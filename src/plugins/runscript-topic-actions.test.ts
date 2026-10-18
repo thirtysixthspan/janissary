@@ -96,6 +96,27 @@ describe('the runscripts execute action', () => {
     expect(enqueued).toEqual([]);
     expect(notify).not.toHaveBeenCalled();
   });
+
+  it('reports a feed-post rejection to stderr and leaves no unhandled rejection', async () => {
+    const { managers } = fixture(projectRoot());
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const unhandled = vi.fn();
+    notify.mockImplementationOnce(() => { throw new Error('feed unavailable'); });
+    process.on('unhandledRejection', unhandled);
+
+    try {
+      runscriptTopicAction(managers, { topic: 'runscripts', action: 'execute', name: 'deploy', origin: 'janus' });
+      await settle();
+
+      expect(notify).toHaveBeenCalledWith(managers, 'plugin-note', 'janus', 'No runscript named "deploy".');
+      expect(stderr).toHaveBeenCalledWith(
+        expect.stringContaining('Runscript execute "deploy" failed: feed unavailable'),
+      );
+      expect(unhandled).not.toHaveBeenCalled();
+    } finally {
+      process.off('unhandledRejection', unhandled);
+    }
+  });
 });
 
 describe('the runscripts delete action', () => {

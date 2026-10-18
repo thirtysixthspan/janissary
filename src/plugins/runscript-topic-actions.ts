@@ -108,9 +108,11 @@ export function runscriptTopicAction(managers: Managers, action: TabPluginTopicA
   const { origin } = action;
   switch (action.action) {
     case 'execute': {
-      void runRunscriptNow(managers, action.name).then((text) => {
-        if (text !== undefined) post(managers, origin, text);
-      });
+      void runRunscriptNow(managers, action.name)
+        .then((text) => {
+          if (text !== undefined) post(managers, origin, text);
+        })
+        .catch((error: unknown) => { reportCause('execute', error, action.name); });
       return;
     }
     case 'delete': { deleteOne(managers, origin, action.name); return; }
