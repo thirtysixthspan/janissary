@@ -4,7 +4,7 @@ import type {
   DatabasesView,
   TabActivityEntry,
 } from './api.js';
-import type { DatabaseGridQuery, RemoteSessionView } from '../protocol.js';
+import type { DatabaseGridQuery, RemoteSessionView, RunscriptsView } from '../protocol.js';
 
 // The topic half of the v1 tab plugin contract: the host topics a plugin may declare an interest in,
 // the shape of one delivery, and the actions it may ask the host to perform on them. Split out of
@@ -21,7 +21,7 @@ import type { DatabaseGridQuery, RemoteSessionView } from '../protocol.js';
 // latest rows at delivery time. Last activity is minute-rounded, and the launcher drops unchanged
 // rows as a second guard against repeated payloads.
 export type TabPluginNotificationTopic =
-  | 'schedules' | 'conversations' | 'sessions' | 'databases' | 'tabs';
+  | 'schedules' | 'conversations' | 'sessions' | 'databases' | 'tabs' | 'runscripts';
 
 // Keyed by the union for the same reason `CAPABILITIES` is: a topic added to the type without a
 // source here is a compile error rather than a name the host would silently never deliver.
@@ -31,6 +31,7 @@ const NOTIFICATION_TOPICS: Record<TabPluginNotificationTopic, true> = {
   sessions: true,
   databases: true,
   tabs: true,
+  runscripts: true,
 };
 
 export const TAB_PLUGIN_NOTIFICATION_TOPICS =
@@ -74,6 +75,12 @@ export type TabPluginNotification =
   | {
     topic: 'tabs';
     data: readonly TabActivityEntry[];
+    tabs: readonly string[];
+  }
+  // The runscripts in the project, one row each, which is the scripts tab's live list.
+  | {
+    topic: 'runscripts';
+    data: RunscriptsView;
     tabs: readonly string[];
   };
 
@@ -165,4 +172,10 @@ export type TabPluginTopicAction =
     requestId: string;
     query: DatabaseGridQuery;
     format: 'csv' | 'json';
-  };
+  }
+  | { topic: 'runscripts'; action: 'execute'; name: string; origin: string }
+  | { topic: 'runscripts'; action: 'delete'; name: string; origin: string }
+  | { topic: 'runscripts'; action: 'clone'; name: string; origin: string }
+  | { topic: 'runscripts'; action: 'create'; origin: string }
+  | { topic: 'runscripts'; action: 'open'; name: string; origin: string }
+  | { topic: 'runscripts'; action: 'ensureDirectory'; origin: string };

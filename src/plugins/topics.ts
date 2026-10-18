@@ -7,6 +7,8 @@ import type {
 } from './api.js';
 import { tabActivityRows } from './activity.js';
 import { scheduleTopicAction } from './schedule-topic-actions.js';
+import { runscriptTopicAction } from './runscript-topic-actions.js';
+import { readRunscriptRows } from '../schedule/system/runscript-rows.js';
 
 const TABS_NOTIFICATION_WINDOW_MS = 100;
 
@@ -180,6 +182,12 @@ const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
     read: (managers) => tabActivityRows(managers),
     act: (managers, action) => { actOnTabs(managers, action); },
     empty: [],
+  },
+  runscripts: {
+    subscribe: (fire) => messageBus.on('runscripts', 'changed', fire),
+    read: (managers) => readRunscriptRows(managers),
+    act: (managers, action) => { runscriptTopicAction(managers, action); },
+    empty: { rows: [] },
   },
 };
 
