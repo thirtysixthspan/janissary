@@ -19,6 +19,7 @@ function row(
 
 function makeCapabilities(dock: 'left' | 'right' | null = null, onSplit?: () => void) {
   const intent = vi.fn<(name: string, payload: unknown) => Promise<unknown>>(async () => null);
+  const openScheduleLaunch = vi.fn();
   const capabilities: TabPluginClientCapabilities = {
     resourceUrl: (reference) => reference,
     intent: async <Result,>(name: string, payload: unknown) =>
@@ -28,15 +29,16 @@ function makeCapabilities(dock: 'left' | 'right' | null = null, onSplit?: () => 
     active: true,
     dock,
     close: vi.fn(),
+    openScheduleLaunch,
     reportFailure: vi.fn(),
   };
-  return { capabilities, intent };
+  return { capabilities, intent, openScheduleLaunch };
 }
 
 function renderTab(entries: ScheduleRow[], dock: 'left' | 'right' | null = null, onSplit?: () => void) {
-  const { capabilities, intent } = makeCapabilities(dock, onSplit);
+  const { capabilities, intent, openScheduleLaunch } = makeCapabilities(dock, onSplit);
   const rendered = render(<SchedulesTab payload={{ entries }} capabilities={capabilities} />);
-  return { ...rendered, intent };
+  return { ...rendered, intent, openScheduleLaunch };
 }
 
 // jsdom implements no scrolling, and the list keeps the selected row in view on every move.
@@ -319,5 +321,38 @@ describe('SchedulesTab row delete', () => {
     renderTab([row({ id: 'fetch' })], 'right');
 
     expect(screen.getByLabelText('Delete schedule fetch')).toBeInTheDocument();
+  });
+});
+
+describe('SchedulesTab new schedule button', () => {
+  it('offers the New schedule button in the metadata row when there are no rows', () => {
+    renderTab([]);
+
+    expect(screen.getByRole('button', { name: 'New schedule' })).toBeInTheDocument();
+  });
+
+  it('offers the New schedule button beside the rows too', () => {
+    renderTab([row()]);
+
+    expect(screen.getByRole('button', { name: 'New schedule' })).toBeInTheDocument();
+  });
+
+  it('opens the New schedule dialog on click, without sending an intent', () => {
+    const { intent, openScheduleLaunch } = renderTab([row()]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'New schedule' }));
+
+    expect(openScheduleLaunch).toHaveBeenCalledTimes(1);
+    expect(intent).not.toHaveBeenCalled();
+  });
+
+  it('keeps the button in the docked rendering, next to the host split action', () => {
+    const { container, openScheduleLaunch } = renderTab([row()], 'left', vi.fn());
+
+    fireEvent.click(screen.getByRole('button', { name: 'New schedule' }));
+
+    expect(openScheduleLaunch).toHaveBeenCalledTimes(1);
+    expect(container.querySelector('.schedules-compact')).not.toBeNull();
+    expect(container.querySelector('.plugin-actions')).toContainElement(screen.getByRole('button', { name: 'Split' }));
   });
 });

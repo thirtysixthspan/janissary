@@ -27,6 +27,13 @@ describe('createPluginClientCapabilities', () => {
     expect(send).toHaveBeenCalledWith({ method: 'openDiffFor', params: { label: 'shell-1' } });
   });
 
+  it('opens the New schedule dialog by sending the bare schedule command', () => {
+    const { client, send } = makeClient();
+    const capabilities = createPluginClientCapabilities(host, 'schedules', 'schedules', client, true, null, vi.fn());
+    capabilities.openScheduleLaunch?.();
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'schedule' } });
+  });
+
   it('opens the calling plugin tab\'s ACP transcript', () => {
     const { client, send } = makeClient();
     const capabilities = createPluginClientCapabilities(host, 'launcher', 'launcher-2', client, true, 'right', vi.fn());

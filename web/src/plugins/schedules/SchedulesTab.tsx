@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { ScheduleRow, SchedulesPayload } from '@shared/plugins/schedules/shared';
-import type { TabPluginClientCapabilities } from '../api';
+import { PluginActionsHeader, newTabIcon, type TabPluginClientCapabilities } from '../api';
 import { nextSelection } from './schedules-keys';
 import { sectionSchedules } from './schedules-sections';
 import { ScheduleSection } from './SchedulesRows';
@@ -14,8 +15,9 @@ const NAV_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 // double click (or Enter on the selected row) focuses the tab that owns it. Arrow Up/Down/Home/End
 // move the selection through the on-screen order. Rendered full-width in the main area, or as a
 // compressed one-line-per-entry list when the host reports the tab docked; both layouts share the
-// same selection and focus behavior. The dock-cycle control is host chrome and is deliberately
-// absent here.
+// same selection and focus behavior. Apart from the rows, the one control is the + button in the
+// metadata row, which opens the New schedule dialog. The dock-cycle control is host chrome and is
+// deliberately absent here.
 export function SchedulesTab({
   payload, capabilities,
 }: {
@@ -88,11 +90,19 @@ export function SchedulesTab({
       onKeyDown={onKeyDown}
       data-doc-shot="schedules-tab"
     >
-      <div className="schedules-header">
-        <div className="schedules-actions">
+      <PluginActionsHeader className="schedules-header">
+        <span className="plugin-actions">
+          <button
+            type="button"
+            title="New schedule"
+            aria-label="New schedule"
+            onClick={() => capabilities.openScheduleLaunch?.()}
+          >
+            <FontAwesomeIcon icon={newTabIcon} />
+          </button>
           {capabilities.splitAction}
-        </div>
-      </div>
+        </span>
+      </PluginActionsHeader>
       {entries.length === 0 ? (
         <div className="schedules-empty">No scheduled commands.</div>
       ) : (
