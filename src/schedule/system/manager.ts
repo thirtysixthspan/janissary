@@ -1,4 +1,5 @@
 import { messageBus } from '../../bus.js';
+import { errorText } from '../../error-text.js';
 import type { Managers } from '../../managers.js';
 import { SystemScheduleStore } from './store.js';
 import { recoverSystemSchedules } from './boot-recovery.js';
@@ -93,7 +94,7 @@ export class SystemScheduleManager {
       try {
         outcome = await fireSystemBatch(this.managers, claimed, now);
       } catch (error) {
-        process.stderr.write(`System schedule ${claimed.id}: ${error instanceof Error ? error.message : String(error)}\n`);
+        process.stderr.write(`System schedule ${claimed.id}: ${errorText(error)}\n`);
         continue;
       }
       if (this.disposed || !outcome || this.entries.every((entry) => entry.key !== claimed.key)) continue;
