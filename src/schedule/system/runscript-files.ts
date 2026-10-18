@@ -60,7 +60,7 @@ export function readRunscript(projectRoot: string, name: string): { file: string
 
 function makeScriptsDirectory(projectRoot: string): void {
   const stateDir = path.join(projectRoot, '.janissary');
-  const scriptsDir = path.join(stateDir, 'scripts');
+  const scriptsDir = runscriptsDirectoryPath(projectRoot);
   if (!assertDirectory(stateDir)) mkdirSync(stateDir);
   if (!assertDirectory(scriptsDir)) mkdirSync(scriptsDir);
 }

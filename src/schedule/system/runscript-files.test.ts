@@ -120,6 +120,20 @@ describe('runscript files', () => {
     }
   });
 
+  it('creates the scripts directory at the path the reads and writes use', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'schedule ensure path '));
+    try {
+      ensureScriptsDirectory(root);
+      const scripts = path.join(root, '.janissary', 'scripts');
+      expect(lstatSync(scripts).isDirectory()).toBe(true);
+      expect(readRunscript(root, 'deploy').file).toBe(path.join(scripts, 'deploy.rs'));
+      expect(createRunscript(root, 'deploy')).toEqual({ file: path.join(scripts, 'deploy.rs'), created: true });
+      expect(readdirSync(scripts)).toEqual(['deploy.rs']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('refuses a symlinked state directory, reports the exclusion failure and creates nothing', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'schedule ensure symlink '));
     const write = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
