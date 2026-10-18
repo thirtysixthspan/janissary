@@ -20,6 +20,7 @@ export function ScriptsTab({ payload, capabilities }: {
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<RunscriptRow | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dismissedRef = useRef(false);
   const selected = rowIndexOf(rows, selectedName);
 
   useEffect(() => {
@@ -46,12 +47,22 @@ export function ScriptsTab({ payload, capabilities }: {
   };
 
   const openDelete = (name: string) => {
+    dismissedRef.current = false;
     setPendingDelete(rows.find((row) => row.name === name) ?? null);
   };
 
   const closeDelete = () => {
+    dismissedRef.current = true;
     setPendingDelete(null);
     containerRef.current?.focus();
+  };
+
+  const swallowSecondClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (dismissedRef.current && event.detail > 1) {
+      event.stopPropagation();
+      return;
+    }
+    dismissedRef.current = false;
   };
 
   const confirmDelete = () => {
@@ -96,7 +107,14 @@ export function ScriptsTab({ payload, capabilities }: {
   };
 
   return (
-    <div className="scripts-tab" ref={containerRef} tabIndex={0} onKeyDown={onKeyDown}>
+    <div
+      className="scripts-tab"
+      ref={containerRef}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
+      onClickCapture={swallowSecondClick}
+      onDoubleClickCapture={swallowSecondClick}
+    >
       <PluginActionsHeader className="scripts-header">
         <span className="plugin-actions">
           <button type="button" title="New script" aria-label="New script" onClick={createScript}>

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Stop a double-click on the delete dialog's Delete or Cancel button from opening the row beneath it once the dialog has closed.
-
-Existing Issue: The delete dialog's Delete and Cancel buttons close the dialog on the first click, so the second click of a double-click lands on the row beneath, and that row's double-click handler sends open, which opens an unrelated runscript in an editor tab or reports No runscript named for the one just deleted. Severity: 3/10
-
-Existing Risk: 3/10 - A double-click on Delete opens an editor tab for a different script the user did not ask for, which is recoverable by closing that tab but makes the list look as if it acted on its own.
-
-Proposal Risk: 1/10 - The residual hazard is a double-click inside the swallow window that the user meant as a new action, while a double-click after the window still opens its row normally.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1739 "stop a double-click on the delete dialog's own buttons from opening the row beneath". In web/src/plugins/scripts/ScriptsTab.tsx, the confirm path and the close path both dismiss the dialog on the first click, so after either one arm a one-shot capture-phase listener on globalThis for click and dblclick that calls preventDefault and stopPropagation on the next such event within about 500 ms and then removes itself, so the second click neither selects nor opens the row beneath. Swallow dblclick as well as click, because the browser still fires dblclick on the row after its click is cancelled. Remove any pending listener on unmount, and move the helper into its own module beside ScriptsTab.tsx if that file would exceed the 200-line limit. In web/src/plugins/scripts/ScriptRowActions.tsx, correct the comment that says the Delete path's second click lands on the dialog backdrop, since that holds only for the row's Delete button and not for the dialog's own buttons. Leave the Run and Duplicate detail guard unchanged. Add a test to web/src/plugins/scripts/ScriptsTab.test.tsx that opens the delete dialog for one row, clicks the dialog's Delete button, then dispatches a click and a dblclick on another row, and expects no open or execute intent and an unchanged selection; keep every existing test untouched. Verify with the diff-scoped web tests for the scripts tab.
-
-
 * Replace the scripts delete dialog's copied keyboard contract with the shared ConfirmDialog so Cmd+W and Shift+Tab stop reaching the window while the dialog is open.
 
 Existing Issue: The delete dialog re-implements the two-button confirm shell and its keyboard contract instead of using the shared ConfirmDialog that the plugin API already publishes, and because the copy never registers with the modal signal, Cmd+W and Shift+Tab still reach the window shortcuts while the dialog is open, contrary to the spec's claim that the dialog takes every key. Severity: 4/10

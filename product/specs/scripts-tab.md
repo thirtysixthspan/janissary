@@ -65,7 +65,7 @@ Delete opens a dialog titled `Delete runscript "<name>"?` with `Delete` and `Can
 
 In the dialog, `y` confirms, `n` and Escape cancel, Left and Right move the highlight between the two buttons, and Enter chooses the highlighted button. The highlight starts on `Cancel`. While the dialog is open it takes every key, and a click outside it is swallowed, so the dialog stays open. Cancelling leaves the file in place.
 
-On confirm, `deleteRunscript` in `src/schedule/system/runscript-files.ts` removes the file, and the row leaves the list at the next refresh. If the deleted row was the selected row, the selection moves to the next row, or to the previous row when the deleted row was last, and clears when no row is left. Deleting a row that is not selected leaves the selection where it was.
+On confirm, `deleteRunscript` in `src/schedule/system/runscript-files.ts` removes the file, and the row leaves the list at the next refresh. If the deleted row was the selected row, the selection moves to the next row, or to the previous row when the deleted row was last, and clears when no row is left. Deleting a row that is not selected leaves the selection where it was. A double-click on the dialog's `Delete` or `Cancel` button does not act on the row beneath it, so the second click neither selects that row nor opens it, and does not press one of its buttons.
 
 An editor tab that holds the deleted file keeps its text until it is saved or closed. A system schedule that names the file fires as missing afterward, as it does for a script removed by hand (see [[scheduling]]). Saving that tab afterward writes the file back. The editor's save path does not refuse a file that is gone from disk, so the save recreates it, and the row returns at the next refresh.
 

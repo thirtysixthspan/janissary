@@ -429,3 +429,48 @@ describe('ScriptsTab row buttons', () => {
     expect(selectedName(container)).toBe('a');
   });
 });
+
+describe('ScriptsTab second click after the delete dialog closes', () => {
+  it.each(['Delete', 'Cancel'])(
+    'does not select or open the row beneath after a double-click on the dialog %s button',
+    (label) => {
+      const { container, intent } = renderTab([row('a'), row('b'), row('c')]);
+
+      fireEvent.click(screen.getByText('a'));
+      fireEvent.click(screen.getByRole('button', { name: 'Delete b' }));
+      fireEvent.click(dialogButton(label), { detail: 1 });
+      fireEvent.click(screen.getByText('c'), { detail: 2 });
+      fireEvent.doubleClick(screen.getByText('c'), { detail: 2 });
+
+      expect(intent).not.toHaveBeenCalledWith('open', expect.anything());
+      expect(intent).not.toHaveBeenCalledWith('execute', expect.anything());
+      expect(selectedName(container)).toBe('a');
+    },
+  );
+
+  it('does not open a second dialog from the row Delete button beneath the closed dialog', () => {
+    const { intent } = renderTab([row('a'), row('b'), row('c')]);
+
+    fireEvent.click(screen.getByText('a'));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete b' }));
+    fireEvent.click(dialogButton('Cancel'), { detail: 1 });
+    fireEvent.click(screen.getByRole('button', { name: 'Delete c' }), { detail: 2 });
+
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(intent).not.toHaveBeenCalled();
+  });
+
+  it('opens a row on a double-click that starts after the dialog closes', () => {
+    const { container, intent } = renderTab([row('a'), row('b'), row('c')]);
+
+    fireEvent.click(screen.getByText('a'));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete b' }));
+    fireEvent.click(dialogButton('Cancel'), { detail: 1 });
+    fireEvent.click(screen.getByText('c'), { detail: 1 });
+    fireEvent.click(screen.getByText('c'), { detail: 2 });
+    fireEvent.doubleClick(screen.getByText('c'), { detail: 2 });
+
+    expect(selectedName(container)).toBe('c');
+    expect(intent).toHaveBeenCalledWith('open', { name: 'c' });
+  });
+});

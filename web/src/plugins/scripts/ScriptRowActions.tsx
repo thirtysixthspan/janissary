@@ -25,7 +25,8 @@ export function ScriptRowActions({ name, onAction }: {
           onClick={(event) => {
             event.stopPropagation();
             // The second click of a double-click has detail 2. Run and Duplicate act on the first click only.
-            // Delete needs no such check: its second click lands on the dialog backdrop, which swallows it.
+            // Delete needs no such check when it opened the dialog: its second click lands on the backdrop, which swallows it.
+            // The dialog's own buttons close it on the first click, so their second click reaches the row beneath; ScriptsTab ignores that one.
             if (action !== 'delete' && event.detail > 1) return;
             onAction(action);
           }}
