@@ -258,6 +258,10 @@ export type TabPluginClientCapabilities = {
   // this tab would diff whatever its command line resolves, not the environment this tab is working
   // in. Optional for the same reason as `attachTerminal`.
   openDiffHere?(): void;
+  // Open the New schedule dialog, the same one typing bare `schedule` opens. Sent as the command
+  // rather than as a tab-scoped RPC because the dialog is the command's answer, and the schedules
+  // tab reaches it the same way a shell or harness tab's command bar does.
+  openScheduleLaunch?(): void;
   // Open this plugin tab's own ACP transcript as an editor tab. The host supplies the label so a
   // plugin cannot ask to open another tab's transcript.
   openAcpTranscript?(): void;
@@ -357,6 +361,7 @@ export function createPluginClientCapabilities(
     openFileNavigator: () => { client.send({ method: 'openFileNavigatorFor', params: { label } }); },
     launchShellHere: () => { client.send({ method: 'launchShellFor', params: { label } }); },
     openDiffHere: () => { client.send({ method: 'openDiffFor', params: { label } }); },
+    openScheduleLaunch: () => { client.send({ method: 'command', params: { text: 'schedule' } }); },
     // Each path and its opener are supplied together or not at all: a plugin drawing the recording
     // flag or the transcript button needs one answer to "does this tab have one", and a handler with
     // no path behind it would be a button that opens nothing.

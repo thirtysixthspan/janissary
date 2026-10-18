@@ -37,4 +37,10 @@ describe('schedules stylesheet', () => {
     expect(schedules).toContain('.schedules-row-delete {');
     expect(schedules).not.toContain('.schedules-clear');
   });
+
+  it('styles the metadata row buttons like the sessions header, and drops the old actions wrapper', () => {
+    expect(schedules).toContain('.schedules-header .plugin-actions button {');
+    expect(schedules).toContain('.schedules-header .plugin-actions button:hover');
+    expect(schedules).not.toContain('.schedules-actions');
+  });
 });
