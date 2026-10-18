@@ -14,6 +14,7 @@ export const tabPluginLoaders = {
   pdf: () => import('./pdf/activate.js'),
   roles: () => import('./roles/activate.js'),
   schedules: () => import('./schedules/activate.js'),
+  scripts: () => import('./scripts/activate.js'),
   search: () => import('./search/activate.js'),
   sessions: () => import('./sessions/activate.js'),
   shell: () => import('./shell/activate.js'),
