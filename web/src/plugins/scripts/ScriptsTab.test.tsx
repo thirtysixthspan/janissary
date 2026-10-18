@@ -43,6 +43,10 @@ function selectedName(container: HTMLElement) {
   return container.querySelector(':scope .scripts-row.selected .scripts-name')?.textContent ?? null;
 }
 
+function rowElement(name: string) {
+  return screen.getByText(name).closest('.scripts-row')!;
+}
+
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
 });
@@ -150,6 +154,15 @@ describe('ScriptsTab selection and open', () => {
     expect(intent).toHaveBeenCalledWith('create', {});
     expect(intent).not.toHaveBeenCalledWith('open', expect.anything());
   });
+
+  it('sends open with the row name on Enter pressed on that row', () => {
+    const { intent } = renderTab([row('a'), row('b')]);
+
+    fireEvent.click(screen.getByText('b'));
+    fireEvent.keyDown(rowElement('b'), { key: 'Enter' });
+
+    expect(intent).toHaveBeenCalledWith('open', { name: 'b' });
+  });
 });
 
 describe('ScriptsTab keyboard movement', () => {
@@ -196,6 +209,32 @@ describe('ScriptsTab keyboard movement', () => {
     expect(fireEvent.keyDown(list, { key: 'Delete' })).toBe(true);
     expect(fireEvent.keyDown(list, { key: 'Backspace' })).toBe(true);
     expect(intent).not.toHaveBeenCalled();
+    expect(selectedName(container)).toBe('b');
+  });
+
+  it('moves the selection with ArrowDown pressed on a row', () => {
+    const { container } = renderTab([row('a'), row('b'), row('c')]);
+
+    fireEvent.click(screen.getByText('a'));
+    fireEvent.keyDown(rowElement('a'), { key: 'ArrowDown' });
+
+    expect(selectedName(container)).toBe('b');
+  });
+
+  it('leaves the selection in place on arrow, Home, and End keys pressed on the focused New script button', () => {
+    const { container } = renderTab([row('a'), row('b'), row('c')]);
+    const button = screen.getByRole('button', { name: 'New script' });
+
+    fireEvent.click(screen.getByText('b'));
+    button.focus();
+
+    expect(fireEvent.keyDown(button, { key: 'ArrowDown' })).toBe(true);
+    expect(selectedName(container)).toBe('b');
+    expect(fireEvent.keyDown(button, { key: 'ArrowUp' })).toBe(true);
+    expect(selectedName(container)).toBe('b');
+    expect(fireEvent.keyDown(button, { key: 'Home' })).toBe(true);
+    expect(selectedName(container)).toBe('b');
+    expect(fireEvent.keyDown(button, { key: 'End' })).toBe(true);
     expect(selectedName(container)).toBe('b');
   });
 });
