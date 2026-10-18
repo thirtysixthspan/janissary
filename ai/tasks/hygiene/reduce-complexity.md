@@ -87,7 +87,7 @@ Then record these starting numbers — you will compare against them at the end.
 - **TypeScript:** `npm run typecheck` must finish with **no errors**. If it errors before you touch anything, STOP and tell the user.
 - **Lint:** near the end of `npm run lint` there is a summary line like `✖ 16 problems (0 errors, 16 warnings)`. Write down the **errors** count and the **warnings** count. Note especially the `sonarjs/cognitive-complexity` warnings — they are your extraction targets, or the before-score of the function you were handed.
 - **Tests:** they must be **green** (all passing). If any test is already failing **before** you touch anything, STOP and tell the user — do not start a refactor on a broken suite.
-- **Quality (FTA):** `npm run quality` prints a table per area, sorted worst-first, with each file's **line count** and **FTA score** (lower = better). Write down the score and line count of the file you end up in, so you can confirm the score dropped afterward.
+- **Quality (FTA):** `npm run quality` prints a table per area, sorted worst-first, with each file's **line count** and **FTA score** (lower = better). Write down the score and line count of the file you end up in, so you can compare them against the Step 6 quality check afterward.
 
 Always run these fresh. Do not trust earlier output in the conversation.
 
@@ -192,7 +192,7 @@ Check each, in order:
 1. **TypeScript is clean.** `npm run typecheck:diff` must have no errors. A type error here almost always means the new helper is missing a type on a parameter or return value — fix it in your source file. If you cannot make it clean quickly, restore your backup and report.
 2. **Tests pass.** If a test now fails: try a quick, obvious fix in your source file (do **not** edit the test). If it does not pass quickly, **restore your backup** (`cp src/foo.ts.bak src/foo.ts`) and report what blocked you. Never edit a test to make it pass.
 3. **Lint is no worse.** Look at the `✖ … problems (… errors, … warnings)` line again. **Errors must be 0.** **Warnings must be the same or fewer** than Step 1 — the `sonarjs/cognitive-complexity` warning on your target function should now be gone or reduced. If the target was never flagged by lint, the bar is simply that the count did not go up. If a new warning or error appeared, fix it in your source file. Never silence a warning with an `eslint-disable` comment.
-4. **Quality did not get worse.** The file's FTA score and line count should stay the same or improve. A small increase in line count from the extra function signature/braces is expected and fine; the score should not go up.
+4. **Quality did not get worse.** The file's FTA score and line count should stay the same or improve, with one allowance for the cost of the extraction itself. FTA scores the whole file on its line count and on how many distinct names and operators it uses. It does not score how tangled any one function is. So moving a block into a new function adds a signature, braces, and a new name, takes nothing away, and usually nudges the score up a little even though the code got simpler. Accept a rise of up to **1.0 point** when the extra lines are the new function's signature and braces and the change added no new branches. A larger rise, or a rise with any other cause, means the file got worse: fix it in your source file or restore your backup. When you accept a rise, add `(accepted: extraction overhead)` to the FTA line of your report.
 
 When all checks pass, **delete the backup file**: `rm src/foo.ts.bak`.
 
