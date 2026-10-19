@@ -2,17 +2,6 @@
 
 ## ready
 
-* Give remote filesystem ports used by plugin capabilities an explicit tab-owned lifetime.
-
-Existing Debt: Plugin workspace capabilities cache filesystem ports forever in a module-level label-keyed map, without tying reuse or disposal to the tab incarnation and channel that created each port. Severity: 6/10
-
-Existing Risk: 6/10 - Closing and reopening a remote diff tab can reuse a closed port under the recycled label, while closing it alongside surviving session tabs retains its remote filesystem session and cached write-back records.
-
-Proposal Risk: 2/10 - A transport loss can still interrupt filesystem work, but a closed tab cannot retain or donate its port to a later tab using the same label.
-
-Proposal: Replace the process-global `ports` map and unconditional label-based reuse in `src/plugins/remote-capabilities.ts` with a resource record owned by the invoking tab's lifetime; retain the current channel identity in that record and reuse the port only while both the tab and channel still match. Resolve the live tab before acquiring a port, and make release idempotently call `RemoteFileSystemPort.dispose()` from `src/file-navigator/remote/port.ts` and `forgetRemoteFilesOf()` from `src/file-navigator/remote/file-cache.ts`. Wire release through the host's tab-close path in `src/tab/cleanup.ts`, with host shutdown in `src/plugins/host.ts` releasing any remaining records before the remote manager shuts down. After the awaited read in `materializeRemoteFile`, recheck that the originating resource record is still live before registering a cache file, so a late completion cannot recreate an orphaned write-back record. `src/plugins/context.test.ts` covers successful reads, materialization, missing channels, and read failures, but resets modules between cases and never exercises close/reopen reuse; add coverage for repeated calls sharing a live port, closing one plugin tab while its channel survives, label reuse on another channel, and a read resolving after close. Preserve the ordinary navigator-port disposal and orphaned-save behavior covered by `src/file-navigator/remote/port.test.ts` and `src/file-navigator/remote/file-cache.test.ts`.
-
-
 * Key remote file caches and their cleanup by the complete remote workspace identity.
 
 Existing Debt: Remote cache ownership uses only the bare host and canonical workspace label, even though independent remote entries also differ by SSH destination and remote workspace root. Severity: 6/10
