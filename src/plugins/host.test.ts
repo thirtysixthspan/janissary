@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import { fakeNotificationsHost } from '../notifications/tab-test-fixture.js';
 import { NotificationQueue } from '../notifications/queue.js';
@@ -267,6 +270,73 @@ describe('TabPluginHost commands', () => {
     expect(host.statusFor('fixture')).toMatchObject({
       state: 'disabled', reason: 'command exploded after queueing',
     });
+  });
+});
+
+describe('the runscripts change signal', () => {
+  function projectWithScript(): string {
+    const root = mkdtempSync(path.join(tmpdir(), 'host-runscripts-'));
+    mkdirSync(path.join(root, '.janissary', 'scripts'), { recursive: true });
+    writeFileSync(path.join(root, '.janissary', 'scripts', 'deploy.rs'), 'echo deploy\n');
+    return root;
+  }
+
+  function hostFor(root: string, declared: TabPluginDeclaration): TabPluginHost {
+    const { managers } = makeManagers();
+    const scoped = {
+      ...managers,
+      tab: { ...managers.tab, launchDir: root },
+      systemSchedule: { list: () => [] },
+    } as unknown as Managers;
+    scoped.tab.tabs.push({ label: 'fixture-1', plugin: { id: 'fixture', instanceKey: 'one' } } as Tab);
+    return new TabPluginHost(scoped, [declared], { fixture: loader(activation()) });
+  }
+
+  it('publishes a change on a schedules tick while a tab of a plugin that asked for runscripts is open', () => {
+    const root = projectWithScript();
+    const host = hostFor(root, declaration({ notifications: ['runscripts'] }));
+    const published = vi.fn();
+    const listener = messageBus.on('runscripts', 'changed', published);
+    try {
+      messageBus.emit('schedules', { type: 'tick' });
+      expect(published).toHaveBeenCalledOnce();
+    } finally {
+      listener.unsubscribe();
+      host.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('publishes nothing on a tick when no declared plugin asked for runscripts', () => {
+    const root = projectWithScript();
+    const host = hostFor(root, declaration());
+    const published = vi.fn();
+    const listener = messageBus.on('runscripts', 'changed', published);
+    try {
+      messageBus.emit('schedules', { type: 'tick' });
+      expect(published).not.toHaveBeenCalled();
+    } finally {
+      listener.unsubscribe();
+      host.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('publishes nothing once the host has been disposed', () => {
+    const root = projectWithScript();
+    const host = hostFor(root, declaration({ notifications: ['runscripts'] }));
+    const published = vi.fn();
+    const listener = messageBus.on('runscripts', 'changed', published);
+    try {
+      messageBus.emit('schedules', { type: 'tick' });
+      host.dispose();
+      writeFileSync(path.join(root, '.janissary', 'scripts', 'second.rs'), 'echo second\n');
+      messageBus.emit('schedules', { type: 'tick' });
+      expect(published).toHaveBeenCalledOnce();
+    } finally {
+      listener.unsubscribe();
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 

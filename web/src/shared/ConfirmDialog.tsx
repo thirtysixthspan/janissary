@@ -18,15 +18,18 @@ import { ConfirmDialogShell } from './ConfirmDialogShell';
  *
  * The markup and the key wiring belong to `ConfirmDialogShell`, which the host's own quit and delete
  * dialogs already render; this only fixes the one label a plugin caller has no opinion about, so a
- * plugin question and a host question cannot drift apart.
+ * plugin question and a host question cannot drift apart. `notes` is an optional list of plain lines
+ * shown between the title and the buttons, for a consequence the question has to state.
  */
 export function ConfirmDialog({
   title,
+  notes,
   confirmLabel,
   onConfirm,
   onCancel,
 }: {
   title: string;
+  notes?: string[];
   confirmLabel: string;
   onConfirm(): void;
   onCancel(): void;
@@ -34,6 +37,7 @@ export function ConfirmDialog({
   return (
     <ConfirmDialogShell
       title={title}
+      notes={notes}
       confirmLabel={confirmLabel}
       cancelLabel="Cancel"
       onConfirm={onConfirm}

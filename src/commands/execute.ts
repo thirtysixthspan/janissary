@@ -1,7 +1,22 @@
 import type { Command } from './types.js';
+import type { Managers } from '../managers.js';
 import { appendCommandOutput } from '../command/append.js';
 import { isRunscriptName } from '../schedule/system/runscript.js';
 import { readRunscript } from '../schedule/system/runscript-files.js';
+
+export async function runRunscriptNow(managers: Managers, name: string): Promise<string | undefined> {
+  let runscript;
+  try {
+    runscript = readRunscript(managers.tab.launchDir, name);
+  } catch {
+    return `Could not read runscript "${name}".`;
+  }
+  if (!runscript.exists) return `No runscript named "${name}".`;
+
+  const shell = await managers.systemShell.ensure();
+  if (shell.status !== 'ok') return;
+  managers.tab.enqueueSystemBatch('system', runscript.lines);
+}
 
 export const command: Command = {
   name: 'execute',
@@ -16,24 +31,9 @@ export const command: Command = {
       return;
     }
 
-    let runscript;
-    try {
-      runscript = readRunscript(managers.tab.launchDir, name);
-    } catch {
-      appendCommandOutput(managers, tab.label, {
-        input: command_, output: `Could not read runscript "${name}".`,
-      }, invocation);
-      return;
+    const failure = await runRunscriptNow(managers, name);
+    if (failure !== undefined) {
+      appendCommandOutput(managers, tab.label, { input: command_, output: failure }, invocation);
     }
-    if (!runscript.exists) {
-      appendCommandOutput(managers, tab.label, {
-        input: command_, output: `No runscript named "${name}".`,
-      }, invocation);
-      return;
-    }
-
-    const shell = await managers.systemShell.ensure();
-    if (shell.status !== 'ok') return;
-    managers.tab.enqueueSystemBatch('system', runscript.lines);
   },
 };

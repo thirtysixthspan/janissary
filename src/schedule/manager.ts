@@ -183,6 +183,7 @@ export class ScheduleManager {
     }
     if (changed) { messageBus.emit('state', { type: 'dirty' }); this.announceChange(); }
     this.managers.systemSchedule?.tick(now);
+    messageBus.emit('schedules', { type: 'tick' });
   }
 
   // The named, low-frequency signal a tab plugin may subscribe to: emitted wherever the scheduled

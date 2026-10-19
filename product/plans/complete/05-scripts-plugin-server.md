@@ -1,0 +1,66 @@
+# Scripts tab plugin server modules
+**Complexity: 3/10** — three small server modules shaped like the schedules plugin, with commands and intents routed through the topic built in `04`; nothing is registered yet.
+
+## Goal
+
+Create `src/plugins/scripts/` with the manifest, the import-free shared contract, and the activation. The activation claims the `scripts` command, opens or focuses the singleton tab, routes the five client intents to topic actions, and folds topic changes into the open tab. The plugin is not added to the catalog or the loader map until `08-scripts-plugin-registration`.
+
+## Design decisions and dependencies
+
+This subplan depends on `04-runscripts-topic-and-actions`. The manifest's `notifications: ['runscripts']` only passes validation once `runscripts` is a known topic, and the activation calls the topic actions defined there. The same declaration is what lets `topicData` and `topicAction` past `requireDeclaredTopic` in `src/plugins/context.ts`, which refuses any topic the declaration does not name, so the manifest's list and the topic calls in the activation must agree. This subplan lands before `06` and `07`, which import `shared.ts`, and before `08`, which registers the plugin.
+
+- The manifest declares `id: 'scripts'`, `version: '1.0.0'`, `apiVersion: TAB_PLUGIN_API_VERSION`, `payloadSchemaVersion` set to the shared constant (1), `tabLabelPrefix: 'scripts'`, an empty `fileExtensions`, `command: 'scripts'`, `notifications: ['runscripts']`, and the capabilities `openOrFocusTab`, `updateTab`, `topicData`, `topicAction`, `originTab`, `rejectRequest`, and `reportFailure`. It does not request `dockTab`, because the tab is centre-only. It does not use `defineDockableList` (`src/plugins/define-list-tab.ts`). That builder always calls `dockTab`, and it answers an argument it cannot parse with a usage rejection, while this command ignores its argument. The seven names are exactly the capabilities the activation calls, and nothing else is requested.
+- No built-in command matches `scripts`, so `createPluginCommands` in `src/plugins/command-adapter.ts` admits the claim. That function refuses a claim on the bare name of a core command that answers to that name, or on a name in `RESERVED_NON_COMMAND_NAMES` (`src/commands/reserved.ts`, which holds only `help`). No core command is named `scripts`, and no core command's `match` accepts a bare `scripts` token, so the plugin's command answers `scripts` and `scripts left`. The `schedule` match (`^schedule\b`) plays no part here. The catalog test in `08` checks this.
+- The shared contract in `shared.ts` re-declares the row shape `{ name, schedules, open }` and the payload `{ rows }`, the same way `src/plugins/schedules/shared.ts` re-declares its row. The payload and the topic slice are both `{ rows }`, so one guard, `isScriptsPayload`, serves as the tab's `isPayload` and as the check on the notify slice. The file imports nothing, so it keeps its own record check, as `src/plugins/schedules/shared.ts` does, instead of importing `isRecord` from `../api.js`. A shared test pins the shapes to the host's types.
+- The command ignores its argument, so `scripts left` opens the tab as a plain `scripts` does. Its order of work is: call `ensureDirectory` through `topicAction` with the origin label, read `topicData('runscripts')`, check the result with the shared guard, and then call `openOrFocusTab('scripts', ...)` with the title `scripts`. If the guard fails, the command reports a failure through `reportFailure`, as `defineDockableList` does. The command does not read the return value of `topicAction`, because `runscriptTopicAction` returns nothing and the directory action posts its own failure to the feed (`04`). The directory action runs synchronously, so the read that follows sees the directory. If the directory cannot be made, `readRunscriptRows` returns empty rows and the tab opens on its empty state. If `originTab()` returns `null`, the command does nothing, the same rule the intents follow. The rows are read and guarded before `openOrFocusTab` is called, so the factory only wraps them as `{ title, payload }` and reads nothing. The factory is the one place where resources may be registered, and this plugin registers none.
+- The origin label is `originTab()?.label`, in the command and in each intent. The intent's `originTab()` is the scripts tab that sent it, because `runPluginIntent` in `src/plugins/requests.ts` passes the sending tab's label as the answering label, and `originTab()` reads that label first. The feed therefore attributes failures to that tab.
+- The notify handler replaces the tab payload with the rows through `updateTab` and leaves the title alone. It returns without acting unless `event.topic` is `runscripts`. The slice is the payload as delivered, with no mapping, because `{ rows }` is already the tab's shape. A slice that fails the guard is ignored rather than mapped, as the notify path of `defineDockableList` does. A delivery that fails the guard means the host and the plugin disagree about the shape, and mapping it would be wrong. The handler's return value is ignored, and the host guards the handler at 1000 ms.
+- The five intents (`execute`, `delete`, `clone`, `create`, `open`) are a table built with `defineIntents`, which handles the tab-payload check, unknown names, and bad payloads. Each entry sends its topic action with the origin and, where there is one, the name. Each returns `null`. A malformed payload or unknown name is a rejection. A tab payload that fails the guard is a failure, which is how `defineIntents` already treats it. If `originTab()` returns `null`, the entry does nothing. The table is built with `'scripts'` as its plugin id and `isScriptsPayload` as its tab guard, so its messages read `unknown scripts intent` and `invalid scripts tab payload`. `execute`, `delete`, `clone`, and `open` take a payload that is an object with a string `name`, and `create` takes any object, because the client sends `{ name }` for the four and `{}` for `create`. The return value of `topicAction` is ignored here too, as in the command.
+- The `create` payload is an empty object, so the ingress check passes it. That check only requires the payload to be present (`src/client-params/plugin.ts`, `isPluginIntentParams`).
+- Names are passed through unchanged. The host checks them against `isRunscriptName`, so the plugin does no name validation of its own.
+- The activation has no `dispose`. The plugin acquires nothing. The refresh belongs to the host and is released by `TabPluginHost.dispose` (see `03`). The source plan's "disposal releases what the tab acquired" test therefore becomes a check that the activation holds nothing to release. The source plan's "refresh starts with the first tab and stops with the last" test is not repeated here. The activation must not start or stop the refresh, because `03` gates each tick on an open tab of a listening plugin, and `03` tests the stop after the last tab closes.
+- The activation provides `opener: noFileOpener('scripts')`, as the schedules plugin does, because the interface requires an opener.
+
+## What already exists (reuse, don't rebuild)
+
+| Existing piece | Where | How this subplan uses it |
+| --- | --- | --- |
+| Schedules plugin shape | `src/plugins/schedules/manifest.ts`, `shared.ts`, `activate.ts` | Pattern for the three files. |
+| Intent table | `src/plugins/define-intents.ts` (`defineIntents`) | Used for the five intents. |
+| No-file opener | `src/plugins/no-file-opener.ts` (`noFileOpener`) | Used for the required opener. |
+| Plugin API surface | `src/plugins/api.ts` (only `../api.js` may be imported) | Source of `TAB_PLUGIN_API_VERSION`, the types, `defineIntents`, and `noFileOpener`. The boundary lint rule permits only `../api.js` and the plugin's own files. |
+| Capability names | `src/plugins/api-capabilities.ts` | The capability list in the manifest must match these names. |
+| Topic action shapes | `src/plugins/api-topics.ts` (from `04`) | The type the activation sends. The `runscripts` members used are `ensureDirectory`, `create`, `execute`, `delete`, `clone`, and `open`. |
+| Dockable list builder | `src/plugins/define-list-tab.ts` (`defineDockableList`) | Not used, for the reason given under the manifest. Its notify path is the model for the slice guard. |
+| Runscript view types | `src/protocol/runscripts.ts` (`RunscriptRowView`, `RunscriptsView`) | The host types the shared row copy is pinned against. `api.ts` does not re-export them, so the test imports them from `../../protocol.js`. |
+| Declared-topic check | `src/plugins/context.ts` (`requireDeclaredTopic`) | Why the manifest's `notifications` must name `runscripts`. |
+
+## Proposed changes
+
+- `src/plugins/scripts/manifest.ts` (new): export `scriptsManifest` as a constant that satisfies `TabPluginDeclaration`, with the same const-and-satisfies form that `schedulesManifest` uses in `src/plugins/schedules/manifest.ts`. Type-only names are imported with the inline `type` modifier, as the schedules files do, because `consistent-type-imports` is an error in `eslint.config.mjs`.
+- `src/plugins/scripts/shared.ts` (new): export `SCRIPTS_PAYLOAD_SCHEMA_VERSION` (1), the row and payload types (`RunscriptRow` and `ScriptsPayload`), the intent payload types, and the guards `isScriptsPayload` (for the tab payload and the topic slice alike), `isNameIntent` (an object with a string `name`), and `isCreateIntent` (any object). The file imports nothing and declares its own record check.
+- `src/plugins/scripts/activate.ts` (new): export `activate()`, which is synchronous and returns `isPayload` set to `isScriptsPayload`, the opener, the `command` handler, the `notify` handler, and the `intent` handler built by `defineIntents`. The instance key `scripts` and the topic name `runscripts` are each one named constant in the file. The planned size is about 80 code lines, well under the 200-line `max-lines` limit, so the intent table stays here. If the file grows past about 180 code lines, move the intent table into `src/plugins/scripts/intents.ts`, which imports only `./shared.js` and `../api.js`, both of which the plugin boundary permits.
+
+## Tests
+
+- In `src/plugins/scripts/activate.test.ts` (new), using fake capabilities in the same style as `src/plugins/schedules/activate.test.ts`:
+  - The `scripts` command calls `ensureDirectory` through `topicAction` with the origin label, then reads `topicData('runscripts')`, in that order, and opens the singleton with title `scripts` and the rows it was given.
+  - A second `scripts` call passes the same instance key `scripts` to `openOrFocusTab`, so the host focuses the open tab.
+  - `scripts left` and `scripts right` open the tab as a bare `scripts` does, and no dock call is made.
+  - A `runscripts` notification replaces the tab's payload through `updateTab` and does not send a title. A notification whose data fails the guard causes no `updateTab` call. A notification for any other topic causes no `updateTab` call.
+  - Each of the five intents sends the topic action it names, carries the origin from `originTab()`, and returns `null`. The `create` intent sends no name.
+  - A malformed payload on an intent is rejected, not treated as a failure. An unknown intent name is rejected. An invalid tab payload is reported as a failure. The fakes follow `schedules/activate.test.ts`, where `rejectRequest` throws `TabPluginRejection` and `reportFailure` throws a plain `Error`, so a test tells the two apart by class.
+  - When `originTab()` returns `null`, an intent sends no topic action and still returns `null`, and the command sends no topic action and opens no tab.
+  - The activation has no `dispose` function. The refresh's start and stop with the tab are tested in `03`, not here.
+- In `src/plugins/scripts/shared.test.ts` (new): `isScriptsPayload` accepts a complete payload and rejects `null`, an array, a missing `rows`, a row missing any one of its three fields, a row with a non-string name, a non-numeric `schedules`, and a non-boolean `open`. The intent guards reject arrays, `null`, and a `name` that is not a string. A type-level pin imports `RunscriptRowView` from `../../protocol.js`, as `src/plugins/schedules/shared.test.ts` imports its host type, and assigns each type to the other in both directions, so a field added to one shape and not the other fails to compile.
+
+## Verification
+
+Run `./scripts/run.mjs check-diff`, which includes `lint-files`, so the `max-lines`, import-extension, and boundary rules are checked on the new files. Confirm by reading the imports that `activate.ts`, `manifest.ts`, and `intents.ts` if it exists import only `../api.js` and their own files, which the boundary rule enforces, and that `shared.ts` imports nothing. The plugin is not registered yet, so the running app does not change in this subplan. The manual check is the two-project walk of the tab in `10`, which runs after `08` registers the plugin, so the unit tests above are the whole check for this subplan.
+
+## Out of scope
+
+- The catalog, loader, and client registry entries. Those are in `08`.
+- The client entry and its components. Those are in `06` and `07`.
+- Docking, `dockTab`, and any capability beyond the seven listed.
+- Any host state beyond the `runscripts` topic.

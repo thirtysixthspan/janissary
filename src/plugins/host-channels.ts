@@ -6,6 +6,10 @@ import type { BackgroundDeliveryPort } from './background-delivery.js';
 import { subscribeTabPluginNotifications } from './notifications.js';
 import { subscribeTabPluginHostState } from './host-state.js';
 import type { PluginRecord } from './status.js';
+import { subscribeRunscriptRefresh } from '../schedule/system/runscript-refresh.js';
+
+const asksForRunscripts = (declaration: TabPluginDeclaration): boolean =>
+  (declaration.notifications ?? []).includes('runscripts');
 
 // The one thing both delivery modules share: the guarded, deadline-bounded call path the host owns,
 // and the way it disables a plugin. Passed in rather than reached for, so their delivery policy stays
@@ -36,5 +40,9 @@ export function subscribeHostChannels(
     connectionsFor: (label) => managers.connection.connectionsFor(label),
     scheduleView: (label) => managers.schedule.view(label),
   });
-  return [...notifications, ...hostState];
+  const runscripts = declarations.some((declaration) => asksForRunscripts(declaration))
+    ? [subscribeRunscriptRefresh(managers, (pluginId) => declarations.some((declaration) =>
+      declaration.id === pluginId && asksForRunscripts(declaration)))]
+    : [];
+  return [...notifications, ...hostState, ...runscripts];
 }

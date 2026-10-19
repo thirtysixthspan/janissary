@@ -7,13 +7,14 @@ import { isTabPluginNotificationTopic, TAB_PLUGIN_NOTIFICATION_TOPICS } from './
 describe('the notification topic record', () => {
   it('carries every topic the union names, and the database topic with them', () => {
     expect(TAB_PLUGIN_NOTIFICATION_TOPICS).toEqual(
-      ['schedules', 'conversations', 'sessions', 'databases', 'tabs'],
+      ['schedules', 'conversations', 'sessions', 'databases', 'tabs', 'runscripts'],
     );
   });
 
   it('recognises the database topic, and refuses a name that is not one', () => {
     expect(isTabPluginNotificationTopic('databases')).toBe(true);
     expect(isTabPluginNotificationTopic('tabs')).toBe(true);
+    expect(isTabPluginNotificationTopic('runscripts')).toBe(true);
     expect(isTabPluginNotificationTopic('schedules')).toBe(true);
     expect(isTabPluginNotificationTopic('transcript')).toBe(false);
   });

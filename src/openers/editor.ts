@@ -20,14 +20,21 @@ const EXTENSIONS = [
   '.css', '.html', '.xml', '.sql', '.csv',
 ];
 
+export function editorSizeRefusal(name: string, bytes: number): string | undefined {
+  return bytes > EDITOR_MAX_BYTES
+    ? `edit: ${name} is ${humanSize(bytes)} — too large to edit in-app (limit ${humanSize(EDITOR_MAX_BYTES)}).`
+    : undefined;
+}
+
 // Shared inline handler: also the entry point for the `edit` command, which bypasses the opener
 // registry so any file (markdown, extensionless) can be edited.
 export function openInEditor(file: string, context: OpenContext, line?: number): string | undefined {
   const name = path.basename(file);
   let bytes: number | undefined;
   try { bytes = statSync(file).size; } catch { bytes = undefined; }
-  if (bytes !== undefined && bytes > EDITOR_MAX_BYTES) {
-    context.note(`edit: ${name} is ${humanSize(bytes)} — too large to edit in-app (limit ${humanSize(EDITOR_MAX_BYTES)}).`);
+  const refusal = bytes === undefined ? undefined : editorSizeRefusal(name, bytes);
+  if (refusal !== undefined) {
+    context.note(refusal);
     return undefined;
   }
   const size = bytes === undefined ? 'unknown' : humanSize(bytes);

@@ -1,8 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { Managers } from '../managers.js';
+import type { Tab } from '../tab/types.js';
 import type { AggregatedScheduleView, RemoteSessionView } from '../protocol.js';
 import { initDbDir } from '../connections.js';
 import { DatabaseManager } from '../database/manager.js';
@@ -106,7 +107,7 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
 function contextFor(
   managers: Managers,
   capabilities: readonly TabPluginCapabilityName[] = ['topicData', 'topicAction'],
-  notifications: readonly 'schedules'[] = ['schedules'],
+  notifications: readonly TabPluginNotificationTopic[] = ['schedules'],
 ) {
   return createPluginContext(
     managers,
@@ -448,6 +449,78 @@ describe('the schedules topic source', () => {
     runTopicAction(managers, { topic: 'schedules', action: 'focusOwner', tab: 'agent-1' });
 
     expect(setActiveTab).not.toHaveBeenCalled();
+  });
+});
+
+describe('the runscripts topic source', () => {
+  const projects: string[] = [];
+
+  afterEach(() => {
+    for (const project of projects) rmSync(project, { recursive: true, force: true });
+    projects.length = 0;
+  });
+
+  function runscriptProject(names: string[], scheduled: { script: string }[] = []) {
+    const root = mkdtempSync(path.join(tmpdir(), 'topics-runscripts-'));
+    projects.push(root);
+    const directory = path.join(root, '.janissary', 'scripts');
+    if (names.length > 0) mkdirSync(directory, { recursive: true });
+    for (const name of names) writeFileSync(path.join(directory, `${name}.rs`), 'echo hi\n');
+    const { managers } = makeManagers();
+    const scoped = {
+      ...managers,
+      tab: { ...managers.tab, launchDir: root },
+      systemSchedule: { list: () => scheduled },
+    } as unknown as Managers;
+    return { root, directory, managers: scoped };
+  }
+
+  it('reads one row per runscript, sorted by name, with its schedule count and whether it is open', () => {
+    const { directory, managers } = runscriptProject(['beta', 'alpha'], [{ script: 'alpha' }, { script: 'alpha' }]);
+    managers.tab.tabs.push({
+      label: 'editor', log: [], editor: { name: 'alpha.rs', path: path.join(directory, 'alpha.rs'), size: '1 B', url: '/open/1' },
+    } as Tab);
+
+    expect(readTopicData(managers, 'runscripts')).toEqual({
+      rows: [
+        { name: 'alpha', schedules: 2, open: true },
+        { name: 'beta', schedules: 0, open: false },
+      ],
+    });
+  });
+
+  it('delivers each runscripts change signal to a subscriber', () => {
+    const fire = vi.fn();
+    const subscription = subscribeTopic('runscripts', fire);
+    messageBus.emit('runscripts', { type: 'changed' });
+    expect(fire).toHaveBeenCalledTimes(1);
+    subscription.unsubscribe();
+  });
+
+  it('routes a runscripts action to the runscript action module', () => {
+    const { directory, managers } = runscriptProject(['deploy']);
+
+    runTopicAction(managers, { topic: 'runscripts', action: 'delete', name: 'deploy', origin: 'janus' });
+
+    expect(existsSync(path.join(directory, 'deploy.rs'))).toBe(false);
+  });
+
+  it('refuses a runscripts action when the plugin did not declare the topic', () => {
+    const { root, managers } = runscriptProject([]);
+    const capabilities = contextFor(managers, ['topicAction'], []);
+
+    expect(() => capabilities.topicAction({ topic: 'runscripts', action: 'ensureDirectory', origin: 'janus' }))
+      .toThrow('used topic "runscripts" without declaring it');
+    expect(existsSync(path.join(root, '.janissary'))).toBe(false);
+  });
+
+  it('performs a runscripts action for a plugin that declared the topic', () => {
+    const { root, managers } = runscriptProject([]);
+    const capabilities = contextFor(managers, ['topicAction'], ['runscripts']);
+
+    capabilities.topicAction({ topic: 'runscripts', action: 'ensureDirectory', origin: 'janus' });
+
+    expect(existsSync(path.join(root, '.janissary', 'scripts'))).toBe(true);
   });
 });
 

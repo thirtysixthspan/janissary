@@ -658,6 +658,7 @@ button.tab-recording { cursor: pointer; }
   box-shadow: 0 6px 24px rgb(0 0 0 / 40%);
 }
 .modal-title { margin-bottom: 14px; }
+.modal-note { color: var(--muted); }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 .modal-button {
   background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;

@@ -1,8 +1,10 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { IMAGE_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/image/shared';
 import { MARKDOWN_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/markdown/shared';
 import { PDF_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/pdf/shared';
 import { SCHEDULES_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/schedules/shared';
+import { SCRIPTS_PAYLOAD_SCHEMA_VERSION, isScriptsPayload } from '@shared/plugins/scripts/shared';
 import { VIDEO_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/video/shared';
 import { CONVERSATIONS_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/conversations/shared';
 import { DIFF_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/diff/shared';
@@ -22,6 +24,7 @@ describe('client plugin registry', () => {
     expect(clientPluginRegistry.get('markdown')?.schemaVersion).toBe(MARKDOWN_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('pdf')?.schemaVersion).toBe(PDF_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('schedules')?.schemaVersion).toBe(SCHEDULES_PAYLOAD_SCHEMA_VERSION);
+    expect(clientPluginRegistry.get('scripts')?.schemaVersion).toBe(SCRIPTS_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('shell')?.schemaVersion).toBe(SHELL_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('sql')?.schemaVersion).toBe(SQL_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('video')?.schemaVersion).toBe(VIDEO_PAYLOAD_SCHEMA_VERSION);
@@ -56,5 +59,18 @@ describe('client plugin registry', () => {
     expect(isPayload(payload({ models: { codex: ['gpt-6-sol'] }, efforts: ['low'] }))).toBe(true);
     expect(isPayload(payload({ models: { codex: 'gpt-6-sol' }, efforts: ['low'] }))).toBe(false);
     expect(isPayload(payload({ models: { codex: ['gpt-6-sol', 7] }, efforts: ['low'] }))).toBe(false);
+  });
+
+  it('reaches the scripts entry only through a dynamic import', () => {
+    const source = readFileSync('web/src/plugins/registry.tsx', 'utf8');
+    const statics = [...source.matchAll(/^import\s[^;]*?from\s+'(?<path>[^']+)'/gmu)]
+      .map((match) => match.groups?.path ?? '');
+    expect(statics.filter((path) => path.includes('scripts'))).toEqual([]);
+    expect(source).toContain("scripts: () => import('./scripts/index')");
+  });
+
+  it('resolves the scripts entry to the shared payload guard', async () => {
+    const { isPayload } = await clientPluginLoaders.scripts();
+    expect(isPayload).toBe(isScriptsPayload);
   });
 });

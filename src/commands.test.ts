@@ -73,6 +73,13 @@ describe('execute command routing', () => {
   });
 });
 
+describe('scripts command routing', () => {
+  it('routes scripts and scripts left to the scripts tab plugin', () => {
+    expect(resolveCommand('scripts')).toEqual({ kind: 'app', name: 'scripts', cmd: 'scripts' });
+    expect(resolveCommand('scripts left')).toEqual({ kind: 'app', name: 'scripts', cmd: 'scripts left' });
+  });
+});
+
 describe('getOutput("help")', () => {
   it('documents the queue command', () => {
     expect(helpText()).toContain('`queue`');

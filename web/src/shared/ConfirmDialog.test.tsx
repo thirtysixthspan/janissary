@@ -93,4 +93,20 @@ describe('ConfirmDialog', () => {
     unmount();
     expect(isModalOpen()).toBe(false);
   });
+
+  it('shows its notes and reports an open modal while mounted, releasing it on unmount', () => {
+    const view = render(
+      <ConfirmDialog
+        title="Delete runscript?"
+        notes={['Used by 1 system schedule.']}
+        confirmLabel="Delete"
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Used by 1 system schedule.')).toBeInTheDocument();
+    expect(isModalOpen()).toBe(true);
+    view.unmount();
+    expect(isModalOpen()).toBe(false);
+  });
 });
