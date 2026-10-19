@@ -215,6 +215,19 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
+  // Every package-update task runs `$janissary/scripts/run.mjs check-malicious-package`, which reads
+  // its blocklist from the install's security/ directory beside scripts/.
+  it.skipIf(!sandboxAvailable())('carves the install\'s security/ directory into the read allow-list, literal and resolved', () => {
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir }, 'bash', []);
+    const securityDir = path.join(janissaryRoot(), 'security');
+    expect(result.args).toContain(`JANISSARY_SECURITY_L=${securityDir}`);
+    expect(result.args).toContain(`JANISSARY_SECURITY_R=${realpathSync(securityDir)}`);
+    expect(SANDBOX_PROFILE).toContain('(subpath (param "JANISSARY_SECURITY_L"))');
+    expect(SANDBOX_PROFILE).toContain('(subpath (param "JANISSARY_SECURITY_R"))');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
   it.skipIf(!sandboxAvailable())('permits selected installed skill support files but not unrelated install paths', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const selectedDir = path.join(janissaryRoot(), 'skills', 'ask-user');

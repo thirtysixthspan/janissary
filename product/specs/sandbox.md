@@ -5,7 +5,8 @@ using a kernel-enforced [Seatbelt](https://en.wikipedia.org/wiki/Sandbox_(comput
 sandbox (`sandbox-exec`), on macOS only. `src/sandbox-profile.ts` holds the static profile text and
 its table-driven carve-out/carve-in/secret-deny lists; `src/sandbox.ts` resolves the dynamic paths
 (workspace, temp dir, `$HOME`, the parent repo's git objects dir, the self-binary's own directory,
-the real Darwin per-user cache dir, the running installation's own `ai/` and `scripts/` directories)
+the real Darwin per-user cache dir, the running installation's own `ai/`, `scripts/`, and
+`security/` directories)
 and wraps the spawn in `sandbox-exec -p <profile> -D … --`.
 
 ### What gets sandboxed
@@ -118,9 +119,18 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   steps, so the runner and the scripts it dispatches to have to be openable or the prompt names a
   command the agent cannot execute. The scripts come from the installation while acting on the
   agent's own working directory — the project — which is what makes reaching for them through
-  `$janissary` correct rather than merely resolvable. `ai/` and `scripts/` are the only two parts of
-  the installation carved in; the install root itself, `node_modules`, and everything else stay
-  denied.
+  `$janissary` correct rather than merely resolvable.
+- That same installation's **`security/` directory** is readable on identical terms again
+  (`JANISSARY_SECURITY_L`/`JANISSARY_SECURITY_R`). It holds `known-malicious-packages.json`, the
+  supply-chain blocklist that `check-malicious-package` reads from beside its own `scripts/`
+  directory, and every package-update task runs that gate before touching `node_modules/`. Without
+  the carve-in the gate fails on its first read, before it checks anything. Read-only, so an agent
+  cannot clear a blocked release that a later unsandboxed install would then accept. `ai/`,
+  `scripts/`, and `security/` are the only three parts of the installation carved in; the install
+  root itself, `node_modules`, a development checkout's `.janissary/`, and everything else stay
+  denied. So a script that reaches further still fails inside a workspace: `lint-files` runs the
+  installation's own `node_modules/.bin/eslint`, and a bare `check-malicious-package --audit` reads
+  the installation's own `package-lock.json`.
 - `/dev/null`, the PTY master multiplexer (`/dev/ptmx`), and tty/pty devices get their own narrow
   read/write/ioctl allow, independent of the workspace/`$HOME` rules. `/dev/ptmx` lets a
   sandboxed Janissary process allocate a PTY; its terminal slave needs `ioctl` for raw-mode termios

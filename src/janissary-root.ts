@@ -14,8 +14,8 @@ export function janissaryRoot(): string {
 
 // The install's own `ai/` directory: the guidelines, personas, and executable task prompts that ship
 // with janissary. A sandboxed process reads task files from here (see `sandbox/profile.ts`), which is
-// why it is named separately from the root — it and `scripts/` below are the only parts of the
-// installation carved in.
+// why it is named separately from the root — it, `scripts/`, and `security/` below are the only parts
+// of the installation carved in.
 export function janissaryAiDir(): string {
   return path.join(janissaryRoot(), 'ai');
 }
@@ -27,6 +27,14 @@ export function janissaryAiDir(): string {
 // happens in the agent's own working directory.
 export function janissaryScriptsDir(): string {
   return path.join(janissaryRoot(), 'scripts');
+}
+
+// The install's own `security/` directory: the supply-chain blocklist `check-malicious-package`
+// reads from beside its own `scripts/` directory. Every package-update task runs that gate before
+// touching `node_modules/`, so a sandboxed process has to be able to read the list too (see
+// `sandbox/install-reads.ts`) or the gate fails before it checks anything.
+export function janissarySecurityDir(): string {
+  return path.join(janissaryRoot(), 'security');
 }
 
 // The environment variable carrying `janissaryRoot()` into every process janissary spawns, so the

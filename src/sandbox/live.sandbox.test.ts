@@ -111,6 +111,14 @@ describe.skipIf(!sandboxAvailable())('sandboxSpawn — live sandbox-exec integra
     expect(runSandboxed(`cat "${runner}"`).status).toBe(0);
   });
 
+  // The supply-chain gate that runner dispatches to reads its blocklist from the install's
+  // security/ directory, which the same $HOME content deny would otherwise refuse.
+  it('reads the blocklist under the install\'s security/ directory', () => {
+    const blocklist = path.join(janissaryRoot(), 'security', 'known-malicious-packages.json');
+    expect(existsSync(blocklist)).toBe(true);
+    expect(runSandboxed(`cat "${blocklist}"`).status).toBe(0);
+  });
+
   it('a non-secret $HOME read outside any carve-in reports EPERM, not ENOENT', () => {
     // Directory-listing-based resolvers (esbuild, notably) walk ancestor directories under $HOME
     // while resolving an entry point; those directories genuinely exist (metadata is allowed
