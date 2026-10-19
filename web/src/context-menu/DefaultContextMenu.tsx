@@ -12,8 +12,8 @@ import { useDefaultContextMenu } from './useDefaultContextMenu';
 // bar — in the same visual language as the file navigator's, which keeps its own menu because it
 // defines one.
 //
-// When a plugin contributes an entry for the selection, it arrives while the menu is open and
-// renders as its own group after Copy, Paste, and Paste from clipboard.
+// When plugins contribute entries for the selection, they arrive while the menu is open and render,
+// in the order the server gave them, as one group after Copy, Paste, and Paste from clipboard.
 export function DefaultContextMenu({ client }: { client?: JanusClient }) {
   const { pending, contributed, runContributed, pasteFromClipboard, close } = useDefaultContextMenu(client);
   if (!pending) return null;
@@ -28,8 +28,8 @@ export function DefaultContextMenu({ client }: { client?: JanusClient }) {
     paste: (element) => { void pasteInto(element); },
     pasteFromClipboard,
   });
-  if (contributed) {
-    groups.push([{ label: contributed.label, onActivate: runContributed }]);
+  if (contributed.length > 0) {
+    groups.push(contributed.map(({ label }) => ({ label, onActivate: () => { runContributed(label); } })));
   }
   if (groups.length === 0) return null;
 

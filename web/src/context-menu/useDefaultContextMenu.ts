@@ -32,13 +32,13 @@ function isChatShortcut(event: KeyboardEvent): boolean {
 // `defaultPrevented` is the whole test for "someone else owns this click", and no surface has to
 // register anything to be left alone.
 //
-// When the click also resolves a plugin-contributed entry, the label arrives while the menu is
+// When the click also resolves plugin-contributed entries, their labels arrive while the menu is
 // open: the server owns the declarations, so the client asks rather than assuming a contributor.
 // A generation counter in the same shape `useSelectionAction` keeps ensures a late reply for a
 // closed menu installs nothing and a reply cannot lag into the next menu.
 export function useDefaultContextMenu(client?: JanusClient) {
   const [pending, setPending] = useState<PendingDefaultMenu | null>(null);
-  const [contributed, setContributed] = useState<DefaultMenuEntry | null>(null);
+  const [contributed, setContributed] = useState<DefaultMenuEntry[]>([]);
   const generation = useRef(0);
 
   useEffect(() => {
@@ -53,13 +53,13 @@ export function useDefaultContextMenu(client?: JanusClient) {
       // to offer and the right-click should be left to the browser.
       event.preventDefault();
       generation.current += 1;
-      setContributed(null);
+      setContributed([]);
       const queryGeneration = generation.current;
       if (target.selectionText && typeof client?.request === 'function') {
-        void client.request<DefaultMenuEntry | null>({
+        void client.request<DefaultMenuEntry[]>({
           method: 'defaultMenuSelectionAction', params: { selection: target.selectionText },
         }).then((result) => {
-          if (generation.current === queryGeneration) setContributed(result.ok ? (result.value ?? null) : null);
+          if (generation.current === queryGeneration) setContributed(result.ok ? result.value : []);
         });
       }
       setPending({ ...target, x: event.clientX, y: event.clientY });
@@ -69,13 +69,14 @@ export function useDefaultContextMenu(client?: JanusClient) {
       const selection = resolveSelection(document.activeElement);
       if (!selection.text) return;
       event.preventDefault();
-      void client.request<DefaultMenuEntry | null>({
+      void client.request<DefaultMenuEntry[]>({
         method: 'defaultMenuSelectionAction', params: { selection: selection.text },
       }).then((result) => {
-        if (!result.ok || !result.value) return;
+        const entry = result.ok ? result.value.find((candidate) => candidate.shortcut) : undefined;
+        if (!entry) return;
         client.send({
           method: 'runDefaultMenuSelectionAction',
-          params: { selection: selection.text, action: result.value.label },
+          params: { selection: selection.text, action: entry.label },
         });
       });
     };
@@ -100,7 +101,7 @@ export function useDefaultContextMenu(client?: JanusClient) {
   // otherwise the frozen overlay outlives the menu that Escape looked like it dismissed.
   const close = (reason?: 'escape') => {
     generation.current += 1;
-    setContributed(null);
+    setContributed([]);
     if (reason === 'escape' && pending?.selectionSource === 'terminal') {
       clearTerminalSelection(pending.restoreFocus);
     }
@@ -108,11 +109,11 @@ export function useDefaultContextMenu(client?: JanusClient) {
     setPending(null);
   };
 
-  const runContributed = () => {
-    if (!contributed || !pending?.selectionText) return;
+  const runContributed = (label: string) => {
+    if (!pending?.selectionText) return;
     client?.send({
       method: 'runDefaultMenuSelectionAction',
-      params: { selection: pending.selectionText, action: contributed.label },
+      params: { selection: pending.selectionText, action: label },
     });
     close();
   };

@@ -17,11 +17,14 @@ The menu also opens when nothing is selected and nowhere can receive text. Right
 
 Finishing a Shift+drag selection in a terminal (see [Copying text out of a harness](/user-documentation/advanced-agents/harness#copying-text-out-of-a-harness)) opens this menu automatically. Right-clicking the held selection afterward opens it again.
 
-## Chat about this
+## Search for this and Chat about this
 
 <img class="agent-float left" src="/agents/orhan-south-west.png" alt="" />
 
-Right-click a text selection — on the page, in an editor, or in a terminal — and the menu also offers **Chat about this**, which starts an AI conversation about the selected text. It sits in its own group after the default entries, behind a divider. `Cmd+I` on macOS, or `Ctrl+I` elsewhere, runs the same action directly, without opening the menu first. See [Keyboard shortcuts](/user-documentation/getting-started/keyboard) for the shortcut and [Conversations](/user-documentation/tab-types/conversations) for what it opens.
+Right-click a text selection — on the page, in an editor, or in a terminal — and the menu also offers two more entries. They sit in their own group after the default entries, behind a divider:
+
+- **Search for this** opens the [search tab](/user-documentation/command-bar/project-search), puts the selected text in its search bar, and searches the project for it. The search tab gets the keyboard, just as it does after `search <phrase>`.
+- **Chat about this** starts an AI conversation about the selected text. `Cmd+I` on macOS, or `Ctrl+I` elsewhere, runs it directly, without opening the menu first. See [Keyboard shortcuts](/user-documentation/getting-started/keyboard) for the shortcut and [Conversations](/user-documentation/tab-types/conversations) for what it opens.
 
 ## What the menu does not replace
 

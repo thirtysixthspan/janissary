@@ -8,21 +8,31 @@ import type { PluginFailureOrigin } from './failure.js';
 import { runClientlessPluginEntry } from './clientless-entry.js';
 import type { PluginRequestPort } from './requests.js';
 
+export type DefaultMenuAction = { plugin: string; label: string; shortcut?: true };
+
 // The default context menu's own entry point, beside an opener/command, a tab-bound intent, and the
 // file navigator's selection action. Shaped on `selection.ts`: the host owns activation, guarding,
 // and disabling, and this module owns only what contributing to the default menu means.
 //
 // The label the client sent back is checked against the declaration rather than trusted — the run
 // RPC carries it, so anything else the client could name was never offered to it by anyone. Unlike
-// a navigator selection there is no owner tree to derive a plugin from, so resolution either
-// answers exactly one contribution or none.
-export function defaultMenuActionFor(
+// a navigator selection there is no owner tree to derive a plugin from, so the label is the only
+// identity an entry has: a label more than one plugin contributes is offered by none of them, and
+// a shortcut more than one entry claims is kept by none of them.
+export function defaultMenuActionsFor(
   declarations: readonly TabPluginDeclaration[],
-): { plugin: string; label: string } | null {
-  const contributions = declarations.flatMap((declaration) => declaration.defaultMenu
-    ? [{ plugin: declaration.id, label: declaration.defaultMenu.label }]
+): DefaultMenuAction[] {
+  const contributions = declarations.flatMap((declaration, index) => declaration.defaultMenu
+    ? [{ plugin: declaration.id, index, ...declaration.defaultMenu }]
     : []);
-  return contributions.length === 1 ? contributions[0] : null;
+  const unique = contributions.filter((entry) =>
+    contributions.filter((other) => other.label === entry.label).length === 1);
+  const shortcutOwners = unique.filter((entry) => entry.shortcut).length;
+  return unique
+    .toSorted((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.index - b.index)
+    .map(({ plugin, label, shortcut }) => ({
+      plugin, label, ...(shortcut && shortcutOwners === 1 && { shortcut }),
+    }));
 }
 
 function invokeDefaultMenuAction(

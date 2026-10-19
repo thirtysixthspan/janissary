@@ -718,7 +718,7 @@ first. Copying a
 held selection releases it — the copy chord and the menu's **Copy** entry both clear it right
 after the clipboard write, so a second Shift+drag is needed to pick text again. Releasing a
 Shift+drag that picks text opens the default menu itself, at the point the drag ended, offering
-**Copy** and **Paste from clipboard…** alongside **Chat about this** (see [[context-menu]]);
+**Copy** and **Paste from clipboard…** alongside **Search for this** and **Chat about this** (see [[context-menu]]);
 right-clicking the held selection afterward opens the same menu again. `Cmd+I`/`Ctrl+I` runs Chat
 about this directly without clearing the selection.
 
