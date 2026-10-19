@@ -34,7 +34,7 @@ export function workerEntry(moduleUrl: string): URL {
 function defaultWorker(): WorkerPort {
   const entry = workerEntry(import.meta.url);
   const source = import.meta.url.endsWith('.ts');
-  return new Worker(entry, { execArgv: source ? ['--import', 'tsx'] : [] });
+  return new Worker(entry, { execArgv: source ? ['--import', import.meta.resolve('tsx')] : [] });
 }
 
 export function createMatcherWorker(

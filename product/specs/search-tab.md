@@ -128,6 +128,9 @@ one settles with nothing, and the reason when a search fails.
 Each matching job has a one-second deadline. If one exceeds it, the search ends with an error reason;
 any rows already found remain visible, and a later query can run normally.
 
+Searching works the same whichever directory the application was started from, including when it
+runs from a source checkout and the project has its own, different TypeScript tooling installed.
+
 ### Navigating and opening a result
 
 **Tab alternates between the search term and the results.** The two are the tab's only focusable
