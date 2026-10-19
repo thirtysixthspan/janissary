@@ -2,6 +2,8 @@
 
 ## ready
 
+* search tab should search in local and remote workspaces. `search for this` in a workspaced harness or agent, local or remote, should search the relevant workspace and return results in that workspace and open files in that workspace. 
+
 ## development
 
 * add an ACP skill to allow an agent to spin up other agents with different models, pass them ai tasks (form the repository) to execute and access to monitor the transcript as the agent works, and to recieve the response.
