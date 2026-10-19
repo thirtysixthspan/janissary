@@ -17,8 +17,16 @@ describe('agent guidance', () => {
     const instructions = readProjectFile('AGENTS.md');
 
     expect(instructions).toContain('# Repository Guide for Coding Agents');
-    expect(instructions).toContain('./scripts/run.mjs check-diff');
+    expect(instructions).toContain('$janissary/scripts/run.mjs check-diff');
     expect(instructions).toContain('scripts/**/*.test.mjs');
     expect(instructions).toContain('.codex/` and `.claude/');
+  });
+
+  it('explains $janissary for finding shipped tasks and scripts', () => {
+    const instructions = readProjectFile('AGENTS.md');
+
+    expect(instructions).toContain('## `$janissary`');
+    expect(instructions).toContain('$janissary/ai/tasks/<path>');
+    expect(instructions).toContain('./scripts/run.mjs <name>');
   });
 });

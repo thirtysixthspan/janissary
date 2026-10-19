@@ -23,14 +23,14 @@ Before writing code, review [`eslint.config.mjs`](eslint.config.mjs) to understa
 **Always use the fast diff-scoped commands** after each change:
 
 ```bash
-./scripts/run.mjs lint-files   # lint changed files
-npm run typecheck:diff        # typecheck affected projects (incremental)
-npm run test:diff:server      # server tests for changes
-npm run test:diff:web         # web tests for changes
-./scripts/run.mjs check-diff   # orchestrator: runs all four above concurrently
+$janissary/scripts/run.mjs lint-files   # lint changed files
+npm run typecheck:diff                 # typecheck affected projects (incremental)
+npm run test:diff:server               # server tests for changes
+npm run test:diff:web                  # web tests for changes
+$janissary/scripts/run.mjs check-diff   # orchestrator: runs all four above concurrently
 ```
 
-Pick the one(s) you want, or just run **`./scripts/run.mjs check-diff`** which automatically:
+Pick the one(s) you want, or just run **`$janissary/scripts/run.mjs check-diff`** which automatically:
 
 - Lints only the files you changed
 - Typechecks the affected project(s) incrementally (fast on repeated runs)
@@ -55,7 +55,7 @@ This completes in seconds and is the entire development loop. `check-diff` is sc
 
 | Command | When | Who | Speed |
 | --- | --- | --- | --- |
-| `./scripts/run.mjs check-diff` | After each change | AI (always) | ~10-40s |
+| `$janissary/scripts/run.mjs check-diff` | After each change | AI (always) | ~10-40s |
 | `npm run check` | Once, end of work | Human only | ~2min |
 
 ## Capturing command output
@@ -110,12 +110,12 @@ npm run coverage 2>&1
 **Check package updates against the supply-chain blocklist before changing their versions.** The list lives in [`security/known-malicious-packages.json`](security/known-malicious-packages.json) and is enforced by:
 
 ```bash
-./scripts/run.mjs check-malicious-package <pkg>@<version> ...          # gate package update targets
-./scripts/run.mjs check-malicious-package --audit                      # scan package-lock.json
-./scripts/run.mjs check-malicious-package --audit ./some.lock.json     # scan a named lockfile
+$janissary/scripts/run.mjs check-malicious-package <pkg>@<version> ...          # gate package update targets
+$janissary/scripts/run.mjs check-malicious-package --audit ./package-lock.json  # scan this checkout's lockfile
+$janissary/scripts/run.mjs check-malicious-package --audit ./some.lock.json     # scan a named lockfile
 ```
 
-The bare `--audit` scans the lockfile beside the script, which is this repository's own. A task prompt installing into some *other* project names that project's lockfile instead: the gate reads the file it is given, resolved against the working directory, and prints the file it audited.
+The bare `--audit` scans the lockfile beside the script. Run through `$janissary`, that's the installation's own lockfile, not the checkout you're working in, so name the lockfile you mean. The gate reads the file it is given, resolved against the working directory, and prints the file it audited.
 
 For a package update target, exit codes are `0` clean, `2` BLOCKED (an exact known-malicious release), `3` QUARANTINED (a package or scope from a compromised maintainer account, at a version not yet known to be bad), and `1` when the check itself failed. Do not install or update a BLOCKED version, and do not update to a QUARANTINED version; choose a different update target. A quarantined version already pinned in the lockfile may be installed as part of the existing dependency tree. In `--audit` mode, quarantined entries are reported but do not fail the audit; exact known-malicious versions still fail it. A failed check is never permission to proceed.
 
@@ -173,15 +173,31 @@ All commit messages and PR titles must follow the [Conventional Commits 1.0.0](h
 
 Valid types include `feat`, `fix`, `build`, `chore`, `ci`, `docs`, `style`, `refactor`, `perf`, `test`, and `revert`. Breaking changes are indicated with a `!` after the type/scope or a `BREAKING CHANGE:` footer.
 
+## `$janissary`
+
+`$janissary` is an environment variable that holds the install root of the Janissary that started your process. Janissary sets it on every process it spawns: a tab's shell, a harness terminal, an agent connection, and anything those start. Use it to reach the tasks and scripts that ship with Janissary. They aren't at a fixed path relative to the project you're working in. On a remote tab, `$janissary` points at the installation on the machine you're running on.
+
+It's a plain path, so the shell expands it. Check it with `echo "$janissary"`. When a path reaches you unexpanded, for example in an `execute $janissary/ai/tasks/<path>` line from the task picker, replace the `$janissary` prefix with that value before reading the file.
+
+Inside a sandboxed workspace, only `$janissary/ai/` and `$janissary/scripts/` are readable. The rest of the installation, including `node_modules/`, is off limits, so don't go looking there.
+
+**Finding a task.** Look for `./ai/tasks/<path>` in the project first. If the project doesn't have that file, use `$janissary/ai/tasks/<path>`. A project copy at the same path overrides the shipped one, which matches what the task picker does. Tasks often tell you to read another task, such as `ai/tasks/workspace/start-application.md`. Resolve that path the same way. To see which shipped tasks exist, list `$janissary/ai/tasks/`.
+
+**Running a script.** See [Running scripts](#running-scripts).
+
 ## Running scripts
 
-Use `./scripts/run.mjs <name>` to run any script in `scripts/`. Use `npm run <name>` for package scripts declared in `package.json`. Do not invoke a file under `scripts/` directly with `bash` or `node`; the runner resolves the project script and keeps agent permissions scoped.
+Use `$janissary/scripts/run.mjs <name>` to run any script in `scripts/`. Use `npm run <name>` for package scripts declared in `package.json`. Do not invoke a file under `scripts/` directly with `bash` or `node`; the runner resolves the script and keeps agent permissions scoped.
 
 ```bash
-./scripts/run.mjs pr-merge-to-master   # runs scripts/pr-merge-to-master.sh
-./scripts/run.mjs check-diff           # runs scripts/check-diff.mjs
-./scripts/run.mjs                      # lists all available scripts
+$janissary/scripts/run.mjs pr-merge-to-master   # runs scripts/pr-merge-to-master.sh
+$janissary/scripts/run.mjs check-diff           # runs scripts/check-diff.mjs
+$janissary/scripts/run.mjs                      # lists all available scripts
 ```
+
+The scripts load from the installation but act on your working directory. So `check-diff`, git, gh, npm and the linters all run against the project you have open. That works in any project, not only a Janissary checkout.
+
+The one exception is testing a change to a script itself. `$janissary/scripts/` is the installed copy, which may not be your working tree. A Janissary workspace, for example, points `$janissary` at the main checkout. When you edit a file under `scripts/`, run your edited copy with `./scripts/run.mjs <name>`. For example, after editing the diff checker, run `./scripts/run.mjs check-diff`.
 
 All scripts in `scripts/` are considered trusted. Do not invoke them directly with `bash scripts/foo.sh` or `node scripts/foo.mjs`.
 
@@ -196,9 +212,9 @@ All scripts in `scripts/` are considered trusted. Do not invoke them directly wi
 - `product/specs/` — functional specs, one file per feature; when a change alters behavior, update the matching spec
 - `product/plans/` — implementation plans by status (see [Plan storage](#plan-storage))
 - `product/backlog/` — prioritized bugs, chores, documentation work, features, issues, and technical debt
-- `ai/` — agent workflow playbooks (`ai/tasks/**/*.md`), binding guidelines (`ai/guidelines/`), and personas (`ai/personas/`)
+- `ai/` — agent workflow playbooks (`ai/tasks/**/*.md`, also shipped under `$janissary/ai/tasks/`; see [`$janissary`](#janissary)), binding guidelines (`ai/guidelines/`), and personas (`ai/personas/`)
 - `documentation/` — VitePress docs site (`npm run docs:dev` / `npm run docs:build`), with user and contributor sections
-- `scripts/` — checked-in maintenance scripts and their `scripts/**/*.test.mjs` tests; invoke scripts through `./scripts/run.mjs` (see [Running scripts](#running-scripts))
+- `scripts/` — checked-in maintenance scripts and their `scripts/**/*.test.mjs` tests; invoke scripts through `$janissary/scripts/run.mjs` (see [Running scripts](#running-scripts))
 - `profiles/` — harness profiles (see `product/specs/profiles.md`)
 - `skills/` — project-provided agent skills
 - `security/` — `known-malicious-packages.json`, the supply-chain blocklist (see [Package updates](#package-updates))
