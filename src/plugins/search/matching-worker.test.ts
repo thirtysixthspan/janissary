@@ -1,8 +1,9 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { Worker } from 'node:worker_threads';
 import { describe, expect, it, vi } from 'vitest';
-import { createMatcherWorker, workerEntry } from './matching-worker.js';
+import { createMatcherWorker, workerEntry, workerExecArgv } from './matching-worker.js';
 import type { MatcherWorkerRequest, MatcherWorkerResponse } from './matcher-worker-protocol.js';
 
 type EventName = 'message' | 'error' | 'exit';
@@ -104,6 +105,17 @@ describe('matcher worker adapter', () => {
     const next = createMatcherWorker('todo', modes, new AbortController().signal);
     await expect(next.detect(['todo'])).resolves.toBe(true);
     next.dispose();
+  }, 5000);
+
+  it('loads its TypeScript entry on a Node version where tsx registers only on the main thread', async () => {
+    const pinNode = "Object.defineProperty(process.versions, 'node', { value: '24.10.0' });";
+    const moduleUrl = new URL('matching-worker.ts', import.meta.url).href;
+    const execArgv = ['--import', `data:text/javascript,${encodeURIComponent(pinNode)}`, ...workerExecArgv(moduleUrl)];
+    const matcher = createMatcherWorker('todo', modes, new AbortController().signal, {
+      createWorker: () => new Worker(workerEntry(moduleUrl), { execArgv }),
+    });
+    await expect(matcher.detect(['todo'])).resolves.toBe(true);
+    matcher.dispose();
   }, 5000);
 
   it('loads its TypeScript entry when the working directory resolves a different tsx', async () => {

@@ -31,10 +31,14 @@ export function workerEntry(moduleUrl: string): URL {
   return new URL(source ? './matcher-worker-entry.ts' : './matcher-worker-entry.js', moduleUrl);
 }
 
+export function workerExecArgv(moduleUrl: string): string[] {
+  if (!moduleUrl.endsWith('.ts')) return [];
+  const loader = `import { register } from ${JSON.stringify(import.meta.resolve('tsx/esm/api'))};\nregister();`;
+  return ['--import', `data:text/javascript,${encodeURIComponent(loader)}`];
+}
+
 function defaultWorker(): WorkerPort {
-  const entry = workerEntry(import.meta.url);
-  const source = import.meta.url.endsWith('.ts');
-  return new Worker(entry, { execArgv: source ? ['--import', import.meta.resolve('tsx')] : [] });
+  return new Worker(workerEntry(import.meta.url), { execArgv: workerExecArgv(import.meta.url) });
 }
 
 export function createMatcherWorker(
