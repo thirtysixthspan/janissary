@@ -13,12 +13,13 @@ afterEach(() => {
   hosts.length = 0;
 });
 
-function fixture(multiple = false) {
-  const declaration: TabPluginDeclaration = {
-    id: 'fixture', version: '1.0.0', apiVersion: TAB_PLUGIN_API_VERSION,
-    payloadSchemaVersion: 1, tabLabelPrefix: 'fixture', fileExtensions: {},
-    defaultMenu: { label: 'Chat about this' }, capabilities: [],
-  };
+const chat: TabPluginDeclaration = {
+  id: 'fixture', version: '1.0.0', apiVersion: TAB_PLUGIN_API_VERSION,
+  payloadSchemaVersion: 1, tabLabelPrefix: 'fixture', fileExtensions: {},
+  defaultMenu: { label: 'Chat about this' }, capabilities: [],
+};
+
+function fixture(declarations: TabPluginDeclaration[] = [chat]) {
   const managers = {} as Managers;
   managers.notifications = new NotificationQueue();
   managers.tab = new TabManager(managers);
@@ -28,8 +29,8 @@ function fixture(multiple = false) {
     isPayload: () => true, intent: () => null,
     opener: { inline: () => {}, external: () => {} }, defaultMenuAction: handler,
   }) }));
-  const declarations = multiple ? [declaration, { ...declaration, id: 'second' }] : [declaration];
-  const host = new TabPluginHost(managers, declarations, { fixture: loader, second: loader });
+  const loaders = Object.fromEntries(declarations.map((declaration) => [declaration.id, loader]));
+  const host = new TabPluginHost(managers, declarations, loaders);
   hosts.push(host);
   managers.plugins = host;
   const adapter = createPluginControllerAdapter(managers);
@@ -40,7 +41,7 @@ function fixture(multiple = false) {
 describe('default-menu plugin eligibility', () => {
   it('offers declared contributions without loading or activating them', () => {
     const { host, adapter, loader } = fixture();
-    expect(adapter.defaultMenuSelectionAction()).toEqual({ label: 'Chat about this' });
+    expect(adapter.defaultMenuSelectionAction()).toEqual([{ label: 'Chat about this' }]);
     expect(host.statusFor('fixture')?.state).toBe('declared');
     expect(loader).not.toHaveBeenCalled();
   });
@@ -49,7 +50,7 @@ describe('default-menu plugin eligibility', () => {
     const { host, adapter, handler, loader, origin } = fixture();
     await host.runDefaultMenuAction('fixture', 'Chat about this', 'selection', origin);
     expect(host.statusFor('fixture')?.state).toBe('active');
-    expect(adapter.defaultMenuSelectionAction()).toEqual({ label: 'Chat about this' });
+    expect(adapter.defaultMenuSelectionAction()).toEqual([{ label: 'Chat about this' }]);
     adapter.runDefaultMenuSelectionAction('next selection', 'Chat about this');
     await vi.waitFor(() => { expect(handler).toHaveBeenCalledTimes(2); });
     expect(handler.mock.calls[1][0]).toBe('next selection');
@@ -58,25 +59,44 @@ describe('default-menu plugin eligibility', () => {
 
   it('omits a disabled contribution and refuses an action offered before failure', async () => {
     const { host, adapter, handler, origin } = fixture();
-    const offered = adapter.defaultMenuSelectionAction()!;
+    const [offered] = adapter.defaultMenuSelectionAction();
     handler.mockImplementation(() => { throw new Error('handler failed'); });
     await host.runDefaultMenuAction('fixture', offered.label, 'selection', origin);
     expect(host.statusFor('fixture')?.state).toBe('disabled');
-    expect(adapter.defaultMenuSelectionAction()).toBeNull();
+    expect(adapter.defaultMenuSelectionAction()).toEqual([]);
     const dispatch = vi.spyOn(host, 'runDefaultMenuAction');
     adapter.runDefaultMenuSelectionAction('stale selection', offered.label);
     expect(dispatch).not.toHaveBeenCalled();
     expect(handler).toHaveBeenCalledOnce();
   });
 
-  it('refuses unknown labels and multiple eligible contributors without dispatching', () => {
+  it('offers every distinct contribution in order and runs the one named by its label', () => {
+    const search: TabPluginDeclaration = {
+      ...chat, id: 'search', defaultMenu: { label: 'Search for this', order: 1 },
+    };
+    const shortcutChat: TabPluginDeclaration = {
+      ...chat, defaultMenu: { label: 'Chat about this', order: 2, shortcut: true },
+    };
+    const { host, adapter } = fixture([shortcutChat, search]);
+    const dispatch = vi.spyOn(host, 'runDefaultMenuAction').mockResolvedValue();
+    expect(adapter.defaultMenuSelectionAction()).toEqual([
+      { label: 'Search for this' },
+      { label: 'Chat about this', shortcut: true },
+    ]);
+    adapter.runDefaultMenuSelectionAction('selection', 'Search for this');
+    expect(dispatch).toHaveBeenCalledExactlyOnceWith(
+      'search', 'Search for this', 'selection', expect.objectContaining({ command: 'default menu' }),
+    );
+  });
+
+  it('refuses unknown labels and a label more than one plugin contributes without dispatching', () => {
     const single = fixture();
     const singleDispatch = vi.spyOn(single.host, 'runDefaultMenuAction');
     single.adapter.runDefaultMenuSelectionAction('selection', 'Unknown action');
     expect(singleDispatch).not.toHaveBeenCalled();
-    const multiple = fixture(true);
+    const multiple = fixture([chat, { ...chat, id: 'second' }]);
     const multipleDispatch = vi.spyOn(multiple.host, 'runDefaultMenuAction');
-    expect(multiple.adapter.defaultMenuSelectionAction()).toBeNull();
+    expect(multiple.adapter.defaultMenuSelectionAction()).toEqual([]);
     multiple.adapter.runDefaultMenuSelectionAction('selection', 'Chat about this');
     expect(multipleDispatch).not.toHaveBeenCalled();
     expect(multiple.loader).not.toHaveBeenCalled();

@@ -1,15 +1,14 @@
 import type { Managers } from '../managers.js';
-import { defaultMenuActionFor } from '../plugins/default-menu.js';
+import { defaultMenuActionsFor } from '../plugins/default-menu.js';
 import type { DefaultMenuEntry } from '../protocol.js';
 
 // The generic tab-plugin RPCs, plus the default context menu's pair. Kept apart from the editor
 // adapter they briefly shared a home with: these route to whichever bundled plugin owns the named
 // tab and have nothing to do with the editor, so filing them under it would make the adapter a
 // grab bag rather than one subsystem's surface. Plugin identity resolves server-side from the
-// host's own records — the default menu has no owner tree, so resolution either answers exactly
-// one contribution or none.
+// host's own records — the default menu has no owner tree, so an entry's label is what names it.
 export type PluginControllerAdapter = {
-  defaultMenuSelectionAction(): DefaultMenuEntry | null;
+  defaultMenuSelectionAction(): DefaultMenuEntry[];
   runDefaultMenuSelectionAction(selection: string, action: string): void;
   pluginIntent(tab: string, intent: string, payload: unknown): Promise<unknown>;
   pluginFailed(tab: string, reason: string): void;
@@ -25,18 +24,17 @@ function originOf(managers: Managers): { label: string; command: string } {
 }
 
 export function createPluginControllerAdapter(managers: Managers): PluginControllerAdapter {
-  const eligibleAction = () => defaultMenuActionFor(managers.plugins.declarations.filter((declaration) => {
+  const eligibleActions = () => defaultMenuActionsFor(managers.plugins.declarations.filter((declaration) => {
     const state = managers.plugins.statusFor(declaration.id)?.state;
     return state === 'declared' || state === 'active';
   }));
   return {
-    defaultMenuSelectionAction: () => {
-      const match = eligibleAction();
-      return match ? { label: match.label } : null;
-    },
+    defaultMenuSelectionAction: () => eligibleActions().map(({ label, shortcut }) => ({
+      label, ...(shortcut && { shortcut }),
+    })),
     runDefaultMenuSelectionAction: (selection, action) => {
-      const match = eligibleAction();
-      if (!match || match.label !== action) return;
+      const match = eligibleActions().find((entry) => entry.label === action);
+      if (!match) return;
       void managers.plugins.runDefaultMenuAction(match.plugin, action, selection, originOf(managers));
     },
     pluginIntent: (tab, intent, payload) => managers.plugins.intent(tab, intent, payload),

@@ -87,8 +87,9 @@ export type TabPluginDeclaration = {
   // Host topics this plugin wants to hear about. A declaration naming one must supply `notify`.
   notifications?: readonly TabPluginNotificationTopic[];
   // An entry the default context menu offers for a text selection. A declaration carrying one must
-  // supply a `defaultMenuAction` handler.
-  defaultMenu?: { label: string };
+  // supply a `defaultMenuAction` handler. `order` places it among other plugins' entries, lowest
+  // first, and `shortcut` makes it the entry Cmd+I runs directly.
+  defaultMenu?: { label: string; order?: number; shortcut?: true };
   // An entry the file navigator offers for a multi-row selection of this plugin's own file types.
   // A declaration carrying one must supply a `selectionAction` handler.
   selectionAction?: TabPluginSelectionAction;

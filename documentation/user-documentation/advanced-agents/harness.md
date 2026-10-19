@@ -50,10 +50,10 @@ unfreezing the screen the same as dismissing it does; make a new Shift+drag to c
 `Escape` while the terminal has your keyboard, or click plain, to dismiss the selection without
 copying it (both a dismiss click and the Escape key are consumed, not sent to the harness).
 Releasing the drag over a pick opens the app's own menu
-automatically, offering **Copy**, **Paste from clipboard…**, and **Chat about this** (also `Cmd+I`
-on macOS, `Ctrl+I` elsewhere), but not **Paste**. Right-clicking the held selection afterward opens
-the same menu again instead of the browser's. Copy releases the selection there too; choosing Chat
-about this does not. Pressing `Escape` while that menu is open closes it and releases the selection.
+automatically, offering **Copy**, **Paste from clipboard…**, **Search for this**, and **Chat about
+this** (also `Cmd+I` on macOS, `Ctrl+I` elsewhere), but not **Paste**. Right-clicking the held
+selection afterward opens the same menu again instead of the browser's. Copy releases the selection
+there too; choosing Search for this or Chat about this does not. Pressing `Escape` while that menu is open closes it and releases the selection.
 See [Right-click menus](/user-documentation/getting-started/context-menus).
 
 The copy chords are taken only while something is selected. With nothing selected they go straight

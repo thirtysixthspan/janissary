@@ -6,7 +6,7 @@ import {
   type TabPluginActivation,
   type TabPluginDeclaration,
 } from './api.js';
-import { defaultMenuActionFor } from './default-menu.js';
+import { defaultMenuActionsFor } from './default-menu.js';
 import { TabPluginHost } from './host.js';
 import { NotificationQueue } from '../notifications/queue.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
@@ -54,18 +54,49 @@ function origin(managers: Managers) {
   return { label: managers.tab.tabs[0].label, command: 'Chat about this' };
 }
 
-describe('resolving a default-menu contribution', () => {
+function contributor(id: string, defaultMenu: TabPluginDeclaration['defaultMenu']): TabPluginDeclaration {
+  return { ...manifest(false), id, defaultMenu };
+}
+
+describe('resolving default-menu contributions', () => {
   it('answers the single declaration that contributes one', () => {
-    expect(defaultMenuActionFor([manifest()])).toEqual({ plugin: 'fixture', label: 'Chat about this' });
+    expect(defaultMenuActionsFor([manifest()])).toEqual([{ plugin: 'fixture', label: 'Chat about this' }]);
   });
 
   it('answers nothing when no declaration contributes', () => {
-    expect(defaultMenuActionFor([manifest(false)])).toBeNull();
+    expect(defaultMenuActionsFor([manifest(false)])).toEqual([]);
   });
 
-  it('answers nothing when more than one declaration contributes', () => {
+  it('answers every contribution, ordered by its declared order rather than catalog order', () => {
+    const chat = contributor('chat', { label: 'Chat about this', order: 2, shortcut: true });
+    const search = contributor('search', { label: 'Search for this', order: 1 });
+    expect(defaultMenuActionsFor([chat, manifest(false), search])).toEqual([
+      { plugin: 'search', label: 'Search for this' },
+      { plugin: 'chat', label: 'Chat about this', shortcut: true },
+    ]);
+  });
+
+  it('keeps catalog order between contributions with the same order', () => {
+    const first = contributor('first', { label: 'First' });
+    const second = contributor('second', { label: 'Second' });
+    expect(defaultMenuActionsFor([first, second]).map((entry) => entry.plugin)).toEqual(['first', 'second']);
+  });
+
+  it('offers a label more than one declaration contributes from none of them', () => {
     const second = { ...manifest(), id: 'second' };
-    expect(defaultMenuActionFor([manifest(), second])).toBeNull();
+    const search = contributor('search', { label: 'Search for this' });
+    expect(defaultMenuActionsFor([manifest(), second, search])).toEqual([
+      { plugin: 'search', label: 'Search for this' },
+    ]);
+  });
+
+  it('gives the shortcut to no entry when more than one claims it', () => {
+    const chat = contributor('chat', { label: 'Chat about this', shortcut: true });
+    const search = contributor('search', { label: 'Search for this', shortcut: true });
+    expect(defaultMenuActionsFor([chat, search])).toEqual([
+      { plugin: 'chat', label: 'Chat about this' },
+      { plugin: 'search', label: 'Search for this' },
+    ]);
   });
 });
 

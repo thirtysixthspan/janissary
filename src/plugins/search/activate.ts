@@ -35,6 +35,10 @@ export function activate(readFile?: ScanRead, createMatcher?: ScanMatcherFactory
     command(argument, capabilities) {
       sessionFor(capabilities).open(argument);
     },
+    // `Search for this` on the default menu is `search <selection>` reached by a right-click.
+    defaultMenuAction(selection, capabilities) {
+      sessionFor(capabilities).open(selection);
+    },
     intent: defineIntents('search', isSearchPayload, {
       search: {
         payload: isSearchIntent,

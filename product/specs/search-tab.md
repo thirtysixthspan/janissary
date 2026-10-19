@@ -14,6 +14,11 @@ of text with no path-to-line affordance, or to search one already-open buffer at
 `search <phrase>` opens it and searches for that phrase straight away. **Cmd+Shift+F**
 (Ctrl+Shift+F elsewhere) does the same as a bare `search`. The tab is titled **search**.
 
+Right-clicking a text selection anywhere the default menu answers offers **Search for this**, just
+above **Chat about this** (see [[context-menu]]). Choosing it does what `search <selection>` does:
+it opens the tab or focuses the open one, puts the selected text in the search bar, and searches
+for it, leaving the search tab focused.
+
 A bare `search` leaves the tab showing whatever it last searched for, so the chord lands the user
 back where they were rather than discarding a query they had built up. That holds only while the tab
 is open. A search tab opened after the previous one was closed starts empty: no query, no results,

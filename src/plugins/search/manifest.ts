@@ -16,6 +16,7 @@ export const searchManifest = {
   tabLabelPrefix: 'search',
   fileExtensions: {},
   command: 'search',
+  defaultMenu: { label: 'Search for this', order: 1 },
   capabilities: [
     'note',
     'openOrFocusTab',

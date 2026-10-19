@@ -131,6 +131,16 @@ describe('search plugin activation', () => {
     expect(factory().payload.query).toBe('todo');
   });
 
+  it('opens the tab and searches for the selection the default menu hands it', async () => {
+    const { capabilities, openOrFocusTab, updateTab } = makeCapabilities();
+    const activation = searchActivation();
+    await activation.defaultMenuAction?.('  todo  ', capabilities);
+    expect(openOrFocusTab).toHaveBeenCalledTimes(1);
+    expect(lastPayload(updateTab)).toMatchObject({ query: 'todo', seed: 1, state: 'searching' });
+    await settle();
+    expect(lastPayload(updateTab).rows.map((row) => [row.path, row.line])).toEqual([['b.ts', 2]]);
+  });
+
   it('streams the rows a scan finds into the tab', async () => {
     const { capabilities, updateTab } = makeCapabilities();
     const activation = searchActivation();
