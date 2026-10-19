@@ -1,8 +1,16 @@
-import { isModelPair, isRecord } from '../api.js';
-
 export const CONVERSATIONS_PAYLOAD_SCHEMA_VERSION = 1;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 export type ConversationModelPair = { harness: 'claude' | 'opencode'; model: string };
+
+function isModelPair(value: unknown): value is ConversationModelPair {
+  return isRecord(value)
+    && (value.harness === 'claude' || value.harness === 'opencode')
+    && typeof value.model === 'string';
+}
 export type ConversationSummary = { id: string; title: string; updatedAt: number };
 export type ConversationTurn = {
   query: string;

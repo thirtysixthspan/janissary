@@ -1,10 +1,8 @@
-import { isRecord } from '../api.js';
-
-// The page plugin's payload and intent contract. Its one import is the published `isRecord` guard
-// through `../api.js` — the plugin api module is a pure contract — because the client runs these
-// guards through `@shared`, where any other server module would follow them into the browser graph.
-
 export const PAGE_PAYLOAD_SCHEMA_VERSION = 1;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 // What one embedded page tab shows: the normalized address loaded into the view, and the root domain
 // the tab is named after. The visible-text snapshot a monitor reads is deliberately absent — it is

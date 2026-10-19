@@ -1,4 +1,5 @@
 import type { ServerEvent, RpcCall, StateEvent, LayoutEvent, LayoutUpdate, NativeNotificationEvent } from '@shared/protocol';
+import { mergeAgentRunRevision } from './agent-run-merge';
 import type { ClientStateCollectors } from './client-state-collectors';
 import { PtyOutputBuffer, type PtyOutputBufferOptions } from './pty-output-buffer';
 import { resourceUrl } from './session-url';
@@ -13,12 +14,6 @@ export type StateListener = (snapshot: StateEvent) => void;
 type ExitListener = (id: string, exitCode: number) => void;
 export type LayoutListener = (event: LayoutUpdate) => void;
 const layoutUpdateOf = ({ t: _t, ...update }: LayoutEvent): LayoutUpdate => update;
-function monitorOwnsRun(tab: StateEvent['tabs'][number], runId: string): boolean {
-  const payload = tab.plugin?.payload;
-  return tab.plugin?.id === 'agent-monitor' && typeof payload === 'object' && payload !== null
-    && 'runId' in payload && typeof payload.runId === 'string' && payload.runId === runId;
-}
-// One notification to show in the corner, and the signal that empties the corner at once.
 
 // How long a wake's liveness probe waits for `init`'s reply before treating an `OPEN`-but-silent
 // socket as dead. Generous enough that a server answering slowly under load is not mistaken for a
@@ -94,18 +89,12 @@ export class JanusClient {
       };
       this.latestState = snapshot;
       for (const listener of this.stateListeners) listener(snapshot);
-    
-    break;
+      break;
     }
     case 'agent-run-updated': {
       const current = this.latestState;
       if (!current) break;
-      const tabs = current.tabs.map((tab) => {
-        if (tab.label !== event.tab || !monitorOwnsRun(tab, event.view.id)
-          || (tab.agentRun?.id === event.view.id && tab.agentRun.revision >= event.view.revision)) return tab;
-        return { ...tab, agentRun: event.view };
-      });
-      this.latestState = { ...current, tabs };
+      this.latestState = mergeAgentRunRevision(current, event);
       for (const listener of this.stateListeners) listener(this.latestState);
       break;
     }
@@ -113,14 +102,12 @@ export class JanusClient {
       const h = this.ptyHandlers.get(event.id);
       if (h) h(event.data);
       else this.ptyOutput.record(event.id, event.data);
-
-    break;
+      break;
     }
     case 'pty-exit': {
       this.ptyOutput.markExited(event.id);
       for (const l of this.exitListeners) l(event.id, event.exitCode);
-
-    break;
+      break;
     }
     case 'layout': {
       const update = layoutUpdateOf(event);
@@ -161,7 +148,7 @@ export class JanusClient {
     case 'bye': {
       // The server is shutting down (quit/exit); close this window.
       window.close();
-    
+
     break;
     }
     case 'rpc-reply': {
@@ -201,11 +188,6 @@ export class JanusClient {
   reportLayout(sidebarLeft: number, sidebarRight: number, tabAreaPct: number): void {
     this.send({ method: 'reportLayout', params: { sidebarLeft, sidebarRight, tabAreaPct } });
   }
-
-  // Sync a page tab's currently visible text (from the extension content script) to the server as
-  // transient snapshot state. (Page snapshots reach the
-  // server's plugin context through the plugin intent path — see src/plugins/context.ts and
-  // src/plugins/page/activate.ts — not through a sync call here.)
 
   // Write an editor buffer back to disk. Resolves with the server's error message, or undefined
   // on success (including when the socket is down, which surfaces as a generic failure).

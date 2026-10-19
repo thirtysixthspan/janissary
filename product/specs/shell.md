@@ -4,6 +4,8 @@
 
 ## Startup and command framing
 
+In the command bar, a line beginning with `!` runs the remaining text in the captured shell. Leading whitespace after `!` is removed; `!` by itself runs an empty command. Without the prefix, an unrecognized shell command is reported as unknown rather than run automatically.
+
 The user's login shell is started lazily. Bash uses `--norc --noprofile` and zsh uses `--no-rcs` so startup banners do not pollute captured replies. A local shell starts with the tab's validated working directory as its process working directory; the path is not sent as shell input, so quotes, dollar signs, backticks, and newlines in its name stay literal. If that directory no longer exists, the shell starts in the project launch directory. Remote shells start in their remote workspace as before. Commands and their completion sentinel are written as one shell line, stderr is captured with stdout, and the tab's working directory is queried afterwards.
 
 ## Streaming and lifecycle

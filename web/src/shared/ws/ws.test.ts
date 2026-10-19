@@ -445,6 +445,28 @@ describe('JanusClient', () => {
     client.dispose();
   });
 
+  it('ignores run updates when the monitor payload fails the shared guard', () => {
+    const client = new JanusClient();
+    const listener = vi.fn();
+    client.onState(listener);
+    messageHandler!({ data: JSON.stringify({
+      t: 'state',
+      tabs: [{
+        label: 'monitor', plugin: { id: 'agent-monitor', schemaVersion: 1, payload: { runId: '' } },
+      }],
+      activeTab: 0, tabNameMaxLength: 20, globalHistory: [], syntaxTheme: 'monokai', theme: 'dark',
+      tasks: [], profiles: [], projectDir: '/tmp', version: '1.2.3',
+    }) });
+
+    messageHandler!({ data: JSON.stringify({
+      t: 'agent-run-updated', tab: 'monitor',
+      view: { id: 'run-a', revision: 3, task: 'task.md', status: 'Running', activity: [] },
+    }) });
+
+    expect(listener.mock.calls.at(-1)?.[0].tabs[0]?.agentRun).toBeUndefined();
+    client.dispose();
+  });
+
   it('delivers a toast-clear event to registered listeners', () => {
     const client = new JanusClient();
     const listener = vi.fn();

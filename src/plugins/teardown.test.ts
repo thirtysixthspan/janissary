@@ -11,7 +11,7 @@ import { messageBus } from '../bus.js';
 const manifest: TabPluginDeclaration = {
   id: 'fixture', version: '1.0.0', apiVersion: TAB_PLUGIN_API_VERSION,
   payloadSchemaVersion: 1, tabLabelPrefix: 'fixture', fileExtensions: { '.fixture': 'text/plain' },
-  capabilities: ['openOrFocusTab', 'reportFailure'],
+  capabilities: ['openOrFocusTab', 'reportFailure', 'updateTab'],
 };
 
 function makeManagers(): Managers {
@@ -159,5 +159,29 @@ describe('plugin teardown', () => {
     expect(host.statusFor('fixture')).toMatchObject({
       state: 'disabled', reason: 'produced an invalid tab payload',
     });
+  });
+
+  it('disables a plugin when updateTab refuses an invalid payload without throwing', async () => {
+    const managers = makeManagers();
+    openFixture(managers, 'update-refusal');
+    const pluginTab = managers.tab.tabs.find((tab) => tab.plugin?.instanceKey === 'update-refusal');
+    if (!pluginTab) throw new Error('The plugin tab was not created.');
+    const activation: TabPluginActivation = {
+      isPayload: () => true,
+      intent: (_request, capabilities) => {
+        capabilities.updateTab('update-refusal', () => ({ payload: { invalid: undefined } }));
+        return null;
+      },
+    };
+    const host = new TabPluginHost(
+      managers, [manifest], { fixture: async () => ({ activate: () => activation }) },
+    );
+
+    await expect(host.intent(pluginTab.label, 'update', {})).resolves.toBeNull();
+
+    expect(host.statusFor('fixture')).toMatchObject({
+      state: 'disabled', reason: 'produced an invalid tab payload',
+    });
+    expect(managers.tab.tabs.some((tab) => tab.plugin?.id === 'fixture')).toBe(false);
   });
 });

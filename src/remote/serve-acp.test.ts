@@ -118,6 +118,16 @@ describe('RemoteAcp — opening a session', () => {
     expect(acpMock.options).toHaveLength(1);
   });
 
+  it('accepts a new session for an id after its prior session was released', async () => {
+    const { acp } = makeAcp();
+    acp.open(OPEN);
+    await acp.close('racp1');
+
+    acp.open(OPEN);
+
+    expect(acpMock.options).toHaveLength(2);
+  });
+
   // One `remote-serve` serves every tab sharing its channel — the launching tab and each agent
   // joined from it through ➕ — so their sessions arrive here together and must not displace one
   // another. Each carries its own id, minted by the local side.
@@ -234,6 +244,16 @@ describe('RemoteAcp — closing', () => {
     expect(frames).toEqual([{ type: 'acp-closed', id: 'racp1', released: true }]);
   });
 
+  it('forwards a late connection error after the session has closed', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    await acp.close('racp1');
+
+    acpMock.options[0].onError('late exit');
+
+    expect(frames.at(-1)).toEqual({ type: 'acp-error', id: 'racp1', message: 'late exit', fatal: true });
+  });
+
   it('sends a negative acknowledgment when process shutdown times out', async () => {
     vi.useFakeTimers();
     const { acp, frames } = makeAcp();
@@ -247,6 +267,24 @@ describe('RemoteAcp — closing', () => {
     expect(frames).toEqual([{ type: 'acp-closed', id: 'racp1', released: false }]);
     await acp.close('racp1');
     expect(frames.at(-1)).toEqual({ type: 'acp-closed', id: 'racp1', released: false });
+  });
+
+  it('keeps the last close outcome when dispose later releases a timed-out session', async () => {
+    vi.useFakeTimers();
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    acpMock.shutdown.mockReturnValueOnce(new Promise<void>(() => {})).mockResolvedValue(undefined);
+
+    const closing = acp.close('racp1');
+    await vi.advanceTimersByTimeAsync(5000);
+    await closing;
+    await acp.dispose();
+    await acp.close('racp1');
+
+    expect(acpMock.shutdown).toHaveBeenCalledTimes(2);
+    expect(frames.at(-1)).toEqual({ type: 'acp-closed', id: 'racp1', released: false });
+    acp.open(OPEN);
+    expect(acpMock.options).toHaveLength(2);
   });
 
   it('shares one in-flight shutdown across concurrent close requests', async () => {

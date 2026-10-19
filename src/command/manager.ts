@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import type { Resolution } from '../resolve.js';
 import { resolveInTab } from './resolve-in-tab.js';
 import { findCommand } from '../commands/index.js';
 import { recordGlobalHistory } from '../global-history.js';
@@ -33,18 +32,12 @@ export class CommandManager {
     switch (res.kind) {
       case 'empty': { return;
       }
-      case 'shell': { this.runShell(res, label); return;
-      }
       case 'output':
       case 'unknown': { this.managers.tab.append(label, { input, output: res.output, markdown: res.kind === 'output' }); return;
       }
       case 'app': { void this.executeCommand(res.name, res.cmd, label, index); return;
       }
     }
-  }
-
-  private runShell(res: Extract<Resolution, { kind: 'shell' }>, label: string): void {
-    this.managers.shell.run(label, res.cmd);
   }
 
   // Offers one line to the ordinary dispatcher and answers whether the application claimed it, with
@@ -97,7 +90,7 @@ export class CommandManager {
       this.managers.tab.append(label, { input, output: resolution.output, markdown: true });
       return { dispatched: true, output: resolution.output };
     }
-    if (resolution.kind !== 'app') return { dispatched: false, output: '' };
+    if (resolution.kind !== 'app' || resolution.name === 'shell') return { dispatched: false, output: '' };
 
     const command = findCommand(resolution.name, resolution.cmd);
     if (command?.coreResponse) {

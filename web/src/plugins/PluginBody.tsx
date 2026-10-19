@@ -195,10 +195,22 @@ export function PluginBody({
     [split, splittable],
   );
   const capabilities = useMemo(
-    () => createPluginClientCapabilities(
-      host, pluginId, label, client, active, dock, close, splitAction, registerDirty, chords, dotColor,
-      recording, transcript, remoteCapabilities,
-    ),
+    () => createPluginClientCapabilities({
+      host,
+      pluginId,
+      label,
+      client,
+      active,
+      dock,
+      onClose: close,
+      splitAction,
+      onDirtyHandle: registerDirty,
+      claimedChords: chords,
+      dotColor,
+      recording,
+      transcript,
+      remoteCapabilities,
+    }),
     [active, client, close, dock, host, label, pluginId, registerDirty, splitAction, chords, dotColor,
       recording, transcript, remoteCapabilities],
   );

@@ -1,6 +1,8 @@
-import { isRecord } from '../api.js';
-
 export const VIDEO_PAYLOAD_SCHEMA_VERSION = 1;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 export type VideoPayload = {
   name: string;

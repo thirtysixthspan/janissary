@@ -1,3 +1,4 @@
+import { errorText } from '../../error-text.js';
 import { git } from './git.js';
 import { parseDiff } from './parse-diff.js';
 import type { DiffFile } from './shared.js';
@@ -11,7 +12,7 @@ async function fullFile(root: string, file: DiffFile, prefix: string, signal?: A
 }
 
 function reasonOf(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = errorText(error);
   return message.split('\n').find((line) => line.trim() !== '') ?? 'Context expansion failed';
 }
 

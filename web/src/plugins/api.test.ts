@@ -22,21 +22,21 @@ beforeEach(() => { host = createPluginHost(); });
 describe('createPluginClientCapabilities', () => {
   it('sends the tab-scoped RPC the diff button names', () => {
     const { client, send } = makeClient();
-    const capabilities = createPluginClientCapabilities(host, 'shell', 'shell-1', client, true, null, vi.fn());
+    const capabilities = createPluginClientCapabilities({ host, pluginId: 'shell', label: 'shell-1', client, active: true, dock: null, onClose: vi.fn() });
     capabilities.openDiffHere?.();
     expect(send).toHaveBeenCalledWith({ method: 'openDiffFor', params: { label: 'shell-1' } });
   });
 
   it('opens the New schedule dialog by sending the bare schedule command', () => {
     const { client, send } = makeClient();
-    const capabilities = createPluginClientCapabilities(host, 'schedules', 'schedules', client, true, null, vi.fn());
+    const capabilities = createPluginClientCapabilities({ host, pluginId: 'schedules', label: 'schedules', client, active: true, dock: null, onClose: vi.fn() });
     capabilities.openScheduleLaunch?.();
     expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'schedule' } });
   });
 
   it('opens the calling plugin tab\'s ACP transcript', () => {
     const { client, send } = makeClient();
-    const capabilities = createPluginClientCapabilities(host, 'launcher', 'launcher-2', client, true, 'right', vi.fn());
+    const capabilities = createPluginClientCapabilities({ host, pluginId: 'launcher', label: 'launcher-2', client, active: true, dock: 'right', onClose: vi.fn() });
     capabilities.openAcpTranscript?.();
     expect(send).toHaveBeenCalledWith({
       method: 'openAcpTranscript',
@@ -48,7 +48,7 @@ describe('createPluginClientCapabilities', () => {
     const { client, send } = makeClient(async () => ({ ok: true, value: true }));
     const attachPty = vi.fn(() => vi.fn());
     Object.assign(client, { attachPty, onPtyExit: vi.fn(() => vi.fn()) });
-    const capabilities = createPluginClientCapabilities(host, 'shell', 'shell-1', client, true, null, vi.fn());
+    const capabilities = createPluginClientCapabilities({ host, pluginId: 'shell', label: 'shell-1', client, active: true, dock: null, onClose: vi.fn() });
     const onData = vi.fn();
     const terminal = await capabilities.attachTerminal?.('pty1', onData);
     terminal?.write('echo hello');
@@ -65,7 +65,7 @@ describe('createPluginClientCapabilities', () => {
     const { client } = makeClient(async () => ({ ok: true, value: false }));
     const attachPty = vi.fn();
     Object.assign(client, { attachPty });
-    const capabilities = createPluginClientCapabilities(host, 'shell', 'shell-1', client, true, null, vi.fn());
+    const capabilities = createPluginClientCapabilities({ host, pluginId: 'shell', label: 'shell-1', client, active: true, dock: null, onClose: vi.fn() });
     await expect(capabilities.attachTerminal?.('pty2', vi.fn())).rejects.toThrow('terminal does not belong');
     expect(attachPty).not.toHaveBeenCalled();
   });
@@ -73,20 +73,20 @@ describe('createPluginClientCapabilities', () => {
   it('builds an authenticated resource URL from the session token', () => {
     history.replaceState(null, '', '/?token=s3cr3t%2Ftoken');
     const { client } = makeClient();
-    const capabilities = createPluginClientCapabilities(host, 'video', 'video', client, true, null, vi.fn());
+    const capabilities = createPluginClientCapabilities({ host, pluginId: 'video', label: 'video', client, active: true, dock: null, onClose: vi.fn() });
     expect(capabilities.resourceUrl('/open/abc')).toBe('/open/abc?token=s3cr3t%2Ftoken');
   });
 
   it('sends an empty token when the page has none, rather than omitting the parameter', () => {
     history.replaceState(null, '', '/');
     const { client } = makeClient();
-    expect(createPluginClientCapabilities(host, 'video', 'video', client, true, null, vi.fn()).resourceUrl('/open/abc'))
+    expect(createPluginClientCapabilities({ host, pluginId: 'video', label: 'video', client, active: true, dock: null, onClose: vi.fn() }).resourceUrl('/open/abc'))
       .toBe('/open/abc?token=');
   });
 
   it('binds every intent to its own tab label and returns the result', async () => {
     const { client } = makeClient(async () => ({ ok: true, value: { name: 'clip.shot-1.png' } }));
-    const capabilities = createPluginClientCapabilities(host, 'video', 'video-2', client, true, null, vi.fn());
+    const capabilities = createPluginClientCapabilities({ host, pluginId: 'video', label: 'video-2', client, active: true, dock: null, onClose: vi.fn() });
 
     await expect(capabilities.intent('capture-frame', { dataUrl: 'data:image/png;base64,AA==' }))
       .resolves.toEqual({ name: 'clip.shot-1.png' });
@@ -100,19 +100,19 @@ describe('createPluginClientCapabilities', () => {
 
   it('rejects when the server answers an intent with no result', async () => {
     const { client } = makeClient(async () => ({ ok: false }));
-    await expect(createPluginClientCapabilities(host, 'video', 'video', client, true, null, vi.fn()).intent('capture-frame', {}))
+    await expect(createPluginClientCapabilities({ host, pluginId: 'video', label: 'video', client, active: true, dock: null, onClose: vi.fn() }).intent('capture-frame', {}))
       .rejects.toThrow('Plugin intent "capture-frame" failed');
   });
 
   it('preserves the server error when an intent is refused', async () => {
     const { client } = makeClient(async () => ({ ok: false, error: 'Plugin tab "bug-repro" not found' }));
-    await expect(createPluginClientCapabilities(host, 'shell', 'bug-repro', client, true, null, vi.fn()).intent('cwd', '/remote/work'))
+    await expect(createPluginClientCapabilities({ host, pluginId: 'shell', label: 'bug-repro', client, active: true, dock: null, onClose: vi.fn() }).intent('cwd', '/remote/work'))
       .rejects.toThrow('Plugin tab "bug-repro" not found');
   });
 
   it('reports a failure against its own tab label', () => {
     const { client, send } = makeClient();
-    createPluginClientCapabilities(host, 'video', 'video', client, true, null, vi.fn()).reportFailure('chunk rejected');
+    createPluginClientCapabilities({ host, pluginId: 'video', label: 'video', client, active: true, dock: null, onClose: vi.fn() }).reportFailure('chunk rejected');
     expect(send).toHaveBeenCalledWith({
       method: 'pluginFailed', params: { tab: 'video', reason: 'chunk rejected' },
     });
@@ -123,8 +123,8 @@ describe('createPluginClientCapabilities', () => {
   // would race that teardown rather than tell the server anything it does not already know.
   it('sends only the first report for a plugin, across every tab it owns', () => {
     const { client, send } = makeClient();
-    createPluginClientCapabilities(host, 'video', 'video', client, true, null, vi.fn()).reportFailure('render exploded');
-    createPluginClientCapabilities(host, 'video', 'video-2', client, true, null, vi.fn()).reportFailure('render exploded too');
+    createPluginClientCapabilities({ host, pluginId: 'video', label: 'video', client, active: true, dock: null, onClose: vi.fn() }).reportFailure('render exploded');
+    createPluginClientCapabilities({ host, pluginId: 'video', label: 'video-2', client, active: true, dock: null, onClose: vi.fn() }).reportFailure('render exploded too');
     expect(send).toHaveBeenCalledOnce();
     expect(send).toHaveBeenCalledWith({
       method: 'pluginFailed', params: { tab: 'video', reason: 'render exploded' },
@@ -133,8 +133,8 @@ describe('createPluginClientCapabilities', () => {
 
   it('keeps one plugin\'s failure from silencing another\'s', () => {
     const { client, send } = makeClient();
-    createPluginClientCapabilities(host, 'video', 'video', client, true, null, vi.fn()).reportFailure('render exploded');
-    createPluginClientCapabilities(host, 'other', 'other', client, true, null, vi.fn()).reportFailure('chunk rejected');
+    createPluginClientCapabilities({ host, pluginId: 'video', label: 'video', client, active: true, dock: null, onClose: vi.fn() }).reportFailure('render exploded');
+    createPluginClientCapabilities({ host, pluginId: 'other', label: 'other', client, active: true, dock: null, onClose: vi.fn() }).reportFailure('chunk rejected');
     expect(send).toHaveBeenCalledTimes(2);
   });
 
@@ -142,17 +142,17 @@ describe('createPluginClientCapabilities', () => {
   // whether the tab is the visible one.
   it('reports the host\'s answer for whether this tab is active', () => {
     const { client } = makeClient();
-    expect(createPluginClientCapabilities(host, 'video', 'video', client, true, null, vi.fn()).active).toBe(true);
-    expect(createPluginClientCapabilities(host, 'video', 'video', client, false, null, vi.fn()).active).toBe(false);
+    expect(createPluginClientCapabilities({ host, pluginId: 'video', label: 'video', client, active: true, dock: null, onClose: vi.fn() }).active).toBe(true);
+    expect(createPluginClientCapabilities({ host, pluginId: 'video', label: 'video', client, active: false, dock: null, onClose: vi.fn() }).active).toBe(false);
   });
 
   // Placement is host-owned too: a plugin laying itself out for a narrow sidebar reads it here
   // rather than measuring the frame the host renders around it.
   it('reports which sidebar the tab is docked into, and null in the centre', () => {
     const { client } = makeClient();
-    expect(createPluginClientCapabilities(host, 'video', 'video', client, true, null, vi.fn()).dock).toBeNull();
-    expect(createPluginClientCapabilities(host, 'video', 'video', client, true, 'left', vi.fn()).dock).toBe('left');
-    expect(createPluginClientCapabilities(host, 'video', 'video', client, true, 'right', vi.fn()).dock).toBe('right');
+    expect(createPluginClientCapabilities({ host, pluginId: 'video', label: 'video', client, active: true, dock: null, onClose: vi.fn() }).dock).toBeNull();
+    expect(createPluginClientCapabilities({ host, pluginId: 'video', label: 'video', client, active: true, dock: 'left', onClose: vi.fn() }).dock).toBe('left');
+    expect(createPluginClientCapabilities({ host, pluginId: 'video', label: 'video', client, active: true, dock: 'right', onClose: vi.fn() }).dock).toBe('right');
   });
 
   // Close is a callback rather than a rendered control, because a plugin body hosting a cross-origin
@@ -160,7 +160,7 @@ describe('createPluginClientCapabilities', () => {
   it('closes this tab through the host callback it was built with', () => {
     const { client } = makeClient();
     const close = vi.fn();
-    createPluginClientCapabilities(host, 'page', 'page', client, true, null, close).close();
+    createPluginClientCapabilities({ host, pluginId: 'page', label: 'page', client, active: true, dock: null, onClose: close }).close();
     expect(close).toHaveBeenCalledOnce();
   });
 
@@ -168,7 +168,7 @@ describe('createPluginClientCapabilities', () => {
   // same link goes to the same place wherever it was rendered.
   it('opens a web link and edits a file and line link, as the transcript does', () => {
     const { client, send } = makeClient();
-    const capabilities = createPluginClientCapabilities(host, 'shell', 'shell-1', client, true, null, vi.fn());
+    const capabilities = createPluginClientCapabilities({ host, pluginId: 'shell', label: 'shell-1', client, active: true, dock: null, onClose: vi.fn() });
     capabilities.openLink?.('https://example.com/docs');
     capabilities.openLink?.('src/foo.ts:42');
     expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'open https://example.com/docs' } });
@@ -177,13 +177,13 @@ describe('createPluginClientCapabilities', () => {
 
   it('opens nothing for a link the application does not open', () => {
     const { client, send } = makeClient();
-    createPluginClientCapabilities(host, 'shell', 'shell-1', client, true, null, vi.fn()).openLink?.('#section');
+    createPluginClientCapabilities({ host, pluginId: 'shell', label: 'shell-1', client, active: true, dock: null, onClose: vi.fn() }).openLink?.('#section');
     expect(send).not.toHaveBeenCalled();
   });
 
   it('offers no split action when the host did not supply one', () => {
     const { client } = makeClient();
-    expect(createPluginClientCapabilities(host, 'video', 'video', client, true, null, vi.fn()).splitAction).toBeNull();
+    expect(createPluginClientCapabilities({ host, pluginId: 'video', label: 'video', client, active: true, dock: null, onClose: vi.fn() }).splitAction).toBeNull();
   });
 
   // The host builds the control; this module only carries it. Passing a plain sentinel rather than
@@ -191,16 +191,16 @@ describe('createPluginClientCapabilities', () => {
   it('carries the host\'s split action through untouched', () => {
     const { client } = makeClient();
     const action = 'a control the host rendered';
-    expect(createPluginClientCapabilities(host, 'video', 'video', client, true, null, vi.fn(), action).splitAction)
+    expect(createPluginClientCapabilities({ host, pluginId: 'video', label: 'video', client, active: true, dock: null, onClose: vi.fn(), splitAction: action }).splitAction)
       .toBe(action);
   });
 
   it('supplies the transcript path and opens it by this tab\'s label', () => {
     const { client, send } = makeClient();
-    const capabilities = createPluginClientCapabilities(
-      host, 'shell', 'shell-1', client, true, null, vi.fn(),
-      undefined, undefined, undefined, undefined, undefined, '/repo/.janissary/transcripts/shell-1.txt',
-    );
+    const capabilities = createPluginClientCapabilities({
+      host, pluginId: 'shell', label: 'shell-1', client, active: true, dock: null, onClose: vi.fn(),
+      transcript: '/repo/.janissary/transcripts/shell-1.txt',
+    });
     expect(capabilities.transcript).toBe('/repo/.janissary/transcripts/shell-1.txt');
     capabilities.openTranscript?.();
     expect(send).toHaveBeenCalledWith({ method: 'openTranscriptFileFor', params: { label: 'shell-1' } });
@@ -208,10 +208,9 @@ describe('createPluginClientCapabilities', () => {
 
   it('supplies neither the transcript nor its opener when there is no transcript path', () => {
     const { client } = makeClient();
-    const capabilities = createPluginClientCapabilities(
-      host, 'shell', 'shell-1', client, true, null, vi.fn(),
-      undefined, undefined, undefined, undefined, undefined, undefined,
-    );
+    const capabilities = createPluginClientCapabilities({
+      host, pluginId: 'shell', label: 'shell-1', client, active: true, dock: null, onClose: vi.fn(),
+    });
     expect(capabilities.transcript).toBeUndefined();
     expect(capabilities.openTranscript).toBeUndefined();
   });

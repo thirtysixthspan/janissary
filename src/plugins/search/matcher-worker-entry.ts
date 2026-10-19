@@ -1,4 +1,5 @@
 import { parentPort } from 'node:worker_threads';
+import { errorText } from '../../error-text.js';
 import { compileMatcher } from './compile-matcher.js';
 import { fileMatches, matchFile } from './search-files.js';
 import type { MatcherWorkerRequest, MatcherWorkerResponse } from './matcher-worker-protocol.js';
@@ -25,7 +26,7 @@ parentPort?.on('message', (request: MatcherWorkerRequest) => {
   try {
     parentPort?.postMessage(execute(request));
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = errorText(error);
     parentPort?.postMessage({ id: request.id, error: message } satisfies MatcherWorkerResponse);
   }
 });

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { atomicWriteFile } from '../atomic-write.js';
 import { REMOTE_DETACH_TIMEOUT_MS } from '../remote/serve-detach.js';
 import { isZshHookNonce } from '../shell/zsh-startup/script.js';
+import { isRecord } from '../value-guards.js';
 
 // Janissary's own record of the remote sessions it has launched, so a peer that outlived the process
 // that started it can still be found. Everything else about a remote session is in-memory state on
@@ -75,10 +76,6 @@ export function initRemoteSessionStore(projectDirectory: string): void {
   if (!projectDirectory) { recordDir = ''; recordFile = ''; return; }
   recordDir = path.join(projectDirectory, '.janissary');
   recordFile = path.join(recordDir, `remote-sessions.${accountHash()}.json`);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function isProcess(value: unknown): value is RemoteSessionProcess {

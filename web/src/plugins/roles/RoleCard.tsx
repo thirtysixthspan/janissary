@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { errorText } from '@shared/error-text';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import type { Role } from '@shared/plugins/roles/shared';
@@ -44,7 +45,7 @@ export function RoleCard({ role, index, efforts, models, capabilities, onRefusal
   const raise = (intent: string, payload: Record<string, unknown>) => {
     onRefusal(null);
     void capabilities.intent(intent, payload).catch((error: unknown) => {
-      onRefusal(String(error instanceof Error ? error.message : error));
+      onRefusal(errorText(error));
     });
   };
 

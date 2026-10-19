@@ -1,13 +1,17 @@
-import { isRecord, parseDockArgument } from '../api.js';
+import { parseDockArgument } from '../api.js';
 import type { SqlFilterOperator } from './shared.js';
 import type { Dock } from './open-tab.js';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 // The intent payload types and the guards that decide whether a request is well formed.
 //
 // They live beside the tab-payload contract rather than inside it because they run on one side only:
 // `isSqlPayload` is what the client executes, and it has to stay import-free for that. These run on
-// the server, in the guarded intent table, so they may share the tab contract's own type
-// declarations and its two value guards rather than carrying a second copy of each.
+// the server, in the guarded intent table, so its object guard is kept local under the server plugin
+// import boundary.
 
 export type OpenIntent = { name: string };
 // A filter rides along with the selection rather than following it. `topicAction` is

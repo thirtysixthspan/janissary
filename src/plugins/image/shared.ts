@@ -1,10 +1,12 @@
-import { isRecord } from '../api.js';
-
 // Additive changes leave this at 1: an older reader ignores a field it does not know, and both
 // halves of a bundled plugin ship inside the same build, so they can never disagree about one. The
 // first change that removes a field, retypes one, or changes what an existing field means does have
 // to bump it — the field-addition exemption stops there.
 export const IMAGE_PAYLOAD_SCHEMA_VERSION = 1;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 export type ImageMode = 'edit';
 

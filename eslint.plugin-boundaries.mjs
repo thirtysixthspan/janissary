@@ -21,7 +21,8 @@ export const pluginBoundaries = [
   // side of the boundary: the file operations every file-backed plugin composes out of the capability
   // primitives — external open and size lookup — the web-target normalizer that core's profile
   // relaunch and the page plugin must agree on to the character, and the numbered-sibling writer the
-  // video and image plugins share so "a numbered PNG beside an original" has one rule rather than two.
+  // video and image plugins share so "a numbered PNG beside an original" has one rule rather than two,
+  // and the caught-error text formatter shared by server and client call sites.
   // The size formatter is deliberately absent: it reaches a plugin through `files.js`, so a plugin
   // spelling out its own stat-and-format block again would be caught here.
   {
@@ -30,7 +31,7 @@ export const pluginBoundaries = [
     rules: {
       'no-restricted-imports': ['error', {
         patterns: [{
-          regex: String.raw`^\.\./(?!(?:api\.js|files\.js|\.\./openers/(?:web-target|numbered-sibling)\.js)$)`,
+          regex: String.raw`^\.\./(?!(?:api\.js|files\.js|\.\./openers/(?:web-target|numbered-sibling)\.js|\.\./error-text\.js)$)`,
           message: 'Server tab plugins must use src/plugins/api.ts capabilities instead of host internals.',
         }],
       }],
@@ -46,7 +47,7 @@ export const pluginBoundaries = [
     rules: {
       'no-restricted-imports': ['error', {
         patterns: [{
-          regex: String.raw`^(?:\.\./(?!(?:api|shared\.css)$)|@shared/(?!plugins/[^/]+/shared$))`,
+          regex: String.raw`^(?:\.\./(?!(?:api|shared\.css)$)|@shared/(?!(?:error-text|plugins/[^/]+/shared)$))`,
           message: 'Client tab plugins must use their client API, an import-free shared contract, and the shared plugin stylesheet.',
         }],
       }],

@@ -231,6 +231,24 @@ describe('RemoteProcesses session state', () => {
 
     expect(processes.states()).toEqual([]);
   });
+
+  it('routes input and resize through the owning entry and still emits the resize event', () => {
+    const write = vi.fn();
+    const resize = vi.fn();
+    vi.mocked(spawnPty).mockReturnValue({ id: 'pty1', program: 'claude', write, resize, kill: vi.fn() });
+    const processes = new RemoteProcesses(vi.fn(), '/remote/workspace', 'claude');
+    const seen: string[] = [];
+    const subscription = messageBus.on('pty', 'resize', (event) => { if (event.type === 'resize') seen.push(event.id); });
+    try {
+      processes.spawn({ type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', cols: 80, rows: 24 });
+      processes.input('r1', 'command');
+      processes.resize('r1', 100, 40);
+
+      expect(write).toHaveBeenCalledWith('command');
+      expect(resize).toHaveBeenCalledWith(100, 40);
+      expect(seen).toEqual(['r1']);
+    } finally { subscription.unsubscribe(); }
+  });
 });
 
 // A missing or unexecutable `$SHELL` is reported by the child's `'error'` event rather than a throw,
@@ -487,5 +505,15 @@ describe('RemoteProcesses harness detection', () => {
     const { processes, feed } = spawnClaude(false);
     await feed(BUSY_TEXT);
     expect(processes.busyStates()).toEqual([{ id: 'r1', busy: true, unread: false }]);
+  });
+
+  it('disposes detection when killAll runs before a process exit callback', async () => {
+    const { processes, handlers } = spawnClaude(false);
+    processes.killAll();
+    send.mockClear();
+    handlers.onData('pty1', CLEAR + READY_TEXT.replaceAll('\n', '\r\n'));
+    await vi.advanceTimersByTimeAsync(1500);
+
+    expect(send).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'busy-transition' }));
   });
 });

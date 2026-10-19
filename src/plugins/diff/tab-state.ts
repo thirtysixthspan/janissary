@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { errorText } from '../../error-text.js';
 import type { TabPluginServerCapabilities } from '../api.js';
 import { isInsideRoot } from '../files.js';
 import type { ChangeSetResult } from './change-set.js';
@@ -30,7 +31,7 @@ function emptyPayload(instanceKey: string, split = false): DiffPayload {
 }
 
 function reasonOf(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = errorText(error);
   return message.split('\n').find((line) => line.trim().length > 0) ?? 'git diff failed';
 }
 
@@ -222,17 +223,8 @@ export class DiffTab {
     this.readController?.abort(reason);
   }
 
-  // A publish the host refuses — a payload it will not accept — leaves nothing to answer with: the
-  // tab is already gone as far as the application is concerned. Nothing else here may escape either:
-  // a recompute runs outside the intent that asked for it, so a throw would be an unhandled
-  // rejection, and an unhandled rejection takes the process down — closing every tab in the
-  // application rather than this one.
   private publish(changes: Partial<DiffPayload>): void {
     this.payload = { ...this.payload, ...changes };
-    try {
-      this.capabilities.updateTab(this.instanceKey, () => ({ payload: this.payload }));
-    } catch {
-      // Deliberately empty.
-    }
+    this.capabilities.updateTab(this.instanceKey, () => ({ payload: this.payload }));
   }
 }

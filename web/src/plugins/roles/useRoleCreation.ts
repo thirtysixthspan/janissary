@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { errorText } from '@shared/error-text';
 import type { TabPluginClientCapabilities } from '../api';
 
 type Intent = TabPluginClientCapabilities['intent'];
@@ -34,7 +35,7 @@ export function useRoleCreation(intent: Intent, onRefusal: (message: string | nu
       if (typed.current.trim() !== trimmed) return;
       closeNewRole();
     } catch (error) {
-      onRefusal(String(error instanceof Error ? error.message : error));
+      onRefusal(errorText(error));
     } finally {
       if (inFlight.current === trimmed) inFlight.current = null;
     }

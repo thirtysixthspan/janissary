@@ -1,5 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import type { RemoteSessionState as ProtocolRemoteSessionState } from '@shared/protocol';
 import { connectionStatusIcon } from './icons';
 
 // A connection's status, as one plug coloured by what the connection is doing. Both surfaces that
@@ -11,10 +12,9 @@ import { connectionStatusIcon } from './icons';
 // for one parked on its host, red for one that is over. The two unsettled states carry no colour of
 // their own, because neither has arrived anywhere yet.
 
-export type ConnectionPlugState =
-  | 'provisioning' | 'active' | 'reconnecting' | 'detached' | 'terminated';
+export type ConnectionPlugState = ProtocolRemoteSessionState;
 
-const LABELS: Record<ConnectionPlugState, string> = {
+const LABELS: Record<ProtocolRemoteSessionState, string> = {
   provisioning: 'Provisioning',
   active: 'Connected',
   reconnecting: 'Reconnecting',
@@ -22,7 +22,7 @@ const LABELS: Record<ConnectionPlugState, string> = {
   terminated: 'Terminated',
 };
 
-export function ConnectionPlug({ state }: { state: ConnectionPlugState }) {
+export function ConnectionPlug({ state }: { state: ProtocolRemoteSessionState }) {
   const label = LABELS[state];
   return (
     <span className="connection-plug" data-state={state} role="img" aria-label={label} title={label}>

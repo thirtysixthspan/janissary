@@ -1,9 +1,6 @@
 import { isRunscriptName } from './runscript.js';
 import type { StoreLoadResult, SystemScheduleEntry, SystemScheduleSnapshot } from './types.js';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+import { isRecord } from '../../value-guards.js';
 
 function hasNoRecurrenceFields(entry: Record<string, unknown>): boolean {
   return entry.intervalMs === undefined && entry.timeOfDay === undefined && entry.weekday === undefined;

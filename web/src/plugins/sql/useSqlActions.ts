@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { errorText } from '@shared/error-text';
 import type { SqlFilterOperator, SqlInsertCell } from '@shared/plugins/sql/shared';
 import type { TabPluginClientCapabilities } from '../api';
 
@@ -25,18 +26,13 @@ export type SqlActions = {
 
 type Intent = TabPluginClientCapabilities['intent'];
 
-function errorMessage(error: unknown): string {
-  if (error instanceof Error && error.message) return error.message;
-  return String(error);
-}
-
 export function createSqlActions(intent: Intent, onRequestError: (reason: string) => void = () => {}): SqlActions {
   const send = async (name: string, payload: unknown): Promise<boolean> => {
     try {
       await intent(name, payload);
       return true;
     } catch (error) {
-      onRequestError(errorMessage(error));
+      onRequestError(errorText(error) || String(error));
       return false;
     }
   };

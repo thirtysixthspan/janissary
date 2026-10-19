@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { EditorView } from '@shared/protocol';
-import { TAB_RENAME_MAX_LENGTH } from '@shared/config';
+import { TAB_RENAME_MAX_LENGTH } from '@shared/tab/rename-limits';
 import { InlineEditInput } from '../shared/InlineEditInput';
 import { opensRenameSession } from './new-file-rename';
 

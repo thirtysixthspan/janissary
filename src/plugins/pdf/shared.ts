@@ -1,6 +1,8 @@
-import { isRecord } from '../api.js';
-
 export const PDF_PAYLOAD_SCHEMA_VERSION = 1;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 // What the tab holds. Deliberately no configured-viewer name: the video payload carries one so its
 // view can offer "Open in <player>" when the browser cannot decode, and this plugin answers a failed

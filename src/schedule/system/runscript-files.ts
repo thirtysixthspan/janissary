@@ -1,6 +1,7 @@
 import { lstatSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { nextFreeName } from '../../editor/next-free-name.js';
+import { errorText } from '../../error-text.js';
 import { ensureSystemScheduleExcluded } from './local-exclude.js';
 import { isRunscriptName, parseRunscriptText } from './runscript.js';
 
@@ -28,7 +29,7 @@ function excludeScriptsFromGit(projectRoot: string): void {
   try {
     ensureSystemScheduleExcluded(projectRoot);
   } catch (error) {
-    process.stderr.write(`System schedule paths could not be excluded from Git: ${error instanceof Error ? error.message : String(error)}\n`);
+    process.stderr.write(`System schedule paths could not be excluded from Git: ${errorText(error)}\n`);
   }
 }
 

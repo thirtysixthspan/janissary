@@ -3,6 +3,7 @@ import { ROOT_REFUSAL_FIELDS, type RootRefusal, type RootRefusalKind } from '../
 import {
   malformed, nonEmptyString, optionalNonEmptyString, type DecodeResult,
 } from './decode-shared.js';
+import { isRecord } from '../../value-guards.js';
 
 // The decoders for settling a remote project root: the clone offer and its answer, the structured
 // refusal, and the two fields that ride on older frames (`provision.origin` and
@@ -10,10 +11,6 @@ import {
 // so `decode.ts` stays the dispatcher.
 
 type Cloned = NonNullable<Extract<RemoteFrame, { type: 'workspace-ready' }>['cloned']>;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function isRefusalKind(value: unknown): value is RootRefusalKind {
   return typeof value === 'string' && Object.hasOwn(ROOT_REFUSAL_FIELDS, value);

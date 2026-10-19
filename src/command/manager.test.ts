@@ -127,9 +127,12 @@ describe('CommandManager dispatchLineWithOutput', () => {
     });
   });
 
-  it('leaves shell and unknown lines undispatched', async () => {
+  it('leaves shell and unknown lines undispatched for plugin callers', async () => {
     const { managers } = makeManagers();
 
+    await expect(managers.command.dispatchLineWithOutput('janus', '!ls -la')).resolves.toEqual({
+      dispatched: false, output: '',
+    });
     await expect(managers.command.dispatchLineWithOutput('janus', 'ls -la')).resolves.toEqual({
       dispatched: false, output: '',
     });
@@ -152,6 +155,20 @@ describe('CommandManager dispatchLineWithOutput', () => {
     });
     late.resolve();
     await vi.waitFor(() => { expect(managers.tab.cur().log.at(-1)?.output).toBe('finished'); });
+  });
+});
+
+describe('CommandManager shell command', () => {
+  it.each([
+    ['!ls -la', 'ls -la'],
+    ['! git status', 'git status'],
+    ['!', ''],
+  ])('runs %s through the registry with the shell body', (input, body) => {
+    const { managers } = makeManagers();
+
+    managers.command.dispatch(input);
+
+    expect(managers.shell.run).toHaveBeenCalledWith('janus', body);
   });
 });
 

@@ -1,6 +1,8 @@
-import { isRecord } from '../api.js';
-
 export const AUDIO_PAYLOAD_SCHEMA_VERSION = 1;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 // The instance key every audio tab opens under. Constant because there is only ever one player: a
 // second `open` appends to the playlist this key already addresses rather than opening a second tab.

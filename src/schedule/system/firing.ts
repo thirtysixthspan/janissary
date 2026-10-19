@@ -1,4 +1,5 @@
 import type { Managers } from '../../managers.js';
+import { errorText } from '../../error-text.js';
 import { computeNextRun } from '../time.js';
 import { readRunscript } from './runscript-files.js';
 import { notifySystemScheduleRun } from './notices.js';
@@ -13,7 +14,7 @@ export async function fireSystemBatch(
   try {
     runscript = readRunscript(managers.tab.launchDir, entry.script);
   } catch (error) {
-    process.stderr.write(`System schedule ${entry.id}: ${error instanceof Error ? error.message : String(error)}\n`);
+    process.stderr.write(`System schedule ${entry.id}: ${errorText(error)}\n`);
     return;
   }
   if (!runscript.exists) {
