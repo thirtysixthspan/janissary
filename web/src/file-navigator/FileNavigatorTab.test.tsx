@@ -624,23 +624,24 @@ describe('FileNavigatorTab', () => {
     rerender(<FileNavigatorTab files={files2} client={client} index={0} label="files" />);
   });
 
-  it('dock-cycle button is hidden when the navigator is in a center tab', () => {
+  it('location button in a center tab sends setDock to right', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
-    render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
-    expect(screen.queryByTitle('Move to left sidebar')).toBeNull();
-    expect(screen.queryByTitle('Move to right sidebar')).toBeNull();
-  });
-
-  it('dock-cycle button from left sends setDock to right', () => {
-    const send = vi.fn();
-    const client = { send } as unknown as JanusClient;
-    render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" dock="left" />);
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
+    expect(container.querySelectorAll('.files-dock-cycle')).toHaveLength(1);
     fireEvent.click(screen.getByTitle('Move to right sidebar'));
     expect(send).toHaveBeenCalledWith({ method: 'setDock', params: { index: 0, dock: 'right' } });
   });
 
-  it('dock-cycle button from right sends setDock to left', () => {
+  it('location button from left sends the tree back to the center tab strip', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" dock="left" />);
+    fireEvent.click(screen.getByTitle('Move to center tab strip'));
+    expect(send).toHaveBeenCalledWith({ method: 'setDock', params: { index: 0, dock: null } });
+  });
+
+  it('location button from right sends setDock to left', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" dock="right" />);

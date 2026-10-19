@@ -86,9 +86,9 @@ The header's detail button cycles a tree through the four modes, one click at a 
 
 A [profile](/user-documentation/automation/profiles) that saves this tree restores its detail mode along with its expanded directories and selection.
 
-## Move a tree between the two sidebars
+## Move a tree between the sidebars and the center
 
-A tree in a sidebar has a **location** button in its header that swaps it to the other sidebar. Its tooltip names the side the next click will take it to, so you can see where a tree is going before you send it. That is the same two places `files left` and `files right` reach. A tree in the center tab strip has no such button, and that is also the only way back to the center: `files` on its own, or `files <path>`, puts the tree back in the strip, at the front of its group where a navigator always sits.
+Every tree has a **location** button in its header, wherever it sits. Each click moves the tree one step around the cycle left sidebar → center tab strip → right sidebar → left sidebar. Its tooltip names where the next click will take it (`Move to right sidebar`, `Move to left sidebar`, or `Move to center tab strip`), so you can see where a tree is going before you send it. Back in the center, the tree lands at the front of its group where a navigator always sits. The commands reach the same places: `files left` and `files right` dock it, and `files` on its own, or `files <path>`, puts it back in the strip.
 
 The header has no close button of its own. A tree in the center strip is closed from the strip, and a docked one from its sidebar's tab strip, where the × sits beside the tab's name. `close navigator` works from any tab either way.
 
@@ -161,7 +161,7 @@ Inside a git repository, a file's name is colored by its git status: **green** f
 | Double-click the `..` row | Re-root the tree one directory up |
 | Right-click a row | Open its context menu without changing the selection |
 | Header ⊟ button | Collapse everything back to the root |
-| Header ⇄ button | Swap sidebars: left → right, or right → left. Only on a docked tree |
+| Header ⇄ button | Move the tree one step: left sidebar → center strip → right sidebar → left sidebar |
 | Header Split button | Open the tree in the other pane, so a file and the tree sit side by side |
 | Press a row, drag, and release over a directory (or any file inside it) | Moves the dragged file or directory into that directory on disk |
 

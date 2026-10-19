@@ -19,7 +19,7 @@ import type { FileNavigatorTabProperties as Properties } from './file/navigator-
 import { useFileNavigatorIntents } from './useFileNavigatorIntents';
 import { useFileNavigatorCommit } from './useFileNavigatorCommit';
 import { defaultCommitMessageForCount } from './file/navigator-commit-message';
-import { nextDock } from '../shared/dock-cycle';
+import { nextLocation } from './file/navigator-location';
 import { FileNavigatorRows } from './FileNavigatorRows';
 
 export function FileNavigatorTab({
@@ -148,7 +148,7 @@ export function FileNavigatorTab({
         onOpenGithub={intents.openGithub}
         onPull={files.branch ? intents.pull : undefined}
         onCommit={files.branch ? commitEverything : undefined}
-        onCycleDock={dock === undefined ? undefined : () => intents.setDock(nextDock(dock))}
+        onCycleDock={() => intents.setDock(nextLocation(dock))}
         onSetDetail={intents.setDetail} onCollapseAll={intents.collapseAll}
         onSearch={openSearch} onNewFile={createNewFile} onNewDirectory={createNewDirectory}
         onSplit={onSplit}

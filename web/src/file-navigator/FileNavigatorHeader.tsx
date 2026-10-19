@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type {
   FileNavigatorCommitStatus, FileNavigatorDetail, FileNavigatorPullStatus, RemoteTargetView,
 } from '@shared/protocol';
-import { nextDock, dockTooltip } from '../shared/dock-cycle';
+import { nextLocation, locationTooltip } from './file/navigator-location';
 import { nextDetail, detailTooltip } from './file/navigator-detail';
 import { ConnectionPlug } from '../shared/ConnectionPlug';
 import { dockSwapIcon, fileDetailIcon, newDirectoryIcon, newFileIcon, searchFilesIcon } from '../shared/icons';
@@ -34,7 +34,7 @@ type Properties = {
 };
 
 // The file navigator's metadata row: root/branch on the left, action buttons (GitHub link, pull,
-// commit, search, new items, dock cycle, collapse all) on the right. The commit button sits
+// commit, search, new items, location, collapse all) on the right. The commit button sits
 // immediately after the pull button, so the pair reads down-then-up. Docked into a sidebar the row has no width for
 // both on one line, so it stacks onto two — see `.files-header--docked`. Split out of
 // `FileNavigatorTab` to keep it under the file-size limit.
@@ -72,16 +72,14 @@ export function FileNavigatorHeader({
         <button type="button" className="files-new-directory" title="New directory" onClick={onNewDirectory}>
           <FontAwesomeIcon icon={newDirectoryIcon} />
         </button>
-        {dock && (
-          <button
-            type="button"
-            className="files-dock-cycle"
-            title={dockTooltip(nextDock(dock))}
-            onClick={onCycleDock}
-          >
-            <FontAwesomeIcon icon={dockSwapIcon} />
-          </button>
-        )}
+        <button
+          type="button"
+          className="files-dock-cycle"
+          title={locationTooltip(nextLocation(dock))}
+          onClick={onCycleDock}
+        >
+          <FontAwesomeIcon icon={dockSwapIcon} />
+        </button>
         <button
           type="button"
           className="files-detail-cycle"
