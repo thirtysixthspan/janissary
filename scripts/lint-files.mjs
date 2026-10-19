@@ -11,6 +11,8 @@
 // can lint (.ts/.tsx/.js/.jsx/.mjs/.cjs) are passed on; anything else (.md, .json, dirs)
 // is left to ESLint's own handling.
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { changedFiles } from './changed-files.mjs';
 
 const LINTABLE = /\.(?:ts|tsx|js|jsx|mjs|cjs)$/;
@@ -37,9 +39,15 @@ if (targets.length === 0) {
 
 console.error(`lint-files: linting ${targets.length} file(s)`);
 
-// Invoke the locally installed ESLint via its bin shim, resolved relative to this script
-// so it works regardless of the caller's working directory.
-const eslintBin = new URL('../node_modules/.bin/eslint', import.meta.url).pathname;
+// Invoke the project's own ESLint via its bin shim, resolved from the working directory. This
+// script is reached through `$janissary/scripts/run.mjs`, so its own directory is the Janissary
+// installation; linting with the installation's ESLint would apply the wrong plugins and config to
+// the project, and inside a sandboxed workspace the installation's `node_modules` is not readable.
+const eslintBin = path.join(process.cwd(), 'node_modules', '.bin', 'eslint');
+if (!existsSync(eslintBin)) {
+  console.error(`lint-files: no ESLint at ${eslintBin}; run npm install in this project first.`);
+  process.exit(1);
+}
 try {
   execFileSync(eslintBin, [...flags, '--cache', '--concurrency=auto', ...targets], { stdio: 'inherit' });
 } catch (error) {

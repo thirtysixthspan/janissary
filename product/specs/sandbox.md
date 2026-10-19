@@ -128,9 +128,11 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   cannot clear a blocked release that a later unsandboxed install would then accept. `ai/`,
   `scripts/`, and `security/` are the only three parts of the installation carved in; the install
   root itself, `node_modules`, a development checkout's `.janissary/`, and everything else stay
-  denied. So a script that reaches further still fails inside a workspace: `lint-files` runs the
-  installation's own `node_modules/.bin/eslint`, and a bare `check-malicious-package --audit` reads
-  the installation's own `package-lock.json`.
+  denied. So a script that reaches further still fails inside a workspace: a bare
+  `check-malicious-package --audit` reads the installation's own `package-lock.json`. `lint-files`
+  does not reach that far: it runs the ESLint installed in the working directory's own
+  `node_modules`, never the installation's, and stops with a pointer to `npm install` when the
+  project has none.
 - `/dev/null`, the PTY master multiplexer (`/dev/ptmx`), and tty/pty devices get their own narrow
   read/write/ioctl allow, independent of the workspace/`$HOME` rules. `/dev/ptmx` lets a
   sandboxed Janissary process allocate a PTY; its terminal slave needs `ioctl` for raw-mode termios
