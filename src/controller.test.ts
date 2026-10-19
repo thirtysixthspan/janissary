@@ -276,6 +276,19 @@ describe('Controller', () => {
     expect(c.view().map((t) => t.label)).toEqual(before.filter((label) => label !== 'bob'));
   });
 
+  it('keeps tab removal and focus synchronous when resource release fails', async () => {
+    const { c } = makeController();
+    seedTestTab(c.managers.tab, 'bob');
+    c.setActiveTab(1);
+    c.managers.shell.closeTab = () => { throw new Error('shell release failed'); };
+
+    const closing = c.managers.tab.closeTab(1);
+
+    expect(c.view().map((tab) => tab.label)).toEqual(['janus']);
+    expect(c.view()[c.managers.tab.activeTab].label).toBe('janus');
+    await expect(closing).rejects.toThrow(AggregateError);
+  });
+
   it('closeTab for a label no longer open closes nothing', () => {
     const { c } = makeController();
     seedTestTab(c.managers.tab, 'bob');

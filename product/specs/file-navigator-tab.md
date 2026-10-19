@@ -133,7 +133,10 @@ notifications feed, leaves the editor dirty, and leaves the cached copy as it wa
 content the remote did not receive. A cached file keeps its route back only while the navigator it
 was opened from stays open on that remote root: once that navigator closes or is re-rooted, saving
 the file is refused with a notification saying so, rather than being saved only locally, and the
-file can be reopened from a remote navigator to save it again. `open external` is not
+file can be reopened from a remote navigator to save it again. Cached files are shared by navigators
+that reach the same remote file within one SSH destination, workspace root, and canonical workspace
+label. Different remote entries keep separate cached copies and write-back routes, even when they
+share a host and absolute path; ending one entry removes only its own cache. `open external` is not
 allowed for a remote row: choosing it is refused in the notifications feed because an external
 application has no route to save its changes back.
 Plugin-contributed selection actions are likewise not offered for remote rows.

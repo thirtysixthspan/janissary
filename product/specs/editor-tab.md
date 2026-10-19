@@ -269,6 +269,11 @@ This protection also applies when the user starts editing while an automatic rel
 reading the file. When several external changes arrive close together, only the newest completed
 reload can update a clean buffer.
 
+An external change detected while the editor's initial file read is still pending supersedes that
+initial read. The newest successful read supplies both the buffer content and the baseline used by
+the next save. If the user edits while the initial read is pending, the read may establish the disk
+baseline but never replaces the user's buffer.
+
 A save never writes over content the buffer has not seen. Each save is checked against the file as
 it is on disk at that moment: if the file no longer holds what the buffer was last loaded, reloaded,
 or saved as, nothing is written and the same overwrite prompt appears, even when the change was

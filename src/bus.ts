@@ -88,16 +88,18 @@ export class MessageBus<C extends ChannelMap> {
     return ref.sub;
   }
 
-  emit<K extends keyof C>(channel: K, event: C[K]): void {
+  emit<K extends keyof C>(channel: K, event: C[K]): unknown[] {
+    const failures: unknown[] = [];
     const k = this.key(channel, event.type);
     const set = this.listeners.get(k);
-    if (!set) return;
+    if (!set) return failures;
     const snapshot = [...set];
     for (const fn of snapshot) {
       try {
         fn(event);
         this.removeListener(this.reported, k, fn);
       } catch (error) {
+        failures.push(error);
         // Isolate subscriber errors so a throwing listener cannot break the emit path, but do not
         // discard them where nothing can see them: report through the sink, deduplicated per
         // listener until a subsequent successful call clears it.
@@ -117,6 +119,7 @@ export class MessageBus<C extends ChannelMap> {
         }
       }
     }
+    return failures;
   }
 
   clear(): void {

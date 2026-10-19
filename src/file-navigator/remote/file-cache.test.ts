@@ -21,7 +21,8 @@ function setup(writeFile: FileSystemPort['writeFile']) {
   initRemoteFileCache(project);
   const filesystem = { writeFile } as FileSystemPort;
   const file = materializeRemoteFile(
-    'devbox', 'claude', 'src/notes.txt', Buffer.from('remote'),
+    { destination: 'devbox', workspaceRoot: '/remote/ws', workspaceLabel: 'claude' },
+    'src/notes.txt', Buffer.from('remote'),
     { filesystem, root: '/remote/ws', relPath: 'src/notes.txt', label: 'files' },
   );
   const managers = {} as Managers;
@@ -40,7 +41,12 @@ function openHarness(readFile: FileSystemPort['readFile']) {
   managers.notifications = new NotificationQueue();
   managers.tab = new TabManager(managers);
   managers.openFile = { edit: vi.fn(), run: vi.fn() } as unknown as Managers['openFile'];
-  managers.remote = { workspaceLabelOf: vi.fn(() => 'creator') } as unknown as Managers['remote'];
+  managers.remote = {
+    workspaceLabelOf: vi.fn(() => 'creator'),
+    entryOf: vi.fn(() => ({
+      address: { destination: 'devbox' }, workspaceDir: '/remote/ws', workspaceLabel: 'creator',
+    })),
+  } as unknown as Managers['remote'];
   const state = {
     root: '/remote/ws', remote: { host: 'devbox', address: 'devbox' }, ownerLabel: 'joined',
     filesystem: { readFile } as FileSystemPort,
@@ -53,7 +59,9 @@ describe('remote file cache', () => {
     const writeFile = vi.fn().mockResolvedValue({ ok: true });
     const { managers, file, url } = setup(writeFile);
     const filesystem = remoteFileFor(file)!.filesystem;
-    const second = materializeRemoteFile('devbox', 'claude', 'src/notes.txt', Buffer.from('other'), {
+    const second = materializeRemoteFile(
+      { destination: 'devbox', workspaceRoot: '/remote/ws', workspaceLabel: 'claude' },
+      'src/notes.txt', Buffer.from('other'), {
       filesystem, root: '/remote/ws/subdir', relPath: 'src/notes.txt', label: 'files',
     });
     const secondUrl = managers.tab.registerFile(second);
@@ -68,15 +76,66 @@ describe('remote file cache', () => {
       ['/remote/ws', 'src/notes.txt', Buffer.from('first edit')],
       ['/remote/ws/subdir', 'src/notes.txt', Buffer.from('second edit')],
     ]);
-    clearRemoteFileCacheForWorkspace('devbox', 'claude');
+    clearRemoteFileCacheForWorkspace({
+      destination: 'devbox', workspaceRoot: '/remote/ws', workspaceLabel: 'claude',
+    });
     expect(existsSync(file)).toBe(false);
     expect(existsSync(second)).toBe(false);
+  });
+
+  it('isolates entries sharing a host and workspace label, including cleanup', () => {
+    const firstOwner = { destination: 'devbox', workspaceRoot: '/remote/one', workspaceLabel: 'claude' };
+    const secondOwner = { destination: 'devbox', workspaceRoot: '/remote/two', workspaceLabel: 'claude' };
+    initRemoteFileCache(mkdtempSync(path.join(tmpdir(), 'janus-remote-cache-')));
+    const first = materializeRemoteFile(firstOwner, 'src/notes.txt', Buffer.from('one'), {
+      filesystem: {} as FileSystemPort, root: '/remote/one', relPath: 'src/notes.txt', label: 'one',
+    });
+    const second = materializeRemoteFile(secondOwner, 'src/notes.txt', Buffer.from('two'), {
+      filesystem: {} as FileSystemPort, root: '/remote/two', relPath: 'src/notes.txt', label: 'two',
+    });
+
+    clearRemoteFileCacheForWorkspace(firstOwner);
+
+    expect(first).not.toBe(second);
+    expect(existsSync(first)).toBe(false);
+    expect(existsSync(second)).toBe(true);
+    expect(remoteFileFor(first)).toBeUndefined();
+    expect(remoteFileFor(second)?.root).toBe('/remote/two');
+  });
+
+  it('isolates SSH destinations with the same host and absolute file path', async () => {
+    const firstWrite = vi.fn().mockResolvedValue({ ok: true });
+    const secondWrite = vi.fn().mockResolvedValue({ ok: true });
+    const { managers, file, url } = setup(firstWrite);
+    const second = materializeRemoteFile(
+      { destination: 'alice@devbox', workspaceRoot: '/remote/ws', workspaceLabel: 'claude' },
+      'src/notes.txt', Buffer.from('other'),
+      { filesystem: { writeFile: secondWrite } as FileSystemPort, root: '/remote/ws', relPath: 'src/notes.txt', label: 'other' },
+    );
+    const secondUrl = managers.tab.registerFile(second);
+    managers.tab.openEditorTab({ name: 'notes.txt', path: second, size: '5 B', url: secondUrl });
+
+    expect(second).not.toBe(file);
+    await saveFile(managers, url, 'first edit');
+    await saveFile(managers, secondUrl, 'second edit');
+    clearRemoteFileCacheForWorkspace({
+      destination: 'devbox', workspaceRoot: '/remote/ws', workspaceLabel: 'claude',
+    });
+
+    expect(firstWrite).toHaveBeenCalledWith('/remote/ws', 'src/notes.txt', Buffer.from('first edit'));
+    expect(secondWrite).toHaveBeenCalledWith('/remote/ws', 'src/notes.txt', Buffer.from('second edit'));
+    expect(existsSync(file)).toBe(false);
+    expect(existsSync(second)).toBe(true);
+    expect(remoteFileFor(file)).toBeUndefined();
+    expect(remoteFileFor(second)?.filesystem.writeFile).toBe(secondWrite);
   });
 
   it('reuses the same cache identity when two roots reach the same remote file', () => {
     const { file } = setup(vi.fn(() => ({ ok: true })));
     const record = remoteFileFor(file)!;
-    const same = materializeRemoteFile('devbox', 'claude', 'notes.txt', Buffer.from('refreshed'), {
+    const same = materializeRemoteFile(
+      { destination: 'devbox', workspaceRoot: '/remote/ws', workspaceLabel: 'claude' },
+      'notes.txt', Buffer.from('refreshed'), {
       ...record, root: '/remote/ws/src', relPath: 'notes.txt',
     });
     expect(same).toBe(file);
@@ -86,7 +145,7 @@ describe('remote file cache', () => {
 
   it('keeps the relative path and registration metadata', () => {
     const { file } = setup(vi.fn(() => ({ ok: true })));
-    expect(file).toMatch(/remote-files\/devbox\/claude\/[a-f0-9]{64}\/notes\.txt$/);
+    expect(file).toMatch(/remote-files\/[a-f0-9]{64}\/[a-f0-9]{64}\/notes\.txt$/);
     expect(readFileSync(file, 'utf8')).toBe('remote');
     expect(remoteFileFor(file)?.relPath).toBe('src/notes.txt');
   });
@@ -95,10 +154,9 @@ describe('remote file cache', () => {
     const readFile = vi.fn().mockResolvedValue(Buffer.from('from remote'));
     const { managers, state } = openHarness(readFile);
     await openNavigatorFile(managers, state, 'files', 'src/notes.txt', 'edit');
-    expect(managers.remote.workspaceLabelOf).toHaveBeenCalledWith('joined');
     expect(managers.openFile.edit).toHaveBeenCalledWith(
-      expect.stringMatching(/remote-files\/devbox\/creator\/[a-f0-9]{64}\/notes\.txt$/),
-      expect.stringMatching(/remote-files\/devbox\/creator\/[a-f0-9]{64}\/notes\.txt$/),
+      expect.stringMatching(/remote-files\/[a-f0-9]{64}\/[a-f0-9]{64}\/notes\.txt$/),
+      expect.stringMatching(/remote-files\/[a-f0-9]{64}\/[a-f0-9]{64}\/notes\.txt$/),
       'files',
     );
   });
@@ -171,7 +229,8 @@ describe('remote file cache', () => {
   it('forgets the files that wrote back through a disposed port, and only those', () => {
     const { file } = setup(vi.fn(() => ({ ok: true })));
     const other = materializeRemoteFile(
-      'devbox', 'claude', 'src/other.txt', Buffer.from('x'),
+      { destination: 'devbox', workspaceRoot: '/remote/ws', workspaceLabel: 'claude' },
+      'src/other.txt', Buffer.from('x'),
       { filesystem: {} as FileSystemPort, root: '/remote/ws', relPath: 'src/other.txt', label: 'files-2' },
     );
     const disposed = remoteFileFor(file)!.filesystem;
@@ -206,7 +265,9 @@ describe('remote file cache', () => {
 
   it('removes one workspace without retaining its records', () => {
     const { file } = setup(vi.fn(() => ({ ok: true })));
-    clearRemoteFileCacheForWorkspace('devbox', 'claude');
+    clearRemoteFileCacheForWorkspace({
+      destination: 'devbox', workspaceRoot: '/remote/ws', workspaceLabel: 'claude',
+    });
     expect(remoteFileFor(file)).toBeUndefined();
     expect(existsSync(file)).toBe(false);
   });
@@ -224,8 +285,12 @@ const record = { filesystem: {} as FileSystemPort, root: '/ws', relPath: 'a.txt'
 describe('materializeRemoteFile before the cache is initialized', () => {
   it('refuses rather than writing outside any cache root', async () => {
     const fresh = await uninitialized();
-    expect(() => { fresh.materializeRemoteFile('devbox', 'claude', 'a.txt', Buffer.from('x'), record); })
-      .toThrow('Remote file cache is not initialized.');
+    expect(() => {
+      fresh.materializeRemoteFile(
+        { destination: 'devbox', workspaceRoot: '/ws', workspaceLabel: 'claude' },
+        'a.txt', Buffer.from('x'), record,
+      );
+    }).toThrow('Remote file cache is not initialized.');
   });
 });
 
@@ -235,15 +300,22 @@ describe('materializeRemoteFile outside the cache', () => {
   // later reads a file's owner out of.
   it('refuses a relPath that climbs out of the workspace', () => {
     initRemoteFileCache(mkdtempSync(path.join(tmpdir(), 'janus-remote-cache-')));
-    expect(() => { materializeRemoteFile('devbox', 'claude', '../escaped.txt', Buffer.from('x'), record); })
-      .toThrow('The path is outside the remote file cache.');
+    expect(() => {
+      materializeRemoteFile(
+        { destination: 'devbox', workspaceRoot: '/ws', workspaceLabel: 'claude' },
+        '../escaped.txt', Buffer.from('x'), record,
+      );
+    }).toThrow('The path is outside the remote file cache.');
   });
 
   it('sanitizes a host or workspace label that holds path separators', () => {
     const project = mkdtempSync(path.join(tmpdir(), 'janus-remote-cache-'));
     initRemoteFileCache(project);
-    const file = materializeRemoteFile('../devbox', 'a/b', 'a.txt', Buffer.from('x'), record);
-    expect(file).toContain(path.join('remote-files', '.._devbox', 'a_b'));
+    const file = materializeRemoteFile(
+      { destination: '../devbox', workspaceRoot: '/ws', workspaceLabel: 'a/b' },
+      'a.txt', Buffer.from('x'), record,
+    );
+    expect(file).toMatch(/remote-files\/[a-f0-9]{64}\/[a-f0-9]{64}\/a\.txt$/);
     expect(existsSync(file)).toBe(true);
   });
 });
@@ -251,7 +323,11 @@ describe('materializeRemoteFile outside the cache', () => {
 describe('clearRemoteFileCacheForWorkspace before the cache is initialized', () => {
   it('removes nothing and throws nothing', async () => {
     const fresh = await uninitialized();
-    expect(() => { fresh.clearRemoteFileCacheForWorkspace('devbox', 'claude'); }).not.toThrow();
+    expect(() => {
+      fresh.clearRemoteFileCacheForWorkspace(
+        { destination: 'devbox', workspaceRoot: '/ws', workspaceLabel: 'claude' },
+      );
+    }).not.toThrow();
   });
 });
 
