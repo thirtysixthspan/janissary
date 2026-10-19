@@ -29,6 +29,7 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
   const [savedFlash, setSavedFlash] = useState(false);
   const [conflictOpen, setConflictOpen] = useState(false);
   const [saves] = useState(() => new SaveCoordinator());
+  const documentRead = useRef({ generation: 0, url: editor.url });
   const setBaseline = useCallback((text: string) => {
     saves.setBaseline(text);
     setLastSaved(text);
@@ -88,17 +89,25 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
       setBaseline('');
       return;
     }
-    let cancelled = false;
+    const activeDocumentRead = documentRead.current;
+    const generation = ++activeDocumentRead.generation;
+    activeDocumentRead.url = editor.url;
     const load = async () => {
       try {
         const text = await client.readFile(editor.url);
-        if (!cancelled) { api.load(text, editor.line === undefined ? undefined : editor.line - 1); setBaseline(text); }
+        if (activeDocumentRead.generation !== generation || activeDocumentRead.url !== editor.url) return;
+        if (api.stateRef.current === null) api.load(text, editor.line === undefined ? undefined : editor.line - 1);
+        setBaseline(text);
       } catch {
-        if (!cancelled) setLoadError(`Failed to load ${editor.name}`);
+        if (activeDocumentRead.generation === generation && activeDocumentRead.url === editor.url) {
+          setLoadError(`Failed to load ${editor.name}`);
+        }
       }
     };
     void load();
-    return () => { cancelled = true; };
+    return () => {
+      if (activeDocumentRead.generation === generation) activeDocumentRead.generation += 1;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- editor identity triggers loading; refs and setters remain stable for the mounted file
   }, [editor.url, editor.name, editor.sync]);
 
@@ -107,7 +116,7 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
     [api.state, lastSaved],
   );
 
-  useEditorWatchReload(editor.mtimeMs, dirty, conflictPendingRef, api, setBaseline, client, editor.url);
+  useEditorWatchReload(editor.mtimeMs, dirty, conflictPendingRef, api, setBaseline, client, editor.url, editor.line, documentRead);
 
   return {
     dirty,

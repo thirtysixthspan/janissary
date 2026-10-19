@@ -36,6 +36,13 @@ function makeClient(overrides: Partial<Record<'readFile' | 'saveFile', unknown>>
   };
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the web project's ES2023 library excludes Promise.withResolvers
+  const promise = new Promise<T>((accept) => { resolve = accept; });
+  return { promise, resolve };
+}
+
 describe('useEditorFile — load', () => {
   it('reads the file through the client and loads it into the editor', async () => {
     const client = makeClient();
@@ -103,6 +110,44 @@ describe('useEditorFile — load', () => {
 
     await act(async () => { await Promise.resolve(); });
     expect(client.readFile).not.toHaveBeenCalled();
+  });
+
+  it('keeps a newer watched read when the initial read resolves later', async () => {
+    const initial = deferred<string>();
+    const client = makeClient({ readFile: vi.fn().mockImplementationOnce(() => initial.promise).mockResolvedValue('newer disk content') });
+    const api = makeApi();
+    const { result, rerender } = renderHook(
+      ({ mtimeMs }: { mtimeMs: number }) => useEditorFile(client, makeView({ line: 3, mtimeMs }), api),
+      { initialProps: { mtimeMs: 1000 } },
+    );
+
+    rerender({ mtimeMs: 2000 });
+    await waitFor(() => expect(api.load).toHaveBeenCalledWith('newer disk content', 2));
+    initial.resolve('stale initial content');
+    await act(async () => { await Promise.resolve(); });
+
+    expect(toText(api.stateRef.current!)).toBe('newer disk content');
+    expect(result.current.dirty).toBe(false);
+    api.setState(fromText('edit after reload'));
+    await act(async () => { await result.current.save(); });
+    expect(client.saveFile).toHaveBeenCalledWith('/open/1', 'edit after reload', contentHash('newer disk content'));
+  });
+
+  it('preserves edits made while the initial read is pending and uses its text as the save baseline', async () => {
+    const initial = deferred<string>();
+    const client = makeClient({ readFile: vi.fn(() => initial.promise) });
+    const api = makeApi();
+    const { result, rerender } = renderHook(() => useEditorFile(client, makeView(), api));
+
+    api.setState(fromText('user input during load'));
+    rerender();
+    initial.resolve('disk baseline');
+    await act(async () => { await Promise.resolve(); });
+
+    expect(toText(api.stateRef.current!)).toBe('user input during load');
+    expect(result.current.dirty).toBe(true);
+    await act(async () => { await result.current.save(); });
+    expect(client.saveFile).toHaveBeenCalledWith('/open/1', 'user input during load', contentHash('disk baseline'));
   });
 });
 

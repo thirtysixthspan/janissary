@@ -171,6 +171,8 @@ This continues after you save, including after repeated saves. Your own save doe
 
 Your typing always wins if you start editing while Janissary is still reading an external change. The in-progress reload cannot replace your new text. If several external changes arrive close together, only the newest completed read can update a clean buffer.
 
+The same applies while a file is first opening: a newer external read takes precedence over the original load, and typing before that load finishes stays in your buffer. The latest successful read remains the version your next save checks against.
+
 If you do have unsaved changes, your edits are left alone. The next time you try to save, a dialog appears instead: "This file changed on disk. Overwrite it with your changes?" with **Overwrite** and **Cancel**. Overwrite writes your buffer over the external change; Cancel leaves your buffer as it is, still unsaved, and shows the same prompt again on your next save attempt.
 
 Every save also checks the file on disk at the moment you save. If the file no longer matches what your buffer was loaded from or last saved as, nothing is written and the same dialog appears, even if the change was never picked up while it happened. A save can't quietly replace content you never saw.
