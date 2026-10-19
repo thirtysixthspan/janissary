@@ -4,6 +4,8 @@
 
 * in the search tab throws this error:
 Cannot find module '/Users/ashmorgan/dev/janissary/src/plugins/search/compile-matcher.js' imported from /Users/ashmorgan/dev/janissary/src/plugins/search/matcher-worker-entry.ts
+or 
+Search matching cancelled
 
 * Give a file navigator in the center tab strip its location button
 
