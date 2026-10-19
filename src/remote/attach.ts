@@ -108,7 +108,11 @@ export function markEntryEnded(entry: RemoteEntry): RemoteLaunchHandlers[] {
   entry.closed = true;
   entry.attach.stop();
   cancelSessionState(entry);
-  clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
+  if (entry.workspaceDir) {
+    clearRemoteFileCacheForWorkspace({
+      destination: entry.address.destination, workspaceRoot: entry.workspaceDir, workspaceLabel: entry.workspaceLabel,
+    });
+  }
   const handlers = [...entry.handlers.values()];
   entry.handlers.clear();
   return handlers;

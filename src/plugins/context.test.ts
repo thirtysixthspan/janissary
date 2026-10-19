@@ -632,6 +632,9 @@ describe('remote workspace capabilities', () => {
         workspaceOf: () => '/srv/work',
         addressOf: () => ({ address: 'devbox', host: 'devbox' }),
         workspaceLabelOf: () => 'remote',
+        entryOf: () => ({
+          address: { destination: 'alice@devbox' }, workspaceDir: '/srv/work', workspaceLabel: 'remote',
+        }),
       },
     } as unknown as Managers;
   }

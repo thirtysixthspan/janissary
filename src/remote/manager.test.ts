@@ -174,7 +174,9 @@ describe('RemoteManager shared channels', () => {
     expect(h.remote.readyOf('joined')).toBeUndefined();
     expect(h.remote.addressOf('joined')).toBeUndefined();
     expect(h.remote.transcriptSource('joined')).toBeUndefined();
-    expect(clearRemoteFileCacheForWorkspace).toHaveBeenCalledExactlyOnceWith('devbox', 'creator');
+    expect(clearRemoteFileCacheForWorkspace).toHaveBeenCalledExactlyOnceWith({
+      destination: 'devbox', workspaceRoot: '/remote/ws', workspaceLabel: 'creator',
+    });
     expect(notify).toHaveBeenCalledWith(expect.anything(), 'remote-session-terminated', 'joined', expect.any(String));
   });
 
@@ -276,7 +278,7 @@ describe('RemoteManager shared channels', () => {
     h.remote.release('creator');
     await expect(ready).rejects.toThrow('ended before its workspace was ready');
     h.transport()?.onExit();
-    expect(clearRemoteFileCacheForWorkspace).toHaveBeenCalledOnce();
+    expect(clearRemoteFileCacheForWorkspace).not.toHaveBeenCalled();
     expect(h.kill).not.toHaveBeenCalled();
     expect(h.handlers.onClosed).not.toHaveBeenCalled();
   });

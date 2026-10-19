@@ -15,7 +15,8 @@ describe('closeTabState', () => {
     initRemoteFileCache(mkdtempSync(path.join(tmpdir(), 'janus-close-state-')));
     const filesystem = { dispose: vi.fn() } as unknown as FileSystemPort;
     const file = materializeRemoteFile(
-      'devbox', 'claude', 'a.txt', Buffer.from('x'),
+      { destination: 'devbox', workspaceRoot: '/remote/ws', workspaceLabel: 'claude' },
+      'a.txt', Buffer.from('x'),
       { filesystem, root: '/remote/ws', relPath: 'a.txt', label: 'files' },
     );
     const state = { filesystem, watchers: new Map(), pendingWatchers: new Map() } as unknown as FilesTabState;

@@ -69,9 +69,14 @@ export function remoteCapabilities(input: {
   const ride = () => {
     if (!isEnabled()) return;
     const resource = resourceFor(managers, label);
-    const root = managers.remote?.workspaceOf(label);
-    const host = managers.remote?.addressOf(label)?.host;
-    return resource && root && host ? { resource, port: resource.port, root, host } : undefined;
+    const entry = managers.remote?.entryOf(label);
+    const root = entry?.workspaceDir;
+    return resource && entry && root
+      ? {
+          resource, port: resource.port, root,
+          owner: { destination: entry.address.destination, workspaceRoot: root, workspaceLabel: entry.workspaceLabel },
+        }
+      : undefined;
   };
   return {
     // A tab riding no channel is answered with nothing rather than an error: the question is about a
@@ -90,8 +95,7 @@ export function remoteCapabilities(input: {
       try {
         const content = await channel.port.readFile(channel.root, relPath);
         if (!resourceIsLive(managers, label, channel.resource)) return null;
-        return materializeRemoteFile(
-          channel.host, managers.remote?.workspaceLabelOf(label) ?? label, relPath, content,
+        return materializeRemoteFile(channel.owner, relPath, content,
           { filesystem: channel.port, root: channel.root, relPath, label },
         );
       } catch {

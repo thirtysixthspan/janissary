@@ -19,10 +19,14 @@ export function openNavigatorFile(
     notify(managers, 'file-operation', label, 'Remote files cannot be opened externally. Edit or open the file in a tab instead.');
     return;
   }
-  const workspaceLabel = managers.remote.workspaceLabelOf(state.ownerLabel ?? label) ?? state.ownerLabel ?? label;
+  const entry = managers.remote.entryOf(state.ownerLabel ?? label);
+  if (!entry?.workspaceDir) throw new Error('The remote workspace is not ready yet.');
+  const owner = {
+    destination: entry.address.destination, workspaceRoot: entry.workspaceDir, workspaceLabel: entry.workspaceLabel,
+  };
   return mapMaybe(filesystem.readFile(root, relPath), (content) => {
     const file = materializeRemoteFile(
-      remote.host, workspaceLabel, relPath, content,
+      owner, relPath, content,
       { filesystem, root, relPath, label },
     );
     openMaterialized(managers, label, file, command);
@@ -33,14 +37,16 @@ export function createNavigatorFile(
   managers: Managers, state: FilesTabState, label: string, destination: string,
 ): MaybePromise<void> {
   const { remote, root, filesystem } = state;
-  const workspaceLabel = remote
-    ? managers.remote.workspaceLabelOf(state.ownerLabel ?? label) ?? state.ownerLabel ?? label
-    : undefined;
+  const entry = remote ? managers.remote.entryOf(state.ownerLabel ?? label) : undefined;
+  const owner = entry?.workspaceDir ? {
+    destination: entry.address.destination, workspaceRoot: entry.workspaceDir, workspaceLabel: entry.workspaceLabel,
+  } : undefined;
   return mapMaybe(filesystem.createFile(root, destination), (result) => {
     if (!result.ok) { notify(managers, 'file-operation', label, result.reason); return; }
     if (!remote) { void openNavigatorFile(managers, state, label, result.value.path, 'edit'); return; }
+    if (!owner) throw new Error('The remote workspace is not ready yet.');
     const file = materializeRemoteFile(
-      remote.host, workspaceLabel!, result.value.path, new Uint8Array(),
+      owner, result.value.path, new Uint8Array(),
       { filesystem, root, relPath: result.value.path, label },
     );
     const opened = managers.openFile.edit(`edit ${file}`, file, label);
