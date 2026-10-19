@@ -1,13 +1,14 @@
 import path from 'node:path';
 import {
-  history, historyPaths, optionalPolicy, optionalRoot, stringArray, stringValue, policy,
+  history, historyPaths, optionalPolicy, optionalRoot, requireBoolean, requireDirection, requireHistory,
+  requirePasteMode, requireString, requireStringArray, stringArray, stringValue, policy,
 } from './argument-checks.js';
 import { nonEmptyString } from '../frame/decode-shared.js';
 import {
   refusedDeleteMany, refusedItem, refusedMoveMany, refusedPaste, refusedReplay,
 } from './refusal-shapes.js';
 import type { RemoteFilesystemOperation } from '../protocol-frames.js';
-import { descriptorFor, type OperationContext, type OperationDescriptor } from './operation-types.js';
+import { descriptorFor, type AnyOperationDescriptor, type OperationContext } from './operation-types.js';
 import type { HistoryStep } from '../../file-navigator/moves.js';
 import { resultDecoders } from './result-decoders.js';
 import { writeFileOperation } from './write-file-operation.js';
@@ -15,9 +16,9 @@ import { writeFileOperation } from './write-file-operation.js';
 // What an operation's `run` reaches, handed over as one value so the table stays a plain data
 // module: `root` and `filesystem` are the far side's own, and the rest are bound closures over the
 // server's session bookkeeping, which stays private to it.
-const pathOnly = (args: Record<string, unknown>) => ({ path: args.path as string });
+const pathOnly = (args: Record<string, unknown>) => ({ path: requireString(args.path) });
 const namedPath = (args: { path?: string }) => [args.path ?? ''];
-const destinationOnly = (args: Record<string, unknown>) => ({ destination: args.destination as string });
+const destinationOnly = (args: Record<string, unknown>) => ({ destination: requireString(args.destination) });
 const namedDestination = (args: { destination?: string }) => [args.destination ?? ''];
 const noArguments = { valid: (args: Record<string, unknown>) => Object.keys(args).length === 0, decode: () => ({}), paths: () => [] };
 
@@ -32,7 +33,7 @@ const READ_OPERATIONS = {
   }),
   stat: descriptorFor<'stat'>()({
     valid: (args) => stringArray(args.paths),
-    decode: (args) => ({ paths: args.paths as string[] }),
+    decode: (args) => ({ paths: requireStringArray(args.paths) }),
     paths: (args) => args.paths,
     decodeResult: resultDecoders.stat,
     run: (context, args) => context.filesystem.statRows(context.root, args.paths),
@@ -55,7 +56,7 @@ const READ_OPERATIONS = {
   'git-pull': descriptorFor<'git-pull'>()({ ...noArguments, decodeResult: resultDecoders['git-pull'], run: (context: OperationContext) => context.filesystem.pull(context.root) }),
   'change-set': descriptorFor<'change-set'>()({
     valid: (args) => stringArray(args.fullFiles),
-    decode: (args) => ({ fullFiles: args.fullFiles as string[] }),
+    decode: (args) => ({ fullFiles: requireStringArray(args.fullFiles) }),
     paths: () => [],
     decodeResult: resultDecoders['change-set'],
     run: (context, args) => context.filesystem.changeSet(context.root, args.fullFiles),
@@ -67,8 +68,7 @@ const READ_OPERATIONS = {
     decodeResult: resultDecoders['read-file'],
     run: (context, args) => context.readFile(args.path),
   }),
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the constraint only loosens this satisfies check's variance; each entry keeps its own decoded type in `typeof FILESYSTEM_OPERATIONS`.
-} as const satisfies Record<string, OperationDescriptor<any>>;
+} as const satisfies Record<string, AnyOperationDescriptor>;
 
 // The operations that write. Each names the refusal shape matching its own result type.
 const MUTATION_OPERATIONS = {
@@ -77,8 +77,8 @@ const MUTATION_OPERATIONS = {
     valid: (args) => stringValue(args.from) && stringValue(args.to)
       && (args.overwrite === undefined || typeof args.overwrite === 'boolean'),
     decode: (args) => ({
-      from: args.from as string, to: args.to as string,
-      ...(args.overwrite !== undefined && { overwrite: args.overwrite as boolean }),
+      from: requireString(args.from), to: requireString(args.to),
+      ...(args.overwrite !== undefined && { overwrite: requireBoolean(args.overwrite) }),
     }),
     paths: (args) => [args.from, args.to],
     rootDestination: true, refusal: refusedItem,
@@ -88,7 +88,7 @@ const MUTATION_OPERATIONS = {
   'move-many': descriptorFor<'move-many'>()({
     valid: (args) => stringArray(args.sources) && stringValue(args.destination) && policy(args.policy),
     decode: (args) => ({
-      sources: args.sources as string[], destination: args.destination as string,
+      sources: requireStringArray(args.sources), destination: requireString(args.destination),
       ...optionalPolicy(args.policy),
     }),
     paths: (args) => [...args.sources, args.destination],
@@ -106,7 +106,7 @@ const MUTATION_OPERATIONS = {
   }),
   'delete-many': descriptorFor<'delete-many'>()({
     valid: (args) => stringArray(args.paths),
-    decode: (args) => ({ paths: args.paths as string[] }),
+    decode: (args) => ({ paths: requireStringArray(args.paths) }),
     paths: (args) => args.paths,
     refusal: refusedDeleteMany,
     decodeResult: resultDecoders['delete-many'],
@@ -116,8 +116,8 @@ const MUTATION_OPERATIONS = {
     valid: (args) => stringValue(args.path) && nonEmptyString(args.name)
       && (args.overwrite === undefined || typeof args.overwrite === 'boolean'),
     decode: (args) => ({
-      path: args.path as string, name: args.name as string,
-      ...(args.overwrite !== undefined && { overwrite: args.overwrite as boolean }),
+      path: requireString(args.path), name: requireString(args.name),
+      ...(args.overwrite !== undefined && { overwrite: requireBoolean(args.overwrite) }),
     }),
     paths: namedPath, refusal: refusedItem,
     decodeResult: resultDecoders.rename,
@@ -127,8 +127,8 @@ const MUTATION_OPERATIONS = {
     valid: (args) => stringArray(args.sources) && stringValue(args.destination)
       && (args.mode === 'copy' || args.mode === 'cut') && policy(args.policy),
     decode: (args) => ({
-      sources: args.sources as string[], destination: args.destination as string,
-      mode: args.mode as 'copy' | 'cut', ...optionalPolicy(args.policy),
+      sources: requireStringArray(args.sources), destination: requireString(args.destination),
+      mode: requirePasteMode(args.mode), ...optionalPolicy(args.policy),
     }),
     paths: (args) => [...args.sources, args.destination],
     rootDestination: true, refusal: refusedPaste,
@@ -162,7 +162,7 @@ const MUTATION_OPERATIONS = {
     valid: (args) => nonEmptyString(args.message) && stringArray(args.paths)
       && (args.root === undefined || stringValue(args.root)),
     decode: (args) => ({
-      message: args.message as string, paths: args.paths as string[], ...optionalRoot(args.root),
+      message: requireString(args.message), paths: requireStringArray(args.paths), ...optionalRoot(args.root),
     }),
     paths: (args) => [...args.paths, ...(args.root === undefined ? [] : [args.root])],
     rootDestination: true,
@@ -177,9 +177,9 @@ const MUTATION_OPERATIONS = {
       && (args.direction === 'undo' || args.direction === 'redo')
       && typeof args.overwrite === 'boolean' && typeof args.skipConflicts === 'boolean',
     decode: (args) => ({
-      undoStack: args.undoStack as HistoryStep[], redoStack: args.redoStack as HistoryStep[],
-      direction: args.direction as 'undo' | 'redo', overwrite: args.overwrite as boolean,
-      skipConflicts: args.skipConflicts as boolean,
+      undoStack: requireHistory(args.undoStack), redoStack: requireHistory(args.redoStack),
+      direction: requireDirection(args.direction), overwrite: requireBoolean(args.overwrite),
+      skipConflicts: requireBoolean(args.skipConflicts),
     }),
     paths: (args: { undoStack: HistoryStep[]; redoStack: HistoryStep[] }) => historyPaths([...args.undoStack, ...args.redoStack]),
     refusal: refusedReplay,
@@ -189,8 +189,7 @@ const MUTATION_OPERATIONS = {
       args.direction, args.overwrite, args.skipConflicts,
     ),
   }),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the constraint only loosens this satisfies check's variance; each entry keeps its own decoded type in `typeof FILESYSTEM_OPERATIONS`.
-} as const satisfies Record<string, OperationDescriptor<any>>;
+} as const satisfies Record<string, AnyOperationDescriptor>;
 
 // One entry per operation: its argument validator, its decoder, its path extractor, how a refusal is
 // answered, and what it dispatches to. The `satisfies` is the guarantee — adding a member to
@@ -199,8 +198,7 @@ const MUTATION_OPERATIONS = {
 export const FILESYSTEM_OPERATIONS = {
   ...READ_OPERATIONS,
   ...MUTATION_OPERATIONS,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the constraint only loosens this satisfies check's variance; each entry keeps its own decoded type in `typeof FILESYSTEM_OPERATIONS`.
-} satisfies Record<RemoteFilesystemOperation, OperationDescriptor<any>>;
+} satisfies Record<RemoteFilesystemOperation, AnyOperationDescriptor>;
 
 export function isFilesystemOperation(value: unknown): value is RemoteFilesystemOperation {
   return typeof value === 'string' && Object.hasOwn(FILESYSTEM_OPERATIONS, value);

@@ -67,7 +67,9 @@ export async function invokePlugin<Result>(
     // The capabilities are built inside the guarded call because the ones that do host work on the
     // plugin's behalf exempt that work from this deadline, and so need the deadline itself.
     value = await guardPluginCall((deadline) => call(createPluginContext(
-      managers, declaration, activation, origin, isEnabled, openRequests, answeringLabel, deadline, deferred, adoptPtyId,
+      managers, declaration, activation, origin, isEnabled,
+      openRequests, answeringLabel, deadline, deferred, adoptPtyId,
+      (error, failureOrigin) => { disable?.(error, failureOrigin); },
     )), timeoutMs);
   } catch (error) {
     if (error instanceof TabPluginRejection) return { status: 'rejected', reason: error.message };

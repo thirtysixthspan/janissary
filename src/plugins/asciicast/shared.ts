@@ -1,6 +1,8 @@
-import { isRecord } from '../api.js';
-
 export const ASCIICAST_PAYLOAD_SCHEMA_VERSION = 1;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 // The ordinary file-backed tab payload — the served reference, the display name, the path, and the
 // human size every file tab carries — plus one boolean the opener is the only thing that can know:

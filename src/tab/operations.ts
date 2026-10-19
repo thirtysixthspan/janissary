@@ -1,6 +1,6 @@
 import type { CenterPane, Tab } from './types.js';
 import type { Managers } from '../managers.js';
-import { TAB_RENAME_MAX_LENGTH } from '../config.js';
+import { TAB_RENAME_MAX_LENGTH } from './rename-limits.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';
 import { closeTabOp } from './close.js';

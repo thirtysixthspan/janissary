@@ -173,12 +173,12 @@ describe('updateTab', () => {
     ['a payload its own guard rejects', () => ({ payload: { text: 42 } })],
     ['a payload that is not JSON-compatible', () => ({ payload: { text: 'x', later: () => {} } })],
     ['an empty title', () => ({ title: '  ', payload: { text: 'x' } })],
-  ])('disables the plugin and closes its tabs on %s', async (_name, update) => {
+  ])('disables the plugin and closes its tabs without throwing on %s', async (_name, update) => {
     const managers = makeManagers();
     const host = hostFor(managers, update as () => TabPluginTabUpdate);
     const tab = await openTab(host, managers);
 
-    await expect(host.intent(tab.label, 'refresh', '/tmp/a.fixture')).rejects.toThrow();
+    await expect(host.intent(tab.label, 'refresh', '/tmp/a.fixture')).resolves.toBeNull();
 
     expect(host.statusFor('fixture')?.state).toBe('disabled');
     expect(managers.tab.tabs.some((candidate) => candidate.plugin)).toBe(false);
@@ -279,7 +279,7 @@ describe('updateTab', () => {
     for (const reference of survivors) expect(managers.tab.openFiles.has(reference)).toBe(true);
   });
 
-  it('serves nothing when the factory registers a file and then throws', async () => {
+  it('serves nothing when an invalid update registers a file before refusal', async () => {
     const managers = makeManagers();
     const host = hostFor(managers, (resources) => {
       resources.registerFile('/tmp/queued.fixture');
@@ -287,7 +287,7 @@ describe('updateTab', () => {
     });
     const tab = await openTab(host, managers);
 
-    await expect(host.intent(tab.label, 'refresh', '/tmp/a.fixture')).rejects.toThrow();
+    await expect(host.intent(tab.label, 'refresh', '/tmp/a.fixture')).resolves.toBeNull();
 
     expect([...managers.tab.openFiles.values()]).not.toContain('/tmp/queued.fixture');
   });

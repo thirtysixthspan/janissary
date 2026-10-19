@@ -7,7 +7,6 @@ export type AppCommand = string;
 
 export type Resolution =
   | { kind: 'empty' }
-  | { kind: 'shell'; cmd: string }
   | { kind: 'app'; name: AppCommand; cmd: string }
   | { kind: 'output'; cmd: string; output: string }
   // An unprefixed command that matches no built-in, with the existing unknown-command reply.
@@ -18,8 +17,6 @@ export type Resolution =
  * used when a command is typed into a tab. Pure: callers decide the side effects (a
  * foreground tab can run interactive/app commands; a remote agent refuses them).
  *
- * - `shell`: run in a shell. Explicitly requested with a leading `!`; there is no bare
- *   auto-run, so a non-built-in typed without it is unknown.
  * - `app`: an application built-in that needs live state.
  * - `output`: a built-in with textual output to display (also the "unknown command" reply).
  * - `empty`: nothing to do.
@@ -27,11 +24,6 @@ export type Resolution =
 export function resolveCommand(raw: string, available: (name: string) => boolean = () => true): Resolution {
   const trimmed = raw.trim();
   if (!trimmed) return { kind: 'empty' };
-
-  // A leading `!` runs the rest of the line in the shell.
-  if (trimmed.startsWith('!')) {
-    return { kind: 'shell', cmd: trimmed.slice(1).replace(/^\s+/, '') };
-  }
 
   const command = trimmed.replace(/^\//, '');
 

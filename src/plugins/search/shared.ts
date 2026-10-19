@@ -1,6 +1,8 @@
-import { isRecord } from '../api.js';
-
 export const SEARCH_PAYLOAD_SCHEMA_VERSION = 1;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 // One match, self-describing: its own project-relative path and line number so the row's header
 // needs nothing from its neighbours, and the block of text around the match. `above` and `below`

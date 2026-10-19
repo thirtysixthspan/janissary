@@ -578,10 +578,9 @@ describe('diff plugin activation', () => {
     expect(isJsonCompatible(factory().payload)).toBe(true);
   });
 
-  it('answers an error state rather than throwing when a publish is refused', async () => {
-    // The recompute runs outside the intent that asked for it, so a throw here would escape as an
-    // unhandled rejection and take the process down, closing every tab rather than this one.
-    const refusing = vi.fn(() => { throw new Error('produced an invalid tab payload'); });
+  it('stops publishing when a refused update disables the plugin', async () => {
+    let disabled = false;
+    const refusing = vi.fn(() => { disabled = true; });
     const { capabilities } = makeCapabilities({
       originTab: vi.fn(() => ({ label: 'shell', cwd: repo, root: repo, workspace: undefined })),
       updateTab: refusing,
@@ -593,6 +592,7 @@ describe('diff plugin activation', () => {
     expect(answered).toBeNull();
     await rest();
     expect(refusing).toHaveBeenCalled();
+    expect(disabled).toBe(true);
   });
 
   it('opens the tab in the layout its settings entry saved, and switches on the layout intent', async () => {

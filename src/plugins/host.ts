@@ -54,10 +54,8 @@ export class TabPluginHost {
     this.subscriptions = subscribeHostChannels({
       managers,
       records: () => [...this.records.values()],
-      invoke: (record, activation, origin, call, timeoutMs) => invokePlugin(
-        managers, record.declaration, activation, origin,
-        () => record.state === 'active' && !this.disposed, timeoutMs, call,
-      ),
+      invoke: (record, activation, origin, call, timeoutMs) =>
+        this.invoke(record, activation, origin, call, undefined, undefined, timeoutMs),
       disable: (record, error, origin) => { this.disable(record, error, origin); },
     }, declarations, {
       notifyMs: options.notifyTimeoutMs ?? TAB_PLUGIN_NOTIFY_TIMEOUT_MS,
@@ -161,10 +159,11 @@ export class TabPluginHost {
     call: (capabilities: TabPluginServerCapabilities) => Result | Promise<Result>,
     answeringLabel?: string,
     adoptPtyId?: string,
+    timeoutMs = this.handlerTimeoutMs,
   ): Promise<PluginCallOutcome<Result>> {
     return invokePlugin(
       this.managers, record.declaration, activation, origin,
-      () => record.state === 'active' && !this.disposed, this.handlerTimeoutMs, call, answeringLabel,
+      () => record.state === 'active' && !this.disposed, timeoutMs, call, answeringLabel,
       (error, failureOrigin) => { this.disable(record, error, failureOrigin); },
       adoptPtyId,
     );

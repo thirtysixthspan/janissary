@@ -4,6 +4,7 @@ import type { AcpPromptResult } from '../acp/types.js';
 import type { AgentRunView } from '../agent/types.js';
 import type { QueueEntry } from '../command-queue/entry.js';
 import type { ReceiptRecord } from '../command-queue/receipts.js';
+import type { RemoteTargetView } from '../protocol/tab.js';
 
 export type LogEntry = {
   input: string;
@@ -209,7 +210,7 @@ export type FileNavigatorCommitStatus = 'committing' | 'committed' | 'error';
 export type FileNavigatorView = {
   root: string; absoluteRoot: string; rows: FileNavigatorRow[]; branch?: string;
   // Set when the tree reads its root over an existing remote tab's workspace channel.
-  remote?: RemoteTarget & { reconnecting?: boolean; provisioning?: boolean };
+  remote?: RemoteTargetView;
   // GitHub commits-page URL for the current origin/branch (see `github-url.ts`); undefined when
   // there's no github.com origin remote.
   githubUrl?: string;

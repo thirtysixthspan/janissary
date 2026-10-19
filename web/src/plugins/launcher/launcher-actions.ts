@@ -1,3 +1,4 @@
+import { errorText } from '@shared/error-text';
 import type { TabPluginClientCapabilities } from '../api';
 import type { LauncherCommand, LauncherDispatchReply } from '@shared/plugins/launcher/shared';
 
@@ -8,7 +9,7 @@ function shownFor(reply: LauncherDispatchReply | null, line: string): string | n
 }
 
 function rejectedFor(error: unknown, line: string): string {
-  const detail = error instanceof Error ? error.message : String(error);
+  const detail = errorText(error);
   return `Could not run "${line}": ${detail}`;
 }
 

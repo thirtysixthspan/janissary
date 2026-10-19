@@ -1,6 +1,6 @@
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
-import { TAB_RENAME_MAX_LENGTH } from '../config.js';
+import { TAB_RENAME_MAX_LENGTH } from '../tab/rename-limits.js';
 import { notify } from '../notifications/index.js';
 import { renameEditorTab } from '../tab/rename-editor.js';
 

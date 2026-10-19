@@ -78,10 +78,6 @@ export const DEFAULT_TRANSCRIPT_MAX_LINES = 25_000;
 export const DEFAULT_TAB_NAME_MAX_LENGTH = 16;
 export const DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH = 50;
 export const DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES = 15;
-// Cap for the tab-rename input itself, independent of tabNameMaxLength (which only truncates
-// the tab strip's *display* label). Editor-tab renames go straight to a file-system rename, so
-// this needs to accommodate real file names rather than the short display length.
-export const TAB_RENAME_MAX_LENGTH = 50;
 export const DEFAULT_SYNC_PATHS = ['product/backlog/', 'product/plans/'];
 export const DEFAULT_EXTERNAL_VIEWERS: Record<string, string> = { video: 'QuickTime Player' };
 

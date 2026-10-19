@@ -3,12 +3,11 @@
 // one question — "is every field the dispatcher will read of its declared type" — so an extra key
 // the client happens to send is accepted: the dispatcher never reads a key it does not know, and
 // refusing one would only stop a client a version ahead from talking at all.
-
 export type ParamsDecoder = (params: Record<string, unknown>) => boolean;
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+// This module remains the existing import path for websocket parameter decoders.
+// eslint-disable-next-line no-restricted-syntax -- preserve that public import path with the shared guard
+export { isRecord } from '../value-guards.js';
 
 export function isString(value: unknown): value is string {
   return typeof value === 'string';

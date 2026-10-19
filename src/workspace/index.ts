@@ -4,6 +4,7 @@ import path from 'node:path';
 import { homedir } from 'node:os';
 import { execSync, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { isRecord } from '../value-guards.js';
 import { toHttpsUrl } from '../git/repository-url.js';
 import { startGitClone } from '../git/clone.js';
 import { createWorkspaceScratch } from './scratch.js';
@@ -52,10 +53,6 @@ export function findRepoRoot(from: string): string | undefined {
     if (parent === directory) return undefined;
     directory = parent;
   }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function readClaudeConfig(claudeJson: string): Record<string, unknown> {

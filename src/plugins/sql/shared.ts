@@ -1,6 +1,8 @@
-import { isRecord } from '../api.js';
-
 export const SQL_PAYLOAD_SCHEMA_VERSION = 1;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 // What a database tab shows. Everything the view needs is here, including the grid page and the
 // statement that produced it, so a payload is a complete description of the tab and the plugin holds
@@ -267,4 +269,3 @@ export function isSqlPayload(value: unknown): value is SqlPayload {
   ];
   return parts.every(([part, guard]) => guard(part));
 }
-

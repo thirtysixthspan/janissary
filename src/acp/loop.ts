@@ -5,6 +5,7 @@
 // which keeps it testable independently of the live agent.
 
 import { cleanCommandLine } from './command-line.js';
+import { errorText } from '../error-text.js';
 import type { AcpLoopSession, AcpLoopDeps as AcpLoopDependencies, AcpLoopHandlers } from './types.js';
 
 /**
@@ -56,7 +57,7 @@ export function runAcpToolLoop(
             const returnValue = dependencies.runCommand(command);
             result = returnValue instanceof Promise ? await returnValue : returnValue;
           } catch (error) {
-            h.error(error instanceof Error ? error.message : String(error));
+            h.error(errorText(error));
             return;
           }
           if (dependencies.signal?.aborted) return;

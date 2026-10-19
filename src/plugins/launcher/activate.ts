@@ -1,4 +1,5 @@
 import { homedir } from 'node:os';
+import { errorText } from '../../error-text.js';
 import { defineIntents, noFileOpener, parseDockArgument } from '../api.js';
 import type { TabActivityEntry, TabPluginActivation, TabPluginNotification, TabPluginServerCapabilities } from '../api.js';
 import {
@@ -248,7 +249,7 @@ export function activate(): TabPluginActivation {
             return null;
           } catch (error) {
             if (incarnation !== launcherIncarnation) return null;
-            capabilities.notifyUser(`launcher summarizer: ${error instanceof Error ? error.message : String(error)}`);
+            capabilities.notifyUser(`launcher summarizer: ${errorText(error)}`);
             return null;
           }
         },

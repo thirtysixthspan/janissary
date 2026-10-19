@@ -1,4 +1,4 @@
-import { stringValue } from './argument-checks.js';
+import { requireString, stringValue } from './argument-checks.js';
 import { refusedItem } from './refusal-shapes.js';
 import { descriptorFor } from './operation-types.js';
 import { resultDecoders } from './result-decoders.js';
@@ -7,8 +7,8 @@ export const writeFileOperation = descriptorFor<'write-file'>()({
   valid: (args) => stringValue(args.path) && stringValue(args.content)
     && (args.expectedHash === undefined || stringValue(args.expectedHash)),
   decode: (args) => ({
-    path: args.path as string, content: args.content as string,
-    ...(args.expectedHash !== undefined && { expectedHash: args.expectedHash as string }),
+    path: requireString(args.path), content: requireString(args.content),
+    ...(args.expectedHash !== undefined && { expectedHash: requireString(args.expectedHash) }),
   }),
   paths: (args) => [args.path], refusal: refusedItem,
   decodeResult: resultDecoders['write-file'],

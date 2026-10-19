@@ -10,10 +10,10 @@ describe('resolveCommand', () => {
     expect(resolveCommand(' '.repeat(3))).toEqual({ kind: 'empty' });
   });
 
-  it('treats a leading `!` as a request to run a shell command', () => {
-    expect(resolveCommand('!ps')).toEqual({ kind: 'shell', cmd: 'ps' });
-    expect(resolveCommand('! git status')).toEqual({ kind: 'shell', cmd: 'git status' });
-    expect(resolveCommand('!')).toEqual({ kind: 'shell', cmd: '' });
+  it('resolves a leading `!` through the shell command registry entry', () => {
+    expect(resolveCommand('!ps')).toEqual({ kind: 'app', name: 'shell', cmd: '!ps' });
+    expect(resolveCommand('! git status')).toEqual({ kind: 'app', name: 'shell', cmd: '! git status' });
+    expect(resolveCommand('!')).toEqual({ kind: 'app', name: 'shell', cmd: '!' });
   });
 
   it('does not run a backtick-prefixed command in the shell', () => {

@@ -77,6 +77,7 @@ export type { RunscriptRowView, RunscriptsView } from './protocol/runscripts.js'
 export type {
   RemoteSessionAction,
   RemoteSessionKind,
+  RemoteSessionState,
   RemoteSessionRpcCall,
   
   RemoteSessionView,

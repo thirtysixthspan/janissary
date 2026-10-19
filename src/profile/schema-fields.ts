@@ -1,10 +1,11 @@
 // The primitive field checks every profile section is validated with, extracted from `schema.ts` to
 // keep it under the file-size limit — see `ai/guidelines/code-guidelines.md`.
+import { isRecord } from '../value-guards.js';
 
 export type FieldKind = 'string' | 'number' | 'boolean' | 'string[]';
 
 export function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return isRecord(value);
 }
 
 function describeKind(kind: FieldKind): string {

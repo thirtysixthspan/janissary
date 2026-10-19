@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { TabView } from '@shared/protocol';
-import { TAB_RENAME_MAX_LENGTH } from '@shared/config';
+import { TAB_RENAME_MAX_LENGTH } from '@shared/tab/rename-limits';
 import { statusDotIcon, unreadIcon } from './shared/icons';
 import { InlineEditInput } from './shared/InlineEditInput';
 import { truncateTabLabel } from './tab-label';

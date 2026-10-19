@@ -1,8 +1,5 @@
 import type { Config, NotificationConfig } from './config.js';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+import { isRecord } from './value-guards.js';
 
 function strings(value: unknown, fallback: readonly string[]): string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === 'string')

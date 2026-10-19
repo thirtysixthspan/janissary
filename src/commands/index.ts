@@ -1,4 +1,5 @@
 import type { Command } from './types.js';
+import { command as shell } from './shell.js';
 import { command as next } from './next.js';
 import { command as acp } from './acp.js';
 import { command as acpReset } from './acp-reset.js';
@@ -40,6 +41,7 @@ import { tabPluginCatalog } from '../plugins/catalog.js';
 import { createPluginCommands } from '../plugins/command-adapter.js';
 
 const coreCommands: Command[] = [
+  shell,
   next,
   acpReset,
   agent,

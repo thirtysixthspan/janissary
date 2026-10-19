@@ -8,8 +8,8 @@ import type {
 } from './api-launch.js';
 import type { CompletionResult } from '../completion/types.js';
 import type { AcpPromptResult } from '../acp/types.js';
-import type { Tab } from '../tab/types.js';
 import type { QueueCapabilityTypes } from './queue-capability-types.js';
+import type { TabPluginOriginTab } from './api-origin-tab.js';
 
 // The capability half of the contract, and the topic half below it, live in modules of their own and
 // are re-exported here, so a plugin still reads the whole v2 contract from one module.
@@ -20,6 +20,7 @@ export type { TabPluginCapabilityName } from './api-capabilities.js';
 // The one open tab the `tabActivity` capability reports and the `tabs` topic delivers. Re-exported
 // from beside its reader so a plugin reaches both from this module, the only one a plugin may import.
 export type { TabActivityEntry } from './activity.js';
+export type { TabPluginOriginTab } from './api-origin-tab.js';
 // What a core ACP prompt answered with, re-exported so a plugin reading a result names the type from
 // the same module it read the capability from.
 export type { AcpPromptResult } from '../acp/types.js';
@@ -355,7 +356,7 @@ export type TabPluginServerCapabilities = QueueCapabilityTypes & {
   // and `plugin` the id of the plugin behind it when it is one, so a caller whose route is written
   // for a shell or a harness tab — the two whose workspace it serves — can tell one from a
   // navigator's without reading the host's tab list either.
-  originTab(label?: string): { label: string; cwd: string; root: string; view?: Tab['view']; plugin?: string; workspace?: { dir: string; offline?: boolean }; remote?: true; provisioning?: true } | null;
+  originTab(label?: string): TabPluginOriginTab;
   // The change set of the remote workspace this plugin's own answering tab rides, as the far side
   // computed it — the same records a local read produces, validated by the plugin's own guard before
   // it publishes anything. Null when the answering tab rides no remote workspace, because a
@@ -505,6 +506,7 @@ export type {
   
   RemoteSessionView,
 } from '../protocol.js';
+export type { RemoteSessionKind, RemoteSessionState, RemoteSessionAction } from '../protocol.js';
 // The database-browser slice, re-exported for the same reason: a plugin reaches the SQLite registry
 // only through the `databases` topic, and typing that topic's data and actions needs these.
 export type {

@@ -1,3 +1,5 @@
+import { errorText } from '../../error-text.js';
+
 export type MatcherModes = { regex: boolean; matchCase: boolean; wholeWord: boolean };
 
 // Where the first match on a line sits, as UTF-16 offsets into it: `start` inclusive, `end` exclusive.
@@ -51,7 +53,7 @@ export function patternError(query: string, modes: MatcherModes): string | null 
     new RegExp(query, modes.matchCase ? '' : 'i');
     return null;
   } catch (error) {
-    return error instanceof Error ? error.message : String(error);
+    return errorText(error);
   }
 }
 

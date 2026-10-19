@@ -1,4 +1,5 @@
 export const AGENT_MONITOR_SCHEMA_VERSION = 1;
+export const AGENT_MONITOR_PLUGIN_ID = 'agent-monitor';
 
 export type AgentMonitorPayload = { runId: string };
 

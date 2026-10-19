@@ -1,6 +1,8 @@
-import { isRecord } from '../api.js';
-
 export const SHELL_PAYLOAD_SCHEMA_VERSION = 4;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 // The zsh binary this plugin spawns, named outright rather than taken from `$SHELL`: the tab is a
 // zsh tab whatever the user's login shell happens to be, which is what makes `shell` an honest command

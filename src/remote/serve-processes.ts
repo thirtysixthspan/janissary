@@ -25,7 +25,14 @@ import type { ClientFrame, RemoteProcessState, ServerFrame } from './protocol-fr
 // knows what it once started but not what survived, and only this side does — so `states()` reads
 // the entries that are still here, which is the same fact `kill` and `finish` maintain rather than a
 // second record that could disagree with them.
-type Entry = { kill: () => void; frame: Extract<ClientFrame, { type: 'spawn' }> };
+type ProcessResources = {
+  kill: () => void;
+  writer: (data: string) => void;
+  resizer?: (cols: number, rows: number) => void;
+  detection?: HarnessDetection;
+  browser?: BrowserHandle;
+};
+type Entry = ProcessResources & { frame: Extract<ClientFrame, { type: 'spawn' }> };
 
 // The e2e browser a `-b` spawn started on this host, if any. Closing it stops the guard, kills the
 // confined Chromium, and removes the browser's scratch workspace — so a harness that exits on its
@@ -55,10 +62,10 @@ export class RemoteProcesses {
     return [...this.entries.values()].map(({ frame }) => spawnFrameState(frame));
   }
 
-  input(id: string, data: string): void { this.writers.get(id)?.(data); }
+  input(id: string, data: string): void { this.entries.get(id)?.writer(data); }
 
   resize(id: string, cols: number, rows: number): void {
-    this.resizers.get(id)?.(cols, rows);
+    this.entries.get(id)?.resizer?.(cols, rows);
     messageBus.emit('pty', { type: 'resize', id, cols, rows });
   }
 
@@ -68,30 +75,29 @@ export class RemoteProcesses {
   // none yet (no bytes settled) or `id` names a process with no detection at all (not a harness, or
   // already exited). Backs `capture-request` (decision 15/16 of the auto-accept-while-detached plan):
   // a fresh on-demand snapshot, live or from a parked peer, without a full attach.
-  latestCapture(id: string): ScreenCapture | undefined { return this.detections.get(id)?.latestCapture(); }
+  latestCapture(id: string): ScreenCapture | undefined { return this.entries.get(id)?.detection?.latestCapture(); }
 
   // Every harness process's current busy/ready state, for `DetachedPeer.accept()` to send as a
   // one-shot `busy-transition` on attach (decision 20 of the auto-accept-while-detached plan).
   busyStates(): Array<{ id: string; busy: boolean; unread: boolean }> {
-    return [...this.detections].map(([id, detection]) => ({ id, ...detection.snapshot() }));
+    return [...this.entries].flatMap(([id, entry]) => entry.detection === undefined ? [] : [{ id, ...entry.detection.snapshot() }]);
   }
 
   // The client's answer to a `resume-event` it has already acted on: the scheduled resume left that
   // process's tab schedule, delivered or cancelled, so this side's detector may report a fresh limit.
   // An id with no detection — a plain PTY, an agent process, or one already exited — is ignored.
-  resumeDelivered(id: string): void { this.detections.get(id)?.delivered(); }
+  resumeDelivered(id: string): void { this.entries.get(id)?.detection?.delivered(); }
 
   killAll(): void {
-    for (const [, entry] of this.entries) entry.kill();
+    for (const entry of this.entries.values()) {
+      entry.kill();
+      this.disposeResources(entry);
+    }
     this.entries.clear();
     this.zshStartup.dispose();
   }
 
-  private writers = new Map<string, (data: string) => void>();
-  private resizers = new Map<string, (cols: number, rows: number) => void>();
-  private detections = new Map<string, HarnessDetection>();
-
-  private spawnPty(frame: Extract<ClientFrame, { type: 'spawn' }>): Omit<Entry, 'frame'> {
+  private spawnPty(frame: Extract<ClientFrame, { type: 'spawn' }>): ProcessResources {
     const shell = frame.shell;
     const cwd = shell === undefined ? this.workspaceDir : this.shellCwd(frame.cwd);
     // The remote builds its own copy of the harness environment, browser included: the endpoint
@@ -107,7 +113,14 @@ export class RemoteProcesses {
         onBrowserGone: (message) => this.send({ type: 'browser-exited', id: frame.id, message }),
         onBrowserStarted: () => this.send({ type: 'browser-started', id: frame.id }),
       });
-    this.browsers.set(frame.id, spawnEnv.handle);
+    let browserHandle = spawnEnv.handle;
+    const browser: BrowserHandle = browserHandle === undefined ? undefined : {
+      close: () => {
+        const handle = browserHandle;
+        browserHandle = undefined;
+        handle?.close();
+      },
+    };
     // A throw here leaves before `spawn` records the entry, so neither `kill` nor `finish` will ever
     // reach the browser recorded a line above. Give it back here or nothing will.
     let session;
@@ -140,18 +153,22 @@ export class RemoteProcesses {
         frame.launch ?? (shell === undefined ? undefined : { shell: 'zsh', args: [] }),
       );
     } catch (error) {
-      this.closeBrowser(frame.id);
+      browser?.close();
       throw error;
     }
-    this.writers.set(frame.id, (data) => session.write(data));
-    this.resizers.set(frame.id, (cols, rows) => session.resize(cols, rows));
+    const resources: ProcessResources = {
+      kill: () => { browser?.close(); session.kill(); },
+      writer: (data) => session.write(data),
+      resizer: (cols, rows) => session.resize(cols, rows),
+      browser,
+    };
     if (frame.harness !== undefined) {
-      this.detections.set(frame.id, buildHarnessDetection(
+      resources.detection = buildHarnessDetection(
         frame.id, frame.harness, frame.cols, frame.rows, frame.autoApprove ?? false, frame.autoResume ?? false,
         (keystroke) => this.input(frame.id, keystroke), this.send,
-      ));
+      );
     }
-    return { kill: () => { this.closeBrowser(frame.id); session.kill(); } };
+    return resources;
   }
 
   private shellCwd(requested: string | undefined): string {
@@ -159,18 +176,18 @@ export class RemoteProcesses {
     return containedAbsolute(this.workspaceDir, cwd) ? cwd : this.workspaceDir;
   }
 
-  private browsers = new Map<string, BrowserHandle>();
-
-  private closeBrowser(id: string): void {
-    this.browsers.get(id)?.close();
-    this.browsers.delete(id);
+  private disposeResources(entry: Entry): void {
+    entry.detection?.dispose();
+    entry.detection = undefined;
+    entry.browser?.close();
+    entry.browser = undefined;
   }
 
   // Spawned in a process group of its own, because the hangup that parks this peer is delivered to
   // the ssh session's group and would otherwise take the shell down with the transport — the one
   // thing a detach exists to leave running. A `pty` process needs no such care: its pseudo-terminal
   // already put it in a session of its own.
-  private spawnPipe(id: string, agentName?: string): Omit<Entry, 'frame'> {
+  private spawnPipe(id: string, agentName?: string): ProcessResources {
     const shell = spawnShell(0, { JANUS_AGENT_NAME: agentName ?? this.label }, {
       workspaceDir: this.workspaceDir,
       tokens: this.tokens,
@@ -191,17 +208,16 @@ export class RemoteProcesses {
     // The shell inherits this server's own directory, so put it in the workspace the same way the
     // local `ShellManager` does for a freshly spawned shell.
     shell.stdin?.write(`cd "${this.workspaceDir}"\n`);
-    this.writers.set(id, (data) => { if (shell.stdin?.writable) shell.stdin.write(data); });
-    return { kill: () => { killShellGroup(shell); } };
+    return {
+      kill: () => { killShellGroup(shell); },
+      writer: (data) => { if (shell.stdin?.writable) shell.stdin.write(data); },
+    };
   }
 
   private finish(id: string, exitCode: number): void {
+    const entry = this.entries.get(id);
     this.entries.delete(id);
-    this.writers.delete(id);
-    this.resizers.delete(id);
-    this.detections.get(id)?.dispose();
-    this.detections.delete(id);
-    this.closeBrowser(id);
+    if (entry !== undefined) this.disposeResources(entry);
     this.send({ type: 'exit', id, exitCode });
   }
 }

@@ -161,6 +161,15 @@ describe('FILESYSTEM_OPERATIONS', () => {
     expect(decoded).toEqual({ path: 'src' });
   });
 
+  it('rejects malformed values when a decoder is called without its validator', () => {
+    expect(() => operationDescriptor('move').decode({ from: 7, to: 'dest' }))
+      .toThrow('Invalid remote filesystem operation arguments.');
+    expect(() => operationDescriptor('replay').decode({
+      undoStack: [{ entries: [{ from: 'a', to: 3 }] }], redoStack: [],
+      direction: 'undo', overwrite: false, skipConflicts: false,
+    })).toThrow('Invalid remote filesystem operation arguments.');
+  });
+
   it('omits an absent conflict policy rather than decoding it as undefined', () => {
     const decoded = operationDescriptor('move-many').decode({ sources: ['a.txt'], destination: 'dest' });
 

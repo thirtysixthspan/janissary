@@ -1,10 +1,10 @@
 // Narrowing helpers for records parsed out of a harness's own on-disk session format. Every value
 // arrives as `unknown` (the shapes belong to another program and change between its versions), so
 // each adapter reads through these rather than asserting a type it cannot guarantee.
+import { isRecord } from '../../value-guards.js';
 
 export function asRecord(value: unknown): Record<string, unknown> | undefined {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
-  return value as Record<string, unknown>;
+  return isRecord(value) ? value : undefined;
 }
 
 export function asString(value: unknown): string | undefined {

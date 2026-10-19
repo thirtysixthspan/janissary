@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { errorText } from '@shared/error-text';
 import type { RolesPayload } from '@shared/plugins/roles/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { RoleCard } from './RoleCard';
@@ -23,7 +24,7 @@ export function RolesTab({ payload, capabilities }: Properties) {
   const raise = (intent: string, value: Record<string, unknown>) => {
     setRefusal(null);
     void capabilities.intent(intent, value).catch((error: unknown) => {
-      setRefusal(String(error instanceof Error ? error.message : error));
+      setRefusal(errorText(error));
     });
   };
 

@@ -1,20 +1,16 @@
-import { isRecord } from '../api.js';
+import type { RemoteSessionAction, RemoteSessionKind, RemoteSessionState } from '../api.js';
 
 export const SESSIONS_PAYLOAD_SCHEMA_VERSION = 1;
 
-// The sessions tab's payload contract. Its one import is the published `isRecord` guard through
-// `../api.js`, which the client can follow because the plugin api module is a pure contract; any
-// other server module would pull NodeNext `.js` resolution or server behavior into the browser
-// graph. The shapes are deliberately re-declared rather than imported from the host's
-// `RemoteSessionView`; `shared.test.ts` pins the two against each other.
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-export type SessionRowKind = 'harness' | 'shell' | 'ssh' | 'navigator';
+export type SessionRowKind = RemoteSessionKind;
 
-export type SessionRowState =
-  | 'provisioning' | 'active' | 'reconnecting' | 'detached' | 'terminated';
+export type SessionRowState = RemoteSessionState;
 
-export type SessionRowAction =
-  | 'attach' | 'detach' | 'terminate' | 'forget' | 'focus' | 'close' | 'diff';
+export type SessionRowAction = RemoteSessionAction;
 
 export type SessionRow = {
   id: string;
@@ -40,9 +36,28 @@ export type SessionsPayload = { entries: SessionRow[] };
 // six, because every one of them says the same thing: this verb, on this row.
 export type SessionIntent = { id: string };
 
-const KINDS = new Set<string>(['harness', 'shell', 'ssh', 'navigator']);
-const STATES = new Set<string>(['provisioning', 'active', 'reconnecting', 'detached', 'terminated']);
-const ACTIONS = new Set<string>(['attach', 'detach', 'terminate', 'forget', 'focus', 'close', 'diff']);
+const KINDS: Record<SessionRowKind, true> = {
+  harness: true,
+  shell: true,
+  ssh: true,
+  navigator: true,
+};
+const STATES: Record<SessionRowState, true> = {
+  provisioning: true,
+  active: true,
+  reconnecting: true,
+  detached: true,
+  terminated: true,
+};
+const ACTIONS: Record<SessionRowAction, true> = {
+  attach: true,
+  detach: true,
+  terminate: true,
+  forget: true,
+  focus: true,
+  close: true,
+  diff: true,
+};
 
 function isOptionalString(value: unknown): boolean {
   return value === undefined || typeof value === 'string';
@@ -53,14 +68,14 @@ function isSessionRow(value: unknown): value is SessionRow {
     && typeof value.id === 'string'
     && typeof value.host === 'string'
     && typeof value.name === 'string'
-    && typeof value.kind === 'string' && KINDS.has(value.kind)
-    && typeof value.state === 'string' && STATES.has(value.state)
+    && typeof value.kind === 'string' && Object.hasOwn(KINDS, value.kind)
+    && typeof value.state === 'string' && Object.hasOwn(STATES, value.state)
     && typeof value.activity === 'number'
     && typeof value.destination === 'string'
     && typeof value.workspace === 'string'
     && typeof value.joined === 'boolean'
     && Array.isArray(value.actions)
-    && value.actions.every((action) => typeof action === 'string' && ACTIONS.has(action))
+    && value.actions.every((action) => typeof action === 'string' && Object.hasOwn(ACTIONS, action))
     && typeof value.label === 'string'
     && isOptionalString(value.session)
     && isOptionalString(value.failure)

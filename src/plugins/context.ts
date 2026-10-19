@@ -31,6 +31,7 @@ import { isPluginSettings, validateTabValue } from './tab-value.js';
 import { tabActivityRows } from './activity.js';
 import { withRunAllocation, withRunAllocationAsync } from './run-allocation.js';
 import { queueCapabilities } from './queue-capabilities.js';
+import { updateTabCapability } from './update-tab-capability.js';
 
 // Holds a plugin to the capability set its own manifest asked for. Without this the `capabilities`
 // field is decorative: every plugin receives the whole context regardless of what it declared, so
@@ -81,6 +82,7 @@ export function createPluginContext(
   // A later guarded call into this plugin, for a handler that outlives this one — `launchTab`'s ready.
   deferred?: DeferredPluginCall,
   adoptPtyId?: string,
+  disable?: (error: unknown, origin: PluginFailureOrigin) => void,
 ): TabPluginServerCapabilities {
   return restrictToDeclared({
     note: (text) => {
@@ -141,14 +143,7 @@ export function createPluginContext(
     }),
     // Unlike `openOrFocusTab`, this does not require the originating tab to still exist: the target
     // is the plugin's own tab, not the transcript that asked for the change.
-    updateTab: (instanceKey, factory) => {
-      if (!isEnabled()) return;
-      managers.tab.updatePluginTab(declaration.id, instanceKey, (resources) => {
-        const update = factory(declaredResources(declaration, resources));
-        validateTabValue(activation, update);
-        return update;
-      });
-    },
+    updateTab: updateTabCapability({ managers, declaration, activation, origin, isEnabled, disable }),
     ...ownTabCapabilities({ managers, declaration, isEnabled }),
     tabActivity: (tailLines) => (isEnabled() ? tabActivityRows(managers, tailLines) : []),
     openClaimedFiles: (target) => {

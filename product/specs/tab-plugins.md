@@ -98,7 +98,7 @@ A profile captures a docked plugin tab with the side it was docked to, and reope
 
 A plugin may replace what one of its own tabs shows after it has opened, addressing the tab by the same identity it was opened with. The tab keeps everything else — its name in the strip unless the plugin supplies a new one, its place in the strip, its group, its pane, whether it is focused, and the files it already serves — so a view that updates never jumps, steals focus, or reopens. Supplying a new name replaces whatever the tab is currently called, including a name the user gave it by renaming the tab.
 
-An update aimed at a tab that is no longer open, or one belonging to a different plugin, does nothing at all: no view changes, nothing is reported, and the plugin keeps running. A plugin that produces a replacement its own contract rejects is disabled like any other broken plugin.
+An update aimed at a tab that is no longer open, or one belonging to a different plugin, does nothing at all: no view changes, nothing is reported, and the plugin keeps running. A replacement that fails the plugin's payload guard or the host's JSON-compatibility check is refused, and the host disables the plugin with the reason `produced an invalid tab payload`; `updateTab` returns without throwing after the failure is recorded. Failure and teardown behavior is described below.
 
 An update may begin serving a file the tab did not hold before, which is what lets a view grow — the audio plugin's playlist gaining a track. A file registered this way belongs to the tab being updated exactly as one registered when it opened does, so closing the tab releases everything it ever served and nothing else.
 
