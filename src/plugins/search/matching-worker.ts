@@ -44,7 +44,7 @@ export function createMatcherWorker(
   const deadline = options.deadlineMs ?? MATCHING_JOB_DEADLINE_MS;
   const pending = new Map<number, Pending>();
   let nextId = 0;
-  let closed = false;
+  let closedBy: Error | null = null;
 
   const rejectPending = (error: Error) => {
     for (const job of pending.values()) {
@@ -55,8 +55,8 @@ export function createMatcherWorker(
   };
 
   const terminate = (reason: Error) => {
-    if (closed) return;
-    closed = true;
+    if (closedBy !== null) return;
+    closedBy = reason;
     signal.removeEventListener('abort', cancel);
     rejectPending(reason);
     void worker.terminate();
@@ -75,13 +75,17 @@ export function createMatcherWorker(
   });
   worker.on('error', (error) => terminate(error));
   worker.on('exit', (code) => {
-    if (!closed) terminate(new Error(`Search matching worker exited with code ${code}`));
+    if (closedBy === null) terminate(new Error(`Search matching worker exited with code ${code}`));
   });
 
   const request = (
     build: (id: number) => MatcherWorkerRequest,
   ): Promise<MatcherWorkerResponse> => new Promise((resolve, reject) => {
-    if (closed || signal.aborted) {
+    if (closedBy !== null) {
+      reject(closedBy);
+      return;
+    }
+    if (signal.aborted) {
       reject(new Error('Search matching cancelled'));
       return;
     }
