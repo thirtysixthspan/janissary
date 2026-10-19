@@ -28,6 +28,11 @@ class FakeWorker {
     const listeners = this.listeners.get('message') ?? [];
     for (const listener of listeners) listener(response);
   }
+
+  fail(error: Error): void {
+    const listeners = this.listeners.get('error') ?? [];
+    for (const listener of listeners) listener(error);
+  }
 }
 
 const modes = { regex: false, matchCase: false, wholeWord: false };
@@ -69,6 +74,19 @@ describe('matcher worker adapter', () => {
     await expect(result).rejects.toThrow('cancelled');
     expect(fake.terminate).toHaveBeenCalledOnce();
     fake.reply({ id: 1, result: true });
+  });
+
+  it('reports a worker failure that happens before the first job', async () => {
+    const fake = new FakeWorker();
+    const matcher = createMatcherWorker('todo', modes, new AbortController().signal, {
+      createWorker: () => fake,
+    });
+    fake.fail(new Error('worker failed to load'));
+
+    await expect(matcher.detect(['todo'])).rejects.toThrow('worker failed to load');
+    await expect(matcher.rows('a.ts', 'todo')).rejects.toThrow('worker failed to load');
+    expect(fake.posted).toEqual([]);
+    expect(fake.terminate).toHaveBeenCalledOnce();
   });
 
   it('keeps the parent responsive during expensive matching and permits a later query', async () => {
