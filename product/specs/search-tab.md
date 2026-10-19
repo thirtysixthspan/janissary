@@ -133,7 +133,9 @@ before any file has been matched. A search is never reported as cancelled unless
 a search the user replaces or closes settles silently.
 
 Searching works the same whichever directory the application was started from, including when it
-runs from a source checkout and the project has its own, different TypeScript tooling installed.
+runs from a source checkout and the project has its own, different TypeScript tooling installed. A
+source checkout searches the same way on every Node.js release the application runs on, not only the
+newest ones.
 
 ### Navigating and opening a result
 
