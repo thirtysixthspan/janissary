@@ -11,7 +11,7 @@ import {
 } from './paths.js';
 import { getConfig } from '../config.js';
 import { sandboxAvailable as isSandboxAvailable, sandboxWillConfine } from './confinement.js';
-import { janissaryRoot, janissaryAiDir, janissaryScriptsDir, JANISSARY_HOME_ENV } from '../janissary-root.js';
+import { janissaryRoot, janissaryAiDir, janissaryScriptsDir, janissarySecurityDir, JANISSARY_HOME_ENV } from '../janissary-root.js';
 import { scrubEnv, withJanissaryHome, withWorkspaceCredentials, workspaceEnv } from './environment.js';
 import type { ProjectTokens } from '../project/tokens.js';
 
@@ -197,6 +197,7 @@ export function sandboxSpawn(
   const playwright = playwrightPackagePaths();
   const janissaryAi = dualPath(janissaryAiDir());
   const janissaryScripts = dualPath(janissaryScriptsDir());
+  const janissarySecurity = dualPath(janissarySecurityDir());
   const installedSkillsRoot = path.join(janissaryRoot(), 'skills');
   const installedSkillsRealRoot = resolvePath(installedSkillsRoot);
   const skillDirs = (options.installedSkillDirs ?? []).filter((skillDir) => {
@@ -228,6 +229,8 @@ export function sandboxSpawn(
     '-D', `JANISSARY_AI_R=${janissaryAi.real}`,
     '-D', `JANISSARY_SCRIPTS_L=${janissaryScripts.literal}`,
     '-D', `JANISSARY_SCRIPTS_R=${janissaryScripts.real}`,
+    '-D', `JANISSARY_SECURITY_L=${janissarySecurity.literal}`,
+    '-D', `JANISSARY_SECURITY_R=${janissarySecurity.real}`,
     ...skillDirs.flatMap((skillDir, index) => {
       const dual = dualPath(skillDir);
       return ['-D', `JANISSARY_SKILL_${index}_L=${dual.literal}`, '-D', `JANISSARY_SKILL_${index}_R=${dual.real}`];

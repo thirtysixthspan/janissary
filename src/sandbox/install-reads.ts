@@ -1,7 +1,8 @@
 // The read rule covering code the sandboxed process itself runs, as opposed to the project data it
 // works on: its own executable, the node binary janissary hands it, and the directories janissary
-// ships — its Playwright client, its `ai/` prompts, its `scripts/` runner. All of it is program text
-// rather than user data, none of it is writable, and every entry is here for the same shape of
+// ships — its Playwright client, its `ai/` prompts, its `scripts/` runner, its `security/`
+// blocklist. All of it is program text rather than user data, none of it is writable, and every
+// entry is here for the same shape of
 // reason: a path the process must be able to open to function, which the `$HOME` content deny in
 // `profile.ts` would otherwise catch because a harness or a janissary installation commonly lives
 // under `$HOME`.
@@ -49,6 +50,12 @@ export function installReadRule(skillCount: number): string {
 ; directory — the project — while coming from the installation, which is what makes reaching for them
 ; through $janissary correct rather than merely possible. Read-only for a sharper version of the same
 ; reason as ai/: these are executed, not just read.
+; JANISSARY_SECURITY_L/R is that installation's security/ directory, on the same terms again. It holds
+; the supply-chain blocklist check-malicious-package reads from beside its own scripts/ directory,
+; and every package-update task runs that gate before touching node_modules, so without it the gate
+; fails before checking anything. Read-only so an agent cannot clear a blocked release that a later
+; unsandboxed install would then accept. ai/, scripts/, and security/ are the only parts of the
+; installation carved in; the root itself, node_modules, and a checkout's .janissary/ stay denied.
 (allow file-read-data file-read-xattr
   (subpath (param "SELF_DIR_L"))
   (subpath (param "SELF_DIR_R"))
@@ -60,5 +67,7 @@ export function installReadRule(skillCount: number): string {
   (subpath (param "JANISSARY_AI_R"))
   (subpath (param "JANISSARY_SCRIPTS_L"))
   (subpath (param "JANISSARY_SCRIPTS_R"))
+  (subpath (param "JANISSARY_SECURITY_L"))
+  (subpath (param "JANISSARY_SECURITY_R"))
 ${skillReads})`;
 }
