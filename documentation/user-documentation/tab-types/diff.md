@@ -30,7 +30,7 @@ Click a file's name to open it in an editor tab. Double-click an added or unchan
 
 The tab recomputes every second, so the change set stays live while files are edited around it. A change set with no files reads `No changes`, and a directory that isn't in a git repository says so by name.
 
-The header names the directory being diffed in the app's own shorthand — `$root` for the project's own directory, `$workspace/<name>` for a clone, `~` for a path under your home directory. A workspace on another host is named after that host, so it's never ambiguous which machine the changes came from.
+The header names the directory being diffed in the app's own shorthand — `$root` for the project's own directory, `$workspace/<name>` for a clone, `$git-sync` for the shared clone [git-synced files](/user-documentation/tab-types/editor-git-sync) live in, `~` for a path under your home directory. A workspace on another host is named after that host, so it's never ambiguous which machine the changes came from.
 
 The arrows-up-down button in a file's header cycles that file through closed, a compact diff, and the whole file. In a replacement, only the characters that changed carry the stronger tint. The header's plus-minus control switches between a unified layout, one column per line, and a split layout, old and new content in separate columns; the choice is remembered for the next diff tab you open.
 

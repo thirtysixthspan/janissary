@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { abbreviatePath, abbreviateWorkspaceDir, abbreviateWorkspacePath, expandUserPath } from './paths.js';
+import { abbreviateDisplayPath, abbreviatePath, abbreviateWorkspaceDir, abbreviateWorkspacePath, expandUserPath } from './paths.js';
 
 const root = '/Users/name/dev/janissary';
 const home = '/Users/name';
@@ -35,6 +35,34 @@ describe('abbreviatePath', () => {
   it('does not match a sibling that merely shares the root prefix string', () => {
     // `…/janissary-extra` is not inside `…/janissary`; it falls back to the home shortcut.
     expect(ab('/Users/name/dev/janissary-extra/x')).toBe('~/dev/janissary-extra/x');
+  });
+});
+
+const sync = `${root}/.janissary/workspace/git-sync`;
+const display = (p: string) => abbreviateDisplayPath(p, { root, home });
+
+describe('abbreviateDisplayPath', () => {
+  it('shows the shared git-sync clone itself as $git-sync/', () => {
+    expect(display(sync)).toBe('$git-sync/');
+  });
+
+  it('abbreviates a synced file inside the clone to $git-sync ahead of $root', () => {
+    expect(display(`${sync}/product/backlog/issues.md`)).toBe('$git-sync/product/backlog/issues.md');
+  });
+
+  it('does not match a sibling clone that merely shares the git-sync prefix string', () => {
+    expect(display(`${root}/.janissary/workspace/git-sync-old/x`)).toBe('$root/workspace/git-sync-old/x');
+  });
+
+  it('abbreviates every other path the way abbreviatePath does', () => {
+    for (const p of [root, `${root}/src/cli.ts`, `${root}/.janissary/workspace/emrah`, `${home}/other`, '/etc/hosts']) {
+      expect(display(p)).toBe(ab(p));
+    }
+  });
+
+  it('leaves abbreviatePath itself reading the clone under $root', () => {
+    // `profile save` writes abbreviatePath's output for expandUserPath, which never expands $git-sync.
+    expect(ab(`${sync}/notes.md`)).toBe('$root/workspace/git-sync/notes.md');
   });
 });
 

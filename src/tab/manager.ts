@@ -2,7 +2,7 @@ import type { Tab, CenterPane } from './types.js';
 import type { ConnectionView, ScheduleView, TabView } from '../protocol.js';
 import type { TabPluginTerminal, TabPluginTerminalOptions } from '../plugins/api.js';
 import type { Managers } from '../managers.js';
-import { abbreviatePath } from '../paths.js';
+import { abbreviateDisplayPath } from '../paths.js';
 import { getConfig } from '../config.js';
 import { messageBus } from '../bus.js';
 import { TabTranscriptState } from './transcript/state.js';
@@ -192,7 +192,7 @@ export class TabManager extends TabTranscriptState {
   }
 
   shorten(p: string): string {
-    return abbreviatePath(p, { root: this.rootDir });
+    return abbreviateDisplayPath(p, { root: this.rootDir });
   }
 
   registerFile(absPath: string): string {

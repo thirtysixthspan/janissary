@@ -1,5 +1,6 @@
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { SYNC_WORKSPACE_NAME } from './git/sync.js';
 
 export type RootContext = {
   // The root path: the directory the application was launched from.
@@ -66,4 +67,16 @@ export function abbreviatePath(p: string, context: RootContext): string {
   if (p === home) return '~';
   if (p.startsWith(home + path.sep)) return '~' + p.slice(home.length);
   return p;
+}
+
+// Abbreviate an absolute path for display wherever the application renders one, as `abbreviatePath`
+// does, except that the shared git-sync workspace clone reads as `$git-sync` ahead of `$root` (a synced
+// file at `<root>/.janissary/workspace/git-sync/notes.md` shows as `$git-sync/notes.md`). Kept apart
+// from `abbreviatePath` because `profile save` writes that one's output back to disk for
+// `expandUserPath` to read, and `$git-sync` is never expanded. Display-only — callers keep the real path.
+export function abbreviateDisplayPath(p: string, context: RootContext): string {
+  const sync = path.join(context.root, '.janissary', 'workspace', SYNC_WORKSPACE_NAME);
+  if (p === sync) return '$git-sync/';
+  if (p.startsWith(sync + path.sep)) return '$git-sync' + p.slice(sync.length);
+  return abbreviatePath(p, context);
 }

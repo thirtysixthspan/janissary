@@ -20,6 +20,19 @@ describe('formatShellCwd', () => {
       .toBe('$root/workspace/alex-old');
   });
 
+  it('reads the shared git-sync clone as $git-sync ahead of $root', () => {
+    expect(formatShellCwd('/repo/.janissary/workspace/git-sync', '/repo')).toBe('$git-sync/');
+    expect(formatShellCwd('/repo/.janissary/workspace/git-sync/product/plans', '/repo'))
+      .toBe('$git-sync/product/plans');
+    expect(formatShellCwd('/repo/.janissary/workspace/git-sync-old', '/repo'))
+      .toBe('$root/workspace/git-sync-old');
+  });
+
+  it('keeps a shell workspaced in its own clone on the workspace shortcut', () => {
+    expect(formatShellCwd('/repo/.janissary/workspace/alex', '/repo/.janissary/workspace/alex', '/repo/.janissary/workspace/alex'))
+      .toBe('$workspace/alex');
+  });
+
   it('leaves a cwd outside the project unchanged', () => {
     expect(formatShellCwd('/tmp/elsewhere', '/repo')).toBe('/tmp/elsewhere');
   });

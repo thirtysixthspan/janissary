@@ -118,6 +118,15 @@ describe('TabManager by-label lookups', () => {
   });
 });
 
+describe('TabManager shorten', () => {
+  it('reads a synced file in the shared git-sync clone as $git-sync and a project file as $root', () => {
+    const tm = makeTabManager();
+    expect(tm.shorten('/repo/.janissary/workspace/git-sync/product/backlog/issues.md'))
+      .toBe('$git-sync/product/backlog/issues.md');
+    expect(tm.shorten('/repo/product/backlog/issues.md')).toBe('$root/product/backlog/issues.md');
+  });
+});
+
 describe('TabManager queue', () => {
 
   it('appends a system-schedule batch contiguously with one provenance key and one update', () => {
