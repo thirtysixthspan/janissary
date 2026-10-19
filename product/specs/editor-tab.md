@@ -44,7 +44,8 @@ up/down, etc.) are not.
 
 - **Metadata header** — a single row showing the file's name, size, and location. The location is
   abbreviated using the `$root` and `~` shortcuts (see `root-path.md`), the same as elsewhere the
-  application displays a path.
+  application displays a path. A git-synced file lives in the shared git-sync clone, so its location
+  reads as `$git-sync/<rest>` rather than `$root/workspace/git-sync/<rest>`.
 - The metadata header groups every action at the right edge of that same row: the sync-status icon when present, save, commit to origin, connections status, and Split when available. The save button is enabled when the buffer has unsaved changes and
   disabled and dimmed when the buffer is clean. The connections-status button opens the tab's
   connections window (see [[connection]]) and is dimmed and inert when no persona connection is

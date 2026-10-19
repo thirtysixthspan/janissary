@@ -21,6 +21,16 @@ $root/workspace/emrah   = /Users/name/dev/janissary/.janissary/workspace/emrah
 
 Concretely, both the root directory and the state directory inside it are addressed as `$root`, and the **longest matching prefix wins** — so a path under the state directory loses its `.janissary` segment, while a path elsewhere under the root keeps its own first segment.
 
+### The git-sync symbol
+
+Every git-synced file is edited inside one shared workspace clone, which physically lives under the state directory at `workspace/git-sync`. That clone reads as **`$git-sync`** instead of `$root/workspace/git-sync`: the clone itself is shown as `$git-sync/`, and a path inside it as `$git-sync/<rest>`. It takes priority over `$root`, so a synced file's location reads, for example:
+
+```
+$git-sync/product/backlog/issues.md   = /Users/name/dev/janissary/.janissary/workspace/git-sync/product/backlog/issues.md
+```
+
+Only the clone named exactly `git-sync` is abbreviated this way; a sibling folder whose name merely starts with `git-sync` keeps the ordinary `$root/workspace/…` form. A workspaced tab's own clone still reads as `$workspace/<name>` (below). `$git-sync` is display-only: it is not recognized as a typed path prefix, and a saved profile never contains it.
+
 ### The workspace symbol
 
 A **workspaced tab's** metadata row abbreviates further: the tab's own clone reads as
@@ -50,7 +60,9 @@ The shortcut is applied wherever the application itself renders a path into a ta
 
 - the working directory shown alongside each command's prompt,
 - the working directory listed in a tab's connections panel,
-- the file's location in an editor tab's metadata header,
+- the file's location in an editor tab's metadata header — `$git-sync/<rest>` for a git-synced file,
+- a file navigator's root,
+- a shell tab's working directory and a diff tab's header,
 - the notifications feed's launch lines — a workspace clone as `$workspace/<name>`, and a project
   root a remote launch just cloned as `$root`, and
 - the application's own status messages that name a path (for example, the location reported when a workspaced tab is created).

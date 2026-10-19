@@ -221,8 +221,8 @@ can be edited or run.
 
 ## The metadata row
 
-The row shows the shell's current working directory, shortened to `$root` or `$workspace/<name>`
-when it is inside the project or workspace clone. The stored directory stays absolute for shell actions.
+The row shows the shell's current working directory, shortened to `$root`, `$workspace/<name>`, or
+`$git-sync` when it is inside the project, the workspace clone, or the shared git-sync clone. The stored directory stays absolute for shell actions.
 It shows a workspace mark when that directory is a workspace clone, and the actions a shell tab can
 act on: **open file navigator here**, **new shell here**, the split control, and the connections and
 schedule windows.

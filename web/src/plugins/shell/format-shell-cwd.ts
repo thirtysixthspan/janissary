@@ -15,6 +15,9 @@ export function formatShellCwd(cwd: string, root: string, workspaceDir?: string)
   if (cwd === rootDirectory) return '$root/';
   if (rootDirectory === '/' && cwd.startsWith('/')) return `$root${cwd}`;
   const stateDirectory = rootDirectory === '/' ? '/.janissary' : `${rootDirectory}/.janissary`;
+  const syncDirectory = `${stateDirectory}/workspace/git-sync`;
+  if (cwd === syncDirectory) return '$git-sync/';
+  if (isAtOrBelow(cwd, syncDirectory)) return `$git-sync${cwd.slice(syncDirectory.length)}`;
   if (cwd === stateDirectory) return '$root/';
   if (isAtOrBelow(cwd, stateDirectory)) {
     return `$root${cwd.slice(stateDirectory.length)}`;

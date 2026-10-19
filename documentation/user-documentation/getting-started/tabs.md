@@ -145,6 +145,11 @@ The hidden `.janissary` state directory folds into the root, so a workspaced clo
 prefix wins. The root directory itself appears as `$root/`. Paths elsewhere under your home
 directory shorten to `~`.
 
+[Git-synced files](/user-documentation/tab-types/editor-git-sync) are edited in one shared clone at
+`$root/workspace/git-sync`, which gets its own shorter name: `$git-sync`. It wins over `$root`, so a
+synced file's editor tab shows its location as `$git-sync/product/backlog/issues.md`, and the clone
+itself appears as `$git-sync/`. Like `$workspace`, it's display-only — you can't type it as a path.
+
 A [workspaced](/user-documentation/advanced-agents/workspaced-agent) tab's metadata row shortens
 one step further: the clone reads as `$workspace/<name>` (its own directory name, e.g.
 `$workspace/salih`), and anything inside it as `$workspace/<name>/<rest>` — on remote hosts too,
