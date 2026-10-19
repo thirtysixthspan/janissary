@@ -18,8 +18,12 @@ export async function closeTabResources(
 ): Promise<void> {
   const label = tab.label;
   const releases: Promise<void>[] = [];
+  const failures: unknown[] = [];
+  const attempt = (release: () => void): void => {
+    try { release(); } catch (error) { failures.push(error); }
+  };
   tabRuntime(tab).closing = true;
-  releasePluginRemoteResource(label);
+  attempt(() => releasePluginRemoteResource(label));
   // Release the workspace clone in the background: its final release recursively removes a full git clone,
   // slow enough to freeze the UI if run inline (the tab can't visibly close until it finishes).
   // Deferring it lets the tab close and the state broadcast reach the client first. The clone stays
@@ -29,23 +33,37 @@ export async function closeTabResources(
     // If the clone is still being provisioned (the tab was closed before it finished), cancel it
     // immediately — a no-op once nothing is pending for this label — so the tab closes right away
     // instead of leaving an orphaned `git clone` running for a tab that no longer exists.
-    if (tab.workspaceCancel) tab.workspaceCancel();
-    else managers.workspace.cancel(label);
-    releases.push(new Promise((resolve, reject) => {
-      setTimeout(() => {
-        try { resolve(managers.workspace.release(workspaceDir)); } catch (error) { reject(error); }
+    attempt(() => {
+      if (tab.workspaceCancel) tab.workspaceCancel();
+      else managers.workspace.cancel(label);
+    });
+    const release = new Promise<void>((resolve) => {
+      setTimeout(async () => {
+        try {
+          await managers.workspace.release(workspaceDir);
+        } catch (error) {
+          failures.push(error);
+        } finally {
+          resolve();
+        }
       }, 0);
-    }));
+    });
+    releases.push(release);
   }
   for (const name of MANAGER_TAB_RELEASE) {
     if (name === 'remote' && !tab.remote) continue;
-    managers[name].closeTab(label);
+    attempt(() => managers[name].closeTab(label));
   }
-  managers.tab.deleteBusy(label);
-  messageBus.emit('transcript', { type: 'tab:removed', tabLabel: label });
+  attempt(() => managers.tab.deleteBusy(label));
+  attempt(() => {
+    const listenerFailures = messageBus.emit('transcript', { type: 'tab:removed', tabLabel: label });
+    for (const error of listenerFailures) failures.push(error);
+  });
   if (tab.plugin) {
-    for (const id of tab.plugin.fileRefs) openFiles.delete(id);
+    for (const id of tab.plugin.fileRefs) attempt(() => { openFiles.delete(id); });
   }
-  if (tab.editor) releaseFileReference(openFiles, tab.editor.url);
+  const editor = tab.editor;
+  if (editor) attempt(() => releaseFileReference(openFiles, editor.url));
   await Promise.all(releases);
+  if (failures.length > 0) throw new AggregateError(failures, `Closing tab "${label}" failed.`);
 }

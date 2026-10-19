@@ -32,13 +32,16 @@ function makeManagers() {
   const run = vi.fn();
   const append = vi.fn();
   const workspaceLabelOf = vi.fn(() => 'creator' as string | undefined);
+  const entryOf = vi.fn(() => ({
+    address: { destination: 'alice@devbox' }, workspaceDir: '/remote/ws', workspaceLabel: 'creator',
+  }));
   const managers = {
     tab: { tabs, cur: () => active, byLabel: () => active, append },
     openFile: { edit, run },
-    remote: { workspaceLabelOf },
+    remote: { workspaceLabelOf, entryOf },
     notifications: new NotificationQueue(),
   } as unknown as Managers;
-  return { managers, edit, run, append, workspaceLabelOf, editor };
+  return { managers, edit, run, append, workspaceLabelOf, entryOf, editor };
 }
 
 function stateFor(filesystem: Partial<FileSystemPort>, ownerLabel?: string): FilesTabState {
@@ -89,31 +92,20 @@ describe('openNavigatorFile', () => {
 
   it('caches a remote file under the workspace the remote names', async () => {
     initRemoteFileCache(project());
-    const { managers, edit, workspaceLabelOf } = makeManagers();
+    const { managers, edit } = makeManagers();
     await openNavigatorFile(managers, remoteState({ readFile: readFile() }, 'joined'), 'files', 'a.ts', 'edit');
-    expect(workspaceLabelOf).toHaveBeenCalledWith('joined');
     expect(edit).toHaveBeenCalledWith(
-      expect.stringMatching(/remote-files\/devbox\/creator\/[a-f0-9]{64}\/a\.ts$/), expect.any(String), 'files',
+      expect.stringMatching(/remote-files\/[a-f0-9]{64}\/[a-f0-9]{64}\/a\.ts$/), expect.any(String), 'files',
     );
   });
 
-  // A remote that cannot name the workspace it served the tree from is not a reason to refuse the
-  // open: the cache keys the file under the navigator's owner, or failing that its own label.
-  it('falls back to the navigator owner, then to its own label, when the remote names no workspace', async () => {
+  it('uses the owning entry identity for remote file cache ownership', async () => {
     initRemoteFileCache(project());
-    const owned = makeManagers();
-    owned.workspaceLabelOf.mockReturnValue(undefined);
-    await openNavigatorFile(owned.managers, remoteState({ readFile: readFile() }, 'joined'), 'files', 'a.ts', 'edit');
-    expect(owned.edit).toHaveBeenCalledWith(
-      expect.stringMatching(/remote-files\/devbox\/joined\/[a-f0-9]{64}\/a\.ts$/), expect.any(String), 'files',
-    );
-
-    const orphan = makeManagers();
-    orphan.workspaceLabelOf.mockReturnValue(undefined);
-    await openNavigatorFile(orphan.managers, remoteState({ readFile: readFile() }), 'files', 'a.ts', 'edit');
-    expect(orphan.edit).toHaveBeenCalledWith(
-      expect.stringMatching(/remote-files\/devbox\/files\/[a-f0-9]{64}\/a\.ts$/), expect.any(String), 'files',
-    );
+    const harness = makeManagers();
+    await openNavigatorFile(harness.managers, remoteState({ readFile: readFile() }, 'joined'), 'files', 'a.ts', 'edit');
+    const file = harness.edit.mock.calls[0][1];
+    expect(file).toMatch(/remote-files\/[a-f0-9]{64}\/[a-f0-9]{64}\/a\.ts$/);
+    expect(harness.entryOf).toHaveBeenCalledWith('joined');
   });
 });
 
@@ -158,31 +150,22 @@ describe('createNavigatorFile', () => {
   // rather than treating the tab as a read-only view of bytes that do not exist locally.
   it('materializes an empty remote file and marks the editor tab as new', async () => {
     initRemoteFileCache(project());
-    const { managers, edit, editor, workspaceLabelOf } = makeManagers();
+    const { managers, edit, editor } = makeManagers();
     const state = remoteState({ createFile: vi.fn(() => ({ ok: true, value: { path: 'src/new.ts' } })) }, 'joined');
     await createNavigatorFile(managers, state, 'files', 'src/new.ts');
-    expect(workspaceLabelOf).toHaveBeenCalledWith('joined');
     expect(edit).toHaveBeenCalledWith(
-      expect.stringMatching(/remote-files\/devbox\/creator\/[a-f0-9]{64}\/new\.ts$/), expect.any(String), 'files',
+      expect.stringMatching(/remote-files\/[a-f0-9]{64}\/[a-f0-9]{64}\/new\.ts$/), expect.any(String), 'files',
     );
     expect(editor.editor).toMatchObject({ newFile: true });
   });
 
-  it('falls back to the navigator owner, then to its own label, when the remote names no workspace', async () => {
+  it('uses the owning entry identity when creating a remote file', async () => {
     initRemoteFileCache(project());
     const created = () => vi.fn(() => ({ ok: true, value: { path: 'a.ts' } }));
-    const owned = makeManagers();
-    owned.workspaceLabelOf.mockReturnValue(undefined);
-    await createNavigatorFile(owned.managers, remoteState({ createFile: created() }, 'joined'), 'files', 'a.ts');
-    expect(owned.edit).toHaveBeenCalledWith(
-      expect.stringMatching(/remote-files\/devbox\/joined\/[a-f0-9]{64}\/a\.ts$/), expect.any(String), 'files',
-    );
-
-    const orphan = makeManagers();
-    orphan.workspaceLabelOf.mockReturnValue(undefined);
-    await createNavigatorFile(orphan.managers, remoteState({ createFile: created() }), 'files', 'a.ts');
-    expect(orphan.edit).toHaveBeenCalledWith(
-      expect.stringMatching(/remote-files\/devbox\/files\/[a-f0-9]{64}\/a\.ts$/), expect.any(String), 'files',
+    const harness = makeManagers();
+    await createNavigatorFile(harness.managers, remoteState({ createFile: created() }, 'joined'), 'files', 'a.ts');
+    expect(harness.edit).toHaveBeenCalledWith(
+      expect.stringMatching(/remote-files\/[a-f0-9]{64}\/[a-f0-9]{64}\/a\.ts$/), expect.any(String), 'files',
     );
   });
 });

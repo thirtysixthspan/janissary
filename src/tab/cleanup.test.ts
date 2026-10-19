@@ -208,4 +208,45 @@ describe('closeTabResources', () => {
 
     expect([...openFiles]).toEqual([['keep', '/tmp/keep.txt']]);
   });
+
+  it('continues releasing resources and file references after an early manager fails', async () => {
+    const managers = makeManagers();
+    const failure = new Error('shell release failed');
+    vi.mocked(managers.shell.closeTab).mockImplementation(() => { throw failure; });
+    const tab = {
+      ...makeTab('video', 'red'),
+      plugin: {
+        id: 'video', instanceKey: '/tmp/clip.mp4', schemaVersion: 1,
+        payload: {}, fileRefs: ['video'], sourceLabel: 'main',
+      },
+    };
+    const openFiles = new Map([['video', '/tmp/clip.mp4'], ['keep', '/tmp/keep.txt']]);
+
+    const closing = closeTabResources(tab, managers, openFiles);
+
+    expect(managers.acp.closeTab).toHaveBeenCalledWith('video');
+    expect(managers.tab.deleteBusy).toHaveBeenCalledWith('video');
+    expect([...openFiles]).toEqual([['keep', '/tmp/keep.txt']]);
+    await expect(closing).rejects.toMatchObject({ errors: [failure] });
+  });
+
+  it('aggregates transcript-listener and deferred workspace-release failures', async () => {
+    const managers = makeManagers();
+    const listenerFailure = new Error('transcript listener failed');
+    const workspaceFailure = new Error('workspace release failed');
+    vi.mocked(managers.workspace.release).mockRejectedValue(workspaceFailure);
+    const subscription = messageBus.on('transcript', 'tab:removed', () => { throw listenerFailure; });
+    const tab = { ...makeTab('ws', 'red'), workspaceDir: '/tmp/ws-main' };
+    const openFiles = new Map([['keep', '/tmp/keep.txt']]);
+
+    try {
+      const closing = closeTabResources(tab, managers, openFiles);
+      await expect(closing).rejects.toMatchObject({ errors: [listenerFailure, workspaceFailure] });
+    } finally {
+      subscription.unsubscribe();
+    }
+
+    expect(managers.acp.closeTab).toHaveBeenCalledWith('ws');
+    expect([...openFiles]).toEqual([['keep', '/tmp/keep.txt']]);
+  });
 });
