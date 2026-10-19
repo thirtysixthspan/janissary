@@ -11,11 +11,18 @@ export type RemoteFileRecord = {
   label: string;
 };
 
+export type RemoteFileCacheOwner = {
+  destination: string;
+  workspaceRoot: string;
+  workspaceLabel: string;
+};
+
 let cacheRoot = '';
 const records = new Map<string, RemoteFileRecord>();
 
-function safeSegment(value: string): string {
-  return value.replaceAll(/[^a-zA-Z0-9._-]/g, '_');
+function ownerDirectory(owner: RemoteFileCacheOwner): string {
+  const identity = JSON.stringify([owner.destination, owner.workspaceRoot, owner.workspaceLabel]);
+  return path.join(cacheRoot, createHash('sha256').update(identity).digest('hex'));
 }
 
 export function initRemoteFileCache(projectDirectory: string): void {
@@ -23,10 +30,10 @@ export function initRemoteFileCache(projectDirectory: string): void {
 }
 
 export function materializeRemoteFile(
-  host: string, workspaceLabel: string, relPath: string, content: Uint8Array, record: RemoteFileRecord,
+  owner: RemoteFileCacheOwner, relPath: string, content: Uint8Array, record: RemoteFileRecord,
 ): string {
   if (!cacheRoot) throw new Error('Remote file cache is not initialized.');
-  const workspace = path.join(cacheRoot, safeSegment(host), safeSegment(workspaceLabel));
+  const workspace = ownerDirectory(owner);
   const remotePath = containedPath(record.root, relPath);
   if (!remotePath) throw new Error('The path is outside the remote file cache.');
   const identity = createHash('sha256').update(remotePath).digest('hex');
@@ -58,9 +65,9 @@ export function forgetRemoteFilesOf(filesystem: FileSystemPort): void {
   for (const [file, record] of records) if (record.filesystem === filesystem) records.delete(file);
 }
 
-export function clearRemoteFileCacheForWorkspace(host: string, workspaceLabel: string): void {
+export function clearRemoteFileCacheForWorkspace(owner: RemoteFileCacheOwner): void {
   if (!cacheRoot) return;
-  const workspace = path.join(cacheRoot, safeSegment(host), safeSegment(workspaceLabel));
+  const workspace = ownerDirectory(owner);
   try { rmSync(workspace, { recursive: true, force: true }); } catch { /* ignore */ }
   for (const [file] of records) if (file.startsWith(`${workspace}${path.sep}`)) records.delete(file);
 }
