@@ -19,7 +19,7 @@ export function useFileNavigatorIntents(client: JanusClient, index: number) {
     client.send({ method: 'fileNavigatorReroot', params: { index, path } });
   }, [client, index]);
 
-  const setDock = useCallback((dock: 'left' | 'right') => {
+  const setDock = useCallback((dock: 'left' | 'right' | null) => {
     client.send({ method: 'setDock', params: { index, dock } });
   }, [client, index]);
 
