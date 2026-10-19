@@ -2,11 +2,6 @@
 
 ## ready
 
-* in the search tab throws this error:
-Cannot find module '/Users/ashmorgan/dev/janissary/src/plugins/search/compile-matcher.js' imported from /Users/ashmorgan/dev/janissary/src/plugins/search/matcher-worker-entry.ts
-or 
-Search matching cancelled
-
 * when the laptop goes to sleep then resumes, the application stops with the ui disappearing and the server halting. The application should be tolerant of going to sleep and resuming. After the laptop resumes, the application UI and server should still be present and active. 
 
 ## development
