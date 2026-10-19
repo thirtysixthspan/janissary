@@ -31,9 +31,10 @@ function deferred<T>() {
 function renderWatch(mtimeMs: number | undefined, dirty: boolean, api: EditorApi, client: JanusClient) {
   const conflictPendingRef = { current: false };
   const setLastSaved = vi.fn();
+  const documentRead = { current: { generation: 0, url: '/open/1' } };
   const view = renderHook<void, { m: number | undefined; isDirty?: boolean }>(
     ({ m, isDirty }: { m: number | undefined; isDirty?: boolean }) =>
-      useEditorWatchReload(m, isDirty ?? dirty, conflictPendingRef, api, setLastSaved, client, '/open/1'),
+      useEditorWatchReload(m, isDirty ?? dirty, conflictPendingRef, api, setLastSaved, client, '/open/1', undefined, documentRead),
     { initialProps: { m: mtimeMs, isDirty: undefined } },
   );
   return { ...view, conflictPendingRef, setLastSaved };
