@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { createMatcherWorker, workerEntry } from './matching-worker.js';
 import type { MatcherWorkerRequest, MatcherWorkerResponse } from './matcher-worker-protocol.js';
@@ -83,5 +86,23 @@ describe('matcher worker adapter', () => {
     const next = createMatcherWorker('todo', modes, new AbortController().signal);
     await expect(next.detect(['todo'])).resolves.toBe(true);
     next.dispose();
+  }, 5000);
+
+  it('loads its TypeScript entry when the working directory resolves a different tsx', async () => {
+    const project = mkdtempSync(path.join(tmpdir(), 'search-worker-cwd-'));
+    const stub = path.join(project, 'node_modules', 'tsx');
+    mkdirSync(stub, { recursive: true });
+    writeFileSync(path.join(stub, 'package.json'), JSON.stringify({ name: 'tsx', type: 'module', exports: './noop.mjs' }));
+    writeFileSync(path.join(stub, 'noop.mjs'), '');
+    const previous = process.cwd();
+    process.chdir(project);
+    try {
+      const matcher = createMatcherWorker('todo', modes, new AbortController().signal);
+      await expect(matcher.detect(['todo'])).resolves.toBe(true);
+      matcher.dispose();
+    } finally {
+      process.chdir(previous);
+      rmSync(project, { recursive: true, force: true });
+    }
   }, 5000);
 });
