@@ -154,6 +154,8 @@ A plugin whose declaration asks for terminals may start one from a payload facto
 
 A plugin tab opened with a remote target carries the host identity in its tab view. `originTab()` reports its remote workspace directory and offline mode, with the tab's current remote working directory as `cwd`.
 
+A plugin tab may read files from a remote workspace through its own remote filesystem capability. A file opened from that read can be saved back only while the requesting tab remains open on the same connection. Closing the tab removes that write-back route without closing a connection still held by other tabs. A read that finishes after the tab closes produces no file.
+
 A tab any plugin opens from an intent or a selection action on one of its own tabs — the shell's ➕ is one — is placed beside that tab, takes its group and starts from it, the same tab the plugin is told it was invoked from, even after the tab that created it has closed.
 
 ### Launching a tab with its own workspace

@@ -3,6 +3,7 @@ import { messageBus } from '../bus.js';
 import type { Tab } from './types.js';
 import { MANAGER_TAB_RELEASE, type Managers } from '../managers.js';
 import { releaseFileReference } from './file-registry.js';
+import { releasePluginRemoteResource } from '../plugins/remote-capabilities.js';
 
 // The walk covers exactly the managers named in `MANAGER_TAB_RELEASE` — the declared list beside
 // `MANAGER_DISPOSE_ORDER`. `workspace` is released only through the deferred block below and `tab`
@@ -18,6 +19,7 @@ export async function closeTabResources(
   const label = tab.label;
   const releases: Promise<void>[] = [];
   tabRuntime(tab).closing = true;
+  releasePluginRemoteResource(label);
   // Release the workspace clone in the background: its final release recursively removes a full git clone,
   // slow enough to freeze the UI if run inline (the tab can't visibly close until it finishes).
   // Deferring it lets the tab close and the state broadcast reach the client first. The clone stays

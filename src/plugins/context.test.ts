@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { getConfig, loadConfig } from '../config.js';
@@ -20,6 +20,7 @@ import { modelsFor } from '../harness/models.js';
 import { EFFORT_LEVELS } from '../harness/effort-levels.js';
 import { messageBus } from '../bus.js';
 import { TabPluginHost } from './host.js';
+import { MANAGER_TAB_RELEASE } from '../managers.js';
 
 const { armEscalation, cancelEscalation } = vi.hoisted(() => ({
   armEscalation: vi.fn(),
@@ -614,21 +615,34 @@ describe('remote workspace capabilities', () => {
     readFile: vi.fn(async () => new Uint8Array()),
     dispose: vi.fn(),
   };
+  let channel: { attachNavigator: ReturnType<typeof vi.fn>; detachNavigator: ReturnType<typeof vi.fn> };
 
   function managersRiding() {
+    const tab = { label: 'diff' };
+    channel = { attachNavigator: vi.fn(), detachNavigator: vi.fn() };
+    const tabs = [tab];
     return {
       tab: {
-        tabs: [{ label: 'diff' }], launchDir: '/repo', cwdOf: () => '/repo',
-        byLabel: (label: string) => (label === 'diff' ? { label: 'diff' } : undefined),
+        tabs, launchDir: '/repo', cwdOf: () => '/repo', deleteBusy: vi.fn(),
+        byLabel: (label: string) => tabs.find((candidate) => candidate.label === label),
       },
       remote: {
-        get: () => ({ attachNavigator: vi.fn(), detachNavigator: vi.fn() }),
+        get: () => channel,
         readyOf: () => Promise.resolve('/srv/work'),
         workspaceOf: () => '/srv/work',
         addressOf: () => ({ address: 'devbox', host: 'devbox' }),
         workspaceLabelOf: () => 'remote',
       },
     } as unknown as Managers;
+  }
+
+  function managersForCleanup(managers: Managers): Managers {
+    for (const name of MANAGER_TAB_RELEASE) {
+      const registry = managers as unknown as Record<string, { closeTab?: ReturnType<typeof vi.fn> }>;
+      registry[name] ??= { closeTab: vi.fn() };
+      registry[name].closeTab ??= vi.fn();
+    }
+    return managers;
   }
 
   beforeEach(() => {
@@ -638,6 +652,7 @@ describe('remote workspace capabilities', () => {
     }));
     port.changeSet.mockReturnValue({ kind: 'files', files: [] });
     port.readFile.mockResolvedValue(new Uint8Array());
+    port.dispose.mockClear();
   });
 
   afterEach(() => { vi.doUnmock('../file-navigator/remote/port.js'); vi.resetModules(); });
@@ -654,6 +669,47 @@ describe('remote workspace capabilities', () => {
       .resolves.toEqual({ kind: 'files', files: [] });
     expect(port.changeSet).toHaveBeenCalledWith('/srv/work', []);
     expect(port.dispose).not.toHaveBeenCalled();
+  });
+
+  it('reuses one port while the plugin tab continues riding its channel', async () => {
+    const managers = managersRiding();
+    const capabilities = await capabilitiesFor(managers);
+    const { RemoteFileSystemPort } = await import('../file-navigator/remote/port.js');
+
+    capabilities.readWorkspaceChangeSet([]);
+    capabilities.readWorkspaceChangeSet([]);
+
+    expect(RemoteFileSystemPort).toHaveBeenCalledOnce();
+    expect(port.changeSet).toHaveBeenCalledTimes(2);
+  });
+
+  it('closes the plugin port with its tab while leaving the remote channel available', async () => {
+    const managers = managersForCleanup(managersRiding());
+    const capabilities = await capabilitiesFor(managers);
+    const { closeTabResources } = await import('../tab/cleanup.js');
+    capabilities.readWorkspaceChangeSet([]);
+
+    await closeTabResources({ label: 'diff' } as never, managers, new Map());
+
+    expect(port.dispose).toHaveBeenCalledOnce();
+    expect(managers.remote.get('diff')).toBe(channel);
+  });
+
+  it('creates a fresh port when a closed tab label is reused on another channel', async () => {
+    const managers = managersForCleanup(managersRiding());
+    const capabilities = await capabilitiesFor(managers);
+    const { closeTabResources } = await import('../tab/cleanup.js');
+    const { RemoteFileSystemPort } = await import('../file-navigator/remote/port.js');
+    capabilities.readWorkspaceChangeSet([]);
+    await closeTabResources({ label: 'diff' } as never, managers, new Map());
+    managers.tab.tabs[0] = { label: 'diff' } as never;
+    channel = { attachNavigator: vi.fn(), detachNavigator: vi.fn() };
+
+    const reopened = await capabilitiesFor(managers);
+    reopened.readWorkspaceChangeSet([]);
+
+    expect(RemoteFileSystemPort).toHaveBeenCalledTimes(2);
+    expect(port.dispose).toHaveBeenCalledOnce();
   });
 
   it('answers null when the tab rides no channel', async () => {
@@ -684,6 +740,39 @@ describe('remote workspace capabilities', () => {
     // of the diff tab writes back to the workspace for as long as that tab holds the channel.
     clearRemoteFileCache();
     rmSync(cache, { recursive: true, force: true });
+  });
+
+  it('does not materialize a read that completes after its tab closes', async () => {
+    const cache = mkdtempSync(path.join(tmpdir(), 'janus-remote-cache-'));
+    const { initRemoteFileCache, clearRemoteFileCache } =
+      await import('../file-navigator/remote/file-cache.js');
+    const { closeTabResources } = await import('../tab/cleanup.js');
+    const managers = managersForCleanup(managersRiding());
+    const { promise, resolve } = Promise.withResolvers<Uint8Array>();
+    port.readFile.mockReturnValue(promise);
+    initRemoteFileCache(cache);
+    const capabilities = await capabilitiesFor(managers);
+    const pending = capabilities.materializeRemoteFile('src/late.txt');
+
+    await closeTabResources({ label: 'diff' } as never, managers, new Map());
+    resolve(new TextEncoder().encode('too late'));
+
+    await expect(pending).resolves.toBeNull();
+    expect(existsSync(path.join(cache, '.janissary', 'remote-files'))).toBe(false);
+    clearRemoteFileCache();
+    rmSync(cache, { recursive: true, force: true });
+  });
+
+  it('releases plugin ports during host shutdown', async () => {
+    const managers = managersRiding();
+    const capabilities = await capabilitiesFor(managers);
+    capabilities.readWorkspaceChangeSet([]);
+    const { TabPluginHost: FreshTabPluginHost } = await import('./host.js');
+    const host = new FreshTabPluginHost(managers, [declaration(['readWorkspaceChangeSet'])]);
+
+    host.dispose();
+
+    expect(port.dispose).toHaveBeenCalledOnce();
   });
 
   it('answers null when the remote file could not be read', async () => {

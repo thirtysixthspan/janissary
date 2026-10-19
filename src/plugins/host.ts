@@ -4,7 +4,7 @@ import {
   type TabPluginPresentation, type TabPluginServerCapabilities,
   type TabPluginReattachRecord,
 } from './api.js';
-import { disposePluginActivation } from './activate.js';
+import { disposePluginHost, disposePluginRecord } from './host-dispose.js';
 import { tabPluginCatalog } from './catalog.js';
 import { reportPluginFailure, type PluginFailureOrigin } from './failure.js';
 import { errorFirstLine } from '../error-text.js';
@@ -128,8 +128,7 @@ export class TabPluginHost {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
-    for (const subscription of this.subscriptions) subscription.unsubscribe();
-    for (const record of this.records.values()) this.disposeActivation(record);
+    disposePluginHost(this.subscriptions, this.records.values());
   }
 
   // Activate if needed, then make one guarded call. A rejection goes to the originating transcript
@@ -216,9 +215,7 @@ export class TabPluginHost {
   }
 
   private disposeActivation(record: PluginRecord): void {
-    if (!record.activation || record.activationDisposed) return;
-    record.activationDisposed = true;
-    disposePluginActivation(record.activation);
-    record.activation = undefined;
+    disposePluginRecord(record);
   }
+
 }
