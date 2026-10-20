@@ -60,10 +60,14 @@ export function useFileNavigatorRowEvents({ rows, selection, drag, containerRef,
   };
 
   // Right-click raises the menu for the clicked row and leaves the selection exactly as it was, so
-  // the menu can act on a row that isn't part of it.
+  // the menu can act on a row that isn't part of it. macOS reports a Ctrl+left-click as a
+  // right-click too, but here Ctrl+click already toggled the row on mouse down, so that press
+  // swallows the event and opens no menu. Returns whether a menu opened.
   const onRowContextMenu = (row: FileNavigatorRow, event: React.MouseEvent) => {
     event.preventDefault();
+    if (event.ctrlKey && event.button === 0) return false;
     setMenu({ row, x: event.clientX, y: event.clientY });
+    return true;
   };
 
   return {
