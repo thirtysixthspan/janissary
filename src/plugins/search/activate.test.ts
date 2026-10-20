@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { activate } from './activate.js';
-import { compileMatcher } from './compile-matcher.js';
-import { fileMatches, matchFile } from './search-files.js';
-import { MAX_BYTES, type ScanMatcherFactory } from './scan.js';
-import type { MatcherWorker } from './matcher-worker-protocol.js';
-import type { SearchIntent, SearchPayload } from './shared.js';
+import { compileMatcher } from '../../search/compile-matcher.js';
+import { fileMatches, matchFile } from '../../search/search-files.js';
+import type { ScanMatcherFactory } from './scan.js';
+import type { MatcherWorker } from '../../search/matcher-worker-protocol.js';
+import type { SearchIntent, SearchMatch, SearchPayload } from './shared.js';
 import { isJsonCompatible } from '../tab-value.js';
 
 const files: Record<string, string> = {
@@ -709,8 +709,9 @@ describe('search plugin workspace scope', () => {
           calls.push(`join ${key} ${ride}`);
           return joins.shift() ?? true;
         }),
-        remoteWorkspaceFileList: vi.fn(async () => ({ root: '/far/clone', paths: ['r.ts'] })),
-        readRemoteWorkspaceFile: vi.fn(async () => 'todo on the far side'),
+        remoteWorkspaceSearch: vi.fn(async () => [{
+          path: 'r.ts', line: 1, above: [], match: 'todo on the far side', start: 0, end: 4, below: [],
+        }]),
         materializeRemoteFile: vi.fn(() => Promise.resolve('/cache/r.ts')),
       },
     };
@@ -723,8 +724,9 @@ describe('search plugin workspace scope', () => {
     await settle();
     expect(calls).toEqual(['release search', 'join search claude-9']);
     expect(listing).not.toHaveBeenCalled();
-    expect(overrides.remoteWorkspaceFileList).toHaveBeenCalledWith('search');
-    expect(overrides.readRemoteWorkspaceFile).toHaveBeenCalledWith('search', 'r.ts', MAX_BYTES);
+    expect(overrides.remoteWorkspaceSearch).toHaveBeenCalledWith('search', {
+      query: 'todo', include: '', exclude: '', regex: false, matchCase: false, wholeWord: false,
+    });
     const payload = lastPayload(updateTab);
     expect(payload).toMatchObject({ scope: '$workspace/claude-9', host: 'box', state: 'done' });
     expect(payload.rows.map((row) => row.match)).toEqual(['todo on the far side']);
@@ -732,7 +734,7 @@ describe('search plugin workspace scope', () => {
 
   it('settles a remote scan with no rows when the channel answers no listing', async () => {
     const { overrides } = remoteFakes();
-    overrides.remoteWorkspaceFileList.mockResolvedValue(null as never);
+    overrides.remoteWorkspaceSearch.mockResolvedValue(null as never);
     const { capabilities, updateTab } = scoped({ current: remoteHarness }, overrides);
     searchActivation(contents).command?.('todo', capabilities);
     await settle();
@@ -779,7 +781,7 @@ describe('search plugin workspace scope', () => {
     expect(notifyUser).toHaveBeenCalledWith('Search: the workspace of "claude-9" is no longer available.');
     expect(calls).toEqual(['release search', 'release search', 'join search claude-9']);
     expect(listing).not.toHaveBeenCalled();
-    expect(overrides.remoteWorkspaceFileList).not.toHaveBeenCalled();
+    expect(overrides.remoteWorkspaceSearch).not.toHaveBeenCalled();
     expect(lastPayload(updateTab).scope).toBe('$workspace/claude-2');
     origin.current = searchTab;
     activation.command?.('todo', capabilities);
@@ -803,7 +805,7 @@ describe('search plugin workspace scope', () => {
     held.resolve();
     await settle();
     expect(projectFileList.mock.calls.map((call) => call[0])).toEqual(['/repo/clone', '/repo/clone']);
-    expect(overrides.remoteWorkspaceFileList).not.toHaveBeenCalled();
+    expect(overrides.remoteWorkspaceSearch).not.toHaveBeenCalled();
     expect(lastPayload(updateTab)).toMatchObject({ query: 'todo', state: 'done', scope: '$workspace/claude-2' });
     expect(lastPayload(updateTab).rows.map((row) => row.match)).toEqual(['todo in the clone']);
   });
@@ -814,13 +816,13 @@ describe('search plugin workspace scope', () => {
     const { capabilities, updateTab, notifyUser } = scoped(origin, overrides);
     const activation = searchActivation(contents);
     activation.command?.('', capabilities);
-    overrides.remoteWorkspaceFileList.mockClear();
+    overrides.remoteWorkspaceSearch.mockClear();
     origin.current = remoteHarness;
     activation.command?.('todo', capabilities);
     await settle();
     expect(notifyUser).toHaveBeenCalledWith('Search: the workspace of "claude-9" is no longer available.');
     expect(calls.slice(2)).toEqual(['release search', 'join search claude-9', 'join search claude-8']);
-    expect(overrides.remoteWorkspaceFileList).not.toHaveBeenCalled();
+    expect(overrides.remoteWorkspaceSearch).not.toHaveBeenCalled();
     expect(lastPayload(updateTab)).toMatchObject({ scope: '$workspace/claude-8', host: 'box' });
   });
 
@@ -832,28 +834,28 @@ describe('search plugin workspace scope', () => {
     activation.command?.('todo', capabilities);
     await settle();
     expect(lastPayload(updateTab).rows).toHaveLength(1);
-    overrides.remoteWorkspaceFileList.mockClear();
+    overrides.remoteWorkspaceSearch.mockClear();
     origin.current = remoteHarness;
     activation.command?.('phrase', capabilities);
     await settle();
     expect(listing).not.toHaveBeenCalled();
-    expect(overrides.remoteWorkspaceFileList).not.toHaveBeenCalled();
+    expect(overrides.remoteWorkspaceSearch).not.toHaveBeenCalled();
     const payload = lastPayload(updateTab);
     expect(payload).toMatchObject({ scope: '$root', query: 'todo', state: 'done', message: '', rows: [] });
     expect(payload.host).toBeUndefined();
   });
 
   it('restarts a scan the failed join interrupted in the launch directory it falls back to', async () => {
-    const held = Promise.withResolvers<{ root: string; paths: string[] }>();
+    const held = Promise.withResolvers<SearchMatch[]>();
     const origin = { current: otherRemote as unknown };
     const { overrides } = remoteFakes([true, false, false]);
-    overrides.remoteWorkspaceFileList.mockReturnValueOnce(held.promise);
+    overrides.remoteWorkspaceSearch.mockReturnValueOnce(held.promise);
     const { capabilities, updateTab } = scoped(origin, overrides);
     const activation = searchActivation(contents);
     activation.command?.('todo', capabilities);
     origin.current = remoteHarness;
     activation.command?.('', capabilities);
-    held.resolve({ root: '/far/other', paths: ['r.ts'] });
+    held.resolve([{ path: 'r.ts', line: 1, above: [], match: 'todo on far host', start: 0, end: 4, below: [] }]);
     await settle();
     expect(roots()).toEqual([undefined]);
     expect(lastPayload(updateTab)).toMatchObject({ query: 'todo', scope: '$root', state: 'done' });
@@ -892,7 +894,7 @@ describe('search plugin workspace scope', () => {
   });
 
   it('opens nothing for a shown remote row after a re-scope to local, and a cancelled remote listing keeps the root', async () => {
-    const pending = Promise.withResolvers<{ root: string; paths: string[] }>();
+    const pending = Promise.withResolvers<SearchMatch[]>();
     const origin = { current: remoteHarness as unknown };
     const { overrides } = remoteFakes();
     const { capabilities } = scoped(origin, overrides);
@@ -908,13 +910,13 @@ describe('search plugin workspace scope', () => {
     expect(opener.overrides.materializeRemoteFile).not.toHaveBeenCalled();
     expect(openerCaps.openInEditor).not.toHaveBeenCalled();
 
-    overrides.remoteWorkspaceFileList.mockReturnValueOnce(pending.promise);
+    overrides.remoteWorkspaceSearch.mockReturnValueOnce(pending.promise);
     origin.current = remoteHarness;
     activation.command?.('', capabilities);
     origin.current = harness;
     activation.command?.('', capabilities);
     await settle();
-    pending.resolve({ root: '/far/clone', paths: ['r.ts'] });
+    pending.resolve([{ path: 'r.ts', line: 1, above: [], match: 'todo on far host', start: 0, end: 4, below: [] }]);
     await settle();
     const local = makeCapabilities();
     activation.intent(intent(settledTab, 'open', { path: 'b.ts', line: 1 }), local.capabilities);
@@ -922,14 +924,14 @@ describe('search plugin workspace scope', () => {
   });
 
   it('does not materialize a shown remote row from another remote workspace after a re-scope', async () => {
-    const pending = Promise.withResolvers<{ root: string; paths: string[] }>();
+    const pending = Promise.withResolvers<SearchMatch[]>();
     const origin = { current: remoteHarness as unknown };
     const { overrides } = remoteFakes();
     const { capabilities } = scoped(origin, overrides);
     const activation = searchActivation(contents);
     activation.command?.('todo', capabilities);
     await settle();
-    overrides.remoteWorkspaceFileList.mockReturnValueOnce(pending.promise);
+    overrides.remoteWorkspaceSearch.mockReturnValueOnce(pending.promise);
     origin.current = otherRemote;
     activation.command?.('', capabilities);
     await settle();
@@ -939,7 +941,7 @@ describe('search plugin workspace scope', () => {
     await settle();
     expect(opener.overrides.materializeRemoteFile).not.toHaveBeenCalled();
     expect(openerCaps.openInEditor).not.toHaveBeenCalled();
-    pending.resolve({ root: '/far/other', paths: ['r.ts'] });
+    pending.resolve([{ path: 'r.ts', line: 1, above: [], match: 'todo on far host', start: 0, end: 4, below: [] }]);
   });
 
   describe('search plugin closes with its workspace', () => {

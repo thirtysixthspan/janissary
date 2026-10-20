@@ -4,6 +4,7 @@ import { releasePluginRemoteResources, remoteCapabilities } from './remote-capab
 
 const port = vi.hoisted(() => ({
   search: vi.fn(),
+  searchText: vi.fn(),
   statRows: vi.fn(),
   readFile: vi.fn(),
   changeSet: vi.fn(),
@@ -46,6 +47,7 @@ const capabilitiesFor = (managers: Managers, isEnabled = () => true) =>
 describe('remote workspace file capabilities', () => {
   beforeEach(() => {
     port.search.mockResolvedValue(['src/a.ts', 'README.md']);
+    port.searchText.mockResolvedValue([{ path: 'src/a.ts', line: 1, above: [], match: 'todo', start: 0, end: 4, below: [] }]);
     port.statRows.mockResolvedValue({ 'src/a.ts': { size: 5 } });
     port.readFile.mockResolvedValue(new TextEncoder().encode('hello'));
   });
@@ -68,13 +70,27 @@ describe('remote workspace file capabilities', () => {
     expect(port.readFile).toHaveBeenCalledWith('/srv/work', 'src/a.ts');
   });
 
+  it('runs a search on the remote workspace and returns only match rows', async () => {
+    const request = { query: 'todo', include: 'src/**', exclude: '', regex: false, matchCase: false, wholeWord: false };
+    await expect(capabilitiesFor(fakeManagers()).remoteWorkspaceSearch('scan-1', request))
+      .resolves.toEqual([{ path: 'src/a.ts', line: 1, above: [], match: 'todo', start: 0, end: 4, below: [] }]);
+    expect(port.searchText).toHaveBeenCalledWith('/srv/work', request);
+    expect(port.readFile).not.toHaveBeenCalled();
+  });
+
   it('answers null for a tab riding nothing and for an instance key with no open tab', async () => {
     const riding = capabilitiesFor(fakeManagers({ riding: false }));
     await expect(riding.remoteWorkspaceFileList('scan-1')).resolves.toBeNull();
     await expect(riding.readRemoteWorkspaceFile('scan-1', 'src/a.ts', 100)).resolves.toBeNull();
+    await expect(riding.remoteWorkspaceSearch('scan-1', {
+      query: 'todo', include: '', exclude: '', regex: false, matchCase: false, wholeWord: false,
+    })).resolves.toBeNull();
     const missing = capabilitiesFor(fakeManagers());
     await expect(missing.remoteWorkspaceFileList('scan-2')).resolves.toBeNull();
     await expect(missing.readRemoteWorkspaceFile('scan-2', 'src/a.ts', 100)).resolves.toBeNull();
+    await expect(missing.remoteWorkspaceSearch('scan-2', {
+      query: 'todo', include: '', exclude: '', regex: false, matchCase: false, wholeWord: false,
+    })).resolves.toBeNull();
   });
 
   it('answers null when the file is over the size limit or has no stat row', async () => {

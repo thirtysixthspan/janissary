@@ -34,7 +34,7 @@ There's still one search tab. Starting a search from a different workspace switc
 
 If the workspace is still being created, or no longer exists, nothing opens. The notifications feed shows `Search: the workspace of "<name>" is not ready yet.` or `Search: the workspace of "<name>" is no longer available.`
 
-A remote workspace is searched over its connection: the file list comes from the remote machine and each file is fetched to be matched, so a search over a very large remote repository is slower. While it's there, the search tab keeps the remote session open, and lets it go when it switches to another workspace or closes. If the search tab can't connect to the remote workspace, you see the `no longer available` line and the tab stays where it was.
+A remote workspace is searched on its host, and only matching rows come back over the connection. Its results appear together when the scan completes. While it searches there, the search tab keeps the remote session open, and lets it go when it switches to another workspace or closes. If the search tab can't connect to the remote workspace, you see the `no longer available` line and the tab stays where it was.
 
 When the workspace goes away, the search tab closes on its own, and any search still running stops. For a local clone, that happens when you close the last tab that owns it. For a remote workspace, it happens when the remote session ends, for example when you end it from the connections panel. Closing just the remote tab you searched from leaves the search tab open, because the search tab keeps the session going.
 
@@ -74,7 +74,7 @@ An empty include searches everything, and an empty exclude removes nothing. When
 
 Each match gets its own entry. The entry has a dimmed header with the file's path and the line number, then the match with two lines of context above and two below. A thin rule separates one entry from the next. When the matching line is long enough to wrap, the entry shows the part of it around the match instead of the lines next to it.
 
-Results stack upward. The first match sits at the bottom of the window, just above the search bar, and later matches build up above it. Rows appear while the search is still running, and the window stays on the first match so nothing scrolls away while you read.
+Results stack upward. The first match sits at the bottom of the window, just above the search bar, and later matches build up above it. Local rows appear while the search is still running; remote rows appear together when the scan completes. The window stays on the first match so nothing scrolls away while you read.
 
 A search stops after 250 matches. There's no count of matches or files anywhere in the tab. The body shows `Searching…` while a search runs, and `No matches found for "<query>".` when one finishes with nothing.
 

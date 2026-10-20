@@ -4,6 +4,7 @@ import type { RootRefusal } from './root-refusal.js';
 import type { ResumeReset } from '../harness/auto-resume.js';
 import type { HistoryStep } from '../file-navigator/moves.js';
 import type { AgentSnapshot } from '../agent/types.js';
+import type { SearchRequest } from '../protocol.js';
 
 // The frame shapes of the remote protocol, split out of `protocol.ts` so the wire *codec* and the
 // wire *grammar* are two files: this one says what a frame may carry, `protocol.ts` says how one is
@@ -12,7 +13,7 @@ import type { AgentSnapshot } from '../agent/types.js';
 
 export type RemoteFilesystemOperation =
   | 'read-directory' | 'stat' | 'watch' | 'unwatch' | 'git' | 'git-pull' | 'git-commit' | 'search'
-  | 'read-file' | 'write-file' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
+  | 'search-text' | 'read-file' | 'write-file' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
   | 'create-file' | 'create-directory' | 'replay' | 'change-set';
 
 export type RemoteAcpActivityKind = 'message' | 'thought' | 'tool' | 'plan' | 'permission';
@@ -25,6 +26,7 @@ export type RemoteFilesystemArgumentsByOperation = {
   git: Record<string, never>;
   'git-pull': Record<string, never>;
   search: Record<string, never>;
+  'search-text': SearchRequest & { root: string };
   'read-file': { path: string };
   'write-file': { path: string; content: string; expectedHash?: string };
   move: { from: string; to: string; overwrite?: boolean };

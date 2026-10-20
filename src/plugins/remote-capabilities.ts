@@ -3,12 +3,12 @@ import type { RemoteChannel } from '../remote/channel/index.js';
 import { RemoteFileSystemPort } from '../file-navigator/remote/port.js';
 import { forgetRemoteFilesOf, materializeRemoteFile } from '../file-navigator/remote/file-cache.js';
 import type { TabPluginDeclaration, TabPluginServerCapabilities } from './api.js';
+import type { SearchRequest } from '../protocol.js';
 
 // The remote workspace a plugin tab rides, reached as a filesystem port. Built the first time a tab
 // asks and kept after that, which is the same lifetime a remote navigator's port has: the channel
 // closes every navigator session on it when its last tab lets it go. It exists so that a plugin never
-// constructs one, and it publishes only the two capabilities a remote workspace needs — its change
-// set, and a file materialized for the ordinary openers.
+// constructs one, and publishes workspace operations through the host capability contract.
 
 type PluginRemoteResource = {
   channel: RemoteChannel;
@@ -63,7 +63,8 @@ export function remoteCapabilities(input: {
   declaration: TabPluginDeclaration;
   isEnabled: () => boolean;
 }): Pick<TabPluginServerCapabilities,
-  'readWorkspaceChangeSet' | 'materializeRemoteFile' | 'remoteWorkspaceFileList' | 'readRemoteWorkspaceFile'> {
+  'readWorkspaceChangeSet' | 'materializeRemoteFile' | 'remoteWorkspaceFileList' | 'readRemoteWorkspaceFile'
+  | 'remoteWorkspaceSearch'> {
   const { managers, originLabel, answeringLabel, declaration, isEnabled } = input;
   // The tab the call came from, which is the tab riding the channel: an intent on a diff tab names
   // that tab, and a command names the tab it was typed in.
@@ -109,6 +110,11 @@ export function remoteCapabilities(input: {
       } catch {
         return null;
       }
+    },
+    remoteWorkspaceSearch: async (instanceKey, request: SearchRequest) => {
+      const own = rideOwn(instanceKey);
+      if (!own) return null;
+      return own.port.searchText(own.root, request);
     },
     // A tab riding no channel is answered with nothing rather than an error: the question is about a
     // directory that is not on another machine, and the caller decides what that means.

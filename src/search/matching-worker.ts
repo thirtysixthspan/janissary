@@ -3,7 +3,7 @@ import type { MatcherModes } from './compile-matcher.js';
 import type {
   MatcherWorker, MatcherWorkerRequest, MatcherWorkerResponse,
 } from './matcher-worker-protocol.js';
-import type { SearchMatch } from './shared.js';
+import type { SearchMatch } from './types.js';
 
 export const MATCHING_JOB_DEADLINE_MS = 1000;
 

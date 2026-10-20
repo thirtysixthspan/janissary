@@ -23,6 +23,8 @@ import type { HistoryStep } from './moves.js';
 import type { MaybePromise } from '../maybe-promise.js';
 import { replayHistory } from './manager/history.js';
 import { readChangeSet } from '../plugins/diff/change-set.js';
+import { searchText as searchTextAtRoot } from './search-text.js';
+import type { SearchMatch, SearchRequest } from '../search/types.js';
 
 export type WatchHandle = { stop: () => void };
 export type GitMetadata = {
@@ -82,6 +84,7 @@ export interface FileSystemPort {
   // that crossed a channel is one the caller has to check rather than one it produced.
   changeSet(root: string, fullFiles: readonly string[]): Promise<unknown>;
   search(root: string): Promise<string[]>;
+  searchText(root: string, request: SearchRequest): Promise<SearchMatch[]>;
   readFile(root: string, relPath: string): Promise<Uint8Array>;
   writeFile(root: string, relPath: string, content: Uint8Array, expectedHash?: string): MaybePromise<FileOperationResult>;
   // Refuses to replace an existing destination unless `overwrite` is set, answering the conflict as
@@ -150,6 +153,10 @@ export class LocalFileSystemPort implements FileSystemPort {
   }
 
   search(root: string): Promise<string[]> { return listProjectFiles(root); }
+
+  searchText(root: string, request: SearchRequest): Promise<SearchMatch[]> {
+    return searchTextAtRoot(root, request);
+  }
 
   pull(root: string): Promise<string> { return pullRoot(root); }
 

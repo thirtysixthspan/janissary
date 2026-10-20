@@ -55,7 +55,7 @@ Every file under the search's scope — the launch directory or the workspace cl
 Quick Open searches, so the two never disagree about what the project contains. Two kinds of file
 are skipped: anything too large for the editor to open, and anything whose bytes are binary.
 
-A remote workspace is listed on the remote machine, with the same gitignore rules, and each file is fetched over the workspace's connection and matched locally. The results are the same as for a local clone, but a search over a very large remote repository is slower.
+A remote workspace is searched on the remote machine with the same gitignore rules, file-size and binary skips, query modes, and include/exclude filters as a local search. Only matching rows are returned over the workspace connection. The capped result set appears when the remote scan completes.
 
 Two fields in the header narrow the search further. **Files to include** and **Files to
 exclude** each take comma-separated glob patterns. The header is a single line: the two fields
@@ -139,12 +139,11 @@ first match first, so the first entry is the one at the bottom edge and each lat
 reading upward in the order the search found them. The window opens on the first match and stays
 there, so a match does not scroll away while the rest of the search is still running.
 
-**Rows stream in while the search is still running**, so a large project starts filling the window
+**Rows appear while a local search is still running**, so a large project starts filling the window
 before it has been fully searched, and the rows already found stay on screen. For a local workspace,
 each matching file's rows appear as soon as that file and all earlier paths resolve; the scan does not
-wait for every file in its current read group. For a remote workspace, the scan keeps a small group
-of file reads in flight and publishes matches as soon as any of those reads finds one, without
-waiting for earlier paths or the rest of the group.
+wait for every file in its current read group. A remote search returns its capped matching rows
+together when the remote scan completes.
 
 **A search stops at 250 matches.** Once it has found that many, in the order the results are
 listed, it stops reading the project and settles as finished. There is no tally: the header shows no

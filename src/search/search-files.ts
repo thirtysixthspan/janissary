@@ -1,5 +1,5 @@
 import type { Matcher } from './compile-matcher.js';
-import type { SearchMatch } from './shared.js';
+import type { SearchMatch } from './types.js';
 
 // How many lines of context a match carries either side. Clipped at the start and end of a file
 // rather than padded, so a block may hold fewer than this many lines on either side.

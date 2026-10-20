@@ -1,4 +1,4 @@
-import { errorText } from '../../error-text.js';
+import { errorText } from '../error-text.js';
 
 export type MatcherModes = { regex: boolean; matchCase: boolean; wholeWord: boolean };
 

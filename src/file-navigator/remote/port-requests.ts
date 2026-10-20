@@ -36,7 +36,7 @@ export const REQUEST_DEADLINE_MS = 60_000;
 export const LONG_REQUEST_DEADLINE_MS = 600_000;
 
 const LONG_RUNNING: ReadonlySet<RemoteFilesystemOperation> = new Set([
-  'git-pull', 'git-commit', 'search', 'move-many', 'delete-many', 'paste', 'replay', 'read-file', 'write-file',
+  'git-pull', 'git-commit', 'search', 'search-text', 'move-many', 'delete-many', 'paste', 'replay', 'read-file', 'write-file',
 ]);
 
 export function requestDeadline(operation: RemoteFilesystemOperation): number {

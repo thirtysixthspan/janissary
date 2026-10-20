@@ -1,23 +1,25 @@
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { patternError } from './compile-matcher.js';
-import { filterPaths } from './filter-paths.js';
-import { splitLines } from './search-files.js';
-import { createMatcherWorker } from './matching-worker.js';
-import { scanRemoteCandidates } from './scan-remote.js';
-import type { MatcherWorker } from './matcher-worker-protocol.js';
+import { patternError } from '../../search/compile-matcher.js';
+import { filterPaths } from '../../search/filter-paths.js';
+import { splitLines } from '../../search/search-files.js';
+import { createMatcherWorker } from '../../search/matching-worker.js';
+import {
+  SEARCH_BINARY_PREFIX_BYTES, SEARCH_MAX_FILE_BYTES, SEARCH_MAX_RESULTS,
+} from '../../search/types.js';
+import type { MatcherWorker } from '../../search/matcher-worker-protocol.js';
 import type { SearchMatch } from './shared.js';
 
 // The editor tab's own limit, restated rather than imported because a plugin may not reach host
 // internals across the import boundary. A match in a file the editor would refuse to open is a row
 // that cannot be acted on, and the two numbers are expected to stay equal.
-export const MAX_BYTES = 2 * 1024 * 1024;
+export const MAX_BYTES = SEARCH_MAX_FILE_BYTES;
 
 // How many bytes are inspected for the binary test. A null byte in the first few kilobytes is the
 // same signal `grep` and `git grep` use, and checking a prefix rather than the whole file is what
 // keeps the refusal cheap enough to run on every candidate — at the cost of a file whose null byte
 // sits past the prefix being searched as text.
-const BINARY_PREFIX = 8192;
+const BINARY_PREFIX = SEARCH_BINARY_PREFIX_BYTES;
 
 // How many files one detection batch covers, and how many of them are read at once inside a batch.
 // Both bound how much of the repository a single `updateTab` represents and how many reads are open
@@ -28,10 +30,9 @@ const READ_CONCURRENCY = 8;
 // How many rows one search delivers before it settles. Enforced here rather than in the session,
 // because the scan is what reads the disk: a cap applied to the rows as they arrive would hide the
 // rest while the scan kept reading every file to the end.
-const MAX_RESULTS = 250;
+const MAX_RESULTS = SEARCH_MAX_RESULTS;
 
 export type ScanRead = (absPath: string) => Promise<string>;
-export type ScanReadCandidate = (absPath: string, relPath: string) => Promise<string | null>;
 export type ScanQuery = {
   query: string;
   include: string;
@@ -56,9 +57,7 @@ export type ScanOptions = {
   // check, so a test asserting the size refusal has to state the size it means.
   readFile?: ScanRead;
   fileSize?: (absPath: string) => Promise<number | null>;
-  // Reads a candidate in one call in place of the size-then-read pair, answering null to skip it,
-  // which is what a remote workspace needs when each read is a capability call.
-  readCandidate?: ScanReadCandidate;
+  remoteSearch?: (request: ScanQuery) => Promise<SearchMatch[] | null>;
   createMatcher?: ScanMatcherFactory;
 };
 export type ScanHandle = { cancel(): void };
@@ -73,16 +72,12 @@ type Candidate = { relPath: string; absPath: string };
 // that cannot be read is treated as over the limit, so an unreadable file is skipped rather than
 // read and found to be enormous afterwards.
 async function readableText(candidate: Candidate, runtime: Runtime): Promise<string | null> {
-  const { absPath, relPath } = candidate;
+  const { absPath } = candidate;
   let text: string | null;
   try {
-    if (runtime.readCandidate === undefined) {
-      const bytes = await runtime.sizeOf(absPath);
-      if (bytes === null || bytes > MAX_BYTES) return null;
-      text = await runtime.read(absPath);
-    } else {
-      text = await runtime.readCandidate(absPath, relPath);
-    }
+    const bytes = await runtime.sizeOf(absPath);
+    if (bytes === null || bytes > MAX_BYTES) return null;
+    text = await runtime.read(absPath);
   } catch {
     return null;
   }
@@ -102,7 +97,6 @@ type Runtime = {
   request: ScanQuery;
   read: ScanRead;
   sizeOf: SizeLookup;
-  readCandidate?: ScanReadCandidate;
   createMatcher: NonNullable<ScanOptions['createMatcher']>;
   signal: AbortSignal;
   // Rows still to deliver before the search reaches its cap.
@@ -149,20 +143,23 @@ async function run(runtime: Runtime): Promise<void> {
     options.onBatch({ rows: [], done: true });
     return;
   }
+  if (options.remoteSearch !== undefined) {
+    const remoteRequest = {
+      query: request.query, include: request.include, exclude: request.exclude,
+      regex: request.regex, matchCase: request.matchCase, wholeWord: request.wholeWord,
+    };
+    const rows = await options.remoteSearch(remoteRequest);
+    if (signal.aborted) return;
+    await options.listFiles();
+    if (!signal.aborted) options.onBatch({ rows: rows ?? [], done: true });
+    return;
+  }
   const matcher = runtime.createMatcher(request, signal);
   try {
     const listed = await options.listFiles();
     if (signal.aborted) return;
     const candidates: Candidate[] = filterPaths(listed.paths, request.include, request.exclude)
       .map((relPath) => ({ relPath, absPath: path.join(listed.root, relPath) }));
-    if (runtime.readCandidate !== undefined) {
-      await scanRemoteCandidates({
-        candidates, readCandidate: runtime.readCandidate, matcher, signal,
-        onBatch: options.onBatch,
-      });
-      if (!signal.aborted) options.onBatch({ rows: [], done: true });
-      return;
-    }
     for (const batch of chunk(candidates, BATCH_SIZE)) {
       if (signal.aborted) return;
       if (runtime.remaining === 0) break;
@@ -199,7 +196,7 @@ export function startScan(options: ScanOptions, request: ScanQuery): ScanHandle 
   });
   const controller = new AbortController();
   const runtime: Runtime = {
-    options, request, read, sizeOf, readCandidate: options.readCandidate, signal: controller.signal,
+    options, request, read, sizeOf, signal: controller.signal,
     createMatcher: options.createMatcher
       ?? ((search, signal) => createMatcherWorker(search.query, search, signal)),
     remaining: MAX_RESULTS,

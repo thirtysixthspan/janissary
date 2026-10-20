@@ -18,6 +18,7 @@ import { remoteGitCommit, remoteGitMetadata, remoteGitPull, type RemoteRequest }
 import { remoteMove, remoteMoveMany } from './port-moves.js';
 import { remoteDeleteMany, remoteReplay, remoteSearch, remoteStatRows } from './port-mapped.js';
 import type { CommitResult } from '../../git/commit.js';
+import type { SearchMatch, SearchRequest } from '../../search/types.js';
 import { RemotePortPaths, resolveRemoteWorkspace } from './port-paths.js';
 import {
   CLOSED_REASON, ENDED_REASON, RemotePortRequests, unavailableResult,
@@ -103,6 +104,10 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
 
   async search(root: string): Promise<string[]> {
     return remoteSearch(this.requester(), this.paths, root);
+  }
+
+  async searchText(root: string, request: SearchRequest): Promise<SearchMatch[]> {
+    return this.request('search-text', { ...request, root: await this.paths.to(root, '') });
   }
 
   async readFile(root: string, relPath: string): Promise<Uint8Array> {

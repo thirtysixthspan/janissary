@@ -12,6 +12,7 @@ import { descriptorFor, type AnyOperationDescriptor, type OperationContext } fro
 import type { HistoryStep } from '../../file-navigator/moves.js';
 import { resultDecoders } from './result-decoders.js';
 import { writeFileOperation } from './write-file-operation.js';
+import { searchTextOperation } from './search-text-operation.js';
 
 // What an operation's `run` reaches, handed over as one value so the table stays a plain data
 // module: `root` and `filesystem` are the far side's own, and the rest are bound closures over the
@@ -62,6 +63,7 @@ const READ_OPERATIONS = {
     run: (context, args) => context.filesystem.changeSet(context.root, args.fullFiles),
   }),
   search: descriptorFor<'search'>()({ ...noArguments, decodeResult: resultDecoders.search, run: (context: OperationContext) => context.filesystem.search(context.root) }),
+  'search-text': searchTextOperation,
   'read-file': descriptorFor<'read-file'>()({
     valid: (args) => stringValue(args.path),
     decode: pathOnly, paths: namedPath,

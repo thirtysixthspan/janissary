@@ -1,11 +1,11 @@
 import { parentPort } from 'node:worker_threads';
-import { errorText } from '../../error-text.js';
+import { errorText } from '../error-text.js';
 import { compileMatcher } from './compile-matcher.js';
 import { fileMatches, matchFile } from './search-files.js';
 import type { MatcherWorkerRequest, MatcherWorkerResponse } from './matcher-worker-protocol.js';
 
 let matcherKey = '';
-let matcher = null as ReturnType<typeof compileMatcher>;
+let matcher: ReturnType<typeof compileMatcher> = null;
 
 function execute(request: MatcherWorkerRequest): MatcherWorkerResponse {
   const key = JSON.stringify([request.query, request.modes]);

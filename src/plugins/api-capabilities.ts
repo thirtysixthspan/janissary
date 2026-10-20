@@ -45,6 +45,7 @@ export type TabPluginCapabilityName =
   | 'materializeRemoteFile'
   | 'remoteWorkspaceFileList'
   | 'readRemoteWorkspaceFile'
+  | 'remoteWorkspaceSearch'
   | 'joinRemoteWorkspace'
   | 'releaseRemoteWorkspace'
   | 'startAcp'
@@ -97,6 +98,7 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   materializeRemoteFile: true,
   remoteWorkspaceFileList: true,
   readRemoteWorkspaceFile: true,
+  remoteWorkspaceSearch: true,
   joinRemoteWorkspace: true,
   releaseRemoteWorkspace: true,
   startAcp: true,

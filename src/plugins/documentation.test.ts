@@ -21,7 +21,7 @@ const COUNT_WORDS = [
   'twenty', 'twenty-one', 'twenty-two', 'twenty-three', 'twenty-four', 'twenty-five', 'twenty-six', 'twenty-seven', 'twenty-eight', 'twenty-nine',
   'thirty', 'thirty-one', 'thirty-two', 'thirty-three', 'thirty-four', 'thirty-five', 'thirty-six',
   'thirty-seven', 'thirty-eight', 'thirty-nine', 'forty', 'forty-one', 'forty-two',
-  'forty-three', 'forty-four', 'forty-five', 'forty-six',
+  'forty-three', 'forty-four', 'forty-five', 'forty-six', 'forty-seven',
 ];
 
 // The client-side count is a literal because its capability object lives in the web project, which

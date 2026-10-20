@@ -18,6 +18,25 @@ export type { BufferLine, HarnessView, EditorView, RemoteTarget, TerminalEntry, 
 export type { AgentRunView } from './agent/types.js';
 export type { ProfileRow } from './profile/types.js';
 
+export type SearchRequest = {
+  query: string;
+  include: string;
+  exclude: string;
+  regex: boolean;
+  matchCase: boolean;
+  wholeWord: boolean;
+};
+
+export type SearchMatch = {
+  path: string;
+  line: number;
+  above: string[];
+  match: string;
+  start: number;
+  end: number;
+  below: string[];
+};
+
 export type ConversationHarness = 'claude' | 'opencode';
 
 export type ConversationModelPair = {

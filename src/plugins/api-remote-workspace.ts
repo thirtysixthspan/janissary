@@ -1,3 +1,5 @@
+import type { SearchMatch, SearchRequest } from '../protocol.js';
+
 // The capabilities that reach the remote workspace a plugin's answering tab rides, split off the main
 // contract module and intersected back into `TabPluginServerCapabilities`.
 export type TabPluginRemoteWorkspaceCapabilities = {
@@ -19,6 +21,9 @@ export type TabPluginRemoteWorkspaceCapabilities = {
   // One file of that same workspace as UTF-8 text, or null when it is missing, larger than
   // `maxBytes`, could not be read, or the tab rides no remote workspace.
   readRemoteWorkspaceFile(instanceKey: string, relPath: string, maxBytes: number): Promise<string | null>;
+  // Runs the search on the remote host and returns only matching rows. Null means the plugin tab
+  // no longer rides an available remote workspace; a failed operation rejects.
+  remoteWorkspaceSearch(instanceKey: string, request: SearchRequest): Promise<SearchMatch[] | null>;
   // Joins this plugin's own open tab, named by its instance key, to the remote channel the tab named
   // `sourceLabel` rides, in place: the tab keeps its label and strip position and holds the session
   // until it releases it or closes. False, changing nothing, when either tab is missing, the source

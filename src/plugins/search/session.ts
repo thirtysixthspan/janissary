@@ -2,7 +2,7 @@ import path from 'node:path';
 import type { TabPluginNotification, TabPluginServerCapabilities } from '../api.js';
 import { isInsideRoot } from '../files.js';
 import { startScan, type ScanHandle, type ScanMatcherFactory, type ScanRead } from './scan.js';
-import { patternError } from './compile-matcher.js';
+import { patternError } from '../../search/compile-matcher.js';
 import { modesFrom, sameModes, type SearchModes } from './saved-modes.js';
 import { refusalLine, sameScope, scopeDisplay, scopeFrom, type SearchScope } from './scope.js';
 import { scopeFileAccess } from './scope-files.js';
@@ -172,7 +172,7 @@ export class SearchSession {
         }
         return listed;
       },
-      readCandidate: access.readCandidate,
+      remoteSearch: access.remoteSearch,
       readFile: contents,
       fileSize: contents === undefined ? undefined : async (absPath) => {
         try {
