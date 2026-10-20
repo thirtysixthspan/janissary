@@ -146,8 +146,9 @@ wait for every file in its current read group. A remote search returns its cappe
 together when the remote scan completes.
 
 **A search stops at 250 matches.** Once it has found that many, in the order the results are
-listed, it stops reading the project and settles as finished. There is no tally: the header shows no
-count of matches or files, and the window shows the rows and nothing else. Three states cover everything the body can say — **Searching…** while a scan
+listed, it stops scheduling files and settles as finished; reads already in flight may finish in the
+background. There is no tally: the header shows no count of matches or files, and the window shows
+the rows and nothing else. Three states cover everything the body can say — **Searching…** while a scan
 is running (over whatever rows have already arrived), **`No matches found for "<query>".`** when
 one settles with nothing, and the reason when a search fails.
 
