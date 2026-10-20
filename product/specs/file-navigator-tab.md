@@ -250,7 +250,7 @@ usable.
 |---|---|---|
 | Click a row | Replace the selection with that row, make it the keyboard cursor and range anchor, and give the tree keyboard focus |
 | Shift-click a row | Replace the selection with the visible range from the anchor to that row; `..` is omitted from ranges |
-| Cmd-click / Ctrl-click a row | Add or remove that row, then make it the keyboard cursor and range anchor |
+| Cmd-click / Ctrl-click a row | Add or remove that row, then make it the keyboard cursor and range anchor; a Ctrl+left-click never opens a context menu, even on macOS, where the system would otherwise treat it as a right-click |
 | Double-click a file row | Select it and open it (with `open`) — for Markdown files, this opens the plain-text editor instead (with `edit`); the context menu's **Open with** offers the other routes |
 | Double-click a directory row | Select it and toggle expand/collapse |
 | Double-click the `..` row | Navigate the tree up one directory |
@@ -289,7 +289,9 @@ claims, **Open with** shows the same two options double-clicking already offers.
 Right-clicking a row opens a menu at the pointer instead of the browser's own. The menu belongs to
 the row that was clicked and most of its entries act on that row alone, whether or not it is part
 of the current selection — right-clicking never changes what is selected, so an existing multi-row
-highlight stays visible underneath the menu. **Delete** is one exception: choosing it deletes the
+highlight stays visible underneath the menu. A right-click opens it whether or not Ctrl is held, but
+a Ctrl+left-click only changes the selection and shows no menu at all, neither this one nor the
+browser's or the app's default menu. **Delete** is one exception: choosing it deletes the
 whole current selection when the clicked row is part of it, and just the clicked row otherwise, so
 right-clicking any row inside a multi-row highlight and deleting removes every highlighted row.
 **Commit to origin** follows the same rule, so one commit carries every highlighted row.
