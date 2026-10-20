@@ -91,25 +91,6 @@ async function readableText(candidate: Candidate, runtime: Runtime): Promise<str
   return text;
 }
 
-// Read `paths` with at most `limit` reads open at once, preserving input order in the results so a
-// batch's rows arrive in the order the file list gave.
-async function readAll(
-  paths: readonly Candidate[], runtime: Runtime, limit: number,
-): Promise<(string | null)[]> {
-  const results: (string | null)[] = Array.from({ length: paths.length }, () => null);
-  let next = 0;
-  const worker = async () => {
-    while (next < paths.length) {
-      const index = next++;
-      const candidate = paths[index];
-      if (candidate === undefined) return;
-      results[index] = await readableText(candidate, runtime);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(limit, paths.length) }, worker));
-  return results;
-}
-
 function chunk<T>(items: readonly T[], size: number): T[][] {
   const out: T[][] = [];
   for (let index = 0; index < items.length; index += size) out.push(items.slice(index, index + size));
@@ -128,38 +109,35 @@ type Runtime = {
   remaining: number;
 };
 
-// Phase two: turn every queued candidate into rows, one `onBatch` per file so the table fills
-// progressively. Aborted midway, the rows already delivered stand and the rest are dropped. A file
-// whose matches straddle the cap gives only the rows that fit, and the queue behind it is not read.
-async function deliver(queue: Candidate[], matcher: MatcherWorker, runtime: Runtime): Promise<void> {
+// Check a batch with bounded read concurrency, but consume outcomes in path order. This lets a
+// resolved early match publish without waiting for every other file in the batch.
+async function scanBatch(batch: readonly Candidate[], matcher: MatcherWorker, runtime: Runtime): Promise<void> {
   const { options, signal } = runtime;
-  while (queue.length > 0 && runtime.remaining > 0) {
+  const reads = new Map<number, Promise<string | null>>();
+  let next = 0;
+  const schedule = () => {
+    while (next < batch.length && reads.size < READ_CONCURRENCY) {
+      const index = next++;
+      const candidate = batch[index];
+      if (candidate !== undefined) reads.set(index, readableText(candidate, runtime));
+    }
+  };
+
+  schedule();
+  for (const [index, candidate] of batch.entries()) {
+    if (signal.aborted || runtime.remaining === 0) return;
+    const read = reads.get(index);
+    if (read === undefined) continue;
+    reads.delete(index);
+    schedule();
+    const text = await read;
     if (signal.aborted) return;
-    const candidate = queue.shift();
-    if (candidate === undefined) return;
-    const text = await readableText(candidate, runtime);
-    if (signal.aborted) return;
-    if (text === null) continue;
+    if (text === null || !await matcher.detect(splitLines(text))) continue;
     const matchedRows = await matcher.rows(candidate.relPath, text);
     const rows = matchedRows.slice(0, runtime.remaining);
     runtime.remaining -= rows.length;
     if (rows.length > 0) options.onBatch({ rows, done: false });
   }
-}
-
-// Phase one over one batch: read it and return the candidates that match at all.
-async function detect(
-  batch: readonly Candidate[], matcher: MatcherWorker, runtime: Runtime,
-): Promise<Candidate[]> {
-  const texts = await readAll(batch, runtime, READ_CONCURRENCY);
-  const found: Candidate[] = [];
-  for (const [offset, text] of texts.entries()) {
-    const candidate = batch[offset];
-    if (text === null || candidate === undefined) continue;
-    const matches = await matcher.detect(splitLines(text));
-    if (matches) found.push(candidate);
-  }
-  return found;
 }
 
 // The scan proper: list the project, then alternate between detecting which files in the next batch
@@ -185,13 +163,10 @@ async function run(runtime: Runtime): Promise<void> {
       if (!signal.aborted) options.onBatch({ rows: [], done: true });
       return;
     }
-    const pending: Candidate[] = [];
-
     for (const batch of chunk(candidates, BATCH_SIZE)) {
       if (signal.aborted) return;
       if (runtime.remaining === 0) break;
-      pending.push(...await detect(batch, matcher, runtime));
-      await deliver(pending, matcher, runtime);
+      await scanBatch(batch, matcher, runtime);
     }
 
     if (!signal.aborted) options.onBatch({ rows: [], done: true });

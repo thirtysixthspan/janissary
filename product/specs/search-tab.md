@@ -140,11 +140,11 @@ reading upward in the order the search found them. The window opens on the first
 there, so a match does not scroll away while the rest of the search is still running.
 
 **Rows stream in while the search is still running**, so a large project starts filling the window
-before it has been fully searched, and the rows already found stay on screen. The first results
-arrive as soon as any file is known to match rather than only once the whole project has been read
-in order. For a remote workspace, the scan keeps a small group of file reads in flight and publishes
-matches as soon as any of those reads finds one, without waiting for earlier paths or the rest of the
-group.
+before it has been fully searched, and the rows already found stay on screen. For a local workspace,
+each matching file's rows appear as soon as that file and all earlier paths resolve; the scan does not
+wait for every file in its current read group. For a remote workspace, the scan keeps a small group
+of file reads in flight and publishes matches as soon as any of those reads finds one, without
+waiting for earlier paths or the rest of the group.
 
 **A search stops at 250 matches.** Once it has found that many, in the order the results are
 listed, it stops reading the project and settles as finished. There is no tally: the header shows no
