@@ -45,7 +45,9 @@ export function FileNavigatorTab({
     client, index, files.rows, selection.replace, () => containerRef.current?.focus(),
   );
   const opener = useFileNavigatorOpener(client, index);
-  const deletion = useFileNavigatorDelete(client, label);
+  // A confirmed delete leaves nothing selected, so no surviving row inherits the cursor and the
+  // list keeps its scroll position with only the deleted rows gone.
+  const deletion = useFileNavigatorDelete(client, label, () => selection.replace(null));
   const paste = useFileNavigatorPaste(client, label, files.absoluteRoot, files.remote?.host);
   const selectionAction = useSelectionAction(client, index);
   const commit = useFileNavigatorCommit(intents.commit);

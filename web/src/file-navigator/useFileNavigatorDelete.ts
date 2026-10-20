@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { JanusClient } from '../shared/ws/ws';
 
-export function useFileNavigatorDelete(client: JanusClient, label: string) {
+export function useFileNavigatorDelete(client: JanusClient, label: string, onConfirmed: () => void) {
   const [pendingDelete, setPendingDelete] = useState<string[] | null>(null);
   const confirm = () => {
     if (pendingDelete?.length === 1) {
@@ -9,6 +9,7 @@ export function useFileNavigatorDelete(client: JanusClient, label: string) {
     } else if (pendingDelete && pendingDelete.length > 1) {
       client.send({ method: 'deleteFileNavigatorItems', params: { label, paths: pendingDelete } });
     }
+    if (pendingDelete && pendingDelete.length > 0) onConfirmed();
     setPendingDelete(null);
   };
   return {
