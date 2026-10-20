@@ -31,12 +31,14 @@ export const TIMED_OUT_REASON = 'The remote machine did not answer in time.';
 //
 // Generous on purpose: a spurious timeout reports a failure for work that may still land, so the
 // deadline only has to bound a lost reply, not a slow one. Operations that do real work on the far
-// side — git, search, bulk moves and pastes, history replay, whole-file transfers — get far longer.
+// side — git, bulk moves and pastes, history replay, whole-file transfers — get far longer. Search
+// uses the ordinary deadline so a missing remote file listing cannot leave the search tab loading
+// for ten minutes.
 export const REQUEST_DEADLINE_MS = 60_000;
 export const LONG_REQUEST_DEADLINE_MS = 600_000;
 
 const LONG_RUNNING: ReadonlySet<RemoteFilesystemOperation> = new Set([
-  'git-pull', 'git-commit', 'search', 'move-many', 'delete-many', 'paste', 'replay', 'read-file', 'write-file',
+  'git-pull', 'git-commit', 'move-many', 'delete-many', 'paste', 'replay', 'read-file', 'write-file',
 ]);
 
 export function requestDeadline(operation: RemoteFilesystemOperation): number {

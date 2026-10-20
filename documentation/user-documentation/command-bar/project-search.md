@@ -36,6 +36,8 @@ If the workspace is still being created, or no longer exists, nothing opens. The
 
 A remote workspace is searched over its connection: the file list comes from the remote machine and each file is fetched to be matched, so a search over a very large remote repository is slower. While it's there, the search tab keeps the remote session open, and lets it go when it switches to another workspace or closes. If the search tab can't connect to the remote workspace, you see the `no longer available` line and the tab stays where it was.
 
+If the remote machine does not answer with a file list within 60 seconds, the search ends with `The remote machine did not answer in time`.
+
 When the workspace goes away, the search tab closes on its own, and any search still running stops. For a local clone, that happens when you close the last tab that owns it. For a remote workspace, it happens when the remote session ends, for example when you end it from the connections panel. Closing just the remote tab you searched from leaves the search tab open, because the search tab keeps the session going.
 
 ## Type a search

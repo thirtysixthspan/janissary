@@ -55,6 +55,18 @@ describe('RemotePortRequests deadlines', () => {
     expect(reject).toHaveBeenCalledWith(new Error(TIMED_OUT_REASON));
   });
 
+  it('settles an unanswered remote search at the ordinary request deadline', () => {
+    expect(requestDeadline('search')).toBe(REQUEST_DEADLINE_MS);
+    const requests = new RemotePortRequests();
+    const { reject } = track(requests, 'r1', 'search');
+
+    vi.advanceTimersByTime(REQUEST_DEADLINE_MS - 1);
+    expect(reject).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+
+    expect(reject).toHaveBeenCalledWith(new Error(TIMED_OUT_REASON));
+  });
+
   it('settles a request answered in time exactly once, with its reply', () => {
     const requests = new RemotePortRequests();
     const { resolve, reject } = track(requests, 'r1', 'read-directory', { path: 'src' });

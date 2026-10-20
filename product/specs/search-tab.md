@@ -57,6 +57,8 @@ are skipped: anything too large for the editor to open, and anything whose bytes
 
 A remote workspace is listed on the remote machine, with the same gitignore rules, and each file is fetched over the workspace's connection and matched locally. The results are the same as for a local clone, but a search over a very large remote repository is slower.
 
+If the remote file listing does not answer within 60 seconds, the search ends with `The remote machine did not answer in time`.
+
 Two fields in the header narrow the search further. **Files to include** and **Files to
 exclude** each take comma-separated glob patterns. The header is a single line: the two fields
 share it with the tab's split control, which sits at its right-hand end.
