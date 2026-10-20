@@ -2,3 +2,5 @@
 
 # pull-request
 
+* `shell on anonymouscoward@10.27.1.94` then search foo gets stuch searching... and never returns anything in the search tab.
+ 
