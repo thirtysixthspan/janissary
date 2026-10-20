@@ -1,13 +1,3 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
-
-* Route the `shell` command to the workspace launcher from a shell command bar.
-
-Existing Issue: A shell command bar sends `shell pr1760 -w` to zsh as `zsh: command not found: shell`, so the workspaced shell needed to verify PR 1760 cannot open. Severity: 8/10
-
-Existing Risk: 8/10 - Users cannot open a new shell or create a workspace through the documented shell command, blocking a core tab workflow and workspace search entry point.
-
-Proposal Risk: 2/10 - A command route regression test should catch a recurrence before release; any remaining impact would be contained to the shell launcher command.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1760 "Dispatch the shell plugin launcher from a shell command bar". G1 (generated): “Open a local workspaced shell with `shell pr1760 -w`; add `WORKSPACE_ONLY_1760` to its `fixture.md`; run `search WORKSPACE_ONLY_1760` from that shell. Expect the header to show `$workspace/pr1760`, a `fixture.md` match, and opening the result to open the workspace copy. Promise: ‘A search started from a workspaced tab searches that workspace, lists that workspace's matches, and opens a match from that workspace.’” For setup, create a scratch Git project with `fixture.md` containing `# Pull request 1760 search fixture` and `Launch root fixture: ROOT_ONLY_1760`, and set its `origin` to that local repository. From the app's `janus` command bar, run `shell pr1760 -w`; expected: a shell tab appears and provisions `.janissary/workspace/pr1760`, after which the marker is added to the clone and the search scope and result are checked. Observed: `zsh: command not found: shell`, no shell tab or workspace directory. Reran G1 alone from a fresh app with the same scratch repository and command; it failed identically, 2 of 2. In `src/command/manager.ts`, `CommandManager.dispatchLineWithOutput()` returns `dispatched: false` for every resolution named `shell`, intending to leave the `!` shell route to zsh; the shell plugin launcher also resolves to `shell` through `src/plugins/command-adapter.ts` and `src/plugins/shell/manifest.ts`. `src/plugins/shell/useShellSubmit.ts` then falls back to `runInShell()` when dispatch reports false, sending the plugin command to zsh. Distinguish the `!` shell route from the shell plugin command before returning false, so the plugin launcher is dispatched. Add a regression assertion that `shell pr1760 -w` dispatches the shell plugin command while `!printf probe` remains a zsh command.

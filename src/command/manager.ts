@@ -90,7 +90,9 @@ export class CommandManager {
       this.managers.tab.append(label, { input, output: resolution.output, markdown: true });
       return { dispatched: true, output: resolution.output };
     }
-    if (resolution.kind !== 'app' || resolution.name === 'shell') return { dispatched: false, output: '' };
+    if (resolution.kind !== 'app' || (resolution.name === 'shell' && resolution.cmd.startsWith('!'))) {
+      return { dispatched: false, output: '' };
+    }
 
     const command = findCommand(resolution.name, resolution.cmd);
     if (command?.coreResponse) {
