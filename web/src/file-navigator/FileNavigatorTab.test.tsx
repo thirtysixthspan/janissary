@@ -1596,6 +1596,37 @@ describe('FileNavigatorTab', () => {
       expect(selected).toEqual(['src']);
     });
 
+    it('treats a Ctrl+left-click as a selection toggle and opens no menu', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
+      fireEvent.mouseDown(screen.getByText('src'), { button: 0 });
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0, ctrlKey: true });
+      const notPrevented = fireEvent.contextMenu(screen.getByText('README.md'), { button: 0, ctrlKey: true });
+      expect(notPrevented).toBe(false);
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+      const selected = [...container.querySelectorAll('[aria-selected="true"]')].map((row) => row.textContent);
+      expect(selected).toEqual(['src', 'README.md']);
+    });
+
+    it('asks for no selection action on a Ctrl+left-click inside a multi-row selection', () => {
+      const request = vi.fn().mockResolvedValue({ ok: true, value: null });
+      const client = { send: vi.fn(), request } as unknown as JanusClient;
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0 });
+      fireEvent.mouseDown(screen.getByText('index.ts'), { button: 0, ctrlKey: true });
+      fireEvent.contextMenu(screen.getByText('index.ts'), { button: 0, ctrlKey: true });
+      expect(request).not.toHaveBeenCalledWith(
+        expect.objectContaining({ method: 'fileNavigatorSelectionAction' }),
+      );
+    });
+
+    it('still opens the menu for a secondary-button right-click made while Ctrl is held', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
+      fireEvent.contextMenu(screen.getByText('README.md'), { button: 2, ctrlKey: true });
+      expect(screen.getByRole('menu')).toBeInTheDocument();
+    });
+
     it('omits Paste until something is on the clipboard', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);

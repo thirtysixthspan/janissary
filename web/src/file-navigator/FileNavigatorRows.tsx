@@ -52,12 +52,12 @@ export function FileNavigatorRows({
           onDoubleClick={(shiftKey) => rowEvents.onRowDoubleClick(row, shiftKey)}
           onMouseDown={(event) => rowEvents.onRowMouseDown(row, event)}
           onContextMenu={(event) => {
+            if (!rowEvents.onRowContextMenu(row, event)) return;
             // Only a menu raised on a row inside a multi-row selection can carry an entry that
             // acts on the whole selection; every other menu asks nothing and shows none.
             selectionAction.query(
               selection.selected.has(row.path) ? selection.operationPaths : [],
             );
-            rowEvents.onRowContextMenu(row, event);
           }}
         />
       ))}
