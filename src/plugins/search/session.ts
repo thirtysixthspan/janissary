@@ -27,7 +27,9 @@ export function emptyPayload(): SearchPayload {
 function payloadOf(
   base: SearchPayload, changes: Partial<SearchPayload>,
 ): SearchPayload {
-  return { ...base, ...changes };
+  const payload = { ...base, ...changes };
+  if (payload.host === undefined) delete payload.host;
+  return payload;
 }
 
 // The state one search tab holds between calls: what it currently shows, and the scan still feeding

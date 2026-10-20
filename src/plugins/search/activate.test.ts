@@ -5,6 +5,7 @@ import { fileMatches, matchFile } from './search-files.js';
 import { MAX_BYTES, type ScanMatcherFactory } from './scan.js';
 import type { MatcherWorker } from './matcher-worker-protocol.js';
 import type { SearchIntent, SearchPayload } from './shared.js';
+import { isJsonCompatible } from '../tab-value.js';
 
 const files: Record<string, string> = {
   'a.ts': 'nothing',
@@ -551,9 +552,12 @@ describe('search plugin workspace scope', () => {
     activation.command?.('todo', capabilities);
     await settle();
     expect(roots()).toEqual(['/repo/clone']);
-    expect(lastPayload(updateTab)).toMatchObject({
+    const payload = lastPayload(updateTab);
+    expect(payload).toMatchObject({
       scope: '$workspace/claude-2', rows: [{ match: 'todo in the clone' }], state: 'done',
     });
+    expect('host' in payload).toBe(false);
+    expect(isJsonCompatible(payload)).toBe(true);
 
     await activation.defaultMenuAction?.('todo', capabilities);
     await settle();
