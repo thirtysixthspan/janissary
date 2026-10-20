@@ -519,11 +519,11 @@ a dialog, any failures are reported as one line in the notifications feed: `Coul
 <failed> of <total> items: <names>`, naming the failing items in selection order and truncating
 past three names with `… and N more`, followed by the shared or per-item cause and recovery action.
 The tree already watches every visible directory, so the removed row disappears automatically once
-the watcher picks up the change, the same as any other on-disk change made outside the app. If the
-selected row was the one removed, selection moves to the nearest surviving row rather than pointing
-at nothing.
-Acting on the dialog always returns keyboard focus to the tree. Confirming leaves the parent
-directory as the active row once the deletion lands; canceling leaves the file that was about to be
+the watcher picks up the change, the same as any other on-disk change made outside the app.
+Acting on the dialog always returns keyboard focus to the tree. Confirming clears the cursor, the
+anchor, and every selected row, the same empty state Escape leaves, so no surviving row is selected
+once the deletion lands. The row list keeps its scroll position: the deleted rows drop out and
+nothing scrolls to bring another row into view. Canceling leaves the file that was about to be
 deleted as the active row.
 
 ### Renaming a file or directory
@@ -671,7 +671,8 @@ key falls through to the window-level bindings untouched.
 
 When rows disappear or become hidden, surviving visible selections remain. A missing cursor moves
 to its nearest visible ancestor, or falls back near its former row index. A missing anchor resets
-to that cursor. Changing the navigator root clears cursor, anchor, and selection.
+to that cursor. Changing the navigator root clears cursor, anchor, and selection, and so does
+confirming a delete (see "Deleting a file or directory").
 
 ### Tab strip: name and close button
 

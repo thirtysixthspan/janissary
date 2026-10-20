@@ -352,9 +352,9 @@ failures, reported as one line in the notifications feed instead of a dialog:
 truncating the rest with `… and N more`. The line also gives the cause and what to try next.
 Deletion is recursive for directories and cannot be undone.
 
-Confirming a delete moves the selection to the nearest row that survived, and the parent directory
-becomes the active row, so your cursor is somewhere you can keep working from. Cancelling leaves the
-rows exactly as they were, with the one you right-clicked still selected.
+Confirming a delete clears the selection, so no row is selected afterward. The tree stays scrolled
+where it was, and the deleted rows just drop out of the list. Cancelling leaves the rows exactly as
+they were, with the one you right-clicked still selected.
 
 Undo and redo apply to moves and [copy-paste or cut-paste](#copying-cutting-and-pasting). Each tree keeps its own undo/redo history in memory for as long
 as it stays open; closing it clears that history. One bulk move is one history step. Undo reverses

@@ -719,6 +719,40 @@ describe('FileNavigatorTab', () => {
       fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
       expect(send).not.toHaveBeenCalled();
       expect(screen.queryByRole('alertdialog')).toBeNull();
+      const selected = [...container.querySelectorAll('[aria-selected="true"]')].map((row) => row.textContent);
+      expect(selected).toEqual(['README.md']);
+    });
+
+    it('confirming clears the selection and scrolls nowhere once the deleted row drops out', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const files = makeFiles();
+      const { container, rerender } = render(<FileNavigatorTab files={files} client={client} index={0} label="files" />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0 });
+      fireEvent.keyDown(tree, { key: 'Backspace' });
+      vi.mocked(Element.prototype.scrollIntoView).mockClear();
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+      expect(container.querySelectorAll('[aria-selected="true"]')).toHaveLength(0);
+      expect(container.querySelector('[data-cursor]')).toBeNull();
+
+      const remaining = files.rows.filter((row) => row.path !== 'README.md');
+      rerender(<FileNavigatorTab files={makeFiles({ rows: remaining })} client={client} index={0} label="files" />);
+      expect(screen.queryByText('README.md')).toBeNull();
+      expect(container.querySelectorAll('[aria-selected="true"]')).toHaveLength(0);
+      expect(container.querySelector('[data-cursor]')).toBeNull();
+      expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+    });
+
+    it('confirming a multi-row delete clears the whole selection', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={3} label="files" />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.mouseDown(screen.getByText('index.ts'), { button: 0 });
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0, metaKey: true });
+      fireEvent.keyDown(tree, { key: 'Delete' });
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+      expect(container.querySelectorAll('[aria-selected="true"]')).toHaveLength(0);
+      expect(container.querySelector('[data-cursor]')).toBeNull();
     });
 
     it('confirms one normalized batch as a single send, with no failure dialog', () => {
@@ -1708,6 +1742,17 @@ describe('FileNavigatorTab', () => {
       fireEvent.contextMenu(screen.getByText('README.md'));
       fireEvent.click(screen.getByText('Delete'));
       expect(screen.getByText('Delete "README.md"?')).toBeInTheDocument();
+    });
+
+    it('confirming a Delete chosen from the menu clears the selection', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
+      fireEvent.mouseDown(screen.getByText('src'), { button: 0 });
+      fireEvent.contextMenu(screen.getByText('README.md'));
+      fireEvent.click(screen.getByText('Delete'));
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+      expect(container.querySelectorAll('[aria-selected="true"]')).toHaveLength(0);
+      expect(container.querySelector('[data-cursor]')).toBeNull();
     });
 
     it('choosing Delete on a row inside a multi-selection deletes the whole selection', () => {
