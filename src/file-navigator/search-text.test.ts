@@ -63,6 +63,31 @@ describe('searchText', () => {
     expect(rows).toHaveLength(250);
   });
 
+  it('keeps path order and applies the result cap when reads finish out of order', async () => {
+    const root = project();
+    const paths = Array.from({ length: 260 }, (_, index) => `f${String(index).padStart(3, '0')}.txt`);
+    const contents = new Map(paths.map((relativePath) => [relativePath, `todo ${relativePath}`]));
+    for (const relativePath of paths) write(root, relativePath, contents.get(relativePath) ?? '');
+
+    const firstRead = Promise.withResolvers<void>();
+    const laterReadsComplete = Promise.withResolvers<void>();
+    const completed: string[] = [];
+    const candidateReader = async (_root: string, relativePath: string) => {
+      if (relativePath === paths[0]) await firstRead.promise;
+      completed.push(relativePath);
+      if (completed.length === 7) laterReadsComplete.resolve();
+      return contents.get(relativePath) ?? null;
+    };
+
+    const pending = searchText(root, plain, candidateReader);
+    await laterReadsComplete.promise;
+    expect(completed).toEqual(paths.slice(1, 8));
+    firstRead.resolve();
+
+    const rows = await pending;
+    expect(rows.map((row) => row.path)).toEqual(paths.slice(0, 250));
+  });
+
   it('returns no rows for an empty query', async () => {
     const root = project();
     write(root, 'a.txt', 'todo');

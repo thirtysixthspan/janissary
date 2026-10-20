@@ -9,6 +9,7 @@ import {
 } from '../search/types.js';
 
 const READ_CONCURRENCY = 8;
+type CandidateReader = (root: string, relPath: string) => Promise<string | null>;
 
 async function readCandidate(root: string, relPath: string): Promise<string | null> {
   const absPath = path.join(root, relPath);
@@ -22,29 +23,41 @@ async function readCandidate(root: string, relPath: string): Promise<string | nu
   }
 }
 
-export async function searchText(root: string, request: SearchRequest): Promise<SearchMatch[]> {
+export async function searchText(
+  root: string, request: SearchRequest, candidateReader: CandidateReader = readCandidate,
+): Promise<SearchMatch[]> {
   if (request.query === '') return [];
   const candidates = filterPaths(await listProjectFiles(root), request.include, request.exclude);
   const matcher = createMatcherWorker(request.query, request, new AbortController().signal);
   const rows: SearchMatch[] = [];
-  let next = 0;
+  const reads = new Map<number, Promise<string | null>>();
+  let nextToRead = 0;
   let remaining = SEARCH_MAX_RESULTS;
 
-  const worker = async () => {
-    while (next < candidates.length && remaining > 0) {
-      const relPath = candidates[next++];
-      if (relPath === undefined) continue;
-      const text = await readCandidate(root, relPath);
+  const scheduleReads = () => {
+    while (nextToRead < candidates.length && reads.size < READ_CONCURRENCY) {
+      const index = nextToRead++;
+      const relPath = candidates[index];
+      if (relPath !== undefined) reads.set(index, candidateReader(root, relPath));
+    }
+  };
+
+  scheduleReads();
+  try {
+    let nextToProcess = 0;
+    while (nextToProcess < candidates.length && remaining > 0) {
+      const relPath = candidates[nextToProcess];
+      const read = reads.get(nextToProcess);
+      if (relPath === undefined || read === undefined) break;
+      const text = await read;
+      reads.delete(nextToProcess++);
+      scheduleReads();
       if (text === null) continue;
       const matches = await matcher.rows(relPath, text);
       const found = matches.slice(0, remaining);
       remaining -= found.length;
       rows.push(...found);
     }
-  };
-
-  try {
-    await Promise.all(Array.from({ length: READ_CONCURRENCY }, worker));
     return rows;
   } finally {
     matcher.dispose();
