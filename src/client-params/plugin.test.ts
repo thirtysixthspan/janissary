@@ -23,6 +23,13 @@ describe('runDefaultMenuSelectionAction params', () => {
       .toBe(true);
   });
 
+  it('accepts the tab the selection came from and refuses a mistyped one', () => {
+    expect(clientParamsValid('runDefaultMenuSelectionAction', { selection: 'first', action: 'open', tab: 'shell-2' }))
+      .toBe(true);
+    expect(clientParamsValid('runDefaultMenuSelectionAction', { selection: 'first', action: 'open', tab: 7 }))
+      .toBe(false);
+  });
+
   it('refuses a selection with no action to run', () => {
     expect(clientParamsValid('runDefaultMenuSelectionAction', { selection: 'first' })).toBe(false);
   });

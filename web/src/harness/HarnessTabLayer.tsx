@@ -44,6 +44,7 @@ export function HarnessTabLayer({
   return (
     <div
       className="tab-body"
+      data-tab-label={t.label}
       data-pane-index={index}
       inert={!isVisible}
       style={{

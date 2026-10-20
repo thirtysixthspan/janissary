@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeAll } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './shared/ws/ws';
 import { Sidebar, DEFAULT_WIDTH_PX } from './Sidebar';
+import { createPluginHost, PluginHostProvider } from './plugins/host';
 
 // A drag needs the width prop to actually move the rendered flex value, so the drag-clamp tests
 // wrap Sidebar in a small controlled harness — mirroring how `App` owns the width in production.
@@ -45,6 +46,27 @@ describe('Sidebar', () => {
     const { container, getByText } = render(<Sidebar side="left" tabs={tabs} client={client} />);
     expect(container.querySelector('.sidebar-left')).not.toBeNull();
     expect(getByText('/tmp/project')).toBeTruthy();
+  });
+
+  it('labels the sidebar body with the files tab when it is current', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const tabs = [makeTab({ label: 'files', view: 'files', dock: 'left', files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] } })];
+    const { container } = render(<Sidebar side="left" tabs={tabs} client={client} />);
+    expect(container.querySelector<HTMLElement>('.sidebar-body')?.dataset.tabLabel).toBe('files');
+  });
+
+  it('leaves the sidebar body unlabelled when a docked plugin is current', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const tabs = [makeTab({
+      label: 'video', view: 'plugin', dock: 'left', title: 'video',
+      plugin: { id: 'fixture', schemaVersion: 1, payload: {} },
+    })];
+    const { container } = render(
+      <PluginHostProvider host={createPluginHost(new Map())}>
+        <Sidebar side="left" tabs={tabs} client={client} />
+      </PluginHostProvider>,
+    );
+    expect(container.querySelector('.sidebar-body')?.hasAttribute('data-tab-label')).toBe(false);
   });
 
   it('ignores a tab docked to the other side', () => {

@@ -28,7 +28,7 @@ export type PickerKeySnapshot = OverlayOpenSources & {
 
 // The window key handler uses these callbacks for shared pickers and commands.
 export type PickerKeyCallbacks = {
-  runCommand: (text: string) => void;
+  runCommand: (text: string, tab?: string) => void;
   setPickerIndex: (setter: (prev: number) => number) => void;
   setPickerOpen: (open: boolean) => void;
   openPicker: () => void;

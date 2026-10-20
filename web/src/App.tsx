@@ -90,7 +90,7 @@ export function App({ client }: { client: JanusClient }) {
   });
 
 
-  const runCommand = useCallback((text: string) => client.send({ method: 'command', params: { text } }), [client]);
+  const runCommand = useCallback((text: string, tab?: string) => client.send({ method: 'command', params: { text, ...(tab && { tab }) } }), [client]);
   // Every modal overlay's state, under one owner. It hands out a bag per consumer — the render tree,
   // the window key handler, the command bar's interception chain, the server state stream — so none
   // of them restates the others' fields (see `pickers/usePickerOverlays`).

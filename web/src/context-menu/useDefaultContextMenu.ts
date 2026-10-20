@@ -4,8 +4,9 @@ import { clearTerminalSelection, terminalSelectionText } from '../shared/termina
 import { openOverlayForCommand } from '../shared/contributed-overlays';
 import type { DefaultMenuEntry } from '@shared/protocol';
 import type { JanusClient } from '../shared/ws/ws';
+import { enclosingTabLabel } from '../shared/tab-label-lookup';
 
-export type PendingDefaultMenu = DefaultMenuTarget & { x: number; y: number };
+export type PendingDefaultMenu = DefaultMenuTarget & { x: number; y: number; tab?: string };
 
 function domSelectionText(): string {
   return globalThis.getSelection()?.toString() ?? '';
@@ -62,13 +63,15 @@ export function useDefaultContextMenu(client?: JanusClient) {
           if (generation.current === queryGeneration) setContributed(result.ok ? result.value : []);
         });
       }
-      setPending({ ...target, x: event.clientX, y: event.clientY });
+      const tab = enclosingTabLabel(clicked);
+      setPending({ ...target, x: event.clientX, y: event.clientY, ...(tab && { tab }) });
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (!isChatShortcut(event) || typeof client?.request !== 'function') return;
       const selection = resolveSelection(document.activeElement);
       if (!selection.text) return;
       event.preventDefault();
+      const tab = enclosingTabLabel(document.activeElement);
       void client.request<DefaultMenuEntry[]>({
         method: 'defaultMenuSelectionAction', params: { selection: selection.text },
       }).then((result) => {
@@ -76,7 +79,7 @@ export function useDefaultContextMenu(client?: JanusClient) {
         if (!entry) return;
         client.send({
           method: 'runDefaultMenuSelectionAction',
-          params: { selection: selection.text, action: entry.label },
+          params: { selection: selection.text, action: entry.label, ...(tab && { tab }) },
         });
       });
     };
@@ -113,7 +116,7 @@ export function useDefaultContextMenu(client?: JanusClient) {
     if (!pending?.selectionText) return;
     client?.send({
       method: 'runDefaultMenuSelectionAction',
-      params: { selection: pending.selectionText, action: label },
+      params: { selection: pending.selectionText, action: label, ...(pending.tab && { tab: pending.tab }) },
     });
     close();
   };

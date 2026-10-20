@@ -1,8 +1,10 @@
-/* Search tab: the include and exclude fields in the metadata bar, the query's three modifiers on
+/* Search tab: the scope being searched (the host first for a remote workspace) and the include and
+   exclude fields in the metadata bar, the query's three modifiers on
    the command line beside it, and a scrollable column of match rows. Each row is a dimmed
    path-and-line header above its context block, in the monospace the editor uses, so a match reads
    as a piece of code rather than as prose. */
 .search-tab { gap: 6px; }
+.search-tab .files-loc { flex: none; white-space: nowrap; word-break: normal; }
 .search-filters { display: flex; flex: 1; min-width: 0; gap: 8px; }
 .search-filters input {
   flex: 1; min-width: 0; background: transparent; border: 1px solid var(--border); border-radius: 3px;

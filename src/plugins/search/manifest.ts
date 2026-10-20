@@ -19,6 +19,8 @@ export const searchManifest = {
   defaultMenu: { label: 'Search for this', order: 1 },
   capabilities: [
     'note',
+    'notifyUser',
+    'originTab',
     'openOrFocusTab',
     'updateTab',
     'projectFileList',
@@ -27,5 +29,13 @@ export const searchManifest = {
     'saveSettings',
     'rejectRequest',
     'reportFailure',
+    'materializeRemoteFile',
+    'remoteWorkspaceFileList',
+    'readRemoteWorkspaceFile',
+    'joinRemoteWorkspace',
+    'releaseRemoteWorkspace',
+    'workspaceTracked',
+    'closeOwnTab',
   ],
+  notifications: ['tabs'],
 } as const satisfies TabPluginDeclaration;

@@ -34,8 +34,18 @@ describe('dispatchPluginMessage default-menu cases', () => {
       method: 'runDefaultMenuSelectionAction',
       params: { selection: 'first', action: 'open' },
     });
-    expect(controller.runDefaultMenuSelectionAction).toHaveBeenCalledExactlyOnceWith('first', 'open');
+    expect(controller.runDefaultMenuSelectionAction).toHaveBeenCalledExactlyOnceWith('first', 'open', undefined);
     expect(result).toBeUndefined();
+  });
+
+  it('passes the tab the selection came from to the controller', () => {
+    const controller = makeController();
+    dispatch(controller, {
+      method: 'runDefaultMenuSelectionAction',
+      params: { selection: 'first', action: 'open', tab: 'shell-2' },
+    });
+    expect(controller.runDefaultMenuSelectionAction)
+      .toHaveBeenCalledExactlyOnceWith('first', 'open', 'shell-2');
   });
 });
 

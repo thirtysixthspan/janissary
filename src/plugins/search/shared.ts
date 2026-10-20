@@ -1,4 +1,4 @@
-export const SEARCH_PAYLOAD_SCHEMA_VERSION = 1;
+export const SEARCH_PAYLOAD_SCHEMA_VERSION = 2;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -39,6 +39,11 @@ export type SearchPayload = {
   // user's own editing surface, so the client adopts `query` only when this changes — an echo of a
   // search the client started itself must never overwrite what is being typed.
   seed: number;
+  // The display root of the workspace the rows came from: `$root` for the launch directory, or the
+  // workspace's own display form.
+  scope: string;
+  // The remote host the scope is on; absent for the launch directory and a local workspace.
+  host?: string;
 };
 
 export type SearchIntent = { query: string; include: string; exclude: string; regex: boolean; matchCase: boolean; wholeWord: boolean };
@@ -71,7 +76,9 @@ export function isSearchPayload(value: unknown): value is SearchPayload {
     && typeof value.message === 'string'
     && Array.isArray(value.rows)
     && value.rows.every((row) => isMatch(row))
-    && typeof value.seed === 'number';
+    && typeof value.seed === 'number'
+    && typeof value.scope === 'string'
+    && (value.host === undefined || typeof value.host === 'string');
 }
 
 export function isSearchIntent(value: unknown): value is SearchIntent {

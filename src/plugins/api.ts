@@ -10,6 +10,9 @@ import type { CompletionResult } from '../completion/types.js';
 import type { AcpPromptResult } from '../acp/types.js';
 import type { QueueCapabilityTypes } from './queue-capability-types.js';
 import type { TabPluginOriginTab } from './api-origin-tab.js';
+import type { TabPluginRemoteWorkspaceCapabilities } from './api-remote-workspace.js';
+import type { TabPluginOwnTabCapabilities } from './api-own-tab.js';
+import type { TabPluginProjectCapabilities } from './api-project.js';
 
 // The capability half of the contract, and the topic half below it, live in modules of their own and
 // are re-exported here, so a plugin still reads the whole v2 contract from one module.
@@ -21,6 +24,8 @@ export type { TabPluginCapabilityName } from './api-capabilities.js';
 // from beside its reader so a plugin reaches both from this module, the only one a plugin may import.
 export type { TabActivityEntry } from './activity.js';
 export type { TabPluginOriginTab } from './api-origin-tab.js';
+export type { TabPluginRemoteWorkspaceCapabilities } from './api-remote-workspace.js';
+export type { TabPluginOwnTabCapabilities } from './api-own-tab.js';
 // What a core ACP prompt answered with, re-exported so a plugin reading a result names the type from
 // the same module it read the capability from.
 export type { AcpPromptResult } from '../acp/types.js';
@@ -214,7 +219,7 @@ export type TabPluginSelectionAction = {
   action: string;
 };
 
-export type TabPluginServerCapabilities = QueueCapabilityTypes & {
+export type TabPluginServerCapabilities = QueueCapabilityTypes & TabPluginRemoteWorkspaceCapabilities & TabPluginOwnTabCapabilities & TabPluginProjectCapabilities & {
   // Core ACP connection operations, scoped to this plugin's own answering tab.
   //
   // `startAcp` takes an optional request. `{ withoutTools: true }` asks for a session with no tool
@@ -274,22 +279,6 @@ export type TabPluginServerCapabilities = QueueCapabilityTypes & {
   // reference it registers is recorded against the tab being updated, so closing that tab releases
   // what the update served exactly as it releases what the open served.
   updateTab(instanceKey: string, factory: (resources: TabPluginResources) => TabPluginTabUpdate): void;
-  // Set the unread badge on one of this plugin's tabs. Raising it arms the standard waiting
-  // notification; clearing it cancels that notification.
-  setUnread(instanceKey: string, unread: boolean): void;
-  // Light or clear the tab strip's busy dot on one of this plugin's tabs, addressed by instance key
-  // like `setUnread`; a key with no open tab is a no-op. It changes the dot alone: the host's own
-  // notion of a tab running a command, which `send` and `queue` consult, is not touched.
-  setBusy(instanceKey: string, busy: boolean): void;
-  // Dock one of this plugin's own tabs into a sidebar, or `null` to undock it back to the centre
-  // strip and make it active. Addressed by instance key like `updateTab`, so a key with no open tab
-  // is a silent no-op and a plugin can never move another plugin's tab.
-  dockTab(instanceKey: string, dock: 'left' | 'right' | null): void;
-  // Cache the text currently visible in one of this plugin's own tabs, so a monitor watching that
-  // tab has something to feed on. The cache is server-only and is never broadcast to any client.
-  // Addressed by instance key like `updateTab`, so a key with no open tab is a silent no-op and a
-  // plugin can never write another plugin's snapshot.
-  snapshotTab(instanceKey: string, text: string): void;
   // The data a declared topic carries, as of now. A notification says a topic changed; this is how a
   // plugin building a tab for the first time learns what the topic currently holds. Asking for a
   // topic this plugin did not declare is a plugin-authoring mistake and disables it.
@@ -300,11 +289,6 @@ export type TabPluginServerCapabilities = QueueCapabilityTypes & {
   // claimed extensions. The host queues the request and runs it after the guarded call returns, so
   // glob expansion and per-file dispatch never count against the plugin's own call budget.
   openClaimedFiles(target: string): void;
-  // The project's gitignore-aware file list as project-relative forward-slash paths, and the
-  // directory they are relative to. The same list the `projectFiles` RPC serves to Quick Open, so a
-  // plugin scanning the repository and a user picking a file see the same set. The root is returned
-  // because a relative path cannot be opened without it.
-  projectFileList(): Promise<{ root: string; paths: string[] }>;
   // The launch vocabulary a harness tab is opened with: every harness name mapped to its known
   // model ids, and the effort levels any surface may offer. The models are the same catalog the
   // New harness dialog reads and `harness --model` validates against, loaded once at startup, so a
@@ -312,12 +296,6 @@ export type TabPluginServerCapabilities = QueueCapabilityTypes & {
   // harness subsystem of its own — the plugin import boundary closes that route — so a plugin that
   // must show or validate harness/model choices asks here.
   harnessLaunchCatalog(): { models: Record<string, string[]>; efforts: string[] };
-  // Open a file in an editor tab with the cursor on `line`, through the ordinary `edit` pipeline: an
-  // already-open file is focused rather than duplicated, the line is centered, and the file is
-  // served by the authenticated `/open/<id>` allow-list like any other editor open. This is the
-  // route for a plugin that must put a user on a specific line, which `openClaimedFiles` cannot
-  // express — it is pinned to the plugin's own claimed extensions and takes no line.
-  openInEditor(absPath: string, line: number): void;
   configuredViewer(): string;
   openExternally(absPath: string, application?: string): boolean;
   // This plugin's own remembered settings from `.janissary/config.json`, or `{}` when it has saved
@@ -356,18 +334,11 @@ export type TabPluginServerCapabilities = QueueCapabilityTypes & {
   // rather than open a tab that would read the workspace as absent. `view` is the tab's body kind
   // and `plugin` the id of the plugin behind it when it is one, so a caller whose route is written
   // for a shell or a harness tab — the two whose workspace it serves — can tell one from a
-  // navigator's without reading the host's tab list either.
+  // navigator's without reading the host's tab list either. `workspace` also carries its `label`,
+  // its `display` form, and for a remote one the `ride` tab and `host`; `gone` marks a riding tab
+  // whose workspace no longer exists, and `workspaceLabel` names a remote workspace not yet ready.
+  // All of it is resolved by `src/plugins/origin-workspace.ts`.
   originTab(label?: string): TabPluginOriginTab;
-  // The change set of the remote workspace this plugin's own answering tab rides, as the far side
-  // computed it — the same records a local read produces, validated by the plugin's own guard before
-  // it publishes anything. Null when the answering tab rides no remote workspace, because a
-  // directory that is not on another machine has no far side to ask.
-  readWorkspaceChangeSet(fullFiles: readonly string[]): Promise<unknown> | null;
-  // The local path one file of that remote workspace has been materialized to, answered by the same
-  // cache a remote file navigator's row opens through, or null when the asking tab rides no remote
-  // workspace or the file could not be read. The plugin opens that path through the routes it
-  // already has, so a remote row's click is the same open a local row's is.
-  materializeRemoteFile(relPath: string): Promise<string | null> | null;
   // Offer one line to the application's own command dispatcher, answering whether it ran and with the
   // output it added to the answering tab's transcript. A line that resolves to a command runs as that
   // command in the tab this was called from; a line that resolves to nothing is the caller's to

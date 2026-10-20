@@ -219,6 +219,55 @@ describe('DefaultContextMenu', () => {
     });
   });
 
+  it('runs the Cmd+I entry for the tab holding focus', async () => {
+    stubSelection('selected text');
+    const client = { request: vi.fn().mockResolvedValue({ ok: true, value: [chat] }), send: vi.fn() };
+    render(<DefaultContextMenu client={client as never} />);
+    const body = document.createElement('div');
+    body.dataset.tabLabel = 'files';
+    const input = document.createElement('textarea');
+    body.append(input);
+    document.body.append(body);
+    input.focus();
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'i', metaKey: true, bubbles: true, cancelable: true }));
+    await act(async () => {});
+    expect(client.send).toHaveBeenCalledExactlyOnceWith({
+      method: 'runDefaultMenuSelectionAction',
+      params: { selection: 'selected text', action: 'Chat about this', tab: 'files' },
+    });
+    body.remove();
+  });
+
+  it('runs a contributed entry for the tab body the right-click landed in', async () => {
+    stubSelection('selected text');
+    const client = { request: vi.fn().mockResolvedValue({ ok: true, value: [search] }), send: vi.fn() };
+    render(<DefaultContextMenu client={client as never} />);
+    const body = document.createElement('div');
+    body.dataset.tabLabel = 'notifications';
+    const text = document.createElement('p');
+    body.append(text);
+    document.body.append(body);
+    rightClick(text);
+    fireEvent.click(await screen.findByText('Search for this'));
+    expect(client.send).toHaveBeenCalledExactlyOnceWith({
+      method: 'runDefaultMenuSelectionAction',
+      params: { selection: 'selected text', action: 'Search for this', tab: 'notifications' },
+    });
+    body.remove();
+  });
+
+  it('names no tab when the right-click lands outside every tab body', async () => {
+    stubSelection('selected text');
+    const client = { request: vi.fn().mockResolvedValue({ ok: true, value: [search] }), send: vi.fn() };
+    render(<DefaultContextMenu client={client as never} />);
+    rightClick(field());
+    fireEvent.click(await screen.findByText('Search for this'));
+    expect(client.send).toHaveBeenCalledExactlyOnceWith({
+      method: 'runDefaultMenuSelectionAction',
+      params: { selection: 'selected text', action: 'Search for this' },
+    });
+  });
+
   it('runs the shortcut entry with Cmd+I even when another entry comes first', async () => {
     stubSelection('selected text');
     const client = { request: vi.fn().mockResolvedValue({ ok: true, value: [search, chat] }), send: vi.fn() };

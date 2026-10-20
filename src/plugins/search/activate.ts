@@ -33,11 +33,11 @@ export function activate(readFile?: ScanRead, createMatcher?: ScanMatcherFactory
     isPayload: isSearchPayload,
     // `search <query>` opens the tab and starts a scan; `search` alone opens or focuses it.
     command(argument, capabilities) {
-      sessionFor(capabilities).open(argument);
+      sessionFor(capabilities).open(argument, capabilities);
     },
     // `Search for this` on the default menu is `search <selection>` reached by a right-click.
     defaultMenuAction(selection, capabilities) {
-      sessionFor(capabilities).open(selection);
+      sessionFor(capabilities).open(selection, capabilities);
     },
     intent: defineIntents('search', isSearchPayload, {
       search: {
@@ -50,11 +50,16 @@ export function activate(readFile?: ScanRead, createMatcher?: ScanMatcherFactory
       open: {
         payload: isOpenIntent,
         run: (_tab, payload: OpenIntent, capabilities) => {
-          sessionFor(capabilities).openMatch(payload.path, payload.line);
+          sessionFor(capabilities).openMatch(payload.path, payload.line, capabilities);
           return null;
         },
       },
     }),
+    // A workspace going away closes the tab; with no session there is no scope to lose.
+    notify(event, capabilities) {
+      if (event.topic !== 'tabs') return;
+      session?.checkScope(event, capabilities);
+    },
     opener: noFileOpener('search'),
     dispose() {
       session?.dispose();

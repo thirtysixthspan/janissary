@@ -30,7 +30,7 @@ type Input = {
   syntaxTheme: string;
   tasks: TaskRow[];
   profiles: ProfileRow[];
-  runCommand: (text: string) => void;
+  runCommand: (text: string, tab?: string) => void;
   inputRef: React.RefObject<HTMLTextAreaElement | null>;
   dropRef: React.RefObject<CommandInputDropHandle | null>;
   // Puts the keyboard on the harness terminal with this PTY id, after the task picker types into it.

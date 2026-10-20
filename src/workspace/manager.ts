@@ -91,6 +91,12 @@ export class WorkspaceManager {
     return false;
   }
 
+  // Whether `dir` is a clone this manager still holds a reference to. Read-only, so callers can ask
+  // without reaching the private reference map; a provisioning clone counts as tracked.
+  tracks(dir: string): boolean {
+    return this.refs.has(dir);
+  }
+
   // Cancel an in-flight clone still provisioning under `name` (the owning tab's label). A no-op
   // once nothing is pending for that name, or once another tab has retained the clone. In the
   // latter case the clone must finish for the surviving tab even if its creator closes first.

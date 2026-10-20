@@ -95,7 +95,7 @@ export const clientPluginRegistry = createClientPluginRegistry({
   roles: clientPlugin(1, clientPluginLoaders.roles),
   schedules: clientPlugin(2, clientPluginLoaders.schedules),
   scripts: clientPlugin(1, clientPluginLoaders.scripts),
-  search: clientPlugin(1, clientPluginLoaders.search),
+  search: clientPlugin(2, clientPluginLoaders.search),
   sessions: clientPlugin(1, clientPluginLoaders.sessions),
   shell: clientPlugin(4, clientPluginLoaders.shell),
   sql: clientPlugin(1, clientPluginLoaders.sql),

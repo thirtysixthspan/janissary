@@ -18,7 +18,7 @@ function payload(overrides: Partial<SearchPayload> = {}): SearchPayload {
   return {
     query: 'todo', include: '', exclude: '',
     regex: false, matchCase: false, wholeWord: false,
-    state: 'done', message: '', rows: [match()], seed: 0, ...overrides,
+    state: 'done', message: '', rows: [match()], seed: 0, scope: '$root', ...overrides,
   };
 }
 
@@ -694,5 +694,34 @@ describe('SearchTab result scrolling', () => {
     fireEvent.keyDown(results, { key: 'Enter' });
     // The selection did not move, so there is nothing new to bring into view.
     expect(scrollIndexes()).toEqual([]);
+  });
+});
+
+describe('SearchTab scope header', () => {
+  it('shows the launch directory and no host by default', () => {
+    const { container } = renderTab();
+    expect(container.querySelector('.search-scope')?.textContent).toBe('$root');
+    expect(container.querySelector('.search-host')).toBeNull();
+  });
+
+  it('shows a local workspace with no host', () => {
+    const { container } = renderTab(payload({ scope: '$workspace/claude-2' }));
+    expect(container.querySelector('.search-scope')?.textContent).toBe('$workspace/claude-2');
+    expect(container.querySelector('.search-host')).toBeNull();
+  });
+
+  it('shows the remote host before the scope', () => {
+    const { container } = renderTab(payload({ scope: '$workspace/claude-9', host: 'box' }));
+    const host = screen.getByLabelText('Remote host');
+    expect(host.textContent).toBe('box');
+    expect(host.getAttribute('title')).toBe('Remote: box');
+    const scope = container.querySelector('.search-scope');
+    expect(scope?.textContent).toBe('$workspace/claude-9');
+    expect(host.compareDocumentPosition(scope as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('renders no host span for an empty host', () => {
+    const { container } = renderTab(payload({ host: '' }));
+    expect(container.querySelector('.search-host')).toBeNull();
   });
 });

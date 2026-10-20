@@ -31,11 +31,31 @@ one query while the results answer another. It is searched once: the bar settlin
 not start the same search again. Only the command replaces what is in the bar; results arriving for a
 search already under way leave a partly typed query alone.
 
+### Which workspace it searches
+
+Each search runs in one scope: the launch directory, or the workspace of the tab the search was started from. Three routes carry that tab: **Search for this** on a selection in it, a typed `search` or `search <phrase>` in its command bar, and Cmd+Shift+F / Ctrl+Shift+F while focus is in it. The tab a route came from decides the scope, whether its workspace is local or remote:
+
+- a shell or harness tab that owns a workspace clone searches that clone;
+- an agent monitor searches its run's workspace, and keeps that workspace after the run ends;
+- an editor tab on a file inside a clone searches that clone;
+- a file navigator rooted in a clone searches that clone;
+- the search tab itself keeps whatever scope it already has.
+
+Every other tab searches the launch directory.
+
+There is still only one search tab, and it stays titled **search** whatever it searches. The header, left of the file fields, shows the scope's root in the diff tab's abbreviated form: `$root` for the launch directory, `$workspace/<name>` for a local clone, and the remote host followed by the path for a remote workspace. A route from a different scope re-scopes it, and the new scope's results replace whatever it showed. Opening a result never opens a file from a scope other than the one that produced it, even when the re-scope landed while the old scope's search was still gathering its file list. A local result still opens after a re-scope; a remote result opens only while its remote workspace is still the tab's scope, and clicking one left over from before a re-scope opens nothing. A bare `search` or the chord from a different scope searches the current query, toggles, and narrowing fields again in the new scope; from the same scope it only focuses the tab. When the query is empty, a re-scope searches nothing, clears the old scope's results, and the tab shows `Type to search`. The term history and the narrowing fields carry across a re-scope; only closing the tab forgets them, and a tab opened after one was closed starts at the launch directory.
+
+A route from a tab whose workspace has not finished being created, or whose workspace no longer exists, opens nothing and searches nothing. The notifications feed shows `Search: the workspace of "<name>" is not ready yet.` or `Search: the workspace of "<name>" is no longer available.`, where `<name>` is the workspace label.
+
+A route from a tab on a remote workspace whose connection the search tab cannot join — the tab rides no connection, is reconnecting, or the connection refuses — also shows `Search: the workspace of "<name>" is no longer available.` and searches nothing, not even a phrase the route carried. The search tab keeps the scope it had. If that scope was itself remote and its workspace can no longer be reached either, the tab moves to the launch directory instead, clearing the results it showed from the unreachable workspace without searching the launch directory. A search that was still running when the failed route arrived is started again in the scope the tab ends up with, so the tab settles on that search's results rather than staying in its searching state.
+
 ### What is searched
 
-Every file under the project's launch directory that gitignore does not exclude — the same set
+Every file under the search's scope — the launch directory or the workspace clone it was started from (see Which workspace it searches) — that gitignore does not exclude — the same set
 Quick Open searches, so the two never disagree about what the project contains. Two kinds of file
 are skipped: anything too large for the editor to open, and anything whose bytes are binary.
+
+A remote workspace is listed on the remote machine, with the same gitignore rules, and each file is fetched over the workspace's connection and matched locally. The results are the same as for a local clone, but a search over a very large remote repository is slower.
 
 Two fields in the header narrow the search further. **Files to include** and **Files to
 exclude** each take comma-separated glob patterns. The header is a single line: the two fields
@@ -169,9 +189,15 @@ is focused rather than duplicated, and the line is re-centered on every request.
 stays open** with its query and its results, so a second match can be opened without searching
 again.
 
+A match from a remote workspace opens a local copy of the remote file in the editor, and saving it writes the change back to the remote workspace for as long as the search tab holds that workspace's connection. A copy that cannot be fetched opens nothing.
+
 ### Lifetime
 
 The search tab is a live, in-memory view tab like every other plugin tab. It is not persisted and is
 not restored; only its toggles outlive the application, in the config file. Closing
 the tab abandons any search still running and forgets everything else it held. Only one search runs at a time: starting a new one abandons the
 previous, so results from a query the user has moved on from never arrive.
+
+While it searches a remote workspace, the search tab holds that workspace's remote session open, the way a remote diff tab or navigator does, so the session outlives the tab the search started from. It lets the session go when it re-scopes to another workspace or is closed; the session ends once nothing else holds it.
+
+The search tab closes itself when the workspace it searches goes away: a local workspace clone is removed, or a remote workspace's session ends. It closes silently, with no notification line, abandoning any search still running, and it closes even while no browser is connected. Closing the tab the search started from closes the search tab only for a local clone, which goes away with its last tab; a remote session is held by the search tab itself and outlives that tab. A workspace that is only offline does not close the tab. When closing it would quit the application, the tab stays open.

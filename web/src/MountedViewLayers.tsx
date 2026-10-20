@@ -45,6 +45,7 @@ function TabBodyDiv({
   return (
     <div
       className="tab-body"
+      data-tab-label={tab.label}
       data-pane-index={index}
       inert={!visibleLabels.includes(tab.label)}
       style={{

@@ -53,6 +53,12 @@ export function SearchTab({
   return (
     <div className="plugin-tab search-tab" data-doc-shot="search-tab">
       <div className="plugin-meta">
+        {payload.host && (
+          <span className="files-loc search-host" aria-label="Remote host" title={`Remote: ${payload.host}`}>
+            {payload.host}
+          </span>
+        )}
+        <span className="files-loc search-scope" title={payload.scope}>{payload.scope}</span>
         <SearchFilters
           include={include}
           exclude={exclude}

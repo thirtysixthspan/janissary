@@ -154,6 +154,20 @@ describe('useWindowKeys', () => {
     expect(runCommand).toHaveBeenCalledWith('search');
   });
 
+  it('Cmd+Shift+F names the tab that holds focus', () => {
+    const runCommand = vi.fn();
+    render(React.createElement(TestComponent, { callbacks: { runCommand } }));
+    const tabBody = document.createElement('div');
+    tabBody.dataset.tabLabel = 'agent';
+    const bar = document.createElement('textarea');
+    tabBody.append(bar);
+    document.body.append(tabBody);
+    bar.focus();
+    fireEvent.keyDown(bar, { key: 'f', metaKey: true, shiftKey: true });
+    expect(runCommand).toHaveBeenCalledExactlyOnceWith('search', 'agent');
+    tabBody.remove();
+  });
+
   it('Cmd+Shift+F runs the search command even where the transcript is not searchable', () => {
     const runCommand = vi.fn();
     render(React.createElement(TestComponent, { callbacks: { runCommand } }));
@@ -523,6 +537,42 @@ describe('useWindowKeys', () => {
       expect(handler).not.toHaveBeenCalled();
       expect(openPicker).toHaveBeenCalledOnce();
       agentBar.remove();
+    });
+
+    it('runs the plugin claim from focus inside its labelled plugin tab', () => {
+      const { chords, handler } = claimed('ctrl+r');
+      const openPicker = vi.fn();
+      render(React.createElement(TestComponent, { chords, callbacks: { openPicker } }));
+      const tabBody = document.createElement('div');
+      tabBody.dataset.tabLabel = 'shell';
+      const input = document.createElement('textarea');
+      tabBody.append(input);
+      document.body.append(tabBody);
+      input.focus();
+
+      fireEvent.keyDown(input, { key: 'r', ctrlKey: true });
+
+      expect(handler).toHaveBeenCalledOnce();
+      expect(openPicker).not.toHaveBeenCalled();
+      tabBody.remove();
+    });
+
+    it('leaves a claimed chord with the application when focus is in a core tab body', () => {
+      const { chords, handler } = claimed('ctrl+r');
+      const openPicker = vi.fn();
+      render(React.createElement(TestComponent, { chords, callbacks: { openPicker } }));
+      const harnessBody = document.createElement('div');
+      harnessBody.dataset.tabLabel = 'agent';
+      const bar = document.createElement('textarea');
+      harnessBody.append(bar);
+      document.body.append(harnessBody);
+      bar.focus();
+
+      fireEvent.keyDown(bar, { key: 'r', ctrlKey: true });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(openPicker).toHaveBeenCalledOnce();
+      harnessBody.remove();
     });
 
     it('gives a chord pressed with focus on the page to the current plugin tab only', () => {

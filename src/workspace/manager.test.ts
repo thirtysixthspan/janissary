@@ -288,6 +288,24 @@ describe('WorkspaceManager', () => {
     });
   });
 
+  describe('tracks', () => {
+    it('is true once create registers a clone, through a retain and one release, and false after the last', () => {
+      findRepoRootMock.mockReturnValue('/repo');
+      getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
+      const dir = '/repo/.janissary/workspace/agent-1';
+      provisionWorkspaceMock.mockReturnValue(handle(dir));
+      const manager = new WorkspaceManager();
+      expect(manager.tracks(dir)).toBe(false);
+      manager.create('agent-1');
+      expect(manager.tracks(dir)).toBe(true);
+      manager.retain(dir);
+      manager.release(dir);
+      expect(manager.tracks(dir)).toBe(true);
+      manager.release(dir);
+      expect(manager.tracks(dir)).toBe(false);
+    });
+  });
+
   describe('references', () => {
     it('borrows a named tracked workspace without releasing its other holder', async () => {
       findRepoRootMock.mockReturnValue('/repo');

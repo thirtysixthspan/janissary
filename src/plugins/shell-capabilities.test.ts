@@ -78,7 +78,7 @@ describe('originTab', () => {
     byLabel.mockReturnValue({ label: 'janus', workspaceDir: '/clone', offline: true } as never);
 
     expect(contextFor(['originTab'], managers).originTab()).toEqual({
-      label: 'janus', cwd: '/repo', root: '/repo', workspace: { dir: '/clone', offline: true },
+      label: 'janus', cwd: '/repo', root: '/repo', workspace: { dir: '/clone', offline: true, label: 'clone', display: '$workspace/clone' },
     });
   });
 
@@ -95,7 +95,9 @@ describe('originTab', () => {
 
     expect(contextFor(['originTab'], managers).originTab()).toEqual({
       label: 'janus', cwd: '/repo', root: '/repo', remote: true,
-      workspace: { dir: '/srv/work', offline: false },
+      workspace: {
+        dir: '/srv/work', offline: false, label: 'work', display: '$workspace/work', ride: 'janus', host: 'box',
+      },
     });
   });
 

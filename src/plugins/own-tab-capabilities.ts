@@ -1,18 +1,19 @@
 import type { Managers } from '../managers.js';
 import { messageBus } from '../bus.js';
+import { closeQuitsApp } from '../tab/placement.js';
 import { armHarnessIdleEscalation, cancelHarnessIdleEscalation } from '../harness/idle-notification.js';
 import type { TabPluginDeclaration, TabPluginServerCapabilities } from './api.js';
 
 // The capabilities that act on one of this plugin's own tabs, each addressed by instance key the way
-// `updateTab` is: the badge, the busy dot, where the tab sits, and the server-only snapshot a monitor
-// watching it feeds on. Grouped because they are one shape — resolve the tab, do one thing to it —
+// `updateTab` is: the badge, the busy dot, where the tab sits, the server-only snapshot a monitor
+// watching it feeds on, and closing it. Grouped because they are one shape — resolve the tab, do one thing to it —
 // and because they depend on nothing beyond what they are handed.
 
 export function ownTabCapabilities(input: {
   managers: Managers;
   declaration: TabPluginDeclaration;
   isEnabled: () => boolean;
-}): Pick<TabPluginServerCapabilities, 'setUnread' | 'setBusy' | 'dockTab' | 'snapshotTab'> {
+}): Pick<TabPluginServerCapabilities, 'setUnread' | 'setBusy' | 'dockTab' | 'snapshotTab' | 'closeOwnTab'> {
   const { managers, declaration, isEnabled } = input;
   return {
     setUnread: (instanceKey, unread) => {
@@ -50,6 +51,16 @@ export function ownTabCapabilities(input: {
       if (!isEnabled()) return;
       const tab = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey);
       if (tab) tab.pageSnapshot = { text, capturedAt: Date.now() };
+    },
+    // The ordinary close path, never awaited so a `notify` handler's budget is not spent on release,
+    // and never the close that quits the app.
+    closeOwnTab: (instanceKey) => {
+      if (!isEnabled()) return;
+      const index = managers.tab.tabs.findIndex(
+        (tab) => tab.plugin?.id === declaration.id && tab.plugin.instanceKey === instanceKey,
+      );
+      if (index === -1 || closeQuitsApp(managers.tab.tabs, index)) return;
+      void managers.tab.closeTab(index);
     },
   };
 }

@@ -243,6 +243,18 @@ describe('diff plugin activation', () => {
     expect(openOrFocusTab).not.toHaveBeenCalled();
   });
 
+  it('opens nothing for the workspace button on a tab whose workspace is gone', () => {
+    const { capabilities, openOrFocusTab, launchTab } = makeCapabilities({
+      originTab: vi.fn(() => ({
+        label: 'search-1', cwd: repo, root: repo, remote: true,
+        workspace: { dir: '', label: 'search-1', display: '', gone: true },
+      })),
+    });
+    activate().openSibling?.(capabilities);
+    expect(openOrFocusTab).not.toHaveBeenCalled();
+    expect(launchTab).not.toHaveBeenCalled();
+  });
+
   it('opens the workspace the clause names, titled after the tab that names it', async () => {
     const workspace = path.join(root, '.janissary', 'workspace', 'selim');
     mkdirSync(workspace, { recursive: true });

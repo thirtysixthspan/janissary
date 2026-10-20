@@ -10,7 +10,7 @@ import type { SearchMatch } from './shared.js';
 // The editor tab's own limit, restated rather than imported because a plugin may not reach host
 // internals across the import boundary. A match in a file the editor would refuse to open is a row
 // that cannot be acted on, and the two numbers are expected to stay equal.
-const MAX_BYTES = 2 * 1024 * 1024;
+export const MAX_BYTES = 2 * 1024 * 1024;
 
 // How many bytes are inspected for the binary test. A null byte in the first few kilobytes is the
 // same signal `grep` and `git grep` use, and checking a prefix rather than the whole file is what
@@ -30,6 +30,7 @@ const READ_CONCURRENCY = 8;
 const MAX_RESULTS = 250;
 
 export type ScanRead = (absPath: string) => Promise<string>;
+export type ScanReadCandidate = (absPath: string, relPath: string) => Promise<string | null>;
 export type ScanQuery = {
   query: string;
   include: string;
@@ -54,6 +55,9 @@ export type ScanOptions = {
   // check, so a test asserting the size refusal has to state the size it means.
   readFile?: ScanRead;
   fileSize?: (absPath: string) => Promise<number | null>;
+  // Reads a candidate in one call in place of the size-then-read pair, answering null to skip it,
+  // which is what a remote workspace needs when each read is a capability call.
+  readCandidate?: ScanReadCandidate;
   createMatcher?: ScanMatcherFactory;
 };
 export type ScanHandle = { cancel(): void };
@@ -67,17 +71,21 @@ type Candidate = { relPath: string; absPath: string };
 // deleted since the list was taken. Each is a normal outcome, never a failure of the scan. A size
 // that cannot be read is treated as over the limit, so an unreadable file is skipped rather than
 // read and found to be enormous afterwards.
-async function readableText(
-  absPath: string, read: ScanRead, sizeOf: SizeLookup,
-): Promise<string | null> {
-  const bytes = await sizeOf(absPath);
-  if (bytes === null || bytes > MAX_BYTES) return null;
-  let text: string;
+async function readableText(candidate: Candidate, runtime: Runtime): Promise<string | null> {
+  const { absPath, relPath } = candidate;
+  let text: string | null;
   try {
-    text = await read(absPath);
+    if (runtime.readCandidate === undefined) {
+      const bytes = await runtime.sizeOf(absPath);
+      if (bytes === null || bytes > MAX_BYTES) return null;
+      text = await runtime.read(absPath);
+    } else {
+      text = await runtime.readCandidate(absPath, relPath);
+    }
   } catch {
     return null;
   }
+  if (text === null) return null;
   if (text.slice(0, BINARY_PREFIX).includes('\0')) return null;
   return text;
 }
@@ -85,16 +93,16 @@ async function readableText(
 // Read `paths` with at most `limit` reads open at once, preserving input order in the results so a
 // batch's rows arrive in the order the file list gave.
 async function readAll(
-  paths: readonly string[], read: ScanRead, sizeOf: SizeLookup, limit: number,
+  paths: readonly Candidate[], runtime: Runtime, limit: number,
 ): Promise<(string | null)[]> {
   const results: (string | null)[] = Array.from({ length: paths.length }, () => null);
   let next = 0;
   const worker = async () => {
     while (next < paths.length) {
       const index = next++;
-      const absPath = paths[index];
-      if (absPath === undefined) return;
-      results[index] = await readableText(absPath, read, sizeOf);
+      const candidate = paths[index];
+      if (candidate === undefined) return;
+      results[index] = await readableText(candidate, runtime);
     }
   };
   await Promise.all(Array.from({ length: Math.min(limit, paths.length) }, worker));
@@ -112,6 +120,7 @@ type Runtime = {
   request: ScanQuery;
   read: ScanRead;
   sizeOf: SizeLookup;
+  readCandidate?: ScanReadCandidate;
   createMatcher: NonNullable<ScanOptions['createMatcher']>;
   signal: AbortSignal;
   // Rows still to deliver before the search reaches its cap.
@@ -122,12 +131,12 @@ type Runtime = {
 // progressively. Aborted midway, the rows already delivered stand and the rest are dropped. A file
 // whose matches straddle the cap gives only the rows that fit, and the queue behind it is not read.
 async function deliver(queue: Candidate[], matcher: MatcherWorker, runtime: Runtime): Promise<void> {
-  const { options, read, sizeOf, signal } = runtime;
+  const { options, signal } = runtime;
   while (queue.length > 0 && runtime.remaining > 0) {
     if (signal.aborted) return;
     const candidate = queue.shift();
     if (candidate === undefined) return;
-    const text = await readableText(candidate.absPath, read, sizeOf);
+    const text = await readableText(candidate, runtime);
     if (signal.aborted) return;
     if (text === null) continue;
     const matchedRows = await matcher.rows(candidate.relPath, text);
@@ -141,9 +150,7 @@ async function deliver(queue: Candidate[], matcher: MatcherWorker, runtime: Runt
 async function detect(
   batch: readonly Candidate[], matcher: MatcherWorker, runtime: Runtime,
 ): Promise<Candidate[]> {
-  const texts = await readAll(
-    batch.map((candidate) => candidate.absPath), runtime.read, runtime.sizeOf, READ_CONCURRENCY,
-  );
+  const texts = await readAll(batch, runtime, READ_CONCURRENCY);
   const found: Candidate[] = [];
   for (const [offset, text] of texts.entries()) {
     const candidate = batch[offset];
@@ -208,7 +215,7 @@ export function startScan(options: ScanOptions, request: ScanQuery): ScanHandle 
   });
   const controller = new AbortController();
   const runtime: Runtime = {
-    options, request, read, sizeOf, signal: controller.signal,
+    options, request, read, sizeOf, readCandidate: options.readCandidate, signal: controller.signal,
     createMatcher: options.createMatcher
       ?? ((search, signal) => createMatcherWorker(search.query, search, signal)),
     remaining: MAX_RESULTS,

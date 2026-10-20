@@ -31,7 +31,7 @@ export type PickerOverlaysState =
     syntaxTheme: string;
     // The history picker runs its selected row rather than populating the command line, so the key
     // handler needs the same submit path the pickers were built with.
-    runCommand: (text: string) => void;
+    runCommand: (text: string, tab?: string) => void;
     // Derived from the active tab: the history picker's rows and the queue picker's rows.
     recent: string[];
     queueItems: string[];
