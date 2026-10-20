@@ -4,6 +4,7 @@ import { patternError } from './compile-matcher.js';
 import { filterPaths } from './filter-paths.js';
 import { splitLines } from './search-files.js';
 import { createMatcherWorker } from './matching-worker.js';
+import { scanRemoteCandidates } from './scan-remote.js';
 import type { MatcherWorker } from './matcher-worker-protocol.js';
 import type { SearchMatch } from './shared.js';
 
@@ -176,6 +177,14 @@ async function run(runtime: Runtime): Promise<void> {
     if (signal.aborted) return;
     const candidates: Candidate[] = filterPaths(listed.paths, request.include, request.exclude)
       .map((relPath) => ({ relPath, absPath: path.join(listed.root, relPath) }));
+    if (runtime.readCandidate !== undefined) {
+      await scanRemoteCandidates({
+        candidates, readCandidate: runtime.readCandidate, matcher, signal,
+        onBatch: options.onBatch,
+      });
+      if (!signal.aborted) options.onBatch({ rows: [], done: true });
+      return;
+    }
     const pending: Candidate[] = [];
 
     for (const batch of chunk(candidates, BATCH_SIZE)) {

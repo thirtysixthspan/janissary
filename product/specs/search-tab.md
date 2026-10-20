@@ -57,8 +57,6 @@ are skipped: anything too large for the editor to open, and anything whose bytes
 
 A remote workspace is listed on the remote machine, with the same gitignore rules, and each file is fetched over the workspace's connection and matched locally. The results are the same as for a local clone, but a search over a very large remote repository is slower.
 
-If the remote file listing does not answer within 60 seconds, the search ends with `The remote machine did not answer in time`.
-
 Two fields in the header narrow the search further. **Files to include** and **Files to
 exclude** each take comma-separated glob patterns. The header is a single line: the two fields
 share it with the tab's split control, which sits at its right-hand end.
@@ -144,7 +142,9 @@ there, so a match does not scroll away while the rest of the search is still run
 **Rows stream in while the search is still running**, so a large project starts filling the window
 before it has been fully searched, and the rows already found stay on screen. The first results
 arrive as soon as any file is known to match rather than only once the whole project has been read
-in order.
+in order. For a remote workspace, the scan keeps a small group of file reads in flight and publishes
+matches as soon as any of those reads finds one, without waiting for earlier paths or the rest of the
+group.
 
 **A search stops at 250 matches.** Once it has found that many, in the order the results are
 listed, it stops reading the project and settles as finished. There is no tally: the header shows no

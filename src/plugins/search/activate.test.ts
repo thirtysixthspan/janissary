@@ -739,18 +739,6 @@ describe('search plugin workspace scope', () => {
     expect(lastPayload(updateTab)).toMatchObject({ state: 'done', rows: [] });
   });
 
-  it('shows a remote listing timeout instead of staying in the searching state', async () => {
-    const { overrides } = remoteFakes();
-    overrides.remoteWorkspaceFileList.mockRejectedValue(new Error('The remote machine did not answer in time.'));
-    const { capabilities, updateTab } = scoped({ current: remoteHarness }, overrides);
-    searchActivation(contents).command?.('todo', capabilities);
-    await settle();
-
-    expect(lastPayload(updateTab)).toMatchObject({
-      state: 'error', message: 'The remote machine did not answer in time', rows: [],
-    });
-  });
-
   it('neither releases nor joins for another riding tab onto the same remote workspace', async () => {
     const origin = { current: remoteHarness as unknown };
     const { calls, overrides } = remoteFakes();

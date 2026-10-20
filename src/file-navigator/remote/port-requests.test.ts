@@ -44,6 +44,7 @@ describe('RemotePortRequests deadlines', () => {
 
   it('gives work the far side really does, like a pull, the long deadline', () => {
     expect(requestDeadline('git-pull')).toBe(LONG_REQUEST_DEADLINE_MS);
+    expect(requestDeadline('search')).toBe(LONG_REQUEST_DEADLINE_MS);
     expect(requestDeadline('read-directory')).toBe(REQUEST_DEADLINE_MS);
     const requests = new RemotePortRequests();
     const { reject } = track(requests, 'r1', 'git-pull');
@@ -51,18 +52,6 @@ describe('RemotePortRequests deadlines', () => {
     vi.advanceTimersByTime(REQUEST_DEADLINE_MS);
     expect(reject).not.toHaveBeenCalled();
     vi.advanceTimersByTime(LONG_REQUEST_DEADLINE_MS - REQUEST_DEADLINE_MS);
-
-    expect(reject).toHaveBeenCalledWith(new Error(TIMED_OUT_REASON));
-  });
-
-  it('settles an unanswered remote search at the ordinary request deadline', () => {
-    expect(requestDeadline('search')).toBe(REQUEST_DEADLINE_MS);
-    const requests = new RemotePortRequests();
-    const { reject } = track(requests, 'r1', 'search');
-
-    vi.advanceTimersByTime(REQUEST_DEADLINE_MS - 1);
-    expect(reject).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(1);
 
     expect(reject).toHaveBeenCalledWith(new Error(TIMED_OUT_REASON));
   });
