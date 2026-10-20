@@ -127,14 +127,31 @@ describe('CommandManager dispatchLineWithOutput', () => {
     });
   });
 
-  it('leaves shell and unknown lines undispatched for plugin callers', async () => {
+  it('leaves forced shell and unknown lines undispatched for plugin callers', async () => {
     const { managers } = makeManagers();
 
-    await expect(managers.command.dispatchLineWithOutput('janus', '!ls -la')).resolves.toEqual({
+    await expect(managers.command.dispatchLineWithOutput('janus', '!printf probe')).resolves.toEqual({
       dispatched: false, output: '',
     });
+    managers.command.dispatch('!printf probe');
+    expect(managers.shell.run).toHaveBeenCalledWith('janus', 'printf probe');
     await expect(managers.command.dispatchLineWithOutput('janus', 'ls -la')).resolves.toEqual({
       dispatched: false, output: '',
+    });
+  });
+
+  it('dispatches a shell plugin launcher from a shell command bar', async () => {
+    const { managers } = makeManagers();
+    const runCommand = vi.fn(async () => {});
+    managers.plugins = { runCommand } as unknown as Managers['plugins'];
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'shell pr1760 -w')).resolves.toEqual({
+      dispatched: true, output: '',
+    });
+
+    expect(runCommand).toHaveBeenCalledWith('shell', 'shell pr1760 -w', {
+      label: 'janus', command: 'shell pr1760 -w',
+      invocationId: expect.any(String), runId: expect.any(String),
     });
   });
 

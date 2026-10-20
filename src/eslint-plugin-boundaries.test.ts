@@ -105,6 +105,7 @@ describe('plugin architecture import boundaries', () => {
     ['a server plugin using the web-target normalizer', importOf('../../openers/web-target.js'), 'src/plugins/page/activate.ts'],
     ['a server plugin using the numbered-sibling writer', importOf('../../openers/numbered-sibling.js'), 'src/plugins/video/activate.ts'],
     ['a server plugin using the shared error-text formatter', importOf('../../error-text.js'), 'src/plugins/video/activate.ts'],
+    ['a server plugin using the shared search matcher', importOf('../../search/compile-matcher.js'), 'src/plugins/search/scan.ts'],
     ['a client plugin using its client API', importOf('../api'), 'web/src/plugins/video/index.tsx'],
     ['a client plugin using the shared plugin stylesheet', importOf('../shared.css'), 'web/src/plugins/video/index.tsx'],
     ['a client plugin using its own shared contract', importOf('@shared/plugins/video/shared'), 'web/src/plugins/video/index.tsx'],

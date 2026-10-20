@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { activate } from './activate.js';
-import { compileMatcher } from './compile-matcher.js';
-import { fileMatches, matchFile } from './search-files.js';
+import { compileMatcher } from '../../search/compile-matcher.js';
+import { fileMatches, matchFile } from '../../search/search-files.js';
 import type { ScanMatcherFactory } from './scan.js';
-import type { MatcherWorker } from './matcher-worker-protocol.js';
-import type { SearchIntent, SearchPayload } from './shared.js';
+import type { MatcherWorker } from '../../search/matcher-worker-protocol.js';
+import type { SearchIntent, SearchMatch, SearchPayload } from './shared.js';
+import { isJsonCompatible } from '../tab-value.js';
 
 const files: Record<string, string> = {
   'a.ts': 'nothing',
@@ -22,13 +23,14 @@ function makeCapabilities(overrides: Capability = {}) {
   const readSettings = vi.fn(() => ({}));
   const saveSettings = vi.fn((_settings: Record<string, unknown>) => true);
   const note = vi.fn();
+  const notifyUser = vi.fn();
   const capabilities = {
-    note, openOrFocusTab, updateTab, projectFileList, openInEditor, rejectRequest, readSettings, saveSettings,
+    note, notifyUser, originTab: vi.fn(() => null), openOrFocusTab, updateTab, projectFileList, openInEditor, rejectRequest, readSettings, saveSettings,
     reportFailure: vi.fn((reason: unknown) => { throw new Error(String(reason)); }),
     ...overrides,
   };
   return {
-    capabilities: capabilities as never, openOrFocusTab, updateTab, projectFileList, openInEditor, saveSettings, note,
+    capabilities: capabilities as never, openOrFocusTab, updateTab, projectFileList, openInEditor, saveSettings, note, notifyUser,
   };
 }
 
@@ -36,7 +38,7 @@ function makeCapabilities(overrides: Capability = {}) {
 // tab payload, not whatever the test last published.
 const settledTab: SearchPayload = {
   query: 'todo', include: '', exclude: '', regex: false, matchCase: false, wholeWord: false,
-  state: 'done', message: '', rows: [], seed: 0,
+  state: 'done', message: '', rows: [], seed: 0, scope: '$root',
 };
 
 // The payload the tab would be showing after the last `updateTab`, which is how a test reads what
@@ -259,6 +261,39 @@ describe('search plugin activation', () => {
     expect(openInEditor).toHaveBeenCalledWith('/repo/b.ts', 2);
   });
 
+  it('opens or focuses the tab through the capabilities of the command that asked', () => {
+    const first = makeCapabilities();
+    const second = makeCapabilities();
+    const activation = searchActivation();
+    activation.command?.('', first.capabilities);
+    first.openOrFocusTab.mockClear();
+    activation.command?.('todo', second.capabilities);
+    expect(second.openOrFocusTab).toHaveBeenCalledTimes(1);
+    expect(first.openOrFocusTab).not.toHaveBeenCalled();
+  });
+
+  it('opens or focuses the tab through the capabilities of the menu action that asked', () => {
+    const first = makeCapabilities();
+    const second = makeCapabilities();
+    const activation = searchActivation();
+    activation.command?.('', first.capabilities);
+    first.openOrFocusTab.mockClear();
+    activation.defaultMenuAction?.('todo', second.capabilities);
+    expect(second.openOrFocusTab).toHaveBeenCalledTimes(1);
+    expect(first.openOrFocusTab).not.toHaveBeenCalled();
+  });
+
+  it('opens a result through the capabilities of the open intent that asked', async () => {
+    const first = makeCapabilities();
+    const second = makeCapabilities();
+    const activation = searchActivation();
+    activation.command?.('todo', first.capabilities);
+    await settle();
+    activation.intent(intent(settledTab, 'open', { path: 'b.ts', line: 2 }), second.capabilities);
+    expect(second.openInEditor).toHaveBeenCalledWith('/repo/b.ts', 2);
+    expect(first.openInEditor).not.toHaveBeenCalled();
+  });
+
   it('opens nothing for a result before the project has been listed', () => {
     const { capabilities, openInEditor } = makeCapabilities();
     const activation = searchActivation();
@@ -474,5 +509,536 @@ describe('search plugin tab lifetime', () => {
     activation.command?.('', capabilities);
     activation.command?.('todo', capabilities);
     expect(lastPayload(updateTab).include).toBe('b.ts');
+  });
+});
+
+// A route's origin decides which workspace is searched. The clone sits at `/repo/clone`, so the
+// fake reader serves its files as `clone/<path>`, and its listing answers its own root.
+describe('search plugin workspace scope', () => {
+  const clone = { dir: '/repo/clone', label: 'claude-2', display: '$workspace/claude-2' };
+  const harness = { label: 'claude-2', cwd: clone.dir, root: '/repo', workspace: clone };
+  const searchTab = { label: 'search', cwd: '/repo', root: '/repo', plugin: 'search' };
+  const contents: Record<string, string> = { ...files, 'clone/b.ts': 'todo in the clone' };
+  const listing = vi.fn(async (root?: string) => ({ root: root ?? '/repo', paths: ['b.ts'] }));
+
+  function scoped(origin: { current: unknown }, overrides: Capability = {}) {
+    listing.mockClear();
+    return makeCapabilities({
+      originTab: vi.fn(() => origin.current), projectFileList: listing,
+      releaseRemoteWorkspace: vi.fn(), joinRemoteWorkspace: vi.fn(() => true), ...overrides,
+    });
+  }
+
+  const roots = () => listing.mock.calls.map((call) => call[0]);
+
+  it('re-scopes a default-menu action from a workspaced harness and scans the clone', async () => {
+    const { capabilities, updateTab } = scoped({ current: harness });
+    const activation = searchActivation(contents);
+    await activation.defaultMenuAction?.('todo', capabilities);
+    await settle();
+    expect(roots()).toEqual(['/repo/clone']);
+    const payload = lastPayload(updateTab);
+    expect(payload.scope).toBe('$workspace/claude-2');
+    expect(payload.rows.map((row) => row.match)).toEqual(['todo in the clone']);
+  });
+
+  it('searches a local workspaced shell clone from both the command and default menu', async () => {
+    const shell = {
+      label: 'shell-2', view: 'plugin', plugin: 'shell', workspace: clone,
+    };
+    const { capabilities, updateTab } = scoped({ current: shell });
+    const activation = searchActivation(contents);
+
+    activation.command?.('todo', capabilities);
+    await settle();
+    expect(roots()).toEqual(['/repo/clone']);
+    const payload = lastPayload(updateTab);
+    expect(payload).toMatchObject({
+      scope: '$workspace/claude-2', rows: [{ match: 'todo in the clone' }], state: 'done',
+    });
+    expect('host' in payload).toBe(false);
+    expect(isJsonCompatible(payload)).toBe(true);
+
+    await activation.defaultMenuAction?.('todo', capabilities);
+    await settle();
+    expect(roots()).toEqual(['/repo/clone', '/repo/clone']);
+    expect(lastPayload(updateTab).scope).toBe('$workspace/claude-2');
+  });
+
+  it('reruns the current request on a bare search from another scope, and only focuses from the same', async () => {
+    const origin = { current: null as unknown };
+    const { capabilities, openOrFocusTab } = scoped(origin);
+    const activation = searchActivation(contents);
+    activation.command?.('todo', capabilities);
+    await settle();
+    origin.current = harness;
+    activation.command?.('', capabilities);
+    await settle();
+    expect(roots()).toEqual([undefined, '/repo/clone']);
+    activation.command?.('', capabilities);
+    await settle();
+    expect(listing).toHaveBeenCalledTimes(2);
+    expect(openOrFocusTab).toHaveBeenCalledTimes(3);
+  });
+
+  it('starts no scan on a bare re-scope with an empty query, republishing empty rows in the new scope', () => {
+    const { capabilities, updateTab } = scoped({ current: harness });
+    const activation = searchActivation(contents);
+    activation.command?.('', capabilities);
+    expect(listing).not.toHaveBeenCalled();
+    expect(lastPayload(updateTab)).toMatchObject({ rows: [], state: 'done', scope: '$workspace/claude-2' });
+  });
+
+  it('refuses a workspace that is not ready yet, opening nothing', () => {
+    const { capabilities, openOrFocusTab, notifyUser } = scoped({ current: { ...harness, provisioning: true } });
+    void searchActivation(contents).defaultMenuAction?.('todo', capabilities);
+    expect(notifyUser).toHaveBeenCalledWith('Search: the workspace of "claude-2" is not ready yet.');
+    expect(openOrFocusTab).not.toHaveBeenCalled();
+    expect(listing).not.toHaveBeenCalled();
+  });
+
+  it('refuses a workspace that is gone, opening nothing', () => {
+    const gone = { ...harness, workspace: { ...clone, gone: true } };
+    const { capabilities, openOrFocusTab, notifyUser } = scoped({ current: gone });
+    searchActivation(contents).command?.('todo', capabilities);
+    expect(notifyUser).toHaveBeenCalledWith('Search: the workspace of "claude-2" is no longer available.');
+    expect(openOrFocusTab).not.toHaveBeenCalled();
+    expect(listing).not.toHaveBeenCalled();
+  });
+
+  it('keeps the scope for a selection inside the search tab', async () => {
+    const origin = { current: harness as unknown };
+    const { capabilities, updateTab } = scoped(origin);
+    const activation = searchActivation(contents);
+    activation.command?.('', capabilities);
+    origin.current = searchTab;
+    await activation.defaultMenuAction?.('todo', capabilities);
+    await settle();
+    expect(roots()).toEqual(['/repo/clone']);
+    expect(lastPayload(updateTab).scope).toBe('$workspace/claude-2');
+  });
+
+  it('keeps the include and exclude fields across a re-scope without rebuilding the tab', async () => {
+    let built = 0;
+    const openOrFocusTab = vi.fn((_key: string, factory: () => unknown) => {
+      built += 1;
+      if (built === 1) factory();
+    });
+    const origin = { current: null as unknown };
+    const { capabilities, updateTab } = scoped(origin, { openOrFocusTab });
+    const activation = searchActivation(contents);
+    activation.command?.('', capabilities);
+    activation.intent(intent(settledTab, 'search', { ...query, include: 'b.ts', exclude: 'x.ts' }), capabilities);
+    origin.current = harness;
+    activation.command?.('', capabilities);
+    await settle();
+    expect(lastPayload(updateTab)).toMatchObject({ include: 'b.ts', exclude: 'x.ts', scope: '$workspace/claude-2' });
+    expect(roots()).toEqual([undefined, '/repo/clone']);
+    // Two opens, and only the first ran the factory: the re-scope republished the same tab.
+    expect(built).toBe(2);
+  });
+
+  it('lists the clone for a query typed in the tab after a re-scope', async () => {
+    const { capabilities } = scoped({ current: harness });
+    const activation = searchActivation(contents);
+    activation.command?.('', capabilities);
+    activation.intent(intent(settledTab, 'search', query), capabilities);
+    await settle();
+    expect(roots()).toEqual(['/repo/clone']);
+  });
+
+  it('opens a local row from the clone through the route\'s own editor, refusing an escaping path', async () => {
+    const { capabilities } = scoped({ current: harness });
+    const opener = makeCapabilities();
+    const activation = searchActivation(contents);
+    activation.command?.('todo', capabilities);
+    await settle();
+    activation.intent(intent(settledTab, 'open', { path: '../b.ts', line: 1 }), opener.capabilities);
+    expect(opener.openInEditor).not.toHaveBeenCalled();
+    activation.intent(intent(settledTab, 'open', { path: 'b.ts', line: 1 }), opener.capabilities);
+    expect(opener.openInEditor).toHaveBeenCalledWith('/repo/clone/b.ts', 1);
+  });
+
+  it('keeps the clone as the open root when a cancelled launch listing resolves after the clone listing', async () => {
+    const launch = Promise.withResolvers<void>();
+    const projectFileList = vi.fn(async (root?: string) => {
+      if (root === undefined) await launch.promise;
+      return { root: root ?? '/repo', paths: ['b.ts'] };
+    });
+    const origin = { current: null as unknown };
+    const { capabilities } = scoped(origin, { projectFileList });
+    const opener = makeCapabilities();
+    const activation = searchActivation(contents);
+    activation.command?.('todo', capabilities);
+    origin.current = harness;
+    activation.command?.('', capabilities);
+    await settle();
+    launch.resolve();
+    await settle();
+    activation.intent(intent(settledTab, 'open', { path: 'b.ts', line: 1 }), opener.capabilities);
+    expect(opener.openInEditor).toHaveBeenCalledWith('/repo/clone/b.ts', 1);
+  });
+
+  it('starts a closed and reopened tab at the launch directory', async () => {
+    const openOrFocusTab = vi.fn((_key: string, factory: () => unknown) => { factory(); });
+    const origin = { current: harness as unknown };
+    const { capabilities, updateTab } = scoped(origin, { openOrFocusTab });
+    const activation = searchActivation(contents);
+    activation.command?.('todo', capabilities);
+    await settle();
+    origin.current = searchTab;
+    activation.command?.('todo', capabilities);
+    await settle();
+    expect(roots()).toEqual(['/repo/clone', undefined]);
+    expect(lastPayload(updateTab).scope).toBe('$root');
+  });
+
+  const far = { dir: '/far/clone', label: 'claude-9', display: '$workspace/claude-9', host: 'box', ride: 'claude-9' };
+  const remoteHarness = { label: 'claude-9', cwd: far.dir, root: '/repo', workspace: far };
+  const otherRider = { label: 'shell-9', cwd: far.dir, root: '/repo', workspace: { ...far, ride: 'shell-9' } };
+  const otherFar = { ...far, dir: '/far/other', label: 'claude-8', display: '$workspace/claude-8', ride: 'claude-8' };
+  const otherRemote = { label: 'claude-8', cwd: otherFar.dir, root: '/repo', workspace: otherFar };
+
+  function remoteFakes(joins: boolean[] = []) {
+    const calls: string[] = [];
+    return {
+      calls,
+      overrides: {
+        releaseRemoteWorkspace: vi.fn((key: string) => { calls.push(`release ${key}`); }),
+        joinRemoteWorkspace: vi.fn((key: string, ride: string) => {
+          calls.push(`join ${key} ${ride}`);
+          return joins.shift() ?? true;
+        }),
+        remoteWorkspaceSearch: vi.fn(async () => [{
+          path: 'r.ts', line: 1, above: [], match: 'todo on the far side', start: 0, end: 4, below: [],
+        }]),
+        materializeRemoteFile: vi.fn(() => Promise.resolve('/cache/r.ts')),
+      },
+    };
+  }
+
+  it('joins a remote scope and scans it over the channel, never listing locally', async () => {
+    const { calls, overrides } = remoteFakes();
+    const { capabilities, updateTab } = scoped({ current: remoteHarness }, overrides);
+    searchActivation(contents).command?.('todo', capabilities);
+    await settle();
+    expect(calls).toEqual(['release search', 'join search claude-9']);
+    expect(listing).not.toHaveBeenCalled();
+    expect(overrides.remoteWorkspaceSearch).toHaveBeenCalledWith('search', {
+      query: 'todo', include: '', exclude: '', regex: false, matchCase: false, wholeWord: false,
+    });
+    const payload = lastPayload(updateTab);
+    expect(payload).toMatchObject({ scope: '$workspace/claude-9', host: 'box', state: 'done' });
+    expect(payload.rows.map((row) => row.match)).toEqual(['todo on the far side']);
+  });
+
+  it('settles a remote scan with no rows when the channel answers no listing', async () => {
+    const { overrides } = remoteFakes();
+    overrides.remoteWorkspaceSearch.mockResolvedValue(null as never);
+    const { capabilities, updateTab } = scoped({ current: remoteHarness }, overrides);
+    searchActivation(contents).command?.('todo', capabilities);
+    await settle();
+    expect(lastPayload(updateTab)).toMatchObject({ state: 'done', rows: [] });
+  });
+
+  it('neither releases nor joins for another riding tab onto the same remote workspace', async () => {
+    const origin = { current: remoteHarness as unknown };
+    const { calls, overrides } = remoteFakes();
+    const { capabilities } = scoped(origin, overrides);
+    const activation = searchActivation(contents);
+    activation.command?.('todo', capabilities);
+    await settle();
+    origin.current = otherRider;
+    activation.command?.('', capabilities);
+    expect(calls).toEqual(['release search', 'join search claude-9']);
+  });
+
+  it('releases without joining on a later local scope, clearing the host', async () => {
+    const origin = { current: remoteHarness as unknown };
+    const { calls, overrides } = remoteFakes();
+    const { capabilities, updateTab } = scoped(origin, overrides);
+    const activation = searchActivation(contents);
+    activation.command?.('todo', capabilities);
+    await settle();
+    origin.current = harness;
+    activation.command?.('', capabilities);
+    await settle();
+    expect(calls).toEqual(['release search', 'join search claude-9', 'release search']);
+    const payload = lastPayload(updateTab);
+    expect(payload.scope).toBe('$workspace/claude-2');
+    expect(payload.host).toBeUndefined();
+  });
+
+  it('keeps a local scope and searches nothing when a remote join fails', async () => {
+    const origin = { current: harness as unknown };
+    const { calls, overrides } = remoteFakes([false]);
+    const { capabilities, updateTab, notifyUser } = scoped(origin, overrides);
+    const activation = searchActivation(contents);
+    activation.command?.('', capabilities);
+    origin.current = remoteHarness;
+    activation.command?.('todo', capabilities);
+    await settle();
+    expect(notifyUser).toHaveBeenCalledWith('Search: the workspace of "claude-9" is no longer available.');
+    expect(calls).toEqual(['release search', 'release search', 'join search claude-9']);
+    expect(listing).not.toHaveBeenCalled();
+    expect(overrides.remoteWorkspaceSearch).not.toHaveBeenCalled();
+    expect(lastPayload(updateTab).scope).toBe('$workspace/claude-2');
+    origin.current = searchTab;
+    activation.command?.('todo', capabilities);
+    await settle();
+    expect(roots()).toEqual(['/repo/clone']);
+  });
+
+  it('searches the kept scope again when a failed remote join interrupts its scan', async () => {
+    const held = Promise.withResolvers<void>();
+    const projectFileList = vi.fn(async (root?: string) => {
+      if (projectFileList.mock.calls.length === 1) await held.promise;
+      return { root: root ?? '/repo', paths: ['b.ts'] };
+    });
+    const origin = { current: harness as unknown };
+    const { overrides } = remoteFakes([false]);
+    const { capabilities, updateTab } = scoped(origin, { ...overrides, projectFileList });
+    const activation = searchActivation(contents);
+    activation.command?.('todo', capabilities);
+    origin.current = remoteHarness;
+    activation.command?.('phrase', capabilities);
+    held.resolve();
+    await settle();
+    expect(projectFileList.mock.calls.map((call) => call[0])).toEqual(['/repo/clone', '/repo/clone']);
+    expect(overrides.remoteWorkspaceSearch).not.toHaveBeenCalled();
+    expect(lastPayload(updateTab)).toMatchObject({ query: 'todo', state: 'done', scope: '$workspace/claude-2' });
+    expect(lastPayload(updateTab).rows.map((row) => row.match)).toEqual(['todo in the clone']);
+  });
+
+  it('rejoins a previous remote scope when the join onto another fails', async () => {
+    const origin = { current: otherRemote as unknown };
+    const { calls, overrides } = remoteFakes([true, false, true]);
+    const { capabilities, updateTab, notifyUser } = scoped(origin, overrides);
+    const activation = searchActivation(contents);
+    activation.command?.('', capabilities);
+    overrides.remoteWorkspaceSearch.mockClear();
+    origin.current = remoteHarness;
+    activation.command?.('todo', capabilities);
+    await settle();
+    expect(notifyUser).toHaveBeenCalledWith('Search: the workspace of "claude-9" is no longer available.');
+    expect(calls.slice(2)).toEqual(['release search', 'join search claude-9', 'join search claude-8']);
+    expect(overrides.remoteWorkspaceSearch).not.toHaveBeenCalled();
+    expect(lastPayload(updateTab)).toMatchObject({ scope: '$workspace/claude-8', host: 'box' });
+  });
+
+  it('falls back to launch when the previous remote scope cannot be rejoined', async () => {
+    const origin = { current: otherRemote as unknown };
+    const { overrides } = remoteFakes([true, false, false]);
+    const { capabilities, updateTab } = scoped(origin, overrides);
+    const activation = searchActivation(contents);
+    activation.command?.('todo', capabilities);
+    await settle();
+    expect(lastPayload(updateTab).rows).toHaveLength(1);
+    overrides.remoteWorkspaceSearch.mockClear();
+    origin.current = remoteHarness;
+    activation.command?.('phrase', capabilities);
+    await settle();
+    expect(listing).not.toHaveBeenCalled();
+    expect(overrides.remoteWorkspaceSearch).not.toHaveBeenCalled();
+    const payload = lastPayload(updateTab);
+    expect(payload).toMatchObject({ scope: '$root', query: 'todo', state: 'done', message: '', rows: [] });
+    expect(payload.host).toBeUndefined();
+  });
+
+  it('restarts a scan the failed join interrupted in the launch directory it falls back to', async () => {
+    const held = Promise.withResolvers<SearchMatch[]>();
+    const origin = { current: otherRemote as unknown };
+    const { overrides } = remoteFakes([true, false, false]);
+    overrides.remoteWorkspaceSearch.mockReturnValueOnce(held.promise);
+    const { capabilities, updateTab } = scoped(origin, overrides);
+    const activation = searchActivation(contents);
+    activation.command?.('todo', capabilities);
+    origin.current = remoteHarness;
+    activation.command?.('', capabilities);
+    held.resolve([{ path: 'r.ts', line: 1, above: [], match: 'todo on far host', start: 0, end: 4, below: [] }]);
+    await settle();
+    expect(roots()).toEqual([undefined]);
+    expect(lastPayload(updateTab)).toMatchObject({ query: 'todo', scope: '$root', state: 'done' });
+    expect(lastPayload(updateTab).rows.map((row) => row.match)).toEqual(['todo two']);
+  });
+
+  it('opens a remote row through the open intent\'s materialized copy, refusing an escaping path', async () => {
+    const { overrides } = remoteFakes();
+    const { capabilities } = scoped({ current: remoteHarness }, overrides);
+    const activation = searchActivation(contents);
+    activation.command?.('todo', capabilities);
+    await settle();
+    const opener = remoteFakes();
+    const openerCaps = makeCapabilities(opener.overrides);
+    activation.intent(intent(settledTab, 'open', { path: '../r.ts', line: 1 }), openerCaps.capabilities);
+    expect(opener.overrides.materializeRemoteFile).not.toHaveBeenCalled();
+    activation.intent(intent(settledTab, 'open', { path: 'r.ts', line: 1 }), openerCaps.capabilities);
+    await settle();
+    expect(opener.overrides.materializeRemoteFile).toHaveBeenCalledWith('r.ts');
+    expect(overrides.materializeRemoteFile).not.toHaveBeenCalled();
+    expect(openerCaps.openInEditor).toHaveBeenCalledWith('/cache/r.ts', 1);
+  });
+
+  it('opens nothing when a remote row cannot be materialized', async () => {
+    const { overrides } = remoteFakes();
+    const { capabilities } = scoped({ current: remoteHarness }, overrides);
+    const activation = searchActivation(contents);
+    activation.command?.('todo', capabilities);
+    await settle();
+    for (const answer of [null, Promise.resolve(null)]) {
+      const opener = makeCapabilities({ materializeRemoteFile: vi.fn(() => answer) });
+      activation.intent(intent(settledTab, 'open', { path: 'r.ts', line: 1 }), opener.capabilities);
+      await settle();
+      expect(opener.openInEditor).not.toHaveBeenCalled();
+    }
+  });
+
+  it('opens nothing for a shown remote row after a re-scope to local, and a cancelled remote listing keeps the root', async () => {
+    const pending = Promise.withResolvers<SearchMatch[]>();
+    const origin = { current: remoteHarness as unknown };
+    const { overrides } = remoteFakes();
+    const { capabilities } = scoped(origin, overrides);
+    const activation = searchActivation(contents);
+    activation.command?.('todo', capabilities);
+    await settle();
+    origin.current = harness;
+    activation.command?.('', capabilities);
+    const opener = remoteFakes();
+    const openerCaps = makeCapabilities(opener.overrides);
+    activation.intent(intent(settledTab, 'open', { path: 'r.ts', line: 1 }), openerCaps.capabilities);
+    await settle();
+    expect(opener.overrides.materializeRemoteFile).not.toHaveBeenCalled();
+    expect(openerCaps.openInEditor).not.toHaveBeenCalled();
+
+    overrides.remoteWorkspaceSearch.mockReturnValueOnce(pending.promise);
+    origin.current = remoteHarness;
+    activation.command?.('', capabilities);
+    origin.current = harness;
+    activation.command?.('', capabilities);
+    await settle();
+    pending.resolve([{ path: 'r.ts', line: 1, above: [], match: 'todo on far host', start: 0, end: 4, below: [] }]);
+    await settle();
+    const local = makeCapabilities();
+    activation.intent(intent(settledTab, 'open', { path: 'b.ts', line: 1 }), local.capabilities);
+    expect(local.openInEditor).toHaveBeenCalledWith('/repo/clone/b.ts', 1);
+  });
+
+  it('does not materialize a shown remote row from another remote workspace after a re-scope', async () => {
+    const pending = Promise.withResolvers<SearchMatch[]>();
+    const origin = { current: remoteHarness as unknown };
+    const { overrides } = remoteFakes();
+    const { capabilities } = scoped(origin, overrides);
+    const activation = searchActivation(contents);
+    activation.command?.('todo', capabilities);
+    await settle();
+    overrides.remoteWorkspaceSearch.mockReturnValueOnce(pending.promise);
+    origin.current = otherRemote;
+    activation.command?.('', capabilities);
+    await settle();
+    const opener = remoteFakes();
+    const openerCaps = makeCapabilities(opener.overrides);
+    activation.intent(intent(settledTab, 'open', { path: 'r.ts', line: 1 }), openerCaps.capabilities);
+    await settle();
+    expect(opener.overrides.materializeRemoteFile).not.toHaveBeenCalled();
+    expect(openerCaps.openInEditor).not.toHaveBeenCalled();
+    pending.resolve([{ path: 'r.ts', line: 1, above: [], match: 'todo on far host', start: 0, end: 4, below: [] }]);
+  });
+
+  describe('search plugin closes with its workspace', () => {
+    const ownRow = { label: 'search-1', incarnation: 'i1', dotColor: '#fff', plugin: { id: 'search', instanceKey: 'search' } };
+    const tabsEvent = (tabs: string[] = ['search']) => ({ topic: 'tabs' as const, data: [ownRow], tabs });
+
+    function closing(origin: { current: unknown }, tracked: { current: boolean }, overrides: Capability = {}) {
+      const closeOwnTab = vi.fn();
+      const workspaceTracked = vi.fn(() => tracked.current);
+      const caps = scoped(origin, { closeOwnTab, workspaceTracked, ...overrides });
+      return { ...caps, closeOwnTab, workspaceTracked };
+    }
+
+    it('closes the tab and cancels the scan when its local clone is no longer tracked', async () => {
+      const pending = Promise.withResolvers<void>();
+      const reads = { ...contents };
+      const activation = activate(async (absPath) => {
+        await pending.promise;
+        return reads[absPath.replace('/repo/', '')] ?? '';
+      }, inlineMatcher);
+      const tracked = { current: true };
+      const { capabilities, closeOwnTab, updateTab, note, notifyUser } = closing({ current: harness }, tracked);
+      activation.command?.('todo', capabilities);
+      await settle();
+      tracked.current = false;
+      activation.notify?.(tabsEvent(), capabilities);
+      expect(closeOwnTab).toHaveBeenCalledWith('search');
+      const published = updateTab.mock.calls.length;
+      pending.resolve();
+      await settle();
+      expect(updateTab).toHaveBeenCalledTimes(published);
+      expect(note).not.toHaveBeenCalled();
+      expect(notifyUser).not.toHaveBeenCalled();
+    });
+
+    it('does nothing while the clone is still tracked', async () => {
+      const { capabilities, closeOwnTab } = closing({ current: harness }, { current: true });
+      const activation = searchActivation(contents);
+      activation.command?.('todo', capabilities);
+      await settle();
+      activation.notify?.(tabsEvent(), capabilities);
+      expect(closeOwnTab).not.toHaveBeenCalled();
+    });
+
+    it('asks nothing while scoped to the launch directory', async () => {
+      const originTab = vi.fn(() => null);
+      const { capabilities, closeOwnTab, workspaceTracked } = closing({ current: null }, { current: false }, { originTab });
+      const activation = searchActivation(contents);
+      activation.command?.('todo', capabilities);
+      await settle();
+      originTab.mockClear();
+      activation.notify?.(tabsEvent(), capabilities);
+      expect(closeOwnTab).not.toHaveBeenCalled();
+      expect(workspaceTracked).not.toHaveBeenCalled();
+      expect(originTab).not.toHaveBeenCalled();
+    });
+
+    it('closes a remote scope when its own record is gone, and not while it is live', async () => {
+      const record = { current: remoteHarness as unknown };
+      const { overrides } = remoteFakes();
+      const originTab = vi.fn((label?: string) => (label === undefined ? remoteHarness : record.current));
+      const { capabilities, closeOwnTab, notifyUser, note } = closing(
+        { current: remoteHarness }, { current: true }, { ...overrides, originTab },
+      );
+      const activation = searchActivation(contents);
+      activation.command?.('todo', capabilities);
+      await settle();
+      activation.notify?.(tabsEvent(), capabilities);
+      expect(originTab).toHaveBeenCalledWith('search-1');
+      expect(closeOwnTab).not.toHaveBeenCalled();
+      record.current = { ...remoteHarness, workspace: { ...far, gone: true } };
+      activation.notify?.(tabsEvent(), capabilities);
+      expect(closeOwnTab).toHaveBeenCalledWith('search');
+      expect(notifyUser).not.toHaveBeenCalled();
+      expect(note).not.toHaveBeenCalled();
+    });
+
+    it('ignores another topic, a delivery without its own tab, and a delivery before any command', async () => {
+      const tracked = { current: false };
+      const { capabilities, closeOwnTab } = closing({ current: harness }, tracked);
+      const activation = searchActivation(contents);
+      activation.notify?.(tabsEvent(), capabilities);
+      expect(closeOwnTab).not.toHaveBeenCalled();
+      tracked.current = true;
+      activation.command?.('todo', capabilities);
+      await settle();
+      tracked.current = false;
+      activation.notify?.({ topic: 'schedules', data: [], tabs: ['search'] }, capabilities);
+      activation.notify?.(tabsEvent([]), capabilities);
+      expect(closeOwnTab).not.toHaveBeenCalled();
+    });
+
+    it('declares the tabs topic and supplies notify', async () => {
+      const { searchManifest } = await import('./manifest.js');
+      expect(searchManifest.notifications).toContain('tabs');
+      expect(searchManifest.capabilities).toEqual(expect.arrayContaining(['workspaceTracked', 'closeOwnTab']));
+      expect(typeof searchActivation().notify).toBe('function');
+    });
   });
 });

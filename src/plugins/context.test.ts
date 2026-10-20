@@ -517,7 +517,7 @@ describe('originTab with a label', () => {
 
     expect(contextWith(managers).originTab('shell1')).toEqual({
       label: 'shell1', cwd: '/repo/src', root: '/repo',
-      workspace: { dir: '/repo/.janissary/workspace/demir', offline: false },
+      workspace: { dir: '/repo/.janissary/workspace/demir', offline: false, label: 'demir', display: '$workspace/demir' },
     });
   });
 
@@ -551,7 +551,7 @@ describe('originTab with a label', () => {
 
     expect(contextWith(managers).originTab('shell1')).toEqual({
       label: 'shell1', cwd: '/repo/src', root: '/repo', view: 'plugin', plugin: 'shell',
-      workspace: { dir: '/repo/.janissary/workspace/demir', offline: false },
+      workspace: { dir: '/repo/.janissary/workspace/demir', offline: false, label: 'demir', display: '$workspace/demir' },
     });
     expect(contextWith(managers).originTab('editor-1')).toEqual({
       label: 'editor-1', cwd: '/repo/src', root: '/repo', view: 'editor',
@@ -575,11 +575,11 @@ describe('originTab with a label', () => {
 
     expect(contextWith(cloning.managers).originTab('shell1')).toEqual({
       label: 'shell1', cwd: '/repo/src', root: '/repo',
-      workspace: { dir, offline: false }, provisioning: true,
+      workspace: { dir, offline: false, label: 'demir', display: '$workspace/demir' }, provisioning: true,
     });
     expect(contextWith(settled.managers).originTab('shell1')).toEqual({
       label: 'shell1', cwd: '/repo/src', root: '/repo',
-      workspace: { dir, offline: false },
+      workspace: { dir, offline: false, label: 'demir', display: '$workspace/demir' },
     });
   });
 
@@ -662,7 +662,7 @@ describe('remote workspace capabilities', () => {
 
   const capabilitiesFor = async (managers: Managers) => {
     const { remoteCapabilities } = await import('./remote-capabilities.js');
-    return remoteCapabilities({ managers, originLabel: 'diff', isEnabled: () => true });
+    return remoteCapabilities({ managers, originLabel: 'diff', declaration: { id: 'diff' } as never, isEnabled: () => true });
   };
 
   it('answers the change set the far side sent, unchanged', async () => {

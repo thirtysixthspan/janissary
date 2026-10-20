@@ -10,6 +10,7 @@ import { CONVERSATIONS_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/conversati
 import { DIFF_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/diff/shared';
 import { SQL_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/sql/shared';
 import { SHELL_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/shell/shared';
+import { SEARCH_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/search/shared';
 import { clientPluginLoaders, clientPluginRegistry } from './registry';
 
 // The registry hardcodes each plugin's payload schema version so importing a shared contract cannot
@@ -25,6 +26,7 @@ describe('client plugin registry', () => {
     expect(clientPluginRegistry.get('pdf')?.schemaVersion).toBe(PDF_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('schedules')?.schemaVersion).toBe(SCHEDULES_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('scripts')?.schemaVersion).toBe(SCRIPTS_PAYLOAD_SCHEMA_VERSION);
+    expect(clientPluginRegistry.get('search')?.schemaVersion).toBe(SEARCH_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('shell')?.schemaVersion).toBe(SHELL_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('sql')?.schemaVersion).toBe(SQL_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('video')?.schemaVersion).toBe(VIDEO_PAYLOAD_SCHEMA_VERSION);

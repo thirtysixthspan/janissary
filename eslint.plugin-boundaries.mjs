@@ -22,7 +22,9 @@ export const pluginBoundaries = [
   // primitives — external open and size lookup — the web-target normalizer that core's profile
   // relaunch and the page plugin must agree on to the character, and the numbered-sibling writer the
   // video and image plugins share so "a numbered PNG beside an original" has one rule rather than two,
-  // and the caught-error text formatter shared by server and client call sites.
+  // and the caught-error text formatter shared by server and client call sites. Search's pure
+  // matcher, worker, and path-filter modules also live in core so remote filesystem operations and
+  // the search plugin apply the same rules without the host importing plugin behavior.
   // The size formatter is deliberately absent: it reaches a plugin through `files.js`, so a plugin
   // spelling out its own stat-and-format block again would be caught here.
   {
@@ -31,7 +33,7 @@ export const pluginBoundaries = [
     rules: {
       'no-restricted-imports': ['error', {
         patterns: [{
-          regex: String.raw`^\.\./(?!(?:api\.js|files\.js|\.\./openers/(?:web-target|numbered-sibling)\.js|\.\./error-text\.js)$)`,
+          regex: String.raw`^\.\./(?!(?:api\.js|files\.js|\.\./openers/(?:web-target|numbered-sibling)\.js|\.\./error-text\.js|\.\./search/(?:compile-matcher|filter-paths|matching-worker|matcher-worker-protocol|search-files|types)\.js)$)`,
           message: 'Server tab plugins must use src/plugins/api.ts capabilities instead of host internals.',
         }],
       }],

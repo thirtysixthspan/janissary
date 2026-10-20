@@ -1,5 +1,5 @@
 import type { PluginRpcCall } from '../protocol/plugin.js';
-import { isRecord, isString, type ParamsDecoder } from './guards.js';
+import { isRecord, isString, optionalString, type ParamsDecoder } from './guards.js';
 
 // These two were the only params guards this codebase had before the table around them existed, and
 // `src/message/plugin.ts` re-checks both inside its own dispatch arms. They stay exported
@@ -28,7 +28,8 @@ export function isPluginFailedParams(value: unknown): value is { tab: string; re
 // Keyed by the union so a method added to `PluginRpcCall` without a decoder fails the build.
 export const PLUGIN_PARAMS: Record<PluginRpcCall['method'], ParamsDecoder> = {
   defaultMenuSelectionAction: (p) => isString(p.selection),
-  runDefaultMenuSelectionAction: (p) => isString(p.selection) && isString(p.action),
+  runDefaultMenuSelectionAction: (p) => isString(p.selection) && isString(p.action)
+    && optionalString(p.tab),
   pluginIntent: isPluginIntentParams,
   pluginFailed: isPluginFailedParams,
 };

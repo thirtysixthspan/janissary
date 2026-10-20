@@ -30,7 +30,13 @@ export type PluginFailedRequest = { tab: string; reason: string };
 // just offered. `shortcut` marks the one entry Cmd+I runs without opening the menu.
 export type DefaultMenuEntry = { label: string; shortcut?: true };
 export type DefaultMenuActionRequest = { selection: string };
-export type DefaultMenuRunRequest = { selection: string; action: string };
+export type DefaultMenuRunRequest = {
+  selection: string;
+  action: string;
+  // The tab whose body the selection is in; absent from older clients, which fall back to the
+  // active tab.
+  tab?: string;
+};
 
 export type PluginRpcCall =
   // The entries the default context menu should contribute for `selection`, in order — empty when

@@ -1,5 +1,5 @@
 import type { MatcherModes } from './compile-matcher.js';
-import type { SearchMatch } from './shared.js';
+import type { SearchMatch } from './types.js';
 
 export type MatcherWorkerRequest = {
   id: number;

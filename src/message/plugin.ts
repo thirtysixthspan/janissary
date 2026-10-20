@@ -17,7 +17,9 @@ export function dispatchPluginMessage(controller: Controller, message: PluginMes
       return controller.defaultMenuSelectionAction();
     }
     case 'runDefaultMenuSelectionAction': {
-      controller.runDefaultMenuSelectionAction(message.params.selection, message.params.action);
+      controller.runDefaultMenuSelectionAction(
+        message.params.selection, message.params.action, message.params.tab,
+      );
       break;
     }
     case 'pluginIntent': {

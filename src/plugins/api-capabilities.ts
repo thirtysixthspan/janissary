@@ -17,10 +17,12 @@ export type TabPluginCapabilityName =
   | 'setBusy'
   | 'dockTab'
   | 'snapshotTab'
+  | 'closeOwnTab'
   | 'openClaimedFiles'
   | 'projectFileList'
   | 'harnessLaunchCatalog'
   | 'openInEditor'
+  | 'workspaceTracked'
   | 'topicData'
   | 'topicAction'
   | 'configuredViewer'
@@ -41,6 +43,11 @@ export type TabPluginCapabilityName =
   | 'recordGlobalHistory'
   | 'readWorkspaceChangeSet'
   | 'materializeRemoteFile'
+  | 'remoteWorkspaceFileList'
+  | 'readRemoteWorkspaceFile'
+  | 'remoteWorkspaceSearch'
+  | 'joinRemoteWorkspace'
+  | 'releaseRemoteWorkspace'
   | 'startAcp'
   | 'promptAcp'
   | 'promptAcpResult'
@@ -63,10 +70,12 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   setBusy: true,
   dockTab: true,
   snapshotTab: true,
+  closeOwnTab: true,
   openClaimedFiles: true,
   projectFileList: true,
   harnessLaunchCatalog: true,
   openInEditor: true,
+  workspaceTracked: true,
   topicData: true,
   topicAction: true,
   configuredViewer: true,
@@ -87,6 +96,11 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   recordGlobalHistory: true,
   readWorkspaceChangeSet: true,
   materializeRemoteFile: true,
+  remoteWorkspaceFileList: true,
+  readRemoteWorkspaceFile: true,
+  remoteWorkspaceSearch: true,
+  joinRemoteWorkspace: true,
+  releaseRemoteWorkspace: true,
   startAcp: true,
   promptAcp: true,
   promptAcpResult: true,

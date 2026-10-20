@@ -15,6 +15,7 @@ const payload: SearchPayload = {
     },
   ],
   seed: 0,
+  scope: '$root',
 };
 
 const intent = {
@@ -58,6 +59,16 @@ describe('isSearchPayload', () => {
   it('rejects a payload without a numeric seed', () => {
     expect(isSearchPayload(without(payload, 'seed'))).toBe(false);
     expect(isSearchPayload({ ...payload, seed: '1' })).toBe(false);
+  });
+
+  it('requires a string scope', () => {
+    expect(isSearchPayload(without(payload, 'scope'))).toBe(false);
+    expect(isSearchPayload({ ...payload, scope: 2 })).toBe(false);
+  });
+
+  it('accepts an absent or string host and rejects any other', () => {
+    expect(isSearchPayload({ ...payload, host: 'devbox' })).toBe(true);
+    expect(isSearchPayload({ ...payload, host: 7 })).toBe(false);
   });
 
   it('rejects a wrong field type', () => {

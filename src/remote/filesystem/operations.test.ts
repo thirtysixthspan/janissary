@@ -9,7 +9,7 @@ import type { RemoteFilesystemArgumentsByOperation, RemoteFilesystemOperation } 
 // the table is still caught here. Adding one to the protocol means adding it in both places.
 const ALL_OPERATIONS: RemoteFilesystemOperation[] = [
   'read-directory', 'stat', 'watch', 'unwatch', 'git', 'git-pull', 'git-commit', 'search',
-  'read-file', 'write-file', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
+  'search-text', 'read-file', 'write-file', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
   'create-file', 'create-directory', 'replay', 'change-set',
 ];
 
@@ -33,6 +33,7 @@ const PATH_CASES: PathCase[] = [
   ['git-commit', { message: 'commit: a.txt', paths: ['a.txt', 'b.txt'] }, ['a.txt', 'b.txt']],
   ['git-commit', { message: 'commit: 2 files', paths: [], root: 'src' }, ['src']],
   ['search', {}, []],
+  ['search-text', { root: '', query: 'todo', include: 'src/**', exclude: '', regex: false, matchCase: false, wholeWord: false }, ['']],
   ['read-file', { path: 'a.txt' }, ['a.txt']],
   ['write-file', { path: 'a.txt', content: '', expectedHash: 'baseline' }, ['a.txt']],
   ['move', { from: 'a.txt', to: 'dest' }, ['a.txt', 'dest']],
@@ -66,6 +67,8 @@ const INVALID_CASES: [RemoteFilesystemOperation, Record<string, unknown>][] = [
   ['git-commit', { message: '', paths: ['a.txt'] }],
   ['git-commit', { message: 'x', paths: [], root: 3 }],
   ['search', { path: 'src' }],
+  ['search-text', { root: '', query: 'todo', include: '', exclude: '', regex: false, matchCase: false, wholeWord: 'yes' }],
+  ['search-text', { root: 1, query: 'todo', include: '', exclude: '', regex: false, matchCase: false, wholeWord: false }],
   ['read-file', {}],
   ['write-file', { path: 'a.txt' }],
   ['write-file', { path: 'a.txt', content: '', expectedHash: null }],
@@ -95,6 +98,7 @@ const VALID_RESULTS: { [K in RemoteFilesystemOperation]: RemoteFilesystemOperati
   'change-set': { kind: 'files', files: [] },
   'git-commit': { committed: false },
   search: ['a.txt'],
+  'search-text': [],
   'read-file': { content: 'YQ==' },
   'write-file': { ok: false, reason: 'denied' },
   move: { ok: true, value: { from: 'a.txt', to: 'dest/a.txt' } },
@@ -131,6 +135,11 @@ describe('FILESYSTEM_OPERATIONS', () => {
       total: 1, failedPaths: [], mutated: true,
       pairs: [{ from: 'source', to: 'destination', identity: 7 }],
     })).toThrow('Invalid remote filesystem operation result.');
+  });
+
+  it('rejects a search row with an invalid context shape', () => {
+    expect(() => decodeFilesystemResult('search-text', [{ path: 'a.ts', line: 1, above: [2], match: 'todo', start: 0, end: 4, below: [] }]))
+      .toThrow('Invalid remote filesystem operation result.');
   });
 
   it.each(ALL_OPERATIONS)('rejects a malformed %s result', (operation) => {
@@ -211,7 +220,7 @@ describe('FILESYSTEM_OPERATIONS', () => {
 
     expect(alphabetical(rootDestination)).toEqual([
       'create-directory', 'create-file', 'git-commit', 'move', 'move-many', 'paste', 'read-directory',
-      'unwatch', 'watch',
+      'search-text', 'unwatch', 'watch',
     ]);
   });
 });

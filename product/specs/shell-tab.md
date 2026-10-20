@@ -77,6 +77,10 @@ asking for a password, cannot be given `theme` or `files` without the `!` prefix
 warns about none of this; `!` is the override, and it is documented in `help`. The bare `clear`
 command is sent directly to zsh so it clears the terminal, while `/clear` still clears the app transcript.
 
+The shell launcher is also an application command in this bar: `shell <name> -w` opens a sibling shell
+with that name and a fresh workspace. To run a zsh command whose text starts with `shell`, prefix it
+with `!`.
+
 First refusal means what it says. A line the application answers itself — a bare word that opens a
 picker, `quit` or `/quit`, or `close` or `/close` that would take the last tab with it — is answered
 here rather than sent onward. A quit typed in a shell tab asks the same confirmation it asks anywhere

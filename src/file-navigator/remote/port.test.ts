@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { RemoteChannel } from '../../remote/channel/index.js';
 import type { NavigatorListener } from '../../remote/channel/types.js';
 import type { ClientFrame } from '../../remote/protocol-frames.js';
+import type { SearchMatch } from '../../protocol.js';
 import { RemoteFileSystemPort } from './port.js';
 
 function harness() {
@@ -203,6 +204,18 @@ describe('RemoteFileSystemPort', () => {
     await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
     h.listener()?.onClose?.();
     await expect(pending).rejects.toThrow('connection ended');
+  });
+
+  it('sends a search request without transferring candidate files', async () => {
+    const h = harness();
+    const request = { query: 'todo', include: 'src/**', exclude: '', regex: false, matchCase: false, wholeWord: false };
+    const pending = h.port.searchText('/remote/ws/src', request);
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    expect(h.sent.findLast((frame) => frame.type === 'filesystem-request'))
+      .toMatchObject({ operation: 'search-text', args: { ...request, root: 'src' } });
+    const result: SearchMatch[] = [{ path: 'src/a.ts', line: 1, above: [], match: 'todo', start: 0, end: 4, below: [] }];
+    h.reply(result);
+    await expect(pending).resolves.toEqual(result);
   });
 
   it('reports in-flight mutating work as a per-path failure when the channel closes', async () => {

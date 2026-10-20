@@ -9,16 +9,17 @@ import type { DefaultMenuEntry } from '../protocol.js';
 // host's own records — the default menu has no owner tree, so an entry's label is what names it.
 export type PluginControllerAdapter = {
   defaultMenuSelectionAction(): DefaultMenuEntry[];
-  runDefaultMenuSelectionAction(selection: string, action: string): void;
+  runDefaultMenuSelectionAction(selection: string, action: string, tab?: string): void;
   pluginIntent(tab: string, intent: string, payload: unknown): Promise<unknown>;
   pluginFailed(tab: string, reason: string): void;
 };
 
-// Where a default-menu failure is noted: the active tab, whichever it is — the menu is a shell-level
-// surface and does not belong to the tab it landed on.
-function originOf(managers: Managers): { label: string; command: string } {
+// The tab a default-menu action came from: the open tab the client named, else the active tab — an
+// older client sends no tab, and an unknown label still leaves the action itself valid.
+function originOf(managers: Managers, tab?: string): { label: string; command: string } {
+  const named = tab ? managers.tab.byLabel(tab) : undefined;
   return {
-    label: managers.tab.tabs[managers.tab.activeTab]?.label ?? 'janus',
+    label: named?.label ?? managers.tab.tabs[managers.tab.activeTab]?.label ?? 'janus',
     command: 'default menu',
   };
 }
@@ -32,10 +33,10 @@ export function createPluginControllerAdapter(managers: Managers): PluginControl
     defaultMenuSelectionAction: () => eligibleActions().map(({ label, shortcut }) => ({
       label, ...(shortcut && { shortcut }),
     })),
-    runDefaultMenuSelectionAction: (selection, action) => {
+    runDefaultMenuSelectionAction: (selection, action, tab) => {
       const match = eligibleActions().find((entry) => entry.label === action);
       if (!match) return;
-      void managers.plugins.runDefaultMenuAction(match.plugin, action, selection, originOf(managers));
+      void managers.plugins.runDefaultMenuAction(match.plugin, action, selection, originOf(managers, tab));
     },
     pluginIntent: (tab, intent, payload) => managers.plugins.intent(tab, intent, payload),
     pluginFailed: (tab, reason) => managers.plugins.clientFailed(tab, reason),

@@ -80,7 +80,7 @@ export function Sidebar({
   return (
     <div className={`sidebar sidebar-${side}`} inert={!current} style={{ flex: `0 0 ${width}px`, display: current ? undefined : 'none' }} data-doc-shot={`sidebar-${side}`}>
       {side === 'right' && divider}
-      <div className="sidebar-body">
+      <div className="sidebar-body" data-tab-label={current && (isFilesTabView(current.tab) || current.tab.view === 'notifications') ? current.tab.label : undefined}>
         <TabStrip
           tabs={entries.map((e) => e.tab)}
           activeTab={activeIndex}

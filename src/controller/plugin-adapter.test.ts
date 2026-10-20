@@ -5,7 +5,7 @@ import { TAB_PLUGIN_API_VERSION, type TabPluginDeclaration } from '../plugins/ap
 import { TabPluginHost } from '../plugins/host.js';
 import { createPluginControllerAdapter } from './plugin-adapter.js';
 import { NotificationQueue } from '../notifications/queue.js';
-import { seedRootTab } from '../tab/root-tab-test-fixture.js';
+import { seedRootTab, seedTestTab } from '../tab/root-tab-test-fixture.js';
 
 const hosts: TabPluginHost[] = [];
 afterEach(() => {
@@ -35,7 +35,7 @@ function fixture(declarations: TabPluginDeclaration[] = [chat]) {
   managers.plugins = host;
   const adapter = createPluginControllerAdapter(managers);
   const origin = { label: managers.tab.tabs[0].label, command: 'default menu' };
-  return { host, adapter, handler, loader, origin };
+  return { host, adapter, handler, loader, origin, adapterManagers: managers };
 }
 
 describe('default-menu plugin eligibility', () => {
@@ -100,5 +100,32 @@ describe('default-menu plugin eligibility', () => {
     multiple.adapter.runDefaultMenuSelectionAction('selection', 'Chat about this');
     expect(multipleDispatch).not.toHaveBeenCalled();
     expect(multiple.loader).not.toHaveBeenCalled();
+  });
+
+  describe('origin', () => {
+    function withSecondTab() {
+      const setup = fixture();
+      const dispatch = vi.spyOn(setup.host, 'runDefaultMenuAction').mockResolvedValue();
+      const root = setup.origin.label;
+      const second = seedTestTab(setup.adapterManagers.tab, 'shell-2');
+      setup.adapterManagers.tab.setActiveTab(0);
+      return { ...setup, dispatch, root, second };
+    }
+
+    it('uses the open tab the request names', () => {
+      const { adapter, dispatch, second } = withSecondTab();
+      adapter.runDefaultMenuSelectionAction('selection', 'Chat about this', second.label);
+      expect(dispatch).toHaveBeenCalledExactlyOnceWith(
+        'fixture', 'Chat about this', 'selection', { label: 'shell-2', command: 'default menu' },
+      );
+    });
+
+    it('falls back to the active tab for an unknown or absent tab', () => {
+      const { adapter, dispatch, root } = withSecondTab();
+      adapter.runDefaultMenuSelectionAction('selection', 'Chat about this', 'missing-9');
+      adapter.runDefaultMenuSelectionAction('selection', 'Chat about this');
+      const fallback = { label: root, command: 'default menu' };
+      expect(dispatch.mock.calls.map((call) => call[3])).toEqual([fallback, fallback]);
+    });
   });
 });

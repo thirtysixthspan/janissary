@@ -1,10 +1,17 @@
 import path from 'node:path';
-import type { TabPluginServerCapabilities } from '../api.js';
+import type { TabPluginNotification, TabPluginServerCapabilities } from '../api.js';
 import { isInsideRoot } from '../files.js';
 import { startScan, type ScanHandle, type ScanMatcherFactory, type ScanRead } from './scan.js';
-import { patternError } from './compile-matcher.js';
+import { patternError } from '../../search/compile-matcher.js';
 import { modesFrom, sameModes, type SearchModes } from './saved-modes.js';
+import { refusalLine, sameScope, scopeDisplay, scopeFrom, type SearchScope } from './scope.js';
+import { scopeFileAccess } from './scope-files.js';
+import { enterScope } from './scope-ride.js';
+import { scopeGone } from './scope-gone.js';
 import type { SearchIntent, SearchMatch, SearchPayload } from './shared.js';
+
+type RescopeOutcome = 'same' | 'moved' | 'join-failed';
+type TabsNotification = Extract<TabPluginNotification, { topic: 'tabs' }>;
 
 const INSTANCE_KEY = 'search';
 const TAB_TITLE = 'search';
@@ -13,14 +20,16 @@ export function emptyPayload(): SearchPayload {
   return {
     query: '', include: '', exclude: '',
     regex: false, matchCase: false, wholeWord: false,
-    state: 'done', message: '', rows: [], seed: 0,
+    state: 'done', message: '', rows: [], seed: 0, scope: '$root',
   };
 }
 
 function payloadOf(
   base: SearchPayload, changes: Partial<SearchPayload>,
 ): SearchPayload {
-  return { ...base, ...changes };
+  const payload = { ...base, ...changes };
+  if (payload.host === undefined) delete payload.host;
+  return payload;
 }
 
 // The state one search tab holds between calls: what it currently shows, and the scan still feeding
@@ -30,10 +39,22 @@ function payloadOf(
 // The rows accumulate here rather than being sent whole each time, so a batch arriving appends to
 // what the tab already shows instead of replacing it. One scan is in flight at a time: a new query
 // cancels the previous one, which is what keeps a superseded scan's rows off the screen.
+//
+// The capabilities the session is built with are only for what needs no origin tab: publishing to
+// the tab by its instance key, the settings, and the project file list. Anything that acts for the
+// tab a request came from — opening or focusing the search tab, opening an editor, noting an error —
+// goes through that request's own capabilities, because the first caller's origin may since have
+// closed.
 export class SearchSession {
   private payload: SearchPayload;
   private scan: ScanHandle | null = null;
   private root = '';
+  // The scope that produced `root`. A remote row opens only while that scope is still the tab's own,
+  // because a re-scope releases the channel that could serve it.
+  private rootScope: SearchScope = { kind: 'launch' };
+  // The workspace the tab searches. A route from a workspaced tab moves it; a rebuilt tab starts
+  // back at the launch directory.
+  private scope: SearchScope = { kind: 'launch' };
   // The modes as last read from or written to the config, so a search that changes none of them
   // does not rewrite the file on every keystroke.
   private saved: SearchModes;
@@ -53,20 +74,70 @@ export class SearchSession {
   // Open the tab if it is not already open, or focus the one that is. A `search` command with an
   // argument seeds the query and starts a scan; a bare `search` just reveals the tab, so the chord
   // and the command both land the user in the same place with whatever they last searched for.
-  open(argument: string): void {
+  //
+  // The route's origin decides the scope. A workspace that is not ready or is gone is refused with a
+  // line in the notifications feed, and nothing opens.
+  open(argument: string, capabilities: TabPluginServerCapabilities): void {
+    const decision = scopeFrom(capabilities.originTab());
+    if (decision.kind === 'refuse') {
+      capabilities.notifyUser(refusalLine(decision.reason, decision.label));
+      return;
+    }
     const query = argument.trim();
     if (query !== '') this.payload = payloadOf(this.payload, { seed: this.payload.seed + 1 });
     // The host runs this factory only when it has to build the tab, which means the previous one was
-    // closed — and closing a tab forgets its query, results, narrowing fields, and history. Only the
-    // toggles, remembered on purpose, and the seed, which only moves forward, carry over.
-    this.capabilities.openOrFocusTab(INSTANCE_KEY, () => {
+    // closed — and closing a tab forgets its query, results, narrowing fields, history, and scope.
+    // Only the toggles, remembered on purpose, and the seed, which only moves forward, carry over.
+    capabilities.openOrFocusTab(INSTANCE_KEY, () => {
       this.cancel();
+      this.scope = { kind: 'launch' };
       this.payload = payloadOf(emptyPayload(), {
         ...modesFrom(this.payload), seed: this.payload.seed, query,
       });
       return { title: TAB_TITLE, payload: this.payload };
     });
-    if (query !== '') this.run({ ...this.payload, query });
+    const interrupted = this.payload.state === 'searching';
+    const outcome = decision.kind === 'scope' ? this.rescope(decision.scope, capabilities) : 'same';
+    if (outcome === 'join-failed') {
+      if (interrupted) this.rerun(capabilities);
+      return;
+    }
+    if (query !== '') this.run({ ...this.payload, query }, capabilities);
+    else if (outcome === 'moved') this.rerun(capabilities);
+  }
+
+  // Move to `target` when it searches other files, cancelling the scan of the old scope and moving
+  // the tab's remote channel with it. A target whose channel cannot be joined is reported, and the
+  // tab stays where it is unless that, too, is no longer reachable, in which case it falls back to
+  // the launch directory with its rows cleared. Either way a failed join searches nothing; `open`
+  // searches the scope the tab ends up with again only when the cancel interrupted a running scan.
+  private rescope(target: SearchScope, capabilities: TabPluginServerCapabilities): RescopeOutcome {
+    if (sameScope(target, this.scope)) return 'same';
+    this.cancel();
+    const entry = enterScope(target, this.scope, this.capabilities);
+    if (entry.joinFailed) capabilities.notifyUser(refusalLine('gone', target.kind === 'remote' ? target.label : ''));
+    if (sameScope(entry.scope, this.scope)) return entry.joinFailed ? 'join-failed' : 'same';
+    this.scope = entry.scope;
+    this.payload = payloadOf(this.payload, {
+      scope: scopeDisplay(entry.scope),
+      host: entry.scope.kind === 'remote' ? entry.scope.host : undefined,
+    });
+    if (!entry.joinFailed) return 'moved';
+    this.payload = payloadOf(this.payload, { rows: [], state: 'done', message: '' });
+    this.publish();
+    return 'join-failed';
+  }
+
+  // A bare route that changed scope searches the current request again in the new one. With no
+  // query there is nothing to search, but the old scope's rows must not stay clickable.
+  private rerun(capabilities: TabPluginServerCapabilities): void {
+    const { query, include, exclude, regex, matchCase, wholeWord } = this.payload;
+    if (query.trim() !== '') {
+      this.run({ query, include, exclude, regex, matchCase, wholeWord }, capabilities);
+      return;
+    }
+    this.payload = payloadOf(this.payload, { rows: [], state: 'done', message: '' });
+    this.publish();
   }
 
   // Start a scan for a query and its filters, replacing whatever the tab was showing. The tab is
@@ -90,12 +161,18 @@ export class SearchSession {
     this.payload = payloadOf(this.payload, { ...request, state: 'searching', message: '', rows: [] });
     this.publish();
     const contents = this.contents;
-    this.scan = startScan({
+    const scope = this.scope;
+    const access = scopeFileAccess(scope, this.capabilities);
+    const scan: ScanHandle = startScan({
       listFiles: async () => {
-        const listed = await this.capabilities.projectFileList();
-        this.root = listed.root;
+        const listed = await access.listFiles();
+        if (this.scan === scan) {
+          this.root = listed.root;
+          this.rootScope = scope;
+        }
         return listed;
       },
+      remoteSearch: access.remoteSearch,
       readFile: contents,
       fileSize: contents === undefined ? undefined : async (absPath) => {
         try {
@@ -108,16 +185,37 @@ export class SearchSession {
       createMatcher: this.createMatcher,
       onBatch: (batch) => this.receive(batch.rows, batch.done, batch.error),
     }, request);
+    this.scan = scan;
   }
 
   // Put the file a result names on the line that result names, in an editor tab. The path arrived
   // from the client, and `path.join` collapses `..`, so it is resolved and checked against the
   // project root before it goes anywhere: a row's path is one the scan itself produced, and a
-  // client that names anything else gets nothing.
-  openMatch(relPath: string, line: number): void {
+  // client that names anything else gets nothing. The editor opens through the asking request's own
+  // capabilities, so it is attributed to the search tab that asked.
+  openMatch(relPath: string, line: number, capabilities: TabPluginServerCapabilities): void {
     const target = path.join(this.root, relPath);
     if (!isInsideRoot(this.root, target)) return;
-    this.capabilities.openInEditor(target, line);
+    if (this.rootScope.kind !== 'remote') {
+      capabilities.openInEditor(target, line);
+      return;
+    }
+    if (!sameScope(this.rootScope, this.scope)) return;
+    const local = capabilities.materializeRemoteFile(relPath);
+    if (local === null) return;
+    void Promise.resolve(local).then((materialized) => {
+      if (materialized === null) return;
+      capabilities.openInEditor(materialized, line);
+    });
+  }
+
+  // A `tabs` delivery: when the scoped workspace has gone away, abandon the scan and close the tab,
+  // silently. The next open rebuilds the tab at the launch directory.
+  checkScope(event: TabsNotification, capabilities: TabPluginServerCapabilities): void {
+    if (!event.tabs.includes(INSTANCE_KEY)) return;
+    if (!scopeGone(this.scope, event.data, capabilities)) return;
+    this.cancel();
+    capabilities.closeOwnTab(INSTANCE_KEY);
   }
 
   dispose(): void {

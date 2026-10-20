@@ -2,13 +2,13 @@ import type { Managers } from '../managers.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
 import { RemoteFileSystemPort } from '../file-navigator/remote/port.js';
 import { forgetRemoteFilesOf, materializeRemoteFile } from '../file-navigator/remote/file-cache.js';
-import type { TabPluginServerCapabilities } from './api.js';
+import type { TabPluginDeclaration, TabPluginServerCapabilities } from './api.js';
+import type { SearchRequest } from '../protocol.js';
 
 // The remote workspace a plugin tab rides, reached as a filesystem port. Built the first time a tab
 // asks and kept after that, which is the same lifetime a remote navigator's port has: the channel
 // closes every navigator session on it when its last tab lets it go. It exists so that a plugin never
-// constructs one, and it publishes only the two capabilities a remote workspace needs — its change
-// set, and a file materialized for the ordinary openers.
+// constructs one, and publishes workspace operations through the host capability contract.
 
 type PluginRemoteResource = {
   channel: RemoteChannel;
@@ -60,9 +60,12 @@ export function remoteCapabilities(input: {
   managers: Managers;
   originLabel: string;
   answeringLabel?: string;
+  declaration: TabPluginDeclaration;
   isEnabled: () => boolean;
-}): Pick<TabPluginServerCapabilities, 'readWorkspaceChangeSet' | 'materializeRemoteFile'> {
-  const { managers, originLabel, answeringLabel, isEnabled } = input;
+}): Pick<TabPluginServerCapabilities,
+  'readWorkspaceChangeSet' | 'materializeRemoteFile' | 'remoteWorkspaceFileList' | 'readRemoteWorkspaceFile'
+  | 'remoteWorkspaceSearch'> {
+  const { managers, originLabel, answeringLabel, declaration, isEnabled } = input;
   // The tab the call came from, which is the tab riding the channel: an intent on a diff tab names
   // that tab, and a command names the tab it was typed in.
   const label = answeringLabel ?? originLabel;
@@ -78,7 +81,41 @@ export function remoteCapabilities(input: {
         }
       : undefined;
   };
+  // The plugin's own open tab, named by its instance key rather than by the call's tab: a scan
+  // outlives the call that started it, and that call may have come from another tab entirely.
+  const rideOwn = (instanceKey: string) => {
+    if (!isEnabled()) return;
+    const tab = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey);
+    if (!tab) return;
+    const resource = resourceFor(managers, tab.label);
+    const root = managers.remote?.entryOf(tab.label)?.workspaceDir;
+    return resource && root ? { resource, port: resource.port, root, label: tab.label } : undefined;
+  };
   return {
+    remoteWorkspaceFileList: async (instanceKey) => {
+      const own = rideOwn(instanceKey);
+      if (!own) return null;
+      return { root: own.root, paths: await own.port.search(own.root) };
+    },
+    readRemoteWorkspaceFile: async (instanceKey, relPath, maxBytes) => {
+      const own = rideOwn(instanceKey);
+      if (!own) return null;
+      try {
+        const stats = await own.port.statRows(own.root, [relPath]);
+        const stat = stats[relPath];
+        if (!stat || stat.size > maxBytes) return null;
+        const content = await own.port.readFile(own.root, relPath);
+        if (!resourceIsLive(managers, own.label, own.resource)) return null;
+        return new TextDecoder().decode(content);
+      } catch {
+        return null;
+      }
+    },
+    remoteWorkspaceSearch: async (instanceKey, request: SearchRequest) => {
+      const own = rideOwn(instanceKey);
+      if (!own) return null;
+      return own.port.searchText(own.root, request);
+    },
     // A tab riding no channel is answered with nothing rather than an error: the question is about a
     // directory that is not on another machine, and the caller decides what that means.
     readWorkspaceChangeSet: (fullFiles) => {

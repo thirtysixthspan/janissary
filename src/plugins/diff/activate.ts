@@ -141,7 +141,7 @@ export function activate(): TabPluginActivation {
     // tab's own environment, and does nothing when the tab has no workspace to diff.
     openSibling(capabilities) {
       const origin = capabilities.originTab();
-      if (!origin?.workspace) return;
+      if (!origin?.workspace || origin.workspace.gone) return;
       const route = {
         kind: origin.remote ? 'remote' as const : 'local' as const,
         origin: { root: origin.root, workspace: { dir: origin.workspace.dir } },

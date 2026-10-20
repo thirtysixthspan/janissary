@@ -6,6 +6,7 @@ import { recordGlobalHistory } from '../global-history.js';
 import { messageBus } from '../bus.js';
 import type { TabPluginDeclaration, TabPluginServerCapabilities } from './api.js';
 import { ownTabLabel } from './own-tab.js';
+import { originWorkspace } from './origin-workspace.js';
 
 // The capabilities that make a plugin tab a place a line can be typed and a process can be checked
 // on: where it is, which tab a line runs in, what output that line produces, what the application
@@ -47,17 +48,9 @@ export function lineCapabilities(input: {
         return { label: origin.label, cwd: managers.tab.launchDir, root: managers.tab.launchDir };
       }
       if (!tab) return null;
-      // A remote tab holds no local directory — the clone lives on the far side and its removal is
-      // that host's business — so the workspace the question is about is read from the session.
-      const workspaceDir = tab.workspaceDir ?? (tab.remote ? managers.remote?.workspaceOf?.(tab.label) : undefined);
-      // Whether the workspace named has landed. A local clone's directory is known the moment its
-      // tab opens, so the path alone cannot answer it, and a command that names a workspace still
-      // being cloned has a wait to report rather than a directory to read. A remote tab's directory
-      // is the channel's own, undefined until the far side answers — which is the wait to report,
-      // read the same way `buildTabView` reads it for the metadata row's spinner.
-      const provisioning = workspaceDir === undefined
-        ? (tab.remote !== undefined && managers.remote?.workspaceOf?.(tab.label) === undefined)
-        : managers.workspace?.provisioning?.(workspaceDir) ?? false;
+      // Which workspace the tab is in, and whether it has landed, answered by the one host resolver
+      // every plugin shares (`src/plugins/origin-workspace.ts`).
+      const { workspace, provisioning, workspaceLabel } = originWorkspace(managers, tab);
       return {
         label: tab.label,
         cwd: managers.tab.cwdOf(tab.label) ?? managers.tab.launchDir,
@@ -68,9 +61,10 @@ export function lineCapabilities(input: {
         // allowed to serve one of the two and not the rest is told which of them it holds.
         ...(tab.view !== undefined && { view: tab.view }),
         ...(tab.plugin?.id !== undefined && { plugin: tab.plugin.id }),
-        ...(workspaceDir && { workspace: { dir: workspaceDir, offline: tab.offline ?? false } }),
+        ...(workspace && { workspace }),
         ...(tab.remote && { remote: true as const }),
         ...(provisioning && { provisioning: true as const }),
+        ...(workspaceLabel !== undefined && { workspaceLabel }),
       };
     },
     // The tab a dispatched line runs in. That is the tab answering when the host named one — a line

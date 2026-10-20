@@ -13,7 +13,7 @@ function match(overrides: Partial<SearchMatch> = {}): SearchMatch {
 function payload(overrides: Partial<SearchPayload> = {}): SearchPayload {
   return {
     query: 'todo', include: '', exclude: '', regex: false, matchCase: false, wholeWord: false,
-    state: 'done', message: '', rows: [match()], seed: 0, ...overrides,
+    state: 'done', message: '', rows: [match()], seed: 0, scope: '$root', ...overrides,
   };
 }
 

@@ -30,7 +30,9 @@ When an entry arrives while the menu is open, the highlighted action stays selec
 
 Bundled tab plugins may each contribute an entry to the default menu for a text selection. Two do: **Search for this**, offered by the search plugin, and **Chat about this**, offered by the conversations plugin, in that order. They appear only when the right-click resolves a selection — a DOM selection, an editor's own selection, or, in a terminal, the selection that terminal itself holds — and render together as one final group after Copy, Paste, and Paste from clipboard…, separated by a divider. Each plugin's manifest fixes its entry's label and its place in that group. A label that more than one plugin contributes is offered by none of them. Everything a second right-click sees is offered again from scratch, so a menu that closed without an entry carries nothing into the next one.
 
-**Search for this** opens the search tab, or focuses it when it is already open, puts the selected text in its search bar, and searches for it straight away, exactly as `search <selection>` would (see [[search-tab]]). The search tab is left focused.
+A contributed entry runs for the tab the selection is in: the tab whose body was right-clicked, or, for `Cmd+I`, the tab holding focus. When the selection is in no tab, it runs for the active tab.
+
+**Search for this** opens the search tab, or focuses it when it is already open, puts the selected text in its search bar, and searches for it straight away, exactly as `search <selection>` would (see [[search-tab]]). It searches the workspace of the tab the selection is in: a selection in a tab working in a workspace clone searches that clone, and one anywhere else searches the launch directory. The search tab is left focused.
 
 **Chat about this** runs the conversations plugin's own presentation (see [[conversations]]). `Cmd+I` on macOS, or `Ctrl+I` elsewhere, runs it directly for the current selection, without opening the menu. The shortcut belongs to Chat about this alone; it never runs Search for this.
 

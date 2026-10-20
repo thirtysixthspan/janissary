@@ -1,22 +1,25 @@
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { patternError } from './compile-matcher.js';
-import { filterPaths } from './filter-paths.js';
-import { splitLines } from './search-files.js';
-import { createMatcherWorker } from './matching-worker.js';
-import type { MatcherWorker } from './matcher-worker-protocol.js';
+import { patternError } from '../../search/compile-matcher.js';
+import { filterPaths } from '../../search/filter-paths.js';
+import { splitLines } from '../../search/search-files.js';
+import { createMatcherWorker } from '../../search/matching-worker.js';
+import {
+  SEARCH_BINARY_PREFIX_BYTES, SEARCH_MAX_FILE_BYTES, SEARCH_MAX_RESULTS,
+} from '../../search/types.js';
+import type { MatcherWorker } from '../../search/matcher-worker-protocol.js';
 import type { SearchMatch } from './shared.js';
 
 // The editor tab's own limit, restated rather than imported because a plugin may not reach host
 // internals across the import boundary. A match in a file the editor would refuse to open is a row
 // that cannot be acted on, and the two numbers are expected to stay equal.
-const MAX_BYTES = 2 * 1024 * 1024;
+export const MAX_BYTES = SEARCH_MAX_FILE_BYTES;
 
 // How many bytes are inspected for the binary test. A null byte in the first few kilobytes is the
 // same signal `grep` and `git grep` use, and checking a prefix rather than the whole file is what
 // keeps the refusal cheap enough to run on every candidate — at the cost of a file whose null byte
 // sits past the prefix being searched as text.
-const BINARY_PREFIX = 8192;
+const BINARY_PREFIX = SEARCH_BINARY_PREFIX_BYTES;
 
 // How many files one detection batch covers, and how many of them are read at once inside a batch.
 // Both bound how much of the repository a single `updateTab` represents and how many reads are open
@@ -27,7 +30,7 @@ const READ_CONCURRENCY = 8;
 // How many rows one search delivers before it settles. Enforced here rather than in the session,
 // because the scan is what reads the disk: a cap applied to the rows as they arrive would hide the
 // rest while the scan kept reading every file to the end.
-const MAX_RESULTS = 250;
+const MAX_RESULTS = SEARCH_MAX_RESULTS;
 
 export type ScanRead = (absPath: string) => Promise<string>;
 export type ScanQuery = {
@@ -54,6 +57,7 @@ export type ScanOptions = {
   // check, so a test asserting the size refusal has to state the size it means.
   readFile?: ScanRead;
   fileSize?: (absPath: string) => Promise<number | null>;
+  remoteSearch?: (request: ScanQuery) => Promise<SearchMatch[] | null>;
   createMatcher?: ScanMatcherFactory;
 };
 export type ScanHandle = { cancel(): void };
@@ -67,38 +71,19 @@ type Candidate = { relPath: string; absPath: string };
 // deleted since the list was taken. Each is a normal outcome, never a failure of the scan. A size
 // that cannot be read is treated as over the limit, so an unreadable file is skipped rather than
 // read and found to be enormous afterwards.
-async function readableText(
-  absPath: string, read: ScanRead, sizeOf: SizeLookup,
-): Promise<string | null> {
-  const bytes = await sizeOf(absPath);
-  if (bytes === null || bytes > MAX_BYTES) return null;
-  let text: string;
+async function readableText(candidate: Candidate, runtime: Runtime): Promise<string | null> {
+  const { absPath } = candidate;
+  let text: string | null;
   try {
-    text = await read(absPath);
+    const bytes = await runtime.sizeOf(absPath);
+    if (bytes === null || bytes > MAX_BYTES) return null;
+    text = await runtime.read(absPath);
   } catch {
     return null;
   }
+  if (text === null) return null;
   if (text.slice(0, BINARY_PREFIX).includes('\0')) return null;
   return text;
-}
-
-// Read `paths` with at most `limit` reads open at once, preserving input order in the results so a
-// batch's rows arrive in the order the file list gave.
-async function readAll(
-  paths: readonly string[], read: ScanRead, sizeOf: SizeLookup, limit: number,
-): Promise<(string | null)[]> {
-  const results: (string | null)[] = Array.from({ length: paths.length }, () => null);
-  let next = 0;
-  const worker = async () => {
-    while (next < paths.length) {
-      const index = next++;
-      const absPath = paths[index];
-      if (absPath === undefined) return;
-      results[index] = await readableText(absPath, read, sizeOf);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(limit, paths.length) }, worker));
-  return results;
 }
 
 function chunk<T>(items: readonly T[], size: number): T[][] {
@@ -118,40 +103,35 @@ type Runtime = {
   remaining: number;
 };
 
-// Phase two: turn every queued candidate into rows, one `onBatch` per file so the table fills
-// progressively. Aborted midway, the rows already delivered stand and the rest are dropped. A file
-// whose matches straddle the cap gives only the rows that fit, and the queue behind it is not read.
-async function deliver(queue: Candidate[], matcher: MatcherWorker, runtime: Runtime): Promise<void> {
-  const { options, read, sizeOf, signal } = runtime;
-  while (queue.length > 0 && runtime.remaining > 0) {
+// Check a batch with bounded read concurrency, but consume outcomes in path order. This lets a
+// resolved early match publish without waiting for every other file in the batch.
+async function scanBatch(batch: readonly Candidate[], matcher: MatcherWorker, runtime: Runtime): Promise<void> {
+  const { options, signal } = runtime;
+  const reads = new Map<number, Promise<string | null>>();
+  let next = 0;
+  const schedule = () => {
+    while (next < batch.length && reads.size < READ_CONCURRENCY) {
+      const index = next++;
+      const candidate = batch[index];
+      if (candidate !== undefined) reads.set(index, readableText(candidate, runtime));
+    }
+  };
+
+  schedule();
+  for (const [index, candidate] of batch.entries()) {
+    if (signal.aborted || runtime.remaining === 0) return;
+    const read = reads.get(index);
+    if (read === undefined) continue;
+    reads.delete(index);
+    schedule();
+    const text = await read;
     if (signal.aborted) return;
-    const candidate = queue.shift();
-    if (candidate === undefined) return;
-    const text = await readableText(candidate.absPath, read, sizeOf);
-    if (signal.aborted) return;
-    if (text === null) continue;
+    if (text === null || !await matcher.detect(splitLines(text))) continue;
     const matchedRows = await matcher.rows(candidate.relPath, text);
     const rows = matchedRows.slice(0, runtime.remaining);
     runtime.remaining -= rows.length;
     if (rows.length > 0) options.onBatch({ rows, done: false });
   }
-}
-
-// Phase one over one batch: read it and return the candidates that match at all.
-async function detect(
-  batch: readonly Candidate[], matcher: MatcherWorker, runtime: Runtime,
-): Promise<Candidate[]> {
-  const texts = await readAll(
-    batch.map((candidate) => candidate.absPath), runtime.read, runtime.sizeOf, READ_CONCURRENCY,
-  );
-  const found: Candidate[] = [];
-  for (const [offset, text] of texts.entries()) {
-    const candidate = batch[offset];
-    if (text === null || candidate === undefined) continue;
-    const matches = await matcher.detect(splitLines(text));
-    if (matches) found.push(candidate);
-  }
-  return found;
 }
 
 // The scan proper: list the project, then alternate between detecting which files in the next batch
@@ -163,19 +143,27 @@ async function run(runtime: Runtime): Promise<void> {
     options.onBatch({ rows: [], done: true });
     return;
   }
+  if (options.remoteSearch !== undefined) {
+    const remoteRequest = {
+      query: request.query, include: request.include, exclude: request.exclude,
+      regex: request.regex, matchCase: request.matchCase, wholeWord: request.wholeWord,
+    };
+    const rows = await options.remoteSearch(remoteRequest);
+    if (signal.aborted) return;
+    await options.listFiles();
+    if (!signal.aborted) options.onBatch({ rows: rows ?? [], done: true });
+    return;
+  }
   const matcher = runtime.createMatcher(request, signal);
   try {
     const listed = await options.listFiles();
     if (signal.aborted) return;
     const candidates: Candidate[] = filterPaths(listed.paths, request.include, request.exclude)
       .map((relPath) => ({ relPath, absPath: path.join(listed.root, relPath) }));
-    const pending: Candidate[] = [];
-
     for (const batch of chunk(candidates, BATCH_SIZE)) {
       if (signal.aborted) return;
       if (runtime.remaining === 0) break;
-      pending.push(...await detect(batch, matcher, runtime));
-      await deliver(pending, matcher, runtime);
+      await scanBatch(batch, matcher, runtime);
     }
 
     if (!signal.aborted) options.onBatch({ rows: [], done: true });

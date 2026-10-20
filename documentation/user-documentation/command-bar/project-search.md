@@ -16,6 +16,28 @@ There is only ever one search tab, titled `search`. Bare `search` opens it, or f
 
 While the tab stays open, it keeps your last query, its results, and the two file fields. So `Cmd+Shift+F` takes you back to where you left off. Closing the tab forgets all of that, and the next search tab starts empty. Only the three toggles carry over.
 
+## Search a workspace
+
+A search follows the tab you start it from. Choose **Search for this** on a selection, type `search` in a tab's command bar, or press `Cmd+Shift+F` while that tab is focused. If the tab works in a workspace, local or remote, the search covers that workspace instead of the launch directory:
+
+- a shell or harness tab that owns a workspace clone searches that clone
+- an agent monitor searches its run's workspace, even after the run ends
+- an editor showing a file from a clone searches that clone
+- a file navigator rooted in a clone searches that clone
+- the search tab itself keeps the workspace it already has
+
+Any other tab searches the launch directory.
+
+The header, left of the file fields, shows where the search is looking: `$root` for the launch directory, `$workspace/<name>` for a local clone, or the remote host followed by the path.
+
+There's still one search tab. Starting a search from a different workspace switches it there, and the new results replace the old ones. A bare `search` or `Cmd+Shift+F` from another workspace reruns your current query there. From the same workspace it just focuses the tab. If the query is empty, the old results are cleared and the tab shows `Type to search`. Your term history and file fields come along when the tab switches.
+
+If the workspace is still being created, or no longer exists, nothing opens. The notifications feed shows `Search: the workspace of "<name>" is not ready yet.` or `Search: the workspace of "<name>" is no longer available.`
+
+A remote workspace is searched on its host, and only matching rows come back over the connection. Its results appear together when the scan completes. While it searches there, the search tab keeps the remote session open, and lets it go when it switches to another workspace or closes. If the search tab can't connect to the remote workspace, you see the `no longer available` line and the tab stays where it was.
+
+When the workspace goes away, the search tab closes on its own, and any search still running stops. For a local clone, that happens when you close the last tab that owns it. For a remote workspace, it happens when the remote session ends, for example when you end it from the connections panel. Closing just the remote tab you searched from leaves the search tab open, because the search tab keeps the session going.
+
 ## Type a search
 
 The search bar sits at the bottom of the tab, with the prompt `search >`. Results update a moment after you stop typing, so you don't press `Return` to search. Emptying the bar clears the results and shows `Type to search`. A bar holding only spaces counts as empty.
@@ -40,7 +62,7 @@ With the search bar focused, `↑` steps back through the terms this tab has sea
 
 ## Choose which files to search
 
-The search covers every file under the directory the app was launched from that `.gitignore` doesn't exclude. That's the same set Quick open uses. Two kinds of file are skipped: files too large for the editor to open, and binary files.
+The search covers every file under the directory the app was launched from, or under the workspace it follows, that `.gitignore` doesn't exclude. That's the same set Quick open uses. Two kinds of file are skipped: files too large for the editor to open, and binary files.
 
 The **Files to include** and **Files to exclude** fields across the top narrow that set. Each takes glob patterns separated by commas, such as `*.md, docs`, and editing either one reruns the search.
 
@@ -52,7 +74,7 @@ An empty include searches everything, and an empty exclude removes nothing. When
 
 Each match gets its own entry. The entry has a dimmed header with the file's path and the line number, then the match with two lines of context above and two below. A thin rule separates one entry from the next. When the matching line is long enough to wrap, the entry shows the part of it around the match instead of the lines next to it.
 
-Results stack upward. The first match sits at the bottom of the window, just above the search bar, and later matches build up above it. Rows appear while the search is still running, and the window stays on the first match so nothing scrolls away while you read.
+Results stack upward. The first match sits at the bottom of the window, just above the search bar, and later matches build up above it. Local rows appear while the search is still running; remote rows appear together when the scan completes. The window stays on the first match so nothing scrolls away while you read.
 
 A search stops after 250 matches. There's no count of matches or files anywhere in the tab. The body shows `Searching…` while a search runs, and `No matches found for "<query>".` when one finishes with nothing.
 
@@ -67,5 +89,7 @@ If one matching step takes longer than one second, the search ends with an error
 With the results focused, `↑` moves up the window to a later match and `↓` moves down to an earlier one. They stop at the ends rather than wrapping. `Home` and `End` jump to the first and last match. Press `Return` to open the selected match, or double-click any entry.
 
 Opening a match puts the file in an [editor tab](/user-documentation/tab-types/editor) with the matching line centered. A file that's already open is focused rather than opened twice. The search tab stays open with its query and results, so you can open the next match without searching again.
+
+A match from a remote workspace opens a local copy of the file. Saving it writes your change back to the remote workspace.
 
 The search tab is a live view. It isn't restored.

@@ -11,6 +11,7 @@ import { openOverlayForChord, contributedOverlayOnScreen } from './shared/contri
 import { isTabSwitchChord } from './shared/terminal/window-chords';
 import { appChordAction, type AppChordAction } from './shared/app-chords';
 import type { PluginChordRegistry } from './plugins/PluginChords';
+import { enclosingTabLabel } from './shared/tab-label-lookup';
 import type { PickerKeySnapshot, PickerKeyCallbacks } from './pickers/picker/key-bindings';
 
 // Every overlay-owned field comes from `pickers/picker-key-bindings`, where the hook that owns the
@@ -131,7 +132,8 @@ function metaChordOpener(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): 
   case undefined: { return false; }
   case 'projectSearch': {
     e.preventDefault();
-    cb.runCommand('search');
+    const tab = enclosingTabLabel(e.target);
+    if (tab) cb.runCommand('search', tab); else cb.runCommand('search');
     return true;
   }
   case 'editorSearch': { return false; }
@@ -165,12 +167,12 @@ function exhaust(action: AppChordAction | undefined): never {
 // without the core chord, but a plugin tab the user is looking at would otherwise have the key do
 // nothing at all there.
 // The plugin tab a chord was pressed in: the labelled tab around the focused element, or the current
-// plugin tab when focus rests on the page itself. Focus inside an element no plugin tab encloses —
-// a harness tab's command bar — names no tab, so the application keeps the chord.
+// plugin tab when focus rests on the page itself. Focus inside a core tab — a harness tab's command
+// bar, say — names that core tab, which no plugin claims, so the application keeps the chord.
 function chordTabLabel(target: EventTarget | null, snap: StateSnapshot): string | undefined {
   const focusOnPage = !(target instanceof Element) || target === document.body || target === document.documentElement;
   if (focusOnPage) return snap.currentPluginTab;
-  return target.closest<HTMLElement>('[data-tab-label]')?.dataset.tabLabel;
+  return enclosingTabLabel(target);
 }
 
 function handleChordKeys(

@@ -9,6 +9,7 @@ import type { PasteManyResult } from '../../file-navigator/paste.js';
 import type { CommitResult } from '../../git/commit.js';
 import type { HistoryStep } from '../../file-navigator/moves.js';
 import { isChangeSetResult, type ChangeSetResult } from '../../plugins/diff/change-set.js';
+import type { SearchMatch } from '../../search/types.js';
 
 export const decodeResult = <R>(check: (value: unknown) => value is R) => (value: unknown): R => {
   if (!check(value)) throw new Error('Invalid remote filesystem operation result.');
@@ -19,6 +20,10 @@ const record = (value: unknown): value is Record<string, unknown> => typeof valu
   && value !== null && !Array.isArray(value);
 const strings = (value: unknown): value is string[] => Array.isArray(value)
   && value.every((item: unknown) => typeof item === 'string');
+const searchMatches = (value: unknown): value is SearchMatch[] => Array.isArray(value)
+  && value.every((item: unknown) => record(item) && typeof item.path === 'string'
+    && typeof item.line === 'number' && strings(item.above) && typeof item.match === 'string'
+    && typeof item.start === 'number' && typeof item.end === 'number' && strings(item.below));
 const emptyObject = (value: unknown): value is Record<string, never> => record(value) && Object.keys(value).length === 0;
 const result = (value: unknown): value is Record<string, unknown> & { ok: boolean } => record(value) && typeof value.ok === 'boolean';
 const batch = (value: unknown): value is Record<string, unknown> => record(value)
@@ -46,6 +51,7 @@ export const resultDecoders = {
   'git-commit': decodeResult<CommitResult>((value): value is CommitResult => record(value)
     && (value.committed === false || (value.committed === true && typeof value.summary === 'string'))),
   search: decodeResult<string[]>(strings),
+  'search-text': decodeResult<SearchMatch[]>(searchMatches),
   'read-file': decodeResult<{ content: string }>((value): value is { content: string } => record(value) && typeof value.content === 'string'),
   'write-file': decodeResult<FileOperationResult>((value): value is FileOperationResult => result(value)
     && (value.ok ? !Object.hasOwn(value, 'value') || value.value === undefined : typeof value.reason === 'string')),

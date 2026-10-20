@@ -40,6 +40,9 @@ describe('RemoteFileNavigators', () => {
     expect(await request('read-directory', { path: 'src' })).toMatchObject({ result: [{ name: 'a.txt', dir: false }] });
     expect(await request('stat', { paths: ['src/a.txt'] })).toMatchObject({ result: { 'src/a.txt': expect.any(Object) } });
     expect(await request('search', {})).toMatchObject({ result: ['src/a.txt'] });
+    expect(await request('search-text', {
+      root: '', query: 'world', include: 'src/**', exclude: '', regex: false, matchCase: false, wholeWord: false,
+    })).toMatchObject({ result: [{ path: 'src/a.txt', line: 2, match: 'world', start: 0, end: 5 }] });
     expect(await request('read-file', { path: 'src/a.txt' })).toMatchObject({ result: { content: Buffer.from('héllo\nworld').toString('base64') } });
     await request('write-file', { path: 'src/a.txt', content: Buffer.from('changed').toString('base64') });
     expect(readFileSync(path.join(root, 'src', 'a.txt'), 'utf8')).toBe('changed');

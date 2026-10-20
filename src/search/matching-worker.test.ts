@@ -40,10 +40,10 @@ const modes = { regex: false, matchCase: false, wholeWord: false };
 
 describe('matcher worker adapter', () => {
   it('uses matching worker entries beside source and compiled modules', () => {
-    expect(workerEntry('file:///repo/src/plugins/search/matching-worker.ts').pathname)
-      .toBe('/repo/src/plugins/search/matcher-worker-entry.ts');
-    expect(workerEntry('file:///repo/dist/plugins/search/matching-worker.js').pathname)
-      .toBe('/repo/dist/plugins/search/matcher-worker-entry.js');
+    expect(workerEntry('file:///repo/src/search/matching-worker.ts').pathname)
+      .toBe('/repo/src/search/matcher-worker-entry.ts');
+    expect(workerEntry('file:///repo/dist/search/matching-worker.js').pathname)
+      .toBe('/repo/dist/search/matcher-worker-entry.js');
   });
 
   it('terminates on a job deadline, settles all pending jobs, and ignores late replies', async () => {

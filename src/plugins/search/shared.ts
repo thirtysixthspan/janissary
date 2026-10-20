@@ -1,4 +1,7 @@
-export const SEARCH_PAYLOAD_SCHEMA_VERSION = 1;
+import type { SearchMatch as CoreSearchMatch, SearchRequest } from '../../search/types.js';
+
+export const SEARCH_PAYLOAD_SCHEMA_VERSION = 2;
+export type SearchMatch = CoreSearchMatch;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -8,18 +11,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 // needs nothing from its neighbours, and the block of text around the match. `above` and `below`
 // hold the two context lines either side and are shorter than two when the match sits near the start
 // or end of a file — they are clipped, never padded.
-export type SearchMatch = {
-  path: string;
-  line: number;
-  above: string[];
-  match: string;
-  // Where the line's first match sits in `match`, as UTF-16 offsets, `end` exclusive. The client
-  // needs it to find which wrapped display line holds the match, which only the browser can measure.
-  start: number;
-  end: number;
-  below: string[];
-};
-
 // `searching` while a scan runs, `done` once it settles, `error` when it fails. The rows already
 // delivered stay on screen through all three, so a scan that fails partway keeps what it found.
 export type SearchState = 'searching' | 'done' | 'error';
@@ -39,9 +30,14 @@ export type SearchPayload = {
   // user's own editing surface, so the client adopts `query` only when this changes — an echo of a
   // search the client started itself must never overwrite what is being typed.
   seed: number;
+  // The display root of the workspace the rows came from: `$root` for the launch directory, or the
+  // workspace's own display form.
+  scope: string;
+  // The remote host the scope is on; absent for the launch directory and a local workspace.
+  host?: string;
 };
 
-export type SearchIntent = { query: string; include: string; exclude: string; regex: boolean; matchCase: boolean; wholeWord: boolean };
+export type SearchIntent = SearchRequest;
 export type OpenIntent = { path: string; line: number };
 
 function isStringArray(value: unknown): value is string[] {
@@ -71,7 +67,9 @@ export function isSearchPayload(value: unknown): value is SearchPayload {
     && typeof value.message === 'string'
     && Array.isArray(value.rows)
     && value.rows.every((row) => isMatch(row))
-    && typeof value.seed === 'number';
+    && typeof value.seed === 'number'
+    && typeof value.scope === 'string'
+    && (value.host === undefined || typeof value.host === 'string');
 }
 
 export function isSearchIntent(value: unknown): value is SearchIntent {

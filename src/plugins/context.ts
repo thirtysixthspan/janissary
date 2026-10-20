@@ -13,11 +13,9 @@ import {
 } from './api.js';
 import type { PluginFailureOrigin } from './failure.js';
 import type { HandlerDeadline } from './guard.js';
-import { projectFilesFor } from '../project/files.js';
 import { HARNESS_NAMES } from '../harness/index.js';
 import { modelsFor } from '../harness/models.js';
 import { EFFORT_LEVELS } from '../harness/effort-levels.js';
-import { isInsideRoot } from './files.js';
 import { readPluginSettings, savePluginSettings } from './settings.js';
 import { liveRecordingPaths } from './live-recordings.js';
 import { emptyTopicData, readTopicData, runTopicAction } from './topics.js';
@@ -26,10 +24,12 @@ import { lineCapabilities } from './line-capabilities.js';
 import { acpCapabilities } from './acp-capabilities.js';
 import { launchCapabilities, type DeferredPluginCall } from './launch-tab.js';
 import { remoteCapabilities } from './remote-capabilities.js';
+import { remoteJoinCapabilities } from './remote-join-capabilities.js';
 import { ownTabCapabilities } from './own-tab-capabilities.js';
+import { projectCapabilities } from './project-capabilities.js';
 import { isPluginSettings, validateTabValue } from './tab-value.js';
 import { tabActivityRows } from './activity.js';
-import { withRunAllocation, withRunAllocationAsync } from './run-allocation.js';
+import { withRunAllocation } from './run-allocation.js';
 import { queueCapabilities } from './queue-capabilities.js';
 import { updateTabCapability } from './update-tab-capability.js';
 
@@ -150,13 +150,6 @@ export function createPluginContext(
       if (!isEnabled()) return;
       openRequests.push(target);
     },
-    // The same gitignore-aware file list the `projectFiles` RPC already serves to Quick Open, so a
-    // plugin that scans the repository cannot drift from the set Quick Open searches. The root comes
-    // back alongside the paths because a relative path is not a path a plugin can open without it.
-    projectFileList: () => {
-      if (!isEnabled()) return Promise.resolve({ root: '', paths: [] });
-      return projectFilesFor(managers);
-    },
     // The harness launch vocabulary: the model catalog the launcher dialog reads, plus the effort
     // levels. Built fresh per call from the already-loaded catalog (a project's
     // `.janissary/harness-models.json` override is reflected), and empty while the plugin is
@@ -167,35 +160,6 @@ export function createPluginContext(
         : {},
       efforts: [...EFFORT_LEVELS],
     }),
-    // Opens a file in an editor tab with the cursor on `line`, through the ordinary `edit` pipeline —
-    // so the tab is de-duplicated, the line is centered, and the file is served by the same
-    // authenticated `/open/<id>` allow-list as any other editor open. Deliberately not
-    // `openClaimedFiles`, which is pinned to the plugin's own extensions and cannot express a line.
-    //
-    // A path outside the launch directory is refused. The capability is this plugin's whole reach
-    // over the filesystem, so the boundary belongs here rather than in each plugin that asks: a
-    // plugin holding one could otherwise name any path on the machine and have it opened and served.
-    openInEditor: (absPath, line) => {
-      if (!isEnabled() || !isInsideRoot(managers.tab.launchDir, absPath)) return;
-      if (origin.runId && managers.agent.isAgentRun(origin.runId)) {
-        void withRunAllocationAsync(managers, origin.runId, async (registerTab) => {
-          if (!isEnabled()) return;
-          await managers.openFile.editForCommand(
-            `${declaration.id} ${absPath}:${line}`, absPath, origin.label, line, origin.runId, registerTab,
-          );
-        });
-        return;
-      }
-      withRunAllocation(managers, origin.runId, (registerTab) => {
-        if (origin.runId) {
-          managers.openFile.edit(
-            `${declaration.id} ${absPath}:${line}`, absPath, origin.label, line, origin.runId, registerTab,
-          );
-        } else {
-          managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line);
-        }
-      });
-    },
     topicData: (topic) => {
       requireDeclaredTopic(declaration, topic);
       return isEnabled() ? readTopicData(managers, topic) : emptyTopicData(topic);
@@ -218,7 +182,9 @@ export function createPluginContext(
     // moved out whole because they depend on nothing here beyond what they are handed.
     ...lineCapabilities({ managers, declaration, origin, answeringLabel, isEnabled, deadline }),
     ...queueCapabilities({ managers, declaration, origin, answeringLabel, isEnabled, deadline }),
-    ...remoteCapabilities({ managers, originLabel: origin.label, answeringLabel, isEnabled }),
+    ...remoteCapabilities({ managers, originLabel: origin.label, answeringLabel, declaration, isEnabled }),
+    ...remoteJoinCapabilities({ managers, declaration, isEnabled }),
+    ...projectCapabilities({ managers, declaration, origin, isEnabled }),
     ...acpCapabilities({ managers, declaration, origin, answeringLabel, isEnabled, deadline }),
     rejectRequest: (reason) => {
       throw new TabPluginRejection(reason);
