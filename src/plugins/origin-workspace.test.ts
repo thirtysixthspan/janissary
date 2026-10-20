@@ -38,6 +38,16 @@ describe('originWorkspace', () => {
     });
   });
 
+  it('answers a local shell plugin clone with its label and display form', () => {
+    const dir = '/repo/.janissary/workspace/demir';
+    expect(originWorkspace(managersWith({}), tab({
+      view: 'plugin', plugin: { id: 'shell' } as Tab['plugin'], workspaceDir: dir,
+    }))).toEqual({
+      workspace: { dir, offline: false, label: 'demir', display: '$workspace/demir' },
+      provisioning: false,
+    });
+  });
+
   it('answers a remote harness from its channel, riding itself on its host', () => {
     const managers = managersWith({ h1: { dir: '/srv/work/claude-2', label: 'claude-2' } });
     expect(originWorkspace(managers, tab({ label: 'h1', view: 'harness', remote }))).toEqual({

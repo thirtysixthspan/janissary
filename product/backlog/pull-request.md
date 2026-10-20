@@ -2,6 +2,3 @@
 
 # pull-request
 
-* open a workspaced shell locally `shell`, `seach foo` or click search from this locally and the plugin disables.
-
-

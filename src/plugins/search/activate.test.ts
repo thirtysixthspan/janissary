@@ -541,6 +541,26 @@ describe('search plugin workspace scope', () => {
     expect(payload.rows.map((row) => row.match)).toEqual(['todo in the clone']);
   });
 
+  it('searches a local workspaced shell clone from both the command and default menu', async () => {
+    const shell = {
+      label: 'shell-2', view: 'plugin', plugin: 'shell', workspace: clone,
+    };
+    const { capabilities, updateTab } = scoped({ current: shell });
+    const activation = searchActivation(contents);
+
+    activation.command?.('todo', capabilities);
+    await settle();
+    expect(roots()).toEqual(['/repo/clone']);
+    expect(lastPayload(updateTab)).toMatchObject({
+      scope: '$workspace/claude-2', rows: [{ match: 'todo in the clone' }], state: 'done',
+    });
+
+    await activation.defaultMenuAction?.('todo', capabilities);
+    await settle();
+    expect(roots()).toEqual(['/repo/clone', '/repo/clone']);
+    expect(lastPayload(updateTab).scope).toBe('$workspace/claude-2');
+  });
+
   it('reruns the current request on a bare search from another scope, and only focuses from the same', async () => {
     const origin = { current: null as unknown };
     const { capabilities, openOrFocusTab } = scoped(origin);
