@@ -2,6 +2,7 @@ import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import { TAB_RENAME_MAX_LENGTH } from '../tab/rename-limits.js';
 import { notify } from '../notifications/index.js';
+import { retargetRemoteFile } from './remote-rename.js';
 import { renameEditorTab } from '../tab/rename-editor.js';
 
 // Rename an editor tab's file, addressed by the tab's `/open/<id>` ref the way saveFile is.
@@ -17,6 +18,7 @@ export function renameEditorFile(managers: Managers, url: string, name: string):
     (reference, absPath) => managers.tab.replaceFile(reference, absPath),
     (label, filePath) => managers.editorWatch.watch(label, filePath),
     (filePath) => managers.shellTranscript.isWriting(filePath),
+    (oldPath, newPath) => retargetRemoteFile(managers, oldPath, newPath),
   );
   if (refusal) notify(managers, 'file-operation', tab.label, refusal);
   messageBus.emit('state', { type: 'dirty' });
