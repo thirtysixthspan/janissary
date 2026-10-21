@@ -50,6 +50,7 @@ export function renameEditorTab(
   replaceFile: (reference: string, absPath: string) => string,
   rewatch: (label: string, filePath: string) => void,
   isWriting: (filePath: string) => boolean,
+  onRenamed?: (oldPath: string, newPath: string) => void,
 ): string | undefined {
   const editor = tab.editor;
   if (!editor) return undefined;
@@ -62,5 +63,6 @@ export function renameEditorTab(
   tab.editor = { ...editor, path: newPath, name: trimmed, url: replaceFile(editor.url, newPath) };
   tab.title = trimmed;
   rewatch(tab.label, newPath);
+  onRenamed?.(editor.path, newPath);
   return undefined;
 }

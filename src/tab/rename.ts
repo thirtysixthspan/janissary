@@ -15,6 +15,7 @@ export function renameTabOp(
   replaceFile: (reference: string, absPath: string) => string,
   watchEditor: (label: string, filePath: string) => void,
   isWriting: (filePath: string) => boolean,
+  onRenamed?: (oldPath: string, newPath: string) => void,
 ): string | undefined {
   const tab = tabs[index];
   if (!tab) return undefined;
@@ -23,7 +24,7 @@ export function renameTabOp(
     return RESERVED_SYSTEM_LABEL_REFUSAL;
   }
   if (tab.editor) {
-    const refusal = renameEditorTab(tab, title, maxLength, replaceFile, watchEditor, isWriting);
+    const refusal = renameEditorTab(tab, title, maxLength, replaceFile, watchEditor, isWriting, onRenamed);
     messageBus.emit('state', { type: 'dirty' });
     return refusal;
   }

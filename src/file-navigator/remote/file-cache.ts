@@ -51,6 +51,17 @@ export function remoteFileFor(file: string): RemoteFileRecord | undefined {
   return records.get(path.resolve(file));
 }
 
+// Follow a cached remote file to its new local name: the record moves to `newFile` and now names the
+// renamed remote path, so a save of the renamed file still writes back to the remote.
+export function retargetRemoteFileRecord(oldFile: string, newFile: string): void {
+  const record = records.get(path.resolve(oldFile));
+  if (!record) return;
+  records.delete(path.resolve(oldFile));
+  records.set(path.resolve(newFile), {
+    ...record, relPath: path.posix.join(path.posix.dirname(record.relPath), path.basename(newFile)),
+  });
+}
+
 // Whether `file` is a cached copy of a remote file, whether or not the navigator it came from is
 // still open — the cache holds nothing else. A cached copy with no record is orphaned: it has no
 // route back to its remote, so it must not be saved or committed as if it were a local file.

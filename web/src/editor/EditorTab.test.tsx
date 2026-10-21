@@ -1374,6 +1374,7 @@ describe('EditorTab', () => {
     it('does not scroll the body, since the caret has not moved', async () => {
       const { client } = makeClient();
       await renderLoaded(client);
+      await act(async () => {});
       const scrollIntoView = vi.mocked(Element.prototype.scrollIntoView);
       scrollIntoView.mockClear();
       paste('alpha\nbeta\ngamma');

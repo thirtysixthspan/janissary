@@ -5,6 +5,7 @@ import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';
 import { closeTabOp } from './close.js';
 import { renameTabOp } from './rename.js';
+import { retargetRemoteFile } from '../editor/remote-rename.js';
 import { applyDock } from './dock.js';
 import { insertTabInGroup } from './utils.js';
 import { setActiveTabOp, moveTabOp, reorderTabOp, reorderTabToOp } from './navigation-commands.js';
@@ -115,7 +116,7 @@ export function closeTab(port: TabOperationsPort, index: number): Promise<void> 
 }
 
 export function renameTab(port: TabOperationsPort, index: number, title: string): string | undefined {
-  const refusal = renameTabOp(port.tabs, index, title, TAB_RENAME_MAX_LENGTH, (reference, path) => port.replaceFile(reference, path), (label, path) => port.managerServices.editorWatch.watch(label, path), (path) => port.managerServices.shellTranscript.isWriting(path));
+  const refusal = renameTabOp(port.tabs, index, title, TAB_RENAME_MAX_LENGTH, (reference, path) => port.replaceFile(reference, path), (label, path) => port.managerServices.editorWatch.watch(label, path), (path) => port.managerServices.shellTranscript.isWriting(path), (oldPath, newPath) => retargetRemoteFile(port.managerServices, oldPath, newPath));
   const label = port.tabs[index]?.label;
   if (refusal && label) notify(port.managerServices, 'file-operation', label, refusal);
   return refusal;

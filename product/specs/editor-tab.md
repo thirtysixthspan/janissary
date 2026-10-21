@@ -204,6 +204,10 @@ Saving a file opened from a remote navigator uses the same guarantee on the remo
 existing bytes and permission bits remain in place if the replacement fails, and the local cache,
 draft, and saved indicator advance only after the remote write succeeds.
 
+Renaming such an editor's file, including naming a new file just created from a remote navigator,
+renames the file on the remote host too, and later saves write to the renamed remote file. If the
+remote refuses the rename, a notification reports it.
+
 ### Live draft sync
 
 As the buffer changes, the editor keeps the server updated with the current in-progress content
