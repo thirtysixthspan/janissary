@@ -33,7 +33,7 @@ Settled with the user:
 
 Decided while verifying the plan against the code:
 
-- **A banner with no sound sends no cue name.** An ambient type set to `{ "desktop": true, "sound": "none" }` has no cue at all, so `category` on the wire becomes optional: it is present exactly when a cue will play, and `volume` is `0` whenever it's absent. Sending some placeholder cue at volume `0` was rejected because the field would then name a sound that was never chosen.
+- **A banner with no sound sends no cue name.** A type set to `{ "desktop": true, "sound": "none" }` has no cue at all, so `category` on the wire becomes optional: it is present exactly when a cue will play, and `volume` is `0` whenever it's absent. Sending some placeholder cue at volume `0` was rejected because the field would then name a sound that was never chosen. The client does not create audio or advance its one-second bell throttle for such a banner.
 - **One defaults table, keyed by the whole event union.** The defaults live in one `Record<NotificationEventType, …>` table, so a new event type stops compiling until it has a default, the same guard `EXPLICIT_EVENTS` gives in `src/notifications/index.ts` ("Keyed by the union so an eighteenth event stops compiling here"). It replaces `CATEGORIES` rather than sitting beside it, so the event-to-cue mapping keeps a single definition.
 
 Established by existing behavior:
@@ -123,6 +123,7 @@ The early return before audio playback also returns when `category` is absent, a
 - `src/notifications/native.test.ts`:
   - Replace the mute half of "respects both master switches and category volume and mute" with alert-driven cases: `file-operation` set to `{ desktop: false, sound: 'none' }` emits nothing while the notification still reaches the queue; `question` set to `{ desktop: true, sound: 'error' }` emits `category: 'error'` at the error volume; `osNotifications: false` suppresses a `desktop: true` entry, and `terminalBell: false` suppresses a configured cue.
   - Ambient: with the default config, `state-change` from a background tab with its toggle on emits nothing; with an entry `{ desktop: true, sound: 'success' }` it emits; with `{ desktop: true, sound: 'none' }` it emits `desktop: true`, `volume: 0`, and no `category`. A replayed `auto-approve` still emits nothing even when its entry is configured.
+  - Direct regression cases pin the separation between queueing and native-alert delivery: with `osNotifications` off, an opted-in banner stays silent while the notification remains queued; with an ambient feed toggle on and its alert entry left at defaults, the event remains queued without a native alert. The separately configured ambient alert case covers the opt-in path.
   - Replace "classifies every explicit event and no ambient event" with a check on `NOTIFICATION_ALERT_DEFAULTS`: every key of `EXPLICIT_EVENTS` has `desktop: true` and a cue other than `none`, every key of `AMBIENT_EVENTS` has `desktop: false` and `none`, plus the existing spot checks (`plugin-failure` error, `harness-idle` warning, `system-schedule-fire` warning, `manual` success).
 - `src/notifications/index.test.ts`: the `allOn` and `allOff` literals are typed `NotificationConfig` and gain `alerts: NOTIFICATION_ALERT_DEFAULTS`.
 - `src/notifications/system-schedule.integration.test.ts`: the `updateConfig({ notifications: { events: … } })` call in "does not queue, record, toast, or alert when the system schedule toggle is disabled" spreads the loaded `notifications` first, so it still type-checks with `alerts` required.
@@ -137,10 +138,12 @@ The early return before audio playback also returns when `category` is absent, a
 - No per-type volume. Volume stays per cue.
 - No control over the in-app toast, the feed, or the record file. The `alerts` map governs the desktop banner and the sound only; which events reach the feed is still decided by `notifications.events` and focus suppression.
 - No per-tab settings. An entry applies to its type in every tab.
+- Suppressing a native banner or sound does not suppress the notification queue, feed, record, or toast.
 
 ## Verification
 
 - `$janissary/scripts/run.mjs check-diff`, which goes green once the whole change is in (see the note at the top of Proposed changes).
+- Direct regression coverage confirms that disabling the desktop master or leaving an opted-in ambient event at its default alert settings suppresses native delivery while preserving queue delivery.
 - Manual, fresh file: launch against an empty scratch directory and confirm `.janissary/config.json` lists all 29 types under `notifications.alerts`, alphabetically, with today's cues and the four ambient types off.
 - Manual, upgrade: delete `alerts` from that file, leave a hand-added key and a changed `notifications.events` toggle in it, restart, and confirm `alerts` is back with every default while the hand-added key and the toggle are untouched.
 - Manual, per-type treatment: grant the browser notification permission, put the Janissary window behind another app, and run `notify hello` from a tab. Confirm a banner and the success cue. Set `"manual": { "desktop": false, "sound": "warning" }`, restart, run it again, and confirm there is no banner and the warning cue plays. Set it to `{ "desktop": true, "sound": "none" }`, restart, and confirm a silent banner. In every case the feed line and toast appear as before.
