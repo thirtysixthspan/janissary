@@ -54,7 +54,7 @@ export function HarnessTabLayer({
         gridRow: 2,
       }}
     >
-      <HarnessTab harness={t.harness} client={client} cwd={t.cwd} cwdDisplay={t.cwdDisplay} flags={t.flags} remote={t.remote} label={t.label}
+      <HarnessTab harness={t.harness} client={client} cwd={t.cwd} cwdDisplay={t.cwdDisplay} workspaceDir={t.workspaceDir} flags={t.flags} remote={t.remote} label={t.label}
         active={isActive}
         taskPickerOpen={!!taskPickerOpen && isActive}
         navOpen={!!navOpen && isActive}

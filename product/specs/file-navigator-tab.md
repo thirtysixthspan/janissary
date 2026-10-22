@@ -458,8 +458,11 @@ harness, exactly as if it had been typed there, without moving anything on disk.
 submitted: the paths arrive as text, and the harness sees them at whatever prompt it is showing.
 
 A harness terminal is a command line, so the paths take the same form a command-bar drop uses
-rather than the editor's — separated by single spaces, each one relative to the harness tab's own
-working directory, and, for a remote tree, written as `<host>:<absolute-remote-path>`. Paths are
+rather than the editor's — separated by single spaces. A local path is anchored with the same
+shortcuts the metadata row uses: `$workspace/<clone-name>/…` when the file is inside that harness
+tab's own workspace clone, and otherwise `$root/…` (or the `~` / absolute form where the tree's
+root is not under `$root`). A path no longer depends on which tab is active or on the harness's
+working directory. For a remote tree, a path is written as `<host>:<absolute-remote-path>`. Paths are
 inserted exactly as computed, never quoted, even when one contains spaces. Newlines are never used
 as a separator here, since each one would submit the path before it to the harness as a command.
 

@@ -24,7 +24,7 @@ import { FileNavigatorRows } from './FileNavigatorRows';
 
 export function FileNavigatorTab({
   files, client, index, label, dock, autoFocus = true, dropRef,
-  targetCwd = files.absoluteRoot, onSplit, multiOpen,
+  onSplit, multiOpen,
 }: Properties) {
   const intents = useFileNavigatorIntents(client, index);
   const selection = useFileNavigatorSelection(files.rows, files.absoluteRoot, index, files.restore);
@@ -34,7 +34,6 @@ export function FileNavigatorTab({
   const drag = useFileNavigatorDrag(files.rows, client, label, {
     absoluteRoot: files.absoluteRoot,
     displayRoot: files.root,
-    targetCwd,
     dropRef,
     remoteHost: files.remote?.host,
   });

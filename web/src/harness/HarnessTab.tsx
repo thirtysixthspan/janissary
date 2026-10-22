@@ -13,7 +13,7 @@ import { useHarnessPtyDrop } from './useHarnessPtyDrop';
 import { ptyActions } from '../shared/terminal/pty-actions';
 
 type Properties = {
-  harness: HarnessView; client: JanusClient; taskPickerOpen?: boolean; navOpen?: boolean; cwd?: string; cwdDisplay?: string; flags?: string[]; remote?: RemoteTargetView; label: string;
+  harness: HarnessView; client: JanusClient; taskPickerOpen?: boolean; navOpen?: boolean; cwd?: string; cwdDisplay?: string; workspaceDir?: string; flags?: string[]; remote?: RemoteTargetView; label: string;
   connectionsButton?: StatusWindowButtonProps; scheduleButton?: StatusWindowButtonProps;
   active?: boolean;
   onSplit?: () => void;
@@ -33,7 +33,7 @@ function harnessKeyFilter(e: KeyboardEvent, taskPickerOpen: boolean, navOpen: bo
 // (Ctrl+Shift+V and Cmd+Shift+V), and every key while either picker overlay is open over this tab (Up/Down/Left/Right/
 // Enter/Escape must reach the picker instead of the PTY), which all bubble to the window handler.
 export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function HarnessTab({
-  harness, client, taskPickerOpen, navOpen, cwd, cwdDisplay, flags, remote, label, connectionsButton, scheduleButton,
+  harness, client, taskPickerOpen, navOpen, cwd, cwdDisplay, workspaceDir, flags, remote, label, connectionsButton, scheduleButton,
   active, onSplit,
 }, ref) {
   const hostReference = useRef<HTMLDivElement>(null);
@@ -52,7 +52,7 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
 
   // A tab still provisioning has no PTY to write to, so the drop marker below is left off its body.
   const ptyId = harness.ptyId;
-  useHarnessPtyDrop(ptyId, client, focusTerm);
+  useHarnessPtyDrop(ptyId, client, focusTerm, workspaceDir);
 
   // A workspaced tab, local or remote: the clone either lands here or has already landed there, and
   // either way it is the workspace the diff button opens.

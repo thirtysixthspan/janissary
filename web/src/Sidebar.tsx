@@ -23,7 +23,7 @@ export const DEFAULT_WIDTH_PX = 300;
 // can drive it too — see `useLayoutState`), resized by dragging either the gutter button
 // or the border divider on the sidebar's inner edge.
 export function Sidebar({
-  side, tabs, client, dropRef, targetCwd,
+  side, tabs, client, dropRef,
   pickerOverlays, pickerSourceTab,
   tabNameMaxLength = 16, activeTabNameMaxLength = 50,
   width = DEFAULT_WIDTH_PX, onWidthChange, focusView, onNotificationsVisibilityChange,
@@ -34,7 +34,6 @@ export function Sidebar({
   // The active tab's command-bar drop handle, threaded down to a docked `FileNavigatorTab` so a drag
   // can find and insert into that tab's command bar. See `App.tsx`'s `dropRef`.
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
-  targetCwd?: string;
   tabNameMaxLength?: number;
   activeTabNameMaxLength?: number;
   width?: number;
@@ -99,8 +98,7 @@ export function Sidebar({
         {current && isFilesTabView(current.tab) && (
           <FileNavigatorTab
             files={current.tab.files} client={client} index={current.index} label={current.tab.label} dock={current.tab.dock} autoFocus={false}
-            dropRef={dropRef} targetCwd={targetCwd ?? current.tab.cwd}
-            multiOpen={multiOpenablePaths}
+            dropRef={dropRef}            multiOpen={multiOpenablePaths}
           />
         )}
         {current?.tab.view === 'notifications' && (

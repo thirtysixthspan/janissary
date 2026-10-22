@@ -75,6 +75,9 @@ export type TabView = {
   // clones alike (see buildTabView). Undefined when the working directory is not the tab's own
   // workspace or a dir inside it — ordinary tabs render `cwd` as before.
   cwdDisplay?: string;
+  // Absolute directory of this tab's local workspace clone, present only for a local workspaced tab.
+  // A file-navigator drop onto a harness reads it to type `$workspace/<name>/…` paths.
+  workspaceDir?: string;
   // Identifiers of this tab's currently-active flags ('provisioning' or 'workspaced', 'autoApprove'
   // or 'autoApproved', 'autoResume' or 'autoResuming', 'browser' or 'browserInUse'), for the metadata
   // row's flag display. Empty when none are active.

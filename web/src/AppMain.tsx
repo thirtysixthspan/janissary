@@ -73,7 +73,6 @@ export function AppMain({
     <AppShell
       tabs={tabs} client={client} dropRef={dropRef} tabNameMaxLength={tabNameMaxLength}
       notificationsVisible={current?.view === 'notifications'}
-      targetCwd={current?.cwd}
       activeTabNameMaxLength={activeTabNameMaxLength}
       sidebarLeftWidth={sidebarLeftWidth} onSidebarLeftWidthChange={setSidebarLeftWidth}
       sidebarRightWidth={sidebarRightWidth} onSidebarRightWidthChange={setSidebarRightWidth}

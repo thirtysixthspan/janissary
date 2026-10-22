@@ -1,25 +1,33 @@
 import { describe, expect, it } from 'vitest';
 import {
-  joinCommandPaths, joinDropFileNames, joinEditorPaths, relativeNavigatorPath, remoteNavigatorPath,
+  joinDropFileNames, joinEditorPaths, joinHarnessPaths, remoteNavigatorPath,
 } from './navigator-relative-path';
 
-describe('relativeNavigatorPath', () => {
-  it.each([
-    ['/work', 'src/a.ts', '/work', 'src/a.ts'],
-    ['/work/project', 'a.ts', '/work', 'project/a.ts'],
-    ['/work', 'src/a.ts', '/work/project', '../src/a.ts'],
-    ['/work/one', 'a.ts', '/work/two', '../one/a.ts'],
-    ['/work', '', '/work', '.'],
-  ])('maps %s and %s from %s', (root, source, cwd, expected) => {
-    expect(relativeNavigatorPath(root, source, cwd)).toBe(expected);
+describe('joinHarnessPaths', () => {
+  it('joins paths under the display root in source order', () => {
+    expect(joinHarnessPaths('/work', '$root', ['a.ts', 'src/b.ts'])).toBe('$root/a.ts $root/src/b.ts');
   });
 
-  it('joins multiple paths in source order', () => {
-    expect(joinCommandPaths('/work', ['a.ts', 'src/b.ts'], '/work')).toBe('a.ts src/b.ts');
+  it('tolerates trailing slashes on the roots', () => {
+    expect(joinHarnessPaths('/work/', '$root/', ['a.ts'])).toBe('$root/a.ts');
+  });
+
+  it('anchors files inside the workspace clone to $workspace', () => {
+    expect(joinHarnessPaths('/work/.janissary/workspace/salih', '$root/workspace/salih', ['src/a.ts'], '/work/.janissary/workspace/salih'))
+      .toBe('$workspace/salih/src/a.ts');
+  });
+
+  it('anchors a tree rooted above the clone only for rows inside it', () => {
+    expect(joinHarnessPaths('/work/.janissary/workspace', '$root/workspace', ['salih/a.ts', 'other/b.ts'], '/work/.janissary/workspace/salih'))
+      .toBe('$workspace/salih/a.ts $root/workspace/other/b.ts');
+  });
+
+  it('uses the display root for a file outside the clone', () => {
+    expect(joinHarnessPaths('/work', '$root', ['a.ts'], '/work/.janissary/workspace/salih')).toBe('$root/a.ts');
   });
 
   it('qualifies remote paths with their host', () => {
-    expect(joinCommandPaths('/remote/ws', ['a.ts', 'src/b.ts'], '/local', 'devbox'))
+    expect(joinHarnessPaths('/remote/ws', '$workspace/ws', ['a.ts', 'src/b.ts'], undefined, 'devbox'))
       .toBe('devbox:/remote/ws/a.ts devbox:/remote/ws/src/b.ts');
   });
 

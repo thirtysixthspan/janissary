@@ -1159,7 +1159,7 @@ describe('FileNavigatorTab', () => {
         view: 'files', dock: 'left', files: makeFiles(),
       };
       const { container } = render(
-        <Sidebar side="left" tabs={[tab]} client={client} dropRef={dropRef} targetCwd="/home/user" />,
+        <Sidebar side="left" tabs={[tab]} client={client} dropRef={dropRef} />,
       );
       const bar = document.createElement('div');
       bar.dataset.commandBar = '';

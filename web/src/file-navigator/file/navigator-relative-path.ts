@@ -1,32 +1,32 @@
 import { basename } from '../../shared/rel-path';
 
-function splitPath(path: string): string[] {
-  return path.replaceAll('\\', '/').split('/').filter(Boolean);
+function withoutTrailingSlash(path: string): string {
+  return path.endsWith('/') ? path.slice(0, -1) : path;
 }
 
-export function relativeNavigatorPath(
+// What a tree row reads as when it lands in a local harness terminal: anchored to the harness's own
+// workspace as `$workspace/<clone-name>/…` when the file sits inside its clone, and otherwise to the
+// tree's display root (`$root/…`, `~/…`). A remote tree keeps the host-qualified absolute form.
+export function joinHarnessPaths(
   absoluteRoot: string,
-  sourcePath: string,
-  targetCwd: string,
-): string {
-  const source = [...splitPath(absoluteRoot), ...splitPath(sourcePath)];
-  const target = splitPath(targetCwd);
-  let shared = 0;
-  while (shared < source.length && shared < target.length && source[shared] === target[shared]) shared += 1;
-  const parts = [...Array.from({ length: target.length - shared }, () => '..'), ...source.slice(shared)];
-  return parts.join('/') || '.';
-}
-
-export function joinCommandPaths(
-  absoluteRoot: string,
+  displayRoot: string,
   sourcePaths: string[],
-  targetCwd: string,
+  workspaceDir?: string,
   remoteHost?: string,
 ): string {
   if (remoteHost) {
     return sourcePaths.map((path) => remoteNavigatorPath(remoteHost, absoluteRoot, path)).join(' ');
   }
-  return sourcePaths.map((path) => relativeNavigatorPath(absoluteRoot, path, targetCwd)).join(' ');
+  const display = withoutTrailingSlash(displayRoot);
+  const root = withoutTrailingSlash(absoluteRoot);
+  const clone = workspaceDir === undefined ? undefined : withoutTrailingSlash(workspaceDir);
+  return sourcePaths.map((path) => {
+    const absolute = `${root}/${path}`;
+    if (clone && absolute.startsWith(`${clone}/`)) {
+      return `$workspace/${clone.split('/').at(-1) ?? ''}${absolute.slice(clone.length)}`;
+    }
+    return `${display}/${path}`;
+  }).join(' ');
 }
 
 // What tree rows look like when they land in a text buffer: tree-relative, one per line. An editor

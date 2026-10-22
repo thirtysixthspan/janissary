@@ -80,6 +80,15 @@ describe('buildTabView', () => {
     expect(view.editor).toEqual(tab.editor);
   });
 
+  it('carries the local workspace clone directory only when the tab has one', () => {
+    const tab = makeTab('claude', '#fff');
+    expect('workspaceDir' in buildTabView(tab, false, '/tmp', undefined, [], [], [], (path) => path)).toBe(false);
+
+    tab.workspaceDir = '/work/.janissary/workspace/salih';
+    const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (path) => path);
+    expect(view.workspaceDir).toBe('/work/.janissary/workspace/salih');
+  });
+
   // The two `sessionTerminated` fields hold the same text for different purposes: the tab's copy is the
   // server's own gate on a dead session and has no client reader, while the harness view's copy is
   // what the tab shows in place of `exited`.

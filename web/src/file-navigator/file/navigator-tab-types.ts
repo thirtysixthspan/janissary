@@ -22,7 +22,6 @@ export type FileNavigatorTabProperties = {
   // Omitted for a center-mounted tree, which per Decision 4 never has a reachable command-bar
   // target regardless.
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
-  targetCwd?: string;
   onSplit?: () => void;
   // Classifier for the whole-selection Open/Edit fan-out: which paths, if any, Open and Edit
   // apply to when the clicked row belongs to the multi-row selection. Owned by the app shell,

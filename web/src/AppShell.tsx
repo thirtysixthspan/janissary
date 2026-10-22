@@ -12,7 +12,7 @@ import { useToastPosition } from './toasts/useToastPosition';
 // The root layout: left sidebar / center column (everything App renders today) / right sidebar.
 // Split out of App.tsx to keep it under the file-size limit.
 export function AppShell({
-  tabs, client, children, dropRef, targetCwd,
+  tabs, client, children, dropRef,
   notificationsVisible,
   tabNameMaxLength = 16, activeTabNameMaxLength = 50,
   sidebarLeftWidth, onSidebarLeftWidthChange, sidebarRightWidth, onSidebarRightWidthChange,
@@ -24,7 +24,6 @@ export function AppShell({
   client: JanusClient;
   children: React.ReactNode;
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
-  targetCwd?: string;
   tabNameMaxLength?: number;
   activeTabNameMaxLength?: number;
   sidebarLeftWidth?: number;
@@ -45,7 +44,7 @@ export function AppShell({
     <div className="app">
       <Sidebar
         side="left" tabs={tabs} client={client} dropRef={dropRef}
-        targetCwd={targetCwd} tabNameMaxLength={tabNameMaxLength}
+        tabNameMaxLength={tabNameMaxLength}
         activeTabNameMaxLength={activeTabNameMaxLength}
         width={sidebarLeftWidth} onWidthChange={onSidebarLeftWidthChange} focusView={focusLeft}
         onNotificationsVisibilityChange={setLeftNotificationsVisible}
@@ -54,7 +53,7 @@ export function AppShell({
       <div className="app-center"><ConnectionStatusLabel status={connectionStatus} />{children}</div>
       <Sidebar
         side="right" tabs={tabs} client={client} dropRef={dropRef}
-        targetCwd={targetCwd} tabNameMaxLength={tabNameMaxLength}
+        tabNameMaxLength={tabNameMaxLength}
         activeTabNameMaxLength={activeTabNameMaxLength}
         width={sidebarRightWidth} onWidthChange={onSidebarRightWidthChange} focusView={focusRight}
         onNotificationsVisibilityChange={setRightNotificationsVisible}

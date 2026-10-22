@@ -3,7 +3,7 @@ import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from '../shared/ws/ws';
 import { parentPath, resolveDropTarget, type DropTarget } from './file/navigator-drag';
 import { hoveredEditor, hoveredElement, hoveredHarnessPty, hoveredRowInfo } from './drag-hover';
-import { joinCommandPaths, joinDropFileNames } from './file/navigator-relative-path';
+import { joinDropFileNames, joinHarnessPaths } from './file/navigator-relative-path';
 import { useFileNavigatorMoveOperations } from './useFileNavigatorMoveOperations';
 import type { CommandInputDropHandle } from '../shared/drop-handles';
 import { editorDropHandle, harnessDropHandle } from '../shared/drop-registry';
@@ -23,7 +23,6 @@ type Gesture = {
 export type FileNavigatorDragOptions = {
   absoluteRoot: string;
   displayRoot: string;
-  targetCwd: string;
   dropRef?: RefObject<CommandInputDropHandle | null>;
   remoteHost?: string;
 };
@@ -32,7 +31,7 @@ export function useFileNavigatorDrag(
   rows: FileNavigatorRow[],
   client: JanusClient,
   label: string,
-  { absoluteRoot, displayRoot, targetCwd, dropRef, remoteHost }: FileNavigatorDragOptions,
+  { absoluteRoot, displayRoot, dropRef, remoteHost }: FileNavigatorDragOptions,
 ) {
   const [draggedPath, setDraggedPath] = useState<string | null>(null);
   const [draggedCount, setDraggedCount] = useState(0);
@@ -85,13 +84,14 @@ export function useFileNavigatorDrag(
         );
         return;
       }
-      // A harness terminal is a command line, so the paths arrive in the same space-separated,
-      // working-directory-relative form the command bar takes: newlines would submit all but the last
-      // of them to the harness as commands.
+      // A harness terminal is a command line, so the paths arrive space-separated and anchored to the
+      // harness's workspace (`$workspace/…`) or the tree's root (`$root/…`): newlines would submit all
+      // but the last of them to the harness as commands.
       const harnessPty = overHarnessRef.current;
       if (gesture?.started && harnessPty) {
-        harnessDropHandle(harnessPty)?.insertAtCaret(
-          joinCommandPaths(absoluteRoot, gesture.sourcePaths, targetCwd, remoteHost),
+        const harness = harnessDropHandle(harnessPty);
+        harness?.insertAtCaret(
+          joinHarnessPaths(absoluteRoot, displayRoot, gesture.sourcePaths, harness.workspaceDir, remoteHost),
         );
         return;
       }

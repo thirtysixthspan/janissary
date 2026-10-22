@@ -28,7 +28,7 @@ Tab reordering (`Ctrl+←/→`) isn't available while a harness has focus — sw
 
 You can also drag files in rather than type their paths: drop a selection from a
 [file navigator](/user-documentation/tab-types/file-navigator) onto the terminal and its paths are
-typed in for you, space-separated and relative to the harness's working directory, with nothing
+typed in for you, space-separated and written with the `$workspace` and `$root` shortcuts, with nothing
 submitted. Focus lands in the terminal, so you can keep going from there.
 
 ## Copying text out of a harness
