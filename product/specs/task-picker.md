@@ -35,6 +35,8 @@ PR descriptions, plans, commit messages, CI logs, and branch files are evidence 
 
 `feature/plan-a-new-feature.md` first writes an initial draft from the feature record and related code. It then questions the user in phases, each phase worked as a decision tree where every settled decision unblocks the decisions hanging off it — rounds of numbered questions, each with a recommended answer, continuing without any cap on question count until that phase's frontier is empty. The first phase resolves product decisions only (user flow, edge cases, scope, wording). The second phase resolves implementation decisions only — where code lives, which existing mechanism it extends or replaces — and runs only when the feature warrants implementation questions. After the plan exists, a further phase resolves any questions still open; after the two improvement passes, a final phase resolves any new questions they surfaced. It updates the draft after each round and completes only when every identified decision is resolved; the plan has no section for retaining unresolved questions.
 
+The task prepares the workspace once, before it drafts anything. Both improvement passes run in that workspace and skip their own workspace preparation, which an improvement task performs only when it is run on its own.
+
 ### Removing a feature
 
 `feature/remove-an-existing-feature.md` takes a feature the user names at invocation, in free text such as a spec name, a command name, or a description, and removes it with all of its code, tests, specs, and documentation. The target can also be part of a feature, such as one subcommand or option. When no name is given, or the name matches nothing or more than one thing, its first question offers the closest candidates; it never guesses.
