@@ -326,6 +326,15 @@ describe('useWindowKeys', () => {
     expect(setTaskPickerIndex).toHaveBeenCalled();
   });
 
+  it('prevents ordinary keys from reaching the command line while the task picker is open', () => {
+    render(React.createElement(TestComponent, { taskPickerOpen: true }));
+    const event = new KeyboardEvent('keydown', { key: 'x', bubbles: true, cancelable: true });
+
+    globalThis.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+  });
+
   it('routes Enter to pickTask (populate) when the task picker is open', () => {
     const pickTask = vi.fn();
     render(React.createElement(TestComponent, { taskPickerOpen: true, callbacks: { pickTask } }));

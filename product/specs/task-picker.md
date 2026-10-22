@@ -128,6 +128,8 @@ never a different, unrelated tab.
 | Return, or clicking a directory row | Toggles that directory's expand state, same as Right/Left |
 | Escape | Closes the popup, leaving the command line unchanged |
 
+Other keys have no effect while the picker is open and are not entered into the command line.
+
 Selecting a task inserts the command at the command line's current cursor position rather than
 overwriting the line — any text already typed is preserved, and the cursor is left immediately after
 the inserted command, so it can be supplemented (for example appending extra instructions) or edited
