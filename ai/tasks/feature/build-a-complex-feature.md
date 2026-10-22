@@ -64,7 +64,7 @@ Apply these overrides to `build-a-feature.md`:
 
 1. Select the supplied plan even if the original feature plan is rated 6 or higher. The selected subplan must still be rated 1–5.
 2. Reuse the prepared workspace; override Step 0 and do not run workspace preparation again.
-3. Do not run the build task's PR-opening handoff. The orchestrator commits and pushes each implementation to the existing feature PR branch after implementation, as specified in Step 5.
+3. Do not run the build task's PR-opening handoff, its review-and-repair cycle, or its pull request update. The orchestrator commits and pushes each implementation to the existing feature PR branch after implementation, as specified in Step 5, reviews that commit in Step 6, and reviews and updates the full PR in Steps 8 and 9.
 4. Keep the original high-complexity plan and the improved subplan plans with the delivered work. Do not expand the subplan's file scope without first updating and re-improving its plan.
 
 The subagent reports the completed plan path, implementation summary, checks, tests, specs, and any blocker. The orchestrator verifies the subplan is complete and its working tree changes are limited to the planned work before publication.
