@@ -2,8 +2,6 @@
 
 ## ready
 
-* create a notification configuration in config.json that controls if and what type of system notification or audio sound is trigggered when a given type of notification is fired. 
-
 ## development
 
 * add an ACP skill to allow an agent to spin up other agents with different models, pass them ai tasks (form the repository) to execute and access to monitor the transcript as the agent works, and to recieve the response.
