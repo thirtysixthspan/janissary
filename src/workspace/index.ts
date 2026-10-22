@@ -6,7 +6,7 @@ import { execSync, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { isRecord } from '../value-guards.js';
 import { toHttpsUrl } from '../git/repository-url.js';
-import { startGitClone } from '../git/clone.js';
+import { startGitClone, type GitCloneOptions } from '../git/clone.js';
 import { createWorkspaceScratch } from './scratch.js';
 
 const execFileAsync = promisify(execFile);
@@ -137,10 +137,15 @@ export type ProvisionHandle = {
 // the host (this runs unsandboxed, so SSH is fine here) — intentional: user-driven workspace
 // creation; only local-user commands reach this sink. A remote workspace passes the forwarded
 // GitHub credential, which `startGitClone` applies to a github.com origin only.
-export function provisionWorkspace(name: string, remoteUrl: string, githubToken?: string): ProvisionHandle {
+export function provisionWorkspace(
+  name: string,
+  remoteUrl: string,
+  githubToken?: string,
+  cloneOptions?: Omit<GitCloneOptions, 'githubToken'>,
+): ProvisionHandle {
   ensureWorkspaceDir();
   const target = workspacePath(name);
-  const clone = startGitClone(remoteUrl, target, { githubToken });
+  const clone = startGitClone(remoteUrl, target, { ...cloneOptions, githubToken });
   let oauthNotice: string | undefined;
 
   async function run(): Promise<void> {

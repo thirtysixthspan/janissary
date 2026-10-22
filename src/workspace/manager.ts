@@ -1,6 +1,7 @@
 import { findRepoRoot, getRemoteUrl, provisionWorkspace, removeWorkspace, removeWorkspaceStrict, type ProvisionHandle } from './index.js';
 import { errorText } from '../error-text.js';
 import { messageBus } from '../bus.js';
+import type { GitCloneOptions } from '../git/clone.js';
 
 export const NO_REPO ='No git repository found. Cannot create workspace.';
 
@@ -33,10 +34,16 @@ export class WorkspaceManager {
   // `origin` remote, or `origin` can't be read. Shared by the agent and harness `--workspace`
   // paths so both behave identically. `githubToken` is a remote workspace's forwarded credential;
   // a local clone passes none.
-  create(name: string, githubToken?: string): ProvisioningWorkspace | { error: string } {
+  create(
+    name: string,
+    githubToken?: string,
+    cloneOptions?: Omit<GitCloneOptions, 'githubToken'>,
+  ): ProvisioningWorkspace | { error: string } {
     const origin = this.originUrl();
     if ('error' in origin) return origin;
-    const handle = provisionWorkspace(name, origin.url, githubToken);
+    const handle = cloneOptions === undefined
+      ? provisionWorkspace(name, origin.url, githubToken)
+      : provisionWorkspace(name, origin.url, githubToken, cloneOptions);
     this.refs.set(handle.dir, 1);
     this.names.set(name, handle.dir);
     const pending: PendingWorkspace = { cancel: handle.cancel, dir: handle.dir, ready: Promise.resolve() };

@@ -140,6 +140,7 @@ describe('GitSync', () => {
     const sync = new GitSync(workspace);
     const [a, b] = await Promise.all([sync.openSync(), sync.openSync()]);
     expect(workspace.create).toHaveBeenCalledTimes(1);
+    expect(workspace.create).toHaveBeenCalledWith('git-sync', undefined, { depth: 1, sparseDirectories: ['product'] });
     expect(a).toEqual({ dir: '/repo/.janissary/workspace/git-sync' });
     expect(b).toEqual(a);
   });

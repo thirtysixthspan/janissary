@@ -44,7 +44,7 @@ export class GitSync {
 
   private ensureWorkspace(): SyncWorkspace | { error: string } {
     if (this.handle) return this.handle;
-    const created = this.workspace.create(SYNC_WORKSPACE_NAME);
+    const created = this.workspace.create(SYNC_WORKSPACE_NAME, undefined, { depth: 1, sparseDirectories: ['product'] });
     if ('error' in created) return created;
     this.handle = { dir: created.dir, ready: created.ready };
     return this.handle;

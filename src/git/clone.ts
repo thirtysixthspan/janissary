@@ -1,4 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { cloneUrlError, isGitHubUrl, toHttpsUrl } from './repository-url.js';
 
 // The one `git clone` every clone janissary makes goes through: a local `-w` workspace, a remote
@@ -7,6 +9,7 @@ import { cloneUrlError, isGitHubUrl, toHttpsUrl } from './repository-url.js';
 
 // Set only on the clone's own child, so the token never appears in an argument list or on disk.
 const TOKEN_VARIABLE = 'JANUS_CLONE_GITHUB_TOKEN';
+const execFileAsync = promisify(execFile);
 
 // An inline credential helper answering every `get` with the token from the child's environment.
 // It is quoted for the shell git runs `!` helpers through, so `$JANUS_CLONE_GITHUB_TOKEN` expands
@@ -19,6 +22,8 @@ export type GitCloneOptions = {
   githubToken?: string;
   // Keep git's stderr so a failure can report git's own first error line.
   keepStderr?: boolean;
+  depth?: number;
+  sparseDirectories?: string[];
 };
 
 export type GitCloneHandle = {
@@ -29,17 +34,21 @@ export type GitCloneHandle = {
 };
 
 function cloneCommand(url: string, target: string, options: GitCloneOptions): { args: string[]; env?: NodeJS.ProcessEnv } {
-  const { githubToken, keepStderr } = options;
+  const { githubToken, keepStderr, depth, sparseDirectories } = options;
+  const cloneOptions = [
+    ...(depth === undefined ? [] : [`--depth=${depth}`]),
+    ...(sparseDirectories === undefined ? [] : ['--filter=blob:none', '--sparse']),
+  ];
   if (githubToken === undefined || !isGitHubUrl(url)) {
     // A clone whose errors are being kept runs where no terminal can answer git, so a credential
     // prompt fails it instead of hanging it.
-    return { args: ['clone', '--', url, target], ...(keepStderr && { env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } }) };
+    return { args: ['clone', ...cloneOptions, '--', url, target], ...(keepStderr && { env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } }) };
   }
   // The empty value first resets every inherited helper (the reset `finishProvisioning` explains),
   // so the token is the only credential this clone can offer; a `git -c` value is never written to
   // the clone's own config.
   return {
-    args: ['-c', 'credential.helper=', '-c', `credential.helper=${TOKEN_HELPER}`, 'clone', '--', toHttpsUrl(url), target],
+    args: ['-c', 'credential.helper=', '-c', `credential.helper=${TOKEN_HELPER}`, 'clone', ...cloneOptions, '--', toHttpsUrl(url), target],
     env: { ...process.env, GIT_TERMINAL_PROMPT: '0', [TOKEN_VARIABLE]: githubToken },
   };
 }
@@ -67,7 +76,13 @@ export function startGitClone(url: string, target: string, options: GitCloneOpti
     child.on('error', reject);
     child.on('close', (code) => {
       if (cancelled) reject(new Error('git clone cancelled.'));
-      else if (code === 0) resolve();
+      else if (code === 0) {
+        if (options.sparseDirectories === undefined) resolve();
+        else {
+          void execFileAsync('git', ['sparse-checkout', 'set', ...options.sparseDirectories], { cwd: target })
+            .then(() => resolve(), reject);
+        }
+      }
       else reject(new Error((options.keepStderr ? firstLine(stderr) : undefined) ?? `git clone exited with code ${String(code)}`));
     });
   });
