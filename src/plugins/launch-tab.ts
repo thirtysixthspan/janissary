@@ -4,6 +4,7 @@ import { notify } from '../notifications/index.js';
 import { abbreviateWorkspaceDir } from '../paths.js';
 import { unconfinedAgentCwd } from '../profile/inherited-cwd.js';
 import { sandboxNotice } from '../sandbox/index.js';
+import { SHELL_WORKSPACE_CLONE } from '../workspace/clone-depth.js';
 import { NO_REPO, type ProvisioningWorkspace } from '../workspace/manager.js';
 import { PROVISION_FAILURE_CLOSE_DELAY_MS, wireProvisioning } from '../workspace/provision-wire.js';
 import type {
@@ -48,7 +49,7 @@ function startClone(
   managers: Managers, label: string, request: TabPluginLaunchRequest,
 ): { clone?: ProvisioningWorkspace; fallbackReason?: string } {
   if (!request.workspace) return {};
-  const created = managers.workspace.create(label);
+  const created = managers.workspace.create(label, undefined, SHELL_WORKSPACE_CLONE);
   if ('error' in created) return { fallbackReason: created.error === NO_REPO ? NO_REPO_REASON : NO_ORIGIN_REASON };
   return { clone: created };
 }

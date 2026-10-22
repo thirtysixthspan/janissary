@@ -162,7 +162,9 @@ new one, so they keep disambiguating with `-2`, `-3`, ….
 ### Workspace default and opt-out
 
 Harnesses clone the root repository (detected from the current directory) into
-a disposable workspace named after the harness tab's unique label, identically to `shell --workspace`:
+a disposable workspace named after the harness tab's unique label, the same way `shell --workspace`
+does. The one difference is depth: a local harness clone keeps the newest ten commits of each branch
+where a shell's keeps one (see [[workspaced-agent]]):
 
 ```
 harness claude -w    → tab "claude"   with workspace at .janissary/workspace/claude/

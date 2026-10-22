@@ -40,6 +40,7 @@ beforeAll(() => {
   writeFileSync(path.join(seed, 'other', 'large-tree.md'), 'outside product');
   execSync('git add . && git commit -m init', { cwd: seed, stdio: 'pipe' });
   execSync(`git remote add origin "${bareDir}" && git push origin HEAD`, { cwd: seed, stdio: 'pipe' });
+  execSync('git checkout -b feature && git commit --allow-empty -m feature && git push origin feature && git checkout -', { cwd: seed, stdio: 'pipe' });
 });
 
 afterAll(() => {
@@ -60,9 +61,21 @@ describe('startGitClone', () => {
     expect(call.args).toContain('--depth=1');
     expect(call.args).toContain('--filter=blob:none');
     expect(call.args).toContain('--sparse');
+    expect(call.args).not.toContain('--no-single-branch');
     expect(existsSync(path.join(target, 'product', 'notes.md'))).toBe(true);
     expect(existsSync(path.join(target, 'other', 'large-tree.md'))).toBe(false);
     expect(execSync('git rev-parse --is-shallow-repository', { cwd: target, stdio: 'pipe' }).toString().trim()).toBe('true');
+  });
+
+  it('creates a shallow clone that still fetches every branch', async () => {
+    const target = path.join(tmpDir, 'all-branches-clone');
+    await startGitClone(`file://${bareDir}`, target, { depth: 1, allBranches: true }).ready;
+    const call = spawnSpy.calls.at(-1)!;
+    expect(call.args).toContain('--depth=1');
+    expect(call.args).toContain('--no-single-branch');
+    const git = (command: string) => execSync(command, { cwd: target, stdio: 'pipe' }).toString().trim();
+    expect(git('git rev-parse --is-shallow-repository')).toBe('true');
+    expect(git('git rev-list --count origin/feature')).toBe('1');
   });
 
   it('rejects with git\'s first stderr line when stderr is kept', async () => {
