@@ -1,5 +1,7 @@
 import type { Config, NotificationConfig } from './config.js';
 import { isRecord } from './value-guards.js';
+import type { AlertSound, NotificationAlert } from './notifications/alert-defaults.js';
+import type { NotificationEventType } from './notifications/index.js';
 
 function strings(value: unknown, fallback: readonly string[]): string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === 'string')
@@ -30,6 +32,11 @@ function booleanValue(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
 }
 
+function alertSound(value: unknown, fallback: AlertSound): AlertSound {
+  const sounds: AlertSound[] = ['success', 'warning', 'error', 'none'];
+  return sounds.includes(value as AlertSound) ? value as AlertSound : fallback;
+}
+
 function stringMap(value: unknown, fallback: Readonly<Record<string, string>>): Record<string, string> {
   if (!isRecord(value) || Object.values(value).some((entry) => typeof entry !== 'string')) {
     return { ...fallback };
@@ -57,6 +64,39 @@ function notifications(value: unknown, fallback: NotificationConfig): Notificati
       rateLimited: booleanValue(events.rateLimited, fallback.events.rateLimited),
       systemScheduleFire: booleanValue(events.systemScheduleFire, fallback.events.systemScheduleFire),
     },
+    alerts: Object.fromEntries(Object.entries(fallback.alerts).map(([event, defaultAlert]) => {
+      const entry = isRecord(record.alerts) && isRecord(record.alerts[event]) ? record.alerts[event] : {};
+      return [event, {
+        desktop: booleanValue(entry.desktop, defaultAlert.desktop),
+        sound: alertSound(entry.sound, defaultAlert.sound),
+      }];
+    })) as Record<NotificationEventType, NotificationAlert>,
+  };
+}
+
+export function backfillNotificationAlerts(
+  parsed: unknown,
+  defaults: NotificationConfig,
+): Record<string, unknown> | undefined {
+  const raw = configRecord(parsed);
+  if (!raw) return;
+  const rawNotifications = configRecord(raw.notifications);
+  if (!rawNotifications) return { ...raw, notifications: defaults };
+  const rawAlerts = configRecord(rawNotifications.alerts);
+  if (!rawAlerts) {
+    return { ...raw, notifications: { ...rawNotifications, alerts: defaults.alerts } };
+  }
+  const missing = Object.keys(defaults.alerts).filter((event) => !Object.hasOwn(rawAlerts, event));
+  if (missing.length === 0) return;
+  return {
+    ...raw,
+    notifications: {
+      ...rawNotifications,
+      alerts: {
+        ...rawAlerts,
+        ...Object.fromEntries(missing.map((event) => [event, defaults.alerts[event as NotificationEventType]])),
+      },
+    },
   };
 }
 
@@ -78,9 +118,6 @@ export function decodeConfig(value: unknown, defaults: Config): Config {
     terminalBellVolumeSuccess: volumeValue(record.terminalBellVolumeSuccess, defaults.terminalBellVolumeSuccess),
     terminalBellVolumeWarning: volumeValue(record.terminalBellVolumeWarning, defaults.terminalBellVolumeWarning),
     terminalBellVolumeError: volumeValue(record.terminalBellVolumeError, defaults.terminalBellVolumeError),
-    terminalBellMuteSuccess: booleanValue(record.terminalBellMuteSuccess, defaults.terminalBellMuteSuccess),
-    terminalBellMuteWarning: booleanValue(record.terminalBellMuteWarning, defaults.terminalBellMuteWarning),
-    terminalBellMuteError: booleanValue(record.terminalBellMuteError, defaults.terminalBellMuteError),
     syncPaths: strings(record.syncPaths, defaults.syncPaths),
     externalViewers: stringMap(record.externalViewers, defaults.externalViewers),
     pluginSettings: settingsMap(record.pluginSettings),

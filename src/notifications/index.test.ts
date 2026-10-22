@@ -10,12 +10,15 @@ import { NOTIFICATIONS_LABEL } from './tab.js';
 import { fakeNotificationsHost } from './tab-test-fixture.js';
 import { NOTIFICATION_QUEUE_LIMIT, NotificationQueue } from './queue.js';
 import { messageBus } from '../bus.js';
+import { NOTIFICATION_ALERT_DEFAULTS } from './alert-defaults.js';
 
 const allOn: NotificationConfig = {
   events: { stateChange: true, scheduleFire: true, agentStart: true, rateLimited: true, systemScheduleFire: true },
+  alerts: NOTIFICATION_ALERT_DEFAULTS,
 };
 const allOff: NotificationConfig = {
   events: { stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false, systemScheduleFire: false },
+  alerts: NOTIFICATION_ALERT_DEFAULTS,
 };
 
 // One case per member of `NotificationEventType`, driven off the tables that classify them — so a

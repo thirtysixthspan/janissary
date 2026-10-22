@@ -139,6 +139,20 @@ describe('NativeNotifications', () => {
     expect(audio).toHaveLength(2);
   });
 
+  it('shows a banner without a cue and does not consume the bell throttle', () => {
+    const service = new NativeNotifications(client);
+    const bannerOnly: NativeNotificationEvent = {
+      t: 'native-notification', tab: 'build', from: 'Build agent', message: 'Quiet alert',
+      desktop: true, volume: 0,
+    };
+    service.show(bannerOnly, centre('janus'));
+    expect(notifications).toHaveLength(1);
+    expect(audio).toHaveLength(0);
+
+    service.show(event, centre('janus'));
+    expect(audio).toHaveLength(1);
+  });
+
   it('plays the next bell one monotonic second later after wall time steps backward', () => {
     const service = new NativeNotifications(client);
     service.show(event, centre('janus'));

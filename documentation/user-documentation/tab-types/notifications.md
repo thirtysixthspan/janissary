@@ -44,11 +44,9 @@ toast of its own; the feed is the only place you will see it.
 
 ## Desktop banners and bell sounds
 
-Eligible explicit notifications can also show a desktop banner and play a category sound. This is
+Each notification type can show a desktop banner and play a selected sound. This is
 separate from the in-app toast: the toast stays silent even when a banner or sound is enabled.
-The ambient toggles `stateChange`, `scheduleFire`, `agentStart`, and `rateLimited` control feed
-entries only; they do not trigger desktop banners or bell sounds. `scheduleFire` covers tab-owned
-schedules. System schedule notices are explicit and can raise a banner and warning sound.
+The four ambient types default to no banner and no sound, but you can opt them in. They still need to pass their feed toggle and focus suppression. `scheduleFire` covers tab-owned schedules. System schedule notices default to a banner and warning sound.
 
 Each browser window handles its own banner and sound. It suppresses both only when Janissary's
 window has focus and the notification's tab is visible there. A background tab or an unselected
@@ -63,18 +61,30 @@ Set the alert channels and category volumes in `.janissary/config.json`:
 
 | Setting | Default | What it controls |
 |---|---:|---|
-| `osNotifications` | `true` | Allows eligible desktop banners when the browser has permission. |
-| `terminalBell` | `true` | Allows eligible category sounds to play. |
+| `osNotifications` | `true` | Master switch for configured desktop banners when the browser has permission. |
+| `notifications.alerts` | Per-type defaults | Chooses each type's banner and sound (`success`, `warning`, `error`, or `none`). |
+| `terminalBell` | `true` | Allows each type's configured sound cue to play. |
 | `terminalBellVolumeSuccess` | `0.8` | Success-sound volume, from `0` to `1`. |
 | `terminalBellVolumeWarning` | `0.8` | Warning-sound volume, from `0` to `1`. |
 | `terminalBellVolumeError` | `0.8` | Error-sound volume, from `0` to `1`. |
-| `terminalBellMuteSuccess` | `false` | Mutes success sounds without affecting banners. |
-| `terminalBellMuteWarning` | `false` | Mutes warning sounds without affecting banners. |
-| `terminalBellMuteError` | `false` | Mutes error sounds without affecting banners. |
-
-The switches are independent. A category mute affects only its sound; it does not silence that
-category's desktop banners. See [app configuration](/user-documentation/getting-started/configuration)
+`osNotifications` and `terminalBell` are master switches for every type's configured banner and cue. Per-type settings can move a notification to a different bundled sound or silence its sound without disabling its banner. See [app configuration](/user-documentation/getting-started/configuration)
 for how to edit and validate these settings.
+
+The config file lists every notification type with its default. For example:
+
+```json
+{
+  "notifications": {
+    "alerts": {
+      "question": { "desktop": true, "sound": "error" },
+      "file-operation": { "desktop": false, "sound": "none" },
+      "state-change": { "desktop": true, "sound": "none" }
+    }
+  }
+}
+```
+
+A banner with `sound: "none"` plays no cue. A missing or invalid field uses that event's default.
 
 Every notification is also appended to `.janissary/notifications.json`, one JSON line per
 notification, as a durable trail that outlives the run. `notifications clear` is what empties the
@@ -139,7 +149,7 @@ A tab-owned scheduled command that fires more than five seconds late ignores the
 
 ### System schedule notices
 
-System schedules use a separate explicit notification, independent of `scheduleFire`. The `systemScheduleFire` toggle defaults to `true`, so you receive notices for a firing, a run missed while Janissary was closed, a missing runscript, or a system shell that could not start. These notices use the warning banner and bell category and still appear when `system` is the active tab. Set `systemScheduleFire` to `false` to suppress the notice from the queue, feed, record file, toast, banner, and bell.
+System schedules use a separate explicit notification, independent of `scheduleFire`. The `systemScheduleFire` toggle defaults to `true`, so you receive notices for a firing, a run missed while Janissary was closed, a missing runscript, or a system shell that could not start. These notices default to a banner and the warning cue and still appear when `system` is the active tab. Set `systemScheduleFire` to `false` to suppress the notice from the queue, feed, record file, toast, banner, and bell.
 
 The feed shows the stored script invocation when a runscript is queued. For example, `System schedule nightly ran: script deploy` means the `deploy` runscript was enqueued; it does not mean every line has finished. Other outcomes read:
 

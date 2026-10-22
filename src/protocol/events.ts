@@ -57,7 +57,7 @@ export type ToastClearEvent = { t: 'toast-clear' };
 export type NotificationsRevealEvent = { t: 'notifications-reveal'; dock: 'left' | 'right' };
 export type NativeNotificationEvent = {
   t: 'native-notification'; tab: string; from: string; message: string;
-  category: 'success' | 'warning' | 'error'; desktop: boolean; volume: number;
+  category?: 'success' | 'warning' | 'error'; desktop: boolean; volume: number;
 };
 export type AgentRunUpdatedEvent = { t: 'agent-run-updated'; tab: string; view: AgentRunView };
 export type ServerEvent =

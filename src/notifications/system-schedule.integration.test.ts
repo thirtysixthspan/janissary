@@ -83,7 +83,9 @@ describe('system schedule notification delivery', () => {
   it('does not queue, record, toast, or alert when the system schedule toggle is disabled', () => {
     const events = getConfig().notifications?.events;
     if (!events) throw new Error('notification defaults were not loaded');
-    expect(updateConfig({ notifications: { events: { ...events, systemScheduleFire: false } } })).toBe(true);
+    expect(updateConfig({ notifications: {
+      ...getConfig().notifications!, events: { ...events, systemScheduleFire: false },
+    } })).toBe(true);
 
     notifySystemScheduleRun(controller.managers, 'nightly', 'deploy');
 
