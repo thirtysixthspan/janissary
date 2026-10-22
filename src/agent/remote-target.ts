@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Managers } from '../managers.js';
 import { parseRemoteAddress } from '../remote/address.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
+import { AGENT_CLONE_DEPTH } from '../workspace/clone-depth.js';
 
 export type RemoteAgentTarget = Readonly<{
   channel: RemoteChannel;
@@ -68,7 +69,7 @@ export async function resolveRemoteAgentTarget(
     onReady: () => {},
     onFailed: () => {},
     onClosed: () => {},
-  }, undefined, { nonInteractive: true });
+  }, undefined, { nonInteractive: true, depth: AGENT_CLONE_DEPTH });
   try {
     const ready = managers.remote.readyOf(label);
     if (!ready) throw new Error('Agent: remote workspace is not ready.');

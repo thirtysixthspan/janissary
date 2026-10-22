@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { AGENT_CLONE_DEPTH, workspaceCloneOptions } from '../workspace/clone-depth.js';
 import type { WorkspaceManager } from '../workspace/manager.js';
 import type { AgentCaller, AgentRun } from './run.js';
 import type { AgentSnapshot } from './types.js';
@@ -26,7 +27,7 @@ export function prepareAgentWorkspace(workspace: WorkspaceManager, callerDir: st
   }
 
   const name = `agent-${randomUUID()}`;
-  const created = workspace.create(name);
+  const created = workspace.create(name, undefined, workspaceCloneOptions(AGENT_CLONE_DEPTH));
   if ('error' in created) throw new Error(created.error);
   const release = workspace.acquireAgentLease(created.dir);
   workspace.release(created.dir);
