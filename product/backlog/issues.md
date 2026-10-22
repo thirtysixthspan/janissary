@@ -2,7 +2,7 @@
 
 ## ready
 
-* update build-a-feature to end with a review/repair cycle and update-pull-request in the same way that build-a-complex-feature does.  
+* update build-a-feature task to end with a review/repair cycle and update-pull-request in the same way that build-a-complex-feature does.  
 
 * when the task picker is open, key presses should not be allowed to enter the command line.
 
