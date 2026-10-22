@@ -254,12 +254,12 @@ describe('dispatchTaskPickerKey', () => {
     expect(toggleDir).toHaveBeenCalledWith({ path: 'sub', source: 'project' });
   });
 
-  it('ignores unhandled keys', () => {
+  it('prevents unhandled keys from reaching the command line', () => {
     const visible = flattenVisibleTaskRows(rows, new Set());
     const setIndex = vi.fn();
     const e = keyEvent('a');
     dispatchTaskPickerKey(e, visible, 1, setIndex, vi.fn(), vi.fn(), vi.fn());
-    expect(e.preventDefault).not.toHaveBeenCalled();
+    expect(e.preventDefault).toHaveBeenCalledOnce();
     expect(setIndex).not.toHaveBeenCalled();
   });
 });

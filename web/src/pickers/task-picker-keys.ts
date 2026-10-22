@@ -115,8 +115,8 @@ export function dispatchTaskPickerKey(
   pickTask: (row: TaskRowIdentity) => void,
   setOpen: (open: boolean) => void,
 ): void {
-  if (!HANDLED_KEYS.has(e.key)) return;
   e.preventDefault();
+  if (!HANDLED_KEYS.has(e.key)) return;
   const result = handleTaskPickerKey(rows, index, e.key);
   setIndex(() => result.index);
   switch (result.action?.type) {
