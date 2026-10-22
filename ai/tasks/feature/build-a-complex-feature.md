@@ -1,6 +1,6 @@
 # Build a Complex Feature
 
-Take one supplied high-complexity plan, decompose it into ordered subplans each rated below 7/10, and deliver the complete feature on one open pull request. Publish all subplans before implementation. Immediately before each subplan is implemented, improve it and publish the improved plan; then publish its implementation as a separate commit, review that commit against the subplan, and clear its review backlog before proceeding. After all subplans are complete, update the canonical plan and pull request, then review the full pull request and resolve findings until a full review adds none. Finish with a pull request update.
+Take one supplied plan, decompose it into ordered subplans each rated at or below 5/10, and deliver the complete feature on one open pull request. Publish all subplans before implementation. Immediately before each subplan is implemented, improve it and publish the improved plan; then publish its implementation as a separate commit, review that commit against the subplan, and clear its review backlog before proceeding. After all subplans are complete, update the canonical plan and pull request, then review the full pull request and resolve findings until a full review adds none. Finish with a pull request update.
 
 Invocation: `execute ./ai/tasks/feature/build-a-complex-feature.md <plan name or path>`.
 
@@ -14,8 +14,8 @@ Invocation: `execute ./ai/tasks/feature/build-a-complex-feature.md <plan name or
 
 ## Orchestration rules
 
-- The supplied high-complexity plan is the authoritative feature scope. Do not reject it, weaken it, lower its rating, or apply a complexity cutoff to it.
-- Decompose all planned behavior into ordered subplans, each with an honest `**Complexity: N/10**` rating where `N` is 1–6. A subplan rated 7 or higher is not ready to implement: split it again until every piece is below 7. Do not use the rating to hide work or evade a child's normal checks.
+- The supplied plan is the authoritative feature scope. Do not reject it, weaken it, lower its rating.
+- Decompose all planned behavior into ordered subplans, each with an honest `**Complexity: N/10**` rating where `N` is 1–5. A subplan rated 6 or higher is not ready to implement: split it again until every piece is below 6. Do not use the rating to hide work or evade a child's normal checks.
 - Preserve dependencies and shared contracts explicitly. Order subplans so each can be implemented and verified against the preceding completed work. Include cross-cutting integration, migration, and end-to-end verification in the sequence; do not leave required work as an implied final cleanup.
 - Use one feature branch and one pull request for the entire feature. Publish all initial subplan plans and open the PR before improving or implementing any subplan. Every plan update, implementation, and repair is committed and pushed to that same branch and PR. Never create another PR.
 - Before starting a subplan, improve it with `improve-plan.md` in the workspace Step 0 prepared, skipping the improvement task's own `Step 0 — Prepare the workspace`, then promote it to `ready/` and commit and push the improved plan. After implementation, publish its own commit before review.
@@ -27,20 +27,20 @@ Invocation: `execute ./ai/tasks/feature/build-a-complex-feature.md <plan name or
 ## Step 0 — Validate and prepare
 
 1. Require a plan name or path that resolves to a plan in `./product/plans/ready/`. If none is supplied or no plan matches, report the reason and stop. Do not choose an unrelated plan.
-2. Read the selected plan in full and confirm it states the feature goal, implementation scope, tests, verification, and an honest complexity rating of 7/10 or higher. If any are missing, report the issue and stop; do not invent or improve the source plan here.
+2. Read the selected plan in full and confirm it states the feature goal, implementation scope, tests, verification, and an honest complexity rating of 6/10 or higher. If any are missing, report the issue and stop; do not invent or improve the source plan here.
 3. Read `AGENTS.md`, every file under `ai/guidelines/`, and the relevant project specs and implementation references. Read the task files used below, including `build-a-feature.md`, `improve-plan.md`, `review-pull-request.md`, `work-pull-request-issue.md`, `update-pull-request.md`, and `open-feature-pull-request.md`.
 4. Confirm the working tree is clean before workspace preparation. Preserve unrelated work and stop if the tree is not clean.
 5. Delegate `ai/tasks/workspace/prepare-workspace.md` to a fresh subagent and require it to complete the task in full. Stop if its required audit or preparation fails. Confirm the tree is clean afterward.
 
 ## Step 1 — Decompose the plan
 
-Delegate this step to a fresh subagent. Provide the entire source plan, relevant repository constraints, and the requirement that each subplan rate 1–6.
+Delegate this step to a fresh subagent. Provide the entire source plan, relevant repository constraints, and the requirement that each subplan rate 1–5.
 
 1. Break the plan into the smallest coherent, ordered subplans that deliver the original goal without dropping scope. Write a complete draft plan for every subplan, each stating its goal, decisions and dependencies, existing code to reuse, proposed changes, tests, verification, and out-of-scope boundaries.
 2. Ensure the subplans collectively cover every requirement and edge case in the source plan. Include explicit integration work where pieces meet. A subplan may depend on earlier subplans, but never on future work.
 3. Return the ordered subplan paths, dependencies, ratings, and a requirement-to-subplan coverage map to the orchestrator. Do not write source code or implementation changes in this step.
 
-The orchestrator checks that the source plan's full scope is represented exactly once or explicitly shared across named subplans, dependencies form a workable order, and every rating is below 7. If not, send the decomposition back for correction before proceeding.
+The orchestrator checks that the source plan's full scope is represented exactly once or explicitly shared across named subplans, dependencies form a workable order, and every rating is below 6. If not, send the decomposition back for correction before proceeding.
 
 ## Step 2 — Publish all subplans and open the PR
 
@@ -54,7 +54,7 @@ After decomposition and before improving or implementing any subplan:
 
 Process subplans strictly in sequence, immediately before each implementation. Use a fresh subagent to execute `ai/tasks/planning/improve-plan.md` with that subplan's exact draft path. Skip its `Step 0 — Prepare the workspace` and reuse the workspace this task prepared in its own Step 0; improve-plan prepares the workspace only when it is run directly. Preserve its one-plan-only edit restriction and all other improvement and verification steps. The subagent may edit only that plan. Preserve its assigned 1–6 rating; improve-plan may correct the rating only if it remains below 7 and its rationale stays honest. If the improvement finds the plan cannot remain below 7, split it into smaller subplans, publish the additional plan files to the existing PR, and improve each new plan the same way before implementation, with its exact draft path and the same Step 0 skip.
 
-After improvement, the orchestrator verifies the plan remains within the source scope and has a complexity rating below 7. Promote the plan from `draft/` to `ready/` with a normal file move, commit and push that plan change to the open PR, and record its exact path. Do not start implementation until publication succeeds.
+After improvement, the orchestrator verifies the plan remains within the source scope and has a complexity rating below 6. Promote the plan from `draft/` to `ready/` with a normal file move, commit and push that plan change to the open PR, and record its exact path. Do not start implementation until publication succeeds.
 
 ## Step 4 — Implement one subplan
 
@@ -62,7 +62,7 @@ For each promoted subplan, delegate `ai/tasks/feature/build-a-feature.md` to a f
 
 Apply these overrides to `build-a-feature.md`:
 
-1. Select the supplied plan even if the original feature plan is rated 7 or higher. The selected subplan must still be rated 1–6.
+1. Select the supplied plan even if the original feature plan is rated 6 or higher. The selected subplan must still be rated 1–5.
 2. Reuse the prepared workspace; override Step 0 and do not run workspace preparation again.
 3. Do not run the build task's PR-opening handoff. The orchestrator commits and pushes each implementation to the existing feature PR branch after implementation, as specified in Step 5.
 4. Keep the original high-complexity plan and the improved subplan plans with the delivered work. Do not expand the subplan's file scope without first updating and re-improving its plan.
