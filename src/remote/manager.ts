@@ -52,10 +52,11 @@ export class RemoteManager {
   // launches and attaches alike.
   create(
     label: string, address: RemoteAddress, cwd: string, handlers: RemoteLaunchHandlers,
-    resume?: RemoteResume, options?: { nonInteractive?: boolean },
+    resume?: RemoteResume, options?: { nonInteractive?: boolean; depth?: number },
   ): RemoteChannel {
     const entry = createRemoteEntry({
       managers: this.managers, label, address, cwd, handlers, resume, nonInteractive: options?.nonInteractive,
+      depth: options?.depth,
       channelClosed: (closed) => this.channelClosed(closed),
       sessionsChanged: () => this.sessionsChanged(),
     });

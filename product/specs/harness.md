@@ -163,8 +163,8 @@ new one, so they keep disambiguating with `-2`, `-3`, ….
 
 Harnesses clone the root repository (detected from the current directory) into
 a disposable workspace named after the harness tab's unique label, the same way `shell --workspace`
-does. The one difference is depth: a local harness clone keeps the newest ten commits of each branch
-where a shell's keeps one (see [[workspaced-agent]]):
+does. The one difference is depth: a harness clone, local or remote, keeps the newest ten commits of
+each branch where a shell's keeps one (see [[workspaced-agent]]):
 
 ```
 harness claude -w    → tab "claude"   with workspace at .janissary/workspace/claude/

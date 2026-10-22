@@ -54,6 +54,20 @@ function harness(): Harness {
   return { managers, handlers: () => captured, closed };
 }
 
+describe('startRemoteLaunch clone depth', () => {
+  it('asks the channel for the clone depth it was given', () => {
+    const h = harness();
+    startRemoteLaunch(h.managers, 'placeholder', ADDRESS, '/local', undefined, 10);
+    expect(vi.mocked(h.managers.remote.create).mock.calls[0]?.[5]).toEqual({ depth: 10 });
+  });
+
+  it('passes no options without a depth, so the host makes a full clone', () => {
+    const h = harness();
+    startRemoteLaunch(h.managers, 'placeholder', ADDRESS, '/local');
+    expect(vi.mocked(h.managers.remote.create).mock.calls[0]?.[5]).toBeUndefined();
+  });
+});
+
 describe('startRemoteLaunch refusals', () => {
   it('reports an optional remote OAuth failure once without rejecting readiness', async () => {
     vi.mocked(notify).mockClear();

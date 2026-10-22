@@ -256,6 +256,13 @@ any name outside its own credential list, so forwarding a Kilo key to one would 
 provisioning request as malformed rather than provisioning a workspace without the key. Exact-version
 refusal at the handshake reports the mismatch before a tab is provisioned.
 
+Protocol version 35 adds the clone depth to the provisioning request, so a remote workspace is as
+shallow as a local one: the newest commit of each branch for a shell, the newest ten for a harness,
+with every branch present. A request without a depth, which is what a remote agent run sends, gets
+the full history. A depth that is not a positive whole number makes the request malformed. A
+version-34 remote would ignore the depth and clone the whole history while both ends looked healthy,
+so the handshake refuses it.
+
 The handshake check is narrower for an attach than for a launch. An attach is answered by the
 freshly started remote server that then relays into the parked peer, so the version it announces is
 whatever is installed on that host now — not the version of the peer waiting behind it. A session

@@ -196,7 +196,7 @@ export class RemoteServer {
         this.files = files;
         this.acp = acp;
       },
-    }, frame.label, frame.tokens ?? {}, frame.identity ?? {}, cloned);
+    }, frame.label, frame.tokens ?? {}, frame.identity ?? {}, cloned, frame.depth);
   }
 
   // Run the root-dependent setup, then start the detached peer and route every frame through it —

@@ -27,6 +27,7 @@ export type RemoteEntryFactoryOptions = {
   handlers: RemoteLaunchHandlers;
   resume?: RemoteResume;
   nonInteractive?: boolean;
+  depth?: number;
   channelClosed: (entry: RemoteEntry) => void;
   sessionsChanged: () => void;
 };
@@ -57,7 +58,7 @@ export function provisionOrigin(managers: Managers): { origin?: string } {
 }
 
 export function createRemoteEntry({
-  managers, label, address, cwd, handlers, resume, nonInteractive, channelClosed, sessionsChanged,
+  managers, label, address, cwd, handlers, resume, nonInteractive, depth, channelClosed, sessionsChanged,
 }: RemoteEntryFactoryOptions): RemoteEntry {
   const state = { resuming: resume !== undefined };
   const transcript = createRemoteTranscriptSource();
@@ -93,7 +94,12 @@ export function createRemoteEntry({
           channel.send({
             type: 'attach', session: channel.sessionId, ...(state.resuming && { restore: true }), ...provisionOrigin(managers),
           });
-        } else channel.send({ type: 'provision', label, tokens: getProjectTokens(), identity: getGitIdentity(), ...provisionOrigin(managers) });
+        } else {
+          channel.send({
+            type: 'provision', label, tokens: getProjectTokens(), identity: getGitIdentity(), ...provisionOrigin(managers),
+            ...(depth !== undefined && { depth }),
+          });
+        }
       },
       onFrame: (frame) => {
         switch (frame.type) {

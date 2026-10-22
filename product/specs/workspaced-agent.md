@@ -47,7 +47,7 @@ and the harness PTY starts there. `-w`/`--workspace` explicitly confirms the def
 except the workspace lives under the **remote** host's project root rather than this machine's, and
 is governed entirely by that host: its sandbox policy (so isolation is active where the remote is
 macOS and inactive otherwise, and the notice shown in the tab is the remote's) and its own
-repository's `origin` transport. A remote clone keeps the full history rather than a shallow one. The credentials are the exception: this project's
+repository's `origin` transport. The clone's depth is the exception to that, because the launch sends it: a remote shell's clone holds the newest commit of each branch and a remote harness's the newest ten, exactly as on this machine. The credentials are the other exception: this project's
 `.janissary/github-token`, `.janissary/claude-token`, `.janissary/opencode-token`, `.janissary/kilo-token`,
 and `.janissary/gemini-token` are all forwarded on the provisioning frame, each falling back to the
 remote project's own file when nothing is sent. A remote tab records

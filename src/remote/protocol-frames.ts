@@ -84,8 +84,9 @@ export type ClientFrame =
   // in the remote workspace are attributed to them rather than to whatever account the ssh
   // destination resolved to. `origin` is the launching project's `origin` with any embedded
   // credential removed: the far side's root must be a clone of that repository, and a missing one
-  // is offered from it.
-  | { type: 'provision'; label: string; tokens?: ProjectTokens; identity?: GitIdentity; origin?: string }
+  // is offered from it. `depth` is how many commits of each branch the workspace clone keeps; without
+  // it the clone keeps the full history.
+  | { type: 'provision'; label: string; tokens?: ProjectTokens; identity?: GitIdentity; origin?: string; depth?: number }
   // The user's answer to `clone-offer`, typed into the placeholder tab's terminal.
   | { type: 'clone-answer'; accept: boolean }
   | {

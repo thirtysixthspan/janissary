@@ -270,6 +270,7 @@ describe('launchRemotePluginTab', () => {
 
     expect(launchRemotePluginTab(h.input, 'shell-1', { remote: { address: 'devbox' }, name: 'docs' }, factory, ready))
       .toEqual({ label: 'docs' });
+    expect(vi.mocked(h.managers.remote.create).mock.calls[0]?.[5]).toEqual({ depth: 1 });
     expect(h.opened[0]).toMatchObject({
       label: 'docs', start: { connectPtyId: 'connect-0', host: 'devbox' },
       payload: { payload: { connectPtyId: 'connect-0', host: 'devbox' } },

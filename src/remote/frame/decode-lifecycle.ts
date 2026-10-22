@@ -1,6 +1,6 @@
 import { decodeCloned, decodeOrigin } from './decode-root.js';
 import {
-  malformed, nonEmptyString, optionalNonEmptyString, type DecodeResult,
+  malformed, nonEmptyString, optionalNonEmptyString, positiveInteger, type DecodeResult,
 } from './decode-shared.js';
 import { isZshHookNonce } from '../../shell/zsh-startup/script.js';
 
@@ -8,10 +8,6 @@ import { isZshHookNonce } from '../../shell/zsh-startup/script.js';
 // addressed data and resize in between, the two ways it stops, and the workspace outcome it reports.
 // In their own module the way the other `decode-*.ts` families are, so `decode.ts` is
 // left holding only the dispatcher and the frames that have no family of their own.
-
-function positiveInteger(value: unknown): value is number {
-  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
-}
 
 function decodeLaunch(value: unknown): undefined | false | { shell?: string; args?: string[] } {
   if (value === undefined) return undefined;

@@ -72,6 +72,23 @@ describe('provisionRemoteWorkspace', () => {
     expect(frames).toContainEqual(expect.objectContaining({ type: 'workspace-ready', home: homedir() }));
   });
 
+  it('clones as shallow as the launch asked, keeping every branch', async () => {
+    const { context, workspaces } = harness();
+
+    await provisionRemoteWorkspace(context, 'alpha', {}, {}, undefined, 1);
+
+    expect(workspaces.create.mock.calls[0]?.[0]).toBe('alpha');
+    expect(workspaces.create.mock.calls[0]?.[2]).toEqual({ depth: 1, allBranches: true });
+  });
+
+  it('clones the full history when the launch names no depth', async () => {
+    const { context, workspaces } = harness();
+
+    await provisionRemoteWorkspace(context, 'alpha', {}, {});
+
+    expect(workspaces.create.mock.calls[0]).toHaveLength(2);
+  });
+
   it('starts nothing when the server is no longer idle', async () => {
     const { context, frames, workspaces, provisioned } = harness({ idle: () => false });
 

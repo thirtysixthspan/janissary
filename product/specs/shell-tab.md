@@ -320,7 +320,7 @@ The command is `shell [name] [-w|--workspace|--no-workspace] [--offline] [on <ad
 its own. A typed `shell` creates a new sandbox by default, wherever it is typed, a sandboxed tab included:
 a fresh `git clone` of the project's `origin` under `.janissary/workspace/<name>/`, with zsh confined to
 it by the same Seatbelt profile and credential injection a `harness -w` gets (see [[workspaced-agent]]).
-The local clone is shallow: it holds only the newest commit of each branch.
+The clone is shallow, on a remote host as on this machine: it holds only the newest commit of each branch.
 `-w` and `--workspace` confirm the default. `--no-workspace` opts out and wins when both are given.
 `--offline` provisions the clone with the offline sandbox profile, which denies network access, and
 changes nothing without a workspace. `on <address>` opens the shell on that remote host and implies
