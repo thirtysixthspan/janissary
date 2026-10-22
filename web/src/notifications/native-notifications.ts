@@ -18,7 +18,7 @@ export class NativeNotifications {
     }
 
     const now = performance.now();
-    if (event.volume <= 0 || now - this.lastBell < 1000) return;
+    if (!event.category || event.volume <= 0 || now - this.lastBell < 1000) return;
     this.lastBell = now;
     try {
       const sound = new Audio(this.client.resourceUrl(`/sounds/${event.category}.mp3`));

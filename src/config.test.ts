@@ -10,6 +10,7 @@ import {
 } from './config.js';
 import { DEFAULT_SYNTAX_THEME } from './syntax-themes.js';
 import { DEFAULT_APP_THEME } from './app-themes.js';
+import { NOTIFICATION_ALERT_DEFAULTS } from './notifications/alert-defaults.js';
 
 describe('loadConfig', () => {
   let tmpDir: string;
@@ -77,9 +78,7 @@ describe('loadConfig', () => {
     expect(config.terminalBellVolumeSuccess).toBe(0.2);
     expect(config.terminalBellVolumeWarning).toBe(0.8);
     expect(config.terminalBellVolumeError).toBe(0.8);
-    expect(config.terminalBellMuteError).toBe(true);
-    expect(config.terminalBellMuteSuccess).toBe(false);
-    expect(config.terminalBellMuteWarning).toBe(false);
+    expect(config).not.toHaveProperty('terminalBellMuteError');
   });
 
   it('enables desktop and bell by default for existing projects', () => {
@@ -219,9 +218,10 @@ describe('loadConfig', () => {
 
   it('writes a default notifications block with system schedule notices on', () => {
     const config = loadConfig(tmpDir);
-    expect(config.notifications).toEqual({
-      events: { stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false, systemScheduleFire: true },
+    expect(config.notifications?.events).toEqual({
+      stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false, systemScheduleFire: true,
     });
+    expect(config.notifications?.alerts).toEqual(NOTIFICATION_ALERT_DEFAULTS);
 
     const configPath = path.join(tmpDir, '.janissary', 'config.json');
     expect(JSON.parse(readFileSync(configPath, 'utf8')).notifications.events.stateChange).toBe(false);
@@ -248,16 +248,16 @@ describe('loadConfig', () => {
     });
     writeFileSync(configPath, raw);
 
-    expect(loadConfig(tmpDir).notifications).toEqual({
-      events: {
+    expect(loadConfig(tmpDir).notifications?.events).toEqual({
         stateChange: true,
         scheduleFire: false,
         agentStart: false,
         rateLimited: false,
         systemScheduleFire: true,
-      },
     });
-    expect(readFileSync(configPath, 'utf8')).toBe(raw);
+    const written = JSON.parse(readFileSync(configPath, 'utf8'));
+    expect(written.notifications.events).toEqual({ stateChange: true, scheduleFire: false, systemScheduleFire: 'yes' });
+    expect(written.notifications.alerts).toEqual(NOTIFICATION_ALERT_DEFAULTS);
   });
 
   it.each([
@@ -273,7 +273,15 @@ describe('loadConfig', () => {
     writeFileSync(configPath, raw);
 
     expect(loadConfig(tmpDir).notifications?.events.systemScheduleFire).toBe(true);
-    expect(readFileSync(configPath, 'utf8')).toBe(raw);
+    const written = JSON.parse(readFileSync(configPath, 'utf8'));
+    if ('notifications' in rawConfig && rawConfig.notifications && typeof rawConfig.notifications === 'object') {
+      expect(written.notifications.events).toEqual(rawConfig.notifications.events);
+    } else {
+      expect(written.notifications.events).toEqual({
+        stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false, systemScheduleFire: true,
+      });
+    }
+    expect(written.notifications.alerts).toEqual(NOTIFICATION_ALERT_DEFAULTS);
   });
 
   it('preserves an explicit false system schedule toggle', () => {
@@ -284,6 +292,104 @@ describe('loadConfig', () => {
     }));
 
     expect(loadConfig(tmpDir).notifications?.events.systemScheduleFire).toBe(false);
+  });
+
+  it('writes notification alert defaults alphabetically in a fresh config', () => {
+    loadConfig(tmpDir);
+    const raw = JSON.parse(readFileSync(path.join(tmpDir, '.janissary', 'config.json'), 'utf8'));
+    expect(raw.notifications.alerts).toEqual(NOTIFICATION_ALERT_DEFAULTS);
+    expect(Object.keys(raw.notifications.alerts)).toEqual(Object.keys(NOTIFICATION_ALERT_DEFAULTS).toSorted((left, right) => left.localeCompare(right)));
+  });
+
+  it('backfills alerts while preserving unknown and removed keys', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    const configPath = path.join(configDir, 'config.json');
+    writeFileSync(configPath, JSON.stringify({
+      custom: 'kept', terminalBellMuteError: true,
+      notifications: { events: { systemScheduleFire: 'yes' }, customAlert: 'kept' },
+    }));
+
+    loadConfig(tmpDir);
+
+    const written = JSON.parse(readFileSync(configPath, 'utf8'));
+    expect(written.custom).toBe('kept');
+    expect(written.terminalBellMuteError).toBe(true);
+    expect(written.notifications.events).toEqual({ systemScheduleFire: 'yes' });
+    expect(written.notifications.customAlert).toBe('kept');
+    expect(written.notifications.alerts).toEqual(NOTIFICATION_ALERT_DEFAULTS);
+  });
+
+  it('replaces malformed alerts and fills only missing types without changing present entries', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    const configPath = path.join(configDir, 'config.json');
+    writeFileSync(configPath, JSON.stringify({ notifications: { events: null, alerts: 'off' } }));
+    loadConfig(tmpDir);
+    expect(JSON.parse(readFileSync(configPath, 'utf8')).notifications.alerts).toEqual(NOTIFICATION_ALERT_DEFAULTS);
+
+    const partial: Record<string, unknown> = {
+      ...NOTIFICATION_ALERT_DEFAULTS,
+      'agent-start': { desktop: 'bad', custom: true },
+    };
+    delete partial.question;
+    delete partial['state-change'];
+    writeFileSync(configPath, JSON.stringify({ notifications: { events: null, alerts: partial } }));
+    loadConfig(tmpDir);
+    const written = JSON.parse(readFileSync(configPath, 'utf8'));
+    expect(written.notifications.events).toBeNull();
+    expect(written.notifications.alerts['agent-start']).toEqual(partial['agent-start']);
+    expect(written.notifications.alerts.question).toEqual(NOTIFICATION_ALERT_DEFAULTS.question);
+    expect(written.notifications.alerts['state-change']).toEqual(NOTIFICATION_ALERT_DEFAULTS['state-change']);
+    expect(Object.keys(written.notifications.alerts)).toHaveLength(Object.keys(NOTIFICATION_ALERT_DEFAULTS).length);
+  });
+
+  it('does not rewrite a complete alert map or invalid JSON', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    const configPath = path.join(configDir, 'config.json');
+    const complete = JSON.stringify({ notifications: { events: {}, alerts: NOTIFICATION_ALERT_DEFAULTS } });
+    writeFileSync(configPath, complete);
+    loadConfig(tmpDir);
+    expect(readFileSync(configPath, 'utf8')).toBe(complete);
+    writeFileSync(configPath, 'not-json');
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    loadConfig(tmpDir);
+    expect(readFileSync(configPath, 'utf8')).toBe('not-json');
+  });
+
+  it('uses decoded defaults and stays silent when alert backfill cannot be written', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    const configPath = path.join(configDir, 'config.json');
+    writeFileSync(configPath, JSON.stringify({ notifications: { alerts: null } }));
+    const writeSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    chmodSync(configDir, 0o500);
+    try {
+      expect(loadConfig(tmpDir).notifications?.alerts).toEqual(NOTIFICATION_ALERT_DEFAULTS);
+      expect(writeSpy).not.toHaveBeenCalled();
+    } finally {
+      chmodSync(configDir, 0o700);
+    }
+  });
+
+  it('decodes alert fields independently and drops unknown or non-object entries', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ notifications: { alerts: {
+      question: { desktop: false, sound: 'error' },
+      manual: { sound: 'none' },
+      'file-operation': { desktop: true, sound: 'loud' },
+      unknown: { desktop: true, sound: 'success' },
+      'state-change': 'invalid',
+    } } }));
+
+    const alerts = loadConfig(tmpDir).notifications?.alerts;
+    expect(alerts?.question).toEqual({ desktop: false, sound: 'error' });
+    expect(alerts?.manual).toEqual({ desktop: true, sound: 'none' });
+    expect(alerts?.['file-operation']).toEqual({ desktop: true, sound: 'error' });
+    expect(alerts?.['state-change']).toEqual(NOTIFICATION_ALERT_DEFAULTS['state-change']);
+    expect(alerts).not.toHaveProperty('unknown');
   });
 
   it('defaults syncPaths to product/backlog/ and product/plans/', () => {

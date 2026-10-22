@@ -32,14 +32,12 @@ Keep only the settings you want to change. Any setting you leave out uses its de
 | `notifications.events.agentStart` | `false` | Adds background agent-start events to the feed. |
 | `notifications.events.rateLimited` | `false` | Adds background model rate-limit events to the feed. |
 | `notifications.events.systemScheduleFire` | `true` | Adds system schedule firing, missed-run, missing-runscript, and shell-start failure notices. |
-| `osNotifications` | `true` | Allows eligible explicit notifications to use desktop banners when the browser has permission. Janissary does not request permission. |
-| `terminalBell` | `true` | Plays sound cues for eligible explicit notifications. Browser autoplay restrictions can block playback before you interact with the page. |
+| `notifications.alerts` | Per-type defaults | Chooses a desktop banner and sound (`success`, `warning`, `error`, or `none`) for each notification type. See [Notifications](/user-documentation/tab-types/notifications#desktop-banners-and-bell-sounds). |
+| `osNotifications` | `true` | Allows each type's configured desktop banner when the browser has permission. Janissary does not request permission. |
+| `terminalBell` | `true` | Allows each type's configured sound cue. Browser autoplay restrictions can block playback before you interact with the page. |
 | `terminalBellVolumeSuccess` | `0.8` | Volume from `0` to `1` for success cues. |
 | `terminalBellVolumeWarning` | `0.8` | Volume from `0` to `1` for warning cues. |
 | `terminalBellVolumeError` | `0.8` | Volume from `0` to `1` for error cues. |
-| `terminalBellMuteSuccess` | `false` | Mutes success cues without changing desktop banners or other cues. |
-| `terminalBellMuteWarning` | `false` | Mutes warning cues without changing desktop banners or other cues. |
-| `terminalBellMuteError` | `false` | Mutes error cues without changing desktop banners or other cues. |
 | `syncPaths` | `["product/backlog/", "product/plans/"]` | Project paths eligible for automatic GitHub syncing. See [Git-synced files](/user-documentation/tab-types/editor-git-sync). |
 | `externalViewers` | `{ "video": "QuickTime Player" }` | macOS application names used by external file viewers. An empty or missing entry uses the operating system's default. Setting this map replaces the defaults. See [Opening files and pages](/user-documentation/tab-types/opening-files#opening-outside-the-app-open-external). |
 | `pluginSettings` | `{}` | Preferences saved by tab plugins. Each plugin owns its entry; the search tab stores its search toggles here. |
@@ -50,7 +48,7 @@ The `notifications` object can also be left out. Missing or invalid ambient even
 
 <img class="agent-float" src="/agents/yusuf-south-west.png" alt="" />
 
-Edit `.janissary/config.json` as JSON. A setting with the wrong type falls back to its default while valid neighboring settings still apply. Numeric limits such as `transcriptMaxLines` and tab-name lengths accept any number. `clipboardHistoryMaxEntries` must be a positive whole number. Bell volumes outside `0` through `1`, or values that are not numbers, use `0.8`.
+Edit `.janissary/config.json` as JSON. A setting with the wrong type falls back to its default while valid neighboring settings still apply. Numeric limits such as `transcriptMaxLines` and tab-name lengths accept any number. `clipboardHistoryMaxEntries` must be a positive whole number. Bell volumes outside `0` through `1`, or values that are not numbers, use `0.8`. An invalid `desktop` or `sound` value in a notification alert falls back to that type's default while the other field still applies. Janissary adds the full alerts list to a config file that does not have one the next time it starts.
 
 `syncPaths` must be an array of strings, and every value in `externalViewers` must be a string. If either whole value is malformed, its default is used. Invalid entries in `pluginSettings` are dropped individually; a plugin setting must be a JSON object.
 

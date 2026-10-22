@@ -6,7 +6,7 @@ import {
   appendNotification, clearNotificationsFeed, notificationsFeedVisible, replaceLatestNotification, showNotificationsFeed,
 } from './tab.js';
 import { appendNotificationRecord, clearNotificationRecord } from './record.js';
-import { soundCategory } from './sound-category.js';
+import { NOTIFICATION_ALERT_DEFAULTS } from './alert-defaults.js';
 
 // Where a notification that has already passed `shouldNotify` goes. Holding it and rendering it are
 // separate steps here: it always reaches the queue and the record, and only then is a surface
@@ -56,23 +56,25 @@ export function deliverNotification(
 }
 
 function emitNativeNotification(notification: RecordedNotification): void {
-  const category = soundCategory(notification.event);
-  if (!category) return;
   const config = getConfig();
-  const volume = {
-    success: config.terminalBellMuteSuccess ? 0 : config.terminalBellVolumeSuccess,
-    warning: config.terminalBellMuteWarning ? 0 : config.terminalBellVolumeWarning,
-    error: config.terminalBellMuteError ? 0 : config.terminalBellVolumeError,
-  }[category];
-  const effectiveVolume = config.terminalBell ? volume : 0;
-  if (!config.osNotifications && effectiveVolume === 0) return;
+  const alert = config.notifications?.alerts[notification.event] ?? NOTIFICATION_ALERT_DEFAULTS[notification.event];
+  const desktop = config.osNotifications && alert.desktop;
+  const category = alert.sound === 'none' ? undefined : alert.sound;
+  const effectiveVolume = config.terminalBell && category
+    ? {
+      success: config.terminalBellVolumeSuccess,
+      warning: config.terminalBellVolumeWarning,
+      error: config.terminalBellVolumeError,
+    }[category]
+    : 0;
+  if (!desktop && effectiveVolume === 0) return;
   messageBus.emit('notifications', {
     type: 'native-notification',
     tab: notification.tabLabel,
     from: notification.tabName ?? notification.tabLabel,
     message: notification.message,
-    category,
-    desktop: config.osNotifications,
+    ...(effectiveVolume > 0 && category && { category }),
+    desktop,
     volume: effectiveVolume,
   });
 }

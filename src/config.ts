@@ -3,7 +3,10 @@ import path from 'node:path';
 import { atomicWriteFile } from './atomic-write.js';
 import { DEFAULT_SYNTAX_THEME } from './syntax-themes.js';
 import { DEFAULT_APP_THEME } from './app-themes.js';
-import { configRecord, decodeConfig } from './config-decode.js';
+import { backfillNotificationAlerts, configRecord, decodeConfig } from './config-decode.js';
+import { NOTIFICATION_ALERT_DEFAULTS } from './notifications/alert-defaults.js';
+import type { NotificationEventType } from './notifications/index.js';
+import type { NotificationAlert } from './notifications/alert-defaults.js';
 
 // Per-event toggles for the notifications tab (see `notifications/index.ts`). Ambient events default
 // to false; system schedule notices default to true. There is deliberately no toggle for `manual`
@@ -16,6 +19,7 @@ export type NotificationConfig = {
     rateLimited: boolean;
     systemScheduleFire: boolean;
   };
+  alerts: Record<NotificationEventType, NotificationAlert>;
 };
 
 export type Config = {
@@ -56,9 +60,6 @@ export type Config = {
   terminalBellVolumeSuccess: number;
   terminalBellVolumeWarning: number;
   terminalBellVolumeError: number;
-  terminalBellMuteSuccess: boolean;
-  terminalBellMuteWarning: boolean;
-  terminalBellMuteError: boolean;
   // Project-relative file paths kept automatically synced with `origin/master` via a shared,
   // lazily-created workspace clone (see `git/sync.ts`). Defaults to `DEFAULT_SYNC_PATHS` (the
   // project's backlog and plans folders) — syncing is entirely config-driven, with no UI toggle.
@@ -98,15 +99,13 @@ const DEFAULT_CONFIG: Config = {
       rateLimited: false,
       systemScheduleFire: true,
     },
+    alerts: NOTIFICATION_ALERT_DEFAULTS,
   },
   osNotifications: true,
   terminalBell: true,
   terminalBellVolumeSuccess: 0.8,
   terminalBellVolumeWarning: 0.8,
   terminalBellVolumeError: 0.8,
-  terminalBellMuteSuccess: false,
-  terminalBellMuteWarning: false,
-  terminalBellMuteError: false,
   syncPaths: DEFAULT_SYNC_PATHS,
   externalViewers: DEFAULT_EXTERNAL_VIEWERS,
   pluginSettings: {},
@@ -130,6 +129,14 @@ export function loadConfig(projectDirectory: string): Config {
   try {
     const parsed: unknown = JSON.parse(readFileSync(configPath, 'utf8'));
     config = decodeConfig(parsed, DEFAULT_CONFIG);
+    const backfilled = backfillNotificationAlerts(parsed, DEFAULT_CONFIG.notifications!);
+    if (backfilled) {
+      try {
+        atomicWriteFile(configPath, JSON.stringify(backfilled, undefined, 2) + '\n');
+      } catch {
+        return config;
+      }
+    }
     return config;
   } catch {
     process.stderr.write('warning: .janissary/config.json is invalid JSON — using defaults (file left untouched)\n');
