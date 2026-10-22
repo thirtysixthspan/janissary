@@ -94,6 +94,23 @@ describe('native notification delivery', () => {
     } finally { fixture.dispose(); }
   });
 
+  it('keeps a queued notification when the desktop master switch disables its enabled banner', () => {
+    const fixture = setup();
+    try {
+      const defaults = config.getConfig();
+      vi.spyOn(config, 'getConfig').mockReturnValue({
+        ...defaults,
+        osNotifications: false,
+        notifications: { ...defaults.notifications!, alerts: {
+          ...defaults.notifications!.alerts, manual: { desktop: true, sound: 'none' },
+        } },
+      });
+      notify(fixture.managers, 'manual', 'build', 'Done');
+      expect(fixture.events).toHaveLength(0);
+      expect(fixture.managers.notifications.all).toHaveLength(1);
+    } finally { fixture.dispose(); }
+  });
+
   it('alerts for ambient events only when opted in and configured', () => {
     const fixture = setup();
     try {
@@ -117,6 +134,19 @@ describe('native notification delivery', () => {
       notify(fixture.managers, 'auto-approve', 'build', 'Approved', { detectedAt: new Date(2024, 0, 1) });
       expect(fixture.events).toHaveLength(2);
       expect(fixture.managers.notifications.all).toHaveLength(2);
+    } finally { fixture.dispose(); }
+  });
+
+  it('queues an opted-in ambient event without alerting under its default alert settings', () => {
+    const fixture = setup();
+    try {
+      const defaults = config.getConfig();
+      vi.spyOn(config, 'getConfig').mockReturnValue({ ...defaults, notifications: {
+        ...defaults.notifications!, events: { ...defaults.notifications!.events, stateChange: true },
+      } });
+      notify(fixture.managers, 'state-change', 'build');
+      expect(fixture.events).toHaveLength(0);
+      expect(fixture.managers.notifications.all).toHaveLength(1);
     } finally { fixture.dispose(); }
   });
 
