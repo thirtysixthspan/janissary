@@ -16,3 +16,7 @@ export function nonEmptyString(value: unknown): value is string {
 export function optionalNonEmptyString(value: unknown): value is string | undefined {
   return value === undefined || nonEmptyString(value);
 }
+
+export function positiveInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+}

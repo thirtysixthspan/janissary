@@ -7,6 +7,7 @@ import { notify } from '../notifications/index.js';
 import { abbreviateWorkspaceDir } from '../paths.js';
 import { parseRemoteAddress } from '../remote/address.js';
 import { isInsideRoot } from './files.js';
+import { SHELL_CLONE_DEPTH } from '../workspace/clone-depth.js';
 import { wireProvisioning } from '../workspace/provision-wire.js';
 import { TabPluginRejection } from './api-capabilities.js';
 import type { TabPluginLaunchFactory, TabPluginLaunchReadyHandler, TabPluginLaunchRequest, TabPluginLaunchResult } from './api-launch.js';
@@ -62,7 +63,7 @@ export function launchRemotePluginTab(
       if (relaunched) registerTab(relaunched.label);
     },
   };
-  const remote = startRemoteLaunch(input.managers, label, parsed, launchCwd(input));
+  const remote = startRemoteLaunch(input.managers, label, parsed, launchCwd(input), undefined, SHELL_CLONE_DEPTH);
   try {
     input.managers.tab.openPluginTab(
       input.declaration.id, input.declaration.tabLabelPrefix, instanceKey, input.declaration.payloadSchemaVersion,

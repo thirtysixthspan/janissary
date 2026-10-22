@@ -2,6 +2,7 @@ import { homedir } from 'node:os';
 import { getProjectTokens, type ProjectTokens } from '../project/tokens.js';
 import { setGitIdentity, type GitIdentity } from '../git/identity.js';
 import { sandboxNotice } from '../sandbox/index.js';
+import { workspaceCloneOptions } from '../workspace/clone-depth.js';
 import { workspacePath } from '../workspace/index.js';
 import type { WorkspaceManager } from '../workspace/manager.js';
 import { workspaceLabelError } from '../workspace/label.js';
@@ -50,7 +51,7 @@ export type ProvisionContext = {
  */
 export async function provisionRemoteWorkspace(
   context: ProvisionContext, label: string, forwarded: ProjectTokens, identity: GitIdentity,
-  cloned?: { url: string; path: string },
+  cloned?: { url: string; path: string }, depth?: number,
 ): Promise<void> {
   const { emit, workspaces } = context;
   if (!context.idle()) return;
@@ -75,7 +76,9 @@ export async function provisionRemoteWorkspace(
   const tokens = { ...own, ...forwarded };
   // The clone fetches with the same GitHub credential the workspace's processes will get, so a host
   // with no GitHub access of its own can still clone a private repository.
-  const result = workspaces.create(label, tokens.github);
+  const result = depth === undefined
+    ? workspaces.create(label, tokens.github)
+    : workspaces.create(label, tokens.github, workspaceCloneOptions(depth));
   if ('error' in result) { emit({ type: 'workspace-failed', message: result.error }); return; }
   try {
     await result.ready;

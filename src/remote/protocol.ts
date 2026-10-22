@@ -185,7 +185,10 @@
 // Version 33 adds the `kilo` name to the `provision` token map. A version-32 remote decodes that map
 // against its own table, refuses an unknown name, and so rejects the whole frame as malformed the
 // moment a Kilo key is forwarded, which fails the provisioning instead of leaving the key out.
-export const REMOTE_PROTOCOL_VERSION = 34;
+// Version 35 adds `depth` to `provision`, so a remote workspace clone is as shallow as a local one:
+// one commit of each branch for a shell, ten for a harness. A version-34 remote would drop the field
+// and clone the full history while both ends looked healthy.
+export const REMOTE_PROTOCOL_VERSION = 35;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.

@@ -1294,6 +1294,15 @@ describe('HarnessManager remote launch', () => {
     expect(tabs.at(-1)!.harness).toMatchObject({ status: 'provisioning', ptyId: 'ssh-pty-1' });
   });
 
+  it('asks the host for a clone ten commits deep', () => {
+    const { managers } = remoteLaunch();
+    const manager = new HarnessManager(managers);
+
+    expect(manager.run('harness claude on admin@devbox:/srv/proj')).toBeUndefined();
+
+    expect(vi.mocked(managers.remote.create).mock.calls[0]?.[5]).toEqual({ depth: 10 });
+  });
+
   it('marks the tab remote and leaves workspaceDir unset, so nothing local is ever deleted', () => {
     const { managers, tabs } = remoteLaunch();
     const manager = new HarnessManager(managers);

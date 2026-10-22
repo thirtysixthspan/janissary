@@ -1,5 +1,5 @@
 import type { Managers } from '../managers.js';
-import { HARNESS_WORKSPACE_CLONE } from '../workspace/clone-depth.js';
+import { HARNESS_CLONE_DEPTH, workspaceCloneOptions } from '../workspace/clone-depth.js';
 import type { ProvisioningWorkspace } from '../workspace/manager.js';
 
 // Where a harness tab starts on disk. Both launch surfaces — the `harness` command and a profile
@@ -29,7 +29,7 @@ export function resolveLaunchDir(
   managers: Managers, workspace: boolean, label: string, fallbackCwd: string,
 ): string | LaunchDir {
   const resolved: string | ProvisioningWorkspace | { error: string } = workspace
-    ? managers.workspace.create(label, undefined, HARNESS_WORKSPACE_CLONE)
+    ? managers.workspace.create(label, undefined, workspaceCloneOptions(HARNESS_CLONE_DEPTH))
     : fallbackCwd;
   if (typeof resolved !== 'string' && 'error' in resolved) return resolved.error;
   return {

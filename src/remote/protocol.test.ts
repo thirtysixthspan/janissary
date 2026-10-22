@@ -209,6 +209,10 @@ describe('frame codec', () => {
     ['provision with an unknown identity key', { type: 'provision', label: 'agent', identity: { handle: 'ada' } }],
     ['provision with a non-string identity value', { type: 'provision', label: 'agent', identity: { name: 42 } }],
     ['provision with an empty identity value', { type: 'provision', label: 'agent', identity: { name: '' } }],
+    ['provision with a zero depth', { type: 'provision', label: 'agent', depth: 0 }],
+    ['provision with a negative depth', { type: 'provision', label: 'agent', depth: -1 }],
+    ['provision with a fractional depth', { type: 'provision', label: 'agent', depth: 1.5 }],
+    ['provision with a string depth', { type: 'provision', label: 'agent', depth: '1' }],
     ['spawn without an id', { type: 'spawn', program: 'bash', command: 'bash', mode: 'pty', cols: 80, rows: 24 }],
     ['spawn with an empty program', { type: 'spawn', id: 'r1', program: '', command: 'bash', mode: 'pty', cols: 80, rows: 24 }],
     ['spawn with a non-string command', { type: 'spawn', id: 'r1', program: 'bash', command: 1, mode: 'pty', cols: 80, rows: 24 }],
@@ -401,6 +405,11 @@ describe('frame codec', () => {
   it('leaves tokens and identity absent when the provision frame declares neither', () => {
     expect(decodeFrame(JSON.stringify({ type: 'provision', label: 'agent' })))
       .toEqual({ type: 'provision', label: 'agent' });
+  });
+
+  it('keeps the clone depth the provision frame carries', () => {
+    expect(decodeFrame(JSON.stringify({ type: 'provision', label: 'agent', depth: 10 })))
+      .toEqual({ type: 'provision', label: 'agent', depth: 10 });
   });
 
   it('keeps the half of an identity the provision frame carries', () => {
@@ -660,8 +669,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 32', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(34);
+  it('is 35', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(35);
   });
 });
 

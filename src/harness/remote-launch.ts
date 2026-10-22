@@ -1,5 +1,6 @@
 import { messageBus } from '../bus.js';
 import { wireProvisioning } from '../workspace/provision-wire.js';
+import { HARNESS_CLONE_DEPTH } from '../workspace/clone-depth.js';
 import type { Managers } from '../managers.js';
 import type { RemoteAddress } from '../remote/address.js';
 import type { RemoteResume } from '../remote/resume.js';
@@ -52,7 +53,7 @@ function closeTab(managers: Managers, label: string): void {
  * (`failRemoteLaunch`) tells apart from every other failure.
  */
 export function startRemoteLaunch(
-  managers: Managers, label: string, address: RemoteAddress, cwd: string, resume?: RemoteResume,
+  managers: Managers, label: string, address: RemoteAddress, cwd: string, resume?: RemoteResume, depth?: number,
 ): RemoteLaunchState {
   // The channel is opened inside the executor, which runs synchronously, so `ptyId` is filled in
   // before this function returns and no resolver has to be lifted out of the promise.
@@ -97,7 +98,7 @@ export function startRemoteLaunch(
         resume?.onFailed?.(message);
         reject(resume ? new Error(message) : new LaunchCheckUnanswered(address.host, message));
       },
-    }, resume);
+    }, resume, depth === undefined ? undefined : { depth });
     state.ptyId = channel.ptyId;
   });
 
@@ -120,7 +121,7 @@ export function startRemoteTab(
   onReady: (cwd: string, notice?: string) => void,
 ): void {
   const { label, cwd } = options;
-  const launch = startRemoteLaunch(managers, label, remote, cwd, options.resume);
+  const launch = startRemoteLaunch(managers, label, remote, cwd, options.resume, HARNESS_CLONE_DEPTH);
   const liveTab = managers.tab.byLabel(label);
   if (liveTab?.harness) liveTab.harness.ptyId = launch.ptyId;
   messageBus.emit('state', { type: 'dirty' });

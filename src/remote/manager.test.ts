@@ -772,7 +772,7 @@ describe('RemoteManager detach', () => {
 
 // A fresh launch whose host settles its project root: the origin it sends, the keystrokes the
 // placeholder routes, the clone offer it answers, and the refusal or clone it hears back.
-function rootHarness(origin: string | undefined) {
+function rootHarness(origin: string | undefined, options?: { depth?: number }) {
   let transport: { onData: (data: string) => void; onExit: () => void; onInput?: (data: string) => void } | undefined;
   const write = vi.fn();
   const managers = {
@@ -793,7 +793,7 @@ function rootHarness(origin: string | undefined) {
   const handlers: RemoteLaunchHandlers = {
     onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn(), onNameRefused: vi.fn(), onRootRefused: vi.fn(),
   };
-  remote.create('creator', address('devbox'), '/local', handlers);
+  remote.create('creator', address('devbox'), '/local', handlers, undefined, options);
   const sent = () => write.mock.calls.map(([data]: [string]) => data).join('');
   return {
     remote, handlers, write, terminal, sent, transport: () => transport!,
@@ -817,6 +817,14 @@ describe('RemoteManager — settling the remote root', () => {
     h.transport().onData(`${encodeHandshake()}\n`);
     expect(h.sent()).toContain('"type":"provision"');
     expect(h.sent()).not.toContain('origin');
+    expect(h.sent()).not.toContain('depth');
+    h.dispose();
+  });
+
+  it('sends the clone depth the launch asked for on provision', () => {
+    const h = rootHarness(undefined, { depth: 10 });
+    h.transport().onData(`${encodeHandshake()}\n`);
+    expect(h.sent()).toContain('"depth":10');
     h.dispose();
   });
 

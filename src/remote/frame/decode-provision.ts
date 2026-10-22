@@ -1,7 +1,7 @@
 import { PROJECT_TOKENS, type ProjectTokens } from '../../project/tokens.js';
 import type { GitIdentity } from '../../git/identity.js';
 import { decodeOrigin } from './decode-root.js';
-import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js';
+import { malformed, nonEmptyString, positiveInteger, type DecodeResult } from './decode-shared.js';
 
 // The `provision` decoder, in its own module for the same reason `decode-history.ts` has one:
 // `decode.ts` is the dispatcher, and a frame carrying two records of adopted settings is more
@@ -39,12 +39,15 @@ export function decodeProvision(record: Record<string, unknown>): DecodeResult {
   const tokens = decodeTokens(record.tokens);
   const identity = decodeIdentity(record.identity);
   const origin = decodeOrigin(record.origin);
+  const { depth } = record;
   if (!nonEmptyString(record.label) || tokens === undefined || identity === undefined || origin === false) return malformed('provision');
+  if (depth !== undefined && !positiveInteger(depth)) return malformed('provision');
   return {
     type: 'provision',
     label: record.label,
     ...(Object.hasOwn(record, 'tokens') && { tokens }),
     ...(Object.hasOwn(record, 'identity') && { identity }),
     ...(origin !== undefined && { origin }),
+    ...(depth !== undefined && { depth }),
   };
 }
