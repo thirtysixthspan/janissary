@@ -2,6 +2,8 @@
 
 ## ready
 
+* assign auto-approval prompt notifications a new notification type, and allow this type to be configured in config.json. The default should be no audio notification.
+
 ## development
 
 * add an ACP skill to allow an agent to spin up other agents with different models, pass them ai tasks (form the repository) to execute and access to monitor the transcript as the agent works, and to recieve the response.
