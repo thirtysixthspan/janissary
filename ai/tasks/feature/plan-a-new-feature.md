@@ -118,10 +118,12 @@ Keep asking rounds until the phase's frontier is empty — every product decisio
 
 ### 2f. Improve the answered draft
 
-Execute these tasks in order and in full:
+Execute these tasks in order, each in full except for its `Step 0 — Prepare the workspace`:
 
 1. `ai/tasks/planning/improve-plan.md`
 2. `ai/tasks/planning/improve-plan-with-minimalism.md`
+
+Skip that Step 0 in both. They reuse the workspace this task already prepared in its own Step 0. An improvement task prepares the workspace only when it is run directly. Every other step of each task runs as written.
 
 The improvement passes may uncover product or implementation decisions the draft has not settled. Continue to the next step after both passes complete.
 
