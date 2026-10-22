@@ -62,7 +62,6 @@ function useFileNavigatorDrag(
   rows: FileNavigatorRow[], client: JanusClient,
   absoluteRootOrDropRef: string | React.RefObject<CommandInputDropHandle | null> = '',
   displayRoot = '',
-  targetCwd = '',
   providedDropRef?: React.RefObject<CommandInputDropHandle | null>,
   remoteHost?: string,
 ) {
@@ -70,7 +69,6 @@ function useFileNavigatorDrag(
   return useFileNavigatorDragImplementation(rows, client, 'files', {
     absoluteRoot: legacy ? '' : absoluteRootOrDropRef,
     displayRoot,
-    targetCwd,
     dropRef: legacy ? absoluteRootOrDropRef : providedDropRef,
     remoteHost,
   });
@@ -508,7 +506,7 @@ describe('useFileNavigatorDrag', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const harness = registerHarness('pty-1');
       const { result } = renderHook(() =>
-        useFileNavigatorDrag(makeRows(), client, '/work/tree', 'tree', '/work'));
+        useFileNavigatorDrag(makeRows(), client, '/work/tree', 'tree'));
       document.elementFromPoint = vi.fn().mockReturnValue(makeHarnessBodyElement('pty-1'));
 
       act(() => {
@@ -531,22 +529,37 @@ describe('useFileNavigatorDrag', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const left = registerHarness('pty-left');
       const right = registerHarness('pty-right');
-      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, '/work', '$root'));
       document.elementFromPoint = vi.fn().mockReturnValue(makeHarnessBodyElement('pty-right'));
 
       act(() => { result.current.onRowMouseDown({ path: 'src/notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
       act(() => { result.current.drop(); });
 
-      expect(right.insertAtCaret).toHaveBeenCalledWith('src/notes.txt');
+      expect(right.insertAtCaret).toHaveBeenCalledWith('$root/src/notes.txt');
       expect(left.insertAtCaret).not.toHaveBeenCalled();
+    });
+
+    it('anchors a file inside the harness workspace clone to $workspace', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const handle = { insertAtCaret: vi.fn(), workspaceDir: '/work/.janissary/workspace/salih' };
+      registeredHarnesses.push(registerHarnessDrop('pty-ws', handle));
+      const { result } = renderHook(() =>
+        useFileNavigatorDrag(makeRows(), client, '/work/.janissary/workspace/salih', '$root/workspace/salih'));
+      document.elementFromPoint = vi.fn().mockReturnValue(makeHarnessBodyElement('pty-ws'));
+
+      act(() => { result.current.onRowMouseDown({ path: 'src/a.ts' } as FileNavigatorRow, downEvent(0, 0)); });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+      act(() => { result.current.drop(); });
+
+      expect(handle.insertAtCaret).toHaveBeenCalledWith('$workspace/salih/src/a.ts');
     });
 
     it('a remote tree types host-qualified absolute paths, as it does into a command bar', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const harness = registerHarness('pty-1');
       const { result } = renderHook(() =>
-        useFileNavigatorDrag(makeRows(), client, '/srv/project', 'project', '/srv', undefined, 'devbox'));
+        useFileNavigatorDrag(makeRows(), client, '/srv/project', 'project', undefined, 'devbox'));
       document.elementFromPoint = vi.fn().mockReturnValue(makeHarnessBodyElement('pty-1'));
 
       act(() => { result.current.onRowMouseDown({ path: 'src/a.ts' } as FileNavigatorRow, downEvent(0, 0)); });
@@ -604,7 +617,7 @@ describe('useFileNavigatorDrag', () => {
       request: vi.fn().mockResolvedValue({ total: 2, failedPaths: [] }),
     } as unknown as JanusClient;
     const { result } = renderHook(() =>
-      useFileNavigatorDrag(makeRows(), client, '/work/tree', 'tree', '/work'));
+      useFileNavigatorDrag(makeRows(), client, '/work/tree', 'tree'));
     const target = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(target);
 
@@ -636,7 +649,7 @@ describe('useFileNavigatorDrag', () => {
     const commandHandle = makeDropHandle();
     const commandRef = { current: commandHandle };
     const { result } = renderHook(() =>
-      useFileNavigatorDrag(makeRows(), client, '/work/tree', 'tree', '/work', commandRef));
+      useFileNavigatorDrag(makeRows(), client, '/work/tree', 'tree', commandRef));
     document.elementFromPoint = vi.fn().mockReturnValue(makeCommandBarElement());
 
     act(() => {
@@ -659,7 +672,7 @@ describe('useFileNavigatorDrag', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const editor = registerEditor('notes-editor');
     const { result } = renderHook(() =>
-      useFileNavigatorDrag(makeRows(), client, '/work/tree', 'tree', '/work'));
+      useFileNavigatorDrag(makeRows(), client, '/work/tree', 'tree'));
     document.elementFromPoint = vi.fn().mockReturnValue(makeEditorBodyElement('notes-editor'));
 
     act(() => {
@@ -686,7 +699,7 @@ describe('useFileNavigatorDrag', () => {
     const commandHandle = makeDropHandle();
     const commandRef = { current: commandHandle };
     const { result, unmount } = renderHook(() =>
-      useFileNavigatorDrag(makeRows(), client, '', '', '', commandRef));
+      useFileNavigatorDrag(makeRows(), client, '', '', commandRef));
     document.elementFromPoint = vi.fn().mockReturnValue(makeCommandBarElement());
 
     act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
@@ -709,7 +722,7 @@ describe('useFileNavigatorDrag', () => {
     const commandHandle = makeDropHandle();
     const commandRef = { current: commandHandle };
     const { result } = renderHook(() =>
-      useFileNavigatorDrag(makeRows(), client, '', '', '', commandRef));
+      useFileNavigatorDrag(makeRows(), client, '', '', commandRef));
     document.elementFromPoint = vi.fn().mockReturnValue(makeCommandBarElement());
 
     act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
@@ -744,7 +757,7 @@ describe('useFileNavigatorDrag', () => {
     const commandHandle = { insertAtCaret: vi.fn(() => { throw new Error('surface closed'); }), setDropHighlighted: vi.fn() };
     const commandRef = { current: commandHandle };
     const { result } = renderHook(() =>
-      useFileNavigatorDrag(makeRows(), client, '', '', '', commandRef));
+      useFileNavigatorDrag(makeRows(), client, '', '', commandRef));
     document.elementFromPoint = vi.fn().mockReturnValue(makeCommandBarElement());
 
     act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });

@@ -18,6 +18,14 @@ describe('useHarnessPtyDrop', () => {
     unmount();
   });
 
+  it('publishes the tab workspace directory on the handle', () => {
+    const { client } = fakeClient();
+    const { unmount } = renderHook(() => useHarnessPtyDrop('pty-ws', client, vi.fn(), '/work/ws/salih'));
+
+    expect(harnessDropHandle('pty-ws')?.workspaceDir).toBe('/work/ws/salih');
+    unmount();
+  });
+
   it('focuses the terminal and then types the dropped text into the PTY', () => {
     const { client, send } = fakeClient();
     const calls: string[] = [];

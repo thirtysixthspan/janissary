@@ -112,6 +112,7 @@ export function buildTabView(
     // shorten. Naming the clone is what keeps a strip of parallel workspaced agents
     // distinguishable. Display-only, so `cwd` keeps the value every other consumer reads.
     cwdDisplay: abbreviateWorkspacePath(workspacePrefix, cwd),
+    ...(tab.workspaceDir && { workspaceDir: tab.workspaceDir }),
     // A remote tab is workspaced too — its clone just lives on the other host, so the flag is
     // derived from either field rather than from `workspaceDir` alone. The provisioning spinner
     // stands in for it until the workspace lands.

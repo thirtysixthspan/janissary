@@ -43,7 +43,7 @@ A remote tree has the same browsing and editing tools as a local one: directory 
 
 Row sizes, modified times, and permissions come from the remote host. Until those details arrive, the row shows a blank value. A failed detail read is retried on the next refresh.
 
-Moves and copies stay on one machine. A drag onto a tree on another host has no drop highlight, and a cross-host paste is refused without changing anything or clearing the clipboard marks. Dragging a remote row into a command bar, an editor, or a harness inserts a host-qualified absolute path such as `devbox:/srv/project/src/index.ts`; local rows still insert relative paths.
+Moves and copies stay on one machine. A drag onto a tree on another host has no drop highlight, and a cross-host paste is refused without changing anything or clearing the clipboard marks. Dragging a remote row into a command bar, an editor, or a harness inserts a host-qualified absolute path such as `devbox:/srv/project/src/index.ts`; local rows still insert short paths.
 
 A navigator opened from a remote tab's 📁 button closes when that tab closes, even if another joined tab keeps using the shared connection. Retargeting the navigator to a local directory removes that tie. A dropped or explicitly closed SSH connection closes every tree and tab using it. Remote trees are not restored by a profile.
 
@@ -259,8 +259,8 @@ so you can keep typing without reaching for the mouse.
 
 Drag selected rows onto a [harness](/user-documentation/advanced-agents/harness) tab's terminal to
 type their paths into the harness. They arrive as if you had typed them — nothing is submitted —
-separated by single spaces, relative to that harness's
-working directory, and host-qualified for a remote tree. Focus moves to the terminal, so you can
+separated by single spaces, written with the `$workspace` and `$root` shortcuts (`$workspace/salih/src/index.ts`
+for a file inside that harness's workspace, `$root/src/index.ts` otherwise), and host-qualified for a remote tree. Focus moves to the terminal, so you can
 carry on typing from the path you just dropped. The terminal doesn't highlight during the drag, and
 a harness that is still provisioning its workspace isn't a target yet. With two harness tabs side by
 side, the paths go to the one you released over.

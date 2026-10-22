@@ -25,4 +25,6 @@ export type EditorDropHandle = {
   pasteAtCaret: (text: string) => void;
 };
 
-export type HarnessDropHandle = { insertAtCaret: (text: string) => void };
+// `workspaceDir` is the harness tab's local clone directory, when it has one: a drop anchors the
+// paths it types to it as `$workspace/<name>/…`.
+export type HarnessDropHandle = { insertAtCaret: (text: string) => void; workspaceDir?: string };

@@ -653,8 +653,8 @@ Reorder/collapse chords (`Ctrl+←/→`, `Ctrl+T`) are **not** available while a
 switch to another tab first.
 
 A file navigator drag released over the terminal types the dragged paths into the harness, as if
-they had been typed there — space-separated, relative to the tab's own working directory, and
-nothing submitted. Focus moves to the terminal on the drop; see `file-navigator-tab.md` for the
+they had been typed there — space-separated, anchored with `$workspace/<clone-name>/…` or
+`$root/…`, and nothing submitted. Focus moves to the terminal on the drop; see `file-navigator-tab.md` for the
 full behavior.
 
 **Shift+Enter** is translated before it reaches the PTY: instead of a bare carriage return
