@@ -257,9 +257,9 @@ provisioning request as malformed rather than provisioning a workspace without t
 refusal at the handshake reports the mismatch before a tab is provisioned.
 
 Protocol version 35 adds the clone depth to the provisioning request, so a remote workspace is as
-shallow as a local one: the newest commit of each branch for a shell, the newest ten for a harness,
-with every branch present. A request without a depth, which is what a remote agent run sends, gets
-the full history. A depth that is not a positive whole number makes the request malformed. A
+shallow as a local one: the newest commit of each branch for a shell, the newest ten for a harness
+or an agent run's own workspace, with every branch present. A request without a depth gets the full
+history. A depth that is not a positive whole number makes the request malformed. A
 version-34 remote would ignore the depth and clone the whole history while both ends looked healthy,
 so the handshake refuses it.
 

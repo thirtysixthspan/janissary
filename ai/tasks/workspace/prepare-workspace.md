@@ -5,7 +5,7 @@
 1. Run `git checkout master` to switch to the primary branch.
 2. Run `git pull origin master` to fetch the latest commits.
 
-A workspace clone that Janissary makes for a shell or a harness is shallow. A shell's clone holds only the newest commit of each branch (depth 1), and a harness's holds the newest 10 commits of each branch (depth 10). Every branch is there, but history past that point is not. Run `git rev-parse --is-shallow-repository` to check whether the current checkout is shallow. When research or debugging needs older history, such as `git log`, `git blame`, or `git bisect` reaching past the cut-off, run `git fetch --unshallow` first to fetch the rest.
+A workspace clone that Janissary makes for a shell, a harness, or an agent run is shallow. A shell's clone holds only the newest commit of each branch (depth 1). A harness's or an agent run's holds the newest 10 commits of each branch (depth 10). Every branch is there, but history past that point is not. Run `git rev-parse --is-shallow-repository` to check whether the current checkout is shallow. When research or debugging needs older history, such as `git log`, `git blame`, or `git bisect` reaching past the cut-off, run `git fetch --unshallow` first to fetch the rest.
 
 ---
 

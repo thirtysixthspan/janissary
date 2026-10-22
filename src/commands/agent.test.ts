@@ -100,6 +100,7 @@ describe('agent command', () => {
     expect(execute.mock.calls[0]?.[1]).toHaveProperty('signal', expect.any(AbortSignal));
     expect(execute.mock.calls[0]?.[1]).toMatchObject({ caller: { cwd: workspace } });
     expect(managers.workspace.create).toHaveBeenCalledOnce();
+    expect(vi.mocked(managers.workspace.create).mock.calls[0]?.[2]).toEqual({ depth: 10, allBranches: true });
     expect(workspaceRelease).toHaveBeenCalledOnce();
   });
 
@@ -370,7 +371,7 @@ describe('agent command', () => {
     await expect(run('agent on build-box execute task.md')).resolves.toMatchObject({ status: 'completed' });
 
     expect(managers.remote.create).toHaveBeenCalledWith(
-      expect.stringMatching(/^agent-/), parsed, workspace, expect.any(Object), undefined, { nonInteractive: true },
+      expect.stringMatching(/^agent-/), parsed, workspace, expect.any(Object), undefined, { nonInteractive: true, depth: 10 },
     );
     expect(channel.resolveAgentSnapshot).toHaveBeenCalledWith('task.md', []);
     expect(execute.mock.calls[0]?.[0]).toMatchObject({ snapshot });
@@ -398,7 +399,7 @@ describe('agent command', () => {
     await expect(run('agent on build-box execute task.md')).resolves.toMatchObject({ status: 'completed' });
 
     expect(managers.remote.create).toHaveBeenCalledWith(
-      expect.stringMatching(/^agent-/), target, workspace, expect.any(Object), undefined, { nonInteractive: true },
+      expect.stringMatching(/^agent-/), target, workspace, expect.any(Object), undefined, { nonInteractive: true, depth: 10 },
     );
     expect(targetChannel.resolveAgentSnapshot).toHaveBeenCalledOnce();
   });
@@ -426,7 +427,7 @@ describe('agent command', () => {
     await expect(run('agent on build-box execute task.md')).resolves.toMatchObject({ status: 'completed' });
 
     expect(managers.remote.create).toHaveBeenCalledWith(
-      expect.stringMatching(/^agent-/), requested, workspace, expect.any(Object), undefined, { nonInteractive: true },
+      expect.stringMatching(/^agent-/), requested, workspace, expect.any(Object), undefined, { nonInteractive: true, depth: 10 },
     );
     expect(currentChannel.resolveAgentSnapshot).toBeUndefined();
   });
@@ -451,7 +452,7 @@ describe('agent command', () => {
     await expect(run('agent on admin@build-box execute task.md')).resolves.toMatchObject({ status: 'completed' });
 
     expect(managers.remote.create).toHaveBeenCalledWith(
-      expect.stringMatching(/^agent-/), requested, workspace, expect.any(Object), undefined, { nonInteractive: true },
+      expect.stringMatching(/^agent-/), requested, workspace, expect.any(Object), undefined, { nonInteractive: true, depth: 10 },
     );
     expect(currentChannel.resolveAgentSnapshot).toBeUndefined();
   });
@@ -499,7 +500,7 @@ describe('agent command', () => {
     await expect(run('agent on admin@build-box:/other/project execute task.md')).resolves.toMatchObject({ status: 'completed' });
 
     expect(managers.remote.create).toHaveBeenCalledWith(
-      expect.stringMatching(/^agent-/), requested, workspace, expect.any(Object), undefined, { nonInteractive: true },
+      expect.stringMatching(/^agent-/), requested, workspace, expect.any(Object), undefined, { nonInteractive: true, depth: 10 },
     );
     expect(currentChannel.resolveAgentSnapshot).toBeUndefined();
   });
