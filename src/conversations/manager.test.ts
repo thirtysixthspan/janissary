@@ -31,7 +31,7 @@ function fakeSession(): FakeSession {
 }
 
 function fixture() {
-  const store = new ConversationStore({ home });
+  const store = new ConversationStore({ home, projectDir: home });
   const reportStorageError = vi.fn();
   const tabs: Tab[] = [];
   const setCwd = vi.fn();
@@ -520,7 +520,7 @@ describe('ConversationsManager', () => {
     expect(manager.cancel('first')).toBe(true);
     manager.dispose();
 
-    expect(new ConversationStore({ home }).read('first'))
+    expect(new ConversationStore({ home, projectDir: home }).read('first'))
       .toMatchObject({ title: 'Kept history', turns: [{ query: 'First' }] });
   });
 
@@ -696,7 +696,7 @@ describe('ConversationsManager', () => {
   });
 
   it('falls back to the first available model when the remembered pair is retired', () => {
-    new ConversationStore({ home }).writeLastUsedPair({ harness: 'opencode', model: 'retired/model-0' });
+    new ConversationStore({ home, projectDir: home }).writeLastUsedPair({ harness: 'opencode', model: 'retired/model-0' });
     const { manager } = fixture();
     try {
       manager.create('first');
@@ -720,12 +720,12 @@ describe('ConversationsManager', () => {
         expect(manager.selectModel('first', pair)).toBe(true);
         expect(write).toHaveBeenCalledTimes(index + 1);
         expect(write).toHaveBeenLastCalledWith(pair);
-        expect(new ConversationStore({ home }).readLastUsedPair()).toEqual(pair);
+        expect(new ConversationStore({ home, projectDir: home }).readLastUsedPair()).toEqual(pair);
       }
       expect(manager.selectModel('missing', initial)).toBe(false);
       expect(manager.selectModel('first', { harness: 'opencode', model: 'retired/model-0' })).toBe(false);
       expect(write).toHaveBeenCalledTimes(3);
-      expect(new ConversationStore({ home }).readLastUsedPair()).toEqual(different);
+        expect(new ConversationStore({ home, projectDir: home }).readLastUsedPair()).toEqual(different);
     } finally {
       manager.dispose();
     }

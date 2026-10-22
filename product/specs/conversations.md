@@ -1,6 +1,6 @@
 # Conversations
 
-The bundled conversations view provides durable, ordinary conversations with an ACP-capable model. Conversation history is shared across project directories on the same machine.
+The bundled conversations view provides durable, ordinary conversations with an ACP-capable model. Conversation history is specific to the project directory where Janissary is running; another project has its own conversations and remembered model selection.
 
 ### Command grammar
 
@@ -38,7 +38,7 @@ The tab opens with the most recent 20 turns and the newest turn visible. An acti
 
 The model selector sits with the metadata row's right-aligned controls, ahead of the folder, new-shell, and split buttons rather than beside the title. It offers every model catalogued for the `claude` and `opencode` harnesses, grouped by harness. The selected pair applies to the next query. Changing it starts a fresh agent session; earlier turns keep the pair that produced them. If a saved pair is no longer catalogued, the next query uses the first available pair.
 
-The last pair any conversation's selector chose is remembered on its own, across conversations and application restarts. Every newly created conversation starts on that remembered pair — falling back to the first available when it is no longer catalogued — so a conversation created from the list and one opened by the default menu's **Chat about this** (see [[context-menu]]) start identically. Sending a query does not change the memory; choosing another model in the selector does.
+The last pair any conversation's selector chose is remembered for this project across conversations and application restarts. Every newly created conversation starts on that remembered pair — falling back to the first available when it is no longer catalogued — so a conversation created from the list and one opened by the default menu's **Chat about this** (see [[context-menu]]) start identically. Sending a query does not change the memory; choosing another model in the selector does.
 
 A conversation opened through the default menu's **Chat about this** entry shows the selected text in the turn list as a conversation turn posed by the user, with no model response beneath it and no query yet sent, while the message input starts empty. The content is context, not a question: nothing reaches the model, and nothing is sent, until the user types a prompt and sends it. That first submission carries the selection along as additional context; later queries are ordinary queries. The selection turn never leaves the conversation on its own afterwards — it stays in the turn list whether or not queries have been sent — and nothing about it is saved: if the tab closes without sending, the selection is gone, and reopening the conversation does not bring it back.
 
@@ -68,7 +68,9 @@ If workspace or session setup fails after a query is submitted, the pending turn
 
 ### Storage and workspace
 
-Each conversation is stored in its own directory under the user's Janissary data directory. That directory contains the conversation record, an empty private workspace, and the workspace's private temporary directory. The directory is created when the first query is sent or either workspace control is used. Using a workspace control before the first query also saves the otherwise-empty conversation, so its workspace remains available after a restart. The directory survives application restarts and project workspace sweeps and is removed only when the conversation is deleted.
+Each conversation is stored in its own directory under the project's `.janissary/conversations/` directory. That directory contains the conversation record, an empty private workspace, and the workspace's private temporary directory. The directory is created when the first query is sent or either workspace control is used. Using a workspace control before the first query also saves the otherwise-empty conversation, so its workspace remains available after a restart. The directory survives application restarts and project workspace sweeps and is removed only when the conversation is deleted.
+
+Conversations and remembered model selection in the former user-wide store remain untouched and are not imported into projects automatically. Each project starts with its own conversation list and remembered model selection.
 
 Conversation records contain completed and failed turns, never a streaming turn. Renaming or changing the model while a reply is in progress updates an existing record without storing the partial response. A pending first query does not create a record through a metadata change; workspace controls can still save an empty conversation explicitly.
 

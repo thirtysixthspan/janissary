@@ -24,6 +24,7 @@ export type Conversation = {
 };
 
 type StoreOptions = {
+  projectDir?: string;
   home?: string;
   write?: typeof atomicWriteFile;
 };
@@ -62,8 +63,9 @@ export class ConversationStore {
   private warned = new Set<string>();
 
   constructor(options: StoreOptions = {}) {
+    const projectDir = options.projectDir ?? process.cwd();
     const home = options.home ?? homedir();
-    this.root = path.join(home, '.janissary', 'conversations');
+    this.root = path.join(projectDir, '.janissary', 'conversations');
     this.claudeJson = path.join(home, '.claude.json');
     this.writeFile = options.write ?? atomicWriteFile;
   }

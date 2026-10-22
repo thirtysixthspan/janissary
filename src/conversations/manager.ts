@@ -19,6 +19,7 @@ import {
 } from './view.js';
 
 type ManagerOptions = {
+  projectDir?: string;
   store?: ConversationStore;
   sessions?: ConversationSessions;
   now?: () => number;
@@ -35,7 +36,7 @@ export class ConversationsManager {
   private readonly tabRemoved: Subscription;
 
   constructor(private managers: Managers, options: ManagerOptions = {}) {
-    this.store = options.store ?? new ConversationStore();
+    this.store = options.store ?? new ConversationStore({ projectDir: options.projectDir });
     this.sessions = options.sessions ?? new ConversationSessions();
     this.now = options.now ?? Date.now;
     this.responder = new ConversationResponder(

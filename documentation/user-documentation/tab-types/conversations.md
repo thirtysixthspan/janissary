@@ -70,10 +70,12 @@ The conversation's own ACP agent has no tools at all. It cannot read, write, or 
 
 The first query or either workspace button creates the workspace. Using a workspace button before asking anything also saves the empty conversation, so you can reopen it after restarting.
 
-Saved conversations live under `~/.janissary/conversations/`, shared across projects on this machine. Their history and workspaces survive restarts and project workspace cleanup. [Profiles](/user-documentation/automation/profiles) restore the conversation list, rather than individual conversation tabs; reopen those from the list.
+Saved conversations live in the current project's `.janissary/conversations/` directory. Each project has its own history and remembered model selection. Conversation history and private workspaces survive restarts and project workspace cleanup. [Profiles](/user-documentation/automation/profiles) restore the conversation list, rather than individual conversation tabs; reopen those from the list.
+
+Conversations and remembered model selection saved before this change remain untouched in their former user-wide location. Janissary does not import them into a project automatically.
 
 ## Delete a conversation
 
 Use the row's **Delete** button in the conversation list. It asks `Delete conversation "<title>"?` before touching anything. Confirming deletes its saved history, private workspace, and everything inside that workspace. Cancelling leaves them intact.
 
-A conversation that opens while you are looking at another tab does not pull focus away from it — you get the empty message box waiting, and it takes your typing when you switch to it. Nothing about a conversation is created until it is needed: its files are written the first time you send a query or use one of the workspace buttons, and using a workspace button first still counts, so the workspace is there after a restart. The record outlives restarts and workspace sweeps, and is removed only when you delete the conversation.
+A conversation that opens while you are looking at another tab does not pull focus away from it — you get the empty message box waiting, and it takes your typing when you switch to it. Nothing about a conversation is created until it is needed: its files are written the first time you send a query or use one of the workspace buttons, and using a workspace button first still counts, so the workspace is there after a restart. The record stays with its project through restarts and workspace sweeps, and is removed only when you delete the conversation.

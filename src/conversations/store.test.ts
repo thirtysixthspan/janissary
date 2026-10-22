@@ -27,7 +27,7 @@ afterEach(() => { rmSync(home, { recursive: true, force: true }); });
 
 describe('ConversationStore', () => {
   it('writes only completed turns and reports whether a record exists', () => {
-    const store = new ConversationStore({ home });
+    const store = new ConversationStore({ home, projectDir: home });
     const pending: Conversation['turns'][number] = {
       query: 'Second question', response: 'partial',
       pair: { harness: 'opencode', model: 'google/gemini' }, streaming: true,
@@ -42,13 +42,31 @@ describe('ConversationStore', () => {
   });
 
   it('round-trips a conversation through an atomic write', () => {
-    const store = new ConversationStore({ home });
+    const store = new ConversationStore({ home, projectDir: home });
     store.write(conversation());
     expect(store.read('first')).toEqual(conversation());
   });
 
+  it('isolates conversations and remembered models between project directories', () => {
+    const projectA = path.join(home, 'project-a');
+    const projectB = path.join(home, 'project-b');
+    const storeA = new ConversationStore({ home, projectDir: projectA });
+    const storeB = new ConversationStore({ home, projectDir: projectB });
+    storeA.write({ ...conversation(), title: 'Project A' });
+    storeB.write({ ...conversation(), title: 'Project B' });
+    storeA.writeLastUsedPair({ harness: 'claude', model: 'opus' });
+
+    expect(storeA.directory('first')).toBe(path.join(projectA, '.janissary', 'conversations', 'first'));
+    expect(storeA.read('first')?.title).toBe('Project A');
+    expect(storeB.read('first')?.title).toBe('Project B');
+    expect(storeA.list()).toEqual([{ id: 'first', title: 'Project A', updatedAt: 2 }]);
+    expect(storeB.list()).toEqual([{ id: 'first', title: 'Project B', updatedAt: 2 }]);
+    expect(storeA.readLastUsedPair()).toEqual({ harness: 'claude', model: 'opus' });
+    expect(storeB.readLastUsedPair()).toBeUndefined();
+  });
+
   it('ensures the conversation workspace, scratch directory, and trust entry', () => {
-    const store = new ConversationStore({ home });
+    const store = new ConversationStore({ home, projectDir: home });
     const workspace = store.ensure('first');
     expect(existsSync(workspace)).toBe(true);
     expect(existsSync(`${workspace}.tmp`)).toBe(true);
@@ -59,7 +77,7 @@ describe('ConversationStore', () => {
   });
 
   it('ensures an existing workspace without replacing its contents', () => {
-    const store = new ConversationStore({ home });
+    const store = new ConversationStore({ home, projectDir: home });
     const workspace = store.ensure('first');
     const marker = path.join(workspace, 'marker.txt');
     writeFileSync(marker, 'kept');
@@ -74,7 +92,7 @@ describe('ConversationStore', () => {
     writeFileSync(path.join(root, 'malformed', 'conversation.json'), '{broken');
     writeFileSync(path.join(root, 'stray.txt'), 'ignored');
     const warning = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
-    const store = new ConversationStore({ home });
+    const store = new ConversationStore({ home, projectDir: home });
 
     expect(store.list()).toEqual([]);
     expect(store.list()).toEqual([]);
@@ -85,7 +103,7 @@ describe('ConversationStore', () => {
   });
 
   it('deletes one conversation with its workspace and trust entry', () => {
-    const store = new ConversationStore({ home });
+    const store = new ConversationStore({ home, projectDir: home });
     const first = store.ensure('first');
     const second = store.ensure('second');
     writeFileSync(path.join(first, 'marker.txt'), 'remove');
@@ -105,13 +123,14 @@ describe('ConversationStore', () => {
   });
 
   it('leaves the previous document intact when a write fails', () => {
-    const working = new ConversationStore({ home });
+    const working = new ConversationStore({ home, projectDir: home });
     working.write(conversation());
     const original = readFileSync(
       path.join(working.directory('first'), 'conversation.json'), 'utf8',
     );
     const failing = new ConversationStore({
       home,
+      projectDir: home,
       write: () => { throw new Error('disk full'); },
     });
 
@@ -122,12 +141,12 @@ describe('ConversationStore', () => {
   });
 
   it('survives a new store instance with its turns and workspace contents', () => {
-    const first = new ConversationStore({ home });
+    const first = new ConversationStore({ home, projectDir: home });
     const workspace = first.ensure('first');
     writeFileSync(path.join(workspace, 'marker.txt'), 'survived');
     first.write(conversation());
 
-    const restarted = new ConversationStore({ home });
+    const restarted = new ConversationStore({ home, projectDir: home });
 
     expect(restarted.list()).toEqual([{ id: 'first', title: 'First question', updatedAt: 2 }]);
     expect(restarted.read('first')?.turns).toHaveLength(1);

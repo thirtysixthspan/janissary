@@ -55,7 +55,7 @@ export function createManagers(managers: Managers, projectDir?: string): void {
       notify(managers, 'question', label, undefined, { openTab: label });
     }
   });
-  managers.conversations = new ConversationsManager(managers);
+  managers.conversations = new ConversationsManager(managers, { projectDir });
   managers.sessions = new SessionsManager(managers);
   managers.plugins = new TabPluginHost(managers);
   managers.workspace = new WorkspaceManager(projectDir, (label, message) => { notify(managers, 'manual', label, message); });
