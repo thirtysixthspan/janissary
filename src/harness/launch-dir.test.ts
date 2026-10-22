@@ -26,12 +26,12 @@ describe('resolveLaunchDir', () => {
     expect(dir).toEqual({ cwd: '/workspace/claude', workspaceDir: '/workspace/claude', ready });
   });
 
-  it('names the clone under the label it was given', () => {
+  it('names the clone under the label it was given, ten commits deep on every branch', () => {
     const create = vi.fn(() => ({ dir: '/workspace/bot', ready: Promise.resolve() }));
 
     resolveLaunchDir(managersWith(create), true, 'bot', '/project');
 
-    expect(create).toHaveBeenCalledWith('bot');
+    expect(create).toHaveBeenCalledWith('bot', undefined, { depth: 10, allBranches: true });
   });
 
   // No repo, or a remote that cannot be read. Both fail before anything is cloned, so the caller

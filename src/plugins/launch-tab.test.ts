@@ -330,6 +330,7 @@ describe('launchTab with a workspace', () => {
     const dir = path.join(root, '.janissary', 'workspace', 'docs');
     const [tab] = pluginTabs(managers);
     expect(results).toEqual([{ label: 'docs' }]);
+    expect(managers.workspace.create).toHaveBeenCalledWith('docs', undefined, { depth: 1, allBranches: true });
     expect(tab).toMatchObject({ label: 'docs', title: 'docs', workspaceDir: dir, offline: true });
     expect(tab?.plugin?.busy).toBe(true);
     expect(tab?.plugin?.payload).toEqual({ provisioning: true, cwd: dir });

@@ -23,6 +23,7 @@ export type GitCloneOptions = {
   // Keep git's stderr so a failure can report git's own first error line.
   keepStderr?: boolean;
   depth?: number;
+  allBranches?: boolean;
   sparseDirectories?: string[];
 };
 
@@ -34,9 +35,10 @@ export type GitCloneHandle = {
 };
 
 function cloneCommand(url: string, target: string, options: GitCloneOptions): { args: string[]; env?: NodeJS.ProcessEnv } {
-  const { githubToken, keepStderr, depth, sparseDirectories } = options;
+  const { githubToken, keepStderr, depth, allBranches, sparseDirectories } = options;
   const cloneOptions = [
     ...(depth === undefined ? [] : [`--depth=${depth}`]),
+    ...(allBranches ? ['--no-single-branch'] : []),
     ...(sparseDirectories === undefined ? [] : ['--filter=blob:none', '--sparse']),
   ];
   if (githubToken === undefined || !isGitHubUrl(url)) {

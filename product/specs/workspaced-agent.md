@@ -10,6 +10,8 @@ A workspaced tab is a shell or harness tab with its own cloned workspace. This w
 
 Shell and harness launches create a fresh clone of the project origin by default under `.janissary/workspace/<name>/`. A shell without a usable repository opens unsandboxed and explains the fallback. Shell input queues until its first prompt; harness schedules wait for readiness. Failed provisioning is reported and closes the tab.
 
+The clone is shallow so it lands quickly on a large repository. A shell's clone holds only the newest commit of each branch, and a harness's holds the newest ten commits of each branch. Every branch of `origin` is present, as in a full clone; only older history is left out. Running `git fetch --unshallow` inside the workspace fetches the rest of the history when it is needed.
+
 Provisioning records the clone as trusted in Claude's user configuration. A missing configuration is
 created, and a valid configuration keeps all unrelated fields and per-project settings. If the file
 cannot be read, contains malformed JSON, or has an invalid root, projects, or matching-project
@@ -45,7 +47,7 @@ and the harness PTY starts there. `-w`/`--workspace` explicitly confirms the def
 except the workspace lives under the **remote** host's project root rather than this machine's, and
 is governed entirely by that host: its sandbox policy (so isolation is active where the remote is
 macOS and inactive otherwise, and the notice shown in the tab is the remote's) and its own
-repository's `origin` transport. The credentials are the exception: this project's
+repository's `origin` transport. A remote clone keeps the full history rather than a shallow one. The credentials are the exception: this project's
 `.janissary/github-token`, `.janissary/claude-token`, `.janissary/opencode-token`, `.janissary/kilo-token`,
 and `.janissary/gemini-token` are all forwarded on the provisioning frame, each falling back to the
 remote project's own file when nothing is sent. A remote tab records
