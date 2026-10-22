@@ -34,6 +34,10 @@ beforeAll(() => {
   execSync('git init', { cwd: seed, stdio: 'pipe' });
   execSync('git config user.email test@test.com && git config user.name test', { cwd: seed, stdio: 'pipe' });
   writeFileSync(path.join(seed, 'README.md'), '# Seed');
+  mkdirSync(path.join(seed, 'product'), { recursive: true });
+  mkdirSync(path.join(seed, 'other'), { recursive: true });
+  writeFileSync(path.join(seed, 'product', 'notes.md'), 'synced');
+  writeFileSync(path.join(seed, 'other', 'large-tree.md'), 'outside product');
   execSync('git add . && git commit -m init', { cwd: seed, stdio: 'pipe' });
   execSync(`git remote add origin "${bareDir}" && git push origin HEAD`, { cwd: seed, stdio: 'pipe' });
 });
@@ -47,6 +51,18 @@ describe('startGitClone', () => {
     const target = path.join(tmpDir, 'plain-clone');
     await startGitClone(bareDir, target).ready;
     expect(existsSync(path.join(target, 'README.md'))).toBe(true);
+  });
+
+  it('creates a depth-1 sparse clone containing only the selected directory', async () => {
+    const target = path.join(tmpDir, 'sparse-clone');
+    await startGitClone(`file://${bareDir}`, target, { depth: 1, sparseDirectories: ['product'] }).ready;
+    const call = spawnSpy.calls.at(-1)!;
+    expect(call.args).toContain('--depth=1');
+    expect(call.args).toContain('--filter=blob:none');
+    expect(call.args).toContain('--sparse');
+    expect(existsSync(path.join(target, 'product', 'notes.md'))).toBe(true);
+    expect(existsSync(path.join(target, 'other', 'large-tree.md'))).toBe(false);
+    expect(execSync('git rev-parse --is-shallow-repository', { cwd: target, stdio: 'pipe' }).toString().trim()).toBe('true');
   });
 
   it('rejects with git\'s first stderr line when stderr is kept', async () => {

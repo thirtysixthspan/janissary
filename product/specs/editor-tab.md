@@ -566,7 +566,8 @@ file changed as a result refreshes automatically, exactly like an ordinary exter
 "Live reload of external changes"). A synced tab with unsaved changes is left alone, same as always,
 and its next save shows the overwrite prompt instead of writing over the pulled content. Every pull
 into the shared workspace re-checks every open synced tab straight away rather than waiting for the
-file change to be noticed.
+file change to be noticed. The shared workspace is a depth-1 sparse clone containing the `product/`
+directory, so it starts with only the latest commit and the files git-sync is configured to sync.
 
 Saving a synced file writes and confirms the save exactly as an ordinary save does — the "Saved"
 flash is not delayed by anything that happens next. After that, the saved file alone is committed
