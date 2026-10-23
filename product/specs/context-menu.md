@@ -32,11 +32,13 @@ Bundled tab plugins may each contribute an entry to the default menu for a text 
 
 A contributed entry runs for the tab the selection is in: the tab whose body was right-clicked, or, for `Cmd+I`, the tab holding focus. When the selection is in no tab, it runs for the active tab.
 
+When the selection is a URL, the application adds an entry of its own at the top of that final group: **Open this URL**, directly above **Search for this**. A URL here is the whole selection, ignoring surrounding whitespace, written with an explicit `http://` or `https://` scheme — the same thing `open` recognizes as a web address without the `page` keyword. A bare domain such as `example.com`, a sentence that merely contains a link, and any other scheme are not URLs, and get no such entry. Because no plugin supplies it, Open this URL is there as soon as the menu opens, and the contributed entries join it in the same group when they arrive. Activating it opens the address in a new page tab, exactly as `open <url>` would (see [[embedded-web-page]]), focusing the page tab already showing that address instead when there is one.
+
 **Search for this** opens the search tab, or focuses it when it is already open, puts the selected text in its search bar, and searches for it straight away, exactly as `search <selection>` would (see [[search-tab]]). It searches the workspace of the tab the selection is in: a selection in a tab working in a workspace clone searches that clone, and one anywhere else searches the launch directory. The search tab is left focused.
 
 **Chat about this** runs the conversations plugin's own presentation (see [[conversations]]). `Cmd+I` on macOS, or `Ctrl+I` elsewhere, runs it directly for the current selection, without opening the menu. The shortcut belongs to Chat about this alone; it never runs Search for this.
 
-The terminal paragraph above is narrowed by these entries and only by them: the menu may read an xterm selection to answer **Search for this** and **Chat about this**, and offers **Copy** for that same selection — the terminal's own copy shortcut still works too, unaffected by the menu.
+The terminal paragraph above is narrowed by these entries and only by them: the menu may read an xterm selection to answer **Open this URL**, **Search for this**, and **Chat about this**, and offers **Copy** for that same selection — the terminal's own copy shortcut still works too, unaffected by the menu.
 
 ### Surfaces that define their own menu
 

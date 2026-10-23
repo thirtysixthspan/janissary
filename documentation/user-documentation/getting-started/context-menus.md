@@ -17,12 +17,13 @@ The menu also opens when nothing is selected and nowhere can receive text. Right
 
 Finishing a Shift+drag selection in a terminal (see [Copying text out of a harness](/user-documentation/advanced-agents/harness#copying-text-out-of-a-harness)) opens this menu automatically. Right-clicking the held selection afterward opens it again.
 
-## Search for this and Chat about this
+## Act on selected text
 
 <img class="agent-float left" src="/agents/orhan-south-west.png" alt="" />
 
-Right-click a text selection — on the page, in an editor, or in a terminal — and the menu also offers two more entries. They sit in their own group after the default entries, behind a divider:
+Right-click a text selection — on the page, in an editor, or in a terminal — and the menu also offers two more entries, three when the selection is a web address. They sit in their own group after the default entries, behind a divider:
 
+- **Open this URL** comes first in that group, but only when the selection is a web address: the whole selection, starting with `http://` or `https://`. It opens the address in a new [page tab](/user-documentation/tab-types/web-pages), just like `open <url>`. A bare domain such as `example.com`, or a sentence with a link in it, doesn't get this entry.
 - **Search for this** opens the [search tab](/user-documentation/command-bar/project-search), puts the selected text in its search bar, and searches for it. In a tab that works in a workspace, it searches that workspace; anywhere else, it searches the project. The search tab gets the keyboard, just as it does after `search <phrase>`.
 - **Chat about this** starts an AI conversation about the selected text. `Cmd+I` on macOS, or `Ctrl+I` elsewhere, runs it directly, without opening the menu first. See [Keyboard shortcuts](/user-documentation/getting-started/keyboard) for the shortcut and [Conversations](/user-documentation/tab-types/conversations) for what it opens.
 

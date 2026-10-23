@@ -419,6 +419,42 @@ describe('DefaultContextMenu', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
+  it('offers Open this URL above the contributed entries for a URL selection and opens it in a tab', async () => {
+    stubSelection('https://example.com/docs');
+    const client = { request: vi.fn().mockResolvedValue({ ok: true, value: [search, chat] }), send: vi.fn() };
+    render(<DefaultContextMenu client={client as never} />);
+    rightClick(field());
+    await screen.findByText('Search for this');
+    expect(labels()).toEqual([
+      'Copy', 'Paste', 'Paste from clipboard…', 'Open this URL', 'Search for this', 'Chat about this',
+    ]);
+    expect(screen.getByRole('menu').querySelectorAll('.context-menu-separator')).toHaveLength(1);
+
+    fireEvent.click(screen.getByText('Open this URL'));
+    expect(client.send).toHaveBeenCalledExactlyOnceWith({
+      method: 'command', params: { text: 'open https://example.com/docs' },
+    });
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('offers Open this URL before the contribution reply arrives', () => {
+    stubSelection('https://example.com');
+    const reply = deferredContribution();
+    const client = { request: vi.fn(() => reply.promise), send: vi.fn() };
+    render(<DefaultContextMenu client={client as never} />);
+    rightClick(field());
+    expect(labels()).toEqual(['Copy', 'Paste', 'Paste from clipboard…', 'Open this URL']);
+  });
+
+  it('offers no Open this URL for a selection that is not a URL', async () => {
+    stubSelection('example.com is not a URL');
+    const client = { request: vi.fn().mockResolvedValue({ ok: true, value: [search] }), send: vi.fn() };
+    render(<DefaultContextMenu client={client as never} />);
+    rightClick(field());
+    await screen.findByText('Search for this');
+    expect(labels()).toEqual(['Copy', 'Paste', 'Paste from clipboard…', 'Search for this']);
+  });
+
   it('omits it for selections with no contribution', async () => {
     stubSelection('selected text');
     const client = { request: vi.fn().mockResolvedValue({ ok: true, value: [] }), send: vi.fn() };
