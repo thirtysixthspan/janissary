@@ -6,16 +6,20 @@ import { pasteInto } from './clipboard-commands';
 import { copyText } from '../shared/system-clipboard';
 import { clearTerminalSelection } from '../shared/terminal/terminal/selection';
 import { useDefaultContextMenu } from './useDefaultContextMenu';
+import { selectionEntries } from './selection-entries';
 
 // The app's fallback right-click menu, mounted once by the shell. It draws Copy, Paste, and Paste from
 // clipboard for any surface that defines no menu of its own — an editor tab, a terminal, the command
 // bar — in the same visual language as the file navigator's, which keeps its own menu because it
 // defines one.
 //
-// When plugins contribute entries for the selection, they arrive while the menu is open and render,
-// in the order the server gave them, as one group after Copy, Paste, and Paste from clipboard.
+// Entries that act on the selection render as one group after Copy, Paste, and Paste from clipboard:
+// Open this URL when the selection is a web address, then whatever plugins contribute, which arrives
+// while the menu is open and keeps the order the server gave it.
 export function DefaultContextMenu({ client }: { client?: JanusClient }) {
-  const { pending, contributed, runContributed, pasteFromClipboard, close } = useDefaultContextMenu(client);
+  const {
+    pending, contributed, runContributed, openUrl, pasteFromClipboard, close,
+  } = useDefaultContextMenu(client);
   if (!pending) return null;
 
   const groups = defaultMenuGroups(pending, {
@@ -28,9 +32,8 @@ export function DefaultContextMenu({ client }: { client?: JanusClient }) {
     paste: (element) => { void pasteInto(element); },
     pasteFromClipboard,
   });
-  if (contributed.length > 0) {
-    groups.push(contributed.map(({ label }) => ({ label, onActivate: () => { runContributed(label); } })));
-  }
+  const selectionGroup = selectionEntries(pending.selectionText, contributed, { openUrl, runContributed });
+  if (selectionGroup.length > 0) groups.push(selectionGroup);
   if (groups.length === 0) return null;
 
   return <ContextMenu groups={groups} x={pending.x} y={pending.y} onClose={close} />;

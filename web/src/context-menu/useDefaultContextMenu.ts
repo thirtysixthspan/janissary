@@ -121,5 +121,12 @@ export function useDefaultContextMenu(client?: JanusClient) {
     close();
   };
 
-  return { pending, contributed, runContributed, pasteFromClipboard, close };
+  // The same route a clicked web link in a transcript takes, so the page plugin's opener decides
+  // everything about the tab: its name, and focusing one already showing the address.
+  const openUrl = (url: string) => {
+    client?.send({ method: 'command', params: { text: `open ${url}` } });
+    close();
+  };
+
+  return { pending, contributed, runContributed, openUrl, pasteFromClipboard, close };
 }
