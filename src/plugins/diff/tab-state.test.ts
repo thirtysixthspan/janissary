@@ -22,7 +22,7 @@ describe('DiffTab read deadlines', () => {
     }));
     const tab = new DiffTab('diff', 'diff', '/repo', { root: '/repo' }, read, capabilities, { split: false });
 
-    tab.open('/repo', { root: '/repo' });
+    tab.open('/repo', { root: '/repo' }, capabilities);
     await vi.advanceTimersByTimeAsync(30_000);
 
     expect(read).toHaveBeenCalledOnce();
