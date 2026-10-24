@@ -2,23 +2,22 @@ import { readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { atomicWriteFile } from '../atomic-write.js';
 import { humanSize } from '../openers/size.js';
+import { containedAbsolute } from '../path-containment.js';
 import type { TabPluginDeclaration, TabPluginResources, TabPluginServerCapabilities } from './api.js';
 
-// Whether `candidate` is `root` itself or lies beneath it. Both are resolved first, so a path
-// carrying `..` is compared on its real location rather than its written one, and the comparison
-// uses a trailing separator so a sibling directory whose name merely starts with the root's
-// (`/repo-evil` beside `/repo`) is not accepted as inside it.
+// Whether `candidate` is `root` itself or lies beneath it, by the host's one containment rule
+// (`../path-containment.ts`): both are resolved first, so a path carrying `..` is compared on its
+// real location rather than its written one, and a sibling directory whose name merely starts with
+// the root's (`/repo-evil` beside `/repo`) is not accepted as inside it.
 //
 // An empty root means the project has not been established, so nothing is inside it — the answer a
-// caller gets before it has a root to compare against. Published here rather than kept private
-// because both the host and the plugins that ask it to open a file have to make this judgement, and
-// the plugin import boundary permits a plugin to reach this module and nothing else of the host's.
+// caller gets before it has a root to compare against, and the one place this differs from the
+// shared rule. Published here rather than kept private because both the host and the plugins that
+// ask it to open a file have to make this judgement, and the plugin import boundary permits a plugin
+// to reach this module and nothing else of the host's.
 export function isInsideRoot(root: string, candidate: string): boolean {
   if (root === '') return false;
-  const resolvedRoot = path.resolve(root);
-  const resolved = path.resolve(candidate);
-  if (resolved === resolvedRoot) return true;
-  return resolved.startsWith(resolvedRoot.endsWith(path.sep) ? resolvedRoot : resolvedRoot + path.sep);
+  return containedAbsolute(root, candidate);
 }
 
 // The operations every file-backed tab plugin performs, composed once from the capability primitives

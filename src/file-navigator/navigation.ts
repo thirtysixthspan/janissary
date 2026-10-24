@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { abbreviateWorkspaceDir } from '../paths.js';
-import { containedPath } from './batch-paths.js';
+import { containedPath } from '../path-containment.js';
 import { parentPath } from './index.js';
 import type { FilesTabState } from './state.js';
 import type { BasePort, NavigationPort } from './port.js';

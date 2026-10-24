@@ -3,10 +3,10 @@ import { basename, dirname } from '../../shared/rel-path';
 
 export type DropTarget = { path: string; conflict: boolean } | null;
 
-// True if `candidate` is `base` itself, or is nested inside it — mirrors the server-side check in
-// `src/file-navigator/index.ts`'s `isSameOrDescendantPath`. It is duplicated here because the
-// server's copy shares its module with `node:fs` directory reads, which importing it through
-// `@shared/` would pull into the browser bundle.
+// True if `candidate` is `base` itself, or is nested inside it — mirrors, for tree-relative paths,
+// the server's containment rule (`containedAbsolute` in `src/path-containment.ts`). It is duplicated
+// here because the server's copy is built on `node:path`, which importing it through `@shared/`
+// would pull into the browser bundle.
 function isSameOrDescendantPath(candidate: string, base: string): boolean {
   return candidate === base || candidate.startsWith(`${base}/`);
 }

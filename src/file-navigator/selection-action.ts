@@ -2,7 +2,7 @@ import { statSync } from 'node:fs';
 import path from 'node:path';
 import { openerForExtension } from '../openers/index.js';
 import type { TabPluginDeclaration } from '../plugins/api.js';
-import { containedAbsolute } from './batch-paths.js';
+import { containedAbsolute } from '../path-containment.js';
 
 // A resolved match: the entry to draw, plus the plugin that owns it and the paths it would act on.
 // Only the label and the action name ever reach the client — the plugin identity stays server-side,

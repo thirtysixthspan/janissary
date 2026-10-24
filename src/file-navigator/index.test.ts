@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from 'node
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { FileNavigatorRow } from '../tab/types.js';
-import { readDirSorted, buildRows, isSameOrDescendantPath, hasNameConflict } from './index.js';
+import { readDirSorted, buildRows, hasNameConflict } from './index.js';
 import { markGitStatus } from './git-mark.js';
 
 describe('readDirSorted', () => {
@@ -133,24 +133,6 @@ describe('markGitStatus', () => {
       ['src/c.txt', 'staged'],
     ]);
     expect(markGitStatus(rows, statuses)[0].gitStatus).toBe('conflict');
-  });
-});
-
-describe('isSameOrDescendantPath', () => {
-  it('is true for the same path', () => {
-    expect(isSameOrDescendantPath('src', 'src')).toBe(true);
-  });
-
-  it('is true for a nested descendant', () => {
-    expect(isSameOrDescendantPath('src/nested', 'src')).toBe(true);
-  });
-
-  it('is false for an unrelated sibling', () => {
-    expect(isSameOrDescendantPath('other', 'src')).toBe(false);
-  });
-
-  it('is false for a path that merely shares a name prefix', () => {
-    expect(isSameOrDescendantPath('src-backup', 'src')).toBe(false);
   });
 });
 

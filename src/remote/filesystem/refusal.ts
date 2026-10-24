@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { containedPath } from '../../file-navigator/batch-paths.js';
+import { containedPath } from '../../path-containment.js';
 import { OUTSIDE_ROOT_REASON } from '../../file-navigator/file-operation-result.js';
 import { operationDescriptor } from './operations.js';
 import type { ClientFrame, RemoteFilesystemOperation, RemoteFilesystemOperationRequestFor } from '../protocol-frames.js';

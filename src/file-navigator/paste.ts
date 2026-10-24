@@ -1,6 +1,7 @@
 import { lstatSync } from 'node:fs';
 import path from 'node:path';
 import { exists, realDirectory } from './batch-paths.js';
+import { containedAbsolute } from '../path-containment.js';
 import { copyItem, moveReplacingDestination, renamePath } from './filesystem.js';
 import {
   DESCENDANT_DESTINATION_REASON,
@@ -28,12 +29,6 @@ function sourceInfo(abs: string): Source {
   }
 }
 
-// Absolute-path version of `isSameOrDescendantPath` (`index.ts`) — the clipboard's sources are
-// absolute and may lie outside the pasting tab's root, so the tree-relative helper doesn't apply.
-function isSameOrDescendantAbsolute(candidate: string, base: string): boolean {
-  return candidate === base || candidate.startsWith(`${base}${path.sep}`);
-}
-
 // Dedupe, then drop any source nested inside another selected source directory — mirrors
 // `normalizeBatchSources` in `batch.ts`, but over absolute paths with a plain `lstatSync` existence
 // check rather than `realDirectory` containment (decision 14: sources need not resolve inside any
@@ -45,7 +40,7 @@ function normalizeSources(sources: string[]): Source[] {
     ancestor === source
     || !ancestor.valid
     || !ancestor.dir
-    || !isSameOrDescendantAbsolute(source.abs, ancestor.abs)));
+    || !containedAbsolute(ancestor.abs, source.abs)));
 }
 
 type Classified = { attempted: Source[]; eligible: Source[]; rejected: Set<string>; renamed: Map<string, string> };
@@ -59,7 +54,7 @@ function classifySources(normalized: Source[], destination: string, mode: 'copy'
   const rejected = new Set(
     attempted
       .filter((source) => !source.valid
-        || (source.dir && isSameOrDescendantAbsolute(destination, source.abs)))
+        || (source.dir && containedAbsolute(source.abs, destination)))
       .map((source) => source.abs),
   );
   const eligible = attempted.filter((source) => !rejected.has(source.abs));

@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { containedPath } from '../file-navigator/batch-paths.js';
+import { containedPath } from '../path-containment.js';
 import { errorText } from '../error-text.js';
 import {
   LocalFileSystemPort,

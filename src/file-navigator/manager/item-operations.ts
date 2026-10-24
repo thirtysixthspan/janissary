@@ -1,5 +1,4 @@
-import { isSameOrDescendantPath } from '../index.js';
-import { containedPath } from '../batch-paths.js';
+import { containedAbsolute, containedPath } from '../../path-containment.js';
 import {
   DESCENDANT_DESTINATION_REASON,
   failureReasons,
@@ -36,7 +35,7 @@ export function moveOne(
   rebuild: () => void,
   overwrite?: boolean,
 ): MaybePromise<BulkMoveResult> {
-  if (isSameOrDescendantPath(toRelPath, fromRelPath)) {
+  if (containedAbsolute(fromRelPath, toRelPath)) {
     return failedOperation(fromRelPath, DESCENDANT_DESTINATION_REASON);
   }
   return mapMaybe(state.filesystem.move(state.root, fromRelPath, toRelPath, overwrite), (moved) => {

@@ -1,13 +1,9 @@
 import { readFileSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { listTasksFromRoot } from '../tasks.js';
+import { containedAbsolute } from '../path-containment.js';
 import { resolveAgentSkills } from './skill-grants.js';
 import type { AgentResolutionOptions, AgentSnapshot } from './types.js';
-
-function within(root: string, target: string): boolean {
-  const relative = path.relative(root, target);
-  return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative));
-}
 
 function taskError(message: string): Error {
   return new Error(`Agent: ${message}.`);
@@ -17,7 +13,7 @@ function installedTaskRoot(installation: string): string | undefined {
   try {
     const realInstallation = realpathSync(installation);
     const realTaskRoot = realpathSync(path.join(installation, 'ai', 'tasks'));
-    return within(realInstallation, realTaskRoot) ? realTaskRoot : undefined;
+    return containedAbsolute(realInstallation, realTaskRoot) ? realTaskRoot : undefined;
   } catch {
     return undefined;
   }
@@ -42,7 +38,7 @@ function resolveTaskPath(request: string, options: AgentResolutionOptions): stri
     throw taskError(`unknown task "${request}"`);
   }
   const permitted = allowedRoots.some((root) => {
-    try { return within(realpathSync(root), realTarget); } catch { return false; }
+    try { return containedAbsolute(realpathSync(root), realTarget); } catch { return false; }
   });
   if (!permitted) throw taskError(`task path outside allowed roots "${request}"`);
   return realTarget;
@@ -62,7 +58,7 @@ function validateTaskRoot(root: string, source: 'project' | 'janissary'): void {
   const realAllowedRoot = source === 'project'
     ? realSourceRoot
     : path.join(realSourceRoot, 'ai', 'tasks');
-  if (!within(realAllowedRoot, realTaskRoot)) {
+  if (!containedAbsolute(realAllowedRoot, realTaskRoot)) {
     throw taskError(`task root outside allowed roots "${source}"`);
   }
 }

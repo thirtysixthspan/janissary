@@ -10,6 +10,7 @@ import {
 } from './paths.js';
 import { janissaryRoot, janissaryAiDir, janissaryScriptsDir, janissarySecurityDir, JANISSARY_HOME_ENV } from '../janissary-root.js';
 import { scrubEnv, workspaceEnv } from './environment.js';
+import { containedStrictly } from '../path-containment.js';
 import type { ProjectTokens } from '../project/tokens.js';
 
 // The `sandbox-exec` invocation for a harness spawn this host has already decided to confine: the
@@ -149,10 +150,8 @@ export function confinedHarnessSpawn(
   const janissarySecurity = dualPath(janissarySecurityDir());
   const installedSkillsRoot = path.join(janissaryRoot(), 'skills');
   const installedSkillsRealRoot = resolvePath(installedSkillsRoot);
-  const skillDirs = (options.installedSkillDirs ?? []).filter((skillDir) => {
-    const relative = path.relative(installedSkillsRealRoot, resolvePath(skillDir));
-    return relative !== '' && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
-  });
+  const skillDirs = (options.installedSkillDirs ?? [])
+    .filter((skillDir) => containedStrictly(installedSkillsRealRoot, resolvePath(skillDir)));
 
   scrubbed.JANISSARY_NODE = process.execPath;
   scrubbed[JANISSARY_HOME_ENV] = janissaryRoot();

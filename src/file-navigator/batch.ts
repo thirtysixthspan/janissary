@@ -1,7 +1,8 @@
 import { lstatSync } from 'node:fs';
 import path from 'node:path';
-import { isSameOrDescendantPath, parentPath } from './index.js';
-import { containedPath, duplicateNames, exists, realDirectory } from './batch-paths.js';
+import { parentPath } from './index.js';
+import { duplicateNames, exists, realDirectory } from './batch-paths.js';
+import { containedAbsolute, containedPath } from '../path-containment.js';
 import type { BatchResult, BulkConflictPolicy } from '../protocol.js';
 import { moveReplacingDestination, removePath, renamePath } from './filesystem.js';
 import {
@@ -35,7 +36,7 @@ function sourceInfo(root: string, rel: string): Source {
 function canMoveSource(source: Source, duplicates: Set<string>, destinationPath: string): boolean {
   return source.valid
     && !duplicates.has(path.basename(source.rel))
-    && !(source.dir && isSameOrDescendantPath(destinationPath, source.rel));
+    && !(source.dir && containedAbsolute(source.rel, destinationPath));
 }
 
 function initialMoveFailures(
@@ -90,7 +91,7 @@ export function normalizeBatchSources(root: string, paths: string[]): Source[] {
     ancestor === source
     || !ancestor.valid
     || !ancestor.dir
-    || !isSameOrDescendantPath(source.rel, ancestor.rel)));
+    || !containedAbsolute(ancestor.rel, source.rel)));
 }
 
 export function moveBatch(
