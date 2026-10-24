@@ -66,7 +66,9 @@ export class DiffTab {
     root: string,
     origin: DiffOrigin,
     private read: ChangeSetReader,
-    private capabilities: TabPluginServerCapabilities,
+    // Only for publishing to this tab by its instance key, which needs no origin tab. Everything that
+    // acts for a tab goes through the capabilities of the call that asked.
+    private publisher: Pick<TabPluginServerCapabilities, 'updateTab'>,
     start: { split: boolean; host?: string; workspace?: boolean },
   ) {
     this.root = root;
@@ -92,7 +94,7 @@ export class DiffTab {
   // Open or focus this tab, scoped to `root`. A tab already open on another directory is focused and
   // then re-scoped here; the cleared payload is published through `updateTab` because the focus path
   // runs no factory, and the recompute that follows paints only when its result lands.
-  open(root: string, origin: DiffOrigin): void {
+  open(root: string, origin: DiffOrigin, capabilities: TabPluginServerCapabilities): void {
     const rescope = root !== this.root;
     if (rescope) {
       this.fullFiles.clear();
@@ -105,7 +107,7 @@ export class DiffTab {
       root: displayRoot(root, origin.root, origin.workspace?.dir),
       ...(rescope && { state: 'loading', message: '', files: [] }),
     };
-    this.capabilities.openOrFocusTab(this.instanceKey, () => {
+    capabilities.openOrFocusTab(this.instanceKey, () => {
       // The host runs this factory only when the tab has to be built, so it is exactly the "this tab
       // is new" case: a reopened tab starts over rather than inheriting the expansions of the one that
       // was closed.
@@ -115,7 +117,7 @@ export class DiffTab {
       return { title: this.title, payload: this.opening() };
     });
     this.publish({});
-    void this.recompute(this.capabilities);
+    void this.recompute(capabilities);
   }
 
   async refresh(capabilities: TabPluginServerCapabilities): Promise<void> {
@@ -127,10 +129,10 @@ export class DiffTab {
     this.publish({});
   }
 
-  setFullFile(relPath: string, fullFile: boolean): void {
+  setFullFile(relPath: string, fullFile: boolean, capabilities: TabPluginServerCapabilities): void {
     const file = this.payload.files.find((candidate) => candidate.path === relPath);
     if (!file || file.binary || file.added || file.deleted || file.hunks.length === 0) {
-      this.capabilities.rejectRequest('Cannot expand context for a file outside the current text diff.');
+      capabilities.rejectRequest('Cannot expand context for a file outside the current text diff.');
       return;
     }
     if (file.expandingContext) return;
@@ -139,40 +141,40 @@ export class DiffTab {
     this.revision++;
     this.publish({ files: this.payload.files.map((candidate) => candidate.path === relPath
       ? { ...candidate, expandingContext: true, contextError: '' } : candidate) });
-    void this.recompute(this.capabilities);
+    void this.recompute(capabilities);
   }
 
   // Open a file at a line in an editor tab, through the same containment check the search tab's
   // `openMatch` makes: a path the diff never produced gets nothing. A remote workspace's files are
   // materialized to a local cache first, and that path is what opens, so a remote row's click is the
   // same open a local row's is.
-  openFile(relPath: string, line: number): void {
+  openFile(relPath: string, line: number, capabilities: TabPluginServerCapabilities): void {
     if (!isInsideRoot(this.root, path.join(this.root, relPath))) return;
     if (this.payload.host === undefined) {
-      this.capabilities.openInEditor(path.join(this.root, relPath), line);
+      capabilities.openInEditor(path.join(this.root, relPath), line);
       return;
     }
-    const local = this.capabilities.materializeRemoteFile(relPath);
+    const local = capabilities.materializeRemoteFile(relPath);
     if (local === null) return;
     void Promise.resolve(local).then((materialized) => {
       if (materialized === null) return;
-      this.capabilities.openInEditor(materialized, line);
+      capabilities.openInEditor(materialized, line);
     });
   }
 
   // Open a binary file in the media tab its extension already opens, by offering the application's
   // own `open` line for the path it opens to the ordinary dispatcher.
-  openMedia(relPath: string): void {
+  openMedia(relPath: string, capabilities: TabPluginServerCapabilities): void {
     if (!isInsideRoot(this.root, path.join(this.root, relPath))) return;
     if (this.payload.host === undefined) {
-      void this.capabilities.dispatchLineWithOutput(`open ${path.join(this.root, relPath)}`);
+      void capabilities.dispatchLineWithOutput(`open ${path.join(this.root, relPath)}`);
       return;
     }
-    const local = this.capabilities.materializeRemoteFile(relPath);
+    const local = capabilities.materializeRemoteFile(relPath);
     if (local === null) return;
     void Promise.resolve(local).then((materialized) => {
       if (materialized === null) return;
-      void this.capabilities.dispatchLineWithOutput(`open ${materialized}`);
+      void capabilities.dispatchLineWithOutput(`open ${materialized}`);
     });
   }
 
@@ -225,6 +227,6 @@ export class DiffTab {
 
   private publish(changes: Partial<DiffPayload>): void {
     this.payload = { ...this.payload, ...changes };
-    this.capabilities.updateTab(this.instanceKey, () => ({ payload: this.payload }));
+    this.publisher.updateTab(this.instanceKey, () => ({ payload: this.payload }));
   }
 }

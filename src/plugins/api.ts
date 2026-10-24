@@ -219,7 +219,10 @@ export type TabPluginSelectionAction = {
   action: string;
 };
 
-export type TabPluginServerCapabilities = QueueCapabilityTypes & TabPluginRemoteWorkspaceCapabilities & TabPluginOwnTabCapabilities & TabPluginProjectCapabilities & {
+// Valid only for the call that received it: the host builds a fresh object for every guarded call,
+// bound to that call's origin and answering tab, so a plugin that keeps one past its call keeps only
+// what needs no origin tab (settings, `updateTab`) and acts through each later call's own object.
+export type TabPluginServerCapabilities =QueueCapabilityTypes & TabPluginRemoteWorkspaceCapabilities & TabPluginOwnTabCapabilities & TabPluginProjectCapabilities & {
   // Core ACP connection operations, scoped to this plugin's own answering tab.
   //
   // `startAcp` takes an optional request. `{ withoutTools: true }` asks for a session with no tool

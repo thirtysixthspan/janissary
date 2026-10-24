@@ -12,6 +12,14 @@ import { DiffTab, type ChangeSetReader, type DiffOrigin } from './tab-state.js';
 // tab per workspace directory, so two routes for the same workspace find the same tab rather than
 // opening a second one — the metadata row's ➕ means two shell tabs can share one clone, and the two
 // are looking at the same thing.
+//
+// The capabilities the session is built with are only for what needs no origin tab: the settings
+// entry and publishing to a tab by its instance key. Anything that acts for the tab a request came
+// from — opening or focusing a diff tab, joining a channel, opening an editor, reading through a
+// remote channel — goes through that request's own capabilities, because the first caller's origin
+// may since have closed.
+
+type SessionCapabilities = Pick<TabPluginServerCapabilities, 'readSettings' | 'saveSettings' | 'updateTab'>;
 
 const ROOT_KEY = 'diff';
 const WORKSPACE_KEY_PREFIX = 'workspace:';
@@ -47,7 +55,7 @@ export class DiffSession {
   private split = false;
   private savedSplit = false;
 
-  constructor(private capabilities: TabPluginServerCapabilities) {
+  constructor(private capabilities: SessionCapabilities) {
     const saved = capabilities.readSettings().split;
     if (typeof saved === 'boolean') {
       this.split = saved;
@@ -56,36 +64,37 @@ export class DiffSession {
   }
 
   // The project-root diff: one tab, re-scoped in place, titled `diff`.
-  open(root: string, origin: DiffOrigin): void {
+  open(root: string, origin: DiffOrigin, capabilities: TabPluginServerCapabilities): void {
     if (root === '') return;
     const tab = this.tabFor(ROOT_KEY, root, origin, { title: ROOT_TITLE, read: localReader() });
-    tab.open(root, origin);
+    tab.open(root, origin, capabilities);
   }
 
   // A workspace diff on this machine: one tab per clone, opened with `openOrFocusTab`.
-  openWorkspace(origin: WorkspaceOrigin): void {
+  openWorkspace(origin: WorkspaceOrigin, capabilities: TabPluginServerCapabilities): void {
     if (origin.workspace.dir === '') return;
     const key = workspaceKey(origin.workspace.dir);
     const tab = this.tabFor(key, origin.workspace.dir, origin, {
       title: `${TAB_TITLE_PREFIX}${origin.tab}`, read: localReader(), workspace: true,
     });
-    tab.open(origin.workspace.dir, origin);
+    tab.open(origin.workspace.dir, origin, capabilities);
   }
 
   // A workspace diff on another host. The tab joins that tab's channel, which is what holds the
   // session and its workspace open for as long as the diff tab is, and reads through it. `launchTab`
   // never focuses an existing tab, so a workspace whose diff tab is already open is focused here
-  // instead of joined a second time.
-  openRemoteWorkspace(origin: WorkspaceOrigin, sourceLabel: string): void {
+  // instead of joined a second time. The ready callback refreshes through the capabilities it is
+  // handed, which answer as the new tab and so read through its own channel.
+  openRemoteWorkspace(origin: WorkspaceOrigin, sourceLabel: string, capabilities: TabPluginServerCapabilities): void {
     if (origin.workspace.dir === '') return;
     const key = workspaceKey(origin.workspace.dir);
     const existing = this.tabs.get(key);
     if (existing) {
-      this.capabilities.openOrFocusTab(key, () => ({ title: existing.title, payload: existing.opening() }));
+      capabilities.openOrFocusTab(key, () => ({ title: existing.title, payload: existing.opening() }));
       return;
     }
     const remote = { title: `${TAB_TITLE_PREFIX}${origin.tab}`, read: remoteReader(), workspace: true };
-    this.capabilities.launchTab(
+    capabilities.launchTab(
       key,
       { remote: { join: true, label: sourceLabel } },
       (resources, start) => {
@@ -94,7 +103,7 @@ export class DiffSession {
         });
         return { title: tab.title, payload: tab.opening() };
       },
-      () => { void this.tabs.get(key)?.refresh(this.capabilities); },
+      (_ready, readyCapabilities) => { void this.tabs.get(key)?.refresh(readyCapabilities); },
     );
   }
 
@@ -102,16 +111,16 @@ export class DiffSession {
     await this.tabs.get(key)?.refresh(capabilities);
   }
 
-  setFullFile(key: string, relPath: string, fullFile: boolean): void {
-    this.tabs.get(key)?.setFullFile(relPath, fullFile);
+  setFullFile(key: string, relPath: string, fullFile: boolean, capabilities: TabPluginServerCapabilities): void {
+    this.tabs.get(key)?.setFullFile(relPath, fullFile, capabilities);
   }
 
-  openFile(key: string, relPath: string, line: number): void {
-    this.tabs.get(key)?.openFile(relPath, line);
+  openFile(key: string, relPath: string, line: number, capabilities: TabPluginServerCapabilities): void {
+    this.tabs.get(key)?.openFile(relPath, line, capabilities);
   }
 
-  openMedia(key: string, relPath: string): void {
-    this.tabs.get(key)?.openMedia(relPath);
+  openMedia(key: string, relPath: string, capabilities: TabPluginServerCapabilities): void {
+    this.tabs.get(key)?.openMedia(relPath, capabilities);
   }
 
   // The layout the user chose, remembered in this plugin's settings entry so every diff tab after

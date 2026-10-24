@@ -70,12 +70,13 @@ function resolveWorkspace(
 function openWorkspace(
   session: DiffSession, tab: string,
   route: { kind: 'local' | 'remote'; origin: { root: string; workspace: { dir: string } } },
+  capabilities: TabPluginServerCapabilities,
 ): void {
   if (route.kind === 'remote') {
-    session.openRemoteWorkspace({ tab, ...route.origin }, tab);
+    session.openRemoteWorkspace({ tab, ...route.origin }, tab, capabilities);
     return;
   }
-  session.openWorkspace({ tab, ...route.origin });
+  session.openWorkspace({ tab, ...route.origin }, capabilities);
 }
 
 function escapeMarkdownAngleBrackets(message: string): string {
@@ -84,7 +85,8 @@ function escapeMarkdownAngleBrackets(message: string): string {
 
 export function activate(): TabPluginActivation {
   // Built on first use and closed over by every handler, so the tabs' identity, their roots, and the
-  // recomputes in flight are one object with the lifetime of the plugin.
+  // recomputes in flight are one object with the lifetime of the plugin. It keeps the first caller's
+  // capabilities only for settings and publishing; every handler hands the session its own.
   let session: DiffSession | null = null;
   const sessionFor = (capabilities: TabPluginServerCapabilities): DiffSession => {
     session ??= new DiffSession(capabilities);
@@ -130,12 +132,12 @@ export function activate(): TabPluginActivation {
             `Cannot diff on <${parsed.tab}>: the workspace of "${parsed.tab}" is still being prepared.`,
           ));
         }
-        openWorkspace(active, parsed.tab, route);
+        openWorkspace(active, parsed.tab, route, capabilities);
         return;
       }
       const root = rootFor(parsed.path, origin, capabilities);
       if (root === '') return;
-      active.open(root, origin);
+      active.open(root, origin, capabilities);
     },
     // Another tab's workspace button, and the sessions row's button: the diff tab opens on that
     // tab's own environment, and does nothing when the tab has no workspace to diff.
@@ -146,7 +148,7 @@ export function activate(): TabPluginActivation {
         kind: origin.remote ? 'remote' as const : 'local' as const,
         origin: { root: origin.root, workspace: { dir: origin.workspace.dir } },
       };
-      openWorkspace(sessionFor(capabilities), origin.label, route);
+      openWorkspace(sessionFor(capabilities), origin.label, route, capabilities);
     },
     intent: defineIntents('diff', isDiffPayload, {
       // The recompute is started rather than awaited, and the answer is `null`: an intent's result is
@@ -172,21 +174,21 @@ export function activate(): TabPluginActivation {
       context: {
         payload: isContextIntent,
         run: (tab, payload: ContextIntent, capabilities) => {
-          sessionFor(capabilities).setFullFile(tab.instanceKey, payload.path, payload.fullFile);
+          sessionFor(capabilities).setFullFile(tab.instanceKey, payload.path, payload.fullFile, capabilities);
           return null;
         },
       },
       open: {
         payload: isOpenIntent,
         run: (tab, payload: OpenIntent, capabilities) => {
-          sessionFor(capabilities).openFile(tab.instanceKey, payload.path, payload.line);
+          sessionFor(capabilities).openFile(tab.instanceKey, payload.path, payload.line, capabilities);
           return null;
         },
       },
       'open-media': {
         payload: isOpenMediaIntent,
         run: (tab, payload: OpenMediaIntent, capabilities) => {
-          sessionFor(capabilities).openMedia(tab.instanceKey, payload.path);
+          sessionFor(capabilities).openMedia(tab.instanceKey, payload.path, capabilities);
           return null;
         },
       },

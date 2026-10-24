@@ -146,6 +146,67 @@ describe('diff plugin activation', () => {
     expect(lastPayload(updateTab).files.map((file) => file.path)).toEqual(['a.txt']);
   });
 
+  // The host builds a fresh capability object for every call, bound to that call's tab, and the first
+  // caller's may since have closed — so each call has to act through its own.
+  it('opens the tab through the capabilities of the call that asked, not the first caller\'s', async () => {
+    const origin = () => ({ label: 'shell', cwd: repo, root: repo, workspace: undefined });
+    const first = makeCapabilities({ originTab: vi.fn(origin) });
+    const second = makeCapabilities({ originTab: vi.fn(origin) });
+    const activation = activate();
+    activation.command?.('', first.capabilities);
+    await settled(first.updateTab);
+    activation.command?.('', second.capabilities);
+    expect(first.openOrFocusTab).toHaveBeenCalledTimes(1);
+    expect(second.openOrFocusTab).toHaveBeenCalledTimes(1);
+    activation.dispose?.();
+  });
+
+  it('opens a file through the capabilities of the intent that asked', async () => {
+    const origin = () => ({ label: 'shell', cwd: repo, root: repo, workspace: undefined });
+    const first = makeCapabilities({ originTab: vi.fn(origin) });
+    const second = makeCapabilities({ originTab: vi.fn(origin) });
+    const activation = activate();
+    activation.command?.('', first.capabilities);
+    await settled(first.updateTab);
+    activation.intent(intent(settledTab, 'open', { path: 'a.txt', line: 1 }), second.capabilities);
+    activation.intent(intent(settledTab, 'open-media', { path: 'pic.png' }), second.capabilities);
+    expect(second.openInEditor).toHaveBeenCalledWith(path.join(repo, 'a.txt'), 1);
+    expect(second.dispatchLineWithOutput).toHaveBeenCalledWith(`open ${path.join(repo, 'pic.png')}`);
+    expect(first.openInEditor).not.toHaveBeenCalled();
+    expect(first.dispatchLineWithOutput).not.toHaveBeenCalled();
+    activation.dispose?.();
+  });
+
+  it('reads a joined remote workspace through the capabilities its ready callback receives', async () => {
+    const remoteWorkspace = '/srv/proj/.janissary/workspace/remote';
+    const launching = makeCapabilities({
+      originTab: vi.fn(() => ({
+        label: 'remote', cwd: '/srv/proj', root: repo, remote: true as const,
+        workspace: { dir: remoteWorkspace }, ...shellRecord(),
+      })),
+      readWorkspaceChangeSet: vi.fn(() => Promise.resolve({ kind: 'files', files: [] })),
+    });
+    const ready = makeCapabilities({
+      readWorkspaceChangeSet: vi.fn(() => Promise.resolve({ kind: 'files', files: [] })),
+    });
+    const activation = activate();
+    activation.command?.('on remote', launching.capabilities);
+    const call = launching.launchTab.mock.calls[0] as unknown as [
+      string, unknown,
+      (resources: never, start: { label: string; cwd: string; workspaceDir: string; host: string }) => unknown,
+      (event: unknown, capabilities: never) => void,
+    ];
+    const factory = call[2];
+    const onReady = call[3];
+    factory(undefined as never, { label: 'diff-2', cwd: '/srv/proj', workspaceDir: remoteWorkspace, host: 'devbox' });
+    onReady({ label: 'diff-2' }, ready.capabilities);
+    const readyRead = (ready.capabilities as { readWorkspaceChangeSet: ReturnType<typeof vi.fn> }).readWorkspaceChangeSet;
+    const launchingRead = (launching.capabilities as { readWorkspaceChangeSet: ReturnType<typeof vi.fn> }).readWorkspaceChangeSet;
+    await vi.waitFor(() => { expect(readyRead).toHaveBeenCalledTimes(1); });
+    expect(launchingRead).not.toHaveBeenCalled();
+    activation.dispose?.();
+  });
+
   it('scopes to a path argument and abbreviates the root for the header', async () => {
     mkdirSync(path.join(repo, 'sub'));
     writeFileSync(path.join(repo, 'sub', 'inner.txt'), 'x');

@@ -35,6 +35,9 @@ also shown literally. A workspace diff is titled **diff: <workspace label>**, an
 metadata row's ➕ opens a sibling shell in the same one — share one diff tab, because they are looking at the same
 changes.
 
+Every route acts for the tab it came from. Closing the tab that first ran `diff` doesn't stop `diff` or either button
+from opening or focusing a diff tab from any other tab.
+
 The header names the directory being diffed in the application's own abbreviated form — `$root` for the
 launch directory, `$workspace/<name>` for a workspace clone, `$git-sync` for the shared git-sync clone, `~` for a
 path under home. Workspace metadata is
@@ -47,8 +50,9 @@ A remote workspace's changes are read on the far side and carried back over the 
 tab shows the same change set a local one does. Holding one open keeps that session alive the way a remote file
 navigator does: the diff tab joins the channel and releases it when it closes. A row's name opens the file, a
 double-click on an added or context line opens it at that line, a binary entry opens its media tab, and the
-arrows-up-down control expands a text file — all of them materialized through the same cache a remote file navigator's
-rows open through, so a save from that editor writes back to the workspace for as long as the tab holds the channel.
+arrows-up-down control expands a text file — all of them fetched over the diff tab's own channel and materialized
+through the same cache a remote file navigator's rows open through, so a save from that editor writes back to the
+workspace for as long as the tab holds the channel.
 
 A workspace diff whose workspace is gone closes itself: the clone was deleted locally, or the remote session ended,
 and there is nothing left to read. The project-root diff says a non-repository directory is not one instead, because
