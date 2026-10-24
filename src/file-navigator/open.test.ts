@@ -59,7 +59,7 @@ function makeManagers(options: {
       launchDir: process.cwd(),
       tabs,
       byLabel: (label: string) => tabs.find((t) => t.label === label),
-      cwdOf: () => source.cwd,
+      cwdOf: () => source.cwd, workingDirOf: () => source.cwd ?? process.cwd(),
       mostRecentFileNavigatorLabel: () => options.existing,
       findIndex: (label: string) => tabs.findIndex((t) => t.label === label),
       openFilesTab: (arg: { root: string; waitingFor?: string }) => {

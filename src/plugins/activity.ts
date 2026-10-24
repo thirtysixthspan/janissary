@@ -170,7 +170,7 @@ function entryFor(tab: Tab, managers: Managers, tailLines: number | undefined): 
     // busy/unread pair, so a remote gate reads as idle-unread there and not as needs-input.
     needsInput: pending !== undefined || tab.runtime?.gateNeedsUser === true,
     lastActivity: Math.floor((tab.runtime?.lastActivity ?? 0) / MINUTE_MS) * MINUTE_MS,
-    cwd: tab.runtime?.cwd ?? managers.tab.launchDir,
+    cwd: managers.tab.workingDirOf(tab.label),
     ...(tab.remote && { remote: tab.remote.host }),
     lastCommand: lastCommandOf(tab.log),
     logLength: transcriptLength,

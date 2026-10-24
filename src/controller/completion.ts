@@ -6,7 +6,7 @@ import { catalogRunscripts } from '../schedule/system/runscript-files.js';
 
 export function complete(managers: Managers, text: string, cursor: number, label?: string): CompletionResult {
   const tab = (label ? managers.tab.byLabel(label) : undefined) ?? managers.tab.cur();
-  const cwd = managers.tab.cwdOf(tab.label) ?? process.cwd();
+  const cwd = managers.tab.workingDirOf(tab.label);
   const labels = managers.tab.allLabels();
   const actionTabs = managers.tab.tabs.filter((t) => t.view !== 'monitor');
   const groups = [...new Set(actionTabs.map((t) => t.group))].toSorted((a, b) => a - b).map((g) => `group:${g}`);

@@ -53,7 +53,7 @@ export function lineCapabilities(input: {
       const { workspace, provisioning, workspaceLabel } = originWorkspace(managers, tab);
       return {
         label: tab.label,
-        cwd: managers.tab.cwdOf(tab.label) ?? managers.tab.launchDir,
+        cwd: managers.tab.workingDirOf(tab.label),
         root: managers.tab.launchDir,
         // Which kind of tab this is, and which plugin owns it when it is one. The workspace a
         // command may ask about belongs to a shell or a harness tab, and both are shaped by what

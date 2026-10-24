@@ -521,6 +521,7 @@ describe('buildTabViews', () => {
     provisioning?: (dir: string) => boolean;
   } = {}) {
     return {
+      tab: { workingDirOf: () => '/repo' },
       questions: { pendingFor: overrides.pendingFor ?? noQuestion },
       workspace: { provisioning: overrides.provisioning ?? (() => false) },
       remote: {

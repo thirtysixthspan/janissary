@@ -170,7 +170,7 @@ export class CommandManager {
       caller: Object.freeze({
         label,
         ...(runtime?.incarnation && { incarnation: runtime.incarnation }),
-        cwd: runtime?.cwd ?? this.managers.tab.launchDir,
+        cwd: this.managers.tab.workingDirOf(label),
         context: Object.freeze([...(runtime?.context ?? [])]),
       }),
       signal: new AbortController().signal,

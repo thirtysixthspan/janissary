@@ -6,7 +6,7 @@ import { didOsOpen } from '../openers/os-open.js';
 import { openInDefaultViewer } from '../openers/external-viewer.js';
 import { openInEditor } from '../openers/editor.js';
 import { nextFreeName } from '../editor/next-free-name.js';
-import { expandUserPath } from '../paths.js';
+import { resolveTabPath } from '../tab/resolve-path.js';
 import { containedAbsolute } from '../path-containment.js';
 import { expandGlob } from './glob.js';
 import type { Managers } from '../managers.js';
@@ -75,9 +75,7 @@ export class OpenFileManager {
     command: string, target: string, label: string, line?: number, runId?: string,
     registerTab?: (label: string) => void,
   ): EditResult | undefined | Promise<EditResult | undefined> {
-    const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
-    const expanded = expandUserPath(target, { root: this.managers.tab.launchDir });
-    const file = path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
+    const file = resolveTabPath(this.managers, label, target);
     const context = this.buildContext(command, label, runId, registerTab);
     const opener = openerForExtension(path.extname(file));
     if (opener?.editsOwnFiles) return this.openPluginEdit(opener.name, file, context);
@@ -96,9 +94,7 @@ export class OpenFileManager {
   // `untitled.md` opens `untitled-2.md` instead of reopening the existing one. `newfile <file>`
   // names its file, so the view is marked `named` and the tab opens in its buffer, not a rename.
   newFile(command: string, target: string, label: string, runId?: string): void {
-    const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
-    const expanded = expandUserPath(target, { root: this.managers.tab.launchDir });
-    const file = path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
+    const file = resolveTabPath(this.managers, label, target);
     const dir = path.dirname(file);
     const resolved = path.join(dir, nextFreeName(dir, path.basename(file)));
     const context = this.buildContext(command, label, runId);
@@ -106,9 +102,7 @@ export class OpenFileManager {
   }
 
   newDirectory(target: string, label: string): void {
-    const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
-    const expanded = expandUserPath(target, { root: this.managers.tab.launchDir });
-    const directory = path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
+    const directory = resolveTabPath(this.managers, label, target);
     const parent = path.dirname(directory);
     const resolved = path.join(parent, nextFreeName(parent, path.basename(directory)));
     mkdirSync(resolved);

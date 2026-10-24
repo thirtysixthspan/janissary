@@ -56,7 +56,7 @@ describe('the pull button refreshes the whole tree', () => {
         byLabel: (label: string) => tabs.find((t) => t.label === label),
         editorTabByUrl: () => tabs.find((t) => t.editor),
         filesTabByRoot: (r: string) => tabs.find((t) => t.files?.root === r),
-        cwdOf: () => navRoot,
+        cwdOf: () => navRoot, workingDirOf: () => navRoot,
         append: () => {},
         findIndex: (label: string) => tabs.findIndex((t) => t.label === label),
         setActiveTab: () => {},

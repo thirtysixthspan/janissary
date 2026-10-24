@@ -39,6 +39,7 @@ function managers(
         tabs,
         launchDir: '/repo',
         byLabel: (label: string) => tabs.find((candidate) => candidate.label === label),
+        workingDirOf: (label: string) => tabs.find((candidate) => candidate.label === label)?.runtime?.cwd ?? '/repo',
       } as unknown as ManagersStub['tab'],
       questions: { pendingFor } as unknown as ManagersStub['questions'],
       harness: {
@@ -303,7 +304,7 @@ describe('recording a permission gate the user has to answer', () => {
   // nothing to answer, and the launcher's needs-you tier is not raised for a prompt nobody has to read.
   it('leaves a gate the approver is clearing out of the needs-you tier', () => {
     const blocked = tab({ label: 'shell', runtime: { busy: false, context: [], queue: [] } });
-    const host = { tab: { tabs: [blocked], launchDir: '/repo', byLabel: () => blocked }, questions: { pendingFor: (): unknown => undefined } };
+    const host = { tab: { tabs: [blocked], launchDir: '/repo', byLabel: () => blocked, workingDirOf: () => '/repo' }, questions: { pendingFor: (): unknown => undefined } };
 
     recordGateNeedsUser(stubFor([blocked], 'shell'), 'shell', false);
     const rows = tabActivityRows(host as unknown as Managers);

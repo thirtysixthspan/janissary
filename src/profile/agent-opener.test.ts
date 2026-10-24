@@ -51,7 +51,7 @@ function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnTyp
       setContext: vi.fn(),
       persist: vi.fn(),
       buildAgentState: vi.fn(() => ({ name: 'x', dotColor: 'red', active: true })),
-      cwdOf: () => '/cwd',
+      cwdOf: () => '/cwd', workingDirOf: () => '/cwd',
       setActiveTab: vi.fn(),
       placeProfileTabs: vi.fn((candidates: { label: string; pane?: 'left' | 'right' }[]) => {
         for (const candidate of candidates) {

@@ -84,6 +84,24 @@ function makeTabManagerWithManagers(): { tm: TabManager; managers: Managers } {
   return { tm: managers.tab, managers };
 }
 
+// The project directory here is `/repo`, not the process's own, which is the case the fallback is
+// for: a server started on a directory other than the one `janus` was launched from.
+describe('TabManager.workingDirOf', () => {
+  it('answers a tab\'s recorded cwd', () => {
+    const tm = makeTabManager();
+    tm.setCwd(tm.tabs[0].label, '/repo/src');
+    expect(tm.workingDirOf(tm.tabs[0].label)).toBe('/repo/src');
+  });
+
+  it('answers the project directory for a tab whose shell has reported no cwd yet', () => {
+    const tm = makeTabManager();
+    tm.tabs.push(makeTab('fresh', '#abc'));
+    expect(tm.cwdOf('fresh')).toBeUndefined();
+    expect(tm.workingDirOf('fresh')).toBe('/repo');
+    expect(tm.workingDirOf('fresh')).not.toBe(process.cwd());
+  });
+});
+
 // Callers used to scan the public `tabs` array themselves and then check the returned record's
 // view payload — fifty-two times across thirty-one modules. These route the same question through
 // the manager; `lookup.test.ts` covers what the accessors answer.

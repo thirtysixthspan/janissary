@@ -47,6 +47,7 @@ function makeManagers(extra: Partial<Managers> = {}) {
       cur: () => tabs[0],
       launchDir: '/repo',
       cwdOf: vi.fn(() => '/repo'),
+      workingDirOf: (label: string) => managers.tab.cwdOf(label) ?? managers.tab.launchDir,
       ...fakeNotificationsHost(tabs),
       // After the fixture, because it supplies its own `byLabel` over the tab array and these cases
       // need to answer with a tab record carrying fields a bare array entry does not have.

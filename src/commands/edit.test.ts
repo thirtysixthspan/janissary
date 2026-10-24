@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { command } from './edit.js';
+import { TabManager } from '../tab/manager.js';
 
 describe('edit command', () => {
   it('has the correct name', () => {
@@ -54,6 +55,29 @@ describe('edit runscript fallback', () => {
     }
   });
 
+  // A tab whose shell has reported no cwd yet, in a server whose project directory is not the
+  // process's own: the exact file lives in the project, so it opens instead of falling through to the
+  // runscript lookup the way a resolution against `process.cwd()` would.
+  it('resolves a tab with no recorded cwd against the project directory, not the process directory', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'edit-runscript-'));
+    try {
+      writeFileSync(path.join(root, 'deploy'), 'project file');
+      const targets: string[] = [];
+      const appended: { input: string; output: string }[] = [];
+      const managers = editManagers(root, targets, appended) as { tab: Record<string, unknown> };
+      managers.tab.cwdOf = () => {};
+      managers.tab.workingDirOf = TabManager.prototype.workingDirOf;
+      expect(process.cwd()).not.toBe(root);
+
+      command.run('edit deploy', { label: 'janus', index: 0 }, managers as never);
+
+      expect(targets).toEqual(['deploy']);
+      expect(appended.some((entry) => entry.output.startsWith('No runscript'))).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('reports a missing runscript without calling the editor', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'edit-runscript-'));
     try {
@@ -96,7 +120,7 @@ function editManagers(
   return {
     tab: {
       launchDir: root,
-      cwdOf: () => root,
+      cwdOf: () => root, workingDirOf: () => root,
       append: (_label: string, entry: { input: string; output: string }) => { appended.push(entry); },
     },
     openFile: {

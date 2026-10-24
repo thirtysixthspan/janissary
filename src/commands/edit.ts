@@ -1,8 +1,7 @@
 import type { Command } from './types.js';
 import { appendCommandOutput } from '../command/append.js';
 import { existsSync } from 'node:fs';
-import path from 'node:path';
-import { expandUserPath } from '../paths.js';
+import { resolveTabPath } from '../tab/resolve-path.js';
 import { isRunscriptName } from '../schedule/system/runscript.js';
 import { readRunscript } from '../schedule/system/runscript-files.js';
 
@@ -19,9 +18,7 @@ export const command: Command = {
     let fileTarget = lineMatch ? lineMatch[1] : target;
     const line = lineMatch ? Number(lineMatch[2]) : undefined;
     if (line === undefined && isRunscriptName(fileTarget)) {
-      const cwd = managers.tab.cwdOf(tab.label) ?? process.cwd();
-      const expanded = expandUserPath(fileTarget, { root: managers.tab.launchDir });
-      const exactFile = path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
+      const exactFile = resolveTabPath(managers, tab.label, fileTarget);
       if (!existsSync(exactFile)) {
         try {
           const runscript = readRunscript(managers.tab.launchDir, fileTarget);

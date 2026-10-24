@@ -56,7 +56,7 @@ export async function openProfileEntries(
   const opened: string[] = [];
   const candidates: MainAreaCandidate[] = [];
   const firstNew = managers.tab.tabs.length;
-  const issuingCwd = managers.tab.cwdOf(issuingLabel) ?? process.cwd();
+  const issuingCwd = managers.tab.workingDirOf(issuingLabel);
 
   for (const entry of toOpen) {
     const label = labelOf(entry);

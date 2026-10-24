@@ -48,7 +48,7 @@ export function runOpenCommand(
 ): void | Promise<void> {
   const parsed = parseOpen(parsedCommand);
   if ('error' in parsed) { managers.tab.append(label, { input: displayCommand, output: parsed.error }); return; }
-  const cwd = managers.tab.cwdOf(label) ?? process.cwd();
+  const cwd = managers.tab.workingDirOf(label);
   const context = buildContext(displayCommand, label);
   const target = expandUserPath(parsed.target, { root: managers.tab.launchDir });
 

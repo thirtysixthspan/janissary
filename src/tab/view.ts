@@ -23,7 +23,7 @@ export function buildTabViews(
     const view = buildTabView(
       tab,
       tab.runtime?.busy ?? false,
-      tab.runtime?.cwd ?? process.cwd(),
+      managers.tab.workingDirOf(tab.label),
       acpLabel(tab.label),
       connectionsFor(tab.label),
       scheduleView(tab.label),

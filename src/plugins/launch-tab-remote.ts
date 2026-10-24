@@ -21,7 +21,7 @@ function* poolThenPrefix(prefix: string): Generator<string> {
 function launchCwd(input: LaunchInput): string {
   const { managers, origin } = input;
   if (origin.launch) return managers.tab.launchDir;
-  return managers.tab.cwdOf(origin.label) ?? managers.tab.launchDir;
+  return managers.tab.workingDirOf(origin.label);
 }
 
 function fail(
