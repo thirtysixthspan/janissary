@@ -4,6 +4,7 @@ import { notify } from '../../notifications/index.js';
 import type { FileOpenerChoice } from '../../protocol.js';
 import { mapMaybe, type MaybePromise } from '../../maybe-promise.js';
 import { materializeRemoteFile } from '../remote/file-cache.js';
+import { remoteCacheOwner } from '../../remote/attach.js';
 import type { FilesTabState } from '../state.js';
 
 export function openNavigatorFile(
@@ -20,10 +21,8 @@ export function openNavigatorFile(
     return;
   }
   const entry = managers.remote.entryOf(state.ownerLabel ?? label);
-  if (!entry?.workspaceDir) throw new Error('The remote workspace is not ready yet.');
-  const owner = {
-    destination: entry.address.destination, workspaceRoot: entry.workspaceDir, workspaceLabel: entry.workspaceLabel,
-  };
+  const owner = entry && remoteCacheOwner(entry);
+  if (!owner) throw new Error('The remote workspace is not ready yet.');
   return mapMaybe(filesystem.readFile(root, relPath), (content) => {
     const file = materializeRemoteFile(
       owner, relPath, content,
@@ -38,9 +37,7 @@ export function createNavigatorFile(
 ): MaybePromise<void> {
   const { remote, root, filesystem } = state;
   const entry = remote ? managers.remote.entryOf(state.ownerLabel ?? label) : undefined;
-  const owner = entry?.workspaceDir ? {
-    destination: entry.address.destination, workspaceRoot: entry.workspaceDir, workspaceLabel: entry.workspaceLabel,
-  } : undefined;
+  const owner = entry && remoteCacheOwner(entry);
   return mapMaybe(filesystem.createFile(root, destination), (result) => {
     if (!result.ok) { notify(managers, 'file-operation', label, result.reason); return; }
     if (!remote) { void openNavigatorFile(managers, state, label, result.value.path, 'edit'); return; }

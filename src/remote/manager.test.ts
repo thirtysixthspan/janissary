@@ -98,8 +98,9 @@ describe('RemoteManager shared channels', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.useRealTimers());
 
+  // A channel provisions once, so the one `workspace-ready` it hears is the one that settles it.
   it('exposes the remote home reported by workspace-ready', () => {
-    const h = managerHarness();
+    const h = managerHarness(false);
     h.transport()?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws', home: '/home/remote' })}\n`);
     expect(h.remote.homeOf('creator')).toBe('/home/remote');
     h.remote.dispose();

@@ -1,6 +1,6 @@
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
-import { dropRemoteLabels, isEstablished, markEntryEnded, type RemoteEntry } from './attach.js';
+import { dropRemoteLabels, isEstablished, markEntryEnded, settleEntryReady, type RemoteEntry } from './attach.js';
 
 /**
  * A channel's transport went away, or its last label let it go. Split out of `RemoteManager` to keep
@@ -19,11 +19,11 @@ export function remoteChannelClosed(
 ): void {
   if (entry.closed) return;
   if (!ending && isEstablished(entry)) { entry.attach.lost(); return; }
+  // Settled before `markEntryEnded` closes the entry, since a closed entry settles nothing.
+  const wasSettled = entry.settled;
+  settleEntryReady(entry, new Error(`Remote session to ${entry.address.host} ended before its workspace was ready.`));
   const handlers = markEntryEnded(entry);
-  if (!entry.settled) {
-    entry.settled = true;
-    entry.rejectReady(new Error(`Remote session to ${entry.address.host} ended before its workspace was ready.`));
-  } else if (entry.workspaceDir && entry.labels.size > 0) {
+  if (wasSettled && entry.workspaceDir && entry.labels.size > 0) {
     notify(managers, 'remote-session-terminated', entry.labels.values().next().value!,
       `Remote janus on ${entry.address.host} terminated.`);
   }

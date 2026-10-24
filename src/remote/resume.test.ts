@@ -124,6 +124,8 @@ describe('detachRemoteEntry', () => {
 describe('handleAttachResult — restoring remote home', () => {
   it('restores home from the session record before notifying the tab', () => {
     const target = entry();
+    // A resume's entry is freshly created, so its readiness is still waiting on this answer.
+    target.settled = false;
     target.resolveReady = vi.fn();
     const onReady = vi.fn();
     target.handlers.set('claude', { onReady } as never);

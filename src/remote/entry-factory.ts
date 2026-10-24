@@ -6,7 +6,7 @@ import type { Managers } from '../managers.js';
 import type { PtySession } from '../pty.js';
 import { getProjectTokens } from '../project/tokens.js';
 import type { RemoteAddress } from './address.js';
-import { Attach, terminateRemoteProcess, type RemoteEntry } from './attach.js';
+import { Attach, settleEntryReady, terminateRemoteProcess, type RemoteEntry } from './attach.js';
 import { RemoteChannel } from './channel/index.js';
 import { deferredChannelTransport } from './channel/types.js';
 import {
@@ -109,7 +109,7 @@ export function createRemoteEntry({
           break;
         }
         case 'workspace-ready': {
-          if (!entry.closed) { entry.workspaceDir = frame.dir; entry.home = frame.home; entry.settled = true; entry.resolveReady(frame.dir); }
+          settleEntryReady(entry, { workspaceDir: frame.dir, home: frame.home });
           const onReady = entry.handlers.get(label)?.onReady;
           if (frame.home === undefined) onReady?.(frame.dir, frame.notice, frame.cleaned, frame.cloned);
           else onReady?.(frame.dir, frame.notice, frame.cleaned, frame.cloned, frame.home);
@@ -118,18 +118,18 @@ export function createRemoteEntry({
         }
         case 'clone-offer': { offer = frame; terminal(clonePromptText(frame)); break; }
         case 'root-refused': {
-          if (!entry.closed) { entry.settled = true; entry.rejectReady(new Error(rootRefusalMessage(label, address.host, frame.refusal))); }
+          settleEntryReady(entry, new Error(rootRefusalMessage(label, address.host, frame.refusal)));
           entry.handlers.get(label)?.onRootRefused?.(frame.refusal);
           break;
         }
         case 'workspace-failed': {
           if (entry.settled) { reportRemoteRefusal(managers, entry, frame.message); break; }
-          if (!entry.closed) { entry.settled = true; entry.rejectReady(new Error(frame.message)); }
+          settleEntryReady(entry, new Error(frame.message));
           entry.handlers.get(label)?.onFailed(frame.message);
           break;
         }
         case 'name-in-use': {
-          if (!entry.closed) { entry.settled = true; entry.rejectReady(new Error(`"${frame.label}" is in use on ${address.host}.`)); }
+          settleEntryReady(entry, new Error(`"${frame.label}" is in use on ${address.host}.`));
           entry.handlers.get(label)?.onNameRefused?.(frame);
           break;
         }
@@ -141,7 +141,7 @@ export function createRemoteEntry({
       },
       onError: (message) => {
         if (entry.attach.active) return;
-        if (!entry.closed && !entry.settled) { entry.settled = true; entry.rejectReady(new Error(message)); }
+        settleEntryReady(entry, new Error(message));
         entry.handlers.get(label)?.onFailed(message);
       },
       onClose: () => channelClosed(entry),
