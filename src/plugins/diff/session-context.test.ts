@@ -33,6 +33,7 @@ function host() {
       factory();
     }),
     updateTab: (_key: string, factory: () => { payload: DiffPayload }) => { updates.push(factory().payload); },
+    ownTabKeys: () => (opened ? [KEY] : []),
     rejectRequest,
   };
   return {

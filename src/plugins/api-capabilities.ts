@@ -18,6 +18,7 @@ export type TabPluginCapabilityName =
   | 'dockTab'
   | 'snapshotTab'
   | 'closeOwnTab'
+  | 'ownTabKeys'
   | 'openClaimedFiles'
   | 'projectFileList'
   | 'harnessLaunchCatalog'
@@ -71,6 +72,7 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   dockTab: true,
   snapshotTab: true,
   closeOwnTab: true,
+  ownTabKeys: true,
   openClaimedFiles: true,
   projectFileList: true,
   harnessLaunchCatalog: true,

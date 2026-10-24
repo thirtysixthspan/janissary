@@ -22,4 +22,9 @@ export type TabPluginOwnTabCapabilities = {
   // with no open tab of this plugin's is a no-op, and so is a close that would quit the app because
   // the tab is the last one keeping it open. Callable from a `notify` handler.
   closeOwnTab(instanceKey: string): void;
+  // The instance keys of this plugin's own open tabs, in strip order. A notification names them too,
+  // but one only arrives while the plugin still has a tab open, so a plugin keeping state per tab asks
+  // here before reusing any of it — the copy it kept for a tab closed since is then dropped rather
+  // than reopened. Empty while the plugin is disabled.
+  ownTabKeys(): readonly string[];
 };
