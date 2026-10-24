@@ -80,7 +80,7 @@ A run holds an ephemeral reference to the shared remote channel and workspace. R
 
 ### Run monitoring
 
-With `in a tab`, the server opens a lazy `agent-monitor` tab titled `Agent: <task filename>` and binds it to the newly created run. The monitor shows the complete launch command, selected model and effort, execution workspace, status, provider-reported activity, and final response. It has no terminal, command bar, or prompt input. Activity includes reported message, thought, tool, plan, and permission updates, in the order received; message text also remains the source for command extraction and the final answer.
+With `in a tab`, the server opens a lazy `agent-monitor` tab titled `Agent: <task filename>` and binds it to the newly created run. The monitor shows the complete launch command, selected model and effort, execution workspace, status, provider-reported activity, and final response. It has no terminal, command bar, or prompt input. Activity includes reported message, thought, tool, plan, and permission updates, in the order received; message text also remains the source for command extraction and the final answer. Each entry is labelled with one of those five kinds and carries plain text, structured content falling back to its JSON form, and other session bookkeeping updates are not shown; a local run and a remote run report the same activity for the same updates.
 
 If the monitor cannot be opened, the run fails before task execution. The failed result retains the monitor creation error as its response and includes any run cleanup failures in `cleanupWarnings`.
 

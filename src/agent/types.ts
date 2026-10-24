@@ -1,3 +1,5 @@
+import type { AcpActivityKind } from '../acp/activity.js';
+
 export type AgentLaunch = Readonly<{
   host?: string;
   inTab: boolean;
@@ -27,7 +29,7 @@ export type AgentRunView = Readonly<{
   host: string;
   workspace: string;
   status: 'Provisioning' | 'Running' | 'Waiting for answer' | 'Cleaning up' | 'Completed' | 'Failed' | 'Terminated';
-  activity: readonly Readonly<{ id: number; kind: string; text: string }>[];
+  activity: readonly Readonly<{ id: number; kind: AcpActivityKind; text: string }>[];
   response?: string;
 }>;
 

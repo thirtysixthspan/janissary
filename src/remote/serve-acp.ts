@@ -1,4 +1,5 @@
 import { connectAcp } from '../acp/index.js';
+import { acpActivity } from '../acp/activity.js';
 import type { AcpSession } from '../acp/types.js';
 import type { ProjectTokens } from '../project/tokens.js';
 import type { ClientFrame, ServerFrame } from './protocol-frames.js';
@@ -70,15 +71,8 @@ export class RemoteAcp {
       autonomous: frame.autonomous,
       effort: frame.effort,
       onActivity: (update) => {
-        if (typeof update !== 'object' || update === null || !('sessionUpdate' in update)) return;
-        const value = update as { sessionUpdate?: unknown; content?: unknown };
-        const kind = this.activityKind(value.sessionUpdate);
-        if (!kind) return;
-        const content = value.content;
-        const text = typeof content === 'string' ? content
-          : typeof content === 'object' && content !== null && 'text' in content && typeof content.text === 'string'
-            ? content.text : JSON.stringify(content ?? update);
-        this.send({ type: 'acp-activity', id, kind, text });
+        const activity = acpActivity(update);
+        if (activity) this.send({ type: 'acp-activity', id, ...activity });
       },
       // The connection-level channel: a failed spawn or a dead agent means the session no longer
       // exists, so it travels as fatal and the local side drops its record of it.
@@ -122,16 +116,6 @@ export class RemoteAcp {
       if (record.state !== 'live' || !record.runOnly) continue;
       this.trackShutdown(id, record.session);
     }
-  }
-
-  private activityKind(update: unknown): 'message' | 'thought' | 'tool' | 'plan' | 'permission' | undefined {
-    if (typeof update !== 'string') return undefined;
-    if (update === 'agent_message_chunk') return 'message';
-    if (update === 'agent_thought_chunk') return 'thought';
-    if (update.includes('tool')) return 'tool';
-    if (update.includes('plan')) return 'plan';
-    if (update.includes('permission')) return 'permission';
-    return undefined;
   }
 
   // Every session this server holds, for shutdown. `connectAcp`'s `shutdown()` suppresses its own exit

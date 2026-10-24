@@ -3,6 +3,7 @@ import type { Managers } from '../managers.js';
 import { parseRemoteAddress } from '../remote/address.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
 import { isUsableEntry } from '../remote/attach.js';
+import { awaitReady } from './readiness.js';
 import { AGENT_CLONE_DEPTH } from '../workspace/clone-depth.js';
 
 export type RemoteAgentTarget = Readonly<{
@@ -17,21 +18,6 @@ function establishedLabel(managers: Managers, destination: string): string | und
     candidate.address.destination.toLowerCase() === destination.toLowerCase() && isUsableEntry(candidate),
   );
   return entry?.labels.values().next().value;
-}
-
-async function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
-  if (signal.aborted) throw new Error('Agent terminated.');
-  let rejectAbort = (_error: Error) => {};
-  // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the project targets ES2023
-  const aborted = new Promise<never>((_resolve, reject) => { rejectAbort = reject; });
-  const onAbort = () => rejectAbort(new Error('Agent terminated.'));
-  const timeout = setTimeout(() => rejectAbort(new Error('Agent: remote workspace readiness timed out.')), 15_000);
-  signal.addEventListener('abort', onAbort, { once: true });
-  try { return await Promise.race([promise, aborted]); }
-  finally {
-    clearTimeout(timeout);
-    signal.removeEventListener('abort', onAbort);
-  }
 }
 
 export async function resolveRemoteAgentTarget(
@@ -73,7 +59,7 @@ export async function resolveRemoteAgentTarget(
   try {
     const ready = managers.remote.readyOf(label);
     if (!ready) throw new Error('Agent: remote workspace is not ready.');
-    const workspace = await abortable(ready, signal);
+    const workspace = await awaitReady(ready, signal, 15_000, 'Agent: remote workspace readiness timed out.');
     if (!channel.attached) throw new Error('Agent: remote connection unavailable.');
     const release = managers.remote.acquireAgentLease(label, `agent:${randomUUID()}`);
     managers.remote.release(label);

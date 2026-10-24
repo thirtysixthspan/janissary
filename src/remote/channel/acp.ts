@@ -1,10 +1,10 @@
-import type { RemoteFrame } from '../protocol-frames.js';
+import type { RemoteAcpActivityKind, RemoteFrame } from '../protocol-frames.js';
 
 export type AcpSessionListener = {
   onReady: (sandboxed: boolean) => void;
   onChunk: (text: string) => void;
   onEnd: (stopReason: string) => void;
-  onActivity: (kind: 'message' | 'thought' | 'tool' | 'plan' | 'permission', text: string) => void;
+  onActivity: (kind: RemoteAcpActivityKind, text: string) => void;
   onClosed: (released: boolean) => void;
   onTransportLost?: () => void;
   onError: (message: string, fatal: boolean) => void;
