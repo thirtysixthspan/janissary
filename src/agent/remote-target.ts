@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Managers } from '../managers.js';
 import { parseRemoteAddress } from '../remote/address.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
+import { isUsableEntry } from '../remote/attach.js';
 import { AGENT_CLONE_DEPTH } from '../workspace/clone-depth.js';
 
 export type RemoteAgentTarget = Readonly<{
@@ -13,8 +14,7 @@ export type RemoteAgentTarget = Readonly<{
 
 function establishedLabel(managers: Managers, destination: string): string | undefined {
   const entry = managers.remote.liveEntries().find((candidate) =>
-    candidate.address.destination.toLowerCase() === destination.toLowerCase()
-    && candidate.channel.attached && candidate.workspaceDir !== undefined,
+    candidate.address.destination.toLowerCase() === destination.toLowerCase() && isUsableEntry(candidate),
   );
   return entry?.labels.values().next().value;
 }

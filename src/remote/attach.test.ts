@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RemoteManager } from './manager.js';
-import { Attach } from './attach.js';
+import { Attach, isUsableEntry, remoteCacheOwner, settleEntryReady, type RemoteEntry } from './attach.js';
 import { encodeFrame, encodeHandshake } from './protocol.js';
 import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
@@ -218,5 +218,75 @@ describe('remote attachment', () => {
     expect(connect.mock.calls.length).toBeGreaterThan(1);
     retry.stop(); const count = connect.mock.calls.length;
     vi.advanceTimersByTime(60_000); expect(connect).toHaveBeenCalledTimes(count);
+  });
+});
+
+// A bare entry record, for the helpers that read and settle one without a channel behind it.
+function bareEntry(overrides: Partial<RemoteEntry> = {}): RemoteEntry {
+  return {
+    address: { address: 'user@devbox', destination: 'user@devbox', host: 'devbox' },
+    channel: { attached: true },
+    workspaceLabel: 'claude-2',
+    settled: false,
+    closed: false,
+    resolveReady: vi.fn(),
+    rejectReady: vi.fn(),
+    ...overrides,
+  } as unknown as RemoteEntry;
+}
+
+describe('settleEntryReady', () => {
+  it('resolves once with the workspace and records its directory and home', () => {
+    const entry = bareEntry();
+    settleEntryReady(entry, { workspaceDir: '/srv/ws', home: '/home/user' });
+    settleEntryReady(entry, { workspaceDir: '/srv/other' });
+    expect(entry.resolveReady).toHaveBeenCalledTimes(1);
+    expect(entry.resolveReady).toHaveBeenCalledWith('/srv/ws');
+    expect(entry).toMatchObject({ settled: true, workspaceDir: '/srv/ws', home: '/home/user' });
+  });
+
+  it('rejects with the error it is given, and nothing settles it afterwards', () => {
+    const entry = bareEntry();
+    const error = new Error('no origin');
+    settleEntryReady(entry, error);
+    settleEntryReady(entry, { workspaceDir: '/srv/ws' });
+    expect(entry.rejectReady).toHaveBeenCalledWith(error);
+    expect(entry.resolveReady).not.toHaveBeenCalled();
+    expect(entry.workspaceDir).toBeUndefined();
+  });
+
+  it('settles nothing on an entry that has already ended', () => {
+    const entry = bareEntry({ closed: true });
+    settleEntryReady(entry, new Error('late'));
+    settleEntryReady(entry, { workspaceDir: '/srv/ws' });
+    expect(entry.rejectReady).not.toHaveBeenCalled();
+    expect(entry.resolveReady).not.toHaveBeenCalled();
+    expect(entry.settled).toBe(false);
+  });
+});
+
+describe('remoteCacheOwner', () => {
+  it('names no owner until the workspace has landed', () => {
+    expect(remoteCacheOwner(bareEntry())).toBeUndefined();
+  });
+
+  it('keys the cache by destination, workspace root, and workspace label', () => {
+    expect(remoteCacheOwner(bareEntry({ workspaceDir: '/srv/ws' }))).toEqual({
+      destination: 'user@devbox', workspaceRoot: '/srv/ws', workspaceLabel: 'claude-2',
+    });
+  });
+});
+
+describe('isUsableEntry', () => {
+  it('accepts an open, attached entry whose workspace has landed', () => {
+    expect(isUsableEntry(bareEntry({ workspaceDir: '/srv/ws' }))).toBe(true);
+  });
+
+  it.each([
+    { state: 'ended', overrides: { workspaceDir: '/srv/ws', closed: true } },
+    { state: 'detached', overrides: { workspaceDir: '/srv/ws', channel: { attached: false } } },
+    { state: 'without a workspace', overrides: {} },
+  ])('refuses an entry $state', ({ overrides }) => {
+    expect(isUsableEntry(bareEntry(overrides as Partial<RemoteEntry>))).toBe(false);
   });
 });

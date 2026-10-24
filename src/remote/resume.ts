@@ -1,5 +1,5 @@
 import type { Managers } from '../managers.js';
-import { terminateRemoteEntry, type RemoteEntry } from './attach.js';
+import { settleEntryReady, terminateRemoteEntry, type RemoteEntry } from './attach.js';
 import type { RemoteProcessState, ServerFrame } from './protocol-frames.js';
 
 // A launch that is really an attach. The workspace already exists on the far side, so this side
@@ -29,12 +29,7 @@ export type RemoteResume = {
  * behind it.
  */
 function settleResume(entry: RemoteEntry, resume: RemoteResume, label: string): void {
-  if (!entry.closed) {
-    entry.workspaceDir = resume.workspaceDir;
-    entry.home = resume.home;
-    entry.settled = true;
-    entry.resolveReady(resume.workspaceDir);
-  }
+  settleEntryReady(entry, { workspaceDir: resume.workspaceDir, home: resume.home });
   const onReady = entry.handlers.get(label)?.onReady;
   if (resume.home === undefined) onReady?.(resume.workspaceDir);
   else onReady?.(resume.workspaceDir, undefined, undefined, undefined, resume.home);

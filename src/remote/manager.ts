@@ -5,7 +5,7 @@ import type { RemoteChannel } from './channel/index.js';
 import type { ServerFrame } from './protocol-frames.js';
 import type { RootRefusal } from './root-refusal.js';
 import type { RemoteTranscriptSource } from './transcript-source.js';
-import { detachRemoteEntry, dropTerminatedSessionRecord, dropRemoteLabels, emitSessionsChanged, markEntryEnded, terminateRemoteEntry, resumeRemote, type RemoteEntry as Entry } from './attach.js';
+import { detachRemoteEntry, dropTerminatedSessionRecord, dropRemoteLabels, emitSessionsChanged, isUsableEntry, markEntryEnded, terminateRemoteEntry, resumeRemote, type RemoteEntry as Entry } from './attach.js';
 import type { RemoteResume } from './resume.js';
 import { remoteChannelClosed } from './manager-closed.js';
 import { createRemoteEntry } from './entry-factory.js';
@@ -100,9 +100,7 @@ export class RemoteManager {
 
   acquireAgentLease(label: string, runId: string): () => Promise<void> {
     const entry = this.entries.get(label);
-    if (!entry || entry.closed || !entry.channel.attached || !entry.workspaceDir) {
-      throw new Error('Agent: remote workspace is not ready.');
-    }
+    if (!entry || !isUsableEntry(entry)) throw new Error('Agent: remote workspace is not ready.');
     if (entry.runRefs.has(runId)) throw new Error(`Remote agent run already owns a lease: ${runId}`);
     entry.runRefs.add(runId);
     this.runEntries.add(entry);
@@ -175,14 +173,7 @@ export class RemoteManager {
     entry.handlers.delete(label);
     const survivor = entry.labels.values().next().value;
     if (survivor) this.managers.pty.reassignTransports(label, survivor);
-    else if (entry.runRefs.size === 0) {
-      // Captured before `finish()`, which forgets the channel's session id as part of closing.
-      const session = entry.channel.sessionId;
-      entry.channel.finish();
-      this.channelClosed(entry, true);
-      entry.channel.closeAfterShutdown();
-      dropTerminatedSessionRecord(this.managers, session);
-    }
+    else if (entry.runRefs.size === 0) this.finishUnreferencedEntry(entry);
     this.sessionsChanged();
     return true;
   }
@@ -215,8 +206,11 @@ export class RemoteManager {
     this.sessionsChanged();
   }
 
+  // The last label and the last agent lease are both gone. Shared by `release` and a lease's own
+  // release, so the ending sequence is written once.
   private finishUnreferencedEntry(entry: Entry): void {
     if (entry.closed) return;
+    // Captured before `finish()`, which forgets the channel's session id as part of closing.
     const session = entry.channel.sessionId;
     entry.channel.finish();
     this.channelClosed(entry, true);

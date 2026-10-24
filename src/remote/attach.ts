@@ -1,7 +1,7 @@
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
-import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote/file-cache.js';
+import { clearRemoteFileCacheForWorkspace, type RemoteFileCacheOwner } from '../file-navigator/remote/file-cache.js';
 import type { RemoteChannel } from './channel/index.js';
 import type { RemoteProcessState } from './protocol-frames.js';
 import type { RemoteTranscriptSource } from './transcript-source.js';
@@ -108,11 +108,8 @@ export function markEntryEnded(entry: RemoteEntry): RemoteLaunchHandlers[] {
   entry.closed = true;
   entry.attach.stop();
   cancelSessionState(entry);
-  if (entry.workspaceDir) {
-    clearRemoteFileCacheForWorkspace({
-      destination: entry.address.destination, workspaceRoot: entry.workspaceDir, workspaceLabel: entry.workspaceLabel,
-    });
-  }
+  const owner = remoteCacheOwner(entry);
+  if (owner) clearRemoteFileCacheForWorkspace(owner);
   const handlers = [...entry.handlers.values()];
   entry.handlers.clear();
   return handlers;
@@ -125,6 +122,35 @@ export type EstablishedEntry = RemoteEntry & { workspaceDir: string; channel: { 
 
 export function isEstablished(entry: RemoteEntry): entry is EstablishedEntry {
   return Boolean(entry.channel.sessionId) && Boolean(entry.workspaceDir);
+}
+
+// Whether something can use the entry's workspace right now — an agent run taking a lease, or
+// riding an existing session instead of opening its own: not ended, transport attached, and the
+// workspace landed. One test for both, so the lease and the reuse cannot disagree.
+export function isUsableEntry(entry: RemoteEntry): boolean {
+  return !entry.closed && entry.channel.attached && Boolean(entry.workspaceDir);
+}
+
+// Settle the entry's readiness once, whichever frame or ending gets there first. A settled or ended
+// entry has nothing left to settle, so every later answer is a no-op here rather than a guard each
+// caller has to remember.
+export function settleEntryReady(entry: RemoteEntry, result: Error | { workspaceDir: string; home?: string }): void {
+  if (entry.settled || entry.closed) return;
+  entry.settled = true;
+  if (result instanceof Error) {
+    entry.rejectReady(result);
+    return;
+  }
+  entry.workspaceDir = result.workspaceDir;
+  entry.home = result.home;
+  entry.resolveReady(result.workspaceDir);
+}
+
+// The key the remote file cache files this entry's copies under. Built here and nowhere else, so the
+// copies a navigator or plugin materializes are the ones the session's ending clears.
+export function remoteCacheOwner(entry: RemoteEntry): RemoteFileCacheOwner | undefined {
+  if (!entry.workspaceDir) return undefined;
+  return { destination: entry.address.destination, workspaceRoot: entry.workspaceDir, workspaceLabel: entry.workspaceLabel };
 }
 
 // Only an entry already mid-backoff after losing its transport benefits from a resume: it has

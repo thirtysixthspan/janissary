@@ -2,6 +2,7 @@ import type { Managers } from '../managers.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
 import { RemoteFileSystemPort } from '../file-navigator/remote/port.js';
 import { forgetRemoteFilesOf, materializeRemoteFile } from '../file-navigator/remote/file-cache.js';
+import { remoteCacheOwner } from '../remote/attach.js';
 import type { TabPluginDeclaration, TabPluginServerCapabilities } from './api.js';
 import type { SearchRequest } from '../protocol.js';
 
@@ -73,12 +74,9 @@ export function remoteCapabilities(input: {
     if (!isEnabled()) return;
     const resource = resourceFor(managers, label);
     const entry = managers.remote?.entryOf(label);
-    const root = entry?.workspaceDir;
-    return resource && entry && root
-      ? {
-          resource, port: resource.port, root,
-          owner: { destination: entry.address.destination, workspaceRoot: root, workspaceLabel: entry.workspaceLabel },
-        }
+    const owner = entry && remoteCacheOwner(entry);
+    return resource && owner
+      ? { resource, port: resource.port, root: owner.workspaceRoot, owner }
       : undefined;
   };
   // The plugin's own open tab, named by its instance key rather than by the call's tab: a scan
