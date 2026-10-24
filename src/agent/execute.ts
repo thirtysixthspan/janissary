@@ -13,8 +13,9 @@ import { notify } from '../notifications/index.js';
 import { sandboxWillConfine } from '../sandbox/confinement.js';
 import { janissaryRoot } from '../janissary-root.js';
 import { containedStrictly } from '../path-containment.js';
-import { isRecord } from '../value-guards.js';
+import { acpActivity } from '../acp/activity.js';
 import { agentPrimer, extractAgentCommand, runGrantedAgentCommand } from './command-tools.js';
+import { awaitReady } from './readiness.js';
 import type { AgentRun } from './run.js';
 
 export type AgentResult = Readonly<{
@@ -44,6 +45,12 @@ function selectedInstalledSkillDirs(run: AgentRun): string[] {
     const directory = path.dirname(resolvedFile);
     return containedStrictly(installedSkillsRoot, directory) ? [directory] : [];
   }))];
+}
+
+// Said once, to the feed, whichever host reports that the agent is not confined: locally the sandbox
+// check, remotely the far side's own answer on readiness.
+function notifySandboxingDisabled(managers: Managers, run: AgentRun): void {
+  notify(managers, 'manual', run.caller.label, 'Agent: sandboxing is disabled.');
 }
 
 export async function executeAgentRun(
@@ -86,47 +93,23 @@ export async function executeAgentRun(
       autonomous: true,
       effort: { level: effort ?? 'medium', model: selected },
       onActivity: (update) => {
-        if (!isRecord(update) || typeof update.sessionUpdate !== 'string') return;
-        const kind = update.sessionUpdate;
-        const content = update.content;
-        if (kind === 'agent_message_chunk' && isRecord(content) && content.type === 'text'
-          && typeof content.text === 'string') {
-          run.reportActivity('message', content.text);
-        } else {
-          run.reportActivity(kind, JSON.stringify(content ?? update) ?? String(content ?? update));
-        }
+        const activity = acpActivity(update);
+        if (activity) run.reportActivity(activity.kind, activity.text);
       },
       onError: reportConnectionFailure,
     });
   const localSession = remoteSession ? undefined : session;
-  if (!remote && !sandboxWillConfine(run.executionDir)) {
-    notify(managers, 'manual', run.caller.label, 'Agent: sandboxing is disabled.');
-  }
+  if (!remote && !sandboxWillConfine(run.executionDir)) notifySandboxingDisabled(managers, run);
   run.addResource(`acp:${run.id}`, async () => {
     if (remoteSession) {
       if (!await remoteSession.release()) throw new Error('Remote agent close was not acknowledged.');
     } else if (localSession) await localSession.shutdown();
   });
   if (remoteSession) {
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-    let rejectAbort = (_error: Error) => {};
-    // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the project targets ES2023
-    const abortPromise = new Promise<never>((_resolve, reject) => { rejectAbort = reject; });
-    const onAbort = () => rejectAbort(new Error('Agent terminated.'));
-    run.abortController.signal.addEventListener('abort', onAbort, { once: true });
-    try {
-      const sandboxed = await Promise.race([
-        remoteSession.ready,
-        new Promise<never>((_resolve, reject) => {
-          timeout = setTimeout(() => reject(new Error('Agent: remote agent readiness timed out.')), 15_000);
-        }),
-        abortPromise,
-      ]);
-      if (!sandboxed) notify(managers, 'manual', run.caller.label, 'Agent: sandboxing is disabled.');
-    } finally {
-      if (timeout) clearTimeout(timeout);
-      run.abortController.signal.removeEventListener('abort', onAbort);
-    }
+    const sandboxed = await awaitReady(
+      remoteSession.ready, run.abortController.signal, 15_000, 'Agent: remote agent readiness timed out.',
+    );
+    if (!sandboxed) notifySandboxingDisabled(managers, run);
   }
   if (pendingConnectionFailure !== undefined) throw new Error(`Agent: ${pendingConnectionFailure}`);
   const response = await new Promise<string>((resolve, reject) => {

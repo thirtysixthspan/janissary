@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { getConfig } from '../config.js';
 import type { AgentRunView, AgentSnapshot } from './types.js';
+import type { AcpActivityKind } from '../acp/activity.js';
 
 export type AgentOutcome = 'completed' | 'failed' | 'terminated';
 export type AgentCaller = Readonly<{
@@ -40,7 +41,7 @@ export class AgentRun {
   private revision = 0;
   private status: AgentRunView['status'] = 'Running';
   private response?: string;
-  private activity: { id: number; kind: string; text: string }[] = [];
+  private activity: { id: number; kind: AcpActivityKind; text: string }[] = [];
   private listeners = new Set<(view: AgentRunView) => void>();
   private cleanupPromise?: Promise<void>;
   private cleanups: (() => void | Promise<void>)[] = [];
@@ -101,7 +102,7 @@ export class AgentRun {
     this.publish();
   }
 
-  reportActivity(kind: string, text: string): void {
+  reportActivity(kind: AcpActivityKind, text: string): void {
     if (!text.trim()) return;
     this.activity.push({ id: this.activity.length + 1, kind, text });
     if (this.activity.length > getConfig().transcriptMaxLines) this.activity.shift();

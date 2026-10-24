@@ -1,5 +1,6 @@
 import type { AcpSession, PromptHandlers } from '../acp/types.js';
 import type { RemoteChannel } from './channel/index.js';
+import type { RemoteAcpActivityKind } from './protocol-frames.js';
 
 // What the local side decides and sends across: which agent runs, with what arguments and
 // environment, and whether it is confined offline. The remote supplies the workspace directory it
@@ -21,7 +22,7 @@ export type RemoteAcpOptions = {
 export type RemoteAcpHooks = {
   onError: (message: string) => void;
   onConnect: (sandboxed: boolean) => void;
-  onActivity?: (kind: 'message' | 'thought' | 'tool' | 'plan' | 'permission', text: string) => void;
+  onActivity?: (kind: RemoteAcpActivityKind, text: string) => void;
   onTransportLost?: () => void;
 };
 

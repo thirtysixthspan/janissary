@@ -4,6 +4,7 @@ import type { RootRefusal } from './root-refusal.js';
 import type { ResumeReset } from '../harness/auto-resume.js';
 import type { HistoryStep } from '../file-navigator/moves.js';
 import type { AgentSnapshot } from '../agent/types.js';
+import type { AcpActivityKind } from '../acp/activity.js';
 import type { SearchRequest } from '../protocol.js';
 
 // The frame shapes of the remote protocol, split out of `protocol.ts` so the wire *codec* and the
@@ -16,7 +17,8 @@ export type RemoteFilesystemOperation =
   | 'search-text' | 'read-file' | 'write-file' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
   | 'create-file' | 'create-directory' | 'replay' | 'change-set';
 
-export type RemoteAcpActivityKind = 'message' | 'thought' | 'tool' | 'plan' | 'permission';
+// The five activity kinds the ACP mapping produces (`../acp/activity.ts`), which is what travels.
+export type RemoteAcpActivityKind = AcpActivityKind;
 
 export type RemoteFilesystemArgumentsByOperation = {
   'read-directory': { path: string };

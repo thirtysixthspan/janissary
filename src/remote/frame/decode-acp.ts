@@ -1,5 +1,5 @@
 import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js';
-import type { RemoteAcpActivityKind } from '../protocol-frames.js';
+import { isAcpActivityKind } from '../../acp/activity.js';
 
 // The ACP family's decoders, in their own module for the same reason `decode-history.ts` has
 // one: `decode.ts` is the dispatcher, and six frame shapes are more validation than a
@@ -70,9 +70,8 @@ export function decodeAcpError(record: Record<string, unknown>): DecodeResult {
 
 export function decodeAcpActivity(record: Record<string, unknown>): DecodeResult {
   const { id, kind, text } = record;
-  if (!nonEmptyString(id) || !['message', 'thought', 'tool', 'plan', 'permission'].includes(String(kind))
-    || typeof text !== 'string') return malformed('acp-activity');
-  return { type: 'acp-activity', id, kind: kind as RemoteAcpActivityKind, text: Buffer.from(text, 'base64').toString('utf8') };
+  if (!nonEmptyString(id) || !isAcpActivityKind(kind) || typeof text !== 'string') return malformed('acp-activity');
+  return { type: 'acp-activity', id, kind, text: Buffer.from(text, 'base64').toString('utf8') };
 }
 
 export function decodeAcpClosed(record: Record<string, unknown>): DecodeResult {

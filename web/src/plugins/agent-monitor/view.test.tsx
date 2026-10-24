@@ -8,7 +8,7 @@ vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect()
 const run: AgentRunView = {
   id: 'server-owned-id', revision: 4, task: 'task.md', command: 'agent in a tab execute task.md',
   model: 'openai/test', effort: 'high', host: 'Local', workspace: '/work', status: 'Running',
-  activity: [{ id: 1, kind: 'agent_thought_chunk', text: 'Planning.' }],
+  activity: [{ id: 1, kind: 'thought', text: 'Planning.' }],
 };
 
 function capabilities(intent = vi.fn(async () => null)): TabPluginClientCapabilities {
@@ -22,7 +22,7 @@ describe('agent monitor view', () => {
 
     expect(screen.getByText('agent in a tab execute task.md')).toBeTruthy();
     expect(screen.getByText('Local · /work')).toBeTruthy();
-    expect(screen.getByText((text) => text.includes('agent_thought_chunk') && text.includes('Planning.'))).toBeTruthy();
+    expect(screen.getByText((text) => text.includes('thought') && text.includes('Planning.'))).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Terminate' }));
     expect(intent).toHaveBeenCalledWith('terminate', {});
   });

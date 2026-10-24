@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import path from 'node:path';
 import type { AcpOptions } from '../acp/types.js';
 import type { CommandInvocationContext } from '../commands/types.js';
@@ -200,5 +200,120 @@ describe('executeAgentRun', () => {
     shutdown.resolve();
     await finishing;
     expect(releaseWorkspace).toHaveBeenCalledOnce();
+  });
+});
+
+// The branches a successful run never takes: a remote agent that never reports ready, a run
+// terminated while waiting, a connection that fails before or during the tool loop, and an answer
+// with nothing in it. Each has to end the run with its own message rather than hang it.
+describe('executeAgentRun failure paths', () => {
+  beforeEach(() => {
+    connectAcp.mockReset();
+    runAcpToolLoop.mockReset();
+    sandboxWillConfine.mockReturnValue(true);
+  });
+
+  function openCodeModel(): string {
+    const model = modelsFor('opencode')[0];
+    if (!model) throw new Error('No OpenCode model is available for this test.');
+    return model;
+  }
+
+  function newRun() {
+    const caller = { label: 'janus', incarnation: 'caller-1', cwd: '/source', context: [] };
+    const run = new AgentRun(caller, { taskPath: '/clone/task.md', taskText: 'Task', skills: [], grants: [] },
+      undefined, undefined, '/clone');
+    const invocation: CommandInvocationContext = {
+      runId: run.id, invocationId: 'invocation-1', caller, signal: run.abortController.signal,
+    };
+    return { run, invocation };
+  }
+
+  // A channel whose far side never answers the session it is asked to open.
+  function silentChannel(): RemoteChannel {
+    return { attachAcp: vi.fn(), detachAcp: vi.fn(), send: vi.fn() } as unknown as RemoteChannel;
+  }
+
+  // The local session's options, captured so a test can play the connection's side of the run.
+  function capturedSession(): { options: () => AcpOptions } {
+    let options: AcpOptions | undefined;
+    connectAcp.mockImplementation((value: AcpOptions) => {
+      options = value;
+      return { prompt: vi.fn(), kill: vi.fn(), shutdown: vi.fn(async () => {}) };
+    });
+    return {
+      options: () => {
+        if (!options) throw new Error('the session was never opened');
+        return options;
+      },
+    };
+  }
+
+  it('fails a remote run whose agent never reports ready within fifteen seconds', async () => {
+    vi.useFakeTimers();
+    try {
+      const { run, invocation } = newRun();
+      const execution = executeAgentRun(run, invocation, openCodeModel(), undefined, '', {} as never, { channel: silentChannel() });
+      const outcome = expect(execution).rejects.toThrow('Agent: remote agent readiness timed out.');
+      await vi.advanceTimersByTimeAsync(15_000);
+      await outcome;
+      expect(runAcpToolLoop).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('ends a remote run terminated while its agent is still getting ready', async () => {
+    const { run, invocation } = newRun();
+    const execution = executeAgentRun(run, invocation, openCodeModel(), undefined, '', {} as never, { channel: silentChannel() });
+    run.abortController.abort();
+    await expect(execution).rejects.toThrow('Agent terminated.');
+    expect(runAcpToolLoop).not.toHaveBeenCalled();
+  });
+
+  it('fails with the connection\'s error when the agent fails before the tool loop starts', async () => {
+    connectAcp.mockImplementation((options: AcpOptions) => {
+      options.onError('agent failed to start');
+      return { prompt: vi.fn(), kill: vi.fn(), shutdown: vi.fn(async () => {}) };
+    });
+    const { run, invocation } = newRun();
+    await expect(executeAgentRun(run, invocation, openCodeModel(), undefined, '', {} as never))
+      .rejects.toThrow('Agent: agent failed to start');
+    expect(runAcpToolLoop).not.toHaveBeenCalled();
+  });
+
+  it('fails with the connection\'s error when the agent fails during the tool loop', async () => {
+    const session = capturedSession();
+    runAcpToolLoop.mockImplementation(() => { session.options().onError('agent exited'); });
+    const { run, invocation } = newRun();
+    await expect(executeAgentRun(run, invocation, openCodeModel(), undefined, '', {} as never))
+      .rejects.toThrow('Agent: agent exited');
+  });
+
+  it('fails a run whose final answer is empty', async () => {
+    capturedSession();
+    runAcpToolLoop.mockImplementation((_session, _prompt, _dependencies, handlers) => {
+      handlers.endTurn(' '.repeat(3));
+      handlers.finished('answered', Infinity);
+    });
+    const { run, invocation } = newRun();
+    await expect(executeAgentRun(run, invocation, openCodeModel(), undefined, '', {} as never))
+      .rejects.toThrow('Agent: task returned an empty response.');
+  });
+
+  // The local run reports what a remote one does: the spec's kinds with plain text, and nothing for
+  // session bookkeeping.
+  it('reports a local thought chunk as a thought with plain text', async () => {
+    const session = capturedSession();
+    runAcpToolLoop.mockImplementation((_session, _prompt, _dependencies, handlers) => {
+      session.options().onActivity?.({ sessionUpdate: 'agent_thought_chunk', content: { type: 'text', text: 'Planning.' } });
+      session.options().onActivity?.({ sessionUpdate: 'available_commands_update', availableCommands: [] });
+      handlers.endTurn('Finished.');
+      handlers.finished('answered', Infinity);
+    });
+    const { run, invocation } = newRun();
+    await executeAgentRun(run, invocation, openCodeModel(), undefined, '', {} as never);
+    expect(run.view().activity).toEqual([{ id: 1, kind: 'thought', text: 'Planning.' }]);
+    await run.finish('completed');
   });
 });
