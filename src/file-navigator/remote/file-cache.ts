@@ -1,7 +1,7 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { containedPath } from '../batch-paths.js';
+import { containedPath, containedStrictly } from '../../path-containment.js';
 import type { FileSystemPort } from '../filesystem-port.js';
 
 export type RemoteFileRecord = {
@@ -67,7 +67,7 @@ export function retargetRemoteFileRecord(oldFile: string, newFile: string): void
 // route back to its remote, so it must not be saved or committed as if it were a local file.
 export function isRemoteCacheFile(file: string): boolean {
   if (!cacheRoot) return false;
-  return path.resolve(file).startsWith(`${path.resolve(cacheRoot)}${path.sep}`);
+  return containedStrictly(cacheRoot, file);
 }
 
 // Forget every cached file that writes back through `filesystem`, at the moment its navigator
@@ -80,7 +80,7 @@ export function clearRemoteFileCacheForWorkspace(owner: RemoteFileCacheOwner): v
   if (!cacheRoot) return;
   const workspace = ownerDirectory(owner);
   try { rmSync(workspace, { recursive: true, force: true }); } catch { /* ignore */ }
-  for (const [file] of records) if (file.startsWith(`${workspace}${path.sep}`)) records.delete(file);
+  for (const [file] of records) if (containedStrictly(workspace, file)) records.delete(file);
 }
 
 export function clearRemoteFileCache(): void {

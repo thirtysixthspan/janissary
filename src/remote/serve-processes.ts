@@ -5,7 +5,7 @@ import { shellStartupEnvironment } from '../shell/zsh-startup/script.js';
 import { ZshStartupDirectory } from '../shell/zsh-startup/directory.js';
 import { harnessSpawnEnv } from '../harness/scratch-dir.js';
 import { messageBus } from '../bus.js';
-import { containedAbsolute } from '../file-navigator/batch-paths.js';
+import { containedAbsolute } from '../path-containment.js';
 import type { ScreenCapture } from '../harness/screen.js';
 import { buildHarnessDetection, type HarnessDetection } from './serve-processes-detect.js';
 import { spawnFrameState } from './process-state.js';

@@ -73,12 +73,6 @@ export function parentPath(relPath: string): string {
   return idx === -1 ? '' : relPath.slice(0, idx);
 }
 
-// True if `candidate` is `base` itself, or is nested inside it — the check that blocks dropping a
-// dragged item onto itself or one of its own descendants (moving a directory into its own child).
-export function isSameOrDescendantPath(candidate: string, base: string): boolean {
-  return candidate === base || candidate.startsWith(`${base}/`);
-}
-
 // True if the directory at `absDestDir` already has a child named `name` — used to detect a
 // same-name conflict at the drop target. Re-reads the destination directory fresh from disk
 // rather than trusting the client's row list, which can be briefly stale.

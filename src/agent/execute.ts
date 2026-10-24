@@ -12,6 +12,7 @@ import { errorText } from '../error-text.js';
 import { notify } from '../notifications/index.js';
 import { sandboxWillConfine } from '../sandbox/confinement.js';
 import { janissaryRoot } from '../janissary-root.js';
+import { containedStrictly } from '../path-containment.js';
 import { isRecord } from '../value-guards.js';
 import { agentPrimer, extractAgentCommand, runGrantedAgentCommand } from './command-tools.js';
 import type { AgentRun } from './run.js';
@@ -41,10 +42,7 @@ function selectedInstalledSkillDirs(run: AgentRun): string[] {
     if (skill.source !== 'janissary') return [];
     const resolvedFile = realpathSync(skill.path);
     const directory = path.dirname(resolvedFile);
-    const relative = path.relative(installedSkillsRoot, directory);
-    return relative !== '' && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative)
-      ? [directory]
-      : [];
+    return containedStrictly(installedSkillsRoot, directory) ? [directory] : [];
   }))];
 }
 

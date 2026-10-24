@@ -210,6 +210,12 @@ describe('originWorkspace for monitors, editors, and navigators', () => {
     expect(originWorkspace(kindManagers({}), editor(`${ws}/demir/a.ts`))).toEqual(goneClone('demir'));
   });
 
+  // A clone whose name merely starts with `..` is under the workspaces directory, not above it.
+  it('answers a local editor file inside a clone named ..notes with that clone', () => {
+    const managers = kindManagers({ tracked: [`${ws}/..notes`] });
+    expect(originWorkspace(managers, editor(`${ws}/..notes/a.md`))).toEqual(clone('..notes'));
+  });
+
   it('rides the materializing tab for a remote-cache editor file', () => {
     const file = cachedFile('files');
     const managers = kindManagers({ entries: { files: { dir: '/remote/ws', label: 'claude', host: 'devbox' } } });

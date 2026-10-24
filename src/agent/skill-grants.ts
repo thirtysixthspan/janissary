@@ -1,14 +1,10 @@
 import { lstatSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { containedAbsolute } from '../path-containment.js';
 import type { AgentResolutionOptions, AgentSnapshot } from './types.js';
 
 type Skill = Readonly<{ source: 'project' | 'janissary'; name: string; path: string; instructions: string }>;
 type ResolvedSkill = Readonly<{ skill: Skill; directory: string }>;
-
-function contained(root: string, target: string): boolean {
-  const relative = path.relative(root, target);
-  return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
-}
 
 function isMissingPath(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'ENOENT';
@@ -25,7 +21,7 @@ function resolveSkill(name: string, options: AgentResolutionOptions): ResolvedSk
     try {
       const realSourceRoot = realpathSync(sourceRoot);
       realRoot = realpathSync(root);
-      if (!contained(realSourceRoot, realRoot) || !statSync(realRoot).isDirectory()) {
+      if (!containedAbsolute(realSourceRoot, realRoot) || !statSync(realRoot).isDirectory()) {
         throw new Error('invalid skill root');
       }
     } catch (error) {
@@ -42,11 +38,11 @@ function resolveSkill(name: string, options: AgentResolutionOptions): ResolvedSk
     const directory = path.dirname(candidate);
     try {
       const realDirectory = realpathSync(directory);
-      if (realDirectory !== path.resolve(realRoot, name) || !contained(realRoot, realDirectory) || !statSync(realDirectory).isDirectory()) {
+      if (realDirectory !== path.resolve(realRoot, name) || !containedAbsolute(realRoot, realDirectory) || !statSync(realDirectory).isDirectory()) {
         throw new Error('invalid skill directory');
       }
       const realFile = realpathSync(candidate);
-      if (!contained(realDirectory, realFile) || !statSync(realFile).isFile()) throw new Error('outside skill directory');
+      if (!containedAbsolute(realDirectory, realFile) || !statSync(realFile).isFile()) throw new Error('outside skill directory');
       return Object.freeze({
         skill: Object.freeze({ source, name, path: realFile, instructions: readFileSync(realFile, 'utf8') }),
         directory: realDirectory,
@@ -70,7 +66,7 @@ function readGrants(resolved: ResolvedSkill, knownCommands: ReadonlySet<string>)
   let realSidecar: string;
   try {
     realSidecar = realpathSync(sidecar);
-    if (!contained(directory, realSidecar) || !statSync(realSidecar).isFile()) throw new Error('outside skill directory');
+    if (!containedAbsolute(directory, realSidecar) || !statSync(realSidecar).isFile()) throw new Error('outside skill directory');
   } catch {
     throw new Error(`Agent: invalid skill path "${skill.name}".`);
   }

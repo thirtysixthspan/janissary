@@ -1,22 +1,10 @@
 import { lstatSync } from 'node:fs';
 import path from 'node:path';
+import { containedPath } from '../path-containment.js';
 
 // Path helpers shared by `batch.ts` (move/delete) and `paste.ts` (copy/cut-paste) — extracted so
-// neither module has to duplicate them, and to keep `batch.ts` under the file-size limit.
-
-export function containedPath(root: string, relPath: string): string | undefined {
-  if (!relPath || relPath === '.' || relPath === '..' || path.isAbsolute(relPath)) return;
-  const absolute = path.resolve(root, relPath);
-  return containedAbsolute(root, absolute) ? absolute : undefined;
-}
-
-// Whether an already-resolved absolute path sits inside `root` (the root itself counts). The tail
-// `containedPath` and its callers need, published so the navigator, the remote filesystem, and the
-// serve process clamp with one rule rather than four spellings of it.
-export function containedAbsolute(root: string, absolute: string): boolean {
-  const relative = path.relative(root, absolute);
-  return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
-}
+// neither module has to duplicate them, and to keep `batch.ts` under the file-size limit. The
+// containment rule they build on lives in `../path-containment.ts`.
 
 export function realDirectory(root: string, relPath: string): string | undefined {
   const absolute = relPath === '' ? path.resolve(root) : containedPath(root, relPath);

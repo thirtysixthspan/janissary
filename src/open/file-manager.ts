@@ -7,6 +7,7 @@ import { openInDefaultViewer } from '../openers/external-viewer.js';
 import { openInEditor } from '../openers/editor.js';
 import { nextFreeName } from '../editor/next-free-name.js';
 import { expandUserPath } from '../paths.js';
+import { containedAbsolute } from '../path-containment.js';
 import { expandGlob } from './glob.js';
 import type { Managers } from '../managers.js';
 import { runOpenCommand, pinnedOpenerRefusal } from './file-command.js';
@@ -189,9 +190,7 @@ export class OpenFileManager {
   private governingNavigator(label: string, launchDir: string): Managers['fileNavigator'] | undefined {
     const root = this.managers.fileNavigator.rootOf(label);
     if (root === undefined) return undefined;
-    const relative = path.relative(launchDir, root);
-    const escapes = relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative);
-    return escapes ? undefined : this.managers.fileNavigator;
+    return containedAbsolute(launchDir, root) ? this.managers.fileNavigator : undefined;
   }
 
   // Mirrors `HarnessManager.spawnTab`/`finishSpawn`'s immediate-placeholder-then-async-fill-in

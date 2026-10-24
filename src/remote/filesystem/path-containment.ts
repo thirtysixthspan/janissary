@@ -1,6 +1,6 @@
 import { realpathSync } from 'node:fs';
 import path from 'node:path';
-import { containedAbsolute, containedPath } from '../../file-navigator/batch-paths.js';
+import { containedAbsolute, containedPath } from '../../path-containment.js';
 
 export function physicallyContainedPath(root: string, relPath: string): boolean {
   const absolute = containedPath(root, relPath);

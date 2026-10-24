@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import { containedPath } from './batch-paths.js';
+import { containedPath } from '../path-containment.js';
 import {
   failureResult,
   INVALID_NAME_REASON,

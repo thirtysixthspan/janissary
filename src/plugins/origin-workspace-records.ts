@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 import { abbreviateWorkspaceDir } from '../paths.js';
+import { containedStrictly } from '../path-containment.js';
 import { workspacePath } from '../workspace/index.js';
 import type { OriginWorkspace } from './api-origin-tab.js';
 
@@ -58,8 +59,9 @@ export function localCloneOf(file: string): string | undefined {
   } catch {
     return undefined;
   }
-  const relative = path.relative(base, path.resolve(file));
-  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return undefined;
+  const resolved = path.resolve(file);
+  if (!containedStrictly(base, resolved)) return undefined;
+  const relative = path.relative(base, resolved);
   return path.join(base, relative.split(path.sep)[0] ?? relative);
 }
 
