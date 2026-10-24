@@ -243,6 +243,21 @@ describe('createRemotePtySession', () => {
       expect(tab.harness?.autoResumeState).toBe('resumed');
     });
 
+    // A limit that clears before its reset withdraws the entry the event scheduled, the way a local
+    // resumer cancels its own; the cancel's `removed` hook then acknowledges as above.
+    it('cancels the scheduled entry when the far side reports the limit cleared', () => {
+      const { channel } = attachedChannel();
+      const tab = makeTab('codex', 'red');
+      tab.harness = { name: 'codex', program: 'codex', ptyId: 'r1', status: 'running' };
+      const cancel = vi.fn(() => true);
+      createRemotePtySession(channel, makeManagers([tab], { add: vi.fn(), cancel }), {
+        id: 'r1', program: 'codex', command: 'codex', harness: 'codex', cols: 80, rows: 24, agentName: 'codex',
+      }, vi.fn());
+      channel.receive(`${encodeFrame({ type: 'resume-event', id: 'r1', reset, capturedAt: 1000 })}\n`);
+      channel.receive(`${encodeFrame({ type: 'resume-cancel', id: 'r1' })}\n`);
+      expect(cancel).toHaveBeenCalledWith('codex', 'auto-resume');
+    });
+
     // A stated clock time is only "already past" relative to the clock reading it, so this pins the
     // clock: at a real 00:30 the same 01:00 reset is an hour ahead and the assertion inverts.
     it('resumes at once for a report replayed long after its reset, rather than waiting a day', () => {

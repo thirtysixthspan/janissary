@@ -11,6 +11,7 @@ export function dispatchSessionFrame(frame: RemoteFrame, router: SessionRouter, 
   if (frame.type === 'gate-event') { router.gateEvent(frame); return true; }
   if (frame.type === 'busy-transition') { router.busyTransition(frame); return true; }
   if (frame.type === 'resume-event') { router.resumeEvent(frame); return true; }
+  if (frame.type === 'resume-cancel') { router.resumeCancel(frame); return true; }
   if (frame.type === 'exit') { router.exit(frame); return true; }
   if (frame.type === 'capture-reply') { captures.resolve(frame); return true; }
   return false;

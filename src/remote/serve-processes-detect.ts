@@ -27,7 +27,8 @@ export type HarnessDetection = {
  * Auto-resume is split rather than mirrored: the resumer here only *reports* a limit, because the
  * resume is scheduled and delivered by the client — which owns the clock the reset is stated in, and
  * the schedule the entry belongs to. The client answers with `resume-ack` when that entry has left
- * its schedule, which is what `delivered()` answers.
+ * its schedule, which is what `delivered()` answers. A limit screen that clears before its reset is
+ * sent as `resume-cancel`, so the client withdraws the entry the way a local resumer's `cancel` does.
  */
 export function buildHarnessDetection(
   id: string, harnessName: string, cols: number, rows: number, autoApprove: boolean, autoResume: boolean,
@@ -51,7 +52,7 @@ export function buildHarnessDetection(
     ? new HarnessAutoResumer({
       harnessName,
       schedule: () => RESUME_ENTRY_ID,
-      cancel: () => {},
+      cancel: () => send({ type: 'resume-cancel', id }),
       onScheduled: (reset, _resumeAt, capture) => send({
         type: 'resume-event', id, reset, capturedAt: capture.capturedAt, capture: capture.text,
       }),

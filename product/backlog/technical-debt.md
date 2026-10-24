@@ -4,17 +4,6 @@
 
 ## development
 
-* Carry auto-resume cancellation across the remote wire, so a remote harness whose usage limit clears early has its pending resume withdrawn the way a local one does.
-
-Existing Debt: The harness detector pipeline is assembled twice, locally through `captureWiring` and the `*-wire.ts` modules and on the remote host through `buildHarnessDetection`, and each observer callback is mapped onto a frame by hand, so the resumer's `cancel` callback, which has no frame, became a silent no-op on the remote side. Severity: 5/10
-
-Existing Risk: 6/10 - A remote harness whose limit screen clears before the reset still has the resume prompt typed into it at the old reset time, possibly in the middle of new work, its strip keeps showing a pending auto-resume until then, and the spec's promise that a cleared blockage cancels the pending entry is false for every remote tab.
-
-Proposal Risk: 2/10 - The missing callback gets its own frame and tests, but the two pipelines stay separate, so a future observer callback can still be dropped the same way unless its change adds a frame too.
-
-Proposal: `HarnessAutoResumer.onCapture` in `src/harness/auto-resume.ts` calls `opts.cancel()` when a pending limit screen goes away; locally that is `managers.schedule.cancel(label, RESUME_ENTRY_ID)` in `src/harness/auto-resume-wire.ts`, but `buildHarnessDetection` in `src/remote/serve-processes-detect.ts` passes `cancel: () => {}`, and `createRemotePtySession` in `src/remote/pty-session.ts` only ever adds the resume entry in `onResumeEvent`, because remote tabs get no local `captureWiring` (see `src/harness/observers.ts`). `product/specs/harness.md` says a blockage that goes away before the resume is due cancels the pending entry. Add a `resume-cancel { id }` server frame: declare it in `ServerFrame` and `SERVER_FRAME_TYPES` in `src/remote/protocol-frames.ts`, decode it beside `decodeResumeAck` in `src/remote/frame/decode-detect.ts` and route it in `src/remote/frame/decode.ts`, bump `REMOTE_PROTOCOL_VERSION` in `src/remote/protocol.ts` (currently 35) with a changelog paragraph, send it from the far side's `cancel`, route it in `src/remote/channel/dispatch.ts` to a new `SessionRouter.resumeCancel` in `src/remote/channel/sessions.ts` that is held during an attach exactly as `resumeEvent` is (add it to `PendingFrame` in `src/remote/channel/pending.ts`), and have `pty-session.ts` answer it with `managers.schedule.cancel(label, RESUME_ENTRY_ID)`, whose existing `removed` hook already sends `resume-ack` and clears the strip flag. Nothing tests a remote limit that clears today, so add cases to `src/remote/serve-processes.test.ts` (a limit screen followed by a cleared screen sends `resume-cancel`) and `src/remote/pty-session.test.ts` (the frame removes the entry), update the per-type sample table and the version assertion in `src/remote/protocol.test.ts` and the held-frame cases in `src/remote/channel/sessions.test.ts`, and describe the frame in `product/specs/remote-server.md`.
-
-
 * Split the harness sandbox's argument and environment builder from the host check that decides whether to confine, so its credential-scrub and token-injection tests run on every platform, CI included.
 
 Existing Debt: `sandboxSpawn` both asks whether this host can confine and assembles the `sandbox-exec` invocation, so 28 tests that only inspect the returned arguments and environment are gated on a darwin-only availability check, while CI runs on Linux. Severity: 6/10

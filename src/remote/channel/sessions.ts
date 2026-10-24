@@ -24,6 +24,9 @@ export type SessionListener = {
   // A recognized subscription limit and the reset clause it states. Only a remote harness's
   // `PtySession` takes one — see `createRemotePtySession` in `./pty-session.js`.
   onResumeEvent?: (reset: ResumeReset, capturedAt: number, replayed: boolean, capture?: string) => void;
+  // The limit a resume-event reported has cleared before its reset, so the scheduled resume is
+  // withdrawn. Taken by the same remote harness `PtySession` as `onResumeEvent`.
+  onResumeCancel?: () => void;
 };
 
 type SpawnFrame = Extract<ClientFrame, { type: 'spawn' }>;
@@ -32,6 +35,7 @@ type HistoryFrame = Extract<ServerFrame, { type: 'shell-history' }>;
 type GateEventFrame = Extract<ServerFrame, { type: 'gate-event' }>;
 type BusyTransitionFrame = Extract<ServerFrame, { type: 'busy-transition' }>;
 type ResumeEventFrame = Extract<ServerFrame, { type: 'resume-event' }>;
+type ResumeCancelFrame = Extract<ServerFrame, { type: 'resume-cancel' }>;
 type ExitFrame = Extract<ServerFrame, { type: 'exit' }>;
 
 export type SessionRouterHandlers = {
@@ -67,6 +71,7 @@ export class SessionRouter {
       if (frame.type === 'gate-event') { listener.onGateEvent?.(frame.message, frame.capturedAt, true, frame.capture); continue; }
       if (frame.type === 'busy-transition') { listener.onBusyTransition?.(frame.busy, frame.unread); continue; }
       if (frame.type === 'resume-event') { listener.onResumeEvent?.(frame.reset, frame.capturedAt, true, frame.capture); continue; }
+      if (frame.type === 'resume-cancel') { listener.onResumeCancel?.(); continue; }
       this.sessions.delete(id);
       listener.onExit(frame.exitCode);
     }
@@ -129,6 +134,14 @@ export class SessionRouter {
   resumeEvent(frame: ResumeEventFrame): void {
     const listener = this.sessions.get(frame.id);
     if (listener) listener.onResumeEvent?.(frame.reset, frame.capturedAt, false, frame.capture);
+    else if (this.holding) this.pending.hold(frame);
+  }
+
+  // Held exactly as the resume-event it withdraws is, so a limit that cleared while detached replays
+  // after the report it follows and the rebuilt tab ends up with no pending resume.
+  resumeCancel(frame: ResumeCancelFrame): void {
+    const listener = this.sessions.get(frame.id);
+    if (listener) listener.onResumeCancel?.();
     else if (this.holding) this.pending.hold(frame);
   }
 

@@ -263,6 +263,12 @@ history. A depth that is not a positive whole number makes the request malformed
 version-34 remote would ignore the depth and clone the whole history while both ends looked healthy,
 so the handshake refuses it.
 
+Protocol version 36 adds `resume-cancel`, which the remote host sends when a usage limit it reported
+clears before its reset. The client withdraws the pending auto-resume entry, the way a local harness
+tab withdraws its own. A version-35 peer would never send it or would refuse it as unknown, so a
+remote harness would still get the resume prompt typed into it at the old reset time. The handshake
+refuses the mismatch.
+
 The handshake check is narrower for an attach than for a launch. An attach is answered by the
 freshly started remote server that then relays into the parked peer, so the version it announces is
 whatever is installed on that host now — not the version of the peer waiting behind it. A session
@@ -525,7 +531,10 @@ reported with the reset the harness stated, and the client turns that into a sch
 own scheduler and acknowledges when the entry fires or is cancelled — because only the client owns
 the clock the reset is stated in and the schedule the entry belongs to. Only firing types the prompt;
 cancellation acknowledges removal without sending input to the harness (see [[harness]] § Auto-resume
-after a usage limit). Asciicast recordings, by contrast, are still computed **locally** from the streamed
+after a usage limit). A limit screen that clears before its reset is reported too, and the client
+withdraws the pending entry just as it would for a local tab. One that clears while the tab is
+detached replays on the next attach after the limit it follows, so the rebuilt tab has no resume
+pending. Asciicast recordings, by contrast, are still computed **locally** from the streamed
 bytes, exactly as for a local harness — a detached remote harness produces no recording for the gap,
 since there is no local process to write one. Detaching closes the tab's recording file and stops its
 local transcript polling, and the attach that brings the tab back starts a fresh recording file
