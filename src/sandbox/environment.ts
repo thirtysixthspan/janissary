@@ -6,8 +6,8 @@ import { ENV_SCRUB_PATTERNS } from './paths.js';
 import { resolvePath } from './resolve.js';
 import { opencodeDataHome, workspaceOpencodeDataHome } from './opencode-data.js';
 
-// What a spawn's environment gains and loses, as opposed to the profile and its `-D` params beside
-// it in `./index.ts`. Two of these apply whether or not this machine can confine anything: a
+// What a spawn's environment gains and loses, as opposed to the profile and its `-D` params built
+// in `./harness-spawn.ts`. Two of these apply whether or not this machine can confine anything: a
 // workspaced tab is handed its credentials on every host, and every spawn is told where janissary's
 // own code is.
 

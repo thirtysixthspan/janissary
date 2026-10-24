@@ -4,17 +4,6 @@
 
 ## development
 
-* Split the harness sandbox's argument and environment builder from the host check that decides whether to confine, so its credential-scrub and token-injection tests run on every platform, CI included.
-
-Existing Debt: `sandboxSpawn` both asks whether this host can confine and assembles the `sandbox-exec` invocation, so 28 tests that only inspect the returned arguments and environment are gated on a darwin-only availability check, while CI runs on Linux. Severity: 6/10
-
-Existing Risk: 6/10 - A regression in the credential scrub, the per-harness token injection or the `ai/`, `scripts/` and `security/` read carve-ins passes CI and every Linux run and is caught only if someone runs the suite on a Mac first, and a new profile parameter with no `-D` binding is checked against just four hard-coded names.
-
-Proposal Risk: 2/10 - The builder's output is pinned on every platform and every profile parameter is checked against a binding, leaving only real kernel confinement, which genuinely needs macOS, under the darwin-only live tests.
-
-Proposal: In `src/sandbox/index.ts`, `sandboxSpawn` calls `sandboxWillConfine(dir)` from `src/sandbox/confinement.ts` and returns early on a host that cannot confine; everything after that check only computes paths, the `-D` parameter list, the profile string and the scrubbed environment. The browser path already has the right shape: `browserSpawn` in `src/sandbox/browser/spawn.ts` receives the `confinable` decision as an argument, and neither `src/sandbox/browser/spawn.test.ts` nor `src/sandbox/browser/profile.test.ts` skips a test, while 28 cases in `src/sandbox/index.test.ts` are `it.skipIf(!sandboxAvailable())` and `.github/workflows/ci.yml` runs on `ubuntu-latest`. Move the post-check body into `confinedHarnessSpawn(options, dir, command, args, env)` in a new `src/sandbox/harness-spawn.ts`, taking `homeDParams` with it, and leave `sandboxSpawn` with the probe and the dispatch. Point the skipped cases that only read `result.args` and `result.env` at the builder and drop their skip, keeping one skipped case that asserts `sandboxSpawn` wraps through `sandbox-exec` on a confining host. Replace the `includes every -D param the profile references` test, which checks only `WORKSPACE`, `TMPDIR`, `HOME` and `GIT_OBJECTS`, with the derived check `src/sandbox/browser/profile.test.ts` already uses (collect every `(param "…")` the profile string names and assert each has a `-D` binding), run for online, offline and one installed-skill directory. Before relying on the builder under Linux, confirm that `darwinUserCacheDir` in `src/sandbox/resolve.ts`, `resolveExecutableDirs`, `serverNodeDirs` and `playwrightPackagePaths` return a value there rather than throwing, since a throw would fail the unskipped tests rather than any behavior. The live confinement tests (`src/sandbox/live.sandbox.test.ts`, `src/sandbox/pty.sandbox.test.ts`, `src/sandbox/keychain.sandbox.test.ts`) stay macOS-only and untouched.
-
-
 * Give the "is this path inside that root" check one neutral home and route the dozen hand-written versions across the server through it.
 
 Existing Debt: Containment is decided in at least a dozen places under four different rules, because the two shared helpers live inside features (`containedAbsolute` in the file navigator, `isInsideRoot` in the plugin host), so remote code reaches into the file navigator for one and everyone else writes the check inline. Severity: 5/10

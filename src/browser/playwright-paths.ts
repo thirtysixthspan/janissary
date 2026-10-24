@@ -20,7 +20,7 @@ import path from 'node:path';
 const require_ = createRequire(import.meta.url);
 
 // A path that matches nothing, so a Seatbelt `-D` param always has a bound value even when
-// resolution fails outright. Same fallback shape `resolveExecutableDirs` uses in `sandbox/index.ts`.
+// resolution fails outright. Same fallback shape `resolveExecutableDirs` uses in `sandbox/harness-spawn.ts`.
 export const PLAYWRIGHT_PATH_PLACEHOLDER = '/nonexistent-janissary-playwright-placeholder';
 
 export type PlaywrightPackagePaths = {
