@@ -67,6 +67,7 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
   const managers = {
     tab: {
       tabs,
+      workingDirOf: () => '/repo',
       findIndex: (label: string) => tabs.findIndex((tab) => tab.label === label),
       setActiveTab,
     },

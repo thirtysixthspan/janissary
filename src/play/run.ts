@@ -3,7 +3,7 @@ import path from 'node:path';
 import { parsePlay } from '../commands/play.js';
 import type { Managers } from '../managers.js';
 import { playablePluginForExtension } from '../openers/index.js';
-import { expandUserPath } from '../paths.js';
+import { resolveTabPath } from '../tab/resolve-path.js';
 import { harnessRecordingDirectory } from '../harness/recording-file.js';
 import { findRecording, recordingStem } from './recording-search.js';
 
@@ -42,9 +42,7 @@ export function runPlay(managers: Managers, input: string, label: string): strin
 // played as written; only a recording name that is not falls through to the recordings directory, so
 // the fallback can never quietly open a different recording than the one asked for.
 function resolveTarget(managers: Managers, label: string, target: string): string {
-  const expanded = expandUserPath(target, { root: managers.tab.launchDir });
-  const cwd = managers.tab.cwdOf(label) ?? process.cwd();
-  const requested = path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
+  const requested = resolveTabPath(managers, label, target);
   if (existsSync(requested)) return requested;
   return recordedByName(target) ?? requested;
 }

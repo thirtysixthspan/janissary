@@ -16,7 +16,7 @@ export interface OpenPort extends BasePort { managers: Managers }
 export function openOrRetarget(port: OpenPort, label: string): void {
   const source = port.managers.tab.byLabel(label);
   if (!source) return;
-  const cwd = port.managers.tab.cwdOf(label) ?? port.managers.tab.launchDir;
+  const cwd = port.managers.tab.workingDirOf(label);
   const existing = port.managers.tab.mostRecentFileNavigatorLabel();
   if (source.remote) openRemote(port, label, source.remote, cwd, existing);
   else if (localDirectory(cwd)) openLocal(port, cwd, existing);

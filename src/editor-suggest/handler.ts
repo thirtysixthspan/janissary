@@ -41,7 +41,7 @@ export function editorSuggest(
   }
 
   const persona = loadPersona(match, 'editor');
-  const cwd = managers.tab.cwdOf(label) ?? process.cwd();
+  const cwd = managers.tab.workingDirOf(label);
   const isFirstTurn = !managers.editorAcp.hasSession(label, persona.name);
   let settled = false;
   let failed = false;

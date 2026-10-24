@@ -32,7 +32,7 @@ describe('OpenFileManager.edit', () => {
     const managers = {
       tab: {
         tabs,
-        cwdOf: () => '/working',
+        cwdOf: () => '/working', workingDirOf: () => '/working',
         launchDir: '/working',
         append: vi.fn(),
         registerFile: (file: string) => `/open/${file.length}`,
@@ -60,7 +60,7 @@ describe('OpenFileManager.edit', () => {
     const opened: string[] = [];
     const managers = {
       tab: {
-        cwdOf: () => '/working',
+        cwdOf: () => '/working', workingDirOf: () => '/working',
         append: (_label: string, _entry: unknown) => { appended.push(JSON.stringify(_entry)); },
         openEditorTab: (view: { path: string }) => { opened.push(view.path); return 'editor'; },
         registerFile: (p: string) => `/open/test-${p.length}`,
@@ -80,7 +80,7 @@ describe('OpenFileManager.edit', () => {
     const opened: string[] = [];
     const managers = {
       tab: {
-        cwdOf: () => '/working',
+        cwdOf: () => '/working', workingDirOf: () => '/working',
         append: () => {},
         openEditorTab: (view: { path: string }) => { opened.push(view.path); return 'editor'; },
         registerFile: (p: string) => `/open/test-${p.length}`,
@@ -98,7 +98,7 @@ describe('OpenFileManager.edit', () => {
     const opened: { path: string; line?: number }[] = [];
     const managers = {
       tab: {
-        cwdOf: () => '/working',
+        cwdOf: () => '/working', workingDirOf: () => '/working',
         append: () => {},
         openEditorTab: (view: { path: string; line?: number }) => { opened.push(view); return 'editor'; },
         registerFile: (p: string) => `/open/test-${p.length}`,
@@ -115,9 +115,11 @@ describe('OpenFileManager.edit', () => {
   // Only `newfile` names its new file for the user; `edit` on a missing path keeps the rename session.
   it('does not mark a new file opened by edit as named', () => {
     const opened: { newFile?: boolean; named?: boolean }[] = [];
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-edit-new-'));
     const managers = {
       tab: {
-        cwdOf: () => mkdtempSync(path.join(tmpdir(), 'janus-edit-new-')),
+        cwdOf: () => dir,
+        workingDirOf: () => dir,
         append: () => {},
         openEditorTab: (view: { newFile?: boolean; named?: boolean }) => { opened.push(view); return 'editor'; },
         registerFile: (p: string) => `/open/test-${p.length}`,
@@ -138,7 +140,7 @@ describe('OpenFileManager.edit', () => {
     const notes: unknown[] = [];
     const managers = {
       tab: {
-        cwdOf: () => dir,
+        cwdOf: () => dir, workingDirOf: () => dir,
         launchDir: dir,
         append: (_label: string, entry: unknown) => { notes.push(entry); },
         openEditorTab: vi.fn(() => 'editor'),
@@ -157,7 +159,7 @@ describe('OpenFileManager.edit', () => {
 describe('OpenFileManager.edit (dispatch by file type)', () => {
   const makeEditManagers = (opened: string[], runOpener: ReturnType<typeof vi.fn>) => ({
     tab: {
-      cwdOf: () => '/working',
+      cwdOf: () => '/working', workingDirOf: () => '/working',
       append: () => {},
       openEditorTab: (view: { path: string }) => { opened.push(view.path); return 'editor'; },
       registerFile: (p: string) => `/open/test-${p.length}`,
@@ -220,7 +222,7 @@ describe('OpenFileManager.edit (dispatch by file type)', () => {
 describe('OpenFileManager.newFile', () => {
   const makeManagers = (dir: string, opened: string[]): Managers => ({
     tab: {
-      cwdOf: () => dir,
+      cwdOf: () => dir, workingDirOf: () => dir,
       append: () => {},
       openEditorTab: (view: { path: string }) => { opened.push(view.path); },
       registerFile: vi.fn((p: string) => `/open/test-${p.length}`),
@@ -266,7 +268,7 @@ describe('OpenFileManager.newFile', () => {
     const views: { path: string; newFile?: boolean; named?: boolean }[] = [];
     const managers = {
       tab: {
-        cwdOf: () => dir,
+        cwdOf: () => dir, workingDirOf: () => dir,
         append: () => {},
         openEditorTab: (view: { path: string; newFile?: boolean; named?: boolean }) => { views.push(view); },
         registerFile: vi.fn((p: string) => `/open/test-${p.length}`),
@@ -282,7 +284,7 @@ describe('OpenFileManager.newFile', () => {
 
 describe('OpenFileManager.newDirectory', () => {
   const makeManager = (dir: string) => new OpenFileManager({
-    tab: { cwdOf: () => dir },
+    tab: { cwdOf: () => dir, workingDirOf: () => dir },
   } as unknown as Managers);
 
   it('creates the requested directory', () => {
@@ -326,7 +328,7 @@ describe('OpenFileManager.run', () => {
     const runOpener = vi.fn();
     const managers = {
       tab: {
-        cwdOf: () => dir,
+        cwdOf: () => dir, workingDirOf: () => dir,
         launchDir: dir,
         append: (_label: string, entry: { input: string; output: string }) => { notes.push(entry); },
         registerFile: vi.fn(),
@@ -346,7 +348,7 @@ describe('OpenFileManager.run', () => {
     const runOpener = vi.fn();
     const managers = {
       tab: {
-        cwdOf: () => dir,
+        cwdOf: () => dir, workingDirOf: () => dir,
         launchDir: dir,
         append: () => {},
         registerFile: (p: string) => `/open/test-${p.length}`,
@@ -373,7 +375,7 @@ describe('OpenFileManager.run', () => {
     const runOpener = vi.fn();
     const managers = {
       tab: {
-        cwdOf: () => dir,
+        cwdOf: () => dir, workingDirOf: () => dir,
         launchDir: dir,
         append: () => {},
         registerFile: (p: string) => `/open/test-${p.length}`,
@@ -397,7 +399,7 @@ describe('OpenFileManager.run', () => {
     const runOpener = vi.fn();
     const managers = {
       tab: {
-        cwdOf: () => dir, launchDir: dir, registerFile: vi.fn(),
+        cwdOf: () => dir, workingDirOf: () => dir, launchDir: dir, registerFile: vi.fn(),
         append: (_label: string, entry: { input: string; output: string }) => { notes.push(entry); },
       },
       plugins: { runOpener },
@@ -422,7 +424,7 @@ describe('OpenFileManager.run', () => {
     const runOpener = vi.fn();
     const managers = {
       tab: {
-        cwdOf: () => '/tmp', launchDir: '/tmp', registerFile: vi.fn(),
+        cwdOf: () => '/tmp', workingDirOf: () => '/tmp', launchDir: '/tmp', registerFile: vi.fn(),
         append: (_label: string, entry: { input: string; output: string }) => { notes.push(entry); },
       },
       plugins: { runOpener },
@@ -443,7 +445,7 @@ describe('OpenFileManager.run', () => {
   ])('routes %s to the web claimant', async (command, presentation, target) => {
     const runOpener = vi.fn();
     const managers = {
-      tab: { cwdOf: () => '/tmp', launchDir: '/tmp', registerFile: vi.fn(), append: vi.fn() },
+      tab: { cwdOf: () => '/tmp', workingDirOf: () => '/tmp', launchDir: '/tmp', registerFile: vi.fn(), append: vi.fn() },
       plugins: { runOpener },
     } as unknown as Managers;
 
@@ -458,7 +460,7 @@ describe('OpenFileManager.run', () => {
     const order: string[] = [];
     const managers = {
       tab: {
-        cwdOf: () => dir, launchDir: dir, append: vi.fn(), registerFile: vi.fn(),
+        cwdOf: () => dir, workingDirOf: () => dir, launchDir: dir, append: vi.fn(), registerFile: vi.fn(),
       },
       plugins: {
         runOpener: vi.fn(async (_id: string, _mode: string, file: string) => {
@@ -486,7 +488,7 @@ describe('OpenFileManager.run (video)', () => {
     const managers = {
       tab: {
         tabs: [{ label: 'janus' }],
-        cwdOf: () => dir,
+        cwdOf: () => dir, workingDirOf: () => dir,
         launchDir: dir,
         append: (_label: string, entry: Note) => { notes.push(entry); },
         registerFile: (file: string) => `/open/test-${file.length}`,
@@ -557,7 +559,7 @@ describe('OpenFileManager.run (unclaimed extension)', () => {
 
   const makeManagers = (dir: string, notes: Note[], opened: string[]) => ({
     tab: {
-      cwdOf: () => dir,
+      cwdOf: () => dir, workingDirOf: () => dir,
       launchDir: dir,
       append: (_label: string, entry: Note) => { notes.push(entry); },
       registerFile: (file: string) => `/open/test-${file.length}`,
@@ -669,7 +671,7 @@ describe('OpenFileManager.edit (synced path)', () => {
     navigatorRoot: string | null = dir,
   ) => ({
     tab: {
-      cwdOf: () => dir,
+      cwdOf: () => dir, workingDirOf: () => dir,
       launchDir: dir,
       append: () => {},
       openEditorTab: (view: { name: string; path: string; size: string; url: string; sync?: string }) => {

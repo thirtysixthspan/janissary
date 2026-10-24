@@ -6,6 +6,7 @@ import { openFilesCommand } from './open-command.js';
 import type { FilesTabState } from './state.js';
 import type { Managers } from '../managers.js';
 import type { RemoteTarget, Tab } from '../tab/types.js';
+import { TabManager } from '../tab/manager.js';
 
 const REMOTE: RemoteTarget = { host: 'devbox', address: 'devbox:/srv/project' };
 
@@ -57,6 +58,7 @@ function harness(options: { channel?: unknown; attach?: boolean; existing?: Tab;
       tabs: allTabs,
       launchDir: root,
       cwdOf: (label: string) => (label === 'other' ? options.cwd ?? '/remote/ws' : root),
+      workingDirOf: (label: string) => (label === 'other' ? options.cwd ?? '/remote/ws' : root),
       byLabel: (label: string) => allTabs.find((tab) => tab.label === label),
       cur: () => opened.at(-1)!,
       append: vi.fn(),
@@ -98,6 +100,21 @@ beforeEach(() => {
 
 afterEach(() => {
   rmSync(root, { recursive: true, force: true });
+});
+
+describe('openFilesCommand from a tab with no recorded cwd', () => {
+  // The real fallback, run on the fake: a project directory that is not the process's own is the
+  // case it exists for.
+  it('roots the navigator at the project directory, not the process directory', () => {
+    const h = harness();
+    const tab = h.managers.tab as unknown as Record<string, unknown>;
+    tab.cwdOf = () => {};
+    tab.workingDirOf = TabManager.prototype.workingDirOf;
+    expect(process.cwd()).not.toBe(root);
+
+    expect(run(h, 'files', 'janus')).toBe('navigator1');
+    expect(h.opened[0].files?.root).toBe(root);
+  });
 });
 
 describe('openFilesCommand over a remote label', () => {

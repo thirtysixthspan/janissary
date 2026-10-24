@@ -25,11 +25,13 @@ const activation: TabPluginActivation = {
 };
 
 function emptyManagers(): Managers {
-  return {
+  const managers = {
     tab: {
       tabs: [], launchDir: '/repo', openPluginTab: vi.fn(), byLabel: vi.fn(), cwdOf: vi.fn(),
+      workingDirOf: (label: string) => managers.tab.cwdOf(label) ?? managers.tab.launchDir,
     },
   } as unknown as Managers;
+  return managers;
 }
 
 describe('a launch origin', () => {

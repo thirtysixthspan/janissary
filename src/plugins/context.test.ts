@@ -495,7 +495,7 @@ describe('originTab with a label', () => {
   function managersWith(tabs: unknown[], workspaceProvisioning: (dir: string) => boolean = () => false) {
     const managers = {
       tab: {
-        tabs, launchDir: '/repo', cwdOf: () => '/repo/src',
+        tabs, launchDir: '/repo', cwdOf: () => '/repo/src', workingDirOf: () => '/repo/src',
         byLabel: (label: string) => tabs.find((tab) => tab.label === label),
         byLabelOrAlias: (name: string) => tabs.find((tab) => tab.label?.toLowerCase() === name.toLowerCase()
           || tab.title?.toLowerCase() === name.toLowerCase()),
@@ -623,7 +623,7 @@ describe('remote workspace capabilities', () => {
     const tabs = [tab];
     return {
       tab: {
-        tabs, launchDir: '/repo', cwdOf: () => '/repo', deleteBusy: vi.fn(),
+        tabs, launchDir: '/repo', cwdOf: () => '/repo', workingDirOf: () => '/repo', deleteBusy: vi.fn(),
         byLabel: (label: string) => tabs.find((candidate) => candidate.label === label),
       },
       remote: {

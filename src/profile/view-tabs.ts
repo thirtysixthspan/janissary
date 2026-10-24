@@ -1,5 +1,4 @@
-import path from 'node:path';
-import { expandUserPath } from '../paths.js';
+import { resolveTabPath } from '../tab/resolve-path.js';
 import { normalizeWebUrl } from '../openers/web-target.js';
 import { relocateToGroup } from './editors.js';
 import type { Managers } from '../managers.js';
@@ -28,14 +27,6 @@ type ViewTarget = {
   // than the generic word, so the note reads the way it did before plugins owned these tabs.
   kind: string;
 };
-
-// Resolve an entry's path the way `open` does: `$root`/`~` expand against the launch directory,
-// and a still-relative path resolves from the issuing tab's working directory.
-function resolvePath(managers: Managers, issuingLabel: string, target: string): string {
-  const expanded = expandUserPath(target, { root: managers.tab.launchDir });
-  if (path.isAbsolute(expanded)) return expanded;
-  return path.resolve(managers.tab.cwdOf(issuingLabel) ?? process.cwd(), expanded);
-}
 
 // The url an `open <target>` would land on, so a page entry matches the tab it opens. An
 // unnormalizable url is left as authored; `open` reports the problem itself.
@@ -66,10 +57,11 @@ function claimsWebTargets(managers: Managers, id: string): boolean {
   return managers.plugins.declarations.find((entry) => entry.id === id)?.webTargets === true;
 }
 
+// An entry's path resolves the way `open` resolves one, from the issuing tab.
 function fileTarget(
   id: string, authored: string, managers: Managers, issuingLabel: string,
 ): ViewTarget {
-  const file = resolvePath(managers, issuingLabel, authored);
+  const file = resolveTabPath(managers, issuingLabel, authored);
   return {
     matches: (tab) => tab.plugin?.id === id && tab.plugin.instanceKey === file,
     preClose: false, subject: authored, kind: id,

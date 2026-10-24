@@ -13,7 +13,7 @@ function makeManagers() {
   const runOpener = vi.fn(async () => {});
   const append = vi.fn();
   const managers = {
-    tab: { tabs, cur: () => tabs[0], cwdOf: () => cwd, launchDir: cwd, append },
+    tab: { tabs, cur: () => tabs[0], cwdOf: () => cwd, workingDirOf: () => cwd, launchDir: cwd, append },
     plugins: { runOpener },
   } as unknown as Managers;
   return { managers, runOpener, append, cwd };

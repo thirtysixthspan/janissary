@@ -37,7 +37,7 @@ function harness(options: {
   const managers = {
     tab: {
       launchDir: '/repo', tabs, allLabels: () => tabs.map((tab) => tab.label),
-      cwdOf: () => options.cwd ?? '/repo/src', byLabel: (label: string) => tabs.find((tab) => tab.label === label),
+      cwdOf: () => options.cwd ?? '/repo/src', workingDirOf: () => options.cwd ?? '/repo/src', byLabel: (label: string) => tabs.find((tab) => tab.label === label),
       pluginTabByInstanceKey: (id: string, key: string) => tabs.find((tab) => tab.plugin?.id === id && tab.plugin.instanceKey === key),
       openPluginTab: (
         id: string, _prefix: string, instanceKey: string, _version: number, _source: string,

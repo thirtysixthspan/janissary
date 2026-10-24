@@ -65,6 +65,13 @@ export class TabManager extends TabTranscriptState {
     return runtimeOperations.cwdOf(this.tabs, label);
   }
 
+  // Where a relative path typed in this tab lands: its recorded cwd, or the project directory the
+  // session was started on until its shell reports one. Never `process.cwd()`, which is the
+  // directory `janus` was launched from rather than the project.
+  workingDirOf(label: string): string {
+    return this.cwdOf(label) ?? this.launchDir;
+  }
+
   setCwd(label: string, dir: string): void {
     runtimeOperations.setCwd(this.tabs, label, dir);
   }

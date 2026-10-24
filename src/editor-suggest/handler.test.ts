@@ -30,7 +30,7 @@ function makeManagers(session: ReturnType<typeof vi.fn>, record: ReturnType<type
       byLabel: (label: string) => tabs.find((t) => t.label === label),
       editorTabByUrl: (url: string) => tabs.find((t) => t.editor?.url === url),
       cur: () => ({ label: 'notes' }),
-      cwdOf: () => '/repo',
+      cwdOf: () => '/repo', workingDirOf: () => '/repo',
     },
     editorAcp: { session, record, hasSession: vi.fn(() => false) },
   } as unknown as Managers;
@@ -91,7 +91,7 @@ describe('editorSuggest', () => {
         byLabel: (label: string) => tabs.find((t) => t.label === label),
         editorTabByUrl: (url: string) => tabs.find((t) => t.editor?.url === url),
         cur: () => ({ label: 'notes' }),
-        cwdOf: () => '/repo',
+        cwdOf: () => '/repo', workingDirOf: () => '/repo',
       },
       editorAcp,
     } as unknown as Managers;
@@ -138,7 +138,7 @@ describe('editorSuggest', () => {
         byLabel: (label: string) => tabs.find((t) => t.label === label),
         editorTabByUrl: (url: string) => tabs.find((t) => t.editor?.url === url),
         cur: () => ({ label: 'notes' }),
-        cwdOf: () => '/repo',
+        cwdOf: () => '/repo', workingDirOf: () => '/repo',
       },
       editorAcp: { session: sessionFn, record, hasSession },
     } as unknown as Managers;

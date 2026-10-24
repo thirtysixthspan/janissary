@@ -27,7 +27,7 @@ function resolveCwd(
       const resolved = remoteCwd(managers, label, '', out);
       return resolved && { cwd: resolved.cwd, sourceLabel: label, remote: tab.remote };
     }
-    return { cwd: managers.tab.cwdOf(label) ?? process.cwd() };
+    return { cwd: managers.tab.workingDirOf(label) };
   }
   const sourceTab = resolveTarget(inLabel, managers, out);
   if (!sourceTab) return undefined;
@@ -37,7 +37,7 @@ function resolveCwd(
     return { cwd: resolved.cwd, sourceLabel: sourceTab.label, remote: sourceTab.remote };
   }
   return {
-    cwd: managers.tab.cwdOf(sourceTab.label) ?? process.cwd(),
+    cwd: managers.tab.workingDirOf(sourceTab.label),
     sourceLabel: sourceTab.label,
     remote: sourceTab.remote,
   };

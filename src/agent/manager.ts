@@ -22,7 +22,7 @@ export class AgentRunManager {
     return copyAgentCaller({
       label: tab.label,
       incarnation: runtime.incarnation,
-      cwd: runtime.cwd ?? this.managers.tab.launchDir,
+      cwd: this.managers.tab.workingDirOf(tab.label),
       context: runtime.context,
     });
   }

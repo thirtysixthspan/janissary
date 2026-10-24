@@ -107,6 +107,7 @@ describe('FileNavigatorManager', () => {
         editorTabByUrl: (url: string) => tabs.find((t) => t.editor?.url === url),
         filesTabByRoot: (r: string) => tabs.find((t) => t.files?.root === r),
         cwdOf: (label: string) => (label === 'other' ? otherRoot : root),
+        workingDirOf: (label: string) => (label === 'other' ? otherRoot : root),
         append: (_label: string, entry: LogEntry) => { outputs.push(entry.output); entries.push(entry); },
         findIndex: (label: string) => tabs.findIndex((t) => t.label === label),
         setActiveTab: (index: number) => { activeTab = index; },

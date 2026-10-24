@@ -48,7 +48,7 @@ function makeManagers(creator: Tab, tabs: Tab[] = [creator]): { managers: Manage
       persist: vi.fn(),
       buildAgentState: vi.fn(() => ({ name: creator.label, dotColor: creator.dotColor, active: true })),
       shorten: (p: string) => p,
-      cwdOf: () => '/proj',
+      cwdOf: () => '/proj', workingDirOf: () => '/proj',
       launchDir: '/proj',
       activeTab: 0,
       placeProfileTabs: vi.fn(),
