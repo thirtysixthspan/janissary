@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Terminal, type ITheme } from '@xterm/xterm';
-import { isMacPlatform, terminalColors, type TabPluginClientCapabilities } from '../api';
+import type { ITheme, Terminal } from '@xterm/xterm';
+import { createAppTerminal, isMacPlatform, terminalColors, type TabPluginClientCapabilities } from '../api';
 import type { CastEvent, CastHeader } from './cast-stream';
 
 // The recorded terminal, built by the plugin's own chunk rather than by the host's shared hook: a
@@ -16,11 +16,6 @@ import type { CastEvent, CastHeader } from './cast-stream';
 export type AsciicastTerminal = {
   renderUpTo(events: readonly CastEvent[], time: number): void;
 };
-
-const FALLBACK_FONT_SIZE = 13.5;
-// The same fallback `useXterm` and `useShellTerminal` use, so a stylesheet that declares no
-// `--terminal-line-height` still renders every terminal in the app at one line height.
-const FALLBACK_LINE_HEIGHT = 1.2;
 
 // The 16 ANSI slots in the order xterm's theme option names them, so a recorded palette lands in the
 // slot it was recorded for. Returns nothing when the recording carries no palette, which is every
@@ -60,30 +55,23 @@ export function useAsciicastTerminal(
     // rather than `palette` because the sixteen are the palette inside it, and `palette.palette` is
     // the kind of line that survives review because it compiles.
     const recorded = header.colors ?? terminalColors();
-    const styles = getComputedStyle(document.documentElement);
-    // The app's own terminal metrics, read the way `useXterm` and `useShellTerminal` read them, so a
-    // recording in this tab is the same grid as the terminal beside it rather than a second scale of
-    // its own. `lineHeight` is not optional to that: the emulator's own default is 1, and every
-    // surface this app renders uses 1.2, so leaving it off draws the recorded rows tighter than the
-    // session that produced them — the replay does not match the recording's own geometry, and the
-    // stage's own background shows through the gap below the last row.
-    const fontSize = Number(styles.getPropertyValue('--terminal-font-size').replace('px', ''))
-      || FALLBACK_FONT_SIZE;
-    const lineHeight = Number(styles.getPropertyValue('--terminal-line-height').replace('px', ''))
-      || FALLBACK_LINE_HEIGHT;
-    const term = new Terminal({
+    // The app's own terminal metrics come from the shared factory, so a recording in this tab is the
+    // same grid as the terminal beside it rather than a second scale of its own. `lineHeight` is not
+    // optional to that: the emulator's own default is 1, and every surface this app renders uses
+    // 1.2, so leaving it off draws the recorded rows tighter than the session that produced them.
+    //
+    // A fixed theme, so the recording keeps the colors it was recorded under, and no `copyText`: a
+    // recording replaying a program's OSC 52 copy must not write to the viewer's clipboard.
+    const app = createAppTerminal(container, {
       cols: header.cols,
       rows: header.rows,
       cursorBlink: false,
       theme: { ...recordedTheme(recorded.palette), background: recorded.bg, foreground: recorded.fg },
-      fontFamily: styles.getPropertyValue('--mono').trim() || 'monospace',
-      fontSize,
-      lineHeight,
     });
+    const term = app.terminal;
     termRef.current = term;
     // A new terminal has been fed nothing, whatever a previous one had been fed.
     cursor.current = { index: 0, time: 0 };
-    term.open(container);
     // Copying is the ordinary chord rather than the terminal's: there is no program behind this
     // terminal to interrupt, so Ctrl+C is free to mean what it means everywhere else.
     term.attachCustomKeyEventHandler((event) => {
@@ -96,7 +84,7 @@ export function useAsciicastTerminal(
     });
     return () => {
       termRef.current = null;
-      term.dispose();
+      app.dispose();
     };
     // Built once per recording: its recorded size and colors are fixed for the recording's whole life.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the terminal is one object for one recording: rebuilding it on a new options object or capability would tear down and re-create a terminal that is playing.

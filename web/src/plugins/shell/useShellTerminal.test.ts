@@ -129,6 +129,13 @@ function osc(id: number): (data: string) => boolean {
 }
 
 describe('useShellTerminal', () => {
+  // A shell tab runs local, remote, and SSH programs alike, and a program on another machine can only
+  // reach this clipboard by asking the terminal to copy for it.
+  it('copies a program\'s OSC 52 request through the tab\'s copyText', () => {
+    const { copyText } = harness();
+    expect(osc(52)(`c;${btoa('from the remote shell')}`)).toBe(true);
+    expect(copyText).toHaveBeenCalledWith('from the remote shell');
+  });
 
   it('keeps the tab open when the SSH PTY exits during provisioning, then closes on remote zsh exit', async () => {
     const exitHandlers: (() => void)[][] = [];

@@ -59,6 +59,10 @@ export { ConfirmDialog } from '../shared/ConfirmDialog';
 // wrong breaks Cmd+C on exactly one platform and nowhere else to notice it.
 export { terminalColors, type TerminalColors } from '../shared/terminal/colors';
 export { copySelectionChord, isMacPlatform } from '../shared/terminal/terminal/keys';
+// The one place every terminal in the app is built, so a plugin's terminal has the host's metrics,
+// clipboard, and theme handling rather than a copy of them that drifts. Additive, so the plugin API
+// integer is unchanged.
+export { createAppTerminal, type AppTerminal, type AppTerminalOptions } from '../shared/terminal/app-terminal';
 // The metadata row's recording flag, published for the same reason and on the same terms. The shell
 // plugin's row deliberately does not import the host's `HarnessTabMeta` markup, but this flag is a
 // component of its own rather than part of that markup — so the plugin renders the one the host
