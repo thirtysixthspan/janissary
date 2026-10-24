@@ -568,7 +568,10 @@ queried parked peer keeps its socket and original expiry. Authentication, protoc
 failures return to the requesting transcript instead of leaving a hidden query transport running.
 Each capture request carries a correlation id, so concurrent requests for the same process settle
 their own replies. Losing a live transport settles its pending captures before reconnecting; a later
-reply from the lost transport cannot be delivered on the replacement connection.
+reply from the lost transport cannot be delivered on the replacement connection. A capture over a
+live channel is bounded too: a far side that has not answered within fifteen seconds is reported to
+the requesting transcript as a timed-out query, rather than leaving `harness capture` waiting with
+nothing on screen until the channel closes.
 The remote process state also carries each harness's auto-approve setting so a detached Attach rebuilds
 the local metadata with the policy the far-side detector is still applying.
 Busy-transition frames are emitted only when either the busy or unread value changes; an attach still
