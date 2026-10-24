@@ -32,6 +32,9 @@ export function openDatabase(
   const known = databasesFrom(capabilities).databases.some((entry) => entry.name === database);
   if (!known) capabilities.rejectRequest(UNKNOWN_DATABASE(database));
   const key = instanceKeyFor(database);
+  // A tab closed since its payload was kept would otherwise come back with that payload — and any
+  // request it was still waiting on — instead of reading its schema afresh.
+  tabs.prune(capabilities.ownTabKeys());
   const existing = tabs.read(key);
   if (existing) {
     capabilities.openOrFocusTab(key, () => ({ title: database, payload: existing }));

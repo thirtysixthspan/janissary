@@ -66,6 +66,7 @@ export class DiffSession {
   // The project-root diff: one tab, re-scoped in place, titled `diff`.
   open(root: string, origin: DiffOrigin, capabilities: TabPluginServerCapabilities): void {
     if (root === '') return;
+    this.prune(capabilities);
     const tab = this.tabFor(ROOT_KEY, root, origin, { title: ROOT_TITLE, read: localReader() });
     tab.open(root, origin, capabilities);
   }
@@ -73,6 +74,7 @@ export class DiffSession {
   // A workspace diff on this machine: one tab per clone, opened with `openOrFocusTab`.
   openWorkspace(origin: WorkspaceOrigin, capabilities: TabPluginServerCapabilities): void {
     if (origin.workspace.dir === '') return;
+    this.prune(capabilities);
     const key = workspaceKey(origin.workspace.dir);
     const tab = this.tabFor(key, origin.workspace.dir, origin, {
       title: `${TAB_TITLE_PREFIX}${origin.tab}`, read: localReader(), workspace: true,
@@ -87,6 +89,7 @@ export class DiffSession {
   // handed, which answer as the new tab and so read through its own channel.
   openRemoteWorkspace(origin: WorkspaceOrigin, sourceLabel: string, capabilities: TabPluginServerCapabilities): void {
     if (origin.workspace.dir === '') return;
+    this.prune(capabilities);
     const key = workspaceKey(origin.workspace.dir);
     const existing = this.tabs.get(key);
     if (existing) {
@@ -136,6 +139,18 @@ export class DiffSession {
   dispose(): void {
     for (const tab of this.tabs.values()) tab.dispose();
     this.tabs.clear();
+  }
+
+  // Drop every tab the host no longer has open, before a route reuses one. No notification tells this
+  // plugin a tab closed, so without this a closed remote diff would read as still open and be
+  // refocused rather than rejoined, and a reopened tab would inherit the closed one's state.
+  private prune(capabilities: Pick<TabPluginServerCapabilities, 'ownTabKeys'>): void {
+    const open = new Set(capabilities.ownTabKeys());
+    for (const [key, tab] of this.tabs) {
+      if (open.has(key)) continue;
+      tab.dispose();
+      this.tabs.delete(key);
+    }
   }
 
   private tabFor(

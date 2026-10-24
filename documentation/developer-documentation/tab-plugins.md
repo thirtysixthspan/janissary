@@ -99,7 +99,7 @@ type TabPluginActivation = {
 };
 ```
 
-The host supplies forty-seven capabilities:
+The host supplies forty-eight capabilities:
 
 - `note(text)` writes to the originating transcript.
 - `notifyUser(text, options?)` reports one line to the notifications feed. Text plus, at most, one file to link — you say that something happened; the host chooses the event type, the attribution, and whether it toasts or is shown directly in an already-visible feed. A link is how you offer something too long to read in place, the way the `sql` plugin links the whole result of a query from a line that only says how many rows came back; it is an absolute path opened with the host's ordinary `edit`, not a `registerFile` reference, because a notification outlives the tab that produced it. The line is never lost even when the feed isn't on screen — it's held in the notification queue either way. A line is attributed to the tab you were invoked from, which a `notify` handler doesn't have, so pass `tab` with one of your own instance keys — `notifyUser(text, { tab: key })` — to have the line carry that tab's name and colour instead. A key you have no open tab for falls back to the invoking tab, so you can't attribute a line to a tab you don't own.
@@ -117,6 +117,7 @@ An activation may provide `reattach(record, capabilities)` to rebuild a tab arou
 - `dockTab(instanceKey, dock)` docks one of your own tabs into `'left'` or `'right'`, or undocks it back to the centre strip with `null`.
 - `snapshotTab(instanceKey, text)` caches the text currently visible in one of your own tabs, so a monitor watching it has something to feed on.
 - `closeOwnTab(instanceKey)` closes one of your own tabs from the server, through the same path a user's close takes, releasing what it holds. A key you have no open tab for is a no-op, and so is a close that would quit the app because the tab is the last one keeping it open. You may call it from a `notify` handler.
+- `ownTabKeys()` answers the instance keys of your own open tabs, in strip order, and an empty list while your plugin is disabled. A notification names them too, but one only reaches you while you still have a tab open, so a plugin that keeps state per tab asks here before reusing any of it and drops what it kept for a tab that has since closed.
 - `openClaimedFiles(target)` runs the host's `open` pipeline for `target`, pinned to your opener.
 - `projectFileList(root?)` reads the project's gitignore-aware file list — the same list Quick Open searches — as project-relative paths plus the directory they are relative to. It is how a plugin that scans the repository stays in step with the rest of the application rather than growing its own walker. Pass `root` to list a different directory, such as a local workspace clone, with paths relative to it. The root must be inside the project's launch directory (the launch directory itself counts), the same bound `openInEditor` applies; a root outside it answers `{ root: '', paths: [] }`.
 - `workspaceTracked(dir)` answers whether `dir` is a local workspace clone the host still tracks. It answers `false` for a directory outside the launch directory and while your plugin is disabled. A plugin that holds a clone's path but rides no tab of it uses this to learn the clone has been removed.
@@ -378,6 +379,7 @@ API v2 removes agent-tab launch actions and uses `launchShellHere()` for a sibli
 
 ### v2
 
+- Forty-eight server and fourteen client capabilities. `ownTabKeys()` lists the instance keys of a plugin's own open tabs, so a plugin that keeps state per tab can drop the copy for a tab that closed while no notification was coming. It is additive, so the API integer remains v2.
 - Forty-seven server and fourteen client capabilities. `remoteWorkspaceSearch(instanceKey, request)` runs a plugin search on the remote host and returns matching rows instead of transferring candidate files. It is additive, so the API integer remains v2.
 
 - The `originTab` record grew additively: `workspace` gained `label`, `display`, `ride`, `host` and `gone`, and the record gained `workspaceLabel`, all resolved by one host module so every plugin gets the same answer. The API integer is unchanged at v2.

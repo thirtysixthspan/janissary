@@ -27,14 +27,22 @@ function makeCapabilities(overrides: Record<string, unknown> = {}) {
   // A remote workspace's tab joins the channel through `launchTab`, which never focuses an existing
   // tab, so a mock that only records the request is enough to see which tab was joined.
   const launchTab = vi.fn(() => ({ label: 'diff-2' }));
+  // The tabs the host would still hold open: every key a call opened or launched, less the ones a
+  // test has closed since.
+  const closed = new Set<string>();
+  const ownTabKeys = vi.fn(() => {
+    const calls = [...openOrFocusTab.mock.calls, ...launchTab.mock.calls] as unknown as [string][];
+    return [...new Set(calls.map(([key]) => key)).difference(closed)];
+  });
+  const close = (key: string) => { closed.add(key); };
   const capabilities = {
     openOrFocusTab, updateTab, openInEditor, dispatchLineWithOutput, rejectRequest, reportFailure, originTab,
-    readSettings, saveSettings, launchTab,
+    readSettings, saveSettings, launchTab, ownTabKeys,
     ...overrides,
   };
   return {
     capabilities: capabilities as never, openOrFocusTab, updateTab, openInEditor, dispatchLineWithOutput,
-    originTab, readSettings, saveSettings, launchTab,
+    originTab, readSettings, saveSettings, launchTab, close,
   };
 }
 
@@ -352,6 +360,34 @@ describe('diff plugin activation', () => {
     // The join is the only route to a far-side directory, and it never focuses an existing tab, so
     // nothing else may open one.
     expect(openOrFocusTab).not.toHaveBeenCalled();
+  });
+
+  // No notification tells the plugin a tab closed, so only asking the host which of its tabs are open
+  // shows the session the remote diff is gone. Refocusing it would open a tab with no channel behind
+  // it, which then reports that the remote host did not answer.
+  it('rejoins the channel for a remote workspace diff that was closed, rather than refocusing it', () => {
+    const remoteWorkspace = '/srv/proj/.janissary/workspace/remote';
+    const fake = makeCapabilities({
+      originTab: vi.fn((name?: string) => (name === 'remote'
+        ? { label: 'remote', cwd: '/srv/proj', root: repo, remote: true as const, workspace: { dir: remoteWorkspace }, ...shellRecord() }
+        : shellRecord({ label: 'shell', cwd: repo, root: repo }))),
+    });
+    const activation = activate();
+    activation.command?.('on remote', fake.capabilities);
+    const factory = fake.launchTab.mock.calls[0]?.[2] as unknown as (
+      resources: never, start: { label: string; cwd: string; workspaceDir: string; host: string },
+    ) => unknown;
+    factory(undefined as never, { label: 'diff-2', cwd: '/srv/proj', workspaceDir: remoteWorkspace, host: 'devbox' });
+
+    activation.command?.('on remote', fake.capabilities);
+    expect(fake.openOrFocusTab).toHaveBeenCalledTimes(1);
+    expect(fake.launchTab).toHaveBeenCalledTimes(1);
+
+    fake.close(`workspace:${remoteWorkspace}`);
+    activation.command?.('on remote', fake.capabilities);
+    expect(fake.launchTab).toHaveBeenCalledTimes(2);
+    expect(fake.openOrFocusTab).toHaveBeenCalledTimes(1);
+    activation.dispose?.();
   });
 
   it('titles local and remote workspace diff tabs with the workspace label', () => {

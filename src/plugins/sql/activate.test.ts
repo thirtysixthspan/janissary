@@ -47,10 +47,19 @@ function fakeCapabilities(initial: DatabasesView = emptyView(), respond?: Respon
   const resources = { registerFile: (file: string) => { registered.push(file); return `/open/${registered.length}`; } };
   // The plugin's own line into the notifications feed, recorded here so a test can ask what it said.
   const notifyUser = vi.fn();
+  // The tabs the host would still hold open: every one opened, less the ones a test has closed.
+  const closed = new Set<string>();
+  const openKeys = () => [...new Set(opened.map((entry) => entry.key)).difference(closed)];
+  const close = (key: string) => { closed.add(key); };
   const capabilities = {
     note: vi.fn(),
     notifyUser,
-    openOrFocusTab: (key: string, factory: () => TabPluginPayload) => { opened.push({ key, value: factory() }); shown.push(opened.at(-1)!.value.payload); },
+    ownTabKeys: openKeys,
+    openOrFocusTab: (key: string, factory: () => TabPluginPayload) => {
+      closed.delete(key);
+      opened.push({ key, value: factory() });
+      shown.push(opened.at(-1)!.value.payload);
+    },
     updateTab: (key: string, factory: () => TabPluginTabUpdate) => { updated.push({ key, value: factory(resources) }); shown.push(updated.at(-1)!.value.payload); },
     dockTab: (key: string, dock: 'left' | 'right' | null) => { docks.push({ key, dock }); },
     openClaimedFiles: vi.fn(),
@@ -72,12 +81,12 @@ function fakeCapabilities(initial: DatabasesView = emptyView(), respond?: Respon
     state.view = { ...state.view, results: [answer, ...state.view.results] };
     // And the host tells a plugin only about tabs it owns, so a request sent before the tab was
     // opened is answered into nothing rather than held for later.
-    const owned = opened.map((entry) => entry.key);
+    const owned = openKeys();
     if (owned.length === 0) return;
     activation.notify?.({ topic: 'databases', data: state.view, tabs: owned }, capabilities);
   }
 
-  return { actions, activation, capabilities, docks, notifyUser, opened, registered, shown, state, updated };
+  return { actions, activation, capabilities, close, docks, notifyUser, opened, registered, shown, state, updated };
 }
 
 /** A host that answers a schema read with the fixture's objects and a query with its grid. */
@@ -225,6 +234,22 @@ describe('sql plugin command', () => {
     fixture.activation.command?.('shop', fixture.capabilities);
     expect(fixture.actions).toHaveLength(after);
     expect(fixture.opened).toHaveLength(2);
+  });
+
+  // No notification reaches a plugin whose last tab has closed, so nothing else would drop the copy
+  // it kept — and reopening from it would skip the schema and resurrect whatever it was waiting on.
+  it('starts a closed tab over when its database is opened again', () => {
+    const fixture = fakeCapabilities(emptyView(), answering());
+    openTab(fixture, 'shop');
+    const schemaReads = () => fixture.actions.filter((action) => action.action === 'schema').length;
+    expect(schemaReads()).toBe(1);
+    expect(fixture.shown.at(-1)).toMatchObject({ object: 'orders' });
+
+    fixture.close('sqlite:shop');
+    fixture.activation.command?.('shop', fixture.capabilities);
+
+    expect(schemaReads()).toBe(2);
+    expect(fixture.opened.at(-1)?.value.payload).toMatchObject({ objects: [], object: '' });
   });
 });
 

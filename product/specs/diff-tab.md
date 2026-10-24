@@ -54,6 +54,9 @@ arrows-up-down control expands a text file — all of them fetched over the diff
 through the same cache a remote file navigator's rows open through, so a save from that editor writes back to the
 workspace for as long as the tab holds the channel.
 
+Closing a remote workspace diff releases its channel, so opening that workspace's diff again joins the channel
+afresh rather than reviving the closed tab.
+
 A workspace diff whose workspace is gone closes itself: the clone was deleted locally, or the remote session ended,
 and there is nothing left to read. The project-root diff says a non-repository directory is not one instead, because
 that is an answer rather than a loss.

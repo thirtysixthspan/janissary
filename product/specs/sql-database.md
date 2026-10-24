@@ -35,7 +35,9 @@ or a character outside letters, digits, `-`, and `_` — is refused with `Invali
 
 One tab per database, named after it, so two databases can be browsed side by side and `sql notes`
 twice focuses the tab already open rather than opening a second one. Reopening keeps that tab's
-filters, search term, hidden columns, order, page, and exports, and reads nothing again.
+filters, search term, hidden columns, order, page, and exports, and reads nothing again. A tab that
+was closed starts over: opening its database again reads the schema afresh, and nothing from the
+closed tab comes back.
 
 ### What the tab shows
 

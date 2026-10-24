@@ -27,6 +27,7 @@ export const diffManifest = {
     'dispatchLineWithOutput',
     'readWorkspaceChangeSet',
     'materializeRemoteFile',
+    'ownTabKeys',
     'readSettings',
     'saveSettings',
     'rejectRequest',

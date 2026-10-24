@@ -219,6 +219,33 @@ describe('setBusy', () => {
   });
 });
 
+describe('ownTabKeys', () => {
+  function withTabs(tabs: object[]): Managers {
+    const { managers } = makeManagers();
+    (managers.tab as unknown as { tabs: object[] }).tabs = tabs;
+    return managers;
+  }
+
+  const tabs = [
+    { label: 'janus' },
+    { label: 'fixture-1', plugin: { id: 'fixture', instanceKey: 'one' } },
+    { label: 'other-1', plugin: { id: 'other', instanceKey: 'theirs' } },
+    { label: 'fixture-2', plugin: { id: 'fixture', instanceKey: 'two' } },
+  ];
+
+  it('answers the instance keys of the calling plugin\'s own open tabs, in strip order', () => {
+    expect(contextFor(['ownTabKeys'], () => true, [], withTabs(tabs)).ownTabKeys()).toEqual(['one', 'two']);
+  });
+
+  it('answers nothing once the plugin is disabled', () => {
+    expect(contextFor(['ownTabKeys'], () => false, [], withTabs(tabs)).ownTabKeys()).toEqual([]);
+  });
+
+  it('is refused to a plugin that did not declare it', () => {
+    expect(() => contextFor(['note']).ownTabKeys()).toThrow('used capability "ownTabKeys" without declaring it');
+  });
+});
+
 // Everything a plugin produces — a tab payload, an intent result — is broadcast or replied to as
 // JSON. Values JavaScript is happy with but JSON is not would be silently rewritten in transit, so
 // the host refuses them at the boundary rather than letting a client receive something else.

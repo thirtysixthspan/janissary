@@ -82,7 +82,8 @@ export function resultFor(data: DatabasesView, id: string, database: string): Da
  * The tab state a host notification cannot reconstruct. The payload is the view, but a notification
  * carries no payloads, so the plugin keeps the last one it wrote per tab in order to fold the next
  * answer into it, plus each finished export's path so its `/open/` reference is registered exactly
- * once. Pruned against the open-tab set on every notification, so nothing outlives its tab.
+ * once. Pruned against the open-tab set on every notification and before a tab is opened, since no
+ * notification arrives once the last tab has closed, so nothing outlives its tab.
  */
 export class SqlTabs {
   private readonly payloads = new Map<string, SqlPayload>();
