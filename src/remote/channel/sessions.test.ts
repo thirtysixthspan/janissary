@@ -6,9 +6,9 @@ import { SessionRouter, type SessionListener } from './sessions.js';
 // covers the gate-event/busy-transition routing the auto-accept-while-detached plan adds, following
 // the same hold-until-listener contract `output`/`shell-history`/`exit` already have.
 
-function listener(): SessionListener & { onOutput: ReturnType<typeof vi.fn>; onExit: ReturnType<typeof vi.fn>; onGateEvent: ReturnType<typeof vi.fn>; onBusyTransition: ReturnType<typeof vi.fn>; onResumeEvent: ReturnType<typeof vi.fn> } {
+function listener(): SessionListener & { onOutput: ReturnType<typeof vi.fn>; onExit: ReturnType<typeof vi.fn>; onGateEvent: ReturnType<typeof vi.fn>; onBusyTransition: ReturnType<typeof vi.fn>; onResumeEvent: ReturnType<typeof vi.fn>; onResumeCancel: ReturnType<typeof vi.fn> } {
   return {
-    onOutput: vi.fn(), onExit: vi.fn(), onGateEvent: vi.fn(), onBusyTransition: vi.fn(), onResumeEvent: vi.fn(),
+    onOutput: vi.fn(), onExit: vi.fn(), onGateEvent: vi.fn(), onBusyTransition: vi.fn(), onResumeEvent: vi.fn(), onResumeCancel: vi.fn(),
   };
 }
 
@@ -78,6 +78,46 @@ describe('SessionRouter — resume-event', () => {
     const late = listener();
     holding.attach('r1', late);
     expect(late.onResumeEvent).not.toHaveBeenCalled();
+  });
+});
+
+describe('SessionRouter — resume-cancel', () => {
+  const reset = { kind: 'at', time: { hour: 13, minute: 20 } } as const;
+
+  it('delivers live to a registered listener', () => {
+    const router = new SessionRouter({});
+    const l = listener();
+    router.attach('r1', l);
+    router.resumeCancel({ type: 'resume-cancel', id: 'r1' });
+    expect(l.onResumeCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('is held during an attach and replayed after the resume-event it follows', () => {
+    const router = new SessionRouter({});
+    router.openHold();
+    router.resumeEvent({ type: 'resume-event', id: 'r1', reset, capturedAt: 1000 });
+    router.resumeCancel({ type: 'resume-cancel', id: 'r1' });
+    const l = listener();
+    const calls: string[] = [];
+    l.onResumeEvent.mockImplementation(() => { calls.push('event'); });
+    l.onResumeCancel.mockImplementation(() => { calls.push('cancel'); });
+    router.attach('r1', l);
+    expect(calls).toEqual(['event', 'cancel']);
+  });
+
+  it('is dropped for an unregistered id on an ordinary channel, and after the hold closes', () => {
+    const router = new SessionRouter({});
+    router.resumeCancel({ type: 'resume-cancel', id: 'r1' });
+    const open = listener();
+    router.attach('r1', open);
+    expect(open.onResumeCancel).not.toHaveBeenCalled();
+    const holding = new SessionRouter({});
+    holding.openHold();
+    holding.resumeCancel({ type: 'resume-cancel', id: 'r1' });
+    holding.discardUnclaimed();
+    const late = listener();
+    holding.attach('r1', late);
+    expect(late.onResumeCancel).not.toHaveBeenCalled();
   });
 });
 

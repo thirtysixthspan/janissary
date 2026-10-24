@@ -125,6 +125,7 @@ describe('frame codec', () => {
       { type: 'resume-event', id: 'r1', reset: { kind: 'on', month: 6, day: 8, time: { hour: 10, minute: 59 } }, capturedAt: 1_700_000_000_000, capture: 'the screen text' },
       { type: 'resume-event', id: 'r1', reset: { kind: 'in', ms: 3_600_000 }, capturedAt: 1_700_000_000_000 },
       { type: 'resume-ack', id: 'r1' },
+      { type: 'resume-cancel', id: 'r1' },
       { type: 'capture-reply', id: 'r1', request: 'q1', text: 'the screen text', capturedAt: 1_700_000_000_000 },
       { type: 'capture-reply', id: 'r1', request: 'q1' },
       { type: 'filesystem-reply', session: 'files1', request: 'q1', result: { entries: [] } },
@@ -246,6 +247,8 @@ describe('frame codec', () => {
     ['resume-event without a capturedAt', { type: 'resume-event', id: 'r1', reset: { kind: 'in', ms: 1 } }],
     ['resume-event with a non-string capture', { type: 'resume-event', id: 'r1', reset: { kind: 'in', ms: 1 }, capturedAt: 1, capture: 7 }],
     ['resume-ack without an id', { type: 'resume-ack' }],
+    ['resume-cancel without an id', { type: 'resume-cancel' }],
+    ['resume-cancel with an empty id', { type: 'resume-cancel', id: '' }],
     ['browser-exited without an id', { type: 'browser-exited' }],
     ['browser-exited with an empty id', { type: 'browser-exited', id: '' }],
     ['browser-exited with an empty message', { type: 'browser-exited', id: 'r1', message: '' }],
@@ -669,8 +672,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 35', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(35);
+  it('is 36', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(36);
   });
 });
 
@@ -690,7 +693,7 @@ describe('admitted frame types', () => {
     expect(Object.keys(SERVER_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
       'acp-activity', 'acp-chunk', 'acp-closed', 'acp-end', 'acp-error', 'acp-ready', 'agent-resolve-result', 'attach-result', 'browser-exited', 'browser-started',
       'busy-transition', 'capture-reply', 'clone-offer', 'exit', 'filesystem-event', 'filesystem-reply', 'gate-event', 'name-in-use',
-      'output', 'resume-event', 'root-refused', 'session-state-result', 'shell-history', 'transcript', 'workspace-failed',
+      'output', 'resume-cancel', 'resume-event', 'root-refused', 'session-state-result', 'shell-history', 'transcript', 'workspace-failed',
       'workspace-ready',
     ]);
   });

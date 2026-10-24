@@ -8,7 +8,7 @@ import {
   decodeCloneAnswer, decodeCloneOffer, decodeRootRefused,
 } from './decode-root.js';
 import {
-  decodeCaptureRequest, decodeCaptureReply, decodeGateEvent, decodeBusyTransition, decodeResumeEvent, decodeResumeAck,
+  decodeCaptureRequest, decodeCaptureReply, decodeGateEvent, decodeBusyTransition, decodeResumeEvent, decodeResumeAddressed,
 } from './decode-detect.js';
 import {
   decodeAcpOpen, decodeAcpText, decodeAcpAddressed, decodeAcpEnd, decodeAcpError, decodeAcpActivity, decodeAcpClosed,
@@ -56,7 +56,8 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'gate-event': { return decodeGateEvent(record); }
   case 'busy-transition': { return decodeBusyTransition(record); }
   case 'resume-event': { return decodeResumeEvent(record); }
-  case 'resume-ack': { return decodeResumeAck(record); }
+  case 'resume-ack':
+  case 'resume-cancel': { return decodeResumeAddressed(type, record); }
   case 'workspace-ready': { return decodeWorkspaceReady(record); }
   case 'workspace-failed': { return decodeWorkspaceFailed(record); }
   case 'name-in-use': { return decodeNameInUse(record); }

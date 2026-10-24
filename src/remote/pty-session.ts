@@ -4,7 +4,7 @@ import { writeCaptureFile } from '../harness/capture/file.js';
 import { applyBusyTransition } from '../harness/busy-status.js';
 import { reportAutoApproved } from '../harness/auto-approved.js';
 import { reportAutoResumeScheduled, reportAutoResumed } from '../harness/auto-resume-state.js';
-import { resumeEntry, resumeInstant } from '../harness/auto-resume.js';
+import { RESUME_ENTRY_ID, resumeEntry, resumeInstant } from '../harness/auto-resume.js';
 import { fmtNextRun } from '../schedule/display.js';
 import type { PtyLaunch, PtySession } from '../pty.js';
 import type { Managers } from '../managers.js';
@@ -104,6 +104,11 @@ export function createRemotePtySession(
       };
       managers.schedule.add(label, resumeEntry(resumeAt), { fired: settleResume, removed: settleResume });
       reportAutoResumeScheduled(managers, label);
+    }),
+    // The limit cleared before its reset. Withdrawing the entry runs its `removed` hook above, which
+    // acknowledges the far side and puts the strip flag back, exactly as a user's own cancel does.
+    onResumeCancel: () => deliver(() => {
+      managers.schedule.cancel(agentName ?? '', RESUME_ENTRY_ID);
     }),
   });
   if (pending.length === 0) attaching = false;

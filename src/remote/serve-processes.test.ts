@@ -406,6 +406,25 @@ describe('RemoteProcesses harness detection', () => {
     }));
   });
 
+  // The local resumer cancels its own entry when the limit clears early; the far side cannot reach
+  // the client's schedule, so it says so with a frame instead.
+  it('sends resume-cancel when a reported limit clears before its reset', async () => {
+    const { feed } = spawnCodex(true);
+    await feed(LIMIT_TEXT);
+    send.mockClear();
+    await feed(' Working on the task again');
+    expect(send).toHaveBeenCalledWith({ type: 'resume-cancel', id: 'r1' });
+  });
+
+  it('sends no resume-cancel for a cleared screen with no limit pending', async () => {
+    const { feed, resumeDelivered } = spawnCodex(true);
+    await feed(LIMIT_TEXT);
+    resumeDelivered('r1');
+    send.mockClear();
+    await feed(' Working on the task again');
+    expect(send).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'resume-cancel' }));
+  });
+
   it('detects a permission gate and injects the approval keystroke', async () => {
     const { feed } = spawnClaude(true);
     await feed(GATE_TEXT);

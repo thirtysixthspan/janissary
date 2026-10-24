@@ -126,8 +126,8 @@ export type ClientFrame =
   // schedule. The far side's detector re-arms on it, so a later limit is reportable again rather
   // than suppressed as one it has already acted on — and because delivery can fail indefinitely (the
   // harness never returns, the tab is never reattached), it cannot infer the outcome from its own
-  // screen. A blockage that clears needs no ack: the far side sees its own screen change and re-arms
-  // on that, exactly as a local observer does.
+  // screen. A blockage that clears re-arms on the far side's own screen change, exactly as a local
+  // observer does; the ack that answers its `resume-cancel` finds nothing left to settle.
   | { type: 'resume-ack'; id: string }
   // Ask the far side for a fresh screen capture of the process `id`. `session` names the peer to ask:
   // ignored by a `RemoteServer` that already holds the live workspace (it answers from its own
@@ -225,6 +225,10 @@ export type ServerFrame =
   // base64-encoded like `output`, so the client writes the same capture file a local detector would
   // have without a second round trip.
   | { type: 'resume-event'; id: string; reset: ResumeReset; capturedAt: number; capture?: string }
+  // The limit a `resume-event` reported has cleared before its reset — the user bought credits, or
+  // the limit was advisory — so the client withdraws the entry it scheduled, exactly as a local
+  // detector cancels its own. The client's removal is acknowledged with the usual `resume-ack`.
+  | { type: 'resume-cancel'; id: string }
   // The answer to `capture-request`: the process's latest screen capture, or no fields at all when
   // it has none yet — the same "nothing captured yet" a local `latestCapture()` can return.
   | { type: 'capture-reply'; id: string; request: string; text?: string; capturedAt?: number }
@@ -283,6 +287,7 @@ export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'attach-result': true, 'session-state-result': true, 'clone-offer': true, 'root-refused': true,
   'workspace-ready': true, 'workspace-failed': true, 'name-in-use': true, output: true, exit: true, transcript: true,
   'shell-history': true, 'browser-exited': true, 'browser-started': true, 'gate-event': true, 'busy-transition': true, 'capture-reply': true, 'resume-event': true,
+  'resume-cancel': true,
   'filesystem-reply': true, 'filesystem-event': true,
   'agent-resolve-result': true,
   'acp-ready': true, 'acp-chunk': true, 'acp-end': true, 'acp-activity': true, 'acp-closed': true, 'acp-error': true,

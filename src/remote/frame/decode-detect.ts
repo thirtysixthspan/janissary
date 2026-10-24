@@ -76,10 +76,12 @@ export function decodeResumeEvent(record: Record<string, unknown>): DecodeResult
   };
 }
 
-export function decodeResumeAck(record: Record<string, unknown>): DecodeResult {
+// The two resume frames that carry nothing but the spawn id: the client's ack and the far side's
+// withdrawal.
+export function decodeResumeAddressed(type: 'resume-ack' | 'resume-cancel', record: Record<string, unknown>): DecodeResult {
   const { id } = record;
-  if (!nonEmptyString(id)) return malformed('resume-ack');
-  return { type: 'resume-ack', id };
+  if (!nonEmptyString(id)) return malformed(type);
+  return { type, id };
 }
 
 export function decodeBusyTransition(record: Record<string, unknown>): DecodeResult {

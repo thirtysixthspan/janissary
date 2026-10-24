@@ -188,7 +188,13 @@
 // Version 35 adds `depth` to `provision`, so a remote workspace clone is as shallow as a local one:
 // one commit of each branch for a shell, ten for a harness. A version-34 remote would drop the field
 // and clone the full history while both ends looked healthy.
-export const REMOTE_PROTOCOL_VERSION = 35;
+// Version 36 adds `resume-cancel`, which the far side sends when a limit it reported with
+// `resume-event` clears before its reset, so the client withdraws the entry it scheduled the way a
+// local detector cancels its own. Before it, a remote harness whose limit cleared early still had the
+// resume prompt typed into it at the old reset time. A version-35 client would refuse the frame as
+// unknown, and a version-35 remote never sends it, so either way the withdrawal would silently not
+// happen while both ends looked healthy.
+export const REMOTE_PROTOCOL_VERSION = 36;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
