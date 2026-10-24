@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Terminal } from '@xterm/xterm';
+import type { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import {
-  copySelectionChord, isMacPlatform, registerTerminalSelection, terminalColors, unregisterTerminalSelection,
-  type PluginTerminal, type TerminalColors,
+  copySelectionChord, createAppTerminal, isMacPlatform, registerTerminalSelection, terminalColors,
+  unregisterTerminalSelection, type PluginTerminal, type TerminalColors,
 } from '../api';
 import { shellTerminalTheme } from './shell-terminal-theme';
 import { registerShellMarkerHandlers } from './shell-marker-handlers';
@@ -109,22 +109,21 @@ export function useShellTerminal({
     setAttachedPtyId(null);
     const shellStarted = ptyId !== undefined;
 
-    const styles = getComputedStyle(document.documentElement);
-    const terminal = new Terminal({
+    const app = createAppTerminal(container, {
       allowProposedApi: true,
-      fontFamily: styles.getPropertyValue('--mono').trim() || 'monospace',
-      fontSize: Number(styles.getPropertyValue('--terminal-font-size').replace('px', '')) || 13.5,
-      lineHeight: Number(styles.getPropertyValue('--terminal-line-height').replace('px', '')) || 1.2,
       cursorBlink: true,
       // The cursor shows only while the terminal holds the keyboard; the prompt mask below hides the
       // prompt on the same rule.
       cursorInactiveStyle: 'none',
       disableStdin: false,
-      theme: shellTerminalTheme(),
+      // A function, so the terminal follows the app's theme switches.
+      theme: shellTerminalTheme,
+      // A program in this shell — local, remote, or SSH — copies through OSC 52 to this clipboard.
+      copyText: (text) => { copyTextRef.current(text); },
     });
+    const terminal = app.terminal;
     const fit = new FitAddon();
     terminal.loadAddon(fit);
-    terminal.open(container);
     const releasePressFocus = holdFocusOffSinglePress(container, terminal);
     const isMac = isMacPlatform();
     terminal.attachCustomKeyEventHandler((event) => {
@@ -132,10 +131,6 @@ export function useShellTerminal({
       copyTextRef.current(terminal.getSelection());
       return false;
     });
-    const themeObserver = new MutationObserver(() => {
-      terminal.options.theme = shellTerminalTheme();
-    });
-    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     const promptMask = shellStarted ? attachPromptMask(terminal) : undefined;
     if (shellStarted) {
       registerShellMarkerHandlers(terminal, hookNonceRef.current, {
@@ -191,13 +186,12 @@ export function useShellTerminal({
       setAttachedPtyId(null);
       releasePressFocus();
       observer.disconnect();
-      themeObserver.disconnect();
       handleRef.current?.detach();
       handleRef.current = null;
       terminalRef.current = null;
       unregisterTerminalSelection(container);
       promptMask?.dispose();
-      terminal.dispose();
+      app.dispose();
     };
   }, [ptyId, connectPtyId, containerRef]);
 

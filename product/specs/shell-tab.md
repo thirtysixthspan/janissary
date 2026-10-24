@@ -178,6 +178,11 @@ With the terminal focused, `Ctrl+Shift+C` copies its selection; on macOS, `Cmd+C
 copy uses the shared clipboard writer, so the text is available from the system clipboard and the
 clipboard-history popup.
 
+A program running in the shell can copy too, by sending the terminal an OSC 52 request, which is how a
+program on a remote or SSH host reaches the clipboard of the machine the tab is shown on. The text goes
+through the same shared clipboard writer, exactly as it does in a harness tab. A request to read the
+clipboard back is answered with nothing.
+
 `Shift+↑`/`Shift+↓` and `Ctrl+↑`/`Ctrl+↓` scroll the terminal with acceleration. `Page Up` and
 `Page Down` move by half a terminal screen. `Escape` returns to the bottom of the scrollback when
 the command line is empty or the terminal has focus; with text in the focused command line, it clears
