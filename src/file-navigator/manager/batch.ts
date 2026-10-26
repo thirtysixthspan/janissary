@@ -4,6 +4,8 @@ import { LocalFileSystemPort, type FileSystemPort } from '../filesystem-port.js'
 import { mapMaybe, type MaybePromise } from '../../maybe-promise.js';
 import type { RemoteTarget } from '../../tab/types.js';
 import { failureReasons } from '../file-operation-result.js';
+import type { Managers } from '../../managers.js';
+import { pathsMoved } from './paths-moved.js';
 
 const localFilesystem = new LocalFileSystemPort();
 
@@ -13,6 +15,7 @@ type BatchState = {
   undoStack: HistoryStep[];
   redoStack: HistoryStep[];
   remote?: RemoteTarget;
+  managers?: Managers;
 };
 
 function publicResult(result: BatchResult): BatchResult {
@@ -32,6 +35,7 @@ export function moveMany(
 ): MaybePromise<BulkMoveResult> {
   return mapMaybe((state.filesystem ?? localFilesystem).moveMany(state.root, sourcePaths, destinationPath, policy), (result) => {
     if ('conflictPaths' in result) return result;
+    if (result.moved.length > 0 && state.managers) pathsMoved(state.managers, state, result.moved);
     if (result.moved.length > 0) {
       state.undoStack.push({ entries: result.moved });
       state.redoStack = [];
@@ -70,6 +74,9 @@ export function pasteMany(
   }
   return mapMaybe((state.filesystem ?? localFilesystem).paste(state.root, sources, destinationPath, mode, policy), (result) => {
     if ('conflictPaths' in result) return result;
+    if (mode === 'cut' && result.pairs.length > 0 && state.managers) {
+      pathsMoved(state.managers, state, result.pairs);
+    }
     if (result.pairs.length > 0) {
       state.undoStack.push({ mode, pairs: result.pairs });
       state.redoStack = [];

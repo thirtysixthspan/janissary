@@ -8,6 +8,11 @@ import type { FilesTabState } from '../state.js';
 import type { MaybePromise } from '../../maybe-promise.js';
 import type { Managers } from '../../managers.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, UndoRedoResult } from '../../protocol.js';
+import { containedAbsolute } from '../../path-containment.js';
+import path from 'node:path';
+import { isPasteGroup } from '../moves.js';
+import { mapMaybe } from '../../maybe-promise.js';
+import { pathsMoved } from './paths-moved.js';
 
 // The manager internals every mutating operation needs, handed over as one value so the manager's
 // own `rebuild` stays private — it is reachable here only through the bound closure it puts on this.
@@ -36,7 +41,7 @@ export function moveItem(
 ): MaybePromise<BulkMoveResult> {
   return withFilesState(context.tabs, label, unavailable(fromRelPath), (state) => (
     liveTranscriptRefusal(context.managers, state, fromRelPath)
-    ?? moveOne(state, fromRelPath, toRelPath, afterMutation(context, label, state), overwrite)
+    ?? moveOne(context.managers, state, fromRelPath, toRelPath, afterMutation(context, label, state), overwrite)
   ));
 }
 
@@ -47,9 +52,16 @@ export function moveItems(
   destinationPath: string,
   policy?: BulkConflictPolicy,
 ): MaybePromise<BulkMoveResult> {
-  return withFilesState(context.tabs, label, nothingMutated(), (state) => moveMany(
-    state, sourcePaths, destinationPath, policy, afterMutation(context, label, state),
-  ));
+  return withFilesState(context.tabs, label, nothingMutated(), (state) => {
+    for (const source of sourcePaths) {
+      const refusal = liveTranscriptRefusal(context.managers, state, source);
+      if (refusal) return refusal;
+    }
+    return moveMany(
+      { ...state, managers: context.managers }, sourcePaths, destinationPath, policy,
+      afterMutation(context, label, state),
+    );
+  });
 }
 
 export function deleteItems(
@@ -69,9 +81,19 @@ export function pasteItems(
   policy?: BulkConflictPolicy,
   sourceHost?: string,
 ): MaybePromise<BulkMoveResult> {
-  return withFilesState(context.tabs, label, nothingMutated(), (state) => pasteMany(
-    state, sources, destinationPath, mode, policy, afterMutation(context, label, state), sourceHost,
-  ));
+  return withFilesState(context.tabs, label, nothingMutated(), (state) => {
+    if (mode === 'cut') {
+      for (const source of sources) {
+        if (!containedAbsolute(state.root, source)) continue;
+        const refusal = liveTranscriptRefusal(context.managers, state, path.relative(state.root, source));
+        if (refusal) return refusal;
+      }
+    }
+    return pasteMany(
+      { ...state, managers: context.managers }, sources, destinationPath, mode, policy,
+      afterMutation(context, label, state), sourceHost,
+    );
+  });
 }
 
 export function replayMutation(
@@ -81,9 +103,41 @@ export function replayMutation(
   overwrite: boolean,
   skipConflicts: boolean,
 ): MaybePromise<UndoRedoResult> {
-  return withFilesState(context.tabs, label, {}, (state) => replayHistory(
-    state, direction, overwrite, skipConflicts, afterMutation(context, label, state),
-  ));
+  return withFilesState(context.tabs, label, {}, (state) => {
+    const fromStack = direction === 'undo' ? state.undoStack : state.redoStack;
+    const toStack = direction === 'undo' ? state.redoStack : state.undoStack;
+    const step = fromStack.at(-1);
+    if (!step) return {};
+    const movingFrom = isPasteGroup(step)
+      ? step.mode === 'cut' ? step.pairs.map((pair) => direction === 'undo' ? pair.to : pair.from) : []
+      : step.entries.map((entry) => direction === 'undo' ? entry.to : entry.from);
+    for (const source of movingFrom) {
+      const relative = path.isAbsolute(source) ? path.relative(state.root, source) : source;
+      const refusal = liveTranscriptRefusal(context.managers, state, relative);
+      if (refusal) return refusal;
+    }
+    const previousLength = toStack.length;
+    return mapMaybe(replayHistory(
+      state, direction, overwrite, skipConflicts, afterMutation(context, label, state),
+    ), (result) => {
+      const currentToStack = direction === 'undo' ? state.redoStack : state.undoStack;
+      const completed = currentToStack.length > previousLength ? currentToStack.at(-1) : undefined;
+      if (completed && isPasteGroup(completed)) {
+        if (completed.mode === 'cut') {
+          pathsMoved(context.managers, state, completed.pairs.map((pair) => ({
+            from: direction === 'undo' ? pair.to : pair.from,
+            to: direction === 'undo' ? pair.from : pair.to,
+          })));
+        }
+      } else if (completed) {
+        pathsMoved(context.managers, state, completed.entries.map((entry) => ({
+          from: direction === 'undo' ? entry.to : entry.from,
+          to: direction === 'undo' ? entry.from : entry.to,
+        })));
+      }
+      return result;
+    });
+  });
 }
 
 export function renameItem(

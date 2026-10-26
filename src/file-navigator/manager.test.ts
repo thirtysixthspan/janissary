@@ -685,6 +685,41 @@ describe('FileNavigatorManager', () => {
     expect(existsSync(path.join(root, 'src'))).toBe(false);
   });
 
+  it('retargets editors under directories renamed, moved, and cut-pasted locally', () => {
+    mkdirSync(path.join(root, 'src'));
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'src', 'index.ts'), 'code');
+    const editor = {
+      ...tabs[0]!, label: 'editor',
+      editor: { name: 'index.ts', path: path.join(root, 'src', 'index.ts'), size: '4 B', url: '/open/1' },
+    };
+    tabs.push(editor);
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((tab) => tab.label.startsWith('navigator'))!.label;
+
+    manager.rename(label, 'src', 'renamed');
+    expect(retargetEditorTabMock).toHaveBeenLastCalledWith(path.join(root, 'src'), path.join(root, 'renamed'));
+
+    manager.move(label, 'renamed', 'dest');
+    expect(retargetEditorTabMock).toHaveBeenLastCalledWith(path.join(root, 'renamed'), path.join(root, 'dest', 'renamed'));
+
+    mkdirSync(path.join(root, 'bulk'));
+    writeFileSync(path.join(root, 'bulk', 'next.ts'), 'code');
+    (editor.editor as NonNullable<Tab['editor']>).path = path.join(root, 'bulk', 'next.ts');
+    manager.moveMany(label, ['bulk'], 'dest');
+    expect(retargetEditorTabMock).toHaveBeenLastCalledWith(path.join(root, 'bulk'), path.join(root, 'dest', 'bulk'));
+
+    const movedFile = path.join(root, 'dest', 'renamed', 'index.ts');
+    manager.paste(label, [movedFile], '', 'cut');
+    expect(retargetEditorTabMock).toHaveBeenLastCalledWith(movedFile, path.join(root, 'index.ts'));
+
+    manager.undo(label);
+    expect(retargetEditorTabMock).toHaveBeenLastCalledWith(path.join(root, 'index.ts'), movedFile);
+    manager.redo(label);
+    expect(retargetEditorTabMock).toHaveBeenLastCalledWith(movedFile, path.join(root, 'index.ts'));
+  });
+
   describe('a shell transcript that is still being written', () => {
     const LIVE = 'A running shell is still writing this transcript; rename or move it after the shell exits';
 
@@ -718,6 +753,23 @@ describe('FileNavigatorManager', () => {
       expect(readFileSync(path.join(root, 'session.txt'), 'utf8')).toBe('rows');
       expect(existsSync(path.join(root, 'renamed.txt'))).toBe(false);
       expect(retargetEditorTabMock).not.toHaveBeenCalled();
+    });
+
+    it('refuses bulk move and cut-paste before moving any selected item', () => {
+      const { manager, label } = openOnLiveTranscript();
+      writeFileSync(path.join(root, 'ordinary.txt'), 'safe');
+
+      expect(manager.moveMany(label, ['ordinary.txt', 'session.txt'], 'dest')).toMatchObject({
+        failedPaths: ['session.txt'], failureReasons: { 'session.txt': LIVE },
+      });
+      expect(existsSync(path.join(root, 'ordinary.txt'))).toBe(true);
+      expect(existsSync(path.join(root, 'dest', 'ordinary.txt'))).toBe(false);
+
+      expect(manager.paste(label, [path.join(root, 'session.txt')], 'dest', 'cut')).toMatchObject({
+        failedPaths: ['session.txt'], failureReasons: { 'session.txt': LIVE },
+      });
+      expect(existsSync(path.join(root, 'session.txt'))).toBe(true);
+      expect(existsSync(path.join(root, 'dest', 'session.txt'))).toBe(false);
     });
 
     it('moves and renames the same file once its writer has let it go', () => {

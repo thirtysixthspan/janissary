@@ -9,6 +9,7 @@ import type { FilesTabState } from '../state.js';
 import type { Managers } from '../../managers.js';
 import type { BatchResult, BulkMoveResult } from '../../protocol.js';
 import { mapMaybe, type MaybePromise } from '../../maybe-promise.js';
+import { pathsMoved } from './paths-moved.js';
 
 function failedOperation(path: string, reason: string): BatchResult {
   return { total: 1, failedPaths: [path], ...failureReasons(new Map([[path, reason]])) };
@@ -29,6 +30,7 @@ export function liveTranscriptRefusal(
 // A conflict answer passes straight through: nothing moved, so there is no history entry to record
 // and no tree to rebuild — the client asks the user and retries with `overwrite` set.
 export function moveOne(
+  managers: Managers,
   state: FilesTabState,
   fromRelPath: string,
   toRelPath: string,
@@ -41,6 +43,7 @@ export function moveOne(
   return mapMaybe(state.filesystem.move(state.root, fromRelPath, toRelPath, overwrite), (moved) => {
     if ('conflictPaths' in moved) return moved;
     if (!moved.ok) return failedOperation(fromRelPath, moved.reason);
+    pathsMoved(managers, state, [moved.value]);
     state.undoStack.push({ entries: [moved.value] });
     state.redoStack = [];
     rebuild();
@@ -59,10 +62,7 @@ export function renameOne(
   return mapMaybe(state.filesystem.rename(state.root, relPath, newName, overwrite), (renamed) => {
     if ('conflict' in renamed) return renamed;
     if (!renamed.ok) return failedOperation(relPath, renamed.reason);
-    if (!state.remote) {
-      const [oldAbs, newAbs] = renamed.value;
-      managers.tab.retargetEditorTab(oldAbs, newAbs);
-    }
+    pathsMoved(managers, state, [{ from: renamed.value[0], to: renamed.value[1] }]);
     rebuild();
     return { total: 1, failedPaths: [] };
   });
