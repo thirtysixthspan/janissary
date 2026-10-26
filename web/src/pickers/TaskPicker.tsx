@@ -30,7 +30,7 @@ export function TaskPicker({ rows, selected, onPick, onToggleDir }: Properties) 
         ) : (
           <div
           key={taskRowKey(row.source, row.path)}
-            className={`picker-row${index === selected ? ' selected' : ''}`}
+            className={`picker-row${row.dir ? ' task-picker-directory-row' : ''}${index === selected ? ' selected' : ''}`}
             style={{ paddingLeft: 12 + row.depth * 16 }}
             onClick={() => (row.dir ? onToggleDir({ path: row.path, source: row.source }) : onPick({ path: row.path, source: row.source }))}
           >

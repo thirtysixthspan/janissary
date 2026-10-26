@@ -94,6 +94,7 @@ second, not instantly. Each file row displays its name with the `.md` extension 
 (`work-an-issue`, not `work-an-issue.md`); the extension is still present in the command
 inserted when the row is picked. Directory rows show a caret-icon chevron indicating their expand state (pointing
 right when collapsed, down when expanded) and are indented one level deeper than their parent.
+There is a small space between the chevron and the directory name.
 
 When the same task path exists in both sources, the **project copy wins** and the built-in copy is
 hidden — a project can override a shipped task by giving a file the same name. A section whose

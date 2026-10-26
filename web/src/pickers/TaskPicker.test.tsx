@@ -44,6 +44,7 @@ describe('TaskPicker', () => {
     const rows = [dirRow('sub', false)];
     const { container, getByText } = render(React.createElement(TaskPicker, { rows, selected: 0, onPick: vi.fn(), onToggleDir: vi.fn() }));
     expect(getByText('sub')).toBeTruthy();
+    expect(container.querySelector(':scope .task-picker-directory-row .picker-chevron')).toBeTruthy();
     expect(container.querySelector(':scope .picker-chevron svg[data-icon="caret-right"]')).toBeTruthy();
   });
 
