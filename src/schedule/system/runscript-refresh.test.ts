@@ -115,7 +115,7 @@ describe('runscript refresh changes', () => {
     });
   });
 
-  it('leaves the Git exclusion file unchanged on an admitted tick and still publishes the runscript', () => {
+  it('ensures Git exclusions on refresh and still publishes the runscript', () => {
     withProject((root) => {
       execFileSync('git', ['init', '-q'], { cwd: root });
       writeFileSync(path.join(scriptsDir(root), 'deploy.rs'), '');
@@ -123,8 +123,13 @@ describe('runscript refresh changes', () => {
       const before = readFileSync(excludeFile, 'utf8');
       expect(before).not.toContain('/.janissary/scripts');
       const publish = vi.fn();
-      createRunscriptRefresh(fakeManagers(root, [pluginTab('scripts')]), listens, publish).tick();
-      expect(readFileSync(excludeFile, 'utf8')).toBe(before);
+      const refresh = createRunscriptRefresh(fakeManagers(root, [pluginTab('scripts')]), listens, publish);
+      refresh.tick();
+      const afterFirstTick = readFileSync(excludeFile, 'utf8');
+      expect(afterFirstTick).toContain('/.janissary/system-schedules.json');
+      expect(afterFirstTick).toContain('/.janissary/scripts');
+      refresh.tick();
+      expect(readFileSync(excludeFile, 'utf8')).toBe(afterFirstTick);
       expect(publish).toHaveBeenCalledTimes(1);
     });
   });
@@ -194,7 +199,7 @@ describe('runscript refresh changes', () => {
     });
   });
 
-  it('keeps a symlinked state directory to an empty list without throwing or writing to stderr', () => {
+  it('keeps a symlinked state directory to an empty list and reports the exclusion refusal', () => {
     withProject((root) => {
       const elsewhere = path.join(root, 'elsewhere');
       mkdirSync(elsewhere);
@@ -205,7 +210,7 @@ describe('runscript refresh changes', () => {
         const refresh = createRunscriptRefresh(fakeManagers(root, [pluginTab('scripts')]), listens, publish);
         expect(() => refresh.tick()).not.toThrow();
         expect(publish).not.toHaveBeenCalled();
-        expect(write).not.toHaveBeenCalled();
+        expect(write).toHaveBeenCalledWith(expect.stringContaining('could not be excluded from Git'));
       } finally {
         write.mockRestore();
       }

@@ -14,6 +14,7 @@ import { PluginTabLayer } from './plugins/PluginTabLayer';
 import { hostsCommandBar } from './shared/command-bar/hosts-command-bar';
 import { indexedTabs, isHarnessTabView, isEditorTabView, isPluginTabView } from './shared/tab/view-guards';
 import { useEditorPluginHost } from './useEditorPluginHost';
+import { visibleTabs } from './shared/tab/visible-tabs';
 
 type Properties = {
   tabs: TabView[];
@@ -70,9 +71,12 @@ export function MountedViewLayers({
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   navOpen, navQuery, navIndex, onPickTab, contributedOverlay,
 }: Properties) {
-  const current = candidate && !candidate.hidden && !candidate.dock ? candidate : undefined;
-  const visibleLabels = (requestedLabels ?? (current ? [current.label] : []))
-    .filter((label) => tabs.some((tab) => tab.label === label && !tab.hidden && !tab.dock));
+  const activeIndex = candidate ? tabs.findIndex((tab) => tab.label === candidate.label) : -1;
+  const requestedSecondary = requestedLabels?.find((label) => label !== candidate?.label);
+  const secondaryIndex = requestedSecondary === undefined
+    ? undefined
+    : tabs.findIndex((tab) => tab.label === requestedSecondary);
+  const { current, visibleLabels } = visibleTabs({ tabs, activeTab: activeIndex, secondaryTab: secondaryIndex });
   // This composition mounts every editor tab, so it owns the one session plugin host they all share
   // and the disabled-plugin queue that host fills. Disabling is session-scoped rather than per tab,
   // and a plugin can be disabled before any tab has mounted to report it.

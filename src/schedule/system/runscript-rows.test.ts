@@ -82,7 +82,7 @@ describe('runscript rows', () => {
     });
   });
 
-  it('returns an empty view, without writing to stderr, when the listing throws', () => {
+  it('returns an empty view and reports the exclusion failure when the state directory is unsafe', () => {
     withProject((root) => {
       const elsewhere = path.join(root, 'elsewhere');
       mkdirSync(elsewhere);
@@ -90,7 +90,7 @@ describe('runscript rows', () => {
       const write = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
       try {
         expect(readRunscriptRows(fakeManagers(root))).toEqual({ rows: [] });
-        expect(write).not.toHaveBeenCalled();
+        expect(write).toHaveBeenCalledWith(expect.stringContaining('could not be excluded from Git'));
       } finally {
         write.mockRestore();
       }

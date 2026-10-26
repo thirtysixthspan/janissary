@@ -27,6 +27,7 @@ import { sidebarSelectionFor } from './sidebar-selection-coordinator';
 import { useCmdWRefs } from './useCmdWRefs';
 import { collectNavigatorSelections } from './file-navigator/file/navigator-selection-registry';
 import { useOverlayPlugins } from './useOverlayPlugins';
+import { visibleTabs } from './shared/tab/visible-tabs';
 
 
 export function App({ client }: { client: JanusClient }) {
@@ -71,8 +72,7 @@ export function App({ client }: { client: JanusClient }) {
     focusLeft, focusRight,
   } = useLayoutState(client);
 
-  const selected = tabs[activeTab];
-  const current = selected && !selected.hidden && !selected.dock ? selected : undefined;
+  const { current } = visibleTabs({ tabs, activeTab, secondaryTab });
   currentRef.current = current;
 
   // The overlay-plugin host. Nothing holds it: the seam resolves a chord or a command word to a plugin

@@ -25,6 +25,16 @@ describe('createAlertPlacement', () => {
     expect(placement.isVisible('janus')).toBe(false);
   });
 
+  it('treats the selected tab in the secondary pane as visible', () => {
+    const state = stateWith([{ label: 'janus' }, { label: 'split', pane: 'right' }, { label: 'background' }], 0);
+    state.secondaryTab = 1;
+    const placement = createAlertPlacement(() => state, undefined);
+
+    expect(placement.isVisible('janus')).toBe(true);
+    expect(placement.isVisible('split')).toBe(true);
+    expect(placement.isVisible('background')).toBe(false);
+  });
+
   it('reveals a docked tab through sidebar selection and declines a centre tab', () => {
     const docked = dockedSelection(undefined);
     const state = stateWith([{ label: 'janus' }, { label: 'files', dock: 'left' }]);

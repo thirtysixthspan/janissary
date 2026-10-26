@@ -85,7 +85,7 @@ export function AppMain({
         activeTabNameMaxLength={activeTabNameMaxLength}
         onFocusCommandBar={() => inputReference.current?.focus()}
         onFocusEditor={(label) => tabHandles.current.get(label)?.focus()}
-        windowFocused={windowFocused} current={current}
+        windowFocused={windowFocused}
         dirtyTabs={dirtyPluginTabs}
         mountedProps={{
           harnessHandles, tabHandles, questionPanelRef,
