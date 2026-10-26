@@ -13,4 +13,10 @@ describe('shell stylesheet', () => {
 
     expect(viewport).toContain('background-color: var(--bg)');
   });
+
+  it('allows selecting text in rendered shell replies', () => {
+    const reply = shell.match(/\.shell-output-block \{([^}]*)\}/u)?.[1] ?? '';
+
+    expect(reply).toContain('user-select: text');
+  });
 });

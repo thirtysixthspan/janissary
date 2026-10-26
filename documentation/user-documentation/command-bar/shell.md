@@ -60,7 +60,7 @@ Press `Cmd+T`, or the new-shell button in the metadata row, to open another zsh 
 
 With the command bar focused, `Ctrl+C` sends an interrupt to zsh, unless text is selected in the bar, when it copies that text. `Ctrl+D` sends end-of-input, and `Ctrl+Z` suspends the running command. See [Keyboard shortcuts](/user-documentation/getting-started/keyboard) for these keys and the other shell-tab shortcuts.
 
-With the terminal focused, press `Ctrl+Shift+C` to copy its selection. On macOS, press `Cmd+C`. The copied text is available from your system clipboard and the clipboard-history popup.
+Select text in the terminal or a rendered reply, then press `Ctrl+Shift+C` to copy it. On macOS, press `Cmd+C`. The copied text is available from your system clipboard and the clipboard-history popup.
 
 ## Read a shell session's transcript
 

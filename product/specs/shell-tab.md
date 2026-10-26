@@ -125,8 +125,10 @@ rendered content fits the block without an internal scrollbar, and the reply scr
 terminal without adding an application-window scrollbar. The decoration stays inside the terminal
 body and never covers the metadata row or tab strip. Its visible portion stays rendered while
 scrolling through it, even when its first row is above the viewport. The block is not terminal text,
-so terminal selection and search do not see it. When a full-screen program holds the terminal, or the reply cannot
-be measured or placed, it falls back to the styled terminal text described above.
+so terminal selection and search do not see it. Text in a rendered reply can be selected with the
+pointer; the shell's copy chord copies that browser selection through the shared clipboard. When a
+full-screen program holds the terminal, or the reply cannot be measured or placed, it falls back to
+the styled terminal text described above.
 
 A link in a reply rendered as HTML opens the way the same link opens from the ACP response panel: a
 web address opens through `open`, and a `path:line` reference opens in an editor tab. A click on any
@@ -175,8 +177,8 @@ shell — the characters a terminal would send. The terminal also accepts direct
 still works.
 
 With the terminal focused, `Ctrl+Shift+C` copies its selection; on macOS, `Cmd+C` does the same. The
-copy uses the shared clipboard writer, so the text is available from the system clipboard and the
-clipboard-history popup.
+same chords copy a selected rendered Markdown reply. Both use the shared clipboard writer, so the
+text is available from the system clipboard and the clipboard-history popup.
 
 A program running in the shell can copy too, by sending the terminal an OSC 52 request, which is how a
 program on a remote or SSH host reaches the clipboard of the machine the tab is shown on. The text goes
