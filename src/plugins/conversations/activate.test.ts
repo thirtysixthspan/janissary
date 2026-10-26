@@ -77,14 +77,12 @@ describe('conversations plugin command', () => {
     expect(bare.docks).toEqual([{ key: 'conversations', dock: null }]);
   });
 
-  it('opens a case-insensitive title match and reports a miss', () => {
+  it('refuses title arguments on the plural list command', () => {
     const value = fixture();
-    activate().command?.('first CONVERSATION', value.capabilities);
-    expect(value.actions).toContainEqual({ topic: 'conversations', action: 'load', id: 'first' });
-    expect(value.opened[0]).toMatchObject({ key: 'first', value: { title: 'First conversation' } });
-
-    expect(() => activate().command?.('missing', value.capabilities))
-      .toThrow(new TabPluginRejection('No conversation matching "missing".'));
+    expect(() => activate().command?.('First conversation', value.capabilities, 'conversations'))
+      .toThrow(new TabPluginRejection('Usage: conversations [left|right]'));
+    expect(value.actions).toEqual([]);
+    expect(value.opened).toEqual([]);
   });
 
   it('opens a matching title through the singular command alias', () => {
@@ -238,7 +236,7 @@ describe('initial conversation draft lifetime', () => {
     if (via === 'list') {
       value.run('open', { id: first.key }, { kind: 'list', entries: [] });
     } else {
-      value.plugin.command?.('New conversation', value.capabilities);
+      value.plugin.command?.('New conversation', value.capabilities, 'conversation');
     }
     expect(value.opened.at(-1)?.key).toBe(first.key);
     expect(value.opened.at(-1)?.value.payload).not.toHaveProperty('draftQuery');

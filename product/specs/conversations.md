@@ -4,11 +4,9 @@ The bundled conversations view provides durable, ordinary conversations with an 
 
 ### Command grammar
 
-`conversations` opens or focuses the singleton conversation list. `conversations left` and `conversations right` dock that list in the named sidebar. Running bare `conversations` while the list is docked returns it to the centre.
+`conversations` opens or focuses the singleton conversation list. `conversations left` and `conversations right` dock that list in the named sidebar. Running bare `conversations` while the list is docked returns it to the centre. Any other nonempty argument reports `Usage: conversations [left|right]`.
 
-`conversations <title>` opens the conversation whose title matches case-insensitively. The docking words take precedence over conversations titled `left` or `right`. A missing match reports `No conversation matching "<title>".`
-
-`conversation <title>` is the singular form. It opens a matching saved conversation case-insensitively; when no title matches, it creates a conversation and submits `<title>` as its first query. Bare `conversation` opens the conversation list. `conversations` and its `left`/`right` docking behavior are unchanged.
+`conversation <title>` opens a matching saved conversation case-insensitively; when no title matches, it creates a conversation and submits `<title>` as its first query. Bare `conversation` opens the conversation list.
 
 ### Conversation list
 

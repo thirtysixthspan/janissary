@@ -14,19 +14,13 @@ The list shows conversations in order of most recent activity, each row carrying
 
 The first row is selected when the list opens. `↑` and `↓` move the selection without wrapping; `Home` and `End` select the first and last rows. Press `Enter` to open the selected conversation. With the mouse, click the same row twice: the first click selects it, and the next opens it. This also applies to a row already selected by the keyboard. Opening a conversation focuses its existing tab if one is open.
 
-You can also open a conversation by its full title:
+Open a saved conversation by its full title, or start one with a new title:
 
 ```
-conversations Weekend plans
+conversation Weekend plans
 ```
 
-Title matching ignores case. If there is no match, `conversations <title>` reports `No conversation matching "<title>".`. Use the singular form to start a conversation when the title is new:
-
-```
-conversation What changed in the latest release?
-```
-
-If no saved conversation has that title, Janissary creates one and sends the full title text as its first query. A matching title opens the saved conversation instead. `conversations left` and `conversations right` keep their docking meaning, including when a conversation has either title.
+Title matching ignores case. If no saved conversation has that title, Janissary creates one and sends the full title text as its first query. A matching title opens the saved conversation instead. Use `conversations left` and `conversations right` to dock the list; other arguments report `Usage: conversations [left|right]`.
 
 `conversations left` and `conversations right` dock the list in a sidebar. Bare `conversations` brings it back to the center. See [Tabs](/user-documentation/getting-started/tabs) for shared sidebars.
 

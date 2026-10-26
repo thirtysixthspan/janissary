@@ -49,11 +49,11 @@ export function activate(): TabPluginActivation {
         if (isPluralCommand) capabilities.dockTab(LIST_KEY, null);
         return;
       }
+      if (isPluralCommand) return capabilities.rejectRequest('Usage: conversations [left|right]');
       const match = dataFrom(capabilities).summaries.find(
         (summary) => summary.title.toLowerCase() === title.toLowerCase(),
       );
       if (!match) {
-        if (isPluralCommand) return capabilities.rejectRequest(`No conversation matching "${title}".`);
         const id = tabs.create(undefined, capabilities);
         capabilities.topicAction({ topic: 'conversations', action: 'send', id, query: title });
         return;

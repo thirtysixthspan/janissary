@@ -25,7 +25,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `notify <message>` | Push a custom line into the [notifications](/user-documentation/tab-types/notifications) feed |
 | `plugins` | List the [bundled tab plugins](/user-documentation/command-bar/plugins) with their version and state |
 | `conversation <title>` | Open a saved conversation by title, or start a new conversation and send `<title>` as the first query |
-| `conversations [left\|right\|<title>]` | Open or dock the [conversation list](/user-documentation/tab-types/conversations), or reopen a saved conversation by its title |
+| `conversations [left\|right]` | Open or dock the [conversation list](/user-documentation/tab-types/conversations) |
 | `shell [name] [-w\|--workspace\|--no-workspace] [--offline]` | Open a separate [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab), in a fresh sandboxed workspace clone unless `--no-workspace` is given |
 | `quit` / `/quit` | Exit the application, after confirmation |
 
