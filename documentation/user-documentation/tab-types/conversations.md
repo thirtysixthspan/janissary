@@ -20,7 +20,13 @@ You can also open a conversation by its full title:
 conversations Weekend plans
 ```
 
-Title matching ignores case. If there is no match, you see `No conversation matching "<title>".`. The words `left` and `right` are reserved for docking, so use the list to open conversations with those titles.
+Title matching ignores case. If there is no match, `conversations <title>` reports `No conversation matching "<title>".`. Use the singular form to start a conversation when the title is new:
+
+```
+conversation What changed in the latest release?
+```
+
+If no saved conversation has that title, Janissary creates one and sends the full title text as its first query. A matching title opens the saved conversation instead. `conversations left` and `conversations right` keep their docking meaning, including when a conversation has either title.
 
 `conversations left` and `conversations right` dock the list in a sidebar. Bare `conversations` brings it back to the center. See [Tabs](/user-documentation/getting-started/tabs) for shared sidebars.
 

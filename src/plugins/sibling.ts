@@ -13,5 +13,6 @@ export function runPluginCommand(
   if (!activation.command) {
     throw new TabPluginRejection(`Tab plugin "${id}" claims a command but provides no handler`);
   }
-  return activation.command(command.trim().replace(/^\S+\s*/u, ''), capabilities);
+  const name = command.trim().split(/\s/u, 1)[0].toLowerCase();
+  return activation.command(command.trim().replace(/^\S+\s*/u, ''), capabilities, name);
 }

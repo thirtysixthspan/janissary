@@ -189,6 +189,17 @@ describe('tab plugin command adapter', () => {
     expect(contributionRejection('second')).toBe('duplicate tab plugin command claim "fixture"');
   });
 
+  it('registers aliases and refuses reserved or duplicate alias names', () => {
+    const built = createPluginCommands([
+      manifest('first', { command: 'fixture', commandAliases: ['conversation', 'help'] }),
+      manifest('second', { command: 'other', commandAliases: ['FIXTURE'] }),
+    ], coreCommands());
+    expect(built.map((command) => command.name)).toEqual(['fixture', 'conversation', 'other']);
+    expect(contributionRejection('first')).toBe('reserved tab plugin command claim "help"');
+    expect(contributionRejection('second')).toBe('duplicate tab plugin command claim "fixture"');
+    expect(built.find((command) => command.name === 'conversation')?.match('CONVERSATION title')).toBe(true);
+  });
+
   it('matches a case-insensitive first token on a word boundary', () => {
     const core: Command[] = [];
     const [command] = createPluginCommands([manifest('fixture', { command: 'fixture' })], core);

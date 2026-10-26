@@ -86,6 +86,26 @@ describe('conversations plugin command', () => {
     expect(() => activate().command?.('missing', value.capabilities))
       .toThrow(new TabPluginRejection('No conversation matching "missing".'));
   });
+
+  it('opens a matching title through the singular command alias', () => {
+    const value = fixture();
+    activate().command?.('first CONVERSATION', value.capabilities, 'conversation');
+    expect(value.actions).toContainEqual({ topic: 'conversations', action: 'load', id: 'first' });
+    expect(value.opened[0]).toMatchObject({ key: 'first', value: { title: 'First conversation' } });
+  });
+
+  it('creates a conversation and submits an unmatched singular command as its first query', () => {
+    const value = fixture();
+    activate().command?.('What changed?', value.capabilities, 'conversation');
+    const created = value.actions[0];
+    expect(created).toMatchObject({ topic: 'conversations', action: 'create' });
+    if (created?.topic !== 'conversations' || created.action !== 'create') throw new Error('conversation was not created');
+    expect(value.actions[1]).toEqual({
+      topic: 'conversations', action: 'send', id: created.id, query: 'What changed?',
+    });
+    expect(value.opened).toHaveLength(1);
+    expect(value.opened[0]?.key).toBe(created.id);
+  });
 });
 
 describe('conversations plugin opener', () => {

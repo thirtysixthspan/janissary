@@ -58,6 +58,7 @@ export type TabPluginDeclaration = {
   editsOwnFiles?: boolean;
   editGesture?: 'open external';
   command?: string;
+  commandAliases?: readonly string[];
   // The line a profile entry for this plugin reissues, when it is not `command` itself — a plugin
   // whose bare command does more than a saved tab should, such as cloning a workspace.
   profileCommand?: string;
@@ -401,7 +402,7 @@ export type TabPluginActivation = {
   opener: TabPluginOpener;
   // Runs the plugin's declared command with everything after the first token. Required only when the
   // declaration claims a command name.
-  command?(argument: string, capabilities: TabPluginServerCapabilities): void | Promise<void>;
+  command?(argument: string, capabilities: TabPluginServerCapabilities, name?: string): void | Promise<void>;
   // The result is sent to the waiting client, so it must be JSON-compatible. Unlike an opener or a
   // command, an intent may not fall off its last line: `undefined` is not JSON, so the host treats it
   // as an invalid produced result and disables the plugin. Return `null` when there is nothing to say.

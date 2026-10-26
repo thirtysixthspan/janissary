@@ -9,6 +9,7 @@ export const conversationsManifest = {
   tabLabelPrefix: 'conversations',
   fileExtensions: {},
   command: 'conversations',
+  commandAliases: ['conversation'],
   notifications: ['conversations'],
   defaultMenu: { label: 'Chat about this', order: 2, shortcut: true },
   capabilities: [
