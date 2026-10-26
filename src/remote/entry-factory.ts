@@ -3,6 +3,7 @@ import { getGitIdentity } from '../git/identity.js';
 import { withoutCredentials } from '../git/repository-url.js';
 import { rootRefusalMessage } from '../launch-name/messages.js';
 import type { Managers } from '../managers.js';
+import { notify } from '../notifications/index.js';
 import type { PtySession } from '../pty.js';
 import { getProjectTokens } from '../project/tokens.js';
 import type { RemoteAddress } from './address.js';
@@ -141,6 +142,9 @@ export function createRemoteEntry({
       },
       onError: (message) => {
         if (entry.attach.active) return;
+        if (message.startsWith('Remote janissary speaks protocol version ')) {
+          notify(managers, 'launch-refused', label, message);
+        }
         settleEntryReady(entry, new Error(message));
         entry.handlers.get(label)?.onFailed(message);
       },

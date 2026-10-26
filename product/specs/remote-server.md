@@ -96,7 +96,8 @@ local workspace clone does:
   could not be made. The reason appears in the placeholder and is posted to the notifications feed
   (see [Missing clone](#missing-clone)).
 - The two janissary installations speak different protocol versions — the message names both
-  versions and says to update janissary so the hosts match.
+  versions and says to update janissary so the hosts match. The placeholder tab shows the error,
+  and the launching tab receives a `launch-refused` notification with the same message.
 - The ssh session ends before the workspace is ready. For a new launch this also means the host never
   got to check the launch's name, so `Cannot launch "<name>": could not check <host> for an existing
   "<name>" — <reason>.` is posted to the notifications feed as well.
