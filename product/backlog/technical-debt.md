@@ -2,8 +2,6 @@
 
 ## ready
 
-## development
-
 * Retarget open editor tabs after every file-navigator operation that moves a path on disk, not only a single-file local rename, so a later save can no longer recreate a file at its old location.
 
 Existing Debt: The navigator has no single "these paths moved" step after a mutation, so each operation picks its own side effects, and only a single-item local rename retargets an open editor, by exact path match, while drag moves, bulk moves, cut-and-paste, undo and redo, directory renames and remote renames leave editors pointing at a path that no longer exists. Severity: 6/10
@@ -112,6 +110,8 @@ Existing Risk: 3/10 - With a split open, activity in the second pane plays the w
 Proposal Risk: 1/10 - Visibility has one definition on the client, though it still mirrors the server's rule rather than receiving it, so a change to unread eligibility on the server needs the client selector changed to match.
 
 Proposal: `createAlertPlacement` in `web/src/notifications/alert-placement.ts` answers `isVisible(label)` from the docked selection or `state?.tabs[state.activeTab]?.label === label` and never consults `secondaryTab`, which `StateEvent` in `src/protocol/events.ts` carries; `web/src/notifications/native-notifications.ts` uses that answer to decide whether to suppress a sound or banner. The visible-centre-tab test is written inline as `selected && !selected.hidden && !selected.dock` in `web/src/App.tsx` and as `candidate && !candidate.hidden && !candidate.dock` in `web/src/MountedViewLayers.tsx`, `web/src/AppCenterActionArea.tsx` derives the second pane's tab from `tabs.at(secondaryTab)` on its own, and `focusCenterVisibleTab` in `web/src/useFocusOnTabSwitch.ts` repeats the hidden and dock guard. On the server, `isUnreadEligible` in `src/tab/transcript/events.ts` already treats the active label and the secondary label as visible. Add a pure `web/src/shared/tab/visible-tabs.ts` exporting `visibleTabs(state)` that returns `{ current, secondary, visibleLabels }` by that rule (it sits in the shared layer because a feature, `notifications/`, and the app shell both consume it, so it must import neither), and have `alert-placement.ts`, `App.tsx`, `MountedViewLayers.tsx` and `AppCenterActionArea.tsx` read from it. `web/src/notifications/alert-placement.test.ts` covers docked and active tabs; add a split-pane case. `web/src/MountedViewLayers.test.tsx` and `web/src/MountedViewLayers.split-dirty.test.tsx` pin the current centre and split rendering and must keep passing; give `visibleTabs` its own unit tests.
+
+## development
 
 ## deferred
 
