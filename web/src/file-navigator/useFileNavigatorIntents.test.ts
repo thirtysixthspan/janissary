@@ -6,7 +6,7 @@ import { useFileNavigatorIntents } from './useFileNavigatorIntents';
 function setup() {
   const send = vi.fn();
   const client = { send } as unknown as JanusClient;
-  const { result } = renderHook(() => useFileNavigatorIntents(client, 3));
+  const { result } = renderHook(() => useFileNavigatorIntents(client, 3, 'navigator-3'));
   return { intents: result.current, send };
 }
 
@@ -22,7 +22,7 @@ describe('useFileNavigatorIntents', () => {
     expect(send).toHaveBeenNthCalledWith(3, { method: 'fileNavigatorReroot', params: { index: 3, path: 'packages/app' } });
   });
 
-  it('adapts header actions to indexed protocol messages', () => {
+  it('adapts header actions to protocol messages addressed by label', () => {
     const { intents, send } = setup();
     intents.setDock('left');
     intents.setDetail('modified');
@@ -32,7 +32,7 @@ describe('useFileNavigatorIntents', () => {
     expect(send).toHaveBeenNthCalledWith(1, { method: 'setDock', params: { index: 3, dock: 'left' } });
     expect(send).toHaveBeenNthCalledWith(2, { method: 'fileNavigatorSetDetail', params: { index: 3, details: 'modified' } });
     expect(send).toHaveBeenNthCalledWith(3, { method: 'fileNavigatorCollapseAll', params: { index: 3 } });
-    expect(send).toHaveBeenNthCalledWith(4, { method: 'fileNavigatorPull', params: { index: 3 } });
+    expect(send).toHaveBeenNthCalledWith(4, { method: 'fileNavigatorPull', params: { label: 'navigator-3' } });
   });
 
   it('sends a commit with the message and the paths it names', () => {
@@ -41,7 +41,7 @@ describe('useFileNavigatorIntents', () => {
 
     expect(send).toHaveBeenNthCalledWith(1, {
       method: 'fileNavigatorCommit',
-      params: { index: 3, message: 'commit: notes.md', paths: ['src/notes.md'] },
+      params: { label: 'navigator-3', message: 'commit: notes.md', paths: ['src/notes.md'] },
     });
   });
 
@@ -50,7 +50,7 @@ describe('useFileNavigatorIntents', () => {
     intents.commit('commit: 2 files', []);
 
     expect(send).toHaveBeenNthCalledWith(1, {
-      method: 'fileNavigatorCommit', params: { index: 3, message: 'commit: 2 files', paths: [] },
+      method: 'fileNavigatorCommit', params: { label: 'navigator-3', message: 'commit: 2 files', paths: [] },
     });
   });
 
@@ -58,7 +58,9 @@ describe('useFileNavigatorIntents', () => {
     const { intents, send } = setup();
     intents.nothingToCommit();
 
-    expect(send).toHaveBeenNthCalledWith(1, { method: 'fileNavigatorNothingToCommit', params: { index: 3 } });
+    expect(send).toHaveBeenNthCalledWith(1, {
+      method: 'fileNavigatorNothingToCommit', params: { label: 'navigator-3' },
+    });
   });
 
   it('adapts command and GitHub actions to command messages', () => {

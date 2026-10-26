@@ -57,38 +57,38 @@ describe('controller-file-navigator', () => {
     expect(calls).toEqual([['agent']]);
   });
 
-  it('fileNavigatorPull delegates to FileNavigatorManager.pull when the tab exists', () => {
+  it('fileNavigatorPull delegates to FileNavigatorManager.pull by tab label', () => {
     const calls: unknown[] = [];
     const managers = makeManagers('agent', { pull: (...args: unknown[]) => { calls.push(args); } });
-    fileNavigatorPull(managers, 0);
+    fileNavigatorPull(managers, 'agent');
     expect(calls).toEqual([['agent']]);
   });
 
-  it('fileNavigatorPull is a no-op when the tab index has no label', () => {
+  it('fileNavigatorPull is a no-op when the label no longer names an open tab', () => {
     const calls: unknown[] = [];
     const managers = makeManagers(undefined, { pull: (...args: unknown[]) => { calls.push(args); } });
-    fileNavigatorPull(managers, 0);
+    fileNavigatorPull(managers, 'gone');
     expect(calls).toHaveLength(0);
   });
 
   it('fileNavigatorCommit delegates with the resolved label, message, and paths', () => {
     const calls: unknown[] = [];
     const managers = makeManagers('agent', { commit: (...args: unknown[]) => { calls.push(args); } });
-    fileNavigatorCommit(managers, 0, 'commit: a.md', ['a.md']);
+    fileNavigatorCommit(managers, 'agent', 'commit: a.md', ['a.md']);
     expect(calls).toEqual([['agent', 'commit: a.md', ['a.md']]]);
   });
 
-  it('fileNavigatorCommit is a no-op when the tab index has no label', () => {
+  it('fileNavigatorCommit is a no-op when the label no longer names an open tab', () => {
     const calls: unknown[] = [];
     const managers = makeManagers(undefined, { commit: (...args: unknown[]) => { calls.push(args); } });
-    fileNavigatorCommit(managers, 0, 'commit: a.md', ['a.md']);
+    fileNavigatorCommit(managers, 'gone', 'commit: a.md', ['a.md']);
     expect(calls).toHaveLength(0);
   });
 
   it('fileNavigatorNothingToCommit posts the nothing-to-commit line attributed to the tab', () => {
     const append = vi.fn();
     const managers = makeManagersWithNotifications('agent', {}, append);
-    fileNavigatorNothingToCommit(managers, 0);
+    fileNavigatorNothingToCommit(managers, 'agent');
     expect(append).toHaveBeenCalledTimes(1);
     expect(append).toHaveBeenCalledWith(
       NOTIFICATIONS_LABEL,
@@ -97,9 +97,9 @@ describe('controller-file-navigator', () => {
     );
   });
 
-  it('fileNavigatorNothingToCommit is a no-op when the tab index has no label', () => {
+  it('fileNavigatorNothingToCommit is a no-op when the label no longer names an open tab', () => {
     const managers = makeManagers(undefined, {});
-    expect(() => fileNavigatorNothingToCommit(managers, 0)).not.toThrow();
+    expect(() => fileNavigatorNothingToCommit(managers, 'gone')).not.toThrow();
   });
 
   it('fileNavigatorReroot delegates to FileNavigatorManager.reroot when the tab exists', () => {

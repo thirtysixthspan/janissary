@@ -330,6 +330,9 @@ builds and pushes one commit carrying the selected file or files. Unlike **Edit*
 a directory row, where it commits everything beneath that directory; selecting a folder and a file
 inside it commits the folder once rather than naming the file twice.
 
+Pull, commit, and the **Nothing to commit** notice are always directed to the navigator tab that
+requested them. If that navigator closes before its request is handled, the request has no effect.
+
 Entries that do not apply are left out rather than shown greyed, so the menu's height varies with
 context: **Paste** is absent when nothing has been copied or cut, **Edit** is absent for directories,
 **Commit to origin** is absent wherever the header shows no branch text, and **Open**, **Edit**,

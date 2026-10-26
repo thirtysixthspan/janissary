@@ -8,15 +8,16 @@ const CASES: Array<[
 ]> = [
   ['fileNavigatorToggle', { index: 0, path: 'src' }, [{ index: 0 }, { index: 0, path: 3 }]],
   ['fileNavigatorCollapseAll', { index: 0 }, [{}, { index: '0' }]],
-  ['fileNavigatorPull', { index: 1 }, [{ index: null }]],
+  ['fileNavigatorPull', { label: 'files' }, [{ label: null }, { index: 1 }]],
   // An empty path array is accepted: that is the header button's whole-tree form.
-  ['fileNavigatorCommit', { index: 0, message: 'commit: a.md', paths: [] }, [
-    { index: 0, paths: [] },
-    { index: 0, message: 7, paths: [] },
-    { index: 0, message: 'commit: a.md', paths: 'a.md' },
-    { index: 0, message: 'commit: a.md', paths: ['a.md', 2] },
+  ['fileNavigatorCommit', { label: 'files', message: 'commit: a.md', paths: [] }, [
+    { label: 'files', paths: [] },
+    { label: 'files', message: 7, paths: [] },
+    { label: 'files', message: 'commit: a.md', paths: 'a.md' },
+    { label: 'files', message: 'commit: a.md', paths: ['a.md', 2] },
+    { label: 1, message: 'commit: a.md', paths: [] },
   ]],
-  ['fileNavigatorNothingToCommit', { index: 0 }, [{ index: '0' }, {}]],
+  ['fileNavigatorNothingToCommit', { label: 'files' }, [{ label: 1 }, { index: 0 }]],
   ['fileNavigatorSetDetail', { index: 0, details: 'modified' }, [{ index: 0 }, { index: 0, details: 'owner' }]],
   ['fileNavigatorReroot', { index: 0 }, [{ index: 0, path: 4 }]],
   ['moveFileNavigatorItem', { label: 'files', fromRelPath: 'a', toRelPath: 'b' }, [

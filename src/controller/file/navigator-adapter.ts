@@ -9,9 +9,9 @@ import type { BulkConflictPolicy, FileOpenerResolution, FileSelectionAction, Fil
 export type FileNavigatorControllerAdapter = {
   fileNavigatorToggle(index: number, path: string): void;
   fileNavigatorCollapseAll(index: number): void;
-  fileNavigatorPull(index: number): void;
-  fileNavigatorCommit(index: number, message: string, paths: string[]): void;
-  fileNavigatorNothingToCommit(index: number): void;
+  fileNavigatorPull(label: string): void;
+  fileNavigatorCommit(label: string, message: string, paths: string[]): void;
+  fileNavigatorNothingToCommit(label: string): void;
   fileNavigatorSetDetail(index: number, details: FileNavigatorDetail): void;
   fileNavigatorReroot(index: number, relPath?: string): void;
   moveFileNavigatorItem(label: string, fromRelPath: string, toRelPath: string, overwrite?: boolean): ReturnType<typeof fileNavigatorRpc.moveFileNavigatorItem>;
@@ -41,9 +41,9 @@ export function createFileNavigatorControllerAdapter(managers: Managers): FileNa
   return {
     fileNavigatorToggle: (index, path) => fileNavigatorRpc.fileNavigatorToggle(managers, index, path),
     fileNavigatorCollapseAll: (index) => fileNavigatorRpc.fileNavigatorCollapseAll(managers, index),
-    fileNavigatorPull: (index) => fileNavigatorRpc.fileNavigatorPull(managers, index),
-    fileNavigatorCommit: (index, message, paths) => fileNavigatorCommit(managers, index, message, paths),
-    fileNavigatorNothingToCommit: (index) => fileNavigatorNothingToCommit(managers, index),
+    fileNavigatorPull: (label) => fileNavigatorRpc.fileNavigatorPull(managers, label),
+    fileNavigatorCommit: (label, message, paths) => fileNavigatorCommit(managers, label, message, paths),
+    fileNavigatorNothingToCommit: (label) => fileNavigatorNothingToCommit(managers, label),
     fileNavigatorSetDetail: (index, details) => fileNavigatorRpc.fileNavigatorSetDetail(managers, index, details),
     fileNavigatorReroot: (index, relPath) => fileNavigatorRpc.fileNavigatorReroot(managers, index, relPath),
     moveFileNavigatorItem: (label, from, to, overwrite) => fileNavigatorRpc.moveFileNavigatorItem(managers, label, from, to, overwrite),

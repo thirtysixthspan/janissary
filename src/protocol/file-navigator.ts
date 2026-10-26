@@ -60,19 +60,19 @@ export type FileNavigatorRpcCall =
   // Pull the tab root's repository up to date from `origin` (the header's pull button), then
   // refresh the tree's rows and git metadata. Fire-and-forget: the outcome surfaces through the
   // next state broadcast, or as a notifications-feed line when the pull fails.
-  | { method: 'fileNavigatorPull'; params: { index: number } }
+  | { method: 'fileNavigatorPull'; params: { label: string } }
   // Commit and push to `origin` from a file navigator tab: the header's commit button and the row
   // context menu's `Commit to origin` entry alike. `paths` are tree-relative, and an empty list is
   // the header button's whole-tree form; `message` is the text the user approved in the navigator's
   // own field, so the server never prompts. One method rather than two, since the two entry points
   // differ only in the presence of that list. Fire-and-forget: the outcome surfaces through the next
   // state broadcast and as a notifications-feed line.
-  | { method: 'fileNavigatorCommit'; params: { index: number; message: string; paths: string[] } }
+  | { method: 'fileNavigatorCommit'; params: { label: string; message: string; paths: string[] } }
   // Reports that the header commit button was clicked on a tree whose root has no changes at all:
   // the client, which holds the same changed-count the whole-tree default message is generated
   // from, opens no message field and sends no commit, and asks the server for the `Nothing to
   // commit` notifications line in the commit's own vocabulary. Fire-and-forget.
-  | { method: 'fileNavigatorNothingToCommit'; params: { index: number } }
+  | { method: 'fileNavigatorNothingToCommit'; params: { label: string } }
   // Switch which per-row detail a file navigator tab shows (its header's detail button).
   | { method: 'fileNavigatorSetDetail'; params: { index: number; details: FileNavigatorDetail } }
   // Re-root a file navigator tab to the parent directory.

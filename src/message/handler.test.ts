@@ -351,22 +351,22 @@ describe('handle', () => {
 
   it('routes fileNavigatorPull', () => {
     const controller = makeController();
-    dispatchCall(controller, 16, { method: 'fileNavigatorPull', params: { index: 0 } });
-    expect(controller.fileNavigatorPull).toHaveBeenCalledWith(0);
+    dispatchCall(controller, 16, { method: 'fileNavigatorPull', params: { label: 'files' } });
+    expect(controller.fileNavigatorPull).toHaveBeenCalledWith('files');
   });
 
   it('routes fileNavigatorCommit with the message and paths it carried', () => {
     const controller = makeController();
     dispatchCall(controller, 16, {
-      method: 'fileNavigatorCommit', params: { index: 0, message: 'commit: a.md', paths: ['a.md'] },
+      method: 'fileNavigatorCommit', params: { label: 'files', message: 'commit: a.md', paths: ['a.md'] },
     });
-    expect(controller.fileNavigatorCommit).toHaveBeenCalledWith(0, 'commit: a.md', ['a.md']);
+    expect(controller.fileNavigatorCommit).toHaveBeenCalledWith('files', 'commit: a.md', ['a.md']);
   });
 
   it('routes fileNavigatorNothingToCommit', () => {
     const controller = makeController();
-    dispatchCall(controller, 16, { method: 'fileNavigatorNothingToCommit', params: { index: 0 } });
-    expect(controller.fileNavigatorNothingToCommit).toHaveBeenCalledWith(0);
+    dispatchCall(controller, 16, { method: 'fileNavigatorNothingToCommit', params: { label: 'files' } });
+    expect(controller.fileNavigatorNothingToCommit).toHaveBeenCalledWith('files');
   });
 
   it('routes fileNavigatorReroot', () => {

@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import type { FileNavigatorDetail } from '@shared/protocol';
 import type { JanusClient } from '../shared/ws/ws';
 
-export function useFileNavigatorIntents(client: JanusClient, index: number) {
+export function useFileNavigatorIntents(client: JanusClient, index: number, label: string) {
   const sendCommand = useCallback((text: string) => {
     client.send({ method: 'command', params: { text } });
   }, [client]);
@@ -32,16 +32,16 @@ export function useFileNavigatorIntents(client: JanusClient, index: number) {
   }, [client, index]);
 
   const pull = useCallback(() => {
-    client.send({ method: 'fileNavigatorPull', params: { index } });
-  }, [client, index]);
+    client.send({ method: 'fileNavigatorPull', params: { label } });
+  }, [client, label]);
 
   const commit = useCallback((message: string, paths: string[]) => {
-    client.send({ method: 'fileNavigatorCommit', params: { index, message, paths } });
-  }, [client, index]);
+    client.send({ method: 'fileNavigatorCommit', params: { label, message, paths } });
+  }, [client, label]);
 
   const nothingToCommit = useCallback(() => {
-    client.send({ method: 'fileNavigatorNothingToCommit', params: { index } });
-  }, [client, index]);
+    client.send({ method: 'fileNavigatorNothingToCommit', params: { label } });
+  }, [client, label]);
 
   const openGithub = useCallback((githubUrl: string) => {
     sendCommand(`open ${githubUrl}`);

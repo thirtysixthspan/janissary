@@ -17,9 +17,8 @@ export function fileNavigatorCollapseAll(managers: Managers, index: number): voi
   if (label) managers.fileNavigator.collapseAll(label);
 }
 
-export function fileNavigatorPull(managers: Managers, index: number): void {
-  const label = managers.tab.tabs[index]?.label;
-  if (label) managers.fileNavigator.pull(label);
+export function fileNavigatorPull(managers: Managers, label: string): void {
+  if (isOpenTab(managers, label)) managers.fileNavigator.pull(label);
 }
 
 export function fileNavigatorSetDetail(managers: Managers, index: number, details: FileNavigatorDetail): void {
@@ -36,7 +35,7 @@ export function fileNavigatorReroot(managers: Managers, index: number, relPath?:
 // ahead of the navigator cannot redirect them. A label no open tab carries is a navigator that
 // closed while the request was in flight: it mutates nothing and, like an out-of-range index
 // before it, reports nothing.
-function isOpenTab(managers: Managers, label: string): boolean {
+export function isOpenTab(managers: Managers, label: string): boolean {
   return managers.tab.tabs.some((tab) => tab.label === label);
 }
 
