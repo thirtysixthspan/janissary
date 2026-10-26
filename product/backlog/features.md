@@ -2,6 +2,8 @@
 
 ## ready
 
+* `help <command>` should offer specific help on how to use a command including high level descriptions, command signature, use cases and examine commands. These explanations should be stored as markdown files <command>.md in a /help directory. move command section in help.md to help/commands.md and Key Bindings section to help/keys.md. `help` alone should execute `help commands`.
+
 * Arranging tabs from the command line. add `tab move <tab> <position>`, `tab pane <tab> left|right`, `tab color <tab> <#hex>`, `tab group <tab> <id|name>`, and `tab dock <tab> left|right`. Each would find its tab the way `tab focus` and `close` do, by label or alias. `tab move` would keep the rule that a tab moves only within its group. `tab group` would insert the tab after the last member of its new group, so groups stay contiguous. `tab dock` would refuse a kind that can't dock, such as a harness or editor tab (`sidebars.md` § Docking). `tab split <tab>` would put the tab on a split view.
 
 * Naming a group from the command line. A group has a numeric ID and a name, and `in group <name|id>` can choose only one of them (`tabs.md` § Tab grouping). An unknown name gets the next free ID. An unknown ID gets the generated name `group-<id>`. A profile restores both together, so group 3 can come back named `review` (`profiles.md` § Group names). No command renames a group, so a runscript can get the ID it wants or the name it wants, but not both. Closing the gap would add `group name <id> <name>`. It would refuse a name another open group already uses, because names compare without regard to case and `in group review` would otherwise be ambiguous. A rename would leave the group's ID, members, and bar color alone. Complexity: low.
