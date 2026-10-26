@@ -1,8 +1,5 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { pullSummary } from './pull.js';
-
-const execFileAsync = promisify(execFile);
+import { runGit } from './run.js';
 
 // What a commit-and-push cycle answers with. `committed: false` is the nothing-to-commit case — a
 // clean tree, or a selection whose files are all unchanged — which is an outcome rather than a
@@ -47,7 +44,7 @@ export async function commitRoot(
   if (!await hasStagedChanges(root)) return { committed: false };
   let stdout: string;
   try {
-    ({ stdout } = await execFileAsync('git', ['commit', '-m', message], { cwd: root }));
+    ({ stdout } = await runGit(['commit', '-m', message], root));
   } catch (error) {
     if (wasAlreadyStaged) markStagingLeftInPlace(error);
     else await unstage(root);
@@ -55,10 +52,10 @@ export async function commitRoot(
   }
   if (await hasUpstream(root)) {
     await rebaseAsideExtraChanges(root);
-    await execFileAsync('git', ['push', 'origin', 'HEAD'], { cwd: root });
+    await runGit(['push', 'origin', 'HEAD'], root);
   } else {
     const branch = await currentBranch(root);
-    await execFileAsync('git', ['push', '--set-upstream', 'origin', branch], { cwd: root });
+    await runGit(['push', '--set-upstream', 'origin', branch], root);
   }
   return { committed: true, summary: pullSummary(stdout) };
 }
@@ -82,7 +79,7 @@ export function commitLeftStagingInPlace(error: unknown): boolean {
 // --abort`: the original commit error is what the caller needs, not a second failure about undoing.
 async function unstage(root: string): Promise<void> {
   try {
-    await execFileAsync('git', ['reset'], { cwd: root });
+    await runGit(['reset'], root);
   } catch { /* nothing more to do if the reset itself fails */ }
 }
 
@@ -93,13 +90,13 @@ async function unstage(root: string): Promise<void> {
 // `changedPaths` uses to decide which rows to colour.
 async function stage(root: string, absolutePaths: string[]): Promise<void> {
   const pathspec = absolutePaths.length > 0 ? absolutePaths : ['.'];
-  await execFileAsync('git', ['add', '-A', '--', ...pathspec], { cwd: root });
+  await runGit(['add', '-A', '--', ...pathspec], root);
 }
 
 // `git diff --cached --quiet` exits 0 when nothing is staged and non-zero otherwise.
 async function hasStagedChanges(root: string): Promise<boolean> {
   try {
-    await execFileAsync('git', ['diff', '--cached', '--quiet'], { cwd: root });
+    await runGit(['diff', '--cached', '--quiet'], root);
     return false;
   } catch {
     return true;
@@ -112,7 +109,7 @@ async function hasStagedChanges(root: string): Promise<boolean> {
 // branch" failure this check exists to route around.
 async function hasUpstream(root: string): Promise<boolean> {
   try {
-    await execFileAsync('git', ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], { cwd: root });
+    await runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], root);
     return true;
   } catch {
     return false;
@@ -123,7 +120,7 @@ async function hasUpstream(root: string): Promise<boolean> {
 // publish always names the branch the tree is on — never `master`, never a name inferred from
 // anywhere else.
 async function currentBranch(root: string): Promise<string> {
-  const { stdout } = await execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: root });
+  const { stdout } = await runGit(['rev-parse', '--abbrev-ref', 'HEAD'], root);
   return stdout.trim();
 }
 
@@ -134,10 +131,10 @@ async function currentBranch(root: string): Promise<string> {
 // after starting is abandoned so the branch is left as it was, and the original error still surfaces.
 async function pullRebase(root: string): Promise<void> {
   try {
-    await execFileAsync('git', ['pull', '--rebase'], { cwd: root });
+    await runGit(['pull', '--rebase'], root);
   } catch (error) {
     try {
-      await execFileAsync('git', ['rebase', '--abort'], { cwd: root });
+      await runGit(['rebase', '--abort'], root);
     } catch { /* no rebase was in progress to abort */ }
     throw error;
   }
@@ -152,7 +149,7 @@ async function rebaseAsideExtraChanges(root: string): Promise<void> {
     await pullRebase(root);
     return;
   }
-  await execFileAsync('git', ['stash', 'push', '--include-untracked', '-m', 'commit-to-origin'], { cwd: root });
+  await runGit(['stash', 'push', '--include-untracked', '-m', 'commit-to-origin'], root);
   try {
     await pullRebase(root);
   } catch (error) {
@@ -169,10 +166,10 @@ async function rebaseAsideExtraChanges(root: string): Promise<void> {
 // `git status --porcelain` prints one line per file with any change — staged, unstaged, or
 // untracked — and nothing at all for a clean tree.
 async function hasExtraChanges(root: string): Promise<boolean> {
-  const { stdout } = await execFileAsync('git', ['status', '--porcelain'], { cwd: root });
+  const { stdout } = await runGit(['status', '--porcelain'], root);
   return stdout.trim().length > 0;
 }
 
 async function popExtraChanges(root: string): Promise<void> {
-  await execFileAsync('git', ['stash', 'pop'], { cwd: root });
+  await runGit(['stash', 'pop'], root);
 }

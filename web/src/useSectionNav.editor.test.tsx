@@ -34,7 +34,8 @@ function makeClient(): JanusClient {
 }
 
 function Harness({ tabs, focusCenter }: { tabs: TabView[]; focusCenter: () => void }) {
-  useSectionNav(tabs, focusCenter);
+  const keyboardCapturedRef = React.useRef(false);
+  useSectionNav(tabs, focusCenter, keyboardCapturedRef);
   const tab = tabs[0];
   return (
     <div className="app-center">

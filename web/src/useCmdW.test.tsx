@@ -3,6 +3,14 @@ import React, { useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { useDialogKeyboard } from './shared/useDialogKeyboard';
 import { useCmdW } from './useCmdW';
+import { useCmdWRefs } from './useCmdWRefs';
+import { openContributedOverlay, registerContributedOverlay } from './shared/contributed-overlays';
+import type { OverlayOpenState } from './pickers/overlay-registry';
+
+const NO_OVERLAYS: OverlayOpenState = {
+  syntaxTheme: false, appTheme: false, quickOpen: false, tabNav: false,
+  history: false, queue: false, task: false, profile: false,
+};
 
 function TestComponent({ closeTab, active, quitOpen, pickerOpen, focusedIndex }: {
   closeTab: (n: number) => void;
@@ -11,15 +19,13 @@ function TestComponent({ closeTab, active, quitOpen, pickerOpen, focusedIndex }:
   pickerOpen: boolean;
   focusedIndex?: number;
 }) {
-  const activeTabRef = useRef(active);
-  activeTabRef.current = active;
-  const quitConfirmOpenRef = useRef(quitOpen);
-  quitConfirmOpenRef.current = quitOpen;
-  const pickerOpenRef = useRef(pickerOpen);
-  pickerOpenRef.current = pickerOpen;
+  const overlays = { ...NO_OVERLAYS, history: pickerOpen };
+  const { activeTabRef, quitConfirmOpenRef, keyboardCapturedRef } = useCmdWRefs(
+    active, quitOpen, false, overlays,
+  );
   const focusedIndexRef = useRef(focusedIndex);
   focusedIndexRef.current = focusedIndex;
-  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, focusedIndexRef);
+  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, keyboardCapturedRef, focusedIndexRef);
 
   return null;
 }
@@ -29,6 +35,12 @@ function Dialog() {
   const dialogRef = useRef<HTMLDivElement>(null);
   useDialogKeyboard(dialogRef, { escape: vi.fn() });
   return <div ref={dialogRef} tabIndex={-1} />;
+}
+
+function ContributedOverlayShortcut({ closeTab }: { closeTab: (n: number) => void }) {
+  const { activeTabRef, quitConfirmOpenRef, keyboardCapturedRef } = useCmdWRefs(2, false, false, NO_OVERLAYS);
+  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, keyboardCapturedRef);
+  return null;
 }
 
 function renderIdle(closeTab: (n: number) => void) {
@@ -90,6 +102,20 @@ describe('useCmdW', () => {
     render(<TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen />);
     dispatchKey('w', { metaKey: true });
     expect(closeTab).not.toHaveBeenCalled();
+  });
+
+  it('does nothing while a contributed overlay is open', () => {
+    const closeTab = vi.fn();
+    const unregister = registerContributedOverlay({
+      name: 'clipboard-history', claimsCommandBar: true, render: () => null, onKey: () => {}, onOpen: () => {},
+    });
+    openContributedOverlay('clipboard-history', null);
+    render(<ContributedOverlayShortcut closeTab={closeTab} />);
+
+    dispatchKey('w', { metaKey: true });
+
+    expect(closeTab).not.toHaveBeenCalled();
+    unregister();
   });
 
   it('does nothing while quit dialog is open', () => {

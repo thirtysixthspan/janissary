@@ -1,7 +1,4 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-
-const execFileAsync = promisify(execFile);
+import { runGit } from './run.js';
 
 // `git pull` writes its progress to stderr and its outcome to stdout: the single line `Already up to
 // date.` when there was nothing to take, otherwise a merge or fast-forward report whose last line is
@@ -21,6 +18,6 @@ export function pullSummary(stdout: string): string {
 // default remote resolution) decides what `git pull` actually does — no arguments are forced here.
 // Resolves with git's own outcome summary so the caller can report what the pull actually did.
 export async function pullRoot(root: string): Promise<string> {
-  const { stdout } = await execFileAsync('git', ['pull'], { cwd: root });
+  const { stdout } = await runGit(['pull'], root);
   return pullSummary(stdout);
 }

@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-type Call = { file: string; args: string[]; options: { cwd?: string } };
+type Call = {
+  file: string;
+  args: string[];
+  options: { cwd?: string; env?: NodeJS.ProcessEnv; timeout?: number; killSignal?: string };
+};
 
 let calls: Call[] = [];
 // Which invocations fail, keyed by the git subcommand the call leads with. `diff` is handled
@@ -64,6 +68,7 @@ vi.mock('node:child_process', () => ({
 }));
 
 const { commitRoot, commitLeftStagingInPlace } = await import('./commit.js');
+const { GIT_COMMAND_TIMEOUT_MS } = await import('./run.js');
 
 const subcommands = () => calls.map((call) => call.args.join(' '));
 
@@ -92,14 +97,22 @@ describe('commitRoot', () => {
       'pull --rebase',
       'push origin HEAD',
     ]);
-    for (const call of calls) expect(call).toMatchObject({ file: 'git', options: { cwd: '/repo' } });
+    for (const call of calls) {
+      expect(call).toMatchObject({
+        file: 'git',
+        options: {
+          cwd: '/repo', env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+          timeout: GIT_COMMAND_TIMEOUT_MS, killSignal: 'SIGTERM',
+        },
+      });
+    }
   });
 
   it('scopes the whole-tree form to the tree root rather than the whole repository', async () => {
     await commitRoot('/repo/src', 'commit: 3 files', []);
 
     expect(calls[1].args).toEqual(['add', '-A', '--', '.']);
-    expect(calls[1].options).toEqual({ cwd: '/repo/src' });
+    expect(calls[1].options).toMatchObject({ cwd: '/repo/src', timeout: GIT_COMMAND_TIMEOUT_MS });
   });
 
   it('passes each path as its own argument rather than interpolating a string', async () => {

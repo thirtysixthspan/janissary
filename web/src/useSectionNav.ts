@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { TabView } from '@shared/protocol';
 import { isReportingTab } from '@shared/tab/placement';
-import { isModalOpen } from './shared/modal-open';
+import type React from 'react';
 
 export type Section = 'left' | 'center' | 'right' | 'reporting';
 
@@ -57,7 +57,9 @@ function focusSection(section: Section, focusCenter: () => void): void {
 // of the dialog, and when the key lands on or inside an element marked `data-claims-shift-tab`, such
 // as the editor's text buffer, which binds the chord to outdent, or a pending question panel's
 // controls, which bind it to their own backward focus cycle.
-export function useSectionNav(tabs: TabView[], focusCenter: () => void): void {
+export function useSectionNav(
+  tabs: TabView[], focusCenter: () => void, keyboardCapturedRef: React.RefObject<boolean>,
+): void {
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
   const focusCenterRef = useRef(focusCenter);
@@ -66,7 +68,7 @@ export function useSectionNav(tabs: TabView[], focusCenter: () => void): void {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Tab' || !e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
-      if (e.defaultPrevented || isModalOpen() || claimsShiftTab(e.target)) return;
+      if (e.defaultPrevented || keyboardCapturedRef.current || claimsShiftTab(e.target)) return;
       const present = getPresentSections(tabsRef.current);
       const current = resolveCurrentSection(document.activeElement);
       const next = nextSection(current, present);
@@ -76,5 +78,5 @@ export function useSectionNav(tabs: TabView[], focusCenter: () => void): void {
     };
     globalThis.addEventListener('keydown', onKeyDown, { capture: true });
     return () => globalThis.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, []);
+  }, [keyboardCapturedRef]);
 }

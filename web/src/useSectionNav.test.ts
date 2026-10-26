@@ -1,9 +1,11 @@
 import { renderHook } from '@testing-library/react';
 import { useRef } from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import { useDialogKeyboard } from './shared/useDialogKeyboard';
 import { getPresentSections, resolveCurrentSection, nextSection, useSectionNav } from './useSectionNav';
+import { keyboardCaptured, type OverlayOpenState } from './pickers/overlay-registry';
+import { openContributedOverlay, registerContributedOverlay } from './shared/contributed-overlays';
 
 function makeTab(overrides: Partial<TabView> = {}): TabView {
   return {
@@ -13,6 +15,22 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
     ...overrides,
   };
 }
+
+function renderSectionNav(tabs: TabView[], focusCenter: () => void, captured = false) {
+  return renderHook(() => {
+    const keyboardCapturedRef = useRef({
+      get current(): boolean { return captured || keyboardCaptured(NO_OVERLAYS); },
+    }).current;
+    return useSectionNav(tabs, focusCenter, keyboardCapturedRef);
+  });
+}
+
+const NO_OVERLAYS: OverlayOpenState = {
+  syntaxTheme: false, appTheme: false, quickOpen: false, tabNav: false,
+  history: false, queue: false, task: false, profile: false,
+};
+const registrations: (() => void)[] = [];
+afterEach(() => { while (registrations.length > 0) registrations.pop()?.(); });
 
 describe('getPresentSections', () => {
   it('yields every section, in order, for a full layout', () => {
@@ -74,7 +92,7 @@ describe('useSectionNav', () => {
     document.body.innerHTML = '<div class="app-center"></div><div class="reporting-section"><div class="reporting-body" tabindex="0" id="reporting-target"></div></div>';
     const tabs = [makeTab({ view: 'monitor' })];
     const focusCenter = vi.fn();
-    renderHook(() => useSectionNav(tabs, focusCenter));
+    renderSectionNav(tabs, focusCenter);
 
     const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
     document.dispatchEvent(event);
@@ -86,7 +104,7 @@ describe('useSectionNav', () => {
   it('ignores bare Tab', () => {
     document.body.innerHTML = '<div class="app-center"></div>';
     const focusCenter = vi.fn();
-    renderHook(() => useSectionNav([makeTab()], focusCenter));
+    renderSectionNav([makeTab()], focusCenter);
 
     const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
     document.dispatchEvent(event);
@@ -98,7 +116,7 @@ describe('useSectionNav', () => {
   it('ignores Ctrl+Tab and Shift+Ctrl+Tab', () => {
     document.body.innerHTML = '<div class="app-center"></div>';
     const focusCenter = vi.fn();
-    renderHook(() => useSectionNav([makeTab()], focusCenter));
+    renderSectionNav([makeTab()], focusCenter);
 
     const ctrlEvent = new KeyboardEvent('keydown', { key: 'Tab', ctrlKey: true, bubbles: true, cancelable: true });
     document.dispatchEvent(ctrlEvent);
@@ -112,7 +130,7 @@ describe('useSectionNav', () => {
     document.body.innerHTML = '<div class="app-center"></div><div class="sidebar-left"><div class="files-tab" tabindex="0" id="files-target"></div></div>';
     const tabs = [makeTab({ dock: 'left', view: 'files' })];
     const focusCenter = vi.fn();
-    renderHook(() => useSectionNav(tabs, focusCenter));
+    renderSectionNav(tabs, focusCenter);
 
     const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
     document.dispatchEvent(event);
@@ -125,7 +143,7 @@ describe('useSectionNav', () => {
     document.body.innerHTML = '<div class="app-center"></div><div class="sidebar-left"><div class="files-tab" tabindex="0" id="files-target"></div></div>';
     const tabs = [makeTab({ dock: 'left', view: 'files' })];
     const focusCenter = vi.fn();
-    renderHook(() => useSectionNav(tabs, focusCenter));
+    renderSectionNav(tabs, focusCenter);
     renderHook(() => { useDialogKeyboard(useRef<HTMLDivElement>(null), { escape: vi.fn() }); });
 
     const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
@@ -135,10 +153,27 @@ describe('useSectionNav', () => {
     expect(focusCenter).not.toHaveBeenCalled();
   });
 
+  it('does nothing while a contributed overlay is open', () => {
+    document.body.innerHTML = '<div class="app-center"></div><div class="sidebar-left"><div class="files-tab" tabindex="0" id="files-target"></div></div>';
+    registrations.push(registerContributedOverlay({
+      name: 'clipboard-history', claimsCommandBar: true, render: () => null, onKey: () => {}, onOpen: () => {},
+    }));
+    openContributedOverlay('clipboard-history', null);
+    const focusCenter = vi.fn();
+    renderSectionNav([makeTab({ dock: 'left', view: 'files' })], focusCenter, keyboardCaptured(NO_OVERLAYS));
+
+    const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
+    document.dispatchEvent(event);
+
+    expect(document.activeElement).not.toBe(document.querySelector('#files-target'));
+    expect(focusCenter).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
   it('leaves Shift+Tab to an element that claims the chord', () => {
     document.body.innerHTML = '<div class="app-center"><textarea data-claims-shift-tab id="buffer"></textarea></div>';
     const focusCenter = vi.fn();
-    renderHook(() => useSectionNav([makeTab()], focusCenter));
+    renderSectionNav([makeTab()], focusCenter);
 
     const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
     document.querySelector('#buffer')!.dispatchEvent(event);
@@ -150,7 +185,7 @@ describe('useSectionNav', () => {
   it('leaves Shift+Tab to an element inside one that claims the chord', () => {
     document.body.innerHTML = '<div class="app-center"><div data-claims-shift-tab><button id="inner"></button></div></div>';
     const focusCenter = vi.fn();
-    renderHook(() => useSectionNav([makeTab()], focusCenter));
+    renderSectionNav([makeTab()], focusCenter);
 
     const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
     document.querySelector('#inner')!.dispatchEvent(event);
@@ -162,7 +197,7 @@ describe('useSectionNav', () => {
   it('is a no-op when center is the only present section', () => {
     document.body.innerHTML = '<div class="app-center"></div>';
     const focusCenter = vi.fn();
-    renderHook(() => useSectionNav([makeTab()], focusCenter));
+    renderSectionNav([makeTab()], focusCenter);
 
     const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
     document.dispatchEvent(event);

@@ -768,7 +768,9 @@ as it was and reads `Could not pull: <git error>`, carrying the first line of gi
 git's error runs past one line — everything the git process wrote, hook output included — the whole
 of it is kept in a file the line links, which opens in an editor tab, so the feed never shows more
 than the one line. The outcome is reported whether the tree that started the pull is still open or
-still rooted where it was.
+still rooted where it was. Each Git process started by a pull or commit, including staging and
+rollback commands, has a ten-minute deadline and never waits for terminal input. A timeout follows
+the same failure and rollback path as any other Git error.
 
 The button also says what is happening on its own face, in the same vocabulary an editor tab's sync
 icon uses (see [[editor-tab]]): its icon spins while the pull runs, turns the success color when the

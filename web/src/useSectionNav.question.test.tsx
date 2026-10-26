@@ -19,7 +19,8 @@ function makeTab(): TabView {
 }
 
 function Harness({ question, focusCenter }: { question: PendingQuestionView; focusCenter: () => void }) {
-  useSectionNav([makeTab()], focusCenter);
+  const keyboardCapturedRef = React.useRef(false);
+  useSectionNav([makeTab()], focusCenter, keyboardCapturedRef);
   return (
     <div className="app-center">
       <textarea aria-label="Command line" />
