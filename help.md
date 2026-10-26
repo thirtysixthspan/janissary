@@ -7,7 +7,7 @@
 | `audio` | `audio <path>` queues audio into the single audio tab through the bundled audio plugin; accepts the same paths and wildcards as `open` |
 | `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |
 | `clear` | Clear the tab's output log; in a shell tab, bare `clear` is sent to zsh so it clears the terminal instead (use `/clear` to clear the output log) |
-| `clip` | Open the clipboard-history popup: everything copied in this session, newest at the bottom (Ctrl+Shift+V or Cmd+Shift+V); choosing an entry pastes it at the cursor rather than running it |
+| `clipboard` | Open the clipboard-history popup: everything copied in this session, newest at the bottom (Ctrl+Shift+V or Cmd+Shift+V); choosing an entry pastes it at the cursor rather than running it |
 | `close` | Close the current tab (exits if last); `close <tabname>` closes a tab by its label (`page`, `page-2`, `image`, …) or display alias. `/close` and `/exit` are equivalent |
 | `connection` | List or close open connections (sqlite/shell/acp/browser/ssh/terminal) |
 | `conversations` | Open the conversation list; `conversations left`/`right` docks it, and `conversations <title>` opens a saved conversation by title, ignoring case |
@@ -65,7 +65,7 @@ Both `shell` and `harness` launches accept `in group <name|id>` to join an exist
 | `Shift+←` / `Shift+→` / `Cmd+Shift+[` / `Cmd+Shift+]` | Switch to the previous / next tab |
 | `Ctrl+←` / `Ctrl+→` | Move the current tab left / right |
 | `Ctrl+R` | Open the command history picker (a shell tab opens its own history instead — see **Shell tab controls**) |
-| `Ctrl+Shift+V` / `Cmd+Shift+V` | Open the clipboard-history popup (`clip`); choosing an entry pastes it at the cursor in the command bar, an editor buffer, or a terminal prompt. `Ctrl+V` and `Cmd+V` are untouched |
+| `Ctrl+Shift+V` / `Cmd+Shift+V` | Open the clipboard-history popup (`clipboard`); choosing an entry pastes it at the cursor in the command bar, an editor buffer, or a terminal prompt. `Ctrl+V` and `Cmd+V` are untouched |
 | `Ctrl+G` | Open the fuzzy tab navigator (also closes it if already open) |
 | `Ctrl+A` | Open the task picker (executable `ai/tasks/*.md` files, project and Janissary); Return inserts it into the command line at the cursor without running. Reaches the terminal instead while a shell tab's terminal holds the keyboard |
 | `Cmd+P` | Open the Quick Open file finder (fuzzy-match a project file; Return opens it in an editor tab) |
