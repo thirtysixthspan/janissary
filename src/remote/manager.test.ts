@@ -61,7 +61,7 @@ describe('remoteCaptureCommand', () => {
   });
 });
 
-function managerHarness(ready = true, session?: string, nonInteractive = false) {
+function managerHarness(ready = true, session?: string, nonInteractive = false, handshake = encodeHandshake(session)) {
   let transport: { onData: (data: string) => void; onExit: () => void } | undefined;
   const kill = vi.fn();
   const write = vi.fn();
@@ -89,7 +89,7 @@ function managerHarness(ready = true, session?: string, nonInteractive = false) 
   const remote = new RemoteManager(managers);
   const handlers: RemoteLaunchHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn(), onNameRefused: vi.fn() };
   remote.create('creator', address('devbox'), '/local', handlers, undefined, { nonInteractive });
-  transport?.onData(`${encodeHandshake(session)}\n`);
+  transport?.onData(`${handshake}\n`);
   if (ready) transport?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
   return { remote, handlers, kill, write, reassignTransports, closeTab, dropSession, spawnTransport, transport: () => transport };
 }
@@ -97,6 +97,28 @@ function managerHarness(ready = true, session?: string, nonInteractive = false) 
 describe('RemoteManager shared channels', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.useRealTimers());
+
+  it('notifies when a remote launch rejects a mismatched protocol version', () => {
+    const version = 999;
+    const h = managerHarness(false, undefined, false,
+      `__JANUS_REMOTE__ ${JSON.stringify({ version })}`);
+
+    expect(notify).toHaveBeenCalledWith(
+      expect.anything(), 'launch-refused', 'creator',
+      expect.stringContaining(`Remote janissary speaks protocol version ${version}`),
+    );
+    expect(notify).toHaveBeenCalledTimes(1);
+    h.remote.dispose();
+  });
+
+  it('does not notify for an unrelated SSH connection failure', () => {
+    const h = managerHarness(false);
+    vi.clearAllMocks();
+    h.transport()?.onExit();
+
+    expect(notify).not.toHaveBeenCalled();
+    h.remote.dispose();
+  });
 
   // A channel provisions once, so the one `workspace-ready` it hears is the one that settles it.
   it('exposes the remote home reported by workspace-ready', () => {
