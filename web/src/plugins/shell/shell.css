@@ -47,6 +47,7 @@
   background: var(--bg);
   font-family: var(--mono);
   pointer-events: auto;
+  user-select: text;
 }
 
 .shell-tab-header { position: relative; flex: 0 0 auto; }

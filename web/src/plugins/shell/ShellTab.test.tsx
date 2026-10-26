@@ -1299,6 +1299,37 @@ describe('ShellTab', () => {
     expect(terminals.at(-1)?.selectionClearCalls).toBe(1);
   });
 
+  it('copies selected rendered reply text through the shared clipboard', () => {
+    const { capabilities } = renderTab();
+    const body = document.querySelector('.shell-body')!;
+    const reply = document.createElement('div');
+    const text = document.createTextNode('selected reply');
+    reply.className = 'shell-output-block';
+    reply.append(text);
+    body.append(reply);
+    vi.spyOn(globalThis, 'getSelection').mockReturnValue({
+      isCollapsed: false, rangeCount: 1, anchorNode: text, toString: () => 'selected reply',
+    } as unknown as Selection);
+
+    fireEvent.keyDown(body, { key: 'c', ctrlKey: true, shiftKey: true });
+
+    expect(capabilities.copyText).toHaveBeenCalledWith('selected reply');
+  });
+
+  it('leaves a selection outside a rendered reply to the terminal', () => {
+    const { capabilities } = renderTab();
+    const body = document.querySelector('.shell-body')!;
+    const text = document.createTextNode('ordinary terminal selection');
+    body.append(text);
+    vi.spyOn(globalThis, 'getSelection').mockReturnValue({
+      isCollapsed: false, rangeCount: 1, anchorNode: text, toString: () => 'ordinary terminal selection',
+    } as unknown as Selection);
+
+    fireEvent.keyDown(body, { key: 'c', ctrlKey: true, shiftKey: true });
+
+    expect(capabilities.copyText).not.toHaveBeenCalled();
+  });
+
   it('claims Ctrl+R while its tab is visible, and the host spends the claim on it', async () => {
     const { chords } = renderTab();
 
