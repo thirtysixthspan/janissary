@@ -9,7 +9,7 @@ Copies you make inside Janissary stay in clipboard history for this session. `Ct
 Three routes, all to the same window:
 
 - **`Ctrl+Shift+V`** or **`Cmd+Shift+V`** from anywhere.
-- **`clip`** typed in the command bar, like `hist` is to `Ctrl+R`.
+- **`clipboard`** typed in the command bar, like `hist` is to `Ctrl+R`.
 - **Paste from clipboard…** in the right-click menu.
 
 It opens above the command line with the newest copy at the bottom, nearest the input. With nothing copied it still opens, showing `(no clipboard history)`.
@@ -48,7 +48,7 @@ The list lives in the window and is not written anywhere, so reloading or restar
 
 ## If the popup fails
 
-If the overlay plugin fails while the popup is opening or already open, the popup closes and keyboard focus returns to where it was. The rest of Janissary keeps working. The Notifications feed reports `Overlay plugin "clipboard-history" disabled: <reason>.`; only the clipboard-history chord and `clip` command stop working.
+If the overlay plugin fails while the popup is opening or already open, the popup closes and keyboard focus returns to where it was. The rest of Janissary keeps working. The Notifications feed reports `Overlay plugin "clipboard-history" disabled: <reason>.`; only the clipboard-history chord and `clipboard` command stop working.
 
 ## Keeping more or fewer
 
