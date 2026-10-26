@@ -19,7 +19,7 @@ export class ConversationTabs {
   private readonly drafts = new Map<string, string>();
   private readonly forwarded = new Set<string>();
 
-  create(draftQuery: string | undefined, capabilities: TabPluginServerCapabilities): void {
+  create(draftQuery: string | undefined, capabilities: TabPluginServerCapabilities): string {
     const id = randomUUID();
     capabilities.topicAction({ topic: 'conversations', action: 'create', id });
     const payload = conversationPayload(dataFrom(capabilities), id);
@@ -31,6 +31,7 @@ export class ConversationTabs {
         payload: draftQuery === undefined ? payload : { ...payload, draftQuery },
       };
     });
+    return id;
   }
 
   open(id: string, capabilities: TabPluginServerCapabilities): void {

@@ -8,6 +8,8 @@ The bundled conversations view provides durable, ordinary conversations with an 
 
 `conversations <title>` opens the conversation whose title matches case-insensitively. The docking words take precedence over conversations titled `left` or `right`. A missing match reports `No conversation matching "<title>".`
 
+`conversation <title>` is the singular form. It opens a matching saved conversation case-insensitively; when no title matches, it creates a conversation and submits `<title>` as its first query. Bare `conversation` opens the conversation list. `conversations` and its `left`/`right` docking behavior are unchanged.
+
 ### Conversation list
 
 The list is ordered by most recent activity. Its metadata row has no title and places an icon-only **New conversation** action with the other right-aligned tab actions. The row is formatted like the metadata row of an agent, harness, or file-navigator tab: a full-width band of muted secondary text separated from the rows below it by a rule, whose action icons carry no button chrome of their own and brighten on hover. When there are no saved rows, `No conversations yet` appears below the metadata row.

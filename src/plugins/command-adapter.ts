@@ -42,17 +42,19 @@ export function createPluginCommands(
   const claims = new Set<string>();
   const commands: Command[] = [];
   for (const declaration of declarations) {
-    if (!declaration.command) continue;
-    const name = declaration.command.toLowerCase();
-    if (reserved.has(name)) {
-      rejectContribution(declaration.id, `reserved tab plugin command claim "${name}"`);
-      continue;
-    }
-    if (claims.has(name)) {
-      rejectContribution(declaration.id, `duplicate tab plugin command claim "${name}"`);
-      continue;
-    }
-    claims.add(name);
+    const names = [declaration.command, ...(declaration.commandAliases ?? [])]
+      .filter((name): name is string => name !== undefined);
+    for (const claimedName of names) {
+      const name = claimedName.toLowerCase();
+      if (reserved.has(name)) {
+        rejectContribution(declaration.id, `reserved tab plugin command claim "${name}"`);
+        continue;
+      }
+      if (claims.has(name)) {
+        rejectContribution(declaration.id, `duplicate tab plugin command claim "${name}"`);
+        continue;
+      }
+      claims.add(name);
     // The core commands whose name this claim shares. `resolveCommand` walks the registry with
     // core entries first, so each one keeps the longer forms of the name it owns.
     const shadowed = coreCommands.filter(
@@ -75,7 +77,8 @@ export function createPluginCommands(
           }),
         },
       ),
-    });
+      });
+    }
   }
   return commands;
 }

@@ -31,8 +31,9 @@ export function activate(): TabPluginActivation {
   const tabs = new ConversationTabs();
   return {
     isPayload: isConversationsPayload,
-    command: (argument, capabilities) => {
-      const dock = parseDockArgument(argument);
+    command: (argument, capabilities, name) => {
+      const isPluralCommand = name !== 'conversation';
+      const dock = isPluralCommand ? parseDockArgument(argument) : undefined;
       if (dock !== undefined) {
         capabilities.openOrFocusTab(LIST_KEY, () => ({
           title: 'conversations', payload: listPayload(dataFrom(capabilities)),
@@ -41,10 +42,22 @@ export function activate(): TabPluginActivation {
         return;
       }
       const title = argument.trim();
+      if (!title) {
+        capabilities.openOrFocusTab(LIST_KEY, () => ({
+          title: 'conversations', payload: listPayload(dataFrom(capabilities)),
+        }));
+        if (isPluralCommand) capabilities.dockTab(LIST_KEY, null);
+        return;
+      }
       const match = dataFrom(capabilities).summaries.find(
         (summary) => summary.title.toLowerCase() === title.toLowerCase(),
       );
-      if (!match) return capabilities.rejectRequest(`No conversation matching "${title}".`);
+      if (!match) {
+        if (isPluralCommand) return capabilities.rejectRequest(`No conversation matching "${title}".`);
+        const id = tabs.create(undefined, capabilities);
+        capabilities.topicAction({ topic: 'conversations', action: 'send', id, query: title });
+        return;
+      }
       tabs.open(match.id, capabilities);
     },
     defaultMenuAction: (selection, capabilities) => {
