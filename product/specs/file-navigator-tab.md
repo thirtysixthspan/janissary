@@ -551,6 +551,11 @@ If the renamed file is already open in an editor tab, that tab updates to the ne
 automatically — its unsaved content, dirty state, cursor, and undo history are preserved exactly as
 when the same file is renamed from the editor tab's own label (see `editor-tab.md`).
 
+When a local navigator moves or renames a directory, every open editor for a file inside it follows
+the new path, preserving the editor's unsaved content and state. Single moves, bulk moves, and cut-
+pastes do the same for their moved files. A move or cut-paste that names a file still being written
+by a live shell transcript is refused before any item in the operation moves.
+
 After a successful rename, the renamed row replaces its old path in the cursor, anchor, and
 selection while other selected rows remain selected. Keyboard focus returns to the tree.
 

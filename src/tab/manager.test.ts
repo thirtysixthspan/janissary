@@ -1028,4 +1028,21 @@ describe('TabManager retargetEditorTab', () => {
     expect(tab.editor?.path).toBe('/tree/notes.txt');
     expect(managers.editorWatch.watch).not.toHaveBeenCalled();
   });
+
+  it('retargets editors inside a moved directory without matching path-prefix siblings', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+    tm.openEditorTab({ name: 'notes.txt', path: '/tree/src/notes.txt', size: '2 B', url: '/open/1' });
+    tm.openEditorTab({ name: 'index.ts', path: '/tree/src-old/index.ts', size: '2 B', url: '/open/2' });
+    const nestedEditor = tm.tabs[tm.activeTab - 1]!;
+    const siblingEditor = tm.tabs[tm.activeTab]!;
+    (managers.editorWatch.watch as ReturnType<typeof vi.fn>).mockClear();
+
+    tm.retargetEditorTab('/tree/src', '/tree/lib');
+
+    expect(nestedEditor.editor?.path).toBe('/tree/lib/notes.txt');
+    expect(nestedEditor.editor?.name).toBe('notes.txt');
+    expect(siblingEditor.editor?.path).toBe('/tree/src-old/index.ts');
+    expect(managers.editorWatch.watch).toHaveBeenCalledTimes(1);
+    expect(managers.editorWatch.watch).toHaveBeenCalledWith(nestedEditor.label, '/tree/lib/notes.txt');
+  });
 });

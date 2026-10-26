@@ -96,7 +96,7 @@ describe('file navigator refusal contract', () => {
 
   it('reports an out-of-tree move the same way on a local and a remote tree', async () => {
     const { local, remoteResult } = await bothTrees((state) => moveOne(
-      state, '../outside.txt', '', () => {},
+      managers, state, '../outside.txt', '', () => {},
     ));
 
     expect(remoteResult).toEqual(local);

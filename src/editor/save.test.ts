@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { chmodSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync, renameSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync, renameSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { saveFile, LIVE_SHELL_TRANSCRIPT_SAVE_REASON } from './save.js';
@@ -76,6 +76,21 @@ describe('saveFile', () => {
     const { managers, file, url } = setup();
     saveFile(managers, url, 'updated content');
     expect(readFileSync(file, 'utf8')).toBe('updated content');
+  });
+
+  it('saves an editor after its file moves without recreating the old path', () => {
+    const { managers, dir, file } = setup();
+    const movedDirectory = path.join(dir, 'moved');
+    const movedFile = path.join(movedDirectory, 'notes.txt');
+    const tab = managers.tab.tabs.find((item) => item.editor)!;
+    mkdirSync(movedDirectory);
+    renameSync(file, movedFile);
+
+    managers.tab.retargetEditorTab(file, movedFile);
+    saveFile(managers, tab.editor!.url, 'saved after move');
+
+    expect(readFileSync(movedFile, 'utf8')).toBe('saved after move');
+    expect(existsSync(file)).toBe(false);
   });
 
   it('preserves the existing file permission bits', () => {
