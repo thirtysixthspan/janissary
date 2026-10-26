@@ -1,18 +1,20 @@
 import { useRef } from 'react';
-import { firstOpenOverlay, type OverlayOpenState } from './pickers/overlay-registry';
+import { keyboardCaptured, type OverlayOpenState } from './pickers/overlay-registry';
 
 // Live snapshot refs read by useCmdW's window keydown handler, so it never has to re-register.
-// `pickerOpenRef` asks the overlay registry the same question the render chain and the keyboard
-// priority chain ask, rather than ORing a hand-picked subset of the overlays.
+// `keyboardCapturedRef` is the common answer for window shortcuts, including core overlays,
+// contributed overlays, and dialogs.
 export function useCmdWRefs(
   activeTab: number,
   quitConfirmOpen: boolean,
   unsavedQuitOpen: boolean,
   overlays: OverlayOpenState,
 ) {
-  const anyOverlayOpen = firstOpenOverlay(overlays) !== undefined;
+  const overlaysRef = useRef(overlays); overlaysRef.current = overlays;
   const activeTabRef = useRef(activeTab); activeTabRef.current = activeTab;
   const quitConfirmOpenRef = useRef(quitConfirmOpen); quitConfirmOpenRef.current = quitConfirmOpen || unsavedQuitOpen;
-  const pickerOpenRef = useRef(anyOverlayOpen); pickerOpenRef.current = anyOverlayOpen;
-  return { activeTabRef, quitConfirmOpenRef, pickerOpenRef };
+  const keyboardCapturedRef = useRef({
+    get current(): boolean { return keyboardCaptured(overlaysRef.current); },
+  }).current;
+  return { activeTabRef, quitConfirmOpenRef, keyboardCapturedRef };
 }

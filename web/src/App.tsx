@@ -124,7 +124,7 @@ export function App({ client }: { client: JanusClient }) {
   const { unsavedQuitOpen, guardedOpenQuitConfirm, confirmUnsavedQuit, cancelUnsavedQuit } =
     useUnsavedQuitGuard(tabs, tabHandles, openQuitConfirm, runCommand);
   const guardRef = useRef<((index: number) => boolean) | null>(null);
-  const { activeTabRef, quitConfirmOpenRef, pickerOpenRef } = useCmdWRefs(
+  const { activeTabRef, quitConfirmOpenRef, keyboardCapturedRef } = useCmdWRefs(
     activeTab, quitConfirmOpen, unsavedQuitOpen, pickers.overlays,
   );
   const focusedPluginTabIndexRef = useRef<number | undefined>(undefined);
@@ -163,9 +163,9 @@ export function App({ client }: { client: JanusClient }) {
 
   useFocusOnTabSwitch(activeTab, currentRef, harnessHandles, inputReference, questionPanelRef);
 
-  useSectionNav(tabs, () => focusCenterVisibleTab(currentRef.current, harnessHandles, inputReference));
+  useSectionNav(tabs, () => focusCenterVisibleTab(currentRef.current, harnessHandles, inputReference), keyboardCapturedRef);
 
-  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, focusedPluginTabIndexRef);
+  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, keyboardCapturedRef, focusedPluginTabIndexRef);
 
   // Live snapshot + callbacks read by the window key handler, so it never has to re-register. Every
   // overlay-owned field arrives in one bag; the current plugin label scopes plugin chords.

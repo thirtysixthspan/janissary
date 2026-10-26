@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-type Call = { file: string; args: string[]; options: { cwd?: string } };
+type Call = { file: string; args: string[]; options: { cwd?: string; env?: NodeJS.ProcessEnv; timeout?: number; killSignal?: string } };
 
 let calls: Call[] = [];
 let fail = false;
@@ -18,6 +18,7 @@ vi.mock('node:child_process', () => ({
 }));
 
 const { pullRoot, pullSummary } = await import('./pull.js');
+const { GIT_COMMAND_TIMEOUT_MS } = await import('./run.js');
 
 beforeEach(() => {
   calls = [];
@@ -51,7 +52,14 @@ describe('pullRoot', () => {
   it('runs git pull at the given root and resolves with git\'s own summary', async () => {
     stdout = 'Already up to date.\n';
     await expect(pullRoot('/repo')).resolves.toBe('Already up to date.');
-    expect(calls).toEqual([{ file: 'git', args: ['pull'], options: { cwd: '/repo' } }]);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({
+      file: 'git', args: ['pull'],
+      options: {
+        cwd: '/repo', env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+        timeout: GIT_COMMAND_TIMEOUT_MS, killSignal: 'SIGTERM',
+      },
+    });
   });
 
   it('resolves with an empty summary when git printed nothing', async () => {

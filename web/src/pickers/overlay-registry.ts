@@ -10,7 +10,8 @@
 // compile-time guarantee that a ninth overlay cannot be added without being mapped here still holds
 // for a bundled plugin as well.
 
-import { contributedOverlayClaimsCommandBar } from '../shared/contributed-overlays';
+import { contributedOverlayClaimsCommandBar, contributedOverlayOnScreen } from '../shared/contributed-overlays';
+import { isModalOpen } from '../shared/modal-open';
 
 export type OverlayName =
   | 'syntaxTheme'
@@ -89,9 +90,12 @@ export function firstOpenOverlay(state: OverlayOpenState): OverlayName | undefin
   return OVERLAYS.find((overlay) => state[overlay.name])?.name;
 }
 
+export function keyboardCaptured(state: OverlayOpenState): boolean {
+  return isModalOpen() || firstOpenOverlay(state) !== undefined || contributedOverlayOnScreen() !== undefined;
+}
+
 // Whether an overlay currently owns the command bar's keys, so the bar stops handling its own.
 export function commandBarSuppressed(state: OverlayOpenState): boolean {
   if (OVERLAYS.some((overlay) => state[overlay.name] && overlay.claimsCommandBar)) return true;
   return contributedOverlayClaimsCommandBar();
 }
-

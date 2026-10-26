@@ -366,7 +366,8 @@ describe('ShellTab', () => {
   it('keeps Shift+Tab from the application\'s section cycling, which listens ahead of it', () => {
     const focusCenter = vi.fn();
     function SectionNav() {
-      useSectionNav([tab('shell1')], focusCenter);
+      const keyboardCapturedRef = React.useRef(false);
+      useSectionNav([tab('shell1')], focusCenter, keyboardCapturedRef);
       return null;
     }
     render(<SectionNav />);
