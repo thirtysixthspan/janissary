@@ -3,6 +3,12 @@ import { lstatSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { atomicWriteFile } from '../../atomic-write.js';
 
+const ensuredRoots = new Set<string>();
+
+export function resetSystemScheduleExclusionCache(): void {
+  ensuredRoots.clear();
+}
+
 function git(root: string, args: string[]): string {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 }
@@ -27,6 +33,8 @@ function tracked(root: string, target: string): boolean {
 }
 
 export function ensureSystemScheduleExcluded(projectRoot: string): void {
+  const root = path.resolve(projectRoot);
+  if (ensuredRoots.has(root)) return;
   const stateDirectory = path.join(projectRoot, '.janissary');
   try {
     const stateStat = lstatSync(stateDirectory);
@@ -38,6 +46,7 @@ export function ensureSystemScheduleExcluded(projectRoot: string): void {
   try {
     worktree = git(projectRoot, ['rev-parse', '--show-toplevel']);
   } catch {
+    ensuredRoots.add(root);
     return;
   }
   worktree = path.resolve(projectRoot, worktree);
@@ -47,7 +56,10 @@ export function ensureSystemScheduleExcluded(projectRoot: string): void {
     throw new Error('System schedule storage is tracked by Git and cannot be safely excluded');
   }
   const missing = [schedule, scripts].filter((target) => !ignored(worktree, target));
-  if (missing.length === 0) return;
+  if (missing.length === 0) {
+    ensuredRoots.add(root);
+    return;
+  }
   const excludePath = git(worktree, ['rev-parse', '--git-path', 'info/exclude']);
   const absoluteExclude = path.resolve(worktree, excludePath);
   let existing = '';
@@ -64,4 +76,5 @@ export function ensureSystemScheduleExcluded(projectRoot: string): void {
   for (const target of missing) {
     if (!ignored(worktree, target)) throw new Error(`Git did not exclude system schedule path: ${target}`);
   }
+  ensuredRoots.add(root);
 }

@@ -1,4 +1,5 @@
 import type { StateEvent } from '@shared/protocol';
+import { visibleTabs } from '../shared/tab/visible-tabs';
 
 export type AlertPlacement = {
   isVisible(label: string): boolean;
@@ -18,7 +19,7 @@ export function createAlertPlacement(
     isVisible(label) {
       if (isDocked(label)) return docked?.isSelected(label) ?? false;
       const state = getState();
-      return state?.tabs[state.activeTab]?.label === label;
+      return state !== undefined && visibleTabs(state).visibleLabels.includes(label);
     },
     reveal(label) {
       return isDocked(label) && (docked?.select(label) ?? false);

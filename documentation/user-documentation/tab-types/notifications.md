@@ -49,9 +49,10 @@ separate from the in-app toast: the toast stays silent even when a banner or sou
 The four ambient types default to no banner and no sound, but you can opt them in. They still need to pass their feed toggle and focus suppression. `scheduleFire` covers tab-owned schedules. System schedule notices default to a banner and warning sound.
 
 Each browser window handles its own banner and sound. It suppresses both only when Janissary's
-window has focus and the notification's tab is visible there. A background tab or an unselected
-docked tab can therefore alert while Janissary is in front. A visible notifications feed does not
-silence a banner. Clicking a banner focuses the window and selects the tab where it currently lives.
+window has focus and the notification's tab is visible there, including the selected tab in either
+center pane. A background tab or an unselected docked tab can therefore alert while Janissary is in
+front. A visible notifications feed does not silence a banner. Clicking a banner focuses the window
+and selects the tab where it currently lives.
 
 Janissary never asks for desktop-notification permission. A banner appears only if the browser has
 already granted permission for the Janissary site; denying or withholding permission does not affect
