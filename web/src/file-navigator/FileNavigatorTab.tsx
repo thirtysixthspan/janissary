@@ -26,7 +26,7 @@ export function FileNavigatorTab({
   files, client, index, label, dock, autoFocus = true, dropRef,
   onSplit, multiOpen,
 }: Properties) {
-  const intents = useFileNavigatorIntents(client, index);
+  const intents = useFileNavigatorIntents(client, index, label);
   const selection = useFileNavigatorSelection(files.rows, files.absoluteRoot, index, files.restore);
   const [pendingNewDir, setPendingNewDir] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);

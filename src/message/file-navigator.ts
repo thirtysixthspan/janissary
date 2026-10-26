@@ -71,11 +71,11 @@ export function dispatchFileNavigatorMessage(controller: Controller, message: Fi
     }
     case 'fileNavigatorCollapseAll': { controller.fileNavigatorCollapseAll(message.params.index); break;
     }
-    case 'fileNavigatorPull': { controller.fileNavigatorPull(message.params.index); break;
+    case 'fileNavigatorPull': { controller.fileNavigatorPull(message.params.label); break;
     }
-    case 'fileNavigatorCommit': { controller.fileNavigatorCommit(message.params.index, message.params.message, message.params.paths); break;
+    case 'fileNavigatorCommit': { controller.fileNavigatorCommit(message.params.label, message.params.message, message.params.paths); break;
     }
-    case 'fileNavigatorNothingToCommit': { controller.fileNavigatorNothingToCommit(message.params.index); break;
+    case 'fileNavigatorNothingToCommit': { controller.fileNavigatorNothingToCommit(message.params.label); break;
     }
     case 'fileNavigatorSetDetail': { controller.fileNavigatorSetDetail(message.params.index, message.params.details); break;
     }

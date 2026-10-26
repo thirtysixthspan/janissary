@@ -45,12 +45,12 @@ function makeTree() {
 }
 
 describe('createFileNavigatorControllerAdapter', () => {
-  it('forwards the pull, commit, and detail RPCs to the navigator behind the tab at the index', () => {
+  it('forwards the pull and commit RPCs by label and the detail RPC by index', () => {
     const { managers, fileNavigator } = makeManagers();
     const adapter = createFileNavigatorControllerAdapter(managers);
 
-    adapter.fileNavigatorPull(0);
-    adapter.fileNavigatorCommit(0, 'commit: a.md', ['a.md']);
+    adapter.fileNavigatorPull('agent');
+    adapter.fileNavigatorCommit('agent', 'commit: a.md', ['a.md']);
     adapter.fileNavigatorSetDetail(0, { open: false });
 
     expect(fileNavigator.pull).toHaveBeenCalledWith('agent');
@@ -60,12 +60,43 @@ describe('createFileNavigatorControllerAdapter', () => {
 
   it('reports a nothing-to-commit as the notifications line the commit would have posted', () => {
     const { managers, append } = makeManagers();
-    createFileNavigatorControllerAdapter(managers).fileNavigatorNothingToCommit(0);
+    createFileNavigatorControllerAdapter(managers).fileNavigatorNothingToCommit('agent');
     expect(append).toHaveBeenCalledWith(
       NOTIFICATIONS_LABEL,
       expect.objectContaining({ output: 'Nothing to commit' }),
       expect.any(Number),
     );
+  });
+
+  it('does not redirect a pull or commit when a tab ahead of the navigator closes', () => {
+    const { managers, fileNavigator } = makeManagers();
+    const closed = { label: 'closed' };
+    managers.tab.tabs.unshift(closed);
+    managers.tab.tabs.shift();
+    const adapter = createFileNavigatorControllerAdapter(managers);
+
+    adapter.fileNavigatorPull('agent');
+    adapter.fileNavigatorCommit('agent', 'commit: a.md', ['a.md']);
+    adapter.fileNavigatorNothingToCommit('agent');
+
+    expect(fileNavigator.pull).toHaveBeenCalledWith('agent');
+    expect(fileNavigator.commit).toHaveBeenCalledWith('agent', 'commit: a.md', ['a.md']);
+  });
+
+  it('commits only the label-addressed navigator after an earlier tab closes', () => {
+    const tabs = [{ label: 'closing' }, { label: 'files' }, { label: 'files-2' }];
+    const commit = vi.fn();
+    const managers = {
+      tab: { tabs },
+      fileNavigator: { commit },
+    } as unknown as Managers;
+    const adapter = createFileNavigatorControllerAdapter(managers);
+    tabs.shift();
+
+    adapter.fileNavigatorCommit('files-2', 'sync: notes', ['notes.md']);
+
+    expect(commit).toHaveBeenCalledOnce();
+    expect(commit).toHaveBeenCalledWith('files-2', 'sync: notes', ['notes.md']);
   });
 
   it('forwards the multi-path, paste, delete-many, rename, and redo calls in argument order', () => {

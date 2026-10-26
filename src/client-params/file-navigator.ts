@@ -23,9 +23,9 @@ function isSelectionRecord(value: unknown): boolean {
 export const FILE_NAVIGATOR_PARAMS: Record<FileNavigatorRpcCall['method'], ParamsDecoder> = {
   fileNavigatorToggle: (p) => isInteger(p.index) && isString(p.path),
   fileNavigatorCollapseAll: (p) => isInteger(p.index),
-  fileNavigatorPull: (p) => isInteger(p.index),
-  fileNavigatorCommit: (p) => isInteger(p.index) && isString(p.message) && isStringArray(p.paths),
-  fileNavigatorNothingToCommit: (p) => isInteger(p.index),
+  fileNavigatorPull: (p) => isString(p.label),
+  fileNavigatorCommit: (p) => isString(p.label) && isString(p.message) && isStringArray(p.paths),
+  fileNavigatorNothingToCommit: (p) => isString(p.label),
   fileNavigatorSetDetail: (p) => isInteger(p.index) && isOneOf(p.details, DETAILS),
   fileNavigatorReroot: (p) => isInteger(p.index) && optionalString(p.path),
   moveFileNavigatorItem: (p) => isString(p.label) && isString(p.fromRelPath) && isString(p.toRelPath)

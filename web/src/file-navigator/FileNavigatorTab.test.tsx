@@ -109,7 +109,7 @@ describe('FileNavigatorTab', () => {
     const pull = container.querySelector('.files-pull');
     expect(pull).not.toBeNull();
     fireEvent.click(pull!);
-    expect(client.send).toHaveBeenCalledWith({ method: 'fileNavigatorPull', params: { index: 0 } });
+    expect(client.send).toHaveBeenCalledWith({ method: 'fileNavigatorPull', params: { label: 'files' } });
   });
 
   it('signals the pull status the tree payload carries on its pull button', () => {
@@ -148,7 +148,9 @@ describe('FileNavigatorTab', () => {
 
     fireEvent.click(container.querySelector('.files-commit')!);
 
-    expect(client.send).toHaveBeenCalledWith({ method: 'fileNavigatorNothingToCommit', params: { index: 0 } });
+    expect(client.send).toHaveBeenCalledWith({
+      method: 'fileNavigatorNothingToCommit', params: { label: 'files' },
+    });
     expect(client.send).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'fileNavigatorCommit' }));
     expect(screen.queryByLabelText('Commit message')).not.toBeInTheDocument();
   });
@@ -168,7 +170,7 @@ describe('FileNavigatorTab', () => {
     fireEvent.keyDown(input, { key: 'Enter' });
 
     expect(client.send).toHaveBeenCalledWith({
-      method: 'fileNavigatorCommit', params: { index: 0, message: 'sync: 1 file', paths: [] },
+      method: 'fileNavigatorCommit', params: { label: 'files', message: 'sync: 1 file', paths: [] },
     });
   });
 
