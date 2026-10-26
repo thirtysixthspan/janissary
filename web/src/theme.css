@@ -590,6 +590,7 @@ button.tab-recording { cursor: pointer; }
 .picker-row:hover { background: var(--border); }
 .picker-row.selected:hover { background: var(--accent); color: var(--bg); }
 .picker-chevron { flex: none; width: 1em; color: var(--muted); font-size: 10px; }
+.task-picker-directory-row .picker-chevron { margin-right: 4px; }
 
 /* Right-click context menu — the picker's visual language, but placed at the pointer instead of
    pinned across the bottom of the pane. Its left/top come from the component's own placement. */
