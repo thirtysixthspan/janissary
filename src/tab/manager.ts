@@ -20,6 +20,7 @@ import * as viewOperations from './view-operations.js';
 import { retargetEditorTab as retargetEditorTabOp } from './retarget-editor.js';
 import { inheritGroupNames } from './groups.js';
 import { userCloseTab } from './user-close.js';
+import { arrangeTab, type TabArrangement } from './arrange.js';
 
 export class TabManager extends TabTranscriptState {
   tabs: Tab[] = [];
@@ -165,6 +166,8 @@ export class TabManager extends TabTranscriptState {
   moveTab(dir: -1 | 1): void { tabOperations.moveTab(this, dir); }
 
   setDock(index: number, dock: 'left' | 'right' | null): void { tabOperations.setDock(this, index, dock); }
+
+  arrangeTab(label: string, change: TabArrangement): boolean { return arrangeTab(this, label, change); }
 
   moveTabToOtherPane(index: number): void { tabOperations.moveTabToOtherPane(this, index); }
 

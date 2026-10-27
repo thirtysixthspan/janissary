@@ -5,7 +5,7 @@ import {
   type MonitorCompletions,
 } from './handlers.js';
 import {
-  completeSendTarget, completeScheduleTarget, completeConnectionClose,
+  completeSendTarget, completeScheduleTarget, completeConnectionClose, completeTabCommand,
 } from './target-handlers.js';
 import { completeBrowserCommand } from './browser.js';
 import { completeFilePath } from './fs.js';
@@ -47,6 +47,7 @@ export function completeCommandLine(
   const cursor = readCompletionCursor(input, cursorOffset);
   const result = completeFilesCommand(cursor, files, cwd) ??
     completeSendTarget(cursor, labels) ??
+    completeTabCommand(cursor, labels) ??
     completeRunscriptCommand(cursor, cwd, systemSchedule?.scripts ?? []) ??
     completeSystemSchedule(cursor, systemSchedule) ??
     completeScheduleTarget(cursor, labels) ??

@@ -545,6 +545,15 @@ describe('notify — surface routing', () => {
     } finally { fixture.dispose(); }
   });
 
+  it('records a tab refusal for its active tab with the warning alert defaults', () => {
+    const fixture = setup();
+    try {
+      notify(fixture.managers, 'tab', 'janus', 'Cannot dock "janus".');
+      expect(fixture.managers.notifications.all.map((entry) => entry.message)).toEqual(['Cannot dock "janus".']);
+      expect(NOTIFICATION_ALERT_DEFAULTS.tab).toEqual({ desktop: true, sound: 'warning' });
+    } finally { fixture.dispose(); }
+  });
+
   // An event the config and focus rules reject costs nothing: no queue entry, no toast, no feed.
   it('touches nothing for an ambient event whose toggle is off', () => {
     const fixture = setup();

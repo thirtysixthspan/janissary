@@ -34,9 +34,37 @@ Empties the current tab's transcript log. Other tabs are unaffected.
 
 Sets the current tab's display alias — see `tabs.md` for how the alias behaves. `rename <newname>` sets it; bare `rename` clears it. The normalized exact name `system` is reserved, case-insensitively, and returns `Cannot use "system": that name is reserved for the system tab.` without changing the alias or an editor file. A managed system tab can clear its alias back to its canonical label.
 
-### `tab focus`
+### `tab`
 
-`tab focus <name>` explicitly focuses the first tab whose label or display alias matches `<name>`, ignoring case. Everything after `focus` is treated as the name, so names may contain spaces. Success prints nothing. A missing name returns `No tab named "<name>".` Bare `tab`, bare `tab focus`, and any unsupported subcommand return `Usage: tab focus <name>.` Explicit focus reveals a hidden system tab and undocks it if necessary. The command claims the entire `tab` token, including malformed forms.
+The `tab` command claims the entire `tab` token, including malformed forms. Each form that names a target resolves the first tab in the full tab array whose label or display alias matches, ignoring case; hidden tabs are included. A target with spaces must be quoted with single or double quotes. A quote may open in the middle of a token, and a backslash escapes the matching quote inside a quoted value. An empty quoted target is malformed. A missing target prints `No tab named "<name>".` to the command transcript.
+
+`tab focus <name>` focuses the target and reveals a hidden system tab, including undocking it if needed. `tab move <tab> <position>` moves the target to a 1-based position among its strip mates: center tabs in its group and pane, docked tabs on the same sidebar regardless of group, or reporting tabs among other reporting tabs. A position past the end moves it last. A hidden system tab stays hidden while it is moved. `tab pane <tab> left|right` moves the target to the named pane, opening or collapsing a split as required. `tab split <tab>` moves it to the other pane. Pane and split selection preserves the active tab unless the target itself was active; a moved tab becomes visible in the new pane unless that pane contains the active tab, and the other pane restores its prior visible tab or its most recently focused remaining tab. A split that loses its last tab collapses, and a tab shown as the secondary selection has its unread badge cleared.
+
+`tab color <tab> <#rrggbb>` sets the dot to the six-digit color exactly as typed and leaves the group's fixed band color unchanged. `tab group <tab> <id|name>` moves the target into an existing group or creates the selected unknown name or positive ID. A new group name receives the next available ID; an unknown numeric ID is named `group-<id>`. The tab is inserted after the last member of its new group, keeps its pane and dock placement, and retains its dot color. A group left empty disappears. A monitor reporting tab cannot be grouped, but it can be moved among reporting tabs and recolored.
+
+`tab dock <tab> left|right` docks a file-navigator tab, notifications tab, or bundled-plugin tab. Docking into an occupied side displaces only an existing tab of the same kind. A kind that cannot dock, or docking the only visible center tab, is refused. Docking the active tab moves focus to the nearest center tab to maintain the active-tab invariant. `tab undock <tab>` returns a visible docked tab to the currently focused pane without making it active. When there is no center tab to select, repairing the selection activates the undocked tab. Hidden tabs cannot be moved to a pane, split, or undocked; they can be moved, recolored, regrouped, or docked without being revealed. Arranging a tab otherwise does not change focus.
+
+Successful arrangements and already-completed requests print nothing. An already-completed request emits no state update. Refusals write nothing to the transcript and send one explicit `tab` notification attributed to the tab where the command ran:
+
+- `Cannot dock "<name>".` when the target kind cannot dock or it is the last visible center tab.
+- `Cannot group "<name>".` for a monitor reporting tab.
+- `Cannot move "<name>" to a pane.` for a tab ineligible for splitting or when an unsplit strip has fewer than two eligible tabs.
+- `Cannot undock "<name>".` for a hidden tab.
+
+A malformed known subcommand prints its own usage line:
+
+```
+Usage: tab focus <name>.
+Usage: tab move <tab> <position>.
+Usage: tab pane <tab> left|right.
+Usage: tab split <tab>.
+Usage: tab color <tab> <#rrggbb>.
+Usage: tab group <tab> <id|name>.
+Usage: tab dock <tab> left|right.
+Usage: tab undock <tab>.
+```
+
+Bare `tab` and an unknown subcommand print `Usage: tab focus|move|pane|split|color|group|dock|undock <tab> [argument].` A missing or extra word, unterminated quote, empty quoted name, invalid side, non-positive or unsafe move position, color other than `#` plus six hexadecimal digits, or invalid group selector is malformed. A `tab focus` name with spaces must be quoted; `tab focus review notes` therefore prints `Usage: tab focus <name>.` See [[tabs]], [[sidebars]], and [[notifications]].
 
 ### `layout`
 

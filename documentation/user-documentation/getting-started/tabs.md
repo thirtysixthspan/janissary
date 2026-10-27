@@ -4,13 +4,14 @@ Shell tabs keep their own terminal, command history, working directory, and unfi
 
 A session starts with a visible zsh [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab) named `janus` and one hidden `system` shell. The hidden shell starts in the project directory without a workspace. Run `tab focus system` to reveal it; closing it hides it without stopping its process. If its zsh exits, Janissary hides the tab and starts a fresh shell there. Focus `system` again to return to it. New tabs are otherwise created on demand — shell tabs with the `shell` command (below), harness tabs with `harness`, and view tabs by opening files, pages, or harnesses (see [Tab Types](/user-documentation/tab-types/opening-files)).
 
-A left and right sidebar flank the tab area, hidden until something is docked into them. The [file navigator](/user-documentation/tab-types/file-navigator), [notifications](/user-documentation/tab-types/notifications) feed, [schedules](/user-documentation/automation/scheduling) tab, [conversation list](/user-documentation/tab-types/conversations), and [sessions](/user-documentation/tab-types/sessions) list each have a `left`/`right` form (`files left`, `notifications right`, `schedules left`, `conversations right`, `sessions left`) that opens or moves them straight into a sidebar. Bare `conversations` and bare `sessions` return their list to the center. Drag the up/down-arrow button at the right of a sidebar's tab gutter to resize it. A sidebar holds at most one docked tab of each kind; docking a second tab of the *same* kind into an occupied side sends the first back to the center strip, but different kinds share the sidebar side by side. For a tab contributed by a bundled plugin, the kind is the plugin rather than the tab, so two image tabs displace each other while an image tab and a PDF tab sit side by side.
+A left and right sidebar flank the tab area, hidden until something is docked into them. The [file navigator](/user-documentation/tab-types/file-navigator), [notifications](/user-documentation/tab-types/notifications) feed, [schedules](/user-documentation/automation/scheduling) tab, [conversation list](/user-documentation/tab-types/conversations), and [sessions](/user-documentation/tab-types/sessions) list each have a `left`/`right` form (`files left`, `notifications right`, `schedules left`, `conversations right`, `sessions left`) that opens or moves them straight into a sidebar. Bare `conversations` and bare `sessions` return their list to the center. Use `tab dock <tab> left|right` to dock a named file navigator, notifications tab, or bundled-plugin tab, and `tab undock <tab>` to return it to the center. Drag the up/down-arrow button at the right of a sidebar's tab gutter to resize it. A sidebar holds at most one docked tab of each kind; docking a second tab of the *same* kind into an occupied side sends the first back to the center strip, but different kinds share the sidebar side by side. For a tab contributed by a bundled plugin, the kind is the plugin rather than the tab, so two image tabs displace each other while an image tab and a PDF tab sit side by side.
 
 When a sidebar holds more than one docked tab, it shows its own small tab strip above the visible one — one entry per docked tab, each with its own **×** close button. There is no separate switcher above that strip. Clicking an entry switches which docked tab is visible; double-clicking its label opens the same inline rename control as any tab in the center strip. Docking a tab into an already-occupied side brings it into view straight away. The visible entry's label gets the same longer limit as a focused tab in the center strip and the others the shorter one, so the `activeTabNameMaxLength` and `tabNameMaxLength` settings cover both — see [Configuration](/user-documentation/getting-started/startup#configuration). Which entry is visible is only ever remembered on your screen — it resets the next time you launch or relaunch the app.
 
-A docked tab is never the active tab. Docking the active tab moves focus to the nearest central tab,
-and undocking it makes it active again. Tab-cycling commands skip docked tabs. A docked tab leaves
-the central strip completely and returns to its reordered position in its group when you undock it.
+A docked tab is never the active tab. Docking the active tab moves focus to the nearest central tab.
+Mouse-undocking makes the tab active again; `tab undock <tab>` returns it to the center without
+changing focus. Tab-cycling commands skip docked tabs. A docked tab leaves the central strip
+completely and returns to its reordered position in its group when you undock it.
 Dragging a sidebar tab label reorders docked tabs within that sidebar without docking, undocking,
 or moving the tab to another strip.
 The sidebar entry's **×** is its only direct close button. Typing `close` cannot target a docked tab,
@@ -58,6 +59,8 @@ beside the first one. The first Split sends the tab you clicked into the **right
 focused eligible tab on the left. Each pane gets its own tab strip and keeps one tab visible; click anywhere in
 a pane to make it the focused one. The focused pane keeps its tab-colored left border; the other pane's border turns muted gray. New tabs opened from an action tab join that tab's pane.
 
+You can also type `tab split <tab>` to move a named tab to the other pane, or `tab pane <tab> left|right` to place it in a specific pane. The command keeps your current focus and shows the moved tab in its new pane unless that pane already contains the focused tab.
+
 The button is only there when it would do something: with a single eligible tab there is nothing to split it from, so it renders inert, and the notifications tab has no Split at all. A reporting tab cannot be moved into a pane either.
 
 When both panes show shell tabs, both keep their command lines and metadata buttons. Harness tabs keep their terminal and metadata actions. The command line in the unfocused pane stays visible without stealing keyboard focus. Click it to focus that pane, then type normally. Pickers and dialogs stay with the focused pane.
@@ -91,14 +94,16 @@ Text in metadata rows and headers can be selected with the mouse and copied, inc
 
 `Shift+←` / `Shift+→` cycle through visible center action tabs; the `next` command switches to the next one. `Ctrl+←` / `Ctrl+→` move the current tab one position left or right within its own group (see [Tab groups](/user-documentation/getting-started/groups)). Clicking a tab's label focuses it as soon as you press the mouse down, and a tab that has lost its command line, such as a harness or shell tab, takes the keyboard that way instead. Releasing the click in a shell tab's body rather than on the command line puts the cursor back in that tab's command bar. You can also drag a tab label to reorder it in the same strip, or drop it on the other center strip when you're working in two panes. A drag needs a few pixels of travel before it starts, and once it has, the neighbouring tabs shift out of the way to preview where the tab will land. `Escape` mid-drag puts everything back exactly as it was. If the strip changes under a drag in progress, because an agent opens a tab or a schedule fires, the drag is dropped rather than half-applied, so the order never ends up somewhere you did not choose. With several tabs open, the [tab navigator](/user-documentation/command-bar/tab-navigator) (`Ctrl+G`) jumps straight to any visible center action tab by typing part of its label or number.
 
-To focus a tab directly by its label or display alias, use `tab focus <name>`. Matching ignores case, and the full text after `focus` is the name, including spaces:
+To focus a tab directly by its label or display alias, use `tab focus <name>`. Matching ignores case. Quote a name that contains spaces:
 
 ```
 tab focus bilal
-tab focus review notes
+tab focus "review notes"
 ```
 
 If a managed system tab is hidden, `tab focus system` or its display alias reveals it. Closing a managed system tab hides it instead of tearing it down; it stays addressable by `tab focus` and does not trigger a quit or unsaved-changes prompt. If the system shell process exits on its own, Janissary hides the same tab and replaces the shell in place; the tab's queued lines stay with it. A system tab is only present when a managed feature creates one.
+
+Use `tab move <tab> <position>` to reorder a named tab within its group and pane. Positions start at 1; a number past the end moves it to the last place. This command doesn't take focus away from the tab you're using.
 
 A tab's label in the strip is not something you can select and copy. The metadata row and panel headers are; the strip deliberately is not, so dragging a label never picks up stray text.
 

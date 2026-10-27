@@ -3,7 +3,7 @@ import {
   completeHelpCommand, completeMonitorCommand, completeSearchCommand, completeSyntaxTheme, completeHarnessModel,
 } from './handlers.js';
 import {
-  completeSendTarget, completeScheduleTarget, completeConnectionClose,
+  completeSendTarget, completeScheduleTarget, completeConnectionClose, completeTabCommand,
 } from './target-handlers.js';
 import { readCompletionCursor } from './cursor.js';
 import { modelsFor } from '../harness/models.js';
@@ -38,6 +38,32 @@ describe('completeSendTarget', () => {
   it('completes a tab label for the exit command at argument 1', () => {
     const r = completeSendTarget(at('exit jan'), ['janus', 'claude']);
     expect(r?.newInput).toBe('exit janus ');
+  });
+});
+
+describe('completeTabCommand', () => {
+  const labels = ['janus', 'review notes'];
+
+  it('completes subcommands and tab labels, quoting a label with whitespace', () => {
+    expect(completeTabCommand(at('tab '), labels)?.matches)
+      .toEqual(['color', 'dock', 'focus', 'group', 'move', 'pane', 'split', 'undock']);
+    expect(completeTabCommand(at('tab mo'), labels)?.newInput).toBe('tab move ');
+    expect(completeTabCommand(at('tab move '), labels)?.matches).toEqual(['janus', '"review notes"']);
+    expect(completeTabCommand(at('tab move rev'), labels)?.newInput).toBe('tab move "review notes" ');
+    expect(completeTabCommand(at('tab move "rev'), labels)?.newInput).toBe('tab move "review notes" ');
+  });
+
+  it('completes pane and dock sides after bare or quoted target names', () => {
+    expect(completeTabCommand(at('tab dock janus '), labels)?.matches).toEqual(['left', 'right']);
+    expect(completeTabCommand(at('tab pane "review notes" '), labels)?.matches).toEqual(['left', 'right']);
+  });
+
+  it('leaves a cursor inside an open quoted name unchanged and declines other commands', () => {
+    const cursor = at('tab move "review notes');
+    expect(completeTabCommand(cursor, labels)).toEqual({
+      newInput: cursor.before + cursor.after, newCursor: cursor.before.length, matches: [],
+    });
+    expect(completeTabCommand(at('send jan'), labels)).toBeNull();
   });
 });
 

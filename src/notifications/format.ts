@@ -58,7 +58,8 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'auto-resume':
     case 'editor-suggest':
     case 'file-operation':
-    case 'open-unsupported': { return detail ?? ''; }
+    case 'open-unsupported':
+    case 'tab': { return detail ?? ''; }
     case 'plugin-failure':
     case 'plugin-note':
     case 'launch-refused':
