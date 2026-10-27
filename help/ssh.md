@@ -6,7 +6,7 @@ Janissary passes the full invocation to `ssh` as written; SSH handles its own fl
 
 **Usage**
 
-`ssh <destination> [ssh options…]`
+`ssh [ssh options…] <destination> [remote command…]`
 
 **Use cases**
 

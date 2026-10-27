@@ -6,7 +6,7 @@ over the tab, exactly like a harness tab (see Harness Tab).
 ## Command
 
 ```
-ssh <destination> [ssh options…]
+ssh [ssh options…] <destination> [remote command…]
 ```
 
 - `ssh` with no destination — error: `Usage: ssh <destination> [ssh options].`
