@@ -6,6 +6,13 @@ import { NotificationQueue } from '../notifications/queue.js';
 import { fakeNotificationsHost } from '../notifications/tab-test-fixture.js';
 import type { Managers } from '../managers.js';
 
+function shellPayload(ptyId: string) {
+  return {
+    instanceKey: 'shell-test', ptyId, cwd: '/repo', root: '/repo', workspace: false,
+    cols: 80, rows: 24, connections: [], schedule: [], hookNonce: 'f'.repeat(32),
+  };
+}
+
 function makeManagers(labels: string[] = ['agent']) {
   // The feed is recognized by its `view`, not its label, so a stand-in has to carry it too.
   const tabs = labels.map((label) => ({
@@ -87,7 +94,7 @@ describe('tab adapter focus', () => {
 
   it('accepts an exited shell generation and closes an ordinary shell directly', () => {
     const { managers, tabs } = makeManagers(['shell']);
-    Object.assign(tabs[0], { view: 'plugin', plugin: { id: 'shell', payload: { ptyId: 'dead-pty' } } });
+    Object.assign(tabs[0], { view: 'plugin', plugin: { id: 'shell', payload: shellPayload('dead-pty') } });
     Object.assign(managers, {
       plugins: { isPayload: () => true },
       pty: { isRunningFor: () => false },
@@ -108,7 +115,7 @@ describe('tab adapter focus', () => {
   ])('ignores stale, live, and closing shell exit reports', ({ reason, live, closing }) => {
     const { managers, tabs } = makeManagers(['shell']);
     Object.assign(tabs[0], {
-      view: 'plugin', plugin: { id: 'shell', payload: { ptyId: 'current-pty' } },
+      view: 'plugin', plugin: { id: 'shell', payload: shellPayload('current-pty') },
       runtime: { closing },
     });
     Object.assign(managers, {

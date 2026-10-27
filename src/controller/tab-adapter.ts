@@ -1,6 +1,7 @@
 import type { Managers } from '../managers.js';
 import type { TerminalColors } from '../harness/terminal-colors.js';
 import { escalateToFeed } from '../notifications/deliver.js';
+import { shellTabPtyId } from '../shell/shell-tab-terminal.js';
 
 export type TabControllerAdapter = {
   setActiveTab(index: number): void;
@@ -39,11 +40,8 @@ export function createTabControllerAdapter(managers: Managers): TabControllerAda
         managers.tab.userCloseTab(index);
         return;
       }
-      if (tab.runtime?.closing || tab.view !== 'plugin' || tab.plugin?.id !== 'shell') return;
-      if (!managers.plugins.isPayload('shell', tab.plugin.payload)) return;
-      const payload = tab.plugin.payload;
-      if (typeof payload !== 'object' || payload === null || !('ptyId' in payload)) return;
-      if (payload.ptyId !== terminalExited || managers.pty.isRunningFor(terminalExited, [label])) return;
+      if (tab.runtime?.closing || tab.view !== 'plugin') return;
+      if (shellTabPtyId(tab, managers) !== terminalExited || managers.pty.isRunningFor(terminalExited, [label])) return;
       if (tab.systemShell) {
         void managers.systemShell.handlePtyExit(terminalExited);
         return;
