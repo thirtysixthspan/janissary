@@ -38,7 +38,7 @@ function helpText(query: string | undefined): string {
   return fallbackHelp();
 }
 
-// `help` with the section it names, if any; `undefined` for a command that is not `help` at all, such
+// `help` with the page name it queries, if any; `undefined` when this is not the `help` command, such
 // as `helper`.
 function parseHelpCommand(command: string): { query: string | undefined } | undefined {
   const [word, ...rest] = command.split(/\s+/);
