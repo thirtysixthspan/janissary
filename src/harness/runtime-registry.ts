@@ -3,8 +3,8 @@ import type { HarnessRuntime } from './runtime.js';
 
 type Entry = { label: string; runtime: HarnessRuntime };
 
-// The harness and ssh tabs' per-PTY runtimes, keyed by PTY id, each recorded beside the label of the
-// tab that owns it. A runtime is released on whichever comes first: its PTY exiting, its tab
+// The harness, ssh, and shell tabs' per-PTY runtimes, keyed by PTY id, each recorded beside the
+// label of the tab that owns it. A runtime is released on whichever comes first: its PTY exiting, its tab
 // closing, or another runtime being installed under the same id. The tab-close release is the one
 // a remote harness depends on: detaching disconnects the channel before the tab closes, so the
 // PTY's `kill` never reaches the far side and no exit event ever arrives. The label is recorded

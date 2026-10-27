@@ -57,7 +57,7 @@ export function createTabControllerAdapter(managers: Managers): TabControllerAda
     ptyResize: (id, cols, rows, tab) => { if (!tab || managers.pty.isRunningFor(id, [tab])) managers.pty.resizeOne(id, cols, rows); },
     pluginTerminalAttach: (id, tab) => managers.pty.isRunningFor(id, [tab]),
     ptyKill: (id) => managers.pty.kill(id),
-    reportTerminalColors: (id, colors) => managers.harness.reportTerminalColors(id, colors),
+    reportTerminalColors: (id, colors) => managers.terminalRuntime.reportTerminalColors(id, colors),
     resize: (cols, rows) => managers.pty.resize(cols, rows),
   };
 }

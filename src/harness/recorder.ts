@@ -5,11 +5,11 @@ import { IntervalClock } from './cast-interval-clock.js';
 import { castHeader } from './cast-header.js';
 import type { TerminalColors } from './terminal-colors.js';
 
-// Records one harness PTY's byte stream to a replayable asciicast v3 `.cast` file. It observes the
-// same `pty` bus events as `HarnessScreenReader` (its sibling observer of the same bytes) and, like
-// it, is owned/disposed by `HarnessManager`. The file is created lazily on the first `data` event —
-// a harness that exits before producing output leaves no empty file. The writing itself, including
-// its pending-byte limit and its handling of open and stream errors, is `BoundedAppendFile`'s.
+// Records one terminal PTY's byte stream to a replayable asciicast v3 `.cast` file. It observes the
+// same `pty` bus events as `HarnessScreenReader` where one is installed and is owned/disposed by
+// `TerminalRuntimeManager`. The file is created lazily on the first `data` event — a session that
+// exits before producing output leaves no empty file. The writing itself, including its pending-byte
+// limit and its handling of open and stream errors, is `BoundedAppendFile`'s.
 //
 // `command` is what the asciicast header reports the session ran: a bare program name (`claude`) for a
 // named harness, the whole verbatim `ssh …` invocation for an ssh tab, the shell's own path for a

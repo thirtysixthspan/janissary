@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { messageBus } from '../bus.js';
 import {
-  browserLogWriteMock, browserNotificationMock, createHarnessManager, harnessBrowserMocks,
+  browserLogWriteMock, browserNotificationMock, createHarnessManager, disposeBrowserManagers, harnessBrowserMocks,
   makeBrowserManagers, resetHarnessBrowserFixture,
 } from './manager-browser-test-fixture.js';
 
@@ -17,6 +17,7 @@ describe('HarnessManager e2e browser', () => {
 
   afterEach(() => {
     messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    disposeBrowserManagers();
     vi.useRealTimers();
     vi.clearAllMocks();
   });
@@ -78,7 +79,8 @@ describe('HarnessManager e2e browser', () => {
     const manager = createHarnessManager(managers);
     expect(manager.run('harness claude --no-workspace -b')).toBeUndefined();
     messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
-    manager.dispose();
+    managers.terminalRuntime.dispose();
+    managers.terminalRuntime.dispose();
     expect(browserMock.handles[0].close).toHaveBeenCalledTimes(1);
   });
 
@@ -86,7 +88,7 @@ describe('HarnessManager e2e browser', () => {
     const { managers } = makeBrowserManagers();
     const manager = createHarnessManager(managers);
     expect(manager.run('harness claude --no-workspace -b')).toBeUndefined();
-    manager.dispose();
+    managers.terminalRuntime.dispose();
     expect(browserMock.handles[0].close).toHaveBeenCalledTimes(1);
   });
 

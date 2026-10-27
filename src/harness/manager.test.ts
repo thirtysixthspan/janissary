@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { HarnessManager } from './manager.js';
+import { TerminalRuntimeManager } from '../terminal-runtime/manager.js';
 import { HarnessScreenReader } from './screen.js';
 import { HarnessRecorder } from './recorder.js';
 import { writeCaptureFile } from './capture/file.js';
@@ -60,6 +61,12 @@ vi.mock('./transcript/tailer.js', () => ({
   }),
 }));
 
+const terminalRuntimeManagers: TerminalRuntimeManager[] = [];
+afterEach(() => {
+  for (const manager of terminalRuntimeManagers) manager.dispose();
+  terminalRuntimeManagers.length = 0;
+});
+
 function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typeof vi.fn>; scheduleSet: ReturnType<typeof vi.fn> } {
   const tabs: Tab[] = [];
   const creator = { label: 'janus', log: [] } as unknown as Tab;
@@ -103,6 +110,9 @@ function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typ
     schedule: { set: scheduleSet },
     sessions: { view: vi.fn(() => []), recordForProcess: vi.fn() },
   } as unknown as Managers;
+  const terminalRuntime = new TerminalRuntimeManager(managers);
+  terminalRuntimeManagers.push(terminalRuntime);
+  Object.assign(managers, { terminalRuntime });
   return { managers, tabs, edit, scheduleSet };
 }
 
@@ -316,7 +326,7 @@ describe('HarnessManager disposal', () => {
     vi.restoreAllMocks();
   });
 
-  it('disposes every observer, clears lookups, and ignores later PTY activity', async () => {
+  it('leaves observer disposal to TerminalRuntimeManager', async () => {
     const { managers } = makeManagers();
     const readerDispose = vi.spyOn(HarnessScreenReader.prototype, 'dispose');
     const manager = new HarnessManager(managers);
@@ -325,6 +335,10 @@ describe('HarnessManager disposal', () => {
 
     manager.dispose();
     manager.dispose();
+
+    expect(recorderMock.instances[0].dispose).not.toHaveBeenCalled();
+    expect(readerDispose).not.toHaveBeenCalled();
+    managers.terminalRuntime.dispose();
 
     expect(readerDispose).toHaveBeenCalledOnce();
     expect(recorderMock.instances[0].dispose).toHaveBeenCalledOnce();
@@ -360,6 +374,8 @@ describe('HarnessManager tab release', () => {
     const manager = new HarnessManager(managers);
     manager.run('harness claude');
 
+    managers.terminalRuntime.closeTab('claude');
+    managers.terminalRuntime.closeTab('claude');
     manager.closeTab('claude');
 
     expect(readerDispose).toHaveBeenCalledOnce();
@@ -374,6 +390,7 @@ describe('HarnessManager tab release', () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
     manager.run('harness claude');
+    managers.terminalRuntime.closeTab('claude');
     manager.closeTab('claude');
 
     messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
@@ -388,6 +405,7 @@ describe('HarnessManager tab release', () => {
     const manager = new HarnessManager(managers);
     manager.run('harness claude');
 
+    managers.terminalRuntime.closeTab('janus');
     manager.closeTab('janus');
 
     expect(recorderMock.instances[0].dispose).not.toHaveBeenCalled();
@@ -399,8 +417,9 @@ describe('HarnessManager tab release', () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);
     tabs.push({ label: 'devbox', harness: { name: 'ssh', program: 'ssh', ptyId: 'pty-9', status: 'running' } } as unknown as Tab);
-    manager.registerSshObservers('pty-9', 'devbox', 'ssh devbox');
+    managers.terminalRuntime.registerSshObservers('pty-9', 'devbox', 'ssh devbox');
 
+    managers.terminalRuntime.closeTab('devbox');
     manager.closeTab('devbox');
 
     expect(recorderMock.instances[0].dispose).toHaveBeenCalledOnce();
@@ -465,7 +484,7 @@ describe('HarnessManager.latestScreenText', () => {
   });
 });
 
-describe('HarnessManager.registerSshObservers', () => {
+describe('TerminalRuntimeManager.registerSshObservers', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     recorderMock.instances.length = 0;
@@ -485,7 +504,7 @@ describe('HarnessManager.registerSshObservers', () => {
     tabs.push({
       label: 'ssh', view: 'harness', harness: { name: 'ssh', program: 'ssh', ptyId: 'pty-1', status: 'running' },
     } as unknown as Tab);
-    manager.registerSshObservers('pty-1', 'ssh', 'ssh host');
+    managers.terminalRuntime.registerSshObservers('pty-1', 'ssh', 'ssh host');
     messageBus.emit('pty', { type: 'data', id: 'pty-1', data: 'ssh screen' });
     await vi.advanceTimersByTimeAsync(1001);
     expect(manager.latestScreenText('ssh')?.text).toBe('ssh screen');
@@ -493,10 +512,9 @@ describe('HarnessManager.registerSshObservers', () => {
 
   it('records the session, passing the label and the verbatim invocation to the recorder', () => {
     const { managers, tabs } = makeManagers();
-    const manager = new HarnessManager(managers);
     tabs.push({ label: 'devbox', harness: { name: 'ssh', program: 'ssh', ptyId: 'pty-1', status: 'running' } } as unknown as Tab);
 
-    manager.registerSshObservers('pty-1', 'devbox', 'ssh -p 2222 admin@host');
+    managers.terminalRuntime.registerSshObservers('pty-1', 'devbox', 'ssh -p 2222 admin@host');
 
     expect(recorderMock.instances).toHaveLength(1);
     expect(vi.mocked(HarnessRecorder).mock.calls[0].slice(0, 5))
@@ -507,7 +525,7 @@ describe('HarnessManager.registerSshObservers', () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);
     tabs.push({ label: 'devbox', harness: { name: 'ssh', program: 'ssh', ptyId: 'pty-1', status: 'running' } } as unknown as Tab);
-    manager.registerSshObservers('pty-1', 'devbox', 'ssh devbox');
+    managers.terminalRuntime.registerSshObservers('pty-1', 'devbox', 'ssh devbox');
     messageBus.emit('pty', { type: 'data', id: 'pty-1', data: 'ssh screen' });
     await vi.advanceTimersByTimeAsync(1001);
 
@@ -523,13 +541,13 @@ describe('HarnessManager.registerSshObservers', () => {
     const manager = new HarnessManager(managers);
     tabs.push({ label: 'devbox', harness: { name: 'ssh', program: 'ssh', ptyId: 'pty-1', status: 'running' } } as unknown as Tab);
 
-    manager.registerSshObservers('pty-1', 'devbox', 'ssh devbox');
+    managers.terminalRuntime.registerSshObservers('pty-1', 'devbox', 'ssh devbox');
 
     expect(manager.transcriptTailer('devbox')).toBeUndefined();
   });
 });
 
-describe('HarnessManager.registerShellObservers', () => {
+describe('TerminalRuntimeManager.registerShellObservers', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     recorderMock.instances.length = 0;
@@ -549,10 +567,9 @@ describe('HarnessManager.registerShellObservers', () => {
 
   it('records the session under the tab label and the shell program as the header command', () => {
     const { managers, tabs } = makeManagers();
-    const manager = new HarnessManager(managers);
     tabs.push(shellTab('devbox'));
 
-    manager.registerShellObservers('pty-1', 'devbox');
+    managers.terminalRuntime.registerShellObservers('pty-1', 'devbox');
 
     expect(recorderMock.instances).toHaveLength(1);
     // The header's `command` is what tells a shell recording apart from a harness or ssh one in the
@@ -566,7 +583,7 @@ describe('HarnessManager.registerShellObservers', () => {
     const manager = new HarnessManager(managers);
     tabs.push(shellTab('devbox'));
 
-    manager.registerShellObservers('pty-1', 'devbox');
+    managers.terminalRuntime.registerShellObservers('pty-1', 'devbox');
 
     expect(manager.transcriptTailer('devbox')).toBeUndefined();
   });
@@ -585,18 +602,18 @@ describe('HarnessManager.registerShellObservers', () => {
       report = onOpened;
       return { dispose: vi.fn(), recordingPath: vi.fn(() => '/project/.janissary/recordings/devbox-a.cast') };
     } as never);
-    manager.registerShellObservers('pty-1', 'devbox');
+    managers.terminalRuntime.registerShellObservers('pty-1', 'devbox');
 
     expect(manager.recordingPathOf('devbox')).toBeUndefined();
     report?.('/project/.janissary/recordings/devbox-a.cast');
     expect(manager.recordingPathOf('devbox')).toBe('/project/.janissary/recordings/devbox-a.cast');
-    expect(manager.liveRecordingPathOf('devbox')).toBe('/project/.janissary/recordings/devbox-a.cast');
+    expect(managers.terminalRuntime.liveRecordingPathOf('devbox')).toBe('/project/.janissary/recordings/devbox-a.cast');
 
     // The file outlives the process, so the tab's own record is what still names it — which is what
     // keeps a harness or shell tab's flag pressable after its session has ended.
     messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
     await vi.advanceTimersByTimeAsync(1);
-    expect(manager.liveRecordingPathOf('devbox')).toBeUndefined();
+    expect(managers.terminalRuntime.liveRecordingPathOf('devbox')).toBeUndefined();
     expect(manager.recordingPathOf('devbox')).toBe('/project/.janissary/recordings/devbox-a.cast');
   });
 });

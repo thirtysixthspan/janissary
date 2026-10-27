@@ -20,7 +20,7 @@ function makeManagers(): { managers: Managers; tabs: Tab[] } {
       findIndex: (label: string) => tabs.findIndex((t) => t.label === label),
     },
     pty: { spawn: vi.fn(() => 'pty-1') },
-    harness: { registerSshObservers: vi.fn() },
+    terminalRuntime: { registerSshObservers: vi.fn() },
   } as unknown as Managers;
   return { managers, tabs };
 }
@@ -71,7 +71,7 @@ describe('SshManager.run', () => {
 
     new SshManager(managers).run('ssh admin@host -p 2222');
 
-    expect(managers.harness.registerSshObservers).toHaveBeenCalledWith('pty-1', 'host', 'ssh admin@host -p 2222');
+    expect(managers.terminalRuntime.registerSshObservers).toHaveBeenCalledWith('pty-1', 'host', 'ssh admin@host -p 2222');
   });
 
   // The sessions list carries a row for every plain ssh tab and is composed from this manager's
@@ -106,7 +106,7 @@ describe('SshManager.run', () => {
     manager.run('ssh devbox');
     manager.run('ssh devbox');
 
-    expect(managers.harness.registerSshObservers).toHaveBeenNthCalledWith(1, 'pty-1', 'devbox', 'ssh devbox');
-    expect(managers.harness.registerSshObservers).toHaveBeenNthCalledWith(2, 'pty-1', 'devbox-2', 'ssh devbox');
+    expect(managers.terminalRuntime.registerSshObservers).toHaveBeenNthCalledWith(1, 'pty-1', 'devbox', 'ssh devbox');
+    expect(managers.terminalRuntime.registerSshObservers).toHaveBeenNthCalledWith(2, 'pty-1', 'devbox-2', 'ssh devbox');
   });
 });

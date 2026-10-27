@@ -27,6 +27,7 @@ import type { NotificationQueue } from './notifications/queue.js';
 import type { AgentRunManager } from './agent/manager.js';
 import type { SystemShellManager } from './system-shell.js';
 import type { SystemScheduleManager } from './schedule/system/manager.js';
+import type { TerminalRuntimeManager } from './terminal-runtime/manager.js';
 
 export type ManagerLifecycle = {
   dispose?(): void | Promise<void>;
@@ -40,6 +41,7 @@ type ManagerRegistry = {
   acp: AcpManager;
   database: DatabaseManager;
   harness: HarnessManager;
+  terminalRuntime: TerminalRuntimeManager;
   shellTranscript: ShellTranscriptManager;
   ssh: SshManager;
   remote: RemoteManager;
@@ -93,6 +95,7 @@ export const MANAGER_DISPOSE_ORDER = [
   'connection',
   'profile',
   'ssh',
+  'terminalRuntime',
   'harness',
   'shellTranscript',
   'shell',
@@ -144,6 +147,7 @@ export const MANAGER_TAB_RELEASE = [
   'shell',
   'schedule',
   'pty',
+  'terminalRuntime',
   'harness',
   'shellTranscript',
   'editorAcp',

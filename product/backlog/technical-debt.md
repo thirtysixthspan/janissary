@@ -4,17 +4,6 @@
 
 ## development
 
-* Give terminal recording and screen capture an owner of their own instead of the harness manager, which today also records shell and ssh tabs.
-
-Existing Debt: The per-PTY runtime registry (recorder, screen reader, transcript tailer) lives inside `HarnessManager`, so shell and ssh tabs register their recorders through harness methods and every question about a live recording or terminal colors goes to `managers.harness`. That ownership is left over from when only harness tabs recorded. Severity: 5/10
-
-Existing Risk: 4/10 - A harness-only change to `HarnessManager`'s close or dispose path also changes when shell and ssh recordings stop, and the registry's own comment still says it serves harness and ssh tabs only, so a reader can miss that shell recordings depend on it and cut them off early or leave their final frames unwritten.
-
-Proposal Risk: 2/10 - One manager with its own `closeTab` and `dispose` owns every recorder; the remaining hazard is the order of `pty` exit subscriptions on the message bus, which the move must preserve and a test can pin.
-
-Proposal: `HarnessRuntimes` in `src/harness/runtime-registry.ts` is built by `HarnessTabSpawn` in `src/harness/tab-spawn.ts`. `HarnessManager` in `src/harness/manager.ts` exposes it as `registerSshObservers` (called from `src/ssh-manager.ts`), `registerShellObservers` (called from `TabManager.recordTerminal` in `src/tab/manager.ts`), `liveRecordingPathOf` (called from `src/plugins/live-recordings.ts`), and `reportTerminalColors` (called from `src/controller/tab-adapter.ts`), with the lookups in `src/harness/runtime-access.ts`. Create a `TerminalRuntimeManager` (for example `src/terminal-runtime/manager.ts`) that owns the registry and exposes `install`, `get`, `closeTab`, `dispose`, the shell and ssh registration, `liveRecordingPathOf`, and `reportTerminalColors`. Register it in `src/managers.ts` at harness's current position in `MANAGER_DISPOSE_ORDER` (ahead of `shellTranscript`, `shell`, and `pty`) and in `MANAGER_TAB_RELEASE`, construct it in `src/controller/create-managers.ts`, and repoint the four callers. `HarnessTabSpawn` then installs harness runtimes through it, and `HarnessManager` keeps only the harness-specific lookups (`latestScreenText`, `transcriptTailer`, `recordingPathOf`). The registry subscribes to `pty` exit in its constructor and its comment explains that it must be registered before any recorder of the same event, so construct the new manager no later than the harness manager is built today and keep the microtask-deferred release. Update that comment to name harness, ssh, and shell tabs. `src/harness/runtime-registry.test.ts`, `src/harness/observers.test.ts`, `src/harness/manager.test.ts`, `src/ssh-manager.test.ts`, `src/plugins/live-recordings.test.ts`, `src/tab/manager.test.ts`, and `src/managers.test.ts` cover the current behavior.
-
-
 * Share one pid lock-file primitive between the project instance lock and the remote root-clone lock, so an unreadable lock entry fails or waits instead of spinning the remote serve process.
 
 Existing Debt: The instance lock and the remote root lock each implement their own exclusive create, pid parse, liveness check, and compare-and-remove, and the two disagree on read errors: the instance lock throws on anything but a missing file, while the root lock treats every read failure as "no holder". Severity: 4/10

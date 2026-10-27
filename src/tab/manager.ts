@@ -247,7 +247,7 @@ export class TabManager extends TabTranscriptState {
     const declares = this.managers.plugins.declarations
       .find((declaration) => declaration.id === pluginId)?.recordsTerminal === true;
     if (declares && getConfig().recordShellTabs) {
-      this.managers.harness.registerShellObservers(ptyId, label);
+      this.managers.terminalRuntime.registerShellObservers(ptyId, label);
       this.managers.shellTranscript.install(ptyId, label);
     }
   }

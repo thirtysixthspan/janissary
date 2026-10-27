@@ -40,6 +40,11 @@ describe('MANAGER_DISPOSE_ORDER', () => {
     expect(positionOf('shellTranscript')).toBeLessThan(positionOf('shell'));
   });
 
+  it('disposes terminal runtimes before their PTYs and the shell transcripts', () => {
+    expect(positionOf('terminalRuntime')).toBeLessThan(positionOf('shellTranscript'));
+    expect(positionOf('terminalRuntime')).toBeLessThan(positionOf('pty'));
+  });
+
   it('disposes the system shell before its plugin and PTY dependencies', () => {
     expect(positionOf('systemShell')).toBeLessThan(positionOf('plugins'));
     expect(positionOf('systemShell')).toBeLessThan(positionOf('pty'));
@@ -87,5 +92,9 @@ describe('MANAGER_TAB_RELEASE', () => {
   // rejects a manager without the method, but neither can see a key written twice.
   it('names each participating manager exactly once', () => {
     expect(new Set(MANAGER_TAB_RELEASE).size).toBe(MANAGER_TAB_RELEASE.length);
+  });
+
+  it('releases terminal runtimes after their PTYs', () => {
+    expect(MANAGER_TAB_RELEASE.indexOf('terminalRuntime')).toBeGreaterThan(MANAGER_TAB_RELEASE.indexOf('pty'));
   });
 });
