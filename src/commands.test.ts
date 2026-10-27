@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { availableCommands, getOutput } from './commands.js';
@@ -105,7 +106,7 @@ describe('getOutput help pages', () => {
     if (!filesRow) throw new Error('files command row is missing');
 
     for (const syntax of [
-      '`with <name|size|modified|permissions>`',
+      '`with <name\\|size\\|modified\\|permissions>`',
       '`expand <path>`',
       '`collapse <path>`',
       '`cursor <path>`',
@@ -115,6 +116,19 @@ describe('getOutput help pages', () => {
     ]) {
       expect(filesRow).toContain(syntax);
     }
+  });
+
+  it('escapes detail-mode separators in the files command table source', () => {
+    const helpDirectory = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'help');
+    const filesRow = readFileSync(path.join(helpDirectory, 'commands.md'), 'utf8')
+      .split('\n')
+      .find((line) => line.startsWith('| `files` |'));
+    if (!filesRow) throw new Error('files command source row is missing');
+
+    const descriptionStart = filesRow.indexOf(' | ', filesRow.indexOf('`') + 1) + 3;
+    const description = filesRow.slice(descriptionStart, filesRow.lastIndexOf(' |'));
+    expect(description).toContain('`with <name\\|size\\|modified\\|permissions>`');
+    expect(description.replaceAll(String.raw`\|`, '')).not.toContain('|');
   });
 
   it('prints all key tables only from help keys', () => {
