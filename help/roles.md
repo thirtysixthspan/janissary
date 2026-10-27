@@ -1,6 +1,6 @@
 ### roles
 
-Open the roles tab. Roles map names to ordered harness, model, and effort choices in `roles.json`.
+Open the roles tab to review and edit each named role's ordered harness, model, and effort choices.
 
 **Usage**
 
