@@ -112,6 +112,11 @@ describe('parseFileNavigatorArgs', () => {
     expectOpen('"select notes" in claude', { inLabel: 'claude', target: 'select notes' });
   });
 
+  it('preserves quote marks opened inside a trailing path', () => {
+    expectOpen('my"folder"', { target: 'my"folder"' });
+    expectOpen('my"folder" in claude', { inLabel: 'claude', target: 'my"folder"' });
+  });
+
   it('reports an unterminated clause quote but leaves an unterminated trailing path alone', () => {
     expect(parseFileNavigatorArgs('expand "src')).toEqual({
       kind: 'error', error: 'files: unterminated quote',

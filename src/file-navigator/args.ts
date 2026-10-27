@@ -66,7 +66,20 @@ function targetValue(input: string, start: number, end: number): string {
   const raw = input.slice(start, end).trim();
   const token = readToken(input, skipSpaces(input, start));
   if (!token || skipSpaces(input, token.end) < end || input.slice(token.start, token.end) === token.value) return raw;
-  return token.value;
+  return isFullyQuoted(raw) ? token.value : raw;
+}
+
+function isFullyQuoted(value: string): boolean {
+  const quote = value.charAt(0);
+  if ((quote !== '"' && quote !== "'") || value.at(-1) !== quote) return false;
+  for (let index = 1; index < value.length; index++) {
+    if (value[index] === '\\' && value[index + 1] === quote) {
+      index++;
+      continue;
+    }
+    if (value[index] === quote) return index === value.length - 1;
+  }
+  return false;
 }
 
 function parsePrint(input: string, keywordEnd: number): ParsedFileNavigatorArgs | undefined {

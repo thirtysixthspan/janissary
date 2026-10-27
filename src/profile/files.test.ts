@@ -93,6 +93,11 @@ describe('openProfileFiles', () => {
     expect(open).toHaveBeenCalledWith('files "select notes"', 'claude');
   });
 
+  it('escapes double quotes in a profile path', () => {
+    const { open } = run([{ path: 'docs/"notes".md' }], 'claude');
+    expect(open).toHaveBeenCalledWith(String.raw`files "docs/\"notes\".md"`, 'claude');
+  });
+
   it('does nothing when there are no files entries', () => {
     const { open, notes } = run([], 'claude');
     expect(open).not.toHaveBeenCalled();

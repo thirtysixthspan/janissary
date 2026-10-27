@@ -88,9 +88,10 @@ case-insensitive. A directory named `expand` at the end of the command is still 
 `files ./expand` when it is followed by other words that would make `expand` a clause. A keyword
 with a path value reads one token. Quote a path containing spaces or quotes with single or double
 quotes; a backslash escapes the matching quote inside the quoted token. An unterminated quote in a
-view clause reports `files: unterminated quote` and opens or changes no tree. A trailing path that
-is exactly one quoted token has its quotes removed; a multiword trailing path otherwise keeps its
-existing verbatim form.
+view clause reports `files: unterminated quote` and opens or changes no tree. A trailing path loses
+its outer quote marks only when one matching pair encloses the entire path; quote marks embedded in
+otherwise bare or partly quoted path text remain verbatim. A multiword trailing path otherwise
+keeps its existing verbatim form.
 
 `files on left`/`files on right` is an explicit spelling of the same docking `files left`/`files
 right` provides. The two clauses are independent and may be combined in either order — `files in
