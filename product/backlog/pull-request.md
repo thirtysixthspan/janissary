@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's tab and system schedule management forms.
-
-Existing Issue: `help/schedule.md` lists only schedule creation, omitting `schedule list`, `schedule cancel`, `schedule clear`, their `[in <tab>]` targeting forms, and the corresponding system list, cancel, and clear commands. Severity: 6/10
-
-Existing Risk: 5/10 - Users can create timers from the page but cannot discover how to inspect, cancel, or clear them, including project-owned system schedules.
-
-Proposal Risk: 2/10 - Listing the management forms alongside creation makes the command discoverable, with only the ongoing risk that help text can drift from the parser.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1799 "document schedule management command forms". Extend the Usage block and examples in `help/schedule.md` with tab schedule creation forms, the optional `in <tab>` target, `schedule list/cancel/clear`, and `schedule system list/cancel/clear`, preserving the existing system schedule creation form. Use `product/specs/scheduling.md`, `src/schedule/parsing.ts`, and `src/commands/schedule.ts` as the grammar and behavior sources. Existing `src/commands/schedule.test.ts` covers tab and system creation, listing, cancellation, clearing, and tab targeting; no test pins help wording, so compare the page directly with those cases.
-
-
 * Correct the plan's unsupported application argument in the open-command help.
 
 Existing Issue: `help/open.md` advertises `open external [application] <path|url>`, but `src/commands/open.ts` consumes only the `external` and `page` modifiers and treats the remaining text as the target. Severity: 5/10
