@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the plan's unsupported application argument in the open-command help.
-
-Existing Issue: `help/open.md` advertises `open external [application] <path|url>`, but `src/commands/open.ts` consumes only the `external` and `page` modifiers and treats the remaining text as the target. Severity: 5/10
-
-Existing Risk: 4/10 - A user following the signature supplies an application name as part of the target and gets a failed or unintended open instead of choosing a viewer.
-
-Proposal Risk: 1/10 - Correct signatures remove the unsupported invocation, with only the usual risk of later documentation drift.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1799 "correct the open help command signatures". Replace the unsupported application placeholder in `help/open.md` with the actual inline and external forms, including `open external <path>` and the `page` modifier for web addresses, and keep its examples consistent with those forms. `product/specs/open.md` describes the supported grammar; `src/commands/open.ts` and `src/commands/open.test.ts` verify that only `external` and `page` are consumed as modifiers and that both modifiers can be combined. No test pins help wording, so verify the updated signatures directly against the parser tests.
-
-
 * Correct the plan's task-picker help for harness tabs.
 
 Existing Issue: `help/tasks.md` says selecting a task always inserts its command into the command line, while a harness tab has no command line and receives the command through its terminal input. Severity: 3/10
