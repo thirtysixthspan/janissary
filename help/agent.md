@@ -4,7 +4,7 @@ Run a task autonomously in a new agent session, with optional host, tab, group, 
 
 **Usage**
 
-`agent [on <host>] [in a tab] [in group <name|id>] [in workspace <label>] [with skill <name>] [using model <id>] [with effort <level>] execute <task> [parameters...]`
+`agent [on <host>] [in a tab] [in group <name|id>] [in workspace <label>] [with skill <name>]... [using model <id>] [with effort <level>] execute <task> [parameters...]`
 
 **Use cases**
 
@@ -15,3 +15,4 @@ Run a task autonomously in a new agent session, with optional host, tab, group, 
 
 - `agent execute summarize the changed files` starts a task with the default settings.
 - `agent with skill review execute inspect the patch` starts a task using the named skill.
+- `agent with skill ask-user with skill perplexity-search execute build-a-feature.md` starts a task using both named skills.
