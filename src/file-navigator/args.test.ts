@@ -39,6 +39,11 @@ describe('parseFileNavigatorArgs', () => {
     expectOpen('./left', { dock: null, target: './left' });
   });
 
+  it('treats a bare in token without a value as the path target', () => {
+    expect(parseFileNavigatorArgs('in')).toEqual({ kind: 'open', dock: null, steps: [], target: 'in' });
+    expect(parseFileNavigatorArgs('left in')).toEqual({ kind: 'open', dock: 'left', steps: [], target: 'in' });
+  });
+
   it('parses a path before the in clause', () => {
     expectOpen('src/sub in claude', { inLabel: 'claude', dock: null, target: 'src/sub' });
   });

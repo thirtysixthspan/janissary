@@ -57,7 +57,7 @@ function readTrailingIn(input: string, start: number): TrailingIn {
     const raw = input.slice(last.start, last.end);
     return { end: previous.start, inLabel: isFullyQuoted(raw) ? last.value : raw };
   }
-  if (last?.bare && last.value.toLowerCase() === 'in') {
+  if (previous && last?.bare && last.value.toLowerCase() === 'in') {
     return { end: last.start, missingInLabel: true };
   }
   return { end };
@@ -81,12 +81,9 @@ function parsePrint(input: string, keywordEnd: number): ParsedFileNavigatorArgs 
   return { kind: 'print', name: name.value };
 }
 
-function readInClause(input: string, token: Token, parsed: FileNavigatorOpenArgs): ClauseResult {
+function readInClause(input: string, token: Token, parsed: FileNavigatorOpenArgs): ClauseResult | undefined {
   const valueStart = skipSpaces(input, token.end);
-  if (valueStart === input.length) {
-    parsed.missingInLabel = true;
-    return { kind: 'missing' };
-  }
+  if (valueStart === input.length) return undefined;
   const quoted = readToken(input, valueStart);
   if (quoted && isFullyQuoted(input.slice(quoted.start, quoted.end))) {
     parsed.inLabel = quoted.value;

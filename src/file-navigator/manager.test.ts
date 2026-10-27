@@ -696,6 +696,16 @@ describe('FileNavigatorManager', () => {
     expect(tabs.some((t) => t.label.startsWith('navigator'))).toBe(false);
   });
 
+  it('files in opens a directory literally named in', () => {
+    mkdirSync(path.join(root, 'in'));
+    const manager = run();
+
+    manager.open('files in', 'janus');
+
+    const tab = tabs.find((candidate) => candidate.label.startsWith('navigator'));
+    expect(tab?.files?.root).toBe(path.join(root, 'in'));
+  });
+
   it('a directory literally named in/on is reachable via a path form', () => {
     mkdirSync(path.join(root, 'in'));
     const manager = run();

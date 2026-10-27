@@ -72,8 +72,10 @@ An unquoted label is one word; a label containing spaces or quotes may be writte
 single- or double-quoted value. A backslash escapes the matching quote inside that value, and the
 outer quotes are removed before the tab is looked up. This works in either clause position, as in
 `files in "review team" src` and `files src in "review team"`.
-A final bare token after the `in` clause is its label even when the token is literally `in`:
-`files src in in` opens `src` under the tab named `in`. If no token follows the clause, as in
+A bare `in` with no following value at the start of a target is the path itself: `files in` opens a
+directory named `in`, and `files left in` opens it in the left sidebar. After a path, `in` starts a
+tab-label clause. A final bare token after that clause is its label even when the token is literally
+`in`: `files src in in` opens `src` under the tab named `in`. If no token follows the clause, as in
 `files src in`, the command reports `files: expected a tab label after "in"`.
 When `<label>` names a remote shell or harness, the tree is rooted in that tab's workspace on the
 remote host and uses that tab's existing ssh channel. There is no `files on <address>` form: a
@@ -103,8 +105,9 @@ keeps its existing verbatim form.
 right` provides. The two clauses are independent and may be combined in either order — `files in
 <label> on <side>` or `files on <side> in <label>` — to root the tree at another tab's cwd and dock
 it in one command, e.g. `files in claude on left`. Like `left`/`right`, `in` and `on` are only
-recognized as clause keywords, so a directory literally named `in` or `on` is still reachable
-through a path form (`files ./in`).
+recognized as clause keywords when followed by values, so a directory literally named `in` or `on`
+is still reachable through a path form (`files ./in` or `files ./on`). A valueless `in` at the start
+of the target is itself a path, as described above.
 
 The view clauses are also recognized after a leading bare `left` or `right`; for example,
 `files left with size expand src` docks and expands `src`. An explicit `on <side>` after that bare
