@@ -228,7 +228,9 @@ describe('openProfileEntries — profile-level file navigator', () => {
 
     await openProfileEntries(loaded([entry], { files: [{ dock: 'left' }] }), managers, 'claude', 'janus', () => {});
 
-    expect(fileNavigatorOpen).toHaveBeenCalledWith('files on left', 'claude');
+    expect(fileNavigatorOpen).toHaveBeenCalledWith({
+      kind: 'open', inLabel: undefined, dock: 'left', details: undefined, steps: [], target: '',
+    }, 'claude', expect.any(Function));
   });
 
   // A profile whose only entry names the issuing tab opens no tab of its own, but its navigators
@@ -244,7 +246,9 @@ describe('openProfileEntries — profile-level file navigator', () => {
       managers, 'demo', 'janus', (text) => { messages.push(text); },
     );
 
-    expect(fileNavigatorOpen).toHaveBeenCalledWith('files on left $root/', 'janus');
+    expect(fileNavigatorOpen).toHaveBeenCalledWith({
+      kind: 'open', inLabel: undefined, dock: 'left', details: undefined, steps: [], target: '$root/',
+    }, 'janus', expect.any(Function));
     expect(edit).toHaveBeenCalledWith('edit $root/notes.md', '$root/notes.md', 'janus', undefined);
     expect(messages.join(' ')).not.toContain('no tab to root it at');
   });

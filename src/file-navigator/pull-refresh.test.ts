@@ -7,6 +7,8 @@ import type { Tab } from '../tab/types.js';
 import { NotificationQueue } from '../notifications/queue.js';
 import { FileNavigatorManager } from './manager.js';
 
+const openRootArgs = { kind: 'open' as const, dock: null, steps: [], target: '' };
+
 // The pull button's whole reason for existing is that a git-driven replace may not reach the
 // directory watchers, so the refresh cannot be tested against a mocked `git pull`: the mock changes
 // nothing on disk and a watcher-driven rebuild would pass the test for the wrong reason. These cases
@@ -96,7 +98,7 @@ describe('the pull button refreshes the whole tree', () => {
 
   it('shows what the pull added and drops what it removed, at the root and inside an expanded directory', async () => {
     const manager = new FileNavigatorManager(managers as never);
-    manager.open('files', 'janus');
+    manager.open(openRootArgs, 'janus', () => {});
     manager.toggle('navigator', 'sub');
     expect(rowPaths()).toContain('sub/old.txt');
     pushSecondCommit();
@@ -113,7 +115,7 @@ describe('the pull button refreshes the whole tree', () => {
 
   it('leaves the directories the user had expanded expanded', async () => {
     const manager = new FileNavigatorManager(managers as never);
-    manager.open('files', 'janus');
+    manager.open(openRootArgs, 'janus', () => {});
     manager.toggle('navigator', 'sub');
     pushSecondCommit();
 

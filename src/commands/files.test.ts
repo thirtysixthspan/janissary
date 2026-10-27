@@ -20,8 +20,8 @@ describe('files command', () => {
 
 describe('files command run', () => {
   let appended: { input: string; output: string }[];
-  let openCalls: { command: string; label: string }[];
-  let printCalls: { name: string; label: string }[];
+  let openCalls: { args: unknown; label: string; out: (output: string) => void }[];
+  let printCalls: { tab: string }[];
   let tab: { label: string };
   let managers: unknown;
 
@@ -32,17 +32,18 @@ describe('files command run', () => {
     tab = { label: 'janus' };
     managers = {
       tab: {
+        tabs: [{ label: 'review notes' }],
         append: (_label: string, entry: { input: string; output: string }) => {
           appended.push(entry);
         },
       },
       fileNavigator: {
-        printView: async (name: string, label: string) => {
-          printCalls.push({ name, label });
+        printView: async (target: { label: string }) => {
+          printCalls.push({ tab: target.label });
           return 'files expand src $root';
         },
-        open: (command_: string, label: string) => {
-          openCalls.push({ command: command_, label });
+        open: (args: unknown, label: string, out: (output: string) => void) => {
+          openCalls.push({ args, label, out });
         },
       },
     };
@@ -56,7 +57,10 @@ describe('files command run', () => {
     expect(appended).toHaveLength(1);
     expect(appended[0]).toEqual({ input: 'files ./src', output: '' });
     expect(openCalls).toHaveLength(1);
-    expect(openCalls[0]).toEqual({ command: 'files ./src', label: 'janus' });
+    expect(openCalls[0]).toMatchObject({
+      args: { kind: 'open', dock: null, steps: [], target: './src' }, label: 'janus',
+    });
+    expect(openCalls[0]?.out).toBeTypeOf('function');
   });
 
   it('appends before fileNavigator.open is called', () => {
@@ -79,7 +83,9 @@ describe('files command run', () => {
 
     expect(appended).toHaveLength(1);
     expect(appended[0]).toEqual({ input: 'files left ./src', output: '' });
-    expect(openCalls[0]).toEqual({ command: 'files left ./src', label: 'janus' });
+    expect(openCalls[0]).toMatchObject({
+      args: { kind: 'open', dock: 'left', steps: [], target: './src' }, label: 'janus',
+    });
   });
 
   it('appends one parser error for a malformed view clause', () => {
@@ -101,14 +107,34 @@ describe('files command run', () => {
     run('files in claude on left with size');
 
     expect(appended[0]).toEqual({ input: 'files in claude on left with size', output: '' });
-    expect(openCalls[0]).toEqual({ command: 'files in claude on left with size', label: 'janus' });
+    expect(openCalls[0]).toMatchObject({
+      args: { kind: 'open', inLabel: 'claude', dock: 'left', details: 'size', steps: [], target: '' },
+      label: 'janus',
+    });
   });
 
   it('prints a named tree in one transcript entry without opening it', async () => {
     await run('files print "review notes"');
 
-    expect(printCalls).toEqual([{ name: 'review notes', label: 'janus' }]);
+    expect(printCalls).toEqual([{ tab: 'review notes' }]);
     expect(appended).toEqual([{ input: 'files print "review notes"', output: 'files expand src $root' }]);
     expect(openCalls).toEqual([]);
+  });
+
+  it('forwards output from opening a parsed tree through the command output path', () => {
+    run('files ./missing');
+    openCalls[0]?.out('files: ./missing: not a directory');
+
+    expect(appended).toEqual([
+      { input: 'files ./missing', output: '' },
+      { input: 'files ./missing', output: 'files: ./missing: not a directory' },
+    ]);
+  });
+
+  it('resolves a missing print target in the command layer', async () => {
+    await run('files print ghost');
+
+    expect(printCalls).toEqual([]);
+    expect(appended).toEqual([{ input: 'files print ghost', output: 'No tab named "ghost".' }]);
   });
 });

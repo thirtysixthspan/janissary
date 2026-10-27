@@ -1,12 +1,20 @@
 import { describe, it, expect, vi } from 'vitest';
 import { openProfileFiles } from './files.js';
-import { parseFileNavigatorArgs } from '../file-navigator/args.js';
+import type { FileNavigatorOpenArgs } from '../file-navigator/args.js';
 import { makeTab } from '../tab/index.js';
 import type { Managers } from '../managers.js';
 import type { ProfileFilesEntry } from './types.js';
 import type { Tab } from '../tab/types.js';
 
 const identityColor = (_group: number, fallbackDotColor: string): string => fallbackDotColor;
+
+function openArgs(overrides: Partial<FileNavigatorOpenArgs> = {}): FileNavigatorOpenArgs {
+  return { kind: 'open', inLabel: undefined, dock: null, details: undefined, steps: [], target: '', ...overrides };
+}
+
+function expectOpenCall(open: ReturnType<typeof vi.fn>, args: FileNavigatorOpenArgs, label: string): void {
+  expect(open).toHaveBeenCalledWith(args, label, expect.any(Function));
+}
 
 // The navigator manager's `open` returns the label it opened; the mock appends a tab and makes it
 // active, so the relocation path sees the same shape the real one does.
@@ -43,93 +51,81 @@ describe('openProfileFiles', () => {
 
   it('opens a bare files tab at the default label when neither dock nor in is set', () => {
     const { open, notes } = run([{}], 'claude');
-    expect(open).toHaveBeenCalledWith('files', 'claude');
+    expectOpenCall(open, openArgs(), 'claude');
     expect(notes).toEqual(['Opened file navigator.']);
   });
 
-  it('builds "files on <side>" using the default label when only dock is set', () => {
+  it('passes the dock and default label when only dock is set', () => {
     const { open, notes } = run([{ dock: 'left' }], 'claude');
-    expect(open).toHaveBeenCalledWith('files on left', 'claude');
+    expectOpenCall(open, openArgs({ dock: 'left' }), 'claude');
     expect(notes).toEqual(['Opened file navigator (docked left).']);
   });
 
-  it('builds "files in <label>" and targets that label instead of the default', () => {
+  it('passes the source label and targets it instead of the default', () => {
     const { open } = run([{ in: 'other' }], 'claude');
-    expect(open).toHaveBeenCalledWith('files in other', 'other');
+    expectOpenCall(open, openArgs({ inLabel: 'other' }), 'other');
   });
 
-  it('quotes a multiword profile label and parses it back as one label', () => {
+  it('passes a multiword profile label without quoting or reparsing it', () => {
     const label = 'review team';
-    const command = 'files in "review team"';
     const { open } = run([{ in: label }], 'claude');
 
-    expect(open).toHaveBeenCalledWith(command, label);
-    expect(parseFileNavigatorArgs(command.slice('files '.length))).toMatchObject({
-      kind: 'open', inLabel: label, target: '',
-    });
+    expectOpenCall(open, openArgs({ inLabel: label }), label);
   });
 
-  it('escapes embedded quotes in a profile label and parses it back unchanged', () => {
+  it('passes embedded quotes in a profile label unchanged', () => {
     const label = 'review "team"';
-    const command = String.raw`files in "review \"team\""`;
     const { open } = run([{ in: label }], 'claude');
 
-    expect(open).toHaveBeenCalledWith(command, label);
-    expect(parseFileNavigatorArgs(command.slice('files '.length))).toMatchObject({
-      kind: 'open', inLabel: label, target: '',
-    });
+    expectOpenCall(open, openArgs({ inLabel: label }), label);
   });
 
-  it('builds "files in <label> on <side>" when both are set', () => {
+  it('passes source label and dock when both are set', () => {
     const { open } = run([{ in: 'other', dock: 'right' }], 'claude');
-    expect(open).toHaveBeenCalledWith('files in other on right', 'other');
+    expectOpenCall(open, openArgs({ inLabel: 'other', dock: 'right' }), 'other');
   });
 
-  it('appends the path after the clauses when path is set', () => {
+  it('passes the target alongside the dock when path is set', () => {
     const { open, notes } = run([{ dock: 'left', path: '$root' }], 'claude');
-    expect(open).toHaveBeenCalledWith('files on left $root', 'claude');
+    expectOpenCall(open, openArgs({ dock: 'left', target: '$root' }), 'claude');
     expect(notes).toEqual(['Opened file navigator (docked left).']);
   });
 
-  it('builds "files <path>" when only path is set', () => {
+  it('passes the target when only path is set', () => {
     const { open } = run([{ path: '$root' }], 'claude');
-    expect(open).toHaveBeenCalledWith('files $root', 'claude');
+    expectOpenCall(open, openArgs({ target: '$root' }), 'claude');
   });
 
-  it('leaves a single-token profile path ending in a backslash unquoted', () => {
+  it('passes a profile path ending in a backslash unchanged', () => {
     const { open } = run([{ path: 'folder\\' }], 'claude');
-    expect(open).toHaveBeenCalledWith('files folder\\', 'claude');
+    expectOpenCall(open, openArgs({ target: 'folder\\' }), 'claude');
   });
 
-  it('combines in, dock, and path into one command', () => {
+  it('passes in, dock, and path together', () => {
     const { open } = run([{ in: 'other', dock: 'right', path: './sub' }], 'claude');
-    expect(open).toHaveBeenCalledWith('files in other on right ./sub', 'other');
+    expectOpenCall(open, openArgs({ inLabel: 'other', dock: 'right', target: './sub' }), 'other');
   });
 
-  it('replays a saved detail mode as a with clause, before the path', () => {
+  it('passes a saved detail mode alongside the target', () => {
     const { open } = run([{ details: 'size', path: './sub' }], 'claude');
-    expect(open).toHaveBeenCalledWith('files with size ./sub', 'claude');
+    expectOpenCall(open, openArgs({ details: 'size', target: './sub' }), 'claude');
   });
 
-  it('combines the with clause with in and dock', () => {
+  it('passes detail mode with in and dock', () => {
     const { open } = run([{ in: 'other', dock: 'right', details: 'modified' }], 'claude');
-    expect(open).toHaveBeenCalledWith('files in other on right with modified', 'other');
+    expectOpenCall(open, openArgs({ inLabel: 'other', dock: 'right', details: 'modified' }), 'other');
   });
 
-  it('quotes a profile path that matches a files clause keyword', () => {
-    const { open } = run([{ path: 'select notes' }], 'claude');
-    expect(open).toHaveBeenCalledWith('files "select notes"', 'claude');
-
-    const bareSide = run([{ path: 'left' }], 'claude').open;
-    expect(bareSide).toHaveBeenCalledWith('files "left"', 'claude');
-
-    const clause = run([{ path: 'in' }], 'claude').open;
-    expect(clause).toHaveBeenCalledWith('files "in"', 'claude');
+  it('passes paths that match files clauses or view keywords unchanged', () => {
+    for (const target of ['select notes', 'left', 'in', 'print', 'expand']) {
+      const { open } = run([{ path: target }], 'claude');
+      expectOpenCall(open, openArgs({ target }), 'claude');
+    }
   });
 
-  it('escapes double quotes in a profile path', () => {
+  it('passes double quotes in a profile path unchanged', () => {
     const { open } = run([{ path: 'docs/"notes".md' }], 'claude');
-    expect(open).toHaveBeenCalledWith(String.raw`files "docs/\"notes\".md"`, 'claude');
+    expectOpenCall(open, openArgs({ target: 'docs/"notes".md' }), 'claude');
   });
 
   it('does nothing when there are no files entries', () => {

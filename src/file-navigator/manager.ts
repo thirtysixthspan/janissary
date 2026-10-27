@@ -1,11 +1,10 @@
 import { isPrimaryBranch } from '../git/status.js';
 import { openOrRetarget, type OpenPort } from './open.js';
 import { openFilesCommand } from './open-command.js';
-import { parseFileNavigatorArgs } from './args.js';
+import type { FileNavigatorOpenArgs } from './args.js';
 import { applyViewSteps } from './restore-command.js';
 import { toTreePath } from './view-paths.js';
 import { expandUserPath } from '../paths.js';
-import { resolveTarget } from '../commands/resolve-target.js';
 import { requestTreeSelections } from './selection-request.js';
 import { formatFilesCommand } from './print-command.js';
 import {
@@ -19,7 +18,7 @@ import { WatchedFilesTabs } from './watched-tabs.js';
 import type { PortClosures } from './port.js';
 import { openersForRow } from './openers-for-row.js';
 import { restoreTreeView, type SavedTreeView } from './restore.js';
-import type { FileNavigatorDetail } from '../tab/types.js';
+import type { FileNavigatorDetail, Tab } from '../tab/types.js';
 import { runPull } from './manager/pull.js';
 import { runCommit } from './manager/commit.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerResolution, UndoRedoResult } from '../protocol.js';
@@ -36,16 +35,9 @@ export class FileNavigatorManager extends WatchedFilesTabs {
   // Open or focus a tree from the parsed `files` arguments, then apply any requested view steps to
   // the returned local tree. The root path remains last, and a leading bare side may precede clauses.
   // Returns the tab label so profile launch can restore its saved view after opening.
-  open(command: string, label: string): string | undefined {
-    const parsed = parseFileNavigatorArgs(command.replace(/^files\b\s*/i, ''));
-    if (parsed.kind === 'error') {
-      this.managers.tab.append(label, { input: command, output: parsed.error });
-      return undefined;
-    }
-    if (parsed.kind !== 'open') return undefined;
+  open(parsed: FileNavigatorOpenArgs, label: string, out: (text: string) => void): string | undefined {
     const openedLabel = openFilesCommand(
-      this.managers, this.tabs, parsed, label,
-      (text) => this.managers.tab.append(label, { input: command, output: text }),
+      this.managers, this.tabs, parsed, label, out,
       (l, a, r) => this.watchDir(l, a, r), (l) => this.refreshGit(l), (l, a) => this.pollForCreation(l, a),
       (l) => this.rebuild(l),
     );
@@ -265,13 +257,10 @@ export class FileNavigatorManager extends WatchedFilesTabs {
     restoreTreeView(this.navPort(), label, view);
   }
 
-  async printView(name: string, _issuingLabel: string): Promise<string> {
-    let reply: string | undefined;
-    const tab = resolveTarget(name, this.managers, (text) => { reply = text; });
-    if (!tab) return reply ?? `No tab named "${name}".`;
-    if (!tab.files) return `files: "${name}" is not a file navigator`;
+  async printView(tab: Tab): Promise<string> {
+    if (!tab.files) return `files: "${tab.label}" is not a file navigator`;
     const state = this.tabs.get(tab.label);
-    if (!state) return `files: "${name}" is not a file navigator`;
+    if (!state) return `files: "${tab.label}" is not a file navigator`;
     const capturedRoot = state.root;
     const selections = state.remote ? undefined : await requestTreeSelections();
     const selection = this.tabs.get(tab.label) === state && state.root === capturedRoot
