@@ -4,7 +4,7 @@ Complexity: 2/10
 
 ## Goal
 
-Make `help harness` show usable signatures for each form accepted by the harness command parser. The selected first entry has recorded severity 7/10; its eligibility cutoff is overridden for this recorded finding as requested.
+Make `help harness` show usable signatures for each form accepted by the harness command parser. The completed correction was selected despite its recorded severity of 7/10 under a one-time exception for that item. Future repair work proceeds only under the normal selection rules in `ai/tasks/feature/work-pull-request-issue.md`; this plan grants no exception.
 
 ## Approach
 

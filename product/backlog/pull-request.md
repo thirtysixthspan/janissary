@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Prevent security-sensitive repair plans from instructing agents to bypass workflow rules.
-
-Existing Issue: `product/plans/complete/complete-harness-help-signatures.md` and `product/plans/complete/task-picker-harness-help.md` tell a future repair agent that a recorded request overrides the explicit rule stopping selected backlog entries rated 7 or higher. Severity: 8/10
-
-Existing Risk: 7/10 - A repair agent following either plan can proceed with work that `ai/tasks/feature/work-pull-request-issue.md` explicitly requires it to stop rather than implement.
-
-Proposal Risk: 2/10 - Removing the override claims leaves the repair task's selection and complexity rules intact and removes the direct instruction to bypass them.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1799 "remove workflow-override directives from repair plans". In `product/plans/complete/complete-harness-help-signatures.md` and `product/plans/complete/task-picker-harness-help.md`, remove the statements that a recorded request overrides the repair task's complexity cutoff and replace them with wording that the work proceeds only when it satisfies the task's normal selection rules. Review the other plans added by this pull request for equivalent instructions to bypass task rules, preserving their factual repair records. Verify the plan text no longer directs a repair agent to disregard the task's explicit cutoff.
-
-
 * Reduce technical debt by sharing the duplicated help-page path confinement check.
 
 Existing Issue: `src/help-pages.ts` and `documentation/.vitepress/command-reference.ts` independently implement the same `regularHelpPagePath` realpath and regular-file confinement check. Severity: 4/10

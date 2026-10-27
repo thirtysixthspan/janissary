@@ -8,7 +8,7 @@ Describe both task-picker destinations accurately in `help/tasks.md`: command-li
 
 ## Approach
 
-Keep this as a help-text correction. The picker implementation and its tests already cover both destinations, and `product/specs/task-picker.md` already describes them accurately. The explicit instruction for this recorded finding overrides the repair task's complexity-7 selection cutoff.
+Keep this as a help-text correction. The picker implementation and its tests already cover both destinations, and `product/specs/task-picker.md` already describes them accurately. This completed correction was selected under a one-time exception for its recorded finding. Future repair work proceeds only under the normal selection rules in `ai/tasks/feature/work-pull-request-issue.md`; this plan grants no exception.
 
 ## Implementation steps
 
