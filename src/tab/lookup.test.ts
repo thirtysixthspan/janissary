@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { makeTab } from './index.js';
-import { byLabel, byLabelOrAlias, editorTab, filesTab, harnessTab, monitorTab, pluginTab, editorTabByUrl, filesTabByRoot, harnessTabByPtyId, pluginTabByInstanceKey } from './lookup.js';
+import {
+  allLabelOrAliasNames, byLabel, byLabelOrAlias, editorTab, editorTabByUrl, filesTab, filesTabByRoot,
+  harnessTab, harnessTabByPtyId, monitorTab, pluginTab, pluginTabByInstanceKey,
+} from './lookup.js';
 import type { Tab } from './types.js';
 
 const withView = (label: string, view: Tab['view'], payload: Partial<Tab>): Tab =>
@@ -61,6 +64,16 @@ describe('byLabelOrAlias', () => {
     const aliased = { ...makeTab('agent1', '#111'), title: 'worker' };
     const worker = makeTab('worker', '#222');
     expect(byLabelOrAlias([aliased, worker], 'worker')).toBe(aliased);
+  });
+});
+
+describe('allLabelOrAliasNames', () => {
+  it('keeps labels and titles in first-match order, deduplicating names without case sensitivity', () => {
+    const first = { ...makeTab('editor', '#111'), title: 'Space Name.txt' };
+    const second = { ...makeTab('space name.TXT', '#222'), title: 'Review' };
+
+    expect(allLabelOrAliasNames([first, second])).toEqual(['editor', 'Space Name.txt', 'Review']);
+    expect(byLabelOrAlias([first, second], 'space name.txt')).toBe(first);
   });
 });
 

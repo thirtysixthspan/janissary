@@ -19,7 +19,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `scripts` | Open a list of the project's runscripts. Use a row's buttons to run, duplicate, or delete one, or **+** to create one. |
 | `clear` | Empty the current tab's transcript — other tabs are unaffected. In a shell tab, `clear` clears the terminal; use `/clear` to empty the transcript |
 | `rename [newname]` | Set (or, bare, clear) the tab's display alias — see [Tabs](/user-documentation/getting-started/tabs) |
-| `tab focus <name>` | Focus the first tab matching its label or alias, including a hidden managed system tab |
+| `tab` | `focus <name>`, `move <tab> <position>`, `pane <tab> left\|right`, `split <tab>`, `color <tab> <#rrggbb>`, `group <tab> <id\|name>`, `dock <tab> left\|right`, `undock <tab>` arrange tabs |
 | `theme [name]` | Switch the application color theme; bare form opens a picker |
 | `syntax theme [name]` | Switch the editor and diff syntax theme; bare form opens a picker |
 | `notifications [left\|right]` | Open the [notifications](/user-documentation/tab-types/notifications) feed, optionally docked in a sidebar |
@@ -49,16 +49,38 @@ If the help files can't be read, `help` falls back to a single summary line nami
 
 Every command's page is also on this site, under **Command Reference** in the sidebar.
 
-## `tab focus`
+## `tab`
 
-`tab focus <name>` selects the first tab whose label or alias matches, ignoring case. The name may contain spaces:
+Every `tab` form finds the first tab whose label or display alias matches, ignoring case. Quote a name that contains spaces. Successful arrangement commands print nothing and leave focus unchanged, except docking the active tab, which moves focus to a center tab:
 
 ```
 tab focus bilal
-tab focus review notes
+tab focus "review notes"
+tab move "review notes" 2
+tab pane janus right
+tab split "review notes"
+tab color "review notes" #FF8800
+tab group "review notes" scratch
+tab dock "review notes" left
+tab undock "review notes"
 ```
 
-If nothing matches, the app prints `No tab named "<name>".` Bare `tab`, `tab focus`, or another `tab` subcommand prints `Usage: tab focus <name>.` Focusing a hidden managed system tab makes it visible again. The exact alias `system` is reserved; trying to use it prints `Cannot use "system": that name is reserved for the system tab.`
+`tab move` uses a 1-based position. A center tab moves among center tabs in its group and pane. A visible docked tab moves among every tab on its sidebar, regardless of group, while a hidden docked tab keeps its center group-and-pane order. Reporting tabs move among other reporting tabs. A position past the end moves the tab to the last place.
+
+`tab group` joins or creates a group and inserts the tab after its last member. `tab color` changes the dot, not the group's band. `tab dock` docks file navigators, notifications, or bundled-plugin tabs; docking the active tab moves focus to a center tab. `tab undock` returns a docked tab without taking focus. `tab focus` reveals a hidden managed system tab. The exact alias `system` is reserved; trying to use it prints `Cannot use "system": that name is reserved for the system tab.`
+
+If no tab matches, the app prints `No tab named "<name>".` An unsupported dock, a monitor group request, a pane move for an ineligible tab, or undocking a hidden tab sends one notification and leaves the transcript alone:
+
+```
+Cannot dock "<name>".
+Cannot group "<name>".
+Cannot move "<name>" to a pane.
+Cannot undock "<name>".
+```
+
+Malformed forms print the matching usage line: `Usage: tab focus <name>.`, `Usage: tab move <tab> <position>.`, `Usage: tab pane <tab> left|right.`, `Usage: tab split <tab>.`, `Usage: tab color <tab> <#rrggbb>.`, `Usage: tab group <tab> <id|name>.`, `Usage: tab dock <tab> left|right.`, or `Usage: tab undock <tab>.` Bare `tab` and unknown subcommands print `Usage: tab focus|move|pane|split|color|group|dock|undock <tab> [argument].`
+
+Angle-bracket arguments in these replies display as literal text in the transcript and shell terminal.
 
 ## `theme`
 

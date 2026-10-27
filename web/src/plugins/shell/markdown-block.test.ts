@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Terminal } from '@xterm/xterm';
 import { parseHarnessCommand } from '@shared/harness/command-parse.js';
+import { parseTabCommand } from '@shared/commands/parse-tab.js';
 import { insertMarkdownBlock } from './markdown-block';
 
 // The usage error the `harness` command itself answers with for `command`, so the test renders the
@@ -206,6 +207,28 @@ describe('insertMarkdownBlock', () => {
     fake.render(element);
 
     expect(element.querySelector('p')?.textContent).toBe(DISPLAYED_LAYOUT_USAGE);
+  });
+
+  it.each([
+    ['tab focus', 'Usage: tab focus <name>.'],
+    ['tab move', 'Usage: tab move <tab> <position>.'],
+    ['tab pane', 'Usage: tab pane <tab> left|right.'],
+    ['tab split', 'Usage: tab split <tab>.'],
+    ['tab color', 'Usage: tab color <tab> <#rrggbb>.'],
+    ['tab group', 'Usage: tab group <tab> <id|name>.'],
+    ['tab dock', 'Usage: tab dock <tab> left|right.'],
+    ['tab undock', 'Usage: tab undock <tab>.'],
+    ['tab close', 'Usage: tab focus|move|pane|split|color|group|dock|undock <tab> [argument].'],
+  ])('renders tab usage placeholders literally for %s', (input, visibleUsage) => {
+    const parsed = parseTabCommand(input);
+    const reply = 'error' in parsed ? parsed.error : '';
+    const fake = fakeTerminal();
+
+    expect(insertMarkdownBlock(fake.terminal, input, reply, vi.fn())).toBe(true);
+
+    const element = document.createElement('div');
+    fake.render(element);
+    expect(element.textContent).toBe(`${visibleUsage}\n`);
   });
 
   it('places nothing when the reply measures nothing', () => {

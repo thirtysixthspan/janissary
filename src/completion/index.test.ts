@@ -82,6 +82,10 @@ describe('completeCommandLine', () => {
     expect(completeCommandLine('files on l', 10, dir, [], [], undefined, undefined, files).newInput)
       .toBe('files on left ');
   });
+
+  it('routes tab subcommand completion through the command-line chain', () => {
+    expect(completeCommandLine('tab mo', 6, dir, ['janus']).newInput).toBe('tab move ');
+  });
 });
 
 describe('completeCommandLine — schedule `in <tab>` target', () => {

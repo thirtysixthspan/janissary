@@ -5,7 +5,7 @@ import {
   type MonitorCompletions,
 } from './handlers.js';
 import {
-  completeSendTarget, completeScheduleTarget, completeConnectionClose,
+  completeSendTarget, completeScheduleTarget, completeConnectionClose, completeTabCommand,
 } from './target-handlers.js';
 import { completeBrowserCommand } from './browser.js';
 import { completeFilePath } from './fs.js';
@@ -23,8 +23,8 @@ const HELP_DIRECTORY = path.join(path.dirname(fileURLToPath(import.meta.url)), '
 /**
  * Tab-complete the token ending at the cursor.
  *
- * - For the target argument of `send`, `queue`, `close`/`exit`, and the `in <tab>` clause of
- *   `schedule`, completes against all open tab labels.
+ * - For tab-target arguments of `send`, `queue`, `close`/`exit`, `schedule`, and `tab`, completes
+ *   against open tab labels and display titles.
  * - For the target of `connection close`, completes against open connection strings
  *   (e.g. `sqlite:movies`, `shell:bash`, `acp:opencode`, `browser:w1`).
  * - For the `browser` command, completes subcommands and, where a window id is expected
@@ -47,6 +47,7 @@ export function completeCommandLine(
   const cursor = readCompletionCursor(input, cursorOffset);
   const result = completeFilesCommand(cursor, files, cwd) ??
     completeSendTarget(cursor, labels) ??
+    completeTabCommand(cursor, labels) ??
     completeRunscriptCommand(cursor, cwd, systemSchedule?.scripts ?? []) ??
     completeSystemSchedule(cursor, systemSchedule) ??
     completeScheduleTarget(cursor, labels) ??

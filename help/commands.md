@@ -50,7 +50,7 @@
 | `sql` | `sql [<name>]` opens a database browser with table filtering, sorting, paging, editing, export, and a SQL console. Bare `sql` opens the most recently used database; add `left` or `right` to dock it |
 | `ssh` | Open an SSH session to a remote host in a full-tab terminal |
 | `syntax` | `syntax theme <name>` sets the syntax-highlighting theme for every open editor and diff tab; `syntax theme` alone opens a theme-picker modal |
-| `tab focus <name>` | Focus the first tab matching its label or alias; explicitly reveals a hidden system tab |
+| `tab` | `focus <name>`, `move <tab> <position>`, `pane <tab> left\|right`, `split <tab>`, `color <tab> <#rrggbb>`, `group <tab> <id\|name>`, `dock <tab> left\|right`, `undock <tab>` arrange tabs |
 | `tasks` | Open the task picker listing executable `ai/tasks/*.md` files from the project and Janissary (Ctrl+A) |
 | `theme` | Set the application UI theme (`theme <name>`); `theme` alone opens a theme-picker modal; `theme sync` sets the syntax theme to match the app theme name |
 | `unmonitor` | Stop a monitor by name, remove one target (`unmonitor <name> <target>`), or stop all monitors started from this tab (`--all`) |

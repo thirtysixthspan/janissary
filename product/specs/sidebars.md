@@ -16,6 +16,9 @@ navigator (see `file-navigator-tab.md`), the notifications tab (see `notificatio
 schedules tab (see `scheduling.md`), and any bundled-plugin tab (see `tab-plugins.md`). They share
 one docking mechanism and, being different kinds, can occupy the **same** sidebar at the same
 time — see "Sharing a sidebar" below — as well as different sidebars.
+`tab dock <tab> left|right` docks one of these tabs by label or display alias. It refuses harness,
+editor, monitor, and tabs without a dockable view, and it refuses to dock the only visible center
+tab. Docking into an occupied side still displaces only a same-kind occupant.
 
 Each sidebar holds **at most one docked tab of each kind at a time**. Docking a tab into a side
 that already holds a tab of the *same* kind **displaces** that occupant, which returns to the
@@ -45,15 +48,20 @@ tab quits the app, the same as if no sidebar existed.
 ### Leaving the strip
 
 While a tab is docked, it is **not shown in the central tab strip** — there is no duplicate
-representation of it there. It reappears in the strip, in its current reordered position within its
-group, the moment it is undocked.
+representation of it there. It reappears in the strip at its current full-array position the moment
+it is undocked. A visible docked tab's `tab move` ordering includes every record docked on that side
+regardless of group, including hidden records that have no visible sidebar entry. The resulting
+full-array position is retained on undock and can differ from the tab's group's center order.
 
 ### The active-tab invariant
 
 A docked tab is **never the active tab**. Docking the currently active tab moves focus to the
 nearest tab that isn't docked. Explicitly focusing a hidden docked tab reveals and undocks it into
 the focused center pane. Undocking a visible tab back to the center strip makes it active again —
-focusing a docked tab always means bringing it fully into view, which requires undocking it.
+the mouse undock and explicit focus bring the tab fully into view. `tab undock <tab>` returns a
+visible docked tab to the currently focused pane without changing focus. A hidden tab cannot be
+undocked by that command. If no center tab is active, selection repair activates the newly undocked
+tab. Focusing a docked tab always means bringing it fully into view, which requires undocking it.
 Tab-cycling commands (e.g. switching to the next tab) skip over docked tabs, since they are not
 eligible to become active.
 

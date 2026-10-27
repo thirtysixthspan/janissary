@@ -17,6 +17,8 @@ Commands submitted in `janus` keep their output there even when a startup notifi
 
 Each tab has a colored dot drawn from a 15-color palette, cycling as tabs are added. The launch shell uses the first palette color. A new tab's dot color is chosen to be perceptually distinct from the colors already on screen (`distinctColor` in `src/tab.ts`), rather than strictly cycling, so adjacent tabs stay easy to tell apart.
 
+`tab color <tab> <#rrggbb>` sets a named tab's dot to the exact six-digit hexadecimal value as typed, including letter casing. It changes no other tab's dot and never changes the fixed group-band color. A monitor reporting tab's dot can be changed too.
+
 ### Tab grouping
 
 Every tab belongs to a **group**, identified by a name, a positive numeric ID, and a fixed bar color. The default group is named `launch` and has ID 1. Existing groups keep their names and IDs while any member tab remains open; groups named only by a numeric ID use the generated name `group-<id>`. A group renders as a colored top border spanning each member tab's full width, drawn at full strength on every tab in the group — active or inactive, never faded — so related tabs read as a connected band in the strip.
@@ -25,8 +27,9 @@ Every tab belongs to a **group**, identified by a name, a positive numeric ID, a
 - **Inheritance.** A shell created with `shell` / `shell <name>` joins the group of the tab it was created from (the active tab), inheriting that group's number and bar color. Because creation is transitive, a chain of shells spawned from one another all share a single group.
 - **Profiles form a group.** Launching a profile creates one new group (the next free group number) shared by all of that profile's tabs; the group's bar color is fixed to the first launched tab's color. See Profiles.
 - **Explicit placement.** `shell` and `harness` launches accept `in group <name|id>`. Names compare without regard to case. An unknown name creates a group with the next available ID; an unknown positive ID creates that ID and gives it the generated name `group-<id>`. Its bar color is the first launched tab's dot color. Profile saves retain group names; older profiles without a name use the generated name for their stored ID.
+- **Command placement.** `tab group <tab> <id|name>` moves a named tab to an existing or newly-created group. A multiword group name is one quoted selector token. New names receive the next free ID; an unknown positive ID gets the generated `group-<id>` name. The tab is inserted after the destination group's last member, keeps its pane and dock placement, and retains its dot; a group that loses its last member disappears. Monitor reporting tabs cannot be grouped. `tab move <tab> <position>` reorders a tab among the center tabs in its group and pane, using a 1-based place; positions past the end place it last. A hidden tab uses those same center mates even while docked. A visible docked tab moves among all same-side docked records regardless of group, including hidden records that have no visible sidebar entry. Reporting tabs move among other reporting tabs. A docked move changes the tab's full-array position, which it keeps when undocked.
 - **Fixed color.** A group's bar color is set when the group is first created (the color of its first member) and stored per tab, so it never shifts when tabs are reordered or a member is closed.
-- **Contiguity.** A new tab is inserted directly after the last tab of its group (`insertTabInGroup` in `src/tab.ts`) so each group stays a single connected run in the strip. Reordering with `Ctrl+←` / `Ctrl+→` or by dragging a label may only move a tab **within the same group** (`canMoveTab`), so groups always stay contiguous and a tab can never be dragged out of its group. A tab can be temporarily absent from the strip while docked into a sidebar; see `sidebars.md`.
+- **Contiguity.** A new tab is inserted directly after the last tab of its group (`insertTabInGroup` in `src/tab/utils.ts`) so a center group stays a single connected run in the strip. Reordering with `Ctrl+←` / `Ctrl+→` or by dragging a center label may only move a tab **within the same group** (`canMoveTab`). A visible docked tab's `tab move` order is independent of group; because undocking preserves its full-array position, it can return outside its group's center run. A tab can be temporarily absent from the strip while docked into a sidebar; see `sidebars.md`.
 
 ### Window focus dimming
 
@@ -62,6 +65,16 @@ one. Its current percentage is reported to the server alongside the sidebar and 
 sizes, but remains absent from profiles and resets on reload. Reporting tabs remain in their
 full-width lower section and cannot be moved into a split pane. Notifications likewise have no
 Split control.
+
+`tab pane <tab> left|right` moves a named eligible tab to that pane, opening a split when needed;
+`tab split <tab>` moves it to the other pane. Neither changes focus when the target is not active.
+When the target is active, it stays active in the destination pane and the pane it leaves restores
+its previous selection. When a non-active tab leaves the active pane, it becomes visible in the
+other pane. When it moves into the active pane, the focused tab remains shown and the other pane
+keeps its selection, or selects its most recently focused remaining tab if the moved tab was visible
+there. Moving the last tab out of a pane collapses the split. A tab that becomes the visible
+secondary selection has its unread badge cleared. Hidden, docked, notification, and reporting tabs
+cannot be moved into panes; an unsplit strip with fewer than two eligible tabs cannot open a split.
 
 ### Busy indicator
 
@@ -259,9 +272,27 @@ While editing via double-click, the field accepts up to 50 characters — indepe
 
 The exact name `system` is reserved, ignoring case, for a managed system tab. A launch label or user alias normalized to that name is refused with `Cannot use "system": that name is reserved for the system tab.` A managed system tab may clear an alias to return to its own canonical label. Names such as `system-2` and `system.md` remain available.
 
-### `tab focus` command
+### `tab` command
 
-`tab focus <name>` explicitly selects the first open tab whose label or display alias matches `<name>`, ignoring case. The full trimmed text after `focus` is the name, including spaces. A hidden system tab may be focused by its label or alias; focusing reveals it, removes its hidden state, and undocks it into the center while preserving its full-array index and system identity. Success is silent. A missing target prints `No tab named "<name>".` Bare `tab`, `tab focus`, and any other `tab` subcommand print `Usage: tab focus <name>.` Hidden tabs stay in the complete tab list but do not appear in the central strip, tab navigator, or navigation cycling until explicitly focused.
+Each `tab` form that names a target resolves the first full-array tab whose label or display alias
+matches, ignoring case, including hidden tabs. A target or multiword group name must be quoted with
+single or double quotes; a backslash escapes the matching quote inside a quoted name. An empty
+quoted name is malformed. A miss prints `No tab named "<name>".`
+
+`tab focus <name>` explicitly selects its target; a hidden system tab becomes visible and is
+undocked into the center while retaining its identity and array position. `tab move`, `tab pane`,
+`tab split`, `tab color`, `tab group`, `tab dock`, and `tab undock` perform the placements described
+in Tab grouping, Tab dot colors, Split tab strips, and `sidebars.md`. Successful changes are silent
+and keep the active tab unchanged except that docking the active tab moves focus to a center tab to
+preserve the active-tab invariant. If `tab undock` runs while no center tab is active, selection
+repair activates the undocked tab. The already-completed form is also silent and emits no state
+update. Refusals are notification-only; malformed forms and missing targets print to the command
+transcript. Exact usage and refusal lines are specified in [[application-commands]].
+
+The `tab` command claims the entire `tab` token, including malformed forms. A hidden tab stays
+hidden when moved, recolored, regrouped, or docked; `tab pane`, `tab split`, and `tab undock` refuse
+to place a hidden tab in a pane. Hidden tabs remain in the complete tab list but do not appear in the
+central strip, tab navigator, or navigation cycling until explicitly focused.
 
 ### Hidden system tab lifecycle
 
@@ -284,6 +315,9 @@ When the server observes the managed system shell's PTY exit, it broadcasts that
 The managed hidden `system` shell does not count as a remaining user tab for the last-tab quit check. Closing the last visible, non-docked user tab therefore quits even when the managed system shell is still present; a user close of the system shell itself only hides it (see "Hidden system tab lifecycle" above).
 
 Closes the current tab and all of its associated connections — its shell, ACP session, browser, harness terminal, and scheduled timers — removes any workspace clone and its in-memory tab state, and restores focus to whichever tab was focused immediately before the closed one became active. If that tab no longer exists (it was closed too, or is now docked into a sidebar) or was never recorded, focus falls back to the nearest adjacent tab. While more than one tab is open, `close` (or its alias `exit`) only closes tabs — exiting the app is `quit`, which asks for confirmation first (see `quit-confirmation.md`). **Closing the last remaining non-docked tab quits the app**: it behaves exactly like `quit`, whether the close came from the command, the tab strip's × button, the Cmd+W / Ctrl+W keyboard shortcut, or the tab's process exiting. Sidebar-docked tabs do not count toward this check — the app quits when the central tab strip has no tabs left, regardless of what is docked. Closing a docked tab never quits the app and never opens the quit confirmation, even when only one non-docked tab remains. When a typed `close`/`exit` would quit — bare on the last tab, or `close <name>` naming it — the quit confirmation dialog is shown first, same as typing `quit`; a process exit quits directly. `close <name>` (or `exit <name>`) closes the tab whose label or display alias (see "Tab display alias" above) matches the given name instead of the active one; the match is case-insensitive, and the first tab in the strip that matches is closed, the same rule `send` and `queue` use. This is how a view tab that authors no label of its own — an embedded page, an image — is closed from elsewhere, since each carries a name like `page`, `page-2`, or `image`. If no tab with that name exists, an error is reported. Typing `close <partial>` (or `exit <partial>`) tab-completes the name against every open tab's label. A close made in the window — a tab strip or sidebar ×, a docked plugin tab's close control, Cmd+W / Ctrl+W, or the save-changes dialog — names the tab it was made on by its exact label, and the server looks that label up when the request arrives. A tab opening, closing, or moving elsewhere in the meantime never redirects the close onto a neighbour, and a close for a tab that is already gone does nothing. (Open SQLite connections are global, not tab-scoped, so they are left open — close them with `connection close sqlite:<name>` — except when the last non-docked tab closes, which closes all of them as part of app shutdown.)
+
+`close`/`exit` completion offers each open tab's label and display title. The command reads its
+entire remaining line as the target, so a spaced display title completes and resolves as one name.
 
 ### Tab resource release failures
 

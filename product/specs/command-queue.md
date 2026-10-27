@@ -26,7 +26,7 @@ Shell command-bar submissions queue while zsh runs a command or its workspace is
 
 ## Command and errors
 
-`queue <shell-tab> <command...>` appends to a named tab's opted-in queue, including a provisioning shell or a plugin tab without a terminal. Labels and display aliases resolve through the ordinary target lookup. On success, the issuing transcript records `→ <label> (queued): <command>`. An idle consumer wakes on the updated queue; a busy consumer waits for its idle signal.
+`queue <shell-tab> <command...>` appends to a named tab's opted-in queue, including a provisioning shell or a plugin tab without a terminal. Labels and display aliases resolve through the ordinary target lookup. Completion offers labels and display titles, including hidden tabs; it does not quote spaced titles, and the queue parser reads one whitespace-delimited target word. On success, the issuing transcript records `→ <label> (queued): <command>`. An idle consumer wakes on the updated queue; a busy consumer waits for its idle signal.
 
 Missing arguments return `Usage: queue <shell-tab> <command>`. An unknown target returns `No tab named "<label>".`. A target without queue support, including a harness tab, returns `Tab "<label>" has no command queue.`. The usage names the shipped shell consumer; queue eligibility is generic. Bare `queue` is the interactive popup command, and is a no-op when dispatched non-interactively on the server.
 

@@ -18,6 +18,7 @@ import { deliverNotification } from './deliver.js';
 // `open-unsupported` reports that `open` found no opener for a file's extension — a deliberate
 // action's answer, and the one dispatcher error a file navigator activation can produce, where the
 // originating tab renders rows rather than a transcript.
+// `tab` reports that a command could not arrange its target tab.
 // `plugin-note` is a line a tab plugin reported through
 // its own `notifyUser` capability — a track a playlist had to drop, say — as opposed to
 // `plugin-failure`, which the host reports when a plugin breaks. `e2e-browser-gone` reports that a
@@ -71,6 +72,7 @@ export type NotificationEventType =
   | 'e2e-browser-gone'
   | 'file-operation'
   | 'open-unsupported'
+  | 'tab'
   | 'plugin-failure'
   | 'plugin-note'
   | 'launch-refused'
@@ -130,6 +132,7 @@ export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
   'e2e-browser-gone': true,
   'file-operation': true,
   'open-unsupported': true,
+  tab: true,
   'plugin-failure': true,
   'plugin-note': true,
   'launch-refused': true,

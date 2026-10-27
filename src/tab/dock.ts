@@ -3,6 +3,10 @@ import { beginDwell } from './dwell.js';
 import type { Tab } from './types.js';
 import { isCenterActionTab } from './placement.js';
 
+export function isDockableTab(tab: Tab): boolean {
+  return ['files', 'notifications', 'plugin'].includes(tab.view ?? '');
+}
+
 // Resolves docking a tab into a sidebar (`'left'` | `'right'`), or undocking it back to the
 // center strip (`null`, which also makes it the active tab). Docking into a side that already
 // holds a tab of the *same view kind* displaces that occupant back to center (non-destructive —

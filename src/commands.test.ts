@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { availableCommands, getOutput } from './commands.js';
 import { commands, findCommand } from './commands/index.js';
+import { parseTabCommand } from './commands/parse-tab.js';
 import { findPriorityConflicts } from './commands/priority.js';
 import { listHelpPages } from './help-pages.js';
 import { resolveCommand } from './resolve.js';
@@ -137,12 +138,58 @@ describe('getOutput help pages', () => {
     expect(text).toContain('Ctrl+E');
     expect(text).toContain('Ctrl+G');
     expect(text).toContain('Shell tab controls');
+    expect(text).toContain('Later arguments to `monitor` and `unmonitor` complete against tab labels and `group:<n>` selectors (`unmonitor` also offers `--all`).');
+    expect(text).not.toMatch(/Later arguments[^.]*display titles/);
   });
 
   it('prints a matching command page, case-insensitively and after one leading slash', () => {
     expect(outputText('help shell').startsWith('### shell')).toBe(true);
     expect(outputText('help Profile')).toContain('### profile');
     expect(outputText('help /quit')).toContain('### quit');
+  });
+
+  it('keeps the tab command page examples and usage aligned with the parser', () => {
+    const text = outputText('help tab');
+    const examples = [
+      'tab focus bilal',
+      'tab focus "review notes"',
+      'tab move "review notes" 2',
+      'tab pane janus right',
+      'tab split "review notes"',
+      'tab color "review notes" #FF8800',
+      'tab group "review notes" scratch',
+      'tab dock "review notes" left',
+      'tab undock "review notes"',
+    ];
+    for (const example of examples) {
+      expect(text).toContain(`\`${example}\``);
+      expect(parseTabCommand(example)).not.toHaveProperty('error');
+    }
+
+    expect(text).toContain('A quote may begin in the middle of a token');
+    expect(text).toContain('An arrangement that is already complete prints nothing and sends no state update.');
+    for (const refusal of [
+      'Cannot dock "<name>".',
+      'Cannot group "<name>".',
+      'Cannot move "<name>" to a pane.',
+      'Cannot undock "<name>".',
+    ]) expect(text).toContain(refusal);
+
+    const focusUsage = 'Usage: tab focus <name>.';
+    expect(parseTabCommand('tab focus review notes')).toEqual({ error: String.raw`Usage: tab focus \<name\>.` });
+    expect(text).toContain(`\`tab focus review notes\` prints \`${focusUsage}\``);
+
+    for (const usage of [
+      focusUsage,
+      'Usage: tab move <tab> <position>.',
+      'Usage: tab pane <tab> left|right.',
+      'Usage: tab split <tab>.',
+      'Usage: tab color <tab> <#rrggbb>.',
+      'Usage: tab group <tab> <id|name>.',
+      'Usage: tab dock <tab> left|right.',
+      'Usage: tab undock <tab>.',
+      'Usage: tab focus|move|pane|split|color|group|dock|undock <tab> [argument].',
+    ]) expect(text).toContain(usage);
   });
 
   it.each([

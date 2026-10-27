@@ -10,8 +10,10 @@ What gets completed depends on where in the command you are:
 
 | Context | Candidates |
 |---|---|
-| The target of [`send`](/user-documentation/command-bar/send), [`queue`](/user-documentation/command-bar/queue), or `close` / `exit` | Every open tab's label |
-| The tab in a [`schedule … in <tab>`](/user-documentation/automation/scheduling#scheduling-into-another-tab) clause | Every open tab's label |
+| The target of [`send`](/user-documentation/command-bar/send), [`queue`](/user-documentation/command-bar/queue), or `close` / `exit` | Every open tab's label or display alias |
+| The tab in a [`schedule … in <tab>`](/user-documentation/automation/scheduling#scheduling-into-another-tab) clause | Every open tab's label or display alias |
+| After `tab`, or at the target of a `tab` subcommand | The eight subcommands, then every open tab's label or display alias; names with spaces are quoted |
+| After a target in `tab pane` or `tab dock` | `left` and `right` |
 | The target of [`connection close`](/user-documentation/command-bar/connections) | Open connection strings, the same ones `connection list` prints (`sqlite:my-db`, `shell:bash`, `acp:opencode/big-pickle`, `browser:w1`, `ssh:my-host`, `terminal:vim`) |
 | After `browser` | Browser subcommands; for those that take a window id (`browser use`, `browser window close`), the current tab's open window ids |
 | After `harness <name>`, at `--model` | That harness's known model names; `--model` may sit anywhere after the harness name |

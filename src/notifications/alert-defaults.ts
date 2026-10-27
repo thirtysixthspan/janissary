@@ -34,5 +34,6 @@ export const NOTIFICATION_ALERT_DEFAULTS: Record<NotificationEventType, Notifica
   'ssh-recording-failed': { desktop: true, sound: 'error' },
   'state-change': { desktop: false, sound: 'none' },
   'system-schedule-fire': { desktop: true, sound: 'warning' },
+  tab: { desktop: true, sound: 'warning' },
   'transcript-unavailable': { desktop: true, sound: 'error' },
 };

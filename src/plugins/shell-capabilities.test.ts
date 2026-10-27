@@ -267,7 +267,7 @@ describe('completeLine', () => {
     const { managers, byLabel, tabs } = makeManagers();
     tabs.push({ label: 'shell', dotColor: '#aaa', log: [] });
     byLabel.mockImplementation((label) => tabs.find((tab) => tab.label === label));
-    managers.tab.allLabels = () => tabs.map((tab) => tab.label);
+    managers.tab.allLabelOrAliasNames = () => tabs.map((tab) => tab.label);
     vi.mocked(managers.tab.cwdOf).mockImplementation((label) => label === 'shell' ? '/repo/clone/subdir' : '/repo');
     managers.connection = { completionConnections: vi.fn(() => []) } as unknown as Managers['connection'];
     managers.monitor = { namesFor: vi.fn(() => []) } as unknown as Managers['monitor'];
