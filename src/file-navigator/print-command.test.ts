@@ -55,6 +55,13 @@ describe('formatFilesCommand', () => {
     }))).toBe('files in remote-tab on right with modified $root/src');
   });
 
+  it('quotes a remote owner label with spaces', () => {
+    expect(formatFilesCommand(view({
+      root: '/remote/workspace/src',
+      remote: { ownerLabel: 'remote workspace', root: '/remote/workspace' },
+    }))).toBe('files in "remote workspace" $root/src');
+  });
+
   it('quotes and escapes paths containing spaces or quotes', () => {
     expect(formatFilesCommand(view({
       expanded: ['my dir', 'a"b', "it's.md"],

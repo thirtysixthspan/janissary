@@ -1,5 +1,18 @@
 export type Token = { value: string; start: number; end: number };
 
+export function isFullyQuoted(value: string): boolean {
+  const quote = value.charAt(0);
+  if ((quote !== '"' && quote !== "'") || value.at(-1) !== quote) return false;
+  for (let index = 1; index < value.length; index++) {
+    if (value[index] === '\\' && value[index + 1] === quote) {
+      index++;
+      continue;
+    }
+    if (value[index] === quote) return index === value.length - 1;
+  }
+  return false;
+}
+
 export function skipSpaces(input: string, start: number): number {
   let index = start;
   while (/\s/.test(input[index] ?? '')) index++;

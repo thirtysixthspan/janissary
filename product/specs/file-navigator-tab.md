@@ -68,6 +68,10 @@ the tree path remains last.
 instead of the issuing tab's own cwd. If no tab has that label, an error (`No tab named
 "<label>".`) is appended to the issuing tab's transcript and no tree is opened or moved.
 The label may also follow a path: `files <path> in <label>` opens the path under that tab's cwd.
+An unquoted label is one word; a label containing spaces or quotes may be written as a fully quoted
+single- or double-quoted value. A backslash escapes the matching quote inside that value, and the
+outer quotes are removed before the tab is looked up. This works in either clause position, as in
+`files in "review team" src` and `files src in "review team"`.
 If `in` has no label after a path, the command reports `files: expected a tab label after "in"`.
 When `<label>` names a remote shell or harness, the tree is rooted in that tab's workspace on the
 remote host and uses that tab's existing ssh channel. There is no `files on <address>` form: a
@@ -576,9 +580,11 @@ At a `files` clause position, Tab offers matching clause keywords before matchin
 It completes `in` with open tab labels, `on` with `left`/`right`, `with` with the four detail modes,
 and `print` with open file navigator labels. After `print`, it completes only those navigator labels.
 After a view clause it completes paths relative to the tree root named by an earlier local
-`in <label>`, or the issuing tab's cwd when there is no `in`. A remote or unknown `in` target has no
-path completions. A completed path or label that contains whitespace or a quote is quoted, and no
-completion is offered while a quote remains open.
+`in <label>`, or the issuing tab's cwd when there is no `in`. A fully quoted label is decoded before
+the local root is looked up, so quoted labels with spaces or escaped quotes use the same root as an
+unquoted label. A remote or unknown `in` target has no path completions. A completed path or label
+that contains whitespace or a quote is quoted, and no completion is offered while a quote remains
+open.
 
 ### Deleting a file or directory
 

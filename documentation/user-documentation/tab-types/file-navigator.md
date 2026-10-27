@@ -15,6 +15,8 @@ Directories sort before files, both alphabetically and ignoring case. A few VS C
 
 If a tree is already open on the same root, `files` focuses it rather than opening a duplicate — or, with `left`/`right`, moves it into that sidebar. You can spell the side out as `files on left` or `files on right`; it means the same as the bare form. A target that isn't a directory prints `files: <path>: not a directory`. A `files in <label>` naming a tab that isn't there prints `No tab named "<label>".` and opens nothing. You can also put a path first, as in `files src in claude`, to open `src` under that tab's working directory; a trailing `in` without a label prints an error and opens nothing. A target that doesn't exist *yet* still opens a tab, showing "Looking for `<path>`…" until the directory shows up — handy for pointing a navigator at a directory a build or clone is about to create.
 
+If a tab label contains spaces or quotes, put it in matching single or double quotes. Escape a matching quote inside the label with a backslash. The quotes are removed before Janissary looks up the tab, whether `in` comes before or after the path: `files in "review team" src` and `files src in "review team"` both open `src` in that tab.
+
 ![A file navigator tab: a directory tree with one directory expanded and a row selected.](/screenshots/file-navigator.png)
 
 ## Opening from a tab's metadata row

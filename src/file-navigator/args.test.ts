@@ -43,6 +43,16 @@ describe('parseFileNavigatorArgs', () => {
     expectOpen('src/sub in claude', { inLabel: 'claude', dock: null, target: 'src/sub' });
   });
 
+  it('decodes quoted labels with spaces and escaped quotes before a path', () => {
+    expectOpen('in "review team" src', { inLabel: 'review team', target: 'src' });
+    expectOpen(String.raw`in "review \"team\"" src`, { inLabel: 'review "team"', target: 'src' });
+  });
+
+  it('decodes quoted labels with spaces and escaped quotes after a path', () => {
+    expectOpen('src in "review team"', { inLabel: 'review team', target: 'src' });
+    expectOpen(String.raw`src in "review \"team\""`, { inLabel: 'review "team"', target: 'src' });
+  });
+
   it('reports a trailing in clause without a label', () => {
     expectOpen('src/sub in', { inLabel: undefined, missingInLabel: true, dock: null, target: 'src/sub' });
   });

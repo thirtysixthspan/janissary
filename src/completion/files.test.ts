@@ -18,9 +18,11 @@ beforeAll(() => {
   mkdirSync(path.join(otherCwd, 'special-folder'));
   writeFileSync(path.join(otherCwd, 'special.md'), '');
   files = {
-    labels: ['janus', 'worker', 'remote'],
+    labels: ['janus', 'worker', 'remote', 'review team'],
     navigators: ['navigator', 'review notes'],
-    workingDirOf: (label) => label === 'worker' ? otherCwd : label === 'janus' ? cwd : undefined,
+    workingDirOf: (label) => label === 'worker' || label === 'review team'
+      ? otherCwd
+      : label === 'janus' ? cwd : undefined,
   };
 });
 
@@ -71,6 +73,13 @@ describe('files command completion', () => {
   it('completes a clause path against an earlier local in-tab root', () => {
     expect(complete('files in worker expand sp').newInput).toBe('files in worker expand special');
     expect(complete('files in worker sp').newInput).toBe('files in worker special');
+  });
+
+  it('uses a decoded quoted local label for clause-path completion', () => {
+    expect(complete('files in rev').newInput).toBe('files in "review team" ');
+    const result = complete('files in "review team" expand sp');
+    expect(result.newInput).toBe('files in "review team" expand special');
+    expect(result.matches).toEqual(['special-folder/', 'special.md']);
   });
 
   it('does not fall back to the issuing cwd for a remote or unknown in-tab root', () => {

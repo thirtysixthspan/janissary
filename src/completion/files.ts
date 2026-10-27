@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { readToken, skipSpaces } from '../command/quoted-token.js';
+import { isFullyQuoted, readToken, skipSpaces } from '../command/quoted-token.js';
 import { VIEW_KEYWORDS } from '../file-navigator/view-args.js';
 import { completeFilePath } from './fs.js';
 import { completeWord, isDir, longestCommonPrefix, replaceToken, splitToken } from './helpers.js';
@@ -53,7 +53,8 @@ type ClauseRead = { kind: 'next'; index: number } | { kind: 'slot'; slot: Slot }
 function readIn(args: Word[], index: number, state: ClauseState, context: FilesCompletions): ClauseRead {
   state.inSeen = true;
   if (index + 1 === args.length) return { kind: 'slot', slot: { kind: 'values', values: context.labels, quote: true } };
-  state.inLabel = args[index + 1]?.raw;
+  const label = args[index + 1];
+  state.inLabel = label && isFullyQuoted(label.raw) ? label.value : label?.raw;
   return { kind: 'next', index: index + 2 };
 }
 

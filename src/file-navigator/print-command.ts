@@ -56,7 +56,7 @@ function appendView(parts: string[], view: FilesCommandView): void {
 
 export function formatFilesCommand(view: FilesCommandView): string {
   const parts = ['files'];
-  if (view.remote) parts.push('in', view.remote.ownerLabel);
+  if (view.remote) parts.push('in', quotePath(view.remote.ownerLabel));
   if (view.dock) parts.push('on', view.dock);
   if (view.details !== 'name') parts.push('with', view.details);
   appendView(parts, view);

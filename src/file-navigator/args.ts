@@ -1,4 +1,4 @@
-import { readToken, skipSpaces, type Token } from '../command/quoted-token.js';
+import { isFullyQuoted, readToken, skipSpaces, type Token } from '../command/quoted-token.js';
 import type { FileNavigatorDetail } from '../tab/types.js';
 import { readViewStep, type ViewStep } from './view-args.js';
 
@@ -57,7 +57,8 @@ function readTrailingIn(input: string, start: number): TrailingIn {
     return { end: last.start, missingInLabel: true };
   }
   if (previous?.bare && previous.value.toLowerCase() === 'in' && last) {
-    return { end: previous.start, inLabel: input.slice(last.start, last.end) };
+    const raw = input.slice(last.start, last.end);
+    return { end: previous.start, inLabel: isFullyQuoted(raw) ? last.value : raw };
   }
   return { end };
 }
@@ -67,19 +68,6 @@ function targetValue(input: string, start: number, end: number): string {
   const token = readToken(input, skipSpaces(input, start));
   if (!token || skipSpaces(input, token.end) < end || input.slice(token.start, token.end) === token.value) return raw;
   return isFullyQuoted(raw) ? token.value : raw;
-}
-
-function isFullyQuoted(value: string): boolean {
-  const quote = value.charAt(0);
-  if ((quote !== '"' && quote !== "'") || value.at(-1) !== quote) return false;
-  for (let index = 1; index < value.length; index++) {
-    if (value[index] === '\\' && value[index + 1] === quote) {
-      index++;
-      continue;
-    }
-    if (value[index] === quote) return index === value.length - 1;
-  }
-  return false;
 }
 
 function parsePrint(input: string, keywordEnd: number): ParsedFileNavigatorArgs | undefined {
@@ -98,6 +86,11 @@ function readInClause(input: string, token: Token, parsed: FileNavigatorOpenArgs
   if (valueStart === input.length) {
     parsed.missingInLabel = true;
     return { kind: 'missing' };
+  }
+  const quoted = readToken(input, valueStart);
+  if (quoted && isFullyQuoted(input.slice(quoted.start, quoted.end))) {
+    parsed.inLabel = quoted.value;
+    return { kind: 'consumed', next: skipSpaces(input, quoted.end) };
   }
   const value = readBareWord(input, valueStart);
   parsed.inLabel = value.value;

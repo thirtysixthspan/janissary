@@ -30,8 +30,10 @@ After a view clause, paths complete relative to the local cwd named by an earlie
 the issuing tab's cwd when no `in` clause was used. A missing or remote `in` target produces no path
 matches and does not fall back to the issuing tab's cwd. The trailing root path is handled by
 ordinary filesystem completion. A path or completed name containing whitespace or a quote is
-offered wrapped in double quotes, with embedded double quotes escaped. If a quote is still open at
-the cursor, completion returns the input unchanged with no matches.
+offered wrapped in double quotes, with embedded double quotes escaped. A fully quoted `in` label is
+decoded before its local cwd is looked up, so accepting a quoted label completion keeps path
+suggestions rooted in that tab. If a quote is still open at the cursor, completion returns the input
+unchanged with no matches.
 
 The shell uses the following rules, in order of precedence:
 
