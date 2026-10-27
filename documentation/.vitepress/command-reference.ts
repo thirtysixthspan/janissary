@@ -15,12 +15,21 @@ export function commandNames(): string[] {
     .toSorted((left, right) => left.localeCompare(right));
 }
 
-export function commandReferenceSidebar() {
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+export function commandReferenceSidebar(names = commandNames()) {
   return {
     text: 'Command Reference',
     collapsed: true,
-    items: commandNames().map((name) => ({
-      text: `<code>${name}</code>`,
+    items: names.map((name) => ({
+      text: `<code>${escapeHtml(name)}</code>`,
       link: `/user-documentation/command-reference/${name}`,
     })),
   };

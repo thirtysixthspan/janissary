@@ -10,6 +10,8 @@ Bare `help` and `help commands` print `help/commands.md`, the command table. The
 
 `help <command>` prints the matching page from `help/<command>.md`, which describes its usage, use cases, and examples. Page names include `commands`, `keys`, and the first word of each command-table entry, so `help tab` prints the page for `tab focus <name>`. Names are case-insensitive; surrounding and repeated spaces are ignored, and one leading slash is dropped, so `help /quit` prints the `quit` page. Only an exact listed page name is accepted. A missing page returns exactly `No help for "<name>". Type "help" for available commands.`, where `<name>` is lowercased, whitespace-collapsed, trimmed, and has one leading slash removed. Thus `help //quit` reports `No help for "/quit". Type "help" for available commands.` and `help tab focus` reports a missing page rather than selecting `tab`.
 
+The documentation site's **Command Reference** sidebar shows each page name as code text. HTML characters in a name display literally, and the link retains that page's original route.
+
 The `help schedule` page documents tab and project-owned schedule creation, tab targeting, and the list, cancel, and clear forms for both schedule owners.
 
 The `help db` page lists `db sqlite list`, `db sqlite create <name>`, `db sqlite delete <name>`, and `db sqlite query <name> <sql>` as supported forms; its examples use the same `sqlite` engine token.
