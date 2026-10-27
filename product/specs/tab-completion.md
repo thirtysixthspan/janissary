@@ -25,6 +25,8 @@ been used. View keywords remain available, and bare `left`/`right` are offered w
 clause has been used. `print` is offered only as the first word after `files`. After `in`, it offers
 open tab labels; after `on`, `left` and `right`; after `with`, `name`, `size`, `modified`, and
 `permissions`; and after `print`, labels of open file navigators only.
+Once the single `files print` target has been entered, Tab leaves the line unchanged and offers no
+further candidates; it does not fall back to filesystem paths.
 
 After a view clause, paths complete relative to the local cwd named by an earlier `in <label>`, or
 the issuing tab's cwd when no `in` clause was used. A missing or remote `in` target produces no path

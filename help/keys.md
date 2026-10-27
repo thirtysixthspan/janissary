@@ -32,6 +32,8 @@
 
 Within a `files` command, Tab offers matching clause words before paths. It completes tab labels after `in`, sides after `on`, detail modes after `with`, and open navigator labels after `print`. Paths after a view clause complete against the local tab named by `in`; a quoted label is decoded for this lookup, while a remote or unknown tab has no path suggestions. Names with spaces or quotes are offered quoted, and nothing completes inside an open quote. Whitespace inside a quoted directory does not stop path completion: `files expand "my dir"/ne` completes a child of `my dir`. For example, `files s` can offer `select` and matching paths.
 
+After the one target of `files print` is entered, Tab leaves the line unchanged and offers no further candidates.
+
 View clauses restore only the named parts of a local tree; remote view clauses are ignored. `files print navigator` prints a reusable command without changing the tree, such as `files on left with size expand src expand src/commands cursor src/commands/files.ts select src/commands/files.ts $root`.
 
 **Shell tab controls** (active only while a shell tab is the visible one):
