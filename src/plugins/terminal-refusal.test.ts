@@ -33,7 +33,7 @@ function makeManagers(spawn: (cwd: string) => string): Managers {
     // A plugin that started no terminal has nothing to record, but the host asks the declaration
     // anyway — for every terminal a factory adopted, recorded or not — so it has to be answerable.
     plugins: { declarations: [] as { id: string; recordsTerminal?: boolean }[] },
-    harness: { registerShellObservers: vi.fn() },
+    terminalRuntime: { registerShellObservers: vi.fn() },
     shellTranscript: { install: vi.fn(), closeTab: vi.fn() },
   } as unknown as Managers);
   return managers;

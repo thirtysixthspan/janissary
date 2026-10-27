@@ -17,7 +17,7 @@ export type ScreenCapture = { text: string; capturedAt: number; title?: string; 
 // to settle into a coherent frame, short enough that the capture reflects "now".
 const CAPTURE_DELAY_MS = 1000;
 
-// Mirrors one harness PTY into a headless terminal so its on-screen text can be read server-side.
+// Mirrors one harness or SSH PTY into a headless terminal so its on-screen text can be read server-side.
 // Captures are throttled on activity: the first `data` event schedules a read 1s later, and further
 // events in that window neither reschedule nor extend it. Once output stops, the screen is re-read
 // exactly once more a further 1s later, marked `settled`, so a consumer that needs an idle reading

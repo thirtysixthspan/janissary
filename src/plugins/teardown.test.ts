@@ -26,6 +26,7 @@ function makeManagers(): Managers {
     browser: { closeTab: vi.fn() },
     pty: { closeTab: vi.fn() },
     harness: { closeTab: vi.fn() },
+    terminalRuntime: { closeTab: vi.fn() },
     shellTranscript: { closeTab: vi.fn() },
     fileNavigator: { closeTab: vi.fn() },
     editorWatch: { closeTab: vi.fn(), watch: vi.fn() },

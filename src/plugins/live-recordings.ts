@@ -14,7 +14,7 @@ import type { Managers } from '../managers.js';
 export function liveRecordingPaths(managers: Managers): Set<string> {
   const live = new Set<string>();
   for (const tab of managers.tab.tabs) {
-    const recording = managers.harness.liveRecordingPathOf(tab.label);
+    const recording = managers.terminalRuntime.liveRecordingPathOf(tab.label);
     if (recording) live.add(recording);
   }
   return live;

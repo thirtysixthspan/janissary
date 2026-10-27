@@ -6,7 +6,6 @@ import { reportBrowserStarted } from './browser-started.js';
 import { autoApproveWithoutWorkspaceWarning } from './auto-approve.js';
 import { notify } from '../notifications/index.js';
 import { harnessRuntime } from './observers.js';
-import { HarnessRuntimes } from './runtime-registry.js';
 import type { SpawnTabOptions } from './spawn-options.js';
 import type { HarnessView } from '../tab/types.js';
 import { messageBus } from '../bus.js';
@@ -17,12 +16,10 @@ import type { Managers } from '../managers.js';
 
 // Creating the harness tab and giving it a PTY: the half of a launch that touches the tab, PTY and
 // runtime registries, as opposed to the half that decides what to launch and what to call it. It
-// carries the runtime registry with it because `finishSpawn` installs into it, and the manager's
-// own screen/tailer lookups read the same registry.
+// installs each runtime through `TerminalRuntimeManager`, which also serves the manager's
+// screen/tailer lookups.
 
 export class HarnessTabSpawn {
-  protected readonly runtimes = new HarnessRuntimes();
-
   constructor(protected readonly managers: Managers) {}
 
   // Shared core: create the harness tab and focus it. With no `ready` (no workspace, or a
@@ -100,7 +97,11 @@ export class HarnessTabSpawn {
       const id = channel
         ? this.managers.pty.registerRemotePty(label, channel, { program, command, harness: name, offline, browser, autoApprove, autoResume }, options.resumePtyId)
         : this.managers.pty.spawn(label, program, command, cwd, workspaceDir, offline, spawnEnv.env);
-      this.runtimes.install(id, label, harnessRuntime({ managers: this.managers, name, label, id, cwd, autoApprove, autoResume, channel, browser: spawnEnv.handle }));
+       this.managers.terminalRuntime.install(
+         id,
+         label,
+         harnessRuntime({ managers: this.managers, name, label, id, cwd, autoApprove, autoResume, channel, browser: spawnEnv.handle }),
+       );
       this.markRunning(label, id);
     } catch (error) {
       spawnEnv.handle?.close();

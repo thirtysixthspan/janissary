@@ -10,7 +10,7 @@ describe('liveRecordingPaths', () => {
   function managersWith(tabs: Tab[], live: Record<string, string>) {
     return {
       tab: { tabs },
-      harness: {
+      terminalRuntime: {
         liveRecordingPathOf: (label: string) => live[label],
       },
     } as unknown as Managers;

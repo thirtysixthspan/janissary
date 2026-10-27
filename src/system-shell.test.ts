@@ -84,8 +84,7 @@ describe('SystemShellManager', () => {
     const position = managers.tab.tabs.indexOf(tab);
     const oldPty = managers.pty.terminalIdFor('system');
     if (!oldPty) throw new Error('expected the system PTY');
-    const runtimes = managers.harness as unknown as { runtimes: { get(id: string): unknown } };
-    expect(runtimes.runtimes.get(oldPty)).toBeDefined();
+    expect(managers.terminalRuntime.get(oldPty)).toBeDefined();
     const oldPayload = tab.plugin?.payload;
     if (typeof oldPayload !== 'object' || oldPayload === null || !('hookNonce' in oldPayload)) {
       throw new Error('expected a shell payload');
@@ -109,7 +108,7 @@ describe('SystemShellManager', () => {
     });
     messageBus.emit('pty', { type: 'exit', id: oldPty, exitCode: 0 });
     await vi.waitFor(() => expect(managers.pty.terminalIdFor('system')).not.toBe(oldPty));
-    await vi.waitFor(() => expect(runtimes.runtimes.get(oldPty)).toBeUndefined());
+    await vi.waitFor(() => expect(managers.terminalRuntime.get(oldPty)).toBeUndefined());
 
     expect(tab).toMatchObject({ label: 'system', title: 'private shell', group: 8, dock: 'right', hidden: true });
     expect(managers.tab.tabs.indexOf(tab)).toBe(position);

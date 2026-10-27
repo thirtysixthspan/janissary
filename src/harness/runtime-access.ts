@@ -4,8 +4,8 @@ import type { HarnessTranscriptTailer } from './transcript/tailer.js';
 import type { ScreenCapture } from './screen.js';
 
 // The three questions a caller asks about one tab's PTY runtime, asked by tab label. Split out of
-// `HarnessManager` for the same reason `observers.ts` was: the manager owns the runtime registry,
-// and these are lookups into it that hold no state of their own.
+// `HarnessManager` for the same reason `observers.ts` was: `TerminalRuntimeManager` owns the runtime
+// registry, and these harness-specific lookups hold no state of their own.
 //
 // Every one of them answers "nothing" for the same two reasons, and both are load-bearing rather
 // than incidental. The tab may be missing or may not be a harness tab at all — an ssh tab reuses
@@ -13,9 +13,11 @@ import type { ScreenCapture } from './screen.js';
 // And a runtime is released on whichever comes first, its PTY exiting or its tab closing, so a
 // lookup after the tab closed has nothing left to read.
 
+type RuntimeLookup = Pick<HarnessRuntimes, 'get'>;
+
 export function screenTextOf(
   managers: Managers,
-  runtimes: HarnessRuntimes,
+  runtimes: RuntimeLookup,
   label: string,
 ): ScreenCapture | undefined {
   const tab = managers.tab.harnessTab(label);
@@ -28,7 +30,7 @@ export function screenTextOf(
 // tail. Callers ask the tailer itself for entries or its file.
 export function tailerOf(
   managers: Managers,
-  runtimes: HarnessRuntimes,
+  runtimes: RuntimeLookup,
   label: string,
 ): HarnessTranscriptTailer | undefined {
   const tab = managers.tab.harnessTab(label);
@@ -54,7 +56,7 @@ export function recordingOf(managers: Managers, label: string): string | undefin
 // `schedule` already share for deciding whether a plugin tab can be typed into.
 export function liveRecordingOf(
   managers: Managers,
-  runtimes: HarnessRuntimes,
+  runtimes: RuntimeLookup,
   label: string,
 ): string | undefined {
   const tab = managers.tab.tabs.find((candidate) => candidate.label === label);

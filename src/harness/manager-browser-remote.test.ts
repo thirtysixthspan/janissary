@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
 import {
-  createHarnessManager, harnessBrowserMocks, makeBrowserManagers, resetHarnessBrowserFixture,
+  createHarnessManager, disposeBrowserManagers, harnessBrowserMocks, makeBrowserManagers, resetHarnessBrowserFixture,
 } from './manager-browser-test-fixture.js';
 
 type RemoteHandlers = {
@@ -42,6 +42,7 @@ describe('HarnessManager remote e2e browser', () => {
   });
 
   afterEach(() => {
+    disposeBrowserManagers();
     vi.useRealTimers();
     vi.clearAllMocks();
   });

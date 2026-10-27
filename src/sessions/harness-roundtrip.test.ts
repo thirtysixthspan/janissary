@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { messageBus } from '../bus.js';
 import { wireControllerEvents } from '../controller/events.js';
 import { HarnessManager } from '../harness/manager.js';
+import { TerminalRuntimeManager } from '../terminal-runtime/manager.js';
 import { MANAGER_TAB_RELEASE, type Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
 import { PseudoterminalManager } from '../pseudoterminal-manager.js';
@@ -94,6 +95,7 @@ function harness() {
   seedRootTab(managers.tab);
   managers.pty = new PseudoterminalManager(managers);
   managers.remote = new RemoteManager(managers);
+  managers.terminalRuntime = new TerminalRuntimeManager(managers);
   managers.harness = new HarnessManager(managers);
   managers.sessions = new SessionsManager(managers);
   wireControllerEvents(managers, { emitState: vi.fn(), sendPty: vi.fn(), sendPtyExit: vi.fn() });
@@ -110,6 +112,7 @@ beforeEach(() => {
 afterEach(() => {
   messageBus.clear();
   managers.sessions.dispose();
+  managers.terminalRuntime.dispose();
   managers.harness.dispose();
   managers.remote.dispose();
   managers.pty.dispose();

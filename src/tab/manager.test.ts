@@ -50,7 +50,8 @@ function makeManagers(): Managers {
       spawnDimensions: vi.fn(() => ({ cols: 80, rows: 24 })),
       isRunning: vi.fn(() => true),
     },
-    harness: { closeTab: vi.fn(), registerShellObservers: vi.fn() },
+    harness: { closeTab: vi.fn() },
+    terminalRuntime: { closeTab: vi.fn(), registerShellObservers: vi.fn() },
     shellTranscript: { install: vi.fn(), closeTab: vi.fn(), isWriting: vi.fn(() => false) },
     // Which plugins asked for their terminals to be recorded. Empty, so the cases below that assert
     // on adoption and on a refused spawn are asserting about those and not about recording; the
@@ -261,7 +262,7 @@ describe('TabManager queue', () => {
     // The label is the whole reason recording starts after adoption rather than at spawn: the file is
     // named for the tab, and the tab-close release matches on that same label.
     const tab = tm.tabs.find((candidate) => candidate.plugin?.instanceKey === 'shell-1')!;
-    expect(managers.harness.registerShellObservers).toHaveBeenCalledWith('pty1', tab.label);
+    expect(managers.terminalRuntime.registerShellObservers).toHaveBeenCalledWith('pty1', tab.label);
     expect(managers.shellTranscript.install).toHaveBeenCalledWith('pty1', tab.label);
   });
 
@@ -275,7 +276,7 @@ describe('TabManager queue', () => {
 
     // The claim is read from the declaration rather than from a list of plugin names here, so a
     // third-party plugin cannot quietly have its terminal's output written to disk.
-    expect(managers.harness.registerShellObservers).not.toHaveBeenCalled();
+    expect(managers.terminalRuntime.registerShellObservers).not.toHaveBeenCalled();
     expect(managers.shellTranscript.install).not.toHaveBeenCalled();
   });
 
@@ -291,7 +292,7 @@ describe('TabManager queue', () => {
       return { title: 'shell', payload: {} };
     });
 
-    expect(managers.harness.registerShellObservers).toHaveBeenCalledTimes(1);
+    expect(managers.terminalRuntime.registerShellObservers).toHaveBeenCalledTimes(1);
   });
 
   it('records nothing when the project turned shell recording off in its config', () => {
@@ -304,7 +305,7 @@ describe('TabManager queue', () => {
       return { title: 'shell', payload: {} };
     });
 
-    expect(managers.harness.registerShellObservers).not.toHaveBeenCalled();
+    expect(managers.terminalRuntime.registerShellObservers).not.toHaveBeenCalled();
     expect(managers.shellTranscript.install).not.toHaveBeenCalled();
   });
 
@@ -318,7 +319,7 @@ describe('TabManager queue', () => {
       return { title: 'shell', payload: {} };
     });
 
-    expect(managers.harness.registerShellObservers).toHaveBeenCalledTimes(2);
+    expect(managers.terminalRuntime.registerShellObservers).toHaveBeenCalledTimes(2);
     expect(managers.shellTranscript.install).toHaveBeenCalledTimes(2);
   });
 

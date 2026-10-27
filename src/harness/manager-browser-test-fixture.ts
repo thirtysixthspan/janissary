@@ -1,5 +1,6 @@
 import { vi } from 'vitest';
 import { HarnessManager } from './manager.js';
+import { TerminalRuntimeManager } from '../terminal-runtime/manager.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 import { byLabel, harnessTab } from '../tab/lookup.js';
@@ -10,6 +11,7 @@ const browserMock = vi.hoisted(() => ({
 }));
 const notificationMock = vi.hoisted(() => vi.fn());
 const browserLogMock = vi.hoisted(() => vi.fn(() => '/project/.janissary/browser-logs/claude-now.log'));
+const terminalRuntimeManagers: TerminalRuntimeManager[] = [];
 
 vi.mock('./scratch-dir.js', () => ({
   claudeTmpDir: vi.fn((cwd: string) => `${cwd}/.janissary/temp`),
@@ -106,10 +108,19 @@ export function makeBrowserManagers(): { managers: Managers; tabs: Tab[] } {
       spawnDimensions: () => ({ cols: 80, rows: 24 }),
       input: vi.fn(),
     },
+    terminalRuntime: { install: vi.fn() },
     workspace: { create: () => ({ dir: '/workspace/claude' }) },
     openFile: { edit: vi.fn() },
     schedule: { set: vi.fn() },
     sessions: { view: vi.fn(() => []) },
   } as unknown as Managers;
+  const terminalRuntime = new TerminalRuntimeManager(managers);
+  terminalRuntimeManagers.push(terminalRuntime);
+  Object.assign(managers, { terminalRuntime });
   return { managers, tabs };
+}
+
+export function disposeBrowserManagers(): void {
+  for (const manager of terminalRuntimeManagers) manager.dispose();
+  terminalRuntimeManagers.length = 0;
 }
