@@ -61,9 +61,12 @@ than the sender's (see [[scheduling]]).
 
 ## Tab-completion
 
-Typing `send <partial>` completes the first argument against every open tab's label (all
-tabs, not just agents), via `completeSendTarget` in `src/completion-handlers.ts`. The same
-handler backs `queue` and `close`/`exit`'s name argument (see [[tabs]]).
+Typing `send <partial>` completes the first argument against every open tab's label and display
+title (all tabs, not just agents), via `completeSendTarget` in
+`src/completion/target-handlers.ts`. The same handler backs `queue` and `close`/`exit`'s name
+argument (see [[tabs]]). Completion does not quote a spaced display title. Because `send` and
+`queue` parse the target as one whitespace-delimited word, such a suggestion is not accepted as a
+whole target; `close` reads the full remaining text.
 
 ## Non-goals
 

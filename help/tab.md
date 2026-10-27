@@ -20,7 +20,7 @@ Focus a tab or arrange tabs by their name in the strip. Each form targets the fi
 
 `tab undock <tab>`
 
-Quote a target with single or double quotes when its name contains spaces. A quote may begin in the middle of a token, and a backslash escapes the matching quote inside a quoted name. An empty quoted name is invalid. A missing target prints `No tab named "<name>".`
+Quote a target or group name with single or double quotes when it contains spaces. A quote may begin in the middle of a token, and a backslash escapes the matching quote inside a quoted name. An empty quoted name is invalid. A missing target prints `No tab named "<name>".`
 
 **Use cases**
 
@@ -49,6 +49,7 @@ Refusals send a `tab` notification and do not write to the command transcript:
 - `tab split "review notes"` moves that tab to the other pane.
 - `tab color "review notes" #FF8800` sets its dot color.
 - `tab group "review notes" scratch` moves it to the `scratch` group, creating the group if needed.
+- `tab group "review notes" "long term"` creates or joins the multiword `long term` group.
 - `tab dock "review notes" left` docks it on the left if its tab kind supports docking.
 - `tab undock "review notes"` returns a visible docked tab to the center.
 - `tab focus review notes` prints `Usage: tab focus <name>.`; quote a name containing spaces.

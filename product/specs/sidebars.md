@@ -48,8 +48,10 @@ tab quits the app, the same as if no sidebar existed.
 ### Leaving the strip
 
 While a tab is docked, it is **not shown in the central tab strip** — there is no duplicate
-representation of it there. It reappears in the strip, in its current reordered position within its
-group, the moment it is undocked.
+representation of it there. It reappears in the strip at its current full-array position the moment
+it is undocked. A visible docked tab's `tab move` ordering includes every record docked on that side
+regardless of group, including hidden records that have no visible sidebar entry. The resulting
+full-array position is retained on undock and can differ from the tab's group's center order.
 
 ### The active-tab invariant
 

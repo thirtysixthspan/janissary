@@ -47,11 +47,11 @@ The shell uses the following rules, in order of precedence:
 - **Candidates:** The names of markdown pages in the help directory, including `commands` and `keys`.
 - **Behavior:** A matching name completes normally. A prefix with no match returns no candidates and does not fall through to filesystem path completion. A leading slash in the argument is not completed. Arguments after the first use the ordinary completion chain.
 
-### Tab arrangements (`tab`)
+### Tab target arguments
 
-- **Context:** The first argument, target arguments, and the side argument after `pane` or `dock`.
-- **Candidates:** The first argument offers all eight tab subcommands. Target arguments offer each open tab's label and display title, including hidden tabs. `pane` and `dock` offer `left` and `right` after a target.
-- **Behavior:** A unique target completes fully, and names containing whitespace are quoted. Names duplicated without regard to case appear once; when entered, the name still resolves to the first matching tab.
+- **Context:** The target argument of `send`, `queue`, `close`/`exit`, `schedule … in <tab>`, and every `tab` subcommand.
+- **Candidates:** Each open tab contributes its label and display title, including hidden tabs. Names duplicated without regard to case appear once, retaining the first spelling in tab order.
+- **Behavior:** `tab` offers all eight subcommands, quotes target names containing whitespace, and offers `left`/`right` after `pane` and `dock`. Generic target completions offer spaced display titles without quoting them. `close` reads the full target remainder; `send`, `queue`, and `schedule` parse a single whitespace-delimited target token, so a spaced title offered there is not accepted as a whole target.
 
 ### 2. Connection Management (`connection close`)
 
