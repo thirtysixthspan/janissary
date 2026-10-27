@@ -6,7 +6,9 @@ When a command is dispatched from a plugin tab, the reply preserves `dispatched`
 
 ### `help`
 
-Bare `help` and `help commands` print `help/commands.md`, the command table. The table is alphabetical by command name and each description is limited to 200 characters. `help keys` prints the key-binding reference from `help/keys.md`; key bindings are not included in bare `help`.
+Bare `help` and `help commands` print the alphabetical command table, whose descriptions are limited to 200 characters except for the `files` row, which is limited to 350 characters to fit its expanded syntax. A command description may include a shortcut reference, such as `Ctrl+E` in the `queue` row. The separate `Key Bindings` section appears only in `help keys` and is not included in bare `help`.
+
+The `files` row keeps the `name`, `size`, `modified`, and `permissions` detail modes together in its single description cell. It also names the `expand <path>`, `collapse <path>`, `cursor <path>`, `anchor <path>`, and `select <path>` view clauses and notes that labels with spaces or quotes should be quoted.
 
 Each command page uses one opening description after its `### <command>` heading, followed by **Usage**, **Use cases**, and **Examples** blocks in that order.
 

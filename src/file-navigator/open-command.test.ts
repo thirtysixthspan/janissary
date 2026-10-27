@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { openFilesCommand } from './open-command.js';
+import { parseFileNavigatorArgs } from './args.js';
 import type { FilesTabState } from './state.js';
 import type { Managers } from '../managers.js';
 import type { RemoteTarget, Tab } from '../tab/types.js';
@@ -90,7 +91,19 @@ function harness(options: { channel?: unknown; attach?: boolean; existing?: Tab;
 }
 
 function run(h: Harness, command: string, label = 'janus'): string | undefined {
-  return openFilesCommand(h.managers, h.tabs, command, label, h.watchDir, h.refreshGit, h.pollForCreation, h.rebuild);
+  const parsed = parseFileNavigatorArgs(command.replace(/^files\b\s*/i, ''));
+  if (parsed.kind !== 'open') return undefined;
+  return openFilesCommand(
+    h.managers,
+    h.tabs,
+    parsed,
+    label,
+    (text) => h.managers.tab.append(label, { input: command, output: text }),
+    h.watchDir,
+    h.refreshGit,
+    h.pollForCreation,
+    h.rebuild,
+  );
 }
 
 beforeEach(() => {

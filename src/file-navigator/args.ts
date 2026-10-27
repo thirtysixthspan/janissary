@@ -1,74 +1,192 @@
+import { isFullyQuoted, readToken, skipSpaces, type Token } from '../command/quoted-token.js';
 import type { FileNavigatorDetail } from '../tab/types.js';
+import { readViewStep, type ViewStep } from './view-args.js';
 
-type ParsedArgs = {
-  inLabel?: string; missingInLabel?: boolean; dock: 'left' | 'right' | null;
-  details?: FileNavigatorDetail; target: string;
+export type FileNavigatorOpenArgs = {
+  kind: 'open';
+  inLabel?: string;
+  missingInLabel?: boolean;
+  dock: 'left' | 'right' | null;
+  details?: FileNavigatorDetail;
+  steps: ViewStep[];
+  target: string;
 };
 
-// One leading keyword clause: the pattern that recognizes it, and where its captured value lands.
-// A clause only matches while its slot is still empty, so each is consumed at most once.
-const CLAUSES: { pattern: RegExp; apply: (parsed: ParsedArgs, value: string) => void }[] = [
-  {
-    pattern: /^in\s+(\S+)\b\s*/i,
-    apply: (parsed, value) => { parsed.inLabel = value; },
-  },
-  {
-    pattern: /^on\s+(left|right)\b\s*/i,
-    apply: (parsed, value) => { parsed.dock = value.toLowerCase() as 'left' | 'right'; },
-  },
-  {
-    pattern: /^with\s+(name|size|modified|permissions)\b\s*/i,
-    apply: (parsed, value) => { parsed.details = value.toLowerCase() as FileNavigatorDetail; },
-  },
-];
+export type ParsedFileNavigatorArgs =
+  | FileNavigatorOpenArgs
+  | { kind: 'print'; name: string }
+  | { kind: 'error'; error: string };
 
-// True while the clause at `index` has not been consumed yet.
-function unfilled(parsed: ParsedArgs, index: number): boolean {
-  if (index === 0) return parsed.inLabel === undefined;
-  if (index === 1) return parsed.dock === null;
-  return parsed.details === undefined;
+type TrailingIn = { end: number; inLabel?: string; missingInLabel?: boolean };
+type ClauseResult = { kind: 'consumed'; next: number } | { kind: 'missing' };
+type ClauseFlags = { onSeen: boolean; bareSideUsed: boolean };
+type TokenResult =
+  | { kind: 'next'; index: number }
+  | { kind: 'stop'; targetStart: number }
+  | { kind: 'print'; name: string }
+  | { kind: 'error'; error: string };
+
+function bareWord(input: string, token: Token): string | undefined {
+  return input.slice(token.start, token.end) === token.value ? token.value.toLowerCase() : undefined;
 }
 
-function trailingInClause(cursor: string): { cursor: string; inLabel?: string; missingInLabel?: boolean } {
-  const clause = /\s+in\s+(\S+)\s*$/i.exec(cursor);
-  if (clause) return { cursor: cursor.slice(0, clause.index), inLabel: clause[1] };
-  if (!/\s+in\s*$/i.test(cursor)) return { cursor };
-  return { cursor: cursor.replace(/\s+in\s*$/i, ''), missingInLabel: true };
+function readBareWord(input: string, start: number): { value: string; end: number } {
+  let end = start;
+  while (end < input.length && !/\s/.test(input[end] ?? '')) end++;
+  return { value: input.slice(start, end), end };
 }
 
-// Parses the argument tail of a `files [left|right] [path]` / `files in <label> [on <side>]` /
-// `files with <mode>` command. Consumes leading `in <label>` / `on <left|right>` /
-// `with <name|size|modified|permissions>` clauses (any order, each at most once), then falls back
-// to the bare `left`/`right` keyword if neither dock clause was used. Whatever's left over is the
-// path target — including a `with` followed by anything other than the four mode words, so a
-// directory named `with` stays reachable as a path.
-export function parseFileNavigatorArgs(rest: string): ParsedArgs {
-  const parsed: ParsedArgs = { dock: null, target: '' };
-  let cursor = rest;
+function readTrailingIn(input: string, start: number): TrailingIn {
+  const end = input.trimEnd().length;
+  let cursor = skipSpaces(input, start);
+  let previous: { start: number; bare: boolean; value: string } | undefined;
+  let last: { start: number; end: number; bare: boolean; value: string } | undefined;
+  while (cursor < end) {
+    const token = readToken(input, cursor);
+    if (!token || token.end > end) return { end };
+    previous = last;
+    last = {
+      start: token.start,
+      end: token.end,
+      bare: input.slice(token.start, token.end) === token.value,
+      value: token.value,
+    };
+    cursor = skipSpaces(input, token.end);
+  }
+  if (previous?.bare && previous.value.toLowerCase() === 'in' && last) {
+    const raw = input.slice(last.start, last.end);
+    return { end: previous.start, inLabel: isFullyQuoted(raw) ? last.value : raw };
+  }
+  if (previous && last?.bare && last.value.toLowerCase() === 'in') {
+    return { end: last.start, missingInLabel: true };
+  }
+  return { end };
+}
 
-  for (let matched = true; matched;) {
-    matched = false;
-    for (const [index, clause] of CLAUSES.entries()) {
-      if (!unfilled(parsed, index)) continue;
-      const match = clause.pattern.exec(cursor);
-      if (!match) continue;
-      clause.apply(parsed, match[1]);
-      cursor = cursor.slice(match[0].length);
-      matched = true;
-      break;
+function targetValue(input: string, start: number, end: number): string {
+  const raw = input.slice(start, end).trim();
+  const token = readToken(input, skipSpaces(input, start));
+  if (!token || skipSpaces(input, token.end) < end || input.slice(token.start, token.end) === token.value) return raw;
+  return isFullyQuoted(raw) ? token.value : raw;
+}
+
+function parsePrint(input: string, keywordEnd: number): ParsedFileNavigatorArgs | undefined {
+  const nameStart = skipSpaces(input, keywordEnd);
+  if (nameStart === input.length) return undefined;
+  const name = readToken(input, nameStart);
+  if (!name) return { kind: 'error', error: 'files: unterminated quote' };
+  if (skipSpaces(input, name.end) < input.length) {
+    return { kind: 'error', error: 'Usage: files print <tab>.' };
+  }
+  return { kind: 'print', name: name.value };
+}
+
+function readInClause(input: string, token: Token, parsed: FileNavigatorOpenArgs): ClauseResult | undefined {
+  const valueStart = skipSpaces(input, token.end);
+  if (valueStart === input.length) return undefined;
+  const quoted = readToken(input, valueStart);
+  if (quoted && isFullyQuoted(input.slice(quoted.start, quoted.end))) {
+    parsed.inLabel = quoted.value;
+    return { kind: 'consumed', next: skipSpaces(input, quoted.end) };
+  }
+  const value = readBareWord(input, valueStart);
+  parsed.inLabel = value.value;
+  return { kind: 'consumed', next: skipSpaces(input, value.end) };
+}
+
+function readOnClause(input: string, token: Token, parsed: FileNavigatorOpenArgs, flags: ClauseFlags): ClauseResult | undefined {
+  const valueStart = skipSpaces(input, token.end);
+  const match = /^(left|right)\b/i.exec(input.slice(valueStart));
+  if (!match) return undefined;
+  parsed.dock = match[1].toLowerCase() as 'left' | 'right';
+  flags.onSeen = true;
+  return { kind: 'consumed', next: skipSpaces(input, valueStart + match[0].length) };
+}
+
+function readWithClause(input: string, token: Token, parsed: FileNavigatorOpenArgs): ClauseResult | undefined {
+  const valueStart = skipSpaces(input, token.end);
+  const match = /^(name|size|modified|permissions)\b/i.exec(input.slice(valueStart));
+  if (!match) return undefined;
+  parsed.details = match[1].toLowerCase() as FileNavigatorDetail;
+  return { kind: 'consumed', next: skipSpaces(input, valueStart + match[0].length) };
+}
+
+function readBareSide(input: string, token: Token, parsed: FileNavigatorOpenArgs, flags: ClauseFlags): ClauseResult {
+  parsed.dock = token.value.toLowerCase() as 'left' | 'right';
+  flags.bareSideUsed = true;
+  return { kind: 'consumed', next: skipSpaces(input, token.end) };
+}
+
+function readClause(
+  input: string, token: Token, parsed: FileNavigatorOpenArgs, flags: ClauseFlags,
+): ClauseResult | undefined {
+  const word = bareWord(input, token);
+  if (word === 'in' && parsed.inLabel === undefined) return readInClause(input, token, parsed);
+  if (word === 'on' && !flags.onSeen) return readOnClause(input, token, parsed, flags);
+  if (word === 'with' && parsed.details === undefined) return readWithClause(input, token, parsed);
+  if ((word === 'left' || word === 'right') && parsed.inLabel === undefined && !flags.onSeen && !flags.bareSideUsed) {
+    return readBareSide(input, token, parsed, flags);
+  }
+  return undefined;
+}
+
+function readStep(input: string, index: number, parsed: FileNavigatorOpenArgs): TokenResult | undefined {
+  const result = readViewStep(input, index);
+  if (!result) return undefined;
+  if ('error' in result) return { kind: 'error', error: result.error };
+  parsed.steps.push(result.step);
+  return { kind: 'next', index: skipSpaces(input, result.next) };
+}
+
+function readNextToken(
+  input: string, index: number, first: boolean, parsed: FileNavigatorOpenArgs, flags: ClauseFlags,
+): TokenResult {
+  const token = readToken(input, index);
+  if (!token) return { kind: 'stop', targetStart: index };
+  if (first && bareWord(input, token) === 'print') {
+    const print = parsePrint(input, token.end);
+    if (print?.kind === 'error') return print;
+    if (print?.kind === 'print') return { kind: 'print', name: print.name };
+  }
+  const clause = readClause(input, token, parsed, flags);
+  if (clause?.kind === 'missing') return { kind: 'stop', targetStart: input.length };
+  if (clause?.kind === 'consumed') return { kind: 'next', index: clause.next };
+  const step = readStep(input, index, parsed);
+  if (step) return step;
+  return { kind: 'stop', targetStart: token.start };
+}
+
+function initialArgs(): FileNavigatorOpenArgs {
+  return { kind: 'open', dock: null, steps: [], target: '' };
+}
+
+export function parseFileNavigatorArgs(rest: string): ParsedFileNavigatorArgs {
+  const parsed = initialArgs();
+  let index = skipSpaces(rest, 0);
+  let targetStart = index;
+  let first = true;
+  const flags: ClauseFlags = { onSeen: false, bareSideUsed: false };
+
+  while (index < rest.length) {
+    const tokenResult = readNextToken(rest, index, first, parsed, flags);
+    first = false;
+    if (tokenResult.kind === 'print' || tokenResult.kind === 'error') return tokenResult;
+    if (tokenResult.kind === 'next') {
+      index = tokenResult.index;
+      targetStart = index;
+      continue;
     }
+    targetStart = tokenResult.targetStart;
+    break;
   }
 
-  if (parsed.inLabel === undefined && parsed.dock === null) {
-    const keyword = /^(left|right)\b\s*/i.exec(cursor);
-    if (keyword) { parsed.dock = keyword[1].toLowerCase() as 'left' | 'right'; cursor = cursor.slice(keyword[0].length); }
-  }
-  if (parsed.inLabel === undefined) {
-    const trailing = trailingInClause(cursor);
+  if (parsed.inLabel === undefined && !parsed.missingInLabel) {
+    const trailing = readTrailingIn(rest, targetStart);
+    if (trailing.missingInLabel) parsed.missingInLabel = true;
     parsed.inLabel = trailing.inLabel;
-    parsed.missingInLabel = trailing.missingInLabel;
-    cursor = trailing.cursor;
+    parsed.target = targetValue(rest, targetStart, trailing.end);
+  } else {
+    parsed.target = targetValue(rest, targetStart, rest.trimEnd().length);
   }
-  parsed.target = cursor.trim();
   return parsed;
 }

@@ -59,10 +59,11 @@ const CASES: Array<[
   ['runFileNavigatorSelectionAction', { index: 0, paths: ['a'], action: 'play' }, [
     { index: 0, paths: ['a'] },
   ]],
-  ['reportFileNavigatorSelection', { id: 4, navigators: [{ index: 0, selected: ['a'], cursor: 'a' }] }, [
-    { id: 4, navigators: [{ index: 0 }] },
-    { id: 4, navigators: [{ index: 0, selected: 'a' }] },
-    { id: 4, navigators: [{ index: 0, selected: [], anchor: 2 }] },
+  ['reportFileNavigatorSelection', { id: 4, navigators: [{ label: 'files', selected: ['a'], cursor: 'a' }] }, [
+    { id: 4, navigators: [{ selected: ['a'] }] },
+    { id: 4, navigators: [{ label: 1, selected: ['a'] }] },
+    { id: 4, navigators: [{ label: 'files', selected: 'a' }] },
+    { id: 4, navigators: [{ label: 'files', selected: [], anchor: 2 }] },
     { id: '4', navigators: [] },
     { id: 4, navigators: {} },
   ]],

@@ -1,6 +1,6 @@
 import { statSync } from 'node:fs';
 import path from 'node:path';
-import { parseFileNavigatorArgs } from './args.js';
+import type { FileNavigatorOpenArgs } from './args.js';
 import { expandUserPath } from '../paths.js';
 import { resolveTarget } from '../commands/resolve-target.js';
 import type { Managers } from '../managers.js';
@@ -158,20 +158,19 @@ function openOrFocusRemoteTree(
   );
 }
 
-// FileNavigatorManager.open, extracted whole: resolves a `files [left|right] [path]` command into a
-// root directory, then either redocks an already-open tab on that root or opens a fresh one.
+// Resolve parsed `files` arguments into a root directory, then redock an existing tree or open a
+// fresh one.
 // Returns the label of the tab it opened, redocked, or focused — what `profile launch` needs to
 // restore that tree's saved view onto — or undefined when nothing was opened.
 export function openFilesCommand(
-  managers: Managers, tabs: Map<string, FilesTabState>, command: string, label: string,
+  managers: Managers, tabs: Map<string, FilesTabState>, parsed: FileNavigatorOpenArgs, label: string,
+  out: (text: string) => void,
   watchDir: (label: string, absDir: string, relPath: string) => void,
   refreshGit: (label: string) => void,
   pollForCreation: (label: string, absDir: string) => void,
   rebuild: (label: string) => void,
 ): string | undefined {
-  const rest = command.replace(/^files\b\s*/i, '');
-  const { inLabel, missingInLabel, dock, details, target } = parseFileNavigatorArgs(rest);
-  const out = (text: string) => managers.tab.append(label, { input: command, output: text });
+  const { inLabel, missingInLabel, dock, details, target } = parsed;
 
   if (missingInLabel) {
     out('files: expected a tab label after "in"');

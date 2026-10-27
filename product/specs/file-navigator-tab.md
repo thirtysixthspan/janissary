@@ -10,6 +10,9 @@ When the `files` command runs, a transcript entry for the command appears in the
 before the file navigator tab opens and takes focus. The command text is recorded as the entry's input;
 the output is empty since the file navigator tab is the side-effect.
 
+If a `files` command is malformed, it produces one transcript entry containing the parser error and
+does not open a tree. This includes malformed `files print` requests.
+
 A file navigator tab is created like a shell tab (see Tabs) — placed contiguously within the active
 tab's group, inheriting that group's number and bar color and taking a distinct dot color. Focus
 moves to the new file navigator tab.
@@ -49,9 +52,9 @@ workspace root is allowed; the parent row is hidden there so the tree cannot nav
 ### `files left`/`files right [path]`
 
 A leading `left` or `right` keyword docks the tree into that sidebar instead of the central tab
-strip — see `sidebars.md` for sidebar mechanics. The keyword is only recognized as the tree's
-first word, so a directory literally named `left` or `right` is still reachable through a path
-form (`files ./left`).
+strip — see `sidebars.md` for sidebar mechanics. The bare side word may precede the other clauses,
+such as `files left with size expand src`. Every clause is recognized at its clause position, and
+the tree path remains last.
 
 - **Bare `files [path]`** behaves exactly as above. If a tree on that root already exists and is
   currently docked, focusing it means **undocking it back to the center strip and making it
@@ -68,7 +71,15 @@ form (`files ./left`).
 instead of the issuing tab's own cwd. If no tab has that label, an error (`No tab named
 "<label>".`) is appended to the issuing tab's transcript and no tree is opened or moved.
 The label may also follow a path: `files <path> in <label>` opens the path under that tab's cwd.
-If `in` has no label after a path, the command reports `files: expected a tab label after "in"`.
+An unquoted label is one word; a label containing spaces or quotes may be written as a fully quoted
+single- or double-quoted value. A backslash escapes the matching quote inside that value, and the
+outer quotes are removed before the tab is looked up. This works in either clause position, as in
+`files in "review team" src` and `files src in "review team"`.
+A bare `in` with no following value at the start of a target is the path itself: `files in` opens a
+directory named `in`, and `files left in` opens it in the left sidebar. After a path, `in` starts a
+tab-label clause. A final bare token after that clause is its label even when the token is literally
+`in`: `files src in in` opens `src` under the tab named `in`. If no token follows the clause, as in
+`files src in`, the command reports `files: expected a tab label after "in"`.
 When `<label>` names a remote shell or harness, the tree is rooted in that tab's workspace on the
 remote host and uses that tab's existing ssh channel. There is no `files on <address>` form: a
 remote tree can only be opened through a tab that already owns a workspace and connection there.
@@ -81,12 +92,29 @@ any order (`files in claude on left with size`). When the command lands on a tre
 open — focusing, redocking, or retargeting it rather than opening a second one — the clause still
 applies, so re-running `files with modified` is a second way to switch an open tree's mode.
 
+The `in`, `on`, and `with` clauses keep their existing value rules and can each appear once. The
+view clauses `expand <path>`, `collapse <path>`, `cursor <path>`, `anchor <path>`, and `select
+<path>` may be repeated and combined with them in any order. Keywords are bare words and
+case-insensitive. A directory named `expand` at the end of the command is still a path; use
+`files ./expand` when it is followed by other words that would make `expand` a clause. A keyword
+with a path value reads one token. Quote a path containing spaces or quotes with single or double
+quotes; a backslash escapes the matching quote inside the quoted token. An unterminated quote in a
+view clause reports `files: unterminated quote` and opens or changes no tree. A trailing path loses
+its outer quote marks only when one matching pair encloses the entire path; quote marks embedded in
+otherwise bare or partly quoted path text remain verbatim. A multiword trailing path otherwise
+keeps its existing verbatim form.
+
 `files on left`/`files on right` is an explicit spelling of the same docking `files left`/`files
 right` provides. The two clauses are independent and may be combined in either order — `files in
 <label> on <side>` or `files on <side> in <label>` — to root the tree at another tab's cwd and dock
 it in one command, e.g. `files in claude on left`. Like `left`/`right`, `in` and `on` are only
-recognized as clause keywords, so a directory literally named `in` or `on` is still reachable
-through a path form (`files ./in`).
+recognized as clause keywords when followed by values, so a directory literally named `in` or `on`
+is still reachable through a path form (`files ./in` or `files ./on`). A valueless `in` at the start
+of the target is itself a path, as described above.
+
+The view clauses are also recognized after a leading bare `left` or `right`; for example,
+`files left with size expand src` docks and expands `src`. An explicit `on <side>` after that bare
+word is still parsed and sets the requested side. A quoted keyword is never treated as a clause.
 
 The `help files` page lists the supported path, tab-target, sidebar-placement, and detail-mode forms
 with examples.
@@ -518,6 +546,63 @@ Profiles for the full rules.
 
 Remote trees are excluded from saved profiles and are never restored, because their workspace and
 authenticated channel do not survive a launch.
+
+The command form can restore the same local view parts on a tree, with ordered clauses such as
+`files expand src cursor src/a.ts anchor src/a.ts select src/a.ts`. Clause paths are relative to
+the tree root. Relative paths are normalized; `..` names the parent row, and an absolute, `~`, or
+`$root` path is converted to a tree-relative path only if it lands inside the tree. The tree root
+is accepted by `collapse` and names no row for the other view clauses. A path outside the tree or
+one that no longer exists is dropped silently.
+
+Each clause takes effect in written order. `expand` opens any directory that still exists, including
+one hidden behind a collapsed ancestor; it appears open when its ancestors are expanded. `collapse`
+closes that directory and every expanded directory beneath it; `.` collapses all folders. A collapse
+of a folder that is not open does nothing. `cursor`, `anchor`, and `select` affect only a row visible
+when that clause runs. Repeated cursor or anchor clauses use the last path that survives, and repeated
+`select` clauses add visible rows. A later collapse drops hidden selected rows, moves a hidden cursor
+to its nearest visible ancestor, and resets a hidden anchor to that cursor. If the command names a
+cursor while hiding the current anchor, that hidden anchor resets to the command's cursor; a
+still-visible current anchor is preserved. If the command names no cursor, the client resets a hidden
+anchor to its current cursor.
+
+On an already-open local tree, the command changes only the parts it names; a dropped path counts as
+not given, so it does not clear an existing part. A command selection never moves keyboard focus.
+Profile launch retains its existing rule of replacing all three selection parts, including parts
+the entry omits. A tree waiting for its root receives no restore and does not retry when the root
+appears. View clauses on remote trees are parsed but ignored, including selection requests, because
+the remote listings are asynchronous.
+
+`files print <tab>` prints one command in the issuing tab's transcript without opening, focusing, or
+changing a tree. It resolves the name or display alias of an open file navigator and prints its
+root, dock, non-default detail mode, sorted expanded folders, cursor, anchor, and selected rows in
+that order. A local root inside `.janissary` retains that path segment in its `$root` form. The
+client selection is requested once; if no client replies before the timeout, the command is printed
+without the selection clauses. The reply is tied to the navigator by its stable tab label, so a tab
+reorder while waiting cannot substitute another tree's selection. Its root is captured when the
+request starts; if the same navigator is re-rooted or retargeted before the reply arrives, the reply's
+selection clauses are omitted. If the target tree closes before its selection arrives, its selection
+clauses are also omitted. A remote tree prints its owner, dock, detail mode, and `$root` path, but no
+view clauses. A path containing whitespace or a quote is
+double-quoted, with each double
+quote escaped as `\"`; because quoted tokens do not escape a final backslash, that path spelling
+does not round-trip. The exact replies are `No tab named "<name>".`, `files: "<name>" is not a file
+navigator`, `Usage: files print <tab>.`, and `files: unterminated quote`.
+
+### `files` command completion
+
+At a `files` clause position, Tab offers matching clause keywords before matching filesystem paths.
+It completes `in` with open tab labels, `on` with `left`/`right`, `with` with the four detail modes,
+and `print` with open file navigator labels. After `print`, it completes only those navigator labels.
+After the target label is complete, or when another argument follows it, Tab leaves the input
+unchanged and offers no candidates instead of falling back to filesystem paths.
+After a view clause it completes paths relative to the tree root named by an earlier local
+`in <label>`, or the issuing tab's cwd when there is no `in`. A fully quoted label is decoded before
+the local root is looked up, so quoted labels with spaces or escaped quotes use the same root as an
+unquoted label. A remote or unknown `in` target has no path completions. A completed path or label
+that contains whitespace or a quote is quoted, and no completion is offered while a quote remains
+open. Whitespace inside a quoted directory does not end the path token, so `files expand "my dir"/ne`
+completes children under `my dir`; the inserted path remains quoted when needed. After a completed
+quoted path and a space, ordinary clause suggestions are available again.
 
 ### Deleting a file or directory
 

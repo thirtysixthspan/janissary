@@ -27,7 +27,7 @@ const dispatch = (controller: Controller, id: number, call: Omit<ClientMessage, 
 describe('dispatchFileNavigatorMessage', () => {
   it('routes reportFileNavigatorSelection through the controller façade', () => {
     const controller = makeController();
-    const navigators = [{ index: 2, cursor: 'src/a.ts', anchor: 'src', selected: ['src', 'src/a.ts'] }];
+    const navigators = [{ label: 'navigator', cursor: 'src/a.ts', anchor: 'src', selected: ['src', 'src/a.ts'] }];
 
     const result = dispatch(controller, 7, { method: 'reportFileNavigatorSelection', params: { id: 4, navigators } });
 

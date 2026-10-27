@@ -44,7 +44,7 @@ function push(state: CaptureState, entry: ProfileTabFile | undefined, count: Cap
 }
 
 export function captureTab(
-  tab: Tab, managers: Managers, state: CaptureState, selections: Map<number, TreeSelection> = new Map(),
+  tab: Tab, managers: Managers, state: CaptureState, selections: Map<string, TreeSelection> = new Map(),
 ): void {
   if (tab.systemShell === true) return;
   if (tab === managers.tab.tabs[0] && tab.label === LAUNCH_LABEL) return;
@@ -71,7 +71,7 @@ export function captureTab(
       return;
     }
     case 'files': {
-      push(state, writeFilesEntry(tab, managers, selections.get(managers.tab.tabs.indexOf(tab))), 'fileNavigators');
+      push(state, writeFilesEntry(tab, managers, selections.get(tab.label)), 'fileNavigators');
       return;
     }
     case 'notifications': {

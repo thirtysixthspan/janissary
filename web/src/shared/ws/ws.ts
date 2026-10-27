@@ -116,7 +116,7 @@ export class JanusClient {
     break;
     }
     case 'collect-tree-state': {
-      // `profile save` is asking for the tree selections only this client knows about. Answer with
+      // `profile save` or `files print` is asking for the tree selections only this client knows about. Answer with
       // whatever the registered collector reports, or an empty list when nothing has registered one.
       this.send({
         method: 'reportFileNavigatorSelection',

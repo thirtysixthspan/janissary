@@ -13,6 +13,7 @@ import { readCompletionCursor } from './cursor.js';
 import { SYNTAX_THEMES } from '../syntax-themes.js';
 import { completeSystemSchedule, type SystemScheduleCompletions } from './system-schedule.js';
 import { completeRunscriptCommand } from './runscript-commands.js';
+import { completeFilesCommand, type FilesCompletions } from './files.js';
 import { listHelpPages } from '../help-pages.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,9 +42,11 @@ export function completeCommandLine(
   connections: string[] = [],
   monitor?: MonitorCompletions,
   systemSchedule?: SystemScheduleCompletions,
+  files?: FilesCompletions,
 ): CompletionResult {
   const cursor = readCompletionCursor(input, cursorOffset);
-  const result = completeSendTarget(cursor, labels) ??
+  const result = completeFilesCommand(cursor, files, cwd) ??
+    completeSendTarget(cursor, labels) ??
     completeRunscriptCommand(cursor, cwd, systemSchedule?.scripts ?? []) ??
     completeSystemSchedule(cursor, systemSchedule) ??
     completeScheduleTarget(cursor, labels) ??

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { openProfileFiles } from './files.js';
+import { parseFileNavigatorArgs } from '../file-navigator/args.js';
 import { makeTab } from '../tab/index.js';
 import type { Managers } from '../managers.js';
 import type { ProfileFilesEntry } from './types.js';
@@ -57,6 +58,28 @@ describe('openProfileFiles', () => {
     expect(open).toHaveBeenCalledWith('files in other', 'other');
   });
 
+  it('quotes a multiword profile label and parses it back as one label', () => {
+    const label = 'review team';
+    const command = 'files in "review team"';
+    const { open } = run([{ in: label }], 'claude');
+
+    expect(open).toHaveBeenCalledWith(command, label);
+    expect(parseFileNavigatorArgs(command.slice('files '.length))).toMatchObject({
+      kind: 'open', inLabel: label, target: '',
+    });
+  });
+
+  it('escapes embedded quotes in a profile label and parses it back unchanged', () => {
+    const label = 'review "team"';
+    const command = String.raw`files in "review \"team\""`;
+    const { open } = run([{ in: label }], 'claude');
+
+    expect(open).toHaveBeenCalledWith(command, label);
+    expect(parseFileNavigatorArgs(command.slice('files '.length))).toMatchObject({
+      kind: 'open', inLabel: label, target: '',
+    });
+  });
+
   it('builds "files in <label> on <side>" when both are set', () => {
     const { open } = run([{ in: 'other', dock: 'right' }], 'claude');
     expect(open).toHaveBeenCalledWith('files in other on right', 'other');
@@ -73,6 +96,11 @@ describe('openProfileFiles', () => {
     expect(open).toHaveBeenCalledWith('files $root', 'claude');
   });
 
+  it('leaves a single-token profile path ending in a backslash unquoted', () => {
+    const { open } = run([{ path: 'folder\\' }], 'claude');
+    expect(open).toHaveBeenCalledWith('files folder\\', 'claude');
+  });
+
   it('combines in, dock, and path into one command', () => {
     const { open } = run([{ in: 'other', dock: 'right', path: './sub' }], 'claude');
     expect(open).toHaveBeenCalledWith('files in other on right ./sub', 'other');
@@ -86,6 +114,22 @@ describe('openProfileFiles', () => {
   it('combines the with clause with in and dock', () => {
     const { open } = run([{ in: 'other', dock: 'right', details: 'modified' }], 'claude');
     expect(open).toHaveBeenCalledWith('files in other on right with modified', 'other');
+  });
+
+  it('quotes a profile path that matches a files clause keyword', () => {
+    const { open } = run([{ path: 'select notes' }], 'claude');
+    expect(open).toHaveBeenCalledWith('files "select notes"', 'claude');
+
+    const bareSide = run([{ path: 'left' }], 'claude').open;
+    expect(bareSide).toHaveBeenCalledWith('files "left"', 'claude');
+
+    const clause = run([{ path: 'in' }], 'claude').open;
+    expect(clause).toHaveBeenCalledWith('files "in"', 'claude');
+  });
+
+  it('escapes double quotes in a profile path', () => {
+    const { open } = run([{ path: 'docs/"notes".md' }], 'claude');
+    expect(open).toHaveBeenCalledWith(String.raw`files "docs/\"notes\".md"`, 'claude');
   });
 
   it('does nothing when there are no files entries', () => {

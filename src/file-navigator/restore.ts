@@ -3,6 +3,7 @@ import { parentPath } from './index.js';
 import { buildCachedRows, listingFor } from './filesystem-cache.js';
 import { expandAndWatch, type NavPort } from './navigation.js';
 import type { FilesTabState } from './state.js';
+import type { FileNavigatorRestoreHint } from '../tab/types.js';
 
 // Replays a tree view saved by `profile save` onto a freshly opened navigator: the expanded
 // directories go back into server state, and the cursor/anchor/selection become a hint the client
@@ -25,24 +26,21 @@ export type SavedTreeView = {
 // The surviving selection, handed to the client on the tab's payload. `revision` changes only when
 // a new restore is applied, so the repeated full-state broadcasts never re-apply an old hint over
 // a selection the user has since changed.
-export type TreeRestoreHint = {
-  revision: number;
-  cursor?: string;
-  anchor?: string;
-  selected: string[];
-};
-
 let nextRevision = 1;
 
 // Whether a saved expanded path should be expanded again. A local tree's port lists synchronously,
 // so the parent's listing answers at once. A remote tree's may still be loading; the path is then
 // expanded on trust, and the rebuild that listing's arrival triggers prunes it if it has gone.
-function stillDirectory(state: FilesTabState, relPath: string, onReady: () => void): boolean {
+export function stillDirectory(state: FilesTabState, relPath: string, onReady: () => void): boolean {
   if (relPath === '') return true;
   const listing = listingFor(state, parentPath(relPath), onReady);
   if (listing === undefined) return true;
   const name = path.posix.basename(relPath);
   return listing.some((entry) => entry.name === name && entry.dir);
+}
+
+export function nextRestoreRevision(): number {
+  return nextRevision++;
 }
 
 export function restoreTreeView(port: NavPort, label: string, view: SavedTreeView): void {
@@ -56,13 +54,13 @@ export function restoreTreeView(port: NavPort, label: string, view: SavedTreeVie
   }
 
   const visible = new Set(buildCachedRows(state, onReady).map((row) => row.path));
-  const survives = (relPath: string | undefined): string | undefined =>
-    (relPath !== undefined && visible.has(relPath) ? relPath : undefined);
+  const survives = (relPath: string | undefined): string | null =>
+    (relPath !== undefined && visible.has(relPath) ? relPath : null);
   state.restore = {
-    revision: nextRevision++,
+    revision: nextRestoreRevision(),
     cursor: survives(view.cursor),
     anchor: survives(view.anchor),
     selected: (view.selected ?? []).filter((relPath) => visible.has(relPath)),
-  };
+  } satisfies FileNavigatorRestoreHint;
   port.rebuild(label);
 }

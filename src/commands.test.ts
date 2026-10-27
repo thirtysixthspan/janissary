@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { availableCommands, getOutput } from './commands.js';
@@ -95,7 +96,39 @@ describe('getOutput help pages', () => {
     expect(helpText()).toBe(text);
     expect(text.startsWith('### Commands')).toBe(true);
     expect(text).toContain('`shell`');
+    const queueRow = text.split('\n').find((line) => line.startsWith('| `queue` |'));
+    expect(queueRow).toContain('Ctrl+E');
     expect(text).not.toContain('### Key Bindings');
+  });
+
+  it('summarizes all files detail modes and view clauses in the command table', () => {
+    const filesRow = outputText('help commands').split('\n').find((line) => line.startsWith('| `files` |'));
+    if (!filesRow) throw new Error('files command row is missing');
+
+    for (const syntax of [
+      '`with <name\\|size\\|modified\\|permissions>`',
+      '`expand <path>`',
+      '`collapse <path>`',
+      '`cursor <path>`',
+      '`anchor <path>`',
+      '`select <path>`',
+      '(quote labels with spaces or quotes)',
+    ]) {
+      expect(filesRow).toContain(syntax);
+    }
+  });
+
+  it('escapes detail-mode separators in the files command table source', () => {
+    const helpDirectory = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'help');
+    const filesRow = readFileSync(path.join(helpDirectory, 'commands.md'), 'utf8')
+      .split('\n')
+      .find((line) => line.startsWith('| `files` |'));
+    if (!filesRow) throw new Error('files command source row is missing');
+
+    const descriptionStart = filesRow.indexOf(' | ', filesRow.indexOf('`') + 1) + 3;
+    const description = filesRow.slice(descriptionStart, filesRow.lastIndexOf(' |'));
+    expect(description).toContain('`with <name\\|size\\|modified\\|permissions>`');
+    expect(description.replaceAll(String.raw`\|`, '')).not.toContain('|');
   });
 
   it('prints all key tables only from help keys', () => {
@@ -133,17 +166,24 @@ describe('getOutput help pages', () => {
     expect(names).toEqual(names.toSorted((left, right) => left.localeCompare(right)));
   });
 
-  it('keeps every command description within 200 characters', () => {
-    const descriptions = outputText('help commands')
+  it('limits ordinary command descriptions to 200 characters and bounds the files row', () => {
+    const commandRows = outputText('help commands')
       .split('\n')
       .filter((line) => line.startsWith('| `'))
       .map((line) => {
         const separator = line.indexOf(' | ', line.indexOf('`') + 1);
-        return line.slice(separator + 3, line.lastIndexOf(' |'));
+        return {
+          name: line.slice(3, line.indexOf('`', 3)).split(' ', 1)[0].toLowerCase(),
+          description: line.slice(separator + 3, line.lastIndexOf(' |')),
+        };
       });
 
-    expect(descriptions.length).toBeGreaterThan(1);
-    expect(descriptions.filter((description) => description.length > 200)).toEqual([]);
+    expect(commandRows.length).toBeGreaterThan(1);
+    const filesRows = commandRows.filter(({ name }) => name === 'files');
+    expect(filesRows).toHaveLength(1);
+    expect(filesRows[0]?.description.length).toBeGreaterThan(200);
+    expect(filesRows[0]?.description.length).toBeLessThanOrEqual(350);
+    expect(commandRows.filter(({ name, description }) => name !== 'files' && description.length > 200)).toEqual([]);
   });
 
   it('has a help page for each command row and no orphan command pages', () => {

@@ -353,14 +353,14 @@ describe('JanusClient', () => {
   it('collect-tree-state answers with the registered collector records, carrying the request id', () => {
     const client = new JanusClient();
     client.registerStateCollector('fileNavigatorSelections', () => [
-      { index: 2, cursor: 'src/a.ts', anchor: 'src', selected: ['src', 'src/a.ts'] },
+      { label: 'navigator', cursor: 'src/a.ts', anchor: 'src', selected: ['src', 'src/a.ts'] },
     ]);
 
     messageHandler!({ data: JSON.stringify({ t: 'collect-tree-state', id: 9 }) });
 
     expect(inst.send).toHaveBeenCalledWith(JSON.stringify({
       t: 'rpc', id: 1, method: 'reportFileNavigatorSelection',
-      params: { id: 9, navigators: [{ index: 2, cursor: 'src/a.ts', anchor: 'src', selected: ['src', 'src/a.ts'] }] },
+      params: { id: 9, navigators: [{ label: 'navigator', cursor: 'src/a.ts', anchor: 'src', selected: ['src', 'src/a.ts'] }] },
     }));
   });
 
@@ -376,7 +376,7 @@ describe('JanusClient', () => {
 
   it('registerStateCollector returns an unregister that stops the collector being consulted', () => {
     const client = new JanusClient();
-    const collect = vi.fn().mockReturnValue([{ index: 0, selected: ['src'] }]);
+    const collect = vi.fn().mockReturnValue([{ label: 'files', selected: ['src'] }]);
     const unregister = client.registerStateCollector('fileNavigatorSelections', collect);
 
     unregister();
@@ -723,15 +723,15 @@ describe('JanusClient', () => {
 
   it('registering the same collector name again replaces the previous collector', () => {
     const client = new JanusClient();
-    const first = vi.fn().mockReturnValue([{ index: 0, selected: ['first'] }]);
+    const first = vi.fn().mockReturnValue([{ label: 'first', selected: ['first'] }]);
     client.registerStateCollector('fileNavigatorSelections', first);
-    client.registerStateCollector('fileNavigatorSelections', () => [{ index: 1, selected: ['second'] }]);
+    client.registerStateCollector('fileNavigatorSelections', () => [{ label: 'second', selected: ['second'] }]);
 
     messageHandler!({ data: JSON.stringify({ t: 'collect-tree-state', id: 8 }) });
 
     expect(first).not.toHaveBeenCalled();
     expect(inst.send).toHaveBeenCalledWith(
-      expect.stringContaining('"navigators":[{"index":1,"selected":["second"]}]'),
+      expect.stringContaining('"navigators":[{"label":"second","selected":["second"]}]'),
     );
   });
 });

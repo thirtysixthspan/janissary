@@ -142,8 +142,8 @@ type PtyEvent =
   | { type: 'exit'; id: string; exitCode: number }
   | { type: 'resize'; id: string; cols: number; rows: number };
 type LayoutEvent = { type: 'update' } & LayoutUpdate;
-// A one-shot request for every connected client's file-navigator selections, issued by
-// `profile save` (see src/file-navigator/selection-request.ts) and broadcast as `collect-tree-state`.
+// A one-shot request for every connected client's file-navigator selections, used by `profile save`
+// and `files print` (see src/file-navigator/selection-request.ts) and broadcast as `collect-tree-state`.
 type FileNavigatorEvent = { type: 'collect'; id: number };
 // The schedules channel carries two variants at different rates. `changed` is raised when the
 // scheduled-command set changes. It is the named, low-frequency signal a tab plugin may subscribe to

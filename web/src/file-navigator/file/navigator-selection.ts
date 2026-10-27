@@ -1,4 +1,4 @@
-import type { FileNavigatorRow } from '@shared/protocol';
+import type { FileNavigatorRestoreHint, FileNavigatorRow } from '@shared/protocol';
 import { dirname } from '../../shared/rel-path';
 
 export type FileNavigatorSelection = {
@@ -103,22 +103,24 @@ export function reconcileSelection(
   return { cursor, anchor, selected };
 }
 
-export type TreeRestoreHint = {
-  revision: number;
-  cursor?: string;
-  anchor?: string;
-  selected: string[];
-};
-
 export function selectionFromRestore(
-  hint: TreeRestoreHint, rows: FileNavigatorRow[],
+  hint: FileNavigatorRestoreHint, rows: FileNavigatorRow[], current: FileNavigatorSelection,
 ): FileNavigatorSelection {
   const visible = new Set(rows.map((row) => row.path));
-  const survives = (path: string | undefined): string | null =>
-    (path !== undefined && visible.has(path) ? path : null);
+  const survives = (path: string | null | undefined, fallback: string | null): string | null =>
+    (path === undefined ? fallback : path !== null && visible.has(path) ? path : null);
+  const cursor = survives(hint.cursor, current.cursor);
+  const anchor = hint.anchorToCursor
+    ? cursor
+    : survives(hint.anchor, current.anchor);
+  const selected = new Set<string>();
+  const candidates = hint.selected === undefined ? current.selected : hint.selected ?? [];
+  for (const path of candidates) {
+    if (visible.has(path)) selected.add(path);
+  }
   return {
-    cursor: survives(hint.cursor),
-    anchor: survives(hint.anchor),
-    selected: new Set(hint.selected.filter((path) => visible.has(path))),
+    cursor,
+    anchor,
+    selected,
   };
 }

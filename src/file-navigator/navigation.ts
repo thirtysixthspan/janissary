@@ -83,6 +83,19 @@ export function collapseAllDirs(port: NavPort, label: string): void {
   port.rebuild(label);
 }
 
+export function collapseTree(port: NavPort, state: FilesTabState, relPath: string): void {
+  if (relPath === '') {
+    dropExpandedWatchers(port, state);
+    return;
+  }
+  const descendantPrefix = `${relPath}/`;
+  for (const expanded of state.expanded) {
+    if (expanded !== relPath && !expanded.startsWith(descendantPrefix)) continue;
+    state.expanded.delete(expanded);
+    port.unwatchDir(state, expanded);
+  }
+}
+
 // Re-root the tree to the parent directory. Clears expanded state and watchers, then rebuilds.
 // Resolves the target and runs the remote escape check here; the sequence itself is `reRootTree`,
 // which the remote paths share.
@@ -121,8 +134,8 @@ export function rerootTree(port: NavPort, label: string, relPath?: string): void
   }
 }
 
-// Mark one directory expanded and start watching it, unless it already is. Shared with
-// `restore.ts`, which replays a saved expanded set through the same pair of steps.
+// Mark one directory expanded and start watching it, unless it already is. Shared with both profile
+// restore and the ordered command restore.
 export function expandAndWatch(port: NavPort, label: string, state: FilesTabState, relPath: string): void {
   if (state.expanded.has(relPath)) return;
   const absolute = relPath ? containedPath(state.root, relPath) : state.root;
