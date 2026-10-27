@@ -46,6 +46,8 @@ A profile may declare one or more file-navigator tabs with `"type": "files"` ent
 
 An entry with no `dock` opens into the center tab strip like any other tab, and so also carries the usual presentation keys (`number`, `group`, `groupColor`, `color`, `pane`, `focus`), reopening in its saved group, order, and pane. A docked entry has no strip position and carries none of them.
 
+The `in` value is stored as the plain tab label. When profile launch constructs the equivalent `files` command, it leaves a safe one-word label bare and otherwise wraps it in double quotes, escaping embedded double quotes so whitespace and quote characters remain part of the label.
+
 ### Restoring a tree's view
 
 A `files` entry may also record the tree's own view, as four keys holding paths relative to that tree's root: `expanded` (the directories that were open), `cursor` (the row holding the keyboard cursor), `anchor` (the range-selection anchor), and `selected` (every highlighted row). On launch each is replayed: a saved directory that still resolves is expanded, and a saved row that is still visible is re-highlighted, with the cursor row scrolled into view.

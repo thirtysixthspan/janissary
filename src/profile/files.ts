@@ -13,6 +13,11 @@ function profilePath(value: string): string {
   return `"${trimmed.replaceAll('"', String.raw`\"`)}"`;
 }
 
+function profileLabel(value: string): string {
+  if (!/[\s'"]/u.test(value)) return value;
+  return `"${value.replaceAll('"', String.raw`\"`)}"`;
+}
+
 // Open each profile-level file-navigator tab once every entry is open, rooted at `defaultLabel`
 // (the profile's first newly opened tab, or the issuing tab when the launch opened none of its own)
 // unless the entry names its own `in` target. An entry's `path`, when set, is appended after the
@@ -26,7 +31,7 @@ function profilePath(value: string): string {
 // last — it is the command's target, not a keyword clause.
 function filesCommand(entry: ProfileFilesEntry): string {
   const clauses = [
-    entry.in ? `in ${entry.in}` : '',
+    entry.in ? `in ${profileLabel(entry.in)}` : '',
     entry.dock ? `on ${entry.dock}` : '',
     entry.details ? `with ${entry.details}` : '',
     entry.path ? profilePath(entry.path) : '',

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { openProfileFiles } from './files.js';
+import { parseFileNavigatorArgs } from '../file-navigator/args.js';
 import { makeTab } from '../tab/index.js';
 import type { Managers } from '../managers.js';
 import type { ProfileFilesEntry } from './types.js';
@@ -55,6 +56,28 @@ describe('openProfileFiles', () => {
   it('builds "files in <label>" and targets that label instead of the default', () => {
     const { open } = run([{ in: 'other' }], 'claude');
     expect(open).toHaveBeenCalledWith('files in other', 'other');
+  });
+
+  it('quotes a multiword profile label and parses it back as one label', () => {
+    const label = 'review team';
+    const command = 'files in "review team"';
+    const { open } = run([{ in: label }], 'claude');
+
+    expect(open).toHaveBeenCalledWith(command, label);
+    expect(parseFileNavigatorArgs(command.slice('files '.length))).toMatchObject({
+      kind: 'open', inLabel: label, target: '',
+    });
+  });
+
+  it('escapes embedded quotes in a profile label and parses it back unchanged', () => {
+    const label = 'review "team"';
+    const command = String.raw`files in "review \"team\""`;
+    const { open } = run([{ in: label }], 'claude');
+
+    expect(open).toHaveBeenCalledWith(command, label);
+    expect(parseFileNavigatorArgs(command.slice('files '.length))).toMatchObject({
+      kind: 'open', inLabel: label, target: '',
+    });
   });
 
   it('builds "files in <label> on <side>" when both are set', () => {
