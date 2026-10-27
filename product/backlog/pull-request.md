@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Close the functionality gap in the `tab` help page by documenting the new forms and quoted-name rule.
-
-Existing Issue: `help/tab.md` still documents only `tab focus`, presents unquoted `tab focus review notes` as valid, and says unknown subcommands print the focus-only usage line, although the parser rejects that input and now supports seven arranging forms. Severity: 6/10
-
-Existing Risk: 6/10 - A user consulting `help tab` gets a command that now prints usage and cannot discover any of the new forms or their refusal behavior.
-
-Proposal Risk: 2/10 - A complete help page and corrected page reference would close the direct mismatch, though the reference could drift again if future forms are not added to the same page.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1802 "update the tab command help reference". Rewrite `help/tab.md` for all eight forms, including exact quoting behavior, success and no-op behavior, notification refusals, and usage lines. Update the help-page description in `product/specs/application-commands.md` to name the `tab` command page rather than `tab focus`, and verify that `help tab` returns the revised page and its examples match parser behavior. Keep the combined row and ordering checks in `help/commands.md`.
-
-
 * Deliver the plan's docked-tab `tab move` behavior accurately in user documentation.
 
 Existing Issue: `documentation/user-documentation/command-bar/commands.md` and `documentation/user-documentation/getting-started/groups.md` describe `tab move` as limited to a tab's group and pane, but docked tabs reorder among every tab on the same sidebar regardless of group, as implemented and specified in `product/specs/tabs.md`. Severity: 4/10
