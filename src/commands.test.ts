@@ -135,18 +135,24 @@ describe('getOutput help pages', () => {
     expect(names).toEqual(names.toSorted((left, right) => left.localeCompare(right)));
   });
 
-  it('keeps command descriptions within 200 characters except the full files syntax', () => {
-    const descriptions = outputText('help commands')
+  it('limits ordinary command descriptions to 200 characters and bounds the files row', () => {
+    const commandRows = outputText('help commands')
       .split('\n')
       .filter((line) => line.startsWith('| `'))
       .map((line) => {
         const separator = line.indexOf(' | ', line.indexOf('`') + 1);
-        return line.slice(separator + 3, line.lastIndexOf(' |'));
+        return {
+          name: line.slice(3, line.indexOf('`', 3)).split(' ', 1)[0].toLowerCase(),
+          description: line.slice(separator + 3, line.lastIndexOf(' |')),
+        };
       });
 
-    expect(descriptions.length).toBeGreaterThan(1);
-    expect(descriptions.filter((description) => description.length > 200 && !description.includes('files print <tab>')))
-      .toEqual([]);
+    expect(commandRows.length).toBeGreaterThan(1);
+    const filesRows = commandRows.filter(({ name }) => name === 'files');
+    expect(filesRows).toHaveLength(1);
+    expect(filesRows[0]?.description.length).toBeGreaterThan(200);
+    expect(filesRows[0]?.description.length).toBeLessThanOrEqual(350);
+    expect(commandRows.filter(({ name, description }) => name !== 'files' && description.length > 200)).toEqual([]);
   });
 
   it('has a help page for each command row and no orphan command pages', () => {
