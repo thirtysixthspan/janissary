@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's complete and usable harness command signatures.
-
-Existing Issue: `help/harness.md` substitutes an unspecified `[options]` placeholder for the supported launch clauses, shows flag-only forms such as `harness --no-workspace` that the parser rejects as unknown harness names, and omits the supported `harness transcript <name>` subcommand. Severity: 7/10
-
-Existing Risk: 6/10 - Users following the advertised flag-only forms receive an error, while users cannot discover supported launch settings or how to open a session transcript from command-specific help.
-
-Proposal Risk: 2/10 - A complete page makes the existing launch syntax and both label-targeting subcommands usable, though future parser changes can still make manually maintained help stale.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1799 "complete the harness help usage and subcommands". Rewrite the Usage block in `help/harness.md` to match `src/harness/command-parse.ts`, including the required harness name, custom label, remote host, group, workspace, offline, auto-approve, browser, auto-resume, model, effort, and trailing prompt clauses; show valid examples with a harness name, such as `harness claude --no-workspace`. List `harness capture <name>` and `harness transcript <name>` as distinct subcommands. Keep supported-harness restrictions consistent with `src/harness/auto-approve.ts`, `src/harness/auto-resume.ts`, and `product/specs/harness.md`. Existing `src/harness/command-parse.test.ts` and `src/harness/subcommands.test.ts` cover the grammar and subcommands; no test pins help wording, so verify the revised page directly against them.
-
-
 * Deliver the plan's tab and system schedule management forms.
 
 Existing Issue: `help/schedule.md` lists only schedule creation, omitting `schedule list`, `schedule cancel`, `schedule clear`, their `[in <tab>]` targeting forms, and the corresponding system list, cancel, and clear commands. Severity: 6/10

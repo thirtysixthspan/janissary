@@ -9,11 +9,16 @@ row, and the one place its behavior differs (the connections panel is shown, not
 ## Command
 
 ```
-harness <name> [as <label>] [on <address>] [-w] [-y] [-b|--no-browser] [--model <name>] [--effort <level>] [with <prompt>]
+harness
+harness <claude|opencode|codex> [as <label>] [on <address>] [in group <name|id>] [-w|--workspace|--no-workspace] [--offline] [-y|--yes] [--no-auto-approve] [-b|--browser|--no-browser] [--auto-resume|--no-auto-resume] [--model <name>] [--effort <level>] [with <prompt>]
+harness capture <name>
+harness transcript <name>
 ```
 
-Valid names: `claude`, `opencode`, `codex`. The binary must be on `PATH`; if it is not found, the
-PTY exits immediately and the tab closes (see [Lifecycle](#lifecycle)). See
+The launch name is required. Launch clauses can appear in any order before the trailing
+`with <prompt>` clause. Bare `harness` opens the New harness launch dialog from a tab with a command
+line. Valid names: `claude`, `opencode`, `codex`. The binary must be on `PATH`; if it is not found,
+the PTY exits immediately and the tab closes (see [Lifecycle](#lifecycle)). See
 [Launching with a model and effort level](#launching-with-a-model-and-effort-level) for `--model`
 and `--effort`.
 
