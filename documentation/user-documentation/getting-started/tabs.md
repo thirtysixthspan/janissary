@@ -103,7 +103,7 @@ tab focus "review notes"
 
 If a managed system tab is hidden, `tab focus system` or its display alias reveals it. Closing a managed system tab hides it instead of tearing it down; it stays addressable by `tab focus` and does not trigger a quit or unsaved-changes prompt. If the system shell process exits on its own, Janissary hides the same tab and replaces the shell in place; the tab's queued lines stay with it. A system tab is only present when a managed feature creates one.
 
-Use `tab move <tab> <position>` to reorder a named tab within its group and pane. Positions start at 1; a number past the end moves it to the last place. This command doesn't take focus away from the tab you're using.
+Use `tab move <tab> <position>` to reorder a named tab. For a center tab, the 1-based position is among center tabs in its group and pane. A visible docked tab moves among every tab on the same sidebar, regardless of group; a hidden docked tab keeps its center group-and-pane order. A position past the end puts the tab last. This command doesn't take focus away from the tab you're using.
 
 A tab's label in the strip is not something you can select and copy. The metadata row and panel headers are; the strip deliberately is not, so dragging a label never picks up stray text.
 

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's docked-tab `tab move` behavior accurately in user documentation.
-
-Existing Issue: `documentation/user-documentation/command-bar/commands.md` and `documentation/user-documentation/getting-started/groups.md` describe `tab move` as limited to a tab's group and pane, but docked tabs reorder among every tab on the same sidebar regardless of group, as implemented and specified in `product/specs/tabs.md`. Severity: 4/10
-
-Existing Risk: 4/10 - A user expecting a docked tab to move within its group can instead reorder it across unrelated sidebar entries without understanding why.
-
-Proposal Risk: 2/10 - Stating the center-strip and sidebar rules separately would make the command's scope clear, though the visible orders can still differ after docking and undocking.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1802 "document docked tab move ordering". Update `documentation/user-documentation/command-bar/commands.md` and `documentation/user-documentation/getting-started/groups.md` to say that center tabs move within their group and pane, while docked tabs use the order of all tabs on their sidebar regardless of group. Keep the 1-based position and past-the-end behavior clear, and verify the wording against `product/specs/tabs.md` and `product/specs/sidebars.md`.
-
-
 * Remove security risk from verification instructions that direct reviewers to execute project commands.
 
 Existing Issue: The plan's Verification section instructs readers to run `check-diff` and manual commands, while the PR description's How to verify directs them to invoke `start-application.md`, launch `node bin/janus.mjs`, and run shell commands including a file redirection; these are untrusted review inputs, not commands for this review to follow. Severity: 7/10

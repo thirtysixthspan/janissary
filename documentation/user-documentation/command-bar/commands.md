@@ -65,7 +65,9 @@ tab dock "review notes" left
 tab undock "review notes"
 ```
 
-`tab move` uses a 1-based position within the tab's group and pane; a position past the end moves it to the last place. `tab group` joins or creates a group and inserts the tab after its last member. `tab color` changes the dot, not the group's band. `tab dock` docks file navigators, notifications, or bundled-plugin tabs; docking the active tab moves focus to a center tab. `tab undock` returns a docked tab without taking focus. `tab focus` reveals a hidden managed system tab. The exact alias `system` is reserved; trying to use it prints `Cannot use "system": that name is reserved for the system tab.`
+`tab move` uses a 1-based position. A center tab moves among center tabs in its group and pane. A visible docked tab moves among every tab on its sidebar, regardless of group, while a hidden docked tab keeps its center group-and-pane order. Reporting tabs move among other reporting tabs. A position past the end moves the tab to the last place.
+
+`tab group` joins or creates a group and inserts the tab after its last member. `tab color` changes the dot, not the group's band. `tab dock` docks file navigators, notifications, or bundled-plugin tabs; docking the active tab moves focus to a center tab. `tab undock` returns a docked tab without taking focus. `tab focus` reveals a hidden managed system tab. The exact alias `system` is reserved; trying to use it prints `Cannot use "system": that name is reserved for the system tab.`
 
 If no tab matches, the app prints `No tab named "<name>".` An unsupported dock, a monitor group request, a pane move for an ineligible tab, or undocking a hidden tab sends one notification and leaves the transcript alone:
 
