@@ -98,14 +98,15 @@ describe('file navigator selection transitions', () => {
 describe('restoring a saved tree selection', () => {
   it('keeps only the paths that still have a visible row', () => {
     const hint = { revision: 1, cursor: 'dir/a.txt', anchor: 'gone', selected: ['dir', 'gone'] };
-    expect(selectionFromRestore(hint, rows(['dir', 'dir/a.txt']))).toEqual({
+    expect(selectionFromRestore(hint, rows(['dir', 'dir/a.txt']), { cursor: null, anchor: null, selected: new Set() })).toEqual({
       cursor: 'dir/a.txt', anchor: null, selected: new Set(['dir']),
     });
   });
 
   it('yields an empty selection when the hint names nothing that still exists', () => {
     const hint = { revision: 1, cursor: 'gone', anchor: 'gone', selected: ['gone'] };
-    expect(selectionFromRestore(hint, rows(['a']))).toEqual({ cursor: null, anchor: null, selected: new Set() });
+    expect(selectionFromRestore(hint, rows(['a']), { cursor: null, anchor: null, selected: new Set() }))
+      .toEqual({ cursor: null, anchor: null, selected: new Set() });
   });
 
   it('seeds cursor, anchor, and selection from the hint', () => {

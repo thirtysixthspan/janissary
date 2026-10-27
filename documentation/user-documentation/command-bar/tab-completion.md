@@ -19,8 +19,11 @@ What gets completed depends on where in the command you are:
 | After `search` | `transcript`, its only subcommand |
 | After `help` | Help page names, including `commands` and `keys` |
 | After `execute`, or a bare `edit` target | Existing project runscript names; bare `edit` also lists matching files |
+| In a `files` command | Clause words, tab labels, detail modes, sidebar sides, and matching paths; clause paths use the local root named by `in <tab>` when available |
 | Anywhere else | Filesystem paths, relative to the tab's working directory |
 
 Path completion lists your home directory for `~` and leaves the tilde in the token it writes back, so `ls ~/pro` and `Tab` gives `ls ~/projects/` when there is one match. A bare `~` works the same as `~/`: `ls ~` and `Tab` offers what's in your home directory rather than in the folder above it. Dotfiles stay hidden unless what you've typed already starts with a `.`.
+
+In a `files` command, matching clause words appear before matching paths when either could go next. Paths or tab names with spaces or quotes are offered quoted. Tab does not complete inside an open quote, or against a remote or unknown `in` target.
 
 Run `execute <name>` to execute a runscript now. `edit <name>` opens it for editing when no exact file target exists; a matching file path takes precedence. Paths, file extensions, and `:line` targets keep filesystem completion.

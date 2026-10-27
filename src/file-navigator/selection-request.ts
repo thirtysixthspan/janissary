@@ -18,6 +18,7 @@ type Pending = {
   id: number;
   resolve: (selections: Map<number, TreeSelection>) => void;
   timer: ReturnType<typeof setTimeout>;
+  promise?: Promise<Map<number, TreeSelection>>;
 };
 
 let pending: Pending | undefined;
@@ -31,15 +32,20 @@ function settle(selections: Map<number, TreeSelection>): void {
   resolve(selections);
 }
 
-// Ask every connected client for its navigators' selections, keyed by tab index. A request already
-// in flight is abandoned (resolved empty) so only one is ever outstanding.
+// Ask every connected client for its navigators' selections, keyed by tab index. A caller joining a
+// request already in flight gets the same answer, captured at the same moment.
 export function requestTreeSelections(timeoutMs = REPLY_TIMEOUT_MS): Promise<Map<number, TreeSelection>> {
-  settle(new Map());
+  if (pending) return pending.promise ?? Promise.resolve(new Map());
   const id = nextId++;
-  return new Promise((resolve) => {
-    pending = { id, resolve, timer: setTimeout(() => { settle(new Map()); }, timeoutMs) };
-    messageBus.emit('fileNavigator', { type: 'collect', id });
+  let request: Pending | undefined;
+  const promise = new Promise<Map<number, TreeSelection>>((resolve) => {
+    request = { id, resolve, timer: setTimeout(() => { settle(new Map()); }, timeoutMs) };
+    pending = request;
   });
+  if (!request) return Promise.resolve(new Map());
+  request.promise = promise;
+  messageBus.emit('fileNavigator', { type: 'collect', id });
+  return promise;
 }
 
 // Settle the request in flight with a client's answer. An `id` that doesn't match the outstanding

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { FileNavigatorRow } from '@shared/protocol';
+import type { FileNavigatorRestoreHint, FileNavigatorRow } from '@shared/protocol';
 import { clearNavigatorSelection, publishNavigatorSelection } from './file/navigator-selection-registry';
 import { siblingSelection } from './file/navigator-siblings';
 import {
@@ -12,11 +12,10 @@ import {
   selectFromPointer,
   selectionFromRestore,
   type FileNavigatorSelection,
-  type TreeRestoreHint,
 } from './file/navigator-selection';
 
 export function useFileNavigatorSelection(
-  rows: FileNavigatorRow[], absoluteRoot: string, index?: number, restore?: TreeRestoreHint,
+  rows: FileNavigatorRow[], absoluteRoot: string, index?: number, restore?: FileNavigatorRestoreHint,
 ) {
   const [state, setState] = useState<FileNavigatorSelection>(EMPTY_SELECTION);
   const previousRows = useRef(rows);
@@ -39,7 +38,7 @@ export function useFileNavigatorSelection(
   useEffect(() => {
     if (!restore || appliedRestore.current === restore.revision) return;
     appliedRestore.current = restore.revision;
-    setState(selectionFromRestore(restore, rows));
+    setState((current) => selectionFromRestore(restore, rows, current));
   }, [restore, rows]);
 
   // Publish into the registry `ws.ts` answers a `collect-tree-state` request from, and drop this

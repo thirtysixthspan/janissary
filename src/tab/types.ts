@@ -168,6 +168,14 @@ export type EditorView = {
 // set by the `files with <mode>` clause, and saved in a profile's `details` key.
 export type FileNavigatorDetail = 'name' | 'size' | 'modified' | 'permissions';
 
+export type FileNavigatorRestoreHint = {
+  revision: number;
+  cursor?: string | null;
+  anchor?: string | null;
+  anchorToCursor?: boolean;
+  selected?: string[] | null;
+};
+
 // A single visible row in a file navigator tab (opened via `files [path]`). `path` is relative to the
 // tree root — the unique key, and the argument passed to `open`/`edit` when a file row is clicked.
 // Children of a directory are included only once it is expanded (present in the row list at all).
@@ -231,7 +239,7 @@ export type FileNavigatorView = {
   changedCount?: number;
   // A selection restored from a profile, applied by the client once per `revision` (see
   // `file-navigator/restore.ts`). Absent for a tree that was never launched from a profile.
-  restore?: { revision: number; cursor?: string; anchor?: string; selected: string[] };
+  restore?: FileNavigatorRestoreHint;
   // The tab's current detail mode, driving which stat value each row renders and which mode the
   // header's detail button offers next. Absent means `name`.
   details?: FileNavigatorDetail;

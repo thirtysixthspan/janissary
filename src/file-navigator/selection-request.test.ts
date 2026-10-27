@@ -39,14 +39,19 @@ describe('requestTreeSelections', () => {
     vi.useRealTimers();
   });
 
-  it('abandons a request already in flight when a new one is issued', async () => {
-    const first = nextRequest();
-    const second = nextRequest();
+  it('joins a request already in flight and shares its answer', async () => {
+    let emitted = 0;
+    let id = 0;
+    const subscription = messageBus.on('fileNavigator', 'collect', (event) => { emitted += 1; id = event.id; });
+    const first = requestTreeSelections(30);
+    const second = requestTreeSelections(1);
+    subscription.unsubscribe();
 
-    resolveTreeSelections(second.id, [{ index: 1, selected: ['a'] }]);
+    expect(emitted).toBe(1);
+    resolveTreeSelections(id, [{ index: 1, selected: ['a'] }]);
 
-    expect(await first.selections).toEqual(new Map());
-    const settled = await second.selections;
-    expect(settled.get(1)).toEqual({ cursor: undefined, anchor: undefined, selected: ['a'] });
+    const [firstAnswer, secondAnswer] = await Promise.all([first, second]);
+    expect(firstAnswer).toEqual(secondAnswer);
+    expect(secondAnswer.get(1)).toEqual({ cursor: undefined, anchor: undefined, selected: ['a'] });
   });
 });

@@ -76,6 +76,12 @@ describe('completeCommandLine', () => {
     expect(completeCommandLine('help pro', 8, dir).newInput).toBe('help profile ');
     expect(completeCommandLine('help zzz', 8, dir).matches).toEqual([]);
   });
+
+  it('routes files completion through its command-specific handler', () => {
+    const files = { labels: [], navigators: [], workingDirOf: () => { return; } };
+    expect(completeCommandLine('files on l', 10, dir, [], [], undefined, undefined, files).newInput)
+      .toBe('files on left ');
+  });
 });
 
 describe('completeCommandLine — schedule `in <tab>` target', () => {

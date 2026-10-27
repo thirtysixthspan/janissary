@@ -3,8 +3,10 @@ import { chmodSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync,
 import type * as NodeFs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { messageBus } from '../bus.js';
 import type { LogEntry, Tab } from '../tab/types.js';
 import { NotificationQueue } from '../notifications/queue.js';
+import { resolveTreeSelections } from './selection-request.js';
 
 const watchMock = vi.fn();
 
@@ -103,6 +105,7 @@ describe('FileNavigatorManager', () => {
     managers = {
       tab: {
         get tabs() { return tabs; },
+        launchDir: root,
         byLabel: (label: string) => tabs.find((t) => t.label === label),
         editorTabByUrl: (url: string) => tabs.find((t) => t.editor?.url === url),
         filesTabByRoot: (r: string) => tabs.find((t) => t.files?.root === r),
@@ -179,6 +182,65 @@ describe('FileNavigatorManager', () => {
     const tab = tabs.find((candidate) => candidate.label.startsWith('navigator'))!;
     expect(tab.files).toMatchObject({ root: '/remote/ws', remote: source.remote });
     expect(remote.attach).toHaveBeenCalledWith(tab.label, 'other');
+  });
+
+  it('prints a local tree with the client selection and its sorted expanded paths', async () => {
+    mkdirSync(path.join(root, 'src'));
+    writeFileSync(path.join(root, 'src', 'a.ts'), '');
+    const manager = run();
+    manager.open('files with size', 'janus');
+    const label = tabs.find((tab) => tab.label.startsWith('navigator'))!.label;
+    manager.toggle(label, 'src');
+    const index = tabs.findIndex((tab) => tab.label === label);
+    const subscription = messageBus.on('fileNavigator', 'collect', (event) => {
+      resolveTreeSelections(event.id, [{ index, cursor: 'src/a.ts', anchor: 'src', selected: ['src/a.ts'] }]);
+    });
+
+    const line = await manager.printView(label, 'janus');
+    subscription.unsubscribe();
+
+    expect(line).toBe('files with size expand src cursor src/a.ts anchor src select src/a.ts $root/');
+  });
+
+  it('prints a local tree without selection clauses when no client answers', async () => {
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((tab) => tab.label.startsWith('navigator'))!.label;
+
+    expect(await manager.printView(label, 'janus')).toBe('files $root/');
+  });
+
+  it('prints remote trees without requesting their client selection', async () => {
+    installRemoteWorkspace();
+    const manager = run();
+    manager.open('files in other', 'janus');
+    const label = tabs.find((tab) => tab.label.startsWith('navigator'))!.label;
+    let requests = 0;
+    const subscription = messageBus.on('fileNavigator', 'collect', () => { requests += 1; });
+
+    const line = await manager.printView(label, 'janus');
+    subscription.unsubscribe();
+
+    expect(line).toBe('files in other $root');
+    expect(requests).toBe(0);
+  });
+
+  it('returns the standard missing-tab and wrong-tab-kind replies when printing', async () => {
+    const manager = run();
+
+    expect(await manager.printView('ghost', 'janus')).toBe('No tab named "ghost".');
+    expect(await manager.printView('other', 'janus')).toBe('files: "other" is not a file navigator');
+  });
+
+  it('ignores command view clauses on a remote tree', () => {
+    installRemoteWorkspace();
+    const manager = run();
+    manager.open('files in other expand src select src/a.ts', 'janus');
+    const tab = tabs.find((candidate) => candidate.label.startsWith('navigator'))!;
+
+    expect(tab.files?.restore).toBeUndefined();
+    expect(manager.expandedPaths(tab.label)).toEqual([]);
+    expect(outputs).toEqual([]);
   });
 
   it('opens the metadata-row navigator remotely and keeps focus on its source tab', () => {
@@ -1797,6 +1859,69 @@ describe('FileNavigatorManager', () => {
     });
   });
 
+  describe('command view restoration', () => {
+    const navLabel = () => tabs.find((t) => t.label.startsWith('navigator'))!.label;
+
+    it('opens a fresh tree with the requested folders and selection', () => {
+      mkdirSync(path.join(root, 'src', 'nested'), { recursive: true });
+      writeFileSync(path.join(root, 'src', 'nested', 'a.ts'), '');
+      const manager = run();
+
+      manager.open('files expand src expand src/nested cursor src/nested/a.ts anchor src/nested/a.ts select src/nested/a.ts', 'janus');
+
+      const label = navLabel();
+      const files = tabs.find((tab) => tab.label === label)!.files!;
+      expect(manager.expandedPaths(label)).toEqual(['src', 'src/nested']);
+      expect(files.rows.map((row) => row.path)).toContain('src/nested/a.ts');
+      expect(files.restore).toMatchObject({
+        cursor: 'src/nested/a.ts', anchor: 'src/nested/a.ts', selected: ['src/nested/a.ts'],
+      });
+    });
+
+    it('touches only the view parts named on an already-open tree', () => {
+      mkdirSync(path.join(root, 'src'));
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+
+      manager.open('files expand src', 'janus');
+
+      expect(manager.expandedPaths(label)).toEqual(['src']);
+      expect(tabs.find((tab) => tab.label === label)!.files!.restore).not.toHaveProperty('selected');
+    });
+
+    it('drops vanished paths silently and leaves their restore parts absent', () => {
+      const manager = run();
+
+      manager.open('files expand missing cursor gone.ts', 'janus');
+
+      const files = tabs.find((tab) => tab.label.startsWith('navigator'))!.files!;
+      expect(files.restore).not.toHaveProperty('cursor');
+      expect(files.restore).not.toHaveProperty('selected');
+      expect(outputs).toEqual([]);
+    });
+
+    it('does not restore a view while the tree waits for its root', () => {
+      const manager = run();
+      const opened = manager.open('files expand src not-yet-there', 'janus');
+      const files = tabs.find((tab) => tab.label === opened)!.files!;
+
+      expect(files.waitingFor).toBe(path.join(root, 'not-yet-there'));
+      expect(files.restore).toBeUndefined();
+    });
+
+    it('reports a malformed clause without opening or focusing a tree', () => {
+      const manager = run();
+      const activeBefore = activeTab;
+
+      manager.open('files expand "src', 'janus');
+
+      expect(outputs.at(-1)).toBe('files: unterminated quote');
+      expect(tabs.some((tab) => tab.files)).toBe(false);
+      expect(activeTab).toBe(activeBefore);
+    });
+  });
+
   describe('profile capture and restore', () => {
     const navLabel = () => tabs.find((t) => t.label.startsWith('navigator'))!.label;
 
@@ -1844,7 +1969,7 @@ describe('FileNavigatorManager', () => {
 
       const restore = tabs.find((t) => t.label === label)!.files!.restore!;
       expect(restore.cursor).toBe('src/a.ts');
-      expect(restore.anchor).toBeUndefined();
+      expect(restore.anchor).toBeNull();
       expect(restore.selected).toEqual(['src', 'src/a.ts']);
     });
 

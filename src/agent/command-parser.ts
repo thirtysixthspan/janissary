@@ -1,39 +1,9 @@
 import type { AgentLaunch } from './types.js';
-
-type Token = { value: string; start: number; end: number };
+import { readToken, skipSpaces, type Token } from '../command/quoted-token.js';
 type Fields = { host?: string; inTab: boolean; group?: string; workspace?: string; skills: string[]; model?: string; effort?: string };
 type ParseStep = { next: number } | { error: string };
 
 const SINGLE_VALUE_CLAUSES = new Map([['on', 'host'], ['using model', 'model'], ['with effort', 'effort']]);
-
-function skipSpaces(input: string, start: number): number {
-  let index = start;
-  while (/\s/.test(input[index] ?? '')) index++;
-  return index;
-}
-
-function readToken(input: string, start: number): Token | undefined {
-  let index = start;
-  let value = '';
-  let quote = '';
-  while (index < input.length) {
-    const char = input[index] ?? '';
-    if (quote) {
-      if (char === quote) quote = '';
-      else if (char === '\\' && input[index + 1] === quote) value += input[++index];
-      else value += char;
-      index++;
-    } else if (char === '"' || char === "'") {
-      quote = char;
-      index++;
-    } else if (/\s/.test(char)) break;
-    else {
-      value += char;
-      index++;
-    }
-  }
-  return quote ? undefined : { value, start, end: index };
-}
 
 function tokenize(input: string): Token[] | undefined {
   const tokens: Token[] = [];

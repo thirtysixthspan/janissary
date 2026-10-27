@@ -21,12 +21,14 @@ describe('files command', () => {
 describe('files command run', () => {
   let appended: { input: string; output: string }[];
   let openCalls: { command: string; label: string }[];
+  let printCalls: { name: string; label: string }[];
   let tab: { label: string };
   let managers: unknown;
 
   beforeEach(() => {
     appended = [];
     openCalls = [];
+    printCalls = [];
     tab = { label: 'janus' };
     managers = {
       tab: {
@@ -35,6 +37,10 @@ describe('files command run', () => {
         },
       },
       fileNavigator: {
+        printView: async (name: string, label: string) => {
+          printCalls.push({ name, label });
+          return 'files expand src $root';
+        },
         open: (command_: string, label: string) => {
           openCalls.push({ command: command_, label });
         },
@@ -81,5 +87,13 @@ describe('files command run', () => {
 
     expect(appended[0]).toEqual({ input: 'files in claude on left with size', output: '' });
     expect(openCalls[0]).toEqual({ command: 'files in claude on left with size', label: 'janus' });
+  });
+
+  it('prints a named tree in one transcript entry without opening it', async () => {
+    await run('files print "review notes"');
+
+    expect(printCalls).toEqual([{ name: 'review notes', label: 'janus' }]);
+    expect(appended).toEqual([{ input: 'files print "review notes"', output: 'files expand src $root' }]);
+    expect(openCalls).toEqual([]);
   });
 });

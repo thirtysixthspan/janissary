@@ -64,28 +64,33 @@ describe('openProfileFiles', () => {
 
   it('appends the path after the clauses when path is set', () => {
     const { open, notes } = run([{ dock: 'left', path: '$root' }], 'claude');
-    expect(open).toHaveBeenCalledWith('files on left $root', 'claude');
+    expect(open).toHaveBeenCalledWith('files on left "$root"', 'claude');
     expect(notes).toEqual(['Opened file navigator (docked left).']);
   });
 
   it('builds "files <path>" when only path is set', () => {
     const { open } = run([{ path: '$root' }], 'claude');
-    expect(open).toHaveBeenCalledWith('files $root', 'claude');
+    expect(open).toHaveBeenCalledWith('files "$root"', 'claude');
   });
 
   it('combines in, dock, and path into one command', () => {
     const { open } = run([{ in: 'other', dock: 'right', path: './sub' }], 'claude');
-    expect(open).toHaveBeenCalledWith('files in other on right ./sub', 'other');
+    expect(open).toHaveBeenCalledWith('files in other on right "./sub"', 'other');
   });
 
   it('replays a saved detail mode as a with clause, before the path', () => {
     const { open } = run([{ details: 'size', path: './sub' }], 'claude');
-    expect(open).toHaveBeenCalledWith('files with size ./sub', 'claude');
+    expect(open).toHaveBeenCalledWith('files with size "./sub"', 'claude');
   });
 
   it('combines the with clause with in and dock', () => {
     const { open } = run([{ in: 'other', dock: 'right', details: 'modified' }], 'claude');
     expect(open).toHaveBeenCalledWith('files in other on right with modified', 'other');
+  });
+
+  it('quotes a profile path that matches a files clause keyword', () => {
+    const { open } = run([{ path: 'select notes' }], 'claude');
+    expect(open).toHaveBeenCalledWith('files "select notes"', 'claude');
   });
 
   it('does nothing when there are no files entries', () => {

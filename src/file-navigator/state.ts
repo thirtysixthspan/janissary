@@ -1,9 +1,8 @@
 import type { GitFileStatus } from '../git/status.js';
 import type {
-  FileNavigatorCommitStatus, FileNavigatorDetail, FileNavigatorPullStatus, RemoteTarget,
+  FileNavigatorCommitStatus, FileNavigatorDetail, FileNavigatorPullStatus, FileNavigatorRestoreHint, RemoteTarget,
 } from '../tab/types.js';
 import type { HistoryStep } from './moves.js';
-import type { TreeRestoreHint } from './restore.js';
 import type { RowStat } from './stats.js';
 import type { FileNavigatorEntry } from './index.js';
 import type { FileSystemPort, WatchHandle } from './filesystem-port.js';
@@ -89,11 +88,9 @@ export type FilesTabState = {
   // a settled `committed` or `error` to rest (see `manager/flash.ts`).
   commit?: FileNavigatorCommitStatus;
   commitFlash?: ReturnType<typeof setTimeout>;
-  // The most recent selection hint applied by `restoreView`, copied onto every payload the tab
-  // rebuilds. Its `revision` changes only when a new restore is applied, which is what stops the
-  // repeated full-state broadcasts from re-applying an old hint over a selection the user has
-  // since changed.
-  restore?: TreeRestoreHint;
+  // The most recent profile or command selection hint, copied onto each rebuilt payload. A new
+  // revision lets the client apply it once without later broadcasts overwriting user changes.
+  restore?: FileNavigatorRestoreHint;
   // Which detail this tree shows to the right of each row name. Every tab starts at 'name', which
   // reproduces the display the navigator had before detail modes existed and stats nothing.
   details: FileNavigatorDetail;

@@ -3,11 +3,22 @@ import type { Managers } from '../managers.js';
 import type { CompletionResult } from '../completion/types.js';
 import { listPersonas } from '../personas.js';
 import { catalogRunscripts } from '../schedule/system/runscript-files.js';
+import { byLabelOrAlias } from '../tab/lookup.js';
+import type { FilesCompletions } from '../completion/files.js';
 
 export function complete(managers: Managers, text: string, cursor: number, label?: string): CompletionResult {
   const tab = (label ? managers.tab.byLabel(label) : undefined) ?? managers.tab.cur();
   const cwd = managers.tab.workingDirOf(tab.label);
   const labels = managers.tab.allLabels();
+  const navigatorLabels = managers.tab.tabs.filter((candidate) => candidate.files).map((candidate) => candidate.label);
+  const files: FilesCompletions = {
+    labels,
+    navigators: navigatorLabels,
+    workingDirOf: (name) => {
+      const target = byLabelOrAlias(managers.tab.tabs, name);
+      return target && !target.remote ? managers.tab.workingDirOf(target.label) : undefined;
+    },
+  };
   const actionTabs = managers.tab.tabs.filter((t) => t.view !== 'monitor');
   const groups = [...new Set(actionTabs.map((t) => t.group))].toSorted((a, b) => a - b).map((g) => `group:${g}`);
   const targets = [...actionTabs.map((t) => t.label).filter((l) => l !== tab.label), ...groups];
@@ -22,5 +33,6 @@ export function complete(managers: Managers, text: string, cursor: number, label
     text, cursor, cwd, labels,managers.connection.completionConnections(tab.label),
     { personas: listPersonas('monitor'), names: managers.monitor.namesFor(tab.label), targets },
     { names, scripts },
+    files,
   );
 }

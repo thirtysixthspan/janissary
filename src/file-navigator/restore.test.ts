@@ -68,6 +68,6 @@ describe('restoreTreeView on a tree whose listings are asynchronous', () => {
 
     restoreTreeView(port, 'files', { cursor: 'src', selected: ['src'] });
 
-    expect(state.restore).toMatchObject({ cursor: undefined, selected: [] });
+    expect(state.restore).toMatchObject({ cursor: null, anchor: null, selected: [] });
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { rerootTree } from './navigation.js';
+import { collapseTree, rerootTree } from './navigation.js';
 import type { FilesTabState } from './state.js';
 
 function remoteState(root: string): FilesTabState {
@@ -55,5 +55,29 @@ describe('rerootTree for remote workspaces', () => {
     expect(port.reportFailure).toHaveBeenCalledWith(
       'files', '/remote', expect.objectContaining({ message: 'outside the remote workspace $workspace/workspace' }),
     );
+  });
+});
+
+describe('collapseTree', () => {
+  it('removes an expanded directory and its expanded descendants and unwatches each', () => {
+    const state = remoteState('/remote/workspace');
+    state.expanded = new Set(['src', 'src/deep', 'docs']);
+    const port = navigationPort(state);
+
+    collapseTree(port, state, 'src');
+
+    expect(state.expanded).toEqual(new Set(['docs']));
+    expect(port.unwatchDir.mock.calls.map(([, path]) => path)).toEqual(['src', 'src/deep']);
+  });
+
+  it('collapses every expanded directory at the tree root', () => {
+    const state = remoteState('/remote/workspace');
+    state.expanded = new Set(['src', 'src/deep', 'docs']);
+    const port = navigationPort(state);
+
+    collapseTree(port, state, '');
+
+    expect(state.expanded).toEqual(new Set());
+    expect(port.unwatchDir).toHaveBeenCalledTimes(3);
   });
 });

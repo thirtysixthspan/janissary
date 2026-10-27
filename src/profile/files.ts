@@ -19,7 +19,7 @@ function filesCommand(entry: ProfileFilesEntry): string {
     entry.in ? `in ${entry.in}` : '',
     entry.dock ? `on ${entry.dock}` : '',
     entry.details ? `with ${entry.details}` : '',
-    entry.path ? entry.path.trim() : '',
+    entry.path ? `"${entry.path.trim().replaceAll('"', String.raw`\"`)}"` : '',
   ].filter(Boolean).join(' ');
   return `files ${clauses}`.trim();
 }

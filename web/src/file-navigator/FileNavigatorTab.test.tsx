@@ -47,6 +47,36 @@ describe('FileNavigatorTab', () => {
     expect(screen.getByText('README.md').closest('[role="treeitem"]')!.getAttribute('aria-expanded')).toBeNull();
   });
 
+  it('applies a cursor-only restore without replacing selection and only once per revision', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { rerender } = render(
+      <FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />,
+    );
+    fireEvent.mouseDown(screen.getByText('src'), { button: 0 });
+    fireEvent.mouseDown(screen.getByText('README.md'), { button: 0, metaKey: true });
+
+    rerender(<FileNavigatorTab
+      files={makeFiles({ restore: { revision: 1, cursor: 'src/index.ts' } })}
+      client={client}
+      index={0}
+      label="files"
+    />);
+
+    expect(screen.getByText('src').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText('README.md').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText('index.ts').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'false');
+
+    fireEvent.mouseDown(screen.getByText('index.ts'), { button: 0 });
+    rerender(<FileNavigatorTab
+      files={makeFiles({ restore: { revision: 1, cursor: 'src/index.ts' } })}
+      client={client}
+      index={0}
+      label="files"
+    />);
+
+    expect(screen.getByText('index.ts').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
+  });
+
   it('renders a git-changed row with the files-name--changed class and leaves clean rows without it', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const files = makeFiles({

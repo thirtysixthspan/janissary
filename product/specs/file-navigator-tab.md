@@ -49,9 +49,9 @@ workspace root is allowed; the parent row is hidden there so the tree cannot nav
 ### `files left`/`files right [path]`
 
 A leading `left` or `right` keyword docks the tree into that sidebar instead of the central tab
-strip — see `sidebars.md` for sidebar mechanics. The keyword is only recognized as the tree's
-first word, so a directory literally named `left` or `right` is still reachable through a path
-form (`files ./left`).
+strip — see `sidebars.md` for sidebar mechanics. The bare side word may precede the other clauses,
+such as `files left with size expand src`. Every clause is recognized at its clause position, and
+the tree path remains last.
 
 - **Bare `files [path]`** behaves exactly as above. If a tree on that root already exists and is
   currently docked, focusing it means **undocking it back to the center strip and making it
@@ -81,12 +81,27 @@ any order (`files in claude on left with size`). When the command lands on a tre
 open — focusing, redocking, or retargeting it rather than opening a second one — the clause still
 applies, so re-running `files with modified` is a second way to switch an open tree's mode.
 
+The `in`, `on`, and `with` clauses keep their existing value rules and can each appear once. The
+view clauses `expand <path>`, `collapse <path>`, `cursor <path>`, `anchor <path>`, and `select
+<path>` may be repeated and combined with them in any order. Keywords are bare words and
+case-insensitive. A directory named `expand` at the end of the command is still a path; use
+`files ./expand` when it is followed by other words that would make `expand` a clause. A keyword
+with a path value reads one token. Quote a path containing spaces or quotes with single or double
+quotes; a backslash escapes the matching quote inside the quoted token. An unterminated quote in a
+view clause reports `files: unterminated quote` and opens or changes no tree. A trailing path that
+is exactly one quoted token has its quotes removed; a multiword trailing path otherwise keeps its
+existing verbatim form.
+
 `files on left`/`files on right` is an explicit spelling of the same docking `files left`/`files
 right` provides. The two clauses are independent and may be combined in either order — `files in
 <label> on <side>` or `files on <side> in <label>` — to root the tree at another tab's cwd and dock
 it in one command, e.g. `files in claude on left`. Like `left`/`right`, `in` and `on` are only
 recognized as clause keywords, so a directory literally named `in` or `on` is still reachable
 through a path form (`files ./in`).
+
+The view clauses are also recognized after a leading bare `left` or `right`; for example,
+`files left with size expand src` docks and expands `src`. An explicit `on <side>` after that bare
+word is still parsed and sets the requested side. A quoted keyword is never treated as a clause.
 
 The `help files` page lists the supported path, tab-target, sidebar-placement, and detail-mode forms
 with examples.
@@ -518,6 +533,50 @@ Profiles for the full rules.
 
 Remote trees are excluded from saved profiles and are never restored, because their workspace and
 authenticated channel do not survive a launch.
+
+The command form can restore the same local view parts on a tree, with ordered clauses such as
+`files expand src cursor src/a.ts anchor src/a.ts select src/a.ts`. Clause paths are relative to
+the tree root. Relative paths are normalized; `..` names the parent row, and an absolute, `~`, or
+`$root` path is converted to a tree-relative path only if it lands inside the tree. The tree root
+is accepted by `collapse` and names no row for the other view clauses. A path outside the tree or
+one that no longer exists is dropped silently.
+
+Each clause takes effect in written order against the rows visible then. `expand` opens a directory
+that still exists. `collapse` closes that directory and every expanded directory beneath it; `.`
+collapses all folders. A collapse of a folder that is not open does nothing. `cursor`, `anchor`, and
+`select` affect only a row visible when that clause runs. Repeated cursor or anchor clauses use the
+last path that survives, and repeated `select` clauses add visible rows. A later collapse drops
+hidden selected rows, moves a hidden cursor to its nearest visible ancestor, and resets a hidden
+anchor to that cursor. If the command names no cursor, the client resets a hidden anchor to its
+current cursor.
+
+On an already-open local tree, the command changes only the parts it names; a dropped path counts as
+not given, so it does not clear an existing part. A command selection never moves keyboard focus.
+Profile launch retains its existing rule of replacing all three selection parts, including parts
+the entry omits. A tree waiting for its root receives no restore and does not retry when the root
+appears. View clauses on remote trees are parsed but ignored, including selection requests, because
+the remote listings are asynchronous.
+
+`files print <tab>` prints one command in the issuing tab's transcript without opening, focusing, or
+changing a tree. It resolves the name or display alias of an open file navigator and prints its
+root, dock, non-default detail mode, sorted expanded folders, cursor, anchor, and selected rows in
+that order. A local root inside `.janissary` retains that path segment in its `$root` form. The
+client selection is requested once; if no client replies before the timeout, the command is printed
+without the selection clauses. A remote tree prints its owner, dock, detail mode, and `$root` path,
+but no view clauses. A path containing whitespace or a quote is double-quoted, with each double
+quote escaped as `\"`; because quoted tokens do not escape a final backslash, that path spelling
+does not round-trip. The exact replies are `No tab named "<name>".`, `files: "<name>" is not a file
+navigator`, `Usage: files print <tab>.`, and `files: unterminated quote`.
+
+### `files` command completion
+
+At a `files` clause position, Tab offers matching clause keywords before matching filesystem paths.
+It completes `in` with open tab labels, `on` with `left`/`right`, `with` with the four detail modes,
+and `print` with open file navigator labels. After `print`, it completes only those navigator labels.
+After a view clause it completes paths relative to the tree root named by an earlier local
+`in <label>`, or the issuing tab's cwd when there is no `in`. A remote or unknown `in` target has no
+path completions. A completed path or label that contains whitespace or a quote is quoted, and no
+completion is offered while a quote remains open.
 
 ### Deleting a file or directory
 

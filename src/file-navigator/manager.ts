@@ -1,6 +1,13 @@
 import { isPrimaryBranch } from '../git/status.js';
 import { openOrRetarget, type OpenPort } from './open.js';
 import { openFilesCommand } from './open-command.js';
+import { parseFileNavigatorArgs } from './args.js';
+import { applyViewSteps } from './restore-command.js';
+import { toTreePath } from './view-paths.js';
+import { expandUserPath } from '../paths.js';
+import { resolveTarget } from '../commands/resolve-target.js';
+import { requestTreeSelections } from './selection-request.js';
+import { formatFilesCommand } from './print-command.js';
 import {
   createDirectoryIn, deleteItem, deleteItems, moveItem, moveItems, pasteItems, renameItem,
   replayMutation, type MutationContext,
@@ -26,23 +33,35 @@ import { withFilesState } from './manager/state.js';
 // server always owns the tree — the client only ever renders rows.
 export class FileNavigatorManager extends WatchedFilesTabs {
 
-  // Handle a `files [left|right] [path]` command: open a new tree tab rooted at `path` (or the
-  // issuing tab's cwd), or focus/redock the existing tab if one is already open on that root.
-  // A leading `left`/`right` keyword docks the tab into that sidebar; a directory literally named
-  // `left`/`right` is still reachable via a path form (`files ./left`), since the keyword is only
-  // recognized as the first word. `in <label>` roots the tree at another tab's cwd instead of the
-  // issuing tab's, and `on <left|right>` is an explicit spelling of the same docking the bare
-  // keyword provides; both are optional, independent, and may appear in either order (`files in
-  // claude on left`). Like `left`/`right`, they are only recognized as clause keywords — a
-  // directory literally named `in`/`on` stays reachable via a path form (`files ./in`).
-  // Returns the label of the tab it opened, redocked, or focused, so a profile launch can restore
-  // that tree's saved view onto it.
+  // Open or focus a tree from the parsed `files` arguments, then apply any requested view steps to
+  // the returned local tree. The root path remains last, and a leading bare side may precede clauses.
+  // Returns the tab label so profile launch can restore its saved view after opening.
   open(command: string, label: string): string | undefined {
-    return openFilesCommand(
-      this.managers, this.tabs, command, label,
+    const parsed = parseFileNavigatorArgs(command.replace(/^files\b\s*/i, ''));
+    if (parsed.kind === 'error') {
+      this.managers.tab.append(label, { input: command, output: parsed.error });
+      return undefined;
+    }
+    if (parsed.kind !== 'open') return undefined;
+    const openedLabel = openFilesCommand(
+      this.managers, this.tabs, parsed, label,
+      (text) => this.managers.tab.append(label, { input: command, output: text }),
       (l, a, r) => this.watchDir(l, a, r), (l) => this.refreshGit(l), (l, a) => this.pollForCreation(l, a),
       (l) => this.rebuild(l),
     );
+    if (!openedLabel || parsed.steps.length === 0) return openedLabel;
+    const state = this.tabs.get(openedLabel);
+    if (!state || state.pollTimer || state.remote) return openedLabel;
+    const steps = parsed.steps.flatMap((step) => {
+      const treePath = toTreePath(
+        step.path,
+        state.root,
+        (input) => expandUserPath(input, { root: this.managers.tab.launchDir }),
+      );
+      return treePath === undefined ? [] : [{ ...step, path: treePath }];
+    });
+    applyViewSteps(this.navPort(), openedLabel, steps);
+    return openedLabel;
   }
 
   // Expand/collapse one directory row.
@@ -244,5 +263,31 @@ export class FileNavigatorManager extends WatchedFilesTabs {
   // silent — a path that no longer exists is simply dropped.
   restoreView(label: string, view: SavedTreeView): void {
     restoreTreeView(this.navPort(), label, view);
+  }
+
+  async printView(name: string, _issuingLabel: string): Promise<string> {
+    let reply: string | undefined;
+    const tab = resolveTarget(name, this.managers, (text) => { reply = text; });
+    if (!tab) return reply ?? `No tab named "${name}".`;
+    if (!tab.files) return `files: "${name}" is not a file navigator`;
+    const state = this.tabs.get(tab.label);
+    if (!state) return `files: "${name}" is not a file navigator`;
+    const selectionIndex = this.managers.tab.findIndex(tab.label);
+    const selections = state.remote ? undefined : await requestTreeSelections();
+    const remote = state.remote
+      ? {
+          ownerLabel: state.ownerLabel ?? tab.label,
+          root: state.remoteRoot ?? this.managers.remote.workspaceOf(state.ownerLabel ?? tab.label),
+        }
+      : undefined;
+    return formatFilesCommand({
+      root: state.root,
+      launchDir: this.managers.tab.launchDir,
+      dock: tab.dock,
+      details: state.details,
+      expanded: this.expandedPaths(tab.label),
+      selection: selections?.get(selectionIndex),
+      ...(remote && { remote }),
+    });
   }
 }
