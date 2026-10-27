@@ -56,8 +56,8 @@ The shell uses the following rules, in order of precedence:
 ### Monitor and unmonitor target arguments
 
 - **Context:** The target argument of `monitor` or `unmonitor`.
-- **Candidates:** Tab labels and `group:<n>` selectors. Display titles are not offered.
-- **Behavior:** A display title can still be typed as a target.
+- **Candidates:** The labels of other action tabs in tab order, including hidden tabs, followed by one `group:<n>` selector for each action-tab group in ascending order. Display titles are not offered.
+- **Behavior:** A display title can still be typed as a target and resolves to its tab.
 
 ### 2. Connection Management (`connection close`)
 

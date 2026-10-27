@@ -284,7 +284,8 @@ undocked into the center while retaining its identity and array position. `tab m
 `tab split`, `tab color`, `tab group`, `tab dock`, and `tab undock` perform the placements described
 in Tab grouping, Tab dot colors, Split tab strips, and `sidebars.md`. Successful changes are silent
 and keep the active tab unchanged except that docking the active tab moves focus to a center tab to
-preserve the active-tab invariant. The already-completed form is also silent and emits no state
+preserve the active-tab invariant. If `tab undock` runs while no center tab is active, selection
+repair activates the undocked tab. The already-completed form is also silent and emits no state
 update. Refusals are notification-only; malformed forms and missing targets print to the command
 transcript. Exact usage and refusal lines are specified in [[application-commands]].
 
