@@ -42,8 +42,9 @@ Create or manage a tab's timers, or schedule an existing project runscript.
 - Target another tab's schedule by its label or display alias with `in <tab>`; omit it to use the issuing tab.
 - List, cancel, or clear timers for the issuing tab or a named tab.
 - Schedule, list, cancel, or clear project-owned runscripts that persist across restarts.
-
-For one-shot schedules, `at <time>` uses the next occurrence of that time, and `on <date>` defaults to 9:00am when no time is given. Recurring schedules accept an interval in minutes, hours, days, or weeks, or a daily or weekday time. System schedules use an existing runscript instead of a free-form command.
+- For one-shot schedules, `at <time>` uses the next occurrence of that time, and `on <date>` defaults to 9:00am when no time is given.
+- Recurring schedules accept an interval in minutes, hours, days, or weeks, or a daily or weekday time.
+- System schedules use an existing runscript instead of a free-form command.
 
 **Examples**
 

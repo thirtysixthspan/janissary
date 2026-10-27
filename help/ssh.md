@@ -1,8 +1,6 @@
 ### ssh
 
-Open an SSH session to a remote host in a full-tab terminal.
-
-Janissary passes the full invocation to `ssh` as written; SSH handles its own flags and remote command. Put connection options before the destination; add a remote command after it.
+Open an SSH session to a remote host in a full-tab terminal. Janissary passes the full invocation to `ssh` as written, so SSH handles its own flags and remote command. Put connection options before the destination and any remote command after it.
 
 **Usage**
 

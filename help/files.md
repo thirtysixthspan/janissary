@@ -14,14 +14,13 @@ Open a file navigator in the current tab's working directory, or target a path o
 
 `files with <name|size|modified|permissions> [in <label>] [on <side>] [path]`
 
-The leading `left` or `right` docks the navigator. Alternatively, `on <side>` docks it on the left or right. Use `in <label>` to use another tab's working directory; a path before `in <label>` is resolved from that directory, and a path after the clauses opens a subdirectory there. The `in`, `on`, and `with` clauses can appear in any order before the path. `with` chooses the detail shown beside each row.
-
 **Use cases**
 
 - Browse the current working directory or start at a specific path.
-- Open a navigator rooted in another tab's working directory or a path within it.
-- Dock the navigator in the left or right sidebar.
-- Choose which file details appear in the navigator.
+- Open a navigator rooted in another tab's working directory or a path within it. With `in <label>`, a path before that clause is resolved from the other tab's directory; a path after the clauses opens a subdirectory there.
+- Dock the navigator in the left or right sidebar with a leading `left` or `right`, or with `on <side>`.
+- Choose which file details appear beside each row with `with <name|size|modified|permissions>`.
+- Use the `in`, `on`, and `with` clauses in any order before the path.
 
 **Examples**
 
