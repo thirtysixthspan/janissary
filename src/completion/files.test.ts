@@ -15,6 +15,7 @@ beforeAll(() => {
   mkdirSync(path.join(cwd, 'src'));
   mkdirSync(path.join(cwd, 'scripts'));
   mkdirSync(path.join(cwd, 'my dir'));
+  mkdirSync(path.join(cwd, 'my dir', 'nested folder'));
   mkdirSync(path.join(otherCwd, 'special-folder'));
   writeFileSync(path.join(otherCwd, 'special.md'), '');
   files = {
@@ -112,5 +113,18 @@ describe('files command completion', () => {
     const openQuote = complete('files expand "my');
     expect(openQuote.matches).toEqual([]);
     expect(openQuote.newInput).toBe('files expand "my');
+  });
+
+  it('completes a child path after a quoted directory name', () => {
+    const result = complete('files expand "my dir"/ne');
+    expect(result.newInput).toBe('files expand "my dir/nested folder"/');
+    expect(result.matches).toEqual(['"my dir/nested folder"/']);
+  });
+
+  it('resumes clause completion after a completed quoted path', () => {
+    const line = 'files expand "my dir"/ ';
+    const result = complete(line);
+    expect(result.newInput).toBe(line);
+    expect(result.matches).toEqual(expect.arrayContaining(['in', 'on', 'with']));
   });
 });

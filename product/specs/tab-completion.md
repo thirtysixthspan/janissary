@@ -33,7 +33,9 @@ ordinary filesystem completion. A path or completed name containing whitespace o
 offered wrapped in double quotes, with embedded double quotes escaped. A fully quoted `in` label is
 decoded before its local cwd is looked up, so accepting a quoted label completion keeps path
 suggestions rooted in that tab. If a quote is still open at the cursor, completion returns the input
-unchanged with no matches.
+unchanged with no matches. Whitespace inside a quoted directory does not end the path token, so
+`files expand "my dir"/ne` completes children under `my dir`; the inserted path remains quoted when
+needed. After a completed quoted path and a space, ordinary clause suggestions are available again.
 
 The shell uses the following rules, in order of precedence:
 

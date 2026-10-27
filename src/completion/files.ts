@@ -43,6 +43,21 @@ function words(input: string): Word[] | undefined {
   return result;
 }
 
+function completionCursor(cursor: CompletionCursor): CompletionCursor | undefined {
+  let quote = '';
+  let tokenStart = 0;
+  for (let index = 0; index < cursor.before.length; index++) {
+    const character = cursor.before[index] ?? '';
+    if (quote) {
+      if (character === quote) quote = '';
+      else if (character === '\\' && cursor.before[index + 1] === quote) index++;
+    } else if (character === '"' || character === "'") quote = character;
+    else if (/\s/u.test(character)) tokenStart = index + 1;
+  }
+  const token = readToken(cursor.before, tokenStart);
+  return token ? { ...cursor, tokenStart, token: token.value } : undefined;
+}
+
 function wordIs(word: Word | undefined, value: string): boolean {
   return word?.bare === true && word.value.toLowerCase() === value;
 }
@@ -155,7 +170,7 @@ function pathCandidates(cursor: CompletionCursor, cwd: string): Candidate[] {
   const result = completeFilePath(cursor, cwd);
   const { dir, prefix } = splitToken(cursor.token, cwd);
   return result.matches.map((name) => {
-    const completion = prefix + quotedName(name);
+    const completion = quotedName(prefix + name);
     const directory = isDir(path.join(dir, name));
     return {
       completion,
@@ -182,20 +197,22 @@ export function completeFilesCommand(
   cwd: string,
 ): CompletionResult | null {
   if (cursor.command !== 'files') return null;
-  const prefixWords = words(cursor.before.slice(0, cursor.tokenStart));
-  if (!prefixWords || !words(cursor.before)) return unchanged(cursor);
+  const activeCursor = completionCursor(cursor);
+  if (!activeCursor) return unchanged(cursor);
+  const prefixWords = words(cursor.before.slice(0, activeCursor.tokenStart));
+  if (!prefixWords) return unchanged(cursor);
   const slot = completionSlot(prefixWords, context ?? EMPTY_FILES_COMPLETIONS);
-  if (slot.kind === 'none') return unchanged(cursor);
+  if (slot.kind === 'none') return unchanged(activeCursor);
   if (slot.kind === 'trailingPath') return null;
   if (slot.kind === 'values') {
-    if (!slot.quote) return completeWord(cursor, slot.values);
-    return combineCandidates(cursor, valueCandidates(cursor, slot.values, true));
+    if (!slot.quote) return completeWord(activeCursor, slot.values);
+    return combineCandidates(activeCursor, valueCandidates(activeCursor, slot.values, true));
   }
   if (slot.kind === 'viewPath') {
     const base = slot.label === undefined ? cwd : (context ?? EMPTY_FILES_COMPLETIONS).workingDirOf(slot.label);
-    return base === undefined ? unchanged(cursor) : combineCandidates(cursor, pathCandidates(cursor, base));
+    return base === undefined ? unchanged(activeCursor) : combineCandidates(activeCursor, pathCandidates(activeCursor, base));
   }
   const base = slot.label === undefined ? cwd : (context ?? EMPTY_FILES_COMPLETIONS).workingDirOf(slot.label);
-  const paths = base === undefined ? [] : pathCandidates(cursor, base);
-  return combineCandidates(cursor, [...keywordCandidates(cursor, slot, slot.clauses), ...paths]);
+  const paths = base === undefined ? [] : pathCandidates(activeCursor, base);
+  return combineCandidates(activeCursor, [...keywordCandidates(activeCursor, slot, slot.clauses), ...paths]);
 }

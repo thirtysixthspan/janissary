@@ -594,7 +594,9 @@ After a view clause it completes paths relative to the tree root named by an ear
 the local root is looked up, so quoted labels with spaces or escaped quotes use the same root as an
 unquoted label. A remote or unknown `in` target has no path completions. A completed path or label
 that contains whitespace or a quote is quoted, and no completion is offered while a quote remains
-open.
+open. Whitespace inside a quoted directory does not end the path token, so `files expand "my dir"/ne`
+completes children under `my dir`; the inserted path remains quoted when needed. After a completed
+quoted path and a space, ordinary clause suggestions are available again.
 
 ### Deleting a file or directory
 

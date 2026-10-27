@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Handle the functionality gap in path completion after quoted directory names.
-
-Existing Issue: Completion splits the cursor token at whitespace before parsing quotes, so after a folder containing spaces is completed as `"my dir"/`, a child prefix such as `ne` is treated as an unmatched token and produces no path suggestions. Severity: 5/10
-
-Existing Risk: 5/10 - Users cannot discover or complete children inside common folders with spaces through Tab and must type the remainder manually.
-
-Proposal Risk: 2/10 - Ordinary paths remain manually enterable, but incorrect quote-boundary tracking could still produce wrong completions for mixed quoted tokens.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1803 "complete files path completion through quoted directory names". In `src/completion/files.ts`, derive the token at the cursor by scanning the full command prefix with quote awareness instead of relying on the whitespace-based `cursor.tokenStart`, and give filesystem matching the decoded path prefix and correct replacement range. Preserve the existing no-match behavior while a quote is still open. Add regressions in `src/completion/files.test.ts` for completing a child under a spaced directory, such as `files expand "my dir"/ne`, and for resuming clause completion after a completed quoted path. Keep the existing root-aware, unquoted fallback, and open-quote cases covered.
-
-
 * Handle the functionality gap in profile restores for labels that need quoting.
 
 Existing Issue: `openProfileFiles` serializes a profile's `in` value verbatim, so a value such as `review team` reaches the command parser as label `review` plus trailing path `team` instead of one label, although `files in` now accepts a fully quoted multiword label. Severity: 5/10
