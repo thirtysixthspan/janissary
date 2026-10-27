@@ -138,6 +138,8 @@ describe('getOutput help pages', () => {
     expect(text).toContain('Ctrl+E');
     expect(text).toContain('Ctrl+G');
     expect(text).toContain('Shell tab controls');
+    expect(text).toContain('Later arguments to `monitor` and `unmonitor` complete against tab labels and `group:<n>` selectors (`unmonitor` also offers `--all`).');
+    expect(text).not.toMatch(/Later arguments[^.]*display titles/);
   });
 
   it('prints a matching command page, case-insensitively and after one leading slash', () => {

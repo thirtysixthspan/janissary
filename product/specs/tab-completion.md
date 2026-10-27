@@ -53,6 +53,12 @@ The shell uses the following rules, in order of precedence:
 - **Candidates:** Each open tab contributes its label and display title, including hidden tabs. Names duplicated without regard to case appear once, retaining the first spelling in tab order.
 - **Behavior:** `tab` offers all eight subcommands, quotes target names containing whitespace, and offers `left`/`right` after `pane` and `dock`. Generic target completions offer spaced display titles without quoting them. `close` reads the full target remainder; `send`, `queue`, and `schedule` parse a single whitespace-delimited target token, so a spaced title offered there is not accepted as a whole target.
 
+### Monitor and unmonitor target arguments
+
+- **Context:** The target argument of `monitor` or `unmonitor`.
+- **Candidates:** Tab labels and `group:<n>` selectors. Display titles are not offered.
+- **Behavior:** A display title can still be typed as a target.
+
 ### 2. Connection Management (`connection close`)
 
 - **Context:** The target argument of `connection close`.

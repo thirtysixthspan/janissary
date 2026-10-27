@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the technical debt in the help text's claim that monitor target completion includes display titles.
-
-Existing Issue: The changed key reference says monitor target arguments complete against display titles, but monitor targets are built from tab labels and group selectors without aliases. Severity: 3/10
-
-Existing Risk: 3/10 - A user following the reference cannot complete a monitor target by its displayed alias and may mistake the missing candidate for a broken completion path.
-
-Proposal Risk: 1/10 - Correcting the key reference aligns it with current behavior, though another stale completion description could still mislead users.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1802 "correct monitor target completion in the key reference". In `help/keys.md`, remove display titles from the monitor and unmonitor target-completion description while retaining labels and `group:<n>` selectors; keep the display-title claim scoped to the generic target handlers and `tab` completion. `completeMonitorCommand` in `src/completion/handlers.ts` receives `targets` separately from the label-and-title list, and `src/controller/completion.ts` builds those monitor targets from action-tab labels and group selectors. Preserve the existing monitor target behavior unless deliberately extending it, and add or update a help-page assertion in `src/commands.test.ts` so `help keys` cannot claim candidates the handler does not offer. The monitor-target assertions in `src/completion/handlers.test.ts` must continue to pass.
-
-
 * Correct the technical debt in the tab guide's claim that docked tabs always return within their group after undocking.
 
 Existing Issue: The tab guide says a docked tab returns to its reordered position in its group, while a visible docked tab can be moved in sidebar order across groups and keeps that full-array position when undocked. Severity: 3/10
