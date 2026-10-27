@@ -59,4 +59,15 @@ describe('help pages', () => {
       rmSync(directory, { recursive: true, force: true });
     }
   });
+
+  it('reports unreadable when the required command index cannot be read', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'help-pages-'));
+    try {
+      symlinkSync(path.join(directory, 'missing-target.md'), path.join(directory, 'commands.md'));
+      writeFileSync(path.join(directory, 'profile.md'), 'Profile help');
+      expect(readHelpPage(directory, 'profile')).toEqual({ kind: 'unreadable' });
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
 });

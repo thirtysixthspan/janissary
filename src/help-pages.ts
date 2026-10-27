@@ -28,6 +28,12 @@ export function readHelpPage(directory: string, query: string): HelpPageResult {
   }
 
   if (!pages.includes('commands')) return { kind: 'unreadable' };
+  try {
+    readFileSync(path.join(directory, 'commands.md'), 'utf8');
+  } catch {
+    return { kind: 'unreadable' };
+  }
+
   const name = query.toLowerCase().replaceAll(/\s+/g, ' ').trim().replace(/^\//, '');
   if (!pages.includes(name)) return { kind: 'missing', name };
 
