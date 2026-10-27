@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { LocalFileSystemPort } from './filesystem-port.js';
+import { buildRows } from './index.js';
 import { freshFileNavigatorState } from './state.js';
 import { applyViewSteps } from './restore-command.js';
 import type { NavPort } from './navigation.js';
@@ -66,6 +67,17 @@ describe('applyViewSteps', () => {
     apply(second.port, [{ kind: 'expand', path: 'src' }, { kind: 'collapse', path: 'src' }]);
     expect(second.state.expanded).toEqual(new Set());
     rmSync(second.root, { recursive: true, force: true });
+  });
+
+  it('keeps a nested expansion recorded behind a collapsed parent', () => {
+    const { root, state, port } = navigator();
+
+    apply(port, [{ kind: 'expand', path: 'src/deep' }, { kind: 'expand', path: 'src' }]);
+
+    expect(state.expanded).toEqual(new Set(['src/deep', 'src']));
+    expect(buildRows(root, state.expanded).find((row) => row.path === 'src/deep'))
+      .toMatchObject({ path: 'src/deep', expanded: true });
+    rmSync(root, { recursive: true, force: true });
   });
 
   it('drops a selection checked before its directory is expanded', () => {

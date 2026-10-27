@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's claim that hidden paths are ignored by every view clause.
-
-Existing Issue: The PR body says missing or hidden paths are ignored, but `expand` records an existing nested folder even while its parent is collapsed and reveals it as expanded later. Severity: 4/10
-
-Existing Risk: 4/10 - A reader expects a hidden directory clause to be a no-op, then finds it unexpectedly expanded when they later open its parent.
-
-Proposal Risk: 2/10 - The behavior remains somewhat surprising, but distinguishing directory clauses from row-selection clauses makes the command's effect predictable.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1803 "clarify hidden-path behavior in the files command description". Clarify PR #1803's description so it distinguishes directory operations from row selection: `expand` can record an existing nested directory even when a parent is collapsed, while `cursor`, `anchor`, and `select` ignore rows that are not visible when their clauses run. Make the corresponding wording precise in `product/specs/file-navigator-tab.md`. `applyStep` in `src/file-navigator/restore-command.ts` validates expansion with `stillDirectory` rather than row visibility, and `expandAndWatch` in `src/file-navigator/navigation.ts` records the directory. Add a focused case in `src/file-navigator/restore-command.test.ts` proving that a hidden nested directory remains expanded and is visible as expanded after its parent is expanded; preserve the ordered-clause and selection-fallback coverage.
-
-
 * Fix the files help-table rendering so its summary stays in one cell.
 
 Existing Issue: The `files` row uses unescaped `|` characters inside the `<name|size|modified|permissions>` code span, which Markdown treats as table separators and renders as extra cells. Severity: 4/10

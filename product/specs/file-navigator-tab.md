@@ -548,15 +548,16 @@ the tree root. Relative paths are normalized; `..` names the parent row, and an 
 is accepted by `collapse` and names no row for the other view clauses. A path outside the tree or
 one that no longer exists is dropped silently.
 
-Each clause takes effect in written order against the rows visible then. `expand` opens a directory
-that still exists. `collapse` closes that directory and every expanded directory beneath it; `.`
-collapses all folders. A collapse of a folder that is not open does nothing. `cursor`, `anchor`, and
-`select` affect only a row visible when that clause runs. Repeated cursor or anchor clauses use the
-last path that survives, and repeated `select` clauses add visible rows. A later collapse drops
-hidden selected rows, moves a hidden cursor to its nearest visible ancestor, and resets a hidden
-anchor to that cursor. If the command names a cursor while hiding the current anchor, that hidden
-anchor resets to the command's cursor; a still-visible current anchor is preserved. If the command
-names no cursor, the client resets a hidden anchor to its current cursor.
+Each clause takes effect in written order. `expand` opens any directory that still exists, including
+one hidden behind a collapsed ancestor; it appears open when its ancestors are expanded. `collapse`
+closes that directory and every expanded directory beneath it; `.` collapses all folders. A collapse
+of a folder that is not open does nothing. `cursor`, `anchor`, and `select` affect only a row visible
+when that clause runs. Repeated cursor or anchor clauses use the last path that survives, and repeated
+`select` clauses add visible rows. A later collapse drops hidden selected rows, moves a hidden cursor
+to its nearest visible ancestor, and resets a hidden anchor to that cursor. If the command names a
+cursor while hiding the current anchor, that hidden anchor resets to the command's cursor; a
+still-visible current anchor is preserved. If the command names no cursor, the client resets a hidden
+anchor to its current cursor.
 
 On an already-open local tree, the command changes only the parts it names; a dropped path counts as
 not given, so it does not clear an existing part. A command selection never moves keyboard focus.
