@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Show the plan's supported tab and group target syntax for monitors.
-
-Existing Issue: `help/monitor.md` and `help/unmonitor.md` use an unspecified `<target>` even though monitor targets accept tab labels or the literal `group:<n>` form, leaving users without the syntax for selecting or removing a group. Severity: 4/10
-
-Existing Risk: 4/10 - Users may be unable to target or remove a group from a monitor because the help pages do not show how to spell that target.
-
-Proposal Risk: 2/10 - Explicit tab-label and `group:<n>` forms and examples make both operations discoverable while preserving the existing parser behavior.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1799 "document monitor tab and group targets". Update the Usage and Examples blocks in `help/monitor.md` and `help/unmonitor.md` to show the accepted tab-label and `group:<n>` forms, retaining the existing `monitor ask` and `unmonitor --all` forms. Explain that tab labels and display aliases are accepted, and include a group-target example. Verify the wording against `product/specs/monitoring.md`, `src/monitor/parsing.ts`, and `src/monitor/parsing.test.ts`; no runtime behavior changes or wording-only test are needed.
-
-
 * Keep PR verification text from prompting execution of unreviewed branch code.
 
 Existing Issue: The PR body's Setup section tells reviewers to run `node bin/janus.mjs --no-open <scratch-project-dir>` from the reviewed branch and drive that instance, making review text an instruction to execute untrusted PR code. Severity: 5/10
