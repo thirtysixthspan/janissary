@@ -22,7 +22,7 @@ Scan the command prefix to find the active token boundary while respecting singl
 - `src/completion/files.test.ts`: `files expand "my dir"/ne` completes the matching child and replaces the token from its opening quote with a correctly quoted full path.
 - `src/completion/files.test.ts`: after `files expand "my dir"/ `, clause candidates such as `in`, `on`, and `with` are available again.
 - `src/completion/files.test.ts`: a quote still open at the cursor returns the original input with no matches; existing unquoted root fallback remains covered.
-- Run `$janissary/scripts/run.mjs check-diff` after each implementation step and after the tests and documentation updates.
+- Diff-scoped checks were run after each implementation step and again after the tests and documentation updates; all passed.
 
 ## Out of scope
 

@@ -20,7 +20,7 @@ Keep `ProfileFilesEntry.in` as the plain tab label. When `filesCommand` builds t
 
 - `src/profile/files.test.ts`: a multiword label is emitted as one quoted token and parses back unchanged.
 - `src/profile/files.test.ts`: a label with embedded double quotes is emitted with those quotes escaped and parses back unchanged.
-- Run `$janissary/scripts/run.mjs check-diff` after each implementation step.
+- Diff-scoped checks were run after each implementation step; all passed.
 
 ## Out of scope
 
