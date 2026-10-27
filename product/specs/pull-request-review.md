@@ -2,7 +2,7 @@
 
 ### Review and recording
 
-A review assesses its stated scope across description fidelity, plan fidelity, functionality gaps, introduced technical debt, and introduced security issues. An ordinary review covers the full open pull request; a staged complex-feature review may be limited to one implementation commit and its subplan. It records new findings in the review backlog on that pull request's branch and leaves the pull request open. Existing findings are preserved and duplicates are not recorded again. The review does not implement its findings.
+A review assesses its stated scope across description fidelity, plan fidelity, functionality gaps, introduced technical debt, and introduced security issues. An ordinary review covers the full open pull request; a staged complex-feature review may be limited to one implementation commit and its subplan. Within its scope, a review reads and judges every line that is added, changed, or removed, in every kind of file, and checks each file of a repeated pattern on its own rather than sampling a few. It also checks every promise: the goal, decisions, changes, tests, documentation edits, and verification steps of the pull request's own plan; each fix plan a repair added; and each claim and verification step in the description. There is no limit on the number of findings it records. A minor finding is recorded with a low severity rather than dropped. Its report states how many changed files and promise items it covered. It records new findings in the review backlog on that pull request's branch and leaves the pull request open. Existing findings are preserved and duplicates are not recorded again. The review does not implement its findings.
 
 ### The review backlog
 

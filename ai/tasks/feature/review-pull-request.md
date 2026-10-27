@@ -1,6 +1,6 @@
 # Review an Open Pull Request
 
-Your job: take a pull request that is **already open**, check out its head branch, read what the pull request promises — the plan it carries and the description it states — and review the diff it proposes across five dimensions: whether the description matches the implementation, how faithfully the implementation delivers the plan, what functionality it is missing, what technical debt it introduces, and what security issues it introduces. Every genuine finding is recorded as a structured entry in `./product/backlog/pull-request.md` on the pull request's own head branch, committed and pushed, with the pull request **left open**.
+Your job: take a pull request that is **already open**, check out its head branch, and review all of it. That means every line its diff adds, changes, or removes, and every promise it makes in its plan, in the fix plans its repairs added, and in its description. Judge them across five dimensions: whether the description matches the implementation, how faithfully the implementation delivers the plan, what functionality it is missing, what technical debt it introduces, and what security issues it introduces. Every genuine finding is recorded as a structured entry in `./product/backlog/pull-request.md` on the pull request's own head branch, committed and pushed, with the pull request **left open**. There is no limit on how many findings a review records.
 
 This task **reviews and records**. It never fixes what it finds, never edits source code, never edits the pull request's description, and never merges or closes anything. Every finding is addressed in a separate invocation of `execute ./ai/tasks/feature/work-pull-request-issue.md`, with the explicit PR number and an optional backlog-entry selector to update the reviewed pull request's branch and leave it open. This applies to all five dimensions, including security; never route a proposal to another task or replace its implementation plan with a human-only handoff.
 
@@ -20,7 +20,7 @@ This task **reviews and records**. It never fixes what it finds, never edits sou
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Check out the pull request's head branch. Run read-only `git` and `gh` commands (`git diff`, `git log`, `git status`, `gh pr view`, `gh pr diff`) and plain navigation commands (`ls`, `wc -l`, `grep`). Create `./product/backlog/pull-request.md` and append entries to the end of it. Commit and push that one file to the pull request's own head branch.
+Read any file in the repo. Check out the pull request's head branch. Run read-only `git` and `gh` commands (`git diff`, `git log`, `git show`, `git status`, `gh pr view`, `gh pr diff`) and plain navigation commands (`ls`, `wc -l`, `grep`). Create `./product/backlog/pull-request.md` and append entries to the end of it. Commit and push that one file to the pull request's own head branch.
 
 ### Forbidden — no exceptions
 
@@ -32,7 +32,7 @@ Read any file in the repo. Check out the pull request's head branch. Run read-on
 6. **Posting to GitHub.** No `gh pr comment`, no `gh pr review`, no inline annotations. The backlog file on the branch is the only output.
 7. **Running the project's build, lint, test, or quality tooling.** No `npm run lint`, no `npm run typecheck`, no test run, no `npm run check`, no `$janissary/scripts/run.mjs check-diff`, and no `pr-check-gate` — not even the diff-scoped fast commands. Those tools have their own dedicated tasks that consume their output; this task's instrument is your own reading. The honest cost is that a branch that does not compile can still review clean here, which is why the report says so out loud.
 8. **Installing dependencies.** Do not run `npm install`, `npm rebuild`, or any part of `ai/tasks/workspace/prepare-workspace.md`. Nothing in this run consumes `node_modules`.
-9. **Capping, padding, or shaping the finding list to a number.** Record every genuine finding and no marginal ones.
+9. **Capping, sampling, or padding the finding list.** Never limit the findings to a number. Never stop before every changed file and every promise has been checked. Never review a few files of a repeated pattern and assume the rest match. Record every finding that survives Step 3's drop rules, and nothing that doesn't.
 10. **Committing anything other than `./product/backlog/pull-request.md`.**
 
 ---
@@ -62,30 +62,78 @@ The rule buys more than the minutes it saves: because no install runs, a reviewe
 
 ## Step 2 — Read what the pull request promises
 
-Three of the five dimensions in Step 3 are meaningless until you know what was promised, so read this before reading a line of the diff.
+Three of the five dimensions in Step 3 are meaningless until you know what was promised, so read this before reading a line of the diff. Promises come from three places: the pull request's own plan, the fix plans its repairs added, and its description.
 
-1. Run `gh pr diff <number> --name-only` and look for a `./product/plans/**/*.md` entry. A feature pull request carries its plan there — moved into `./product/plans/complete/` by `ai/tasks/feature/build-a-feature.md`, or written straight into it by `ai/tasks/work-an-issue.md`.
-2. Read that plan **in full**: its goal, design decisions, file-by-file changes, tests, out-of-scope list, and verification section.
-3. Run `gh pr view <number> --json title,body` and read the description for intent the plan does not state.
-4. **If the diff carries no plan file** — a hygiene or documentation pull request, say — do not stop. Use the pull request body and the commit subjects from `git log origin/master..HEAD` as the statement of intent instead, judge the plan-fidelity dimension against those, and say so in the report.
+1. **Find the own plan.** When the invocation names a plan, as `build-a-feature.md` and `build-a-complex-feature.md` do, that plan is the own plan and you can skip the lookup below. Otherwise run `git log --reverse --format=%H origin/master..HEAD` and take its first line, which is the branch's first commit. Run `git show --name-status --format= <sha> -- product/plans/complete/` on it. When that commit adds (`A`) or moves in (`R`) exactly one plan, that plan is the pull request's own plan. A feature pull request carries one. `ai/tasks/feature/build-a-feature.md` moves it into `./product/plans/complete/`, and `ai/tasks/work-an-issue.md` writes it there directly. When the first commit adds no plan, or more than one, there is no own plan.
+2. **Find the fix plans.** Run `git diff origin/master...HEAD --name-status`. Every `A` line under `product/plans/complete/` other than the own plan is a fix plan. `work-pull-request-issue.md` writes one for each repair, and each one promises that its repair did what it says.
+3. Read the own plan and every fix plan **in full**.
+4. Run `gh pr view <number> --json title,body` and read the description.
+5. **List every promise as a numbered item.** This list is Step 3's checklist, and the review isn't finished until every item on it has been checked. Make one item for each of these:
+   - the own plan's goal
+   - each of its design decisions
+   - each entry in its proposed or file-by-file changes
+   - each test it names
+   - each spec and documentation edit it calls for
+   - each step of its verification section
+   - each fix plan's fix, and each test that fix plan names
+   - each claim the description makes, sentence by sentence, including every behavior example and every "How to verify" step
+
+   The out-of-scope list isn't a promise. It limits what the diff may add, and Step 3 uses it to rule out false gaps.
+6. **If there is no own plan, don't stop.** That's normal for a hygiene or documentation pull request. Use the description and the commit subjects from `git log origin/master..HEAD` as the statement of intent. List their claims the same way, judge plan fidelity against them, and say so in the report.
+
+A plan file the diff changes outside `./product/plans/complete/` isn't a promise. A ready plan edited to stay consistent with this one is an example. It's a changed file, and Step 3 reviews it like any other.
 
 This step is reconnaissance. Write nothing yet.
 
 ---
 
-## Step 3 — Review the diff across five dimensions
+## Step 3 — Review every changed line and every promise
 
-`git diff origin/master...HEAD` — three dots — is the authoritative diff. Read it in full, opening the surrounding files rather than judging hunks in isolation: a hunk read alone is how a false finding gets recorded. Every file in the diff is in scope, not only `src/` and `web/src/` — a spec that no longer matches the behavior beside it, and a documentation page the plan called for and the diff omitted, are both findings. If the diff is too large to hold at once, list it with `git diff origin/master...HEAD --name-only` and read it file by file rather than sampling it; silently skipping files would defeat the "no cap" rule below.
+This review covers the whole pull request. Every line the diff adds, changes, or removes is read and judged, and every promise from Step 2 is traced to the code that keeps it. The work runs in four passes: list the changes, review each file, walk the promises, and confirm coverage. `git diff origin/master...HEAD`, with three dots, is the authoritative diff throughout.
+
+### List the changes
+
+Run `git diff origin/master...HEAD --name-status` and `git diff origin/master...HEAD --numstat`. Together they list every file the pull request touches, its status, and how many lines changed in it. That list is what this review must cover. Every file on it is in scope, not only `src/` and `web/src/`. Specs, help pages, plans, tests, playbooks, configuration, and binary files all count.
+
+### Review each file
+
+Take the files one at a time. Read each one's whole diff with `git diff origin/master...HEAD -- <path>`. What else a file needs depends on its status:
+
+- **Added:** the whole file is the change, so read all of it.
+- **Modified:** read every hunk, then open the file at `HEAD` around each one. A hunk read alone is how a false finding gets recorded.
+- **Deleted:** `grep` for anything that still refers to it, and decide whether behavior, tests, or documentation went with it that should have stayed.
+- **Renamed:** review the content change like a modification, and `grep` for references to the old path.
+- **Binary,** such as a screenshot: confirm it's referenced where the pull request says it is. If your tools can open it, confirm it shows what the description claims.
+
+Judge every changed line under all five dimensions below. A line counts as reviewed once you have judged it, not once you have scrolled past it.
+
+Follow each change past the edge of the diff. Check the callers of a changed function, the consumers of a changed contract, and the specs, help pages, and docs that describe the changed behavior. A spec the diff leaves stale is a finding even though the diff never touched it.
+
+**Never sample.** Files that follow one pattern are each checked against their own source of truth. A set of per-command help pages is one example, and each page is compared with the command it documents. A run of similar tests is another. Checking a few and assuming the rest match is how a review misses findings that later reviews then turn up one at a time.
+
+If the diff is too large to hold at once, keep going file by file. Write down each file's candidate findings before you move to the next one. Keep a running note of which files are done, so nothing is lost as earlier files leave your context.
+
+### Walk the promises
+
+Go through Step 2's list item by item. For each one, find the code, test, spec, or doc that delivers it, and confirm it delivers it correctly. Being present isn't the same as being correct. A design decision implemented in a way the plan rules out is a finding. So is a named test that doesn't test what the plan says, and a verification step whose expected result the code wouldn't produce. An item that nothing delivers is a finding too.
+
+### Confirm coverage
+
+Before you write anything, compare what you reviewed with both lists. Every file from the change list must be done, and every promise must be checked. A gap means going back to finish it, not moving on. Step 7's report gives both counts.
+
+### The five dimensions
 
 Form candidate findings under each of these five headings. Each is a question, with the evidence that answers it:
 
-- **Description fidelity.** Does the description describe what the diff actually does? Findings: claims the implementation does not support, behavior the diff adds that the description never mentions, and stated limitations that are no longer true.
-- **Plan fidelity.** Walk the plan **item by item** — its goal, then each entry in its file-by-file changes, then its tests section, then the spec and documentation edits it called for — and confirm each one is present in the diff. An item the plan called for and the diff does not contain is a finding; so is an item implemented in a way the plan's own design decisions rule out. Specs and docs conflict and vanish as easily as code, so check them as carefully.
+- **Description fidelity.** Does the description describe what the diff actually does? Check every description claim on Step 2's list. Findings: claims the implementation does not support, behavior the diff adds that the description never mentions, stated limitations that are no longer true, and verification steps whose expected result the code would not produce.
+- **Plan fidelity.** Does the diff deliver every plan promise on Step 2's list, and deliver it correctly? The promise walk above is where you answer this. Findings: an item the diff does not deliver, an item implemented in a way the plan's own design decisions rule out, and a fix plan whose repair does not do what the plan says or was undone by a later change. Specs and docs conflict and vanish as easily as code, so check them as carefully.
 - **Functionality gaps.** Independent of the plan: what does this implementation not handle? The empty state, the error path, cancellation, concurrent use, the second call, the failure of something it depends on. **A gap the plan explicitly deferred to its own "Out of scope" section is not a finding** — recording a deliberate deferral as a gap is the single most likely false positive this review produces, so check that list before writing one up.
 - **Technical debt introduced.** Only what this diff *adds*. Name the design gap behind the smell, not the smell itself: duplication the diff creates instead of sharing, a shape inconsistent with the surrounding code or with `ai/guidelines/`, a file pushed past the 200-line limit in [`code-guidelines.md`](../../guidelines/code-guidelines.md), an eroded type boundary, a `TODO`/`FIXME`/`HACK` marker left behind, risky logic (parsing, state transitions, error paths) arriving with no colocated test. Pre-existing debt the diff merely touches belongs in `./product/backlog/technical-debt.md` and is out of scope here.
 - **Security issues introduced.** Read [`improve-security.md`](../hygiene/improve-security.md)'s *Never do on your own* list as a checklist of what to look **for**: input that reaches a filesystem path, a shell command, or a query without validation or sanitisation; a new `eslint-disable` or any other suppression of a security finding; a new or widened regex; an `eval`; any change to auth, crypto, or token handling, including `src/security.ts`; and a secret, token, or credential that is committed, logged, persisted, or placed in an environment a less-trusted process can read. Beside those, the shapes this codebase in particular can regress: a widened sandbox carve-in or a loosened Seatbelt profile, a new network surface that binds beyond loopback or authenticates nothing, a new dependency, and a guard that fails open. Record these; never fix them. That task's reasoning is this one's too — a wrong security fix still passes the tests, so nothing downstream would catch it.
 
-**There is no cap on the number of findings.** A pull request's diff is bounded, so completeness is achievable, and a review that silently dropped findings would be worse than a long file. Equally, do not pad: a marginal finding is dropped for being marginal, not to hit or avoid a number. **Finding nothing is a valid outcome** — if the pull request matches its description and its plan and introduces no gap, no debt, and no security issue, say so and do not invent work.
+**There is no cap on the number of findings.** A pull request's diff is bounded, so completeness is achievable, and a review that silently dropped findings would be worse than a long file. Record every finding that survives the drop rules below. Don't stop once the list feels long enough. Don't merge distinct defects to shorten it. And don't drop a genuine finding because it's minor. A minor finding gets a low severity score, which is what the score is for. When one defect recurs in several files and a single change fixes all of them, one entry may cover them all. That entry names every affected file and never says "and similar files".
+
+A candidate is dropped for one of five reasons. It might be wrong once you read the surrounding code. The plan might have deferred it on purpose. It might be pre-existing debt the diff only touches. It might already be in the backlog (Step 4). Or no proposal you can write brings its `Proposal Risk` materially below its `Existing Risk` (see the scales in Step 4). Don't pad the list either. **Finding nothing is a valid outcome.** If coverage is complete and the pull request matches its description and its plan with no gap, no debt, and no security issue, say so and don't invent work.
 
 References to other tasks in these dimensions supply detection criteria only. Do not execute them or import their remediation routing. In particular, a security finding still gets a concrete implementation and verification proposal for `work-pull-request-issue.md`; it is not handed off to `improve-security.md` or deferred merely because it concerns security. The review itself performs no remediation.
 
@@ -192,7 +240,7 @@ Otherwise write **one** commit. `pr-commit` stages everything and commits with a
 
 ```bash
 $janissary/scripts/run.mjs pr-commit "chore(backlog): record pull request review findings" \
-  "Reviewed #232 across description fidelity, plan fidelity, functionality gaps, technical debt, and security. Recorded 4 findings in product/backlog/pull-request.md; 2 candidates were dropped as duplicates of existing entries."
+  "Reviewed all 12 changed files and 31 promise items in #232 across description fidelity, plan fidelity, functionality gaps, technical debt, and security. Recorded 4 findings in product/backlog/pull-request.md; 2 candidates were dropped as duplicates of existing entries."
 ```
 
 Then push through the upstream `gh pr checkout` configured, substituting the literal branch name — each Bash call is a fresh shell, so nothing persists between them:
@@ -222,7 +270,8 @@ Give the user a short report in this exact shape:
 ```
 PR:             <url> (#<number>)
 Branch:         <head branch>
-Promise:        <./product/plans/... file from the PR, or "none in the PR — used the PR body and commit subjects">
+Promise:        <own plan path> and <n> fix plans | none in the PR — used the PR body and commit subjects
+Coverage:       <n>/<n> changed files reviewed, <n>/<n> promise items checked
 Findings:       description <n>, plan <n>, functionality <n>, debt <n>, security <n>   (recorded this run, after dedupe)
 Duplicates:     <n> candidate(s) dropped as already present in product/backlog/pull-request.md
 Recorded:       <short-sha> pushed to <branch> | clean — nothing recorded | nothing new — all <n> finding(s) already recorded | push failed (see above)
