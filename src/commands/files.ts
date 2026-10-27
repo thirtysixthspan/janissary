@@ -18,6 +18,10 @@ export const command: Command = {
       appendCommandOutput(managers, tab.label, { input: command_, output }, invocation);
       return;
     }
+    if (parsed.kind === 'error') {
+      appendCommandOutput(managers, tab.label, { input: command_, output: parsed.error }, invocation);
+      return;
+    }
     appendCommandOutput(managers, tab.label, { input: command_, output: '' }, invocation);
     managers.fileNavigator.open(command_, tab.label);
   },

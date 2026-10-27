@@ -10,6 +10,9 @@ When the `files` command runs, a transcript entry for the command appears in the
 before the file navigator tab opens and takes focus. The command text is recorded as the entry's input;
 the output is empty since the file navigator tab is the side-effect.
 
+If a `files` command is malformed, it produces one transcript entry containing the parser error and
+does not open a tree. This includes malformed `files print` requests.
+
 A file navigator tab is created like a shell tab (see Tabs) — placed contiguously within the active
 tab's group, inheriting that group's number and bar color and taking a distinct dot color. Focus
 moves to the new file navigator tab.

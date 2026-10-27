@@ -82,6 +82,21 @@ describe('files command run', () => {
     expect(openCalls[0]).toEqual({ command: 'files left ./src', label: 'janus' });
   });
 
+  it('appends one parser error for a malformed view clause', () => {
+    run('files expand "src');
+
+    expect(appended).toEqual([{ input: 'files expand "src', output: 'files: unterminated quote' }]);
+    expect(openCalls).toEqual([]);
+  });
+
+  it('appends one parser error for a malformed print request', () => {
+    run('files print a b');
+
+    expect(appended).toEqual([{ input: 'files print a b', output: 'Usage: files print <tab>.' }]);
+    expect(printCalls).toEqual([]);
+    expect(openCalls).toEqual([]);
+  });
+
   it('passes a with clause through alongside the other clauses', () => {
     run('files in claude on left with size');
 
