@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { CommandInvocationContext, CommandManagers } from './types.js';
+import type { CommandInvocationContext, CommandManagers } from '../commands/types.js';
 
 export function invocationFor(
   label: string,
