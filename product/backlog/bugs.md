@@ -2,6 +2,8 @@
 
 ## ready
 
+* should be able to select command output text in the shell tab with a mouse and copy it out.
+
 ## development
 
 ## deferred
