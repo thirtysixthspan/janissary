@@ -64,6 +64,8 @@ Usage: tab dock <tab> left|right.
 Usage: tab undock <tab>.
 ```
 
+Angle-bracket arguments in these usage replies are rendered as literal text, including when a shell tab displays them in its terminal.
+
 Bare `tab` and an unknown subcommand print `Usage: tab focus|move|pane|split|color|group|dock|undock <tab> [argument].` A missing or extra word, unterminated quote, empty quoted name, invalid side, non-positive or unsafe move position, color other than `#` plus six hexadecimal digits, or invalid group selector is malformed. A `tab focus` name with spaces must be quoted; `tab focus review notes` therefore prints `Usage: tab focus <name>.` See [[tabs]], [[sidebars]], and [[notifications]].
 
 ### `layout`

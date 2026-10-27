@@ -66,3 +66,5 @@ Usage: tab dock <tab> left|right.
 Usage: tab undock <tab>.
 Usage: tab focus|move|pane|split|color|group|dock|undock <tab> [argument].
 ```
+
+Angle-bracket arguments in these usage replies display as literal text in the transcript and shell terminal.

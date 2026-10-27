@@ -30,52 +30,52 @@ describe('parseTabCommand', () => {
   });
 
   it.each([
-    ['tab focus', 'Usage: tab focus <name>.'],
-    ['tab focus notes extra', 'Usage: tab focus <name>.'],
-    ['tab focus "unfinished', 'Usage: tab focus <name>.'],
-    ['tab focus ""', 'Usage: tab focus <name>.'],
-    ['tab move', 'Usage: tab move <tab> <position>.'],
-    ['tab move notes', 'Usage: tab move <tab> <position>.'],
-    ['tab move notes 0', 'Usage: tab move <tab> <position>.'],
-    ['tab move notes -1', 'Usage: tab move <tab> <position>.'],
-    ['tab move notes 1.5', 'Usage: tab move <tab> <position>.'],
-    ['tab move notes two', 'Usage: tab move <tab> <position>.'],
-    ['tab move notes 9007199254740992', 'Usage: tab move <tab> <position>.'],
-    ['tab pane notes north', 'Usage: tab pane <tab> left|right.'],
-    ['tab pane', 'Usage: tab pane <tab> left|right.'],
-    ['tab pane notes right extra', 'Usage: tab pane <tab> left|right.'],
-    ['tab split', 'Usage: tab split <tab>.'],
-    ['tab split notes extra', 'Usage: tab split <tab>.'],
-    ['tab color', 'Usage: tab color <tab> <#rrggbb>.'],
-    ['tab color notes #fff', 'Usage: tab color <tab> <#rrggbb>.'],
-    ['tab color notes ff0000', 'Usage: tab color <tab> <#rrggbb>.'],
-    ['tab color notes #gg0000', 'Usage: tab color <tab> <#rrggbb>.'],
-    ['tab group notes 0', 'Usage: tab group <tab> <id|name>.'],
-    ['tab group', 'Usage: tab group <tab> <id|name>.'],
-    ['tab group notes', 'Usage: tab group <tab> <id|name>.'],
-    ['tab dock', 'Usage: tab dock <tab> left|right.'],
-    ['tab dock notes north', 'Usage: tab dock <tab> left|right.'],
-    ['tab undock', 'Usage: tab undock <tab>.'],
-    ['tab undock notes extra', 'Usage: tab undock <tab>.'],
+    ['tab focus', String.raw`Usage: tab focus \<name\>.`],
+    ['tab focus notes extra', String.raw`Usage: tab focus \<name\>.`],
+    ['tab focus "unfinished', String.raw`Usage: tab focus \<name\>.`],
+    ['tab focus ""', String.raw`Usage: tab focus \<name\>.`],
+    ['tab move', String.raw`Usage: tab move \<tab\> \<position\>.`],
+    ['tab move notes', String.raw`Usage: tab move \<tab\> \<position\>.`],
+    ['tab move notes 0', String.raw`Usage: tab move \<tab\> \<position\>.`],
+    ['tab move notes -1', String.raw`Usage: tab move \<tab\> \<position\>.`],
+    ['tab move notes 1.5', String.raw`Usage: tab move \<tab\> \<position\>.`],
+    ['tab move notes two', String.raw`Usage: tab move \<tab\> \<position\>.`],
+    ['tab move notes 9007199254740992', String.raw`Usage: tab move \<tab\> \<position\>.`],
+    ['tab pane notes north', String.raw`Usage: tab pane \<tab\> left|right.`],
+    ['tab pane', String.raw`Usage: tab pane \<tab\> left|right.`],
+    ['tab pane notes right extra', String.raw`Usage: tab pane \<tab\> left|right.`],
+    ['tab split', String.raw`Usage: tab split \<tab\>.`],
+    ['tab split notes extra', String.raw`Usage: tab split \<tab\>.`],
+    ['tab color', String.raw`Usage: tab color \<tab\> \<#rrggbb\>.`],
+    ['tab color notes #fff', String.raw`Usage: tab color \<tab\> \<#rrggbb\>.`],
+    ['tab color notes ff0000', String.raw`Usage: tab color \<tab\> \<#rrggbb\>.`],
+    ['tab color notes #gg0000', String.raw`Usage: tab color \<tab\> \<#rrggbb\>.`],
+    ['tab group notes 0', String.raw`Usage: tab group \<tab\> \<id|name\>.`],
+    ['tab group', String.raw`Usage: tab group \<tab\> \<id|name\>.`],
+    ['tab group notes', String.raw`Usage: tab group \<tab\> \<id|name\>.`],
+    ['tab dock', String.raw`Usage: tab dock \<tab\> left|right.`],
+    ['tab dock notes north', String.raw`Usage: tab dock \<tab\> left|right.`],
+    ['tab undock', String.raw`Usage: tab undock \<tab\>.`],
+    ['tab undock notes extra', String.raw`Usage: tab undock \<tab\>.`],
   ])('returns exact usage for malformed input %s', (input, error) => {
     expect(parseTabCommand(input)).toEqual({ error });
   });
 
   it.each([
-    ['tab move "unfinished 2', 'Usage: tab move <tab> <position>.'],
-    ['tab pane "unfinished right', 'Usage: tab pane <tab> left|right.'],
-    ['tab split "unfinished', 'Usage: tab split <tab>.'],
-    ['tab color "unfinished #123456', 'Usage: tab color <tab> <#rrggbb>.'],
-    ['tab group "unfinished 1', 'Usage: tab group <tab> <id|name>.'],
-    ['tab dock "unfinished left', 'Usage: tab dock <tab> left|right.'],
-    ['tab undock "unfinished', 'Usage: tab undock <tab>.'],
+    ['tab move "unfinished 2', String.raw`Usage: tab move \<tab\> \<position\>.`],
+    ['tab pane "unfinished right', String.raw`Usage: tab pane \<tab\> left|right.`],
+    ['tab split "unfinished', String.raw`Usage: tab split \<tab\>.`],
+    ['tab color "unfinished #123456', String.raw`Usage: tab color \<tab\> \<#rrggbb\>.`],
+    ['tab group "unfinished 1', String.raw`Usage: tab group \<tab\> \<id|name\>.`],
+    ['tab dock "unfinished left', String.raw`Usage: tab dock \<tab\> left|right.`],
+    ['tab undock "unfinished', String.raw`Usage: tab undock \<tab\>.`],
   ])('uses the known subcommand usage for unterminated target %s', (input, error) => {
     expect(parseTabCommand(input)).toEqual({ error });
   });
 
   it.each(['tab', 'tab close notes', 'tab "focus'])('returns summary usage for unknown or malformed subcommand %s', (input) => {
     expect(parseTabCommand(input)).toEqual({
-      error: 'Usage: tab focus|move|pane|split|color|group|dock|undock <tab> [argument].',
+      error: String.raw`Usage: tab focus|move|pane|split|color|group|dock|undock \<tab\> [argument].`,
     });
   });
 

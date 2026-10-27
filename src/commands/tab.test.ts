@@ -28,10 +28,10 @@ function fixture() {
 
 describe('tab command', () => {
   it.each([
-    ['tab', 'Usage: tab focus|move|pane|split|color|group|dock|undock <tab> [argument].'],
-    ['TAB focus', 'Usage: tab focus <name>.'],
-    ['tab close notes', 'Usage: tab focus|move|pane|split|color|group|dock|undock <tab> [argument].'],
-    ['tab focus   ', 'Usage: tab focus <name>.'],
+    ['tab', String.raw`Usage: tab focus|move|pane|split|color|group|dock|undock \<tab\> [argument].`],
+    ['TAB focus', String.raw`Usage: tab focus \<name\>.`],
+    ['tab close notes', String.raw`Usage: tab focus|move|pane|split|color|group|dock|undock \<tab\> [argument].`],
+    ['tab focus   ', String.raw`Usage: tab focus \<name\>.`],
   ])('claims malformed %s and prints exact usage on the invocation', async (input, usage) => {
     const { managers, appendForInvocation, append, setActiveTab, arrangeTab } = fixture();
     expect(commands.find((entry) => entry.match(input))).toBe(command);
@@ -53,7 +53,7 @@ describe('tab command', () => {
     const { managers, append, setActiveTab, arrangeTab } = fixture();
     await command.run('tab focus review notes', { label: 'janus', index: 0 }, managers);
     expect(append).toHaveBeenCalledWith('janus', {
-      input: 'tab focus review notes', output: 'Usage: tab focus <name>.',
+      input: 'tab focus review notes', output: String.raw`Usage: tab focus \<name\>.`,
     });
     append.mockClear();
     await command.run('tab focus "Missing Notes"', { label: 'janus', index: 0 }, managers);

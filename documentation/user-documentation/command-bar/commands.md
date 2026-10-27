@@ -80,6 +80,8 @@ Cannot undock "<name>".
 
 Malformed forms print the matching usage line: `Usage: tab focus <name>.`, `Usage: tab move <tab> <position>.`, `Usage: tab pane <tab> left|right.`, `Usage: tab split <tab>.`, `Usage: tab color <tab> <#rrggbb>.`, `Usage: tab group <tab> <id|name>.`, `Usage: tab dock <tab> left|right.`, or `Usage: tab undock <tab>.` Bare `tab` and unknown subcommands print `Usage: tab focus|move|pane|split|color|group|dock|undock <tab> [argument].`
 
+Angle-bracket arguments in these replies display as literal text in the transcript and shell terminal.
+
 ## `theme`
 
 `theme <name>` sets the application's color theme — the tab strip, transcript colors, panels, borders, pickers, dialogs, and editor chrome — and applies it immediately, with no restart. It persists to the `theme` key in [app configuration](/user-documentation/getting-started/configuration), so it survives a restart. Names match case-insensitively. An unrecognized name shows an error listing the six built-in themes: `dark` (the default), `light`, `solarized-dark`, `solarized-light`, `nord`, and `dracula`. There are no custom themes.

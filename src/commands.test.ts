@@ -174,7 +174,7 @@ describe('getOutput help pages', () => {
     ]) expect(text).toContain(refusal);
 
     const focusUsage = 'Usage: tab focus <name>.';
-    expect(parseTabCommand('tab focus review notes')).toEqual({ error: focusUsage });
+    expect(parseTabCommand('tab focus review notes')).toEqual({ error: String.raw`Usage: tab focus \<name\>.` });
     expect(text).toContain(`\`tab focus review notes\` prints \`${focusUsage}\``);
 
     for (const usage of [

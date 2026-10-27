@@ -5,16 +5,16 @@ import { isValidGroupSelector } from '../tab/groups.js';
 
 export const TAB_SUBCOMMANDS = ['focus', 'move', 'pane', 'split', 'color', 'group', 'dock', 'undock'] as const;
 
-const SUMMARY_USAGE = 'Usage: tab focus|move|pane|split|color|group|dock|undock <tab> [argument].';
+const SUMMARY_USAGE = String.raw`Usage: tab focus|move|pane|split|color|group|dock|undock \<tab\> [argument].`;
 const USAGE: Record<(typeof TAB_SUBCOMMANDS)[number], string> = {
-  focus: 'Usage: tab focus <name>.',
-  move: 'Usage: tab move <tab> <position>.',
-  pane: 'Usage: tab pane <tab> left|right.',
-  split: 'Usage: tab split <tab>.',
-  color: 'Usage: tab color <tab> <#rrggbb>.',
-  group: 'Usage: tab group <tab> <id|name>.',
-  dock: 'Usage: tab dock <tab> left|right.',
-  undock: 'Usage: tab undock <tab>.',
+  focus: String.raw`Usage: tab focus \<name\>.`,
+  move: String.raw`Usage: tab move \<tab\> \<position\>.`,
+  pane: String.raw`Usage: tab pane \<tab\> left|right.`,
+  split: String.raw`Usage: tab split \<tab\>.`,
+  color: String.raw`Usage: tab color \<tab\> \<#rrggbb\>.`,
+  group: String.raw`Usage: tab group \<tab\> \<id|name\>.`,
+  dock: String.raw`Usage: tab dock \<tab\> left|right.`,
+  undock: String.raw`Usage: tab undock \<tab\>.`,
 };
 
 export type ParsedTabCommand =
