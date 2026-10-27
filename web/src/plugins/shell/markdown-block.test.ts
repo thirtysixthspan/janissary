@@ -207,6 +207,8 @@ describe('insertMarkdownBlock', () => {
     fake.render(element);
 
     expect(element.querySelector('p')?.textContent).toBe(DISPLAYED_LAYOUT_USAGE);
+  });
+
   it.each([
     ['tab focus', 'Usage: tab focus <name>.'],
     ['tab move', 'Usage: tab move <tab> <position>.'],

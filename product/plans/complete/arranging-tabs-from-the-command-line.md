@@ -167,3 +167,7 @@ The implementation is organized around shared parsing, notifications, tab operat
 ## Verification
 
 Automated coverage on the branch checks parsing and exact usage replies, target resolution, every arrangement and refusal, no-op state emission, hidden and docked ordering including a docked move returned outside its group, notification defaults, completion of the displayed `space name.txt` title, monitor-target candidate wording, help-page examples, and literal rendering of usage placeholders. The spaced file path is treated as one literal target. The verification description records expected outcomes without directing its reader to run project commands or start an application.
+
+## Rebase adaptation
+
+`master` added layout-command help, file-navigator completion, and quoted-token validation after this branch diverged. The merged implementation and references retain those behaviors alongside tab completion and tab notifications; the shared quoted-token module now provides both the existing validation helper and the tab command's token reader.
