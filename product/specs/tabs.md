@@ -58,9 +58,10 @@ replacement in that pane, and also collapses when no replacement remains.
 
 The divider starts at an even split, can be dragged horizontally, and is limited to 15–85% of the
 central width. `layout split <percent>` can set an existing split from 1–99%, but does not create
-one. The divider size is reported to the server, but remains absent from profiles and resets on
-reload. Reporting tabs remain in their full-width lower section and cannot be moved into a split
-pane. Notifications likewise have no Split control.
+one. Its current percentage is reported to the server alongside the sidebar and reporting-area
+sizes, but remains absent from profiles and resets on reload. Reporting tabs remain in their
+full-width lower section and cannot be moved into a split pane. Notifications likewise have no
+Split control.
 
 ### Busy indicator
 

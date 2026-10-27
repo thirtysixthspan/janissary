@@ -514,8 +514,13 @@ describe('handle', () => {
 
   it('routes reportLayout through the controller façade', () => {
     const controller = makeController();
-    dispatchCall(controller, 30, { method: 'reportLayout', params: { sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70 } });
-    expect(controller.reportLayout).toHaveBeenCalledWith({ sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70 });
+    dispatchCall(controller, 30, {
+      method: 'reportLayout',
+      params: { sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70, splitPct: 62.5 },
+    });
+    expect(controller.reportLayout).toHaveBeenCalledWith({
+      sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70, splitPct: 62.5,
+    });
   });
 
   it('routes projectFiles to a deferred reply carrying the resolved root and paths', async () => {
