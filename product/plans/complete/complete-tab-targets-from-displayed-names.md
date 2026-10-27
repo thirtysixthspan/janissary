@@ -20,6 +20,7 @@ Expose the target names accepted by tab lookup from `TabManager`: each tab's lab
 
 - Verify label and title candidates follow tab order and duplicate names retain the first candidate, matching command lookup's first-match rule.
 - Verify controller completion completes `tab move "space` to `tab move "space name.txt" ` for an open editor displaying `space name.txt`.
+- Verify the shell-plugin `completeLine` fixture in `src/plugins/shell-capabilities.test.ts` provides the tab label-and-alias accessor used by controller completion.
 - Run `$janissary/scripts/run.mjs check-diff` after each implementation and test change.
 
 ## Specs and documentation
