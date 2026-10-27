@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -8,9 +8,33 @@ const CHARACTERS = [
   'hamza', 'idris', 'mahir', 'malik', 'orhan', 'selim', 'tahir', 'yusuf',
 ];
 
-export function commandNames(): string[] {
-  return readdirSync(HELP_DIRECTORY)
+function regularHelpPagePath(directory: string, file: string): string | undefined {
+  try {
+    const resolvedDirectory = realpathSync(directory);
+    const candidate = path.join(resolvedDirectory, file);
+    if (!lstatSync(candidate).isFile()) return undefined;
+
+    const resolvedFile = realpathSync(candidate);
+    const relativePath = path.relative(resolvedDirectory, resolvedFile);
+    if (
+      relativePath === '..' ||
+      relativePath.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(relativePath)
+    ) {
+      return undefined;
+    }
+
+    return resolvedFile;
+  } catch {
+    return undefined;
+  }
+}
+
+export function commandNames(directory = HELP_DIRECTORY): string[] {
+  const resolvedDirectory = realpathSync(directory);
+  return readdirSync(resolvedDirectory)
     .filter((file) => file.endsWith('.md') && file !== 'commands.md' && file !== 'keys.md')
+    .filter((file) => regularHelpPagePath(resolvedDirectory, file) !== undefined)
     .map((file) => file.slice(0, -3))
     .toSorted((left, right) => left.localeCompare(right));
 }
@@ -43,10 +67,12 @@ export function renderCommandPageContent(name: string, markdown: string, charact
     .replace(heading, () => `${heading}\n\n<img class="agent-float" src="/agents/${character}-south-west.png" alt="" />`);
 }
 
-export function renderCommandPage(name: string): string {
-  const index = commandNames().indexOf(name);
+export function renderCommandPage(name: string, directory = HELP_DIRECTORY): string {
+  const index = commandNames(directory).indexOf(name);
   if (index === -1) throw new Error(`No help page named "${name}".`);
-  const markdown = readFileSync(path.join(HELP_DIRECTORY, `${name}.md`), 'utf8').trim();
+  const pagePath = regularHelpPagePath(directory, `${name}.md`);
+  if (pagePath === undefined) throw new Error(`No help page named "${name}".`);
+  const markdown = readFileSync(pagePath, 'utf8').trim();
   return renderCommandPageContent(name, markdown, index);
 }
 

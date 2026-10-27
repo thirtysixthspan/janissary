@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import {
   commandReferenceSidebar,
+  commandNames,
   renderCommandPage,
   renderCommandPageContent,
 } from '../documentation/.vitepress/command-reference.ts';
@@ -39,5 +43,23 @@ describe('renderCommandPage', () => {
     const page = renderCommandPage('profile');
 
     expect(page).toMatch(/^# <code>profile<\/code>\n\n<img class="agent-float"/);
+  });
+});
+
+describe('command-reference help-page reads', () => {
+  it('does not list or render a symlink to a file outside the help directory', () => {
+    const parent = mkdtempSync(path.join(tmpdir(), 'command-reference-'));
+    const directory = path.join(parent, 'help');
+    mkdirSync(directory);
+    writeFileSync(path.join(directory, 'profile.md'), '### profile\n\nProfile help');
+    writeFileSync(path.join(parent, 'outside.md'), 'Outside contents');
+    symlinkSync(path.join(parent, 'outside.md'), path.join(directory, 'escape.md'));
+    try {
+      expect(commandNames(directory)).toEqual(['profile']);
+      expect(renderCommandPage('profile', directory)).toContain('Profile help');
+      expect(() => renderCommandPage('escape', directory)).toThrow('No help page named "escape".');
+    } finally {
+      rmSync(parent, { recursive: true, force: true });
+    }
   });
 });

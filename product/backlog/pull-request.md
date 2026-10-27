@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Close the security gap that lets a listed help-page symlink serve files outside the help directory.
-
-Existing Issue: `listHelpPages` and `readHelpPage` accept every `.md` directory entry, then `readFileSync` follows a page symlink to its target path. Severity: 8/10
-
-Existing Risk: 7/10 - A packaged or altered help symlink can disclose local file contents through an in-app response or a generated docs page.
-
-Proposal Risk: 2/10 - Rejecting symlinks or enforcing resolved-path containment before reading prevents a help entry from escaping the configured directory.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1799 "confine help-page reads to the help directory". In `src/help-pages.ts` and `documentation/.vitepress/command-reference.ts`, accept only regular help pages whose resolved targets remain inside the configured help directory before reading them. Add a `src/help-pages.test.ts` case with a valid `commands.md`, an outside file, and a `.md` symlink to that file; verify the symlink cannot return the outside contents while existing unreadable and valid-page cases retain their behavior. Add focused coverage for the docs-page reader as well, so a symlink cannot publish outside contents. Run the existing scoped checks and docs build.
-
-
 * Correct the plan's SSH option order in the command help signature.
 
 Existing Issue: `help/ssh.md` puts `[ssh options…]` after `<destination>` even though the same page says connection options precede the destination and its port and identity example uses that order. Severity: 4/10

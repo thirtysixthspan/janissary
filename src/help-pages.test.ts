@@ -60,6 +60,21 @@ describe('help pages', () => {
     }
   });
 
+  it('does not list or read a symlink to a file outside the help directory', () => {
+    const parent = mkdtempSync(path.join(tmpdir(), 'help-pages-'));
+    const directory = path.join(parent, 'help');
+    mkdirSync(directory);
+    writeFileSync(path.join(directory, 'commands.md'), 'Commands');
+    writeFileSync(path.join(parent, 'outside.md'), 'Outside contents');
+    symlinkSync(path.join(parent, 'outside.md'), path.join(directory, 'escape.md'));
+    try {
+      expect(listHelpPages(directory)).toEqual(['commands']);
+      expect(readHelpPage(directory, 'escape')).toEqual({ kind: 'unreadable' });
+    } finally {
+      rmSync(parent, { recursive: true, force: true });
+    }
+  });
+
   it('reports unreadable when the required command index cannot be read', () => {
     const directory = mkdtempSync(path.join(tmpdir(), 'help-pages-'));
     try {
