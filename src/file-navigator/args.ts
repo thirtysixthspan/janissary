@@ -53,12 +53,12 @@ function readTrailingIn(input: string, start: number): TrailingIn {
     };
     cursor = skipSpaces(input, token.end);
   }
-  if (last?.bare && last.value.toLowerCase() === 'in') {
-    return { end: last.start, missingInLabel: true };
-  }
   if (previous?.bare && previous.value.toLowerCase() === 'in' && last) {
     const raw = input.slice(last.start, last.end);
     return { end: previous.start, inLabel: isFullyQuoted(raw) ? last.value : raw };
+  }
+  if (last?.bare && last.value.toLowerCase() === 'in') {
+    return { end: last.start, missingInLabel: true };
   }
   return { end };
 }

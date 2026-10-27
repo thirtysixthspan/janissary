@@ -109,8 +109,8 @@ describe('FileNavigatorManager', () => {
         byLabel: (label: string) => tabs.find((t) => t.label === label),
         editorTabByUrl: (url: string) => tabs.find((t) => t.editor?.url === url),
         filesTabByRoot: (r: string) => tabs.find((t) => t.files?.root === r),
-        cwdOf: (label: string) => (label === 'other' ? otherRoot : root),
-        workingDirOf: (label: string) => (label === 'other' ? otherRoot : root),
+        cwdOf: (label: string) => (label === 'other' || label === 'in' ? otherRoot : root),
+        workingDirOf: (label: string) => (label === 'other' || label === 'in' ? otherRoot : root),
         append: (_label: string, entry: LogEntry) => { outputs.push(entry.output); entries.push(entry); },
         findIndex: (label: string) => tabs.findIndex((t) => t.label === label),
         setActiveTab: (index: number) => { activeTab = index; },
@@ -652,6 +652,17 @@ describe('FileNavigatorManager', () => {
     const tab = tabs.find((t) => t.label.startsWith('navigator'));
     expect(tab!.files!.root).toBe(otherRoot);
     expect(tab!.dock).toBeUndefined();
+  });
+
+  it('files src in in resolves the tab whose label is in', () => {
+    mkdirSync(path.join(otherRoot, 'src'));
+    tabs.push({ ...tabs[0]!, label: 'in' });
+    const manager = run();
+
+    manager.open('files src in in', 'janus');
+
+    const tab = tabs.find((candidate) => candidate.files?.root === path.join(otherRoot, 'src'));
+    expect(tab?.files?.root).toBe(path.join(otherRoot, 'src'));
   });
 
   it('files in <label> on <side> roots at the referenced tab\'s cwd and docks', () => {

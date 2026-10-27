@@ -43,6 +43,10 @@ describe('parseFileNavigatorArgs', () => {
     expectOpen('src/sub in claude', { inLabel: 'claude', dock: null, target: 'src/sub' });
   });
 
+  it('uses a trailing in token as the label after an in clause', () => {
+    expectOpen('src in in', { inLabel: 'in', target: 'src' });
+  });
+
   it('preserves a trailing backslash in an unquoted single-token path', () => {
     expectOpen('folder\\', { target: 'folder\\' });
     expectOpen('on left folder\\', { dock: 'left', target: 'folder\\' });
@@ -60,6 +64,7 @@ describe('parseFileNavigatorArgs', () => {
 
   it('reports a trailing in clause without a label', () => {
     expectOpen('src/sub in', { inLabel: undefined, missingInLabel: true, dock: null, target: 'src/sub' });
+    expectOpen('src in', { inLabel: undefined, missingInLabel: true, dock: null, target: 'src' });
   });
 
   it('parses view clauses in order beside the existing clauses', () => {

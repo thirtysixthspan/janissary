@@ -72,7 +72,9 @@ An unquoted label is one word; a label containing spaces or quotes may be writte
 single- or double-quoted value. A backslash escapes the matching quote inside that value, and the
 outer quotes are removed before the tab is looked up. This works in either clause position, as in
 `files in "review team" src` and `files src in "review team"`.
-If `in` has no label after a path, the command reports `files: expected a tab label after "in"`.
+A final bare token after the `in` clause is its label even when the token is literally `in`:
+`files src in in` opens `src` under the tab named `in`. If no token follows the clause, as in
+`files src in`, the command reports `files: expected a tab label after "in"`.
 When `<label>` names a remote shell or harness, the tree is rooted in that tab's workspace on the
 remote host and uses that tab's existing ssh channel. There is no `files on <address>` form: a
 remote tree can only be opened through a tab that already owns a workspace and connection there.

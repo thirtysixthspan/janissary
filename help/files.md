@@ -35,6 +35,7 @@ Open a file navigator in the current tab's working directory, or target a path o
 - `files right src` opens `src` in the right sidebar.
 - `files in janus` opens a navigator at the `janus` tab's working directory.
 - `files src in janus` opens `src` relative to the `janus` tab's working directory.
+- `files src in in` opens `src` relative to the tab named `in`.
 - `files in "review team" src` opens `src` relative to the `review team` tab's working directory.
 - `files in janus on left with modified` opens the `janus` tab's working directory in the left sidebar and shows each row's modified time.
 - `files with size src` opens `src` with each row's size.
