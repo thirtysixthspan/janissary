@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the plan's task-picker help for harness tabs.
-
-Existing Issue: `help/tasks.md` says selecting a task always inserts its command into the command line, while a harness tab has no command line and receives the command through its terminal input. Severity: 3/10
-
-Existing Risk: 2/10 - A user opening the picker over a harness can expect an editable command-line draft that does not exist in that tab.
-
-Proposal Risk: 1/10 - Describing both destinations sets the right expectation, with only the risk that the wording later drifts from the picker behavior.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1799 "describe task picker behavior in harness tabs". Update the description in `help/tasks.md` to distinguish command-line insertion without submission in command-bar tabs from sending the task command to the harness PTY when the picker is opened over a harness tab. `web/src/pickers/useTaskPicker.ts` implements the two destinations, `web/src/pickers/useTaskPicker.test.ts` covers both, and `product/specs/task-picker.md` records the user-visible behavior; no help-text assertion exists, so verify the wording against those cases.
-
-
 * Deliver the plan's repeatable skill clause in agent help.
 
 Existing Issue: `help/agent.md` shows `[with skill <name>]` only once even though the agent launch grammar permits repeating that clause to select multiple skills. Severity: 4/10
