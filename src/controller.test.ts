@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createController, type Controller } from './controller.js';
@@ -352,6 +352,27 @@ describe('Controller', () => {
     const { c } = makeController(); // cwd is the repo root, which has README.md
     const res = c.complete('shell READ', 10);
     expect(res.newInput).toBe('shell README.md ');
+  });
+
+  it('completes a tab target using the displayed title of an open editor', async () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'janus-tab-target-completion-'));
+    writeFileSync(path.join(root, 'space name.txt'), 'sample text\n');
+    const c = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} }, root);
+    seedRootTab(c.managers.tab);
+    liveControllers.push(c);
+
+    try {
+      await c.managers.openFile.run('open space name.txt', 'janus');
+      expect(c.managers.tab.tabs.find((tab) => tab.view === 'editor')?.title).toBe('space name.txt');
+      c.setActiveTab(c.managers.tab.findIndex('janus'));
+
+      const input = 'tab move "space';
+      expect(c.complete(input, input.length).newInput).toBe('tab move "space name.txt" ');
+    } finally {
+      await c.shutdown();
+      liveControllers.splice(liveControllers.indexOf(c), 1);
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('cycles and toggles via UI shortcuts', () => {

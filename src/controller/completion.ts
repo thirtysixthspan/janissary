@@ -9,7 +9,7 @@ import type { FilesCompletions } from '../completion/files.js';
 export function complete(managers: Managers, text: string, cursor: number, label?: string): CompletionResult {
   const tab = (label ? managers.tab.byLabel(label) : undefined) ?? managers.tab.cur();
   const cwd = managers.tab.workingDirOf(tab.label);
-  const labels = managers.tab.allLabels();
+  const labels = managers.tab.allLabelOrAliasNames();
   const navigatorLabels = managers.tab.tabs.filter((candidate) => candidate.files).map((candidate) => candidate.label);
   const files: FilesCompletions = {
     labels,

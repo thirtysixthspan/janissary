@@ -26,6 +26,21 @@ export function byLabelOrAlias(tabs: Tab[], name: string): Tab | undefined {
   return tabs.find((tab) => matchesLabelOrAlias(tab, name));
 }
 
+export function allLabelOrAliasNames(tabs: Tab[]): string[] {
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const { label, title } of tabs) {
+    const candidates = title ? [label, title] : [label];
+    for (const name of candidates) {
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      names.push(name);
+    }
+  }
+  return names;
+}
+
 // The guard-typed accessors below hand back a narrowed tab or nothing, so a caller gets a
 // non-optional payload instead of a `Tab` plus its own optional-chained check. They are stricter
 // than the `tab?.harness` tests they replace: the predicates check the `view` discriminant *and*

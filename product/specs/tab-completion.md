@@ -47,6 +47,12 @@ The shell uses the following rules, in order of precedence:
 - **Candidates:** The names of markdown pages in the help directory, including `commands` and `keys`.
 - **Behavior:** A matching name completes normally. A prefix with no match returns no candidates and does not fall through to filesystem path completion. A leading slash in the argument is not completed. Arguments after the first use the ordinary completion chain.
 
+### Tab arrangements (`tab`)
+
+- **Context:** The first argument, target arguments, and the side argument after `pane` or `dock`.
+- **Candidates:** The first argument offers all eight tab subcommands. Target arguments offer each open tab's label and display title, including hidden tabs. `pane` and `dock` offer `left` and `right` after a target.
+- **Behavior:** A unique target completes fully, and names containing whitespace are quoted. Names duplicated without regard to case appear once; when entered, the name still resolves to the first matching tab.
+
 ### 2. Connection Management (`connection close`)
 
 - **Context:** The target argument of `connection close`.

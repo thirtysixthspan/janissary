@@ -13,17 +13,6 @@ Proposal Risk: 3/10 - Replacing direct execution requests with inert expected-be
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1802 "remove executable directives from review verification text". Rewrite the Verification section in `product/plans/complete/arranging-tabs-from-the-command-line.md` and the How to verify section in the PR description as non-executable behavior checks: remove the task invocation, app launch, and shell command instructions, and state the expected outcomes without requesting command execution. Verify that neither review input directs its reader to invoke a task, script, or shell command.
 
 
-* Complete `tab` targets from the names users see in the strip.
-
-Existing Issue: Description step D8 expects completion of the visible editor tab name `space name.txt`, but `tab move "space` stays unchanged and offers no matching completion. Severity: 5/10
-
-Existing Risk: 5/10 - Users cannot complete a valid target by the name they can see, making the new tab-target completion unavailable for file tabs and display aliases.
-
-Proposal Risk: 2/10 - Supplying visible names may still present duplicate aliases, so completion must preserve the first-match behavior of command resolution.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1802 "complete tab command targets from displayed tab names". D8 (description) says: "Do: From a shell, run `open "space name.txt"`, then return to a shell command bar. Type `tab ` and press Tab. Then type `tab move ` and press Tab. Type `tab move "space` and press Tab. Type `tab dock janus ` and press Tab. Expect: The first completion offers all eight subcommands; the target completion includes labels and completes the file tab as `"space name.txt" `; the dock completion offers `left` and `right`." Reproduce after creating `space name.txt` with the setup fixture, using `open space name.txt` to reach the completion behavior: the strip displays `space name.txt`, but typing `tab move "space` and pressing Tab leaves the input unchanged with no target suggestions; `tab move ` instead offers the internal label `editor`. `complete` in `src/controller/completion.ts` passes `managers.tab.allLabels()` to `completeCommandLine`, and `allLabels` in `src/tab/manager.ts` returns only internal labels, while `matchesLabelOrAlias` in `src/tab/name-match.ts` resolves both labels and titles. The editor is internally labeled `editor` but displays its title `space name.txt`, so `completeTabTarget` in `src/completion/target-handlers.ts` cannot find the name the command accepts. Pass the same visible target names used by command resolution to the completer and quote names containing spaces; add an integration regression assertion that the editor title appears and completes to `"space name.txt" `.
-
-
 * Preserve angle-bracket argument placeholders in tab-command replies.
 
 Existing Issue: Description steps D9 and D10 promise exact usage lines with argument placeholders, but the shell renders `Usage: tab focus <name>.` as `Usage: tab focus .` and similarly drops several other placeholders. Severity: 5/10

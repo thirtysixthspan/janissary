@@ -58,6 +58,9 @@ export class TabManager extends TabTranscriptState {
   allLabels(): string[] {
     return this.tabs.map((t) => t.label);
   }
+  allLabelOrAliasNames(): string[] {
+    return lookup.allLabelOrAliasNames(this.tabs);
+  }
 
   isBusy(label: string): boolean {
     return runtimeOperations.isBusy(this.tabs, label);

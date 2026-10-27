@@ -119,7 +119,7 @@ An alias changes what you see, not what you can type: commands that target a tab
 
 An alias does not have to be unique, and two tabs can show the same one. They stay separate tabs with separate labels, and anything that takes a name closes or reaches whichever of them comes first in the strip. Setting an alias to nothing, or to the tab's own label, takes the alias back off rather than storing a name that says nothing new.
 
-One place still shows you the original: pressing `Tab` to complete a target offers labels, never aliases.
+Pressing `Tab` to complete a target offers both the label and display alias. A spaced name such as `space name.txt` is quoted for you. If multiple tabs share a name, entering it still targets the first match.
 
 ## Closing tabs
 
