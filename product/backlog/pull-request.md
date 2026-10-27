@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the `helper` verification for the launch shell.
-
-Existing Issue: Description step D12 expects the application unknown-command message after `helper` is entered in the fresh `janus` shell command bar, but that shell sends unclaimed lines to zsh, which returns `zsh: command not found: helper`. Severity: 2/10
-
-Existing Risk: 3/10 - A reviewer can mark a correct shell-routing behavior as a failure and may mistake the zsh reply for a regression in help classification.
-
-Proposal Risk: 1/10 - A corrected shell-specific step could still leave the non-shell unknown-command response unexplained elsewhere in the description.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1799 "correct helper verification for the launch shell". Replace D12 in the PR description's How to verify with: "In the focused `janus` shell command bar, `helper` is sent to zsh and produces `zsh: command not found: helper`." The output reproduced twice. `getOutput` in `src/commands.ts` classifies `helper` as unknown, but `resolveCommand` in `src/resolve.ts` returns that classification as unclaimed; `dispatchLine` in `src/command/manager.ts` reports no dispatch, so `useShellSubmit` in `web/src/plugins/shell/useShellSubmit.ts` sends the line to zsh. This matches `product/specs/shell-tab.md`, which says unclaimed shell-bar lines go to zsh; correct the description rather than changing routing.
-
-
 * Deliver the plan's missing user-facing file-tree and completion documentation.
 
 Existing Issue: The plan requires the file-navigator guide to explain command restoration and `files print`, and the key reference to describe the new `files` completion positions, but neither `documentation/user-documentation/tab-types/file-navigator.md` nor `help/keys.md` changed. Severity: 5/10
