@@ -1,5 +1,5 @@
-import { lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
-import path from 'node:path';
+import { readdirSync, readFileSync } from 'node:fs';
+import { regularHelpPagePath } from './help-page-files.js';
 
 export type HelpPageResult =
   | { kind: 'page'; text: string }
@@ -13,28 +13,6 @@ function markdownPageNames(directory: string): string[] | null {
       .map((file) => file.slice(0, -3));
   } catch {
     return null;
-  }
-}
-
-function regularHelpPagePath(directory: string, file: string): string | undefined {
-  try {
-    const resolvedDirectory = realpathSync(directory);
-    const candidate = path.join(resolvedDirectory, file);
-    if (!lstatSync(candidate).isFile()) return undefined;
-
-    const resolvedFile = realpathSync(candidate);
-    const relativePath = path.relative(resolvedDirectory, resolvedFile);
-    if (
-      relativePath === '..' ||
-      relativePath.startsWith(`..${path.sep}`) ||
-      path.isAbsolute(relativePath)
-    ) {
-      return undefined;
-    }
-
-    return resolvedFile;
-  } catch {
-    return undefined;
   }
 }
 

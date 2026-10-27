@@ -1,34 +1,13 @@
-import { lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
+import { readdirSync, readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { regularHelpPagePath } from '../../src/help-page-files.js';
 
 const HELP_DIRECTORY = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'help');
 const CHARACTERS = [
   'ahmed', 'aslan', 'bilal', 'cavus', 'demir', 'dogan', 'ekrem', 'fariz', 'hakim',
   'hamza', 'idris', 'mahir', 'malik', 'orhan', 'selim', 'tahir', 'yusuf',
 ];
-
-function regularHelpPagePath(directory: string, file: string): string | undefined {
-  try {
-    const resolvedDirectory = realpathSync(directory);
-    const candidate = path.join(resolvedDirectory, file);
-    if (!lstatSync(candidate).isFile()) return undefined;
-
-    const resolvedFile = realpathSync(candidate);
-    const relativePath = path.relative(resolvedDirectory, resolvedFile);
-    if (
-      relativePath === '..' ||
-      relativePath.startsWith(`..${path.sep}`) ||
-      path.isAbsolute(relativePath)
-    ) {
-      return undefined;
-    }
-
-    return resolvedFile;
-  } catch {
-    return undefined;
-  }
-}
 
 export function commandNames(directory = HELP_DIRECTORY): string[] {
   const resolvedDirectory = realpathSync(directory);
