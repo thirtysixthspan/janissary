@@ -1,11 +1,12 @@
 import { messageBus } from '../bus.js';
 import type { FileNavigatorSelectionRecord } from '../protocol.js';
 
-// The save-time round trip for a file navigator's client-only state. A tree's expanded directories
-// live on the server, but its cursor, range anchor, and multi-row selection are React state in the
-// web client, and there is no continuous reporting of them. `profile save` asks for them once,
-// waits briefly, and writes whatever arrived — the same shape `client-layout.ts` plays for sidebar
-// sizes, but request/response rather than last-report-wins.
+// The round trip for a file navigator's client-only state. A tree's expanded directories live on
+// the server, but its cursor, range anchor, and multi-row selection are React state in the web
+// client, and there is no continuous reporting of them. `profile save` captures them for a profile;
+// `files print` uses them to print a reusable command. Both ask once and wait briefly for whatever
+// arrives — the same shape `client-layout.ts` plays for sidebar sizes, but request/response rather
+// than last-report-wins.
 
 export type TreeSelection = { cursor?: string; anchor?: string; selected: string[] };
 

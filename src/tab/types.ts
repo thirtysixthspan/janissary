@@ -237,8 +237,9 @@ export type FileNavigatorView = {
   // or visible — what the header commit button's whole-tree default message counts, since the commit
   // itself carries everything under the root and not only the rows on screen.
   changedCount?: number;
-  // A selection restored from a profile, applied by the client once per `revision` (see
-  // `file-navigator/restore.ts`). Absent for a tree that was never launched from a profile.
+  // A profile restore or `files` view clause writes this hint; the client applies it once per
+  // revision (see `file-navigator/restore.ts` and `restore-command.ts`). Command hints can name
+  // only the parts the command changed, leaving the rest untouched.
   restore?: FileNavigatorRestoreHint;
   // The tab's current detail mode, driving which stat value each row renders and which mode the
   // header's detail button offers next. Absent means `name`.
