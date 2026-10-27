@@ -185,7 +185,8 @@ export function completeFilesCommand(
   const prefixWords = words(cursor.before.slice(0, cursor.tokenStart));
   if (!prefixWords || !words(cursor.before)) return unchanged(cursor);
   const slot = completionSlot(prefixWords, context ?? EMPTY_FILES_COMPLETIONS);
-  if (slot.kind === 'none' || slot.kind === 'trailingPath') return null;
+  if (slot.kind === 'none') return unchanged(cursor);
+  if (slot.kind === 'trailingPath') return null;
   if (slot.kind === 'values') {
     if (!slot.quote) return completeWord(cursor, slot.values);
     return combineCandidates(cursor, valueCandidates(cursor, slot.values, true));

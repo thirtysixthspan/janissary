@@ -50,6 +50,21 @@ describe('files command completion', () => {
     expect(complete('files print re').newInput).toBe('files print "review notes" ');
   });
 
+  it('does not complete filesystem paths after the files print target', () => {
+    for (const line of ['files print navigator ', 'files print navigator extra']) {
+      const result = complete(line);
+      expect(result.newInput).toBe(line);
+      expect(result.matches).toEqual([]);
+    }
+  });
+
+  it('keeps filesystem fallback after an ordinary trailing root path', () => {
+    const line = 'files expand src scripts ';
+    const result = complete(line);
+    expect(result.newInput).toBe(line);
+    expect(result.matches).toContain('scripts');
+  });
+
   it('omits used once-only clauses while keeping other clauses and paths available', () => {
     const afterIn = complete('files in janus ');
     expect(afterIn.matches).not.toContain('in');

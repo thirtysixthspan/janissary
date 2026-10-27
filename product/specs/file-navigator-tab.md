@@ -579,6 +579,8 @@ navigator`, `Usage: files print <tab>.`, and `files: unterminated quote`.
 At a `files` clause position, Tab offers matching clause keywords before matching filesystem paths.
 It completes `in` with open tab labels, `on` with `left`/`right`, `with` with the four detail modes,
 and `print` with open file navigator labels. After `print`, it completes only those navigator labels.
+After the target label is complete, or when another argument follows it, Tab leaves the input
+unchanged and offers no candidates instead of falling back to filesystem paths.
 After a view clause it completes paths relative to the tree root named by an earlier local
 `in <label>`, or the issuing tab's cwd when there is no `in`. A fully quoted label is decoded before
 the local root is looked up, so quoted labels with spaces or escaped quotes use the same root as an
