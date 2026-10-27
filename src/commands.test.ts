@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import { availableCommands, getOutput } from './commands.js';
 import { commands, findCommand } from './commands/index.js';
 import { findPriorityConflicts } from './commands/priority.js';
+import { listHelpPages } from './help-pages.js';
 import { resolveCommand } from './resolve.js';
 
 function helpText(): string {
@@ -80,53 +83,47 @@ describe('scripts command routing', () => {
   });
 });
 
-describe('getOutput("help")', () => {
-  it('documents the queue command', () => {
-    expect(helpText()).toContain('`queue`');
-    expect(helpText()).toContain('queue <tab> <command>');
-  });
-
-  it('documents the Ctrl+E queue-picker key binding', () => {
-    expect(helpText()).toContain('Ctrl+E');
-  });
-
-  it('documents the Ctrl+G tab-navigator key binding', () => {
-    expect(helpText()).toContain('Ctrl+G');
-  });
-
-  it('documents explicit tab focus in the command table', () => {
-    expect(helpText()).toContain('`tab focus <name>`');
-  });
-});
-
-describe('getOutput("help <section>")', () => {
-  function sectionText(command: string): string {
+describe('getOutput help pages', () => {
+  function outputText(command: string): string {
     const result = getOutput(command);
     if (result.kind !== 'output') throw new Error(`${command} did not classify as output`);
     return result.text;
   }
 
-  it('prints only the shell tab key table for help shell', () => {
-    const text = sectionText('help shell');
-    expect(text.startsWith('**Shell tab controls**')).toBe(true);
-    expect(text).toContain('`!` prefix');
-    expect(text).not.toContain('### Commands');
-    expect(text).not.toContain('**Image tab controls**');
-  });
-
-  it('prints only the command table for help commands', () => {
-    const text = sectionText('help commands');
+  it('prints the command table for bare help and help commands', () => {
+    const text = outputText('help commands');
+    expect(helpText()).toBe(text);
     expect(text.startsWith('### Commands')).toBe(true);
     expect(text).toContain('`shell`');
     expect(text).not.toContain('### Key Bindings');
   });
 
-  it('answers an unmatched section as help output rather than an unknown command', () => {
-    expect(sectionText('help nosuchsection')).toContain('No help section matches "nosuchsection". Sections: Commands, Key Bindings');
+  it('prints all key tables only from help keys', () => {
+    const text = outputText('help keys');
+    expect(text.startsWith('### Key Bindings')).toBe(true);
+    expect(text).toContain('Ctrl+E');
+    expect(text).toContain('Ctrl+G');
+    expect(text).toContain('Shell tab controls');
+  });
+
+  it('prints a matching command page, case-insensitively and after one leading slash', () => {
+    expect(outputText('help shell').startsWith('### shell')).toBe(true);
+    expect(outputText('help Profile')).toContain('### profile');
+    expect(outputText('help /quit')).toContain('### quit');
+  });
+
+  it.each([
+    ['help ../package', '../package'],
+    ['help editor', 'editor'],
+    ['help nosuch', 'nosuch'],
+    ['help /nosuch', 'nosuch'],
+    ['help //quit', '/quit'],
+  ])('answers a missing page for %s with the exact help message', (command, name) => {
+    expect(outputText(command)).toBe(`No help for "${name}". Type "help" for available commands.`);
   });
 
   it('lists the commands in alphabetical order by name', () => {
-    const names = sectionText('help commands')
+    const names = outputText('help commands')
       .split('\n')
       .flatMap((line) => {
         const cell = line.startsWith('| `') ? line.slice(3, line.indexOf('`', 3)) : undefined;
@@ -137,7 +134,7 @@ describe('getOutput("help <section>")', () => {
   });
 
   it('keeps every command description within 200 characters', () => {
-    const descriptions = sectionText('help commands')
+    const descriptions = outputText('help commands')
       .split('\n')
       .filter((line) => line.startsWith('| `'))
       .map((line) => {
@@ -147,6 +144,21 @@ describe('getOutput("help <section>")', () => {
 
     expect(descriptions.length).toBeGreaterThan(1);
     expect(descriptions.filter((description) => description.length > 200)).toEqual([]);
+  });
+
+  it('has a help page for each command row and no orphan command pages', () => {
+    const commandNames = outputText('help commands')
+      .split('\n')
+      .flatMap((line) => {
+        const cell = line.startsWith('| `') ? line.slice(3, line.indexOf('`', 3)) : undefined;
+        return cell ? [cell.split(' ', 1)[0].toLowerCase()] : [];
+      });
+    const helpDirectory = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'help');
+    const pages = listHelpPages(helpDirectory).filter((page) => !['commands', 'keys'].includes(page));
+
+    expect(pages.toSorted((left, right) => left.localeCompare(right))).toEqual(
+      commandNames.toSorted((left, right) => left.localeCompare(right)),
+    );
   });
 
   it('leaves a word that only starts with help unknown', () => {

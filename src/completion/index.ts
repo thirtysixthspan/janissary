@@ -1,6 +1,6 @@
 import type { CompletionResult } from './types.js';
 import {
-  completeMonitorCommand, completeSearchCommand, completeSyntaxTheme, completeHarnessModel,
+  completeHelpCommand, completeMonitorCommand, completeSearchCommand, completeSyntaxTheme, completeHarnessModel,
   type MonitorCompletions,
 } from './handlers.js';
 import {
@@ -12,6 +12,11 @@ import { readCompletionCursor } from './cursor.js';
 import { SYNTAX_THEMES } from '../syntax-themes.js';
 import { completeSystemSchedule, type SystemScheduleCompletions } from './system-schedule.js';
 import { completeRunscriptCommand } from './runscript-commands.js';
+import { listHelpPages } from '../help-pages.js';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const HELP_DIRECTORY = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'help');
 
 /**
  * Tab-complete the token ending at the cursor.
@@ -44,6 +49,10 @@ export function completeCommandLine(
     completeConnectionClose(cursor, connections) ??
     completeBrowserCommand(cursor, connections) ??
     completeMonitorCommand(cursor, monitor) ??
+    completeHelpCommand(
+      cursor,
+      cursor.command === 'help' && cursor.argumentIndex === 1 ? listHelpPages(HELP_DIRECTORY) : [],
+    ) ??
     completeSearchCommand(cursor) ??
     completeSyntaxTheme(cursor, SYNTAX_THEMES) ??
     completeHarnessModel(cursor);

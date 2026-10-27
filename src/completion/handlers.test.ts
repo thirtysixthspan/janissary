@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  completeMonitorCommand, completeSearchCommand, completeSyntaxTheme, completeHarnessModel,
+  completeHelpCommand, completeMonitorCommand, completeSearchCommand, completeSyntaxTheme, completeHarnessModel,
 } from './handlers.js';
 import {
   completeSendTarget, completeScheduleTarget, completeConnectionClose,
@@ -111,6 +111,24 @@ describe('completeSearchCommand', () => {
 
   it('returns null past argument 1', () => {
     expect(completeSearchCommand(at('search transcript x'))).toBeNull();
+  });
+});
+
+describe('completeHelpCommand', () => {
+  const pages = ['commands', 'keys', 'profile', 'quit'];
+
+  it('completes the first argument from help pages', () => {
+    expect(completeHelpCommand(at('help pro'), pages)?.newInput).toBe('help profile ');
+  });
+
+  it('offers nothing for an unknown prefix or a leading slash', () => {
+    expect(completeHelpCommand(at('help zzz'), pages)?.matches).toEqual([]);
+    expect(completeHelpCommand(at('help /pro'), pages)?.matches).toEqual([]);
+  });
+
+  it('returns null for other commands and arguments after the first', () => {
+    expect(completeHelpCommand(at('quit pro'), pages)).toBeNull();
+    expect(completeHelpCommand(at('help profile pro'), pages)).toBeNull();
   });
 });
 

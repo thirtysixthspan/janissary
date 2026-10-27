@@ -1,6 +1,6 @@
 # Work an Issue
 
-Your job: take a work item — the simplest issue in `./product/backlog/issues.md`, or the one the user names when running this task, which need not be listed there at all — develop a plan to resolve it, implement the fix, update functional specs, update `help.md` and public documentation where the fix changes behavior they already document, record the plan in `./product/plans/complete/`, remove the issue from the issues file when that is where it came from, and ship the result. Shipping means merging the change to master through the existing merge workflow. You change source code, tests, spec files, `help.md`, `documentation/user-documentation/`, the issues file, and the plan file's location. Nothing else.
+Your job: take a work item — the simplest issue in `./product/backlog/issues.md`, or the one the user names when running this task, which need not be listed there at all — develop a plan to resolve it, implement the fix, update functional specs, update applicable files under `help/` and public documentation where the fix changes behavior they already describe, record the plan in `./product/plans/complete/`, remove the issue from the issues file when that is where it came from, and ship the result. Shipping means merging the change to master through the existing merge workflow. You change source code, tests, spec files, applicable files under `help/`, `documentation/user-documentation/`, the issues file, and the plan file's location. Nothing else.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
@@ -18,7 +18,7 @@ This overrides AGENTS.md's "Capturing command output" guidance (write the output
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and `documentation/user-documentation/` when the fix changes behavior they already document. Write and promote the fix plan. Remove only the fixed issue from `./product/backlog/issues.md` when listed. Run `$janissary/scripts/run.mjs check-diff` after each change. Execute `ai/tasks/workspace/merge-change-to-master.md` when implementation is done.
+Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Update the matching command row in `help/commands.md` and command page in `help/<command>.md` when command behavior changes; update `help/keys.md` when a key binding changes. Update `documentation/user-documentation/` when the fix changes behavior it already documents. Write and promote the fix plan. Remove only the fixed issue from `./product/backlog/issues.md` when listed. Run `$janissary/scripts/run.mjs check-diff` after each change. Execute `ai/tasks/workspace/merge-change-to-master.md` when implementation is done.
 
 ### Forbidden — no exceptions
 
@@ -97,9 +97,9 @@ Every fix must be reflected in the functional specs under `./product/specs/`. Af
 
 ## Step 6 — Update help and public documentation if affected
 
-The fix only needs a documentation update if it changes behavior that `help.md` or `documentation/user-documentation/` already describes — a changed flag, a renamed command, a corrected default, a behavior that no longer matches what's written. Do not add new documentation for behavior that wasn't previously documented; that is out of scope for this task.
+The fix only needs a documentation update if it changes behavior that `help/` or `documentation/user-documentation/` already describes — a changed flag, a renamed command, a corrected default, a behavior that no longer matches what's written. Do not add new documentation for behavior that wasn't previously documented; that is out of scope for this task.
 
-1. Check `help.md` for any command, flag, or behavior description the fix changes. Update it in place if found.
+1. Check `help/commands.md` and the command's `help/<command>.md` page for any command, flag, or behavior description the fix changes. Update them in place if found. For changed key bindings, update `help/keys.md`.
 2. Check `documentation/user-documentation/` for any page describing the changed behavior. Update it in place if found.
 3. If neither documents the changed behavior, do nothing here — do not create new documentation.
 
@@ -130,7 +130,7 @@ Complexity:     N/10
 Implementation: <one-line summary of the fix>
 Tests:          <count> new tests across <files>
 Spec:           <spec file(s) created or updated, with one-line description of change>
-Docs:           <help.md/user-documentation file(s) updated, or "none needed">
+Docs:           <help/commands.md, help/<command>.md, help/keys.md, and/or user-documentation file(s) updated, or "none needed">
 PR:             <url> (#<number>)
 Status:         merged
 ```

@@ -19,6 +19,12 @@ A command typed over several lines with `Shift+Enter` completes the same way on 
 
 The shell uses the following rules, in order of precedence:
 
+### Help pages (`help`)
+
+- **Context:** The first argument after `help`.
+- **Candidates:** The names of markdown pages in the help directory, including `commands` and `keys`.
+- **Behavior:** A matching name completes normally. A prefix with no match returns no candidates and does not fall through to filesystem path completion. A leading slash in the argument is not completed. Arguments after the first use the ordinary completion chain.
+
 ### 2. Connection Management (`connection close`)
 
 - **Context:** The target argument of `connection close`.

@@ -93,7 +93,7 @@
     "chrome-extension",
     "agent-names.json",
     "harness-models.json",
-    "help.md",
+    "help",
     "scripts",
     "security"
   ],

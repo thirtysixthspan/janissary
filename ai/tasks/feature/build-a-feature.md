@@ -122,7 +122,7 @@ If a review or repair is blocked, preserve the PR and outstanding backlog, repor
 
 ## Step 9 — Update the pull request
 
-Once a review records nothing and the backlog is empty, delegate `ai/tasks/feature/update-pull-request.md` to a fresh subagent with the recorded PR number. It folds the fix plans the repairs added into the plan this task promoted and removes them, brings the PR description, specs, and `help.md` in line with the final code, and commits and pushes on the same branch. Preserve every rule of that task. It needs no override: the plan promoted in Step 6 is in the PR's first commit, which is how it finds the PR's own plan.
+Once a review records nothing and the backlog is empty, delegate `ai/tasks/feature/update-pull-request.md` to a fresh subagent with the recorded PR number. It folds the fix plans the repairs added into the plan this task promoted and removes them, brings the PR description, specs, command help pages, and key-binding reference in line with the final code, and commits and pushes on the same branch. Preserve every rule of that task. It needs no override: the plan promoted in Step 6 is in the PR's first commit, which is how it finds the PR's own plan.
 
 If the update cannot publish its changes or the PR description edit fails, preserve the work, report the blocker, and do not claim completion. Confirm the PR is still open, its remote head matches local `HEAD`, and the working tree is clean.
 

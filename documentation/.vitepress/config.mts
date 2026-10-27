@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitepress";
 import { trimAndScaleSprite } from "./sprite-trim.ts";
+import { commandReferenceSidebar } from "./command-reference.ts";
 
 // Decorative agent sprites floated in the doc pages (see .vitepress/theme/custom.css). They
 // live directly in each repo's agent-images/<character>/ directory as <facing>.png; copy the
@@ -93,6 +94,7 @@ export default defineConfig({
             { text: "Quick open", link: "/user-documentation/command-bar/quick-open" },
           ],
         },
+        commandReferenceSidebar(),
         {
           text: "Tab Types",
           items: [

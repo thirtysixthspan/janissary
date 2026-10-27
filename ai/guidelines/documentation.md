@@ -45,6 +45,8 @@ A character sprite must be placed **only next to normal paragraph text or headin
 - Blockquotes
 - A horizontal rule (`---`) immediately below it — the float can cross over the rule instead of resolving cleanly, so leave a plain paragraph or heading between a sprite and the next `---`
 
+The generated Command Reference pages are the exception to the per-page count rule: each gets exactly one sprite, added by the docs build, whatever its length. Do not put an `<img>` tag in a command help page.
+
 The sprite floats into the body text, so it needs flowing prose beside it to wrap naturally. A character wedged against a table or code block creates an awkward gap.
 
 ### Position in the page
@@ -82,4 +84,4 @@ Run `npm run docs:dev` to preview changes locally, or `npm run docs:build` to ve
 
 # Help Command Table
 
-The **Commands** table in `help.md` is kept in alphabetical order by command name. A row's name is the first word inside its first backticks, so `newfile <file>` sorts as `newfile`, and names compare without regard to case. When you add a command, put its row in its alphabetical place rather than at the end, and when you rename one, move its row. `src/commands.test.ts` reads the table through `help commands` and fails when a row is out of order.
+The **Commands** table in `help/commands.md` is kept in alphabetical order by command name. A row's name is the first word inside its first backticks, so `newfile <file>` sorts as `newfile`, and names compare without regard to case. When you add a command, put its row in its alphabetical place rather than at the end, and when you rename one, move its row. `src/commands.test.ts` reads the table through `help commands` and fails when a row is out of order or a command does not have a matching page in `help/`. The docs site's **Command Reference** group generates one page from each command page in `help/`; edit that source page, never a generated copy under `documentation/`.

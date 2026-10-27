@@ -34,6 +34,11 @@ export function completeSearchCommand(cursor: CompletionCursor): CompletionResul
   return completeWord(cursor, ['transcript']);
 }
 
+export function completeHelpCommand(cursor: CompletionCursor, pages: string[]): CompletionResult | null {
+  if (cursor.argumentIndex !== 1 || cursor.command !== 'help') return null;
+  return completeWord(cursor, pages);
+}
+
 // Complete `syntax theme <name>` — argument 1 offers `theme`, argument 2 completes theme names.
 export function completeSyntaxTheme(cursor: CompletionCursor, themes: string[]): CompletionResult | null {
   const { command, argumentIndex, preceding } = cursor;

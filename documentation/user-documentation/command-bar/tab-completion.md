@@ -17,6 +17,7 @@ What gets completed depends on where in the command you are:
 | After `harness <name>`, at `--model` | That harness's known model names; `--model` may sit anywhere after the harness name |
 | After `syntax` | `theme` at the first argument, and the available theme names after it |
 | After `search` | `transcript`, its only subcommand |
+| After `help` | Help page names, including `commands` and `keys` |
 | After `execute`, or a bare `edit` target | Existing project runscript names; bare `edit` also lists matching files |
 | Anywhere else | Filesystem paths, relative to the tab's working directory |
 

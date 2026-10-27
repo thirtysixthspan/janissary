@@ -1,9 +1,8 @@
-import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { commands } from './commands/index.js';
 import { RESERVED_NON_COMMAND_NAMES } from './commands/reserved.js';
-import { selectHelpSection } from './help-sections.js';
+import { readHelpPage } from './help-pages.js';
 
 // What the classifier decided, rather than three meanings folded into `string | null` and told
 // apart by the leading words of a user-facing message. Two callers used to recover the third case
@@ -22,29 +21,21 @@ export const availableCommands = [
   ...commands.map((command) => command.name),
 ];
 
-// `undefined` until the first `help`, then the file's text, or `null` when it could not be read.
-let helpMarkdown: string | null | undefined;
-
-function readHelpMarkdown(): string | null {
+function helpDirectory(): string {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const helpPath = path.join(__dirname, '..', 'help.md');
-  try {
-    return readFileSync(helpPath, 'utf8').trim();
-  } catch {
-    return null;
-  }
+  return path.join(__dirname, '..', 'help');
 }
 
 function fallbackHelp(): string {
   return 'Built-in: ' + availableCommands.join(', ') + '. Prefix a command with "!" to run it in the shell, or / to run a built-in command. Press Ctrl+R or type hist to browse command history.';
 }
 
-// Bare `help` is the whole file; `help <section>` is one section of it. Without the file there are no
-// sections to choose from, so both answer with the generated summary.
+// Bare `help` lists commands; named pages are read fresh so edits take effect without a restart.
 function helpText(query: string | undefined): string {
-  if (helpMarkdown === undefined) helpMarkdown = readHelpMarkdown();
-  if (helpMarkdown === null) return fallbackHelp();
-  return query === undefined ? helpMarkdown : selectHelpSection(helpMarkdown, query);
+  const result = readHelpPage(helpDirectory(), query ?? 'commands');
+  if (result.kind === 'page') return result.text;
+  if (result.kind === 'missing') return `No help for "${result.name}". Type "help" for available commands.`;
+  return fallbackHelp();
 }
 
 // `help` with the section it names, if any; `undefined` for a command that is not `help` at all, such

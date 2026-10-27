@@ -254,7 +254,7 @@ Then read `git status` and `git diff` and confirm:
 2. Every source file changed is one Step 2 predicted or Step 5's compiler errors named. Nothing unrelated came along.
 3. No test was weakened: no assertion loosened to accommodate the new version, no `skip`, no lint suppression, no `any` added to silence a type change.
 4. No spec file was edited. If the upgrade changed documented behavior, you should have reverted in Step 6, not rewritten the spec.
-5. `help.md` and `documentation/user-documentation/` are untouched, for the same reason.
+5. `help/` and `documentation/user-documentation/` are untouched, for the same reason.
 
 If anything else changed on disk, revert it before continuing.
 

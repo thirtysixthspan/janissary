@@ -19,7 +19,7 @@ Do the steps below **in order**. Do not skip steps. Do not invent your own proce
 Only these, ever:
 
 - `documentation/**/**/*.md` (edit existing pages, or add a new page in the folder that matches its topic)
-- `help.md` (the in-app quick-reference: a `Commands` table and a `Key Bindings` table — keep entries there terse, one line each)
+- `help/commands.md`, `help/keys.md`, and `help/<command>.md` (the in-app command list, key-binding reference, and detailed command help pages)
 - `documentation/.vitepress/config.mts` (**only** the `sidebar` entries to register a new page you created — the build won't fail on an unregistered page, it just becomes unreachable in the site nav, so this registration is part of adding a page, not optional — and **only** the `FACINGS` array when a sprite you're placing needs a facing not yet listed there)
 - `scripts/docs-screenshots/manifest.mjs` (**only** to add or update the entry for a screenshot your page references — see Step 4b)
 - `documentation/public/screenshots/*.png` (generated output of `$janissary/scripts/run.mjs docs-screenshots` — commit the PNGs the capture produces; never hand-edit them)
@@ -72,13 +72,13 @@ Read `product/backlog/documentation.md` in full. Your item is the **first** bull
 Keep the research **scoped to your backlog item**. What "scoped" means depends on how the item is written:
 
 - **Scored entries from `find-user-documentation-gaps.md`** name the exact spec and source files and list which facts are missing or wrong — treat that as a starting point to verify (it was written on an earlier date and the app may have moved), not a survey brief.
-- **Entries from other tasks or human input** may name files, or may just describe a symptom ("the reconnect flow isn't documented", "help.md is missing the new flag"). Either way, your first job is to identify the ground-truth spec/source file(s) yourself before writing anything.
+- **Entries from other tasks or human input** may name files, or may just describe a symptom ("the reconnect flow isn't documented", "the profile help page is missing a new flag"). Either way, your first job is to identify the ground-truth spec/source file(s) yourself before writing anything.
 
-Batch your reads: the spec, the existing doc page(s), and the `help.md` rows for the area, once identified, are read together in one round of tool calls rather than one file per call.
+Batch your reads: the spec, the existing doc page(s), and the relevant page under `help/` — including the command-table row where applicable — are read together in one round of tool calls rather than one file per call.
 
 1. Read the spec file(s) relevant to the item in full, if one exists. Note the exact command syntax, flags, and any verbatim error/usage messages — you'll reuse these exactly, not paraphrase them. Confirm each fact the item calls out as missing or wrong; if the spec and the app disagree, the app is the ground truth (grep the source files, read only, never edit).
-2. **Verify before you publish.** Specs and backlog entries both go stale. Before any command, subcommand, flag, key chord, or verbatim message goes into a doc page, confirm it exists in the shipped app: a `help.md` row or one `grep -rln '<token>' src/ web/src/` is enough. Grep one specific token per call. A fact you cannot confirm in the app does **not** go into the docs — drop it and note it in your Step 7 report instead of guessing. Wrong docs are worse than missing docs.
-3. Read the existing doc page(s) and `help.md` entry for the area (if any) and confirm, in plain terms, what's wrong: missing / stale / wrong syntax / wrong example / doesn't exist yet. If a scored entry's fact list turns out to be partly stale, work from what you verified, not from the entry as written. Also grep the rest of the docs for the area's main command or key chord (`grep -riln '<token>' documentation/user-documentation/`) — coverage sometimes lives in a page with an unrelated name, and duplicating it creates two pages that drift apart; link to it instead.
+2. **Verify before you publish.** Specs and backlog entries both go stale. Before any command, subcommand, flag, key chord, or verbatim message goes into a doc page, confirm it exists in the shipped app: a row in `help/commands.md` or one `grep -rln '<token>' src/ web/src/` is enough. Grep one specific token per call. A fact you cannot confirm in the app does **not** go into the docs — drop it and note it in your Step 7 report instead of guessing. Wrong docs are worse than missing docs.
+3. Read the existing doc page(s) and relevant `help/` page for the area (if any) and confirm, in plain terms, what's wrong: missing / stale / wrong syntax / wrong example / doesn't exist yet. If a scored entry's fact list turns out to be partly stale, work from what you verified, not from the entry as written. Also grep the rest of the docs for the area's main command or key chord (`grep -riln '<token>' documentation/user-documentation/`) — coverage sometimes lives in a page with an unrelated name, and duplicating it creates two pages that drift apart; link to it instead.
 4. **Check git history for functionality added after the item was recorded**, when you have a date to anchor to (scored entries reference the run they came from):
 
    ```bash
@@ -95,7 +95,7 @@ Pick where the content belongs before you write — the backlog entry may say wh
 
 - **New page or existing page?** If a page already covers this area, edit it. If not, add a new `.md` file in the `documentation/user-documentation/` subfolder that best matches the topic (look at the existing subfolders: `getting-started/`, `command-bar/`, `automation/`, `advanced-agents/`, `tab-types/`, `workflows/` — put it where a reader would expect to find it). Before creating one, open a neighboring page in that subfolder and match its structure and frontmatter (if any) rather than inventing your own.
 - **New page? Register it.** Add a sidebar entry for it in `documentation/.vitepress/config.mts`, in the section matching its subfolder, at the position where it reads naturally among its neighbors. Copy the exact `{ text: ..., link: ... }` shape of the surrounding entries; the `link` has no `.md` extension. Touch nothing else in that file. Skip this bullet entirely when you only edited existing pages.
-- **`help.md` too?** If the command/key binding is new or its description changed, update its row in `help.md`'s `Commands` or `Key Bindings` table. Keep it to the existing one-line style — don't turn `help.md` into a second copy of the full doc page; link isn't needed there since it's in-app, just keep the one-liner accurate.
+- **Help pages too?** When a command changes, update its row in `help/commands.md` and the detailed `help/<command>.md` page. When a key binding changes, update its row in `help/keys.md`. Command Reference pages on the docs site are generated from `help/`, so edit the source help page rather than a generated page under `documentation/`.
 
 Follow this checklist while writing (full detail in [`user-documentation.md`](../guidelines/user-documentation.md) and [`human-writing-guidelines.md`](../guidelines/human-writing-guidelines.md) if you want more):
 
@@ -182,7 +182,7 @@ Give the user a short report in this exact shape:
 ```
 Backlog item:     <area-id> (<score>/10, if the entry had one — otherwise omit)
 Source material:  <spec/source file(s) you read, or "none named — identified from the item text">
-Docs touched:     <path(s) of the doc pages / help.md rows / sidebar entries you changed or created>
+Docs touched:     <path(s) of the doc pages / help/ pages / sidebar entries you changed or created>
 Gap closed:       <one or two sentences — what was missing or wrong, and what you did about it>
 Visuals:          <sprites placed / screenshots added or recaptured / none needed / skipped because <reason>>
 DOM tagging:      none / added data-doc-shot="<name>" to <web/src file> for <screenshot name>
