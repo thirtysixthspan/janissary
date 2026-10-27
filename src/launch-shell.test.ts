@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Managers } from './managers.js';
 import { LAUNCH_LABEL, openLaunchShell } from './launch-shell.js';
 
-const payload = { instanceKey: 'launch-shell', ptyId: 'pty-1' };
+const payload = {
+  instanceKey: 'launch-shell', ptyId: 'pty-1', cwd: '/repo', root: '/repo', workspace: false,
+  cols: 80, rows: 24, connections: [], schedule: [], hookNonce: 'f'.repeat(32),
+};
 
 function fakeManagers(options: {
   outcome?: { status: 'ok'; value: undefined } | { status: 'rejected'; reason: string } | { status: 'failed'; error: unknown };

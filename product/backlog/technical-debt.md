@@ -4,17 +4,6 @@
 
 ## development
 
-* Give core one helper for a shell tab's terminal id, built on the shell plugin's own payload guard, and replace the four hand-written payload probes in the launch, system-shell, and tab-close paths with it.
-
-Existing Debt: Core reads the bundled shell plugin's `ptyId` out of a tab payload in four places, each with its own `'ptyId' in payload` structural probe, and the system-shell module declares a private `isShellPayload` that shadows the plugin's exported guard of the same name while checking far less. Severity: 5/10
-
-Existing Risk: 5/10 - A change to the shell payload that the plugin's own guard accepts, such as a new provisioning state or a moved field, can pass one probe and fail another, so the launch shell refuses to start, the system shell stops recovering after its zsh exits, or a shell tab whose process ended never closes.
-
-Proposal Risk: 2/10 - All four sites read the id through one function tied to the plugin's exported payload type, so a shape change becomes a compile error or a one-site fix; core still knows the shell plugin's id and payload, which `src/harness/manager.ts` already does for `SHELL_PROGRAM`.
-
-Proposal: The probes are `liveShellPtyId` and `SystemShellManager.handlePtyExit` in `src/system-shell.ts`, `openLaunchShell` in `src/launch-shell.ts`, and the `closeTab` arm of the adapter in `src/controller/tab-adapter.ts`. `src/system-shell.ts` also uses a module-private `isShellPayload` in `ensureShell`, and it and `src/launch-shell.ts` each declare their own `SHELL_PLUGIN = 'shell'` and `SHELL_COMMAND = 'shell --no-workspace'`. Add a core module (for example `src/shell/shell-tab-terminal.ts`) that exports the plugin id, that command, and `shellTabPtyId(tab, managers)`. It returns the payload's `ptyId` only when `tab.plugin?.id` is the shell plugin, `managers.plugins.isPayload` accepts the payload, and the exported `isShellPayload` from `src/plugins/shell/shared.ts` narrows it to a `ShellTerminalPayload`; a provisioning payload answers `undefined`. Rebuild `liveShellPtyId` on top of it, keeping its `tab.remote` exclusion and its `managers.pty.terminalIdFor` and `isRunningFor` checks. Repoint the other three sites, keep each caller's own extra conditions (`runtime.closing`, `systemShell`, `serverPtyExitId`) where they are, and delete the private guard. Core may import a plugin's shared contract; `eslint.plugin-boundaries.mjs` only forbids core from importing a plugin's `activate.js`. `src/system-shell.test.ts`, `src/launch-shell.test.ts`, and `src/controller/tab-adapter.test.ts` pin each site's current accept and refuse behavior and must pass unchanged.
-
-
 * Open file-navigator trees from parsed arguments instead of command text, so the `files` command and profile launch stop rebuilding and re-parsing a command string to reach the same entry point.
 
 Existing Debt: `FileNavigatorManager.open` takes raw `files …` text and parses it itself, so the `files` command parses the same text twice, and profile launch turns structured entries back into command text, using a hand-copied list of the parser's keywords and its own quoting, only to have them parsed again. Severity: 5/10
