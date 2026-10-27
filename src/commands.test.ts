@@ -100,6 +100,23 @@ describe('getOutput help pages', () => {
     expect(text).not.toContain('### Key Bindings');
   });
 
+  it('summarizes all files detail modes and view clauses in the command table', () => {
+    const filesRow = outputText('help commands').split('\n').find((line) => line.startsWith('| `files` |'));
+    if (!filesRow) throw new Error('files command row is missing');
+
+    for (const syntax of [
+      '`with <name|size|modified|permissions>`',
+      '`expand <path>`',
+      '`collapse <path>`',
+      '`cursor <path>`',
+      '`anchor <path>`',
+      '`select <path>`',
+      '(quote labels with spaces or quotes)',
+    ]) {
+      expect(filesRow).toContain(syntax);
+    }
+  });
+
   it('prints all key tables only from help keys', () => {
     const text = outputText('help keys');
     expect(text.startsWith('### Key Bindings')).toBe(true);

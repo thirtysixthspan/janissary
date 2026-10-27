@@ -8,6 +8,8 @@ When a command is dispatched from a plugin tab, the reply preserves `dispatched`
 
 Bare `help` and `help commands` print the alphabetical command table, whose descriptions are limited to 200 characters except for the `files` row, which is limited to 350 characters to fit its expanded syntax. A command description may include a shortcut reference, such as `Ctrl+E` in the `queue` row. The separate `Key Bindings` section appears only in `help keys` and is not included in bare `help`.
 
+The `files` row names the `name`, `size`, `modified`, and `permissions` detail modes; the `expand <path>`, `collapse <path>`, `cursor <path>`, `anchor <path>`, and `select <path>` view clauses; and notes that labels with spaces or quotes should be quoted.
+
 Each command page uses one opening description after its `### <command>` heading, followed by **Usage**, **Use cases**, and **Examples** blocks in that order.
 
 `help <command>` prints the matching page from `help/<command>.md`, which describes its usage, use cases, and examples. Page names include `commands`, `keys`, and the first word of each command-table entry, so `help tab` prints the page for `tab focus <name>`. Names are case-insensitive; surrounding and repeated spaces are ignored, and one leading slash is dropped, so `help /quit` prints the `quit` page. Only an exact listed page name is accepted. A missing page returns exactly `No help for "<name>". Type "help" for available commands.`, where `<name>` is lowercased, whitespace-collapsed, trimmed, and has one leading slash removed. Thus `help //quit` reports `No help for "/quit". Type "help" for available commands.` and `help tab focus` reports a missing page rather than selecting `tab`.

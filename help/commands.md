@@ -16,7 +16,7 @@
 | `diff` | `diff` opens the diff tab on the project's changes versus HEAD; `diff <path>` scopes it to that path's changes; `diff on <tab name>` opens that tab's workspace diff |
 | `edit` | Open a file for editing (`edit <file>[:line]`); a bare existing runscript name opens it when no exact file exists |
 | `execute` | Run an existing project runscript immediately in the managed system shell (`execute <name>`) |
-| `files` | `files [path]` opens a navigator; `files <path> in <label>` targets another tab (quote labels with spaces or quotes). Remote paths use that host's workspace. `with <mode>` chooses a detail column; view clauses restore its tree. `files print <tab>` prints a reusable command |
+| `files` | `files [path]` opens a tree; `files <path> in <label>` targets another tab (quote labels with spaces or quotes). Remote paths use their host's workspace. `with <name|size|modified|permissions>` sets details; `expand <path>`, `collapse <path>`, `cursor <path>`, `anchor <path>`, and `select <path>` restore view. `files print <tab>` prints a command |
 | `harness` | Open an AI coding harness with a disposable workspace and browser. Use `--no-workspace`, `--no-browser`, `--no-auto-approve`, or `--no-auto-resume` to opt out; `capture <name>` saves a screen |
 | `help` | `help` lists the commands; `help <command>` shows one command's usage, use cases, and examples; `help keys` lists the key bindings |
 | `hist` | Open command history picker |
