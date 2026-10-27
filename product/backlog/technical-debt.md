@@ -4,17 +4,6 @@
 
 ## development
 
-* Open file-navigator trees from parsed arguments instead of command text, so the `files` command and profile launch stop rebuilding and re-parsing a command string to reach the same entry point.
-
-Existing Debt: `FileNavigatorManager.open` takes raw `files …` text and parses it itself, so the `files` command parses the same text twice, and profile launch turns structured entries back into command text, using a hand-copied list of the parser's keywords and its own quoting, only to have them parsed again. Severity: 5/10
-
-Existing Risk: 4/10 - A saved profile path that matches a keyword the parser learns later, or a tab label with characters the profile quoting doesn't escape, is re-parsed as a different command, and the restored tree opens at the wrong root or not at all with only a transcript note to show for it.
-
-Proposal Risk: 2/10 - Both callers hand over the same structured arguments the parser produces, which leaves the user-typed grammar as the only parse, and `src/file-navigator/args.test.ts` already pins that grammar.
-
-Proposal: `src/commands/files.ts` calls `parseFileNavigatorArgs` from `src/file-navigator/args.ts` to handle `print` and `error`, then passes the original text to `managers.fileNavigator.open`. That method strips `files` and calls `parseFileNavigatorArgs` again, and its `error` branch, which writes through `managers.tab.append` instead of `appendCommandOutput`, can't be reached from the command. `openProfileFiles` in `src/profile/files.ts` builds text through `filesCommand`, `profilePath`, and `profileLabel`, plus a `FILES_KEYWORDS` set that duplicates the clause words parsed in `src/file-navigator/args.ts` and `src/file-navigator/view-args.ts`. Change `FileNavigatorManager.open` in `src/file-navigator/manager.ts` to take a `FileNavigatorOpenArgs` (already exported from `args.ts`) and an output callback, keeping its view-step tail as it is. Have `src/commands/files.ts` pass its parsed `open` result. Have `src/profile/files.ts` build `{ kind: 'open', inLabel: entry.in, dock: entry.dock ?? null, details: entry.details, steps: [], target: entry.path ?? '' }` directly, and delete `filesCommand`, `profilePath`, `profileLabel`, and `FILES_KEYWORDS`. `openFilesCommand` in `src/file-navigator/open-command.ts` expands `$root` and `~` in `target` through `expandUserPath` and treats an empty target as the source tab's cwd, so a structured target resolves exactly as the text one did. In the same change, move `printView`'s call to `resolveTarget` from `src/commands/resolve-target.ts` into `src/commands/files.ts`, so the manager stops importing the commands layer for it; `open-command.ts` still imports it for `in <label>`, and that can stay. `src/commands/files.test.ts`, `src/profile/files.test.ts`, `src/file-navigator/manager.test.ts`, and `src/file-navigator/args.test.ts` cover the behavior; add a profile case whose path is a clause word such as `print` or `expand`.
-
-
 * Give terminal recording and screen capture an owner of their own instead of the harness manager, which today also records shell and ssh tabs.
 
 Existing Debt: The per-PTY runtime registry (recorder, screen reader, transcript tailer) lives inside `HarnessManager`, so shell and ssh tabs register their recorders through harness methods and every question about a live recording or terminal colors goes to `managers.harness`. That ownership is left over from when only harness tabs recorded. Severity: 5/10

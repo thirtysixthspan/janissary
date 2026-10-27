@@ -1,6 +1,7 @@
 import type { Command } from './types.js';
 import { appendCommandOutput } from '../command/append.js';
 import { parseFileNavigatorArgs } from '../file-navigator/args.js';
+import { resolveTarget } from './resolve-target.js';
 
 // `files [path]` opens a file navigator tab rooted at the issuing tab's cwd, or at `path` when given.
 // `files left [path]` / `files right [path]` dock the tree into that sidebar instead of the
@@ -14,7 +15,9 @@ export const command: Command = {
   run: async (command_, tab, managers, invocation) => {
     const parsed = parseFileNavigatorArgs(command_.replace(/^files\b\s*/i, ''));
     if (parsed.kind === 'print') {
-      const output = await managers.fileNavigator.printView(parsed.name, tab.label);
+      let output = `No tab named "${parsed.name}".`;
+      const target = resolveTarget(parsed.name, managers, (text) => { output = text; });
+      if (target) output = await managers.fileNavigator.printView(target);
       appendCommandOutput(managers, tab.label, { input: command_, output }, invocation);
       return;
     }
@@ -23,6 +26,8 @@ export const command: Command = {
       return;
     }
     appendCommandOutput(managers, tab.label, { input: command_, output: '' }, invocation);
-    managers.fileNavigator.open(command_, tab.label);
+    managers.fileNavigator.open(parsed, tab.label, (output) => {
+      appendCommandOutput(managers, tab.label, { input: command_, output }, invocation);
+    });
   },
 };

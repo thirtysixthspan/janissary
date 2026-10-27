@@ -7,6 +7,7 @@ import { messageBus } from '../bus.js';
 import type { LogEntry, Tab } from '../tab/types.js';
 import { NotificationQueue } from '../notifications/queue.js';
 import { resolveTreeSelections } from './selection-request.js';
+import { parseFileNavigatorArgs } from './args.js';
 
 const watchMock = vi.fn();
 
@@ -147,7 +148,29 @@ describe('FileNavigatorManager', () => {
     rmSync(root, { recursive: true, force: true });
   });
 
-  const run = (): FileNavigatorManagerInstance => new FileNavigatorManager(managers as never);
+  const run = () => {
+    const manager = new FileNavigatorManager(managers as never);
+    return new Proxy(manager, {
+      get(target, property) {
+        if (property === 'open') {
+          return (command: string, label: string) => {
+            const parsed = parseFileNavigatorArgs(command.replace(/^files\b\s*/i, ''));
+            if (parsed.kind !== 'open') throw new Error('manager tests require an open command');
+            return target.open(parsed, label, (output) => {
+              (managers as { tab: { append: (name: string, entry: LogEntry) => void } })
+                .tab.append(label, { input: command, output });
+            });
+          };
+        }
+        const value: unknown = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    }) as FileNavigatorManagerInstance & { open(command: string, label: string): string | undefined };
+  };
+
+  const printView = (manager: FileNavigatorManagerInstance, label: string) => (
+    manager.printView(tabs.find((tab) => tab.label === label)!)
+  );
 
   function installRemoteWorkspace() {
     const source = tabs.find((tab) => tab.label === 'other')!;
@@ -195,7 +218,7 @@ describe('FileNavigatorManager', () => {
       resolveTreeSelections(event.id, [{ label, cursor: 'src/a.ts', anchor: 'src', selected: ['src/a.ts'] }]);
     });
 
-    const line = await manager.printView(label, 'janus');
+    const line = await printView(manager, label);
     subscription.unsubscribe();
 
     expect(line).toBe('files with size expand src cursor src/a.ts anchor src select src/a.ts $root/');
@@ -215,7 +238,7 @@ describe('FileNavigatorManager', () => {
       ]);
     });
 
-    const line = await manager.printView(target.label, 'janus');
+    const line = await printView(manager, target.label);
     subscription.unsubscribe();
 
     expect(line).toBe('files cursor target.ts select target.ts $root/');
@@ -234,7 +257,7 @@ describe('FileNavigatorManager', () => {
       ]);
     });
 
-    const line = await manager.printView(target.label, 'janus');
+    const line = await printView(manager, target.label);
     subscription.unsubscribe();
 
     expect(line).toBe('files $root/sub');
@@ -252,7 +275,7 @@ describe('FileNavigatorManager', () => {
       ]);
     });
 
-    const line = await manager.printView(target.label, 'janus');
+    const line = await printView(manager, target.label);
     subscription.unsubscribe();
 
     expect(line).toContain(path.basename(otherRoot));
@@ -273,7 +296,7 @@ describe('FileNavigatorManager', () => {
       tabs = tabs.filter((tab) => tab.label !== target.label);
     });
 
-    const line = await manager.printView(target.label, 'janus');
+    const line = await printView(manager, target.label);
     subscription.unsubscribe();
 
     expect(line).toBe('files $root/');
@@ -284,7 +307,7 @@ describe('FileNavigatorManager', () => {
     manager.open('files', 'janus');
     const label = tabs.find((tab) => tab.label.startsWith('navigator'))!.label;
 
-    expect(await manager.printView(label, 'janus')).toBe('files $root/');
+    expect(await printView(manager, label)).toBe('files $root/');
   });
 
   it('prints remote trees without requesting their client selection', async () => {
@@ -295,18 +318,17 @@ describe('FileNavigatorManager', () => {
     let requests = 0;
     const subscription = messageBus.on('fileNavigator', 'collect', () => { requests += 1; });
 
-    const line = await manager.printView(label, 'janus');
+    const line = await printView(manager, label);
     subscription.unsubscribe();
 
     expect(line).toBe('files in other $root');
     expect(requests).toBe(0);
   });
 
-  it('returns the standard missing-tab and wrong-tab-kind replies when printing', async () => {
+  it('returns the wrong-tab-kind reply when printing', async () => {
     const manager = run();
 
-    expect(await manager.printView('ghost', 'janus')).toBe('No tab named "ghost".');
-    expect(await manager.printView('other', 'janus')).toBe('files: "other" is not a file navigator');
+    expect(await printView(manager, 'other')).toBe('files: "other" is not a file navigator');
   });
 
   it('ignores command view clauses on a remote tree', () => {
@@ -2008,16 +2030,6 @@ describe('FileNavigatorManager', () => {
       expect(files.restore).toBeUndefined();
     });
 
-    it('reports a malformed clause without opening or focusing a tree', () => {
-      const manager = run();
-      const activeBefore = activeTab;
-
-      manager.open('files expand "src', 'janus');
-
-      expect(outputs.at(-1)).toBe('files: unterminated quote');
-      expect(tabs.some((tab) => tab.files)).toBe(false);
-      expect(activeTab).toBe(activeBefore);
-    });
   });
 
   describe('profile capture and restore', () => {
