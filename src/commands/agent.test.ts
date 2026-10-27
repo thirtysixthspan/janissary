@@ -520,6 +520,26 @@ describe('agent command', () => {
     expect(execute).not.toHaveBeenCalled();
   });
 
+  it('releases a remote target when the caller aborts during target resolution', async () => {
+    const ready = Promise.withResolvers<string>();
+    const channel = { attached: true } as RemoteChannel;
+    vi.spyOn(managers.remote, 'create').mockReturnValue(channel);
+    vi.spyOn(managers.remote, 'readyOf').mockReturnValue(ready.promise);
+    const release = vi.spyOn(managers.remote, 'release').mockReturnValue(true);
+
+    const pending = run('agent on build-box execute task.md');
+    await vi.waitFor(() => expect(managers.remote.create).toHaveBeenCalledOnce());
+    callerAbort.abort();
+
+    await expect(pending).resolves.toEqual({
+      status: 'failed', response: 'Agent: Agent terminated.', cleanupWarnings: [],
+    });
+    expect(release).toHaveBeenCalledOnce();
+    expect(managers.agent.runs.size).toBe(0);
+    expect(managers.workspace.create).not.toHaveBeenCalled();
+    expect(execute).not.toHaveBeenCalled();
+  });
+
   it('resolves remote task snapshots and holds a run-only workspace reference through cleanup', async () => {
     const parsed = parseRemoteAddress('devbox');
     if ('error' in parsed) throw new Error(parsed.error);

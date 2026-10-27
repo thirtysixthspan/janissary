@@ -4,17 +4,6 @@
 
 ## development
 
-* Move the agent command's launch orchestration into the agent feature, with target selection and run cleanup each written once, so the command file only parses, runs, and reports.
-
-Existing Debt: `runAgent` in the agent command is one 120-line function that picks the execution target, creates the run, provisions its workspace, opens the monitor tab, executes, and settles the run, and it writes the run-finishing step out separately on four exits that disagree about whether to check the run registry first. Severity: 6/10
-
-Existing Risk: 5/10 - A new early return or target kind has to copy one of the existing finish sequences, and picking the wrong one leaves a run showing as running in its monitor tab and a remote workspace lease held until shutdown.
-
-Proposal Risk: 3/10 - Every exit settles the run through one helper and the target comes from one function, but the launch still awaits remote resolution and workspace provisioning between creating a run and executing it, so cancellation inside that window stays subtle.
-
-Proposal: In `src/commands/agent.ts`, `runAgent` chooses inline between a local workspace, an inherited remote target, and an explicit host target (the `localWorkspaceName`, `remoteAddress`, and `remoteTarget` block). It then settles the run on four separate exits. The abort check after `local.workspace.ready` and the monitor-tab failure both call `finishRunCollectingWarnings`, which calls `managers.agent.finish` without checking `managers.agent.runs.has`. The normal path checks `runs.has` and then picks `managers.agent.finish` or `activeRun.finish`. The outer `catch` goes through `finishRunAfterError`, which does both. Extract the target choice into `resolveAgentLaunchTarget` in a new `src/agent/launch-target.ts` that returns `{ kind: 'local', workspaceName }` or `{ kind: 'remote', target }`, calling the existing `resolveRemoteAgentTarget` and `inheritRemoteAgentTarget` from `src/agent/remote-target.ts`. Fold the four finish sequences into one `settleAgentRun(run, outcome, managers)` in a new `src/agent/settle-run.ts` that always checks `runs.has` first and always returns cleanup warnings, so each exit in `runAgent` becomes one call. Move `openRunMonitorTab`, which writes `monitor.plugin.agentRunId` onto the tab record directly, into `src/agent/` beside it. Leave the command's self-import of `./index.js` (used for `resolveAgentSnapshot`'s command list) alone in this change. `src/commands/agent.test.ts` covers the local, remote, abort, monitor-tab, and failure paths and must pass unchanged. Check that it has a case for an abort arriving while a remote target is still resolving, and add one if it doesn't, because that exit moves the most.
-
-
 * Give core one helper for a shell tab's terminal id, built on the shell plugin's own payload guard, and replace the four hand-written payload probes in the launch, system-shell, and tab-close paths with it.
 
 Existing Debt: Core reads the bundled shell plugin's `ptyId` out of a tab payload in four places, each with its own `'ptyId' in payload` structural probe, and the system-shell module declares a private `isShellPayload` that shadows the plugin's exported guard of the same name while checking far less. Severity: 5/10
