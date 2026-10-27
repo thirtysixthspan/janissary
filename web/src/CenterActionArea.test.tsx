@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './shared/ws/ws';
-import { CenterActionArea } from './CenterActionArea';
+import { CenterActionArea, DEFAULT_SPLIT_PCT } from './CenterActionArea';
 
 function tab(label: string, pane?: 'right'): TabView {
   return {
@@ -20,6 +20,7 @@ function setup(secondaryTab: number | undefined = 2) {
   const properties = {
     entries: tabs.map((item, index) => ({ tab: item, index })),
     tabs, activeTab: 1, secondaryTab, client, closeTab: vi.fn(),
+    splitPct: DEFAULT_SPLIT_PCT, setSplitPct: vi.fn(),
     tabNameMaxLength: 16, activeTabNameMaxLength: 50,
     onFocusCommandBar: vi.fn(), onFocusEditor: vi.fn(), windowFocused: true,
     renderBody: (entry: { tab: TabView }, focused: boolean) => (
@@ -71,6 +72,7 @@ describe('CenterActionArea', () => {
     const entries = tabs.slice(1).map((item, offset) => ({ tab: item, index: offset + 1 }));
     const { container } = render(<CenterActionArea
       entries={entries} tabs={tabs} activeTab={1} secondaryTab={2} client={client}
+      splitPct={DEFAULT_SPLIT_PCT} setSplitPct={vi.fn()}
       closeTab={vi.fn()} tabNameMaxLength={16} activeTabNameMaxLength={50}
       onFocusCommandBar={vi.fn()} onFocusEditor={vi.fn()} windowFocused
       renderBody={() => null} persistentLayers={null}
@@ -91,16 +93,25 @@ describe('CenterActionArea', () => {
     expect(document.querySelector('.center-split-resize')).toBeNull();
   });
 
-  it('clamps divider dragging to the 15–85 percent band', () => {
-    const { container } = setup();
-    const eventTarget = globalThis as unknown as Window;
+  it('renders the controlled split percent', () => {
+    const { container, rerender, properties } = setup();
     const area = container.querySelector<HTMLElement>('.center-action-area')!;
+    expect(area.style.getPropertyValue('--center-left-pct')).toBe(`${DEFAULT_SPLIT_PCT}%`);
+
+    rerender(<CenterActionArea {...properties} splitPct={62} />);
+
+    expect(area.style.getPropertyValue('--center-left-pct')).toBe('62%');
+  });
+
+  it('clamps divider dragging to the 15–85 percent band before reporting it', () => {
+    const { container, properties } = setup();
+    const eventTarget = globalThis as unknown as Window;
     const divider = container.querySelector<HTMLElement>('.center-split-resize')!;
     fireEvent.mouseDown(divider, { clientX: 500 });
     fireEvent.mouseMove(eventTarget, { clientX: 0 });
-    expect(area.style.getPropertyValue('--center-left-pct')).toBe('15%');
+    expect(properties.setSplitPct).toHaveBeenCalledWith(15);
     fireEvent.mouseMove(eventTarget, { clientX: globalThis.innerWidth });
-    expect(area.style.getPropertyValue('--center-left-pct')).toBe('85%');
+    expect(properties.setSplitPct).toHaveBeenCalledWith(85);
     fireEvent.mouseUp(eventTarget);
   });
 });

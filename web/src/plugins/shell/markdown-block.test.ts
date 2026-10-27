@@ -10,6 +10,9 @@ function usageError(command: string): string {
   return 'error' in parsed ? parsed.error : `no usage error for ${command}`;
 }
 
+const LAYOUT_USAGE = String.raw`Usage: layout window \<width\> \<height\> | sidebar left|right \<width\> | split \<percent\> | reporting \<percent\> | show.`;
+const DISPLAYED_LAYOUT_USAGE = 'Usage: layout window <width> <height> | sidebar left|right <width> | split <percent> | reporting <percent> | show.';
+
 type Fake = {
   terminal: Terminal;
   written: string[];
@@ -188,6 +191,21 @@ describe('insertMarkdownBlock', () => {
     const element = document.createElement('div');
     fake.render(element);
     expect(element.textContent).toContain('Usage: harness capture <name>.');
+  });
+
+  it.each([
+    'layout window 0 900',
+    'layout split 100',
+    'layout reporting 101',
+    'layout sidebar center 300',
+  ])('draws every layout usage placeholder for %s', (command) => {
+    const fake = fakeTerminal();
+    insertMarkdownBlock(fake.terminal, command, LAYOUT_USAGE, vi.fn());
+    const element = document.createElement('div');
+
+    fake.render(element);
+
+    expect(element.querySelector('p')?.textContent).toBe(DISPLAYED_LAYOUT_USAGE);
   });
 
   it('places nothing when the reply measures nothing', () => {

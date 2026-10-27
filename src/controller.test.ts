@@ -1694,7 +1694,7 @@ describe('Controller reportLayout', () => {
   // whose sidebar is at a legal extreme, since a report that throws is a dropped frame.
   it('accepts the extreme layouts a dragged sidebar can report', () => {
     const { c } = makeController();
-    expect(() => { c.reportLayout({ sidebarLeft: 0, sidebarRight: 0, tabAreaPct: 0 }); }).not.toThrow();
-    expect(() => { c.reportLayout({ sidebarLeft: 100, sidebarRight: 100, tabAreaPct: 100 }); }).not.toThrow();
+    expect(() => { c.reportLayout({ sidebarLeft: 0, sidebarRight: 0, tabAreaPct: 0, splitPct: 15 }); }).not.toThrow();
+    expect(() => { c.reportLayout({ sidebarLeft: 100, sidebarRight: 100, tabAreaPct: 100, splitPct: 85 }); }).not.toThrow();
   });
 });

@@ -77,6 +77,7 @@ export type NotificationEventType =
   | 'launch-workspace-cleaned'
   | 'launch-root-cloned'
   | 'remote-refused'
+  | 'layout'
 
 // A background tab's own activity. Both the per-event opt-in toggle and focus suppression (the
 // active tab never notifies about its own activity) apply to these five.
@@ -135,6 +136,7 @@ export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
   'launch-workspace-cleaned': true,
   'launch-root-cloned': true,
   'remote-refused': true,
+  layout: true,
   'system-schedule-fire': true,
 };
 

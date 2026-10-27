@@ -504,7 +504,7 @@ describe('saveProfile', () => {
 
   it('captures sidebar/tab-area sizes and window bounds when a reader is registered', async () => {
     const managers = makeManagers([makeTab('bob', '#aaa')]);
-    setClientLayout({ sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70 });
+    setClientLayout({ sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70, splitPct: 62 });
     setWindowBoundsReader(async () => ({ width: 1440, height: 900 }));
 
     const summary = await saveProfile('demo', managers);
@@ -517,7 +517,7 @@ describe('saveProfile', () => {
 
   it('omits window and notes the skip when no bounds reader is registered', async () => {
     const managers = makeManagers([makeTab('bob', '#aaa')]);
-    setClientLayout({ sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70 });
+    setClientLayout({ sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70, splitPct: 62 });
 
     const summary = await saveProfile('demo', managers);
 

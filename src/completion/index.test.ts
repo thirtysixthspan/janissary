@@ -205,6 +205,20 @@ describe('completeCommandLine — syntax theme', () => {
   });
 });
 
+describe('completeCommandLine — layout command', () => {
+  const noFiles = '/no/such/dir/xyz';
+
+  it('completes subcommands from the parser keyword list', () => {
+    const result = completeCommandLine('layout ', 7, noFiles);
+    expect(result.matches).toEqual(['reporting', 'show', 'sidebar', 'split', 'window']);
+  });
+
+  it('completes the sidebar subcommand and its side choices', () => {
+    expect(completeCommandLine('layout sid', 10, noFiles).newInput).toBe('layout sidebar ');
+    expect(completeCommandLine('layout sidebar ', 15, noFiles).matches).toEqual(['left', 'right']);
+  });
+});
+
 describe('completeCommandLine — harness model', () => {
   const noFiles = '/no/such/dir/xyz';
 

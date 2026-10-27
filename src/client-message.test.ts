@@ -99,7 +99,7 @@ describe('clientParamsProblem', () => {
 
   it.each([
     ['command', { text: 'help' }],
-    ['reportLayout', { sidebarLeft: 240, sidebarRight: 300, tabAreaPct: 62.5 }],
+    ['reportLayout', { sidebarLeft: 240, sidebarRight: 300, tabAreaPct: 62.5, splitPct: 50 }],
     ['reportTerminalColors', { id: 'pty-1', fg: '#e4e5e7', bg: '#17181b' }],
     ['init', {}],
   ])('reports no problem for well-typed %s params', (method, params) => {

@@ -183,10 +183,10 @@ export class JanusClient {
     return this.request({ method: 'editorSync', params: { url, content } }, { timeoutMs: EDITOR_SYNC_TIMEOUT_MS });
   }
 
-  // Report the current sidebar/tab-area sizes after a manual resize completes. Fire-and-forget,
+  // Report the current layout on connect and after a manual resize completes. Fire-and-forget,
   // same as renameEditorFile.
-  reportLayout(sidebarLeft: number, sidebarRight: number, tabAreaPct: number): void {
-    this.send({ method: 'reportLayout', params: { sidebarLeft, sidebarRight, tabAreaPct } });
+  reportLayout(sidebarLeft: number, sidebarRight: number, tabAreaPct: number, splitPct: number): void {
+    this.send({ method: 'reportLayout', params: { sidebarLeft, sidebarRight, tabAreaPct, splitPct } });
   }
 
   // Write an editor buffer back to disk. Resolves with the server's error message, or undefined

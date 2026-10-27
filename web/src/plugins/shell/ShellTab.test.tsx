@@ -984,6 +984,23 @@ describe('ShellTab', () => {
     expect(shown).not.toContain('##');
   });
 
+  it.each([
+    'layout window 0 900',
+    'layout split 100',
+    'layout reporting 101',
+    'layout sidebar center 300',
+  ])('shows the complete layout usage reply after submitting %s', async (command) => {
+    const output = String.raw`Usage: layout window \<width\> \<height\> | sidebar left|right \<width\> | split \<percent\> | reporting \<percent\> | show.`;
+    const visibleUsage = 'Usage: layout window <width> <height> | sidebar left|right <width> | split <percent> | reporting <percent> | show.';
+    const { releaseDispatch, terminal } = renderTab({ dispatched: true, output });
+
+    fireEvent.change(bar(), { target: { value: command } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+
+    expect(terminal.written.at(-1)).toContain(visibleUsage);
+  });
+
   it('records an intercepted application command in shell history', async () => {
     const { releaseDispatch, written } = renderTab({ dispatched: true });
 

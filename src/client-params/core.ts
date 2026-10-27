@@ -40,7 +40,8 @@ export const CORE_PARAMS: Record<CoreRpcCall['method'], ParamsDecoder> = {
   ptyResize: (p) => isString(p.id) && isInteger(p.cols) && isInteger(p.rows) && (p.tab === undefined || isString(p.tab)),
   pluginTerminalAttach: (p) => isString(p.id) && isString(p.tab),
   ptyKill: (p) => isString(p.id),
-  reportLayout: (p) => isFiniteNumber(p.sidebarLeft) && isFiniteNumber(p.sidebarRight) && isFiniteNumber(p.tabAreaPct),
+  reportLayout: (p) => isFiniteNumber(p.sidebarLeft) && isFiniteNumber(p.sidebarRight)
+    && isFiniteNumber(p.tabAreaPct) && isFiniteNumber(p.splitPct),
   // Checked as plain strings here and as hex colors at the point of use: this decoder's job is
   // shape, and refusing to admit a color would answer a formatting mistake the same way it answers a
   // malformed frame. `palette` is shape-checked as an optional array of 16 strings here and refused
