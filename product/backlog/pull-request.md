@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Close the security gap in generated Command Reference headings so filenames cannot inject active HTML.
-
-Existing Issue: `renderCommandPage` interpolates the raw help-page filename into a Markdown code span, so a name containing Markdown delimiters can close the span and insert raw HTML into a generated docs page. Severity: 8/10
-
-Existing Risk: 8/10 - A crafted `.md` filename can inject active markup into the published Command Reference and execute script in a docs reader's browser.
-
-Proposal Risk: 2/10 - Context-appropriate escaping of the heading text would prevent a filename from becoming active markup while retaining its display name and route.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1799 "escape help-page names in generated command headings". In `documentation/.vitepress/command-reference.ts`, encode the page name for the Markdown/HTML context used in `renderCommandPage` instead of inserting raw text into an inline-code span; preserve the code-formatted heading, sprite placement, and raw route identity. Add regression coverage to `scripts/command-reference.test.mjs` for a name containing a backtick and HTML event-handler markup, verifying the generated page cannot contain executable markup, and retain the ordinary `profile` heading case. Verify the generated route still renders a `profile` page and run the docs build and focused check.
-
-
 * Close the security gap that lets a listed help-page symlink serve files outside the help directory.
 
 Existing Issue: `listHelpPages` and `readHelpPage` accept every `.md` directory entry, then `readFileSync` follows a page symlink to its target path. Severity: 8/10

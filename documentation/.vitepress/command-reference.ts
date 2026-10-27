@@ -35,15 +35,19 @@ export function commandReferenceSidebar(names = commandNames()) {
   };
 }
 
+export function renderCommandPageContent(name: string, markdown: string, characterIndex: number): string {
+  const heading = `# <code>${escapeHtml(name)}</code>`;
+  const character = CHARACTERS[characterIndex % CHARACTERS.length];
+  return markdown
+    .replace(/^###\s+.+$/m, () => heading)
+    .replace(heading, () => `${heading}\n\n<img class="agent-float" src="/agents/${character}-south-west.png" alt="" />`);
+}
+
 export function renderCommandPage(name: string): string {
   const index = commandNames().indexOf(name);
   if (index === -1) throw new Error(`No help page named "${name}".`);
   const markdown = readFileSync(path.join(HELP_DIRECTORY, `${name}.md`), 'utf8').trim();
-  const heading = `# \`${name}\``;
-  const character = CHARACTERS[index % CHARACTERS.length];
-  return markdown
-    .replace(/^###\s+.+$/m, heading)
-    .replace(heading, `${heading}\n\n<img class="agent-float" src="/agents/${character}-south-west.png" alt="" />`);
+  return renderCommandPageContent(name, markdown, index);
 }
 
 export function helpDirectory(): string {
