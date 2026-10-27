@@ -79,7 +79,7 @@ Each decision is settled by the feature text, by behavior the app already has, o
 | Subcommand completion | `completeSyntaxTheme` in `src/completion/handlers.ts`, `completeWord` in `src/completion/helpers.ts`, the chain in `src/completion/index.ts` |
 | Keyword list exported from a pure parser for completion to import | `BROWSER_SUBCOMMANDS` in `src/browser/command.ts`, imported by `src/completion/browser.ts` |
 | Profile `layout` precedent for units and no-window behavior | `src/profile/layout.ts` (`applyProfileLayout`), `src/profile/save/reserved.ts` (`buildLayout`) |
-| Help table row, kept alphabetical | `help.md` (Commands table), checked by `src/commands.test.ts` |
+| Help table row, kept alphabetical | `help/commands.md`, checked by `src/commands.test.ts` |
 
 ## Proposed changes
 
@@ -112,9 +112,10 @@ Each decision is settled by the feature text, by behavior the app already has, o
 
 ### Docs and specs
 
-- **`help.md`**. A `layout` row in its alphabetical place, between `launcher` and `monitor`, reading exactly as the user chose (180 characters, under the 200-character limit `src/commands.test.ts` enforces):
+- **`help/commands.md`**. A `layout` row in its alphabetical place, between `launcher` and `monitor`, reading exactly as the user chose (180 characters, under the 200-character limit `src/commands.test.ts` enforces):
   `` | `layout` | `layout window <width> <height>`, `layout sidebar left\|right <width>`, `layout split <percent>`, or `layout reporting <percent>` sets a size; `layout show` prints the current ones | ``
-- **`documentation/user-documentation/command-bar/commands.md`**. A row in the user-facing commands table carrying the same description as the `help.md` row.
+- **`help/layout.md`**. A command help page in the standard layout, describing the forms, units, replies, and examples.
+- **`documentation/user-documentation/command-bar/commands.md`**. A row in the user-facing commands table carrying the same description as the `help/commands.md` row.
 - **`product/specs/application-commands.md`**. A new `### layout` section with every form, the exact replies and notification lines, and the edge cases above.
 - **`product/specs/notifications.md`**. Add `layout` to § Events that notify with its three exact lines, and to the lists of no-toggle explicit events, focus-suppression bypasses, desktop alerts, and `warning` cue defaults.
 - **`product/specs/profiles.md`** § Profile-level layout. A `tabAreaPct` of 0 or 100 now has a command equivalent, `layout reporting 100` or `layout reporting 0`.
@@ -128,7 +129,7 @@ Land these in order so typecheck and tests stay green at each step:
 
 1. The `splitPct` field end to end: `LayoutUpdate`, the `reportLayout` params and guard, `ClientLayout`, `patchClientLayout` and its call in `src/controller/events.ts`, then the web side (hoisted divider, `useLayoutState`, `ws.ts`, the `App`/`AppMain` threading). The required RPC field and the client call that sends it must change together.
 2. The `layout` notification event in the three notification modules.
-3. `parse-layout.ts`, `layout.ts`, the registry entry, and the `help.md` row together, since `commands.test.ts` reads both.
+3. `parse-layout.ts`, `layout.ts`, the registry entry, and the `help/commands.md` row together, since `commands.test.ts` reads both.
 4. Completion.
 5. Specs and user docs.
 
@@ -141,7 +142,7 @@ Land these in order so typecheck and tests stay green at each step:
 - **`src/client-params/core.test.ts`** (extend). The existing `reportLayout` row gains `splitPct`; a missing or non-finite `splitPct` is rejected.
 - **`src/notifications/index.test.ts`** (extend). A `layout` event is recorded even when its tab is the active one, and its alert defaults to a banner with the `warning` cue.
 - **`src/completion/index.test.ts`** (extend, beside the `browser` cases). `layout ` completes the subcommand keywords, `layout sid` completes to `layout sidebar `, and `layout sidebar ` offers `left` and `right`.
-- **`src/commands.test.ts`** (existing, unchanged). Fails if the new `samples` shadow or are shadowed, or if the `help.md` row is out of order.
+- **`src/commands.test.ts`** (existing, unchanged). Fails if the new `samples` shadow or are shadowed, if the `help/commands.md` row is out of order, or if the `help/layout.md` page is missing.
 - **`web/src/useLayoutState.test.tsx`** (extend). A divider drag reports all four sizes. A `layout` event carrying `splitPct` updates the split without reporting back. Mounting reports the starting sizes once, and a `connected` phase reports them again.
 - **`web/src/CenterActionArea.test.tsx`** (extend). The divider renders the percent it is given, and the existing 15–85% drag-clamp test now asserts on the setter it calls.
 - **`web/src/App.test.tsx`** (extend). The fake client gains a `reportLayout` stub, since mounting now reports. A `layout` event carrying `splitPct` moves the divider of a split view and leaves sidebar widths alone.

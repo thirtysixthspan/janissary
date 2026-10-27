@@ -93,7 +93,7 @@ describe.skipIf(!sandboxAvailable())('sandboxSpawn — live sandbox-exec integra
   it('reads a task file under the install\'s ai/ directory, but nothing else in the install', () => {
     const root = janissaryRoot();
     const taskFile = path.join(root, 'ai', 'tasks', 'work-an-issue.md');
-    const elsewhere = path.join(root, 'help.md');
+    const elsewhere = path.join(root, 'help', 'commands.md');
     expect(existsSync(taskFile)).toBe(true);
     expect(existsSync(elsewhere)).toBe(true);
 

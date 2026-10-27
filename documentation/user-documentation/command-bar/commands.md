@@ -7,7 +7,8 @@ These commands manage the app itself — the current tab's transcript and name, 
 | Command | What it does |
 |---|---|
 | `agent [launch options] execute <task> [parameters...]` | Run a task autonomously in a new local ACP session; see [Autonomous task execution](/user-documentation/advanced-agents/agent-command) |
-| `help [<section>]` | List the available commands and key bindings, or just one section of them |
+| `help [<command>]` | List available commands, or show one command's usage, use cases, and examples |
+| `help keys` | List every key binding |
 | `diff [path]` | Open the [diff tab](/user-documentation/tab-types/diff-tab) on the project's changes, optionally scoped to a directory |
 | `newfile <file>` | Open a new unsaved text file; see [Creating a file or directory](/user-documentation/tab-types/opening-files#create-a-file-or-directory) |
 | `newdir <directory>` | Create a directory immediately under an existing parent; see [Creating a file or directory](/user-documentation/tab-types/opening-files#create-a-file-or-directory) |
@@ -39,11 +40,13 @@ Type `scripts` to open the **scripts** tab, where each row has **Run**, **Duplic
 
 ## `help`
 
-`help` prints the in-app quick reference: every command with a one-line description, then the key bindings. It's the same text this tab shows you when you type `help`, so it is a reminder rather than a guide.
+`help` lists every command with a one-line description. Type `help <command>` for that command's usage, use cases, and examples, or `help keys` to list the keyboard shortcuts.
 
-`help <section>` prints one part of it. `help commands` shows the command table, `help key bindings` every key table, and `help shell` just the shell tab's keys. You can name any key table by the start of its label, like `help editor` or `help file`. Case doesn't matter. A name that matches nothing gets `No help section matches "<name>".` followed by the list of section names.
+For example, `help profile` shows profile commands and `help /quit` shows the quit command page. Names are case-insensitive and one leading slash is ignored. A name without a help page gets `No help for "<name>". Type "help" for available commands.`
 
-If the help file can't be read, `help` falls back to a single summary line naming the built-in commands and reminding you that `!` runs something in the shell, `/` runs a built-in, and `Ctrl+R` or `hist` opens command history.
+If the help files can't be read, `help` falls back to a single summary line naming the built-in commands and reminding you that `!` runs something in the shell, `/` runs a built-in, and `Ctrl+R` or `hist` opens command history.
+
+Every command's page is also on this site, under **Command Reference** in the sidebar.
 
 ## `tab focus`
 

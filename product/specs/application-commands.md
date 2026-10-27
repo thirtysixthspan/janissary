@@ -6,9 +6,19 @@ When a command is dispatched from a plugin tab, the reply preserves `dispatched`
 
 ### `help`
 
-Returns the contents of `help.md` at the repo root (read and cached on first use). Its command table lists the commands in alphabetical order by name, with each description limited to 200 characters. If that file cannot be read, it falls back to a generated summary listing the built-in commands and the `!` / `/` prefixes and `Ctrl+R` history shortcut.
+Bare `help` and `help commands` print `help/commands.md`, the command table. The table is alphabetical by command name and each description is limited to 200 characters. `help keys` prints the key-binding reference from `help/keys.md`; key bindings are not included in bare `help`.
 
-`help <section>` returns one section of that text instead of all of it. The sections are the help text's own headings, **Commands** and **Key Bindings**, and the labelled key tables inside Key Bindings, such as **Global key bindings** or **Shell tab controls**. A heading's section runs to the next heading; a key table's section is its label line and the table under it. The name is matched without regard to case or extra spaces: a title equal to it wins, then a title that starts with it, then a title containing it as whole words, and among several candidates the earliest in the help text is chosen. So `help commands` prints the command table, `help shell` the shell tab's keys, and `help command bar` the command bar and tab controls. A name that matches nothing answers `No help section matches "<name>". Sections: <every section title>.` A section reply is rendered as markdown like the full text, and from a shell tab's command bar it is answered by the application rather than sent to zsh. When `help.md` cannot be read, `help <section>` returns the same generated summary as bare `help`.
+Each command page uses one opening description after its `### <command>` heading, followed by **Usage**, **Use cases**, and **Examples** blocks in that order.
+
+`help <command>` prints the matching page from `help/<command>.md`, which describes its usage, use cases, and examples. Page names include `commands`, `keys`, and the first word of each command-table entry, so `help tab` prints the page for `tab focus <name>`. Names are case-insensitive; surrounding and repeated spaces are ignored, and one leading slash is dropped, so `help /quit` prints the `quit` page. Only an exact listed page name is accepted. A missing page returns exactly `No help for "<name>". Type "help" for available commands.`, where `<name>` is lowercased, whitespace-collapsed, trimmed, and has one leading slash removed. Thus `help //quit` reports `No help for "/quit". Type "help" for available commands.` and `help tab focus` reports a missing page rather than selecting `tab`.
+
+The documentation site's **Command Reference** sidebar and generated page heading show each page name as code text. Markdown delimiters and HTML characters in a name display literally rather than changing the page markup, and the sidebar link retains that page's original route.
+
+The `help schedule` page documents tab and project-owned schedule creation, tab targeting, and the list, cancel, and clear forms for both schedule owners.
+
+The `help db` page lists `db sqlite list`, `db sqlite create <name>`, `db sqlite delete <name>`, and `db sqlite query <name> <sql>` as supported forms; its examples use the same `sqlite` engine token.
+
+The page name must be present in the `help/` directory listing; a query such as `../package` or `a/b` cannot read outside it. Only regular Markdown files inside the help directory are served or published. Symbolic links are never served or published, including links to files elsewhere on disk. Help pages are read when requested and are not cached. The required `commands.md` index must be readable for every page request, even when the requested page itself is readable. If the directory or index cannot be read, or the requested page cannot be read, `help` returns the generated summary listing built-in commands and the `!` / `/` prefixes and `Ctrl+R` history shortcut. Every reply is rendered as markdown, and from a shell tab's command bar it is answered by the application rather than sent to zsh. `helper` remains an unknown command.
 
 ### `execute`
 

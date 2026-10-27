@@ -44,6 +44,8 @@ Closing a tab's last window ends that tab's browser process; `connection close b
 
 `browser <open|list|use|goto|eval|shot|content|close|window close> …` drives a per-tab headless/headed web browser. See the Headless Browser section. Subcommands:
 
+The browser command help lists every supported form and gives valid examples that distinguish opening a window from navigating to a URL. Screenshot usage has no argument.
+
 - `browser open [name] [--headed|-H]` — launch this tab's browser (if not running) and open a window; `--headed` requests a visible browser.
 - `browser list` — list this tab's windows, marking the current one.
 - `browser use <id>` — make a window current.

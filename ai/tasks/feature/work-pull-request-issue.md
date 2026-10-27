@@ -20,7 +20,7 @@ This overrides AGENTS.md's "Capturing command output" guidance (write the output
 
 ### Allowed — do it automatically, never ask
 
-Read files relevant to the fix. Check out and prepare the specified PR's recorded head branch. Edit source, tests, CSS, specs, `help.md`, and existing user documentation as the fix requires. Write and promote the fix plan. Remove the resolved branch-backlog entry, preserving all others and restoring the master comment-and-heading skeleton when empty. Run `$janissary/scripts/run.mjs check-diff` after each change. Commit and push to the same head branch, and use `gh pr edit --body-file` only for description corrections named by the entry.
+Read files relevant to the fix. Check out and prepare the specified PR's recorded head branch. Edit source, tests, CSS, specs, applicable help pages under `help/`, and existing user documentation as the fix requires. Write and promote the fix plan. Remove the resolved branch-backlog entry, preserving all others and restoring the master comment-and-heading skeleton when empty. Run `$janissary/scripts/run.mjs check-diff` after each change. Commit and push to the same head branch, and use `gh pr edit --body-file` only for description corrections named by the entry.
 
 ### Forbidden — no exceptions
 
@@ -109,9 +109,9 @@ Every fix must be reflected in the functional specs under `./product/specs/`. Af
 
 ## Step 6 — Update help and public documentation if affected
 
-The fix only needs a documentation update if it changes behavior that `help.md` or `documentation/user-documentation/` already describes — a changed flag, a renamed command, a corrected default, a behavior that no longer matches what's written. Do not add new documentation for behavior that wasn't previously documented; that is out of scope for this task.
+The fix only needs a documentation update if it changes behavior that `help/` or `documentation/user-documentation/` already describes — a changed flag, a renamed command, a corrected default, a behavior that no longer matches what's written. Do not add new documentation for behavior that wasn't previously documented; that is out of scope for this task.
 
-1. Check `help.md` for any command, flag, or behavior description the fix changes. Update it in place if found.
+1. Check `help/commands.md` and the corresponding `help/<command>.md` page for any command, flag, or behavior description the fix changes. Update them in place if found. For changed key bindings, update `help/keys.md`.
 2. Check `documentation/user-documentation/` for any page describing the changed behavior. Update it in place if found.
 3. If neither documents the changed behavior, do nothing here — do not create new documentation.
 
@@ -164,7 +164,7 @@ Complexity:     N/10
 Implementation: <one-line summary of the fix>
 Tests:          <count> new tests across <files>
 Spec:           <spec file(s) created or updated, with one-line description of change>
-Docs:           <help.md/user-documentation file(s) updated, or "none needed">
+Docs:           <help/<command>.md, help/commands.md, help/keys.md, and/or user-documentation file(s) updated, or "none needed">
 Backlog:        entry removed, <n> remaining in product/backlog/pull-request.md | drained — file restored to its comment-and-heading skeleton
 Description:    updated — <one line on what changed> | not needed
 Branch:         <the existing PR head branch>

@@ -1,0 +1,31 @@
+### open
+
+Open files in the application or show web pages in an embedded tab. Use `open external` to hand a file to its configured or default viewer, or a web address to the system browser.
+
+**Usage**
+
+`open <path>`
+
+`open <url>`
+
+`open page <address>`
+
+`open external <path>`
+
+`open external <url>`
+
+`open external page <address>`
+
+**Use cases**
+
+- Open one or more project files, including supported wildcards.
+- View a web page inside the application, including a bare address with `page`.
+- Hand a file or web address to its configured or default external viewer.
+
+**Examples**
+
+- `open README.md` opens the project readme.
+- `open https://example.com` opens a web page in the application.
+- `open page example.com` opens the bare address in the application with `https://` assumed.
+- `open external README.md` hands the file to its external viewer.
+- `open external page example.com` hands the web address to the system browser.

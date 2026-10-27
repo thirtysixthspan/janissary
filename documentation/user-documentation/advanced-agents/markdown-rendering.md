@@ -27,4 +27,4 @@ A single click on a link opens that file in an editor with the target line scrol
 
 The app removes active HTML from agent output before it displays the result. Scripts and event handlers do not run. Safe Markdown links remain available, and a parse failure displays the reply as plain text.
 
-The `help` command is formatted Markdown. Use it whenever you need the current command or key-binding list.
+The `help` command is formatted Markdown. Use `help` for the command list and `help keys` for the key bindings.

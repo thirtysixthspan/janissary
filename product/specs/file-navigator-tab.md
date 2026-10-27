@@ -88,6 +88,9 @@ it in one command, e.g. `files in claude on left`. Like `left`/`right`, `in` and
 recognized as clause keywords, so a directory literally named `in` or `on` is still reachable
 through a path form (`files ./in`).
 
+The `help files` page lists the supported path, tab-target, sidebar-placement, and detail-mode forms
+with examples.
+
 ### Opening from a tab's metadata row
 
 Shell and harness tabs and harness tabs carry a folder-icon file-navigator button in their metadata row (see "Metadata

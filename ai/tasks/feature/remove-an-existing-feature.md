@@ -1,6 +1,6 @@
 # Remove an Existing Feature
 
-Your job: take the feature the user names, settle the scope of its removal with the user, record the removal as a plan, remove the feature's code, tests, specs, and documentation, detach every remaining feature that touched it without breaking that feature, remove the dead code the removal created, prove the remaining features still work, and open a pull request that leaves the removal for a human to merge. You change only what the settled plan names: source, tests, styles, specs, documentation, `help.md`, docs-site configuration, screenshot definitions and assets, dependency lines, backlog entries, and the plan file itself.
+Your job: take the feature the user names, settle the scope of its removal with the user, record the removal as a plan, remove the feature's code, tests, specs, and documentation, detach every remaining feature that touched it without breaking that feature, remove the dead code the removal created, prove the remaining features still work, and open a pull request that leaves the removal for a human to merge. You change only what the settled plan names: source, tests, styles, specs, documentation, the applicable pages under `help/`, docs-site configuration, screenshot definitions and assets, dependency lines, backlog entries, and the plan file itself.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation. Janissary's own scripts are reached as `$janissary/scripts/run.mjs`.
 
@@ -14,7 +14,7 @@ Your job: take the feature the user names, settle the scope of its removal with 
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Ask the user questions. Delete and edit source, tests, styles, specs, documentation, `help.md`, docs-site configuration, screenshot definitions and assets, dependency lines, and `./product/backlog/*.md` entries as the settled plan directs. Write the plan and move it through `./product/plans/draft/` → `./product/plans/ready/` → `./product/plans/complete/`. Create and delete anything under `./temp/remove-an-existing-feature/`. Run the check commands Step 2 discovers and `$janissary/scripts/run.mjs check-diff`. Execute the four workspace tasks. The one `temp/` line `start-application.md` Step 2 may append to `.gitignore` ships in the PR.
+Read any file in the repo. Ask the user questions. Delete and edit source, tests, styles, specs, documentation, applicable pages under `help/`, docs-site configuration, screenshot definitions and assets, dependency lines, and `./product/backlog/*.md` entries as the settled plan directs. Write the plan and move it through `./product/plans/draft/` → `./product/plans/ready/` → `./product/plans/complete/`. Create and delete anything under `./temp/remove-an-existing-feature/`. Run the check commands Step 2 discovers and `$janissary/scripts/run.mjs check-diff`. Execute the four workspace tasks. The one `temp/` line `start-application.md` Step 2 may append to `.gitignore` ships in the PR.
 
 ### Forbidden — no exceptions
 
@@ -97,9 +97,9 @@ Never guess which feature was meant. The target may be a whole feature or part o
 
 ## Step 4 — Inventory the feature
 
-Search the codebase, specs, documentation, `help.md`, backlog files, and the code that loads persisted data. This step asks nothing; it gathers the facts Step 5 asks about. Record:
+Search the codebase, specs, documentation, `help/`, backlog files, and the code that loads persisted data. This step asks nothing; it gathers the facts Step 5 asks about. Record:
 
-1. **What belongs to the feature.** Its code, tests, styles, and dependencies. Its spec, or the spec sections that describe it. Its documentation pages or sections, and its help text. Links to any page that will be deleted: `[[name]]` cross-references in other specs, links in other documentation pages, and the docs site's navigation (on Janissary, the `sidebar` in `documentation/.vitepress/config.mts`). Screenshots and other assets only those pages use, and the screenshot definitions that produce them (on Janissary, entries in `scripts/docs-screenshots/manifest.mjs`).
+1. **What belongs to the feature.** Its code, tests, styles, and dependencies. Its spec, or the spec sections that describe it. Its documentation pages or sections, and its help text in `help/`. Links to any page that will be deleted: `[[name]]` cross-references in other specs, links in other documentation pages, and the docs site's navigation (on Janissary, the `sidebar` in `documentation/.vitepress/config.mts`). Screenshots and other assets only those pages use, and the screenshot definitions that produce them (on Janissary, entries in `scripts/docs-screenshots/manifest.mjs`).
 2. **Touch points.** Every remaining feature that calls into, renders, routes to, or documents the removed one, and what it would have to change to keep working without it.
 3. **Shared pieces.** Helpers, types, styles, and doc sections used both by the feature and by something that stays.
 4. **Deep ties.** Any remaining feature built around the removed one, or one that would lose its main purpose without it, so that detaching it would mean redesigning it.

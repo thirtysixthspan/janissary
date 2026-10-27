@@ -71,6 +71,11 @@ describe('completeCommandLine', () => {
     expect(r.matches).toEqual([]);
     expect(r.newInput).toBe('cat zzz');
   });
+
+  it('completes help page names and does not fall through to file paths', () => {
+    expect(completeCommandLine('help pro', 8, dir).newInput).toBe('help profile ');
+    expect(completeCommandLine('help zzz', 8, dir).matches).toEqual([]);
+  });
 });
 
 describe('completeCommandLine — schedule `in <tab>` target', () => {

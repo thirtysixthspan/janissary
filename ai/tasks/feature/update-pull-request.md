@@ -1,6 +1,6 @@
 # Update an Open Pull Request
 
-Your job: take a pull request that is **already open** and has usually been built, reviewed, tested, and revised several times, check out its head branch, and read what its code does now. Then bring everything that describes the pull request back in line with the code: its description, its plan, the product specs, and `help.md`. The fix plans that `work-pull-request-issue.md` added along the way are folded into the pull request's own plan and removed, so the pull request ends with one plan. Anything still in the branch's backlog is cleared. The file edits are committed and pushed to the pull request's own head branch, the description is rewritten, and the pull request is **left open**.
+Your job: take a pull request that is **already open** and has usually been built, reviewed, tested, and revised several times, check out its head branch, and read what its code does now. Then bring everything that describes the pull request back in line with the code: its description, its plan, the product specs, and the applicable files under `help/`. The fix plans that `work-pull-request-issue.md` added along the way are folded into the pull request's own plan and removed, so the pull request ends with one plan. Anything still in the branch's backlog is cleared. The file edits are committed and pushed to the pull request's own head branch, the description is rewritten, and the pull request is **left open**.
 
 This task **describes**. The code on the head branch is the ground truth: when the text and the code disagree, the text changes and the code never does. The task edits no source, test, or config file, and so it runs no test suite, no lint, and no typecheck. It installs dependencies while preparing the workspace, and nothing else it does consumes them.
 
@@ -22,7 +22,7 @@ This task **describes**. The code on the head branch is the ground truth: when t
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Check out the pull request's head branch. Run Steps 2 and 3 of `ai/tasks/workspace/prepare-workspace.md` on it. Run read-only `git` and `gh` commands. Edit the pull request's own plan, and delete with `git rm` the fix plans the diff adds to `./product/plans/complete/`. Edit or create files in `./product/specs/`. Edit `help.md`. Restore `./product/backlog/pull-request.md` to its skeleton. Commit and push those files to the pull request's own head branch. Rewrite the pull request's description with `gh pr edit --body-file`, as Step 8 describes.
+Read any file in the repo. Check out the pull request's head branch. Run Steps 2 and 3 of `ai/tasks/workspace/prepare-workspace.md` on it. Run read-only `git` and `gh` commands. Edit the pull request's own plan, and delete with `git rm` the fix plans the diff adds to `./product/plans/complete/`. Edit or create files in `./product/specs/`. Edit the applicable files in `help/`. Restore `./product/backlog/pull-request.md` to its skeleton. Commit and push those files to the pull request's own head branch. Rewrite the pull request's description with `gh pr edit --body-file`, as Step 8 describes.
 
 ### Forbidden — no exceptions
 
@@ -98,9 +98,9 @@ Never touch a plan the diff does not add, and never a plan it adds outside `./pr
 
 ---
 
-## Step 5 — Update `help.md`
+## Step 5 — Update help pages
 
-Correct every `Commands` or `Key Bindings` row in `help.md` that describes behavior the diff changes. Add a row for each command or key binding the diff adds that has none. Keep to the existing one-line style: `help.md` is the in-app quick reference, not a second copy of a spec. When the pull request changes nothing `help.md` covers, leave it alone.
+When the diff changes a command, correct its row in `help/commands.md` and its detailed `help/<command>.md` page. Add both when the diff introduces a command. When the diff changes a key binding, update its row in `help/keys.md`. Keep command-table descriptions to one line; the command page carries the usage, use cases, and examples. The docs site's Command Reference pages are generated from `help/`, so edit the help page rather than a generated page under `documentation/`. When the pull request changes no command or key binding, leave the help files alone.
 
 ---
 
@@ -120,13 +120,13 @@ Leave a file already at the skeleton alone, and leave a missing file missing. Ne
 
 ## Step 7 — Commit and push
 
-1. Run `git status --porcelain`. Every line must name a file the Allowed list covers: the own plan, a deleted fix plan, a file in `./product/specs/`, `help.md`, or `./product/backlog/pull-request.md`. Revert anything else: `git checkout -- <file>` for a tracked file, such as a `package-lock.json` the install rewrote, and deleting the file for an untracked stray. `pr-commit` stages everything, so anything left would ride along.
+1. Run `git status --porcelain`. Every line must name a file the Allowed list covers: the own plan, a deleted fix plan, a file in `./product/specs/`, a help page under `help/`, or `./product/backlog/pull-request.md`. Revert anything else: `git checkout -- <file>` for a tracked file, such as a `package-lock.json` the install rewrote, and deleting the file for an untracked stray. `pr-commit` stages everything, so anything left would ride along.
 2. **When nothing remains,** Steps 3 to 6 changed nothing. Skip the rest of this step: there is no commit and no push.
 3. Otherwise write **one** commit. `pr-commit` stages everything and commits with a **single author and no `Co-Authored-By:` trailer**. The body names the pull request and each file updated, created, or deleted:
 
 ```bash
 $janissary/scripts/run.mjs pr-commit "docs: update the pull request plan, specs, and help to match its code" \
-  "Updated #232 to its code: folded 2 fix plans into product/plans/complete/tab-alias.md and removed them, corrected product/specs/tabs.md and the rename row in help.md, and cleared 1 unresolved entry from product/backlog/pull-request.md."
+  "Updated #232 to its code: folded 2 fix plans into product/plans/complete/tab-alias.md and removed them, corrected product/specs/tabs.md and the rename entry in help/commands.md and help/rename.md, and cleared 1 unresolved entry from product/backlog/pull-request.md."
 ```
 
 4. Push, substituting the literal branch name:

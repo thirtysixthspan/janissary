@@ -19,18 +19,17 @@ const FORMERLY_SILENT = [
 ];
 
 describe('getOutput', () => {
-  it('returns help with commands and key bindings', () => {
+  it('returns the command list without key bindings from bare help', () => {
     const result = getOutput('help');
     expect(result.kind).toBe('output');
     if (result.kind !== 'output') return;
     expect(result.text).toContain('Commands');
-    expect(result.text).toContain('Key Bindings');
     expect(result.text).toContain('connection');
-    expect(result.text).toContain('Ctrl+C');
+    expect(result.text).not.toContain('Key Bindings');
   });
 
-  it('separates the key bindings that work everywhere from the shell tab\'s own', () => {
-    const result = getOutput('help');
+  it('separates the global key bindings from the shell tab\'s own', () => {
+    const result = getOutput('help keys');
     if (result.kind !== 'output') throw new Error('help produced no output');
     const global = result.text.indexOf('**Global key bindings**');
     const shell = result.text.indexOf('**Shell tab controls**');
@@ -44,7 +43,10 @@ describe('getOutput', () => {
   it('is case insensitive', () => {
     const result = getOutput('HELP');
     expect(result.kind).toBe('output');
-    if (result.kind === 'output') expect(result.text).toContain('Commands');
+    if (result.kind === 'output') {
+      expect(result.text).toContain('Commands');
+      expect(result.text).not.toContain('Key Bindings');
+    }
   });
 
   it.each([[''], [' '.repeat(3)]])('reports silent for empty input %#', (input) => {

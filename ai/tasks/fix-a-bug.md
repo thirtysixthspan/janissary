@@ -1,6 +1,6 @@
 # Fix a Bug
 
-Your job: take a reported bug — the first one listed under `## ready` in `./product/backlog/bugs.md`, or the specific bug the user names when running this task, which need not be listed there at all — **replicate it** to confirm the faulty behavior, determine the **correct** behavior from the bug report together with the functional specs and the code, implement a fix, **verify** the fix resolves the replicated failure, **verify it end to end in a live instance of the application** whenever the bug can be reached that way, add a **regression test** that would fail without the fix and passes with it, update functional specs and public documentation where the fix changes behavior they already document, record the plan in `./product/plans/complete/`, remove the bug from the bugs file when that is where it came from, and open a pull request that documents the replication steps and leaves the fix for a human to merge. You change source code, tests, spec files, `help.md`, `documentation/user-documentation/`, the bugs file, and the plan file's location — nothing else. The one exception is the single `temp/` line the start task may append to `.gitignore`.
+Your job: take a reported bug — the first one listed under `## ready` in `./product/backlog/bugs.md`, or the specific bug the user names when running this task, which need not be listed there at all — **replicate it** to confirm the faulty behavior, determine the **correct** behavior from the bug report together with the functional specs and the code, implement a fix, **verify** the fix resolves the replicated failure, **verify it end to end in a live instance of the application** whenever the bug can be reached that way, add a **regression test** that would fail without the fix and passes with it, update functional specs and public documentation where the fix changes behavior they already document, record the plan in `./product/plans/complete/`, remove the bug from the bugs file when that is where it came from, and open a pull request that documents the replication steps and leaves the fix for a human to merge. You change source code, tests, spec files, applicable pages under `help/`, `documentation/user-documentation/`, the bugs file, and the plan file's location — nothing else. The one exception is the single `temp/` line the start task may append to `.gitignore`.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
@@ -16,7 +16,7 @@ This overrides AGENTS.md's "Capturing command output" guidance (write the output
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Run read-only commands to replicate the reported bug. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file under `./product/plans/` and move it through `draft/` → `ready/` → `complete/`. Remove the fixed bug from `./product/backlog/bugs.md`. Run `$janissary/scripts/run.mjs check-diff` after each change. Build and start a scratch instance of the app through the start task, drive it with `$janissary/scripts/run.mjs e2e-driver`, and end it through the stop task (Step 5). Run the full PR workflow via `ai/tasks/workspace/open-feature-pull-request.md` when implementation is done.
+Read any file in the repo. Run read-only commands to replicate the reported bug. Edit source, tests, CSS, and spec files as the fix requires. Update the relevant row in `help/commands.md` and the command page in `help/<command>.md` when a command's documented behavior changes; update `help/keys.md` when a key binding changes. Update files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file under `./product/plans/` and move it through `draft/` → `ready/` → `complete/`. Remove the fixed bug from `./product/backlog/bugs.md`. Run `$janissary/scripts/run.mjs check-diff` after each change. Build and start a scratch instance of the app through the start task, drive it with `$janissary/scripts/run.mjs e2e-driver`, and end it through the stop task (Step 5). Run the full PR workflow via `ai/tasks/workspace/open-feature-pull-request.md` when implementation is done.
 
 ### Forbidden — no exceptions
 
@@ -156,9 +156,9 @@ Every fix must be reflected in the functional specs under `./product/specs/`. Af
 
 ## Step 7 — Update help and public documentation if affected
 
-The fix only needs a documentation update if it changes behavior that `help.md` or `documentation/user-documentation/` already describes — a changed flag, a renamed command, a corrected default, a behavior that no longer matches what's written. Do not add new documentation for behavior that wasn't previously documented; that is out of scope for this task.
+The fix only needs a documentation update if it changes behavior that `help/` or `documentation/user-documentation/` already describes — a changed flag, a renamed command, a corrected default, a behavior that no longer matches what's written. Do not add new documentation for behavior that wasn't previously documented; that is out of scope for this task.
 
-1. Check `help.md` for any command, flag, or behavior description the fix changes. Update it in place if found.
+1. Check `help/commands.md` and the command's `help/<command>.md` page for any command, flag, or behavior description the fix changes. Update them in place if found. For changed key bindings, update `help/keys.md`.
 2. Check `documentation/user-documentation/` for any page describing the changed behavior. Update it in place if found.
 3. If neither documents the changed behavior, do nothing here — do not create new documentation.
 
@@ -207,7 +207,7 @@ Implementation: <one-line summary of the fix>
 Regression:     <the test that now guards this bug, and the file it lives in>
 Live E2E:       verified — <one-line observation> | not possible — <reason>  [; teardown incomplete — <what is still running>]
 Spec:           <spec file(s) created or updated, with one-line description of change>
-Docs:           <help.md/user-documentation file(s) updated, or "none needed">
+Docs:           <help/commands.md, help/<command>.md, help/keys.md, and/or user-documentation file(s) updated, or "none needed">
 PR:             <url> (#<number>)
 Status:         open
 ```

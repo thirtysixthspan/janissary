@@ -1,8 +1,8 @@
 # Resolve Technical Debt (first resolvable backlog item, if simple enough)
 
-Your job: walk `./product/backlog/technical-debt.md` from the top, rating each item's complexity in order, and **resolve the first one that does not exceed a complexity threshold of 7**: develop a plan, implement the fix, update functional specs, update `help.md` and public documentation where the fix changes behavior they already document, record the plan in `./product/plans/complete/`, remove the item from the technical-debt file, and ship the change — merging it to master, or leaving it in an open pull request when the hygiene playbook that resolved it says so (Step 8).
+Your job: walk `./product/backlog/technical-debt.md` from the top, rating each item's complexity in order, and **resolve the first one that does not exceed a complexity threshold of 7**: develop a plan, implement the fix, update functional specs, update applicable files under `help/` and public documentation where the fix changes behavior they already document, record the plan in `./product/plans/complete/`, remove the item from the technical-debt file, and ship the change — merging it to master, or leaving it in an open pull request when the hygiene playbook that resolved it says so (Step 8).
 
-A few items are not resolved by a plan you write at all — they **name** one of the hygiene task playbooks in `ai/tasks/hygiene/` and the target to run it against. For those, and only for those, you **trigger the named hygiene task against the backlog item** instead of planning the fix yourself; see Step 2A. An item that merely sounds like hygiene work but names no playbook is planned and fixed here, like any other. Any item you rate **above** the threshold while walking the list — including the eventual pick's rejected predecessors — gets moved into the file's `## deferred` section with a note of its rated complexity, instead of being resolved; you never implement an over-threshold item, you only defer it and move on to the next one. All deferrals and the eventual fix (if any) ship together in one change. You change source code, tests, spec files, `help.md`, `documentation/user-documentation/`, the technical-debt file, and the plan file's location — nothing else.
+A few items are not resolved by a plan you write at all — they **name** one of the hygiene task playbooks in `ai/tasks/hygiene/` and the target to run it against. For those, and only for those, you **trigger the named hygiene task against the backlog item** instead of planning the fix yourself; see Step 2A. An item that merely sounds like hygiene work but names no playbook is planned and fixed here, like any other. Any item you rate **above** the threshold while walking the list — including the eventual pick's rejected predecessors — gets moved into the file's `## deferred` section with a note of its rated complexity, instead of being resolved; you never implement an over-threshold item, you only defer it and move on to the next one. All deferrals and the eventual fix (if any) ship together in one change. You change source code, tests, spec files, applicable files under `help/`, `documentation/user-documentation/`, the technical-debt file, and the plan file's location — nothing else.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
@@ -18,7 +18,7 @@ This overrides AGENTS.md's "Capturing command output" guidance (write the output
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file to `./product/plans/complete/`. Execute a hygiene playbook under `ai/tasks/hygiene/` when — and only when — the item names it (Step 2A). Remove the resolved item from `./product/backlog/technical-debt.md`, and move any over-threshold item(s) encountered along the way into its `## deferred` section with a complexity note. Run `$janissary/scripts/run.mjs check-diff` after each change. Ship the work once, at the end, covering every deferral plus the fix (if any) — through `ai/tasks/workspace/merge-change-to-master.md`, or through the triggered playbook's own shipping step when one resolved the item (Step 8).
+Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Update the matching row in `help/commands.md` and command page in `help/<command>.md` when command behavior changes; update `help/keys.md` when a key binding changes. Update files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file to `./product/plans/complete/`. Execute a hygiene playbook under `ai/tasks/hygiene/` when — and only when — the item names it (Step 2A). Remove the resolved item from `./product/backlog/technical-debt.md`, and move any over-threshold item(s) encountered along the way into its `## deferred` section with a complexity note. Run `$janissary/scripts/run.mjs check-diff` after each change. Ship the work once, at the end, covering every deferral plus the fix (if any) — through `ai/tasks/workspace/merge-change-to-master.md`, or through the triggered playbook's own shipping step (Step 8).
 
 ### Forbidden — no exceptions
 
@@ -139,9 +139,9 @@ Every fix must be reflected in the functional specs under `./product/specs/`. Af
 
 ## Step 6 — Update help and public documentation if affected
 
-The fix only needs a documentation update if it changes behavior that `help.md` or `documentation/user-documentation/` already describes — a changed flag, a renamed command, a corrected default, a behavior that no longer matches what's written. Do not add new documentation for behavior that wasn't previously documented; that is out of scope for this task.
+The fix only needs a documentation update if it changes behavior that `help/` or `documentation/user-documentation/` already describes — a changed flag, a renamed command, a corrected default, a behavior that no longer matches what's written. Do not add new documentation for behavior that wasn't previously documented; that is out of scope for this task.
 
-1. Check `help.md` for any command, flag, or behavior description the fix changes. Update it in place if found.
+1. Check `help/commands.md` and the command's `help/<command>.md` page for any command, flag, or behavior description the fix changes. Update them in place if found. For changed key bindings, update `help/keys.md`.
 2. Check `documentation/user-documentation/` for any page describing the changed behavior. Update it in place if found.
 3. If neither documents the changed behavior, do nothing here — do not create new documentation.
 
@@ -185,7 +185,7 @@ Plan:           ./product/plans/ready/<file> → ./product/plans/complete/<file>
 Implementation: <one-line summary of the fix>
 Tests:          <count> new tests across <files>
 Spec:           <spec file(s) created or updated, with one-line description of change>
-Docs:           <help.md/user-documentation file(s) updated, or "none needed">
+Docs:           <help/commands.md, help/<command>.md, help/keys.md, and/or user-documentation file(s) updated, or "none needed">
 PR:             <url> (#<number>)
 Status:         merged, or "open — awaiting review" when the playbook that shipped it opens a PR instead of merging
 ```
