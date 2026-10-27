@@ -95,6 +95,8 @@ describe('getOutput help pages', () => {
     expect(helpText()).toBe(text);
     expect(text.startsWith('### Commands')).toBe(true);
     expect(text).toContain('`shell`');
+    const queueRow = text.split('\n').find((line) => line.startsWith('| `queue` |'));
+    expect(queueRow).toContain('Ctrl+E');
     expect(text).not.toContain('### Key Bindings');
   });
 

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the bare-help verification to allow the queue row's shortcut reference.
-
-Existing Issue: Description step D1 says `help` omits `Ctrl+E`, but the returned command table's `queue` row includes `Ctrl+E`. Severity: 2/10
-
-Existing Risk: 3/10 - A reviewer following this step can report a false failure even though bare help correctly omits the separate Key Bindings section.
-
-Proposal Risk: 1/10 - The corrected assertion could still miss another stale command-table detail, though its table and page coverage checks already run in CI.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1799 "correct the bare-help verification expectation". Replace D1 in the PR description's How to verify with: "In the focused command bar, `help` displays the command table headed `### Commands` as formatted Markdown. It includes `help` and `profile`, and omits `### Key Bindings`; the `queue` row still mentions `Ctrl+E`." The tested output includes `Ctrl+E` in the `queue` row while it contains no separate Key Bindings section; `help/commands.md` and `getOutput` in `src/commands.ts` are the source and reader. Correct the description step without changing application output; keep the command-table regression coverage that verifies the row and its ordering.
-
-
 * Correct the `helper` verification for the launch shell.
 
 Existing Issue: Description step D12 expects the application unknown-command message after `helper` is entered in the fresh `janus` shell command bar, but that shell sends unclaimed lines to zsh, which returns `zsh: command not found: helper`. Severity: 2/10
