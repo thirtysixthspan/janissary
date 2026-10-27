@@ -15,7 +15,7 @@ import {
 } from './file/navigator-selection';
 
 export function useFileNavigatorSelection(
-  rows: FileNavigatorRow[], absoluteRoot: string, index?: number, restore?: FileNavigatorRestoreHint,
+  rows: FileNavigatorRow[], absoluteRoot: string, label?: string, restore?: FileNavigatorRestoreHint,
 ) {
   const [state, setState] = useState<FileNavigatorSelection>(EMPTY_SELECTION);
   const previousRows = useRef(rows);
@@ -56,14 +56,14 @@ export function useFileNavigatorSelection(
   // Publish into the registry `ws.ts` answers a `collect-tree-state` request from, and drop this
   // navigator's entry when it unmounts.
   useEffect(() => {
-    if (index === undefined) return;
-    publishNavigatorSelection(index, state);
-  }, [index, state]);
+    if (label === undefined) return;
+    publishNavigatorSelection(label, state);
+  }, [label, state]);
 
   useEffect(() => {
-    if (index === undefined) return;
-    return () => { clearNavigatorSelection(index); };
-  }, [index]);
+    if (label === undefined) return;
+    return () => { clearNavigatorSelection(label); };
+  }, [label]);
 
   const replace = useCallback((path: string | null) => setState(replaceSelection(path)), []);
   // Shift+Arrow's counterpart to a Shift-click: the range math stays in `rangeSelection`, and an

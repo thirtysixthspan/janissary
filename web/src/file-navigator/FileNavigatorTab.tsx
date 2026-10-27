@@ -27,7 +27,7 @@ export function FileNavigatorTab({
   onSplit, multiOpen,
 }: Properties) {
   const intents = useFileNavigatorIntents(client, index, label);
-  const selection = useFileNavigatorSelection(files.rows, files.absoluteRoot, index, files.restore);
+  const selection = useFileNavigatorSelection(files.rows, files.absoluteRoot, label, files.restore);
   const [pendingNewDir, setPendingNewDir] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const treeId = useId();

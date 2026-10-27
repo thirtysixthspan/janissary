@@ -191,15 +191,53 @@ describe('FileNavigatorManager', () => {
     manager.open('files with size', 'janus');
     const label = tabs.find((tab) => tab.label.startsWith('navigator'))!.label;
     manager.toggle(label, 'src');
-    const index = tabs.findIndex((tab) => tab.label === label);
     const subscription = messageBus.on('fileNavigator', 'collect', (event) => {
-      resolveTreeSelections(event.id, [{ index, cursor: 'src/a.ts', anchor: 'src', selected: ['src/a.ts'] }]);
+      resolveTreeSelections(event.id, [{ label, cursor: 'src/a.ts', anchor: 'src', selected: ['src/a.ts'] }]);
     });
 
     const line = await manager.printView(label, 'janus');
     subscription.unsubscribe();
 
     expect(line).toBe('files with size expand src cursor src/a.ts anchor src select src/a.ts $root/');
+  });
+
+  it('prints only the requested navigator selection when tabs reorder during collection', async () => {
+    const manager = run();
+    manager.open('files', 'janus');
+    manager.open('files in other', 'janus');
+    const target = tabs.find((tab) => tab.files?.root === root)!;
+    const other = tabs.find((tab) => tab.files?.root === otherRoot)!;
+    const subscription = messageBus.on('fileNavigator', 'collect', (event) => {
+      tabs = [...tabs].toReversed();
+      resolveTreeSelections(event.id, [
+        { label: target.label, cursor: 'target.ts', selected: ['target.ts'] },
+        { label: other.label, cursor: 'other.ts', selected: ['other.ts'] },
+      ]);
+    });
+
+    const line = await manager.printView(target.label, 'janus');
+    subscription.unsubscribe();
+
+    expect(line).toBe('files cursor target.ts select target.ts $root/');
+    expect(line).not.toContain('other.ts');
+  });
+
+  it('omits a selection reply when its navigator closes during collection', async () => {
+    const manager = run();
+    manager.open('files', 'janus');
+    const target = tabs.find((tab) => tab.files?.root === root)!;
+    const subscription = messageBus.on('fileNavigator', 'collect', (event) => {
+      resolveTreeSelections(event.id, [
+        { label: target.label, cursor: 'src/a.ts', selected: ['src/a.ts'] },
+      ]);
+      manager.closeTab(target.label);
+      tabs = tabs.filter((tab) => tab.label !== target.label);
+    });
+
+    const line = await manager.printView(target.label, 'janus');
+    subscription.unsubscribe();
+
+    expect(line).toBe('files $root/');
   });
 
   it('prints a local tree without selection clauses when no client answers', async () => {

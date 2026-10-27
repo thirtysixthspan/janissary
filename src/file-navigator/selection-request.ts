@@ -1,5 +1,5 @@
 import { messageBus } from '../bus.js';
-import type { FileNavigatorSelectionRecord } from '../protocol.js';
+import type { FileNavigatorSelectionRecord } from '../protocol/file-navigator.js';
 
 // The round trip for a file navigator's client-only state. A tree's expanded directories live on
 // the server, but its cursor, range anchor, and multi-row selection are React state in the web
@@ -17,15 +17,15 @@ const REPLY_TIMEOUT_MS = 250;
 
 type Pending = {
   id: number;
-  resolve: (selections: Map<number, TreeSelection>) => void;
+  resolve: (selections: Map<string, TreeSelection>) => void;
   timer: ReturnType<typeof setTimeout>;
-  promise?: Promise<Map<number, TreeSelection>>;
+  promise?: Promise<Map<string, TreeSelection>>;
 };
 
 let pending: Pending | undefined;
 let nextId = 1;
 
-function settle(selections: Map<number, TreeSelection>): void {
+function settle(selections: Map<string, TreeSelection>): void {
   if (!pending) return;
   clearTimeout(pending.timer);
   const { resolve } = pending;
@@ -33,13 +33,13 @@ function settle(selections: Map<number, TreeSelection>): void {
   resolve(selections);
 }
 
-// Ask every connected client for its navigators' selections, keyed by tab index. A caller joining a
+// Ask every connected client for its navigators' selections, keyed by tab label. A caller joining a
 // request already in flight gets the same answer, captured at the same moment.
-export function requestTreeSelections(timeoutMs = REPLY_TIMEOUT_MS): Promise<Map<number, TreeSelection>> {
+export function requestTreeSelections(timeoutMs = REPLY_TIMEOUT_MS): Promise<Map<string, TreeSelection>> {
   if (pending) return pending.promise ?? Promise.resolve(new Map());
   const id = nextId++;
   let request: Pending | undefined;
-  const promise = new Promise<Map<number, TreeSelection>>((resolve) => {
+  const promise = new Promise<Map<string, TreeSelection>>((resolve) => {
     request = { id, resolve, timer: setTimeout(() => { settle(new Map()); }, timeoutMs) };
     pending = request;
   });
@@ -55,9 +55,9 @@ export function requestTreeSelections(timeoutMs = REPLY_TIMEOUT_MS): Promise<Map
 // window answered first.
 export function resolveTreeSelections(id: number, records: FileNavigatorSelectionRecord[]): void {
   if (pending?.id !== id) return;
-  const selections = new Map<number, TreeSelection>();
+  const selections = new Map<string, TreeSelection>();
   for (const record of records) {
-    selections.set(record.index, { cursor: record.cursor, anchor: record.anchor, selected: record.selected });
+    selections.set(record.label, { cursor: record.cursor, anchor: record.anchor, selected: record.selected });
   }
   settle(selections);
 }

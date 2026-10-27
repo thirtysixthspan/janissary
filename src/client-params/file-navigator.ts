@@ -9,11 +9,11 @@ const DETAILS = ['name', 'size', 'modified', 'permissions'];
 const OPENER_COMMANDS = ['open', 'edit', 'open external'];
 const PASTE_MODES = ['copy', 'cut'];
 
-// One navigator's reported selection: the tab index it belongs to, its selected tree-relative
+// One navigator's reported selection: the tab label it belongs to, its selected tree-relative
 // paths, and the optional cursor/anchor rows.
 function isSelectionRecord(value: unknown): boolean {
   return isRecord(value)
-    && isInteger(value.index)
+    && isString(value.label)
     && isStringArray(value.selected)
     && optionalString(value.cursor)
     && optionalString(value.anchor);

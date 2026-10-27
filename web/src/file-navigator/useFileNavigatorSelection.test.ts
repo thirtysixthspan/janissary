@@ -112,7 +112,7 @@ describe('restoring a saved tree selection', () => {
   it('seeds cursor, anchor, and selection from the hint', () => {
     const visible = rows(['a', 'b']);
     const { result } = renderHook(() =>
-      useFileNavigatorSelection(visible, '/root', 0, { revision: 1, cursor: 'b', anchor: 'a', selected: ['a', 'b'] }));
+      useFileNavigatorSelection(visible, '/root', 'navigator', { revision: 1, cursor: 'b', anchor: 'a', selected: ['a', 'b'] }));
 
     expect(result.current.cursor).toBe('b');
     expect(result.current.anchor).toBe('a');
@@ -124,7 +124,7 @@ describe('restoring a saved tree selection', () => {
     const collapsed = rows(['src', 'README.md']);
     const initialHint: FileNavigatorRestoreHint = { revision: 0 };
     const { result, rerender } = renderHook(
-      ({ visible, hint }) => useFileNavigatorSelection(visible, '/root', 0, hint),
+      ({ visible, hint }) => useFileNavigatorSelection(visible, '/root', 'navigator', hint),
       { initialProps: { visible: expanded, hint: initialHint } },
     );
     act(() => { result.current.replace('src'); });
@@ -142,7 +142,7 @@ describe('restoring a saved tree selection', () => {
     const collapsed = rows(['src', 'README.md']);
     const initialHint: FileNavigatorRestoreHint = { revision: 0 };
     const { result, rerender } = renderHook(
-      ({ visible, hint }) => useFileNavigatorSelection(visible, '/root', 0, hint),
+      ({ visible, hint }) => useFileNavigatorSelection(visible, '/root', 'navigator', hint),
       { initialProps: { visible: expanded, hint: initialHint } },
     );
     act(() => { result.current.replace('src/nested/a.ts'); });
@@ -160,7 +160,7 @@ describe('restoring a saved tree selection', () => {
   it('does not re-apply the same revision over a selection the user has since changed', () => {
     const visible = rows(['a', 'b']);
     const hint = { revision: 1, cursor: 'b', anchor: 'b', selected: ['b'] };
-    const { result, rerender } = renderHook(() => useFileNavigatorSelection(visible, '/root', 0, hint));
+    const { result, rerender } = renderHook(() => useFileNavigatorSelection(visible, '/root', 'navigator', hint));
     act(() => { result.current.replace('a'); });
     expect(result.current.cursor).toBe('a');
 
@@ -172,7 +172,7 @@ describe('restoring a saved tree selection', () => {
   it('applies a hint again once its revision changes', () => {
     const visible = rows(['a', 'b']);
     const { result, rerender } = renderHook(
-      ({ hint }) => useFileNavigatorSelection(visible, '/root', 0, hint),
+      ({ hint }) => useFileNavigatorSelection(visible, '/root', 'navigator', hint),
       { initialProps: { hint: { revision: 1, cursor: 'b', anchor: 'b', selected: ['b'] } } },
     );
     act(() => { result.current.replace('a'); });
@@ -184,20 +184,20 @@ describe('restoring a saved tree selection', () => {
 });
 
 describe('publishing a navigator selection for profile save', () => {
-  it('publishes under its tab index and clears the entry on unmount', () => {
+  it('publishes under its tab label and clears the entry on unmount', () => {
     const visible = rows(['a', 'b']);
-    const { result, unmount } = renderHook(() => useFileNavigatorSelection(visible, '/root', 3));
+    const { result, unmount } = renderHook(() => useFileNavigatorSelection(visible, '/root', 'navigator'));
 
     act(() => { result.current.replace('a'); });
     expect(collectNavigatorSelections()).toEqual([
-      { index: 3, cursor: 'a', anchor: 'a', selected: ['a'] },
+      { label: 'navigator', cursor: 'a', anchor: 'a', selected: ['a'] },
     ]);
 
     unmount();
     expect(collectNavigatorSelections()).toEqual([]);
   });
 
-  it('publishes nothing when the hook is given no tab index', () => {
+  it('publishes nothing when the hook is given no tab label', () => {
     const visible = rows(['a']);
     const { result } = renderHook(() => useFileNavigatorSelection(visible, '/root'));
     act(() => { result.current.replace('a'); });

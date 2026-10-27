@@ -42,10 +42,10 @@ export type FileNavigatorMutationResults = {
   redoFileNavigatorItem: UndoRedoResult;
 };
 
-// One navigator's client-side selection, keyed by the tab `index` every other `fileNavigator*` RPC
-// uses. Paths are relative to that tree's root, matching the server's own `expanded` vocabulary.
+// One navigator's client-side selection, keyed by its stable tab label rather than its position.
+// Paths are relative to that tree's root, matching the server's own `expanded` vocabulary.
 export type FileNavigatorSelectionRecord = {
-  index: number;
+  label: string;
   cursor?: string;
   anchor?: string;
   selected: string[];
@@ -146,7 +146,7 @@ export type FileNavigatorRpcCall =
   // the server did not offer it. Fire-and-forget; the plugin's own tab is the result.
   | { method: 'runFileNavigatorSelectionAction'; params: { index: number; paths: string[]; action: string } }
   // Answer to a `collect-tree-state` event: every mounted file navigator's cursor/anchor/selection,
-  // tagged with the request `id` so a late reply to an earlier `profile save` is discarded.
+  // tagged with the request `id` so a late reply to an earlier request is discarded.
   // Fire-and-forget — the server sends no reply of its own.
   | { method: 'reportFileNavigatorSelection'; params: { id: number; navigators: FileNavigatorSelectionRecord[] } }
   // Undo/redo the most recent move in a file navigator tab's per-tab undo/redo stack. `overwrite`

@@ -176,7 +176,7 @@ describe('createFileNavigatorControllerAdapter', () => {
     });
   });
 
-  // The save-time round trip: the client answers the id the request went out with, and the adapter
+  // The tree-selection round trip: the client answers the id the request went out with, and the adapter
   // has to hand that id through untouched or the answer lands on nothing.
   it('settles the outstanding tree-selection request with the client records', async () => {
     const { managers } = makeManagers();
@@ -186,8 +186,8 @@ describe('createFileNavigatorControllerAdapter', () => {
     subscription.unsubscribe();
 
     createFileNavigatorControllerAdapter(managers)
-      .reportFileNavigatorSelection(id, [{ index: 0, cursor: 'a.ts', selected: ['a.ts'] }]);
+      .reportFileNavigatorSelection(id, [{ label: 'navigator', cursor: 'a.ts', selected: ['a.ts'] }]);
 
-    expect(await selections).toEqual(new Map([[0, { cursor: 'a.ts', anchor: undefined, selected: ['a.ts'] }]]));
+    expect(await selections).toEqual(new Map([['navigator', { cursor: 'a.ts', anchor: undefined, selected: ['a.ts'] }]]));
   });
 });

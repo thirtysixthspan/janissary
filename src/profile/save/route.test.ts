@@ -68,6 +68,24 @@ describe('captureTab routing', () => {
     expect(state.skipped).toEqual([]);
   });
 
+  it('captures a navigator selection by label rather than its current tab position', () => {
+    const preceding = tab({ label: 'preceding', view: 'notifications' });
+    const files = tab({
+      label: 'navigator', view: 'files',
+      files: { root: '/project', absoluteRoot: '/project' },
+    });
+    const state = newCaptureState();
+    const selections = new Map([['navigator', {
+      cursor: 'src/a.ts', anchor: 'src', selected: ['src/a.ts'],
+    }]]);
+
+    captureTab(files, managers([preceding, files]), state, selections);
+
+    expect(state.tabEntries[0]).toMatchObject({
+      type: 'files', cursor: 'src/a.ts', anchor: 'src', selected: ['src/a.ts'],
+    });
+  });
+
   // A monitor reporting tab is captured through the monitor manager's snapshot instead, so routing
   // it here would write a second, thinner copy of the same thing. It is a no-op, not a skip.
   it('drops a monitor tab without counting or reporting it', () => {

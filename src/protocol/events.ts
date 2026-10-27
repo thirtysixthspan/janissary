@@ -41,8 +41,9 @@ export type LayoutUpdate = {
 };
 export type LayoutEvent = { t: 'layout' } & LayoutUpdate;
 // Asks every connected client to report its file navigators' cursor/anchor/selection, which live
-// only in client state. Issued by `profile save`, which waits briefly for the matching
-// `reportFileNavigatorSelection` reply before writing the file — see src/file-navigator/selection-request.ts.
+// only in client state. `profile save` and `files print` wait briefly for the matching
+// `reportFileNavigatorSelection` reply before saving a profile or formatting the command — see
+// src/file-navigator/selection-request.ts.
 export type CollectTreeStateEvent = { t: 'collect-tree-state'; id: number };
 // One notification to show as a toast in the window's upper-right corner, because no notifications
 // feed is on screen to carry it. The originating tab's label, the message body, and the tab's dot
