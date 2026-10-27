@@ -222,6 +222,45 @@ describe('FileNavigatorManager', () => {
     expect(line).not.toContain('other.ts');
   });
 
+  it('omits selection replies when the navigator reroots during collection', async () => {
+    mkdirSync(path.join(root, 'sub'));
+    const manager = run();
+    manager.open('files', 'janus');
+    const target = tabs.find((tab) => tab.files?.root === root)!;
+    const subscription = messageBus.on('fileNavigator', 'collect', (event) => {
+      manager.reroot(target.label, 'sub');
+      resolveTreeSelections(event.id, [
+        { label: target.label, cursor: 'old.ts', anchor: 'old.ts', selected: ['old.ts'] },
+      ]);
+    });
+
+    const line = await manager.printView(target.label, 'janus');
+    subscription.unsubscribe();
+
+    expect(line).toBe('files $root/sub');
+    expect(line).not.toContain('old.ts');
+  });
+
+  it('omits selection replies when the navigator is retargeted during collection', async () => {
+    const manager = run();
+    manager.open('files', 'janus');
+    const target = tabs.find((tab) => tab.files?.root === root)!;
+    const subscription = messageBus.on('fileNavigator', 'collect', (event) => {
+      manager.openOrRetarget('other');
+      resolveTreeSelections(event.id, [
+        { label: target.label, cursor: 'old.ts', anchor: 'old.ts', selected: ['old.ts'] },
+      ]);
+    });
+
+    const line = await manager.printView(target.label, 'janus');
+    subscription.unsubscribe();
+
+    expect(line).toContain(path.basename(otherRoot));
+    expect(line).not.toContain('cursor');
+    expect(line).not.toContain('anchor');
+    expect(line).not.toContain('select');
+  });
+
   it('omits a selection reply when its navigator closes during collection', async () => {
     const manager = run();
     manager.open('files', 'janus');

@@ -272,8 +272,11 @@ export class FileNavigatorManager extends WatchedFilesTabs {
     if (!tab.files) return `files: "${name}" is not a file navigator`;
     const state = this.tabs.get(tab.label);
     if (!state) return `files: "${name}" is not a file navigator`;
+    const capturedRoot = state.root;
     const selections = state.remote ? undefined : await requestTreeSelections();
-    const selection = this.tabs.get(tab.label) === state ? selections?.get(tab.label) : undefined;
+    const selection = this.tabs.get(tab.label) === state && state.root === capturedRoot
+      ? selections?.get(tab.label)
+      : undefined;
     const remote = state.remote
       ? {
           ownerLabel: state.ownerLabel ?? tab.label,

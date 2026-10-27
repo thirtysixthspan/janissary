@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Keep printed selections bound to the navigator root captured before the client reply.
-
-Existing Issue: `FileNavigatorManager.printView` checks that the navigator state object remains open after waiting for selections but uses its possibly changed root, so an in-place retarget can pair the old tree's selection with a new root. Severity: 4/10
-
-Existing Risk: 4/10 - If the navigator is rerooted or retargeted during the selection request, the printed reusable command can highlight unrelated rows in the new tree.
-
-Proposal Risk: 1/10 - Omitting the selection when the captured navigator's root changes prevents a delayed reply from being applied to a different tree root.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1803 "bind printed selections to the captured navigator root". In `src/file-navigator/manager.ts`, capture the target state's root before awaiting `requestTreeSelections` and use the returned selection only if the same state is still registered under the label and its root still matches the captured root. Add `src/file-navigator/manager.test.ts` coverage that reroots the target or retargets it through `src/file-navigator/open.ts` while selection collection is pending and confirms the printed command omits the stale selection clauses. Preserve the existing tab-reordering and closed-navigator regressions in that test file.
-
-
 * Preserve profile paths ending in a backslash when those paths do not need quoting.
 
 Existing Issue: `filesCommand` in `src/profile/files.ts` wraps every profile path in double quotes, and the shared token reader treats a backslash before the closing quote as an escape, so a simple path ending in a backslash no longer reaches the navigator unchanged. Severity: 4/10

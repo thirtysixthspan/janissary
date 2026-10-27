@@ -568,10 +568,12 @@ changing a tree. It resolves the name or display alias of an open file navigator
 root, dock, non-default detail mode, sorted expanded folders, cursor, anchor, and selected rows in
 that order. A local root inside `.janissary` retains that path segment in its `$root` form. The
 client selection is requested once; if no client replies before the timeout, the command is printed
-without the selection clauses. The request is tied to the navigator by its stable tab label, so a tab
-reorder while waiting cannot substitute another tree's selection. If the target tree closes before
-its selection arrives, its selection clauses are omitted. A remote tree prints its owner, dock,
-detail mode, and `$root` path, but no view clauses. A path containing whitespace or a quote is
+without the selection clauses. The reply is tied to the navigator by its stable tab label, so a tab
+reorder while waiting cannot substitute another tree's selection. Its root is captured when the
+request starts; if the same navigator is re-rooted or retargeted before the reply arrives, the reply's
+selection clauses are omitted. If the target tree closes before its selection arrives, its selection
+clauses are also omitted. A remote tree prints its owner, dock, detail mode, and `$root` path, but no
+view clauses. A path containing whitespace or a quote is
 double-quoted, with each double
 quote escaped as `\"`; because quoted tokens do not escape a final backslash, that path spelling
 does not round-trip. The exact replies are `No tab named "<name>".`, `files: "<name>" is not a file
