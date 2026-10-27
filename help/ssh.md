@@ -2,9 +2,11 @@
 
 Open an SSH session to a remote host in a full-tab terminal.
 
+Janissary passes the full invocation to `ssh` as written; SSH handles its own flags and remote command. Put connection options before the destination; add a remote command after it.
+
 **Usage**
 
-`ssh <address>`
+`ssh <destination> [ssh options…]`
 
 **Use cases**
 
@@ -14,3 +16,5 @@ Open an SSH session to a remote host in a full-tab terminal.
 **Examples**
 
 - `ssh devbox` opens an SSH terminal for `devbox`.
+- `ssh -p 2222 -i ~/.ssh/id_ed25519 admin@devbox` connects as `admin` on port `2222` using the specified identity file.
+- `ssh devbox uptime` runs `uptime` on `devbox`.

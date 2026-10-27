@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Show the complete SSH invocation in the command help page.
-
-Existing Issue: `help/ssh.md` lists only `ssh <address>`, omitting the SSH options and remote command arguments accepted after the destination and documented by `product/specs/ssh-tab.md`. Severity: 5/10
-
-Existing Risk: 5/10 - Users who need a port, identity file, jump host, or remote command may incorrectly conclude that the SSH command cannot express those connection forms.
-
-Proposal Risk: 2/10 - Showing the pass-through argument form and valid examples makes existing SSH capabilities discoverable without changing the command.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1799 "show SSH options in command help". Update `help/ssh.md` to use the signature `ssh <destination> [ssh options…]` and explain that arguments after the destination are passed to SSH. Add valid examples such as a port/identity-file invocation and a remote command, checked against `product/specs/ssh-tab.md` and `src/commands/ssh.ts`. Keep runtime behavior unchanged; existing SSH behavior remains covered by `src/ssh.test.ts` and `src/ssh-manager.test.ts`.
-
-
 * Show the plan's supported tab and group target syntax for monitors.
 
 Existing Issue: `help/monitor.md` and `help/unmonitor.md` use an unspecified `<target>` even though monitor targets accept tab labels or the literal `group:<n>` form, leaving users without the syntax for selecting or removing a group. Severity: 4/10
