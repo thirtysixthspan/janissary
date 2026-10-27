@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's collapse fallback when a command changes the cursor on an already-open tree.
-
-Existing Issue: When an existing tree has an anchor hidden by collapse and the same command sets a new cursor, `useFileNavigatorSelection` reconciles rows before applying the restore hint, so the anchor falls back to the old cursor instead of the command's cursor. Severity: 5/10
-
-Existing Risk: 5/10 - The visible cursor and range anchor diverge, so a later Shift selection extends from an unintended row.
-
-Proposal Risk: 2/10 - Coordinating partial-restore reconciliation could alter profile behavior if full replacements are not kept distinct.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1803 "make collapse fallback use the command cursor". In `web/src/file-navigator/useFileNavigatorSelection.ts`, coordinate row reconciliation with partial restore application so when the command changes the cursor and collapses a folder in one revision, a hidden current anchor resets to the post-command cursor; preserve a still-visible current anchor and preserve profile restores' full-replacement behavior. Add a regression in `web/src/file-navigator/FileNavigatorTab.test.tsx` that seeds cursor, anchor, and selection under a folder, applies a cursor-only restore while the folder collapses, and asserts the new cursor is also the anchor while hidden selections disappear. Keep the existing once-per-revision and profile-restore cases passing.
-
-
 * Clarify the technical debt in the shared restore hint's profile-only comments.
 
 Existing Issue: `FileNavigatorView.restore` is documented as profile-only and absent on trees not launched from a profile, but `applyViewSteps` now writes it for command restores too. Severity: 2/10

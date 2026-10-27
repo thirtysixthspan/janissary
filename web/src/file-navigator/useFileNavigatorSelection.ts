@@ -23,23 +23,35 @@ export function useFileNavigatorSelection(
   const appliedRestore = useRef<number | undefined>(undefined);
 
   useEffect(() => {
-    if (previousRoot.current !== absoluteRoot) {
-      previousRoot.current = absoluteRoot;
-      previousRows.current = rows;
-      setState(EMPTY_SELECTION);
-      return;
-    }
-    setState((current) => reconcileSelection(current, previousRows.current, rows));
+    const rootChanged = previousRoot.current !== absoluteRoot;
+    const rowsBefore = previousRows.current;
+    const pendingRestore = restore && appliedRestore.current !== restore.revision ? restore : undefined;
+    if (!rootChanged && rowsBefore === rows && !pendingRestore) return;
+    if (pendingRestore) appliedRestore.current = pendingRestore.revision;
+    previousRoot.current = absoluteRoot;
     previousRows.current = rows;
-  }, [absoluteRoot, rows]);
 
-  // A restore hint is applied once per revision, so the repeated full-state broadcasts never
-  // overwrite a selection the user has changed since the launch.
-  useEffect(() => {
-    if (!restore || appliedRestore.current === restore.revision) return;
-    appliedRestore.current = restore.revision;
-    setState((current) => selectionFromRestore(restore, rows, current));
-  }, [restore, rows]);
+    setState((current) => {
+      if (rootChanged) {
+        const reset = EMPTY_SELECTION;
+        return pendingRestore ? selectionFromRestore(pendingRestore, rows, reset) : reset;
+      }
+
+      const reconciled = reconcileSelection(current, rowsBefore, rows);
+      if (!pendingRestore) return reconciled;
+
+      const replacesSelection = pendingRestore.cursor !== undefined
+        && pendingRestore.anchor !== undefined
+        && pendingRestore.selected !== undefined;
+      if (replacesSelection) return selectionFromRestore(pendingRestore, rows, reconciled);
+
+      return reconcileSelection(
+        selectionFromRestore(pendingRestore, rows, current),
+        rowsBefore,
+        rows,
+      );
+    });
+  }, [absoluteRoot, restore, rows]);
 
   // Publish into the registry `ws.ts` answers a `collect-tree-state` request from, and drop this
   // navigator's entry when it unmounts.

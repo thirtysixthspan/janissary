@@ -77,6 +77,45 @@ describe('FileNavigatorTab', () => {
     expect(screen.getByText('index.ts').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
   });
 
+  it('uses a command cursor as the anchor when the same update collapses its previous anchor', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const expandedRows = [
+      { path: 'src', name: 'src', depth: 0, dir: true, expanded: true },
+      { path: 'src/nested', name: 'nested', depth: 1, dir: true, expanded: true },
+      { path: 'src/nested/a.ts', name: 'a.ts', depth: 2, dir: false },
+      { path: 'src/nested/b.ts', name: 'b.ts', depth: 2, dir: false },
+      { path: 'README.md', name: 'README.md', depth: 0, dir: false },
+    ];
+    const { container, rerender } = render(
+      <FileNavigatorTab files={makeFiles({ rows: expandedRows })} client={client} index={0} label="files" />,
+    );
+    fireEvent.mouseDown(screen.getByText('a.ts'), { button: 0 });
+    fireEvent.mouseDown(screen.getByText('b.ts'), { button: 0, shiftKey: true });
+
+    rerender(<FileNavigatorTab
+      files={makeFiles({
+        rows: [
+          { path: 'src', name: 'src', depth: 0, dir: true, expanded: true },
+          { path: 'src/nested', name: 'nested', depth: 1, dir: true, expanded: false },
+          { path: 'README.md', name: 'README.md', depth: 0, dir: false },
+        ],
+        restore: { revision: 1, cursor: 'README.md' },
+      })}
+      client={client}
+      index={0}
+      label="files"
+    />);
+
+    expect(container.querySelectorAll('[aria-selected="true"]')).toHaveLength(0);
+    expect(screen.getByText('README.md').closest<HTMLElement>('[role="treeitem"]')?.dataset.cursor).toBe('true');
+
+    fireEvent.keyDown(container.querySelector('[role="tree"]')!, { key: 'ArrowUp', shiftKey: true });
+
+    const selectedPaths = [...container.querySelectorAll<HTMLElement>('[aria-selected="true"]')]
+      .map((row) => row.dataset.path);
+    expect(selectedPaths).toEqual(['src/nested', 'README.md']);
+  });
+
   it('renders a git-changed row with the files-name--changed class and leaves clean rows without it', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const files = makeFiles({

@@ -548,8 +548,9 @@ collapses all folders. A collapse of a folder that is not open does nothing. `cu
 `select` affect only a row visible when that clause runs. Repeated cursor or anchor clauses use the
 last path that survives, and repeated `select` clauses add visible rows. A later collapse drops
 hidden selected rows, moves a hidden cursor to its nearest visible ancestor, and resets a hidden
-anchor to that cursor. If the command names no cursor, the client resets a hidden anchor to its
-current cursor.
+anchor to that cursor. If the command names a cursor while hiding the current anchor, that hidden
+anchor resets to the command's cursor; a still-visible current anchor is preserved. If the command
+names no cursor, the client resets a hidden anchor to its current cursor.
 
 On an already-open local tree, the command changes only the parts it names; a dropped path counts as
 not given, so it does not clear an existing part. A command selection never moves keyboard focus.
