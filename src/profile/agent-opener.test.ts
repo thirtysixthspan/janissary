@@ -244,7 +244,7 @@ describe('openProfileEntries — profile-level file navigator', () => {
       managers, 'demo', 'janus', (text) => { messages.push(text); },
     );
 
-    expect(fileNavigatorOpen).toHaveBeenCalledWith('files on left "$root/"', 'janus');
+    expect(fileNavigatorOpen).toHaveBeenCalledWith('files on left $root/', 'janus');
     expect(edit).toHaveBeenCalledWith('edit $root/notes.md', '$root/notes.md', 'janus', undefined);
     expect(messages.join(' ')).not.toContain('no tab to root it at');
   });

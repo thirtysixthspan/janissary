@@ -3,6 +3,16 @@ import type { Managers } from '../managers.js';
 import type { ProfileFilesEntry } from './types.js';
 import type { MainAreaCandidate } from './focus.js';
 
+const FILES_KEYWORDS = new Set([
+  'in', 'on', 'with', 'left', 'right', 'expand', 'collapse', 'cursor', 'anchor', 'select', 'print',
+]);
+
+function profilePath(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed && !/[\s'"]/u.test(trimmed) && !FILES_KEYWORDS.has(trimmed.toLowerCase())) return trimmed;
+  return `"${trimmed.replaceAll('"', String.raw`\"`)}"`;
+}
+
 // Open each profile-level file-navigator tab once every entry is open, rooted at `defaultLabel`
 // (the profile's first newly opened tab, or the issuing tab when the launch opened none of its own)
 // unless the entry names its own `in` target. An entry's `path`, when set, is appended after the
@@ -19,7 +29,7 @@ function filesCommand(entry: ProfileFilesEntry): string {
     entry.in ? `in ${entry.in}` : '',
     entry.dock ? `on ${entry.dock}` : '',
     entry.details ? `with ${entry.details}` : '',
-    entry.path ? `"${entry.path.trim().replaceAll('"', String.raw`\"`)}"` : '',
+    entry.path ? profilePath(entry.path) : '',
   ].filter(Boolean).join(' ');
   return `files ${clauses}`.trim();
 }

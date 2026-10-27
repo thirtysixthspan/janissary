@@ -43,6 +43,11 @@ describe('parseFileNavigatorArgs', () => {
     expectOpen('src/sub in claude', { inLabel: 'claude', dock: null, target: 'src/sub' });
   });
 
+  it('preserves a trailing backslash in an unquoted single-token path', () => {
+    expectOpen('folder\\', { target: 'folder\\' });
+    expectOpen('on left folder\\', { dock: 'left', target: 'folder\\' });
+  });
+
   it('decodes quoted labels with spaces and escaped quotes before a path', () => {
     expectOpen('in "review team" src', { inLabel: 'review team', target: 'src' });
     expectOpen(String.raw`in "review \"team\"" src`, { inLabel: 'review "team"', target: 'src' });
