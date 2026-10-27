@@ -69,6 +69,7 @@ export function App({ client }: { client: JanusClient }) {
   // here, per tab, so returning to a tab shows what was left in its bar.
   const {
     sidebarLeftWidth, setSidebarLeftWidth, sidebarRightWidth, setSidebarRightWidth, reportingHeightPct, setReportingHeightPct,
+    splitPct, setSplitPct,
     focusLeft, focusRight,
   } = useLayoutState(client);
 
@@ -207,7 +208,8 @@ export function App({ client }: { client: JanusClient }) {
       tabNameMaxLength={tabNameMaxLength} activeTabNameMaxLength={activeTabNameMaxLength}
       sidebarLeftWidth={sidebarLeftWidth} setSidebarLeftWidth={setSidebarLeftWidth}
       sidebarRightWidth={sidebarRightWidth} setSidebarRightWidth={setSidebarRightWidth}
-      reportingHeightPct={reportingHeightPct} setReportingHeightPct={setReportingHeightPct}
+       reportingHeightPct={reportingHeightPct} setReportingHeightPct={setReportingHeightPct}
+       splitPct={splitPct} setSplitPct={setSplitPct}
       focusLeft={focusLeft} focusRight={focusRight}
       harnessHandles={harnessHandles} questionPanelRef={questionPanelRef}
       tabHandles={tabHandles}

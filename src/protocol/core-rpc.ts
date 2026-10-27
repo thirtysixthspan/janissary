@@ -38,10 +38,10 @@ export type CoreRpcCall =
   // cannot work them out for itself. `palette` is optional: a surface that reports without it still
   // records `fg`/`bg` alone.
   | { method: 'reportTerminalColors'; params: { id: string; fg: string; bg: string; palette?: readonly string[] } }
-  // Report the client's current sidebar/tab-area sizes after a manual resize completes, so the
-  // server always holds the latest values for `profile save` to read synchronously into a profile's
-  // `layout` key. Client-only, no reply — the reverse of the server->client `layout` event.
-  | { method: 'reportLayout'; params: { sidebarLeft: number; sidebarRight: number; tabAreaPct: number } }
+  // Report the client's current sizes on connect and after a manual resize completes, so the server
+  // always holds the latest values for `profile save` to read synchronously. Client-only, no reply —
+  // the reverse of the server->client `layout` event.
+  | { method: 'reportLayout'; params: { sidebarLeft: number; sidebarRight: number; tabAreaPct: number; splitPct: number } }
   // Dock a dockable tab (file navigator or notifications) into a sidebar (`'left'` | `'right'`), or
   // undock it back to the center tab strip (`null`). Explicit set, not "cycle" — the cycle order
   // lives client-side. The handler is generic, so both dockable tab kinds share this one RPC.

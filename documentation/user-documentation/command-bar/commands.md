@@ -9,6 +9,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `agent [launch options] execute <task> [parameters...]` | Run a task autonomously in a new local ACP session; see [Autonomous task execution](/user-documentation/advanced-agents/agent-command) |
 | `help [<command>]` | List available commands, or show one command's usage, use cases, and examples |
 | `help keys` | List every key binding |
+| `layout` | `layout window <width> <height>`, `layout sidebar left\|right <width>`, `layout split <percent>`, or `layout reporting <percent>` sets a size; `layout show` prints the current ones |
 | `diff [path]` | Open the [diff tab](/user-documentation/tab-types/diff-tab) on the project's changes, optionally scoped to a directory |
 | `newfile <file>` | Open a new unsaved text file; see [Creating a file or directory](/user-documentation/tab-types/opening-files#create-a-file-or-directory) |
 | `newdir <directory>` | Create a directory immediately under an existing parent; see [Creating a file or directory](/user-documentation/tab-types/opening-files#create-a-file-or-directory) |

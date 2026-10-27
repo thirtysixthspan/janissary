@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { JanusClient } from './shared/ws/ws';
 import { DEFAULT_WIDTH_PX } from './Sidebar';
 import { DEFAULT_PCT } from './ReportingSection';
+import { DEFAULT_SPLIT_PCT } from './CenterActionArea';
 
 type DockedView = 'files' | 'notifications';
 
@@ -12,13 +13,15 @@ export type LayoutState = {
   setSidebarRightWidth: (width: number) => void;
   reportingHeightPct: number;
   setReportingHeightPct: (heightPct: number) => void;
+  splitPct: number;
+  setSplitPct: (splitPct: number) => void;
   focusLeft?: DockedView;
   focusRight?: DockedView;
 };
 
-// Sidebar widths, the reporting-section height percentage, and which docked tab should be visible
-// per side, hoisted out of Sidebar/ReportingSection's own state so a profile's `layout` key (and,
-// for focus, its `notifications` `focus` field) can drive them too (see
+// Sidebar widths, the reporting-section height percentage, the center split, and which docked tab
+// should be visible per side, hoisted so server layout updates can drive them (and, for focus, a
+// profile's `notifications` `focus` field; see
 // product/specs/profiles.md's "Profile-level layout" section). A `layout` WS event patches
 // whichever fields it carries, leaving the rest untouched. Split out of App.tsx to keep it under
 // the file-size limit.
@@ -26,8 +29,11 @@ export function useLayoutState(client: JanusClient): LayoutState {
   const [sidebarLeftWidth, setSidebarLeftWidth] = useState(DEFAULT_WIDTH_PX);
   const [sidebarRightWidth, setSidebarRightWidth] = useState(DEFAULT_WIDTH_PX);
   const [reportingHeightPct, setReportingHeightPct] = useState(DEFAULT_PCT);
+  const [splitPct, setSplitPct] = useState(DEFAULT_SPLIT_PCT);
   const [focusLeft, setFocusLeft] = useState<DockedView | undefined>(undefined);
   const [focusRight, setFocusRight] = useState<DockedView | undefined>(undefined);
+  const layoutRef = useRef({ sidebarLeftWidth, sidebarRightWidth, reportingHeightPct, splitPct });
+  layoutRef.current = { sidebarLeftWidth, sidebarRightWidth, reportingHeightPct, splitPct };
 
   useEffect(() => client.onLayout((event) => {
     if (event.sidebarLeft !== undefined) setSidebarLeftWidth(event.sidebarLeft);
@@ -35,30 +41,53 @@ export function useLayoutState(client: JanusClient): LayoutState {
     // tabAreaPct is the upper action area's share; ReportingSection's heightPct is the lower
     // reporting area's share, so the two are complementary.
     if (event.tabAreaPct !== undefined) setReportingHeightPct(100 - event.tabAreaPct);
+    if (event.splitPct !== undefined) setSplitPct(event.splitPct);
     if (event.focusLeft !== undefined) setFocusLeft(event.focusLeft);
     if (event.focusRight !== undefined) setFocusRight(event.focusRight);
   }), [client]);
+
+  useEffect(() => {
+    const report = () => {
+      const layout = layoutRef.current;
+      client.reportLayout(
+        layout.sidebarLeftWidth,
+        layout.sidebarRightWidth,
+        100 - layout.reportingHeightPct,
+        layout.splitPct,
+      );
+    };
+    const unsubscribe = client.onConnectionStatus((phase) => {
+      if (phase === 'connected') report();
+    });
+    report();
+    return unsubscribe;
+  }, [client]);
 
   // Report a manual resize back to the server (the reverse of the `layout` event above), so
   // `profile save` can read the live sizes. Not fired for server-driven updates (the setters
   // above, called from onLayout, bypass these wrappers).
   const reportSidebarLeftWidth = (width: number) => {
     setSidebarLeftWidth(width);
-    client.reportLayout(width, sidebarRightWidth, 100 - reportingHeightPct);
+    client.reportLayout(width, sidebarRightWidth, 100 - reportingHeightPct, splitPct);
   };
   const reportSidebarRightWidth = (width: number) => {
     setSidebarRightWidth(width);
-    client.reportLayout(sidebarLeftWidth, width, 100 - reportingHeightPct);
+    client.reportLayout(sidebarLeftWidth, width, 100 - reportingHeightPct, splitPct);
   };
   const reportReportingHeightPct = (heightPct: number) => {
     setReportingHeightPct(heightPct);
-    client.reportLayout(sidebarLeftWidth, sidebarRightWidth, 100 - heightPct);
+    client.reportLayout(sidebarLeftWidth, sidebarRightWidth, 100 - heightPct, splitPct);
+  };
+  const reportSplitPct = (nextSplitPct: number) => {
+    setSplitPct(nextSplitPct);
+    client.reportLayout(sidebarLeftWidth, sidebarRightWidth, 100 - reportingHeightPct, nextSplitPct);
   };
 
   return {
     sidebarLeftWidth, setSidebarLeftWidth: reportSidebarLeftWidth,
     sidebarRightWidth, setSidebarRightWidth: reportSidebarRightWidth,
     reportingHeightPct, setReportingHeightPct: reportReportingHeightPct,
+    splitPct, setSplitPct: reportSplitPct,
     focusLeft, focusRight,
   };
 }

@@ -34,6 +34,7 @@ import { command as syntax } from './syntax.js';
 import { command as theme } from './theme.js';
 import { command as tasks } from './tasks.js';
 import { command as tab } from './tab.js';
+import { command as layout } from './layout.js';
 import { command as question } from './question.js';
 import { monitor, unmonitor, monitors } from './monitor.js';
 import { command as plugins } from './plugins.js';
@@ -80,6 +81,7 @@ const coreCommands: Command[] = [
   theme,
   tasks,
   tab,
+  layout,
   question,
   plugins,
   monitors,

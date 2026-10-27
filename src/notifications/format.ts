@@ -52,6 +52,7 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'schedule-fire': { return `Scheduled: ${detail} in ${tabLabel}`; }
     case 'system-schedule-fire': { return detail ?? ''; }
     case 'manual':
+    case 'layout':
     case 'auto-approve':
     case 'auto-approve-no-workspace':
     case 'auto-resume':

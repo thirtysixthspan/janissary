@@ -206,6 +206,11 @@ These event types can produce a notification line:
   the only one of the dispatcher's errors that moves: a missing file, a malformed invocation, an
   unviewable web address, and a plugin command's refusal are all still reported where the command
   was typed.
+- **`layout`** — a window resize or bounds read failed, or `layout show` had no size to print. The
+  exact messages are `Could not resize the window: <reason>.`,
+  `Could not read the window size: <reason>.`, and `No layout to show.` The reason is the first line
+  of the error with terminal punctuation removed and one period added. These notices are attributed
+  to the tab that ran `layout`, appear only in notifications, and have no config toggle.
 - **`plugin-failure`** — a tab plugin is disabled after a fatal failure (see [[tab-plugins]]). The
   line is `Tab plugin "<id>" disabled: <reason>.`, attributed to the tab that invoked it when one
   exists. It is queued and delivered through the ordinary feed, toast, and burst-escalation rules.
@@ -253,7 +258,7 @@ The four ambient events (`state-change`, `schedule-fire`, `agent-start`,
 `rate-limited`) are each **independently togglable and default off** — opt in by editing
 `.janissary/config.json` (see `application-config.md`). The `harness-idle`, `manual`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`,
 `editor-suggest`, `question`, `transcript-unavailable`, `e2e-browser-gone`, `file-operation`,
-`open-unsupported`, `plugin-failure`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`,
+`open-unsupported`, `layout`, `plugin-failure`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`,
 `launch-refused`, `launch-workspace-cleaned`, `launch-root-cloned`, and `remote-refused` events have no toggle, and like the other explicit
 events they are shown even when the tab they are attributed to is the active one. `system-schedule-fire` is the only explicit event with a toggle. A `question` event fires only for a
 background tab.
@@ -264,7 +269,7 @@ An ambient event on the **currently active** tab never produces a notification �
 tabs feed the notifications tab. The notifications tab itself is a view tab that produces no such
 events, so it never notifies about itself. The `harness-idle`, `manual`, `auto-approve`, `auto-approve-no-workspace`,
 `auto-resume`, `editor-suggest`, `system-schedule-fire`,
-`transcript-unavailable`, `e2e-browser-gone`, `file-operation`, `open-unsupported`, and
+`transcript-unavailable`, `e2e-browser-gone`, `file-operation`, `open-unsupported`, `layout`, and
 `plugin-failure`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`, and `remote-refused` events **bypass focus suppression**: they still
 record a line even when their tab is active, because they report an explicit, user-armed action, a
 system schedule outcome, a capability degrading, or a plugin's own deliberate report, rather than
@@ -352,7 +357,7 @@ on reconnect.
 A live notification can also ask each connected browser window to show a desktop alert or
 play a short sound, according to its per-type `notifications.alerts` entry. This includes `question`, `harness-idle`, `manual`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`,
 `editor-suggest`, `transcript-unavailable`, the three recording-failed events, `shell-transcript-failed`,
-`e2e-browser-gone`, `file-operation`, `open-unsupported`, `plugin-note`, `plugin-failure`,
+`e2e-browser-gone`, `file-operation`, `open-unsupported`, `layout`, `plugin-note`, `plugin-failure`,
 `schedule-late`, `system-schedule-fire`, the two remote-session events, the three launch events, and `remote-refused`.
 Every event type is configured independently in `.janissary/config.json` under `notifications.alerts`, using the event's hyphenated name. Each entry selects whether to show a desktop banner and one of the `success`, `warning`, or `error` cues, or `none`. The four ambient events (`state-change`, `schedule-fire`, `agent-start`, `rate-limited`) default to no banner and no sound; an opted-in ambient event still must pass its `notifications.events` toggle and focus suppression before it can alert.
 A report detected earlier and replayed later does not raise either: its detection time belongs in
@@ -378,7 +383,7 @@ the page has received user interaction. A browser or OS can prevent window activ
 These failures do not interrupt the notification queue or feed.
 
 The default cue uses bundled MP3 files: `success.mp3` for `manual` and `plugin-note`; `warning.mp3` for
-`question`, `harness-idle`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`, `schedule-late`, the two remote-session
+`question`, `harness-idle`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`, `schedule-late`, `layout`, the two remote-session
 events, `system-schedule-fire`, the three launch events, and `remote-refused`; and `error.mp3` for the remaining explicit
 events. A type's cue can be changed or silenced independently. A banner-only alert carries no cue name. Each client plays at most one bell per second, while every eligible desktop banner may still
 show. The `osNotifications` and `terminalBell` config switches are independent master switches for every type's configured banner and cue, and default on.

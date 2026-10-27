@@ -62,6 +62,7 @@ export function AppMain({
   tabNameMaxLength, activeTabNameMaxLength,
   sidebarLeftWidth, setSidebarLeftWidth, sidebarRightWidth, setSidebarRightWidth,
   reportingHeightPct, setReportingHeightPct, focusLeft, focusRight,
+  splitPct, setSplitPct,
   harnessHandles, questionPanelRef, tabHandles,
   dirtyPluginTabs, onPluginDirty,
   harnessLaunch, scheduleLaunch, confirmQuit, cancelQuit, confirmUnsavedQuit, cancelUnsavedQuit,
@@ -81,6 +82,7 @@ export function AppMain({
     >
       <AppCenterActionArea
         entries={actionEntries} tabs={tabs} activeTab={activeTab} secondaryTab={secondaryTab}
+        splitPct={splitPct} setSplitPct={setSplitPct}
         client={client} closeTab={closeTab} tabNameMaxLength={tabNameMaxLength}
         activeTabNameMaxLength={activeTabNameMaxLength}
         onFocusCommandBar={() => inputReference.current?.focus()}

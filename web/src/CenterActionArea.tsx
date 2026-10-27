@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { TabStrip } from './TabStrip';
 import { ResizeButton } from './ResizeButton';
 import { beginResizeDrag } from './drag-resize';
@@ -8,6 +8,7 @@ import type { BaseCenterActionAreaProps } from './CenterActionAreaProps';
 
 const MIN_PCT = 15;
 const MAX_PCT = 85;
+export const DEFAULT_SPLIT_PCT = 50;
 
 type Properties = BaseCenterActionAreaProps & {
   renderBody: (entry: TabEntry, focused: boolean) => React.ReactNode;
@@ -17,9 +18,8 @@ type Properties = BaseCenterActionAreaProps & {
 export function CenterActionArea({
   entries, tabs, activeTab, secondaryTab, client, closeTab, tabNameMaxLength,
   activeTabNameMaxLength, onFocusCommandBar, onFocusEditor, windowFocused, dirtyTabs,
-  renderBody, persistentLayers,
+  splitPct, setSplitPct, renderBody, persistentLayers,
 }: Properties) {
-  const [leftPct, setLeftPct] = useState(50);
   const areaRef = useRef<HTMLDivElement>(null);
   const split = secondaryTab !== undefined;
   const onResize = useCallback((_down: React.MouseEvent, move: MouseEvent) => {
@@ -27,8 +27,8 @@ export function CenterActionArea({
     const width = bounds && bounds.width > 0 ? bounds.width : globalThis.innerWidth;
     const left = bounds?.width ? bounds.left : 0;
     const pct = ((move.clientX - left) / width) * 100;
-    setLeftPct(Math.min(MAX_PCT, Math.max(MIN_PCT, pct)));
-  }, []);
+    setSplitPct(Math.min(MAX_PCT, Math.max(MIN_PCT, pct)));
+  }, [setSplitPct]);
 
   const renderPane = (pane: 'left' | 'right') => {
     const visibleEntries = entriesInPane(entries, pane);
@@ -83,7 +83,7 @@ export function CenterActionArea({
     <div
       ref={areaRef}
       className={`center-action-area${split ? ' center-action-split' : ''}`}
-      style={{ '--center-left-pct': `${split ? leftPct : 100}%` } as React.CSSProperties}
+      style={{ '--center-left-pct': `${split ? splitPct : 100}%` } as React.CSSProperties}
       onPointerDownCapture={(event) => {
         const element = (event.target as Element).closest<HTMLElement>('[data-pane-index]');
         const index = Number(element?.dataset.paneIndex);

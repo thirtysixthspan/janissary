@@ -21,10 +21,11 @@ const CASES: Array<[keyof typeof CORE_PARAMS, Record<string, unknown>, Array<Rec
   ['ptyInput', { id: 'p1', data: 'ls\n' }, [{ id: 'p1' }, { id: 1, data: '' }]],
   ['ptyResize', { id: 'p1', cols: 80, rows: 24 }, [{ id: 'p1', cols: 80 }, { id: 'p1', cols: 80, rows: null }]],
   ['ptyKill', { id: 'p1' }, [{}, { id: 1 }]],
-  ['reportLayout', { sidebarLeft: 240, sidebarRight: 300, tabAreaPct: 62.5 }, [
+  ['reportLayout', { sidebarLeft: 240, sidebarRight: 300, tabAreaPct: 62.5, splitPct: 50 }, [
     { sidebarLeft: '240', sidebarRight: 300, tabAreaPct: 62.5 },
     { sidebarLeft: 240, sidebarRight: 300 },
     { sidebarLeft: NaN, sidebarRight: 300, tabAreaPct: 62.5 },
+    { sidebarLeft: 240, sidebarRight: 300, tabAreaPct: 62.5, splitPct: Infinity },
   ]],
   ['setDock', { index: 0, dock: null }, [{ index: 0 }, { index: 0, dock: 'centre' }]],
   ['launchShellFor', { label: 'one' }, [{ label: [] }]],

@@ -4,6 +4,7 @@ import { messageBus } from '../bus.js';
 import { makeTab } from '../tab/index.js';
 import type { Managers } from '../managers.js';
 import type { Sinks } from './types.js';
+import { getClientLayout, setClientLayout } from '../client-layout.js';
 
 afterEach(() => messageBus.clear());
 
@@ -87,6 +88,17 @@ describe('the bus subscriptions the controller projects onto clients', () => {
     messageBus.emit('layout', { type: 'update', tabAreaPct: 40, focusRight: 'notifications' });
 
     expect(sinks.sendLayout.mock.calls[0][0]).toStrictEqual({ tabAreaPct: 40, focusRight: 'notifications' });
+  });
+
+  it('patches the held layout before forwarding a command update', () => {
+    setClientLayout({ sidebarLeft: 300, sidebarRight: 300, tabAreaPct: 80, splitPct: 50 });
+    const { sinks } = wire();
+    const update = { type: 'update' as const, sidebarRight: 250, splitPct: 62 };
+
+    messageBus.emit('layout', update);
+
+    expect(getClientLayout()).toEqual({ sidebarLeft: 300, sidebarRight: 250, tabAreaPct: 80, splitPct: 62 });
+    expect(sinks.sendLayout).toHaveBeenCalledWith({ sidebarRight: 250, splitPct: 62 });
   });
 
   it('projects a selection-collection request as its id alone', () => {

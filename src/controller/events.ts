@@ -1,6 +1,7 @@
 import { messageBus } from '../bus.js';
 import type { Sinks } from './types.js';
 import type { Managers } from '../managers.js';
+import { patchClientLayout } from '../client-layout.js';
 
 // Wires the message-bus subscriptions the Controller needs for the lifetime of the process:
 // re-emitting state to clients, notifying on new transcript entries,
@@ -9,7 +10,10 @@ import type { Managers } from '../managers.js';
 export function wireControllerEvents(managers: Managers, sinks: Sinks): void {
   messageBus.on('state', 'dirty', () => sinks.emitState());
   messageBus.on('app', 'exit', () => sinks.exit?.());
-  messageBus.on('layout', 'update', ({ type: _type, ...update }) => sinks.sendLayout?.(update));
+  messageBus.on('layout', 'update', ({ type: _type, ...update }) => {
+    patchClientLayout(update);
+    sinks.sendLayout?.(update);
+  });
   messageBus.on('agent', 'run-updated', ({ type: _type, ...update }) => sinks.sendAgentRun?.(update));
   messageBus.on('fileNavigator', 'collect', (event) => sinks.sendCollectTreeState?.({ id: event.id }));
   messageBus.on('notifications', ['toast', 'clear', 'reveal', 'native-notification'], (event) => {

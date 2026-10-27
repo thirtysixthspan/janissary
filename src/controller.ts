@@ -75,7 +75,9 @@ export class ControllerCore {
   openTranscriptFileFor(label: string): void { openTranscriptFileFor(this.managers, label); }
   openAcpTranscript(acpRef: AcpRef): void { openAcpTranscript(this.managers, acpRef); }
   openRecordingFor(label: string): void { openRecordingFor(this.managers, label); }
-  reportLayout(layout: { sidebarLeft: number; sidebarRight: number; tabAreaPct: number }): void { setClientLayout(layout); }
+  reportLayout(layout: { sidebarLeft: number; sidebarRight: number; tabAreaPct: number; splitPct: number }): void {
+    setClientLayout(layout);
+  }
 
   // Tab-completion for the command line (reuses the shared `completeCommandLine`): filesystem
   // paths against the active tab's cwd, `connection close` targets,

@@ -1,6 +1,7 @@
 import type { CompletionResult } from './types.js';
 import {
   completeHelpCommand, completeMonitorCommand, completeSearchCommand, completeSyntaxTheme, completeHarnessModel,
+  completeLayoutCommand,
   type MonitorCompletions,
 } from './handlers.js';
 import {
@@ -55,6 +56,7 @@ export function completeCommandLine(
     ) ??
     completeSearchCommand(cursor) ??
     completeSyntaxTheme(cursor, SYNTAX_THEMES) ??
+    completeLayoutCommand(cursor) ??
     completeHarnessModel(cursor);
   return result ?? completeFilePath(cursor, cwd);
 }

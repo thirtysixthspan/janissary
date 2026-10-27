@@ -21,6 +21,7 @@
 | `help` | `help` lists the commands; `help <command>` shows one command's usage, use cases, and examples; `help keys` lists the key bindings |
 | `hist` | Open command history picker |
 | `launcher` | Open or focus the launcher (`launcher right` for the right sidebar). Select a command row and click again to run it, or select a tab row to focus that tab |
+| `layout` | `layout window <width> <height>`, `layout sidebar left\|right <width>`, `layout split <percent>`, or `layout reporting <percent>` sets a size; `layout show` prints the current ones |
 | `monitor` | Start a persona-driven AI monitor — inline on the current tab, or watching other tabs/groups into a reporting tab |
 | `monitors` | List active monitors with their targets and suggestion counts |
 | `nav` | Open the fuzzy tab navigator (Ctrl+G); `nav <query>` pre-fills the search |

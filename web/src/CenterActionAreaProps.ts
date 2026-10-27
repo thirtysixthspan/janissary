@@ -7,6 +7,8 @@ export type BaseCenterActionAreaProps = {
   tabs: TabView[];
   activeTab: number;
   secondaryTab?: number;
+  splitPct: number;
+  setSplitPct: (splitPct: number) => void;
   client: JanusClient;
   closeTab: (index: number, reason?: { terminalExited: string }) => void;
   tabNameMaxLength: number;

@@ -32,7 +32,7 @@ describe('the client params decoder table', () => {
   // The four whose params outlive the call: they are stored, saved into a profile, or written to
   // disk, so a wrong type here is what surfaces later as an unloadable profile or a bad write.
   it.each([
-    ['reportLayout', { sidebarLeft: 240, sidebarRight: 300, tabAreaPct: 62.5 }, { sidebarLeft: '240', sidebarRight: 300, tabAreaPct: 62.5 }],
+    ['reportLayout', { sidebarLeft: 240, sidebarRight: 300, tabAreaPct: 62.5, splitPct: 50 }, { sidebarLeft: '240', sidebarRight: 300, tabAreaPct: 62.5, splitPct: 50 }],
     ['saveFile', { url: '/open/1', content: 'x' }, { url: '/open/1', content: 7 }],
     ['editorSync', { url: '/open/1', content: '' }, { url: null, content: '' }],
     ['renameTab', { index: 2, title: 'one' }, { index: '2', title: 'one' }],

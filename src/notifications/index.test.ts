@@ -127,6 +127,16 @@ describe('shouldNotify — ambient events', () => {
   });
 });
 
+describe('shouldNotify — layout event', () => {
+  it('is explicit, bypasses focus suppression, and defaults to a warning alert', () => {
+    expect(EXPLICIT_EVENTS.layout).toBe(true);
+    expect(shouldNotify(allOff, 'layout', 'janus', 'janus')).toBe(true);
+    expect(NOTIFICATION_ALERT_DEFAULTS.layout).toEqual({ desktop: true, sound: 'warning' });
+    expect(notificationText('layout', 'janus', 'Could not resize the window: refused.'))
+      .toBe('Could not resize the window: refused.');
+  });
+});
+
 describe('shouldNotify — manual event', () => {
   it('fires even when the issuing tab is active', () => {
     expect(shouldNotify(allOn, 'manual', 'janus', 'janus')).toBe(true);

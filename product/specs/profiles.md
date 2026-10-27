@@ -83,6 +83,8 @@ A profile may declare that the schedules tab should open on launch with a `"type
 
 A profile may declare the size of the application window, the left/right sidebars, and the split between the upper action-tab area and the lower reporting-tab area under a `layout` key. Its value is the layout object directly: `{ "sidebar": { "left": 320, "right": 280 }, "tabAreaPct": 75, "window": { "width": 1440, "height": 900 } }`. The left/right sidebar widths are grouped into a `sidebar` object parallel to `window`; `window.width`/`window.height` are pixels; `sidebar.left`/`sidebar.right` are pixels; `tabAreaPct` is 0-100 and is the upper action area's share of the vertical split.
 
+The `layout` command can set these sizes during a run. `layout reporting <percent>` names the lower reporting area's share, so `layout reporting 0` and `layout reporting 100` correspond to `tabAreaPct` values of 100 and 0.
+
 The layout is applied once every entry is open, on **every** `profile launch`, including a relaunch — it always overrides whatever the user had manually resized things to. Any dimension the `layout` key doesn't mention resets to the app's built-in default (1280x800 window, 300px sidebars, the reporting section's current default height percentage) rather than being left at whatever it currently is. Sizes are applied exactly as specified, even if they exceed the manual-drag limits on sidebars or the reporting split, or the screen's own bounds — a profile's numbers are trusted as authoritative. (A malformed `layout` field makes the whole profile malformed — see Malformed profiles above.)
 
 When the server was started with `--no-open` (no application window opened), the window-size portion of `layout` is ignored entirely — no resize attempt and no report note — while the sidebar/tab-area sizes still apply to any connected browser client.
@@ -127,7 +129,7 @@ A starting directory or editor file path under the project root is captured rela
 
 Live group and dot-color assignments are captured exactly as they appear on screen. Since `profile launch` places each entry into its own authored `group` (see Relaunching above), a session with tabs split across several groups round-trips: relaunching the saved profile reopens each tab into the same group split it was saved from.
 
-The window size, sidebar widths, and the split between the tab area and the reporting area are captured into the profile's layout, matching whatever the window and sidebars currently look like. When the server was started with `--no-open` (no application window), the window-size portion is skipped — the sidebar/tab-area sizes are still captured — and the command's output notes that the window size wasn't captured.
+The window size, sidebar widths, and the split between the tab area and the reporting area are captured into the profile's layout, matching whatever the window and sidebars currently look like, including sizes set by `layout`, a profile launch, or dragging. A connected client reports its sizes on connection, so sizes that have not been manually changed are captured too. When the server was started with `--no-open` (no application window), the window-size portion is skipped — reported sidebar/tab-area sizes are still captured — and the command's output notes that the window size wasn't captured.
 Window-size capture and restoration remain reliable while the managed browser is still completing
 other startup work.
 

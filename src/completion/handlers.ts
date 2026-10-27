@@ -1,6 +1,7 @@
 import type { CompletionCursor, CompletionResult } from './types.js';
 import { completeWord } from './helpers.js';
 import { modelsFor } from '../harness/models.js';
+import { LAYOUT_SUBCOMMANDS } from '../commands/parse-layout.js';
 
 export type MonitorCompletions = { personas: string[]; names: string[]; targets: string[] };
 
@@ -46,6 +47,16 @@ export function completeSyntaxTheme(cursor: CompletionCursor, themes: string[]):
   if (argumentIndex === 1) return completeWord(cursor, ['theme']);
   if (argumentIndex === 2 && preceding[1]?.toLowerCase() === 'theme') {
     return completeWord(cursor, themes);
+  }
+  return null;
+}
+
+export function completeLayoutCommand(cursor: CompletionCursor): CompletionResult | null {
+  const { argumentIndex, preceding, command } = cursor;
+  if (command !== 'layout') return null;
+  if (argumentIndex === 1) return completeWord(cursor, LAYOUT_SUBCOMMANDS);
+  if (argumentIndex === 2 && preceding[1]?.toLowerCase() === 'sidebar') {
+    return completeWord(cursor, ['left', 'right']);
   }
   return null;
 }

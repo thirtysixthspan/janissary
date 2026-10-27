@@ -79,22 +79,24 @@ view visible. The gesture never docks a tab, undocks it, or moves it to another 
 Each sidebar's tab gutter has a single right-aligned up/down-arrow resize button. Dragging the
 button horizontally adjusts the sidebar's width. Width is clamped to a minimum and to roughly
 half the viewport, so a sidebar can never crowd out the center content entirely or shrink to
-nothing. Width is ephemeral display state: it resets to a default on relaunch and is never
-persisted, independent per sidebar, and unrelated to which tab happens to be docked there.
+nothing. `layout sidebar left|right <width>` sets a side's width directly, including while it is
+hidden, without the drag limits. A width resets to its default on relaunch unless a profile applies
+one; `profile save` captures the current widths.
 
 ### What's server-owned vs. client-owned
 
 Which tab is docked where is **server-owned** state, broadcast to the client like any other tab
 property — the server enforces the one-tab-per-kind-per-sidebar rule and the active-tab invariant.
-Sidebar **width** and which docked tab is currently visible (when a side holds both kinds) are, by
-contrast, purely client-side display chrome, the same way scroll position is: neither is ever sent
-to the server or persisted.
+Sidebar **width** is client-controlled display state, reported to the server on connection and after
+resizing so `profile save` can capture it. When several clients report different sizes, the last
+report wins. Which docked tab is currently visible when a side holds both kinds remains client-only
+and is never persisted.
 
 ### Persistence
 
-Dock placement and sidebar width both reset on relaunch — neither is saved. This matches file
-tree tabs generally: they are live, in-memory views, never persisted or restored (see
-`file-navigator-tab.md`).
+Dock placement resets on relaunch. Sidebar widths also return to their defaults unless a profile's
+`layout` key supplies them; `profile save` captures reported widths. File navigator views remain
+live, in-memory tabs and are never restored (see `file-navigator-tab.md`).
 
 ### Keyboard focus
 

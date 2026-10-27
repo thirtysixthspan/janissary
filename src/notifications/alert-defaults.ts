@@ -17,6 +17,7 @@ export const NOTIFICATION_ALERT_DEFAULTS: Record<NotificationEventType, Notifica
   'launch-refused': { desktop: true, sound: 'warning' },
   'launch-root-cloned': { desktop: true, sound: 'warning' },
   'launch-workspace-cleaned': { desktop: true, sound: 'warning' },
+  layout: { desktop: true, sound: 'warning' },
   manual: { desktop: true, sound: 'success' },
   'open-unsupported': { desktop: true, sound: 'error' },
   'plugin-failure': { desktop: true, sound: 'error' },

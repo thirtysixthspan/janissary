@@ -19,6 +19,7 @@ const renameTabMock = vi.fn();
 const unregisterStateCollectorMock = vi.fn();
 const registerStateCollectorMock = vi.fn(() => unregisterStateCollectorMock);
 const requestMock = vi.fn().mockResolvedValue({ newInput: '', newCursor: 0, matches: [] });
+const reportLayoutMock = vi.fn();
 
 // The fields these cases actually vary. `onState` below widens an emitted snapshot to the real
 // `StateListener` signature, so a change to that signature is a type error here rather than the
@@ -27,6 +28,7 @@ type EmitState = (
   tabs: TabView[], activeTab: number, tabNameMaxLength: number, globalHistory: string[],
   syntaxTheme: string, theme: string, tasks: TaskRow[],
   scheduleLaunch?: StateEvent['scheduleLaunch'],
+  secondaryTab?: number,
 ) => void;
 let stateListener: EmitState | null = null;
 let layoutListener: LayoutListener | null = null;
@@ -36,13 +38,15 @@ const client = {
   onConnectionStatus: () => () => {},
   send: sendMock,
   request: requestMock,
+  reportLayout: reportLayoutMock,
   renameTab: renameTabMock,
   registerStateCollector: registerStateCollectorMock,
   saveFile: () => Promise.resolve(undefined),
   onState(listener: StateListener) {
-    stateListener = (tabs, active, maxLength, history, syntax, theme, tasks, scheduleLaunch = null) => {
+    stateListener = (tabs, active, maxLength, history, syntax, theme, tasks, scheduleLaunch = null, secondaryTab) => {
       listener({
         t: 'state', tabs, activeTab: active, tabNameMaxLength: maxLength,
+        ...(secondaryTab !== undefined && { secondaryTab }),
         activeTabNameMaxLength: 50, clipboardHistoryMaxEntries: 15, globalHistory: history,
         syntaxTheme: syntax, theme, tasks,
         profiles: [], projectDir: '/tmp', version: '1.2.3',
@@ -83,6 +87,7 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
 describe('App app theme picker', () => {
   beforeEach(() => {
     sendMock.mockClear();
+    reportLayoutMock.mockClear();
     stateListener = null;
   });
 
@@ -463,6 +468,7 @@ describe('App sidebar docking', () => {
 describe('App layout WS event', () => {
   beforeEach(() => {
     sendMock.mockClear();
+    reportLayoutMock.mockClear();
     stateListener = null;
     layoutListener = null;
   });
@@ -499,6 +505,26 @@ describe('App layout WS event', () => {
     const rightSidebar = container.querySelector('.sidebar-right') as HTMLElement;
     expect(leftSidebar.style.flex).toBe('0 0 300px');
     expect(rightSidebar.style.flex).toBe('0 0 300px');
+  }, 15_000);
+
+  it('updates the divider of a split view without changing sidebar widths', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App client={client} />);
+    const tabs = [
+      makeTab({ label: 'left' }),
+      makeTab({ label: 'right' }),
+      makeTab({ label: 'files', view: 'files', dock: 'left', files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] } }),
+    ];
+    act(() => { stateListener!(tabs, 0, 16, [], 'github-dark', 'dark', [], null, 1); });
+    const area = container.querySelector<HTMLElement>('.center-action-area');
+    const sidebar = container.querySelector<HTMLElement>('.sidebar-left');
+    expect(area?.style.getPropertyValue('--center-left-pct')).toBe('50%');
+    expect(sidebar?.style.flex).toBe('0 0 300px');
+
+    act(() => { layoutListener!({ splitPct: 62 }); });
+
+    expect(area?.style.getPropertyValue('--center-left-pct')).toBe('62%');
+    expect(sidebar?.style.flex).toBe('0 0 300px');
   }, 15_000);
 });
 
