@@ -23,7 +23,7 @@ Use each navigator's stable tab label as the selection record identity instead o
 - A manager test reorders navigators while a print request is pending and verifies only the target tree's selection appears; another supplies a stale target record after that navigator closes and verifies no selection clauses are printed.
 - Client-hook and WebSocket tests verify published labels survive collection and reply; decoder tests reject a missing or non-string label.
 - Profile-route coverage verifies a selection follows its navigator label rather than its array position, while existing whole-profile save and local/remote print cases remain green.
-- Run `$janissary/scripts/run.mjs check-diff` after each implementation, test, spec, and backlog step.
+- Diff-scoped lint, typecheck, and related server and web tests passed after implementation, tests, spec, and backlog updates.
 
 ## Out of scope
 

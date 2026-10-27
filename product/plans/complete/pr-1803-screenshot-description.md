@@ -8,18 +8,17 @@ Make PR #1803's Screenshots section accurately state that the pull request inclu
 
 ## Approach
 
-Replace only the existing follow-up promise in the Screenshots section with `No screenshots are included in this PR.` Keep the section heading and all other body text byte-for-byte unchanged. Remove the resolved, sole entry from the PR backlog and restore its required empty-file skeleton.
+The existing follow-up promise in the Screenshots section was replaced with `No screenshots are included in this PR.` The section heading and all other body text remained byte-for-byte unchanged. The resolved entry was removed from the PR backlog, restoring its required empty-file skeleton.
 
 ## Implementation steps
 
-1. Update only the Screenshots section in PR #1803's description, preserving every other body byte.
-2. Remove the selected entry from `product/backlog/pull-request.md`, retaining the leading comment and `# pull-request` heading.
+1. Only the Screenshots section in PR #1803's description was updated; every other body byte was preserved.
+2. The selected entry was removed from `product/backlog/pull-request.md`, retaining the leading comment and `# pull-request` heading.
 
 ## Tests
 
-- Compare the revised PR description with the original body and confirm the only change is the Screenshots section sentence.
-- Confirm the Screenshots section states that no screenshots are included and the PR remains open on `cli/file-tree-view`.
-- Run `$janissary/scripts/run.mjs check-diff` for the plan and backlog changes. No source behavior changes, so no automated test cases apply.
+- The revised PR description was compared with the original body; the only change was the Screenshots section sentence. The section states that no screenshots are included, and the PR remained open on `cli/file-tree-view`.
+- Diff-scoped checks passed for the plan and backlog changes. No source behavior changed, so no automated test cases applied.
 
 ## Out of scope
 

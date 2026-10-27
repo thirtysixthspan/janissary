@@ -16,14 +16,14 @@ Coordinate row and restore processing in `useFileNavigatorSelection` so a newly 
 2. Add a `FileNavigatorTab.test.tsx` regression that selects rows under an expanded folder, collapses it while applying a cursor-only restore, verifies hidden selections disappear, and uses Shift+Arrow to prove the new cursor is the anchor. Cover preservation of a still-visible anchor in the hook tests.
 3. Add a hook regression proving a complete profile restore can keep a null anchor while rows change, so post-restore reconciliation does not turn it into the cursor.
 4. Update `product/specs/file-navigator-tab.md` to describe the hidden-anchor fallback when a command changes the cursor in the same revision as a collapse.
-5. Check `help/files.md` and the file-navigator user documentation; update them only if they describe behavior made inaccurate by this fix.
+5. `help/files.md` and the file-navigator user documentation were checked; neither described behavior made inaccurate by this fix.
 
 ## Tests
 
 - The component regression covers a cursor-only command restore concurrent with collapse and verifies hidden selected rows are removed and the next Shift+Arrow range begins at the new cursor.
 - Hook tests cover retaining a visible current anchor during a partial cursor restore and retaining a null anchor for a complete profile replacement while rows change.
 - The existing once-per-revision restore and selection-transition tests continue to pass.
-- Run `./scripts/run.mjs check-diff` after each implementation, test, spec, and backlog change.
+- Diff-scoped lint, typecheck, and related web tests passed after implementation, tests, spec, and backlog changes.
 
 ## Out of scope
 

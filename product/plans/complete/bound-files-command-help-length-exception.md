@@ -17,7 +17,7 @@ Identify the `files` row by its command name instead of searching its descriptio
 
 ## Tests
 
-Update the command-table length test in `src/commands.test.ts` to cover the 350-character `files` cap and the general 200-character limit. Run `$janissary/scripts/run.mjs check-diff` after each implementation step.
+The command-table length test in `src/commands.test.ts` covers the 350-character `files` cap and the general 200-character limit. Diff-scoped lint, typecheck, and related server tests passed.
 
 ## Documentation
 
@@ -31,5 +31,5 @@ No help or public documentation update is needed. The change only bounds a regre
 
 ## Verification
 
-- `$janissary/scripts/run.mjs check-diff` — lint, typecheck, and run the affected server tests.
-- Confirm the PR remains open on `cli/file-tree-view` and the pushed head matches the final local commit.
+- Diff-scoped lint, typecheck, and related server tests passed.
+- The PR remained open on `cli/file-tree-view`, and the pushed head matched the final local commit.

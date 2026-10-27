@@ -23,7 +23,7 @@ Keep the shared tokenizer and existing unquoted single-word form. Move full-quot
 - `src/file-navigator/args.test.ts`: quoted labels with spaces and escaped quotes decode in both leading and trailing `in` clauses; existing unquoted and path behavior remains covered.
 - `src/completion/files.test.ts`: a quoted local label resolves its cwd for path suggestions.
 - `src/file-navigator/print-command.test.ts`: remote owners with spaces are quoted in the reusable command.
-- Run `$janissary/scripts/run.mjs check-diff` after each implementation step and after spec and documentation updates.
+- Diff-scoped lint, typecheck, and related server tests passed after implementation and the spec and documentation updates.
 
 ## Out of scope
 

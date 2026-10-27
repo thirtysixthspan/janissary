@@ -8,17 +8,17 @@ Reduce the security risk of asking reviewers to run executable setup and verific
 
 ## Approach
 
-Replace only the “How to verify” block in pull request #1803 with a short, non-executable summary of the local scenarios, fixture names, expected behavior, edge cases, and remote-view limitation. Keep the title and every other part of the description byte-for-byte unchanged. Do not include commands, code blocks, or instructions to operate on the checkout.
+The “How to verify” block in pull request #1803 was replaced with a short, non-executable summary of the local scenarios, fixture names, expected behavior, edge cases, and remote-view limitation. The title and every other part of the description remained byte-for-byte unchanged. The summary contains no commands, code blocks, or checkout-operation instructions.
 
 ## Implementation steps
 
-1. Preserve the PR’s existing description and replace only its setup and verification block with the summary.
-2. Remove only this resolved entry from `product/backlog/pull-request.md`. Since it is the only entry, retain the exact leading comment and `# pull-request` heading skeleton.
-3. Move this plan through draft and ready to complete, then publish the plan and backlog change on the existing PR head branch before editing the PR description.
+1. The PR’s existing description was preserved, and only its setup and verification block was replaced with the summary.
+2. The resolved entry was removed from `product/backlog/pull-request.md`, retaining the leading comment and `# pull-request` heading skeleton.
+3. The plan moved through draft and ready to complete. The plan and backlog change was published on the existing PR head branch before the PR description was updated.
 
 ## Tests
 
-No application tests are needed because this change alters no application behavior. Run `check-diff` after each repository change. Before editing the PR, compare the prepared full body with the current body, confirm the only difference is the designated block, and verify the replacement contains no runnable commands or setup directions. After editing, read the body back and confirm the title and all text outside that block remain byte-for-byte unchanged.
+No application tests were needed because this change altered no application behavior. Diff-scoped checks passed after the repository changes. Before the PR update, the full body was compared with the current body; only the designated block differed, and the replacement contained no runnable commands or setup directions. A read-back confirmed the title and all text outside that block remained byte-for-byte unchanged.
 
 ## Spec
 

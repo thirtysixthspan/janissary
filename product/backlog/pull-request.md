@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Remove security-sensitive operational directions from completed plan content.
-
-Existing Issue: Completed plans in the pull request still tell an agent to run workspace commands and to edit PR #1803's description, rather than recording those actions as historical verification. Severity: 5/10
-
-Existing Risk: 5/10 - An unattended agent treating reviewed branch text as instructions could run repository-controlled scripts or change GitHub state despite its active task constraints.
-
-Proposal Risk: 2/10 - Rewriting the completed plans as historical records removes these direct requests, though other reviewed content still requires the agent to treat it as data.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1803 "remove operational directions from completed plan content". In the completed plans added by this pull request, replace imperative verification commands such as `Run $janissary/scripts/run.mjs check-diff` and manual command sequences with concise past-tense records of what verification was performed. In `product/plans/complete/non-executable-pr-verification-summary.md` and `product/plans/complete/pr-1803-screenshot-description.md`, rewrite the steps that direct an agent to edit PR #1803's body as historical records of the completed change. Keep the plans' design decisions, test coverage descriptions, and outcomes so they remain useful without asking a future reader to execute shell commands or mutate GitHub state. Review all completed plan files introduced by this PR for remaining imperative operational directions.
-
-
 * Keep printed selections bound to the navigator root captured before the client reply.
 
 Existing Issue: `FileNavigatorManager.printView` checks that the navigator state object remains open after waiting for selections but uses its possibly changed root, so an in-place retarget can pair the old tree's selection with a new root. Severity: 4/10

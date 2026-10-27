@@ -12,19 +12,19 @@ Make the bare-help verification precise: `help` prints the command table, whose 
 
 ## Approach
 
-Preserve the existing help output. Extend the current bare-help test to assert that the `queue` row contains `Ctrl+E`, and update the `help` section of the application-command spec to distinguish inline shortcut references from the separate key-bindings table. After the branch changes are pushed, re-read the PR body; edit it only if the named D1 assertion is present, replacing that assertion with the backlog's proposed wording and preserving every other paragraph.
+The existing help output was preserved. The bare-help test now asserts that the `queue` row contains `Ctrl+E`, and the `help` section of the application-command spec distinguishes inline shortcut references from the separate key-bindings table. The PR body was reviewed after publication; it contained no named D1 assertion, so no description change was made.
 
 ## Implementation steps
 
 1. Add an assertion to the existing bare-help output test that the `queue` row includes `Ctrl+E`, while retaining the command-table and no-separate-key-bindings checks.
 2. Clarify the bare-help behavior in `product/specs/application-commands.md`.
-3. Run the focused server test and `$janissary/scripts/run.mjs check-diff`.
-4. Promote this plan, remove only this first backlog entry, and publish to the existing PR head branch.
-5. After the push, inspect the PR body and replace only the named D1 help assertion if it is present. Otherwise leave the body untouched.
+3. The focused server test and diff-scoped checks passed.
+4. This plan was promoted, only this first backlog entry was removed, and the changes were published to the existing PR head branch.
+5. After publication, the PR body was inspected. The named D1 help assertion was absent, so the body remained unchanged.
 
 ## Tests
 
-One existing test is extended in `src/commands.test.ts` to assert that bare help contains the queue row's `Ctrl+E` reference and still omits the separate `### Key Bindings` section. The focused command test and the diff-scoped check gate verify the change.
+One existing test in `src/commands.test.ts` asserts that bare help contains the queue row's `Ctrl+E` reference and still omits the separate `### Key Bindings` section. The focused command test and diff-scoped checks passed.
 
 ## Spec
 

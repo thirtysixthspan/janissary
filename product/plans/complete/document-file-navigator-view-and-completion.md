@@ -14,11 +14,11 @@ Update the existing file-navigator guide and key reference in place. Keep their 
 
 1. In `documentation/user-documentation/tab-types/file-navigator.md`, add command examples beside the row-detail examples, including quoted paths and a representative `files print` result. Clarify near the profile restore explanation that command restores are local-only, affect only named parts, and are ignored for remote trees.
 2. In `help/keys.md`, expand the command-bar Tab entry and its explanation to cover `files` clause words, tab labels, detail modes, sides, path completion, quoting, and path completion against a local `in <tab>` target. Include concise examples and the same restore and print behavior so both references describe the feature consistently.
-3. Check the wording against the existing implementation and functional specs, run the diff-scoped checks and build the user documentation site.
+3. The wording was checked against the existing implementation and functional specs. Diff-scoped checks and the user documentation build passed.
 
 ## Tests and verification
 
-No runtime behavior changes, so no new automated tests are needed. Run `$janissary/scripts/run.mjs check-diff` after each documentation step and `npm run docs:build`. Review the final diff to confirm examples use valid clause order, quote paths with spaces, and keep the tree root as the final argument in printed commands.
+No runtime behavior changed, so no new automated tests were needed. Diff-scoped checks and `npm run docs:build` passed. Final review confirmed that examples use valid clause order, quote paths with spaces, and keep the tree root as the final argument in printed commands.
 
 ## Specs
 

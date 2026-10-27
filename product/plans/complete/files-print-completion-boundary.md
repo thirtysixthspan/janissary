@@ -22,7 +22,7 @@ Keep `none` and `trailingPath` as distinct completion slots. Handle `none` with 
 - `files print navigator extra` returns unchanged input and no matches.
 - After a trailing root path such as `files expand src scripts `, ordinary filesystem fallback still returns cwd entries.
 - Existing print-target label completion and other `files` completion cases continue to pass.
-- Run `$janissary/scripts/run.mjs check-diff` after each implementation step.
+- Diff-scoped lint, typecheck, and related tests passed after implementation.
 
 ## Out of scope
 

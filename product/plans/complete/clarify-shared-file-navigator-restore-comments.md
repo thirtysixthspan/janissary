@@ -18,8 +18,7 @@ Keep behavior unchanged. Update only the comments named in the backlog proposal 
 
 ## Tests
 
-- Add no tests because the change is comments only and does not change behavior. Existing restore and selection-request tests cover the referenced paths.
-- Run `$janissary/scripts/run.mjs check-diff` after each change.
+No tests were added because the change was comments only and did not change behavior. Existing restore and selection-request tests cover the referenced paths, and the diff-scoped checks passed.
 
 ## Out of scope
 

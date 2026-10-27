@@ -29,4 +29,4 @@ Carry the parsed `ClauseState` with the keyword completion slot and use its `inS
 
 ## Verification
 
-Run `$janissary/scripts/run.mjs check-diff` after each implementation step and confirm all relevant diff-scoped checks pass.
+Diff-scoped lint, typecheck, and related tests passed after implementation and the spec and documentation updates.

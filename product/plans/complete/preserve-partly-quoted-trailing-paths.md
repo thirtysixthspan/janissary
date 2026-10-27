@@ -16,13 +16,13 @@ Keep the existing tokenizer and clause parsing unchanged. Before returning a dec
 2. Add parser coverage in `src/file-navigator/args.test.ts` for a balanced quote opened mid-word, a fully quoted path with spaces, a multiword unquoted path, and a trailing `in <label>` clause after a partly quoted path.
 3. Add a focused `src/profile/files.test.ts` case proving that a profile path containing a double quote is escaped in the generated `files` command.
 4. Update `product/specs/file-navigator-tab.md` to state that only a quote pair enclosing the entire trailing path is removed and partly quoted path text remains verbatim.
-5. Check `help/commands.md`, `help/files.md`, and user documentation for an existing description of the changed quote behavior; update only if one describes it.
+5. `help/commands.md`, `help/files.md`, and user documentation were checked for an existing description of the changed quote behavior; none required an update.
 
 ## Tests
 
 - In `src/file-navigator/args.test.ts`, assert `my"folder"` remains the target exactly as typed, a fully quoted path with spaces is decoded, a multiword unquoted path remains unchanged, and `my"folder" in claude` preserves both the path spelling and label.
 - In `src/profile/files.test.ts`, assert a path containing a double quote is emitted with the quote escaped inside the generated quoted path token.
-- Run `$janissary/scripts/run.mjs check-diff` after each implementation step and after the spec update.
+- Diff-scoped lint, typecheck, and related tests passed after implementation and the spec update.
 
 ## Out of scope
 
