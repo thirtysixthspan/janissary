@@ -2,7 +2,7 @@
 
 <img class="agent-float" src="/agents/fariz-south.png" alt="" />
 
-Related tabs stay together as a group, drawn as a colored band along the top of every member tab. The band is the same color and full strength on every member, active or not, so a group reads as one connected run in the strip.
+Related tabs share a group, shown as a colored band along the top of every member tab. The band is the same color and full strength on every member, active or not. Groups usually appear as a connected run in the strip. A visible docked tab moved past another group's tabs can return outside its group's run when you undock it.
 
 ![The tab strip showing two groups: the root group's tabs share one top-border color, and a second group of tabs shows a distinctly colored band.](/screenshots/tabs-groups.png)
 
@@ -16,4 +16,4 @@ Each group has a name and a number. The `janus` tab starts in the `launch` group
 
 A group's band color is fixed when the group is created (the color of its first member) and never shifts afterward, even as tabs are reordered or closed. Profiles saved with group names keep those names when you launch them again; older profiles use `group-<id>` for groups without a saved name.
 
-In the center strip, groups stay contiguous. A new center tab is inserted directly after the last tab of its group, and reordering with `Ctrl+←` / `Ctrl+→` or dragging a center tab stays within its group. `tab move <tab> <position>` uses a 1-based position among center tabs in the same group and pane. A visible docked tab instead moves among all tabs on its sidebar, regardless of group; a hidden tab keeps its center group-and-pane order even while docked. A position past the end puts the tab last. These commands leave your current tab focused.
+In the center strip, group members stay contiguous unless a visible docked tab is moved past tabs from another group on its sidebar and then undocked. A new center tab is inserted directly after the last tab of its group, and reordering with `Ctrl+←` / `Ctrl+→` or dragging a center tab stays within its group. `tab move <tab> <position>` uses a 1-based position among center tabs in the same group and pane. A visible docked tab instead moves among all tabs on its sidebar, regardless of group; a hidden tab keeps its center group-and-pane order even while docked. A position past the end puts the tab last. These commands leave your current tab focused.

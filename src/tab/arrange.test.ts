@@ -251,6 +251,26 @@ describe('TabManager.arrangeTab dock and undock', () => {
     expect(hiddenManager.byLabel('docked')?.dock).toBeUndefined();
     expect(hiddenManager.arrangeTab('system', { kind: 'undock' })).toBe(false);
   });
+
+  it('keeps a docked tab at its moved overall position when it is undocked', () => {
+    const manager = setup([
+      tab('group-one-before', 1),
+      tab('files', 1, { view: 'files', dock: 'left' }),
+      tab('group-one-after', 1),
+      tab('group-two-center', 2),
+      tab('notifications', 2, { view: 'notifications', dock: 'left' }),
+    ]);
+
+    manager.arrangeTab('files', { kind: 'move', position: 2 });
+    expect(manager.tabs.filter((entry) => entry.dock === 'left').map((entry) => entry.label))
+      .toEqual(['notifications', 'files']);
+
+    manager.arrangeTab('files', { kind: 'undock' });
+
+    expect(manager.tabs.filter((entry) => !entry.dock).map((entry) => entry.label))
+      .toEqual(['group-one-before', 'group-one-after', 'group-two-center', 'files']);
+    expect(manager.byLabel('files')).toMatchObject({ group: 1, dock: undefined });
+  });
 });
 
 describe('TabManager.arrangeTab no-ops', () => {
