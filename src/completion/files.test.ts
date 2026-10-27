@@ -48,6 +48,26 @@ describe('files command completion', () => {
     expect(complete('files print re').newInput).toBe('files print "review notes" ');
   });
 
+  it('omits used once-only clauses while keeping other clauses and paths available', () => {
+    const afterIn = complete('files in janus ');
+    expect(afterIn.matches).not.toContain('in');
+    expect(afterIn.matches).toContain('on');
+    expect(afterIn.matches).toContain('with');
+    expect(afterIn.matches).toContain('src/');
+
+    const afterOn = complete('files on left ');
+    expect(afterOn.matches).not.toContain('on');
+    expect(afterOn.matches).toContain('in');
+    expect(afterOn.matches).toContain('with');
+    expect(afterOn.matches).toContain('src/');
+
+    const afterWith = complete('files with size ');
+    expect(afterWith.matches).not.toContain('with');
+    expect(afterWith.matches).toContain('in');
+    expect(afterWith.matches).toContain('on');
+    expect(afterWith.matches).toContain('src/');
+  });
+
   it('completes a clause path against an earlier local in-tab root', () => {
     expect(complete('files in worker expand sp').newInput).toBe('files in worker expand special');
     expect(complete('files in worker sp').newInput).toBe('files in worker special');

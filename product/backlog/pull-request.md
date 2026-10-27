@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Handle the functionality gap where completion suggests already-consumed `files` clauses.
-
-Existing Issue: `keywordCandidates` in `src/completion/files.ts` always offers `in`, `on`, and `with` even after the completion parser marks each clause as used, although `parseFileNavigatorArgs` consumes each only once, so `files on left <Tab>` suggests `on` even though it becomes a trailing path. Severity: 3/10
-
-Existing Risk: 3/10 - Choosing one of these suggestions can make completion produce a command that opens an unintended path or fails instead of adding a clause.
-
-Proposal Risk: 1/10 - A different completion mismatch could remain if its state drifts from the parser, but tests can pin the once-only clauses and the remaining valid suggestions.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1803 "filter already-used files clauses from completion". In `src/completion/files.ts`, pass the parsed `ClauseState` to `keywordCandidates` and omit `in`, `on`, and `with` when their corresponding `inSeen`, `onSeen`, or `withSeen` flag is set. Keep unused clauses, view keywords, and path matches in their current priority order. Extend `src/completion/files.test.ts` to check that each used clause disappears while other valid clauses and path matches remain available. Preserve the once-only parser behavior covered by `src/file-navigator/args.test.ts`.
-
-
 * Bound the command-help length exception for the expanded `files` row.
 
 Existing Issue: `src/commands.test.ts` now exempts any description containing `files print <tab>` from the 200-character check, so the entire `files` command-table description can grow without a regression failure. Severity: 3/10

@@ -19,7 +19,7 @@ const EMPTY_FILES_COMPLETIONS: FilesCompletions = {
 
 type Word = { value: string; raw: string; bare: boolean };
 type Slot =
-  | { kind: 'keywords'; print: boolean; bareSide: boolean; label?: string }
+  | { kind: 'keywords'; print: boolean; bareSide: boolean; label?: string; clauses: ClauseState }
   | { kind: 'values'; values: string[]; quote: boolean }
   | { kind: 'viewPath'; label?: string }
   | { kind: 'trailingPath' }
@@ -114,6 +114,7 @@ function completionSlot(wordsBeforeToken: Word[], context: FilesCompletions): Sl
     print: args.length === 0,
     bareSide: !state.inSeen && !state.onSeen && !state.bareSideUsed,
     label: state.inLabel,
+    clauses: state,
   };
 }
 
@@ -131,8 +132,17 @@ function valueCandidates(cursor: CompletionCursor, values: string[], quote: bool
     });
 }
 
-function keywordCandidates(cursor: CompletionCursor, slot: Extract<Slot, { kind: 'keywords' }>): Candidate[] {
-  const options = ['in', 'on', 'with', ...VIEW_KEYWORDS];
+function keywordCandidates(
+  cursor: CompletionCursor,
+  slot: Extract<Slot, { kind: 'keywords' }>,
+  clauses: ClauseState,
+): Candidate[] {
+  const options = [
+    ...(clauses.inSeen ? [] : ['in']),
+    ...(clauses.onSeen ? [] : ['on']),
+    ...(clauses.withSeen ? [] : ['with']),
+    ...VIEW_KEYWORDS,
+  ];
   if (slot.print) options.push('print');
   if (slot.bareSide) options.push('left', 'right');
   return options
@@ -185,5 +195,5 @@ export function completeFilesCommand(
   }
   const base = slot.label === undefined ? cwd : (context ?? EMPTY_FILES_COMPLETIONS).workingDirOf(slot.label);
   const paths = base === undefined ? [] : pathCandidates(cursor, base);
-  return combineCandidates(cursor, [...keywordCandidates(cursor, slot), ...paths]);
+  return combineCandidates(cursor, [...keywordCandidates(cursor, slot, slot.clauses), ...paths]);
 }

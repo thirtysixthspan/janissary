@@ -20,11 +20,11 @@ A command typed over several lines with `Shift+Enter` completes the same way on 
 ### File navigator command (`files`)
 
 At a `files` clause position, completion offers matching bare keywords before filesystem paths in a
-single candidate list. It offers `in`, `on`, `with`, `expand`, `collapse`, `cursor`, `anchor`, and
-`select`, plus bare `left`/`right` when no `in` or `on` clause has been used. `print` is offered only
-as the first word after `files`. After `in`, it offers open tab labels; after `on`, `left` and
-`right`; after `with`, `name`, `size`, `modified`, and `permissions`; and after `print`, labels of
-open file navigators only.
+single candidate list. The once-only `in`, `on`, and `with` clauses are offered only until each has
+been used. View keywords remain available, and bare `left`/`right` are offered when no `in` or `on`
+clause has been used. `print` is offered only as the first word after `files`. After `in`, it offers
+open tab labels; after `on`, `left` and `right`; after `with`, `name`, `size`, `modified`, and
+`permissions`; and after `print`, labels of open file navigators only.
 
 After a view clause, paths complete relative to the local cwd named by an earlier `in <label>`, or
 the issuing tab's cwd when no `in` clause was used. A missing or remote `in` target produces no path
