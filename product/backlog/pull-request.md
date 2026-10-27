@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's accurate database command signatures.
-
-Existing Issue: `help/db.md` tells users to run `db list`, `db create`, and related forms, but the parser requires `db sqlite ...`, so every listed form returns a usage error. Severity: 8/10
-
-Existing Risk: 6/10 - Users following any database example cannot perform the documented action and may mistake the command for broken.
-
-Proposal Risk: 2/10 - Listing the required engine token removes the mismatch while leaving database behavior unchanged.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1799 "correct database help command signatures". Update the Usage and Examples blocks in `help/db.md` to use `db sqlite list`, `db sqlite create <name>`, `db sqlite delete <name>`, and `db sqlite query <name> <sql>`. Compare each form with `product/specs/database.md` and `src/database/parsing.ts`; preserve the page's existing layout and keep runtime behavior unchanged. Existing database command and query behavior is covered by `src/commands/db.test.ts` and `src/database/query.test.ts`; no test should be weakened or needed solely to pin wording.
-
-
 * Show the complete SSH invocation in the command help page.
 
 Existing Issue: `help/ssh.md` lists only `ssh <address>`, omitting the SSH options and remote command arguments accepted after the destination and documented by `product/specs/ssh-tab.md`. Severity: 5/10

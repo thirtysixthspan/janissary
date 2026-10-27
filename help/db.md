@@ -4,13 +4,13 @@ Create, delete, query, or list SQLite databases.
 
 **Usage**
 
-`db list`
+`db sqlite list`
 
-`db create <name>`
+`db sqlite create <name>`
 
-`db delete <name>`
+`db sqlite delete <name>`
 
-`db query <name> <sql>`
+`db sqlite query <name> <sql>`
 
 **Use cases**
 
@@ -19,5 +19,5 @@ Create, delete, query, or list SQLite databases.
 
 **Examples**
 
-- `db list` lists the available databases.
-- `db query inventory "select * from products"` queries the `inventory` database.
+- `db sqlite list` lists the available databases.
+- `db sqlite query inventory "select * from products"` queries the `inventory` database.
