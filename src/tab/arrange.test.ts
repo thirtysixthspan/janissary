@@ -71,6 +71,26 @@ describe('TabManager.arrangeTab move', () => {
     monitorManager.arrangeTab('report', { kind: 'move', position: 1 });
     expect(monitorManager.tabs.map((entry) => entry.label)).toEqual(['janus', 'report', 'monitor']);
   });
+
+  it('moves a hidden docked system tab among center mates without changing sidebar order', () => {
+    const manager = setup([
+      tab('center-one'),
+      tab('right-pane', 1, { pane: 'right' }),
+      tab('other-group', 2),
+      tab('center-two'),
+      tab('files', 2, { view: 'files', dock: 'left' }),
+      tab('notifications', 3, { view: 'notifications', dock: 'left' }),
+      tab('system', 1, { hidden: true, systemShell: true, view: 'plugin', dock: 'left' }),
+    ]);
+
+    manager.arrangeTab('system', { kind: 'move', position: 2 });
+
+    expect(manager.tabs.filter((entry) => entry.group === 1 && entry.pane !== 'right').map((entry) => entry.label))
+      .toEqual(['center-one', 'system', 'center-two']);
+    expect(manager.tabs.filter((entry) => entry.dock === 'left' && !entry.hidden).map((entry) => entry.label))
+      .toEqual(['files', 'notifications']);
+    expect(manager.byLabel('system')).toMatchObject({ hidden: true, dock: 'left' });
+  });
 });
 
 describe('TabManager.arrangeTab pane and split', () => {

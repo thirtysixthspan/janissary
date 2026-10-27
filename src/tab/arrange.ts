@@ -37,6 +37,7 @@ export function arrangeTab(port: TabOperationsPort, label: string, change: TabAr
 function moveTab(port: TabOperationsPort, tab: Tab, position: number): boolean {
   const mates = port.tabs.filter((candidate) => {
     if (candidate.label === tab.label) return true;
+    if (tab.hidden) return isCenterActionTab(candidate) && candidate.group === tab.group && centerPane(candidate) === centerPane(tab);
     if (tab.dock) return candidate.dock === tab.dock;
     if (isReportingTab(tab)) return isReportingTab(candidate);
     return isCenterActionTab(candidate) && candidate.group === tab.group && centerPane(candidate) === centerPane(tab);

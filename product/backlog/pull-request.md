@@ -2,39 +2,6 @@
 
 # pull-request
 
-* Correct the bare-help verification to allow the queue row's shortcut reference.
-
-Existing Issue: Description step D1 says `help` omits `Ctrl+E`, but the returned command table's `queue` row includes `Ctrl+E`. Severity: 2/10
-
-Existing Risk: 3/10 - A reviewer following this step can report a false failure even though bare help correctly omits the separate Key Bindings section.
-
-Proposal Risk: 1/10 - The corrected assertion could still miss another stale command-table detail, though its table and page coverage checks already run in CI.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1799 "correct the bare-help verification expectation". Replace D1 in the PR description's How to verify with: "In the focused command bar, `help` displays the command table headed `### Commands` as formatted Markdown. It includes `help` and `profile`, and omits `### Key Bindings`; the `queue` row still mentions `Ctrl+E`." The tested output includes `Ctrl+E` in the `queue` row while it contains no separate Key Bindings section; `help/commands.md` and `getOutput` in `src/commands.ts` are the source and reader. Correct the description step without changing application output; keep the command-table regression coverage that verifies the row and its ordering.
-
-
-* Correct the `helper` verification for the launch shell.
-
-Existing Issue: Description step D12 expects the application unknown-command message after `helper` is entered in the fresh `janus` shell command bar, but that shell sends unclaimed lines to zsh, which returns `zsh: command not found: helper`. Severity: 2/10
-
-Existing Risk: 3/10 - A reviewer can mark a correct shell-routing behavior as a failure and may mistake the zsh reply for a regression in help classification.
-
-Proposal Risk: 1/10 - A corrected shell-specific step could still leave the non-shell unknown-command response unexplained elsewhere in the description.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1799 "correct helper verification for the launch shell". Replace D12 in the PR description's How to verify with: "In the focused `janus` shell command bar, `helper` is sent to zsh and produces `zsh: command not found: helper`." The output reproduced twice. `getOutput` in `src/commands.ts` classifies `helper` as unknown, but `resolveCommand` in `src/resolve.ts` returns that classification as unclaimed; `dispatchLine` in `src/command/manager.ts` reports no dispatch, so `useShellSubmit` in `web/src/plugins/shell/useShellSubmit.ts` sends the line to zsh. This matches `product/specs/shell-tab.md`, which says unclaimed shell-bar lines go to zsh; correct the description rather than changing routing.
-
-
-* Deliver the plan's hidden-tab ordering when a docked system tab is moved.
-
-Existing Issue: `moveTab` in `src/tab/arrange.ts` chooses same-sidebar mates whenever `tab.dock` is set before applying the hidden-system rule, while Design decision 21 requires a hidden tab's mates to be center tabs in its group and pane plus itself. Severity: 5/10
-
-Existing Risk: 5/10 - A hidden system tab docked while hidden can be moved relative to unrelated sidebar tabs, and focusing it later can put it at an unintended position among its center-strip groups.
-
-Proposal Risk: 2/10 - Applying the hidden target's group-and-pane ordering would remove the mismatch, though later placement changes could disturb it if the combined case is not pinned by a test.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1802 "preserve hidden-system move ordering while docked". In `src/tab/arrange.ts`, select a hidden tab's center mates from the same group and pane before applying the visible-docked sidebar rule; keep visible docked tabs reorderable among all tabs on the same side. Extend `src/tab/arrange.test.ts` with a hidden system tab docked beside unrelated sidebar entries and with center mates, and assert that `tab move` changes only its group-and-pane-relative array position while the tab remains hidden. Keep the existing visible docked-tab case asserting sidebar ordering. re-observed on 2026-10-27: with `janus` and `center-two` in `launch` and `navigator` plus `notifications` docked left, `tab move system 2` followed by `tab focus system` displayed `system, janus, center-two`, placing `system` at index 0 instead of index 1.
-
-
 * Close the functionality gap in the `tab` help page by documenting the new forms and quoted-name rule.
 
 Existing Issue: `help/tab.md` still documents only `tab focus`, presents unquoted `tab focus review notes` as valid, and says unknown subcommands print the focus-only usage line, although the parser rejects that input and now supports seven arranging forms. Severity: 6/10
