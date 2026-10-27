@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's accurate browser usage signatures and working examples.
-
-Existing Issue: `help/browser.md` says `browser open <url>` opens a page and gives that as its example, but `src/browser/command.ts` treats the argument to `open` as a window name; the page also omits supported `list`, `close`, and `window close` forms and incorrectly gives `shot` a name argument. Severity: 7/10
-
-Existing Risk: 6/10 - Users following the URL example open a browser window without navigating, and the missing forms leave supported window controls undiscoverable.
-
-Proposal Risk: 2/10 - Correcting the page removes the misleading instructions, though future parser changes could still make hand-maintained help text stale.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1799 "correct the browser command help syntax and examples". Update `help/browser.md` to match the supported forms in `src/browser/command.ts`: `browser open [name] [--headed]`, `browser list`, `browser use <id>`, `browser goto <url>`, `browser eval <js>`, `browser shot`, `browser content`, `browser close [id]`, and `browser window close <id>`. Explain that `open` creates a window while `goto` navigates, correct the URL example to use `browser goto`, and remove the ignored name argument from `shot`. Check the supported forms against `src/browser/tab.ts`; the existing `src/browser/command.test.ts` and `src/browser/tab.test.ts` cover parser and browser-action behavior, but no test pins the help-page wording, so verify the rewritten page against those cases.
-
-
 * Deliver the plan's supported file-navigator placement and targeting forms.
 
 Existing Issue: `help/files.md` documents a path and a path targeted at another tab, but omits supported dock-placement forms, targetless `files in <label>`, and the optional `on <side>` clause. Severity: 4/10
