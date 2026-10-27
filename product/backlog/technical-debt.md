@@ -4,17 +4,6 @@
 
 ## development
 
-* Share one pid lock-file primitive between the project instance lock and the remote root-clone lock, so an unreadable lock entry fails or waits instead of spinning the remote serve process.
-
-Existing Debt: The instance lock and the remote root lock each implement their own exclusive create, pid parse, liveness check, and compare-and-remove, and the two disagree on read errors: the instance lock throws on anything but a missing file, while the root lock treats every read failure as "no holder". Severity: 4/10
-
-Existing Risk: 5/10 - A lock entry that exists but can't be read, such as a directory at the lock path or a file left by another account, sends `acquireRootLock` into a synchronous retry loop that never awaits, which hangs the remote serve process and blocks the abort signal that was supposed to cancel the wait.
-
-Proposal Risk: 2/10 - Both locks rest on one tested primitive and an unreadable entry rejects with the lock path; what remains is pid reuse, which both locks already accept by design and document beside `isOwnInstanceAlive`.
-
-Proposal: `acquireLock`, `createLockFile`, `readLockContent`, and `parseLockPid` in `src/instance-lock.ts` and `tryCreate`, `holder`, `clearIfDead`, and `acquireRootLock` in `src/remote/serve-root-lock.ts` implement the same bare-pid lock file twice. In the root lock, `holder` swallows every `readFileSync` error. So when `tryCreate` gets `EEXIST` and the read then fails for any other reason, `clearIfDead` and the `holder(file) !== undefined` wait are both skipped, and `while (!tryCreate(file))` runs again without awaiting. Extract a small module (for example `src/pid-lock-file.ts`) with `parseLockPid`, `createPidFile(file, mode?)` (the `wx` create, `false` on `EEXIST`), `readPidFile(file)` (`undefined` only on `ENOENT`, rethrowing anything else), and `clearIfStale(file, content)` (the compare-and-remove both files already do). Rebuild both locks on it without changing their policies: the instance lock still refuses at once and the root lock still polls every `ROOT_LOCK_POLL_MS`. A rethrown read error should reject `acquireRootLock` with the lock path in the message. `src/instance-lock.test.ts`, `src/remote/serve-root-lock.test.ts`, and `src/stop-instance.test.ts` pin the current behavior; add a root-lock test that puts a directory at `rootLockPath(...)` and expects a rejection rather than a hang.
-
-
 * Write saved image edits over the original atomically, through a file helper the plugin boundary already admits, and correct the comments that still say the image plugin writes a numbered sibling.
 
 Existing Debt: The image plugin's save overwrites the user's original file with a plain `writeFileSync`, unlike the app's other in-place saves, which go through `atomicWriteFile`, and two comments still describe an earlier design where image edits were written as numbered siblings. Severity: 3/10

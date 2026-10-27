@@ -28,6 +28,12 @@ describe('acquireRootLock', () => {
     expect(existsSync(file)).toBe(false);
   });
 
+  it('rejects with the lock path when the lock entry cannot be read', async () => {
+    const file = rootLockPath(target, home);
+    mkdirSync(file, { recursive: true });
+    await expect(acquireRootLock(target, { home, pollMs: 10 })).rejects.toThrow(file);
+  });
+
   it('waits while a live holder has it, and takes it once released', async () => {
     const first = await acquireRootLock(target, { home });
     let second: (() => void) | undefined;

@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { isOwnInstanceAlive } from '../instance-lock.js';
+import { clearIfStale, createPidFile, parseLockPid, readPidFile } from '../pid-lock-file.js';
 
 // One lock per clone target, so two launches reaching the same missing root at once — two tabs from
 // one profile, say — show one prompt and make one clone. It lives in the remote user's own home
@@ -30,19 +31,9 @@ export function rootLockPath(target: string, home: string = homedir()): string {
 
 function holder(file: string): string | undefined {
   try {
-    return readFileSync(file, 'utf8');
-  } catch {
-    return undefined;
-  }
-}
-
-function tryCreate(file: string): boolean {
-  try {
-    writeFileSync(file, String(process.pid), { flag: 'wx', mode: 0o600 });
-    return true;
+    return readPidFile(file);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'EEXIST') return false;
-    throw error;
+    throw new Error(`Cannot read remote root lock file ${file}.`, { cause: error });
   }
 }
 
@@ -50,9 +41,13 @@ function tryCreate(file: string): boolean {
 // attempt can take it. The file is read again first, so a lock another waiter took over a moment ago
 // is not removed out from under it.
 function clearIfDead(file: string, content: string): void {
-  const pid = Number(content.trim());
-  if (Number.isSafeInteger(pid) && pid > 0 && isOwnInstanceAlive(pid)) return;
-  if (holder(file) === content) rmSync(file, { force: true });
+  const pid = parseLockPid(content);
+  if (pid !== undefined && isOwnInstanceAlive(pid)) return;
+  try {
+    clearIfStale(file, content);
+  } catch (error) {
+    throw new Error(`Cannot clear remote root lock file ${file}.`, { cause: error });
+  }
 }
 
 function wait(ms: number, signal: AbortSignal | undefined): Promise<void> {
@@ -71,7 +66,7 @@ function wait(ms: number, signal: AbortSignal | undefined): Promise<void> {
 export async function acquireRootLock(target: string, options: RootLockOptions = {}): Promise<() => void> {
   const file = rootLockPath(target, options.home);
   mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-  while (!tryCreate(file)) {
+  while (!createPidFile(file, 0o600)) {
     if (options.signal?.aborted) throw new Error('Root lock wait cancelled.');
     const content = holder(file);
     if (content !== undefined) clearIfDead(file, content);

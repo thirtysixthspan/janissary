@@ -403,6 +403,9 @@ from one profile. Only the first shows the prompt, and it holds the target until
 The other waits silently, then uses the clone without asking. If the first is declined, cancelled, or
 its clone fails, the waiting launch asks for itself.
 
+If the host cannot check whether another launch is creating the same clone, the offer fails instead
+of leaving the remote serve process unresponsive. A later launch can retry once the cause is resolved.
+
 Closing the placeholder tab, or losing the ssh session, while the prompt is up counts as declining.
 Doing so while the clone runs stops it. A cancelled or failed clone removes the folders it created.
 An empty `~/<repo-name>` that already existed keeps its folder and loses only what the clone put in
