@@ -1,5 +1,5 @@
 export const LAYOUT_SUBCOMMANDS = ['window', 'sidebar', 'split', 'reporting', 'show'];
-export const LAYOUT_USAGE = 'Usage: layout window <width> <height> | sidebar left|right <width> | split <percent> | reporting <percent> | show.';
+export const LAYOUT_USAGE = String.raw`Usage: layout window \<width\> \<height\> | sidebar left|right \<width\> | split \<percent\> | reporting \<percent\> | show.`;
 
 export type ParsedLayoutCommand =
   | { action: 'window'; width: number; height: number }

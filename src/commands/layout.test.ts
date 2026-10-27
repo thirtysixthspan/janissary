@@ -191,7 +191,7 @@ describe('layout command', () => {
 
     expect(appended).toEqual([{
       label: 'janus', input: 'layout sidebar center 300',
-      output: 'Usage: layout window <width> <height> | sidebar left|right <width> | split <percent> | reporting <percent> | show.',
+      output: String.raw`Usage: layout window \<width\> \<height\> | sidebar left|right \<width\> | split \<percent\> | reporting \<percent\> | show.`,
     }]);
   });
 });
