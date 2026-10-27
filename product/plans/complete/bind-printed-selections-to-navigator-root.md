@@ -21,7 +21,7 @@ Capture `state.root` before requesting client selections. Keep the existing stat
 - Reroot the target while selection collection is pending and verify the printed command uses the current root without cursor, anchor, or select clauses from the old tree.
 - Retarget the same navigator through `openOrRetarget` while selection collection is pending and verify the old tree's selection clauses are omitted.
 - Preserve the existing tab-reordering and closed-navigator regressions.
-- Run `$janissary/scripts/run.mjs check-diff` after each implementation, test, spec, and backlog change.
+- Diff-scoped lint, typecheck, and related server tests passed after each implementation, test, spec, and backlog change.
 
 ## Out of scope
 

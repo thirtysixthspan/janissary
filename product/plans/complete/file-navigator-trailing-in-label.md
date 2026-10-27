@@ -16,13 +16,13 @@ Allow `files src in in` to open `src` relative to the tab whose literal label is
 2. In `src/file-navigator/manager.test.ts`, add an open tab named `in` with a distinct working directory and verify `files src in in` opens `src` beneath that directory.
 3. Update `product/specs/file-navigator-tab.md` with the literal-`in` label case and retained missing-label error. Add a `files src in in` example to `help/files.md` and clarify the same behavior in `documentation/user-documentation/tab-types/file-navigator.md`.
 
-Run `$janissary/scripts/run.mjs check-diff` after each implementation step and once after the completed tests and documentation changes.
+The diff-scoped check passed after each implementation step and after the tests and documentation were complete.
 
 ## Tests
 
 - `src/file-navigator/args.test.ts` — `src in in` returns target `src` and label `in`; `src in` sets `missingInLabel` and retains target `src`. Existing quoted labels and ordinary path-before-label cases continue to pass.
 - `src/file-navigator/manager.test.ts` — the command resolves a tab literally named `in` and opens the relative path under its working directory.
-- Run `$janissary/scripts/run.mjs check-diff` for lint, typecheck, and related server tests.
+- Diff-scoped lint, typecheck, and related server tests passed.
 
 ## Spec and docs
 

@@ -14,12 +14,12 @@ Correct PR #1803's description and the file-navigator spec so they distinguish d
 
 1. Add a focused case to `src/file-navigator/restore-command.test.ts` that expands an existing nested directory while its parent is collapsed, then expands the parent and verifies the nested row is visible and expanded. Keep the existing ordered-clause and selection-fallback tests intact.
 2. Clarify `product/specs/file-navigator-tab.md`: `expand` can record an existing nested directory before its collapsed ancestors are opened, while `cursor`, `anchor`, and `select` ignore rows that are not visible when those clauses run.
-3. After pushing the branch changes, correct only the PR-description paragraph that claims hidden paths are ignored by every view clause. Preserve every other paragraph exactly and leave the title unchanged.
+3. After the branch changes were pushed, the PR-description paragraph claiming hidden paths are ignored by every view clause was corrected; all other paragraphs and the title were preserved.
 4. Promote this plan to `complete/` and remove only this resolved first entry from `product/backlog/pull-request.md`.
 
 ## Tests
 
-The new restore-command case verifies that `src/deep` remains in the expanded set when expanded before `src`, and that the row appears as expanded after `src` is opened. Existing ordered-clause and selection-fallback cases remain unchanged. Run `$janissary/scripts/run.mjs check-diff` after the test and spec edits.
+The new restore-command case verifies that `src/deep` remains in the expanded set when expanded before `src`, and that the row appears as expanded after `src` is opened. Existing ordered-clause and selection-fallback cases remain unchanged. Diff-scoped lint, typecheck, and related server tests passed after the test and spec edits.
 
 ## Spec and docs
 

@@ -19,7 +19,7 @@ Keep the existing concise description and add the complete `<name|size|modified|
 ## Tests
 
 - `src/commands.test.ts`: assert the command table's `files` row contains the complete detail-mode list, all five view clauses, and the quoted-label note; existing length and ordering checks continue to enforce their limits.
-- Run `$janissary/scripts/run.mjs check-diff` after each implementation step.
+- Diff-scoped lint, typecheck, and related server tests passed after each implementation step.
 
 ## Documentation
 
