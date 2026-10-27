@@ -95,6 +95,7 @@ The command's forms, limits, replies, and synchronization behavior are:
 - **`src/commands/index.ts`**. Import the command and add it to `coreCommands`. Its position is free, since `commands.test.ts` fails any shadowing either way.
 - **`src/protocol/events.ts`**. `LayoutUpdate` gains an optional `splitPct`, documented as the left pane's percent of the center area. The comment above the type, which says the event carries only "a profile's" sizes, now also names the `layout` command.
 - **`src/protocol/core-rpc.ts`**, **`src/client-params/core.ts`**, **`src/controller.ts`**. The `reportLayout` params gain a required `splitPct`, the guard checks it with `isFiniteNumber` like its siblings, and `controller.reportLayout`'s parameter type follows. The RPC's comment changes from "after a manual resize completes" to "on connect and after a manual resize completes". Client and server ship together, so the field is required rather than optional.
+- **`src/message/handler.test.ts`**. The existing `reportLayout` dispatch test sends a representative `splitPct` and asserts that the controller receives the complete four-field report unchanged.
 - **`src/client-layout.ts`**. `ClientLayout` gains `splitPct`. A new `patchClientLayout(update)` merges whichever of `sidebarLeft`, `sidebarRight`, `tabAreaPct`, and `splitPct` the update carries into the held layout, and does nothing when no layout is held yet, since that event reached no client either. `buildLayout` in `src/profile/save/reserved.ts` ignores `splitPct`, which keeps the split out of saved profiles (Out of scope).
 - **`src/controller/events.ts`**. The existing `layout` subscriber calls `patchClientLayout` with the update before forwarding it to `sinks.sendLayout`.
 - **`src/notifications/index.ts`**, **`src/notifications/alert-defaults.ts`**, **`src/notifications/format.ts`**. Add `'layout'` to `NotificationEventType` and to `EXPLICIT_EVENTS`, give it `{ desktop: true, sound: 'warning' }` in `NOTIFICATION_ALERT_DEFAULTS`, and add it to the `return detail ?? ''` group in the formatter's switch beside `open-unsupported`. Both maps are keyed by the union, so a missed one fails typecheck.
@@ -125,7 +126,7 @@ The command's forms, limits, replies, and synchronization behavior are:
 
 The changes were implemented in this order so typecheck and tests stayed green at each step:
 
-1. The `splitPct` field end to end: `LayoutUpdate`, the `reportLayout` params and guard, `ClientLayout`, `patchClientLayout` and its call in `src/controller/events.ts`, then the web side (hoisted divider, `useLayoutState`, `ws.ts`, the `App`/`AppMain` threading). The required RPC field and the client call that sends it must change together.
+1. The `splitPct` field end to end: `LayoutUpdate`, the `reportLayout` params and guard, its dispatch assertion in `src/message/handler.test.ts`, `ClientLayout`, `patchClientLayout` and its call in `src/controller/events.ts`, then the web side (hoisted divider, `useLayoutState`, `ws.ts`, the `App`/`AppMain` threading). The required RPC field and the client call that sends it must change together.
 2. The `layout` notification event in the three notification modules.
 3. `parse-layout.ts`, `layout.ts`, the registry entry, and the `help/commands.md` row together, since `commands.test.ts` reads both.
 4. Completion.
@@ -138,6 +139,7 @@ The changes were implemented in this order so typecheck and tests stayed green a
 - **`src/client-layout.test.ts`** (extend). `patchClientLayout` merges only the fields an update carries, and does nothing when no layout is held.
 - **`src/controller/events.test.ts`** (extend). A `layout` bus event patches the held layout and still reaches `sendLayout` unchanged.
 - **`src/client-params/core.test.ts`** (extend). The existing `reportLayout` row gains `splitPct`; a missing or non-finite `splitPct` is rejected.
+- **`src/message/handler.test.ts`** (extend). Dispatching a valid `reportLayout` call forwards the complete report, including `splitPct`, to the controller.
 - **`src/notifications/index.test.ts`** (extend). A `layout` event is recorded even when its tab is the active one, and its alert defaults to a banner with the `warning` cue.
 - **`src/completion/index.test.ts`** (extend, beside the `browser` cases). `layout ` completes the subcommand keywords, `layout sid` completes to `layout sidebar `, and `layout sidebar ` offers `left` and `right`.
 - **`src/commands.test.ts`** (existing, unchanged). Fails if the new `samples` shadow or are shadowed, if the `help/commands.md` row is out of order, or if the `help/layout.md` page is missing.
@@ -158,6 +160,7 @@ The changes were implemented in this order so typecheck and tests stayed green a
 - Persisting sizes across relaunch outside a profile. They reset like dragged sizes (Design decision 13).
 - Telling the user that `layout window` did nothing under `--no-open` (Design decision 10).
 - Holding a `layout` change for a client that connects later (Design decision 15).
+- Changing `reportLayout` dispatch or validation beyond forwarding and requiring the finite `splitPct` field; decoder coverage continues to reject a missing or non-finite value.
 - Changing Markdown rendering for unrelated command replies.
 
 ## Open questions

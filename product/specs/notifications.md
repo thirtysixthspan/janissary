@@ -210,7 +210,8 @@ These event types can produce a notification line:
   exact messages are `Could not resize the window: <reason>.`,
   `Could not read the window size: <reason>.`, and `No layout to show.` The reason is the first line
   of the error with terminal punctuation removed and one period added. These notices are attributed
-  to the tab that ran `layout`, appear only in notifications, and have no config toggle.
+  to the tab that ran `layout`, appear only in notifications, and have no config toggle. The event
+  defaults to a desktop banner with the `warning` cue.
 - **`plugin-failure`** — a tab plugin is disabled after a fatal failure (see [[tab-plugins]]). The
   line is `Tab plugin "<id>" disabled: <reason>.`, attributed to the tab that invoked it when one
   exists. It is queued and delivered through the ordinary feed, toast, and burst-escalation rules.
