@@ -1,5 +1,6 @@
-import { mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
+import { clearIfStale, createPidFile, parseLockPid, readPidFile } from './pid-lock-file.js';
 
 /**
  * Does some process hold this pid, whoever owns it?
@@ -54,42 +55,11 @@ function lockPath(projectDir: string): string {
   return path.join(projectDir, '.janissary', 'lock');
 }
 
-// The pid a lock file's contents record, or undefined unless it could name one real process.
-// `process.kill` gives 0 and negative numbers a process-group meaning — and an empty or truncated
-// file parses to 0 — so probing or signalling anything but a positive integer would reach the
-// caller's own process group, or every process the user owns.
-function parseLockPid(content: string): number | undefined {
-  const pid = Number(content.trim());
-  return Number.isSafeInteger(pid) && pid > 0 ? pid : undefined;
-}
-
-// The lock file's contents, or undefined when there is no lock file.
-function readLockContent(file: string): string | undefined {
-  try {
-    return readFileSync(file, 'utf8');
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
-    throw error;
-  }
-}
-
 // The PID recorded in a directory's lock file, or undefined when no lock file exists (or its
 // contents are not a valid pid). Used by `janus stop` to find the instance to signal.
 export function readLockPid(projectDir: string): number | undefined {
-  const content = readLockContent(lockPath(projectDir));
+  const content = readPidFile(lockPath(projectDir));
   return content === undefined ? undefined : parseLockPid(content);
-}
-
-// Create the lock file holding this process's pid, in one exclusive step: false when one already
-// exists, so two starters racing for a free lock cannot both win.
-function createLockFile(file: string): boolean {
-  try {
-    writeFileSync(file, String(process.pid), { flag: 'wx' });
-    return true;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'EEXIST') return false;
-    throw error;
-  }
 }
 
 function alreadyRunning(file: string, pid: number | undefined): Error {
@@ -106,12 +76,12 @@ function alreadyRunning(file: string, pid: number | undefined): Error {
 export function acquireLock(projectDir: string): void {
   const file = lockPath(projectDir);
   mkdirSync(path.dirname(file), { recursive: true });
-  if (createLockFile(file)) return;
-  const content = readLockContent(file);
+  if (createPidFile(file)) return;
+  const content = readPidFile(file);
   const pid = content === undefined ? undefined : parseLockPid(content);
   if (pid !== undefined && isOwnInstanceAlive(pid)) throw alreadyRunning(file, pid);
-  if (content !== undefined && readLockContent(file) === content) rmSync(file, { force: true });
-  if (!createLockFile(file)) throw alreadyRunning(file, readLockPid(projectDir));
+  if (content !== undefined) clearIfStale(file, content);
+  if (!createPidFile(file)) throw alreadyRunning(file, readLockPid(projectDir));
 }
 
 export function releaseLock(projectDir: string): void {
