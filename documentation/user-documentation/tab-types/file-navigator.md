@@ -86,6 +86,19 @@ The header's detail button cycles a tree through the four modes, one click at a 
 
 A [profile](/user-documentation/automation/profiles) that saves this tree restores its detail mode along with its expanded directories and selection.
 
+You can also restore a local tree's view with `files` clauses. Expand folders before naming rows inside them; `cursor`, `anchor`, and `select` use paths relative to the tree root. Repeat `expand`, `collapse`, or `select` to name more than one path, and quote paths that contain spaces or quotes:
+
+```
+files expand src expand src/commands cursor src/commands/files.ts anchor src/commands/files.ts select src/commands/files.ts
+files expand "my folder" select "my folder/notes.md"
+```
+
+`files print <tab>` prints a reusable command for an open tree. For example, if `navigator` is rooted at the project directory, docked on the left, and showing sizes, it could print:
+
+```
+files on left with size expand src expand src/commands cursor src/commands/files.ts anchor src/commands/files.ts select src/commands/files.ts $root
+```
+
 ## Move a tree between the sidebars and the center
 
 Every tree has a **location** button in its header, wherever it sits. Each click moves the tree one step around the cycle left sidebar → center tab strip → right sidebar → left sidebar. Its tooltip names where the next click will take it (`Move to right sidebar`, `Move to left sidebar`, or `Move to center tab strip`), so you can see where a tree is going before you send it. Back in the center, the tree lands at the front of its group where a navigator always sits. The commands reach the same places: `files left` and `files right` dock it, and `files` on its own, or `files <path>`, puts it back in the strip.
@@ -369,3 +382,5 @@ One thing a tree will not do is reach outside itself. Every path you supply to a
 Every change a tree makes is aimed at the tree you made it in. If that tree has closed by the time the request arrives, the change simply doesn't happen and nothing is reported — including when another navigator has since taken its place in the tab list, which never inherits what you asked the old one to do.
 
 A [profile](/user-documentation/automation/profiles) brings a **local** tree back the way you left it. `profile save` records which directories you had expanded, where the cursor was, and every row you had selected; `profile launch` puts them back, silently skipping anything that has since been deleted. Remote trees are omitted because their workspace and signed-in SSH session no longer exist. The undo/redo history is not part of a profile — it stays in memory and dies with the tab.
+
+The command-line view clauses restore local trees too. On an already-open tree, the command changes only the view parts named; a clause for a path that no longer exists is ignored. View clauses on remote trees are ignored. `files print <tab>` prints a reusable command with the tree's root and view; for a remote tree, the printed command has no view clauses.

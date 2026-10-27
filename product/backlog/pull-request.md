@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's missing user-facing file-tree and completion documentation.
-
-Existing Issue: The plan requires the file-navigator guide to explain command restoration and `files print`, and the key reference to describe the new `files` completion positions, but neither `documentation/user-documentation/tab-types/file-navigator.md` nor `help/keys.md` changed. Severity: 5/10
-
-Existing Risk: 4/10 - Users can find the short command syntax but miss the local-only restore behavior, path rules, and completion behavior that affect how they use the feature.
-
-Proposal Risk: 2/10 - Updated references could still miss an edge case, but the changed completion guide and file-navigator spec already describe the full behavior.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1803 "add the planned file-navigator and files-completion documentation". Update `documentation/user-documentation/tab-types/file-navigator.md` with the planned clause and `files print` examples near the detail-mode section, and explain local-only restoration near the profile restore section. Update the command-bar Tab entry and completion explanation in `help/keys.md` to describe `files` clause and path completion, quoted names, and path completion against a local `in` tab. Use `product/specs/file-navigator-tab.md`, `product/specs/profiles.md`, `product/specs/tab-completion.md`, and the already-updated `documentation/user-documentation/command-bar/tab-completion.md` to keep the wording aligned. Verify both pages state that command restores touch only named parts, remote view clauses are ignored, and `files print` emits a reusable command, with examples that follow the implemented syntax.
-
-
 * Handle the functionality gap where completion suggests already-consumed `files` clauses.
 
 Existing Issue: `keywordCandidates` in `src/completion/files.ts` always offers `in`, `on`, and `with` even after the completion parser marks each clause as used, although `parseFileNavigatorArgs` consumes each only once, so `files on left <Tab>` suggests `on` even though it becomes a trailing path. Severity: 3/10
