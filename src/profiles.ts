@@ -1,15 +1,18 @@
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import type { ProfileRow } from './profile/types.js';
 
 // A profile is a named, reusable set of AI harnesses and the tabs that support them for a particular
 // use case (writing code, surfing the web, authoring a book, …). Each profile is a single JSON file
-// `profiles/<name>.json` holding one `tabs` array plus the profile-level `monitors` and `layout` keys. Profiles live
+// `profiles/<name>.json` holding one `tabs` array plus the profile-level `monitors` and `layout` keys,
+// or a runscript `profiles/<name>.rs` whose lines run in the system shell instead. Profiles live
 // in a top-level, committable `profiles/` dir (not `.janissary/`, which is gitignored and whose
 // `state/` is cleared each launch).
 
 let projectProfileDir = '';
 let janissaryProfileDir = '';
+
+export type ProfileSource = { kind: 'runscript' | 'config'; file: string };
 
 export function initProfileDir(projectDir: string, janissaryDir: string = projectDir): void {
   projectProfileDir = path.join(projectDir, 'profiles');
@@ -26,17 +29,37 @@ export function profileReadPath(name: string): string {
   return path.join(janissaryProfileDir, `${name}.json`);
 }
 
-export function profileExists(name: string): boolean {
-  return projectProfileDir !== '' && existsSync(profileReadPath(name));
+// Presence is checked without following links, so a symlinked `.rs` still claims the name and is
+// refused by the runscript reader instead of quietly handing the launch to the `.json` beside it.
+function entryPresent(file: string): boolean {
+  try {
+    lstatSync(file);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function sourceIn(dir: string, name: string): ProfileSource | undefined {
+  const runscript = path.join(dir, `${name}.rs`);
+  if (entryPresent(runscript)) return { kind: 'runscript', file: runscript };
+  const config = path.join(dir, `${name}.json`);
+  if (existsSync(config)) return { kind: 'config', file: config };
+  return undefined;
+}
+
+export function resolveProfile(name: string): ProfileSource | undefined {
+  if (projectProfileDir === '') return undefined;
+  return sourceIn(projectProfileDir, name) ?? sourceIn(janissaryProfileDir, name);
 }
 
 function listProfileDir(dir: string): string[] {
   if (!existsSync(dir)) return [];
   try {
-    return readdirSync(dir, { withFileTypes: true })
-      .filter((d) => d.isFile() && d.name.endsWith('.json'))
-      .map((d) => d.name.replace(/\.json$/, ''))
-      .toSorted((a, b) => a.localeCompare(b));
+    const names = readdirSync(dir, { withFileTypes: true })
+      .filter((d) => d.isFile() && /\.(?:json|rs)$/.test(d.name))
+      .map((d) => d.name.replace(/\.(?:json|rs)$/, ''));
+    return [...new Set(names)].toSorted((a, b) => a.localeCompare(b));
   } catch {
     return [];
   }

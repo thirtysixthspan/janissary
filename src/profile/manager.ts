@@ -1,7 +1,8 @@
-import { listProfiles, profileExists } from '../profiles.js';
+import { listProfiles, resolveProfile } from '../profiles.js';
 import { parseProfileCommand } from './command.js';
 import { loadProfile } from './file.js';
 import { openProfileEntries } from './agent-opener.js';
+import { launchProfileRunscript } from './runscript.js';
 import type { Managers } from '../managers.js';
 import { errorText } from '../error-text.js';
 
@@ -24,8 +25,13 @@ export class ProfileManager {
       out(names.length > 0 ? names.join('\n') : 'No profiles.');
       return;
     }
-    if (!profileExists(parsed.name)) {
+    const source = resolveProfile(parsed.name);
+    if (!source) {
       out(`No profile named "${parsed.name}".`);
+      return;
+    }
+    if (source.kind === 'runscript') {
+      this.finish(launchProfileRunscript(this.managers, parsed.name, source.file, out), out);
       return;
     }
     const loaded = loadProfile(parsed.name);

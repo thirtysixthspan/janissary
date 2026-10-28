@@ -13,9 +13,13 @@ export async function runRunscriptNow(managers: Managers, name: string): Promise
   }
   if (!runscript.exists) return `No runscript named "${name}".`;
 
+  await queueRunscriptLines(managers, runscript.lines);
+}
+
+export async function queueRunscriptLines(managers: Managers, lines: string[]): Promise<void> {
   const shell = await managers.systemShell.ensure();
   if (shell.status !== 'ok') return;
-  managers.tab.enqueueSystemBatch('system', runscript.lines);
+  managers.tab.enqueueSystemBatch('system', lines);
 }
 
 export const command: Command = {
