@@ -3,26 +3,19 @@ import React, {
   Suspense,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
-  useState,
 } from 'react';
 import type { TabView } from '@shared/protocol';
-import { errorText } from '@shared/error-text';
 import type { JanusClient } from '../shared/ws/ws';
-import { SplitTabButton } from '../shared/SplitTabButton';
 import { AppCommandBarTabScope } from '../shared/command-bar/AppCommandBar';
-import { createPluginClientCapabilities, type TabDirtyHandle } from './api';
+import type { createPluginClientCapabilities, TabDirtyHandle } from './api';
 import { usePluginHost } from './host';
 import { type ClientPluginRegistration } from './registry';
 import { usePluginRemote } from './usePluginRemote';
+import { usePluginCapabilities } from './usePluginCapabilities';
 import { AcpResponseScope } from '../shared/acp/AcpResponseScope';
 
 const CLIENT_ACTIVATION_MS = 5000;
-
-// What a plugin that claimed no chord reads. A shared constant so the common case keeps one identity
-// rather than a fresh empty array on every render.
-const NO_CHORDS: readonly string[] = [];
 
 class PluginErrorBoundary extends Component<{
   children: React.ReactNode;
@@ -151,76 +144,23 @@ export function PluginBody({
 }) {
   const host = usePluginHost();
   const remoteCapabilities = usePluginRemote(remote, client, label);
-  const [failed, setFailed] = useState(false);
   const pluginId = plugin.id;
-  // The caller rebuilds `onSplit` on every render, so calling through a ref is what actually keeps
-  // the capability object stable — memoizing on `onSplit` itself would rebuild it every time.
-  const onSplitRef = useRef(onSplit);
-  onSplitRef.current = onSplit;
-  const splittable = onSplit !== undefined;
-  const split = useCallback(() => { onSplitRef.current?.(); }, []);
-  // Same ref treatment as `onSplit`, and for the same reason: the caller closes over a tab index
-  // that changes, so calling through a ref is what keeps the capability object stable.
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
-  const close = useCallback((reason?: { terminalExited: string }) => { onCloseRef.current(reason); }, []);
-  // Same ref treatment again: the handle registration must survive the capability object staying
-  // stable, or a plugin would drop its dirty state every time the host rebuilt this callback.
-  const onDirtyHandleRef = useRef(onDirtyHandle);
-  onDirtyHandleRef.current = onDirtyHandle;
-  // The chord ids the host accepted for this plugin, taken from the tab's own wire view rather than
-  // from the declaration the client cannot read. Held in a ref keyed by their joined form because the
-  // view is rebuilt on every state broadcast: a fresh array each time would rebuild the capability
-  // object with it, and a plugin tab must keep its capabilities stable while it is merely on screen.
-  const claimedChords = plugin.chords ?? NO_CHORDS;
-  const chordsRef = useRef(claimedChords);
-  if (chordsRef.current !== claimedChords && chordsRef.current.join(' ') !== claimedChords.join(' ')) {
-    chordsRef.current = claimedChords;
-  }
-  const chords = chordsRef.current;
-  // This tab's recording and transcript paths, read off the envelope the tab was handed rather than
-  // passed beside it. The envelope is where the server puts them for every plugin tab, so a surface
-  // that renders one — the centre strip or a sidebar — reaches the same answer without a prop each
-  // has to remember to pass.
-  const recording = plugin.recording;
-  const transcript = plugin.transcript;
-  const registerDirty = useCallback((handle: TabDirtyHandle | null) => {
-    onDirtyHandleRef.current?.(handle);
-  }, []);
-  // The host builds the control and the capability object only carries it, so the plugin contract
-  // never has to import a component. Memoized on the same two stable values the capability object
-  // is, or a fresh element every render would churn it underneath a mounted plugin.
-  const splitAction = useMemo(
-    () => (splittable ? <SplitTabButton onClick={split} /> : null),
-    [split, splittable],
-  );
-  const capabilities = useMemo(
-    () => createPluginClientCapabilities({
+  const { capabilities, failed, fail } = usePluginCapabilities({
       host,
       pluginId,
       label,
       client,
       active,
       dock,
-      onClose: close,
-      splitAction,
-      onDirtyHandle: registerDirty,
-      claimedChords: chords,
+      onClose,
+      onSplit,
+      onDirtyHandle,
+      claimedChords: plugin.chords,
       dotColor,
-      recording,
-      transcript,
+      recording: plugin.recording,
+      transcript: plugin.transcript,
       remoteCapabilities,
-    }),
-    [active, client, close, dock, host, label, pluginId, registerDirty, splitAction, chords, dotColor,
-      recording, transcript, remoteCapabilities],
-  );
-  const capabilitiesRef = useRef(capabilities);
-  capabilitiesRef.current = capabilities;
-  // `reportFailure` deduplicates per plugin id, so a second boundary failure sends nothing.
-  const fail = useCallback((error: unknown) => {
-    setFailed(true);
-    capabilitiesRef.current.reportFailure(errorText(error));
-  }, []);
+  });
 
   if (failed || host.failure(pluginId) !== undefined) return null;
   // The command-bar state a body reaches is bound to this tab here, by the host, rather than by a label
