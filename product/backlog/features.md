@@ -2,9 +2,6 @@
 
 ## ready
 
-* Naming a group from the command line. A group has a numeric ID and a name, and `in group <name|id>` can choose only one of them (`tabs.md` § Tab grouping). An unknown name gets the next free ID. An unknown ID gets the generated name `group-<id>`. A profile restores both together, so group 3 can come back named `review` (`profiles.md` § Group names). No command renames a group, so a runscript can get the ID it wants or the name it wants, but not both. Closing the gap would add `group name <id> <name>`. It would refuse a name another open group already uses, because names compare without regard to case and `in group review` would otherwise be ambiguous. A rename would leave the group's ID, members, and bar color alone. Complexity: low.
-
-
 ## development
 
 * add an ACP skill to allow an agent to spin up other agents with different models, pass them ai tasks (form the repository) to execute and access to monitor the transcript as the agent works, and to recieve the response.
