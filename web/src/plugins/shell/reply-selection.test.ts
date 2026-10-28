@@ -3,10 +3,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { REPLY_HIGHLIGHT, holdReplySelection, shellSelectionText } from './reply-selection';
 
 afterEach(() => {
-  globalThis.getSelection()?.removeAllRanges();
+  Reflect.deleteProperty(document, 'caretPositionFromPoint');
   document.body.replaceChildren();
   vi.unstubAllGlobals();
 });
+
+function box(left: number, top: number, right: number, bottom: number): DOMRect {
+  return { left, top, right, bottom, x: left, y: top, width: right - left, height: bottom - top, toJSON: () => ({}) };
+}
 
 function mount() {
   const container = document.createElement('div');
@@ -17,32 +21,43 @@ function mount() {
   reply.className = 'shell-output-block';
   const paragraph = document.createElement('p');
   paragraph.textContent = 'first reply line';
-  reply.append(paragraph);
-  const after = document.createElement('div');
-  after.textContent = 'row after';
-  xterm.append(row, reply, after);
+  const link = document.createElement('a');
+  link.href = 'https://example.com/';
+  link.textContent = 'a link';
+  reply.append(paragraph, link);
+  xterm.append(row, reply);
   container.append(xterm);
   document.body.append(container);
+  container.getBoundingClientRect = () => box(0, 0, 500, 400);
+  reply.getBoundingClientRect = () => box(0, 100, 500, 200);
+  const text = paragraph.firstChild!;
+  Object.defineProperty(document, 'caretPositionFromPoint', {
+    configurable: true,
+    value: (x: number, y: number) => (y >= 100 && y < 200
+      ? { offsetNode: text, offset: Math.min(Math.round(x / 10), 16) }
+      : { offsetNode: row.firstChild, offset: 0 }),
+  });
   const terminalPresses: MouseEvent[] = [];
   xterm.addEventListener('mousedown', (event) => {
     event.preventDefault();
     terminalPresses.push(event);
   });
   const terminal = { clearSelection: vi.fn() };
-  const onRelease = vi.fn();
-  const hold = holdReplySelection(container, terminal, onRelease);
-  return { after, hold, onRelease, paragraph, reply, row, terminal, terminalPresses, text: paragraph.firstChild! };
+  const hold = holdReplySelection(container, terminal);
+  return { hold, link, paragraph, reply, row, terminal, terminalPresses };
 }
 
-function selectFrom(anchor: Node, anchorOffset: number, focus: Node, focusOffset: number) {
-  globalThis.getSelection()!.setBaseAndExtent(anchor, anchorOffset, focus, focusOffset);
+function drag(from: Element, [fromX, fromY]: [number, number], [toX, toY]: [number, number]): void {
+  fireEvent.mouseDown(from, { button: 0, clientX: fromX, clientY: fromY });
+  fireEvent.mouseMove(document, { clientX: toX, clientY: toY });
+  fireEvent.mouseUp(document, { button: 0, clientX: toX, clientY: toY });
 }
 
 describe('holdReplySelection', () => {
-  it('stops a press on a reply before the terminal cancels it, and clears the terminal selection', () => {
+  it('keeps a press on a reply from the terminal and from the browser, and clears the terminal selection', () => {
     const { paragraph, terminal, terminalPresses } = mount();
 
-    expect(fireEvent.mouseDown(paragraph, { button: 0 })).toBe(true);
+    expect(fireEvent.mouseDown(paragraph, { button: 0, clientX: 60, clientY: 150 })).toBe(false);
 
     expect(terminalPresses).toEqual([]);
     expect(terminal.clearSelection).toHaveBeenCalledTimes(1);
@@ -51,84 +66,116 @@ describe('holdReplySelection', () => {
   it('leaves a press on terminal rows to the terminal', () => {
     const { row, terminal, terminalPresses } = mount();
 
-    fireEvent.mouseDown(row, { button: 0 });
+    fireEvent.mouseDown(row, { button: 0, clientX: 60, clientY: 50 });
 
     expect(terminalPresses).toHaveLength(1);
     expect(terminal.clearSelection).not.toHaveBeenCalled();
   });
 
-  it('holds the reply text selected when the press is released, after the page selection is gone', () => {
-    const { hold, onRelease, paragraph, text } = mount();
+  it('holds the text between the caret under the press and the caret under the release', () => {
+    const { hold, paragraph } = mount();
 
-    fireEvent.mouseDown(paragraph, { button: 0 });
-    selectFrom(text, 6, text, 16);
-    fireEvent.mouseUp(paragraph, { button: 0 });
-    globalThis.getSelection()!.removeAllRanges();
+    drag(paragraph, [60, 150], [160, 150]);
 
-    expect(onRelease).toHaveBeenCalledTimes(1);
     expect(hold.text()).toBe('reply line');
   });
 
-  it('clips a selection dragged out of the reply to the reply', () => {
-    const { after, hold, paragraph, row, text } = mount();
+  it('selects backwards when the pointer ends before the press', () => {
+    const { hold, paragraph } = mount();
 
-    fireEvent.mouseDown(paragraph, { button: 0 });
-    selectFrom(text, 5, row.firstChild!, 0);
-    fireEvent.mouseUp(row, { button: 0 });
+    drag(paragraph, [160, 150], [60, 150]);
+
+    expect(hold.text()).toBe('reply line');
+  });
+
+  it('runs to the end of the reply below it and to its start above it', () => {
+    const { hold, paragraph } = mount();
+
+    drag(paragraph, [60, 150], [60, 300]);
+    expect(hold.text()).toBe('reply linea link');
+
+    drag(paragraph, [50, 150], [50, 20]);
     expect(hold.text()).toBe('first');
-
-    fireEvent.mouseDown(paragraph, { button: 0 });
-    selectFrom(text, 6, after.firstChild!, 3);
-    fireEvent.mouseUp(after, { button: 0 });
-    expect(hold.text()).toBe('reply line');
   });
 
-  it('holds nothing for a press released without a selection, and still gives the keyboard back', () => {
-    const { hold, onRelease, paragraph } = mount();
-
-    fireEvent.mouseDown(paragraph, { button: 0 });
-    fireEvent.mouseUp(paragraph, { button: 0 });
-
-    expect(hold.text()).toBe('');
-    expect(onRelease).toHaveBeenCalledTimes(1);
-  });
-
-  it('keeps the hold through a right-button press and drops it on the next primary press', () => {
-    const { hold, paragraph, reply, row, text } = mount();
-    fireEvent.mouseDown(paragraph, { button: 0 });
-    selectFrom(text, 6, text, 16);
-    fireEvent.mouseUp(paragraph, { button: 0 });
-
-    fireEvent.mouseDown(reply, { button: 2 });
-    expect(hold.text()).toBe('reply line');
-
-    fireEvent.mouseDown(row, { button: 0 });
-    expect(hold.text()).toBe('');
-  });
-
-  it('paints the held range with the shared highlight and removes it when cleared', () => {
+  it('paints the selection while dragging and removes it when cleared', () => {
     const highlights = new Map<string, Set<Range>>();
     vi.stubGlobal('CSS', { highlights });
     vi.stubGlobal('Highlight', class extends Set<Range> {});
-    const { hold, paragraph, text } = mount();
+    const { hold, paragraph } = mount();
+    const painted = () => [...highlights.get(REPLY_HIGHLIGHT) ?? []].map(String);
 
-    fireEvent.mouseDown(paragraph, { button: 0 });
-    selectFrom(text, 6, text, 16);
-    fireEvent.mouseUp(paragraph, { button: 0 });
-    expect([...highlights.get(REPLY_HIGHLIGHT)!].map(String)).toEqual(['reply line']);
+    fireEvent.mouseDown(paragraph, { button: 0, clientX: 60, clientY: 150 });
+    fireEvent.mouseMove(document, { clientX: 160, clientY: 150 });
+    expect(painted()).toEqual(['reply line']);
+    fireEvent.mouseUp(document, { button: 0, clientX: 160, clientY: 150 });
+    expect(painted()).toEqual(['reply line']);
 
     hold.clear();
-    expect(highlights.get(REPLY_HIGHLIGHT)!.size).toBe(0);
+    expect(painted()).toEqual([]);
+  });
+
+  it('reads a selection inside one code line with the code block around it', () => {
+    const { hold, reply } = mount();
+    const pre = document.createElement('pre');
+    const code = document.createElement('code');
+    code.textContent = '  indented code';
+    pre.append(code);
+    reply.append(pre);
+    const codeText = code.firstChild!;
+    Object.defineProperty(document, 'caretPositionFromPoint', {
+      configurable: true,
+      value: (x: number) => ({ offsetNode: codeText, offset: Math.round(x / 10) }),
+    });
+    const append = vi.spyOn(document.body, 'append');
+
+    drag(code, [0, 150], [80, 150]);
+
+    const holder = append.mock.calls.at(-1)?.[0] as HTMLElement;
+    expect(holder.innerHTML).toBe('<pre><code>  indent</code></pre>');
+    expect(hold.text()).toBe('  indent');
+    append.mockRestore();
+  });
+
+  it('holds nothing for a press released where it started', () => {
+    const { hold, paragraph } = mount();
+
+    drag(paragraph, [60, 150], [60, 150]);
+
+    expect(hold.text()).toBe('');
+  });
+
+  it('keeps the hold through a right-button press and drops it on the next primary press', () => {
+    const { hold, paragraph, reply, row } = mount();
+    drag(paragraph, [60, 150], [160, 150]);
+
+    fireEvent.mouseDown(reply, { button: 2, clientX: 100, clientY: 150 });
+    expect(hold.text()).toBe('reply line');
+
+    fireEvent.mouseDown(row, { button: 0, clientX: 60, clientY: 50 });
+    expect(hold.text()).toBe('');
+  });
+
+  it('keeps the click that ends a drag from following a link, but not a later click', async () => {
+    const { link, paragraph, reply } = mount();
+    const followed = vi.fn();
+    reply.addEventListener('click', followed);
+    drag(paragraph, [60, 150], [160, 150]);
+
+    expect(fireEvent.click(link)).toBe(false);
+    expect(followed).not.toHaveBeenCalled();
+
+    await new Promise((resolve) => { setTimeout(resolve, 0); });
+    fireEvent.click(link);
+    expect(followed).toHaveBeenCalledTimes(1);
   });
 
   it('releases the hold and its listeners when disposed', () => {
-    const { hold, paragraph, terminalPresses, text } = mount();
-    fireEvent.mouseDown(paragraph, { button: 0 });
-    selectFrom(text, 6, text, 16);
-    fireEvent.mouseUp(paragraph, { button: 0 });
+    const { hold, paragraph, terminalPresses } = mount();
+    drag(paragraph, [60, 150], [160, 150]);
 
     hold.dispose();
-    fireEvent.mouseDown(paragraph, { button: 0 });
+    fireEvent.mouseDown(paragraph, { button: 0, clientX: 60, clientY: 150 });
 
     expect(hold.text()).toBe('');
     expect(terminalPresses).toHaveLength(1);
@@ -137,11 +184,9 @@ describe('holdReplySelection', () => {
 
 describe('shellSelectionText', () => {
   it('reads the held reply text before the terminal selection', () => {
-    const { hold, paragraph, text } = mount();
+    const { hold, paragraph } = mount();
     const terminal = { hasSelection: () => true, getSelection: () => 'terminal text' };
-    fireEvent.mouseDown(paragraph, { button: 0 });
-    selectFrom(text, 6, text, 16);
-    fireEvent.mouseUp(paragraph, { button: 0 });
+    drag(paragraph, [60, 150], [160, 150]);
 
     expect(shellSelectionText(hold, terminal)).toBe('reply line');
     hold.clear();

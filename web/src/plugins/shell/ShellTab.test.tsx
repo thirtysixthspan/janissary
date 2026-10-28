@@ -301,13 +301,19 @@ function dragOverReply(text: string): HTMLElement {
   const reply = document.createElement('div');
   reply.className = 'shell-output-block';
   reply.textContent = text;
-  document.querySelector('.shell-body')!.append(reply);
-  fireEvent.mouseDown(reply, { button: 0 });
-  const range = document.createRange();
-  range.selectNodeContents(reply);
-  globalThis.getSelection()!.removeAllRanges();
-  globalThis.getSelection()!.addRange(range);
-  fireEvent.mouseUp(reply, { button: 0 });
+  const body = document.querySelector<HTMLElement>('.shell-body')!;
+  body.append(reply);
+  const area = { left: 0, top: 0, right: 400, bottom: 40, x: 0, y: 0, width: 400, height: 40, toJSON: () => ({}) };
+  body.getBoundingClientRect = () => area;
+  reply.getBoundingClientRect = () => area;
+  Object.defineProperty(document, 'caretPositionFromPoint', {
+    configurable: true,
+    value: (x: number) => ({ offsetNode: reply.firstChild, offset: Math.min(Math.round(x / 10), text.length) }),
+  });
+  fireEvent.mouseDown(reply, { button: 0, clientX: 0, clientY: 20 });
+  fireEvent.mouseMove(document, { clientX: text.length * 10, clientY: 20 });
+  fireEvent.mouseUp(document, { button: 0, clientX: text.length * 10, clientY: 20 });
+  Reflect.deleteProperty(document, 'caretPositionFromPoint');
   return reply;
 }
 

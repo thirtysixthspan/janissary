@@ -126,12 +126,15 @@ terminal without adding an application-window scrollbar. The decoration stays in
 body and never covers the metadata row or tab strip. Its visible portion stays rendered while
 scrolling through it, even when its first row is above the viewport. The block is not terminal text,
 so terminal search does not see it, and a terminal selection never covers it. Text in a rendered
-reply is selected by dragging over it with the pointer: the press goes to the reply rather than the
-terminal, so it starts an ordinary text selection, and a drag that leaves the reply selects only up
-to the reply's edge. When the drag ends, the keyboard returns to the command bar, as after any
-click on the terminal, and the selected text stays highlighted in the terminal's selection color.
-The copy chord (see § Keys) and the right-click menu's **Copy** copy it through the shared
-clipboard, exactly as they copy a terminal selection. A reply selection and a terminal selection
+reply is selected by dragging over it with the pointer. The press goes to the reply rather than the
+terminal, and the dragged text is highlighted in the terminal's selection color as the pointer
+moves. A drag that leaves the reply runs to the reply's end while the pointer is below it and to its
+start while the pointer is above it. The press does not move the keyboard, and the click that ends
+the drag leaves it in the command bar, as any click on the terminal does; a click that ends a drag
+on a link does not follow the link. The selected text stays highlighted after the drag, and the
+copy chord (see § Keys) and the right-click menu's **Copy** copy it through the shared clipboard,
+exactly as they copy a terminal selection, with the reply's line breaks and table cells separated
+by tabs. A reply selection and a terminal selection
 never stand together: pressing the primary button anywhere in the terminal, a reply included,
 clears whichever is held, and a double-click or a resize of the terminal clears it too. A
 right-click keeps it. When a full-screen program holds the terminal, or the reply cannot be

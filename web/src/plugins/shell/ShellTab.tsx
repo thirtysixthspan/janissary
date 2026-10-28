@@ -57,7 +57,6 @@ export function ShellTab({ payload, capabilities }: Properties) {
     payload,
     capabilities,
     containerRef: terminalReference,
-    focusCommandBar: () => { inputReference.current?.focus(); },
     onCommand: terminalHistory.onCommand,
     onCommandRunning: (running) => {
       setCommandRunning(running);

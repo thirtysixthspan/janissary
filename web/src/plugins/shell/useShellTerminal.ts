@@ -35,7 +35,6 @@ type Options = {
   reportColors?: (id: string, colors: TerminalColors) => void;
   // Opens a link clicked in a rendered reply. Absent, a click on one still never navigates the window.
   openLink?: (href: string) => void;
-  focusCommandBar?: () => void;
   onCommandRunning: (running: boolean) => void;
   onCwd: (cwd: string) => void;
   onCommand?: (command: string) => void;
@@ -63,8 +62,7 @@ export type ShellTerminalHandle = {
 };
 
 export function useShellTerminal({
-  ptyId, connectPtyId, containerRef, attachTerminal, copyText, reportColors, openLink, focusCommandBar, onExit, onCommandRunning, onCwd,
-  onCommand, hookNonce,
+  ptyId, connectPtyId, containerRef, attachTerminal, copyText, reportColors, openLink, onExit, onCommandRunning, onCwd, onCommand, hookNonce,
 }: Options): ShellTerminalHandle & { terminalReady: boolean } {
   const handleRef = useRef<PluginTerminal | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -89,8 +87,6 @@ export function useShellTerminal({
   copyTextRef.current = copyText;
   const openLinkRef = useRef(openLink);
   openLinkRef.current = openLink;
-  const focusCommandBarRef = useRef(focusCommandBar);
-  focusCommandBarRef.current = focusCommandBar;
   const hookNonceRef = useRef(hookNonce);
   hookNonceRef.current = hookNonce;
 
@@ -132,7 +128,7 @@ export function useShellTerminal({
     const fit = new FitAddon();
     terminal.loadAddon(fit);
     const releasePressFocus = holdFocusOffSinglePress(container, terminal);
-    const reply = holdReplySelection(container, terminal, () => { focusCommandBarRef.current?.(); });
+    const reply = holdReplySelection(container, terminal);
     replyRef.current = reply;
     const selectedText = () => shellSelectionText(reply, terminal);
     const clearSelections = () => {

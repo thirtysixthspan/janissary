@@ -50,9 +50,6 @@
   user-select: text;
 }
 
-.shell-output-block::selection,
-.shell-output-block ::selection { background-color: var(--editor-selection); }
-
 ::highlight(shell-reply-selection) { background-color: var(--editor-selection); }
 
 .shell-tab-header { position: relative; flex: 0 0 auto; }
