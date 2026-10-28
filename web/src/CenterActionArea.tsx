@@ -5,10 +5,10 @@ import { beginResizeDrag } from './drag-resize';
 import type { TabEntry } from './tab-entries';
 import { currentEntryForPane, entriesInPane, selectedIndexForPane } from './center-panes';
 import type { BaseCenterActionAreaProps } from './CenterActionAreaProps';
+import { DEFAULT_SPLIT_PCT } from './layout-defaults';
 
 const MIN_PCT = 15;
 const MAX_PCT = 85;
-export const DEFAULT_SPLIT_PCT = 50;
 
 type Properties = BaseCenterActionAreaProps & {
   renderBody: (entry: TabEntry, focused: boolean) => React.ReactNode;
@@ -18,7 +18,7 @@ type Properties = BaseCenterActionAreaProps & {
 export function CenterActionArea({
   entries, tabs, activeTab, secondaryTab, client, closeTab, tabNameMaxLength,
   activeTabNameMaxLength, onFocusCommandBar, onFocusEditor, windowFocused, dirtyTabs,
-  splitPct, setSplitPct, renderBody, persistentLayers,
+  splitPct = DEFAULT_SPLIT_PCT, setSplitPct, renderBody, persistentLayers,
 }: Properties) {
   const areaRef = useRef<HTMLDivElement>(null);
   const split = secondaryTab !== undefined;

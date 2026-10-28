@@ -4,17 +4,6 @@
 
 ## development
 
-* Move the three default layout sizes out of the sidebar, reporting section, and split area components into a small module that the layout hook and those components both read, so the hook stops importing the views it sizes.
-
-Existing Debt: The layout hook imports `DEFAULT_WIDTH_PX` from the sidebar component, `DEFAULT_PCT` from the reporting section, and, as of the layout sizing commit, `DEFAULT_SPLIT_PCT` from the center action area, so a hook reaches up into three component modules for runtime values, which §8 (the four layers, each importing downward only) rules out. Severity: 6/10
-
-Existing Risk: 3/10 - Each new layout dimension has brought one more component import into the hook, its test already loads the sidebar and the whole file-navigator tree just to check four numbers, and the first of those components that needs a runtime value back from the hook's module closes an import cycle between the app's layout state and the views it sizes.
-
-Proposal Risk: 1/10 - The numbers move into a module with no imports, so the only thing left to get wrong is a mistyped value, and the existing tests wouldn't catch that because they read the moved constant rather than a literal, so a slip would show up only as a different default size on first launch.
-
-Proposal: Create `web/src/layout-defaults.ts` holding the three defaults as plain exported constants, renamed so they read clearly outside their old homes: `DEFAULT_SIDEBAR_WIDTH_PX = 300`, `DEFAULT_REPORTING_PCT = 20`, and `DEFAULT_SPLIT_PCT = 50`. Point `web/src/useLayoutState.ts` at the new module and remove its imports of `./Sidebar`, `./ReportingSection`, and `./CenterActionArea`. Have `web/src/Sidebar.tsx`, `web/src/ReportingSection.tsx`, and `web/src/CenterActionArea.tsx` import their default from the new module and stop exporting it; don't re-export it from the component, per §4. The drag clamps (`MIN_WIDTH_PX`, `MAX_WIDTH_PCT`, `MIN_PCT`, `MAX_PCT`) stay where they are, because only each component's own drag handler reads them. `useLayoutState` is imported by `web/src/App.tsx` and, as a type, by `web/src/AppMain.tsx`, and neither changes. Four tests import the constants by their old path and need a mechanical import retarget with no assertion changes: `web/src/useLayoutState.test.tsx`, `web/src/Sidebar.test.tsx`, `web/src/ReportingSection.test.tsx`, and `web/src/CenterActionArea.test.tsx`. They pin the default sizes and the `reportLayout` calls on connect and on every resize, and they must keep passing. The change edits four source files and four tests, so it's hand-planned rather than routed.
-
-
 * Route the file navigator's clipboard reads and writes through the paste hook that already subscribes to the clipboard store, so the tree's components stop reaching into a module-level global.
 
 Existing Debt: The navigator's overlays component calls `getClipboardSnapshot()` during render to decide whether the context menu offers Paste, and the tab component calls `setClipboard('cut', …)` itself, so two components reach straight into the module-level clipboard store past `useFileNavigatorPaste`, the hook that owns its subscription, which §7 (services are injected, never imported into components) and §8 (no component reaches past its hook into a service) both forbid. Severity: 5/10

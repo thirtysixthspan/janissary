@@ -3,13 +3,14 @@ import { act, render, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './shared/ws/ws';
-import { Sidebar, DEFAULT_WIDTH_PX } from './Sidebar';
+import { Sidebar } from './Sidebar';
+import { DEFAULT_SIDEBAR_WIDTH_PX } from './layout-defaults';
 import { createPluginHost, PluginHostProvider } from './plugins/host';
 
 // A drag needs the width prop to actually move the rendered flex value, so the drag-clamp tests
 // wrap Sidebar in a small controlled harness — mirroring how `App` owns the width in production.
 function ControlledSidebar(props: Omit<React.ComponentProps<typeof Sidebar>, 'width' | 'onWidthChange'>) {
-  const [width, setWidth] = useState(DEFAULT_WIDTH_PX);
+  const [width, setWidth] = useState(DEFAULT_SIDEBAR_WIDTH_PX);
   return <Sidebar {...props} width={width} onWidthChange={setWidth} />;
 }
 

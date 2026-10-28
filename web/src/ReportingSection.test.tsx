@@ -1,13 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent, within } from '@testing-library/react';
 import React, { useState } from 'react';
-import { ReportingSection, DEFAULT_PCT, type ReportingEntry } from './ReportingSection';
+import { ReportingSection, type ReportingEntry } from './ReportingSection';
+import { DEFAULT_REPORTING_PCT } from './layout-defaults';
 
 // A drag needs the heightPct prop to actually move the rendered flex value, so the drag-clamp
 // tests wrap ReportingSection in a small controlled harness — mirroring how `App` owns it in
 // production.
 function ControlledReportingSection(props: Omit<React.ComponentProps<typeof ReportingSection>, 'heightPct' | 'onHeightPctChange'>) {
-  const [heightPct, setHeightPct] = useState(DEFAULT_PCT);
+  const [heightPct, setHeightPct] = useState(DEFAULT_REPORTING_PCT);
   return React.createElement(ReportingSection, { ...props, heightPct, onHeightPctChange: setHeightPct });
 }
 

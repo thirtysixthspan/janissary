@@ -2,9 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import type { JanusClient } from './shared/ws/ws';
 import { useLayoutState } from './useLayoutState';
-import { DEFAULT_WIDTH_PX } from './Sidebar';
-import { DEFAULT_PCT } from './ReportingSection';
-import { DEFAULT_SPLIT_PCT } from './CenterActionArea';
+import { DEFAULT_REPORTING_PCT, DEFAULT_SIDEBAR_WIDTH_PX, DEFAULT_SPLIT_PCT } from './layout-defaults';
 
 type LayoutEvent = {
   sidebarLeft?: number;
@@ -41,7 +39,7 @@ describe('useLayoutState', () => {
     act(() => result.current.setSidebarLeftWidth(400));
 
     expect(result.current.sidebarLeftWidth).toBe(400);
-    expect(reportLayout).toHaveBeenCalledWith(400, DEFAULT_WIDTH_PX, 100 - DEFAULT_PCT, DEFAULT_SPLIT_PCT);
+    expect(reportLayout).toHaveBeenCalledWith(400, DEFAULT_SIDEBAR_WIDTH_PX, 100 - DEFAULT_REPORTING_PCT, DEFAULT_SPLIT_PCT);
   });
 
   it('a completed sidebar-right drag reports the new sizes to the server', () => {
@@ -51,7 +49,7 @@ describe('useLayoutState', () => {
 
     act(() => result.current.setSidebarRightWidth(250));
 
-    expect(reportLayout).toHaveBeenCalledWith(DEFAULT_WIDTH_PX, 250, 100 - DEFAULT_PCT, DEFAULT_SPLIT_PCT);
+    expect(reportLayout).toHaveBeenCalledWith(DEFAULT_SIDEBAR_WIDTH_PX, 250, 100 - DEFAULT_REPORTING_PCT, DEFAULT_SPLIT_PCT);
   });
 
   it('a completed reporting-height drag converts back to tabAreaPct (100 - heightPct)', () => {
@@ -61,7 +59,7 @@ describe('useLayoutState', () => {
 
     act(() => result.current.setReportingHeightPct(40));
 
-    expect(reportLayout).toHaveBeenCalledWith(DEFAULT_WIDTH_PX, DEFAULT_WIDTH_PX, 60, DEFAULT_SPLIT_PCT);
+    expect(reportLayout).toHaveBeenCalledWith(DEFAULT_SIDEBAR_WIDTH_PX, DEFAULT_SIDEBAR_WIDTH_PX, 60, DEFAULT_SPLIT_PCT);
   });
 
   it('a server-pushed layout event updates state without reporting back (no echo)', () => {
@@ -80,11 +78,11 @@ describe('useLayoutState', () => {
     const { client, emitConnectionStatus, reportLayout } = makeClient();
     renderHook(() => useLayoutState(client));
 
-    expect(reportLayout).toHaveBeenNthCalledWith(1, DEFAULT_WIDTH_PX, DEFAULT_WIDTH_PX, 100 - DEFAULT_PCT, DEFAULT_SPLIT_PCT);
+    expect(reportLayout).toHaveBeenNthCalledWith(1, DEFAULT_SIDEBAR_WIDTH_PX, DEFAULT_SIDEBAR_WIDTH_PX, 100 - DEFAULT_REPORTING_PCT, DEFAULT_SPLIT_PCT);
 
     act(() => emitConnectionStatus('connected'));
 
-    expect(reportLayout).toHaveBeenNthCalledWith(2, DEFAULT_WIDTH_PX, DEFAULT_WIDTH_PX, 100 - DEFAULT_PCT, DEFAULT_SPLIT_PCT);
+    expect(reportLayout).toHaveBeenNthCalledWith(2, DEFAULT_SIDEBAR_WIDTH_PX, DEFAULT_SIDEBAR_WIDTH_PX, 100 - DEFAULT_REPORTING_PCT, DEFAULT_SPLIT_PCT);
   });
 
   it('reports a manual split divider drag with the other held sizes', () => {
@@ -95,6 +93,6 @@ describe('useLayoutState', () => {
     act(() => result.current.setSplitPct(62));
 
     expect(result.current.splitPct).toBe(62);
-    expect(reportLayout).toHaveBeenCalledWith(DEFAULT_WIDTH_PX, DEFAULT_WIDTH_PX, 100 - DEFAULT_PCT, 62);
+    expect(reportLayout).toHaveBeenCalledWith(DEFAULT_SIDEBAR_WIDTH_PX, DEFAULT_SIDEBAR_WIDTH_PX, 100 - DEFAULT_REPORTING_PCT, 62);
   });
 });

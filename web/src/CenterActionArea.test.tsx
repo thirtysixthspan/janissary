@@ -3,7 +3,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './shared/ws/ws';
-import { CenterActionArea, DEFAULT_SPLIT_PCT } from './CenterActionArea';
+import { CenterActionArea } from './CenterActionArea';
+import { DEFAULT_SPLIT_PCT } from './layout-defaults';
 
 function tab(label: string, pane?: 'right'): TabView {
   return {

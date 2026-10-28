@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { JanusClient } from './shared/ws/ws';
-import { DEFAULT_WIDTH_PX } from './Sidebar';
-import { DEFAULT_PCT } from './ReportingSection';
-import { DEFAULT_SPLIT_PCT } from './CenterActionArea';
+import { DEFAULT_REPORTING_PCT, DEFAULT_SIDEBAR_WIDTH_PX, DEFAULT_SPLIT_PCT } from './layout-defaults';
 
 type DockedView = 'files' | 'notifications';
 
@@ -26,9 +24,9 @@ export type LayoutState = {
 // whichever fields it carries, leaving the rest untouched. Split out of App.tsx to keep it under
 // the file-size limit.
 export function useLayoutState(client: JanusClient): LayoutState {
-  const [sidebarLeftWidth, setSidebarLeftWidth] = useState(DEFAULT_WIDTH_PX);
-  const [sidebarRightWidth, setSidebarRightWidth] = useState(DEFAULT_WIDTH_PX);
-  const [reportingHeightPct, setReportingHeightPct] = useState(DEFAULT_PCT);
+  const [sidebarLeftWidth, setSidebarLeftWidth] = useState(DEFAULT_SIDEBAR_WIDTH_PX);
+  const [sidebarRightWidth, setSidebarRightWidth] = useState(DEFAULT_SIDEBAR_WIDTH_PX);
+  const [reportingHeightPct, setReportingHeightPct] = useState(DEFAULT_REPORTING_PCT);
   const [splitPct, setSplitPct] = useState(DEFAULT_SPLIT_PCT);
   const [focusLeft, setFocusLeft] = useState<DockedView | undefined>(undefined);
   const [focusRight, setFocusRight] = useState<DockedView | undefined>(undefined);

@@ -4,6 +4,7 @@ import { ResizeButton } from './ResizeButton';
 import { beginResizeDrag } from './drag-resize';
 import { TabStrip } from './TabStrip';
 import type { TabEntry } from './tab-entries';
+import { DEFAULT_REPORTING_PCT } from './layout-defaults';
 
 // One reporting tab plus its index in the server's full tab list (close RPCs need it).
 export type ReportingEntry = TabEntry;
@@ -12,7 +13,6 @@ export type ReportingEntry = TabEntry;
 // viewport height; the divider drag clamps to this band.
 const MIN_PCT = 15;
 const MAX_PCT = 100 - MIN_PCT;
-export const DEFAULT_PCT = 20;
 
 // The reporting section: a second tab area rendered below the command bar. It has its
 // own strip and its own (client-side) selection, independent of the server's active
@@ -25,7 +25,7 @@ export const DEFAULT_PCT = 20;
 // `useLayoutState`).
 export function ReportingSection({
   entries, onClose, onRename, onReorder, onRun, onRate, onReset, onSnapshot,
-  heightPct = DEFAULT_PCT, onHeightPctChange,
+  heightPct = DEFAULT_REPORTING_PCT, onHeightPctChange,
 }: {
   entries: ReportingEntry[];
   onClose: (index: number) => void;
