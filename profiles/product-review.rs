@@ -1,4 +1,3 @@
-# Converted from product-review.json.
 files on left expand product expand product/backlog expand product/plans expand product/plans/draft expand product/plans/ready cursor product anchor product select product $root/
 edit $root/product/backlog/issues.md
 tab group issues.md 1

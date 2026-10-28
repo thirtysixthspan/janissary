@@ -1,4 +1,3 @@
-# Converted from default.json.
 files on left expand profiles cursor profiles anchor profiles select profiles $root/
 sessions right
 notifications right
