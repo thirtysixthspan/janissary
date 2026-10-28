@@ -4,17 +4,6 @@
 
 ## development
 
-* Make a terminal output detach release only its own attachment, so a superseded subscriber can't silence the one that replaced it.
-
-Existing Debt: The web client routes each PTY's output to one handler per id, and the unsubscribe that `attachPty` returns deletes whatever handler is registered for that id at the time rather than the one it registered, while every other subscription on the client is a per-listener set. Severity: 3/10
-
-Existing Risk: 3/10 - The shell plugin's terminal detaches an attachment that resolves after its effect was disposed, and if that late detach ever lands after the replacement attached, because of an out-of-order reply or a second surface on the same PTY, the visible terminal stops receiving output while its process keeps running; today only first-in-first-out RPC replies prevent it.
-
-Proposal Risk: 1/10 - A detach can remove only its own handler; a second attach still takes over a PTY's output, which is the intended last-attach-wins rule, and a test pins it.
-
-Proposal: In `web/src/shared/ws/ws.ts`, `JanusClient.attachPty` stores `onData` in `ptyHandlers` (a `Map` keyed by PTY id) and returns `() => this.ptyHandlers.delete(id)`. Its callers are `attachTerminal` in `web/src/plugins/plugin-client-capabilities.ts`, which attaches only after an awaited `pluginTerminalAttach` authorization, `ptyActions` in `web/src/shared/terminal/pty-actions.ts`, and `useAcpPanelActions` in `web/src/shared/acp/useAcpPanelActions.ts`. `useShellTerminal` in `web/src/plugins/shell/useShellTerminal.ts` calls `handle.detach()` on an attachment that resolves after its layout effect was disposed. Change the returned function to delete only when `this.ptyHandlers.get(id) === onData`, and leave drain-on-attach, buffering while detached, and last-attach-wins as they are. `web/src/shared/ws/ws.test.ts` covers attach, detach, and replay; add a case that attaches A, then B, then calls A's detach and expects B to keep receiving output. `web/src/plugins/shell/useShellTerminal.test.ts` covers the plugin side and must pass unchanged.
-
-
 * Put each notification event's rationale beside its classification entry, and drop the hand-kept event catalog and counts at the top of the notifications module, which have drifted from the union they describe.
 
 Existing Debt: The notifications module opens with a long prose catalog of every event that restates the `NotificationEventType` union, and its counts have drifted: it says "Five are ambient" and "these five" where `AmbientNotificationEvent` has four, and "an eighteenth event" where `EXPLICIT_EVENTS` already holds twenty-seven. Severity: 2/10

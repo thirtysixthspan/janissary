@@ -17,6 +17,10 @@ When the browser restores the app from its back/forward cache, the previously re
 
 An unexpected disconnect also reconnects automatically and requests a fresh state snapshot. Existing state, layout, and terminal subscriptions survive that reconnect. Retries continue indefinitely with a five-second maximum delay; becoming visible or coming online prompts an immediate attempt, or, if the connection still reports itself open, a brief liveness check that replaces it if nothing answers. The window shows `Reconnecting…`, then `Cannot reach session` after six unsuccessful retries, and briefly `Reconnected` after success. Time spent asleep does not consume the server's disconnect grace period. Outstanding requests fail when the connection ends and are never resent; input during the gap is not queued, and missed terminal output is not replayed.
 
+### PTY output attachments
+
+The latest attachment for a PTY receives its live output. Releasing an earlier attachment after it has been replaced does not interrupt output to the newer attachment.
+
 ### Accepted envelopes
 
 Client requests are JSON objects with `t: "rpc"`, a numeric `id`, a recognized `method`, and an object-valued `params`. Methods with no arguments still send `params: {}`. Accepted requests are dispatched once, and replies that a method produces carry the request's `id`.
