@@ -1,0 +1,3 @@
+export const DEFAULT_SIDEBAR_WIDTH_PX = 300;
+export const DEFAULT_REPORTING_PCT = 20;
+export const DEFAULT_SPLIT_PCT = 50;

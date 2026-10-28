@@ -11,10 +11,10 @@ import type { CommandInputDropHandle } from './shared/drop-handles';
 import { useSidebarSelection } from './useSidebarSelection';
 import { multiOpenablePaths } from './multi-open';
 import { isFilesTabView } from './shared/tab/view-guards';
+import { DEFAULT_SIDEBAR_WIDTH_PX } from './layout-defaults';
 
 const MIN_WIDTH_PX = 180;
 const MAX_WIDTH_PCT = 50;
-export const DEFAULT_WIDTH_PX = 300;
 
 // A sidebar (left or right) can dock the file navigator and the notifications tab at the same
 // time — the only two dockable kinds — sharing the space via a small internal tab-switcher (only
@@ -26,7 +26,7 @@ export function Sidebar({
   side, tabs, client, dropRef,
   pickerOverlays, pickerSourceTab,
   tabNameMaxLength = 16, activeTabNameMaxLength = 50,
-  width = DEFAULT_WIDTH_PX, onWidthChange, focusView, onNotificationsVisibilityChange,
+  width = DEFAULT_SIDEBAR_WIDTH_PX, onWidthChange, focusView, onNotificationsVisibilityChange,
 }: {
   side: 'left' | 'right';
   tabs: TabView[];
