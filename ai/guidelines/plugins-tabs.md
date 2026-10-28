@@ -59,17 +59,14 @@ Command queues are optional core tab capabilities. A plugin opts in by requestin
 
 The client entry default-exports a React component accepting `{ payload, capabilities }` and named-exports `isPayload`. Write that guard as a type predicate: the registry infers the payload type from it and hands the component a value already narrowed, so no plugin asserts a type its own guard has already proven. The registry creates one `React.lazy` type at module scope; never create it during a render. The host checks the envelope schema and the entry guard before plugin behavior renders.
 
-`TabPluginClientCapabilities` exposes exactly eight things:
+The host hands client plugins the following capability members, grouped by purpose:
 
-- `resourceUrl(reference)` adds current-session authentication to a served-file reference.
-- `intent<Result>(name, payload)` sends a request bound to this tab label.
-- `splitAction` is the host-rendered split control node or `null`.
-- `dock` is which sidebar this tab sits in, `null` for the centre strip.
-- `active` is whether this tab is the visible one in its pane — or, for a docked tab, the selected entry in its sidebar. A plugin tab stays mounted while hidden, so a window-wide listener gates on this instead of assuming the tab is on screen; a plugin never reads visibility off the host's DOM.
-- `close()` closes this tab.
-- `registerDirtyHandle(handle | null)` registers unsaved work with the host, or drops it.
-- `copyText(text)` writes to the system clipboard through the host's own copy helper, which a plugin with its own terminal cannot reach.
-- `reportFailure(reason)` sends one failure report for this plugin boundary.
+- **Tab context and placement:** `active` reports whether this tab is visible in its pane or selected in its sidebar; hidden plugin tabs stay mounted, so global listeners gate on this value rather than reading host DOM. `claimedChords` lists the accepted chord claims, `dock` gives the sidebar or `null` for the centre strip, `dotColor` gives the tab's host-selected color, `label` gives its stable tab label, `remote` and `remoteSession` describe a remote tab when present, and `splitAction` carries the host-rendered control or `null`.
+- **Host communication and shared helpers:** `intent<Result>(name, payload)` sends a request bound to this tab; `resourceUrl(reference)` adds current-session authentication to a served-file reference; `copyText(text)` writes through the host clipboard helper; `openLink(href)` follows the application's transcript-link behavior; `reportFailure(reason)` reports a broken plugin boundary.
+- **Tab actions and lifecycle:** `close()` closes this tab; `registerDirtyHandle(handle | null)` registers or drops unsaved work; `openAcpTranscript()` opens this tab's ACP transcript; `openFileNavigator()` opens a navigator rooted at this tab; `openDiffHere()` opens a diff for this tab's workspace; `openScheduleLaunch()` opens the schedule command; `openRecording()` and `openTranscript()` open the corresponding file when their paths are present; `onBackgroundReply(receive)` subscribes to this tab's completed background replies.
+- **Terminal and output integration:** `attachTerminal(ptyId, onData)` attaches to a terminal owned by this tab; `recording` is its recording path when one exists; `reportTerminalColors(id, colors)` reports the terminal's resolved colors; `transcript` is the transcript path when one exists.
+
+The old `launchShellHere()` member remains available in API v2 as a deprecated compatibility shim. It warns once per client runtime when used; a plugin should use its own sibling intent instead, as the shell plugin does with `intent('sibling', null)`. Removal is scheduled for API v3 after at least two host minor releases.
 
 Never pass `JanusClient`, import a raw socket, or import host UI internals from a concrete plugin. Client-local state may hold playback, scroll, or overlay state; server-owned tab state must not be recomputed locally.
 

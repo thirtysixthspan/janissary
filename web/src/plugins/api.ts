@@ -251,6 +251,10 @@ export type TabPluginClientCapabilities = {
   // tab at *this* tab's cwd and joins its group, which a command run in this tab does not. Optional
   // for the same reason as `attachTerminal`.
   openFileNavigator?(): void;
+  /**
+   * @deprecated Use this plugin's own sibling intent instead; the shell plugin uses `intent('sibling', null)`.
+   * Scheduled for removal in tab plugin API v3 after at least two host minor releases.
+   */
   launchShellHere?(): void;
   // Open the diff tab on this tab's own workspace. The third of the metadata-row actions that are
   // tab-scoped RPCs rather than commands, for the same reason as the two above: a command run in

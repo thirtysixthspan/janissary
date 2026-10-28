@@ -4,17 +4,6 @@
 
 ## development
 
-* Retire the client plugin capability that no plugin calls, and bring the plugin guideline, spec, and developer docs back in line with the capability set the host actually hands out.
-
-Existing Debt: The client capability object has grown to roughly two dozen mostly optional members while the binding guideline still says it "exposes exactly eight things", and the spec and developer docs say shell siblings open through `launchShellHere()`, a capability no plugin calls because the shell plugin uses its own `sibling` intent. Severity: 3/10
-
-Existing Risk: 3/10 - A plugin author or agent working from the guideline or spec builds against a contract that isn't the real one, and the docs steer them to `launchShellHere`, whose plugin-side path nothing exercises and so can break without any test noticing.
-
-Proposal Risk: 1/10 - The docs match the code and the member is marked deprecated with its replacement; it still ships until its removal version, and a new caller would show up in a grep for its name.
-
-Proposal: `TabPluginClientCapabilities` in `web/src/plugins/api.ts` declares `launchShellHere?()`, and `createPluginClientCapabilities` in `web/src/plugins/plugin-client-capabilities.ts` hands it to every plugin as a `launchShellFor` send. No file under `web/src/plugins/*/` calls it. `openSiblingShell` in `web/src/plugins/shell/open-sibling.ts` sends the plugin's own `sibling` intent instead, and the only other sender of `launchShellFor` is host code in `web/src/harness/harness-tab-intents.ts`. Removing a published member is a major change under `ai/guidelines/plugins.md` §4, so this change deprecates it rather than deleting it. Mark `launchShellHere` deprecated in `api.ts` with its replacement and a removal API version. Leave the `launchShellFor` route (`src/message/tabs.ts`, `src/controller/file/navigator-adapter.ts`) alone, since the harness tab still uses it. Then fix the docs. Replace the "exactly eight things" list in `ai/guidelines/plugins-tabs.md` with the real membership grouped by purpose. Rewrite the `launchShellHere` sentences in `product/specs/tab-plugins.md` and `documentation/developer-documentation/tab-plugins.md` to describe the sibling intent the shell plugin actually uses. Nothing changes at runtime; `src/plugins/shell/activate.test.ts` and `web/src/plugins/shell/ShellTab.test.tsx` already pin the sibling-intent path.
-
-
 * Make a terminal output detach release only its own attachment, so a superseded subscriber can't silence the one that replaced it.
 
 Existing Debt: The web client routes each PTY's output to one handler per id, and the unsubscribe that `attachPty` returns deletes whatever handler is registered for that id at the time rather than the one it registered, while every other subscription on the client is a per-listener set. Severity: 3/10

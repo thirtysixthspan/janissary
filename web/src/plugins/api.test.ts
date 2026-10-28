@@ -27,6 +27,22 @@ describe('createPluginClientCapabilities', () => {
     expect(send).toHaveBeenCalledWith({ method: 'openDiffFor', params: { label: 'shell-1' } });
   });
 
+  it('keeps deprecated launchShellHere working and warns once per runtime', () => {
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { client, send } = makeClient();
+    const capabilities = createPluginClientCapabilities({ host, pluginId: 'shell', label: 'shell-1', client, active: true, dock: null, onClose: vi.fn() });
+    const secondTab = createPluginClientCapabilities({ host, pluginId: 'shell', label: 'shell-2', client, active: true, dock: null, onClose: vi.fn() });
+
+    capabilities.launchShellHere?.();
+    secondTab.launchShellHere?.();
+
+    expect(send).toHaveBeenNthCalledWith(1, { method: 'launchShellFor', params: { label: 'shell-1' } });
+    expect(send).toHaveBeenNthCalledWith(2, { method: 'launchShellFor', params: { label: 'shell-2' } });
+    expect(warning).toHaveBeenCalledOnce();
+    expect(warning).toHaveBeenCalledWith(expect.stringContaining('tab plugin API v3'));
+    warning.mockRestore();
+  });
+
   it('opens the New schedule dialog by sending the bare schedule command', () => {
     const { client, send } = makeClient();
     const capabilities = createPluginClientCapabilities({ host, pluginId: 'schedules', label: 'schedules', client, active: true, dock: null, onClose: vi.fn() });
