@@ -14,8 +14,8 @@ import {
 // so carries the flat presentation fields. `files` carries them because an undocked navigator lands
 // in the strip like any other tab; `schedules` is always docked, and a `notifications` entry's own
 // `focus` means "visible in the sidebar switcher" rather than "active after launch". `image` and
-// `markdown` are the pre-plugin spellings of a `plugin` entry with that id and stay accepted so a
-// saved profile keeps launching.
+// `markdown` are the pre-plugin spellings of a `plugin` entry with that id and stay accepted so an
+// older profile keeps launching.
 //
 // Keyed by `ProfileTabFile['type']`, so an eleventh kind added to that union fails to compile here
 // until it is classified — where the two hand-kept lists this replaced would have gone on rejecting

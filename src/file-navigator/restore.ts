@@ -5,9 +5,9 @@ import { expandAndWatch, type NavPort } from './navigation.js';
 import type { FilesTabState } from './state.js';
 import type { FileNavigatorRestoreHint } from '../tab/types.js';
 
-// Replays a tree view saved by `profile save` onto a freshly opened navigator: the expanded
-// directories go back into server state, and the cursor/anchor/selection become a hint the client
-// applies once. Everything here is best effort and silent — a saved path that no longer resolves
+// Replays a tree view recorded in a profile's `files` entry onto a freshly opened navigator: the
+// expanded directories go back into server state, and the cursor/anchor/selection become a hint
+// the client applies once. Everything here is best effort and silent — a saved path that no longer resolves
 // is dropped, exactly as `pruneCachedRows` drops a vanished expanded directory on every rebuild.
 //
 // Every read goes through the tab's own filesystem port and its listing cache, so a navigator on a

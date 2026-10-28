@@ -71,8 +71,8 @@ function fileTarget(
 
 // A plugin that opens on web addresses is reached by `open`, like a file plugin, but its entry names
 // an address rather than a path. The `page` keyword is what forces web interpretation, so a
-// hand-authored bare address (`slashdot.org`) reopens the same way `profile save`'s normalized one
-// does, and both match the tab by the address the plugin keys it with.
+// bare address (`slashdot.org`) reopens the same way the plugin's normalized form of it does, and
+// both match the tab by the address the plugin keys it with.
 function webTarget(
   id: string, authored: string, managers: Managers, issuingLabel: string,
 ): ViewTarget {

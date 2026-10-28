@@ -92,7 +92,7 @@ Every docked plugin tab stays loaded while another entry in the same sidebar is 
 
 A plugin may place its header actions alongside the application's dock control in a single sidebar metadata bar. Those actions remain attached to that tab when switching sidebar entries and disappear when it closes. Returning the tab to the centre restores its ordinary header. Plugins with separate headers keep their existing layout.
 
-A profile captures a docked plugin tab with the side it was docked to, and reopens it docked there. A plugin tab opened on a file is reopened by opening that file again; one opened by a plugin's own command — a plugin that claims no file types at all — is reopened by reissuing that command.
+A profile entry can dock a plugin tab to a side, and opens it docked there. A plugin tab opened on a file is reopened by opening that file again; one opened by a plugin's own command — a plugin that claims no file types at all — is reopened by reissuing that command.
 
 ### Changing what a tab shows
 
@@ -168,7 +168,7 @@ A plugin may ask the host to launch a tab rather than open one. A launch never f
 
 A launch may instead name a remote address. The host validates the address, opens an independent SSH channel, and starts a remote workspace. The plugin tab appears while the channel connects and receives its SSH terminal id and host, so the client can show and answer SSH prompts. When the workspace is ready, the plugin receives its remote path and host in the ready event and can replace the provisioning payload with its remote process. A launch from a remote tab may request a separate remote target, but the shell plugin refuses nested remote shell launches. Remote launch failures are reported as `Failed to start "<name>" on <host>: <reason>` and close the placeholder after a short delay; a refused default name retries with another free name.
 
-A declaration may also name the line a profile entry for it reissues in place of its command (`profileCommand`). The shell names `shell --no-workspace`, so a saved shell reopens without cloning a workspace.
+A declaration may also name the line a profile entry for it reissues in place of its command (`profileCommand`). The shell names `shell --no-workspace`, so a profile's shell entry reopens without cloning a workspace.
 
 A plugin whose tab has a command line may add lines to that tab's command queue, take the next line from it, and record the directory its process moved to (`queueLine`, `nextQueuedLine` and `recordCwd` in `src/plugins/line-capabilities.ts`). Each acts only on the plugin's own answering tab. Called from a command, selection action or menu handler invoked from a shell tab, or from a tab another plugin owns, the call is refused with a rejection naming the capability, so the transcript records which call was turned away: no line is queued, none is taken, and the tab's recorded directory is unchanged. Disabled plugins touch no queue. Shell and harness tabs have no command queue. Their recorded directory decides where completion, file navigation, and new shells start, and is not a plugin's to change.
 

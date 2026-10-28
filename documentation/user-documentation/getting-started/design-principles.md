@@ -6,7 +6,7 @@ Janissary is built around a small set of tenets. They explain why the app looks 
 
 ## Workflow support
 
-Janissary supports the work you're already doing rather than prescribing a workflow of its own. A tab can be a [shell](/user-documentation/command-bar/shell#open-a-shell-tab), an [editor](/user-documentation/tab-types/editor), or a [harness](/user-documentation/advanced-agents/harness). An autonomous `agent` task runs from a command bar and returns a result there; add `in a tab` if you want a monitor tab to follow its activity. Mix these tools freely, whether you're developing code, writing, or managing something else entirely. [Profiles](/user-documentation/automation/profiles) let you capture a multi-tab setup and recreate it with one command.
+Janissary supports the work you're already doing rather than prescribing a workflow of its own. A tab can be a [shell](/user-documentation/command-bar/shell#open-a-shell-tab), an [editor](/user-documentation/tab-types/editor), or a [harness](/user-documentation/advanced-agents/harness). An autonomous `agent` task runs from a command bar and returns a result there; add `in a tab` if you want a monitor tab to follow its activity. Mix these tools freely, whether you're developing code, writing, or managing something else entirely. [Profiles](/user-documentation/automation/profiles) let you describe a multi-tab setup in a file and recreate it with one command.
 
 ## Integrated agents
 

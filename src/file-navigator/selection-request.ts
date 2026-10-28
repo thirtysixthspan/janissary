@@ -3,16 +3,15 @@ import type { FileNavigatorSelectionRecord } from '../protocol/file-navigator.js
 
 // The round trip for a file navigator's client-only state. A tree's expanded directories live on
 // the server, but its cursor, range anchor, and multi-row selection are React state in the web
-// client, and there is no continuous reporting of them. `profile save` captures them for a profile;
-// `files print` uses them to print a reusable command. Both ask once and wait briefly for whatever
-// arrives — the same shape `client-layout.ts` plays for sidebar sizes, but request/response rather
-// than last-report-wins.
+// client, and there is no continuous reporting of them. `files print` uses them to print a reusable
+// command: it asks once and waits briefly for whatever arrives — the same shape `client-layout.ts`
+// plays for sidebar sizes, but request/response rather than last-report-wins.
 
 export type TreeSelection = { cursor?: string; anchor?: string; selected: string[] };
 
-// No reply inside this window resolves to an empty map, which is what a save with no client
+// No reply inside this window resolves to an empty map, which is what a request with no client
 // attached (or under `--no-open`) gets. Only the three selection keys are lost; `expanded` is read
-// from server state and always saves.
+// from server state and is always available.
 const REPLY_TIMEOUT_MS = 250;
 
 type Pending = {
@@ -50,8 +49,8 @@ export function requestTreeSelections(timeoutMs = REPLY_TIMEOUT_MS): Promise<Map
 }
 
 // Settle the request in flight with a client's answer. An `id` that doesn't match the outstanding
-// request is ignored, so a late reply to a previous save never lands in this one. With several
-// clients connected the first reply wins and the rest are ignored — a save captures whichever
+// request is ignored, so a late reply to a previous request never lands in this one. With several
+// clients connected the first reply wins and the rest are ignored — a request captures whichever
 // window answered first.
 export function resolveTreeSelections(id: number, records: FileNavigatorSelectionRecord[]): void {
   if (pending?.id !== id) return;

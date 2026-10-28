@@ -89,21 +89,21 @@ button horizontally adjusts the sidebar's width. Width is clamped to a minimum a
 half the viewport, so a sidebar can never crowd out the center content entirely or shrink to
 nothing. `layout sidebar left|right <width>` sets a side's width directly, including while it is
 hidden, without the drag limits. A width resets to its default on relaunch unless a profile applies
-one; `profile save` captures the current widths.
+one; bare `layout` reports the current widths.
 
 ### What's server-owned vs. client-owned
 
 Which tab is docked where is **server-owned** state, broadcast to the client like any other tab
 property — the server enforces the one-tab-per-kind-per-sidebar rule and the active-tab invariant.
 Sidebar **width** is client-controlled display state, reported to the server on connection and after
-resizing so `profile save` can capture it. When several clients report different sizes, the last
+resizing so bare `layout` can report it. When several clients report different sizes, the last
 report wins. Which docked tab is currently visible when a side holds both kinds remains client-only
 and is never persisted.
 
 ### Persistence
 
 Dock placement resets on relaunch. Sidebar widths also return to their defaults unless a profile's
-`layout` key supplies them; `profile save` captures reported widths. File navigator views remain
+`layout` key supplies them. File navigator views remain
 live, in-memory tabs and are never restored (see `file-navigator-tab.md`).
 
 ### Keyboard focus

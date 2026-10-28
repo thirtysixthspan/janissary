@@ -118,7 +118,7 @@ export type ProfileSchedulesTabFile = { type: 'schedules'; dock?: 'left' | 'righ
 // A bundled-plugin tab: which plugin owns it and what it was opened on — a file for a plugin that
 // claims extensions, an address for one that claims web targets. A plugin claiming neither has
 // nothing to name, so its entry omits `path` and relaunch reissues the plugin's declared command.
-// `profile save` writes this for every plugin tab; `type: 'image'`, `type: 'markdown'`,
+// This is the current spelling of every plugin tab; `type: 'image'`, `type: 'markdown'`,
 // `type: 'schedules'`, and `type: 'page'` are the pre-plugin spellings of those tabs and are still
 // accepted on load.
 export type ProfilePluginTabFile = { type: 'plugin'; id: string; path?: string; dock?: 'left' | 'right' }
@@ -152,7 +152,7 @@ export type ProfileTabFile =
 // (`group:<n>` or a tab label); an empty list is inline mode.
 export type ProfileMonitor = { name: string; persona: string; targets: string[] };
 
-// A `monitors` array element as authored/saved on disk: `name` is optional and defaults to the
+// A `monitors` array element as authored on disk: `name` is optional and defaults to the
 // persona when omitted (preserving the one-monitor-per-persona default).
 export type ProfileMonitorFile = { name?: string; persona: string; targets: string[] };
 
@@ -168,7 +168,7 @@ export type ProfileLayout = {
 
 // The on-disk layout shape under a profile's `layout` key: the left/right sidebar widths grouped
 // under a nested `sidebar` object, parallel to `window`. The loader maps this down to the flat
-// `ProfileLayout`, and the saver maps it back up.
+// `ProfileLayout`.
 export type ProfileLayoutFile = {
   sidebar?: { left?: number; right?: number };
   window?: { width: number; height: number };
@@ -200,5 +200,4 @@ export type ProfileParsed =
   | { error: string }
   | { action: 'list' }
   | { action: 'launch'; name: string }
-  | { action: 'save'; name: string }
   | { action: 'validate'; name?: string };

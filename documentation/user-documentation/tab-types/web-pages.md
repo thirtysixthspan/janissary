@@ -9,7 +9,7 @@ open page slashdot.org        bare address; https:// is assumed
 
 The page fills the tab body, and the tab is labeled with its root domain — `slashdot.org`. It's a real, live page — click, scroll, type, follow links, log in; the site behaves as it would in a browser, sessions included. Clicking an `http(s)` link in an agent's rendered output opens a page tab the same way.
 
-The new tab lands in the same [group](/user-documentation/getting-started/groups) as the tab you ran the command from, with its own dot color, and takes focus. Nothing is written to the transcript: the tab that opens is the whole confirmation. A [profile](/user-documentation/automation/profiles) records an open page tab by its address and reopens it on launch the same way you would.
+The new tab lands in the same [group](/user-documentation/getting-started/groups) as the tab you ran the command from, with its own dot color, and takes focus. Nothing is written to the transcript: the tab that opens is the whole confirmation. A [profile](/user-documentation/automation/profiles) can open a page tab by its address on launch, the same way you would.
 
 ![A page tab showing a live web page embedded in the app.](/screenshots/page-tab.png)
 

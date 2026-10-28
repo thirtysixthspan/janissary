@@ -26,7 +26,7 @@ export async function resizeAppWindow(
 }
 
 // Reads the app's own Chrome window size over the same CDP pipe transport as `resizeAppWindow`
-// (its get-bounds companion), for `profile save` to capture into a profile's `layout.window`.
+// (its get-bounds companion), for bare `layout` to report as its `layout window` line.
 export async function getAppWindowBounds(
   cdp: CdpPipe,
 ): Promise<{ width: number; height: number }> {

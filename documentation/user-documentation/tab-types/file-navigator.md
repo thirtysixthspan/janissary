@@ -86,7 +86,7 @@ A row with nothing to show for the current mode — a directory in `size` mode, 
 
 The header's detail button cycles a tree through the four modes, one click at a time, with a tooltip naming what the next click shows (`Show size`, `Show modified`, `Show permissions`, `Show name only`). Re-running `files with <mode>` on an already-open tree is a second way to switch it, and `in`/`on`/`with` clauses can combine in any order (`files in claude on left with size`).
 
-A [profile](/user-documentation/automation/profiles) that saves this tree restores its detail mode along with its expanded directories and selection.
+A [profile](/user-documentation/automation/profiles) entry can name a detail mode for its tree, along with its expanded directories and selection.
 
 You can also restore a local tree's view with `files` clauses. Expand folders before naming rows inside them; `cursor`, `anchor`, and `select` use paths relative to the tree root. Repeat `expand`, `collapse`, or `select` to name more than one path, and quote paths that contain spaces or quotes:
 
@@ -384,6 +384,6 @@ One thing a tree will not do is reach outside itself. Every path you supply to a
 
 Every change a tree makes is aimed at the tree you made it in. If that tree has closed by the time the request arrives, the change simply doesn't happen and nothing is reported — including when another navigator has since taken its place in the tab list, which never inherits what you asked the old one to do.
 
-A [profile](/user-documentation/automation/profiles) brings a **local** tree back the way you left it. `profile save` records which directories you had expanded, where the cursor was, and every row you had selected; `profile launch` puts them back, silently skipping anything that has since been deleted. Remote trees are omitted because their workspace and signed-in SSH session no longer exist. The undo/redo history is not part of a profile — it stays in memory and dies with the tab.
+A [profile](/user-documentation/automation/profiles) can open a **local** tree with a view already in place. Its `files` entry can list which directories to expand, where the cursor goes, and which rows to select; `profile launch` applies them, silently skipping anything that has since been deleted. Remote trees are not restored because their workspace and signed-in SSH session no longer exist. The undo/redo history is not part of a profile — it stays in memory and dies with the tab.
 
 The command-line view clauses restore local trees too. On an already-open tree, the command changes only the view parts named; a clause for a path that no longer exists is ignored. View clauses on remote trees are ignored. `files print <tab>` prints a reusable command with the tree's root and view; for a remote tree, the printed command has no view clauses.

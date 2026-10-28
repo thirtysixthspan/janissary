@@ -14,14 +14,6 @@ describe('parseProfileCommand', () => {
     expect(parseProfileCommand('profile launch')).toEqual({ error: 'Usage: profile launch <name>' });
   });
 
-  it('parses save with a name', () => {
-    expect(parseProfileCommand('profile save writing')).toEqual({ action: 'save', name: 'writing' });
-  });
-
-  it('reports usage for bare save', () => {
-    expect(parseProfileCommand('profile save')).toEqual({ error: 'Usage: profile save <name>' });
-  });
-
   it('parses validate with a name', () => {
     expect(parseProfileCommand('profile validate writing')).toEqual({ action: 'validate', name: 'writing' });
   });

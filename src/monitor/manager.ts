@@ -152,8 +152,8 @@ export class MonitorManager extends LiveMonitors {
     return monitorNames(this.monitors.values(), owner);
   }
 
-  // One record per live monitor, for `profile save` to write into the `monitors` key. Distinct from
-  // the display-only `list()` strings and never reads the private `monitors` map directly.
+  // One record per live monitor: its name, persona, targets, and inline mode. Distinct from the
+  // display-only `list()` strings and never reads the private `monitors` map directly.
   snapshot(): { name: string; persona: string; targets: MonitorTarget[]; inline: boolean }[] {
     return [...this.monitors.values()].map((reg) => ({ name: reg.name, persona: reg.persona.name, targets: reg.targets, inline: reg.inline }));
   }

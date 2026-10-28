@@ -223,7 +223,8 @@ export class FileNavigatorManager extends WatchedFilesTabs {
     ));
   }
 
-  // This tab's expanded directories and detail mode, both for `profile save`.
+  // This tab's expanded directories, which `files print` writes back as `expand` clauses, and its
+  // detail mode.
   expandedPaths(label: string): string[] {
     return expandedPathsOf(this.tabs, label);
   }
