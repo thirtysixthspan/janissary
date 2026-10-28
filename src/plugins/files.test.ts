@@ -1,13 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import type * as Fs from 'node:fs';
 import type { TabPluginServerCapabilities } from './api.js';
 import { audioManifest } from './audio/manifest.js';
 import { markdownManifest } from './markdown/manifest.js';
 import {
-  fileSize, fileTabPayload, isInsideRoot, openFileExternally, openFileInConfiguredViewer, readJsonConfigFile, servesContentType,
+  fileSize, fileTabPayload, isInsideRoot, openFileExternally, openFileInConfiguredViewer, readJsonConfigFile, replaceFileAtomically, servesContentType,
 } from './files.js';
+
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof Fs>();
+  return { ...actual, renameSync: vi.fn(actual.renameSync) };
+});
 
 describe('isInsideRoot', () => {
   it('accepts the root itself and anything beneath it', () => {
@@ -82,6 +88,22 @@ describe('fileTabPayload', () => {
       name: 'clip.mp4', path: file, size: '1.5 KB', url: '/resource/url',
     });
     expect(registerFile).toHaveBeenCalledWith(file);
+  });
+});
+
+describe('replaceFileAtomically', () => {
+  it('preserves existing bytes when the atomic replacement fails', () => {
+    const file = temporaryFile('photo.png', 4);
+    const previous = Buffer.from([0, 255, 17, 42]);
+    writeFileSync(file, previous);
+    vi.mocked(renameSync).mockImplementationOnce(() => {
+      throw Object.assign(new Error('forced replacement failure'), { code: 'EIO' });
+    });
+
+    expect(() => replaceFileAtomically(file, Uint8Array.from([1, 2, 3]))).toThrow('forced replacement failure');
+
+    expect(readFileSync(file)).toEqual(previous);
+    expect(readdirSync(path.dirname(file))).toEqual(['photo.png']);
   });
 });
 

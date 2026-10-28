@@ -20,9 +20,9 @@ export const pluginBoundaries = [
   // external/Node modules. The documented host utilities are pure functions with a caller on each
   // side of the boundary: the file operations every file-backed plugin composes out of the capability
   // primitives — external open and size lookup — the web-target normalizer that core's profile
-  // relaunch and the page plugin must agree on to the character, and the numbered-sibling writer the
-  // video and image plugins share so "a numbered PNG beside an original" has one rule rather than two,
-  // and the caught-error text formatter shared by server and client call sites. Search's pure
+  // relaunch and the page plugin must agree on to the character, the numbered-sibling writer used by
+  // the video plugin for captured frames, and the caught-error text formatter shared by server and
+  // client call sites. Search's pure
   // matcher, worker, and path-filter modules also live in core so remote filesystem operations and
   // the search plugin apply the same rules without the host importing plugin behavior.
   // The size formatter is deliberately absent: it reaches a plugin through `files.js`, so a plugin

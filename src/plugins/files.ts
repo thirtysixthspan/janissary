@@ -89,6 +89,10 @@ export function writeJsonConfigFile(filePath: string, content: string): void {
   atomicWriteFile(filePath, content);
 }
 
+export function replaceFileAtomically(filePath: string, content: Uint8Array): void {
+  atomicWriteFile(filePath, content);
+}
+
 // The read-and-decode core every JSON config file in a plugin shares: the launcher and the roles
 // reader both read a file, guard the read and the parse into the same two canned lines, and hand the
 // parsed value to a decoder of their own. Only the decoder and the wording for "this parsed but did

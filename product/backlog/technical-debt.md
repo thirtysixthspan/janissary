@@ -4,17 +4,6 @@
 
 ## development
 
-* Write saved image edits over the original atomically, through a file helper the plugin boundary already admits, and correct the comments that still say the image plugin writes a numbered sibling.
-
-Existing Debt: The image plugin's save overwrites the user's original file with a plain `writeFileSync`, unlike the app's other in-place saves, which go through `atomicWriteFile`, and two comments still describe an earlier design where image edits were written as numbered siblings. Severity: 3/10
-
-Existing Risk: 5/10 - A write that fails partway, on a full disk or an exceeded quota, leaves the original image truncated to whatever bytes landed, so the file the user asked to keep is destroyed rather than left untouched.
-
-Proposal Risk: 2/10 - A failed save leaves the original intact and reports the error, but a change made to the file outside the app between opening and saving is still overwritten without the hash check the text editor's save performs.
-
-Proposal: `saveImageEdit` in `src/plugins/image/edit.ts`, called from the `save-edit` intent in `src/plugins/image/activate.ts`, writes the decoded PNG straight to `tabPayload.path`. The plugin can't import `src/atomic-write.ts` because `eslint.plugin-boundaries.mjs` lets a concrete plugin reach only `../api.js`, `../files.js`, and a short list of host utilities. But `src/plugins/files.ts` already wraps `atomicWriteFile` for plugins as `writeJsonConfigFile`. Add a byte-content sibling there (for example `replaceFileAtomically(filePath, content: Uint8Array)`), use it in `saveImageEdit`, and keep the PNG data-URL check. Then fix the stale comments. `nextNumberedSibling` in `src/openers/numbered-sibling.ts` says it is shared by the video frame capture "and the image plugin's saved edit (`edit`)", and the first block in `eslint.plugin-boundaries.mjs` says the numbered-sibling writer is one "the video and image plugins share". Only `src/plugins/video/shot.ts` uses it, and `product/specs/image-tab.md` says Save replaces the original. `src/plugins/image/edit.test.ts` (replaces the source, writes no sibling) and `src/plugins/image/activate.test.ts` cover the behavior; add a `src/plugins/files.test.ts` case showing that a failed write leaves the target's previous bytes in place.
-
-
 * Retire the client plugin capability that no plugin calls, and bring the plugin guideline, spec, and developer docs back in line with the capability set the host actually hands out.
 
 Existing Debt: The client capability object has grown to roughly two dozen mostly optional members while the binding guideline still says it "exposes exactly eight things", and the spec and developer docs say shell siblings open through `launchShellHere()`, a capability no plugin calls because the shell plugin uses its own `sibling` intent. Severity: 3/10
