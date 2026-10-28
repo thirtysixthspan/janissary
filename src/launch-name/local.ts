@@ -9,11 +9,7 @@ import { isReservedTabLabel, RESERVED_SYSTEM_LABEL_REFUSAL } from '../tab/reserv
 // The local half of the launch-name check: read the open tabs and the sessions rows, run the pure
 // check, and — for a `-w` launch — clear a leftover workspace folder before the clone would land on
 // it. Every refusal and cleanup goes to the notifications feed, attributed to `creator`, the tab the
-// command was typed in (or the issuing tab of a profile launch). Nothing reaches a transcript.
-
-// What a profile entry refused here is listed under in the launch summary's `Skipped:` part. The
-// refusal itself has already been posted with its full reason.
-export const LAUNCH_REFUSED = 'launch refused — see notifications';
+// command was typed in. Nothing reaches a transcript.
 
 export type LocalLaunchName = {
   creator: string;

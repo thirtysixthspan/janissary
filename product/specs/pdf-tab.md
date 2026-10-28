@@ -144,8 +144,7 @@ This deliberately differs from the image tab, where Page Up / Page Down and a ba
 image has one page and nowhere to scroll, while in a document those keys already mean something.
 
 A newly opened PDF tab starts on the first page at 100%. Zoom, scroll position, and the current page
-are live and in-memory; none of them is persisted, restored, or carried in a
-profile, which names the file only.
+are live and in-memory; none of them is persisted or restored.
 
 ### Text selection
 

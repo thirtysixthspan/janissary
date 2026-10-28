@@ -13,9 +13,6 @@ export const shellManifest = {
   agentNamedTabs: true,
   fileExtensions: {},
   command: 'shell',
-  // A bare `shell` provisions a fresh workspace clone, which a saved profile entry should not do once
-  // per saved shell, so a profile reopens its shells without one.
-  profileCommand: 'shell --no-workspace',
   // Claimed rather than refused, and honoured only while a shell tab is the visible one: the
   // application's own history picker owns Ctrl+R, and its new-agent-tab action owns Cmd+T, everywhere
   // else, and each takes its chord back the moment focus moves. Cmd+T is claimed here rather than in

@@ -69,7 +69,6 @@ Literal imports make the modules visible to TypeScript, Vite, Knip, and tests wh
 | `webTargets` | no | Claims the `open` command's web branch: an `http`/`https` address, or any address preceded by the `page` keyword |
 | `editGesture` | no | `open external` for a file-navigator edit activation |
 | `command` | no | One case-insensitive first-token command |
-| `profileCommand` | no | The line a profile entry for this plugin reissues instead of `command`. The shell declares `shell --no-workspace`, so a saved shell reopens without cloning a workspace |
 | `agentNamedTabs` | no | Name each tab from the agent-name pool, as an unnamed shell tab is, and show that name as its title; `tabLabelPrefix` and your title are the fallback once every name is held |
 | `playable` | no | Every extension in `fileExtensions` is something `play` may dispatch to your inline opener |
 | `spawnTerminal` | no | Asks for the `spawnTerminal` resource — the right to start a process from a payload factory, in a directory inside the project root. Without it, calling that resource throws rather than quietly doing nothing. Pass `zshHooks: { nonce }` (minted with `createShellMarkerNonce`) to have the host start zsh with the shell tab's status hooks installed |
@@ -218,7 +217,7 @@ A key another of your open tabs already holds is refused, because two tabs answe
 
 ## Docking into a sidebar
 
-Your tab can be docked into either sidebar, by the `setDock` RPC behind the dock control the host renders for it, or by a profile entry carrying `dock`. You write no code for this: the host owns the sidebar frame exactly as it owns the centre one, and your component renders the same either way. Three consequences are worth knowing:
+Your tab can be docked into either sidebar, by the `setDock` RPC behind the dock control the host renders for it. You write no code for this: the host owns the sidebar frame exactly as it owns the centre one, and your component renders the same either way. Three consequences are worth knowing:
 
 - a docked tab leaves the tab strip, so it has no position, group, or focus there;
 - every docked plugin tab stays mounted while another entry in the same sidebar is showing, and `active` becomes "am I the selected entry in this sidebar"; and

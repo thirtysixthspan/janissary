@@ -101,7 +101,7 @@ export type HarnessView = {
 
 // A tab whose harness or agent runs on another host, reached over one ssh session (see
 // `product/specs/remote-server.md`). `address` is the `on <address>` token exactly as typed — the
-// metadata chip's tooltip, and the form a profile entry round-trips; `host` is its bare host, which
+// metadata chip's tooltip; `host` is its bare host, which
 // is what the chip itself shows. Distinct from `HarnessView.destination`: that marks a tab that
 // *is* an ssh session, this marks a tab that *runs over* one.
 export type RemoteTarget = {
@@ -164,7 +164,7 @@ export type EditorView = {
 
 // Which per-row detail a file navigator shows to the right of each name: none, a human-readable
 // size, a last-modified timestamp, or a permission string. Cycled by the tree's own detail button,
-// set by the `files with <mode>` clause, and saved in a profile's `details` key.
+// and set by the `files with <mode>` clause.
 export type FileNavigatorDetail = 'name' | 'size' | 'modified' | 'permissions';
 
 export type FileNavigatorRestoreHint = {
@@ -236,7 +236,7 @@ export type FileNavigatorView = {
   // or visible — what the header commit button's whole-tree default message counts, since the commit
   // itself carries everything under the root and not only the rows on screen.
   changedCount?: number;
-  // A profile restore or `files` view clause writes this hint; the client applies it once per
+  // A `files` view clause writes this hint; the client applies it once per
   // revision (see `file-navigator/restore.ts` and `restore-command.ts`). Command hints can name
   // only the parts the command changed, leaving the rest untouched.
   restore?: FileNavigatorRestoreHint;
@@ -360,17 +360,17 @@ export type Tab = {
   pageSnapshot?: { text: string; capturedAt: number };
   // The monitor-window payload, present only when `view === 'monitor'`: the suggestion feed, the
   // monitor's runtime name (which is also this tab's label and what `unmonitor` and `monitor ask`
-  // address), the persona it runs — the same word as the name unless a profile gave it one of its
-  // own — the monitored tabs/groups (pre-formatted), and the running total of bytes sent/received
+  // address), the persona it runs — the same word as the name unless it was started under one of
+  // its own — the monitored tabs/groups (pre-formatted), and the running total of bytes sent/received
   // on the monitor's dedicated ACP session.
   monitor?: { suggestions: MonitorSuggestion[]; name: string; persona: string; targets: string; contextBytes: number };
   // The file navigator payload, present only when `view === 'files'`.
   files?: FileNavigatorView;
   // Group number, shared by an agent and every agent it (transitively) creates. The root agent
-  // is group 1; a launched profile forms its own group.
+  // is group 1.
   group: number;
-  // User-facing identity used by launch commands to find this group. Older profile entries may
-  // omit it; their numeric group receives the stable `group-<id>` fallback.
+  // User-facing identity used by launch commands to find this group. A tab without one falls back
+  // to `defaultGroupName` for its numeric group (`launch` for group 1, `group-<id>` otherwise).
   groupName?: string;
   // The group's bar color, fixed when the group is first assigned (the color of its first
   // agent). Stored per tab so it never shifts when tabs are moved or a group member is closed.

@@ -693,74 +693,6 @@ describe('HarnessManager auto-approve', () => {
     expect(managers.pty.input).not.toHaveBeenCalled();
     expect(notify).not.toHaveBeenCalledWith(managers, 'auto-approve', expect.anything(), expect.anything());
   });
-
-  it('threads a profile entry\'s autoApprove into the auto-approver', async () => {
-    const { managers } = makeManagers();
-    const manager = new HarnessManager(managers);
-    expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', workspace: true, autoApprove: true }, 'claude', 2, '#fff', 'janus',
-    )).toBeUndefined();
-    messageBus.emit('pty', { type: 'data', id: 'pty-1', data: GATE });
-    await vi.advanceTimersByTimeAsync(1001);
-    expect(managers.pty.input).toHaveBeenCalledWith('pty-1', '\r');
-  });
-
-  it('threads a profile entry\'s offline flag onto the tab', () => {
-    const { managers, tabs } = makeManagers();
-    const manager = new HarnessManager(managers);
-    manager.openFromProfile(
-      { name: 'claude', tool: 'claude', workspace: true, offline: true }, 'claude', 2, '#fff', 'janus',
-    );
-    expect(tabs.at(-1)?.offline).toBe(true);
-  });
-
-  // The same default as the `harness` command: an entry that says nothing gets a browser, and only
-  // an explicit `browser: false` — which `profile save` always writes for a `--no-browser` tab — opts out.
-  it.each([
-    [undefined, true],
-    [true, true],
-    [false, false],
-  ])('opens a profile entry with browser %s as a tab with browser %s', (browser, expected) => {
-    const { managers, tabs } = makeManagers();
-    const manager = new HarnessManager(managers);
-    manager.openFromProfile(
-      { name: 'claude', tool: 'claude', workspace: true, ...(browser !== undefined && { browser }) }, 'claude', 2, '#fff', 'janus',
-    );
-    expect(tabs.at(-1)?.browser).toBe(expected);
-  });
-
-  it('sets tab.autoApprove to match the autoApprove argument it was opened with', () => {
-    const { managers, tabs } = makeManagers();
-    const manager = new HarnessManager(managers);
-    manager.openFromProfile(
-      { name: 'claude', tool: 'claude', workspace: true, autoApprove: true }, 'claude', 2, '#fff', 'janus',
-    );
-    expect(tabs.at(-1)?.autoApprove).toBe(true);
-  });
-
-  // A profile entry has no autoResume field, so the launch default applies: on for a harness whose
-  // limit screen the app recognizes, off for one it does not.
-  it.each([
-    ['codex', true],
-    ['opencode', true],
-    ['claude', false],
-  ])('opens a %s profile entry with autoResume %s', (tool, expected) => {
-    const { managers, tabs } = makeManagers();
-    const manager = new HarnessManager(managers);
-    manager.openFromProfile({ name: tool, tool, workspace: true }, tool, 2, '#fff', 'janus');
-    expect(tabs.at(-1)?.autoResume).toBe(expected);
-  });
-
-  it('registers the workspace clone dir as the tab\'s cwd, so `files` defaults to it', () => {
-    const { managers } = makeManagers();
-    const setCwd = vi.fn();
-    (managers.tab as unknown as { setCwd: typeof setCwd }).setCwd = setCwd;
-    const manager = new HarnessManager(managers);
-    manager.openFromProfile(
-      { name: 'claude', tool: 'claude', workspace: true }, 'claude', 2, '#fff', 'janus',
-    );
-    expect(setCwd).toHaveBeenCalledWith('claude', '/workspace/claude');
-  });
 });
 
 describe('HarnessManager no-workspace auto-approve warning', () => {
@@ -786,17 +718,6 @@ describe('HarnessManager no-workspace auto-approve warning', () => {
       managers, 'auto-approve-no-workspace', 'claude', autoApproveWithoutWorkspaceWarning(true),
     );
     expect(tabs.at(-1)?.log).toEqual([]);
-  });
-
-  it('reports the same warning for a profile entry that is auto-approving with no workspace', () => {
-    const { managers } = makeManagers();
-    const manager = new HarnessManager(managers);
-    manager.openFromProfile(
-      { name: 'claude', tool: 'claude', workspace: false, autoApprove: true }, 'claude', 2, '#fff', 'janus',
-    );
-    expect(notify).toHaveBeenCalledWith(
-      managers, 'auto-approve-no-workspace', 'claude', autoApproveWithoutWorkspaceWarning(true),
-    );
   });
 
   it('reports nothing when auto-approve is off', () => {
@@ -909,18 +830,6 @@ describe('HarnessManager model/effort', () => {
     );
   });
 
-  it('threads a profile entry\'s effort through to the spawned command', () => {
-    const { managers } = makeManagers();
-    const manager = new HarnessManager(managers);
-    expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', effort: 'high', workspace: false }, 'claude', 2, '#fff', 'janus',
-    )).toBeUndefined();
-    expect(managers.pty.spawn).toHaveBeenCalledWith(
-      'claude', 'claude', "claude --effort 'high'", expect.any(String), undefined, false,
-      { CLAUDE_CODE_TMPDIR: expect.any(String), DISABLE_AUTOUPDATER: '1' },
-    );
-  });
-
   it('carries the launch model and effort onto the harness payload', () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);
@@ -1027,17 +936,6 @@ describe('HarnessManager busy/ready status', () => {
     await settle('\u{1B}]0;scratchpad\u{7}');
     await settle('\u{1B}]0;scratchpad\u{7}');
     expect(managers.tab.deleteBusy).toHaveBeenCalledWith('codex');
-  });
-
-  it('builds no busy/ready callback for a harness with no detector, leaving busy set', async () => {
-    const { managers } = makeManagers();
-    const manager = new HarnessManager(managers);
-    expect(manager.openFromProfile({ name: 'mystery', tool: 'mystery' }, 'mystery', 2, '#fff', 'janus')).toBeUndefined();
-    vi.clearAllMocks();
-    await settle('idle-looking output');
-    await settle('still idle');
-    expect(managers.tab.addBusy).not.toHaveBeenCalled();
-    expect(managers.tab.deleteBusy).not.toHaveBeenCalled();
   });
 });
 
@@ -1153,51 +1051,11 @@ describe('HarnessManager workspace provisioning', () => {
     expect(managers.tab.closeTab).toHaveBeenCalledTimes(1);
     expect(tabs.some((t) => t.label === 'claude')).toBe(false);
   });
-
-  it('creates a profile-launched (`openFromProfile`) harness tab as a placeholder too', () => {
-    const { managers, tabs } = pendingWorkspaceLaunch();
-    const manager = new HarnessManager(managers);
-    expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', workspace: true }, 'claude', 2, '#fff', 'janus',
-    )).toBeUndefined();
-    expect(tabs.at(-1)!.harness).toMatchObject({ ptyId: '', status: 'provisioning' });
-    expect(managers.pty.spawn).not.toHaveBeenCalled();
-  });
-
-  it('spawns the PTY for a profile-launched harness tab once its clone resolves', async () => {
-    const { managers, tabs, resolve } = pendingWorkspaceLaunch();
-    const manager = new HarnessManager(managers);
-    expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', workspace: true }, 'claude', 2, '#fff', 'janus',
-    )).toBeUndefined();
-    resolve();
-    await vi.advanceTimersByTimeAsync(0);
-    expect(managers.pty.spawn).toHaveBeenCalledTimes(1);
-    expect(tabs.at(-1)!.harness).toMatchObject({ ptyId: 'pty-1', status: 'running' });
-  });
 });
 
 // The tab-creation options travel as one object, so each of these pins a field that shares a type
 // with its neighbour — the pairs a positional argument list could once have transposed silently.
 describe('HarnessManager spawn options', () => {
-  it('defaults omitted profile booleans to workspace and supported auto-approve', () => {
-    const { managers, tabs } = makeManagers();
-    const manager = new HarnessManager(managers);
-    expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude' }, 'claude', 2, '#fff', 'janus',
-    )).toBeUndefined();
-    expect(tabs.at(-1)).toMatchObject({ workspaceDir: '/workspace/claude', autoApprove: true });
-  });
-
-  it('preserves explicit false profile booleans', () => {
-    const { managers, tabs } = makeManagers();
-    const manager = new HarnessManager(managers);
-    expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', workspace: false, autoApprove: false }, 'claude', 2, '#fff', 'janus',
-    )).toBeUndefined();
-    expect(tabs.at(-1)).toMatchObject({ workspaceDir: undefined, autoApprove: false });
-  });
-
   it('keeps offline and autoApprove apart when only offline is given', () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);
@@ -1220,24 +1078,6 @@ describe('HarnessManager spawn options', () => {
     expect(tabs.at(-1)).toMatchObject({ group: 2, groupName: 'Review' });
     expect(manager.run('harness opencode in group review')).toBeUndefined();
     expect(tabs.at(-1)).toMatchObject({ group: 2, groupName: 'Review', groupColor: tabs.at(-2)?.groupColor });
-  });
-
-  it('does not swap a profile entry\'s model and effort', () => {
-    const { managers, tabs } = makeManagers();
-    const manager = new HarnessManager(managers);
-    expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', model: 'opus', effort: 'high' }, 'claude', 2, '#fff', 'janus',
-    )).toBeUndefined();
-    expect(tabs.at(-1)!.harness).toMatchObject({ model: 'opus', effort: 'high' });
-  });
-
-  it('lands a profile launch\'s group, group color, and dot color on their own tab fields', () => {
-    const { managers, tabs } = makeManagers();
-    const manager = new HarnessManager(managers);
-    expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', dotColor: '#abcdef' }, 'claude', 7, '#123456', 'janus',
-    )).toBeUndefined();
-    expect(tabs.at(-1)).toMatchObject({ group: 7, groupColor: '#123456', dotColor: '#abcdef' });
   });
 });
 
@@ -1519,27 +1359,6 @@ describe('HarnessManager remote launch', () => {
     expect(managers.tab.closeTab).toHaveBeenCalledTimes(1);
   });
 
-  it('opens a profile entry\'s remote tab against the same host', () => {
-    const { managers, tabs, createWorkspace } = remoteLaunch();
-    const manager = new HarnessManager(managers);
-
-    expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', workspace: true, remote: 'admin@devbox:/srv/proj' }, 'claude', 2, '#fff', 'janus',
-    )).toBeUndefined();
-
-    expect(createWorkspace).not.toHaveBeenCalled();
-    expect(tabs.at(-1)).toMatchObject({ remote: { host: 'devbox' }, workspaceDir: undefined });
-  });
-
-  it('reports and skips a profile entry whose remote address is unusable', () => {
-    const { managers } = remoteLaunch();
-    const manager = new HarnessManager(managers);
-
-    expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', remote: 'devbox;id' }, 'claude', 2, '#fff', 'janus',
-    )).toContain('devbox;id');
-  });
-
 });
 
 describe('HarnessManager system-schedule naming', () => {
@@ -1576,9 +1395,6 @@ describe('HarnessManager system-schedule naming', () => {
     const manager = new HarnessManager(managers);
 
     expect(manager.run('harness claude as quality')).toBeUndefined();
-    expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', workspace: false }, 'quality', 1, '#fff', 'janus',
-    )).toBe('launch refused — see notifications');
     expect(manager.run('harness claude as quality --no-workspace', scheduleInvocation('janus', '/project'))).toBeUndefined();
 
     expect(tabs.filter((tab) => tab.label.startsWith('quality'))).toHaveLength(2);
@@ -1643,10 +1459,8 @@ describe('HarnessManager launch-name clashes', () => {
     const manager = new HarnessManager(managers);
 
     expect(manager.run('harness claude as ../victim -w')).toBeUndefined();
-    expect(manager.openFromProfile({ name: '../victim', tool: 'claude', workspace: true }, '../victim', 2, '#fff', 'janus'))
-      .toBe('launch refused — see notifications');
 
-    expect(notify).toHaveBeenCalledTimes(2);
+    expect(notify).toHaveBeenCalledTimes(1);
     expect(notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus', expect.stringMatching(
       /^Cannot launch "\.\.\/victim": a workspace name must be a single folder name/));
     expect(isWorkspaceRunning).not.toHaveBeenCalled();
@@ -1678,15 +1492,5 @@ describe('HarnessManager launch-name clashes', () => {
 
     expect(tabs.at(-1)?.label).toBe('a/b');
     expect(notify).not.toHaveBeenCalledWith(managers, 'launch-refused', expect.anything(), expect.anything());
-  });
-
-  it('refuses a profile entry whose name a detached row holds, as a skip', () => {
-    const { managers } = withTabs([], [row('foo', 'detached')]);
-    const manager = new HarnessManager(managers);
-
-    expect(manager.openFromProfile({ name: 'foo', tool: 'claude', workspace: false }, 'foo', 2, '#fff', 'janus'))
-      .toBe('launch refused — see notifications');
-    expect(notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus',
-      'Cannot launch "foo": "foo" is already in the sessions tab (detached on devbox).');
   });
 });

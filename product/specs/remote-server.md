@@ -412,7 +412,7 @@ An empty `~/<repo-name>` that already existed keeps its folder and loses only wh
 it. Nothing that existed before the clone is touched.
 
 Every root failure appears in the placeholder before it closes and is posted to the notifications
-feed, attributed to the tab the launch was typed in (or a profile launch's issuing tab). The other
+feed, attributed to the tab the launch was typed in. The other
 repository's origin and git's error line have any embedded credential removed before they are
 reported, so a token in the host's own git configuration never reaches the placeholder or the feed.
 `<path>` in the declined and clone-failed lines is the folder the clone would have gone into. These
@@ -513,14 +513,13 @@ count. Each remote server records the name it is provisioning before its clone s
 launch of the same name on the same host sees the first one from then on. A peer record whose process
 has died is ignored, and it is left in place.
 
-- **Running:** nothing is provisioned. For a typed name or a profile entry's name the placeholder closes at once and `Cannot launch "<name>": "<name>" is already running on <host>.` is posted. For a default name (a bare harness name, or an agent pool name) the placeholder closes and the launch is repeated silently over a fresh ssh connection under the next free name, up to 5 attempts in all. After the fifth, one refusal is posted: `Cannot launch "<first>": "<first>" through "<last>" are already running on <host>.` for a harness, or `Cannot launch agent on <host>: 5 names tried (<n1>, <n2>, …) are already running on <host>.` for an agent.
+- **Running:** nothing is provisioned. For a typed name the placeholder closes at once and `Cannot launch "<name>": "<name>" is already running on <host>.` is posted. For a default name (a bare harness name, or an agent pool name) the placeholder closes and the launch is repeated silently over a fresh ssh connection under the next free name, up to 5 attempts in all. After the fifth, one refusal is posted: `Cannot launch "<first>": "<first>" through "<last>" are already running on <host>.` for a harness, or `Cannot launch agent on <host>: 5 names tried (<n1>, <n2>, …) are already running on <host>.` for an agent.
 - **Leftover:** a workspace folder under the name with nothing running in it is removed, even with uncommitted or unpushed work in it, and the launch goes ahead. Once the workspace is ready, `Removed leftover workspace "<name>" on <host> ($workspace/<name>) before launching.` is posted — the same form a local leftover uses, since the clone's own name identifies it on either host.
 - **Leftover that cannot be removed:** nothing is provisioned, the placeholder closes at once, and `Cannot launch "<name>": could not remove leftover workspace "<name>" on <host> ($workspace/<name>) — <reason>.` is posted. This covers a failed update of the host's Claude trust file, which is tried before the folder is touched, and a removal that fails partway, which leaves the rest in place for the next launch to try again.
 - **Leftover with nothing to clone:** when the host's project root has lost its git repository or `origin` remote, the leftover is kept and the launch fails with that reason (see [Missing clone](#missing-clone)).
 - **Name that is not a single folder name:** a name that is empty, `.` or `..`, or contains `/` or `\` would reach outside the host's workspace base. The host checks it before anything else, provisions and removes nothing, and answers with a workspace failure carrying `Cannot launch "<name>": a workspace name must be a single folder name — not empty, "." or "..", and without "/" or "\".`, which the placeholder shows before it closes.
 
-These lines go to the notifications feed only, attributed to the tab the launch was typed in (or the
-issuing tab of a profile launch). Attaching a parked session is not a new launch and is never checked.
+These lines go to the notifications feed only, attributed to the tab the launch was typed in. Attaching a parked session is not a new launch and is never checked.
 
 ### What is computed where
 
@@ -800,7 +799,7 @@ a shared channel's server holds one agent per tab using it.
   remote tree.
 - An alternative confinement mechanism where the remote platform has no sandbox.
 - Nested remoting: a remote tab cannot itself launch `on <another-host>`.
-- Restoring a remote file navigator through a profile, an attach, or a launch restore.
+- Restoring a remote file navigator through an attach or a launch restore.
 - Probing hosts on janissary's own initiative: nothing opens an ssh connection except a pressed
   attach, a pressed end, or a launch restore.
 - Arbitrating two janissary instances attaching one peer — last attach wins, and the loser enters

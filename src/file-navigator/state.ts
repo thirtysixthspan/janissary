@@ -88,7 +88,7 @@ export type FilesTabState = {
   // a settled `committed` or `error` to rest (see `manager/flash.ts`).
   commit?: FileNavigatorCommitStatus;
   commitFlash?: ReturnType<typeof setTimeout>;
-  // The most recent profile or command selection hint, copied onto each rebuilt payload. A new
+  // The most recent command selection hint, copied onto each rebuilt payload. A new
   // revision lets the client apply it once without later broadcasts overwriting user changes.
   restore?: FileNavigatorRestoreHint;
   // Which detail this tree shows to the right of each row name. Every tab starts at 'name', which

@@ -160,8 +160,8 @@ function openOrFocusRemoteTree(
 
 // Resolve parsed `files` arguments into a root directory, then redock an existing tree or open a
 // fresh one.
-// Returns the label of the tab it opened, redocked, or focused — what `profile launch` needs to
-// restore that tree's saved view onto — or undefined when nothing was opened.
+// Returns the label of the tab it opened, redocked, or focused — the tree the command's view
+// clauses then apply to — or undefined when nothing was opened.
 export function openFilesCommand(
   managers: Managers, tabs: Map<string, FilesTabState>, parsed: FileNavigatorOpenArgs, label: string,
   out: (text: string) => void,

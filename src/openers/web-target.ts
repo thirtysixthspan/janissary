@@ -1,9 +1,9 @@
 // What a web address is, as two pure functions: the normalization every `open <url>`, `open page
 // <address>`, and in-place navigation runs, and the root domain a page tab is named after. Kept in
-// core rather than inside the page plugin because core's profile relaunch has to resolve an authored
-// address to the same string the plugin's tab is keyed by, and a second copy of a scheme-rejecting
-// predicate is exactly the type drift `ai/guidelines/plugins.md` calls out. It is therefore the
-// second host utility a server plugin may import, beside `openers/size.ts`.
+// core as a pure host utility rather than inside the page plugin: a scheme-rejecting predicate is
+// the kind of check that should have one definition, and a second copy would be exactly the drift
+// `ai/guidelines/plugins.md` calls out. It is the second host utility a server plugin may import,
+// beside `openers/size.ts`.
 export function normalizeWebUrl(target: string): { url: string } | { error: string } {
   let raw = target.trim();
   if (!raw) return { error: 'empty URL' };

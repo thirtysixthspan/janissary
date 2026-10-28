@@ -191,7 +191,7 @@ covers every close path — the tab's × button, `Cmd+W`, and typing `close` or 
 image edits also hold up `quit`, closing the last tab, and closing or reloading the browser page
 (see [[quit-confirmation]]).
 
-An in-progress edit is a live, in-memory view like zoom and pan: it is not persisted, not restored, and not carried in a profile, which names only the file.
+An in-progress edit is a live, in-memory view like zoom and pan: it is not persisted and not restored.
 
 ### Tab strip: name and close button
 

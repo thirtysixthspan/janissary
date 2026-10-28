@@ -2,16 +2,16 @@
 
 <img class="agent-float" src="/agents/demir-south.png" alt="" />
 
-A profile is a named set of harnesses and other tabs, written in a file, that you can relaunch as one unit — a working setup for a recurring job, recreated with a single command:
+A profile is a named runscript that sets up a working session for a recurring job, such as a couple of harnesses, an editor, and a docked file tree. You recreate it with a single command:
 
 ```
 profile launch writing-code
 profile list
 ```
 
-`profile launch <name>` opens a tab for every entry in the profile. Each one starts fresh, from the entry's name, working directory, and tab presentation: a harness launches with whatever model, directory, workspace flag, and startup commands the profile specifies. Each entry joins the [group](/user-documentation/getting-started/groups) its own `group` key names; any entry that names none instead lands in one shared new group, so a profile with no authored groups reads as its own colored band in the strip. `profile list` names the profiles you have; a name that doesn't exist gets `No profile named "<name>".`
+`profile launch <name>` runs the profile's commands one after another, the way [`execute`](/user-documentation/automation/scheduling#run-a-runscript-now) runs a runscript. `profile list` names the profiles you have. A name that doesn't exist gets `No profile named "<name>".`
 
-![The tab strip after a profile launch: the profile's tabs grouped under one new band color, distinct from the root group.](/screenshots/profile-group.png)
+![The tab strip after profile launch demo: the two editor tabs its runscript opened, beside the launch shell.](/screenshots/profile-group.png)
 
 ## Picking a profile to launch
 
@@ -21,142 +21,45 @@ Opened from a shell's command bar, the selection replaces that shell's draft, in
 
 The list is read from disk about once a second, so a profile file you have just added can take a second to appear. If the list changes while the picker is already open, whether because another tab added a profile or a `git checkout` moved one, the highlight is put back onto a real profile rather than left on a section label or past the end of a shorter list. It keeps its position rather than the profile it was on, so it can end up somewhere else in the list. A key you press before that correction has been applied only puts the highlight back rather than launching anything, so `Enter` never launches a profile that was not showing as selected. `Escape` closes the picker at any point.
 
-The bundled ones are `debugging`, `features`, `multitasking`, `planning`, and `product-review`. Launch any of them by name without setting anything up, and read one as a worked example of the format below. `profile list` shows them alongside your own.
+The bundled ones are `debugging`, `default`, `features`, `planning`, and `product-review`. Launch any of them by name without setting anything up, and read one as a worked example of the format below. `profile list` shows them alongside your own.
 
 ## Writing a profile
 
 <img class="agent-float left" src="/agents/dogan-south-east.png" alt="" />
 
-Your profiles live in the `profiles/` directory in your project: plain files meant to be committed and shared. Janissary also includes built-in profiles. If both sources use the same profile name, your project copy wins, so you can customize a built-in profile by adding a same-named file to your project's `profiles/` directory. Janissary doesn't create that directory for you, so add it yourself the first time. Each profile is a single JSON file (dasherized, like `writing-code.json`) with one `tabs` array. Every element names its kind with a `type`, and a harness entry also carries its own `name`, which becomes the tab's label:
+Your profiles live in the `profiles/` directory in your project: plain files meant to be committed and shared. Janissary doesn't create that directory for you, so add it yourself the first time. Each profile is a runscript named after the profile, like `writing-code.rs`. Janissary also includes built-in profiles. If both sources use the same name, your project copy wins, so you can customize a built-in profile by adding a same-named file to your own `profiles/` directory.
 
-```json
-{
-  "tabs": [
-    {
-      "type": "harness",
-      "name": "builder",
-      "tool": "opencode",
-      "model": "openai/gpt-5",
-      "workspace": true,
-      "run": ["review the open pull requests"],
-      "schedule": ["tests every 2h npm test"],
-      "number": 2,
-      "pane": "right"
-    }
-  ]
-}
+A runscript holds one command per line, and Janissary skips blank lines and lines that start with `#`. A line is anything you could type into a command bar: a Janissary command such as `harness`, `edit`, `files`, or `layout`, or a shell command.
+
+```
+# A harness, the backlog in an editor, and a tree docked on the left.
+harness claude as builder in group 1
+edit $root/product/backlog/features.md
+files on left $root
+notifications right
+layout sidebar left 270
+tab focus builder
 ```
 
-The ten types are `harness`, `editor`, `files`, `notifications`, `schedules`, `plugin`, `image`, `markdown`, `page`, and `ssh`. A harness entry names which binary to launch with a `tool` field (`claude`, `opencode`, or `codex`) — `type` already means the kind of tab — and supports a few more fields:
+The lines run in the project's managed system shell, in order, and each command finishes before the next one starts. Nothing is printed when the profile starts. A line's output goes to the system shell rather than the tab you launched from, and a failing line doesn't stop the lines after it.
 
-- **`model`** — passed to the harness verbatim; an unknown model for that harness is reported and the entry skipped.
-- **`effort`** — an effort/thinking level, forwarded verbatim like `--effort` on the interactive `harness` command (translated to each harness's own flag: claude `--effort`, codex `-c model_reasoning_effort`, opencode has none). Not validated against any fixed set of levels.
-- **`workspace`** — launch in a fresh [workspace clone](/user-documentation/advanced-agents/workspaced-agent). It defaults to `true`; set it to `false` to opt out.
-- **`autoApprove`** — auto-approve permission prompts. It defaults to `true` for claude, opencode, and codex.
-- **`offline`**: deny network access inside the workspace sandbox. It is only meaningful when `workspace` is enabled.
-- **`browser`**: launch the harness with a browser attached. It defaults to `true`, the same as an interactive `harness` command; set it to `false` to opt out, the entry form of `--no-browser`.
-- **`remote`**: launch on another machine, using the address you would put after `on` in a harness command, such as `"dev@example.com:project"`. It implies `workspace`, omits `cwd`, and asks for authentication once for each remote tab the profile opens.
-- **`cwd`** — starting directory. `$root` resolves to the project's launch directory and `~` to home, so you can write a portable path instead of an absolute one.
-- **`run`** — commands typed into the harness once, shortly after launch.
-- **`schedule`** — tab timers in the [`schedule` grammar](/user-documentation/automation/scheduling), minus the leading `schedule` keyword and any `in <tab>` clause (each line belongs to this tab). A line that doesn't parse is reported at launch and skipped. Profile schedule lines cannot create or manage project system schedules; a valid system line is reported as `Schedule "<raw>" for "<harness>" cannot target system schedules.` and skipped.
+Only `.rs` files are profiles. Any other file in `profiles/` is ignored, so it never shows up in `profile list` or the picker.
 
-Every entry that takes a place in the tab strip carries its presentation as plain keys alongside `type`: `color` (the dot color), `number` (tab order), `group`, `groupColor`, `pane`, and `focus`. Set `pane` to `left` or `right` to reopen that entry in a two-pane center layout; omitting it means left. Any main-area entry with `focus: true` can claim keyboard focus after launch; the lowest-numbered focused entry wins, while the other pane keeps one of its own tabs visible. Without one, the first newly opened profile tab stays active.
-
-Every tab entry can use `group` as its numeric group ID and `groupName` as the group's name. A launch restores the name along with the ID. Older entries without a name use `launch` for group `1` and `group-<id>` for another explicit ID.
-
-Two profile-level keys sit outside `tabs`, because neither is a tab: `monitors` and `layout`. A monitor entry names its persona and targets:
-
-```json
-{
-  "monitors": [
-    { "name": "review-watch", "persona": "reviewer", "targets": ["group:2", "builder"] },
-    { "persona": "triage", "targets": [] }
-  ]
-}
-```
-
-`persona` is required. `targets` is a list of tab labels or `group:<number>` targets from the [`monitor` command](/user-documentation/automation/monitoring); an empty list creates an inline monitor. `name` is optional and defaults to `persona`. Monitors start after every profile tab is open, owned by the tab that issued `profile launch`, so closing the profile tabs does not stop them. Relaunching first stops an existing monitor with the same owner and name, then starts its replacement. The launch report includes the result for each monitor.
-
-The `layout` key groups the sidebar widths under a nested `sidebar` object, e.g. `"layout": { "sidebar": { "left": 300, "right": 280 }, "tabAreaPct": 75, "window": { "width": 1280, "height": 800 } }`. It applies on every launch, including a relaunch, and always wins over anything you resized by hand: any dimension the key doesn't mention resets to the app's own default rather than staying at whatever it currently is. When Janissary starts with `--no-open`, the window size is ignored, while the sidebar widths and tab-area split still apply to a connected browser.
-
-Use an `editor` entry to open a file directly in the in-app editor when the profile launches:
-
-```json
-{ "type": "editor", "path": "$root/product/backlog/features.md", "line": 1, "number": 3 }
-```
-
-Each has a required `path`, optional resolving tab `in`, and optional cursor `line`. `$root` resolves from the launch directory and `~` from home; another relative path resolves from `in` or the first newly opened profile tab. A missing file opens an empty buffer and is created only on save. Relaunching reuses an already-open editor tab for the same file and moves its cursor to the requested line.
-
-For a file covered by GitHub syncing, author the original project-relative source path, not its temporary path inside the sync workspace. Launching the profile then provisions or reuses the shared workspace and opens the real content. If the editor refuses a path, for example because the file exceeds its size limit, that entry is skipped without moving or focusing any other tab.
-
-The `plugin`, `page`, and `ssh` types reopen the rest of a working session — a diagram or video, a spec you keep reading, a docs site, a remote box:
-
-```json
-{ "type": "plugin", "id": "image", "path": "$root/docs/architecture.png", "number": 4 },
-{ "type": "page", "url": "https://example.com/", "number": 5 },
-{ "type": "ssh", "destination": "devbox", "options": ["-p", "2222"], "number": 6 }
-```
-
-A `plugin` entry names the [bundled plugin](/user-documentation/command-bar/plugins) that owns the tab. For one that opens on a file — `image`, `markdown`, `video`, `pdf`, `audio` — it carries that file's path, and a launch reopens it by opening the file again. A plugin reached only by its own command, such as the `schedules` list, carries no path; a launch reissues the command instead. A subjectless shell entry places the new shell it opens, never an existing launch shell or system shell. The older `{ "type": "image", "path": … }` and `{ "type": "markdown", "path": … }` spellings still launch exactly the same way, so older profiles are unaffected.
-
-None of these needs a `name` — the label is derived the same way typing `open` or `ssh` derives it. Relaunching closes a page or ssh tab already showing the same url or destination before reopening it, so you end up with one of each rather than a duplicate; an already-open image, markdown, or video tab is simply reused.
-
-A notifications entry opens the singleton feed. Add `dock` to put it in a sidebar, and use `focus: true` with `dock` when the feed should be the visible docked tab even if the profile also docks another view on that side. This `focus` option is the way to choose the notifications tab on launch:
-
-```json
-{ "type": "notifications", "dock": "right", "focus": true }
-```
-
-A `files` entry opens a [file navigator](/user-documentation/tab-types/file-navigator), and can bring back the state of the tree itself — which directories were open, and which rows were selected:
-
-```json
-{
-  "type": "files",
-  "dock": "left",
-  "path": "$root",
-  "details": "modified",
-  "expanded": ["src", "src/file-navigator"],
-  "cursor": "src/file-navigator/manager.ts",
-  "selected": ["src/file-navigator/manager.ts"]
-}
-```
-
-Use `in` with a tab label to root the tree at that tab's working directory. With no `in` or `path`, the navigator uses the first new profile tab, or the issuing tab if nothing new opened. A literal `path` sets the root directly; `$root` always means the profile launch directory. `details` selects the row detail mode: `name`, `size`, `modified`, or `permissions`. Omit it for the default `name` mode.
-
-Every view path is relative to the tree's root. Restoring is quiet and forgiving: a directory or row that no longer exists is dropped without a word, and a restored selection never steals keyboard focus. The profile's own `focus` still decides where you land. Leave off `dock` and the tree opens in the center strip instead, where it takes `number`, `group`, and `pane` like any other tab.
-
-A harness entry's `run` and `schedule` live in memory only — closing the tab or quitting ends them. That's the point of the profile: the file is the source of truth, and every launch rebuilds the setup from it.
-
-A profile can also be a runscript. If `profiles/` holds a `<name>.rs` file, `profile launch <name>` runs it in the system shell instead of opening tabs, even when a `<name>.json` file sits beside it. It works like [`execute`](/user-documentation/automation/scheduling#run-a-runscript-now): one command per line, blank lines and `#` comments skipped, and nothing printed when it starts. Your project's files still win over the built-in ones, so a project `<name>.json` beats a built-in `<name>.rs`. A runscript that can't be read safely, such as a symlink, reports `Could not read runscript for profile "<name>".`. `profile list` and the picker show each name once.
-
-## Relaunching
+## Launching a profile again
 
 <img class="agent-float" src="/agents/ekrem-south-west.png" alt="" />
 
-Launching a profile that's already running resets it: any open tab whose label matches a profile entry is closed first — processes killed, schedules dropped, workspaces removed — then everything opens fresh, with schedules re-based to now and new clones where asked. The tab you ran `profile launch` from is spared; if the profile has an entry by that name, it's reported and skipped so the launch report has somewhere to land. A profile entry named `system`, in any casing, is also skipped and reported as `system (reserved for the system tab)`.
+Launching a profile runs its commands again against whatever is already open. It doesn't close the tabs the last launch opened. A `harness … as <name>` line whose name is still in use is refused, with its `Cannot launch "<name>": …` line in the [notifications](/user-documentation/tab-types/notifications) feed, and the rest of the profile keeps going. Close the old tabs first when you want fresh ones.
 
-An entry's `name` is a typed name, never one that walks to a `-2` suffix. Once the reset above has closed the matching tabs, an entry whose name is still taken — by an open tab, by a live [sessions](/user-documentation/tab-types/sessions) row, or, for a remote entry, by something running on its host — is refused. Its `Cannot launch "<name>": …` line goes to the [notifications](/user-documentation/tab-types/notifications) feed against the tab you ran `profile launch` from, the entry is listed under `Skipped:` as `<name> (launch refused — see notifications)`, and every other entry still opens. A leftover workspace folder sitting under an entry's name is removed before its clone, the same as for any other launch — see [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent#when-a-workspace-folder-is-already-there).
-
-A profile file whose structure is broken opens nothing and reports `Profile "<name>" is malformed.` If a launch fails partway, the issuing transcript receives `Profile command failed: <reason>.` so the command does not appear unfinished.
+A runscript that can't be read safely, such as a symlink, reports `Could not read runscript for profile "<name>".`. If a launch fails partway, the tab you launched it from gets `Profile command failed: <reason>.` so the command does not appear unfinished.
 
 ## A worked example
 
-One profile that ties the pieces together — a morning code-review setup, all in `profiles/morning-review.json`:
+Here's a morning code-review setup in `profiles/morning-review.rs`:
 
-```json
-{
-  "tabs": [
-    {
-      "type": "harness",
-      "name": "reviewer",
-      "tool": "claude",
-      "workspace": true,
-      "run": ["review the newest open PR and summarize the risky changes"],
-      "schedule": ["refresh every 2h check for newly opened PRs"],
-      "number": 2
-    }
-  ]
-}
+```
+harness claude as reviewer with review the newest open PR and summarize the risky changes
+schedule refresh in reviewer every 2h check for newly opened PRs
 ```
 
-`profile launch morning-review` then: opens `reviewer` in a new tab group; clones the repo into a workspace for `reviewer` ([isolated](/user-documentation/advanced-agents/workspacing) from the rest of your machine); types the `run` prompt into the harness once it's up; and keeps nudging it every two hours via its schedule — visible in the [schedule window](/user-documentation/automation/scheduling) floating over the harness. Close the tabs when you're done; tomorrow, one command rebuilds it all.
+`profile launch morning-review` opens `reviewer` in a fresh [workspace clone](/user-documentation/advanced-agents/workspacing), isolated from the rest of your machine. It types the prompt into the harness once it's up, then nudges it every two hours through its schedule, which shows in the [schedule window](/user-documentation/automation/scheduling) floating over the harness. Close the tab when you're done. Tomorrow, one command rebuilds it all.

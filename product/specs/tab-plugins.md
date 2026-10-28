@@ -42,7 +42,7 @@ An active plugin also shows `activation=<milliseconds>ms`. A disabled plugin sho
 
 ### Plugin tabs
 
-Every v2 plugin tab is a live, in-memory view tab. It inherits the creating tab's group and group color, receives a distinct dot color, can move into either split pane, and stays mounted while hidden so view state survives focus changes. A hidden system-shell plugin tab also stays mounted at its existing center or sidebar placement after a user closes it, with `active` false and no visible overlay or focus target; explicit focus reveals it. Plugin tabs are not persisted or restored. A profile does save one, as the plugin that owns it plus the file it was opened on, and reopens it by issuing the same `open` a user would type (see [[profiles]]).
+Every v2 plugin tab is a live, in-memory view tab. It inherits the creating tab's group and group color, receives a distinct dot color, can move into either split pane, and stays mounted while hidden so view state survives focus changes. A hidden system-shell plugin tab also stays mounted at its existing center or sidebar placement after a user closes it, with `active` false and no visible overlay or focus target; explicit focus reveals it. Plugin tabs are not persisted or restored. A profile's runscript can reopen one with the same `open` a user would type (see [[profiles]]).
 
 The wire view identifies the plugin, the payload schema version, and an opaque payload. Instance keys, source-tab ownership, and served-file reference ownership remain server-only. The host checks a stable instance key before asking the plugin to construct a payload, so reopening the same resource focuses the existing tab and registers no duplicate served file.
 
@@ -84,15 +84,13 @@ This is the inverse of the rule the overlay-plugin family works under, where a p
 
 ### Docking a plugin tab
 
-A plugin tab can be docked into either sidebar and undocked back to the centre, exactly as the built-in dockable views can, and by the same means — the dock control shown on a docked tab, a profile that asks for it, and the plugin itself (see Placing its own tab). A docked plugin tab leaves the tab strip, so it has no position, group, or focus there; it appears instead in that sidebar's own tab switcher alongside whatever else is docked to the same side.
+A plugin tab can be docked into either sidebar and undocked back to the centre, exactly as the built-in dockable views can, and by the same means — the dock control shown on a docked tab and the plugin itself (see Placing its own tab). A docked plugin tab leaves the tab strip, so it has no position, group, or focus there; it appears instead in that sidebar's own tab switcher alongside whatever else is docked to the same side.
 
 Docking into a side already holding a docked tab displaces that tab back to the centre only when the two are the same kind — for plugin tabs, that means the same plugin. Two tabs from different plugins share a sidebar the way the file navigator and the notifications feed already do.
 
 Every docked plugin tab stays loaded while another entry in the same sidebar is showing, so switching between them preserves what each was displaying; only the one on screen is told it is visible. The sidebar frame, including the dock control, belongs to the application rather than to the plugin. A plugin is told which side it is docked to, so a view can lay itself out for a narrow sidebar without measuring the frame around it.
 
 A plugin may place its header actions alongside the application's dock control in a single sidebar metadata bar. Those actions remain attached to that tab when switching sidebar entries and disappear when it closes. Returning the tab to the centre restores its ordinary header. Plugins with separate headers keep their existing layout.
-
-A profile entry can dock a plugin tab to a side, and opens it docked there. A plugin tab opened on a file is reopened by opening that file again; one opened by a plugin's own command — a plugin that claims no file types at all — is reopened by reissuing that command.
 
 ### Changing what a tab shows
 
@@ -168,8 +166,6 @@ A plugin may ask the host to launch a tab rather than open one. A launch never f
 
 A launch may instead name a remote address. The host validates the address, opens an independent SSH channel, and starts a remote workspace. The plugin tab appears while the channel connects and receives its SSH terminal id and host, so the client can show and answer SSH prompts. When the workspace is ready, the plugin receives its remote path and host in the ready event and can replace the provisioning payload with its remote process. A launch from a remote tab may request a separate remote target, but the shell plugin refuses nested remote shell launches. Remote launch failures are reported as `Failed to start "<name>" on <host>: <reason>` and close the placeholder after a short delay; a refused default name retries with another free name.
 
-A declaration may also name the line a profile entry for it reissues in place of its command (`profileCommand`). The shell names `shell --no-workspace`, so a profile's shell entry reopens without cloning a workspace.
-
 A plugin whose tab has a command line may add lines to that tab's command queue, take the next line from it, and record the directory its process moved to (`queueLine`, `nextQueuedLine` and `recordCwd` in `src/plugins/line-capabilities.ts`). Each acts only on the plugin's own answering tab. Called from a command, selection action or menu handler invoked from a shell tab, or from a tab another plugin owns, the call is refused with a rejection naming the capability, so the transcript records which call was turned away: no line is queued, none is taken, and the tab's recorded directory is unchanged. Disabled plugins touch no queue. Shell and harness tabs have no command queue. Their recorded directory decides where completion, file navigation, and new shells start, and is not a plugin's to change.
 
 Plugins may additionally request `nextQueuedCommand` and `dispatchQueuedCommand` to take a row with a host-issued receipt and dispatch or discard that exact row. A receipt is scoped to the issuing plugin and tab incarnation, can be consumed once, and remains outstanding only until consumed, discarded, plugin disablement, or tab close. Each tab permits at most 256 outstanding receipts; another dequeue is rejected without changing the queue. An invalid or stale receipt is rejected without disabling the plugin. The host dispatches the stored line, not caller-provided text, and carries its optional system-schedule provenance only in that invocation and child invocations. Ordinary invocations have no provenance, and the server's wire view continues to expose only queue text.
@@ -236,7 +232,7 @@ Page is the bundled plugin that claims web addresses, so `open <url>`, `open pag
 
 ### Bundled schedules plugin
 
-Schedules is the first bundled plugin that opens on no file. It claims no extensions and contributes only the `schedules` command, so it is reached solely that way and costs nothing until someone asks for it. It is told when the set of scheduled commands changes and redraws its list from that, reads the current entries when the tab first opens, and cancels an entry, clears them all, or switches to an owning tab through the actions that state defines. Everything the user sees — the command grammar, the singleton tab, both layouts, the selection keys, the confirmation before a delete, and profile capture and restore — is unchanged by its being a plugin, except that a docked list now shows the application's dock control in its own slim header above the list. See [[scheduling]].
+Schedules is the first bundled plugin that opens on no file. It claims no extensions and contributes only the `schedules` command, so it is reached solely that way and costs nothing until someone asks for it. It is told when the set of scheduled commands changes and redraws its list from that, reads the current entries when the tab first opens, and cancels an entry, clears them all, or switches to an owning tab through the actions that state defines. Everything the user sees — the command grammar, the singleton tab, both layouts, the selection keys, and the confirmation before a delete — is unchanged by its being a plugin, except that a docked list now shows the application's dock control in its own slim header above the list. See [[scheduling]].
 
 ### Bundled conversations plugin
 

@@ -2,9 +2,9 @@ import type { Managers } from '../managers.js';
 import { HARNESS_CLONE_DEPTH, workspaceCloneOptions } from '../workspace/clone-depth.js';
 import type { ProvisioningWorkspace } from '../workspace/manager.js';
 
-// Where a harness tab starts on disk. Both launch surfaces — the `harness` command and a profile
-// entry — ask the same two questions in the same order, so they live together here rather than as a
-// pair of private methods on the manager, which owns command handling and tab wiring instead.
+// Where a harness tab starts on disk. The `harness` command asks two questions in order, so they
+// live together here rather than as a pair of private methods on the manager, which owns command
+// handling and tab wiring instead.
 
 export type LaunchDir = {
   cwd: string;

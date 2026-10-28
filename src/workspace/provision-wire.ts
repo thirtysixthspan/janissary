@@ -6,9 +6,9 @@ import { errorText } from '../error-text.js';
 export const PROVISION_FAILURE_CLOSE_DELAY_MS = 3000;
 
 // Shared "fire and forget" wiring for a workspace clone's `ready` promise (from
-// `WorkspaceManager.create`), reused by both `HarnessManager` and `ProfileManager` since both now
-// create their tab immediately and finish it asynchronously once the clone resolves. Kept out of
-// either manager so the same guard-against-a-since-closed-tab logic isn't duplicated.
+// `WorkspaceManager.create`), reused by every launch that creates its tab immediately and finishes
+// it asynchronously once the clone resolves. Kept out of any one manager so the same
+// guard-against-a-since-closed-tab logic isn't duplicated.
 //
 // `tabExists` is re-checked right before invoking either callback so a tab closed (and its clone
 // cancelled) mid-provisioning is never resurrected by a clone that was already in flight.

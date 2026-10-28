@@ -156,7 +156,7 @@ export class OpenFileManager {
   // config-listed, and the governing checkout is confirmably on its primary branch. The governing
   // checkout is the activating tab's own navigator root when that tree governs at all (see
   // `governingNavigator`) and has already loaded its git metadata — falling back to the launch dir's
-  // cached pair for a shell tab's `edit`, a profile restore, a plugin opener, a navigator rooted
+  // cached pair for a shell tab's `edit`, a plugin opener, a navigator rooted
   // outside the launch dir, or one still loading its first metadata result; a
   // feature-branch (or unconfirmable) checkout answers "no", so the file opens as an ordinary
   // editor tab against the real file on disk. Both inputs are values resolved elsewhere — this

@@ -132,7 +132,7 @@ Whichever of `--model` and `--effort` you set show up as small chips in the harn
 
 Harnesses start inside a disposable clone by default — the same isolation agents get. `-w`/`--workspace` explicitly confirms the default, and `--no-workspace` opts out. See [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent) for how the clone, sandboxing, and GitHub authentication work.
 
-A harness tab joins the same [group](/user-documentation/getting-started/groups) as the tab you launched it from by default. Add `in group <name|id>` to join a group by its name or number; an unknown name or positive number creates a group. Names match without regard to case. Profile launches keep using the profile's group. Each new tab gets its own dot color and takes part in reordering like any other tab.
+A harness tab joins the same [group](/user-documentation/getting-started/groups) as the tab you launched it from by default. Add `in group <name|id>` to join a group by its name or number; an unknown name or positive number creates a group. Names match without regard to case. Each new tab gets its own dot color and takes part in reordering like any other tab.
 
 A codex tab always runs its session in its own process rather than handing it to the shared background server recent codex releases start, which a workspace sandbox can't run at all and which would otherwise run a workspaced session with another codex's environment and credentials. The app checks whether the installed codex offers the switch before asking for it, so a release from before the shared server launches exactly as it did. This holds for a remote codex tab too, checked against the codex on that host.
 
@@ -248,7 +248,7 @@ Ending a harness ends everything it started. Its helpers, MCP servers, and the c
 
 A [schedule](/user-documentation/automation/scheduling) attached to a harness tab lives no longer than the tab does. When the harness exits, its scheduled commands go with it rather than firing later — and because harness tabs are never restored, there is no tab left to carry them.
 
-Other tabs can drive a harness: `send <tab> <text>` types a line into it, and [scheduled commands](/user-documentation/automation/scheduling) targeted at a harness tab are typed into it the same way. A harness launched by a [profile](/user-documentation/automation/profiles) can also be given a model, an effort level, and startup commands, the same as typing the command directly.
+Other tabs can drive a harness: `send <tab> <text>` types a line into it, and [scheduled commands](/user-documentation/automation/scheduling) targeted at a harness tab are typed into it the same way. A [profile](/user-documentation/automation/profiles) launches a harness with the same `harness` command you would type, so it takes the same options.
 
 ## Recordings
 

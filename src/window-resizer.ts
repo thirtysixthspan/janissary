@@ -4,7 +4,7 @@ type WindowBoundsReader = () => Promise<{ width: number; height: number }>;
 let resizer: WindowResizer | undefined;
 let boundsReader: WindowBoundsReader | undefined;
 
-// In-process registry so profile-launch code (src/profile/layout.ts) can request an app window
+// In-process registry so the `layout` command (src/commands/layout.ts) can request an app window
 // resize without importing main.ts, which sits above the server in the dependency graph.
 export function setWindowResizer(fn: WindowResizer | undefined): void {
   resizer = fn;

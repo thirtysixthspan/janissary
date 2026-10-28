@@ -61,8 +61,8 @@ export class ScheduleManager {
   }
 
   // The per-entry hooks a caller registered through `add`, keyed by tab and then entry id. Two
-  // maps rather than one joined key, so no label can be mistaken for part of an id — a profile
-  // harness entry's name may contain a space, and `codex team 2` must not read as an entry called
+  // maps rather than one joined key, so no label can be mistaken for part of an id — a tab label
+  // may contain a space, and `codex team 2` must not read as an entry called
   // `2 …` on `codex team`. Held apart from the entries themselves because a caller-supplied
   // callback has no business on the plain entry data every schedule surface reads.
   private hooks = new Map<string, Map<string, EntryHooks>>();

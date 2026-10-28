@@ -134,8 +134,8 @@ export function rerootTree(port: NavPort, label: string, relPath?: string): void
   }
 }
 
-// Mark one directory expanded and start watching it, unless it already is. Shared with both profile
-// restore and the ordered command restore.
+// Mark one directory expanded and start watching it, unless it already is. Shared with the ordered
+// command restore.
 export function expandAndWatch(port: NavPort, label: string, state: FilesTabState, relPath: string): void {
   if (state.expanded.has(relPath)) return;
   const absolute = relPath ? containedPath(state.root, relPath) : state.root;

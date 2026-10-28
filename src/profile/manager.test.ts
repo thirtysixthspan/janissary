@@ -117,65 +117,6 @@ describe('ProfileManager.run', () => {
     ]);
   });
 
-  it('reports an existing profile that has no tabs', () => {
-    writeProfile('empty', JSON.stringify({}));
-
-    const janus = makeTab('janus', 'red');
-    const { managers, appended } = makeManagers(janus);
-    const manager = new ProfileManager(managers);
-
-    manager.run('profile launch empty', 'janus');
-
-    expect(appended).toEqual([{ input: 'profile launch empty', output: 'Profile "empty" has no tabs.' }]);
-  });
-
-  it('reports an empty tabs array as having no tabs', () => {
-    writeProfile('none', JSON.stringify({ tabs: [] }));
-
-    const janus = makeTab('janus', 'red');
-    const { managers, appended } = makeManagers(janus);
-    new ProfileManager(managers).run('profile launch none', 'janus');
-
-    expect(appended).toEqual([{ input: 'profile launch none', output: 'Profile "none" has no tabs.' }]);
-  });
-
-  // The launch itself is asynchronous — a plugin tab opens through its plugin's activation — so the
-  // summary lands a microtask after `run` returns.
-  it('launches a profile holding only an editor entry rather than calling it empty', async () => {
-    writeProfile('editor-only', JSON.stringify({ tabs: [{ type: 'editor', path: '$root/notes.md' }] }));
-
-    const janus = makeTab('janus', 'red');
-    const { managers, appended } = makeManagers(janus);
-    new ProfileManager(managers).run('profile launch editor-only', 'janus');
-    await vi.waitFor(() => expect(appended).not.toHaveLength(0));
-
-    expect(appended[0].output).not.toContain('has no tabs.');
-  });
-
-  it('reports a malformed profile and opens nothing', () => {
-    writeProfile('broken', JSON.stringify({ tabs: [{ type: 'harness', name: 'c' }] }));
-
-    const janus = makeTab('janus', 'red');
-    const { managers, appended } = makeManagers(janus);
-    const manager = new ProfileManager(managers);
-
-    manager.run('profile launch broken', 'janus');
-
-    expect(appended[0].output).toContain('Profile "broken" is malformed.');
-    expect(managers.tab.insertTabInGroup).not.toHaveBeenCalled();
-  });
-
-  it('reports an unrecognized tab type as malformed', () => {
-    writeProfile('mystery', JSON.stringify({ tabs: [{ type: 'terminal' }] }));
-
-    const janus = makeTab('janus', 'red');
-    const { managers, appended } = makeManagers(janus);
-    new ProfileManager(managers).run('profile launch mystery', 'janus');
-
-    expect(appended[0].output).toContain('Profile "mystery" is malformed.');
-    expect(managers.tab.insertTabInGroup).not.toHaveBeenCalled();
-  });
-
   describe('runscript profiles', () => {
     const writeRunscript = (name: string, contents: string) => {
       writeFileSync(path.join(root, 'profiles', `${name}.rs`), contents);
@@ -240,20 +181,5 @@ describe('ProfileManager.run', () => {
 
       expect(appended[0].output.split('\n')).toContain('deploy');
     });
-  });
-
-  it('reports a rejected profile launch in the issuing transcript', async () => {
-    writeProfile('editor-only', JSON.stringify({ tabs: [{ type: 'editor', path: '$root/notes.md' }] }));
-    const janus = makeTab('janus', 'red');
-    const { managers, appended } = makeManagers(janus);
-    vi.mocked(managers.openFile.edit).mockImplementation(() => { throw new Error('editor unavailable'); });
-
-    new ProfileManager(managers).run('profile launch editor-only', 'janus');
-
-    await vi.waitFor(() => expect(appended).toHaveLength(1));
-    expect(appended).toEqual([{
-      input: 'profile launch editor-only',
-      output: 'Profile command failed: editor unavailable.',
-    }]);
   });
 });

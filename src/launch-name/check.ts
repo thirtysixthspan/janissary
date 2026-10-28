@@ -5,7 +5,7 @@ import { isReservedTabLabel, RESERVED_SYSTEM_LABEL_REFUSAL } from '../tab/reserv
 
 // Whether a harness or agent launch may take the name it asked for, as a pure function of the open
 // tab labels and the sessions rows the caller read (principle 4). An explicit name — one the user
-// typed, or a profile entry's `name` — is refused on any clash. A default name — a bare harness
+// typed — is refused on any clash. A default name — a bare harness
 // name, or an unnamed agent's pool name — walks its candidate sequence to the first free one.
 
 // The sessions-row fields the check reads, so a test can hand it plain data.

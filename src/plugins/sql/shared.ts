@@ -67,8 +67,8 @@ export type SqlFilter = { column: string; op: SqlFilterOperator; value?: string;
 
 /**
  * Whether a filter narrows the query. A filter with no `enabled` is on, which is what a payload
- * written before the flag existed means — the tab's payload is stored in a profile and restored from
- * one, so this contract has to read a filter it would not write today.
+ * written before the flag existed means, so this contract has to read a filter it would not write
+ * today.
  */
 export const isFilterOn = (filter: SqlFilter): boolean => filter.enabled !== false;
 export type SqlOrder = { column: string; desc: boolean };
@@ -115,8 +115,8 @@ export type SqlPayload = {
   object: string;
   filters: SqlFilter[];
   // The columns the grid is not showing. The query is untouched: a hidden column is still selected
-  // and still filtered, so this is view state -- server-owned only so it survives a tab update and a
-  // profile restore the way the filters do.
+  // and still filtered, so this is view state -- server-owned only so it survives a tab update the
+  // way the filters do.
   hidden: string[];
   // One term matched against every column at once, so a value can be looked for without knowing
   // which column holds it. Empty means none, and it is not a per-column filter: it survives a

@@ -88,8 +88,8 @@ Each sidebar's tab gutter has a single right-aligned up/down-arrow resize button
 button horizontally adjusts the sidebar's width. Width is clamped to a minimum and to roughly
 half the viewport, so a sidebar can never crowd out the center content entirely or shrink to
 nothing. `layout sidebar left|right <width>` sets a side's width directly, including while it is
-hidden, without the drag limits. A width resets to its default on relaunch unless a profile applies
-one; bare `layout` reports the current widths.
+hidden, without the drag limits. A width resets to its default on relaunch unless a `layout` command sets
+one again; bare `layout` reports the current widths.
 
 ### What's server-owned vs. client-owned
 
@@ -102,8 +102,8 @@ and is never persisted.
 
 ### Persistence
 
-Dock placement resets on relaunch. Sidebar widths also return to their defaults unless a profile's
-`layout` key supplies them. File navigator views remain
+Dock placement resets on relaunch. Sidebar widths also return to their defaults until a `layout` command
+sets them. File navigator views remain
 live, in-memory tabs and are never restored (see `file-navigator-tab.md`).
 
 ### Keyboard focus

@@ -92,7 +92,7 @@ A tab's timers live as long as the tab: closing it drops them, and no launch bri
 
 A command delivered more than five seconds late posts `<command> ran <duration> late` to [notifications](/user-documentation/tab-types/notifications), with `(system was asleep)` appended when it missed its time because your machine was asleep. See [Sleep and resume](/user-documentation/getting-started/sleep-and-resume#overdue-scheduled-commands) for the rest of what happens to a timer while you're away.
 
-[Profiles](/user-documentation/automation/profiles) can pre-author a harness tab's schedule so it's set up on every launch. Since launching a harness is an ordinary command, you can schedule one with a starting prompt too — wrap the whole [`harness … with <prompt>`](/user-documentation/advanced-agents/harness) command:
+Since launching a harness is an ordinary command, you can schedule one with a starting prompt too — wrap the whole [`harness … with <prompt>`](/user-documentation/advanced-agents/harness) command:
 
 ```
 schedule deploy at 5pm harness claude with fix the failing tests

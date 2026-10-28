@@ -3,7 +3,7 @@ import { currentBranch, defaultBranch, isPrimaryBranch } from '../git/status.js'
 // Cached pair of branch facts for the project launch dir (`tab.launchDir`): its checked-out branch
 // and the remote's detected default branch, both resolved by `src/git/status.ts`. This is the
 // fallback input `OpenFileManager`'s GitHub-sync gate reads for opens with no file navigator behind
-// them — a shell tab's `edit`, a profile restore, a plugin opener. One record, hold-in-memory:
+// them — a shell tab's `edit` or a plugin opener. One record, hold-in-memory:
 // resolved once at startup (see `create-managers.ts`, alongside `GitSync`'s construction) and then
 // refreshed fire-and-forget each time the gate classifies a non-navigator open, never awaited, so
 // an open never pays a git call's latency for its classification.

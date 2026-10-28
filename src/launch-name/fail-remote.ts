@@ -20,8 +20,7 @@ export const MAX_REMOTE_NAME_ATTEMPTS = 5;
 // What a fresh launch carries down so its failure can be reported and, for a default name,
 // retried. Absent for an attach, which brings back an existing session rather than naming one.
 export type RemoteNameRetry = {
-  // The tab the command was typed in, or a profile launch's issuing tab: every notification this
-  // launch posts is attributed to it.
+  // The tab the command was typed in: every notification this launch posts is attributed to it.
   creator: string;
   runId?: string;
   explicit: boolean;

@@ -19,7 +19,7 @@ export function clearNavigatorSelection(label: string): void {
 }
 
 // Every registered navigator's selection, in the reply shape the RPC carries. `null` cursors and
-// anchors are dropped rather than sent, matching the optional keys a profile entry writes.
+// anchors are dropped rather than sent, matching the optional clauses `files print` writes.
 export function collectNavigatorSelections(): FileNavigatorSelectionRecord[] {
   const records: FileNavigatorSelectionRecord[] = [];
   for (const [label, selection] of selections) {

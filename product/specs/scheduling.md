@@ -50,7 +50,7 @@ A single one-second interval (`ScheduleManager` in `src/schedule-manager.ts`) dr
 
 ### An entry the app adds for itself
 
-Most entries are typed by a user or authored in a profile, but the app appends one of its own: a
+Most entries are typed by a user, but the app appends one of its own: a
 harness tab that hits a subscription limit schedules its own resume, as a one-shot entry named
 `auto-resume` carrying the prompt to type in (see [[harness]] § Auto-resume after a usage limit).
 It is an ordinary entry in every respect — it appears in the schedule window and the `schedules` tab,
@@ -100,13 +100,9 @@ The list is live: it is recomputed as the scheduler ticks, so new schedules appe
 
 Pressing Backspace or Delete on the selected row opens a confirmation dialog titled `Delete schedule "<id>"?` with Delete and Cancel buttons. Confirming a tab-owned row cancels that timer in its owning tab — removing the entry, exactly as `schedule cancel <name>` does there. Confirming a system row removes only that row by key; `schedule system cancel <name>` remains the command that removes every system schedule with that name. The list refreshes immediately to drop the removed row. Cancelling the dialog (Escape, the Cancel button, or clicking outside) leaves the entry in place. This works in both the full and docked renderings. Each row also ends in a trash icon that opens the same dialog for that row alone; confirming it removes only that row's schedule, by key for a system row, and pressing the icon does not change the selection. The metadata row above the list carries a + button, labeled `New schedule`, that opens the New schedule dialog (see that section); it sits in the docked header too when the tab is docked, and it does not change the selection. Editing or clearing a schedule stays on the `schedule` command in the owning tab. See the Schedule window section for the per-tab floating panel this tab complements.
 
-### Authored schedules in a profile
-
-A profile's harness entry can author its tab's schedule directly, without the tab existing yet: its `schedule` field is a list of strings in this same command grammar, minus the leading `schedule` keyword and the `in <tab>` clause (the tab is implicitly the entry's own, once opened). Its `run` field is a list of commands typed into the harness once, shortly after launch — each becomes a one-shot entry that fires on the first tick and then disappears from the schedule panel. A schedule string that fails to parse, or that includes an `in <tab>` clause, is reported in the launch output and skipped; a duplicate name within one entry keeps the first and reports the rest. See Profiles.
-
 ### Scheduling a harness launch with a prompt
 
-Because launching a harness is an ordinary command, a `schedule` entry can wrap a `harness … with <prompt>` command to spin up a fresh harness and feed it an initial prompt at a future time — for example `schedule deploy at 5pm harness claude with fix the failing tests`. When the schedule fires, the dispatched launch keeps its requested base label when free and takes the smallest free numeric postfix on a name clash, as described in [[harness]]. Its `with` prompt is injected once the harness is running, using the same one-shot mechanism a profile's `run` entry uses (see [[harness]]); that injected prompt carries no schedule naming policy. The scheduler's ` ## scheduled ##` marker applies only to the launch command dispatched into the issuing tab; the injected prompt itself is delivered verbatim, with no marker. The intended forms are immediate and one-shot at a future time — a recurring schedule that would spawn a new harness on each firing is out of scope.
+Because launching a harness is an ordinary command, a `schedule` entry can wrap a `harness … with <prompt>` command to spin up a fresh harness and feed it an initial prompt at a future time — for example `schedule deploy at 5pm harness claude with fix the failing tests`. When the schedule fires, the dispatched launch keeps its requested base label when free and takes the smallest free numeric postfix on a name clash, as described in [[harness]]. Its `with` prompt is injected once the harness is running, as a one-shot schedule entry (see [[harness]]); that injected prompt carries no schedule naming policy. The scheduler's ` ## scheduled ##` marker applies only to the launch command dispatched into the issuing tab; the injected prompt itself is delivered verbatim, with no marker. The intended forms are immediate and one-shot at a future time — a recurring schedule that would spawn a new harness on each firing is out of scope.
 
 ### `schedule` command
 

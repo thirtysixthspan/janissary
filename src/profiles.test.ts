@@ -2,12 +2,8 @@ import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import {
-  initProfileDir, listProfiles, listProfileRows, profilePath, profileReadPath, resolveProfile,
-} from './profiles.js';
+import { initProfileDir, listProfiles, listProfileRows, resolveProfile } from './profiles.js';
 import { parseProfileCommand, PROFILE_USAGE } from './profile/command.js';
-import { loadProfile } from './profile/file.js';
-import type { LoadedProfile, ProfileFile } from './profile/types.js';
 
 describe('parseProfileCommand', () => {
   it('parses launch with a name', () => {
@@ -29,8 +25,8 @@ describe('single-file profiles', () => {
   let root: string;
   let janissary: string;
 
-  const writeProfile = (name: string, file: ProfileFile, base = root) => {
-    writeFileSync(path.join(base, 'profiles', `${name}.json`), JSON.stringify(file));
+  const writeProfile = (name: string, base = root) => {
+    writeFileSync(path.join(base, 'profiles', `${name}.rs`), 'echo hi\n');
   };
 
   beforeEach(() => {
@@ -47,16 +43,16 @@ describe('single-file profiles', () => {
   });
 
   it('lists profile files (extension stripped) sorted', () => {
-    writeProfile('surfing', {});
-    writeProfile('coding', {});
+    writeProfile('surfing');
+    writeProfile('coding');
     expect(listProfiles()).toEqual(['coding', 'surfing']);
   });
 
   it('lists project profiles before built-in profiles and lets project names override', () => {
-    writeProfile('coding', {});
-    writeProfile('shared', {});
-    writeProfile('planning', {}, janissary);
-    writeProfile('shared', { tabs: [{ type: 'harness', name: 'built-in', tool: 'claude' }] }, janissary);
+    writeProfile('coding');
+    writeProfile('shared');
+    writeProfile('planning', janissary);
+    writeProfile('shared', janissary);
     expect(listProfiles()).toEqual(['coding', 'shared', 'planning']);
     expect(listProfileRows()).toEqual([
       { name: 'coding', source: 'project' },
@@ -66,32 +62,18 @@ describe('single-file profiles', () => {
   });
 
   it('never lists a subdirectory of profiles/ as a row', () => {
-    writeProfile('coding', {});
+    writeProfile('coding');
     mkdirSync(path.join(root, 'profiles', 'archive'), { recursive: true });
     mkdirSync(path.join(janissary, 'profiles', 'shipped'), { recursive: true });
     expect(listProfileRows()).toEqual([{ name: 'coding', source: 'project' }]);
   });
 
-  it('resolves profilePath/resolveProfile to the file', () => {
-    writeProfile('coding', {});
-    const file = path.join(root, 'profiles', 'coding.json');
-    expect(profilePath('coding')).toBe(file);
-    expect(resolveProfile('coding')).toEqual({ kind: 'config', file });
-    expect(resolveProfile('missing')).toBeUndefined();
-  });
-
-  it('reads a built-in profile when no project profile has the same name', () => {
-    writeProfile('planning', { tabs: [{ type: 'harness', name: 'planner', tool: 'claude' }] }, janissary);
-    expect(profileReadPath('planning')).toBe(path.join(janissary, 'profiles', 'planning.json'));
-    expect(resolveProfile('planning')).toEqual({ kind: 'config', file: path.join(janissary, 'profiles', 'planning.json') });
-    expect((loadProfile('planning') as LoadedProfile).entries[0].name).toBe('planner');
-    expect(profilePath('planning')).toBe(path.join(root, 'profiles', 'planning.json'));
-  });
-
-  it('reads the project profile when both sources use the same name', () => {
-    writeProfile('shared', { tabs: [{ type: 'harness', name: 'project-harness', tool: 'claude' }] });
-    writeProfile('shared', { tabs: [{ type: 'harness', name: 'built-in-harness', tool: 'claude' }] }, janissary);
-    expect((loadProfile('shared') as LoadedProfile).entries[0].name).toBe('project-harness');
+  it('neither lists nor resolves a name that has only a .json file', () => {
+    writeFileSync(path.join(root, 'profiles', 'legacy.json'), JSON.stringify({ tabs: [] }));
+    writeFileSync(path.join(janissary, 'profiles', 'shipped.json'), JSON.stringify({ tabs: [] }));
+    expect(listProfileRows()).toEqual([]);
+    expect(resolveProfile('legacy')).toBeUndefined();
+    expect(resolveProfile('shipped')).toBeUndefined();
   });
 
   describe('runscript profiles', () => {
@@ -101,35 +83,21 @@ describe('single-file profiles', () => {
       return file;
     };
 
-    it('resolves a runscript over a JSON file of the same name', () => {
-      writeProfile('coding', { tabs: [{ type: 'harness', name: 'builder', tool: 'claude' }] });
-      const file = writeRunscript('coding');
-      expect(resolveProfile('coding')).toEqual({ kind: 'runscript', file });
-    });
-
     it('resolves a built-in runscript when the project has no profile of that name', () => {
       const file = writeRunscript('planning', janissary);
-      expect(resolveProfile('planning')).toEqual({ kind: 'runscript', file });
-    });
-
-    it('lets a project JSON file override a built-in runscript', () => {
-      writeProfile('shared', {});
-      writeRunscript('shared', janissary);
-      expect(resolveProfile('shared')).toEqual({ kind: 'config', file: path.join(root, 'profiles', 'shared.json') });
+      expect(resolveProfile('planning')).toBe(file);
     });
 
     it('treats a symlink at the runscript path as the runscript', () => {
-      writeProfile('coding', {});
       const target = writeRunscript('elsewhere');
       const link = path.join(root, 'profiles', 'coding.rs');
       symlinkSync(target, link);
-      expect(resolveProfile('coding')).toEqual({ kind: 'runscript', file: link });
+      expect(resolveProfile('coding')).toBe(link);
     });
 
     it('lists a runscript-only profile and a name with both files once', () => {
       writeRunscript('deploy');
       writeRunscript('coding');
-      writeProfile('coding', {});
       writeRunscript('planning', janissary);
       expect(listProfileRows()).toEqual([
         { name: 'coding', source: 'project' },
@@ -137,58 +105,5 @@ describe('single-file profiles', () => {
         { name: 'planning', source: 'janissary' },
       ]);
     });
-  });
-
-  it('loads harness tabs ordered by number, each entry name as its label', () => {
-    writeProfile('coding', {
-      tabs: [
-        { type: 'harness', name: 'reviewer', tool: 'claude', number: 2, color: '#aaa', group: 3, groupColor: '#bbb' },
-        { type: 'harness', name: 'builder', tool: 'opencode', model: 'opencode-go/deepseek-v4-pro', run: ['do it'], number: 1 },
-      ],
-    });
-    const loaded = loadProfile('coding') as LoadedProfile;
-    expect(loaded.entries.map((e) => e.name)).toEqual(['builder', 'reviewer']);
-    const builder = loaded.entries[0];
-    expect('tool' in builder && builder.tool).toBe('opencode');
-    const reviewer = loaded.entries[1];
-    expect(reviewer.dotColor).toBe('#aaa');
-    expect(reviewer.group).toBe(3);
-    expect(reviewer.groupColor).toBe('#bbb');
-  });
-
-  it('parses the docked tab types and the monitors key', () => {
-    writeProfile('assist', {
-      monitors: [{ persona: 'assistant', targets: ['group:1'] }],
-      tabs: [
-        { type: 'files', dock: 'left', path: '$root' },
-        { type: 'notifications', dock: 'right', focus: true },
-        { type: 'schedules', dock: 'right' },
-      ],
-    });
-    const loaded = loadProfile('assist') as LoadedProfile;
-    expect(loaded.monitors).toEqual([{ name: 'assistant', persona: 'assistant', targets: ['group:1'] }]);
-    expect(loaded.files).toEqual([{ dock: 'left', path: '$root' }]);
-    expect(loaded.notifications).toEqual([{ dock: 'right', focus: true }]);
-    expect(loaded.views).toEqual([{ type: 'plugin', id: 'schedules', dock: 'right' }]);
-  });
-
-  it('reads layout.sidebar into the flat internal fields', () => {
-    writeProfile('assist', {
-      layout: { sidebar: { left: 320, right: 280 }, tabAreaPct: 75, window: { width: 1440, height: 900 } },
-    });
-    const loaded = loadProfile('assist') as LoadedProfile;
-    expect(loaded.layout).toEqual({
-      window: { width: 1440, height: 900 }, sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 75,
-    });
-  });
-
-  it('a monitor name defaults to its persona when omitted', () => {
-    writeProfile('assist', { monitors: [{ persona: 'security', targets: [] }] });
-    const loaded = loadProfile('assist') as LoadedProfile;
-    expect(loaded.monitors).toEqual([{ name: 'security', persona: 'security', targets: [] }]);
-  });
-
-  it('returns an error for a missing profile file', () => {
-    expect(loadProfile('nope')).toHaveProperty('error');
   });
 });

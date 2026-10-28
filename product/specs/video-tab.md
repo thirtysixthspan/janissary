@@ -10,8 +10,8 @@ the new video tab. Opening a video that is already showing in a video tab focuse
 of opening a duplicate.
 
 Unlike a shell tab, a video tab has no shell, agent session, browser, transcript, or command
-history, and no persisted agent state. It is a **live, in-memory view** — it is not saved, is not
-restored, and is not recorded in or reopened by a profile.
+history, and no persisted agent state. It is a **live, in-memory view** — it is not saved and is not
+restored.
 
 ### Video tab data
 

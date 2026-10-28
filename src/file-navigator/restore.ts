@@ -1,34 +1,22 @@
 import path from 'node:path';
 import { parentPath } from './index.js';
-import { buildCachedRows, listingFor } from './filesystem-cache.js';
-import { expandAndWatch, type NavPort } from './navigation.js';
+import { listingFor } from './filesystem-cache.js';
 import type { FilesTabState } from './state.js';
-import type { FileNavigatorRestoreHint } from '../tab/types.js';
 
-// Replays a tree view recorded in a profile's `files` entry onto a freshly opened navigator: the
-// expanded directories go back into server state, and the cursor/anchor/selection become a hint
-// the client applies once. Everything here is best effort and silent — a saved path that no longer resolves
-// is dropped, exactly as `pruneCachedRows` drops a vanished expanded directory on every rebuild.
+// Shared pieces of the `files` command's view restore (see `restore-command.ts`). Everything here is
+// best effort and silent — a path that no longer resolves is dropped, exactly as `pruneCachedRows`
+// drops a vanished expanded directory on every rebuild.
 //
 // Every read goes through the tab's own filesystem port and its listing cache, so a navigator on a
 // remote machine is judged against that machine's tree, never against the local disk at the same
 // relative path.
-
-// A navigator's view as authored in (or captured into) a profile's `files` entry. Every path is
-// relative to the tree's root.
-export type SavedTreeView = {
-  expanded?: string[];
-  cursor?: string;
-  anchor?: string;
-  selected?: string[];
-};
 
 // The surviving selection, handed to the client on the tab's payload. `revision` changes only when
 // a new restore is applied, so the repeated full-state broadcasts never re-apply an old hint over
 // a selection the user has since changed.
 let nextRevision = 1;
 
-// Whether a saved expanded path should be expanded again. A local tree's port lists synchronously,
+// Whether a requested expanded path should be expanded again. A local tree's port lists synchronously,
 // so the parent's listing answers at once. A remote tree's may still be loading; the path is then
 // expanded on trust, and the rebuild that listing's arrival triggers prunes it if it has gone.
 export function stillDirectory(state: FilesTabState, relPath: string, onReady: () => void): boolean {
@@ -41,26 +29,4 @@ export function stillDirectory(state: FilesTabState, relPath: string, onReady: (
 
 export function nextRestoreRevision(): number {
   return nextRevision++;
-}
-
-export function restoreTreeView(port: NavPort, label: string, view: SavedTreeView): void {
-  const state = port.states.get(label);
-  if (!state) return;
-  const onReady = () => { port.rebuild(label); };
-  const saved = view.expanded ?? [];
-
-  for (const relPath of saved) {
-    if (stillDirectory(state, relPath, onReady)) expandAndWatch(port, label, state, relPath);
-  }
-
-  const visible = new Set(buildCachedRows(state, onReady).map((row) => row.path));
-  const survives = (relPath: string | undefined): string | null =>
-    (relPath !== undefined && visible.has(relPath) ? relPath : null);
-  state.restore = {
-    revision: nextRestoreRevision(),
-    cursor: survives(view.cursor),
-    anchor: survives(view.anchor),
-    selected: (view.selected ?? []).filter((relPath) => visible.has(relPath)),
-  } satisfies FileNavigatorRestoreHint;
-  port.rebuild(label);
 }

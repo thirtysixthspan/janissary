@@ -90,7 +90,7 @@ export class MonitorManager extends LiveMonitors {
   // with a monitor-update prompt. Returns an error message, or null when the question is
   // on its way.
   // Keyed on the runtime name, the same key `stop` uses and the same one `start` registered under —
-  // a monitor a profile named cannot otherwise be addressed at all.
+  // a monitor started under a name of its own cannot otherwise be addressed at all.
   ask(owner: string, name: string, question: string): string | null {
     const reg = this.monitors.get(`${owner}:${name}`);
     if (!reg) return `No "${name}" monitor running from this tab.`;

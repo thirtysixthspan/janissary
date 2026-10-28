@@ -1,7 +1,6 @@
 import type { CenterPane, Tab } from './types.js';
 import { centerPane, isCenterActionTab } from './placement.js';
 import { moveToOtherPane } from './split.js';
-import { applyProfileTabPanes, resolveProfileTabFocus } from './place-profile-tabs.js';
 import { beginDwell, disposeDwell } from './dwell.js';
 import { clearUnreadTab } from './transcript/events.js';
 
@@ -67,13 +66,4 @@ export function moveTabToOtherPaneSelection(
   tabs: Tab[], targetLabel: string, activeLabel: string, secondaryTabLabel: string | undefined, focusHistory: string[],
 ): { tabs: Tab[]; activeLabel: string; secondaryLabel?: string } | undefined {
   return moveToOtherPane(tabs, targetLabel, activeLabel, secondaryTabLabel, focusHistory);
-}
-
-export function placeProfileTabSelection(
-  tabs: Tab[], activeTab: number, candidates: { label: string; number?: number; pane?: CenterPane }[],
-  findIndex: (label: string) => number,
-): { activeTab?: number; secondaryTabLabel?: string } {
-  applyProfileTabPanes(tabs, candidates);
-  const focus = resolveProfileTabFocus(tabs, activeTab, candidates, findIndex);
-  return { activeTab: focus.activeTab, secondaryTabLabel: focus.secondaryTabLabel };
 }

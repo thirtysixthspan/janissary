@@ -131,9 +131,9 @@ owner (an open tab or a running janus instance) still holds the workspace folder
 terminated, ssh, or file-navigator row never makes a label in use. Labels compare case-insensitively.
 
 - **Default label** (bare `harness <name>`): moves on to the next free `-2`, `-3`, … past every label in use, as above.
-- **`as <label>` or a profile entry's `name`**: refused. The refusal is posted to the notifications feed, attributed to the tab the command was typed in, with nothing written to that tab's transcript, and no tab opens. The lines read `Cannot launch "<label>": a tab named "<label>" is already open.`, `Cannot launch "<label>": "<label>" is already in the sessions tab (<state> on <host>).`, or `Cannot launch "<label>": "<label>" is already running ($workspace/<label>).`.
+- **`as <label>`**: refused. The refusal is posted to the notifications feed, attributed to the tab the command was typed in, with nothing written to that tab's transcript, and no tab opens. The lines read `Cannot launch "<label>": a tab named "<label>" is already open.`, `Cannot launch "<label>": "<label>" is already in the sessions tab (<state> on <host>).`, or `Cannot launch "<label>": "<label>" is already running ($workspace/<label>).`.
 
-A harness launch dispatched from a durable system schedule keeps its requested base label when free; on a clash it takes the smallest free numeric postfix, including when the base came from `as <label>`. This exception is granted only to the server-dispatched invocation carrying the schedule's receipt-backed origin. Typing in the `system` tab, `execute`, `send`, ordinary `queue`, and tab-owned timers (including one targeting `system`) do not grant it, and keep the refusal behavior above. Profile launches and remote attachment or restoration also keep their existing name behavior.
+A harness launch dispatched from a durable system schedule keeps its requested base label when free; on a clash it takes the smallest free numeric postfix, including when the base came from `as <label>`. This exception is granted only to the server-dispatched invocation carrying the schedule's receipt-backed origin. Typing in the `system` tab, `execute`, `send`, ordinary `queue`, and tab-owned timers (including one targeting `system`) do not grant it, and keep the refusal behavior above. Remote attachment or restoration also keeps its existing name behavior.
 
 A remote launch's host answers only after the placeholder tab has opened. When it reports the label
 running, the placeholder closes at once, without showing an error. For an `as` label,
@@ -155,7 +155,7 @@ a remote placeholder at once. The folder is named by its workspace rather than b
 on a local launch and a remote one alike (see [[root-path]]).
 
 A workspace launch's label must be a single folder name: not empty, not `.` or `..`, and without `/`
-or `\`. A local `-w` launch (typed `as <label>` or a profile entry's `name`) with any other label is
+or `\`. A local `-w` launch (typed `as <label>`) with any other label is
 refused before any leftover check, removal, or clone, with
 `Cannot launch "<label>": a workspace name must be a single folder name — not empty, "." or "..", and without "/" or "\".`
 posted to the notifications feed. For `on <address>` the host refuses it the same way, and the
@@ -270,8 +270,7 @@ Playwright keeps its Chromium in — so an AI working in a workspace has no way 
 would see. Every harness tab closes that gap by default: Janissary starts a headless Chromium for the
 tab, on whichever host the harness runs on, and gives the harness two environment variables.
 `-b`/`--browser` explicitly confirms this default, and `--no-browser` opts out and wins if both forms
-are present, the same shape as `--no-workspace` and `--no-auto-approve`. A profile harness entry that
-omits `browser` gets the same default, and one that sets `browser: false` opens without one. The rest of this spec calls a tab launched with the browser a
+are present, the same shape as `--no-workspace` and `--no-auto-approve`. The rest of this spec calls a tab launched with the browser a
 `-b` tab, whether or not the flag was typed. The two variables are:
 
 - `JANISSARY_BROWSER_WS_ENDPOINT` — the endpoint to connect a Playwright client to.
@@ -418,8 +417,8 @@ plain globe and its "E2E browser" tooltip on the same update that raises the gon
 the terminal. A later connect's fresh browser turns it green again, since a browser is in use again,
 while the band and the notification line keep the earlier death on record. Starting a browser notifies nothing: it is what the agent asked for.
 
-The flag is available from all three launch surfaces: the `harness` command, the **E2E browser**
-checkbox in the New harness dialog, and a `browser: true` field on a profile harness entry.
+The flag is available from both launch surfaces: the `harness` command and the **E2E browser**
+checkbox in the New harness dialog.
 
 ### Launch prompt (`with <prompt>`)
 
@@ -438,7 +437,7 @@ split off before options are read, words inside the prompt that look like flags 
 - `harness claude with` (no text after `with`) — error: `Usage: harness <claude|opencode|codex> [options] with <prompt>.` No tab is created.
 - `harness claude` with no `with` clause launches an empty harness exactly as before.
 
-The prompt is delivered by the same mechanism a profile's `run` entry uses: a single one-shot
+The prompt is delivered by a single one-shot
 schedule entry is attached to the new harness tab and fires as soon as the harness is running,
 typing the prompt and submitting it. If the harness is not yet ready the delivery retries on later
 ticks; if the tab never opens or exits first, the prompt is simply never delivered. Because
@@ -1010,12 +1009,10 @@ A launch may include `in group <name|id>` to select an existing group by case-in
 numeric ID. An unknown name creates a group with the next available ID; an unknown ID creates that group
 with the generated name `group-<id>`. The new group's bar color is the first launched tab's dot color.
 A launch without the clause inherits the issuing tab's group. See [[tabs]].
-A harness tab opened by `profile launch` instead joins the profile's own group (see Profiles).
 
 ## Persistence
 
-Harness tabs are **live and in-memory** — like every tab, they are not saved and are not restored. Each launch starts fresh. A schedule attached to a harness tab (directly, or via a
-profile's authored `schedule`/`run` entries — see Profiles) is memory-only for the same reason: it
+Harness tabs are **live and in-memory** — like every tab, they are not saved and are not restored. Each launch starts fresh. A schedule attached to a harness tab is memory-only for the same reason: it
 ends when the harness's PTY exits and its tab closes (see Lifecycle above and Scheduling § Firing).
 
 ## Connections panel
@@ -1024,9 +1021,8 @@ While running, the harness PTY appears in the connections panel as `terminal:<na
 
 ## Launching with a model and effort level
 
-A harness tab can be opened with a model and/or an effort level selected, either from the
-interactive command (`harness <name> --model <name> --effort <level>`) or via `profile launch`
-(see Profiles for the harness-entry schema) — both paths behave the same way.
+A harness tab can be opened with a model and/or an effort level selected, from the
+interactive command (`harness <name> --model <name> --effort <level>`).
 
 `--model <name>` is passed to the harness binary's `--model` flag verbatim, but is validated first
 against that harness's known model catalog; an unknown model is rejected with `Unknown model
