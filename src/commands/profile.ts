@@ -4,5 +4,5 @@ export const command: Command = {
   name: 'profile',
   match: (command_) => /^profile\b/i.test(command_),
   samples: ['profile', 'profile list'],
-  run: (command, tab, managers) => { managers.profile.run(command, tab.label); },
+  run: (command, tab, managers, invocation) => { managers.profile.run(command, tab.label, invocation); },
 };

@@ -28,6 +28,8 @@ With a name, `profile launch <name>` runs the named profile's runscript (see Run
 
 Lists the available project profiles followed by built-in Janissary profiles (each `profiles/*.rs` file with its extension stripped, each source sorted), or `No profiles.` when neither source has any. A project profile hides a same-named built-in profile.
 
+From a shell command bar, the list is returned as the `profile list` reply below the command rather than being sent to zsh.
+
 ### `profile` command
 
 `profile` launches a set of harnesses and the tabs that support them, described in a profile runscript. See the Profiles section. `profile launch <name>` runs the named profile's runscript; `profile list` lists the available profiles. Malformed invocations, including an unrecognized subcommand, return `Usage: profile launch <name> | profile list`.

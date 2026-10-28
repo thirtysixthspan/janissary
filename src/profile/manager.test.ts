@@ -34,6 +34,7 @@ function makeManagers(creator: Tab, tabs: Tab[] = [creator]): { managers: Manage
       tabs,
       byLabel: (label: string) => tabs.find((t: Tab) => t.label === label),
       append: (_label: string, entry: { input: string; output: string }) => { appended.push(entry); },
+      appendForInvocation: vi.fn((_label: string, entry: { input: string; output: string }) => { appended.push(entry); }),
       allLabels: () => tabs.map((t) => t.label),
       cur: () => creator,
       insertTabInGroup: vi.fn((tab: Tab) => { tabs.push(tab); }),
@@ -180,6 +181,22 @@ describe('ProfileManager.run', () => {
       new ProfileManager(managers).run('profile list', 'janus');
 
       expect(appended[0].output.split('\n')).toContain('deploy');
+    });
+
+    it('associates listed profiles with the command invocation', () => {
+      writeRunscript('deploy', '');
+      const janus = makeTab('janus', 'red');
+      const { managers } = makeManagers(janus);
+      const invocation = {
+        runId: 'run-1', invocationId: 'invocation-1',
+        caller: { label: 'janus', cwd: '/proj', context: [] }, signal: new AbortController().signal,
+      };
+
+      new ProfileManager(managers).run('profile list', 'janus', invocation);
+
+      expect(managers.tab.appendForInvocation).toHaveBeenCalledWith(
+        'janus', { input: 'profile list', output: 'deploy' }, 'invocation-1',
+      );
     });
   });
 });

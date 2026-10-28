@@ -6,6 +6,11 @@ import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 import { makeTab } from '../tab/index.js';
 import { commands } from '../commands/index.js';
 import type { CommandInvocationContext } from '../commands/types.js';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { initProfileDir } from '../profiles.js';
+import { ProfileManager } from '../profile/manager.js';
 
 function makeManagers(): { managers: Managers; recorder: string[] } {
   const recorder: string[] = [];
@@ -112,6 +117,24 @@ describe('CommandManager dispatchLineWithOutput', () => {
     expect(result.dispatched).toBe(true);
     expect(result.output.length).toBeGreaterThan(0);
     expect(managers.tab.cur().log.at(-1)?.output).toBe(result.output);
+  });
+
+  it('returns profile list output to a shell command-bar caller', async () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'janus-profile-dispatch-'));
+    try {
+      mkdirSync(path.join(root, 'profiles'));
+      writeFileSync(path.join(root, 'profiles', 'coding.rs'), '');
+      initProfileDir(root);
+      const { managers } = makeManagers();
+      managers.profile = new ProfileManager(managers);
+
+      await expect(managers.command.dispatchLineWithOutput('janus', 'profile list')).resolves.toEqual({
+        dispatched: true, output: 'coding',
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      initProfileDir(root);
+    }
   });
 
   it('captures output appended by the existing async command executor', async () => {
