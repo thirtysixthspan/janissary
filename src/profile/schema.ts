@@ -1,6 +1,5 @@
-// Structural schema for a single-file profile (`profiles/<name>.json`), shared by the loader
-// (`profile/file.ts`, all-or-nothing) and the `profile validate` command (`profile/validate.ts`,
-// collect-every-problem). Both run the exact same checks; only what they do with a failure differs.
+// Structural schema for a single-file profile (`profiles/<name>.json`), run by the loader
+// (`profile/file.ts`) before every launch: any problem makes the whole file malformed.
 // Pure, catalog-free, hand-written predicates — no schema library (see the plan's Decision 11).
 
 import type { ProfileTabFile } from './types.js';
@@ -34,7 +33,7 @@ const TAB_KINDS: Record<ProfileTabFile['type'], boolean> = {
 };
 
 // Declaration order above is the order this message lists, which is the order the two lists it
-// replaced used — so the wording `profile validate` prints does not move.
+// replaced used — so the loader's `type must be one of …` problem does not move.
 const TAB_TYPES = Object.keys(TAB_KINDS);
 
 function isTabKind(value: unknown): value is ProfileTabFile['type'] {

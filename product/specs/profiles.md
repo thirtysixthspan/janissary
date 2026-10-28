@@ -30,7 +30,7 @@ A harness entry's `run`/`schedule` commands are typed into the harness's own ter
 
 ### Malformed profiles
 
-A profile file is validated once, in full, before any tab is opened. If the file is not valid JSON, its root is not an object, any element of `tabs` is missing its `type` or names an unrecognized one, any element is not a structurally valid entry of its own type (e.g. a harness lacking a string `name` or `tool`, or carrying a non-string `cwd`, a non-boolean `offline`, or a `run` or `schedule` that is not an array of strings — refused here rather than failing part-way through the launch), or `monitors`/`layout` has the wrong shape, `profile launch` reports `Profile "<name>" is malformed.` (suggesting `profile validate <name>` for detail) and opens **nothing** — no partial launch.
+A profile file is validated once, in full, before any tab is opened. If the file is not valid JSON, its root is not an object, any element of `tabs` is missing its `type` or names an unrecognized one, any element is not a structurally valid entry of its own type (e.g. a harness lacking a string `name` or `tool`, or carrying a non-string `cwd`, a non-boolean `offline`, or a `run` or `schedule` that is not an array of strings — refused here rather than failing part-way through the launch), or `monitors`/`layout` has the wrong shape, `profile launch` reports `Profile "<name>" is malformed.` and opens **nothing** — no partial launch.
 
 This structural check is distinct from the semantic launch-time checks. "Malformed" means the file's *shape* is wrong. The launcher's per-entry semantic checks are unchanged: an unknown harness tool, an unknown model, `autoApprove` on a harness without auto-approve support, and unparseable `schedule`/`run` lines are each reported and that one entry skipped while the rest launch. A structurally valid file naming an unknown model is not malformed — it launches, skipping that entry.
 
@@ -111,15 +111,9 @@ Each main-area tab joins the group its own `group` key authors, when set. Any en
 
 Lists the available project profiles followed by built-in Janissary profiles (each `profiles/*.json` file with its extension stripped and each source sorted), or `No profiles.` when neither source has any. A project profile hides a same-named built-in profile.
 
-### `profile validate [<name>]`
-
-Checks a profile file against the schema and reports the specific problems it finds, so an author of a hand-written file can catch a mistake without launching it. `profile validate <name>` reports `Profile "<name>" is valid.` or a list of the specific problems, each naming the offending key or field with location context (e.g. `tabs[0]: tool must be a string`, `tabs[2]: type must be one of harness, editor, files, notifications, schedules, plugin, image, markdown, page, ssh`, `layout.window: width must be a number`). Bare `profile validate` (no name) validates every profile and reports each one's status.
-
-Validation checks **structure only** — the same all-or-nothing shape check the launcher runs, but collecting every problem instead of failing on the first. It does not perform the semantic launch-time checks (unknown tool/model, `autoApprove` on an unsupported harness, schedule/run parseability), which depend on runtime catalogs and remain the launcher's job. A name with no matching profile reports `No profile named "<name>".`; unparseable JSON reports a single `not valid JSON`.
-
 ### `profile` command
 
-`profile` launches a set of harnesses and the tabs that support them, described in a profile file. See the Profiles section. `profile launch <name>` opens a tab for each entry in the named profile, closing and reopening any tab that collides with a relaunch; `profile list` lists the available profiles; `profile validate [<name>]` checks one or every profile file against the schema. Malformed invocations, including an unrecognized subcommand, return `Usage: profile launch <name> | profile list | profile validate [<name>]`.
+`profile` launches a set of harnesses and the tabs that support them, described in a profile file. See the Profiles section. `profile launch <name>` opens a tab for each entry in the named profile, closing and reopening any tab that collides with a relaunch; `profile list` lists the available profiles. Malformed invocations, including an unrecognized subcommand, return `Usage: profile launch <name> | profile list`.
 If an asynchronous launch fails, its issuing transcript receives one
 `Profile command failed: <reason>.` result instead of leaving the command unfinished.
 

@@ -1,6 +1,6 @@
 ### profile
 
-Launch a profile, list the available profiles, or validate one.
+Launch a profile or list the available profiles.
 
 **Usage**
 
@@ -8,12 +8,9 @@ Launch a profile, list the available profiles, or validate one.
 
 `profile list`
 
-`profile validate [name]`
-
 **Use cases**
 
 - Reopen an arrangement of tabs and settings from a profile file.
-- Check whether a profile is valid.
 
 **Examples**
 
