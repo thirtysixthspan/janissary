@@ -3,6 +3,8 @@ import { parseProfileCommand } from './command.js';
 import { launchProfileRunscript } from './runscript.js';
 import type { Managers } from '../managers.js';
 import { errorText } from '../error-text.js';
+import { appendCommandOutput } from '../command/append.js';
+import type { CommandInvocationContext } from '../commands/types.js';
 
 export class ProfileManager {
   constructor(private managers: Managers) {}
@@ -14,9 +16,11 @@ export class ProfileManager {
     });
   }
 
-  run(command: string, label: string): void {
+  run(command: string, label: string, invocation?: CommandInvocationContext): void {
     const parsed = parseProfileCommand(command);
-    const out = (text: string) => this.managers.tab.append(label, { input: command, output: text });
+    const out = (text: string) => appendCommandOutput(
+      this.managers, label, { input: command, output: text }, invocation,
+    );
     if ('error' in parsed) { out(parsed.error); return; }
     if (parsed.action === 'list') {
       const names = listProfiles();
