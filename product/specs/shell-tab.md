@@ -176,9 +176,14 @@ shell — the characters a terminal would send. The terminal also accepts direct
 `Ctrl+C` copies the command line's own selection instead when it holds one, so copying by keyboard
 still works.
 
-With the terminal focused, `Ctrl+Shift+C` copies its selection; on macOS, `Cmd+C` does the same. The
-same chords copy a selected rendered Markdown reply. Both use the shared clipboard writer, so the
-text is available from the system clipboard and the clipboard-history popup.
+`Ctrl+Shift+C` copies the terminal's selection; on macOS, `Cmd+C` does the same. The chord works
+whether the keyboard is in the terminal or in the command bar. Dragging over output with the pointer
+selects it and leaves the keyboard in the command bar, as any single click on the terminal does, so
+the chord copies that selection from there. When the command line holds a selection of its own, the
+chord is left to the command line, so `Cmd+C` copies the command line's text as in any text field.
+With nothing selected in either, the chord does nothing. With the terminal focused, the same chords
+copy a selected rendered Markdown reply. Both use the shared clipboard writer, so the text is
+available from the system clipboard and the clipboard-history popup.
 
 A program running in the shell can copy too, by sending the terminal an OSC 52 request, which is how a
 program on a remote or SSH host reaches the clipboard of the machine the tab is shown on. The text goes
@@ -541,7 +546,8 @@ written.
 ## Everything else
 
 The tab is an ordinary plugin tab in the rest: live and in-memory, never persisted and never restored, dockable into either sidebar, and splittable. Selecting text with the pointer and
-right-clicking offers the same **Copy** every other terminal surface offers.
+right-clicking offers the same **Copy** every other terminal surface offers, and the copy chord in
+§ Keys copies the same selection.
 
 Its terminal connection belongs only to that shell tab. A plugin tab cannot attach to, type into, or
 resize a terminal owned by another tab.

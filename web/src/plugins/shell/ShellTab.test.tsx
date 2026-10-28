@@ -26,6 +26,7 @@ interface FakeTerminal {
   options: Record<string, unknown>;
   resizes: { cols: number; rows: number }[];
   focusCalls: number;
+  selection: string;
   selectionClearCalls: number;
   scrollCalls: number[];
   bottomCalls: number;
@@ -37,6 +38,7 @@ vi.mock('@xterm/xterm', () => ({
     disposed = false;
     resizes: { cols: number; rows: number }[] = [];
     focusCalls = 0;
+    selection = '';
     selectionClearCalls = 0;
     scrollCalls: number[] = [];
     bottomCalls = 0;
@@ -51,8 +53,8 @@ vi.mock('@xterm/xterm', () => ({
     open() {}
     dispose() { this.disposed = true; }
     write(data: string) { this.written.push(data); }
-    hasSelection() { return false; }
-    getSelection() { return ''; }
+    hasSelection() { return this.selection !== ''; }
+    getSelection() { return this.selection; }
     clearSelection() { this.selectionClearCalls += 1; }
     attachCustomKeyEventHandler() {}
     textarea = undefined;
@@ -1345,6 +1347,53 @@ describe('ShellTab', () => {
     fireEvent.keyDown(body, { key: 'c', ctrlKey: true, shiftKey: true });
 
     expect(capabilities.copyText).not.toHaveBeenCalled();
+  });
+
+  it('copies a dragged terminal selection on Ctrl+Shift+C after the click returns the keyboard to the bar', () => {
+    const { capabilities, terminal, written } = renderTab();
+    terminal.selection = 'SELECTME-12345';
+    fireEvent.click(document.querySelector('.shell-body')!);
+    expect(document.activeElement).toBe(bar());
+
+    expect(fireEvent.keyDown(bar(), { key: 'C', ctrlKey: true, shiftKey: true })).toBe(false);
+
+    expect(capabilities.copyText).toHaveBeenCalledWith('SELECTME-12345');
+    expect(written).toEqual([]);
+  });
+
+  it('copies a dragged terminal selection on Cmd+C from the bar on macOS', () => {
+    const platform = vi.spyOn(navigator, 'platform', 'get').mockReturnValue('MacIntel');
+    const { capabilities, terminal } = renderTab();
+    terminal.selection = 'SELECTME-12345';
+    fireEvent.click(document.querySelector('.shell-body')!);
+
+    fireEvent.keyDown(bar(), { key: 'c', metaKey: true });
+
+    expect(capabilities.copyText).toHaveBeenCalledWith('SELECTME-12345');
+    platform.mockRestore();
+  });
+
+  it('leaves the copy chord to the bar when the bar holds a selection of its own', () => {
+    const platform = vi.spyOn(navigator, 'platform', 'get').mockReturnValue('MacIntel');
+    const { capabilities, terminal } = renderTab();
+    terminal.selection = 'SELECTME-12345';
+    const input = bar();
+    fireEvent.change(input, { target: { value: 'hello' } });
+    input.setSelectionRange(0, 5);
+
+    expect(fireEvent.keyDown(input, { key: 'c', metaKey: true })).toBe(true);
+
+    expect(capabilities.copyText).not.toHaveBeenCalled();
+    platform.mockRestore();
+  });
+
+  it('leaves the copy chord alone when the terminal holds no selection', () => {
+    const { capabilities, written } = renderTab();
+
+    expect(fireEvent.keyDown(bar(), { key: 'C', ctrlKey: true, shiftKey: true })).toBe(true);
+
+    expect(capabilities.copyText).not.toHaveBeenCalled();
+    expect(written).toEqual([]);
   });
 
   it('claims Ctrl+R while its tab is visible, and the host spends the claim on it', async () => {
