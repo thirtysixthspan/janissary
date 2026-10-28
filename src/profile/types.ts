@@ -199,5 +199,4 @@ export type LoadedProfile = {
 export type ProfileParsed =
   | { error: string }
   | { action: 'list' }
-  | { action: 'launch'; name: string }
-  | { action: 'validate'; name?: string };
+  | { action: 'launch'; name: string };

@@ -174,21 +174,6 @@ describe('ProfileManager.run', () => {
     expect(managers.tab.insertTabInGroup).not.toHaveBeenCalled();
   });
 
-  it('routes the validate action to the validator', () => {
-    writeProfile('good', JSON.stringify({ tabs: [{ type: 'harness', name: 'bob', tool: 'claude' }] }));
-    writeProfile('bad', JSON.stringify({ tabs: [{ type: 'harness', name: 'c' }] }));
-
-    const janus = makeTab('janus', 'red');
-    const { managers, appended } = makeManagers(janus);
-    const manager = new ProfileManager(managers);
-
-    manager.run('profile validate good', 'janus');
-    manager.run('profile validate bad', 'janus');
-
-    expect(appended[0].output).toBe('Profile "good" is valid.');
-    expect(appended[1].output).toContain('Profile "bad" is not valid:');
-  });
-
   it('reports a rejected profile launch in the issuing transcript', async () => {
     writeProfile('editor-only', JSON.stringify({ tabs: [{ type: 'editor', path: '$root/notes.md' }] }));
     const janus = makeTab('janus', 'red');

@@ -7,7 +7,6 @@ A profile is a named set of harnesses and other tabs, written in a file, that yo
 ```
 profile launch writing-code
 profile list
-profile validate writing-code
 ```
 
 `profile launch <name>` opens a tab for every entry in the profile. Each one starts fresh, from the entry's name, working directory, and tab presentation: a harness launches with whatever model, directory, workspace flag, and startup commands the profile specifies. Each entry joins the [group](/user-documentation/getting-started/groups) its own `group` key names; any entry that names none instead lands in one shared new group, so a profile with no authored groups reads as its own colored band in the strip. `profile list` names the profiles you have; a name that doesn't exist gets `No profile named "<name>".`
@@ -136,13 +135,7 @@ Launching a profile that's already running resets it: any open tab whose label m
 
 An entry's `name` is a typed name, never one that walks to a `-2` suffix. Once the reset above has closed the matching tabs, an entry whose name is still taken — by an open tab, by a live [sessions](/user-documentation/tab-types/sessions) row, or, for a remote entry, by something running on its host — is refused. Its `Cannot launch "<name>": …` line goes to the [notifications](/user-documentation/tab-types/notifications) feed against the tab you ran `profile launch` from, the entry is listed under `Skipped:` as `<name> (launch refused — see notifications)`, and every other entry still opens. A leftover workspace folder sitting under an entry's name is removed before its clone, the same as for any other launch — see [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent#when-a-workspace-folder-is-already-there).
 
-If a launch fails partway, the issuing transcript receives `Profile command failed: <reason>.` so the command does not appear unfinished.
-
-## Checking a profile without launching it
-
-`profile validate <name>` checks a profile file's structure and reports either `Profile "<name>" is valid.` or every specific problem it finds, each naming the offending key, e.g. `tabs[0]: tool must be a string`. An entry with a missing or unrecognized `type` is reported the same way, listing the types it could have been. Bare `profile validate`, with no name, checks every profile in your project and reports each one's status in turn. This only checks the file's shape; problems that depend on your setup, an unknown model or harness, an unsupported `autoApprove`, are caught at launch time instead and reported per entry there.
-
-`profile launch` on a structurally broken file opens nothing and reports `Profile "<name>" is malformed.`, pointing you at `profile validate <name>` for the details.
+A profile file whose structure is broken opens nothing and reports `Profile "<name>" is malformed.` If a launch fails partway, the issuing transcript receives `Profile command failed: <reason>.` so the command does not appear unfinished.
 
 ## A worked example
 
