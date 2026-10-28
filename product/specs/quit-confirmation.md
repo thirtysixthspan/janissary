@@ -27,7 +27,7 @@ A tab marked as the managed system shell is excluded from last-tab quit counting
 
 If any open tab has unsaved changes when `quit` runs (or `close`/`exit` closes the last remaining tab), the app shows a different dialog instead of the usual quit confirmation: "You have unsaved changes. Close anyway?" with **Close anyway (y)** and **Cancel (n)**. This dialog behaves identically to the quit dialog above (same selection/confirm/cancel keys, same modal trapping) but with different button labels and no intermediate step — confirming quits immediately, discarding whatever was unsaved; there is no per-file save prompt here. Cancelling leaves every tab open and its edits intact.
 
-"Unsaved changes" here means any tab that has registered unsaved work with the application: an editor tab holding an unwritten buffer, or an image tab holding edits that have not been saved as a new file (see [[image-tab]]). Both raise this dialog, and confirming discards both.
+"Unsaved changes" here means any tab that has registered unsaved work with the application: an editor tab holding an unwritten buffer, or an image tab holding edits that have not been saved to its original file (see [[image-tab]]). Both raise this dialog, and confirming discards both.
 
 When no tab has unsaved changes, `quit` and last-tab-close behave exactly as described above.
 

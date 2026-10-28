@@ -4,8 +4,8 @@ import path from 'node:path';
 const PNG_DATA_URL_PREFIX = 'data:image/png;base64,';
 
 // The next free `<base>.<token>-<n>.png` in `dir` for a source file named `sourceName`, numbering
-// from 1. One rule for "a numbered PNG beside an original", shared by the video plugin's frame
-// capture (`shot`) and the image plugin's saved edit (`edit`).
+// from 1. One rule for "a numbered PNG beside an original", used by the video plugin's frame
+// capture (`shot`).
 //
 // Deliberately not a variant of `nextFreeName` (src/editor/next-free-name.ts): that one starts from
 // a candidate name and appends `-2` only once it is taken, while these always carry a number and use

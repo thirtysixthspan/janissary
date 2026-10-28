@@ -156,6 +156,7 @@ the image tab currently on screen.
 
 **Save** replaces the original image file with the edited image. The server takes the destination
 from the image tab's original path, so the client cannot choose another file or directory.
+If saving fails, the original file remains unchanged and the edits stay unsaved in the tab.
 
 Every save is a **PNG**, whatever the source format was. Editing is offered for every format the
 viewer opens, and two consequences follow from the single output format: an **animated GIF flattens**
