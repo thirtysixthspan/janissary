@@ -239,6 +239,21 @@ describe('JanusClient', () => {
     expect(handler).toHaveBeenCalledWith('live');
   });
 
+  it('a superseded attachment can detach without silencing its replacement', () => {
+    const client = new JanusClient();
+    const original = vi.fn();
+    const detachOriginal = client.attachPty('tab-1', original);
+    const replacement = vi.fn();
+    client.attachPty('tab-1', replacement);
+
+    detachOriginal();
+    messageHandler!({ data: JSON.stringify({ t: 'pty', id: 'tab-1', data: 'live' }) });
+
+    expect(original).not.toHaveBeenCalled();
+    expect(replacement).toHaveBeenCalledOnce();
+    expect(replacement).toHaveBeenCalledWith('live');
+  });
+
   it('saveFile resolves with result from the pending map', async () => {
     const client = new JanusClient();
     const promise = client.saveFile('/file.txt', 'content');

@@ -244,7 +244,9 @@ export class JanusClient {
   attachPty(id: string, onData: (data: string) => void): () => void {
     this.ptyOutput.drain(id, onData);
     this.ptyHandlers.set(id, onData);
-    return () => this.ptyHandlers.delete(id);
+    return () => {
+      if (this.ptyHandlers.get(id) === onData) this.ptyHandlers.delete(id);
+    };
   }
 
   // Release everything the constructor and the subscription methods acquired. In-flight
