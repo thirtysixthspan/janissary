@@ -2,7 +2,7 @@ import { useState, useSyncExternalStore } from 'react';
 import type { BulkConflictPolicy, FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from '../shared/ws/ws';
 import { newFileTargetDir } from './file/navigator-new-file';
-import { clearClipboard, getClipboardSnapshot, pendingClipboardMode, subscribeClipboard, type ClipboardMode } from './file/navigator-clipboard';
+import { clearClipboard, getClipboardSnapshot, pendingClipboardMode, setClipboard, subscribeClipboard, type ClipboardMode } from './file/navigator-clipboard';
 import { basename, dirname } from '../shared/rel-path';
 import { requestFileNavigatorMutation } from './file-navigator-request';
 
@@ -27,7 +27,7 @@ function conflictTitle(sources: string[], destinationPath: string): string {
 // shape. Subscribes to the app-wide clipboard so the tree re-renders when it changes elsewhere
 // (a copy/cut in another navigator, or this one), which is what keeps the cut-row dimming live.
 export function useFileNavigatorPaste(client: JanusClient, label: string, absoluteRoot: string, host?: string) {
-  useSyncExternalStore(subscribeClipboard, getClipboardSnapshot, getClipboardSnapshot);
+  const snapshot = useSyncExternalStore(subscribeClipboard, getClipboardSnapshot, getClipboardSnapshot);
   const [pendingConflict, setPendingConflict] = useState<PendingPasteConflict | null>(null);
 
   const sendPaste = async (
@@ -76,6 +76,9 @@ export function useFileNavigatorPaste(client: JanusClient, label: string, absolu
   };
 
   return {
+    armed: snapshot !== null,
+    cut: (paths: string[]) => { setClipboard('cut', paths, host); },
+    disarm: clearClipboard,
     pendingConflict,
     paste,
     duplicate,

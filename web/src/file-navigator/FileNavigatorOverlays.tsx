@@ -14,7 +14,6 @@ import { FileNavigatorCommitPopup } from './FileNavigatorCommitPopup';
 import type { PendingContextMenu } from './use-file-navigator-row-events';
 import { ContextMenu } from '../shared/ContextMenu';
 import { fileNavigatorMenuItems, type FileNavigatorMenuActions } from './file/navigator-menu-items';
-import { getClipboardSnapshot } from './file/navigator-clipboard';
 import { basename } from '../shared/rel-path';
 
 type Properties = {
@@ -102,7 +101,7 @@ export function FileNavigatorOverlays({
       {menu && (
         <ContextMenu
           groups={fileNavigatorMenuItems(
-            menu.row, getClipboardSnapshot() !== null, menuActions, selectionEntry, hasBranch,
+            menu.row, paste.armed, menuActions, selectionEntry, hasBranch,
           )}
           x={menu.x}
           y={menu.y}

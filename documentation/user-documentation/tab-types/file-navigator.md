@@ -206,6 +206,7 @@ only the row you right-clicked, and **Edit** is not shown for directories. **Ope
 external application instead. The menu also provides Copy, Paste (when the clipboard is armed),
 Duplicate, Copy file path, Rename, Delete, New file, and New folder; the `..` row omits actions that cannot apply to
 it.
+Paste appears or disappears immediately if the clipboard changes while the menu is open.
 
 ## Selecting more than one row
 

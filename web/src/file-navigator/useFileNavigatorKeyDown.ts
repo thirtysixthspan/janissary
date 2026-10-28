@@ -4,12 +4,12 @@ import type { FileNavigatorRow } from '@shared/protocol';
 import { handleFileNavigatorKey, typeAheadMatch, type FileNavigatorKeyOutcome } from './file/navigator-keys';
 import { handleTreeChord, type ChordHandlers } from './file/navigator-chords';
 import { runFileNavigatorAction } from './file/navigator-actions';
-import { clearClipboard, getClipboardSnapshot } from './file/navigator-clipboard';
 import { fileActivation } from './file/activation';
 import type { useFileNavigatorSelection } from './useFileNavigatorSelection';
 import type { useFileNavigatorOpener } from './useFileNavigatorOpener';
 import type { useFileNavigatorRename } from './useFileNavigatorRename';
 import type { useFileNavigatorDelete } from './useFileNavigatorDelete';
+import type { useFileNavigatorPaste } from './useFileNavigatorPaste';
 
 const TYPEAHEAD_RESET_MS = 700;
 const ROW_HEIGHT_PX = 22;
@@ -30,6 +30,7 @@ type Params = {
   opener: ReturnType<typeof useFileNavigatorOpener>;
   rename: ReturnType<typeof useFileNavigatorRename>;
   deletion: ReturnType<typeof useFileNavigatorDelete>;
+  paste: ReturnType<typeof useFileNavigatorPaste>;
   containerRef: RefObject<HTMLDivElement | null>;
   chordHandlers: ChordHandlers;
   actions: NavActions;
@@ -43,13 +44,13 @@ type Params = {
 function clearSelectionAndClipboard(
   e: React.KeyboardEvent<HTMLDivElement>,
   selection: Params['selection'],
+  paste: Params['paste'],
 ): void {
-  const armed = getClipboardSnapshot() !== null;
-  if (selection.selected.size === 0 && selection.cursor === null && !armed) return;
+  if (selection.selected.size === 0 && selection.cursor === null && !paste.armed) return;
   e.preventDefault();
   e.stopPropagation();
   selection.replace(null);
-  clearClipboard();
+  paste.disarm();
 }
 
 // Route a navigation outcome to the selection transition it asks for: a shifted arrow extends the
@@ -70,7 +71,7 @@ function applyNavigationSelection(
 // component stays under the file-size limit. Owns the rename-field bypass, the ctrl/meta chord
 // dispatch, delete, arrow/paging navigation, and type-ahead.
 export function useFileNavigatorKeyDown({
-  rows, selection, opener, rename, deletion, containerRef, chordHandlers, actions,
+  rows, selection, opener, rename, deletion, paste, containerRef, chordHandlers, actions,
 }: Params): (e: React.KeyboardEvent<HTMLDivElement>) => void {
   const typeahead = useRef<{ buffer: string; timer?: ReturnType<typeof setTimeout> }>({ buffer: '' });
 
@@ -87,7 +88,7 @@ export function useFileNavigatorKeyDown({
       return; // tab-management chords go to the window handler
     }
     if (e.key === 'Escape') {
-      clearSelectionAndClipboard(e, selection);
+      clearSelectionAndClipboard(e, selection, paste);
       return;
     }
     if ((e.key === 'Backspace' || e.key === 'Delete') && selection.operationPaths.length > 0) {

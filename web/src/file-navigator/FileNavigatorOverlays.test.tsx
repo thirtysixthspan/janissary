@@ -69,6 +69,9 @@ function makeDeletion(overrides: Partial<Deletion> = {}): Deletion {
 
 function makePaste(overrides: Partial<Paste> = {}): Paste {
   return {
+    armed: false,
+    cut: () => {},
+    disarm: () => {},
     pendingConflict: null,
     paste: () => {},
     duplicate: () => {},
