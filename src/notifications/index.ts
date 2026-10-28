@@ -5,49 +5,6 @@ import { NOTIFICATIONS_LABEL } from './tab.js';
 import { notificationText, provenanceTimestamp } from './format.js';
 import { deliverNotification } from './deliver.js';
 
-// The events that can feed the notifications tab. Five are ambient (a background tab's own
-// activity); `manual` is an explicit `notify <message>`, `auto-approve` is a workspaced harness's
-// auto-approved permission gate, `editor-suggest` is an in-editor persona-suggestion query's
-// failure or empty reply, `question` is an agent waiting for a human answer,
-// `transcript-unavailable` reports that a harness tab's session record could not be found, so the
-// tab is limited to screen snapshots, `ssh-recording-failed`, `harness-recording-failed` and `shell-recording-failed` report
-// that an ssh tab's, a harness tab's, or a shell tab's session recording was abandoned, so nothing more of that
-// session lands on disk, `shell-transcript-failed` reports that a shell tab's text transcript was
-// abandoned, so nothing more of that session's text lands on disk, and `file-operation`
-// reports a failed file-navigator copy, paste, move, delete, or undo/redo replay.
-// `open-unsupported` reports that `open` found no opener for a file's extension — a deliberate
-// action's answer, and the one dispatcher error a file navigator activation can produce, where the
-// originating tab renders rows rather than a transcript.
-// `tab` reports that a command could not arrange its target tab.
-// `plugin-note` is a line a tab plugin reported through
-// its own `notifyUser` capability — a track a playlist had to drop, say — as opposed to
-// `plugin-failure`, which the host reports when a plugin breaks. `e2e-browser-gone` reports that a
-// `-b` tab's browser is no longer there — a failed launch, a browser that exited, or a guard that
-// died are one event to the user, since the consequence is the same: `connect()` now fails.
-// Explicit events are always eligible and bypass focus suppression.
-// `system-schedule-fire` is explicit and focus-independent, with its own default-on config toggle.
-// `remote-session` reports what the sessions tab just did to a remote session — detached,
-// attached, ended, forgotten — so the change is on the record even when the tab is closed. It
-// carries its line verbatim, exactly as `remote-session-terminated` does, and is deliberately distinct
-// from it: that one reports a session ending on its own, this one reports a decision the user made.
-// `launch-refused` reports a harness or agent launch stopped because its name clashes with an open
-// tab, a sessions-table row, or something running on the target host, and
-// `launch-workspace-cleaned` reports a leftover workspace removed so a launch could go ahead. Both
-// carry their line verbatim, as does `launch-root-cloned`, which reports a missing project root a
-// remote launch cloned onto its host after the user accepted the offer. `remote-refused` reports a remote host refusing a request after its
-// workspace was ready: the session is still alive, so the tab stays open and this line is the only
-// sign of the refusal. It carries its line verbatim too.
-// `harness-idle` reports that a hidden harness tab's working→idle transition was badged and has
-// stayed badged long enough to be worth saying out loud, the escalation a backgrounded fleet
-// otherwise leaves silent. It is explicit rather than ambient: the badge has no toggle and neither
-// does this, because a badge the app raised on its own is not something the user opted into either.
-// `auto-resume` reports a harness hitting a subscription limit, naming the moment its resume will be
-// typed in — the counterpart to `auto-approve`, and explicit for the same reason: the app decided it,
-// on the tab's behalf, and the one line saying so is what a user watching a different tab needs.
-// `auto-approve-no-workspace` reports a harness tab that launched auto-approving with no workspace to
-// confine it, so an auto-approved prompt acts on the user's real files unattended. Explicit for the
-// same reason as the others: the tab it is attributed to is the one just launched, which is very
-// often the active one, and this is the only line that says so.
 export type NotificationEventType =
   | 'schedule-late'
   | 'remote-session-terminated'
@@ -81,8 +38,7 @@ export type NotificationEventType =
   | 'remote-refused'
   | 'layout'
 
-// A background tab's own activity. Both the per-event opt-in toggle and focus suppression (the
-// active tab never notifies about its own activity) apply to these five.
+// Background activity requires its own opt-in toggle and is suppressed for the active tab.
 export type AmbientNotificationEvent =
   | 'state-change'
   | 'schedule-fire'
@@ -97,49 +53,73 @@ export type ExplicitNotificationEvent = Exclude<NotificationEventType, AmbientNo
 // key of the config, so neither a new ambient event nor a renamed toggle can slip through — the
 // same reason `CLIENT_FRAME_TYPES` and `CAPABILITIES` are keyed by their unions.
 export const AMBIENT_EVENTS: Record<AmbientNotificationEvent, keyof NotificationConfig['events']> = {
+  // An ACP consumer finishing a turn or otherwise becoming idle.
   'state-change': 'stateChange',
+  // A tab-owned scheduled command firing.
   'schedule-fire': 'scheduleFire',
+  // An ACP session starting its first turn.
   'agent-start': 'agentStart',
+  // An ACP query being rate limited by its provider.
   'rate-limited': 'rateLimited',
 };
 
-// The events that are always eligible and bypass focus suppression. `manual` is an explicit
-// `notify`, `auto-approve` an auto-approved permission gate, `editor-suggest` a persona query's
-// failure, `question` an agent waiting on a human, `open-unsupported` an `open` that found no
-// opener. The rest — a lost transcript, an abandoned
-// recording, a dead browser, a failed file operation, a plugin's own note or breakage — bypass it
-// for one shared reason: the tab it happened to is very often the tab the user is watching, which
-// is exactly the case focus suppression would discard.
-//
-// Keyed by the union so an eighteenth event stops compiling here until it is classified, rather
-// than falling through a `default` arm to `false` and never reaching the feed.
+// Explicit reports bypass focus suppression so an action or failure on the active tab is not lost.
+// Each event's reason for that classification is kept with its entry.
+// Keyed by the union so every new event must be classified before it compiles.
 export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
+  // A scheduled command delivered more than five seconds late.
   'schedule-late': true,
+  // A remote session ended on its own, rather than through a user action.
   'remote-session-terminated': true,
+  // A remote-session action is recorded even after the sessions tab closes.
   'remote-session': true,
+  // An unread harness idle badge escalated after remaining unread.
   'harness-idle': true,
+  // The user explicitly sent `notify <message>`.
   manual: true,
+  // A harness auto-approved one of its permission prompts.
   'auto-approve': true,
+  // Auto-approval without a workspace can act on the user's real files.
   'auto-approve-no-workspace': true,
+  // The app scheduled a harness resume after a subscription limit.
   'auto-resume': true,
+  // An in-editor persona-suggestion query failed or returned no suggestion.
   'editor-suggest': true,
+  // An agent is waiting for a human answer in a background tab.
   question: true,
+  // A harness session record is missing, leaving only screen snapshots.
   'transcript-unavailable': true,
+  // An SSH session recording was abandoned after a write failure.
   'ssh-recording-failed': true,
+  // A harness session recording was abandoned after a write failure.
   'harness-recording-failed': true,
+  // A shell session recording was abandoned after a write failure.
   'shell-recording-failed': true,
+  // A shell's plain-text transcript was abandoned after a write failure.
   'shell-transcript-failed': true,
+  // A browser for a `-b` tab is gone, so a new `connect()` cannot use it.
   'e2e-browser-gone': true,
+  // A file-navigator copy, paste, move, delete, or undo/redo replay failed.
   'file-operation': true,
+  // `open` found no opener; this also covers file-navigator activations without transcripts.
   'open-unsupported': true,
+  // A tab-arrangement command could not carry out its target request.
   tab: true,
+  // The host disabled a tab plugin after it broke.
   'plugin-failure': true,
+  // A plugin used its notification capability to report its own line.
   'plugin-note': true,
+  // A harness or agent launch was refused before it could open.
   'launch-refused': true,
+  // A leftover workspace was removed so a launch could proceed.
   'launch-workspace-cleaned': true,
+  // A remote launch cloned the missing project root after acceptance.
   'launch-root-cloned': true,
+  // A remote host refused a request after the workspace was ready.
   'remote-refused': true,
+  // A layout command could not resize, read bounds, or report a size.
   layout: true,
+  // Project-owned schedule outcomes use their own default-on toggle below.
   'system-schedule-fire': true,
 };
 
@@ -149,8 +129,8 @@ function isAmbient(event: NotificationEventType): event is AmbientNotificationEv
 
 // Whether an event should be recorded, given the config and the active tab. Defensive against the
 // tab feeding itself. An explicit trigger always fires, subject only to the tab being open (enforced
-// in `notify`), except system schedule notices have their own default-on toggle. Ambient events use
-// their own toggle and are subject to focus suppression.
+// in `notify`), except project-owned system schedule notices, which have their own default-on toggle.
+// Ambient events use their own toggle and are subject to focus suppression.
 export function shouldNotify(
   config: NotificationConfig | undefined,
   event: NotificationEventType,

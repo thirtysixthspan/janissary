@@ -4,17 +4,6 @@
 
 ## development
 
-* Put each notification event's rationale beside its classification entry, and drop the hand-kept event catalog and counts at the top of the notifications module, which have drifted from the union they describe.
-
-Existing Debt: The notifications module opens with a long prose catalog of every event that restates the `NotificationEventType` union, and its counts have drifted: it says "Five are ambient" and "these five" where `AmbientNotificationEvent` has four, and "an eighteenth event" where `EXPLICIT_EVENTS` already holds twenty-seven. Severity: 2/10
-
-Existing Risk: 2/10 - Someone adding an event trusts the counts or edits the prose catalog instead of the keyed tables and misreads which toggle and focus rules apply; the keyed `Record` types still catch a missing classification, so the cost is a misleading review rather than a shipped bug.
-
-Proposal Risk: 1/10 - Each rationale sits on the entry it explains and no comment carries a count, so the only way left to mislead is a comment going stale beside the line it describes, where a reviewer sees it in the diff.
-
-Proposal: In `src/notifications/index.ts`, the comment above `NotificationEventType` explains every event in one block, the comment above `AmbientNotificationEvent` says "these five", and the comment above `EXPLICIT_EVENTS` explains a handful of events and says "an eighteenth event stops compiling here". Move each event's one-line rationale onto its own key in `EXPLICIT_EVENTS` or `AMBIENT_EVENTS`, delete the catalog above the union, and reword every count so it doesn't count. Keep the explanation of the `system-schedule-fire` special case in `shouldNotify`. This touches comments only, and `src/notifications/index.test.ts` must still pass.
-
-
 * Move the three default layout sizes out of the sidebar, reporting section, and split area components into a small module that the layout hook and those components both read, so the hook stops importing the views it sizes.
 
 Existing Debt: The layout hook imports `DEFAULT_WIDTH_PX` from the sidebar component, `DEFAULT_PCT` from the reporting section, and, as of the layout sizing commit, `DEFAULT_SPLIT_PCT` from the center action area, so a hook reaches up into three component modules for runtime values, which §8 (the four layers, each importing downward only) rules out. Severity: 6/10
