@@ -62,8 +62,8 @@ const GATE_TABLE: Record<string, GateEntry> = {
 };
 
 // Whether `harnessName` has an installed permission-gate detector and therefore supports
-// auto-approve (`-y`). Command parsing and profile launching both derive their accepted set from
-// this predicate, so validation cannot drift from the detectors that actually exist.
+// auto-approve (`-y`). Command parsing derives its accepted set from this predicate, so validation
+// cannot drift from the detectors that actually exist.
 export function supportsHarnessAutoApprove(harnessName: string): boolean {
   return GATE_TABLE[harnessName] !== undefined;
 }

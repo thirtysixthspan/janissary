@@ -76,7 +76,7 @@ The conversation's own ACP agent has no tools at all. It cannot read, write, or 
 
 The first query or either workspace button creates the workspace. Using a workspace button before asking anything also saves the empty conversation, so you can reopen it after restarting.
 
-Saved conversations live in the current project's `.janissary/conversations/` directory. Each project has its own history and remembered model selection. Conversation history and private workspaces survive restarts and project workspace cleanup. [Profiles](/user-documentation/automation/profiles) restore the conversation list, rather than individual conversation tabs; reopen those from the list.
+Saved conversations live in the current project's `.janissary/conversations/` directory. Each project has its own history and remembered model selection. Conversation history and private workspaces survive restarts and project workspace cleanup. A [profile](/user-documentation/automation/profiles) can reopen the conversation list, but not individual conversation tabs; reopen those from the list.
 
 Conversations and remembered model selection saved before this change remain untouched in their former user-wide location. Janissary does not import them into a project automatically.
 

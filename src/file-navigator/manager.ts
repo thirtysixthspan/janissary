@@ -17,7 +17,6 @@ import { makeNavigationPort, makeOpenPort } from './manager/ports.js';
 import { WatchedFilesTabs } from './watched-tabs.js';
 import type { PortClosures } from './port.js';
 import { openersForRow } from './openers-for-row.js';
-import { restoreTreeView, type SavedTreeView } from './restore.js';
 import type { FileNavigatorDetail, Tab } from '../tab/types.js';
 import { runPull } from './manager/pull.js';
 import { runCommit } from './manager/commit.js';
@@ -34,7 +33,7 @@ export class FileNavigatorManager extends WatchedFilesTabs {
 
   // Open or focus a tree from the parsed `files` arguments, then apply any requested view steps to
   // the returned local tree. The root path remains last, and a leading bare side may precede clauses.
-  // Returns the tab label so profile launch can restore its saved view after opening.
+  // Returns the label of the tab it opened, redocked, or focused.
   open(parsed: FileNavigatorOpenArgs, label: string, out: (text: string) => void): string | undefined {
     const openedLabel = openFilesCommand(
       this.managers, this.tabs, parsed, label, out,
@@ -249,13 +248,6 @@ export class FileNavigatorManager extends WatchedFilesTabs {
   // `manager/commit.ts`.
   commit(label: string, message: string, paths: string[]): void {
     runCommit({ ...this.mutationContext(), refreshGit: (l) => this.refreshGit(l) }, label, message, paths);
-  }
-
-  // Replay a saved tree view onto this tab: expand every saved directory that still resolves, then
-  // record the surviving cursor/anchor/selection as a restore hint for the client. Best effort and
-  // silent — a path that no longer exists is simply dropped.
-  restoreView(label: string, view: SavedTreeView): void {
-    restoreTreeView(this.navPort(), label, view);
   }
 
   async printView(tab: Tab): Promise<string> {

@@ -29,7 +29,7 @@ Every git-synced file is edited inside one shared workspace clone, which physica
 $git-sync/product/backlog/issues.md   = /Users/name/dev/janissary/.janissary/workspace/git-sync/product/backlog/issues.md
 ```
 
-Only the clone named exactly `git-sync` is abbreviated this way; a sibling folder whose name merely starts with `git-sync` keeps the ordinary `$root/workspace/…` form. A workspaced tab's own clone still reads as `$workspace/<name>` (below). `$git-sync` is display-only: it is not recognized as a typed path prefix, and a profile path cannot use it.
+Only the clone named exactly `git-sync` is abbreviated this way; a sibling folder whose name merely starts with `git-sync` keeps the ordinary `$root/workspace/…` form. A workspaced tab's own clone still reads as `$workspace/<name>` (below). `$git-sync` is display-only: it is not recognized as a typed path prefix.
 
 ### The workspace symbol
 

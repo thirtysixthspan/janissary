@@ -80,7 +80,7 @@ Shared guards must reject arrays and `null` when an object is required and valid
 
 ## Docking
 
-A plugin tab docks into either sidebar through the same mechanism the built-in dockable views use, and a profile entry may name the side to dock it to. The host owns the sidebar frame, including the dock-cycle control, exactly as it owns the centre frame: a plugin renders no chrome in either place. Every docked plugin tab stays mounted while another entry in that sidebar is showing, so `active` means "the selected entry here" rather than "the centre tab", and a docked tab is rendered by the sidebar alone — never also in the centre. A side displaces an existing occupant only when the same plugin owns it; tabs from different plugins share a sidebar.
+A plugin tab docks into either sidebar through the same mechanism the built-in dockable views use. The host owns the sidebar frame, including the dock-cycle control, exactly as it owns the centre frame: a plugin renders no chrome in either place. Every docked plugin tab stays mounted while another entry in that sidebar is showing, so `active` means "the selected entry here" rather than "the centre tab", and a docked tab is rendered by the sidebar alone — never also in the centre. A side displaces an existing occupant only when the same plugin owns it; tabs from different plugins share a sidebar.
 
 ## Host notifications
 

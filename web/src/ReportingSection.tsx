@@ -21,7 +21,7 @@ const MAX_PCT = 100 - MIN_PCT;
 // left border. Its top edge is a draggable divider, and its strip carries the same resize
 // affordance as a gutter button — either one dragged up grows the reporting body while the
 // action area shrinks (and vice versa), within the 15% floors. Height is a
-// controlled prop, owned by `App` (so a profile's `layout` key can drive it too — see
+// controlled prop, owned by `App` (so the `layout` command can drive it too — see
 // `useLayoutState`).
 export function ReportingSection({
   entries, onClose, onRename, onReorder, onRun, onRate, onReset, onSnapshot,

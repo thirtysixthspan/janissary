@@ -8,8 +8,8 @@ export type MonitorCompletions = { personas: string[]; names: string[]; targets:
 // Complete `monitor`/`unmonitor` arguments. Which catalog an argument draws from follows what the
 // argument means: `monitor <persona>` chooses a persona to start, so it offers personas, while
 // `unmonitor <name>` and `monitor ask <name>` address a monitor that is already running, so they
-// offer the live monitor names — which are the persona names only until a profile gives one a name
-// of its own. Later arguments are targets (tab labels or `group:<n>` tokens).
+// offer the live monitor names — which are the persona names unless a monitor was started under a
+// name of its own. Later arguments are targets (tab labels or `group:<n>` tokens).
 export function completeMonitorCommand(
   cursor: CompletionCursor,
   monitor: MonitorCompletions | undefined,

@@ -18,9 +18,8 @@ export type LayoutState = {
 };
 
 // Sidebar widths, the reporting-section height percentage, the center split, and which docked tab
-// should be visible per side, hoisted so server layout updates can drive them (and, for focus, a
-// profile's `notifications` `focus` field; see
-// product/specs/profiles.md's "Profile-level layout" section). A `layout` WS event patches
+// should be visible per side, hoisted so server layout updates can drive them (see the `layout`
+// command in product/specs/application-commands.md). A `layout` WS event patches
 // whichever fields it carries, leaving the rest untouched. Split out of App.tsx to keep it under
 // the file-size limit.
 export function useLayoutState(client: JanusClient): LayoutState {

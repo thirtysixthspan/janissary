@@ -80,4 +80,4 @@ The conversation's ACP agent is tool-less. It runs with its current directory an
 
 ### Profiles
 
-Conversation records and workspaces survive independently of profiles. Restoring a saved conversations view reopens the conversation list; individual open conversation tabs are not restored, and their saved conversations remain available from the list.
+Conversation records and workspaces survive independently of profiles. A profile whose runscript runs `conversations` reopens the conversation list; individual open conversation tabs are not restored, and their saved conversations remain available from the list.

@@ -109,7 +109,7 @@ export type TabView = {
   editor?: EditorView;
   // Monitor-window payload, present only when `view === 'monitor'`: the suggestion feed, the
   // monitor's runtime name (also this tab's label, and what `unmonitor` and `monitor ask` address),
-  // the persona it runs — the same word as the name unless a profile gave it one of its own — the
+  // the persona it runs — the same word as the name unless it was started under one of its own — the
   // monitored tabs/groups (pre-formatted), and the running total of bytes sent/received on the
   // monitor's dedicated ACP session.
   monitor?: { suggestions: SuggestionView[]; name: string; persona: string; targets: string; contextBytes: number };

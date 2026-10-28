@@ -19,7 +19,7 @@ const MAX_WIDTH_PCT = 50;
 // A sidebar (left or right) can dock the file navigator and the notifications tab at the same
 // time — the only two dockable kinds — sharing the space via a small internal tab-switcher (only
 // shown once both are present). Visibility is derived: the sidebar renders exactly when some tab
-// is docked to its side. Width is a controlled prop, owned by `App` (so a profile's `layout` key
+// is docked to its side. Width is a controlled prop, owned by `App` (so the `layout` command
 // can drive it too — see `useLayoutState`), resized by dragging either the gutter button
 // or the border divider on the sidebar's inner edge.
 export function Sidebar({
@@ -38,9 +38,8 @@ export function Sidebar({
   activeTabNameMaxLength?: number;
   width?: number;
   onWidthChange?: (width: number) => void;
-  // A profile's `notifications` `focus` field (or any future dock entry's), delivered over
-  // the `layout` WS event. Overrides the "most recently docked tab wins" default below — see
-  // `useLayoutState.ts`.
+  // The docked view this sidebar should show, when the server names one over the `layout` WS
+  // event. Overrides the "most recently docked tab wins" default below — see `useLayoutState.ts`.
   focusView?: 'files' | 'notifications';
   onNotificationsVisibilityChange?: (visible: boolean) => void;
   pickerOverlays?: React.ReactNode;

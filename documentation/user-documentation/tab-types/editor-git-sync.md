@@ -39,7 +39,7 @@ A `syncPaths` match only takes effect while the checkout that governs the file i
 The governing checkout is:
 
 - The [file navigator](/user-documentation/tab-types/file-navigator) tab's own root repository, for a file activated from that tree.
-- The app's launch directory, for any other open — a shell tab's `edit`, a profile restore, or a plugin opener.
+- The app's launch directory, for any other open — a shell tab's `edit` or a plugin opener.
 
 When the governing checkout is off its primary branch (or unconfirmable), the file opens as an ordinary editor tab at its real path instead: saves land in the branch's own working tree, nothing is committed or pushed, and there's no sync status icon. The missing icon is the only signal — nothing else calls out the difference.
 

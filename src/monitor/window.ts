@@ -17,7 +17,7 @@ const makeMonitorTab = (name: string, persona: string, dotColor: string, number:
   view: 'monitor',
   title: name,
   // Both are fixed at creation: the label is the runtime name, and the persona is whichever one the
-  // monitor runs — the same word unless a profile gave the monitor a name of its own.
+  // monitor runs — the same word unless the monitor was started under a name of its own.
   // `targets`/`contextBytes` are filled in afterward via `updateMonitorMeta` once the owning monitor
   // registration exists.
   monitor: { suggestions: [], name, persona, targets: '', contextBytes: 0 },

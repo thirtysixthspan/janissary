@@ -30,8 +30,9 @@ export type PtyExitEvent = { t: 'pty-exit'; id: string; exitCode: number };
 export type RpcReply = { t: 'rpc-reply'; id: number; result?: unknown; error?: string };
 // Tells the client to close its window; the server then stops (the `quit`/`exit` command).
 export type ByeEvent = { t: 'bye' };
-// Profile or command sidebar/tab-area sizes. Window sizing is applied directly over CDP and never
-// reaches the client — see product/specs/profiles.md.
+// The `layout` command's sidebar/tab-area sizes, and which docked tab a sidebar shows. Window sizing
+// is applied directly over CDP and never reaches the client — see
+// product/specs/application-commands.md.
 export type LayoutUpdate = {
   sidebarLeft?: number;
   sidebarRight?: number;

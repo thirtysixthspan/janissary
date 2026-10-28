@@ -1,4 +1,4 @@
-import type { CenterPane, Tab } from './types.js';
+import type { Tab } from './types.js';
 import type { Managers } from '../managers.js';
 import { TAB_RENAME_MAX_LENGTH } from './rename-limits.js';
 import { messageBus } from '../bus.js';
@@ -76,13 +76,6 @@ export function moveTabToOtherPane(port: TabOperationsPort, index: number): void
   port.secondaryTabLabel = result.secondaryLabel;
   port.repairSelections();
   messageBus.emit('state', { type: 'dirty' });
-}
-
-export function placeProfileTabs(port: TabOperationsPort, candidates: { label: string; number?: number; pane?: CenterPane }[], focus: (tabs: Tab[], active: number, candidates: { label: string; number?: number; pane?: CenterPane }[], findIndex: (label: string) => number) => { activeTab?: number; secondaryTabLabel?: string }): void {
-  const result = focus(port.tabs, port.activeTab, candidates, (label) => port.findIndex(label));
-  if (result.activeTab !== undefined) port.activeTab = result.activeTab;
-  if (result.secondaryTabLabel !== undefined) port.secondaryTabLabel = result.secondaryTabLabel;
-  port.repairSelections();
 }
 
 export function reorderTab(port: TabOperationsPort, dir: -1 | 1): void {

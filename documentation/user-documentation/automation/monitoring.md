@@ -22,7 +22,7 @@ A target is a tab label or `group:<n>`. A tab may also be named by its display a
 
 ## How a monitor is named
 
-Every monitor has a name, and that name is what you address it by — `unmonitor <name>`, `monitor ask <name>`, the reporting tab's label, the `monitors` listing, and the connections row all use it. Starting one with `monitor <persona>` names it after the persona, so the two are usually the same word and you never have to think about the difference. A [profile](/user-documentation/automation/profiles) can give a monitor a name of its own; then the name is what you type, and the persona is shown beside it where it helps.
+Every monitor has a name, and that name is what you address it by — `unmonitor <name>`, `monitor ask <name>`, the reporting tab's label, the `monitors` listing, and the connections row all use it. Starting one with `monitor <persona>` names it after the persona, so the two are the same word and you never have to think about the difference.
 
 Names are unique per tab. Two monitors started from the same tab can share a persona as long as their names differ.
 
@@ -98,7 +98,7 @@ monitors                    list active monitors with their targets and suggesti
 
 Use `unmonitor <name> <target>` to remove one tab or group from an external monitor. It keeps running if other targets remain; removing its final target stops it. A target can be a tab label, display alias, or `group:<n>`. If the target does not match one the monitor watches, the monitor stays unchanged. A monitor's session also ends on its own when its owner tab closes. A reporting tab stays open as long as at least one monitor still feeds it, and closes once the last one stops.
 
-None of this survives a restart: a monitor's session is a live process, and its reporting tab is a live view, so both are gone. Start them again from the tab that owned them, or from a [profile](/user-documentation/automation/profiles) that carries a `monitors` entry.
+None of this survives a restart: a monitor's session is a live process, and its reporting tab is a live view, so both are gone. Start them again from the tab that owned them, or from a [profile](/user-documentation/automation/profiles) whose runscript starts them.
 
 Closing a reporting tab stops the monitors feeding it. If two owners share a reporting tab, closing one owner stops only that owner's monitor; the reporting tab remains while another monitor still feeds it.
 

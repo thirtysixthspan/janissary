@@ -4,7 +4,7 @@ import type { MonitorTarget } from '../tab/types.js';
 
 // `name` is the monitor's runtime identity — the registry key, the reporting tab's label, and what
 // `unmonitor` and `monitor ask` address. For `monitor <persona>` it is the persona, because that
-// command names one and takes the other from it; a profile-launched monitor can carry its own.
+// command names one and takes the other from it; `MonitorManager.start` can still be given its own.
 export type ParsedMonitor = { name: string; targets: MonitorTarget[] };
 export type ParsedMonitorAsk = { ask: true; name: string; question: string };
 export type ParsedUnmonitor = { all: true } | { name: string; target?: MonitorTarget };

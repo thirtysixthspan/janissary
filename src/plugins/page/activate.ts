@@ -12,7 +12,7 @@ import {
 } from './shared.js';
 
 // A page tab is keyed by the address it shows, so `open <url>` on an address already open focuses
-// that tab and a profile entry can name what to reopen. Navigation moves the address, and with it
+// that tab. Navigation moves the address, and with it
 // the key — `updateTab` re-keys, which is what keeps "the key is what this tab shows" true.
 function resolve(target: string): PagePayload | undefined {
   const normalized = normalizeWebUrl(target);

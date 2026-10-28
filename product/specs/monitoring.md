@@ -10,7 +10,7 @@ Once the monitor's ACP session connects, the owner tab's transcript shows a line
 
 ### Naming a monitor
 
-A monitor has a **name**, and that name is what everything addresses it by: it is the reporting tab's label, what `unmonitor` and `monitor ask` take, what the `monitors` listing and the connections row show, and what the reporting tab's header leads with. Starting one with `monitor <persona>` names it after the persona, so for a monitor started that way the two words are the same and only one is shown. A profile may give a monitor a name of its own (see [[profiles]]), in which case the name and the persona differ, and the persona is shown beside the name wherever it adds information.
+A monitor has a **name**, and that name is what everything addresses it by: it is the reporting tab's label, what `unmonitor` and `monitor ask` take, what the `monitors` listing and the connections row show, and what the reporting tab's header leads with. Starting one with `monitor <persona>` names it after the persona, so for a monitor started that way the two words are the same and only one is shown.
 
 Names are unique per owner tab. Two monitors started from the same tab may share a persona as long as their names differ, and starting a second monitor under a name already in use from that tab is refused, naming the name rather than the persona. Completion follows the same distinction: `monitor <persona>` offers persona names, because that argument chooses a persona to start, while `unmonitor` and `monitor ask` offer the names of monitors actually running from the current tab.
 

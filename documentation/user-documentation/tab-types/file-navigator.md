@@ -47,7 +47,7 @@ Row sizes, modified times, and permissions come from the remote host. Until thos
 
 Moves and copies stay on one machine. A drag onto a tree on another host has no drop highlight, and a cross-host paste is refused without changing anything or clearing the clipboard marks. Dragging a remote row into a command bar, an editor, or a harness inserts a host-qualified absolute path such as `devbox:/srv/project/src/index.ts`; local rows still insert short paths.
 
-A navigator opened from a remote tab's 📁 button closes when that tab closes, even if another joined tab keeps using the shared connection. Retargeting the navigator to a local directory removes that tie. A dropped or explicitly closed SSH connection closes every tree and tab using it. Remote trees are not restored by a profile.
+A navigator opened from a remote tab's 📁 button closes when that tab closes, even if another joined tab keeps using the shared connection. Retargeting the navigator to a local directory removes that tie. A dropped or explicitly closed SSH connection closes every tree and tab using it.
 
 ## Docking to a sidebar
 
@@ -86,7 +86,7 @@ A row with nothing to show for the current mode — a directory in `size` mode, 
 
 The header's detail button cycles a tree through the four modes, one click at a time, with a tooltip naming what the next click shows (`Show size`, `Show modified`, `Show permissions`, `Show name only`). Re-running `files with <mode>` on an already-open tree is a second way to switch it, and `in`/`on`/`with` clauses can combine in any order (`files in claude on left with size`).
 
-A [profile](/user-documentation/automation/profiles) entry can name a detail mode for its tree, along with its expanded directories and selection.
+A [profile](/user-documentation/automation/profiles) can open a tree in a detail mode, with directories expanded and rows selected, by running the same `files` clauses.
 
 You can also restore a local tree's view with `files` clauses. Expand folders before naming rows inside them; `cursor`, `anchor`, and `select` use paths relative to the tree root. Repeat `expand`, `collapse`, or `select` to name more than one path, and quote paths that contain spaces or quotes:
 
@@ -384,6 +384,4 @@ One thing a tree will not do is reach outside itself. Every path you supply to a
 
 Every change a tree makes is aimed at the tree you made it in. If that tree has closed by the time the request arrives, the change simply doesn't happen and nothing is reported — including when another navigator has since taken its place in the tab list, which never inherits what you asked the old one to do.
 
-A [profile](/user-documentation/automation/profiles) can open a **local** tree with a view already in place. Its `files` entry can list which directories to expand, where the cursor goes, and which rows to select; `profile launch` applies them, silently skipping anything that has since been deleted. Remote trees are not restored because their workspace and signed-in SSH session no longer exist. The undo/redo history is not part of a profile — it stays in memory and dies with the tab.
-
-The command-line view clauses restore local trees too. On an already-open tree, the command changes only the view parts named; a clause for a path that no longer exists is ignored. View clauses on remote trees are ignored. `files print <tab>` prints a reusable command with the tree's root and view; for a remote tree, the printed command has no view clauses.
+The command-line view clauses restore a **local** tree's view: which directories to expand, where the cursor goes, and which rows to select. A [profile](/user-documentation/automation/profiles) can run the same command to open a tree with its view in place. The undo/redo history is never restored. It stays in memory and dies with the tab. On an already-open tree, the command changes only the view parts named; a clause for a path that no longer exists is ignored. View clauses on remote trees are ignored. `files print <tab>` prints a reusable command with the tree's root and view; for a remote tree, the printed command has no view clauses.

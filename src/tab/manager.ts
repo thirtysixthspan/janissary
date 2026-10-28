@@ -1,4 +1,4 @@
-import type { Tab, CenterPane } from './types.js';
+import type { Tab } from './types.js';
 import type { ConnectionView, ScheduleView, TabView } from '../protocol.js';
 import type { TabPluginTerminal, TabPluginTerminalOptions } from '../plugins/api.js';
 import type { Managers } from '../managers.js';
@@ -7,7 +7,6 @@ import { getConfig } from '../config.js';
 import { messageBus } from '../bus.js';
 import { TabTranscriptState } from './transcript/state.js';
 import { FileRegistry } from './file-registry.js';
-import { placeProfileTabSelection } from './split-selection.js';
 import { spawnPluginTerminal } from './plugin-terminals.js';
 import { spawnRemotePluginTerminal } from './remote-plugin-terminal.js';
 import { ZshStartupDirectory } from '../shell/zsh-startup/directory.js';
@@ -173,10 +172,6 @@ export class TabManager extends TabTranscriptState {
   arrangeTab(label: string, change: TabArrangement): boolean { return arrangeTab(this, label, change); }
 
   moveTabToOtherPane(index: number): void { tabOperations.moveTabToOtherPane(this, index); }
-
-  placeProfileTabs(candidates: { label: string; number?: number; pane?: CenterPane }[]): void {
-    tabOperations.placeProfileTabs(this, candidates, placeProfileTabSelection);
-  }
 
   reorderTab(dir: -1 | 1): void { tabOperations.reorderTab(this, dir); }
 

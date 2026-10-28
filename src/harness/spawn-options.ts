@@ -3,7 +3,7 @@ import type { RemoteResume } from '../remote/resume.js';
 import type { RemoteNameRetry } from '../launch-name/fail-remote.js';
 
 // The full set of decisions a harness tab is created from, grouped into one object so
-// `HarnessManager`'s two launch paths (`open` and `openFromProfile`) name every field instead of
+// `HarnessManager`'s launch paths (`open` and `attachRemote`) name every field instead of
 // repeating a long positional list — several fields share a type, so a transposition in one of the
 // lists would otherwise compile silently.
 export interface SpawnTabOptions {

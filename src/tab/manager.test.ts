@@ -810,23 +810,6 @@ describe('TabManager split panes', () => {
     expect(tm.secondaryTabLabel).toBeUndefined();
     expect(tm.tabs.filter((tab) => !tab.dock).every((tab) => tab.pane === undefined)).toBe(true);
   });
-
-  it('places a profile batch and selects its lowest-numbered tab in each pane', () => {
-    const tm = makeTabManager();
-    tm.tabs.push(
-      { ...tm.cur(), label: 'left', number: 2 },
-      { ...tm.cur(), label: 'right-high', number: 3 },
-      { ...tm.cur(), label: 'right-low', number: 4 },
-    );
-    tm.placeProfileTabs([
-      { label: 'left', number: 3 },
-      { label: 'right-high', number: 2, pane: 'right' },
-      { label: 'right-low', number: 1, pane: 'right' },
-    ]);
-    expect(tm.tabs[tm.activeTab].label).toBe('left');
-    expect(tm.secondaryTabLabel).toBe('right-low');
-    expect(tm.tabs.find((tab) => tab.label === 'right-high')?.pane).toBe('right');
-  });
 });
 
 describe('TabManager focus history', () => {

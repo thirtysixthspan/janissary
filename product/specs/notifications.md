@@ -236,7 +236,7 @@ These event types can produce a notification line:
   project root the launch could use, such as a missing clone that was declined. Pool exhaustion
   (`All agent names are in use.`) is reported the same way. The line is the refusal itself, such as
   `Cannot launch "foo": a tab named "foo" is already open.`, attributed to the tab the command was
-  typed in (or the issuing tab of a profile launch); nothing is written to that tab's transcript. See
+  typed in; nothing is written to that tab's transcript. See
   `agents.md`, `harness.md`, and `remote-server.md` for the full set of lines.
 - **`launch-workspace-cleaned`** — a leftover workspace folder with nothing running in it was removed
   so a launch could go ahead: `Removed leftover workspace "<name>" ($workspace/<name>) before

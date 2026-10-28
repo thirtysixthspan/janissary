@@ -10,8 +10,7 @@ Launch a profile or list the available profiles.
 
 **Use cases**
 
-- Reopen an arrangement of tabs and settings from a profile file.
-- Run a profile's runscript, `profiles/<name>.rs`, instead of opening its tabs.
+- Run a profile's runscript, `profiles/<name>.rs`, to set up tabs and settings.
 
 **Examples**
 

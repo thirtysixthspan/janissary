@@ -1,5 +1,5 @@
 import { distinctColor } from '../tab/colors.js';
-import { resolveLocalLaunchName, LAUNCH_REFUSED } from '../launch-name/local.js';
+import { resolveLocalLaunchName } from '../launch-name/local.js';
 import { suffixCandidates } from '../launch-name/check.js';
 import { HARNESS_NAMES } from './index.js';
 import { parseHarnessCommand, type HarnessLaunch } from './command-parse.js';
@@ -7,18 +7,16 @@ import { resolveLaunchDir } from './launch-dir.js';
 import { isKnownModel, modelsFor } from './models.js';
 import type { HarnessLaunchView } from '../protocol.js';
 import type { ScreenCapture } from './screen.js';
-import { autoApproveHarnessNames, supportsHarnessAutoApprove } from './auto-approve.js';
-import { autoResumeHarnessNames, supportsHarnessAutoResume } from './auto-resume.js';
+import { autoApproveHarnessNames } from './auto-approve.js';
+import { autoResumeHarnessNames } from './auto-resume.js';
 import { recordingOf, screenTextOf, tailerOf } from './runtime-access.js';
 import { HarnessTabSpawn } from './tab-spawn.js';
 import type { SpawnTabOptions } from './spawn-options.js';
 import { captureSubcommand, transcriptSubcommand } from './subcommands.js';
 import type { HarnessTranscriptTailer } from './transcript/tailer.js';
 import type { Tab } from '../tab/types.js';
-import type { ProfileHarnessEntry } from '../profile/types.js';
 import { messageBus } from '../bus.js';
-import { oneShotRunEntry } from '../profile/harness-schedule.js';
-import { parseRemoteAddress } from '../remote/address.js';
+import { oneShotRunEntry } from './one-shot-run.js';
 import { cancelHarnessIdleEscalation, disposeHarnessIdleEscalations } from './idle-notification.js';
 import { resolveTabGroup } from '../tab/groups.js';
 import type { CommandInvocationContext } from '../commands/types.js';
@@ -155,37 +153,6 @@ export class HarnessManager extends HarnessTabSpawn {
       ...(nameRetry && { nameRetry }),
     });
     if (prompt) this.managers.schedule.set(label, [oneShotRunEntry('run-1', prompt)]);
-    return undefined;
-  }
-
-  // Open a harness tab for a profile entry: unlike `open()`, the group/color come from the
-  // profile launch (not the creator tab) and the starting directory comes from the entry's own
-  // `cwd`/`workspace` (falling back to the issuing tab's cwd when the entry has neither). Returns
-  // an error to report and skip on, or undefined once the tab is open. Never persisted — harness
-  // tabs have no agent state. The entry's `name` is explicit, so a clash refuses the entry (posted
-  // against `creator`, the issuing tab) rather than suffixing it.
-  openFromProfile(
-    entry: ProfileHarnessEntry, label: string, group: number, groupColor: string, creator: string,
-    groupName?: string,
-  ): string | undefined {
-    const remote = entry.remote === undefined ? undefined : parseRemoteAddress(entry.remote);
-    if (remote && 'error' in remote) return remote.error;
-    const unique = resolveLocalLaunchName(this.managers, {
-      creator, name: label, explicit: true, workspace: (entry.workspace ?? true) && !remote,
-    });
-    if (unique === undefined) return LAUNCH_REFUSED;
-    const dir = resolveLaunchDir(this.managers, (entry.workspace ?? true) && !remote, unique, entry.cwd ?? process.cwd());
-    if (typeof dir === 'string') return dir;
-    const { cwd, workspaceDir, workspaceCancel, ready } = dir;
-    const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor), entry.dotColor);
-    this.spawnTab({
-      name: entry.tool, label: unique, cwd, workspaceDir, offline: entry.offline ?? false,
-      group, groupName: groupName ?? this.managers.tab.tabs.find((tab) => tab.group === group)?.groupName,
-      groupColor, dotColor, autoApprove: entry.autoApprove ?? supportsHarnessAutoApprove(entry.tool),
-      autoResume: supportsHarnessAutoResume(entry.tool),
-      browser: entry.browser ?? true, model: entry.model, effort: entry.effort, ready, workspaceCancel, remote,
-      ...(remote && { nameRetry: { creator, explicit: true, tried: [unique], relaunch: () => {} } }),
-    });
     return undefined;
   }
 

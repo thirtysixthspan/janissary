@@ -6,7 +6,7 @@ import { appendCommandOutput } from '../command/append.js';
 // inline mode, watching the current tab and reporting into its transcript. With targets
 // (tab labels or `group:<n>`): external mode, reporting into the monitor's reporting tab.
 // `monitor ask <name> <question>` — query a running monitor's ACP directly, addressed by the
-// monitor's runtime name (the persona name, unless a profile gave it one of its own).
+// monitor's runtime name (the persona name, unless it was started under one of its own).
 export const monitor: Command = {
   name: 'monitor',
   match: (command_) => /^monitor(\s|$)/i.test(command_),
@@ -20,8 +20,7 @@ export const monitor: Command = {
       if (askError) out(askError);
       return;
     }
-    // This command names a persona and takes the monitor's runtime name from it; only a profile
-    // gives a monitor a name of its own (see `startProfileMonitors`).
+    // This command names a persona and takes the monitor's runtime name from it.
     const error = managers.monitor.start(tab.label, parsed.name, parsed.targets);
     if (error) { out(error); return; }
     const watched = parsed.targets.length === 0

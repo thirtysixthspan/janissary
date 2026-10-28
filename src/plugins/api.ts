@@ -59,9 +59,6 @@ export type TabPluginDeclaration = {
   editGesture?: 'open external';
   command?: string;
   commandAliases?: readonly string[];
-  // The line a profile entry for this plugin reissues, when it is not `command` itself — a plugin
-  // whose bare command does more than a saved tab should, such as cloning a workspace.
-  profileCommand?: string;
   // Every extension in `fileExtensions` is something to play rather than merely to open, which is
   // what the `play` command asks before dispatching a file to this plugin's inline opener. A flag
   // rather than a list of its own, so the playable types cannot drift from the claimed ones: a

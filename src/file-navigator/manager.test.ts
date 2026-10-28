@@ -2053,49 +2053,6 @@ describe('FileNavigatorManager', () => {
       expect(run().expandedPaths('ghost')).toEqual([]);
     });
 
-    it('expands and watches every saved directory that still exists, skipping one that does not', () => {
-      mkdirSync(path.join(root, 'src'));
-      const manager = run();
-      manager.open('files', 'janus');
-      const label = navLabel();
-      watchMock.mockClear();
-
-      manager.restoreView(label, { expanded: ['src', 'gone'] });
-
-      expect(manager.expandedPaths(label)).toEqual(['src']);
-      expect(watchMock).toHaveBeenCalledTimes(1);
-    });
-
-    it('keeps only selection paths that have a visible row', () => {
-      mkdirSync(path.join(root, 'src'));
-      writeFileSync(path.join(root, 'src', 'a.ts'), '');
-      const manager = run();
-      manager.open('files', 'janus');
-      const label = navLabel();
-
-      manager.restoreView(label, {
-        expanded: ['src'], cursor: 'src/a.ts', anchor: 'src/gone.ts', selected: ['src', 'src/a.ts', 'src/gone.ts'],
-      });
-
-      const restore = tabs.find((t) => t.label === label)!.files!.restore!;
-      expect(restore.cursor).toBe('src/a.ts');
-      expect(restore.anchor).toBeNull();
-      expect(restore.selected).toEqual(['src', 'src/a.ts']);
-    });
-
-    it('bumps the restore revision exactly once per call', () => {
-      const manager = run();
-      manager.open('files', 'janus');
-      const label = navLabel();
-
-      manager.restoreView(label, {});
-      const first = tabs.find((t) => t.label === label)!.files!.restore!.revision;
-      manager.restoreView(label, {});
-      const second = tabs.find((t) => t.label === label)!.files!.restore!.revision;
-
-      expect(second).toBe(first + 1);
-    });
-
     it('returns the opened label, the waiting label, and an existing tab\'s label', () => {
       const manager = run();
 
