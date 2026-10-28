@@ -4,17 +4,6 @@
 
 ## development
 
-
-* Pull the capability-object bookkeeping out of the plugin body component into a hook beside it, so the plugin host's busiest component goes back to rendering and the stability rules every mounted plugin depends on can be tested on their own.
-
-Existing Debt: The plugin body component spends most of its body keeping the capability object stable, with refs for split, close, and the dirty handle, a ref that holds the claimed chords steady while their joined text is unchanged, and the memo that builds the capabilities, and its file defines three other components besides, so a component owns a rule worth testing and shares its file, against §5 (components render, they do not decide, one component per file), while the file sits at 195 counted lines against the 200-line limit. Severity: 4/10
-
-Existing Risk: 4/10 - No test pins that the capability object survives a state broadcast unchanged, so a dropped dependency or a ref turned back into a plain prop would rebuild it on every broadcast and re-run every mounted plugin's effects, and the next capability added to the contract will force someone to split this file under pressure in exactly that code.
-
-Proposal Risk: 2/10 - The hook becomes reachable through `renderHook`, but the move is behavior-preserving by eye only until a stability test is written against it, so a slip in a dependency array during the extraction would still land unnoticed.
-
-Proposal: `web/src/plugins/PluginBody.tsx` holds `PluginErrorBoundary`, `FailureEffect`, `PluginContent`, `contentForPlugin`, and `PluginBody`. Inside `PluginBody`, extract the block from `onSplitRef` through `fail` (the split, close, and dirty-handle refs, the `chordsRef` stabilization, `splitAction`, the `createPluginClientCapabilities` memo, `capabilitiesRef`, and `fail`) into a new `web/src/plugins/usePluginCapabilities.ts` hook, and move the `failed` state with it, since only `fail` sets it. The hook takes the host, plugin id, label, client, active flag, dock, claimed chords, dot color, recording, transcript, remote capabilities, `onSplit`, `onClose`, and `onDirtyHandle`, and returns `{ capabilities, failed, fail }`. `PluginBody` keeps its `usePluginHost` and `usePluginRemote` calls and the render. The new hook must not import any plugin's shared contract at runtime, because everything directly under `web/src/plugins/` is reachable from the entry bundle (see `ai/guidelines/plugins-tabs.md`). `PluginBody`'s export and props don't change, so its importers `web/src/plugins/PluginTabLayer.tsx` and `web/src/plugins/DockedPluginBody.tsx` are untouched. `web/src/plugins/PluginBody.test.tsx`, `web/src/plugins/PluginTabLayer.test.tsx`, and `web/src/plugins/DockedPluginBody.test.tsx` pin failure isolation, the activation timeout, and command-bar scoping; none needs an edit, and all must keep passing. A stability test for the new hook is worth writing as its own follow-up. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/plugins/PluginBody.tsx`.
-
 ## deferred
 
 * Remove workspace clones asynchronously through one reference-counted release path, so closing a workspaced tab stops freezing every other tab for the length of a recursive delete. — deferred: complexity 8/10, changes async filesystem teardown, reference-count release semantics, and shutdown ordering while guarding workspace-path reuse races.
