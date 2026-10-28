@@ -17,12 +17,13 @@ let recorder: HarnessRecorder | undefined;
 
 const emit = (event: Parameters<typeof messageBus.emit<'pty'>>[1]) => messageBus.emit('pty', event);
 
-async function waitForCastLines(minLines: number): Promise<string[]> {
+async function waitForCastLines(minLines: number, label?: string): Promise<string[]> {
   for (let i = 0; i < 200; i++) {
     if (existsSync(recordingsDir)) {
       const files = readdirSync(recordingsDir).filter((f) => f.endsWith('.cast'));
-      if (files.length > 0) {
-        const content = readFileSync(path.join(recordingsDir, files[0]), 'utf8').trim();
+      const file = label === undefined ? files[0] : files.find((f) => f.startsWith(`${label}-`));
+      if (file !== undefined) {
+        const content = readFileSync(path.join(recordingsDir, file), 'utf8').trim();
         if (content && content.split('\n').length >= minLines) return content.split('\n');
       }
     }
@@ -89,11 +90,8 @@ describe('HarnessRecorder', () => {
     recorder = new HarnessRecorder('pty-2', 'codex', 'codex', 80, 24, vi.fn());
     emit({ type: 'data', id: 'pty-2', data: 'b' });
     recorder.dispose();
-    await waitFor(() => readdirSync(recordingsDir).length === 2);
-    const second = readFileSync(
-      path.join(recordingsDir, readdirSync(recordingsDir).find((f) => f.includes('codex'))!), 'utf8',
-    );
-    expect(JSON.parse(second.trim().split('\n', 1)[0]).term.theme).toBeUndefined();
+    const second = await waitForCastLines(2, 'codex');
+    expect(JSON.parse(second[0]).term.theme).toBeUndefined();
   });
 
   it('writes a reported palette into the header theme as a colon-joined list', async () => {
@@ -158,11 +156,8 @@ describe('HarnessRecorder', () => {
     recorder = new HarnessRecorder('pty-2', 'codex', 'codex', 80, 24, vi.fn());
     emit({ type: 'data', id: 'pty-2', data: 'still here' });
     recorder.dispose();
-    await waitFor(() => readdirSync(recordingsDir).length === 2);
-    const second = readFileSync(
-      path.join(recordingsDir, readdirSync(recordingsDir).find((f) => f.includes('codex'))!), 'utf8',
-    );
-    expect(second.trim().split('\n').slice(1).map((l) => JSON.parse(l)[1])).toEqual(['o']);
+    const second = await waitForCastLines(2, 'codex');
+    expect(second.slice(1).map((line) => JSON.parse(line)[1])).toEqual(['o']);
   });
 
   it('writes intervals that sum to the real elapsed time rather than drifting', () => {
