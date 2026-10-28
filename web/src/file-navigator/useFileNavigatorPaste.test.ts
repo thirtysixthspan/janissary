@@ -41,6 +41,38 @@ describe('useFileNavigatorPaste', () => {
     expect(request).not.toHaveBeenCalled();
   });
 
+  it('reports whether the subscribed clipboard is armed', () => {
+    const client = { request: vi.fn() } as unknown as JanusClient;
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 'files', '/root'));
+
+    expect(result.current.armed).toBe(false);
+    act(() => { setClipboard('copy', ['/other/a.txt']); });
+    expect(result.current.armed).toBe(true);
+    act(() => { clearClipboard(); });
+    expect(result.current.armed).toBe(false);
+  });
+
+  it('cuts the supplied paths with the navigator host', () => {
+    const client = { request: vi.fn() } as unknown as JanusClient;
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 'files', '/root', 'devbox'));
+
+    act(() => { result.current.cut(['/root/notes.txt']); });
+
+    expect(getClipboardSnapshot()).toEqual({ mode: 'cut', paths: ['/root/notes.txt'], host: 'devbox' });
+    expect(result.current.armed).toBe(true);
+  });
+
+  it('disarms the clipboard', () => {
+    const client = { request: vi.fn() } as unknown as JanusClient;
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 'files', '/root'));
+    act(() => { setClipboard('cut', ['/root/notes.txt']); });
+
+    act(() => { result.current.disarm(); });
+
+    expect(getClipboardSnapshot()).toBeNull();
+    expect(result.current.armed).toBe(false);
+  });
+
   it('a conflictPaths reply opens the conflict state instead of reporting success', async () => {
     setClipboard('copy', ['/other/a.txt']);
     const request = vi.fn().mockResolvedValue({ ok: true, value: { conflictPaths: ['/other/a.txt'] } });

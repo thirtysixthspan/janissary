@@ -368,6 +368,7 @@ Entries that do not apply are left out rather than shown greyed, so the menu's h
 context: **Paste** is absent when nothing has been copied or cut, **Edit** is absent for directories,
 **Commit to origin** is absent wherever the header shows no branch text, and **Open**, **Edit**,
 **Open with**, **Duplicate**, **Rename**, and **Commit to origin** are absent on the `..` row.
+If the app-wide clipboard is armed or cleared while the menu is open, **Paste** appears or disappears immediately.
 
 One further entry can appear, and it is the only one that acts on the whole selection rather than on
 the clicked row: a **tab plugin's contributed selection entry**, drawn in a group of its own between

@@ -8,7 +8,6 @@ import { useFileNavigatorOpener } from './useFileNavigatorOpener';
 import { useFileNavigatorDelete } from './useFileNavigatorDelete';
 import { useFileNavigatorKeyDown } from './useFileNavigatorKeyDown';
 import { useFileNavigatorPaste } from './useFileNavigatorPaste';
-import { setClipboard } from './file/navigator-clipboard';
 import { copySelectionToClipboards } from './file/navigator-copy';
 import { useFileNavigatorSelection } from './useFileNavigatorSelection';
 import { FileNavigatorOverlays } from './FileNavigatorOverlays';
@@ -112,6 +111,7 @@ export function FileNavigatorTab({
     opener,
     rename,
     deletion,
+    paste,
     containerRef,
     chordHandlers: {
       sendUndo: () => void drag.sendUndo(),
@@ -121,7 +121,7 @@ export function FileNavigatorTab({
       copySelection: () => copySelectionToClipboards(
         files.absoluteRoot, selection.operationPaths, files.remote?.host,
       ),
-      cutSelection: () => setClipboard('cut', clipboardPaths(), files.remote?.host),
+      cutSelection: () => paste.cut(clipboardPaths()),
       paste: () => paste.paste(files.rows, selection.cursor),
       selectSiblings: selection.selectSiblings,
     },

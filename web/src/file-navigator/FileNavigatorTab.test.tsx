@@ -502,7 +502,7 @@ describe('FileNavigatorTab', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
     const tree = container.querySelector('[role="tree"]')!;
-    setClipboard('copy', ['/elsewhere/notes.md']);
+    act(() => { setClipboard('copy', ['/elsewhere/notes.md']); });
     const handled = fireEvent.keyDown(tree, { key: 'Escape' });
     expect(handled).toBe(false); // prevent-defaulted by the tree
     expect(getClipboardSnapshot()).toBeNull();
@@ -1732,15 +1732,15 @@ describe('FileNavigatorTab', () => {
       expect(screen.getByRole('menu')).toBeInTheDocument();
     });
 
-    it('omits Paste until something is on the clipboard', () => {
+    it('updates Paste in an open menu when the clipboard changes', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
       fireEvent.contextMenu(screen.getByText('README.md'));
       expect(screen.queryByText('Paste')).not.toBeInTheDocument();
-      fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
       act(() => { setClipboard('copy', ['/home/user/project/README.md']); });
-      fireEvent.contextMenu(screen.getByText('src'));
       expect(screen.getByText('Paste')).toBeInTheDocument();
+      act(() => { clearClipboard(); });
+      expect(screen.queryByText('Paste')).not.toBeInTheDocument();
     });
 
     it('omits Open, Edit, Open with, and Rename on the ".." row', () => {
