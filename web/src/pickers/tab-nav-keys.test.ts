@@ -1,8 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { handleTabNavKey, handleQueueKey } from './keyboard-handlers';
-import { handlePickerKey } from './shared/picker-keyboard';
+import { handleTabNavKey } from './tab-nav-keys';
 import type { TabView } from '@shared/protocol';
-import type { TabNavEntry } from './pickers/tab-nav-match';
+import type { TabNavEntry } from './tab-nav-match';
 
 function fakeEvent(key: string, opts: { ctrlKey?: boolean; metaKey?: boolean } = {}): KeyboardEvent {
   return new KeyboardEvent('keydown', { key, ctrlKey: opts.ctrlKey ?? false, metaKey: opts.metaKey ?? false });
@@ -20,48 +19,6 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
 function makeNavTabs(): TabNavEntry[] {
   return [{ tab: makeTab({ label: 'one' }), index: 0 }, { tab: makeTab({ label: 'two', number: 2 }), index: 1 }];
 }
-
-
-describe('handlePickerKey', () => {
-  it('returns false for an unhandled key', () => {
-    const e = fakeEvent('a');
-    expect(handlePickerKey(e, [], 0, vi.fn(), vi.fn(), vi.fn())).toBe(false);
-  });
-
-  it('moves up on ArrowUp, clamped at 0', () => {
-    const e = fakeEvent('ArrowUp');
-    const setIdx = vi.fn();
-    handlePickerKey(e, ['a', 'b'], 1, setIdx, vi.fn(), vi.fn());
-    const fn = setIdx.mock.calls[0][0] as (n: number) => number;
-    expect(fn(1)).toBe(0);
-    expect(fn(0)).toBe(0);
-  });
-
-  it('moves down on ArrowDown, clamped at length-1', () => {
-    const e = fakeEvent('ArrowDown');
-    const setIdx = vi.fn();
-    handlePickerKey(e, ['a', 'b'], 0, setIdx, vi.fn(), vi.fn());
-    const fn = setIdx.mock.calls[0][0] as (n: number) => number;
-    expect(fn(0)).toBe(1);
-    expect(fn(1)).toBe(1);
-  });
-
-  it('runs the command and closes picker on Enter', () => {
-    const e = fakeEvent('Enter');
-    const runCommand = vi.fn();
-    const setPickerOpen = vi.fn();
-    handlePickerKey(e, ['cmd1', 'cmd2'], 1, vi.fn(), runCommand, setPickerOpen);
-    expect(runCommand).toHaveBeenCalledWith('cmd2');
-    expect(setPickerOpen).toHaveBeenCalledWith(false);
-  });
-
-  it('closes the picker on Escape', () => {
-    const e = fakeEvent('Escape');
-    const setPickerOpen = vi.fn();
-    handlePickerKey(e, [], 0, vi.fn(), vi.fn(), setPickerOpen);
-    expect(setPickerOpen).toHaveBeenCalledWith(false);
-  });
-});
 
 describe('handleTabNavKey', () => {
   it('moves the selection with ArrowUp/ArrowDown, clamped to the list', () => {
@@ -128,42 +85,5 @@ describe('handleTabNavKey', () => {
     const setNavQuery = vi.fn();
     handleTabNavKey(fakeEvent('a', { metaKey: true }), makeNavTabs(), 0, vi.fn(), vi.fn(), vi.fn(), '', setNavQuery);
     expect(setNavQuery).not.toHaveBeenCalled();
-  });
-});
-
-describe('handleQueueKey', () => {
-  it('moves up on ArrowUp, clamped at 0', () => {
-    const e = fakeEvent('ArrowUp');
-    const setIdx = vi.fn();
-    expect(handleQueueKey(e, ['a', 'b'], 1, setIdx, vi.fn())).toBe(true);
-    const fn = setIdx.mock.calls[0][0] as (n: number) => number;
-    expect(fn(1)).toBe(0);
-    expect(fn(0)).toBe(0);
-  });
-
-  it('moves down on ArrowDown, clamped at length-1', () => {
-    const e = fakeEvent('ArrowDown');
-    const setIdx = vi.fn();
-    expect(handleQueueKey(e, ['a', 'b'], 0, setIdx, vi.fn())).toBe(true);
-    const fn = setIdx.mock.calls[0][0] as (n: number) => number;
-    expect(fn(0)).toBe(1);
-    expect(fn(1)).toBe(1);
-  });
-
-  it('Enter is a no-op: does not close, select, or run anything', () => {
-    const setQueueOpen = vi.fn();
-    expect(handleQueueKey(fakeEvent('Enter'), ['a'], 0, vi.fn(), setQueueOpen)).toBe(true);
-    expect(setQueueOpen).not.toHaveBeenCalled();
-  });
-
-  it('closes on Escape', () => {
-    const setQueueOpen = vi.fn();
-    expect(handleQueueKey(fakeEvent('Escape'), ['a'], 0, vi.fn(), setQueueOpen)).toBe(true);
-    expect(setQueueOpen).toHaveBeenCalledWith(false);
-  });
-
-  it('returns false for printable keys and Backspace, so they fall through to the textarea', () => {
-    expect(handleQueueKey(fakeEvent('x'), ['a'], 0, vi.fn(), vi.fn())).toBe(false);
-    expect(handleQueueKey(fakeEvent('Backspace'), ['a'], 0, vi.fn(), vi.fn())).toBe(false);
   });
 });

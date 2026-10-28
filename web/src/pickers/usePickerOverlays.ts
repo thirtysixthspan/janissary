@@ -6,7 +6,7 @@ import type { JanusClient } from '../shared/ws/ws';
 import type { CommandInputDropHandle } from '../shared/drop-handles';
 import type { PluginCommandLineInsertions, PluginCommandLineReplacements } from '../shared/command-bar/AppCommandBar';
 import { hostsCommandBar } from '../shared/command-bar/hosts-command-bar';
-import { getRecentHistory } from '../history';
+import { getRecentHistory } from './recent-history';
 import { buildOverlayOpenState } from './overlay-registry';
 import type { PickerOverlaysState } from './picker/overlays-state';
 import { buildPickerOverlayView, type PickerOverlayView } from './picker/overlay-view';

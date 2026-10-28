@@ -3,6 +3,7 @@ const clientFeatureDirectories = [
   'editor',
   'file-navigator',
   'harness',
+  'notifications',
   'pickers',
   'plugins',
   'QuitDialog',
@@ -32,6 +33,13 @@ const clientFeatureZones = [
   },
 ];
 
+const clientFeatureRootZones = clientFeatureDirectories.map((target) => ({
+  target: `./web/src/${target}`,
+  from: './web/src',
+  except: ['shared', 'overlay-plugins', ...clientFeatureDirectories],
+  message: 'Features must not import app-shell root modules.',
+}));
+
 // The overlay-plugin host sits outside the feature list because it has to reach the pickers, the
 // command bar, and the context menu to build the one capability a plugin gets. Features reach it
 // through the shared seam rather than importing it directly.
@@ -43,4 +51,4 @@ for (const target of clientFeatureDirectories) {
   });
 }
 
-export { clientFeatureZones };
+export { clientFeatureZones, clientFeatureRootZones };

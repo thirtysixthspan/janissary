@@ -1,8 +1,7 @@
 import type { TabView } from '@shared/protocol';
 import { isCenterActionTab } from '@shared/tab/placement';
-import type { TabEntry } from '../tab-entries';
 
-export type TabNavEntry = TabEntry;
+export type TabNavEntry = { tab: TabView; index: number };
 
 // The alias (see `rename`) when set, otherwise the internal label — mirrors TabItem's tab-strip
 // display so a renamed tab shows and matches the same way in both places.

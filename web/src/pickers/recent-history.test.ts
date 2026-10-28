@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getRecentHistory } from './history';
+import { getRecentHistory } from './recent-history';
 
 describe('getRecentHistory', () => {
   it('returns the most recent unique entries, oldest-first', () => {
