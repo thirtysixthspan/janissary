@@ -13,6 +13,7 @@ import {
 } from '../../shared/command-bar/app-command-bar-scope';
 import { ShellTab } from './ShellTab';
 import { useSectionNav } from '../../useSectionNav';
+import { terminalSelectionText } from '../../shared/terminal/terminal/selection';
 
 // The emulator and its fit addon are stubbed so the tab's own logic — routing, focus, the chord claim —
 // is what is under test rather than xterm.js's renderer, which jsdom cannot run. The stub records what
@@ -294,6 +295,20 @@ function renderTab(options: Parameters<typeof makeCapabilities>[0] & AppBarOptio
 
 function bar(): HTMLTextAreaElement {
   return screen.getByLabelText('Shell command') as HTMLTextAreaElement;
+}
+
+function dragOverReply(text: string): HTMLElement {
+  const reply = document.createElement('div');
+  reply.className = 'shell-output-block';
+  reply.textContent = text;
+  document.querySelector('.shell-body')!.append(reply);
+  fireEvent.mouseDown(reply, { button: 0 });
+  const range = document.createRange();
+  range.selectNodeContents(reply);
+  globalThis.getSelection()!.removeAllRanges();
+  globalThis.getSelection()!.addRange(range);
+  fireEvent.mouseUp(reply, { button: 0 });
+  return reply;
 }
 
 describe('ShellTab', () => {
@@ -1318,35 +1333,28 @@ describe('ShellTab', () => {
     expect(terminals.at(-1)?.selectionClearCalls).toBe(1);
   });
 
-  it('copies selected rendered reply text through the shared clipboard', () => {
-    const { capabilities } = renderTab();
-    const body = document.querySelector('.shell-body')!;
-    const reply = document.createElement('div');
-    const text = document.createTextNode('selected reply');
-    reply.className = 'shell-output-block';
-    reply.append(text);
-    body.append(reply);
-    vi.spyOn(globalThis, 'getSelection').mockReturnValue({
-      isCollapsed: false, rangeCount: 1, anchorNode: text, toString: () => 'selected reply',
-    } as unknown as Selection);
+  it('holds a dragged reply selection, returns the keyboard to the bar, and copies it from there', () => {
+    const { capabilities, terminal } = renderTab();
+    const reply = dragOverReply('selected reply');
 
-    fireEvent.keyDown(body, { key: 'c', ctrlKey: true, shiftKey: true });
+    expect(document.activeElement).toBe(bar());
+    expect(terminal.selectionClearCalls).toBe(1);
+    expect(terminalSelectionText(reply)).toBe('selected reply');
+    fireEvent.keyDown(bar(), { key: 'C', ctrlKey: true, shiftKey: true });
 
     expect(capabilities.copyText).toHaveBeenCalledWith('selected reply');
   });
 
-  it('leaves a selection outside a rendered reply to the terminal', () => {
-    const { capabilities } = renderTab();
-    const body = document.querySelector('.shell-body')!;
-    const text = document.createTextNode('ordinary terminal selection');
-    body.append(text);
-    vi.spyOn(globalThis, 'getSelection').mockReturnValue({
-      isCollapsed: false, rangeCount: 1, anchorNode: text, toString: () => 'ordinary terminal selection',
-    } as unknown as Selection);
+  it('prefers a held reply selection to the terminal\'s and drops it on the next press in the terminal', () => {
+    const { capabilities, terminal } = renderTab();
+    dragOverReply('selected reply');
+    terminal.selection = 'SELECTME-12345';
 
-    fireEvent.keyDown(body, { key: 'c', ctrlKey: true, shiftKey: true });
+    fireEvent.keyDown(bar(), { key: 'C', ctrlKey: true, shiftKey: true });
+    fireEvent.mouseDown(document.querySelector('.shell-body')!, { button: 0 });
+    fireEvent.keyDown(bar(), { key: 'C', ctrlKey: true, shiftKey: true });
 
-    expect(capabilities.copyText).not.toHaveBeenCalled();
+    expect(vi.mocked(capabilities.copyText).mock.calls).toEqual([['selected reply'], ['SELECTME-12345']]);
   });
 
   it('copies a dragged terminal selection on Ctrl+Shift+C after the click returns the keyboard to the bar', () => {

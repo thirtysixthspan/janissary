@@ -8,6 +8,7 @@ type Options = {
   payload: ShellPayload;
   capabilities: TabPluginClientCapabilities;
   containerRef: React.RefObject<HTMLDivElement | null>;
+  focusCommandBar?: () => void;
   onCommand: (command: string) => void;
   onCommandRunning: (running: boolean) => void;
 };
@@ -16,12 +17,13 @@ type Options = {
 // directory zsh reports. `useShellTerminal` reads every callback through a
 // ref, so none of these needs a stable identity.
 export function useShellTabTerminal({
-  payload, capabilities, containerRef, onCommand, onCommandRunning,
+  payload, capabilities, containerRef, focusCommandBar, onCommand, onCommandRunning,
 }: Options) {
   return useShellTerminal({
     ptyId: payload.ptyId,
     ...(payload.provisioning && { connectPtyId: payload.connectPtyId }),
     containerRef,
+    focusCommandBar,
     attachTerminal: capabilities.attachTerminal,
     copyText: capabilities.copyText,
     reportColors: capabilities.reportTerminalColors,

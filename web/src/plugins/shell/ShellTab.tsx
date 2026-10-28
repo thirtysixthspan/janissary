@@ -18,7 +18,6 @@ import { appendShellHistory } from './shell-history';
 import { NEW_SHELL_CHORD, NO_CHORDS, SHELL_DOT_COLOR } from './shell-tab-constants';
 import { openSiblingShell } from './open-sibling';
 import { reportShellIntentFailure } from './report-shell-intent-failure';
-import { copyShellMarkdownSelection } from './shell-markdown-selection';
 import './shell.css';
 
 type Properties = {
@@ -58,6 +57,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
     payload,
     capabilities,
     containerRef: terminalReference,
+    focusCommandBar: () => { inputReference.current?.focus(); },
     onCommand: terminalHistory.onCommand,
     onCommandRunning: (running) => {
       setCommandRunning(running);
@@ -181,7 +181,6 @@ export function ShellTab({ payload, capabilities }: Properties) {
         onClick={() => { inputReference.current?.focus(); }}
         onDoubleClick={() => { clearSelection(); focusTerminal(); }}
         onKeyDownCapture={(event) => {
-          if (copyShellMarkdownSelection(event.nativeEvent, event.currentTarget, capabilities.copyText)) return;
           if (event.key !== 'Tab' || !event.shiftKey) return;
           event.preventDefault();
           event.stopPropagation();
