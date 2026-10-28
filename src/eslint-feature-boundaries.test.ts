@@ -109,6 +109,32 @@ describe('client feature boundaries', () => {
     expect(messages[0]?.message).toContain('Shared modules must not import the app-shell root');
   });
 
+  it('rejects a feature importing an app-shell root module', async () => {
+    const messages = await boundaryMessages(
+      "import { AppShell } from '../AppShell'; void AppShell;",
+      'web/src/pickers/PickerOverlays.tsx',
+    );
+    expect(messages).toHaveLength(1);
+    expect(messages[0]?.message).toContain('Features must not import app-shell root modules');
+  });
+
+  it('includes notifications in the feature-to-root boundary', async () => {
+    const messages = await boundaryMessages(
+      "import { AppShell } from '../AppShell'; void AppShell;",
+      'web/src/notifications/NotificationsTab.tsx',
+    );
+    expect(messages).toHaveLength(1);
+    expect(messages[0]?.message).toContain('Features must not import app-shell root modules');
+  });
+
+  it('allows feature integration tests to import the app-shell Sidebar', async () => {
+    const messages = await boundaryMessages(
+      "import { Sidebar } from '../Sidebar'; void Sidebar;",
+      'web/src/file-navigator/FileNavigatorTab.test.tsx',
+    );
+    expect(messages).toEqual([]);
+  });
+
   it('allows a shared module to import another shared module', async () => {
     const messages = await boundaryMessages(
       "import { openContributedOverlay } from './contributed-overlays'; void openContributedOverlay;",

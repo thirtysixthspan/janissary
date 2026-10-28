@@ -135,7 +135,7 @@ export { usePluginChordClaims,  } from './PluginChords';
 // does not move.
 export { nextListSelection } from '../shared/list-selection';
 export { HistoryPicker } from '../shared/command-bar/HistoryPicker';
-export { handlePickerKey } from '../keyboard-handlers';
+export { handlePickerKey } from '../shared/picker-keyboard';
 
 // The "this is a JSON object rather than a scalar or an array" guard, published so a client plugin
 // decodes a payload with the same rule the server side does rather than its own copy of it. It

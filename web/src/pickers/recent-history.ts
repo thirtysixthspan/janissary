@@ -6,7 +6,7 @@ export function getRecentHistory(history: string[], count: number): string[] {
   const out: string[] = [];
   for (let index = history.length - 1; index >= 0 && out.length < count; index--) {
     if (seen.has(history[index])) {
-    	continue;
+	    continue;
     }
 
     seen.add(history[index]); out.push(history[index]);

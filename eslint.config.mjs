@@ -9,7 +9,7 @@ import unicorn from 'eslint-plugin-unicorn';
 import sonarjs from 'eslint-plugin-sonarjs';
 import security from 'eslint-plugin-security';
 import { pluginBoundaries } from './eslint.plugin-boundaries.mjs';
-import { clientFeatureZones } from './eslint.client-feature-zones.mjs';
+import { clientFeatureZones, clientFeatureRootZones } from './eslint.client-feature-zones.mjs';
 
 export default ts.config(
   js.configs.recommended,
@@ -164,6 +164,15 @@ export default ts.config(
     rules: {
       'import-x/extensions': ['error', 'never', { css: 'always' }],
       'import-x/no-restricted-paths': ['error', { zones: clientFeatureZones }],
+    },
+  },
+  {
+    files: ['web/src/**/*.ts', 'web/src/**/*.tsx'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      'import-x/no-restricted-paths': ['error', {
+        zones: [...clientFeatureZones, ...clientFeatureRootZones],
+      }],
     },
   },
   ...pluginBoundaries,
