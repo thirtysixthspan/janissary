@@ -62,7 +62,7 @@ export function useLayoutState(client: JanusClient): LayoutState {
   }, [client]);
 
   // Report a manual resize back to the server (the reverse of the `layout` event above), so
-  // `profile save` can read the live sizes. Not fired for server-driven updates (the setters
+  // bare `layout` can read the live sizes. Not fired for server-driven updates (the setters
   // above, called from onLayout, bypass these wrappers).
   const reportSidebarLeftWidth = (width: number) => {
     setSidebarLeftWidth(width);

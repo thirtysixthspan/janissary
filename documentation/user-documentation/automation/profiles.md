@@ -2,7 +2,7 @@
 
 <img class="agent-float" src="/agents/demir-south.png" alt="" />
 
-A profile is a saved, named set of harnesses and other tabs you can relaunch as one unit — a working setup for a recurring job, recreated with a single command:
+A profile is a named set of harnesses and other tabs, written in a file, that you can relaunch as one unit — a working setup for a recurring job, recreated with a single command:
 
 ```
 profile launch writing-code
@@ -10,7 +10,7 @@ profile list
 profile validate writing-code
 ```
 
-`profile launch <name>` opens a tab for every entry in the profile. Each one starts fresh, from the entry's saved name, working directory, and tab presentation: a harness launches with whatever model, directory, workspace flag, and startup commands the profile specifies. Each entry joins the [group](/user-documentation/getting-started/groups) its own `group` key names; any entry that names none instead lands in one shared new group, so a profile with no authored groups reads as its own colored band in the strip. `profile list` names the profiles you have; a name that doesn't exist gets `No profile named "<name>".`
+`profile launch <name>` opens a tab for every entry in the profile. Each one starts fresh, from the entry's name, working directory, and tab presentation: a harness launches with whatever model, directory, workspace flag, and startup commands the profile specifies. Each entry joins the [group](/user-documentation/getting-started/groups) its own `group` key names; any entry that names none instead lands in one shared new group, so a profile with no authored groups reads as its own colored band in the strip. `profile list` names the profiles you have; a name that doesn't exist gets `No profile named "<name>".`
 
 ![The tab strip after a profile launch: the profile's tabs grouped under one new band color, distinct from the root group.](/screenshots/profile-group.png)
 
@@ -20,7 +20,7 @@ Bare `profile launch`, with no name, opens a picker with a **Project** section f
 
 Opened from a shell's command bar, the selection replaces that shell's draft, including when the shell is docked. If the shell closes while the picker is open, selection does not put the command into another tab. Opened from a harness, selection sends the command directly to that harness.
 
-The list is read from disk about once a second, so a profile you have just saved with `profile save` can take a second to appear. If the list changes while the picker is already open, whether because another tab added a profile or a `git checkout` moved one, the highlight is put back onto a real profile rather than left on a section label or past the end of a shorter list. It keeps its position rather than the profile it was on, so it can end up somewhere else in the list. A key you press before that correction has been applied only puts the highlight back rather than launching anything, so `Enter` never launches a profile that was not showing as selected. `Escape` closes the picker at any point.
+The list is read from disk about once a second, so a profile file you have just added can take a second to appear. If the list changes while the picker is already open, whether because another tab added a profile or a `git checkout` moved one, the highlight is put back onto a real profile rather than left on a section label or past the end of a shorter list. It keeps its position rather than the profile it was on, so it can end up somewhere else in the list. A key you press before that correction has been applied only puts the highlight back rather than launching anything, so `Enter` never launches a profile that was not showing as selected. `Escape` closes the picker at any point.
 
 The bundled ones are `debugging`, `features`, `multitasking`, `planning`, and `product-review`. Launch any of them by name without setting anything up, and read one as a worked example of the format below. `profile list` shows them alongside your own.
 
@@ -28,7 +28,7 @@ The bundled ones are `debugging`, `features`, `multitasking`, `planning`, and `p
 
 <img class="agent-float left" src="/agents/dogan-south-east.png" alt="" />
 
-Your profiles live in the `profiles/` directory in your project: plain files meant to be committed and shared. Janissary also includes built-in profiles. If both sources use the same profile name, your project copy wins. Saving always writes to your project, so you can customize a built-in profile by saving a same-named replacement. You don't need to create the directory yourself: the first `profile save` makes it, and a project that never saves a profile never gets one. Each profile is a single JSON file (dasherized, like `writing-code.json`) with one `tabs` array. Every element names its kind with a `type`, and a harness entry also carries its own `name`, which becomes the tab's label:
+Your profiles live in the `profiles/` directory in your project: plain files meant to be committed and shared. Janissary also includes built-in profiles. If both sources use the same profile name, your project copy wins, so you can customize a built-in profile by adding a same-named file to your project's `profiles/` directory. Janissary doesn't create that directory for you, so add it yourself the first time. Each profile is a single JSON file (dasherized, like `writing-code.json`) with one `tabs` array. Every element names its kind with a `type`, and a harness entry also carries its own `name`, which becomes the tab's label:
 
 ```json
 {
@@ -55,15 +55,15 @@ The ten types are `harness`, `editor`, `files`, `notifications`, `schedules`, `p
 - **`workspace`** — launch in a fresh [workspace clone](/user-documentation/advanced-agents/workspaced-agent). It defaults to `true`; set it to `false` to opt out.
 - **`autoApprove`** — auto-approve permission prompts. It defaults to `true` for claude, opencode, and codex.
 - **`offline`**: deny network access inside the workspace sandbox. It is only meaningful when `workspace` is enabled.
-- **`browser`**: launch the harness with a browser attached. It defaults to `true`, the same as an interactive `harness` command; set it to `false` to opt out, the entry form of `--no-browser`. A `profile save`d entry records it, so a saved session reopens with or without its browser exactly as it ran.
+- **`browser`**: launch the harness with a browser attached. It defaults to `true`, the same as an interactive `harness` command; set it to `false` to opt out, the entry form of `--no-browser`.
 - **`remote`**: launch on another machine, using the address you would put after `on` in a harness command, such as `"dev@example.com:project"`. It implies `workspace`, omits `cwd`, and asks for authentication once for each remote tab the profile opens.
-- **`cwd`** — starting directory. `$root` resolves to the project's launch directory and `~` to home, so you can write a portable path instead of an absolute one — a `profile save`d entry captures its `cwd` this way automatically when it's under the project root.
+- **`cwd`** — starting directory. `$root` resolves to the project's launch directory and `~` to home, so you can write a portable path instead of an absolute one.
 - **`run`** — commands typed into the harness once, shortly after launch.
 - **`schedule`** — tab timers in the [`schedule` grammar](/user-documentation/automation/scheduling), minus the leading `schedule` keyword and any `in <tab>` clause (each line belongs to this tab). A line that doesn't parse is reported at launch and skipped. Profile schedule lines cannot create or manage project system schedules; a valid system line is reported as `Schedule "<raw>" for "<harness>" cannot target system schedules.` and skipped.
 
 Every entry that takes a place in the tab strip carries its presentation as plain keys alongside `type`: `color` (the dot color), `number` (tab order), `group`, `groupColor`, `pane`, and `focus`. Set `pane` to `left` or `right` to reopen that entry in a two-pane center layout; omitting it means left. Any main-area entry with `focus: true` can claim keyboard focus after launch; the lowest-numbered focused entry wins, while the other pane keeps one of its own tabs visible. Without one, the first newly opened profile tab stays active.
 
-Every tab entry can use `group` as its numeric group ID and `groupName` as the group's name. `profile save` records both so a launch restores named groups too. Older entries without a name use `launch` for group `1` and `group-<id>` for another explicit ID.
+Every tab entry can use `group` as its numeric group ID and `groupName` as the group's name. A launch restores the name along with the ID. Older entries without a name use `launch` for group `1` and `group-<id>` for another explicit ID.
 
 Two profile-level keys sit outside `tabs`, because neither is a tab: `monitors` and `layout`. A monitor entry names its persona and targets:
 
@@ -78,7 +78,7 @@ Two profile-level keys sit outside `tabs`, because neither is a tab: `monitors` 
 
 `persona` is required. `targets` is a list of tab labels or `group:<number>` targets from the [`monitor` command](/user-documentation/automation/monitoring); an empty list creates an inline monitor. `name` is optional and defaults to `persona`. Monitors start after every profile tab is open, owned by the tab that issued `profile launch`, so closing the profile tabs does not stop them. Relaunching first stops an existing monitor with the same owner and name, then starts its replacement. The launch report includes the result for each monitor.
 
-The `layout` key groups the sidebar widths under a nested `sidebar` object, e.g. `"layout": { "sidebar": { "left": 300, "right": 280 }, "tabAreaPct": 75, "window": { "width": 1280, "height": 800 } }`. It applies on every launch, including a relaunch, and always wins over anything you resized by hand: any dimension the key doesn't mention resets to the app's own default rather than staying at whatever it currently is. When Janissary starts with `--no-open`, the window size is ignored, while the sidebar widths and tab-area split still apply to a connected browser. `profile save` captures the current sidebar widths and tab-area split in this key.
+The `layout` key groups the sidebar widths under a nested `sidebar` object, e.g. `"layout": { "sidebar": { "left": 300, "right": 280 }, "tabAreaPct": 75, "window": { "width": 1280, "height": 800 } }`. It applies on every launch, including a relaunch, and always wins over anything you resized by hand: any dimension the key doesn't mention resets to the app's own default rather than staying at whatever it currently is. When Janissary starts with `--no-open`, the window size is ignored, while the sidebar widths and tab-area split still apply to a connected browser.
 
 Use an `editor` entry to open a file directly in the in-app editor when the profile launches:
 
@@ -88,7 +88,7 @@ Use an `editor` entry to open a file directly in the in-app editor when the prof
 
 Each has a required `path`, optional resolving tab `in`, and optional cursor `line`. `$root` resolves from the launch directory and `~` from home; another relative path resolves from `in` or the first newly opened profile tab. A missing file opens an empty buffer and is created only on save. Relaunching reuses an already-open editor tab for the same file and moves its cursor to the requested line.
 
-For a file covered by GitHub syncing, author the original project-relative source path, not its temporary path inside the sync workspace. `profile save` records that source path automatically, so launching the profile provisions or reuses the shared workspace and opens the real content. If the editor refuses a path, for example because the file exceeds its size limit, that entry is skipped without moving or focusing any other tab.
+For a file covered by GitHub syncing, author the original project-relative source path, not its temporary path inside the sync workspace. Launching the profile then provisions or reuses the shared workspace and opens the real content. If the editor refuses a path, for example because the file exceeds its size limit, that entry is skipped without moving or focusing any other tab.
 
 The `plugin`, `page`, and `ssh` types reopen the rest of a working session — a diagram or video, a spec you keep reading, a docs site, a remote box:
 
@@ -98,11 +98,11 @@ The `plugin`, `page`, and `ssh` types reopen the rest of a working session — a
 { "type": "ssh", "destination": "devbox", "options": ["-p", "2222"], "number": 6 }
 ```
 
-A `plugin` entry names the [bundled plugin](/user-documentation/command-bar/plugins) that owns the tab, and is what `profile save` writes for any plugin tab you have open. For one that opens on a file — `image`, `markdown`, `video`, `pdf`, `audio` — it carries that file's path, and a launch reopens it by opening the file again. A plugin reached only by its own command, such as the `schedules` list, carries no path; a launch reissues the command instead. A subjectless shell entry places the new shell it opens, never an existing launch shell or system shell. The older `{ "type": "image", "path": … }` and `{ "type": "markdown", "path": … }` spellings still launch exactly the same way, so profiles you saved before are unaffected.
+A `plugin` entry names the [bundled plugin](/user-documentation/command-bar/plugins) that owns the tab. For one that opens on a file — `image`, `markdown`, `video`, `pdf`, `audio` — it carries that file's path, and a launch reopens it by opening the file again. A plugin reached only by its own command, such as the `schedules` list, carries no path; a launch reissues the command instead. A subjectless shell entry places the new shell it opens, never an existing launch shell or system shell. The older `{ "type": "image", "path": … }` and `{ "type": "markdown", "path": … }` spellings still launch exactly the same way, so older profiles are unaffected.
 
 None of these needs a `name` — the label is derived the same way typing `open` or `ssh` derives it. Relaunching closes a page or ssh tab already showing the same url or destination before reopening it, so you end up with one of each rather than a duplicate; an already-open image, markdown, or video tab is simply reused.
 
-A notifications entry opens the singleton feed. Add `dock` to put it in a sidebar, and use `focus: true` with `dock` when the feed should be the visible docked tab even if the profile also docks another view on that side. `profile save` preserves dock placement, but it does not record which docked tab was selected; this `focus` option is the way to choose the notifications tab on launch:
+A notifications entry opens the singleton feed. Add `dock` to put it in a sidebar, and use `focus: true` with `dock` when the feed should be the visible docked tab even if the profile also docks another view on that side. This `focus` option is the way to choose the notifications tab on launch:
 
 ```json
 { "type": "notifications", "dock": "right", "focus": true }
@@ -124,7 +124,7 @@ A `files` entry opens a [file navigator](/user-documentation/tab-types/file-navi
 
 Use `in` with a tab label to root the tree at that tab's working directory. With no `in` or `path`, the navigator uses the first new profile tab, or the issuing tab if nothing new opened. A literal `path` sets the root directly; `$root` always means the profile launch directory. `details` selects the row detail mode: `name`, `size`, `modified`, or `permissions`. Omit it for the default `name` mode.
 
-Every saved view path is relative to the tree's root. Restoring is quiet and forgiving: a directory or row that no longer exists is dropped without a word, and a restored selection never steals keyboard focus. The profile's own `focus` still decides where you land. Leave off `dock` and the tree opens in the center strip instead, where it takes `number`, `group`, and `pane` like any other tab.
+Every view path is relative to the tree's root. Restoring is quiet and forgiving: a directory or row that no longer exists is dropped without a word, and a restored selection never steals keyboard focus. The profile's own `focus` still decides where you land. Leave off `dock` and the tree opens in the center strip instead, where it takes `number`, `group`, and `pane` like any other tab.
 
 A harness entry's `run` and `schedule` live in memory only — closing the tab or quitting ends them. That's the point of the profile: the file is the source of truth, and every launch rebuilds the setup from it.
 
@@ -136,20 +136,7 @@ Launching a profile that's already running resets it: any open tab whose label m
 
 An entry's `name` is a typed name, never one that walks to a `-2` suffix. Once the reset above has closed the matching tabs, an entry whose name is still taken — by an open tab, by a live [sessions](/user-documentation/tab-types/sessions) row, or, for a remote entry, by something running on its host — is refused. Its `Cannot launch "<name>": …` line goes to the [notifications](/user-documentation/tab-types/notifications) feed against the tab you ran `profile launch` from, the entry is listed under `Skipped:` as `<name> (launch refused — see notifications)`, and every other entry still opens. A leftover workspace folder sitting under an entry's name is removed before its clone, the same as for any other launch — see [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent#when-a-workspace-folder-is-already-there).
 
-## Saving the running session as a profile
-
-
-`profile save <name>` captures your current session into `profiles/<name>.json`, the inverse of launching one. It writes `<name>` verbatim as the filename, with no dasherization, and captures every open tab a profile can reopen, including the one you typed the command in. The `janus` shell tab every launch opens is left out without a mention, since every launch has its own fresh one; saving it would open a second shell beside it. The system shell is also left out without a mention, even if you reveal, rename, or move it. Other shell tabs are captured.
-
-Each harness is captured as a clean template: its name, `tool`, model, effort, workspace/offline/auto-approve flags, working directory, and tab presentation. Its scheduled and one-shot commands are never captured, since they only ever lived in memory. Whichever tab is currently active is saved with `focus: true` so a relaunch lands you back in the same place. Every captured main-area entry also saves `pane` as `left` or `right`, preserving which side of a split it occupied; the exact divider position is screen-local and resets to the middle.
-
-Open images, markdown previews, videos, web pages, and SSH sessions are captured too — an SSH entry keeps the flags you connected with, so a relaunch reconnects the same way. Every file navigator is captured, docked or not, along with its tree view: which directories you had expanded, which row the cursor was on, and every row you had selected. Launching the profile puts the tree back the way you left it, quietly skipping anything that no longer exists. A navigator left in the center strip also remembers its group, order, and pane.
-
-The window size, sidebar widths, and reporting-area split are captured into the profile's layout as they currently look, along with any running monitors. Under `--no-open`, the window size is omitted and the command reports that omission, while the sidebar and tab-area sizes are still captured. A monitor's own reporting tab is the one thing left out, and it is left out quietly: it appears neither in the profile nor in the report's skipped list.
-
-Saving over an existing profile name atomically replaces it outright, with no confirmation prompt. Janissary keeps the previous file until the complete replacement is ready, so a capture or write failure leaves your last valid profile intact. If the file can't be written at all, for example because `profiles` exists but is a plain file, the save reports `Profile command failed: could not write profile "<name>" to <path>/profiles/<name>.json (<code>).` with an error code such as `EEXIST`. The command reports what it captured: counts per tab type, plus monitors and docked tabs, followed by the list of anything skipped.
-
-If several `profile save` commands arrive close together, they run in command order. Each finishes capturing file-navigator selections before the next starts, and a failed save does not block the saves behind it. If an asynchronous save or launch fails, the issuing transcript receives `Profile command failed: <reason>.` so the command does not appear unfinished.
+If a launch fails partway, the issuing transcript receives `Profile command failed: <reason>.` so the command does not appear unfinished.
 
 ## Checking a profile without launching it
 

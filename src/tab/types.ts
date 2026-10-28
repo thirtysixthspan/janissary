@@ -68,8 +68,7 @@ export type HarnessView = {
   // This tab's asciicast recording, mirrored from `Tab.recording` so the harness-view payload is the
   // whole of what its row renders. Absent until the session has produced output.
   recording?: string;
-  // Set only on an ssh tab: the non-destination tokens of the original `ssh …` invocation, kept so
-  // `profile save` can write an entry that reconnects with the same flags.
+  // Set only on an ssh tab: the non-destination tokens of the original `ssh …` invocation.
   sshOptions?: string[];
   // Set only when a `-w` launch's workspace clone fails; the tab closes shortly after.
   provisionError?: string;
@@ -409,7 +408,7 @@ export type Tab = {
   autoResume?: boolean;
   // `-b`/`--browser` on the tab's creating `harness` command: a headless Chromium was started for
   // this tab and its endpoint injected into the harness's environment. Harness-only; set once at
-  // spawn time, and kept so `profile save` can write it back.
+  // spawn time, and kept so the metadata row can report it.
   browser?: boolean;
   // When false/undefined, contiguous runs of auto-run agent tool steps (acp entries) are
   // collapsed into a single summary line in the transcript. Toggled with Ctrl+T. In-memory

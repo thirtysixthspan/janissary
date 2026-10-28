@@ -484,7 +484,7 @@ Attached harnesses redraw their retained terminal history immediately, including
 
 Only surviving shell and harness processes are restored. Legacy agent-only records are retained untouched and skipped during launch restore; a mixed shell record restores its shell processes through the temporary SSH bridge and omits agent processes.
 
-Remote shell tabs are restored around their existing PTYs on every launch and when attaching a parked session. Their last reported cwd, offline mode, and marker nonce are retained, and no navigator is reopened. The sessions tab identifies these rows as `shell`. Remote shells are omitted when saving profiles, so a profile never starts a replacement local shell for them.
+Remote shell tabs are restored around their existing PTYs on every launch and when attaching a parked session. Their last reported cwd, offline mode, and marker nonce are retained, and no navigator is reopened. The sessions tab identifies these rows as `shell`.
 
 A session can be terminated for good from its parked state: janissary reconnects far enough to tell the
 peer to shut down, which stops its processes and removes its remote workspace. Forgetting a parked

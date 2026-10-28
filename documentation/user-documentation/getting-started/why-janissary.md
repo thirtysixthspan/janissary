@@ -81,7 +81,7 @@ Janissary is built from the ground up for this: **tab-based, developer-first, wi
 - **Use AI agents regularly** and find yourself opening multiple terminals, tmux panes, or tabs to manage them
 - **Need to automate recurring tasks** like nightly runs, testing pipelines, or deployment checks—and want them to run in predictable, isolated environments
 - **Collaborate with agents** in ways that require them to coordinate: handing off work, messaging results, running in sequence
-- **Value reproducibility** and want to save multi-agent setups as profiles so you can spin up the same workflow again with one command
+- **Value reproducibility** and want to describe multi-agent setups as profiles so you can spin up the same workflow again with one command
 - **Want a better UI** than tmux or bare terminals for understanding what your agents are doing at a glance
 
 ### You might not need Janissary if you:
@@ -121,7 +121,7 @@ Agents can message each other across tabs. One agent can wait for another to fin
 <img class="agent-float" src="/agents/ekrem-south-west.png" alt="" />
 
 ### Profiles for Reproducibility
-Define a multi-tab setup once, save it as a profile, and recreate it anytime. Perfect for team workflows or personal habits.
+Define a multi-tab setup once in a profile file, and recreate it anytime. Perfect for team workflows or personal habits.
 
 ### Workspaced Agents
 Spawn an agent in an isolated git clone of your repo. If it breaks things, your main directory is untouched. When you're done, the clone disappears.
@@ -135,4 +135,4 @@ Spawn an agent in an isolated git clone of your repo. If it breaks things, your 
 - [Tabs](/user-documentation/getting-started/tabs) — Understand how tabs work
 - [Agents](/user-documentation/getting-started/agents) — Spawn and manage AI agents
 - [Scheduling](/user-documentation/automation/scheduling) — Automate tasks with built-in timing
-- [Profiles](/user-documentation/automation/profiles) — Save and recreate multi-tab setups
+- [Profiles](/user-documentation/automation/profiles) — Recreate multi-tab setups from a file

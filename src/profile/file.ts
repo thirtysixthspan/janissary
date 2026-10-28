@@ -52,7 +52,7 @@ function partitionTabs(tabs: ProfileTabFile[]): PartitionedTabs {
       break;
     }
     // The pre-plugin spelling of an image tab: same file, same reopen path, so it loads as the
-    // plugin entry `profile save` writes today rather than as a second kind of view entry.
+    // plugin entry spelled today rather than as a second kind of view entry.
     case 'image': { out.views.push({ ...presentation(tab), type: 'plugin', id: 'image', path: tab.path }); break; }
     // The pre-plugin spelling of a markdown preview tab, mapped the same way.
     case 'markdown': { out.views.push({ ...presentation(tab), type: 'plugin', id: 'markdown', path: tab.path }); break; }

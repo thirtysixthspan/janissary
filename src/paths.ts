@@ -72,8 +72,8 @@ export function abbreviatePath(p: string, context: RootContext): string {
 // Abbreviate an absolute path for display wherever the application renders one, as `abbreviatePath`
 // does, except that the shared git-sync workspace clone reads as `$git-sync` ahead of `$root` (a synced
 // file at `<root>/.janissary/workspace/git-sync/notes.md` shows as `$git-sync/notes.md`). Kept apart
-// from `abbreviatePath` because `profile save` writes that one's output back to disk for
-// `expandUserPath` to read, and `$git-sync` is never expanded. Display-only — callers keep the real path.
+// from `abbreviatePath` because `files print` writes that one's output into a command for
+// `expandUserPath` to read back, and `$git-sync` is never expanded. Display-only — callers keep the real path.
 export function abbreviateDisplayPath(p: string, context: RootContext): string {
   const sync = path.join(context.root, '.janissary', 'workspace', SYNC_WORKSPACE_NAME);
   if (p === sync) return '$git-sync/';

@@ -26,8 +26,6 @@ import { initWorkspaceDir } from '../workspace/index.js';
 initWorkspaceDir('/proj');
 import type { Tab } from '../tab/types.js';
 import { setWindowBoundsReader } from '../window-resizer.js';
-import { messageBus } from '../bus.js';
-import { resolveTreeSelections } from '../file-navigator/selection-request.js';
 
 function makeManagers(creator: Tab, tabs: Tab[] = [creator]): { managers: Managers; appended: { input: string; output: string }[] } {
   const appended: { input: string; output: string }[] = [];
@@ -111,11 +109,9 @@ describe('ProfileManager.run', () => {
     const manager = new ProfileManager(managers);
 
     manager.run('profile launch', 'janus');
-    manager.run('profile save', 'janus');
 
     expect(appended).toEqual([
       { input: 'profile launch', output: 'Usage: profile launch <name>' },
-      { input: 'profile save', output: 'Usage: profile save <name>' },
     ]);
   });
 
@@ -193,20 +189,6 @@ describe('ProfileManager.run', () => {
     expect(appended[1].output).toContain('Profile "bad" is not valid:');
   });
 
-  it('reports a rejected profile save in the issuing transcript', async () => {
-    const janus = makeTab('janus', 'red');
-    const { managers, appended } = makeManagers(janus);
-    setWindowBoundsReader(async () => { throw new Error('window unavailable'); });
-
-    new ProfileManager(managers).run('profile save demo', 'janus');
-
-    await vi.waitFor(() => expect(appended).toHaveLength(1));
-    expect(appended).toEqual([{
-      input: 'profile save demo',
-      output: 'Profile command failed: window unavailable.',
-    }]);
-  });
-
   it('reports a rejected profile launch in the issuing transcript', async () => {
     writeProfile('editor-only', JSON.stringify({ tabs: [{ type: 'editor', path: '$root/notes.md' }] }));
     const janus = makeTab('janus', 'red');
@@ -220,50 +202,5 @@ describe('ProfileManager.run', () => {
       input: 'profile launch editor-only',
       output: 'Profile command failed: editor unavailable.',
     }]);
-  });
-
-  it('serializes overlapping saves so their selection requests do not cancel each other', async () => {
-    const janus = makeTab('janus', 'red');
-    const { managers, appended } = makeManagers(janus);
-    const manager = new ProfileManager(managers);
-    const ids: number[] = [];
-    const subscription = messageBus.on('fileNavigator', 'collect', (event) => { ids.push(event.id); });
-
-    manager.run('profile save first', 'janus');
-    manager.run('profile save second', 'janus');
-
-    await vi.waitFor(() => expect(ids).toHaveLength(1));
-    resolveTreeSelections(ids[0]!, []);
-    await vi.waitFor(() => expect(ids).toHaveLength(2));
-    resolveTreeSelections(ids[1]!, []);
-    await vi.waitFor(() => expect(appended).toHaveLength(2));
-    subscription.unsubscribe();
-
-    expect(ids[0]).not.toBe(ids[1]);
-    expect(appended.map((entry) => entry.input)).toEqual(['profile save first', 'profile save second']);
-    expect(appended.every((entry) => entry.output.startsWith('Saved profile'))).toBe(true);
-  });
-
-  it('continues the save queue after a rejected save', async () => {
-    const janus = makeTab('janus', 'red');
-    const { managers, appended } = makeManagers(janus);
-    const manager = new ProfileManager(managers);
-    let boundsReads = 0;
-    setWindowBoundsReader(async () => {
-      boundsReads += 1;
-      if (boundsReads === 1) throw new Error('window unavailable');
-      return { width: 1200, height: 800 };
-    });
-    const subscription = messageBus.on('fileNavigator', 'collect', (event) => {
-      resolveTreeSelections(event.id, []);
-    });
-
-    manager.run('profile save first', 'janus');
-    manager.run('profile save second', 'janus');
-
-    await vi.waitFor(() => expect(appended).toHaveLength(2));
-    subscription.unsubscribe();
-    expect(appended[0].output).toBe('Profile command failed: window unavailable.');
-    expect(appended[1].output).toContain('Saved profile "second"');
   });
 });

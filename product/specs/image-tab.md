@@ -22,8 +22,8 @@ to the new image tab.
 
 Unlike a shell tab, an image tab has no shell, agent session, browser, transcript, or command
 history, and no persisted agent state. It is a **live, in-memory view** — like browser windows
-(see Browser), it is not saved and is not restored. A profile can still capture one
-and reopen it on launch (see [[profiles]]).
+(see Browser), it is not saved and is not restored. A profile can still open one
+on launch (see [[profiles]]).
 
 ### Image tab data
 
@@ -191,7 +191,7 @@ covers every close path — the tab's × button, `Cmd+W`, and typing `close` or 
 image edits also hold up `quit`, closing the last tab, and closing or reloading the browser page
 (see [[quit-confirmation]]).
 
-An in-progress edit is a live, in-memory view like zoom and pan: it is not persisted, not restored, and not captured by a profile beyond the file a profile already records.
+An in-progress edit is a live, in-memory view like zoom and pan: it is not persisted, not restored, and not carried in a profile, which names only the file.
 
 ### Tab strip: name and close button
 

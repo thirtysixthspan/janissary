@@ -271,8 +271,7 @@ would see. Every harness tab closes that gap by default: Janissary starts a head
 tab, on whichever host the harness runs on, and gives the harness two environment variables.
 `-b`/`--browser` explicitly confirms this default, and `--no-browser` opts out and wins if both forms
 are present, the same shape as `--no-workspace` and `--no-auto-approve`. A profile harness entry that
-omits `browser` gets the same default; `profile save` always records the field, so a saved
-`--no-browser` tab reopens without one. The rest of this spec calls a tab launched with the browser a
+omits `browser` gets the same default, and one that sets `browser: false` opens without one. The rest of this spec calls a tab launched with the browser a
 `-b` tab, whether or not the flag was typed. The two variables are:
 
 - `JANISSARY_BROWSER_WS_ENDPOINT` — the endpoint to connect a Playwright client to.

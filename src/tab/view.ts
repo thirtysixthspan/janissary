@@ -126,8 +126,8 @@ export function buildTabView(
     // Present only when true, so a healthy tab's target is exactly what it was before the flag.
     remote: tab.remote && {
       ...tab.remote,
-      // Recovery-ish channel facts: neither belongs on what `profile save` persists, and neither can
-      // be answered from the tab. `provisioning` is the channel's own workspace-absence test — the
+      // Recovery-ish channel facts: neither belongs on what the tab stores, and neither can be
+      // answered from the tab. `provisioning` is the channel's own workspace-absence test — the
       // one detach refuses on — read beside `reconnectingOf` from the same lookup the workspace
       // prefix already uses.
       ...(reconnectingOf?.(tab.label) === true && { reconnecting: true }),
@@ -210,9 +210,8 @@ function autoResumeFlag(tab: Tab): string[] {
 
 // The metadata row's browser flag. `browserInUse` while a browser is running behind the tab's
 // endpoint, whichever start brought it up — a fresh one after a death included. Otherwise it reports
-// the tab's launch: `tab.browser` is set from `-b` at spawn and left set afterwards (`profile save`
-// reads it), so a `-b` tab shows `browser` before any browser exists and again once a browser is
-// reported gone — the band, not the flag, carries the death. See the Metadata row in
+// the tab's launch: `tab.browser` is set from `-b` at spawn and left set afterwards, so a `-b` tab
+// shows `browser` before any browser exists and again once a browser is reported gone — the band, not the flag, carries the death. See the Metadata row in
 // `product/specs/tabs.md`.
 function browserFlag(tab: Tab): string[] {
   if (!tab.browser) return [];

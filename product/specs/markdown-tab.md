@@ -18,7 +18,7 @@ moves to the new markdown tab.
 Unlike a shell tab, a markdown tab has no shell, agent session, browser, transcript, or command
 history, and no persisted agent state. It is a **live, in-memory view** — like image tabs and
 browser windows (see Browser), it is not saved and is not restored. A profile can
-still capture one and reopen it on launch (see [[profiles]]). The rendered
+still open one on launch (see [[profiles]]). The rendered
 content is a snapshot of the file as it was when opened; later edits to the file on disk are not
 reflected until it is opened again.
 

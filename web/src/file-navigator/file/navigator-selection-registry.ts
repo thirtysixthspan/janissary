@@ -2,7 +2,7 @@ import type { FileNavigatorSelectionRecord } from '@shared/protocol';
 
 // Where every mounted file navigator publishes its current cursor/anchor/selection, keyed by tab
 // label so tab-strip changes cannot associate one tree's state with another. The server owns the tree,
-// but these three are client-only React state, so `profile save` and `files print` ask for them
+// but these three are client-only React state, so `files print` asks for them
 // (see the `collect-tree-state` event). This module is the answer sheet: the
 // hook writes into it on every selection change, and `ws.ts` reads it when the request arrives.
 

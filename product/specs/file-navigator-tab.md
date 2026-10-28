@@ -185,7 +185,7 @@ multi-item action a per-item report rather than a single failure for the whole a
 remote tree cannot describe that way — reading a directory, a file, or row details, where there is
 no per-item result to carry the message — are still reported, as an operation failure.
 
-Remote trees are live views only. They are omitted by `profile save`, are not restored by
+Remote trees are live views only. They are not restored by
 `profile launch` or by a launch restore, and close if their channel drops. The connection-ended failure is
 reported once through the notifications feed; a refused individual filesystem operation is reported
 as an operation failure and does not close the channel.
@@ -535,18 +535,17 @@ A user-initiated deletion is not covered by undo/redo — a file or directory re
 or Delete cannot be restored this way. A paste is undoable, however, and undoing one may delete the
 items it created — see Copying, cutting, and pasting below.
 
-### Saving and restoring a tree's view
+### Restoring a tree's view from a profile
 
-A tree's own view does round-trip through a profile, unlike its undo/redo stacks. `profile save`
-records which directories are expanded, which row holds the keyboard cursor, the range anchor, the
-full row selection, and the tree's current detail mode; `profile launch` replays them, re-expanding
-the directories that still exist, reopening the tree in its saved detail mode, and re-highlighting
-the saved rows with the cursor row scrolled into view. Anything that no
-longer exists is dropped silently, and restoring a selection never moves keyboard focus. See
-Profiles for the full rules.
+A profile's `files` entry can describe a tree's own view, unlike its undo/redo stacks: which
+directories are expanded, which row holds the keyboard cursor, the range anchor, the full row
+selection, and the tree's detail mode. `profile launch` replays them, re-expanding the directories
+that still exist, opening the tree in the named detail mode, and re-highlighting the listed rows
+with the cursor row scrolled into view. Anything that no longer exists is dropped silently, and
+restoring a selection never moves keyboard focus. See Profiles for the full rules.
 
-Remote trees are excluded from saved profiles and are never restored, because their workspace and
-authenticated channel do not survive a launch.
+Remote trees are not restored from a profile, because their workspace and authenticated channel do
+not survive a launch.
 
 The command form can restore the same local view parts on a tree, with ordered clauses such as
 `files expand src cursor src/a.ts anchor src/a.ts select src/a.ts`. Clause paths are relative to

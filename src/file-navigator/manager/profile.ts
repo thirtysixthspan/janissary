@@ -5,8 +5,8 @@ import { unwatchAllDirs } from '../watch.js';
 import type { FileNavigatorDetail } from '../../tab/types.js';
 import type { FilesTabState } from '../state.js';
 
-// The tree-view state `profile save` reads back off a navigator, the detail-mode switch its header
-// button drives, and one tab's teardown. Split out of `manager.ts` to keep that file under the size
+// The tree-view state read back off a navigator, the detail-mode switch its header button drives,
+// and one tab's teardown. Split out of `manager.ts` to keep that file under the size
 // limit — see `ai/guidelines/code-guidelines.md`.
 
 // Stop one tab's watchers, debounce timer, and creation poll, then forget its state (tab close).
@@ -24,9 +24,9 @@ export function closeTabState(tabs: Map<string, FilesTabState>, label: string): 
   tabs.delete(label);
 }
 
-// One tab's expanded directories as a plain sorted array. Sorted only so the written profile is
-// deterministic (profiles are committable); restore order does not matter, since `buildRows` walks
-// from the root and consults the expanded set rather than replaying insertion order.
+// One tab's expanded directories as a plain sorted array. Sorted only so callers get a deterministic
+// order; restore order does not matter, since `buildRows` walks from the root and consults the
+// expanded set rather than replaying insertion order.
 export function expandedPathsOf(tabs: Map<string, FilesTabState>, label: string): string[] {
   const state = tabs.get(label);
   if (!state) return [];
