@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
-  initProfileDir, listProfiles, listProfileRows, profileExists, profilePath, profileReadPath,
+  initProfileDir, listProfiles, listProfileRows, profilePath, profileReadPath, resolveProfile,
 } from './profiles.js';
 import { parseProfileCommand, PROFILE_USAGE } from './profile/command.js';
 import { loadProfile } from './profile/file.js';
@@ -72,17 +72,18 @@ describe('single-file profiles', () => {
     expect(listProfileRows()).toEqual([{ name: 'coding', source: 'project' }]);
   });
 
-  it('resolves profilePath/profileExists to the file', () => {
+  it('resolves profilePath/resolveProfile to the file', () => {
     writeProfile('coding', {});
-    expect(profilePath('coding')).toBe(path.join(root, 'profiles', 'coding.json'));
-    expect(profileExists('coding')).toBe(true);
-    expect(profileExists('missing')).toBe(false);
+    const file = path.join(root, 'profiles', 'coding.json');
+    expect(profilePath('coding')).toBe(file);
+    expect(resolveProfile('coding')).toEqual({ kind: 'config', file });
+    expect(resolveProfile('missing')).toBeUndefined();
   });
 
   it('reads a built-in profile when no project profile has the same name', () => {
     writeProfile('planning', { tabs: [{ type: 'harness', name: 'planner', tool: 'claude' }] }, janissary);
     expect(profileReadPath('planning')).toBe(path.join(janissary, 'profiles', 'planning.json'));
-    expect(profileExists('planning')).toBe(true);
+    expect(resolveProfile('planning')).toEqual({ kind: 'config', file: path.join(janissary, 'profiles', 'planning.json') });
     expect((loadProfile('planning') as LoadedProfile).entries[0].name).toBe('planner');
     expect(profilePath('planning')).toBe(path.join(root, 'profiles', 'planning.json'));
   });
@@ -91,6 +92,51 @@ describe('single-file profiles', () => {
     writeProfile('shared', { tabs: [{ type: 'harness', name: 'project-harness', tool: 'claude' }] });
     writeProfile('shared', { tabs: [{ type: 'harness', name: 'built-in-harness', tool: 'claude' }] }, janissary);
     expect((loadProfile('shared') as LoadedProfile).entries[0].name).toBe('project-harness');
+  });
+
+  describe('runscript profiles', () => {
+    const writeRunscript = (name: string, base = root) => {
+      const file = path.join(base, 'profiles', `${name}.rs`);
+      writeFileSync(file, 'echo hi\n');
+      return file;
+    };
+
+    it('resolves a runscript over a JSON file of the same name', () => {
+      writeProfile('coding', { tabs: [{ type: 'harness', name: 'builder', tool: 'claude' }] });
+      const file = writeRunscript('coding');
+      expect(resolveProfile('coding')).toEqual({ kind: 'runscript', file });
+    });
+
+    it('resolves a built-in runscript when the project has no profile of that name', () => {
+      const file = writeRunscript('planning', janissary);
+      expect(resolveProfile('planning')).toEqual({ kind: 'runscript', file });
+    });
+
+    it('lets a project JSON file override a built-in runscript', () => {
+      writeProfile('shared', {});
+      writeRunscript('shared', janissary);
+      expect(resolveProfile('shared')).toEqual({ kind: 'config', file: path.join(root, 'profiles', 'shared.json') });
+    });
+
+    it('treats a symlink at the runscript path as the runscript', () => {
+      writeProfile('coding', {});
+      const target = writeRunscript('elsewhere');
+      const link = path.join(root, 'profiles', 'coding.rs');
+      symlinkSync(target, link);
+      expect(resolveProfile('coding')).toEqual({ kind: 'runscript', file: link });
+    });
+
+    it('lists a runscript-only profile and a name with both files once', () => {
+      writeRunscript('deploy');
+      writeRunscript('coding');
+      writeProfile('coding', {});
+      writeRunscript('planning', janissary);
+      expect(listProfileRows()).toEqual([
+        { name: 'coding', source: 'project' },
+        { name: 'deploy', source: 'project' },
+        { name: 'planning', source: 'janissary' },
+      ]);
+    });
   });
 
   it('loads harness tabs ordered by number, each entry name as its label', () => {

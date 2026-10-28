@@ -50,7 +50,9 @@ function makeManagers(creator: Tab, tabs: Tab[] = [creator]): { managers: Manage
       launchDir: '/proj',
       activeTab: 0,
       placeProfileTabs: vi.fn(),
+      enqueueSystemBatch: vi.fn(),
     },
+    systemShell: { ensure: vi.fn(async () => ({ status: 'ok' as const, tab: creator })) },
     workspace: { create: vi.fn(), preflight: vi.fn((): string | undefined => undefined) },
     openFile: { edit: vi.fn() },
     monitor: { snapshot: vi.fn(() => []) },
@@ -172,6 +174,72 @@ describe('ProfileManager.run', () => {
 
     expect(appended[0].output).toContain('Profile "mystery" is malformed.');
     expect(managers.tab.insertTabInGroup).not.toHaveBeenCalled();
+  });
+
+  describe('runscript profiles', () => {
+    const writeRunscript = (name: string, contents: string) => {
+      writeFileSync(path.join(root, 'profiles', `${name}.rs`), contents);
+    };
+
+    it('runs the runscript instead of opening the tabs of the JSON file beside it', async () => {
+      writeProfile('coding', JSON.stringify({ tabs: [{ type: 'editor', path: '$root/notes.md' }] }));
+      writeRunscript('coding', 'harness claude\nfiles left\n');
+      const janus = makeTab('janus', 'red');
+      const { managers, appended } = makeManagers(janus);
+
+      new ProfileManager(managers).run('profile launch coding', 'janus');
+
+      await vi.waitFor(() => expect(managers.tab.enqueueSystemBatch).toHaveBeenCalled());
+      expect(managers.tab.enqueueSystemBatch).toHaveBeenCalledWith('system', ['harness claude', 'files left']);
+      expect(managers.openFile.edit).not.toHaveBeenCalled();
+      expect(managers.tab.insertTabInGroup).not.toHaveBeenCalled();
+      expect(appended).toEqual([]);
+    });
+
+    it('runs the runscript without reporting a malformed JSON file beside it', async () => {
+      writeProfile('broken', JSON.stringify({ tabs: [{ type: 'harness', name: 'c' }] }));
+      writeRunscript('broken', 'echo hi\n');
+      const janus = makeTab('janus', 'red');
+      const { managers, appended } = makeManagers(janus);
+
+      new ProfileManager(managers).run('profile launch broken', 'janus');
+
+      await vi.waitFor(() => expect(managers.tab.enqueueSystemBatch).toHaveBeenCalledWith('system', ['echo hi']));
+      expect(appended).toEqual([]);
+    });
+
+    it('launches a runscript-only profile', async () => {
+      writeRunscript('deploy', 'npm run build\n');
+      const janus = makeTab('janus', 'red');
+      const { managers, appended } = makeManagers(janus);
+
+      new ProfileManager(managers).run('profile launch deploy', 'janus');
+
+      await vi.waitFor(() => expect(managers.tab.enqueueSystemBatch).toHaveBeenCalledWith('system', ['npm run build']));
+      expect(appended).toEqual([]);
+    });
+
+    it('reports a runscript launch that rejects in the issuing transcript', async () => {
+      writeRunscript('deploy', 'npm run build\n');
+      const janus = makeTab('janus', 'red');
+      const { managers, appended } = makeManagers(janus);
+      vi.mocked(managers.systemShell.ensure).mockRejectedValueOnce(new Error('shell unavailable'));
+
+      new ProfileManager(managers).run('profile launch deploy', 'janus');
+
+      await vi.waitFor(() => expect(appended).toHaveLength(1));
+      expect(appended).toEqual([{ input: 'profile launch deploy', output: 'Profile command failed: shell unavailable.' }]);
+    });
+
+    it('lists a runscript-only profile', () => {
+      writeRunscript('deploy', '');
+      const janus = makeTab('janus', 'red');
+      const { managers, appended } = makeManagers(janus);
+
+      new ProfileManager(managers).run('profile list', 'janus');
+
+      expect(appended[0].output.split('\n')).toContain('deploy');
+    });
   });
 
   it('reports a rejected profile launch in the issuing transcript', async () => {

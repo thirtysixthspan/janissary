@@ -127,6 +127,8 @@ Every view path is relative to the tree's root. Restoring is quiet and forgiving
 
 A harness entry's `run` and `schedule` live in memory only — closing the tab or quitting ends them. That's the point of the profile: the file is the source of truth, and every launch rebuilds the setup from it.
 
+A profile can also be a runscript. If `profiles/` holds a `<name>.rs` file, `profile launch <name>` runs it in the system shell instead of opening tabs, even when a `<name>.json` file sits beside it. It works like [`execute`](/user-documentation/automation/scheduling#run-a-runscript-now): one command per line, blank lines and `#` comments skipped, and nothing printed when it starts. Your project's files still win over the built-in ones, so a project `<name>.json` beats a built-in `<name>.rs`. A runscript that can't be read safely, such as a symlink, reports `Could not read runscript for profile "<name>".`. `profile list` and the picker show each name once.
+
 ## Relaunching
 
 <img class="agent-float" src="/agents/ekrem-south-west.png" alt="" />

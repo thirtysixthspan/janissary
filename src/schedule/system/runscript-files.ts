@@ -46,21 +46,25 @@ function scriptsDirectory(projectRoot: string): { directory: string; exists: boo
   return inspectScriptsDirectory(projectRoot);
 }
 
+export function readRunscriptFile(file: string): { exists: boolean; lines: string[]; text: string } {
+  let stat;
+  try {
+    stat = lstatSync(file);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { exists: false, lines: [], text: '' };
+    throw error;
+  }
+  if (stat.isSymbolicLink() || !stat.isFile()) throw new Error(`Runscript path is not a regular file: ${file}`);
+  const text = readFileSync(file, 'utf8');
+  return { exists: true, lines: parseRunscriptText(text), text };
+}
+
 export function readRunscript(projectRoot: string, name: string): { file: string; exists: boolean; lines: string[]; text: string } {
   if (!isRunscriptName(name)) throw new Error(`Invalid runscript name: ${name}`);
   const file = runscriptFilePath(projectRoot, name);
   const scripts = scriptsDirectory(projectRoot);
   if (!scripts.exists) return { file, exists: false, lines: [], text: '' };
-  let stat;
-  try {
-    stat = lstatSync(file);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { file, exists: false, lines: [], text: '' };
-    throw error;
-  }
-  if (stat.isSymbolicLink() || !stat.isFile()) throw new Error(`Runscript path is not a regular file: ${file}`);
-  const text = readFileSync(file, 'utf8');
-  return { file, exists: true, lines: parseRunscriptText(text), text };
+  return { file, ...readRunscriptFile(file) };
 }
 
 function makeScriptsDirectory(projectRoot: string): void {
