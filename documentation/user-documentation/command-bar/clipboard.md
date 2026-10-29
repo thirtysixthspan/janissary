@@ -42,7 +42,7 @@ One line per entry: the first line of text that isn't whitespace, which is not a
 
 Nonempty copies made inside Janissary are recorded — an editor copy or cut, a terminal selection, a SQL grid's rows, a drag-selection in a transcript, the right-click menu's Copy, and a copy a program in a terminal asked for. Text copied from *another* application is not recorded: Janissary does not read the system pasteboard.
 
-Copying the same text twice moves that one entry to the bottom rather than showing it twice, so the list is always fifteen distinct entries in recency order.
+Copying the same text twice moves that one entry to the bottom rather than showing it twice, so the list never shows the same text twice and stays in recency order, up to the size you configured (15 by default).
 
 The list lives in the window and is not written anywhere, so reloading or restarting clears it.
 
@@ -58,4 +58,4 @@ Fifteen entries by default, with the oldest falling off. To keep more, set `clip
 { "clipboardHistoryMaxEntries": 40 }
 ```
 
-It is read at launch, so restart afterwards. Lowering it below what is already held trims at once. A value that isn't a whole number above zero — `0`, a negative, a fraction — falls back to 15, as does leaving the key out.
+It is read at launch, so restart afterwards. The history starts empty each launch, and the oldest entries drop once it reaches the limit. A value that isn't a whole number above zero falls back to 15. That covers `0`, a negative, a fraction, text, and a number larger than `9007199254740991`. Leaving the key out also gives 15.
