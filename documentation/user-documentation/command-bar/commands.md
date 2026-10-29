@@ -180,7 +180,7 @@ git status ## check before the demo ##
 ## just cleaning up ## clear
 ```
 
-Both run normally with the comment removed, and the gap a comment leaves behind closes up to a single space, so `clear ## note` and `## note ## clear` both run exactly `clear`. A `##` with no closing marker comments out the rest of the line. What is saved to your history is the command with the comments gone, so recalling it later gives you the bare version.
+Both run normally with the comment removed, and the gap a comment leaves behind closes up to a single space, so `clear ## note` and `## note ## clear` both run exactly `clear`. A `##` with no closing marker comments out the rest of the line. Spaces at the start and end of what's left are trimmed too, so `  clear ## note` runs `clear`, and so does `  clear  ` with no comment at all. What is saved to your history is the command with the comments gone, so recalling it later gives you the bare version.
 
 An empty command does nothing at all. A line holding only a comment, and any line holding only spaces, is discarded: nothing is added to the transcript and nothing is added to your history, so pressing `Enter` on a blank command bar is simply ignored rather than logged as an empty entry.
 
