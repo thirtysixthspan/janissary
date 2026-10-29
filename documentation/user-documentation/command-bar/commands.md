@@ -106,7 +106,19 @@ Sizes apply exactly as you give them, with none of the limits the drag handles e
 
 ## `theme`
 
-`theme <name>` sets the application's color theme — the tab strip, transcript colors, panels, borders, pickers, dialogs, and editor chrome — and applies it immediately, with no restart. It persists to the `theme` key in [app configuration](/user-documentation/getting-started/configuration), so it survives a restart. Names match case-insensitively. An unrecognized name shows an error listing the six built-in themes: `dark` (the default), `light`, `solarized-dark`, `solarized-light`, `nord`, and `dracula`. There are no custom themes.
+`theme <name>` sets the application's color theme — the tab strip, transcript colors, panels, borders, pickers, dialogs, and editor chrome — and applies it immediately, with no restart. It persists to the `theme` key in [app configuration](/user-documentation/getting-started/configuration), so it survives a restart. Names match case-insensitively. There are six built-in themes: `dark` (the default), `light`, `solarized-dark`, `solarized-light`, `nord`, and `dracula`. Each is a finished palette picked by name. You can't edit its individual colors, and there are no custom themes.
+
+An unrecognized name shows an error that lists all six, with the active theme marked by `*`:
+
+```
+Unknown theme "solar". Available themes:
+* dark
+  light
+  solarized-dark
+  solarized-light
+  nord
+  dracula
+```
 
 Bare `theme` opens a picker overlay listing every theme, each row showing a swatch of that theme's own colors next to its name, with the active theme marked. `↑`/`↓` move the selection, `Return` applies it, `Escape` closes, and a row can be clicked.
 
@@ -122,7 +134,9 @@ Could not save theme "light" to .janissary/config.json — theme unchanged.
 
 The theme applies to the whole window — there is no per-tab or per-workspace theming. Rendered Markdown documents follow the active theme too. Embedded web pages and ANSI-colored shell output are deliberately outside the theme — a web page keeps its own paper-white background whatever you pick, and shell output keeps the standard 16 terminal colors — and so are tab dot colors, which are assigned per tab to tell tabs apart rather than drawn from the theme; status indicators such as the running-command highlight, editor saved/error notices, and search-hit highlighting are theme-driven.
 
-**Terminals are the other thing that stays outside it.** A [harness](/user-documentation/advanced-agents/harness) tab, a zsh shell, and an [ssh](/user-documentation/advanced-agents/harness#ssh-sessions) session keep the same dark background and light text in all six themes, because a terminal's own palette is the terminal's. Pick `light` and open a harness and the pane stays dark; that is the boundary working, not the theme failing. The one part that does follow the theme is the highlight over text you have selected in a harness terminal, so it stays visible against the terminal's own colors.
+**Harness and ssh terminals are the other thing that stays outside it.** A [harness](/user-documentation/advanced-agents/harness) tab and an [ssh](/user-documentation/advanced-agents/harness#ssh-sessions) session keep the same dark background and light text in all six themes, because a terminal's own palette is the terminal's. Pick `light` and open a harness and the pane stays dark; that is the boundary working, not the theme failing. The one part that does follow the theme is the highlight over text you have selected in a harness terminal, so it stays visible against the terminal's own colors.
+
+A [shell](/user-documentation/command-bar/shell) tab works the other way. Its terminal takes the theme's background, text, cursor, and selection colors, so `light` gives you a light shell, and switching themes repaints it at once. Only the 16 ANSI colors that programs print stay at the standard terminal values.
 
 ## `syntax theme`
 
