@@ -7,7 +7,7 @@ open https://slashdot.org
 open page slashdot.org        bare address; https:// is assumed
 ```
 
-The page fills the tab body, and the tab is labeled with its root domain — `slashdot.org`. It's a real, live page — click, scroll, type, follow links, log in; the site behaves as it would in a browser, sessions included. Clicking an `http(s)` link in an agent's rendered output opens a page tab the same way.
+The page fills the tab body, and the tab is labeled with its root domain — `slashdot.org`. It's a real, live page — click, scroll, type, follow links, log in; the site behaves as it would in a browser, sessions included. Clicking an `http(s)` link in an agent's rendered output opens a page tab the same way. So does a link in a rendered reply shown in a shell tab's terminal: the click never navigates the app itself, it just runs `open <url>` for you.
 
 The new tab lands in the same [group](/user-documentation/getting-started/groups) as the tab you ran the command from, with its own dot color, and takes focus. Nothing is written to the transcript: the tab that opens is the whole confirmation. A [profile](/user-documentation/automation/profiles) can open a page tab by its address on launch, the same way you would.
 
@@ -19,11 +19,19 @@ Only `http` and `https` addresses can be embedded; anything else (`javascript:`,
 
 <img class="agent-float" src="/agents/dogan-south-west.png" alt="" />
 
-A page tab only displays the site. The app doesn't drive it: whatever you can do inside the page, you do by hand. (Programmatic browsing is a different feature: the `browser` command.) One thing does read it, and only when you ask for it: a [monitor](/user-documentation/automation/monitoring#what-a-monitor-sees) watching the tab is sent the text visible in the page, the same way it's sent an agent's transcript. The metadata header shows the address first and groups back, forward, reload, Split, and close at the right edge. Reload re-fetches the page where it stands. Back and forward move the embedded page through its own history, the way a browser's own buttons would. Double-clicking the address lets you edit it in place: press `Enter` to load the new address into the same tab, or `Escape` to cancel. Clicking away from the field loads it too, so clicking outside is not a way to back out of an edit. An address Janissary can't turn into a web address at all, one carrying a `javascript:` or `file:` scheme or a malformed one, is discarded and the tab stays where it was; a well-formed address that turns out to be unreachable is loaded anyway, so a site that is down or a page that isn't there shows you the site's own error. Loading a new address this way leaves the tab's name, its place in the strip, and its group alone. Only the address changes: the label stays the root domain, and the header never shows the site's own page title.
+A page tab only displays the site. The app doesn't drive it: whatever you can do inside the page, you do by hand. (Programmatic browsing is a different feature: the `browser` command.) A page tab has no command bar and no transcript, so there is nowhere to type a command or read output. Switch to another tab to run commands, such as `close page-2`. The metadata header shows the address first and groups back, forward, reload, Split, and close at the right edge. Reload re-fetches the page where it stands. Back and forward move the embedded page through its own history, the way a browser's own buttons would. Double-clicking the address lets you edit it in place: press `Enter` to load the new address into the same tab, or `Escape` to cancel. Clicking away from the field loads it too, so clicking outside is not a way to back out of an edit. An address Janissary can't turn into a web address at all, one carrying a `javascript:` or `file:` scheme or a malformed one, is discarded and the tab stays where it was; a well-formed address that turns out to be unreachable is loaded anyway, so a site that is down or a page that isn't there shows you the site's own error. Loading a new address this way leaves the tab's name, its place in the strip, and its group alone. Only the address changes: the label stays the root domain, and the header never shows the site's own page title.
 
 Switch to another tab and back and the page is exactly as you left it — same scroll position, same in-page state, never reloaded.
 
 Many sites send headers refusing to be embedded. When the app runs in its own managed browser window, those framing restrictions are lifted and such sites render anyway; if the app fell back to your system browser at startup, a site that refuses framing may show a blocked or blank area instead.
+
+## What the app reads from a page
+
+<img class="agent-float" src="/agents/idris-south.png" alt="" />
+
+The app doesn't read a page's contents, with one exception. While the app's bundled browser extension is running, it picks up the page title and the text currently in view, skipping hidden elements, anything scrolled out of sight, and scripts and styles. About half a second after the page changes or scrolls, it sends that text to the app. The same message carries the address the page is on, which is how the tab follows you from link to link.
+
+The text stays on the server. The app keeps only the latest snapshot in memory, and never sends it back to the app window or saves it. The only reader is a [monitor](/user-documentation/automation/monitoring#what-a-monitor-sees) you attached to the tab. It gets the whole snapshot first, then a diff each time the visible text changes, with a very long snapshot cut short. Without the extension, such as after a fallback to your system browser, nothing is captured, so a monitor watching a page tab has nothing to read.
 
 ## Names and labels
 
