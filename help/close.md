@@ -1,6 +1,6 @@
 ### close
 
-Close the current tab, or name a tab to close it. Closing the last tab exits the application; `/exit` is an alias of `/close`.
+Close the current tab, or name a tab to close it. Closing the last tab exits the application, after confirmation. Docked tabs and the `system` shell tab don't count as tabs for this. `/exit` is an alias of `/close`.
 
 **Usage**
 

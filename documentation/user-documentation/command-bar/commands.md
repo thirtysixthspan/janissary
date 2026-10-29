@@ -150,11 +150,13 @@ A picker needs a screen, so a command that arrives from somewhere without one an
 
 <img class="agent-float" src="/agents/selim-south.png" alt="" />
 
-Typed by you, `quit` (or `/quit`) is the only command that exits the whole app, and it always asks first: a dialog reading "Are you sure you want to quit?" with **Quit (y)** and **Cancel (n)** buttons. **Cancel** is selected by default, so a stray `Enter` is safe. Press `y` to confirm or `n` / `Escape` to cancel; `←`/`→` move the selection. While the dialog is open it traps all other input — clicks outside it and other keys do nothing.
+Typed by you, `quit` (or `/quit`) is the only command that exits the whole app, and it always asks first: a dialog reading "Are you sure you want to quit?" with **Quit (y)** and **Cancel (n)** buttons. That holds in the command bar of every tab type, so `quit` in a shell tab, a harness tab, or any other tab asks the same question. **Cancel** is selected by default, so a stray `Enter` is safe. Press `y` to confirm or `n` / `Escape` to cancel; `←`/`→` move the selection. While the dialog is open it traps all other input — clicks outside it and other keys do nothing.
+
+Cancelling closes the dialog, changes nothing, and puts the cursor back in the command line.
 
 A `quit` nobody typed is not asked about. A [schedule](/user-documentation/automation/scheduling) that fires a `quit`, or another tab telling this one to `quit`, exits the app outright, with no dialog and no unsaved-changes guard.
 
-Don't reach for `exit` to leave the app: `exit` is an alias of `close` and closes the current *tab*. The one overlap is the last tab — closing it exits the app, so `close`, `exit`, the tab strip's × and `Cmd+W`/`Ctrl+W` all show the same confirmation dialog there (see [Tabs](/user-documentation/getting-started/tabs)).
+Don't reach for `exit` to leave the app: `exit` is an alias of `close` and closes the current *tab*. The one overlap is the last tab — closing it exits the app, so `close`, `exit`, the tab strip's × and `Cmd+W`/`Ctrl+W` all show the same confirmation dialog there (see [Tabs](/user-documentation/getting-started/tabs)). Docked sidebar tabs and the `system` shell tab, hidden or revealed, don't count as remaining tabs.
 
 ### Quitting with unsaved work
 
