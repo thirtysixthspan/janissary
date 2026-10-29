@@ -31,7 +31,7 @@ The bundled ones are `debugging`, `default`, `features`, `planning`, and `produc
 
 Your profiles live in the `profiles/` directory in your project: plain files meant to be committed and shared. Janissary doesn't create that directory for you, so add it yourself the first time. It sits outside the `.janissary/` state folder, and Janissary never clears it when it starts, so your profiles are still there on the next launch. Each profile is a runscript named after the profile, like `writing-code.rs`. Janissary also includes built-in profiles. If both sources use the same name, your project copy wins, so you can customize a built-in profile by adding a same-named file to your own `profiles/` directory.
 
-A runscript holds one command per line, and Janissary skips blank lines and lines that start with `#`. A line is anything you could type into a command bar: a Janissary command such as `harness`, `edit`, `files`, or `layout`, or a shell command.
+A runscript holds one command per line, and Janissary skips blank lines and lines that start with `#`. Profiles are separate from the personal runscripts in `.janissary/scripts/` that [`create script`](/user-documentation/command-bar/commands#edit-and-execute-runscripts) makes. In a Git project, Janissary excludes those locally. Your `profiles/` folder is yours to commit. A line is anything you could type into a command bar: a Janissary command such as `harness`, `edit`, `files`, or `layout`, or a shell command.
 
 ```
 # A harness, the backlog in an editor, and a tree docked on the left.

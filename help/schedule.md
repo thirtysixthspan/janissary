@@ -43,8 +43,14 @@ Create or manage a tab's timers, or schedule an existing project runscript.
 - List, cancel, or clear timers for the issuing tab or a named tab.
 - Schedule, list, cancel, or clear project-owned runscripts that persist across restarts.
 - For one-shot schedules, `at <time>` uses the next occurrence of that time, and `on <date>` defaults to 9:00am when no time is given.
+- A time that is now or earlier rolls to the next day. A date that has passed this year rolls to next year.
+- Month and weekday names need at least three letters, so `aug` and `mon` work.
 - Recurring schedules accept an interval in minutes, hours, days, or weeks, or a daily or weekday time.
+- The first word is the timer's name. `list`, `cancel`, `clear`, and `system` can't be names, and names are case-sensitive.
+- The `in <tab>` target is one word, so an alias that contains a space can't be targeted.
+- A bad value gets its own reply: `Invalid time: "<token>".`, `Invalid date. Try "on august 12th" or "on 8/12".`, `Invalid interval or day: "<token>".`, or `No command to schedule.`
 - System schedules use an existing runscript instead of a free-form command.
+- A system schedule that came due while Janissary was closed is reported as missed and does not run.
 
 **Examples**
 
