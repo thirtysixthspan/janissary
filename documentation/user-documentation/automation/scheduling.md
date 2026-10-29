@@ -22,7 +22,30 @@ The first word after `schedule` names the timer (`standup`, `tests`, `reminder`)
 | `schedule <name> every day at <time> <cmd>` | Repeating daily at a clock time |
 | `schedule <name> every <weekday> at <time> <cmd>` | Repeating weekly (`monday`…`sunday`) at a clock time |
 
-Times accept `3:35pm`, `2pm`, or 24-hour `14:00`. Dates accept `august 12th`, `aug 12`, or `8/12`. Timer names must be unique within a tab — a duplicate is rejected — and a malformed invocation prints the `Usage:` message without changing anything.
+Times accept `3:35pm`, `2pm`, or 24-hour `14:00`. Dates accept `august 12th`, `aug 12`, or `8/12`. A month or weekday name needs at least its first three letters, so `mon` works for `monday`. Intervals are whole numbers above zero, like `30m` or `2h`.
+
+### When the time has already passed
+
+A time that is now or earlier counts as passed. `at 3pm` then waits for tomorrow, and `every monday at 9am` typed on a Monday afternoon waits for the following Monday. A date that has passed this year, like `on aug 12` in September, runs next year.
+
+### Names and messages
+
+The first word is the timer's name. `list`, `cancel`, `clear`, and `system` can't be names, because each starts a different command. Names are case-sensitive and must be unique within a tab. Adding one that exists prints `A scheduled command named "standup" already exists.`
+
+A good command prints a confirmation, and nothing is scheduled until you see it:
+
+```
+Scheduled standup: every day at 9:00am — notify daily check-in
+```
+
+When a form fits the pattern but holds a bad value, you get a specific reply instead of the full usage line:
+
+- `Invalid time: "<token>".`
+- `Invalid date. Try "on august 12th" or "on 8/12".`
+- `Invalid interval or day: "<token>".`
+- `No command to schedule.` when nothing follows the schedule form.
+
+Anything else that doesn't fit, such as an unknown keyword after the name, prints the `Usage:` line. Nothing changes in either case.
 
 ## Watching what's scheduled
 
@@ -39,6 +62,18 @@ schedule list              every timer in this tab, with next-run times
 schedule cancel tests      remove one (reports if there's no such name)
 schedule clear             remove them all
 ```
+
+`schedule list` prints one line per timer, `<name>  <schedule>  (next: <when>)  <command>`. These replies tell you what happened:
+
+| Reply | Meaning |
+|---|---|
+| `No scheduled commands.` | `list` or `clear` found nothing |
+| `Cancelled tests.` | `cancel` removed the timer |
+| `No scheduled command "tests".` | `cancel` found no timer with that exact name |
+| `Cleared 3 scheduled commands.` | `clear` removed them (`Cleared 1 scheduled command.` for one) |
+| `Usage: schedule cancel <name> [in TAB]` | `cancel` had no name |
+
+All three commands accept a trailing `in <tab>`. Their replies then end with ` in <tab>` before the period, as in `Cancelled standup in bilal.` Extra words after `list` or `clear`, or after `cancel <name>`, print the full `Usage:` line and change nothing.
 
 ## Project system schedules
 
@@ -58,7 +93,11 @@ Use any of the five schedule forms above before `script <name>`. The script must
 
 When a system schedule comes due, Janissary reads the script, starts the managed system shell if it isn't running, and adds every line of the script to the end of that shell's [command queue](/user-documentation/command-bar/queue#runscripts-in-the-system-shell) as one batch. It then posts `System schedule <name> ran: script <script>`, which means the lines are queued, not that they have finished. A failing line doesn't stop the lines after it, and no notice reports a single line's failure. Queued lines aren't saved, so a restart never replays work that was still waiting.
 
-Three cases queue nothing. An empty script posts no `ran` notice. A missing script posts its [missing-script notice](/user-documentation/tab-types/notifications#system-schedule-notices). Both of those still count as that run, so a one-time schedule is spent and a recurring one moves to its next time. If the system shell can't start, the schedule stays due and tries again on a later check.
+Three cases queue nothing. An empty script posts no `ran` notice. A missing script posts its [missing-script notice](/user-documentation/tab-types/notifications#system-schedule-notices). Both of those still count as that run, so a one-time schedule is spent and a recurring one moves to its next time. If the system shell can't start, or the script can't be read safely, the schedule stays due and tries again on a later check.
+
+A system schedule that came due while Janissary was closed doesn't run when you start it again. Janissary posts a [missed-run notice](/user-documentation/tab-types/notifications#system-schedule-notices) instead. A missed one-time schedule is removed, and a missed recurring one moves to its next future time, skipping everything it missed while the app was closed.
+
+System schedules are saved in `.janissary/system-schedules.json`. In a Git project, Janissary adds that file and `.janissary/scripts/` to your clone's `.git/info/exclude` when it saves a schedule or reads a runscript, unless Git already ignores them, so your commits don't pick them up. It never edits your `.gitignore`. If either path is already tracked by Git, Janissary can't exclude it, and adding a system schedule fails with `Could not save system schedule.` Cancelling or clearing fails with `Could not save system schedules.` when a save doesn't go through. A failed save leaves the existing schedules as they were.
 
 ## Run a runscript now
 
@@ -92,7 +131,11 @@ schedule list in claude
 schedule cancel standup in claude
 ```
 
-The timer belongs to the target tab. It appears in that tab's schedule window and fires there; your tab gets only the confirmation. You can name the target by its tab label or display alias, in any letter case. Harness tabs and plugin tabs that own a live terminal, including shell tabs, are valid targets. A due timer in a shell tab is typed into zsh just as if you had entered it at the terminal. The optional monitor tab for an autonomous `agent` run isn't schedulable. Other view tabs are refused with `Tab "<label>" cannot run scheduled commands.`, and a missing tab name returns `No tab named "<label>".` The `in <tab>` form is also the only way to manage a harness tab's timers, since a harness has no command bar of its own.
+The timer belongs to the target tab. It appears in that tab's schedule window and fires there; your tab gets only the confirmation. You can name the target by its tab label or display alias, in any letter case. If two tabs match, the first one in tab order wins. The timer is stored under the tab's real label, and the confirmation names that label (`Scheduled standup in bilal: …`), however you typed it. Errors repeat the name as you typed it.
+
+Harness tabs and plugin tabs that own a live terminal, including shell tabs, are valid targets. A due timer in a shell tab is typed into zsh just as if you had entered it at the terminal. The optional monitor tab for an autonomous `agent` run isn't schedulable. Other view tabs are refused with `Tab "<label>" cannot run scheduled commands.`, and a missing tab name returns `No tab named "<label>".` The `in <tab>` form is also the only way to manage a harness tab's timers, since a harness has no command bar of its own.
+
+The target is read as a single word. An alias with a space in it, like `my tab`, can't be targeted, and quoting it doesn't help. [Tab completion](/user-documentation/command-bar/tab-completion) offers spaced aliases without quotes, and `schedule` can't use them. Use the tab's label, or [rename](/user-documentation/getting-started/tabs#renaming-a-tab) the tab to a one-word alias.
 
 ## How firing behaves
 
@@ -127,7 +170,7 @@ schedules right   dock it in the right sidebar
 
 The tab has no command bar. Its header carries a **+** button that opens the New schedule dialog, described in [Scheduling from a dialog](#scheduling-from-a-dialog). Each row shows the owner, the timer's name, its timing, its next-run time, and the command it runs; system rows show `system` as the owner and `script <name>` as the command. Recurring entries are shown in the accent color, matching the schedule window. Docked into a sidebar, the list compresses to next-run time, name, and owner, dropping the command and spec to fit the narrower width. Each section has its own title and column headings, and rows are numbered continuously down the list. Either way the list updates live as timers fire and new ones are added — no need to reopen it — and shows "No scheduled commands." when no tab or project schedule exists. The tab has no clear button. To clear timers in bulk, run `schedule clear` in a tab to clear that tab's timers, or `schedule system clear` to clear the project system schedules.
 
-Click a row to select it; double-click it, or press `Enter` with it selected, to jump to its owner. Focusing a system row reveals the managed system shell, or recovers it if needed, before showing it. `↑`/`↓` move the selection one row at a time, and `Home`/`End` jump to the first or last row. Pressing `Backspace` or `Delete` on a selected row opens a confirmation dialog — `Delete schedule "<name>"?` with **Delete** and **Cancel**. Each row also ends in a trash icon that opens the same dialog for that row. Confirming a tab-owned row cancels that timer in its owning tab, the same as `schedule cancel <name>` run there. Confirming a system row deletes only that schedule by its key; `schedule system cancel <name>` removes every system schedule with that name. Creating a schedule from this tab uses the **+** button. Editing a schedule still happens with the `schedule` command in the tab that owns it.
+Click a row to select it; double-click it, or press `Enter` with it selected, to jump to its owner. Focusing a system row reveals the managed system shell, or recovers it if needed, before showing it. `↑`/`↓` move the selection one row at a time, and `Home`/`End` jump to the first or last row. Pressing `Backspace` or `Delete` on a selected row opens a confirmation dialog — `Delete schedule "<name>"?` with **Delete** and **Cancel**. **Cancel** is selected when it opens, so pressing `Enter` right away keeps the timer. `y` deletes, `n` or `Escape` cancels, and `←`/`→` switch the selected button. Clicking outside the dialog does nothing. Each row also ends in a trash icon that opens the same dialog for that row. Confirming a tab-owned row cancels that timer in its owning tab, the same as `schedule cancel <name>` run there. Confirming a system row deletes only that schedule by its key; `schedule system cancel <name>` removes every system schedule with that name. Creating a schedule from this tab uses the **+** button. Editing a schedule still happens with the `schedule` command in the tab that owns it.
 
 Like the [notifications feed](/user-documentation/tab-types/notifications), the schedules tab can dock into either sidebar and shares that sidebar with other dockable tabs rather than displacing them; while docked, a slim header above the list carries the **+** button and a button to cycle it to the other side.
 
@@ -135,7 +178,7 @@ Like the [notifications feed](/user-documentation/tab-types/notifications), the 
 
 In the web app, typing bare `schedule` — the word with nothing after it — opens a **New schedule** dialog instead of printing the `Usage:` message. (The terminal app still prints `Usage:` for a bare `schedule`.) The **+** button in the [schedules tab](#seeing-every-schedule-at-once) opens the same dialog.
 
-The target dropdown lists eligible tabs and a separate **Project (system)** target. The managed system shell isn't listed as a tab target. The dialog defaults to the tab you're on, or to **Project (system)** when you're on the system shell. Opened from the schedules tab, it defaults to the first tab that can hold a schedule, since the schedules tab itself can't. An autonomous `agent` run's optional monitor tab isn't schedulable.
+The target dropdown lists eligible tabs and a separate **Project (system)** target. The managed system shell isn't listed as a tab target. The dialog defaults to the tab you're on, or to **Project (system)** when you're on the system shell. Opened from the schedules tab, it defaults to the first tab that can hold a schedule, since the schedules tab itself can't, or to **Project (system)** when no tab can. If the target you picked last time is gone or can't hold a schedule anymore, the dialog picks a new default the same way: the tab you're on if it's eligible, then the first eligible tab, then **Project (system)**. An autonomous `agent` run's optional monitor tab isn't schedulable.
 
 In tab mode, choose one of the five schedule forms above and enter the command to run. In **Project (system)** mode, choose an existing runscript instead of entering a command. For example, a runscript named `deploy` can be scheduled with `schedule system deploy at 5pm script deploy`. The picker lists valid `.rs` files from `.janissary/scripts/`. If none are available, it tells you to add a valid `.rs` file there and keeps **Schedule** disabled. If a script disappears while the dialog is open, choose another listed script before scheduling.
 

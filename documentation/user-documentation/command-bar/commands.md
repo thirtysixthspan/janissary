@@ -16,6 +16,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `open [external] [page] <target>` | Open a file, a web page, or an external application; see [Opening files and pages](/user-documentation/tab-types/opening-files) |
 | `edit <file>[:line]` | Open a file for editing; a bare existing runscript name opens that script when no exact file exists; see [Opening files](/user-documentation/tab-types/opening-files#opening-a-file-to-change-it-edit) |
 | `execute <name>` | Run an existing project runscript immediately in the system shell; see [Scheduling](/user-documentation/automation/scheduling#run-a-runscript-now) |
+| `create script <name>` | Make an empty runscript and open it in an editor; see [Runscripts](#edit-and-execute-runscripts) |
 | `scripts` | Open a list of the project's runscripts. Use a row's buttons to run, duplicate, or delete one, or **+** to create one. |
 | `clear` | Empty the current tab's transcript — other tabs are unaffected. In a shell tab, `clear` clears the terminal; use `/clear` to empty the transcript |
 | `rename [newname]` | Set (or, bare, clear) the tab's display alias, or rename the file in an editor tab — see [Tabs](/user-documentation/getting-started/tabs#renaming-a-tab) |
@@ -33,7 +34,18 @@ These commands manage the app itself — the current tab's transcript and name, 
 
 ## `edit` and `execute` runscripts
 
-Create a runscript in `.janissary/scripts/<name>.rs`, then run it immediately with `execute <name>`. Its commands run in the project shell, including when you type `execute` from a workspaced shell. The runscript name uses lowercase letters and digits, with single hyphens between words. A successful run prints nothing.
+Create a runscript with `create script <name>`, add commands to it, then run it immediately with `execute <name>`:
+
+```
+create script deploy
+execute deploy
+```
+
+`create script deploy` writes an empty `.janissary/scripts/deploy.rs` and opens it in an editor tab. It makes `.janissary/` and `.janissary/scripts/` first if they're missing. If the runscript already exists, Janissary prints `Runscript "deploy" already exists.` and opens it as it is. It never overwrites one. Three replies mean nothing was created: `Usage: create script <name>`, `Invalid runscript name "<name>". Use lowercase words separated by single hyphens.`, and `Could not create runscript "<name>".`
+
+A runscript holds one command per line. Janissary skips blank lines and lines that start with `#`. In a Git project, creating or reading a runscript also adds `.janissary/scripts/` to your clone's `.git/info/exclude`, unless Git already ignores it. New runscripts then stay out of your commits. Janissary never edits `.gitignore`. If you want to share a runscript, [profiles](/user-documentation/automation/profiles) live in a committed `profiles/` folder instead. [Scheduling](/user-documentation/automation/scheduling#project-system-schedules) covers a folder that Git already tracks.
+
+The commands in `execute <name>` run in the project shell, including when you type `execute` from a workspaced shell. The runscript name uses lowercase letters and digits, with single hyphens between words. A successful run prints nothing.
 
 Three replies mean nothing ran: `Usage: execute <name>` for a missing or invalid name, `No runscript named "<name>".` when the script doesn't exist, and `Could not read runscript "<name>".` when it exists but can't be read. [Scheduling](/user-documentation/automation/scheduling#run-a-runscript-now) has the details.
 
