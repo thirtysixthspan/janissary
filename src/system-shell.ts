@@ -70,16 +70,7 @@ export class SystemShellManager {
 
   private async ensureShell(): Promise<SystemShellEnsureResult> {
     const existing = this.managers.tab.tabs.find((tab) => tab.systemShell === true);
-    if (existing) {
-      if (liveShellPtyId(existing, this.managers)) return { status: 'ok', tab: existing };
-      const ptyId = shellTabPtyId(existing, this.managers);
-      if (existing.runtime?.serverPtyExitId && ptyId === existing.runtime.serverPtyExitId && !this.disposed) {
-        await this.managers.plugins.intent(existing.label, 'restart-terminal', { ptyId });
-        const replacement = liveShellPtyId(existing, this.managers);
-        if (replacement) return { status: 'ok', tab: existing };
-      }
-      return this.fail('the existing system shell has no valid live local terminal');
-    }
+    if (existing) return this.ensureExistingShell(existing);
     if (this.managers.tab.byLabel(SYSTEM_LABEL)) return this.fail('the shell plugin opened no valid system shell');
 
     const before = new Set(this.managers.tab.tabs);
@@ -97,6 +88,17 @@ export class SystemShellManager {
     opened.systemShell = true;
     this.managers.tab.userCloseTab(this.managers.tab.findIndex(opened.label));
     return { status: 'ok', tab: opened };
+  }
+
+  private async ensureExistingShell(existing: Tab): Promise<SystemShellEnsureResult> {
+    if (liveShellPtyId(existing, this.managers)) return { status: 'ok', tab: existing };
+    const ptyId = shellTabPtyId(existing, this.managers);
+    if (existing.runtime?.serverPtyExitId && ptyId === existing.runtime.serverPtyExitId && !this.disposed) {
+      await this.managers.plugins.intent(existing.label, 'restart-terminal', { ptyId });
+      const replacement = liveShellPtyId(existing, this.managers);
+      if (replacement) return { status: 'ok', tab: existing };
+    }
+    return this.fail('the existing system shell has no valid live local terminal');
   }
 
   private async closeAttempt(tab: Tab): Promise<void> {
