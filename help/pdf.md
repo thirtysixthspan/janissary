@@ -1,6 +1,6 @@
 ### pdf
 
-Open a PDF in the bundled PDF tab. It accepts the same paths and wildcards as `open`.
+Open a PDF in the bundled PDF tab. It accepts the same paths and wildcards as `open`. The PDF tab has no command bar. To use your PDF application instead, run `open external <path>`.
 
 **Usage**
 

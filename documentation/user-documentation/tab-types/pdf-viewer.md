@@ -12,6 +12,8 @@ open paper.pdf
 
 The tab shows a compact header with the file's name, size, and location, the page you are on out of the document's total, and the view controls. The document fills the space below. The tab's name in the strip is the file name, and it carries a × close button, which closes that tab without selecting it first. Its internal label starts with `pdf` and gains a number when needed, such as `pdf-2`.
 
+A PDF tab has no command bar and no transcript. You work it with the mouse, the header controls, and the keys below. The page and zoom controls appear once the document has loaded.
+
 ## Two ways to read
 
 A PDF tab opens showing **one page at a time**, fitted to the tab. The stacked-pages button in the header switches to **continuous scroll**, where every page runs down one scrolling column, and back again. The button says what the click will do — `Continuous scroll` while you are on one page, `Single page` while you are scrolling — and switching keeps the page you were on.
@@ -50,13 +52,13 @@ Pages stay fitted as you show or hide the page strip, split the pane, or dock th
 
 <img class="agent-float left" src="/agents/bilal-south-east.png" alt="" />
 
-The text of a PDF is selectable: drag across a passage and copy it with `Cmd+C` / `Ctrl+C`, and you get the document's own text, not a picture of it. There is no in-app copy button, and no find field — searching inside a document isn't supported yet.
+The text of a PDF is selectable: drag across a passage and copy it with `Cmd+C` / `Ctrl+C`, and you get the document's own text, not a picture of it. A selection is highlighted in blue over the page, so you can see it in any theme. There is no in-app copy button, and no find field — searching inside a document isn't supported yet.
 
 `edit <file>.pdf` opens this same viewer, as does `Shift`+double-clicking a PDF in the [file navigator](/user-documentation/tab-types/file-navigator). Nothing in the tab writes to the file: there is no annotating, form filling, or signing.
 
 ## When a PDF won't open
 
-If the document can't be rendered, the tab stays open and the body reads `Failed to load <name>`, and a line goes to your [notifications](/user-documentation/tab-types/notifications) saying why — that it is password-protected, that it could not be read, or that it could not be displayed. Password-protected documents are reported rather than opened; there is no prompt to type a password. A single page that won't draw, or whose text won't come through, lands on the same failed body with the same `Could not display <name>` line, and each tab reports it at most once so a long document with a handful of bad pages does not fill your feed. A render you cancel or replace, a page that is simply not drawn yet, and a thumbnail that will not draw are none of them a failure and report nothing.
+If the document can't be rendered, the tab stays open and the body reads `Failed to load <name>`, and a line goes to your [notifications](/user-documentation/tab-types/notifications) saying why: `<name> is password-protected`, `<name> could not be read`, or `Could not display <name>` for anything else. Password-protected documents are reported rather than opened; there is no prompt to type a password. A single page that won't draw, or whose text won't come through, lands on the same failed body with the same `Could not display <name>` line, and each tab reports it at most once so a long document with a handful of bad pages does not fill your feed. A render you cancel or replace, a page that is simply not drawn yet, and a thumbnail that will not draw are none of them a failure and report nothing.
 
 ## Lifecycle
 
@@ -64,8 +66,8 @@ Closing a PDF tab also stops any document load still in progress. A result that 
 
 A PDF tab is a live view, not saved state: the layout, zoom, and page you were on belong to that tab and are not restored. A second PDF you open starts on page one, fitted, with the strip hidden, whatever you switched the first one to. A [profile](/user-documentation/automation/profiles) is the exception: it can open a PDF tab by its file on launch, even though the tab is otherwise a live view. Closing a tab, via its × button or `close`, just removes the view; the file is untouched. Only files you've explicitly opened are ever served to the viewer, and everything needed to render them ships with the app, so a PDF opens the same way offline or on a remote server.
 
-Two things about the file itself are worth knowing. The document is the file as it was when you opened it, so a PDF that is regenerated on disk keeps showing you the old copy until you open it again. And only the pages near where you are are drawn, in the stage and in the strip alike, which is why a document of several hundred pages opens as fast as a short one.
+Two things about the file itself are worth knowing. The document is the file as it was when you opened it, so a PDF that is regenerated on disk keeps showing you the old copy until you open it again. And pages are drawn only as they come close to the view, in the stage and in the strip alike, so a long document doesn't draw every page up front. A page you have scrolled past stays drawn. The tab still reads every page's size before it shows the document, so a document of several hundred pages takes longer to appear than a short one. Until it has loaded, you see only the header with the file's name, size, and location.
 
 <img class="agent-float" src="/agents/tahir-south.png" alt="" />
 
-To hand a PDF to your system's PDF application instead, use `open external <file>.pdf` — see [Opening files and pages](/user-documentation/tab-types/opening-files). You can name which application that should be with the `externalViewers` setting.
+To hand a PDF to your system's PDF application instead, use `open external <file>.pdf` — see [Opening files and pages](/user-documentation/tab-types/opening-files). You can name which application that should be with the `externalViewers` setting. If nothing can open the file, you get `No PDF viewer available. The file is at <file>`.
