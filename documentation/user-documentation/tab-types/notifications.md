@@ -70,6 +70,8 @@ Set the alert channels and category volumes in `.janissary/config.json`:
 | `terminalBellVolumeError` | `0.8` | Error-sound volume, from `0` to `1`. |
 `osNotifications` and `terminalBell` are master switches for every type's configured banner and cue. Per-type settings can move a notification to a different bundled sound or silence its sound without disabling its banner. See [app configuration](/user-documentation/getting-started/configuration)
 for how to edit and validate these settings.
+Each browser window plays at most one bell per second, even when several notifications arrive
+together. Eligible desktop banners are not rate-limited with the bell.
 
 The config file lists every notification type with its default. For example:
 
@@ -142,6 +144,13 @@ Each toggle controls one kind of event:
 | `rateLimited` | A model query is identified as rate limited |
 | `systemScheduleFire` | A system schedule fires, is missed, names a missing runscript, or the system shell cannot start |
 
+The ambient event messages are `Agent '<tab>' finished`, `Scheduled: <command> in <tab>`, and
+`Agent '<tab>' started`. A detected rate limit reads `Agent '<tab>' is being rate limited`. These
+events are omitted when their toggle is off or their tab is active. The `state-change` event covers a
+core ACP tab becoming idle; `schedule-fire` names the scheduled command; `agent-start` marks the first
+ACP turn. A query that ends with the rate-limit message as ordinary reply text can still trigger the
+rate-limit notice, alongside the unchanged reply.
+
 The four ambient events notify only for a **background** tab. Activity in the currently active tab is suppressed. System schedule notices are explicit, use their own toggle, and are not suppressed when the `system` tab is active.
 
 `notifications.events.rateLimited` covers interactive `acp` queries, periodic monitor queries, and `monitor ask` queries. It recognizes rate limits from error text, and also from an interactive query's ordinary reply text. The feed says `Agent '<tab>' is being rate limited`; the original in-tab output stays available. Other failures don't produce this event.
@@ -159,6 +168,11 @@ The feed shows the stored script invocation when a runscript is queued. For exam
 - `System shell could not start: <reason>.`
 
 The schedule name is the schedule's name. The missed time uses the same local date and time format shown in the schedules list. A startup failure's reason is shortened to its first line. Each notice is attributed to `system`, and its tab link focuses the system tab, revealing it if hidden. If the system tab has not been created yet, the notice is still held and recorded under `system`; clicking its link does nothing and does not create a placeholder tab.
+
+The record file is best-effort. If writing it fails, the queue, feed, and toasts continue normally;
+the app silently abandons further record writes for that run and does not create a notification about
+the failure. Record-file entries are never replayed into a later run. Newly detected missed system
+schedules are delivered as new notifications, but notices from an earlier run are not replayed.
 
 ## A harness that finished and you weren't looking
 
@@ -189,6 +203,13 @@ Typing either `notifications` or `notify` also writes one line into the transcri
 
 `harness recording failed`, `ssh recording failed`, and `shell recording failed` mean that recording has stopped for that session, while the session itself keeps running. `no harness transcript found` is a separate diagnostic: the harness has no available session transcript, but screen-based monitoring remains available. Each diagnostic is reported once per affected tab. See [Recordings](/user-documentation/advanced-agents/harness#recordings) and [Opening a session transcript](/user-documentation/advanced-agents/harness#opening-a-session-transcript).
 
+If a harness auto-approver cannot clear a permission prompt, the feed says
+`Auto-approve could not clear the permission prompt; standing down`. It stops trying that unchanged
+prompt and flags the tab so you can answer it. When `-y` is enabled without a workspace, the feed
+warns: `auto-approve is on without a workspace: prompts are approved unattended against your real
+files, with no sandbox confining the harness`. This warning is attributed to the newly launched tab;
+it does not appear in the harness terminal.
+
 These diagnostics bypass the five event toggles and focus suppression, and they land in the queue and toast the same way other notifications do.
 
 `No opener for ".xyz" files.` means you opened a file type Janissary has no viewer for, whether you typed `open` or double-clicked a row in the [file navigator](/user-documentation/tab-types/file-navigator). It arrives here rather than in the tab you opened from, because a file navigator has no transcript of its own to print it in. See [Opening files and pages](/user-documentation/tab-types/opening-files).
@@ -200,6 +221,12 @@ Every path on a feed line is shortened the way [paths are shown everywhere else]
 These four bypass the five event toggles and focus suppression, the way the recording diagnostics do, and each is attributed to the tab you typed the command in.
 
 Other messages are explained with the feature that produces them: [harness approvals and browser failures](/user-documentation/advanced-agents/harness), [agent questions](/user-documentation/advanced-agents/agent-questions), [editor persona queries](/user-documentation/tab-types/editor-persona-query), [file operations](/user-documentation/tab-types/file-navigator), [unplayable audio](/user-documentation/tab-types/audio-player), and [plugin failures](/user-documentation/command-bar/plugins).
+
+Window layout problems also appear here. A failed resize reads `Could not resize the window: <reason>.`;
+a failed size read reads `Could not read the window size: <reason>.`; and `layout show` with no
+available sizes reads `No layout to show.` The reason is reduced to its first line, with terminal
+punctuation removed and one period added. These notices have no toggle and still appear when the
+issuing tab is active.
 
 ## Docking to a sidebar
 
