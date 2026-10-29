@@ -26,7 +26,7 @@ Keep only the settings you want to change. Any setting you leave out uses its de
 | `sandboxWorkspaces` | `true` | Confines workspaced shell and harness tabs to their workspace clone with the macOS sandbox. |
 | `recordShellTabs` | `true` | Saves shell recordings and text transcripts. Shell recordings include characters echoed by the shell, so secrets typed on a command line can be recorded. See [Shell transcripts](/user-documentation/command-bar/shell#read-a-shell-sessions-transcript). |
 | `syntaxTheme` | `"github-dark"` | Syntax highlighting for every editor and diff tab. Set it with [`syntax theme`](/user-documentation/command-bar/commands#syntax-theme). |
-| `theme` | `"dark"` | Colors for the app window. Set it with [`theme`](/user-documentation/command-bar/commands#theme). |
+| `theme` | `"dark"` | Colors for the app window. Pick one of six built-in themes; individual colors can't be changed. Set it with [`theme`](/user-documentation/command-bar/commands#theme). |
 | `notifications.events.stateChange` | `false` | Adds background agent-finished events to the notifications feed. |
 | `notifications.events.scheduleFire` | `false` | Adds tab-owned scheduled-command events to the feed. |
 | `notifications.events.agentStart` | `false` | Adds background agent-start events to the feed. |
