@@ -20,5 +20,6 @@ Open the conversation list, dock it to a sidebar, or open a saved conversation b
 
 **Examples**
 
-- `conversations` opens the conversation list.
+- `conversations` opens the conversation list, or moves a docked list back to the center.
 - `conversations right` docks the list on the right.
+- `conversations Weekend plans` opens the saved conversation with that title. If none matches, it replies `No conversation matching "Weekend plans".`
