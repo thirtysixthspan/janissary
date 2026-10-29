@@ -27,6 +27,7 @@ The `external` and `page` keywords work in either order. `open` only handles kno
 **Examples**
 
 - `open README.md` opens the project readme.
+- `open $root/README.md` opens the same file by its project-root path. A path can also start with `~` for your home directory.
 - `open https://example.com` opens a web page in the application.
 - `open page example.com` opens the bare address in the application with `https://` assumed.
 - `open external README.md` hands the file to its external viewer.

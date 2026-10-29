@@ -32,6 +32,7 @@ Open a file navigator in the current tab's working directory, or target a path o
 **Examples**
 
 - `files src` opens a navigator at `src`.
+- `files $root` opens a navigator at the project root. A path can also start with `~` for your home directory. In a remote tab, `$root` is that tab's remote workspace and `~` is your home directory on that host.
 - `files right src` opens `src` in the right sidebar.
 - `files in janus` opens a navigator at the `janus` tab's working directory.
 - `files src in janus` opens `src` relative to the `janus` tab's working directory.

@@ -140,7 +140,7 @@ Closing the **last** remaining tab quits the app, so it asks first. `close`, `ex
 
 ## How paths are shown: `$root`
 
-The app shortens project paths to `$root` in its prompts, panels, headers, and status messages, except that a [Markdown preview](/user-documentation/tab-types/markdown-preview) shows the file's full path in its metadata header. The
+The app shortens project paths to `$root` in the places it shows them, listed below. Not every path is shortened. A [Markdown preview](/user-documentation/tab-types/markdown-preview) shows the file's full path in its metadata header, the window titlebar shows the full path, and a few messages about files on another host name the full path. The
 root is the directory you launched Janissary from — the project the session is working in — so a
 second window started somewhere else has its own root and its own `$root`:
 
@@ -158,7 +158,9 @@ directory shorten to `~`.
 [Git-synced files](/user-documentation/tab-types/editor-git-sync) are edited in one shared clone at
 `$root/workspace/git-sync`, which gets its own shorter name: `$git-sync`. It wins over `$root`, so a
 synced file's editor tab shows its location as `$git-sync/product/backlog/issues.md`, and the clone
-itself appears as `$git-sync/`. Like `$workspace`, it's display-only — you can't type it as a path.
+itself appears as `$git-sync/`. Only the clone named exactly `git-sync` gets this name. A sibling
+folder such as `git-sync-old` keeps the ordinary `$root/workspace/git-sync-old` form. Like
+`$workspace`, `$git-sync` is display-only — you can't type it as a path.
 
 A [workspaced](/user-documentation/advanced-agents/workspaced-agent) tab's metadata row shortens
 one step further: the clone reads as `$workspace/<name>` (its own directory name, e.g.
@@ -168,7 +170,9 @@ where the raw clone path has no meaning to the local root shortcut. The same for
 [agent](/user-documentation/getting-started/agents#workspaced-agents) or shell launch announces its
 clone as `Agent "emrah" ready. ($workspace/emrah)`. Paths you type keep the forms above. Where the
 app does not know the clone's directory — a tab whose shell lives on another host — the metadata row
-falls back to the ordinary `$root` form instead of showing `$workspace` at all.
+drops `$workspace` and uses the ordinary shortening instead. A path inside your local project reads
+as `$root/...`, a path under your home directory reads as `~/...`, and any other path, which
+includes most paths on another host, appears in full.
 
 The shortcut appears in the working directory beside a command prompt, the connections panel, an
 editor tab's metadata header, a file navigator's root, and the launch lines the notifications feed
@@ -189,8 +193,11 @@ edit ~/notes.txt
 files $root
 ```
 
-Only a path prefix is expanded. A `$root` or `~` in the middle of a path stays literal. The window
-titlebar is the one exception to display shortening. It reads `Janissary (<version>): <full absolute path>`.
+Only a path prefix is expanded. `$root` counts as a prefix when it is the whole path or is followed by
+`/`, and `~` works the same way, so `$rootfiles` and `~name` stay literal, and so does a `$root` or `~` in
+the middle of a path. In a remote tab, `files $root` means that tab's remote workspace and `~` means your
+home directory on that host. If the app doesn't know that home directory yet, a `~` path is refused as
+outside the remote workspace. The window titlebar reads `Janissary (<version>): <full absolute path>`.
 
 ## Shell output and ACP replies
 
