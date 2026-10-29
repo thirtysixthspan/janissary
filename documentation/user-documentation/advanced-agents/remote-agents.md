@@ -140,6 +140,8 @@ See [Sessions](/user-documentation/tab-types/sessions) for the full list of remo
 
 Attaching a harness redraws its retained terminal output and restores its recent transcript history without waiting for new output. Surviving shell tabs reattach to their existing terminals and replay retained output. If another tab has taken the original name, the restored tab gets a unique name. Older history may be trimmed; a notice appears when terminal history was trimmed, and the oldest surviving output may appear without the command that produced it. Sessions started before display-history retention was available cannot recover output they did not retain.
 
+Remote harnesses can detect permission prompts and usage limits while detached. A limit report is queued until you attach again; if its reset time has passed, the harness resumes one minute after reattachment. The resume is scheduled on the local tab, so cancel it there with `schedule cancel auto-resume in <label>` before it fires if needed.
+
 The remote deletes its workspace clone when the session is terminated. A detached session can wait up to seven days for an attach before expiring. Attaching a shell returns to its existing terminal and workspace, including after repeated detaches. Remote files opened for viewing or editing are cached locally and cleared at startup, on detach, or when the session is terminated. Profiles do not restore remote navigators.
 
 ## Coming back after a restart

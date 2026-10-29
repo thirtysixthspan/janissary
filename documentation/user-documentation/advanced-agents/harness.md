@@ -63,10 +63,11 @@ opened for it: `Escape` there closes that menu and dismisses the selection toget
 always leaves you fully out of the pick.
 
 A selection you've made survives while you keep working in the tab, but clears once you copy it,
-if you switch tabs and back, if you resize the window, or if the harness exits. The frozen image
-covers the visible
-screen at the moment the drag started — text that has scrolled off is selected by scrolling the
-terminal back first and then dragging again.
+if you switch tabs and back, if you resize the window, or if the harness exits. A plain click in the
+terminal clears the selection without sending the click to the harness. The frozen image covers the
+visible screen at the moment the drag started — text that has scrolled off is selected by scrolling
+the terminal back first and then dragging again. In an inline terminal card, scrolling its surrounding
+transcript does not clear the selection; the card has no tab identity of its own.
 
 The harness's own copy command works too, including in a tab running `on <host>`. A harness copying
 something reaches for the clipboard of the machine it is running on; when that machine is a remote
@@ -82,7 +83,7 @@ Selecting and copying work the same in every terminal in the app, including
 
 <img class="agent-float left" src="/agents/ahmed-south.png" alt="" />
 
-The tab is labeled with the harness name by default; a second `harness claude` becomes `claude-2`, and so on. `as <label>` picks your own label instead, and a label you typed is never handed a suffix: when it is already in use, no tab opens and the refusal goes to the [notifications](/user-documentation/tab-types/notifications) feed, attributed to the tab you typed the command in, with nothing written to that tab's transcript.
+The tab is labeled with the harness name by default; a second `harness claude` becomes `claude-2`, and so on. `as <label>` picks your own label instead. The label is one command-line token, so quotes do not group words into a single label. A label you typed is never handed a suffix: when it is already in use, no tab opens and the refusal goes to the [notifications](/user-documentation/tab-types/notifications) feed, attributed to the tab you typed the command in, with nothing written to that tab's transcript.
 
 ```
 harness claude                → tab "claude"
@@ -95,7 +96,7 @@ A default label walks past everything in use to the next free `-2`, `-3`, and so
 
 Two cases change the rule for a label you typed. The reserved name `system` is always refused with `Cannot use "system": that name is reserved for the system tab.` And a `harness` line that a [system schedule](/user-documentation/automation/scheduling) delivers from its runscript keeps its label when it is free and takes the smallest free number when it isn't, so `as quality` can become `quality-2`. Only that scheduled delivery gets this. Typing the same line yourself, in the `system` tab or anywhere else, or running it through `execute`, `send`, `queue`, or a timer on a tab, still gets the refusal. So does a scheduled line you edit while it waits in the [system shell's queue](/user-documentation/command-bar/queue#edit-queued-commands), because an edited row is no longer a scheduled one. The reserved name `system` is refused even then.
 
-- `harness` with no name opens the **New harness** dialog in the app (see below). Only the classic terminal UI prints `Usage: harness <claude|opencode|codex> [as <label>] [-w].` instead.
+- `harness` with no name opens the **New harness** dialog in the app (see below). The classic terminal UI instead prints `Usage: harness <claude|opencode|codex> [as <label>] [-w] [-y].`.
 - An unknown name: `Unknown harness "foo". Choose from: claude, opencode, codex.`
 - `as` with no label: `Usage: harness <claude|opencode|codex> as <label>.`
 
@@ -243,6 +244,8 @@ harness claude with fix the failing tests
 
 Everything after the standalone `with` keyword is the prompt, taken verbatim — so words that look like flags or `as` inside it are treated as prompt text, not parsed as options. `with` must come after every other option.
 
+The prompt is held as a one-shot scheduled command on the new tab. It is typed and submitted as soon as the harness is running; if the harness is still starting, delivery retries on later schedule checks. If the tab never opens or the harness exits before it is ready, the prompt is not delivered.
+
 - `harness claude with` (nothing after `with`): `Usage: harness <claude|opencode|codex> [options] with <prompt>.`
 
 Wrapping the whole launch in a [`schedule`](/user-documentation/automation/scheduling) command runs it — fresh harness plus prompt — at a future time: `schedule deploy at 5pm harness claude with fix the failing tests`.
@@ -261,7 +264,7 @@ Other tabs can drive a harness: `send <tab> <text>` types a line into it, and [s
 
 ## Recordings
 
-Every harness session is recorded automatically. The full session, with its timing and colors, is written to a `.cast` file under `.janissary/recordings/` in your project, named `<label>-<timestamp>.cast`. The label is cleaned up on the way in: every character that isn't a letter, a digit, an underscore, or a dash becomes a dash, so `harness opencode as "my tab"` records as `my-tab-<timestamp>.cast`. Captures, transcripts, and browser logs use the same rule. You can review a recording after its tab has closed and its scrollback is gone — `play` plays it back inside the app (see [Playing a recording back](#playing-a-recording-back)), and `asciinema play` still works on the files. Recordings contain terminal output, terminal resizes, and the session's exit status when the tab's process reports one, so playback can follow changes in window size. Keystrokes are not recorded as input events; text echoed by a program is part of its output.
+Every harness session is recorded automatically. The full session, with its timing and colors, is written to a `.cast` file under `.janissary/recordings/` in your project, named `<label>-<timestamp>.cast`. The label is cleaned up on the way in: every character that isn't a letter, a digit, an underscore, or a dash becomes a dash, so `harness opencode as my-tab` records as `my-tab-<timestamp>.cast`. Captures, transcripts, and browser logs use the same rule. You can review a recording after its tab has closed and its scrollback is gone — `play` plays it back inside the app (see [Playing a recording back](#playing-a-recording-back)), and `asciinema play` still works on the files. Recordings contain terminal output, terminal resizes, and the session's exit status when the tab's process reports one, so playback can follow changes in window size. Keystrokes are not recorded as input events; text echoed by a program is part of its output.
 
 Recording covers named harness tabs, dedicated SSH tabs, and [shell tabs](/user-documentation/command-bar/shell#open-a-shell-tab). Interactive programs launched through `!`, such as `!vim`, are not recorded — a tab whose body is a terminal records, a program the `!` command took a tab over to does not. The three kinds share one directory and are told apart by the file's header: a harness recording names the bare program in `command` and the tab label in `title`, an SSH recording carries the full invocation you typed, and a shell recording names the shell's own path (`/bin/zsh`). That is worth knowing before you type one: an invocation with a secret passed in an ssh flag value puts that secret in a plaintext file under `.janissary/recordings/`.
 
@@ -375,7 +378,7 @@ Both messages bypass event toggles and focus suppression, so they can appear whi
 harness capture <name>
 ```
 
-Writes the harness tab labeled `<name>`'s current screen to a file and opens it in an editor tab — a one-off snapshot, unlike the continuous session recording above. `<name>` is the tab's label, not a harness type, matched exactly and case-sensitively.
+Writes the harness tab labeled `<name>`'s current screen to a file and opens it in an editor tab — a one-off snapshot, unlike the continuous session recording above. `<name>` is the tab's label, not a harness type, matched exactly and case-sensitively. The app captures about one second after output arrives, then reads the unchanged screen once more about a second after output stops. An idle screen produces no more captures, so the command saves the latest settled screen rather than starting a live view.
 
 - `harness capture` with no name: `Usage: harness capture <name>.`
 - No open tab and no persisted detached session record carries that label: `No tab labeled "<name>".`
