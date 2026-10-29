@@ -2,8 +2,6 @@
 
 ## ready
 
-* profiles (6/10) — 27 of 38 facts are covered, 10 are missing, and 1 is wrong. Explain project-profile persistence, system-shell failure, symlink precedence, self-launch loops, picker/list sorting and empty states, and the actual text output of `profile list` in `documentation/user-documentation/automation/profiles.md`; correct `help/profile.md` and add the exact malformed-command usage. Evidence is `product/specs/profiles.md`, `src/profiles.ts`, `src/profile/manager.ts`, `src/profile/runscript.ts`, `src/profile/command.ts`, `src/schedule/system/runscript-files.ts`, `src/system-shell.ts`, and `web/src/pickers/profile-picker-keys.ts`.
-
 * pull-request-review (9/10) — 3 of 19 facts are covered, 16 are missing, and none are wrong. Add a focused how-to at `documentation/user-documentation/workflows/pull-request-review.md` and link it from `documentation/user-documentation/command-bar/tasks.md`, covering review scope/dimensions, PR-branch backlog behavior, preservation/deduplication, and the repair threshold/route while leaving the PR open. Evidence is `product/specs/pull-request-review.md`, `ai/tasks/feature/review-pull-request.md`, `ai/tasks/feature/work-pull-request-issue.md`, `ai/tasks/feature/build-a-feature.md`, `ai/tasks/feature/build-a-complex-feature.md`, and `ai/tasks/feature/update-pull-request.md`; `help/tasks.md` is generic task-picker help, not a review guide.
 
 * pull-request-testing (9/10) — 0 of 24 workflow facts are covered, 24 are missing, and none are wrong. Add `documentation/user-documentation/workflows/testing-a-pull-request.md` and link it from `documentation/user-documentation/command-bar/tasks.md`, explaining the browser prerequisite, tested branch/dependency handling, verification cases, reruns, failure recording, and the boundary between testing and fixing. Ground this in `product/specs/pull-request-testing.md`, `ai/tasks/feature/test-pull-request.md`, `ai/tasks/feature/work-pull-request-issue.md`, and `scripts/test-pull-request-playbook.test.mjs`; `help/tasks.md` describes only the picker.
@@ -108,3 +106,4 @@
 * notifications — documented in documentation/user-documentation/tab-types/notifications.md (removed 2026-10-29)
 * open — documented in documentation/user-documentation/tab-types/opening-files.md, help/open.md (removed 2026-10-29)
 * pdf-tab — documented in documentation/user-documentation/tab-types/pdf-viewer.md, documentation/user-documentation/tab-types/opening-files.md, help/pdf.md, help/open.md (removed 2026-10-29)
+* profiles — documented in documentation/user-documentation/automation/profiles.md, help/profile.md (removed 2026-10-29)
