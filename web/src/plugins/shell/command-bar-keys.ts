@@ -1,3 +1,4 @@
+import { copySelectionChord, isMacPlatform } from '../api';
 import { controlCharacterFor, type ControlKey } from './command-line-rules';
 
 export function handleQueueKey(
@@ -42,6 +43,24 @@ export function handleShellControlKey(
   } else {
     write(character);
   }
+  event.preventDefault();
+  return true;
+}
+
+// A drag over the terminal ends in a click, and a click hands the keyboard back to the bar, so the
+// terminal's copy chord for what the drag selected arrives here rather than at the terminal. A
+// selection in the bar's own text keeps the chord, as it would in any text field.
+export function handleTerminalCopyKey(
+  event: KeyboardEvent,
+  element: HTMLTextAreaElement | null,
+  terminalSelection: () => string,
+  copyText: (text: string) => void,
+): boolean {
+  if (!copySelectionChord(event, isMacPlatform())) return false;
+  if (element && selectionIn(element)) return false;
+  const text = terminalSelection();
+  if (!text) return false;
+  copyText(text);
   event.preventDefault();
   return true;
 }

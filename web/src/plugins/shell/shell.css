@@ -50,6 +50,8 @@
   user-select: text;
 }
 
+::highlight(shell-reply-selection) { background-color: var(--editor-selection); }
+
 .shell-tab-header { position: relative; flex: 0 0 auto; }
 .shell-tab-header .status-panels { top: 100%; right: 10px; }
 /* ➕ waits for a provisioning shell's clone, dimmed the way an unavailable session control is. */

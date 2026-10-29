@@ -10,6 +10,7 @@ import { registerShellMarkerHandlers } from './shell-marker-handlers';
 import { insertMarkdownBlock } from './markdown-block';
 import { attachPromptMask } from './prompt-mask';
 import { holdFocusOffSinglePress } from './press-focus';
+import { holdReplySelection, shellSelectionText, type ReplySelection } from './reply-selection';
 import { formatDispatchedCommand } from './format-dispatched-command';
 import { markdownToAnsi } from './markdown-to-ansi';
 import { stripTerminalControls } from './strip-terminal-controls';
@@ -53,6 +54,7 @@ export type ShellTerminalHandle = {
   display(data: string): void;
   displayReply(line: string, markdown: string): void;
   focus(): void;
+  selection(): string;
   clearSelection(): void;
   scrollLines(amount: number): void;
   scrollToBottom(): void;
@@ -64,6 +66,7 @@ export function useShellTerminal({
 }: Options): ShellTerminalHandle & { terminalReady: boolean } {
   const handleRef = useRef<PluginTerminal | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
+  const replyRef = useRef<ReplySelection | null>(null);
   const [attachedPtyId, setAttachedPtyId] = useState<string | null>(null);
   const exitRef = useRef(onExit);
   exitRef.current = onExit;
@@ -125,10 +128,19 @@ export function useShellTerminal({
     const fit = new FitAddon();
     terminal.loadAddon(fit);
     const releasePressFocus = holdFocusOffSinglePress(container, terminal);
+    const reply = holdReplySelection(container, terminal);
+    replyRef.current = reply;
+    const selectedText = () => shellSelectionText(reply, terminal);
+    const clearSelections = () => {
+      reply.clear();
+      terminal.clearSelection();
+    };
     const isMac = isMacPlatform();
     terminal.attachCustomKeyEventHandler((event) => {
-      if (event.type !== 'keydown' || !copySelectionChord(event, isMac) || !terminal.hasSelection()) return true;
-      copyTextRef.current(terminal.getSelection());
+      if (event.type !== 'keydown' || !copySelectionChord(event, isMac)) return true;
+      const text = selectedText();
+      if (!text) return true;
+      copyTextRef.current(text);
       return false;
     });
     const promptMask = shellStarted ? attachPromptMask(terminal) : undefined;
@@ -153,13 +165,13 @@ export function useShellTerminal({
     // terminal's selection is emulator state, so nothing else can tell it. Registering here is what
     // makes a native drag over the screen offer **Copy**.
     registerTerminalSelection(container, {
-      hasSelection: () => terminal.hasSelection(),
-      getSelection: () => terminal.getSelection(),
-      clear: () => terminal.clearSelection(),
+      hasSelection: () => selectedText() !== '',
+      getSelection: selectedText,
+      clear: clearSelections,
     });
 
     const observer = new ResizeObserver(() => {
-      terminal.clearSelection();
+      clearSelections();
       resize();
     });
     observer.observe(container);
@@ -185,6 +197,8 @@ export function useShellTerminal({
       disposed = true;
       setAttachedPtyId(null);
       releasePressFocus();
+      reply.dispose();
+      replyRef.current = null;
       observer.disconnect();
       handleRef.current?.detach();
       handleRef.current = null;
@@ -206,12 +220,16 @@ export function useShellTerminal({
     terminal.write(formatDispatchedCommand(line, markdownToAnsi(markdown)));
   }, []);
   const focus = useCallback(() => { terminalRef.current?.focus(); }, []);
-  const clearSelection = useCallback(() => { terminalRef.current?.clearSelection(); }, []);
+  const selection = useCallback(() => shellSelectionText(replyRef.current, terminalRef.current), []);
+  const clearSelection = useCallback(() => {
+    replyRef.current?.clear();
+    terminalRef.current?.clearSelection();
+  }, []);
   const scrollLines = useCallback((amount: number) => { terminalRef.current?.scrollLines(amount); }, []);
   const scrollToBottom = useCallback(() => { terminalRef.current?.scrollToBottom(); }, []);
   const rows = useCallback(() => terminalRef.current?.rows ?? 0, []);
   return {
-    write, display, displayReply, focus, clearSelection, scrollLines, scrollToBottom, rows,
+    write, display, displayReply, focus, selection, clearSelection, scrollLines, scrollToBottom, rows,
     terminalReady: ptyId !== undefined && attachedPtyId === ptyId,
   };
 }

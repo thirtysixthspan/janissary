@@ -4,7 +4,7 @@ import { CommandBarShell, useAppCommandBar, useCommandBarKeys, usePluginChordCla
 import type { TabPluginClientCapabilities } from '../api';
 import type { ShellCompletion, ShellPayload } from '@shared/plugins/shell/shared';
 import { useShellTabTerminal } from './useShellTabTerminal';
-import { handleCompletionDismissKey, handleQueueKey, handleShellControlKey } from './command-bar-keys';
+import { handleCompletionDismissKey, handleQueueKey, handleShellControlKey, handleTerminalCopyKey } from './command-bar-keys';
 import { ShellHistoryPopup } from './ShellHistoryPopup';
 import { ShellTabMeta } from './ShellTabMeta';
 import { useShellSubmit } from './useShellSubmit';
@@ -18,7 +18,6 @@ import { appendShellHistory } from './shell-history';
 import { NEW_SHELL_CHORD, NO_CHORDS, SHELL_DOT_COLOR } from './shell-tab-constants';
 import { openSiblingShell } from './open-sibling';
 import { reportShellIntentFailure } from './report-shell-intent-failure';
-import { copyShellMarkdownSelection } from './shell-markdown-selection';
 import './shell.css';
 
 type Properties = {
@@ -51,7 +50,10 @@ export function ShellTab({ payload, capabilities }: Properties) {
   useApplicationBarEdits(appBar, inputReference, draft, setDraft);
 
   const terminalHistory = useTerminalCommandHistory(setSent);
-  const { write, displayReply, focus: focusTerminal, clearSelection, scrollLines, scrollToBottom, rows: terminalRows, terminalReady } = useShellTabTerminal({
+  const {
+    write, displayReply, focus: focusTerminal, selection: terminalSelection, clearSelection, scrollLines, scrollToBottom,
+    rows: terminalRows, terminalReady,
+  } = useShellTabTerminal({
     payload,
     capabilities,
     containerRef: terminalReference,
@@ -124,6 +126,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
       setMatches([]);
       return;
     }
+    if (handleTerminalCopyKey(event.nativeEvent, inputReference.current, terminalSelection, capabilities.copyText)) return;
     // The shell's own control keys, before the baseline keymap: that one returns early on any held
     // modifier, so without this they would reach the window handler and be lost.
     if (handleShellControlKey(event, inputReference.current, capabilities.copyText, write)) return;
@@ -143,7 +146,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
     bar.onKeyDown(event);
   }, [
     appBar.blockingOverlayOpen, appBar.onDeleteQueued, appBar.overlayOwnsCommandBar,
-    bar, capabilities, draft, focusTerminal, historyOpen, matches.length, queueOpen, write,
+    bar, capabilities, draft, focusTerminal, historyOpen, matches.length, queueOpen, terminalSelection, write,
   ]);
 
   // `Ctrl+R` and `Cmd+T` are claimed by this plugin's declaration, so they reach this tab while it is
@@ -177,7 +180,6 @@ export function ShellTab({ payload, capabilities }: Properties) {
         onClick={() => { inputReference.current?.focus(); }}
         onDoubleClick={() => { clearSelection(); focusTerminal(); }}
         onKeyDownCapture={(event) => {
-          if (copyShellMarkdownSelection(event.nativeEvent, event.currentTarget, capabilities.copyText)) return;
           if (event.key !== 'Tab' || !event.shiftKey) return;
           event.preventDefault();
           event.stopPropagation();

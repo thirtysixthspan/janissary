@@ -125,10 +125,20 @@ rendered content fits the block without an internal scrollbar, and the reply scr
 terminal without adding an application-window scrollbar. The decoration stays inside the terminal
 body and never covers the metadata row or tab strip. Its visible portion stays rendered while
 scrolling through it, even when its first row is above the viewport. The block is not terminal text,
-so terminal selection and search do not see it. Text in a rendered reply can be selected with the
-pointer; the shell's copy chord copies that browser selection through the shared clipboard. When a
-full-screen program holds the terminal, or the reply cannot be measured or placed, it falls back to
-the styled terminal text described above.
+so terminal search does not see it, and a terminal selection never covers it. Text in a rendered
+reply is selected by dragging over it with the pointer. The press goes to the reply rather than the
+terminal, and the dragged text is highlighted in the terminal's selection color as the pointer
+moves. A drag that leaves the reply runs to the reply's end while the pointer is below it and to its
+start while the pointer is above it. The press does not move the keyboard, and the click that ends
+the drag leaves it in the command bar, as any click on the terminal does; a click that ends a drag
+on a link does not follow the link. The selected text stays highlighted after the drag, and the
+copy chord (see § Keys) and the right-click menu's **Copy** copy it through the shared clipboard,
+exactly as they copy a terminal selection, with the reply's line breaks and table cells separated
+by tabs. A reply selection and a terminal selection
+never stand together: pressing the primary button anywhere in the terminal, a reply included,
+clears whichever is held, and a double-click or a resize of the terminal clears it too. A
+right-click keeps it. When a full-screen program holds the terminal, or the reply cannot be
+measured or placed, it falls back to the styled terminal text described above.
 
 A link in a reply rendered as HTML opens the way the same link opens from the ACP response panel: a
 web address opens through `open`, and a `path:line` reference opens in an editor tab. A click on any
@@ -176,9 +186,14 @@ shell — the characters a terminal would send. The terminal also accepts direct
 `Ctrl+C` copies the command line's own selection instead when it holds one, so copying by keyboard
 still works.
 
-With the terminal focused, `Ctrl+Shift+C` copies its selection; on macOS, `Cmd+C` does the same. The
-same chords copy a selected rendered Markdown reply. Both use the shared clipboard writer, so the
-text is available from the system clipboard and the clipboard-history popup.
+`Ctrl+Shift+C` copies the terminal's selection; on macOS, `Cmd+C` does the same. The chord works
+whether the keyboard is in the terminal or in the command bar. Dragging over output with the pointer
+selects it and leaves the keyboard in the command bar, as any single click on the terminal does, so
+the chord copies that selection from there. When the command line holds a selection of its own, the
+chord is left to the command line, so `Cmd+C` copies the command line's text as in any text field.
+With nothing selected in either, the chord does nothing. Text selected in a rendered Markdown reply
+is copied the same way, from the terminal or the command bar. Both chords use the shared clipboard
+writer, so the text is available from the system clipboard and the clipboard-history popup.
 
 A program running in the shell can copy too, by sending the terminal an OSC 52 request, which is how a
 program on a remote or SSH host reaches the clipboard of the machine the tab is shown on. The text goes
@@ -541,7 +556,8 @@ written.
 ## Everything else
 
 The tab is an ordinary plugin tab in the rest: live and in-memory, never persisted and never restored, dockable into either sidebar, and splittable. Selecting text with the pointer and
-right-clicking offers the same **Copy** every other terminal surface offers.
+right-clicking offers the same **Copy** every other terminal surface offers, and the copy chord in
+§ Keys copies the same selection.
 
 Its terminal connection belongs only to that shell tab. A plugin tab cannot attach to, type into, or
 resize a terminal owned by another tab.
