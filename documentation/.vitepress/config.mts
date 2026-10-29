@@ -147,6 +147,7 @@ export default defineConfig({
           items: [
             { text: "Product development workflow", link: "/user-documentation/workflows/product-development" },
             { text: "Creating a new project", link: "/user-documentation/workflows/creating-a-new-project" },
+            { text: "Review a pull request", link: "/user-documentation/workflows/pull-request-review" },
           ],
         },
       ],
