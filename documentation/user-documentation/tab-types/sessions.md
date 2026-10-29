@@ -73,6 +73,12 @@ Click a row once to select it, click again — or press `Enter` — to open it. 
 
 The list updates itself as sessions launch, join, detach, or lose their connection, whether or not this tab is open. Opening an `ssh` tab from another tab adds its row straight away, and closing that tab removes the row — which is what a docked list relies on, since it never leaves and returns to focus. The header's refresh button re-reads the list rather than waiting for something to change, and so does returning to this tab from another one. When docked, Refresh shares one metadata bar with the control that moves the list to the other sidebar. Refreshing never opens a connection on its own — reachability is only learned by pressing **Attach** or **Terminate**, so a parked row can go stale: a peer that expired while Janissary was closed still reads `detached` until something tries it.
 
+## How long a parked session lasts
+
+A detached session waits on its host for up to seven days. Attaching cancels the wait. If nobody attaches in time, the host stops the session's processes and removes its remote workspace. Anything queued while it was parked, such as notifications and captures, goes with it. Terminating a session ends it the same way, straight away. The list can't tell the difference until you try: the row reads `detached` until **Attach** or **Terminate** reaches the host and learns the session is gone.
+
+`harness capture <name>` still works on a detached harness. It asks the host for a fresh capture over a separate SSH connection and gives up after 15 seconds with `Detached capture query timed out.`. On a live connection the same wait ends with `Remote capture query timed out.`. Either way the capture request fails without touching the session or its seven-day wait.
+
 ## What a failed attach leaves behind
 
 Not every failed attach means the same thing, and the row tells you which kind you got.

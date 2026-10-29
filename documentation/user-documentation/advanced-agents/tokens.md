@@ -98,7 +98,7 @@ A token reaches the tab whether or not isolation is actually active on that mach
 
 <img class="agent-float" src="/agents/hakim-south.png" alt="" />
 
-All five token files travel to a [remote shell or harness](/user-documentation/advanced-agents/remote-agents) the same way. Janissary sends them through the encrypted SSH connection when it asks the remote for a workspace, and injects them only into that workspace's processes. None is written to the remote filesystem, so you don't need to copy any of these files to the other machine. If you have no token to send, the remote falls back to its own copy, looked up in the same two places on that machine.
+All five token files travel to a [remote shell or harness](/user-documentation/advanced-agents/remote-agents) the same way. Janissary sends them through the encrypted SSH connection when it asks the remote for a workspace, and injects them only into that workspace's processes. None is written to the remote filesystem, so you don't need to copy any of these files to the other machine. If you have no token to send, the remote falls back to its own copy, looked up in the same two places on that machine. The one exception is cloning your project onto a host that has no copy of it. That clone uses only the GitHub token you send, and only when your `origin` is on `github.com`. See [When the host has no clone of the project](/user-documentation/advanced-agents/remote-agents#when-the-host-has-no-clone-of-the-project).
 
 Your saved ChatGPT login is separate from these token files. Janissary does not forward it: OpenCode uses the Codex login saved on the machine running the workspace. A remote workspace therefore uses the remote machine's login, if it has one.
 
