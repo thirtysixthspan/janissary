@@ -31,7 +31,7 @@ The command bar accepts the shortcuts below while a shell tab is active. The one
 | `Ctrl+Shift+V` / `Cmd+Shift+V` | Open the [clipboard-history popup](/user-documentation/command-bar/clipboard) (typing `clip` does the same): everything you have copied inside Janissary this session, newest at the bottom; choosing an entry pastes it at the cursor. `Ctrl+V` and `Cmd+V` are untouched |
 | `Ctrl+A` | Open the task picker |
 | `Ctrl+G` | Open the fuzzy tab navigator, or close it if it is open |
-| `Ctrl+E` | Open the queue picker for a shell tab; does nothing on tabs without a queue |
+| `Ctrl+E` | Open the [queue popup](/user-documentation/command-bar/queue#edit-queued-commands) for a shell tab; does nothing on a tab that lacks a command queue or a command bar, such as a harness |
 | `Ctrl+T` | Expand or collapse the current tab's agent tool steps |
 | `Cmd+W` / `Ctrl+W` | Close the current tab |
 | `Cmd+F` | Search the current tab's transcript |
