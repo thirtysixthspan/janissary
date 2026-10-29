@@ -95,6 +95,8 @@ Press `Cmd+U` to drop the most recently added selection. Press `Escape` to colla
 
 These editing shortcuts are bundled with the editor. If one fails, its attempted change is discarded and that plugin stops responding for the rest of the session. The notifications feed reports `Editor plugin "<plugin>" disabled: <reason>.`, attributed to the editor tab where you pressed the shortcut. Other editing features keep working, and reloading the page gives the failed one a fresh start. While a persona suggestion is waiting for review, or while the in-editor persona query line has focus, plugin shortcuts do nothing; `Tab` still completes a persona name in the query line.
 
+These shortcuts run in your browser, so pressing one doesn't wait on the server. Only the failure report above travels to it. When a shortcut has nothing to do, such as `Cmd+/` in a file type with no comment syntax, the press changes nothing: no edit, no undo step, and no message. And when a failed plugin has disabled its shortcut, the editor goes back to its own behavior for that key. `Tab` inserts a tab character again, and `Escape` collapses the selections again.
+
 ## Caret and scroll
 
 The blinking caret marks where text will be inserted, and is only visible while the editor tab is active — switching away hides it.
