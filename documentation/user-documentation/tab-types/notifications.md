@@ -35,7 +35,7 @@ off after two lines. It tells you something happened and nothing more, which is 
 the way through to the detail. A docked feed holds its toasts back on whichever window is actually
 showing it, so a second window still toasts for a notification the first one has already recorded.
 
-Three notifications inside a ten-second window escalate on their own: the feed is made visible —
+Three notifications inside a ten-second window escalate on their own, and a repeat the feed folds into one line still counts as an arrival: the feed is made visible —
 docked right if it doesn't exist, docked (not focused) if it exists hidden, left exactly where it
 is if already docked — and every toast on screen clears at once, since the feed now shows those
 same lines. A notification that was detected earlier and only delivered now, such as a remote
