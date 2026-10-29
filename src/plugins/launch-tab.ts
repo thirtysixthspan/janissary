@@ -9,13 +9,13 @@ import { NO_REPO, type ProvisioningWorkspace } from '../workspace/manager.js';
 import { PROVISION_FAILURE_CLOSE_DELAY_MS, wireProvisioning } from '../workspace/provision-wire.js';
 import type {
   TabPluginDeclaration, TabPluginLaunchFactory, TabPluginLaunchReadyHandler, TabPluginLaunchRequest,
-  TabPluginPayload, TabPluginServerCapabilities,
+  TabPluginLaunchResult, TabPluginPayload, TabPluginServerCapabilities,
 } from './api.js';
 import { declaredResources } from './declared-resources.js';
 import type { PluginFailureOrigin } from './failure.js';
 import { resolveLaunchLabel } from './launch-tab-label.js';
 import { launchRemotePluginTab } from './launch-tab-remote.js';
-import { withRunAllocation } from './run-allocation.js';
+import { type RegisterRunTab, withRunAllocation } from './run-allocation.js';
 
 // The `launchTab` capability: the host names a plugin tab, starts its workspace clone when one was
 // asked for, places it at once, and runs the plugin's ready handler once the clone lands. Workspace
@@ -166,6 +166,21 @@ function joinSource(request: TabPluginLaunchRequest, input: LaunchInput): string
   return request.remote.label ?? input.answeringLabel ?? input.origin.label;
 }
 
+// A local launch: names the tab, starts its clone when one was asked for, and opens it. A tab that
+// already existed passes no `registerTab`, since the run allocated it earlier.
+function launchLocalTab(
+  input: LaunchInput, origin: PluginFailureOrigin, instanceKey: string, request: TabPluginLaunchRequest,
+  factory: TabPluginLaunchFactory, ready: TabPluginLaunchReadyHandler, registerTab?: RegisterRunTab,
+): TabPluginLaunchResult | undefined {
+  const label = resolveLaunchLabel(input.managers, input.declaration, origin, request);
+  if (label === undefined) return;
+  const { clone, fallbackReason } = startClone(input.managers, label, request);
+  if (!openLaunched(input, label, instanceKey, request, factory, clone)) return;
+  registerTab?.(label);
+  if (clone) awaitClone(input, label, instanceKey, clone, ready);
+  return { label, ...(fallbackReason && { fallbackReason }) };
+}
+
 export function launchCapabilities(input: LaunchInput): Pick<TabPluginServerCapabilities, 'launchTab'> {
   const { managers, declaration, isEnabled } = input;
   return {
@@ -188,13 +203,7 @@ export function launchCapabilities(input: LaunchInput): Pick<TabPluginServerCapa
         if (launched && !existed) registerTab(launched.label);
         return launched;
       }
-      const label = resolveLaunchLabel(managers, declaration, origin, request);
-      if (label === undefined) return;
-      const { clone, fallbackReason } = startClone(managers, label, request);
-      if (!openLaunched(input, label, instanceKey, request, factory, clone)) return;
-      if (!existed) registerTab(label);
-      if (clone) awaitClone(input, label, instanceKey, clone, ready);
-      return { label, ...(fallbackReason && { fallbackReason }) };
+      return launchLocalTab(input, origin, instanceKey, request, factory, ready, existed ? undefined : registerTab);
       },
     ),
   };
