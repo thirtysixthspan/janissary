@@ -2,8 +2,6 @@
 
 ## ready
 
-* shell (6/10) — 9 of 17 facts are covered, 7 are missing, and 1 is wrong. Correct “login shell” for captured `!` commands and explain trimming/bare `!`, unknown-command behavior, startup-file suppression, live output, tab-cwd updates, inherited workspace/remote context, and in-flight command completion when closing the connection in `documentation/user-documentation/command-bar/shell.md`. Source evidence is `product/specs/shell.md`, `src/commands/shell.ts`, `src/shell/manager.ts`, `src/shell/startup.ts`, `src/shell/index.ts`, `src/remote/shell-session.ts`, `src/remote/serve-processes.ts`, and `src/tab/plugin-terminals.ts`; keep `documentation/user-documentation/command-bar/connections.md` aligned.
-
 * shell-tab (8/10) — 56 of 86 facts are covered, 27 are missing, and 3 are wrong. Correct the shell name-pool exhaustion text, theme colors, and Cmd+F guidance across `documentation/user-documentation/getting-started/agents.md`, `documentation/user-documentation/getting-started/tabs.md`, `documentation/user-documentation/command-bar/commands.md`, `documentation/user-documentation/getting-started/keyboard.md`, and `documentation/user-documentation/tab-types/editor.md`. Expand `documentation/user-documentation/command-bar/shell.md` with reply selection/link behavior, OSC 52, history edge cases, provisioning/action details, and transcript limits; evidence is `product/specs/shell-tab.md`, `src/plugins/launch-tab-label.ts`, `web/src/plugins/shell/shell-terminal-theme.ts`, `web/src/plugins/shell/ShellTab.tsx`, `web/src/plugins/shell/useShellSubmit.ts`, `src/plugins/shell/parse-argument.ts`, `src/shell/transcript/writer.ts`, `src/shell/transcript/row-tracker.ts`, and `src/shell/transcript/manager.ts`.
 
 * sidebars (6/10) — 12 of 21 facts are covered, 8 are missing, and 1 is wrong. Correct the resize-button orientation/placement and add exact drag limits, the 300px default, hidden-system-tab behavior, focusing a docked tab, and selection-preserving strip reorder to `documentation/user-documentation/getting-started/tabs.md`; explain that `layout sidebar` can bypass drag limits and screen bounds in `help/layout.md`. Use `product/specs/sidebars.md`, `web/src/Sidebar.tsx`, `web/src/ResizeButton.tsx`, `web/src/layout-defaults.ts`, `web/src/useSidebarSelection.ts`, `src/tab/operations.ts`, `src/tab/visibility.ts`, and `src/client-layout.ts`; the current command syntax is `layout show`, not bare `layout`.
@@ -42,6 +40,7 @@
 
 ## resolved
 
+* shell — documented in documentation/user-documentation/command-bar/shell.md, documentation/user-documentation/command-bar/connections.md (removed 2026-10-29)
 * sessions-tab — documented in documentation/user-documentation/tab-types/sessions.md (removed 2026-10-29)
 * send — documented in documentation/user-documentation/command-bar/send.md, documentation/user-documentation/getting-started/tabs.md, help/keys.md (removed 2026-10-29)
 * shell — documented in documentation/user-documentation/command-bar/shell.md (removed 2026-10-14)
