@@ -20,7 +20,7 @@ Usage: question ask "<question>"
 
 ## Where the panel appears
 
-The panel opens on the tab that asked the question and stays tied to that tab as you switch away and back. It doesn't block the rest of the app: it's non-modal, so you can keep typing in other tabs, switch away, or use any other control while it's still waiting for you.
+The panel opens on the tab that asked the question and stays tied to that tab as you switch away and back. Its title names the asking tab, such as `Question from bilal`, and the question appears under it word for word. It doesn't block the rest of the app: it's non-modal, so you can keep typing in other tabs, switch away, or use any other control while it's still waiting for you.
 
 <img class="agent-float left" src="/agents/mahir-south-east.png" alt="" />
 
@@ -38,8 +38,28 @@ Questions live only in memory for the running session — they're not saved, and
 
 ## Notifications
 
-If a question opens on a tab you're not currently looking at, the [notifications](/user-documentation/tab-types/notifications) feed records `Question from <tab>` as a line you can click to jump to that tab. This one has no on/off toggle in `.janissary/config.json` — unlike the feed's other events, it always fires for a background tab. Nothing is recorded if you're already looking at the tab that asked.
+If a question opens while you're working in a different tab, Janissary records `Question from <tab>` in the [notifications](/user-documentation/tab-types/notifications) queue. The name is the one the asking tab shows in the tab strip, and clicking it in the feed takes you to that tab. Nothing is recorded if you're already looking at the tab that asked. A question that waited behind another is checked the same way when it comes up.
+
+When no feed is on screen, the line appears as a short toast instead. Three notifications inside ten seconds dock the feed on the right.
+
+You can't switch this line off. The background events have their own toggles under `notifications.events`, but a question doesn't. The desktop banner and the sound are separate, and you can change them. By default a question raises a banner and plays the warning sound. To quiet both, set the `question` entry in `.janissary/config.json`:
+
+```json
+{
+  "notifications": {
+    "alerts": {
+      "question": { "desktop": false, "sound": "none" }
+    }
+  }
+}
+```
+
+The `osNotifications` and `terminalBell` master switches still apply. [Desktop banners and bell sounds](/user-documentation/tab-types/notifications#desktop-banners-and-bell-sounds) covers the choices.
 
 ## Cancelling a question
 
-Clicking **Cancel**, closing the tab that asked, or shutting down the server all resolve a pending question the same way: the agent gets back `Question cancelled.` as the command's result. There's no other way to resolve one — no separate cancel command, no timeout, and no default answer supplied on your behalf.
+<img class="agent-float" src="/agents/ahmed-south.png" alt="" />
+
+Clicking **Cancel**, closing the tab that asked, or shutting down the server all resolve a pending question the same way: the agent gets back `Question cancelled.` as the command's result.
+
+Resetting the tab's [ACP connection](/user-documentation/advanced-agents/acp-agent) with `acp reset` cancels questions the same way. It cancels the questions the interrupted request asked, including one waiting behind another, and leaves questions from other requests pending. There's no other way to resolve a question: no separate cancel command, no timeout, and no default answer supplied on your behalf.
