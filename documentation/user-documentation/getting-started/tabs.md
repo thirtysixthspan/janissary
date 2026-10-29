@@ -140,7 +140,7 @@ Closing the **last** remaining tab quits the app, so it asks first. `close`, `ex
 
 ## How paths are shown: `$root`
 
-The app shortens project paths to `$root` in its prompts, panels, headers, and status messages. The
+The app shortens project paths to `$root` in its prompts, panels, headers, and status messages, except that a [Markdown preview](/user-documentation/tab-types/markdown-preview) shows the file's full path in its metadata header. The
 root is the directory you launched Janissary from — the project the session is working in — so a
 second window started somewhere else has its own root and its own `$root`:
 
