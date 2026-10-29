@@ -47,7 +47,7 @@ Row sizes, modified times, and permissions come from the remote host. Until thos
 
 Moves and copies stay on one machine. A drag onto a tree on another host has no drop highlight, and a cross-host paste is refused without changing anything or clearing the clipboard marks. Dragging a remote row into a command bar, an editor, or a harness inserts a host-qualified absolute path such as `devbox:/srv/project/src/index.ts`; local rows still insert short paths.
 
-A navigator opened from a remote tab's 📁 button closes when that tab closes, even if another joined tab keeps using the shared connection. Retargeting the navigator to a local directory removes that tie. A dropped or explicitly closed SSH connection closes every tree and tab using it.
+A navigator opened from a remote tab's 📁 button closes when that tab closes, even if another joined tab keeps using the shared connection. Retargeting the navigator to a local directory removes that tie. Explicitly closing the SSH connection closes every tree and tab using it, and so does a connection lost before the workspace was ready. Once the workspace is ready, a dropped connection does not close the tree. Janissary reconnects on its own and the tree stays open (see [Sleep and resume](/user-documentation/getting-started/sleep-and-resume#remote-sessions)).
 
 ## Docking to a sidebar
 
