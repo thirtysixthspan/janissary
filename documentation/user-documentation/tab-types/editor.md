@@ -4,10 +4,13 @@
 
 ```
 edit src/main.ts
+edit src/main.ts:42         opens with the cursor on line 42
 edit notes/new-idea.md      the path doesn't have to exist yet
 ```
 
-For a bare valid runscript name, `edit deploy` opens the existing project script at `.janissary/scripts/deploy.rs` when no exact file named `deploy` exists in your working directory. A missing runscript prints `No runscript named "deploy".` and doesn't create a file. Explicit paths and names with extensions keep the usual behavior.
+Your `edit` command shows up in the transcript of the tab you typed it in, with no output of its own, and the new editor tab takes focus. Typing `edit` with no file prints `Usage: edit <file>`.
+
+For a bare valid runscript name, `edit deploy` opens the existing project script at `.janissary/scripts/deploy.rs` when no exact file named `deploy` exists in your working directory. A missing runscript prints `No runscript named "deploy".` and doesn't create a file. If the script exists but can't be read, you get `Could not read runscript "deploy".` Explicit paths and names with extensions keep the usual behavior.
 
 The tab shows the file's name, size, and location in a header, with the editable buffer below.
 Typing, arrow keys, `Home`/`End`, `PageUp`/`PageDown`, mouse clicks and selection, and paste all
@@ -17,6 +20,16 @@ Long sentences wrap between words when they reach the editor's edge. A single to
 You can also land in an editor by clicking a `file.ts:42`-style link in any transcript — the file opens with the cursor already on that line, centered in view — or from the [file navigator](/user-documentation/tab-types/file-navigator) with `Shift+Enter` on a file. `Shift+Enter` is the tree's edit gesture, so a Markdown file opens its rendered preview and a video or audio file goes to your system's player instead.
 
 ![An editor tab: syntax-highlighted TypeScript under the metadata header, with the Save control lit to show the buffer has unsaved changes.](/screenshots/editor-tab.png)
+
+## Jump to a line in a file you already have open
+
+If the file is already open in an editor tab, `edit` focuses that tab instead of opening a second one. Add a line number and the cursor moves to the start of that line, any selection is dropped, and the line scrolls into view:
+
+```
+edit src/main.ts:120
+```
+
+That happens on every request, even when you name the same line as last time, so you can scroll away and run the same command to come straight back. Leave the line number off and the cursor stays where it was.
 
 ## Focus stays in the buffer
 
@@ -143,6 +156,8 @@ If you save again while a save is still running, unchanged text waits for that s
 
 If a save receives no answer before its wait expires, the editor shows `request timed out` and keeps your buffer unsaved. The file may still have been written, so Janissary won't repeat the save automatically; you can save again when you're ready.
 
+A file you opened from a remote [file navigator](/user-documentation/tab-types/file-navigator) saves with the same care on the remote machine. If the replacement fails, the remote file keeps its contents and permissions, and your buffer stays unsaved. The failure arrives as a notification that reads `Could not save remote file: <reason>`.
+
 If the path didn't exist when you ran `edit`, the file shows a size of "unknown" and isn't created until your first save. Opening that same not-yet-existing path again doesn't focus the first tab the way opening an existing file would; each open gets its own independent, unsaved tab, since none of them has a real file to converge on yet. If you save one of those tabs without renaming it, and another tab already saved a file under that name in the meantime, your save doesn't overwrite it: it picks the next free name in the same folder instead, such as `untitled.md` becoming `untitled-2.md`, and updates the tab to match.
 
 Beside the save button, the **Commit to origin** icon saves the file and then commits exactly that one file and pushes it to your current branch — the same commit-and-push cycle the [file navigator's](/user-documentation/tab-types/file-navigator) commit uses, with a generated `sync: <filename>` message. The icon spins while the commit runs, turns green on success and red on failure, and each outcome also lands as one line in the [notifications](/user-documentation/tab-types/notifications) tab. Hovering names the branch the push will go to (`Commit to origin (branch <name>)`) plus its current state, the same as the file navigator's own commit button — or just `Commit to origin` when the branch can't be determined. Files on a remote host commit from their navigator instead. Clicking it while a commit is already running does nothing, so a second click can't collide with the first.
@@ -150,6 +165,8 @@ Beside the save button, the **Commit to origin** icon saves the file and then co
 ## Renaming a tab renames the file
 
 Unlike other tab kinds, editing an editor tab's label doesn't just set a display alias. It renames the file itself: type `notes.txt` and that becomes the file's actual name. The `rename` command does the same when it runs against an editor tab, and a refusal is then printed as the command's reply as well as sent as a notification. For a file that hasn't been saved yet, this only updates where the first save will write to. A file tab opened from the [file navigator](/user-documentation/tab-types/file-navigator)'s New file action starts with its default name (`untitled.md`, or the next free name) already highlighted in the metadata row, so you can type the real name and press Enter without touching the tab label; pressing Escape keeps the default name. The metadata row's file name itself is also double-click to rename, just like the tab label. For a file that already exists on disk, whether opened as an existing file or saved for the first time from a new one, renaming moves it to the new path right away.
+
+Renaming a file from a remote navigator, including a new file you just created there, renames it on the remote machine too, and later saves go to the renamed file. If the remote machine refuses, a notification reads `Could not rename remote file <path> to <name>: <reason>`. When the name is already taken, the reason is `a file with that name already exists`.
 
 Either way, the buffer is never reloaded: your unsaved content, cursor position, and undo history stay exactly as they were, and focus returns to the buffer once the rename finishes. Renaming the same file from the [file navigator](/user-documentation/tab-types/file-navigator) has the same effect on an editor tab that already has it open.
 
@@ -177,7 +194,7 @@ The same applies while a file is first opening: a newer external read takes prec
 
 If you do have unsaved changes, your edits are left alone. The next time you try to save, a dialog appears instead: "This file changed on disk. Overwrite it with your changes?" with **Overwrite** and **Cancel**. Overwrite writes your buffer over the external change; Cancel leaves your buffer as it is, still unsaved, and shows the same prompt again on your next save attempt.
 
-Every save also checks the file on disk at the moment you save. If the file no longer matches what your buffer was loaded from or last saved as, nothing is written and the same dialog appears, even if the change was never picked up while it happened. A save can't quietly replace content you never saw.
+Every save also checks the file on disk at the moment you save. If the file no longer matches what your buffer was loaded from or last saved as, nothing is written and the same dialog appears, even if the change was never picked up while it happened. A save can't quietly replace content you never saw. For a remote file, that check runs on the remote machine, and both the remote file and your local copy stay as they were while the dialog is open.
 
 As you type, the editor also keeps a transient, unsaved copy of your buffer synced to the server a moment after you stop, so a [monitor](/user-documentation/automation/monitoring) watching the tab can see your in-progress edits without you having to save. That draft is never written to disk and never shown back in the editor; it's cleared the moment you do save.
 
