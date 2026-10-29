@@ -2,8 +2,6 @@
 
 ## ready
 
-* acp (4/10) — 24 of 27 user-visible facts are covered, 3 are missing, and none are wrong. Expand `documentation/user-documentation/advanced-agents/acp-agent.md` with the exact default model, the distinct fatal-connection and prompt-error messages and output limits, and the source-tab behavior for links from a docked response panel. Ground the changes in `product/specs/acp.md`, `src/acp/manager.ts`, `src/acp/index.ts`, `src/acp/response.ts`, `harness-models.json`, `web/src/shared/acp/acp-panel-actions.ts`, and `web/src/shared/transcript/open-link.ts`; align related details in `documentation/user-documentation/advanced-agents/markdown-rendering.md` and `help/acp.md`.
-
 * agent-command (5/10) — 32 of 45 facts are covered, 12 are missing, and 1 is wrong. Update `documentation/user-documentation/advanced-agents/agent-command.md` with the omitted parser and task-root errors, skill-grant normalization, parent/child cleanup behavior, captured-command context, clone-depth limit, shell reply presentation, remote-target cancellation, and monitor title/activity/termination details; correct the overbroad monitor-failure message. The evidence is `product/specs/agent-command.md`, `src/agent/command-parser.ts`, `src/agent/task-resolution.ts`, `src/agent/skill-grants.ts`, `src/agent/nested-run.ts`, `src/workspace/clone-depth.ts`, `src/agent/command-invocation.ts`, `src/commands/agent.ts`, `src/agent/remote-target.ts`, `src/agent/monitor-tab.ts`, and `web/src/plugins/agent-monitor/view.tsx`; keep `help/agent.md`, `help/commands.md`, and the remote/workspaced-agent guides consistent.
 
 * agent-questions (8/10) — 28 of 33 facts are covered, 2 are missing, and 3 are wrong. In `documentation/user-documentation/advanced-agents/agent-questions.md`, distinguish feed inclusion from configurable desktop/sound alerts, explain that `acp reset` cancels its own pending question, state that question text is preserved, and correct the claim that a closed feed always opens docked. Use `product/specs/agent-questions.md`, `src/notifications/index.ts`, `src/notifications/alert-defaults.ts`, `src/commands/acp-reset.ts`, `src/acp/response.ts`, `src/notifications/deliver.ts`, `src/notifications/queue.ts`, and `src/notifications/tab.ts`; align the cancellation note with `documentation/user-documentation/advanced-agents/acp-agent.md` and `documentation/user-documentation/tab-types/notifications.md`.
@@ -143,3 +141,4 @@
 ## resolved
 
 * shell — documented in documentation/user-documentation/command-bar/shell.md (removed 2026-10-14)
+* acp — documented in documentation/user-documentation/advanced-agents/acp-agent.md, documentation/user-documentation/advanced-agents/markdown-rendering.md (removed 2026-10-29)
