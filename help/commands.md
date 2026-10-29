@@ -7,7 +7,7 @@
 | `audio` | `audio <path>` queues audio into the single audio tab through the bundled audio plugin; accepts the same paths and wildcards as `open` |
 | `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |
 | `clear` | Clear the tab's output log; in a shell tab, bare `clear` is sent to zsh so it clears the terminal instead (use `/clear` to clear the output log) |
-| `clipboard` | Help page for the clipboard-history popup: everything copied inside Janissary this session, newest at the bottom. Open it with `clip`, Ctrl+Shift+V, or Cmd+Shift+V (typing `clipboard` does not open it); choosing an entry pastes it at the cursor rather than running it |
+| `clipboard` | Show session clipboard history with `clip`, Ctrl+Shift+V, or Cmd+Shift+V. Selecting an entry pastes it at the cursor; typing `clipboard` opens this help page |
 | `close` | Close the current tab (exits if last); `close <tabname>` closes a tab by its label (`page`, `page-2`, `image`, …) or display alias. `/close` and `/exit` are equivalent |
 | `connection` | List or close open connections (sqlite/shell/acp/browser/ssh/terminal) |
 | `conversation` | Bare `conversation` opens the conversation list; `conversation <title>` opens a saved conversation by title, ignoring case, or creates one and sends `<title>` as its first query |
@@ -47,7 +47,7 @@
 | `send` | Deliver a line to a harness, or submit it through a shell tab's command bar — application commands run in the app and unclaimed lines go to zsh |
 | `sessions` | Open the remote sessions list — every host you're connected to or parked on (`sessions left`/`right` to dock it) |
 | `shell` | `shell [name] [-w\|--workspace\|--no-workspace] [--offline] [on <address>]` opens a shell with a fresh workspace; `--no-workspace` uses a local shell, and `on <address>` opens a remote shell |
-| `sql` | `sql [<name>]` opens a database browser with table filtering, sorting, paging, editing, export, and a SQL console. Bare `sql` opens the database whose connection was opened most recently; add `left` or `right` to dock it |
+| `sql` | Open a SQL browser. Bare `sql` opens the most recently connected database; use `sql <name>` to choose one or add `left` or `right` to dock it |
 | `ssh` | Open an SSH session to a remote host in a full-tab terminal |
 | `syntax` | `syntax theme <name>` sets the syntax-highlighting theme for every open editor and diff tab; `syntax theme` alone opens a theme-picker modal |
 | `tab` | `focus <name>`, `move <tab> <position>`, `pane <tab> left\|right`, `split <tab>`, `color <tab> <#rrggbb>`, `group <tab> <id\|name>`, `dock <tab> left\|right`, `undock <tab>` arrange tabs |
