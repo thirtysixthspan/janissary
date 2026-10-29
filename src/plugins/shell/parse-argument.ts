@@ -22,15 +22,27 @@ function readGroupClause(tokens: string[], index: number): { group: string; end:
   return { group, end: index + 2 };
 }
 
+function readShellArgumentToken(tokens: string[], index: number, state: ShellLaunchArgument): number | { error: string } {
+  const lower = tokens[index].toLowerCase();
+  if (FLAGS.has(lower)) {
+    if (lower === '--offline') state.offline = true;
+    else if (lower === '--no-workspace') state.workspace = false;
+  } else if (lower.startsWith('-')) {
+    return { error: `Unknown option "${tokens[index]}". ${SHELL_USAGE}` };
+  } else if (lower === 'on') {
+    state.remote = tokens[index + 1] ?? '';
+    if (index + 1 < tokens.length) return index + 1;
+  } else {
+    state.name += `${tokens[index]} `;
+  }
+  return index;
+}
+
 export function parseShellArgument(argument: string): ShellLaunchArgument | { error: string } {
   const tokens = argument.trim().split(/\s+/u).filter(Boolean);
-  const words: string[] = [];
-  let noWorkspace = false;
-  let offline = false;
-  let remote: string | undefined;
+  const state: ShellLaunchArgument = { name: '', workspace: true, offline: false };
   let group: string | undefined;
   for (let index = 0; index < tokens.length; index++) {
-    const lower = tokens[index].toLowerCase();
     const groupClause = readGroupClause(tokens, index);
     if (groupClause && 'error' in groupClause) return groupClause;
     if (groupClause) {
@@ -38,20 +50,12 @@ export function parseShellArgument(argument: string): ShellLaunchArgument | { er
       index = groupClause.end;
       continue;
     }
-    if (FLAGS.has(lower)) {
-      if (lower === '--offline') offline = true;
-      else if (lower === '--no-workspace') noWorkspace = true;
-    } else if (lower.startsWith('-')) {
-      return { error: `Unknown option "${tokens[index]}". ${SHELL_USAGE}` };
-    } else if (lower === 'on') {
-      remote = tokens[index + 1] ?? '';
-      if (index + 1 < tokens.length) index++;
-    } else {
-      words.push(tokens[index]);
-    }
+    const nextIndex = readShellArgumentToken(tokens, index, state);
+    if (typeof nextIndex !== 'number') return nextIndex;
+    index = nextIndex;
   }
   return {
-    name: words.join(' ').toLowerCase(), workspace: remote !== undefined || !noWorkspace, offline,
-    ...(remote !== undefined && { remote }), ...(group !== undefined && { group }),
+    ...state, name: state.name.trim().toLowerCase(), workspace: state.remote !== undefined || state.workspace,
+    ...(group !== undefined && { group }),
   };
 }
