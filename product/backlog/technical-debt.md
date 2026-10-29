@@ -4,8 +4,6 @@
 
 ## development
 
-* Reduce the cognitive complexity of `runSystemSchedule()` in `src/commands/schedule.ts` (line 63), reported at 17 against the allowed 15 in a 100-line file. The function handles system schedule listing, creation, cancellation, and clearing through a sequence of action branches with inline validation and result reporting. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against `runSystemSchedule()` in `src/commands/schedule.ts`. Severity: **low**.
-
 * Reduce the cognitive complexity of `completeSystemSchedule()` in `src/completion/system-schedule.ts` (line 8), reported at 16 against the allowed 15 in a 37-line file. The function chooses schedule completions by command position and preceding tokens, with nested checks for cancel names, recurring days, and complete dates. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against `completeSystemSchedule()` in `src/completion/system-schedule.ts`. Severity: **low**.
 
 * Reduce the cognitive complexity of the `launchTab` callback in `launchCapabilities()` in `src/plugins/launch-tab.ts` (line 173), reported at 17 against the allowed 15 in a 201-line file. The callback validates launch context, checks existing tabs, branches between remote and local launches, and handles workspace cloning and registration. This is risk-sensitive because it launches remote tabs and may adopt a running process. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against the `launchTab` callback in `src/plugins/launch-tab.ts`. Severity: **medium**.

@@ -74,16 +74,7 @@ function runSystemSchedule(
     return;
   }
   if (parsed.action === 'add') {
-    let scriptExists: boolean;
-    try {
-      scriptExists = readRunscript(managers.tab.launchDir, parsed.script).exists;
-    } catch {
-      append(`Could not read runscript "${parsed.script}".`);
-      return;
-    }
-    if (!scriptExists) { append(`No runscript named "${parsed.script}".`); return; }
-    const result = owner.add({ ...parsed.entry, id: parsed.name, script: parsed.script });
-    append(result.ok ? `Scheduled ${parsed.name} system: ${parsed.entry.spec} (script ${parsed.script}).` : 'Could not save system schedule.');
+    addSystemSchedule(parsed, append, managers);
     return;
   }
   if (parsed.action === 'cancel') {
@@ -97,4 +88,21 @@ function runSystemSchedule(
   if (count === 0) { append('No scheduled commands in system.'); return; }
   const result = owner.clear();
   append(result.ok ? `Cleared ${count} scheduled commands in system.` : 'Could not save system schedules.');
+}
+
+function addSystemSchedule(
+  parsed: Extract<ScheduleParseResult, { scope: 'system'; action: 'add' }>,
+  append: (text: string) => void,
+  managers: CommandManagers,
+): void {
+  let scriptExists: boolean;
+  try {
+    scriptExists = readRunscript(managers.tab.launchDir, parsed.script).exists;
+  } catch {
+    append(`Could not read runscript "${parsed.script}".`);
+    return;
+  }
+  if (!scriptExists) { append(`No runscript named "${parsed.script}".`); return; }
+  const result = managers.systemSchedule.add({ ...parsed.entry, id: parsed.name, script: parsed.script });
+  append(result.ok ? `Scheduled ${parsed.name} system: ${parsed.entry.spec} (script ${parsed.script}).` : 'Could not save system schedule.');
 }
