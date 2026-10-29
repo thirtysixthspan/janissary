@@ -96,7 +96,7 @@ The timer belongs to the target tab. It appears in that tab's schedule window an
 
 In a shell tab, the command is dispatched as if typed. The command dispatches immediately even when the agent is busy. In a [harness tab](/user-documentation/advanced-agents/harness), the command is typed into the harness as a line of input — and if the harness isn't accepting input yet, the timer stays due and retries until it lands. After firing, a one-shot timer is removed; a recurring one advances to its next run.
 
-A tab's timers live as long as the tab: closing it drops them, and no launch brings them back.
+A tab's timers live as long as the tab: closing it drops them, and no launch brings them back. The hidden `system` shell's own tab timers also end when its shell exits, even though its tab stays and a fresh shell starts at the project root. Project system schedules belong to the project, so they carry on.
 
 A command delivered more than five seconds late posts `<command> ran <duration> late` to [notifications](/user-documentation/tab-types/notifications), with `(system was asleep)` appended when it missed its time because your machine was asleep. See [Sleep and resume](/user-documentation/getting-started/sleep-and-resume#overdue-scheduled-commands) for the rest of what happens to a timer while you're away.
 
