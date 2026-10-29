@@ -49,4 +49,6 @@ A workspaced harness can check its work in a real browser: Janissary provides on
 
 That browser is contained in its own right, since handing an AI a browser would otherwise be a way straight back out through `file://` URLs. Two things stop it: the address the harness gets belongs to a guard that refuses `file:` URLs and drops the connection, and the browser itself runs in an empty scratch directory rather than anywhere near your files. On macOS the browser is sandboxed to that directory as well, so even a `file:` read that slipped past the guard finds nothing worth having.
 
+That protection reserves loopback ports `65280` through `65535` for browsers, which also caps the machine at 256 browsers at once. A server a workspaced harness starts on one of those ports can't be reached from the harness. See [Giving a harness a browser](/user-documentation/advanced-agents/harness#giving-a-harness-a-browser) for what happens when the range is full.
+
 Be aware of the asymmetry: on a machine without macOS sandboxing, or with `sandboxWorkspaces` switched off, the browser runs unconfined and the guard is the only layer left. It's the same trade-off a workspaced tab already makes on a non-macOS host — the disposable clone still applies, the kernel-enforced boundary doesn't.
