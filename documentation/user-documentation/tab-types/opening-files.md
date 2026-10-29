@@ -14,7 +14,7 @@ open https://example.com      web page, embedded in a page tab
 open page example.com         same, for a bare address
 ```
 
-Full form: `open [external] [page] <target>`. Relative paths resolve against the tab's working directory. What kind of tab you get depends on the file type — see [Image viewer](/user-documentation/tab-types/image-viewer), [Video player](/user-documentation/tab-types/video-player), [Audio player](/user-documentation/tab-types/audio-player), [Markdown preview](/user-documentation/tab-types/markdown-preview), [PDF viewer](/user-documentation/tab-types/pdf-viewer), and [Embedded web pages](/user-documentation/tab-types/web-pages). Every tab it opens joins the current tab's [group](/user-documentation/getting-started/groups) and can be closed from the strip with its × button.
+Full form: `open [external] [page] <target>`. The `external` and `page` keywords can come in either order, so `open page external example.com` does the same as `open external page example.com`. Relative paths resolve against the tab's working directory. What kind of tab you get depends on the file type — see [Image viewer](/user-documentation/tab-types/image-viewer), [Video player](/user-documentation/tab-types/video-player), [Audio player](/user-documentation/tab-types/audio-player), [Markdown preview](/user-documentation/tab-types/markdown-preview), [PDF viewer](/user-documentation/tab-types/pdf-viewer), and [Embedded web pages](/user-documentation/tab-types/web-pages). Every tab it opens joins the current tab's [group](/user-documentation/getting-started/groups) and can be closed from the strip with its × button.
 
 Files opened from a remote [file navigator](/user-documentation/tab-types/file-navigator) use the same viewer or editor as local files. Janissary reads the remote content into its session cache first; saving an editor tab writes the change back to the remote host. If that write fails, the editor remains marked as changed and the notifications feed reports the failure.
 
@@ -35,8 +35,9 @@ These bundled viewers match extensions without regard to letter case:
 | Audio, external only | `.wma` | Configured audio player |
 | Markdown | `.md`, `.markdown` | Markdown tab |
 | PDF | `.pdf` | PDF tab |
+| Plain text | `.txt`, `.text`, `.log`, `.json`, `.yaml`, `.yml`, `.toml`, `.ini`, `.conf`, `.cfg`, `.env`, `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.py`, `.rb`, `.go`, `.rs`, `.c`, `.h`, `.cpp`, `.hpp`, `.java`, `.sh`, `.bash`, `.zsh`, `.css`, `.html`, `.xml`, `.sql`, `.csv` | Editor tab |
 
-Text files and extensionless files such as `Makefile` open in the editor. An unrecognized type can still be handed to your operating system with `open external <file>`.
+`open` only knows the extensions in this table. A file with no extension, such as `Makefile` or `.gitignore`, has no viewer, so `open Makefile` reports `No opener for "(none)" files.` Use `edit Makefile` to open any file as text (see [Opening a file to change it](#opening-a-file-to-change-it-edit)). You can also hand an unrecognized type to your operating system with `open external <file>`.
 
 ## Opening outside the app: `open external`
 
@@ -51,13 +52,15 @@ open external https://example.com the OS default browser
 open external page example.com    the same, for a bare address
 ```
 
-This works for any file, including types Janissary has no viewer of its own for. Your operating system already knows what opens a `.zip`, so `open external` hands the file over and confirms with `Opening papers.zip in your default viewer…`. A video, an audio file, and a PDF each name their own reader: `Opening clip.mp4 in your default video player…`, `Opening track.mp3 in your default audio player…`, `Opening paper.pdf in your default PDF viewer…`. When you've named an application in `externalViewers`, the confirmation names that one instead: `Opening clip.mp4 in QuickTime Player…`. Set viewer names in [app configuration](/user-documentation/getting-started/configuration). If nothing can be launched at all, you get the path rather than an application: `No video player available. The file is at <file>`.
+This works for any file, including types Janissary has no viewer of its own for. Your operating system already knows what opens a `.zip`, so `open external` hands the file over and confirms with `Opening papers.zip in your default viewer…`. A video, an audio file, and a PDF each name their own reader: `Opening clip.mp4 in your default video player…`, `Opening track.mp3 in your default audio player…`, `Opening paper.pdf in your default PDF viewer…`. When you've named an application in `externalViewers`, the confirmation names that one instead: `Opening clip.mp4 in QuickTime Player…`. Set viewer names in [app configuration](/user-documentation/getting-started/configuration). Janissary launches a named application only on macOS. On Windows and Linux the name is ignored, and the file goes to the system default and the confirmation says `default`. If nothing can be launched at all, you get the path rather than an application: `No video player available. The file is at <file>`.
+
+The viewer starts in the background, so Janissary stays responsive while it opens and you can keep typing. Janissary reports a problem only when the platform has no known launcher. If the viewer fails after it starts, you won't see a message.
 
 The `externalViewers` map uses opener names as keys: `video`, `audio`, and `pdf`. For example, set `externalViewers.video` to the application name you want for video files. The video default is QuickTime Player; an empty or missing entry uses the operating system's handler. Image and Markdown files use the operating system's handler, and web addresses use its default browser.
 
 A few formats can only be opened this way — `open clip.mkv` and `open track.wma` go straight to an external player with no tab. Which application gets a video or an audio file is yours to set; see [Video player](/user-documentation/tab-types/video-player) and [Audio player](/user-documentation/tab-types/audio-player).
 
-A web address has no tab to be the confirmation, so the line names the site instead: `Opening example.com in your browser…`, and `No browser available. The address is https://example.com/` when nothing can launch one.
+A web address has no tab to be the confirmation, so the line names the site instead: `Opening example.com in your browser…`, and `No browser available. The address is https://example.com/` when nothing can launch one. If the page viewer is unavailable, `open` itself reports `open: no viewer for web addresses` instead of opening a tab.
 
 `open external` is refused for a remote file, because an external application could change only the local cached copy with no way to write that change back to the remote host. That refusal goes to the [notifications](/user-documentation/tab-types/notifications) feed rather than the tab you typed it in, since a file navigator has no transcript of its own: `Remote files cannot be opened externally. Edit or open the file in a tab instead.`
 
@@ -116,7 +119,7 @@ open shots/*.png
 
 Janissary expands the pattern itself rather than handing it to a shell, so it matches the same files whatever shell you use. You get `*`, `?`, character classes like `[abc]`, and brace expansion like `*.{png,jpg}`. The pattern is only ever matched against filenames, never run — one containing shell punctuation matches nothing.
 
-Past 10 matches, the first 10 open and a note reports how many matched in total. A pattern matching nothing reports that too, as does one that matches only directories. Wildcards only apply to file paths, never web addresses.
+Past 10 matches, the first 10 open and a note reports how many matched in total. A pattern matching nothing reports that too, as does one that matches only directories. A match with an unsupported type is reported in the [notifications feed](/user-documentation/tab-types/notifications) and skipped, and the rest still open. With `open external`, those files go to your operating system instead. Wildcards only apply to file paths, never web addresses.
 
 Matches are deduplicated and sorted by path before opening. If a plugin handles them, Janissary waits for each file to finish opening before it starts the next, so the order stays predictable.
 
@@ -136,7 +139,7 @@ Mistakes are reported in the current tab before anything opens:
 - A wildcard matching more than ten files opens the first ten and says so: `Opening the first 10 of 24 matching files.`
 - A malformed address, or one whose scheme is neither `http` nor `https`, is reported as invalid: `open: invalid URL "htp:/example.com"`, and `open: invalid URL "javascript:alert(1)"` for the scheme.
 - A bare address with no `page` keyword is a file path, not a web address, so it is looked for on disk and named as missing: `open: /Users/name/dev/project/slashdot.org: no such file`. Spell it `open page slashdot.org` to embed a site.
-- A `:<line>` suffix is refused, because `open` looks for an opener by extension and finds none for `notes.md:42`: `No opener for ".md:42" files.` Drop the suffix and it opens, or use `edit notes.md:42` to land on the line.
+- A `:<line>` suffix is refused, because `open` looks for an opener by extension and finds none for `notes.md:42`: `No opener for ".md:42" files.` Like every no-opener report, it lands in the notifications feed (see below). Drop the suffix and it opens, or use `edit notes.md:42` to land on the line.
 
 The `video`, `audio`, and `pdf` commands have their own two. Given no argument, each prints its usage: `Usage: video <path>`, `Usage: audio <path>`, `Usage: pdf <path>`. Given a file that isn't its kind, each refuses it by name: `video: notes.txt: not a video file`, and the same shape for `audio` and `pdf`, including `pdf external notes.txt`. A web address is refused the same way rather than opening a page tab, so `video https://example.com` and `video page notes.txt` both report `video: https://example.com: not a video file`.
 
