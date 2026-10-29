@@ -4,23 +4,35 @@ Shell tabs keep their own terminal, command history, working directory, and unfi
 
 A session starts with a visible zsh [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab) named `janus` and one hidden `system` shell. The hidden shell starts in the project directory without a workspace. Run `tab focus system` to reveal it; closing it hides it without stopping its process. If its zsh exits, Janissary hides the tab and starts a fresh shell there. Focus `system` again to return to it. New tabs are otherwise created on demand — shell tabs with the `shell` command (below), harness tabs with `harness`, and view tabs by opening files, pages, or harnesses (see [Tab Types](/user-documentation/tab-types/opening-files)).
 
-A left and right sidebar flank the tab area, hidden until something is docked into them. The [file navigator](/user-documentation/tab-types/file-navigator), [notifications](/user-documentation/tab-types/notifications) feed, [schedules](/user-documentation/automation/scheduling) tab, [conversation list](/user-documentation/tab-types/conversations), and [sessions](/user-documentation/tab-types/sessions) list each have a `left`/`right` form (`files left`, `notifications right`, `schedules left`, `conversations right`, `sessions left`) that opens or moves them straight into a sidebar. Bare `conversations` and bare `sessions` return their list to the center. Use `tab dock <tab> left|right` to dock a named file navigator, notifications tab, or bundled-plugin tab, and `tab undock <tab>` to return it to the center. Drag the up/down-arrow button at the right of a sidebar's tab gutter to resize it. A sidebar holds at most one docked tab of each kind; docking a second tab of the *same* kind into an occupied side sends the first back to the center strip, but different kinds share the sidebar side by side. For a tab contributed by a bundled plugin, the kind is the plugin rather than the tab, so two image tabs displace each other while an image tab and a PDF tab sit side by side.
+A left and right sidebar flank the tab area, hidden until something is docked into them. The [file navigator](/user-documentation/tab-types/file-navigator), [notifications](/user-documentation/tab-types/notifications) feed, [schedules](/user-documentation/automation/scheduling) tab, [conversation list](/user-documentation/tab-types/conversations), and [sessions](/user-documentation/tab-types/sessions) list each have a `left`/`right` form (`files left`, `notifications right`, `schedules left`, `conversations right`, `sessions left`) that opens or moves them straight into a sidebar. Bare `conversations` and bare `sessions` return their list to the center. Use `tab dock <tab> left|right` to dock a named file navigator, notifications tab, or bundled-plugin tab, and `tab undock <tab>` to return it to the center. A sidebar holds at most one docked tab of each kind; docking a second tab of the *same* kind into an occupied side sends the first back to the center strip, but different kinds share the sidebar side by side. For a tab contributed by a bundled plugin, the kind is the plugin rather than the tab, so two image tabs displace each other while an image tab and a PDF tab sit side by side.
 
 When a sidebar holds more than one docked tab, it shows its own small tab strip above the visible one — one entry per docked tab, each with its own **×** close button. There is no separate switcher above that strip. Clicking an entry switches which docked tab is visible; double-clicking its label opens the same inline rename control as any tab in the center strip. Docking a tab into an already-occupied side brings it into view straight away. The visible entry's label gets the same longer limit as a focused tab in the center strip and the others the shorter one, so the `activeTabNameMaxLength` and `tabNameMaxLength` settings cover both — see [Configuration](/user-documentation/getting-started/startup#configuration). Which entry is visible is only ever remembered on your screen — it resets the next time you launch or relaunch the app.
 
 A docked tab is never the active tab. Docking the active tab moves focus to the nearest central tab.
 Mouse-undocking makes the tab active again; `tab undock <tab>` returns it to the center without
-changing focus. Tab-cycling commands skip docked tabs. A docked tab leaves the central strip
+changing focus. `tab focus <tab>` on a docked tab also undocks it: the tab moves into the focused pane and
+becomes the active one. Tab-cycling commands skip docked tabs. A docked tab leaves the central strip
 completely and returns at its current overall strip position when you undock it. Moving a visible
 docked tab with `tab move` or dragging its sidebar label can change that position, so it may reappear
 outside its group's run. Dragging a sidebar tab label only reorders docked tabs within that sidebar;
-it doesn't dock, undock, or move the tab to another strip.
+it doesn't dock, undock, or move the tab to another strip. The sidebar keeps showing the same tab,
+and the active center tab stays as it was.
 The sidebar entry's **×** is its only direct close button. Typing `close` cannot target a docked tab,
 but `close <label>` still works.
 
 Sidebar visibility is derived from its contents. An empty sidebar cannot be shown, and a docked tab
-does not keep the app alive: closing the last non-docked tab still quits. Dragging a sidebar's
-resize control changes its width within a minimum and roughly half the viewport. Sidebar width and
+does not keep the app alive: closing the last non-docked tab still quits. A hidden tab, such as `system`,
+keeps its dock side but never gets an entry in the sidebar's strip. If it is the only tab on that side,
+the sidebar stays out of view. `tab undock system` can't reach a hidden tab and reports `Cannot undock "system".`;
+`tab focus system` reveals it and undocks it into the focused pane.
+
+To resize a sidebar, drag the left-right arrow button in its tab strip. It sits at the right end of the left
+sidebar's strip and at the left end of the right sidebar's strip, and hovering it shows `Resize left sidebar` or
+`Resize right sidebar`. Dragging the thin border between the sidebar and the center area does the same. A sidebar
+starts 300px wide, and a drag keeps it between 180px and half the width of the window.
+`layout sidebar left|right <width>` sets the width in pixels directly, even while the sidebar is hidden. It skips
+both limits, so it can go narrower or wider than a drag allows; see the
+[`layout` help page](/user-documentation/command-reference/layout). Sidebar width and
 dock placement reset when you relaunch the app normally. A [profile](/user-documentation/automation/profiles)
 can set sidebar widths and dock tabs.
 

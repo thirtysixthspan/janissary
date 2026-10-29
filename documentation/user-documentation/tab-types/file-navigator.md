@@ -57,7 +57,7 @@ tree straight into that sidebar; a directory literally named `left` or `right` i
 with a path form, e.g. `files ./left`.
 
 While docked, the tree leaves the tab strip and appears in its sidebar instead. Drag the
-up/down-arrow button at the right of the sidebar's tab gutter to resize it. Only one tree can be docked per sidebar — docking a
+left-right arrow button in the sidebar's tab strip to resize it (see [Tabs](/user-documentation/getting-started/tabs) for the limits). Only one tree can be docked per sidebar — docking a
 second one into an occupied side sends the first back to the center strip rather than
 closing it. A docked tree is never the active tab; `files <same path>` (no `left`/`right`) brings
 it back to center and focuses it. See [Tabs](/user-documentation/getting-started/tabs) for more on sidebars.
