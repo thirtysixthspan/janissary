@@ -56,7 +56,7 @@ Task files can chain together into a larger loop — one that plans work, harden
 
 Expand **feature** to find the planning, building, removal, and pull request review, testing, and updating tasks. The combined workflow is named `auto-build-a-feature`. Moved tasks have no forwarding entries at their old locations, so use the picker or update any saved invocation to the new path.
 
-Choose `work-an-issue` for an ordinary issue on `master`. Every argument to it is issue text, including a number or PR URL. To repair a recorded pull request finding, choose `feature/work-pull-request-issue`, then append the PR number, `#number`, or GitHub PR URL and, optionally, the finding's summary. It repairs one recorded entry on that PR's branch and leaves the PR open. It needs an explicit target and does not accept a branch name or guess a PR from context. To record the findings in the first place, see [Review a pull request](/user-documentation/workflows/pull-request-review).
+Choose `work-an-issue` for an ordinary issue on `master`. Every argument to it is issue text, including a number or PR URL. To repair a recorded pull request finding, choose `feature/work-pull-request-issue`, then append the PR number, `#number`, or GitHub PR URL and, optionally, the finding's summary. It repairs one recorded entry on that PR's branch and leaves the PR open. It needs an explicit target and does not accept a branch name or guess a PR from context. To record the findings in the first place, see [Review a pull request](/user-documentation/workflows/pull-request-review). To run a pull request's own testing steps in a browser and record what breaks, see [Test a pull request](/user-documentation/workflows/testing-a-pull-request).
 
 ## What a shipped task does when you pick it
 
