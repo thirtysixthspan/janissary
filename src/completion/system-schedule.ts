@@ -25,13 +25,14 @@ export function completeSystemSchedule(
       return completeWord(cursor, ['at']);
     }
   }
-  if (preceding[3]?.toLowerCase() === 'on' && argumentIndex >= 5 && isCompleteDate(preceding)) {
+  if (shouldCompleteDate(cursor)) {
     return completeWord(cursor, ['at']);
   }
   return null;
 }
 
-function isCompleteDate(preceding: string[]): boolean {
-  if (/^\d{1,2}\/\d{1,2}$/.test(preceding[4] ?? '')) return true;
-  return Boolean(preceding[5] && /^\d{1,2}(st|nd|rd|th)?$/i.test(preceding[5]));
+function shouldCompleteDate({ preceding, argumentIndex }: CompletionCursor): boolean {
+  return preceding[3]?.toLowerCase() === 'on' && argumentIndex >= 5
+    && (/^\d{1,2}\/\d{1,2}$/.test(preceding[4] ?? '')
+      || Boolean(preceding[5] && /^\d{1,2}(st|nd|rd|th)?$/i.test(preceding[5])));
 }
