@@ -2,8 +2,6 @@
 
 ## ready
 
-* database (8/10) — 22 of 28 facts are covered, 1 is missing, and 5 are wrong. Correct SQL-browser default ordering, bare-`sql` recency, case-insensitive docking, result-file row limits, pending console input, and database-close wording in `documentation/user-documentation/tab-types/sql-browser.md`, `help/sql.md`, and `help/commands.md`; add the general malformed-`db` usage response to `help/db.md`. Evidence is `product/specs/database.md`, `src/database/grid-sql.ts`, `src/connections.ts`, `src/plugins/sql/activate.ts`, `src/plugins/dock-argument.ts`, `src/database/export.ts`, `src/database/console-read.ts`, and `web/src/plugins/sql/SqlConsole.tsx`.
-
 * diff-tab (8/10) — 23 of 44 facts are covered, 20 are missing, and 1 is wrong. Correct `help/diff.md` to state that a diff target is an existing directory, not a file; expand `documentation/user-documentation/tab-types/diff-tab.md` and `documentation/user-documentation/tab-types/diff.md` with one-token target limits, status labels, split behavior, collapse/context rules, comment lifetimes, refresh/no-commit behavior, and non-restoration. Ground this in `product/specs/diff-tab.md`, `src/plugins/diff/activate.ts`, `src/plugins/diff/parse-argument.ts`, `src/plugins/diff/change-set.ts`, `src/plugins/diff/tab-state.ts`, `web/src/plugins/diff/DiffTab.tsx`, `web/src/plugins/diff/FileEntry.tsx`, `web/src/plugins/diff/SplitHunks.tsx`, and `web/src/plugins/diff/LineCommentsProvider.tsx`.
 
 * editor-plugins (3/10) — 15 of 18 facts are covered, 3 are missing, and none are wrong. Add a short note to the bundled-shortcuts section of `documentation/user-documentation/tab-types/editor.md` explaining that actions run locally, a disabled chord falls back to editor behavior, and unsupported actions are silent no-ops. Evidence is `product/specs/editor-plugins.md`, `web/src/editor/plugins/api.ts`, `web/src/editor/plugins/useEditorPlugins.ts`, `web/src/editor/plugins/host.ts`, and `web/src/editor/useEditorInteractions.ts`; `help/keys.md` is the concise shortcut reference.
@@ -126,3 +124,4 @@
 * connection — documented in documentation/user-documentation/command-bar/connections.md, help/connection.md (removed 2026-10-29)
 * context-menu — documented in documentation/user-documentation/getting-started/context-menus.md (removed 2026-10-29)
 * conversations — documented in documentation/user-documentation/tab-types/conversations.md, documentation/user-documentation/command-bar/commands.md, help/conversation.md, help/conversations.md, help/commands.md (removed 2026-10-29)
+* database — documented in documentation/user-documentation/tab-types/sql-browser.md, help/sql.md, help/db.md, help/commands.md (removed 2026-10-29)

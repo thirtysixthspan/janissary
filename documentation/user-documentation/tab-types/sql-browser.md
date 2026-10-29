@@ -16,7 +16,9 @@ It works on the same databases the [`db` command](/user-documentation/command-ba
 
 `sql <name>` opens that database's tab, or focuses it if it's already open. Each database gets one tab, named after it, so you can browse two side by side. Opening a tab again keeps its filters, search term, hidden columns, order, page, and exports.
 
-Bare `sql` opens the database you reached most recently, whether you reached it with `sql` or with a `db` command in any tab. If you haven't reached one yet, it opens the first database by name. Add `left` or `right` as the last word to dock the tab into that sidebar: `sql shop left`, or `sql left` for the current database. Bare `sql` brings a docked tab back to the center.
+Bare `sql` opens the database whose connection Janissary opened most recently. Any `db` command in any tab can open one, and so can a browser tab. Reaching a database that's already open doesn't move it up the order, and closing a connection takes that database out of the running. If no connection is open, bare `sql` opens the first database by name.
+
+Add `left` or `right` as the last word to dock the tab into that sidebar: `sql shop left`, or `sql left` for the current database. Capital letters work too, so `sql shop LEFT` docks as well. Bare `sql` brings the current database's tab back to the center, while `sql shop` leaves that tab wherever it is.
 
 `sql` never creates a database. Use `db sqlite create <name>` for that. These are the replies you can get instead of a tab:
 
@@ -26,7 +28,7 @@ Bare `sql` opens the database you reached most recently, whether you reached it 
 | `sql` with no databases at all | `No databases. Create one with: db sqlite create <name>` |
 | `sql ../other` | `Invalid database name "../other".` |
 
-Because `left` and `right` are read as dock words when they come last in lower case, a database actually named `left` or `right` can't be opened by name.
+Because `left` and `right` are read as dock words when they come last, in any capitalization, a database actually named `left` or `right` can't be opened by name.
 
 ## Pick a table
 
@@ -44,7 +46,7 @@ Every filter shows as a chip, such as `status = paid` or `total ≥ 10`. Double-
 
 **Search every column** matches one term against every column of the row, so you can find a value without knowing which column holds it. Press `Return` to apply it. Its chip reads `matches "<term>" anywhere`, and a row has to match both the term and every column filter. Submit an empty term, or press **Clear**, to remove it.
 
-Click a column header to sort by it: ascending, then descending, then back to the default order. Only one column sorts the grid at a time. With no sort chosen, rows are ordered by the table's primary key. The **Columns** control lets you hide columns you don't need, and **Show all** brings them back. Its tooltip reads `Columns (2 hidden)` while any are hidden.
+Click a column header to sort by it: ascending, then descending, then back to the default order. Only one column sorts the grid at a time. With no sort chosen, rows are ordered by the table's primary key columns in key order, or by its first column when it has no primary key. Paging needs a fixed order, so the grid always sorts by something. Choosing another table drops a sort on a column the new table lacks, and that table falls back to its own default order. The **Columns** control lets you hide columns you don't need, and **Show all** brings them back. Its tooltip reads `Columns (2 hidden)` while any are hidden.
 
 A column declared as a foreign key shows its values as links, titled with the table and column they point to. Click one to open that table filtered to the row it names.
 
@@ -80,13 +82,19 @@ Click anywhere in a row to highlight it. Shift-click, or move the pointer across
 
 ## Run your own SQL
 
-The command line at the bottom of the tab is a SQL console, with the prompt `SQL >`. Type a statement and press `Return` to run it, or `Shift+Return` for a new line. It's the only place in the tab where you type SQL.
+The command line at the bottom of the tab is a SQL console, with the prompt `SQL >`. Type a statement and press `Return` to send it, or `Shift+Return` for a new line. A blank line does nothing. It's the only place in the tab where you type SQL.
 
 A statement starting with `SELECT`, `PRAGMA`, `WITH`, or `EXPLAIN` is a read. Its result fills the grid, up to the first 200 rows, and the header reads `Read-only: this is a statement's result, not a table.` Changing a filter or the sort goes back to the selected table. Anything else is a write. When it succeeds, the tab reads itself again, so a `CREATE TABLE` or `ALTER TABLE` shows up in the table dropdown right away.
 
 The console never prints results under the prompt. Instead, every statement reports to the [notifications](/user-documentation/tab-types/notifications) feed under the database's name. A write reports `OK.` A read reports `Query returned 12 rows.`, `Query returned 1 row.`, or `Query returned no rows.`, and the line carries a file icon that opens the whole result in an editor tab. A failed statement reports the SQLite error. A failure from the grid itself, like a failed page load or edit, is reported there once, not again until something succeeds.
 
-If Janissary rejects a console request, the line stays in place so you can edit it or send it again. While a request is pending, another submission is ignored. If you type a newer line while an older request is pending, the older request being accepted does not clear your newer text.
+The result file is a plain text file with the column names first, one tab-separated line per row, and a closing count such as `(12 rows)` or `(no rows)`. It's saved as `<database>-result-<timestamp>.txt` in `.janissary/db/exports/`, named for when the statement ran, so an older notification keeps opening its own result.
+
+Two limits apply to a read. The grid shows only the first 200 rows. When a result is longer, the range line reads `First 200 rows of more than 200.` and **Next** stays disabled, because the grid has no second page of a console result. The file keeps up to 1,000,000 rows. Past that, the notification reads `Query returned more than 1,000,000 rows; the first 1,000,000 are in the file.` and the file ends with `(more than 1,000,000 rows, capped at 1,000,000)`. If Janissary can't write the file at all, the notification carries the result itself instead: the column names, the first 40 rows, and the real count. It has no file icon to click.
+
+Your line stays in the console until Janissary accepts the statement. Then it clears and joins the recall list described below. Accepted only means the request arrived, not that the SQL worked, so the outcome comes back as a notification. While a request is pending, pressing `Return` again does nothing. If you type a newer line in the meantime, the older request being accepted leaves your newer text alone.
+
+If Janissary rejects the request, a band above the grid reads `SQL request failed: <reason>` with a **Dismiss** button, and the line stays put so you can edit it or send it again. Janissary never retries on its own. The same band reports a rejected edit, insert, delete, or export.
 
 `↑` and `↓` in the console walk back through the last 50 statements you sent from this tab, and a statement that starts with what you've typed appears ghosted after the cursor. `Tab` moves focus between the console and the rows.
 
@@ -96,4 +104,8 @@ The **CSV** and **JSON** buttons write the whole filtered and sorted table, not 
 
 ## When a database goes away
 
-If you delete a database with `db sqlite delete` while its tab is open, the grid empties and the header reads `Database "<name>" does not exist. Create it to start.` The browser doesn't add a row to the tab's own connections panel. The database still shows in `connection list`, and `connection close sqlite:<name>` closes it. See [Connections](/user-documentation/command-bar/connections).
+If you delete a database with `db sqlite delete` while its tab is open, the grid empties and the header reads `Database "<name>" does not exist. Create it to start.` Deleting also closes the database's connection, so it leaves `connection list` right away. **Refresh** gives you the same message. It doesn't bring the empty file back. Run `db sqlite create <name>` to make the database again.
+
+## Close a database's connection
+
+`connection close sqlite:<name>` closes the connection but leaves the database file alone. An open tab keeps showing what it last read. The next time the tab reads from the database, for example when you press **Refresh**, the connection opens again. Until then the database is missing from `connection list`. The browser doesn't add a row to the tab's own connections panel, even while the connection is open. See [Connections](/user-documentation/command-bar/connections).
