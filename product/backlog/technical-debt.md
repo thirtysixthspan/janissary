@@ -4,8 +4,6 @@
 
 ## development
 
-* Reduce the cognitive complexity of `resolveSkill()` in `src/agent/skill-grants.ts` (line 13), reported at 19 against the allowed 15 in a 102-line file. The function searches project and installation roots while combining missing-path recovery, filesystem checks, and symlink containment validation. This is risk-sensitive because it validates filesystem paths for security. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against `resolveSkill()` in `src/agent/skill-grants.ts`. Severity: **medium**.
-
 * Reduce the cognitive complexity of `buildTabView()` in `src/tab/view.ts` (line 61), reported at 19 against the allowed 15 in a 219-line file. The function builds a wire-format tab view, with conditional workspace and remote provisioning fields alongside plugin, recording, transcript, and harness data. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against `buildTabView()` in `src/tab/view.ts`. Severity: **low**.
 
 * Reduce the cognitive complexity of `fireDue()` in `src/schedule/system/manager.ts` (line 89), reported at 18 against the allowed 15 in a 147-line file. The function walks due system schedules and combines batch execution, stale-entry checks, persistence, and notification or output handling across nested branches. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against `fireDue()` in `src/schedule/system/manager.ts`. Severity: **low**.
