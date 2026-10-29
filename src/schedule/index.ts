@@ -37,9 +37,13 @@ export function parseScheduleCommand(rest: string, now: Date): ScheduleParseResu
     return { action: 'cancel', id: tokens[1], ...clause };
   }
 
-  // Otherwise the first token names the timer (becoming its id, shown in the schedule window
-  // and used by `schedule cancel <name>`), an optional `in <tab>` picks the tab the timer
-  // belongs to, and the remainder is the schedule form.
+  return parseNamedSchedule(tokens, now);
+}
+
+// Otherwise the first token names the timer (becoming its id, shown in the schedule window
+// and used by `schedule cancel <name>`), an optional `in <tab>` picks the tab the timer
+// belongs to, and the remainder is the schedule form.
+function parseNamedSchedule(tokens: string[], now: Date): ScheduleParseResult {
   const name = tokens[0];
   let bodyTokens = tokens.slice(1);
   let target: string | undefined;
