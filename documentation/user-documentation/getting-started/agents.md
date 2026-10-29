@@ -10,9 +10,11 @@ harness claude as build
 
 <img class="agent-float" src="/agents/bilal-south-west.png" alt="" />
 
-Shell tabs draw from the project's name pool. A project can replace the bundled list with `.janissary/agent-names.json`, a JSON array of names. Names are lowercased and must be safe as a single workspace folder. Harness tabs use their tool name and a numeric suffix unless you supply a name with `as`.
+Shell tabs draw a random unused name from a pool of 50 bundled names, such as `bilal` and `selim`. A project can replace that pool with `.janissary/agent-names.json`, a JSON array of names. Names are lowercased, and each may hold only letters, digits, `_`, `.`, and `-`, so it works as a single workspace folder. The file is read once at startup, so restart after you change it. If the file can't be used, Janissary prints a warning in the terminal you launched it from and keeps the bundled pool. The [harness guide](/user-documentation/advanced-agents/harness#choosing-a-model-and-effort-level) shows both warnings.
 
-A name must be free among open tabs, live or detached Sessions rows, and running workspaces. An explicit clash posts `Cannot launch "<name>": …` in Notifications. An unnamed launch tries the next available name. If the pool is exhausted, Notifications shows `All agent names are in use.`
+Harness tabs use their tool name and a numeric suffix unless you supply a name with `as`. A name must be free among open tabs, live or detached Sessions rows, and running workspaces, and names compare without regard to case. A name you typed that clashes posts `Cannot launch "<name>": …` in Notifications and opens nothing. A name Janissary picks for you skips anything in use. The one exception is a `harness` line in a [system-scheduled runscript](/user-documentation/automation/scheduling), which takes the next free number instead of being refused.
+
+When every pool name is in use, a new unnamed shell tab is called `shell`, then `shell-2`, `shell-3`, and so on. Nothing is posted to Notifications.
 
 A leftover workspace with nothing running in it is cleared before a fresh clone starts. See [Workspaced tabs](/user-documentation/advanced-agents/workspaced-agent) for workspace lifetime and [Remote shells and harnesses](/user-documentation/advanced-agents/remote-agents) for remote launch checks.
 

@@ -39,7 +39,7 @@ shell             create a tab with a random unused name
 shell bilal     create a tab named "bilal"
 ```
 
-The new tab is focused immediately. Names are always lowercased, and each must be free before the tab opens: a name an open tab already has, or a live row in the [sessions](/user-documentation/tab-types/sessions) tab, is refused, no tab opens, and the refusal goes to the [notifications](/user-documentation/tab-types/notifications) feed rather than the transcript. Random names come from a pool of 52 (see [Agents](/user-documentation/getting-started/agents)); if the pool is exhausted, the shell plugin falls back to a numbered label.
+The new tab is focused immediately. Names are always lowercased, and each must be free before the tab opens: a name an open tab already has, or a live row in the [sessions](/user-documentation/tab-types/sessions) tab, is refused, no tab opens, and the refusal goes to the [notifications](/user-documentation/tab-types/notifications) feed rather than the transcript. Random names come from a pool of 50 (see [Agents](/user-documentation/getting-started/agents)); when every pool name is in use, new shell tabs are called `shell`, `shell-2`, and so on.
 
 The exact name `system` is reserved, ignoring case, even when no managed system tab is open. Trying `shell SyStEm` reports `Cannot use "system": that name is reserved for the system tab.` Names such as `system-2` remain available.
 
