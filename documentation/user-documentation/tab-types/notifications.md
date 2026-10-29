@@ -54,6 +54,10 @@ center pane. A background tab or an unselected docked tab can therefore alert wh
 front. A visible notifications feed does not silence a banner. Clicking a banner focuses the window
 and selects the tab where it currently lives.
 
+A banner is titled `Janissary`, and its body reads `<tab name>: <message>`. Clicking it focuses the window and takes you to the tab where it lives right now. A docked tab becomes the selected entry in its sidebar without being undocked. If the tab has closed since, nothing happens. When a window is hidden or replaced, the banners it still has open are closed, and clicking one afterwards does nothing.
+
+Each window plays at most one bell per second, while every eligible banner still shows. A notification detected earlier and delivered later, such as a queued approval arriving when you reattach a remote harness, raises no banner and no bell, because an alert would imply it just happened. It still lands in the feed with its original time.
+
 Janissary never asks for desktop-notification permission. A banner appears only if the browser has
 already granted permission for the Janissary site; denying or withholding permission does not affect
 the feed or bell. Browser autoplay rules can block sounds until you interact with the page.
@@ -101,7 +105,7 @@ loads it, never rotates it, and never caps its size; it grows one line per notif
 clear it or delete it yourself. Each line carries `detectedAt` as a full timestamp, the `event` that
 produced it, the `tab` it came from, and the `message` you saw, plus `openFile` and `openTab` entries
 when the event carries somewhere to jump to. A write that fails — a read-only checkout, a full disk —
-is abandoned silently for the rest of the run, with nothing on screen and nothing in the feed, so a
+is abandoned silently for the rest of the run. Delivery doesn't depend on it: the queue, the feed, toasts, banners, and bells all work as before. Nothing reports the failure, so a
 file that has stopped growing has no symptom to explain it.
 
 ## Read and scroll the feed
@@ -143,6 +147,15 @@ Each toggle controls one kind of event:
 | `systemScheduleFire` | A system schedule fires, is missed, names a missing runscript, or the system shell cannot start |
 
 The four ambient events notify only for a **background** tab. Activity in the currently active tab is suppressed. System schedule notices are explicit, use their own toggle, and are not suppressed when the `system` tab is active.
+
+The four ambient events read like this in the feed:
+
+| Toggle | Message |
+|---|---|
+| `stateChange` | `Agent '<tab>' finished` |
+| `agentStart` | `Agent '<tab>' started` |
+| `rateLimited` | `Agent '<tab>' is being rate limited` |
+| `scheduleFire` | `Scheduled: <command> in <tab>` |
 
 `notifications.events.rateLimited` covers interactive `acp` queries, periodic monitor queries, and `monitor ask` queries. It recognizes rate limits from error text, and also from an interactive query's ordinary reply text. The feed says `Agent '<tab>' is being rate limited`; the original in-tab output stays available. Other failures don't produce this event.
 
@@ -189,6 +202,8 @@ Typing either `notifications` or `notify` also writes one line into the transcri
 
 `harness recording failed`, `ssh recording failed`, and `shell recording failed` mean that recording has stopped for that session, while the session itself keeps running. `no harness transcript found` is a separate diagnostic: the harness has no available session transcript, but screen-based monitoring remains available. Each diagnostic is reported once per affected tab. See [Recordings](/user-documentation/advanced-agents/harness#recordings) and [Opening a session transcript](/user-documentation/advanced-agents/harness#opening-a-session-transcript).
 
+`shell transcript failed` means a shell tab's plain-text transcript could not be written, so it has stopped for the rest of that tab's life. It is reported once per open tab, however many times the transcript fails, and nothing is reported for a failure that shows up after the tab has closed. A later tab that reuses the label is reported afresh. The shell and its recording keep running, and the tab's **Open transcript** button still opens whatever was written.
+
 These diagnostics bypass the five event toggles and focus suppression, and they land in the queue and toast the same way other notifications do.
 
 `No opener for ".xyz" files.` means you opened a file type Janissary has no viewer for, whether you typed `open` or double-clicked a row in the [file navigator](/user-documentation/tab-types/file-navigator). It arrives here rather than in the tab you opened from, because a file navigator has no transcript of its own to print it in. See [Opening files and pages](/user-documentation/tab-types/opening-files).
@@ -198,6 +213,10 @@ A launch that never opened reports here too. `Cannot launch "<name>": …` means
 Every path on a feed line is shortened the way [paths are shown everywhere else](/user-documentation/getting-started/tabs#how-paths-are-shown-root): a workspace clone as `$workspace/<name>`, whatever host holds it, and anything else inside the project as `$root/…`. The one line that keeps a full path is a directory a remote host was asked to use as its project root and couldn't — a missing path, a folder with no `origin`, an occupied home-directory target — since `$root` would misname it and it's the one thing on that line you can go and fix.
 
 These four bypass the five event toggles and focus suppression, the way the recording diagnostics do, and each is attributed to the tab you typed the command in.
+
+A harness launched with `-y` and no workspace raises this warning as soon as it starts: `auto-approve is on without a workspace: prompts are approved unattended against your real files, with no sandbox confining the harness`. It shows even when that tab is the active one. Nothing is written into the harness tab itself.
+
+Two kinds of arranging command report failures here instead of in the tab. `layout` sends `Could not resize the window: <reason>.`, `Could not read the window size: <reason>.`, or `No layout to show.` The reason is the first line of the error with one period at the end. The [`layout` help page](/user-documentation/command-reference/layout) explains each case. The tab-arranging commands send `Cannot dock "<name>".`, `Cannot group "<name>".`, `Cannot move "<name>" to a pane.`, or `Cannot undock "<name>".`, where `<name>` is the target exactly as you typed it. Both kinds are attributed to the tab you typed the command in, have no toggle, and ignore focus suppression. Both default to a banner with the warning cue.
 
 Other messages are explained with the feature that produces them: [harness approvals and browser failures](/user-documentation/advanced-agents/harness), [agent questions](/user-documentation/advanced-agents/agent-questions), [editor persona queries](/user-documentation/tab-types/editor-persona-query), [file operations](/user-documentation/tab-types/file-navigator), [unplayable audio](/user-documentation/tab-types/audio-player), and [plugin failures](/user-documentation/command-bar/plugins).
 
