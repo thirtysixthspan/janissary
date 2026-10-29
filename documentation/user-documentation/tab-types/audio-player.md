@@ -9,7 +9,7 @@ play track.mp3
 
 `open track.mp3` does the same thing, and so does `play <file>` — one file rather than a wildcard. All three queue the track into the one playlist rather than opening a second player. The tab shows the playing track's name, size, and location in a header, your platform's own audio controls below that, and the playlist filling the rest of the tab. The header carries a **Split** control at its right edge, so you can put the player in the other pane while you work.
 
-There is no command line and no command history here, and nothing the tab does runs through a shell. The tab lands in the same [group](/user-documentation/getting-started/groups) as the tab you ran the command from, with its own dot color, and takes focus; in the strip it reads like any other member of that band, so you can move it within the group, and the × after its label closes it without selecting it first.
+There is no command line, no transcript, and no command history here, and nothing the tab does runs through a shell. The tab lands in the same [group](/user-documentation/getting-started/groups) as the tab you ran the command from, with its own dot color, and takes focus; in the strip it reads like any other member of that band, so you can move it within the group, and the × after its label closes it without selecting it first.
 
 ## One tab, one playlist
 
@@ -56,13 +56,13 @@ The header carries five transport buttons, and each one has a key binding that w
 
 Seeking stops at either end of the track rather than spilling into its neighbor. Switch to another tab and the keys go back to that tab, so a hidden audio tab never swallows your arrow keys.
 
-Each track starts playing on its own as it becomes current. If your browser blocks playback with sound, the track waits paused instead, ready for the play button.
+While the audio tab is on screen, each track starts playing on its own as it becomes current. If your browser blocks playback with sound, the track waits paused instead, ready for the play button.
 
 ## Work the playlist
 
 Click any row to jump to that track. Each row carries its own remove control.
 
-Removing the track that's playing moves you straight on to the next one. Removing any other row leaves playback alone. Remove the last row and the tab stays open on an empty playlist reading `No tracks queued`, ready to be refilled.
+Removing the track that's playing moves you straight on to the next one. If the track you remove is the last row, the track above it becomes the playing one instead, since nothing follows it. Removing any other row leaves playback alone. Remove the only remaining row and the tab stays open on an empty playlist reading `No tracks queued`, ready to be refilled.
 
 The playlist plays straight through and stops on the last track. Nothing wraps around and nothing is cleared, so you can replay it or step back through it by hand.
 
@@ -75,6 +75,8 @@ Select several audio files in a [file navigator](/user-documentation/tab-types/f
 <img class="agent-float" src="/agents/idris-south.png" alt="" />
 
 A playing track keeps playing when you switch away, including while the audio tab sits in an unfocused split pane. Sound can therefore come from a tab you can't see. To stop it, pause before you leave, or close the tab.
+
+The player also docks into a sidebar, so it can sit beside your work. Run `tab dock audio left` or `tab dock audio right`, and `tab undock audio` to bring it back to the center. A docked player has less room, so the header drops the track's location to keep the five transport buttons within reach. The key bindings answer while the player is the entry showing in its sidebar. See [Tabs](/user-documentation/getting-started/tabs) for how sidebars work.
 
 ## Open in an external player
 
@@ -98,9 +100,11 @@ Holding `Shift` while you double-click an audio row in the file navigator sends 
 
 ## When a track won't play
 
-A file can use a codec the app can't decode, or simply be damaged. When that happens the track is dropped from the playlist and the next one starts, so one bad file never stalls a queue.
+A file can use a codec the app can't decode, or simply be damaged. When that happens the track is dropped from the playlist and the next one starts, so one bad file never stalls a queue. If the bad track was the last row, the track above it becomes the playing one.
 
-The drop is reported to the [notifications](/user-documentation/tab-types/notifications) feed and nowhere else, as `Dropped <name> — it could not be played.` If the feed isn't on screen, the line appears as a toast instead of opening the feed. A burst of notifications can still bring the feed onscreen.
+The player itself says nothing about the drop. The app posts a [notification](/user-documentation/tab-types/notifications) instead: `Dropped <name> — it could not be played.` It always arrives, even while you're watching the audio tab. It goes into the notifications queue and the record file, and shows as a toast in the corner when the feed isn't on screen. Three notifications within ten seconds, such as a folder of damaged files, open the feed on their own.
+
+By default the line also raises a desktop banner and plays the success cue. Both follow the usual focus rules and your alert settings; see [Desktop banners and bell sounds](/user-documentation/tab-types/notifications#desktop-banners-and-bell-sounds).
 
 A track that won't decode is an ordinary media outcome, not a failure of the player itself, so the tab keeps working and nothing is disabled. A genuine plugin failure is different: it closes the audio tab and reports the standard failure line — see [Bundled plugins](/user-documentation/command-bar/plugins).
 
