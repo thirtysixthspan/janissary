@@ -2,8 +2,6 @@
 
 ## ready
 
-* roles (8/10) — 27 of 59 facts are covered, 28 are missing, and 4 are wrong. Expand `documentation/user-documentation/tab-types/roles.md` with the JSON shape/validation, empty-object and broken-file fallback, exact recovery messages, and the current boundary that roles do not launch harnesses; correct the fallback, delete-control, and “default effort launches” wording. Evidence is `product/specs/roles.md`, `src/plugins/roles/roles-file.ts`, `src/plugins/roles/role-edits.ts`, `src/plugins/roles/activate.ts`, `src/plugins/roles/shared.ts`, `src/plugins/files.ts`, `src/plugins/context.ts`, `src/atomic-write.ts`, and `web/src/plugins/roles/RoleCard.tsx`; align `help/roles.md` and `help/commands.md`.
-
 * root-path (7/10) — 17 of 20 facts are covered, 1 is missing, and 2 are wrong. Correct the unknown-remote-workspace fallback and narrow the blanket claim that all transcript/status paths are shortened; add that only the exact `git-sync` clone gets the `$git-sync` display prefix. Update `documentation/user-documentation/getting-started/tabs.md` and `help/open.md`, `help/edit.md`, and `help/files.md`; verify with `product/specs/root-path.md`, `src/paths.ts`, `src/tab/view.ts`, `src/tab/formatting-handlers.ts`, `src/open/file-manager.ts`, and `src/file-navigator/remote-cwd.ts`.
 
 * sandbox (3/10) — 19 of 21 facts are covered, 2 are missing, and none are wrong. Add the reserved loopback port range and 256 simultaneous-browser launch cap to `documentation/user-documentation/advanced-agents/harness.md`, with a link from `documentation/user-documentation/advanced-agents/workspacing.md`. Evidence is `product/specs/sandbox.md`, `src/sandbox/browser/ports.ts`, `src/sandbox/profile.ts`, `src/browser/e2e-ports.ts`, and `src/browser/e2e-server.ts`; there is no `help/sandbox.md`.
@@ -101,3 +99,4 @@
 * quick-open — documented in documentation/user-documentation/command-bar/quick-open.md (removed 2026-10-29)
 * quit-confirmation — documented in documentation/user-documentation/command-bar/commands.md, documentation/user-documentation/getting-started/tabs.md, help/quit.md, help/close.md (removed 2026-10-29)
 * remote-server — documented in documentation/user-documentation/advanced-agents/remote-agents.md, documentation/user-documentation/tab-types/sessions.md, documentation/user-documentation/advanced-agents/tokens.md, documentation/user-documentation/command-bar/shell.md (removed 2026-10-29)
+* roles — documented in documentation/user-documentation/tab-types/roles.md, help/roles.md, help/commands.md (removed 2026-10-29)
