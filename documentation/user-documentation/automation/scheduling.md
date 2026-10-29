@@ -56,6 +56,10 @@ Use any of the five schedule forms above before `script <name>`. The script must
 
 `system` immediately after `schedule` is reserved for this project-level grammar. The `in <tab>` clause still targets a tab named `system` in ordinary tab schedules.
 
+When a system schedule comes due, Janissary reads the script, starts the managed system shell if it isn't running, and adds every line of the script to the end of that shell's [command queue](/user-documentation/command-bar/queue#runscripts-in-the-system-shell) as one batch. It then posts `System schedule <name> ran: script <script>`, which means the lines are queued, not that they have finished. A failing line doesn't stop the lines after it, and no notice reports a single line's failure. Queued lines aren't saved, so a restart never replays work that was still waiting.
+
+Three cases queue nothing. An empty script posts no `ran` notice. A missing script posts its [missing-script notice](/user-documentation/tab-types/notifications#system-schedule-notices). Both of those still count as that run, so a one-time schedule is spent and a recurring one moves to its next time. If the system shell can't start, the schedule stays due and tries again on a later check.
+
 ## Run a runscript now
 
 Run a project runscript immediately with `execute <name>`:
@@ -94,7 +98,7 @@ The timer belongs to the target tab. It appears in that tab's schedule window an
 
 <img class="agent-float" src="/agents/ahmed-south-west.png" alt="" />
 
-In a shell tab, the command is dispatched as if typed. The command dispatches immediately even when the agent is busy. In a [harness tab](/user-documentation/advanced-agents/harness), the command is typed into the harness as a line of input — and if the harness isn't accepting input yet, the timer stays due and retries until it lands. After firing, a one-shot timer is removed; a recurring one advances to its next run.
+In a shell tab, the command is dispatched as if typed. The command dispatches immediately even when the agent is busy. It goes straight to the shell's terminal and doesn't wait in the shell's [command queue](/user-documentation/command-bar/queue). In a [harness tab](/user-documentation/advanced-agents/harness), the command is typed into the harness as a line of input — and if the harness isn't accepting input yet, the timer stays due and retries until it lands. After firing, a one-shot timer is removed; a recurring one advances to its next run.
 
 A tab's timers live as long as the tab: closing it drops them, and no launch brings them back. The hidden `system` shell's own tab timers also end when its shell exits, even though its tab stays and a fresh shell starts at the project root. Project system schedules belong to the project, so they carry on.
 
