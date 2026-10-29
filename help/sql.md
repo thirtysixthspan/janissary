@@ -22,3 +22,9 @@ Open a database browser with table filtering, sorting, paging, editing, export, 
 - `sql` opens the database whose connection was opened most recently.
 - `sql inventory` opens the database named `inventory`.
 - `sql inventory right` docks that database browser on the right. `left` and `right` work in any capitalization.
+
+**Notes**
+
+- `sql` never creates a database. A name with no database prints `No database named "<name>". Create it with: db sqlite create <name>`, and bare `sql` with no databases prints `No databases. Create one with: db sqlite create <name>`.
+- A name containing a character other than letters, digits, `-`, or `_` prints `Invalid database name "<name>".`
+- Because `left` and `right` are read as dock words when they come last, a database named `left` or `right` cannot be opened by name.
