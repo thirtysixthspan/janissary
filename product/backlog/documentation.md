@@ -2,10 +2,6 @@
 
 ## ready
 
-
-
-## development
-
 * acp (4/10) — 24 of 27 user-visible facts are covered, 3 are missing, and none are wrong. Expand `documentation/user-documentation/advanced-agents/acp-agent.md` with the exact default model, the distinct fatal-connection and prompt-error messages and output limits, and the source-tab behavior for links from a docked response panel. Ground the changes in `product/specs/acp.md`, `src/acp/manager.ts`, `src/acp/index.ts`, `src/acp/response.ts`, `harness-models.json`, `web/src/shared/acp/acp-panel-actions.ts`, and `web/src/shared/transcript/open-link.ts`; align related details in `documentation/user-documentation/advanced-agents/markdown-rendering.md` and `help/acp.md`.
 
 * agent-command (5/10) — 32 of 45 facts are covered, 12 are missing, and 1 is wrong. Update `documentation/user-documentation/advanced-agents/agent-command.md` with the omitted parser and task-root errors, skill-grant normalization, parent/child cleanup behavior, captured-command context, clone-depth limit, shell reply presentation, remote-target cancellation, and monitor title/activity/termination details; correct the overbroad monitor-failure message. The evidence is `product/specs/agent-command.md`, `src/agent/command-parser.ts`, `src/agent/task-resolution.ts`, `src/agent/skill-grants.ts`, `src/agent/nested-run.ts`, `src/workspace/clone-depth.ts`, `src/agent/command-invocation.ts`, `src/commands/agent.ts`, `src/agent/remote-target.ts`, `src/agent/monitor-tab.ts`, and `web/src/plugins/agent-monitor/view.tsx`; keep `help/agent.md`, `help/commands.md`, and the remote/workspaced-agent guides consistent.
@@ -137,6 +133,8 @@
 * websocket-rpc (6/10) — 10 of 14 facts are covered, 4 are missing, and none of the current user docs are wrong. Explain that an unanswered file-navigator mutation may have completed despite its lost reply, and that unanswered file search/Quick Open settles to an empty result; document the shell completion failure path without claiming typed input is preserved. Evidence is `product/specs/websocket-rpc.md`, `web/src/shared/ws/rpc-exchange.ts`, `src/message/file-navigator.ts`, `src/file-navigator/manager/item-operations.ts`, `web/src/file-navigator/useFileNavigatorSearch.ts`, `web/src/pickers/useQuickOpen.ts`, `web/src/plugins/shell/ShellTab.tsx`, and `web/src/plugins/plugin-client-capabilities.ts`; update `documentation/user-documentation/tab-types/file-navigator.md`, `documentation/user-documentation/command-bar/quick-open.md`, `documentation/user-documentation/command-bar/tab-completion.md`, and `help/files.md`.
 
 * workspaced-agent (4/10) — 33 of 42 user-facing facts are covered, 9 are missing, and none of the allowed docs are wrong. Add shell/harness clone-depth and `--no-workspace` precedence, exact shell fallback/failure messages, Kilo credential-variable guidance, and OpenCode OAuth scope/failure details to `documentation/user-documentation/advanced-agents/workspaced-agent.md`, `documentation/user-documentation/advanced-agents/remote-agents.md`, and `documentation/user-documentation/advanced-agents/tokens.md`. Evidence is `product/specs/workspaced-agent.md`, `src/workspace/clone-depth.ts`, `src/plugins/shell/parse-argument.ts`, `src/harness/command-parse.ts`, `src/plugins/shell/activate.ts`, `src/plugins/launch-tab.ts`, `src/project/tokens.ts`, `src/sandbox/environment.ts`, `src/sandbox/opencode-data.ts`, and `src/remote/serve-provision.ts`; the current guide already explains the `gh` credential fallback.
+
+## development
 
 ## deferred
 
