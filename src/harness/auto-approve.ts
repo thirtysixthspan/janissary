@@ -39,10 +39,12 @@ function isInputCaretLine(line: string): boolean {
 // line, with no live input caret beneath the options. Keying on what follows the options — rather
 // than their distance from the bottom — lets the gate be detected regardless of the passive chrome
 // claude pins below it (the footer hint, a task panel, status lines), while still rejecting
-// gate-shaped text that has scrolled up and been superseded by claude's own prompt.
+// gate-shaped text that has scrolled up and been superseded by claude's own prompt. The *last*
+// highlighted `❯ 1. Yes` is the anchor: a live gate is the lowest menu on screen, so gate-shaped
+// text quoted higher in the transcript (with a `❯` prompt line after it) cannot mask it.
 function detectClaudeGate(text: string): boolean {
   const lines = text.split('\n');
-  const yesIndex = lines.findIndex((line) => isYesDefaultLine(line));
+  const yesIndex = lines.findLastIndex((line) => isYesDefaultLine(line));
   if (yesIndex === -1) return false;
   const noIndex = lines.findIndex((line, i) => i > yesIndex && isNoOptionLine(line));
   if (noIndex === -1) return false;
