@@ -172,7 +172,7 @@ Attaching a harness redraws its retained terminal output and restores its recent
 
 Remote harnesses can detect permission prompts and usage limits while detached. A limit report is queued until you attach again; if its reset time has passed, the harness resumes one minute after reattachment. The resume is scheduled on the local tab, so cancel it there with `schedule cancel auto-resume in <label>` before it fires if needed.
 
-The remote deletes its workspace clone when the session is terminated. A detached session can wait up to seven days for an attach before expiring. Attaching a shell returns to its existing terminal and workspace, including after repeated detaches. Remote files opened for viewing or editing are cached locally and cleared at startup, on detach, or when the session is terminated. Profiles do not restore remote navigators.
+The remote deletes its workspace clone when the session is terminated. A detached session can wait up to seven days for an attach before expiring. When it expires, the host stops the session's processes and removes its workspace clone. A session that Janissary confirms has ended leaves its tab open with a notification such as `Remote harness 'build' on devbox terminated.` or `Remote shell on devbox terminated.`; [Sleep and resume](/user-documentation/getting-started/sleep-and-resume#remote-sessions) lists the variants. Attaching a shell returns to its existing terminal and workspace, including after repeated detaches. Remote files opened for viewing or editing are cached locally and cleared at startup, on detach, or when the session is terminated. Profiles do not restore remote navigators.
 
 ## Coming back after a restart
 

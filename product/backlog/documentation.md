@@ -2,8 +2,6 @@
 
 ## ready
 
-* sleep-and-resume (7/10) — 30 of 34 facts are covered, 3 are missing, and 1 is wrong. Correct `documentation/user-documentation/tab-types/file-navigator.md` so an established remote session’s temporary disconnect does not imply its navigator closes; add expiry cleanup and the remote harness/shell termination notification variants to `documentation/user-documentation/getting-started/sleep-and-resume.md`. Evidence is `product/specs/sleep-and-resume.md`, `src/remote/manager-closed.ts`, `src/remote/manager.ts`, `src/remote/attach.ts`, `src/remote/serve-detach.ts`, and `src/remote/manager-reports.ts`; align `documentation/user-documentation/advanced-agents/remote-agents.md`.
-
 * sql-database (8/10) — 47 of 95 facts are covered, 43 are missing, and 5 are wrong. Correct primary-key fallback, bare-`sql` recency, docking case, insert pending-state, export limits/failures, and deleted-database connection wording in `documentation/user-documentation/tab-types/sql-browser.md`, `documentation/user-documentation/command-bar/connections.md`, and `help/sql.md`; fill in filter/null, object-switch, foreign-key, CSV/JSON, focus, and result-file behavior. Evidence is `product/specs/sql-database.md`, `src/plugins/dock-argument.ts`, `src/plugins/sql/activate.ts`, `src/database/grid-sql.ts`, `src/connections.ts`, `src/database/export.ts`, `src/database/console-read.ts`, `web/src/plugins/sql/InsertForm.tsx`, `web/src/plugins/sql/SqlConsole.tsx`, and `web/src/plugins/sql/selection.tsx`; retain concise command guidance in `documentation/user-documentation/command-bar/database.md` and `help/sql.md`.
 
 * ssh-tab (5/10) — 19 of 20 facts are covered, 0 are missing, and 1 is wrong. Correct the statement in `documentation/user-documentation/advanced-agents/harness.md` that `!ssh <host>` opens an inline terminal: it runs through the captured-shell path. Verify against `product/specs/ssh-tab.md`, `src/commands/shell.ts`, `src/shell/manager.ts`, and `src/shell/index.ts`; `help/ssh.md` correctly documents bare `ssh` launches.
@@ -36,6 +34,7 @@
 
 ## resolved
 
+* sleep-and-resume — documented in documentation/user-documentation/getting-started/sleep-and-resume.md, documentation/user-documentation/tab-types/file-navigator.md, documentation/user-documentation/advanced-agents/remote-agents.md (removed 2026-10-29)
 * sidebars — documented in documentation/user-documentation/getting-started/tabs.md, documentation/user-documentation/tab-types/file-navigator.md (removed 2026-10-29)
 * shell-tab — documented in documentation/user-documentation/command-bar/shell.md, documentation/user-documentation/getting-started/keyboard.md, documentation/user-documentation/tab-types/editor.md (removed 2026-10-29)
 * shell — documented in documentation/user-documentation/command-bar/shell.md, documentation/user-documentation/command-bar/connections.md (removed 2026-10-29)
