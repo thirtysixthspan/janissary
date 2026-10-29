@@ -21,7 +21,7 @@ src/app.ts:42
 tests/test.py:10:5
 ```
 
-A single click on a link opens that file in an editor with the target line scrolled to the middle of the tab, so the line and its surroundings are in view without scrolling. A `file:line:column` link also opens at its line; the column is not used as the editor position. A bare value such as `error:42` is not treated as a file link.
+A single click on a link opens that file in an editor with the target line scrolled to the middle of the tab, so the line and its surroundings are in view without scrolling. A `file:line:column` link also opens at its line; the column is not used as the editor position. A bare value such as `error:42` is not treated as a file link. In a docked shell's ACP panel, the link opens from the shell that owns the panel, as described in [Query ACP from a shell](/user-documentation/advanced-agents/acp-agent).
 
 ## Use safe links and markup
 

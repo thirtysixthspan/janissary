@@ -20,7 +20,7 @@ Use the explicit `acp` prefix for a model reply; unclaimed text in a shell bar g
 
 ## Which model it runs
 
-The model comes from the OpenCode list in the harness catalog, including a project's `.janissary/harness-models.json` override. The app prefers its default while that model is listed; otherwise it uses the first listed model. An empty list produces `ACP: no opencode model is available in the harness catalog.`.
+The model comes from the OpenCode list in the harness catalog, including a project's `.janissary/harness-models.json` override. The app prefers `google/gemini-3.1-flash-lite` while that model is listed; otherwise it uses the first listed model. An empty list produces `ACP: no opencode model is available in the harness catalog.`.
 
 The connections popup shows the model the session started with. That choice is separate from the models used by monitors, conversations, and editor queries.
 
@@ -54,6 +54,8 @@ Questions identify the tab asking them. Answer or cancel in the question panel. 
 
 The ACP panel, reset button, and tool-step controls belong to their shell even when another tab is current. Resetting or expanding steps in a docked shell does not change another tab's connection or transcript. Replies do not duplicate themselves in zsh's terminal.
 
+A link in a docked panel's reply acts for the shell that owns the panel, not for the tab you are looking at. Clicking a web address runs `open <address>` and clicking a `path:line` reference runs `edit <path:line>`, both as if you had typed them in that shell. See [Markdown rendering](/user-documentation/advanced-agents/markdown-rendering) for which links are clickable.
+
 ## In a workspace or on another host
 
 <img class="agent-float" src="/agents/hamza-south-east.png" alt="" />
@@ -66,6 +68,10 @@ Before SSH has finished connecting, a prompt reports `ACP: the remote session is
 
 ## Errors and connection controls
 
-Bare `acp` prints `Usage: acp <prompt>.`. A process that dies is reported and forgotten, so the next prompt starts a new connection. A prompt-level failure, such as a rate limit, keeps a working conversation.
+Bare `acp` prints `Usage: acp <prompt>.`. Two kinds of failure look alike but behave differently.
+
+A connection failure starts with `ACP:`, for example `ACP: ACP agent exited.` or `ACP: failed to start ACP agent: <reason>`. The connection is forgotten, so the next prompt starts a new one. When the agent printed anything to its error output, the message ends with that text, limited to its last ten lines and 2000 characters.
+
+A prompt failure, such as a rate limit, starts with `ACP error:` and appears in the reply. The connection stays, and so does the conversation, so you can send the prompt again.
 
 The connection is listed as `acp:<provider/model>`. Use its close control or `connection close` to end it. Its transcript button opens a snapshot in an editor tab. See [Connections](/user-documentation/command-bar/connections).
