@@ -2,8 +2,6 @@
 
 ## ready
 
-* shell-tab (8/10) — 56 of 86 facts are covered, 27 are missing, and 3 are wrong. Correct the shell name-pool exhaustion text, theme colors, and Cmd+F guidance across `documentation/user-documentation/getting-started/agents.md`, `documentation/user-documentation/getting-started/tabs.md`, `documentation/user-documentation/command-bar/commands.md`, `documentation/user-documentation/getting-started/keyboard.md`, and `documentation/user-documentation/tab-types/editor.md`. Expand `documentation/user-documentation/command-bar/shell.md` with reply selection/link behavior, OSC 52, history edge cases, provisioning/action details, and transcript limits; evidence is `product/specs/shell-tab.md`, `src/plugins/launch-tab-label.ts`, `web/src/plugins/shell/shell-terminal-theme.ts`, `web/src/plugins/shell/ShellTab.tsx`, `web/src/plugins/shell/useShellSubmit.ts`, `src/plugins/shell/parse-argument.ts`, `src/shell/transcript/writer.ts`, `src/shell/transcript/row-tracker.ts`, and `src/shell/transcript/manager.ts`.
-
 * sidebars (6/10) — 12 of 21 facts are covered, 8 are missing, and 1 is wrong. Correct the resize-button orientation/placement and add exact drag limits, the 300px default, hidden-system-tab behavior, focusing a docked tab, and selection-preserving strip reorder to `documentation/user-documentation/getting-started/tabs.md`; explain that `layout sidebar` can bypass drag limits and screen bounds in `help/layout.md`. Use `product/specs/sidebars.md`, `web/src/Sidebar.tsx`, `web/src/ResizeButton.tsx`, `web/src/layout-defaults.ts`, `web/src/useSidebarSelection.ts`, `src/tab/operations.ts`, `src/tab/visibility.ts`, and `src/client-layout.ts`; the current command syntax is `layout show`, not bare `layout`.
 
 * sleep-and-resume (7/10) — 30 of 34 facts are covered, 3 are missing, and 1 is wrong. Correct `documentation/user-documentation/tab-types/file-navigator.md` so an established remote session’s temporary disconnect does not imply its navigator closes; add expiry cleanup and the remote harness/shell termination notification variants to `documentation/user-documentation/getting-started/sleep-and-resume.md`. Evidence is `product/specs/sleep-and-resume.md`, `src/remote/manager-closed.ts`, `src/remote/manager.ts`, `src/remote/attach.ts`, `src/remote/serve-detach.ts`, and `src/remote/manager-reports.ts`; align `documentation/user-documentation/advanced-agents/remote-agents.md`.
@@ -40,6 +38,7 @@
 
 ## resolved
 
+* shell-tab — documented in documentation/user-documentation/command-bar/shell.md, documentation/user-documentation/getting-started/keyboard.md, documentation/user-documentation/tab-types/editor.md (removed 2026-10-29)
 * shell — documented in documentation/user-documentation/command-bar/shell.md, documentation/user-documentation/command-bar/connections.md (removed 2026-10-29)
 * sessions-tab — documented in documentation/user-documentation/tab-types/sessions.md (removed 2026-10-29)
 * send — documented in documentation/user-documentation/command-bar/send.md, documentation/user-documentation/getting-started/tabs.md, help/keys.md (removed 2026-10-29)
