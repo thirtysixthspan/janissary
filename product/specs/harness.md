@@ -458,7 +458,11 @@ caret (its own `❯` prompt) below the options — an active gate replaces the i
 is gone. This lets a gate be detected regardless of the passive chrome claude pins beneath it (the
 footer hint, a task panel that pushes the options well above the bottom of the screen, status
 lines), while gate-shaped text that has scrolled up and been superseded by claude's prompt — where
-the input caret is back on screen — does not trigger an approval.
+the input caret is back on screen — does not trigger an approval. The lowest highlighted menu on
+the screen is the one checked, so gate-shaped text higher in the transcript, followed by a past
+prompt line, does not mask a live gate below it. That covers a subagent's gate that carries
+claude's "auto mode handles these prompts for you" tip, a boxed command, and a "switch to auto mode"
+option wrapped onto a second line.
 
 At the moment of a successful auto-approval, the app also saves the harness's on-screen text to a
 file and attaches a clickable, outline-style clipboard-icon link before that same notification line's

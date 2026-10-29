@@ -135,9 +135,33 @@ const READ_FOUR_OPTION = [
   ' Esc to cancel · Tab to amend',
 ].join('\n');
 
+// A subagent bash gate on a narrow screen: a "Tip:" header, the command inside a dashed box with
+// `│`-prefixed lines, an unverifiable-variable warning, and the "switch to auto mode" option
+// wrapped onto a second line before `3. No`.
+const SUBAGENT_AUTO_MODE_TIP = [
+  '─────────────────────────────────────────────────────────────────',
+  ' Bash command · from the general-purpose agent',
+  ' Tip: auto mode handles these prompts for you — choose "switch',
+  ' to auto mode" below',
+  ' Run shell command',
+  '╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌',
+  ' │ git checkout master && git pull origin master 2>&1 | tail -5',
+  ' │ && ./scripts/run.mjs check-malicious-package --audit',
+  ' │ ./package-lock.json 2>&1 | tail -5; echo exit=$?',
+  '╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌',
+  " A variable in this command can't be checked before it runs",
+  '',
+  ' Do you want to proceed?',
+  ' ❯ 1. Yes',
+  '   2. Yes, and switch to auto mode · auto mode handles these',
+  '      prompts for you',
+  '   3. No',
+  '',
+].join('\n');
+
 const ALL_GATES = {
   BASH_IN_PROJECT, BASH_OUT_OF_PROJECT, FETCH, SUBAGENT_TWO_OPTION, MCP_TOOL, GATE_WITH_TASK_LIST, BASH_TEMP_CLEANUP,
-  REQUIRES_APPROVAL_FOUR_OPTION, READ_FOUR_OPTION,
+  REQUIRES_APPROVAL_FOUR_OPTION, READ_FOUR_OPTION, SUBAGENT_AUTO_MODE_TIP,
 };
 
 // A codex command-execution overlay: distinct title and `›` selection glyph from claude's gates.
@@ -198,6 +222,11 @@ describe('detectPermissionGate — claude', () => {
     // The old gate is in scrollback; claude sits back at its own prompt (the `❯` input caret) below.
     const quoted = [BASH_IN_PROJECT, '', '', ' ❯ now working on something else', '', ' ? for shortcuts'].join('\n');
     expect(detectPermissionGate(quoted, 'claude')).toBe(false);
+  });
+
+  it('matches a live gate below gate-shaped text that was superseded by a `❯` prompt line', () => {
+    const screen = [BASH_IN_PROJECT, '', ' ❯ execute ./ai/tasks/work-an-issue.md', '', SUBAGENT_AUTO_MODE_TIP].join('\n');
+    expect(detectPermissionGate(screen, 'claude')).toBe(true);
   });
 
   it('still matches a gate followed by passive chrome (status lines, no input caret)', () => {
