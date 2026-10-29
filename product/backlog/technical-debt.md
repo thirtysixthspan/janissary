@@ -4,8 +4,6 @@
 
 ## development
 
-* Reduce the cognitive complexity of `parseShellArgument()` in `src/plugins/shell/parse-argument.ts` (line 25), reported at 20 against the allowed 15 in a 57-line file. The function parses shell launch arguments through a stateful token loop whose nested branches handle flags, group selectors, remote addresses, and the shell name. This is risk-sensitive because it parses shell launch options. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against `parseShellArgument()` in `src/plugins/shell/parse-argument.ts`. Severity: **medium**.
-
 * Reduce the cognitive complexity of `resolveSkill()` in `src/agent/skill-grants.ts` (line 13), reported at 19 against the allowed 15 in a 102-line file. The function searches project and installation roots while combining missing-path recovery, filesystem checks, and symlink containment validation. This is risk-sensitive because it validates filesystem paths for security. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against `resolveSkill()` in `src/agent/skill-grants.ts`. Severity: **medium**.
 
 * Reduce the cognitive complexity of `buildTabView()` in `src/tab/view.ts` (line 61), reported at 19 against the allowed 15 in a 219-line file. The function builds a wire-format tab view, with conditional workspace and remote provisioning fields alongside plugin, recording, transcript, and harness data. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against `buildTabView()` in `src/tab/view.ts`. Severity: **low**.
