@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
-import { pdfjsAssetMiddleware } from './pdfjs-assets';
+import { pdfjsAssetMiddleware } from './pdfjs-assets.ts';
 
 // PDF.js reaches for character maps when a document uses CJK or an unusual text encoding, and for
 // standard font data when a document does not embed its fonts. Both ship with the app rather than
@@ -44,7 +44,7 @@ function pdfjsAssets(): Plugin {
 // Output goes to `web/dist`, which the server serves statically. `base: './'` keeps asset URLs
 // relative so they load regardless of the path the app is opened at.
 export default defineConfig({
-  root: __dirname,
+  root: import.meta.dirname,
   base: './',
   plugins: [react(), pdfjsAssets()],
   build: { outDir: 'dist', emptyOutDir: true },
