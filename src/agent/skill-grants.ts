@@ -10,6 +10,29 @@ function isMissingPath(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'ENOENT';
 }
 
+function readContainedSkill(
+  source: Skill['source'],
+  name: string,
+  candidate: string,
+  realRoot: string,
+): ResolvedSkill {
+  const directory = path.dirname(candidate);
+  try {
+    const realDirectory = realpathSync(directory);
+    if (realDirectory !== path.resolve(realRoot, name) || !containedAbsolute(realRoot, realDirectory) || !statSync(realDirectory).isDirectory()) {
+      throw new Error('invalid skill directory');
+    }
+    const realFile = realpathSync(candidate);
+    if (!containedAbsolute(realDirectory, realFile) || !statSync(realFile).isFile()) throw new Error('outside skill directory');
+    return Object.freeze({
+      skill: Object.freeze({ source, name, path: realFile, instructions: readFileSync(realFile, 'utf8') }),
+      directory: realDirectory,
+    });
+  } catch {
+    throw new Error(`Agent: invalid skill path "${name}".`);
+  }
+}
+
 function resolveSkill(name: string, options: AgentResolutionOptions): ResolvedSkill {
   const roots = [
     { source: 'project', path: options.workspaceDir },
@@ -35,21 +58,7 @@ function resolveSkill(name: string, options: AgentResolutionOptions): ResolvedSk
       if (isMissingPath(error)) continue;
       throw new Error(`Agent: invalid skill path "${name}".`, { cause: error });
     }
-    const directory = path.dirname(candidate);
-    try {
-      const realDirectory = realpathSync(directory);
-      if (realDirectory !== path.resolve(realRoot, name) || !containedAbsolute(realRoot, realDirectory) || !statSync(realDirectory).isDirectory()) {
-        throw new Error('invalid skill directory');
-      }
-      const realFile = realpathSync(candidate);
-      if (!containedAbsolute(realDirectory, realFile) || !statSync(realFile).isFile()) throw new Error('outside skill directory');
-      return Object.freeze({
-        skill: Object.freeze({ source, name, path: realFile, instructions: readFileSync(realFile, 'utf8') }),
-        directory: realDirectory,
-      });
-    } catch {
-      throw new Error(`Agent: invalid skill path "${name}".`);
-    }
+    return readContainedSkill(source, name, candidate, realRoot);
   }
   throw new Error(`Agent: unknown skill "${name}".`);
 }
