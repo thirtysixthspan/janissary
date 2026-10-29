@@ -187,7 +187,7 @@ Typing either `notifications` or `notify` also writes one line into the transcri
 
 ## Read diagnostic messages
 
-`harness recording failed` and `ssh recording failed` mean that recording has stopped for that session, while the session itself keeps running. `no harness transcript found` is a separate diagnostic: the harness has no available session transcript, but screen-based monitoring remains available. Each diagnostic is reported once per affected tab. See [Recordings](/user-documentation/advanced-agents/harness#recordings) and [Opening a session transcript](/user-documentation/advanced-agents/harness#opening-a-session-transcript).
+`harness recording failed`, `ssh recording failed`, and `shell recording failed` mean that recording has stopped for that session, while the session itself keeps running. `no harness transcript found` is a separate diagnostic: the harness has no available session transcript, but screen-based monitoring remains available. Each diagnostic is reported once per affected tab. See [Recordings](/user-documentation/advanced-agents/harness#recordings) and [Opening a session transcript](/user-documentation/advanced-agents/harness#opening-a-session-transcript).
 
 These diagnostics bypass the five event toggles and focus suppression, and they land in the queue and toast the same way other notifications do.
 

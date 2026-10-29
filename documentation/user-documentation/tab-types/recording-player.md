@@ -1,5 +1,7 @@
 # Recording player
 
+<img class="agent-float" src="/agents/ekrem-south-east.png" alt="" />
+
 `play <name>` plays a session's recording in an **asciicast tab**:
 
 ```
@@ -34,6 +36,8 @@ opens the recording directly, following it if the session is still running.
 
 ## What it looks like
 
+<img class="agent-float left" src="/agents/fariz-south-west.png" alt="" />
+
 The tab is a terminal of its own showing the session's output as it was on screen, at the size it was
 recorded at — the columns and rows it ran in, following any window resize it did — at the same text
 size and line spacing as any other terminal. Nothing is scaled to fit: a recording wider or taller than
@@ -45,6 +49,12 @@ long it is, and the session's exit status when the recording carries one. Below 
 
 Text can be selected in the recording and copied with `Cmd+C` (or `Ctrl+C`), the same as in any
 terminal.
+
+Each recording is an asciicast file. Janissary writes version 3, with a header for the command, tab
+label, start time, and terminal dimensions, followed by timed output, resize, and process-exit events.
+The player also reads version 2 recordings. It replays the recorded dimensions rather than fitting the
+terminal to the tab, and a resize before the first output sets the starting dimensions without
+creating a recording file.
 
 ## What it can do
 
@@ -77,9 +87,23 @@ run rather than silence. See
 
 ## Where it lives
 
+<img class="agent-float" src="/agents/yusuf-south-east.png" alt="" />
+
 The tab is an ordinary tab: it docks into either sidebar, takes a **Split** control, and can be closed
 like any other. Playback pauses while it is not the visible tab and resumes where it stopped. Playback
 state is not kept after the tab closes — reopen the recording and it starts from the beginning.
+
+The player has no command bar or transcript. Switch to another tab to run commands. Selecting and
+copying text from the recording does not change the file.
+
+If `play` cannot open a file, it reports one of these lines in the tab where you entered the command:
+
+- `Usage: play <file>.` when you do not name a file.
+- `play: <path>: no such file` when neither a file nor a recording with that session name exists.
+- `play: <file>: not a playable file` when no player claims the file type.
+
+A recording file that exists but cannot be read still opens in the player, which shows the reason in
+its metadata line.
 
 ## Turning shell recording off
 
@@ -91,6 +115,7 @@ in its `.janissary/config.json`:
 { "recordShellTabs": false }
 ```
 
-No shell file is written and no shell tab draws the flag. Named `harness` and `ssh` tabs are unaffected —
-they have no echo of their own, so they are recorded whatever this says. The setting is on unless a
-project turns it off. It also turns off the shell tab's [text transcript](/user-documentation/command-bar/shell#read-a-shell-session-s-transcript).
+No shell file is written and no shell tab draws the flag. Named `harness` and `ssh` tabs are unaffected
+by this setting and keep recording. No keystrokes are stored as input events, but any text a program
+displays is part of its output. The setting is on unless a project turns it off. It also turns off the
+shell tab's [text transcript](/user-documentation/command-bar/shell#read-a-shell-session-s-transcript).
