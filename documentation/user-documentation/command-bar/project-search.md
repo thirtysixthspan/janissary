@@ -34,9 +34,9 @@ There's still one search tab. Starting a search from a different workspace switc
 
 If the workspace is still being created, or no longer exists, nothing opens. The notifications feed shows `Search: the workspace of "<name>" is not ready yet.` or `Search: the workspace of "<name>" is no longer available.`
 
-A remote workspace is searched on its host, and only matching rows come back over the connection. Its results appear together when the scan completes. While it searches there, the search tab keeps the remote session open, and lets it go when it switches to another workspace or closes. If the search tab can't connect to the remote workspace, you see the `no longer available` line and the tab stays where it was.
+A remote workspace is searched on its host, and only matching rows come back over the connection. Its results appear together when the scan completes. While it searches there, the search tab keeps the remote session open, and lets it go when it switches to another workspace or closes. If the search tab can't connect to the remote workspace, you see the `no longer available` line and nothing is searched, not even a phrase you typed. The tab keeps the workspace it had. If that was a remote workspace it can no longer reach either, the tab moves to the launch directory and clears the results it showed. A search that was running when the failed attempt arrived starts again in the workspace the tab ends up with.
 
-When the workspace goes away, the search tab closes on its own, and any search still running stops. For a local clone, that happens when you close the last tab that owns it. For a remote workspace, it happens when the remote session ends, for example when you end it from the connections panel. Closing just the remote tab you searched from leaves the search tab open, because the search tab keeps the session going.
+When the workspace goes away, the search tab closes on its own, and any search still running stops. For a local clone, that happens when you close the last tab that owns it. For a remote workspace, it happens when the remote session ends, for example when you end it from the connections panel. Closing just the remote tab you searched from leaves the search tab open, because the search tab keeps the session going. The tab closes without a notification, and it stays open if closing it would quit the app. A workspace that is only offline doesn't close it.
 
 ## Type a search
 
@@ -58,11 +58,13 @@ The toggles are remembered across restarts, so the tab opens with them the way y
 
 A regular expression that doesn't compile starts no search. The tab shows the reason in the engine's own words, such as `Invalid regular expression: /[unclosed/i: Unterminated character class`. The same line goes into the transcript of the tab you opened the search from. Fix the pattern and the next one that compiles searches as usual.
 
-With the search bar focused, `↑` steps back through the terms this tab has searched and `↓` steps forward again. Stepping past the newest term brings back what you were typing. Searching a term again moves it to the newest place rather than listing it twice.
+With the search bar focused, `↑` steps back through the terms this tab has searched and `↓` steps forward again. Stepping past the newest term brings back what you were typing. Searching a term again moves it to the newest place rather than listing it twice. Flipping a toggle or editing a file field reruns the term already in the bar and doesn't add it to the list again. Closing the tab clears the list.
 
 ## Choose which files to search
 
-The search covers every file under the directory the app was launched from, or under the workspace it follows, that `.gitignore` doesn't exclude. That's the same set Quick open uses. Two kinds of file are skipped: files too large for the editor to open, and binary files.
+The search covers every file under the directory the app was launched from, or under the workspace it follows. In a Git project, that means every tracked file plus every untracked file your `.gitignore` doesn't exclude, so `node_modules` stays out. A tracked file is searched even if `.gitignore` also matches it. If the directory isn't in a Git repository, or Git can't list it, the search walks the folders itself. That walk doesn't read `.gitignore`, so `node_modules` and build output are searched. It skips only `.git`, `.svn`, `.hg`, `.DS_Store`, and `Thumbs.db`. [Quick open](/user-documentation/command-bar/quick-open) lists files the same way.
+
+Two kinds of file are skipped. Files larger than 2 MB are too large for the editor to open, so they never show up. A file counts as binary when a null byte appears in its first 8 KB. A file whose first null byte comes later is searched as text.
 
 The **Files to include** and **Files to exclude** fields across the top narrow that set. Each takes glob patterns separated by commas, such as `*.md, docs`, and editing either one reruns the search.
 
@@ -78,7 +80,7 @@ Results stack upward. The first match sits at the bottom of the window, just abo
 
 A search stops after 250 matches. There's no count of matches or files anywhere in the tab. The body shows `Searching…` while a search runs, and `No matches found for "<query>".` when one finishes with nothing.
 
-If one matching step takes longer than one second, the search ends with an error reason. Any rows already found stay visible, and you can run another query normally.
+If one matching step takes longer than one second, the search ends with the error `Search matching exceeded its 1000 ms deadline`. When no rows were found yet, the window shows that reason. When rows were already found, they stay on screen and the reason is not shown, so a short list can mean the search stopped early. Either way, you can run another query normally.
 
 ## Open a match
 
@@ -90,6 +92,8 @@ With the results focused, `↑` moves up the window to a later match and `↓` m
 
 Opening a match puts the file in an [editor tab](/user-documentation/tab-types/editor) with the matching line centered. A file that's already open is focused rather than opened twice. The search tab stays open with its query and results, so you can open the next match without searching again.
 
-A match from a remote workspace opens a local copy of the file. Saving it writes your change back to the remote workspace.
+A match from a remote workspace opens a local copy of the file. Saving it writes your change back to the remote workspace for as long as the search tab holds that workspace's connection. If the copy can't be fetched, nothing opens.
+
+A match that is still on screen after the tab switches workspaces opens the file from the workspace that produced it. For a remote workspace, that works only while the tab still holds its connection. Once it lets go, clicking the match does nothing.
 
 The search tab is a live view. It isn't restored.
