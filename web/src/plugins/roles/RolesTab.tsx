@@ -29,7 +29,7 @@ export function RolesTab({ payload, capabilities }: Properties) {
   };
 
   return (
-    <div className="roles-tab">
+    <div className="roles-tab" data-doc-shot="roles-tab">
       <div
         className="roles-catalog"
         onDragOver={(event) => allowDrop(event, (drag) => drag.kind === 'entry')}

@@ -39,7 +39,7 @@
 | `queue` | Queue a command for a shell or another tab supporting queues (`queue <tab> <command>`); bare `queue` opens the interactive queue picker (Ctrl+E) |
 | `quit` | Exit the application (asks for confirmation); `/quit` is equivalent |
 | `rename` | Rename the current tab's display name (`rename <name>`); bare `rename` clears the alias; in an editor tab, renames the file |
-| `roles` | Open the roles tab, where named roles map to an ordered list of harness/model/effort choices in `roles.json`; bare `roles` only |
+| `roles` | Open the roles tab, where named roles map to an ordered list of harness/model/effort choices in `roles.json` (a saved list; nothing launches from it); bare `roles` only |
 | `schedule` | Run a tab command later with `schedule <name> <form> <command>`, or manage project runscripts with `schedule system <name> <form> script <name>` |
 | `schedules` | Open the aggregated tab listing every scheduled command across all tabs, through the bundled schedules tab plugin (`schedules left`/`right` to dock it). Its **+** button opens the New schedule dialog |
 | `scripts` | Open the project's runscripts in .janissary/scripts. Run, duplicate, or delete one from its row, or create one with **+**. |
