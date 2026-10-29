@@ -2,8 +2,6 @@
 
 ## ready
 
-* send (5/10) — 19 of 22 facts are covered, 2 are missing, and 1 is wrong. Correct the claim that spaced aliases work with `send`, and add that inline terminal cards cannot be addressed and that payload whitespace is normalized, in `documentation/user-documentation/command-bar/send.md`; reconcile spaced-target quoting in `documentation/user-documentation/getting-started/tabs.md` and `help/keys.md`. Source evidence is `product/specs/send.md`, `src/commands/send.ts`, `src/commands/resolve-target.ts`, `src/completion/target-handlers.ts`, and `src/tab/plugin-terminals.ts`; queueing during provisioning is already covered by `documentation/user-documentation/command-bar/queue.md`.
-
 * sessions-tab (8/10) — 21 of 37 facts are covered, 10 are missing, and 6 are wrong or inaccurate. Correct SSH/navigator row labels, detach confirmation wording, provisioning refusal examples, terminate confirmation order, and the claim that a row displays a “terminating” label; add header layout, retained shell state/history, late-connection behavior, and termination notification variants to `documentation/user-documentation/tab-types/sessions.md`. Evidence is `product/specs/sessions-tab.md`, `src/sessions/rows.ts`, `src/sessions/actions.ts`, `src/sessions/attach.ts`, `src/sessions/restore-tabs.ts`, `src/sessions/manager.ts`, `web/src/plugins/sessions/SessionList.tsx`, `web/src/plugins/sessions/SessionRowActions.tsx`, and `web/src/shared/RemoteSessionButton.tsx`; align `documentation/user-documentation/advanced-agents/remote-agents.md`, `documentation/user-documentation/getting-started/startup.md`, and `help/sessions.md`.
 
 * shell (6/10) — 9 of 17 facts are covered, 7 are missing, and 1 is wrong. Correct “login shell” for captured `!` commands and explain trimming/bare `!`, unknown-command behavior, startup-file suppression, live output, tab-cwd updates, inherited workspace/remote context, and in-flight command completion when closing the connection in `documentation/user-documentation/command-bar/shell.md`. Source evidence is `product/specs/shell.md`, `src/commands/shell.ts`, `src/shell/manager.ts`, `src/shell/startup.ts`, `src/shell/index.ts`, `src/remote/shell-session.ts`, `src/remote/serve-processes.ts`, and `src/tab/plugin-terminals.ts`; keep `documentation/user-documentation/command-bar/connections.md` aligned.
@@ -46,6 +44,7 @@
 
 ## resolved
 
+* send — documented in documentation/user-documentation/command-bar/send.md, documentation/user-documentation/getting-started/tabs.md, help/keys.md (removed 2026-10-29)
 * shell — documented in documentation/user-documentation/command-bar/shell.md (removed 2026-10-14)
 * acp — documented in documentation/user-documentation/advanced-agents/acp-agent.md, documentation/user-documentation/advanced-agents/markdown-rendering.md (removed 2026-10-29)
 * agent-command — documented in documentation/user-documentation/advanced-agents/agent-command.md (removed 2026-10-29)
