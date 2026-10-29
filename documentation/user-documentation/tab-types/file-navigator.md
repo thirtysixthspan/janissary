@@ -11,7 +11,7 @@ files left       rooted at the working directory, docked in the left sidebar
 files right src  rooted at src, docked in the right sidebar
 ```
 
-Directories sort before files, both alphabetically and ignoring case. A few VS Code default excludes (`.svn`, `.hg`, `.DS_Store`, `Thumbs.db`) are hidden; `.git` and every other dotfile show like any other entry. A directory's contents are only read when you expand it, so a huge `node_modules` costs nothing until opened. The tab is named `navigator` in the strip, and placed at the *start* of its group, so the tree sits left of the tabs it opens — except while docked to a sidebar, when it leaves the strip entirely (see below). It joins whichever group was active when you opened it, taking that group's bar colour and a dot colour of its own. `navigator` is also the name `close` goes by, with `navigator-2`, `navigator-3`, and so on for later trees; `files` is the command that opens one, not the name it answers to.
+Directories sort before files, both alphabetically and ignoring case. A few VS Code default excludes (`.svn`, `.hg`, `.DS_Store`, `Thumbs.db`) are hidden; `.git` and every other dotfile show like any other entry. A directory's contents are only read when you expand it, so a huge `node_modules` costs nothing until opened. The tab is named `navigator` in the strip, and placed at the *start* of its group, so the tree sits left of the tabs it opens — except while docked to a sidebar, when it leaves the strip entirely (see below). It joins whichever group was active when you opened it, taking that group's bar colour and a dot colour of its own. `navigator` is also the name `close` goes by, with `navigator-2`, `navigator-3`, and so on for later trees; `files` is the command that opens one, not the name it answers to. A malformed command writes one parser-error line in the issuing tab and opens no tree, including a malformed `files print` request.
 
 If a tree is already open on the same root, `files` focuses it rather than opening a duplicate — or, with `left`/`right`, moves it into that sidebar. You can spell the side out as `files on left` or `files on right`; it means the same as the bare form. A target that isn't a directory prints `files: <path>: not a directory`. A `files in <label>` naming a tab that isn't there prints `No tab named "<label>".` and opens nothing. You can also put a path first, as in `files src in claude`, to open `src` under that tab's working directory. The label can itself be `in`: `files src in in` opens `src` under the tab named `in`. With no label value, `files in` treats `in` as the path; after a path, `files src in` reports `files: expected a tab label after "in"` and opens nothing. A target that doesn't exist *yet* still opens a tab, showing "Looking for `<path>`…" until the directory shows up — handy for pointing a navigator at a directory a build or clone is about to create.
 
@@ -103,7 +103,7 @@ files on left with size expand src expand src/commands cursor src/commands/files
 
 ## Move a tree between the sidebars and the center
 
-Every tree has a **location** button in its header, wherever it sits. Each click moves the tree one step around the cycle left sidebar → center tab strip → right sidebar → left sidebar. Its tooltip names where the next click will take it (`Move to right sidebar`, `Move to left sidebar`, or `Move to center tab strip`), so you can see where a tree is going before you send it. Back in the center, the tree lands at the front of its group where a navigator always sits. The commands reach the same places: `files left` and `files right` dock it, and `files` on its own, or `files <path>`, puts it back in the strip.
+Every tree has a **location** button in its header, wherever it sits. Each click moves the tree one step around the cycle left sidebar → center tab strip → right sidebar → left sidebar. Its tooltip names where the next click will take it (`Move to right sidebar`, `Move to left sidebar`, or `Move to center tab strip`), so you can see where a tree is going before you send it. When it returns to the center, it returns to its current position in the overall tab order. The commands reach the same places: `files left` and `files right` dock it, and `files` on its own, or `files <path>`, puts it back in the strip.
 
 The header has no close button of its own. A tree in the center strip is closed from the strip, and a docked one from its sidebar's tab strip, where the × sits beside the tab's name. `close navigator` works from any tab either way.
 
@@ -123,7 +123,7 @@ The button tells you how the pull is going. Its icon spins while the pull runs, 
 
 Clicking again while a pull is still running does nothing, so overlapping pulls can't collide — and neither can a pull collide with a commit that is still running, so pulling is also a no-op while a commit is in flight.
 
-Either way it turns out, the pull reports one line in the [notifications](/user-documentation/tab-types/notifications) tab. A pull that works reads `Pulled from origin:` followed by git's own summary — `Already up to date.` when nothing came down, or the count of what changed when something did. A pull that fails (no upstream branch, a merge conflict, an authentication problem) leaves the tree untouched and reads `Could not pull:` followed by the first line of git's own error. When git said more than that, the full text is saved under `.janissary/git-errors/` and the line carries a link that opens it in an editor tab. These files clear the next time janissary starts. Outside a git repository there is nothing to pull, and the button doesn't appear. When a pull fails, the button's own hover text points you at that notifications line rather than repeating git's error.
+Either way it turns out, the pull reports one line in the [notifications](/user-documentation/tab-types/notifications) tab. A pull that works reads `Pulled from origin:` followed by git's own summary — `Already up to date.` when nothing came down, or the count of what changed when something did. A pull that fails (no upstream branch, a merge conflict, an authentication problem) leaves the tree untouched and reads `Could not pull:` followed by the first line of git's own error. When git said more than that, the full text is saved under `.janissary/git-errors/` and the line carries a link that opens it in an editor tab. These files clear the next time janissary starts. Each Git process in a pull, including its refresh and rollback work, has a ten-minute deadline and does not wait for terminal input; a timeout follows the same failure path as another Git error. Outside a git repository there is nothing to pull, and the button doesn't appear. When a pull fails, the button's own hover text points you at that notifications line rather than repeating git's error.
 
 ## Committing your changes to origin
 
@@ -139,7 +139,7 @@ If the commit itself fails before it produces anything — a pre-commit hook tha
 
 The button spins while the commit runs, turns green when it lands, and turns red when it fails, going back to normal a few seconds later. Clicking again while one is running does nothing, so commits can't overlap — and neither can a commit collide with a pull that is still running, so committing is also a no-op while a pull is in flight.
 
-Each commit reports one line in the [notifications](/user-documentation/tab-types/notifications) tab: `Committed to origin:` followed by git's own summary when it lands, `Could not commit:` followed by the first line of git's own error when it fails (with a link to the rest of it, such as a rejected push's hook output, when there is more), and `Nothing to commit` when there was nothing to send — whether that verdict came from a commit that ran and found nothing staged, or from the header button on a tree that had no changes to begin with. Once a commit lands, the rows that were colored as changed lose their color.
+Each commit reports one line in the [notifications](/user-documentation/tab-types/notifications) tab: `Committed to origin:` followed by git's own summary when it lands, `Could not commit:` followed by the first line of git's own error when it fails (with a link to the rest of it, such as a rejected push's hook output, when there is more), and `Nothing to commit` when there was nothing to send — whether that verdict came from a commit that ran and found nothing staged, or from the header button on a tree that had no changes to begin with. Each Git process in a commit, including staging and rollback work, has a ten-minute deadline and does not wait for terminal input; a timeout follows the same failure and rollback path as another Git error. Once a commit lands, the rows that were colored as changed lose their color.
 
 For a tree rooted on a remote host, the commit runs there, in that host's workspace.
 
@@ -170,14 +170,14 @@ Inside a git repository, a file's name is colored by its git status: **green** f
 | Interaction | Behavior |
 |---|---|
 | Click a row | Select it |
-| Double-click a file | Open it (same as `open`) |
-| `Shift`+double-click a file | Edit it (same as `edit`), even if its normal opener is a viewer |
+| Double-click a file | Use its registered file-type action; Markdown opens in the text editor, video opens in its in-app player, and audio opens or updates the playlist |
+| `Shift`+double-click a file | Use its edit gesture; Markdown opens its rendered preview, video and audio go to the configured external player, and other types use their normal edit action |
 | Double-click a directory | Expand or collapse it |
 | Double-click the `..` row | Re-root the tree one directory up |
 | Right-click a row | Open its context menu without changing the selection |
 | Header ⊟ button | Collapse everything back to the root |
 | Header ⇄ button | Move the tree one step: left sidebar → center strip → right sidebar → left sidebar |
-| Header Split button | Open the tree in the other pane, so a file and the tree sit side by side |
+| Header Split button | Move the tree into the other center pane; shown only while the tree is in the center strip |
 | Press a row, drag, and release over a directory (or any file inside it) | Moves the dragged file or directory into that directory on disk |
 
 Click a row to replace the selection, and see [Selecting more than one row](#selecting-more-than-one-row)
@@ -197,7 +197,7 @@ and **Open externally**. Choose the action you want, or press `Escape` to close 
 **Open externally** hands the file to whichever application your operating system opens that type
 with — a `.zip` goes to your system's archive utility.
 
-Right-click a file for **Open**, **Edit**, and **Open with**, followed by the usual file actions.
+Right-click a row for **Open**, **Edit**, and **Open with**, followed by the usual file actions. The menu has up to twelve entries in four groups, plus a plugin-contributed selection entry when one applies. Most entries act on the clicked row even when it is part of a selection. **Delete** and **Commit to origin** act on the whole selection when the clicked row is selected, and just that row otherwise. **Edit as text** in the **Open with** chooser also opens every selected file in that case; its other choices still act on the clicked row. When a selection contains only images, **Open** and **Edit** apply to every selected image. The audio plugin adds **Add to playlist** for a multi-row selection made entirely of audio files. The `..` row omits actions that cannot apply to it.
 **Edit** runs the same `edit` command as the command bar: ordinary files open in the text editor,
 while images open directly in the image editor and PDFs open in the
 [PDF viewer](/user-documentation/tab-types/pdf-viewer). With multiple images selected, right-clicking one
@@ -339,8 +339,8 @@ A focused tree captures these keys for itself (tab-switching and other `Ctrl`/`C
 | `Shift+↑` / `Shift+↓` | Extend the selection by one row (see "Selecting more than one row" above) |
 | `→` | Expand a collapsed directory; from an expanded one, re-root the tree there; open a file |
 | `←` | Collapse an expanded directory; otherwise jump to the parent |
-| `Enter` / `Space` | Open a file, toggle a directory, or (on `..`) go up — a Markdown file opens in the editor, as double-clicking it does |
-| `Shift+Enter` | Edit the selected file, exactly as `Shift`+double-click does — a Markdown file opens its preview and a video or audio file goes to your system's player |
+| `Enter` / `Space` | Activate a file, toggle a directory, or (on `..`) go up — Markdown opens in the text editor, video in its in-app player, and audio in the playlist |
+| `Shift+Enter` | Use the file's edit gesture, exactly as `Shift`+double-click does — Markdown opens its preview, while video and audio go to the configured external player |
 | `Home` / `End` | First / last visible row |
 | `PageUp` / `PageDown` | Move by a screenful |
 | Type letters | Jump to the next row starting with what you typed |
@@ -382,6 +382,10 @@ Like other view tabs, a file navigator is a live view — closed with its × but
 
 One thing a tree will not do is reach outside itself. Every path you supply to a file action or to a directory expansion has to land inside that tree's current root; one that points above it is ignored, so a move, rename, delete, or watch can never be aimed at something the tree isn't showing. Walking up to the parent is still available, and lands you in a tree rooted there.
 
-Every change a tree makes is aimed at the tree you made it in. If that tree has closed by the time the request arrives, the change simply doesn't happen and nothing is reported — including when another navigator has since taken its place in the tab list, which never inherits what you asked the old one to do.
+Every change a tree makes is aimed at the tree you made it in. If that tree has closed by the time the request arrives, the change simply doesn't happen and nothing is reported — including when another navigator has since taken its place in the tab list, which never inherits what you asked the old one to do. If a file operation fails, its notification names the affected item, gives the filesystem reason, and suggests a recovery action. Bulk move and delete failures appear together in one notification; it names up to three failed items, then summarizes the rest as `… and N more`.
 
-The command-line view clauses restore a **local** tree's view: which directories to expand, where the cursor goes, and which rows to select. A [profile](/user-documentation/automation/profiles) can run the same command to open a tree with its view in place. The undo/redo history is never restored. It stays in memory and dies with the tab. On an already-open tree, the command changes only the view parts named; a clause for a path that no longer exists is ignored. View clauses on remote trees are ignored. `files print <tab>` prints a reusable command with the tree's root and view; for a remote tree, the printed command has no view clauses.
+The command-line view clauses restore a **local** tree's view with `expand`, `collapse`, `cursor`, `anchor`, and `select`. Use paths relative to the tree root, quote paths with spaces, and expand a directory before selecting a row inside it. Clauses run in order: repeat `expand`, `collapse`, or `select` for multiple paths; `collapse .` closes every folder. Missing paths are ignored, and a collapse removes hidden rows from the selection. A [profile](/user-documentation/automation/profiles) can run the same command to open a tree with its view in place. The undo/redo history is never restored. It stays in memory and dies with the tab. On an already-open tree, the command changes only the view parts named; a clause for a path that no longer exists is ignored. View clauses on remote trees are ignored.
+
+`files print <tab>` prints a command in the issuing tab's transcript without opening or changing a tree. It includes the root, dock side, non-default detail mode, expanded folders, cursor, anchor, and selected rows. A remote tree prints its owner, dock, detail mode, and root, but no view clauses. If the tree does not answer the selection request before its short timeout, the command still prints without selection clauses. The reply is omitted if the tree closes or changes root while the command waits. A name that is not an open navigator reports `files: "<name>" is not a file navigator`; malformed input reports `Usage: files print <tab>.` or `files: unterminated quote`.
+
+Remote file operations normally wait up to one minute for a reply. Git pull and commit, search, bulk moves, deletes and pastes, undo or redo, and whole-file reads or writes wait up to ten minutes. Reconnecting does not end the wait early. If the request times out, the notification or returned failure says `The remote machine did not answer in time.`; the operation may have completed even if its reply was lost, so Janissary does not retry it.
