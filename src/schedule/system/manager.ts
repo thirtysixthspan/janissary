@@ -97,15 +97,23 @@ export class SystemScheduleManager {
         process.stderr.write(`System schedule ${claimed.id}: ${errorText(error)}\n`);
         continue;
       }
-      if (this.disposed || !outcome || this.entries.every((entry) => entry.key !== claimed.key)) continue;
-      const current = this.entries.find((entry) => entry.key === claimed.key);
-      if (!current) continue;
-      const next = this.entries.filter((entry) => entry.key !== claimed.key);
-      if (outcome.entry) next.push(outcome.entry);
-      if (!this.commit(next)) continue;
-      if (outcome.missing) notifySystemScheduleMissingScript(this.managers, current.id, current.script);
-      else appendSystemBatch(this.managers, current, outcome.lines);
+      if (this.disposed || !outcome) continue;
+      this.applyFireOutcome(claimed, outcome);
     }
+  }
+
+  private applyFireOutcome(
+    claimed: SystemScheduleEntry,
+    outcome: Exclude<Awaited<ReturnType<typeof fireSystemBatch>>, undefined>,
+  ): void {
+    if (this.entries.every((entry) => entry.key !== claimed.key)) return;
+    const current = this.entries.find((entry) => entry.key === claimed.key);
+    if (!current) return;
+    const next = this.entries.filter((entry) => entry.key !== claimed.key);
+    if (outcome.entry) next.push(outcome.entry);
+    if (!this.commit(next)) return;
+    if (outcome.missing) notifySystemScheduleMissingScript(this.managers, current.id, current.script);
+    else appendSystemBatch(this.managers, current, outcome.lines);
   }
 
   private async runAfter(previous: Promise<void>, now: number): Promise<void> {
