@@ -11,6 +11,8 @@ monitor activity group:2
 
 Monitors are tool-less by default and receive no filesystem or terminal access. See Persona web tools below for the one narrow exception.
 
+This periodic monitor is separate from the autonomous-agent monitor view, where agent messages render as Markdown. See [Read formatted Markdown in the transcript](/user-documentation/advanced-agents/markdown-rendering#read-autonomous-agent-activity).
+
 ## Inline vs. reporting-tab mode
 
 `monitor <persona> [target...]` behaves differently depending on whether you give it targets:
