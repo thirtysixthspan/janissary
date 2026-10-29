@@ -104,6 +104,17 @@ export function fuzzyMatch(paths: string[], query: string, limit: number): Fuzzy
   });
 }
 
+// The score for the uninterrupted occurrence of `length` characters at `start`: its first character
+// is never treated as consecutive, and every later one is.
+function scoreOccurrence(path: string, start: number, length: number, basenameStart: number): number {
+  let score = 0;
+  for (let offset = 0; offset < length; offset++) {
+    const position = start + offset;
+    score += charScoreAt(path, position, basenameStart, offset === 0 ? start - 2 : position - 1);
+  }
+  return score;
+}
+
 // Match only one uninterrupted occurrence, keeping the same result shape and scoring preferences
 // for callers whose search is a phrase rather than a fuzzy subsequence.
 export function contiguousMatch(paths: string[], query: string, limit: number): FuzzyMatchResult[] {
@@ -117,11 +128,7 @@ export function contiguousMatch(paths: string[], query: string, limit: number): 
     let best: FuzzyMatchResult | null = null;
     let start = lowerPath.indexOf(lowerQuery);
     while (start !== -1) {
-      let score = 0;
-      for (let offset = 0; offset < lowerQuery.length; offset++) {
-        const position = start + offset;
-        score += charScoreAt(path, position, basenameStart, offset === 0 ? start - 2 : position - 1);
-      }
+      const score = scoreOccurrence(path, start, lowerQuery.length, basenameStart);
       if (!best || score > best.score) {
         best = { path, index, score, ranges: [[start, start + lowerQuery.length]] };
       }
