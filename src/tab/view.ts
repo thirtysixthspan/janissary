@@ -116,13 +116,7 @@ export function buildTabView(
     // A remote tab is workspaced too — its clone just lives on the other host, so the flag is
     // derived from either field rather than from `workspaceDir` alone. The provisioning spinner
     // stands in for it until the workspace lands.
-    flags: [
-      ...provisioning,
-      ...(provisioning.length === 0 && (tab.workspaceDir || tab.remote) ? ['workspaced'] : []),
-      ...autoApproveFlag(tab),
-      ...autoResumeFlag(tab),
-      ...browserFlag(tab),
-    ],
+    flags: tabFlags(tab, provisioning),
     // Present only when true, so a healthy tab's target is exactly what it was before the flag.
     remote: tab.remote && {
       ...tab.remote,
@@ -192,6 +186,16 @@ function provisioningFlag(
   const provisioning = tab.harness?.status === 'provisioning' || remoteProvisioning
     || (tab.workspaceDir !== undefined && workspaceProvisioning?.(tab.workspaceDir) === true);
   return provisioning ? ['provisioning'] : [];
+}
+
+function tabFlags(tab: Tab, provisioning: string[]): string[] {
+  return [
+    ...provisioning,
+    ...(provisioning.length === 0 && (tab.workspaceDir || tab.remote) ? ['workspaced'] : []),
+    ...autoApproveFlag(tab),
+    ...autoResumeFlag(tab),
+    ...browserFlag(tab),
+  ];
 }
 
 // The metadata row's auto-approve flag. `autoApproved` once auto-approve has cleared a permission
