@@ -159,9 +159,34 @@ const SUBAGENT_AUTO_MODE_TIP = [
   '',
 ].join('\n');
 
+// The same subagent gate clipped at the right edge of the screen: the auto-mode option, the `No`
+// option, and the footer's background-agent hint are cut off mid-word.
+const SUBAGENT_AUTO_MODE_CLIPPED = [
+  '──────────────────────────────────────────────────────────────────────────',
+  ' Bash command · from the general-purpose agent',
+  ' Tip: auto mode handles these prompts for you — choose "switch to auto',
+  ' mode" below',
+  ' Run shell command',
+  '╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌',
+  ' │ $janissary/scripts/run.mjs pr-create-pr thirtysixthspan/janissary',
+  ' │ docs/profiles-gaps "docs(profiles): document list output, usage lines,',
+  ' │ symlink handling, and launch failures" ./temp/pr-body.md 2>&1 &&',
+  ' │ $janissary/scripts/run.mjs pr-check-mergeable docs/profiles-gaps',
+  ' │ thirtysixthspan/janissary 2>&1',
+  '╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌',
+  " A variable in this command can't be checked before it runs",
+  '',
+  ' Do you want to proceed?',
+  ' ❯ 1. Yes',
+  '   2. Yes, and switch to auto mode · auto mode handles these prompts for',
+  '   3. Nou',
+  '',
+  ' Esc to cancel · Tab to amend · ctrl+x ctrl+k twice to stop background ag',
+].join('\n');
+
 const ALL_GATES = {
   BASH_IN_PROJECT, BASH_OUT_OF_PROJECT, FETCH, SUBAGENT_TWO_OPTION, MCP_TOOL, GATE_WITH_TASK_LIST, BASH_TEMP_CLEANUP,
-  REQUIRES_APPROVAL_FOUR_OPTION, READ_FOUR_OPTION, SUBAGENT_AUTO_MODE_TIP,
+  REQUIRES_APPROVAL_FOUR_OPTION, READ_FOUR_OPTION, SUBAGENT_AUTO_MODE_TIP, SUBAGENT_AUTO_MODE_CLIPPED,
 };
 
 // A codex command-execution overlay: distinct title and `›` selection glyph from claude's gates.
@@ -229,6 +254,11 @@ describe('detectPermissionGate — claude', () => {
     expect(detectPermissionGate(screen, 'claude')).toBe(true);
   });
 
+  it('matches the clipped subagent gate below a quoted copy of it and a `❯` prompt line', () => {
+    const screen = [SUBAGENT_AUTO_MODE_CLIPPED, '', ' ❯ execute ./ai/tasks/work-an-issue.md', '', SUBAGENT_AUTO_MODE_CLIPPED].join('\n');
+    expect(detectPermissionGate(screen, 'claude')).toBe(true);
+  });
+
   it('still matches a gate followed by passive chrome (status lines, no input caret)', () => {
     const withChrome = [BASH_TEMP_CLEANUP, '', ' ? for shortcuts', '   Context left until auto-compact: 23%'].join('\n');
     expect(detectPermissionGate(withChrome, 'claude')).toBe(true);
@@ -287,6 +317,12 @@ describe('HarnessAutoApprover', () => {
     expect(approve).toHaveBeenCalledWith('\r');
     expect(notify).toHaveBeenCalledTimes(1);
     expect(notify).toHaveBeenCalledWith('Auto-approved a permission prompt', cap);
+  });
+
+  it('approves the clipped subagent gate with a carriage return', () => {
+    const { approver, approve } = make();
+    approver.onCapture(capture(SUBAGENT_AUTO_MODE_CLIPPED));
+    expect(approve).toHaveBeenCalledWith('\r');
   });
 
   it('injects the codex table keystroke on a codex overlay', () => {
