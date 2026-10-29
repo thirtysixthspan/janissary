@@ -99,9 +99,7 @@ export class JanusClient {
       break;
     }
     case 'pty': {
-      const h = this.ptyHandlers.get(event.id);
-      if (h) h(event.data);
-      else this.ptyOutput.record(event.id, event.data);
+      this.deliverPtyData(event.id, event.data);
       break;
     }
     case 'pty-exit': {
@@ -158,6 +156,12 @@ export class JanusClient {
     }
     // No default
     }
+  }
+
+  private deliverPtyData(id: string, data: string): void {
+    const h = this.ptyHandlers.get(id);
+    if (h) h(data);
+    else this.ptyOutput.record(id, data);
   }
 
   send(call: RpcCall): void { this.rpc.send(call); }
