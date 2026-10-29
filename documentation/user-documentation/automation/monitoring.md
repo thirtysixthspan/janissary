@@ -50,7 +50,7 @@ If two owner tabs share one reporting tab (the same persona started from two dif
 A monitor receives each target's **full existing history** the moment it starts, not just activity from then on:
 
 - A shell tab feeds its application transcript in order; native zsh scrollback is not an application transcript.
-- A harness tab feeds its normalized session transcript first, then its latest on-screen text. The transcript includes subagent activity and arrives in history order; the screen follows so the monitor can see current interactive state such as a permission prompt, spinner, or TUI panel. The transcript is sent incrementally after the monitor's previous flush. An SSH tab has no session transcript, so it feeds only its latest on-screen text, refreshed when the screen changes.
+- A harness tab feeds its normalized session transcript first, then its latest on-screen text. The transcript includes subagent activity and arrives in history order; the screen follows so the monitor can see current interactive state such as a permission prompt, spinner, or TUI panel. The transcript is sent incrementally after the monitor's previous flush. The monitor receives this text, not the raw terminal recording. An SSH tab has no session transcript, so it feeds only its latest on-screen text, refreshed when the screen changes.
 - An editor tab feeds its live (possibly unsaved) buffer content: the first feed is the full content, and every feed after that is a diff against what that monitor last saw.
 - A page tab feeds only the text currently visible in its viewport, the same way: full content first, diffs after. This needs the bundled browser extension; see [Embedded web pages](/user-documentation/tab-types/web-pages#what-the-app-reads-from-a-page).
 
