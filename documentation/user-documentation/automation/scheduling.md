@@ -64,7 +64,15 @@ Run a project runscript immediately with `execute <name>`:
 execute deploy
 ```
 
-The commands run in the project's managed system shell, even when you type the command from a workspaced shell. They share the system shell's FIFO with scheduled runs, and a failing line does not prevent later lines from running. Manual runs do not create a schedule or a scheduled-run notice. An empty script is a successful no-op; a missing one reports `No runscript named "<name>".`.
+The commands run in the project's managed system shell, even when you type the command from a workspaced shell. They share the system shell's FIFO with scheduled runs, and a failing line does not prevent later lines from running. All of a script's lines join the end of the queue as one batch, so another run can't slip lines in between them. Blank lines and lines starting with `#` are skipped. Manual runs do not create a schedule or a scheduled-run notice, and a successful run prints nothing. An empty script is a successful no-op.
+
+Three replies mean nothing ran:
+
+- `Usage: execute <name>` for a missing or invalid name. Names use lowercase letters and digits, with single hyphens between words.
+- `No runscript named "<name>".` when no such script exists.
+- `Could not read runscript "<name>".` when the script exists but can't be read.
+
+If the system shell can't start, no lines are queued, and you get the usual `System shell could not start` notice.
 
 Type `edit <name>` to open an existing runscript in the editor. An exact file target in your current working directory wins over the runscript. A missing bare name is not created automatically.
 

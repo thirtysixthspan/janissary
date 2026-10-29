@@ -31,6 +31,8 @@ Quote a target or group name with single or double quotes when it contains space
 - `group` moves a tab into an existing group or creates a group by name or positive ID. A new group name gets the next available ID; an unknown numeric ID is named `group-<id>`.
 - `dock` puts a file navigator, notifications tab, or bundled-plugin tab in a sidebar. It displaces an existing tab of the same kind on that side. `undock` returns a visible docked tab to the focused pane without changing focus.
 
+A hidden tab can be moved, recolored, regrouped, or docked without being revealed. It can't be sent to a pane, split, or undocked. `pane` and `split` also refuse a docked tab, a notifications tab, and a monitor reporting tab. A moved tab becomes the visible one in its new pane unless that pane holds the active tab. A split that loses its last tab collapses.
+
 Successful commands print nothing. An arrangement that is already complete prints nothing and sends no state update. Arranging a tab leaves focus unchanged, except that docking the active tab moves focus to the nearest center tab; if there is no center tab, undocking one activates it.
 
 Refusals send a `tab` notification and do not write to the command transcript:

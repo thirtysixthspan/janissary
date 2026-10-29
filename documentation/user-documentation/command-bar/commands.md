@@ -18,7 +18,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `execute <name>` | Run an existing project runscript immediately in the system shell; see [Scheduling](/user-documentation/automation/scheduling#run-a-runscript-now) |
 | `scripts` | Open a list of the project's runscripts. Use a row's buttons to run, duplicate, or delete one, or **+** to create one. |
 | `clear` | Empty the current tab's transcript — other tabs are unaffected. In a shell tab, `clear` clears the terminal; use `/clear` to empty the transcript |
-| `rename [newname]` | Set (or, bare, clear) the tab's display alias — see [Tabs](/user-documentation/getting-started/tabs) |
+| `rename [newname]` | Set (or, bare, clear) the tab's display alias, or rename the file in an editor tab — see [Tabs](/user-documentation/getting-started/tabs#renaming-a-tab) |
 | `tab` | `focus <name>`, `move <tab> <position>`, `pane <tab> left\|right`, `split <tab>`, `color <tab> <#rrggbb>`, `group <tab> <id\|name>`, `dock <tab> left\|right`, `undock <tab>` arrange tabs |
 | `theme [name]` | Switch the application color theme; bare form opens a picker |
 | `syntax theme [name]` | Switch the editor and diff syntax theme; bare form opens a picker |
@@ -33,7 +33,9 @@ These commands manage the app itself — the current tab's transcript and name, 
 
 ## `edit` and `execute` runscripts
 
-Create a runscript in `.janissary/scripts/<name>.rs`, then run it immediately with `execute <name>`. Its commands run in the project shell, including when you type `execute` from a workspaced shell. The runscript name uses lowercase letters and digits, with single hyphens between words. A missing runscript prints `No runscript named "<name>".`.
+Create a runscript in `.janissary/scripts/<name>.rs`, then run it immediately with `execute <name>`. Its commands run in the project shell, including when you type `execute` from a workspaced shell. The runscript name uses lowercase letters and digits, with single hyphens between words. A successful run prints nothing.
+
+Three replies mean nothing ran: `Usage: execute <name>` for a missing or invalid name, `No runscript named "<name>".` when the script doesn't exist, and `Could not read runscript "<name>".` when it exists but can't be read. [Scheduling](/user-documentation/automation/scheduling#run-a-runscript-now) has the details.
 
 Use `edit <name>` to open an existing runscript. If a file with that exact name already exists at the path your working directory resolves to, Janissary opens that file instead. Other paths such as `edit notes/new-idea.md` keep the usual editor behavior.
 
@@ -43,7 +45,9 @@ Type `scripts` to open the **scripts** tab, where each row has **Run**, **Duplic
 
 `help` lists every command with a one-line description. Type `help <command>` for that command's usage, use cases, and examples, or `help keys` to list the keyboard shortcuts.
 
-For example, `help profile` shows profile commands and `help /quit` shows the quit command page. Names are case-insensitive and one leading slash is ignored. A name without a help page gets `No help for "<name>". Type "help" for available commands.`
+For example, `help profile` shows profile commands and `help /quit` shows the quit command page. Press `Tab` after `help ` to complete a page name. Bare `help` lists commands only. The key bindings appear only in `help keys`.
+
+Names are lowercased, and extra spaces around and between words are ignored. One leading slash is dropped, so `help   /Quit` shows the `quit` page. Only an exact page name works. A name without a help page gets `No help for "<name>". Type "help" for available commands.` with `<name>` in its cleaned-up form. So `help //quit` replies `No help for "/quit". Type "help" for available commands.`, and `help tab focus` reports a missing page instead of showing `tab`. `helper` is not `help`, so it stays an unknown command.
 
 If the help files can't be read, `help` falls back to a single summary line naming the built-in commands and reminding you that `!` runs something in the shell, `/` runs a built-in, and `Ctrl+R` or `hist` opens command history.
 
@@ -81,6 +85,24 @@ Cannot undock "<name>".
 Malformed forms print the matching usage line: `Usage: tab focus <name>.`, `Usage: tab move <tab> <position>.`, `Usage: tab pane <tab> left|right.`, `Usage: tab split <tab>.`, `Usage: tab color <tab> <#rrggbb>.`, `Usage: tab group <tab> <id|name>.`, `Usage: tab dock <tab> left|right.`, or `Usage: tab undock <tab>.` Bare `tab` and unknown subcommands print `Usage: tab focus|move|pane|split|color|group|dock|undock <tab> [argument].`
 
 Angle-bracket arguments in these replies display as literal text in the transcript and shell terminal.
+
+A hidden tab, such as a hidden `system` tab, still answers to `tab move`, `tab color`, and `tab group`, and none of them reveals it. `tab dock` works too when the tab's kind can dock. A hidden tab can't be sent to a pane, split, or undocked, so those commands send the matching `Cannot ...` notice. `tab pane` and `tab split` also refuse a docked tab, a notifications tab, and a monitor reporting tab. When the move works, the moved tab becomes the visible one in its new pane unless that pane holds the active tab. A split that loses its last tab collapses.
+
+## `layout`
+
+`layout window 1440 900` resizes the application window, and `layout show` prints the current sizes as commands you can run again. The command works the same from a command bar, a runscript, or a schedule.
+
+```
+layout window <width> <height>
+layout sidebar left|right <width>
+layout split <percent>
+layout reporting <percent>
+layout show
+```
+
+Widths and heights are positive whole pixels. Percentages are whole numbers: `split` takes 1 to 99 as the left pane's share, and `reporting` takes 0 to 100 as the lower area's share. The subcommands and sidebar side ignore case. Anything else prints `Usage: layout window <width> <height> | sidebar left|right <width> | split <percent> | reporting <percent> | show.`
+
+Sizes apply exactly as you give them, with none of the limits the drag handles enforce and no check against your screen. `layout split` prints `No split is showing.` when the center area isn't split. Other successful forms print nothing. A failed resize shows `Could not resize the window: <reason>.` in notifications. The [`layout` help page](/user-documentation/command-reference/layout) lists every reply, including what `layout show` leaves out. `Tab` completes the subcommands and the sidebar side.
 
 ## `theme`
 
@@ -133,7 +155,7 @@ Closing the browser window or reloading the page while work is unsaved gets you 
 ## `notifications` and `notify`
 
 
-`notifications` opens a single feed tab for background activity: an agent finishing, a message arriving, a scheduled command firing, an agent starting a turn, or a model query being rate limited. Background event toggles in `.janissary/config.json` default off; rate-limit reports use `notifications.events.rateLimited`. `notifications left` or `notifications right` docks the feed into a sidebar, and `notifications clear` empties the queue, the record file, and any toasts on screen. `notify <message>` and diagnostic messages bypass event toggles and focus suppression. A notification with no feed on screen appears as a toast instead, escalating to a docked feed after three within ten seconds. See [Notifications](/user-documentation/tab-types/notifications) for delivery details and [app configuration](/user-documentation/getting-started/configuration) for the settings.
+`notifications` opens a single feed tab for background activity: an agent finishing, a message arriving, a scheduled command firing, an agent starting a turn, or a model query being rate limited. Background event toggles in `.janissary/config.json` default off; rate-limit reports use `notifications.events.rateLimited`. `notifications left` or `notifications right` docks the feed into a sidebar, and `notifications clear` empties the queue, the record file, and any toasts on screen. `notify <message>` and diagnostic messages bypass event toggles and focus suppression. A notification with no feed on screen appears as a toast instead. When three arrive within ten seconds, the feed is made visible (docked on the right if it didn't exist yet) and the toasts clear. See [Notifications](/user-documentation/tab-types/notifications) for delivery details and [app configuration](/user-documentation/getting-started/configuration) for the settings.
 
 ## Command comments
 
