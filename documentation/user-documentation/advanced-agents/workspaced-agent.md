@@ -8,7 +8,7 @@ shell emrah --no-workspace
 harness claude
 ```
 
-The clone is made from your repository's `origin` remote and lands at `$root/workspace/<name>`; the shell starts inside it, so everything the agent does happens in the clone, not your checkout. `-w`/`--workspace` explicitly confirms the default. `--no-workspace` opts out. Why you'd want a workspace — and exactly what the isolation allows and blocks — is covered in [Workspacing](/user-documentation/advanced-agents/workspacing).
+The clone is made from your repository's `origin` remote and lands at `$root/workspace/<name>`; the shell starts inside it, so everything the agent does happens in the clone, not your checkout. Harness workspaces keep the newest ten commits of every branch; shell workspaces keep one. You can fetch the rest from inside the clone with `git fetch --unshallow`. `-w`/`--workspace` explicitly confirms the default. `--no-workspace` opts out. Why you'd want a workspace — and exactly what the isolation allows and blocks — is covered in [Workspacing](/user-documentation/advanced-agents/workspacing).
 
 Without a repository or an origin remote, a shell opens unsandboxed and explains why; a harness launch is refused.
 
