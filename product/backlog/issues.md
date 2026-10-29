@@ -2,6 +2,12 @@
 
 ## ready
 
+* address this warning
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - `__dirname` (web/vite.config.ts:47:9). Use `import.meta.dirname` instead
+  - import "./pdfjs-assets" without a file extension (web/vite.config.ts:7:38). Add the file extension
+
+
 * support auto-permission for the following claude prompt
 ──────────────────────────────────────────────────────────────────────────
  Bash command · from the general-purpose agent
