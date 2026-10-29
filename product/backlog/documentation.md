@@ -2,8 +2,6 @@
 
 ## ready
 
-* pull-request-review (9/10) — 3 of 19 facts are covered, 16 are missing, and none are wrong. Add a focused how-to at `documentation/user-documentation/workflows/pull-request-review.md` and link it from `documentation/user-documentation/command-bar/tasks.md`, covering review scope/dimensions, PR-branch backlog behavior, preservation/deduplication, and the repair threshold/route while leaving the PR open. Evidence is `product/specs/pull-request-review.md`, `ai/tasks/feature/review-pull-request.md`, `ai/tasks/feature/work-pull-request-issue.md`, `ai/tasks/feature/build-a-feature.md`, `ai/tasks/feature/build-a-complex-feature.md`, and `ai/tasks/feature/update-pull-request.md`; `help/tasks.md` is generic task-picker help, not a review guide.
-
 * pull-request-testing (9/10) — 0 of 24 workflow facts are covered, 24 are missing, and none are wrong. Add `documentation/user-documentation/workflows/testing-a-pull-request.md` and link it from `documentation/user-documentation/command-bar/tasks.md`, explaining the browser prerequisite, tested branch/dependency handling, verification cases, reruns, failure recording, and the boundary between testing and fixing. Ground this in `product/specs/pull-request-testing.md`, `ai/tasks/feature/test-pull-request.md`, `ai/tasks/feature/work-pull-request-issue.md`, and `scripts/test-pull-request-playbook.test.mjs`; `help/tasks.md` describes only the picker.
 
 * pull-request-updating (9/10) — 1 of 11 workflow facts is covered, 10 are missing, and none are wrong. Add a concise task-specific section to `documentation/user-documentation/command-bar/tasks.md` covering target selection, branch/description/plan/spec/help/backlog updates, commit/push and no-op behavior, and that the PR remains open without code changes or checks. Evidence is `product/specs/pull-request-updating.md`, `ai/tasks/feature/update-pull-request.md`, `product/specs/pull-request-review.md`, `product/specs/pull-request-testing.md`, and `product/specs/task-picker.md`; `help/tasks.md` has no updater workflow details.
@@ -107,3 +105,4 @@
 * open — documented in documentation/user-documentation/tab-types/opening-files.md, help/open.md (removed 2026-10-29)
 * pdf-tab — documented in documentation/user-documentation/tab-types/pdf-viewer.md, documentation/user-documentation/tab-types/opening-files.md, help/pdf.md, help/open.md (removed 2026-10-29)
 * profiles — documented in documentation/user-documentation/automation/profiles.md, help/profile.md (removed 2026-10-29)
+* pull-request-review — documented in documentation/user-documentation/workflows/pull-request-review.md, documentation/user-documentation/command-bar/tasks.md (removed 2026-10-29)
