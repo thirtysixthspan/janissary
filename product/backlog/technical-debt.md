@@ -4,8 +4,6 @@
 
 ## development
 
-* Reduce the cognitive complexity of `fireDue()` in `src/schedule/system/manager.ts` (line 89), reported at 18 against the allowed 15 in a 147-line file. The function walks due system schedules and combines batch execution, stale-entry checks, persistence, and notification or output handling across nested branches. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against `fireDue()` in `src/schedule/system/manager.ts`. Severity: **low**.
-
 * Reduce the cognitive complexity of `ensureShell()` in `src/system-shell.ts` (line 71), reported at 18 against the allowed 15 in a 111-line file. The function reuses or restarts the existing system shell, or launches one through the shell plugin and validates or closes the resulting terminal. This is risk-sensitive because it manages shell and PTY lifecycle. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against `ensureShell()` in `src/system-shell.ts`. Severity: **medium**.
 
 * Reduce the cognitive complexity of `runSystemSchedule()` in `src/commands/schedule.ts` (line 63), reported at 17 against the allowed 15 in a 100-line file. The function handles system schedule listing, creation, cancellation, and clearing through a sequence of action branches with inline validation and result reporting. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against `runSystemSchedule()` in `src/commands/schedule.ts`. Severity: **low**.
