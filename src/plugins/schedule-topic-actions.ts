@@ -13,11 +13,7 @@ export function scheduleTopicAction(managers: Managers, action: TabPluginTopicAc
           ? candidate.owner === 'system' && candidate.key === action.key
           : candidate.owner !== 'system'));
       if (!authorized) return;
-      if (action.owner === 'system') {
-        if (managers.systemSchedule.list().every((entry) => entry.key !== action.key || entry.id !== action.id)) return;
-        const result = managers.systemSchedule.cancelByKey(action.key);
-        return result.ok ? undefined : result.error;
-      }
+      if (action.owner === 'system') return cancelSystemSchedule(managers, action.key, action.id);
       managers.schedule.cancel(action.tab, action.id);
       return;
     }
@@ -34,6 +30,12 @@ export function scheduleTopicAction(managers: Managers, action: TabPluginTopicAc
       return;
     }
   }
+}
+
+function cancelSystemSchedule(managers: Managers, key: string, id: string): string | undefined {
+  if (managers.systemSchedule.list().every((entry) => entry.key !== key || entry.id !== id)) return;
+  const result = managers.systemSchedule.cancelByKey(key);
+  return result.ok ? undefined : result.error;
 }
 
 function focusScheduleOwner(
