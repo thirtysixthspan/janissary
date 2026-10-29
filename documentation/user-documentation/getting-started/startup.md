@@ -13,7 +13,7 @@ from the project directory.
 
 `janus` starts the server in the background and hands your shell prompt straight back once it's ready. The terminal you launched from doesn't need to stay open, and closing it — or pressing `Ctrl+C` in it — no longer stops the app. Use [`janus stop`](#stopping-the-app) to shut it down.
 
-Every launch opens the visible zsh [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab) named `janus`, in the project directory. It also starts one hidden `system` shell in the same directory without a workspace. Use `tab focus system` to reveal it; closing it hides it again. Type `shell` in `janus`'s command bar to open another shell tab. Each launch starts fresh, with the previous session's logs, recordings, and workspace clones cleared. Remote sessions you left parked are reattached (see [Starting fresh](#starting-fresh) below).
+Every launch opens the visible zsh [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab) named `janus`, in the project directory. It also starts one hidden `system` shell in the same directory without a workspace. Use `tab focus system` to reveal it; closing it hides it again. Type `shell` in `janus`'s command bar to open another shell tab. Each launch starts fresh, with the previous session's logs, recordings, and workspace clones cleared. Remote sessions you left parked, other than ones holding only an `agent` run, are reattached (see [Starting fresh](#starting-fresh) below).
 
 If the required `janus` shell can't be started, the app doesn't start: the launch fails with `could not open the launch shell` and the reason. If only the hidden `system` shell fails, Janissary continues starting and posts `System shell could not start: <reason>.` in Notifications.
 

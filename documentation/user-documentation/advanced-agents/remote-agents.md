@@ -144,11 +144,11 @@ The remote deletes its workspace clone when the session is terminated. A detache
 
 ## Coming back after a restart
 
-Every launch reconnects every session you had parked, without asking. It goes through them one at a time and opens each one's tabs as that host answers, so a slow machine holds up only its own row. What a restart cannot get back is a remote file navigator: it's a view onto a workspace that is already coming back, so it stays closed and you open it again yourself.
+Every launch reconnects the parked sessions that still hold a shell or a harness, without asking. It tries each one on its own and opens its tabs as that host answers, so a slow machine holds up only its own row. A parked session that holds nothing but a remote `agent` run is not reconnected and has no row in [Sessions](/user-documentation/tab-types/sessions) to attach from. What a restart cannot get back is a remote file navigator: it's a view onto a workspace that is already coming back, so it stays closed and you open it again yourself.
 
 Each parked session settles one of three ways. If the host still has it, the tabs reopen and the row goes back to active. If the host says the session is gone, or comes back with nothing running in it, the row is marked terminated and dropped, the way it would be if you pressed **Terminate** yourself. If the host never answers, the row stays parked with **Attach** still on it and the reason shown beside it, so you can try again when the machine is awake. The restore finishes either way, and a host that is down never stops the others from coming back.
 
-Every launch runs this restore, so a parked session comes back without you doing anything. See [Sessions](/user-documentation/tab-types/sessions) for the row and its buttons.
+Every launch runs this restore, so a parked session with a shell or harness in it comes back without you doing anything. See [Sessions](/user-documentation/tab-types/sessions) for the row and its buttons.
 
 ## What stays local
 
