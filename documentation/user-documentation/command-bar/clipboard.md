@@ -30,6 +30,8 @@ Choosing an entry — with `Return`, or by clicking it — puts it at the keyboa
 
 A text field that already holds the keyboard always wins over the tab's own paste target. On a harness tab, an entry goes to the terminal prompt only when no such field has the keyboard.
 
+To copy selected terminal text, press `Ctrl+Shift+C`, or `Cmd+C` on macOS. `Ctrl+C` remains the terminal interrupt. The selected text is copied to your system clipboard and added to this session's clipboard history, even if the browser cannot write to the system clipboard.
+
 If you opened the popup from the right-click menu, how you choose matters. Clicking an entry pastes into the editor or text field you right-clicked, even if the keyboard was somewhere else. Choosing with `Return` pastes at the keyboard cursor instead, because the menu has closed by then. If you right-clicked something that isn't a text field, such as a transcript, both ways paste at the keyboard cursor.
 
 The window takes the keyboard while it is open, even in an editor or a terminal. `↑`/`↓` move the selection and stop at the ends, `Return` pastes, and `Escape` or `Tab` closes without pasting anything. With nothing in the list, `Return` just closes it. `Shift+Tab` does not move between [sections](/user-documentation/getting-started/keyboard#move-focus-between-application-sections) while the popup is open, and `Ctrl+W` closes no tab. Switching to another tab closes the popup without pasting.

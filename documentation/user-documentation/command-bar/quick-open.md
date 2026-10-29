@@ -6,7 +6,7 @@
 
 ## Open the finder
 
-Press `Cmd+P`. The Quick Open window floats above the command bar with its own text input already focused, so you can start typing right away. Before you type anything it shows a `type to search` hint.
+Press `Cmd+P` while the app has keyboard focus. The Quick Open window floats above the command bar with its own text input already focused, so you can start typing right away. Before you type anything it shows a `type to search` hint. A focused full-screen harness or SSH terminal sends `Cmd+P` to its program, and an embedded web page keeps the key for its browser; switch to another app tab to open Quick Open.
 
 The searchable set is every file under the directory the app was launched from. The list respects `.gitignore`, so `node_modules` and anything else your project ignores never appears. The window opens at once even for a large project; while the file list is still loading, the body shows `Searching…` and the input stays live.
 
@@ -22,7 +22,7 @@ If nothing matches, the window shows `No matching files`, and `Return` does noth
 
 ## Open a file
 
-`↑`/`↓` move the highlighted selection, or click a row directly. `Return` opens the highlighted file in a [tab of the right kind for it](/user-documentation/tab-types/opening-files) and closes the window: the text editor for source, the image editor for an image, the [PDF viewer](/user-documentation/tab-types/pdf-viewer) for a PDF, the [markdown preview](/user-documentation/tab-types/markdown-preview) for Markdown, the video or audio player for media. It doesn't matter which tab was active when you pressed `Cmd+P`; the file always opens from the project root, with the same open and de-dupe behavior as any other way of opening a file.
+`↑`/`↓` move the highlighted selection, or click a row directly. `Return` opens the highlighted file in a [tab of the right kind for it](/user-documentation/tab-types/opening-files) and closes the window: the text editor for source, the image editor for an image, the [PDF viewer](/user-documentation/tab-types/pdf-viewer) for a PDF, the [markdown preview](/user-documentation/tab-types/markdown-preview) for Markdown, the video or audio player for media. The file list is rooted at the project directory, regardless of the command bar's working directory. The new tab follows the same open and de-duplicate behavior as any other way of opening a file.
 
 `Escape` closes the window without opening anything and returns focus to the command bar.
 

@@ -4,16 +4,16 @@ Use these shortcuts to run commands, move between tabs, scroll transcripts, and 
 
 <img class="agent-float" src="/agents/cavus-south-west.png" alt="" />
 
-The command bar accepts the shortcuts below while a shell tab is active. The ones that switch tabs, move a tab or open a picker belong to the window rather than to the command bar, so they work from the other view tabs as well: an [editor tab](/user-documentation/tab-types/editor)'s text buffer, for example, keeps only the keys it edits with and passes the rest through. `Ctrl+W` also closes the current tab from an embedded web page. It does nothing while any modal overlay is on screen, while the quit dialog is up, or while any other modal dialog is open, such as a save-changes prompt, a launch or schedule dialog, a file-navigator conflict dialog, or a confirmation. The dialog keeps the chord, and no tab behind it closes.
+The command bar accepts the shortcuts below while a shell tab is active. Window shortcuts work when the key event reaches Janissary; focused full-screen harness and SSH terminals send most keys to their program, and an embedded web page keeps its browser keys. An [editor tab](/user-documentation/tab-types/editor)'s text buffer keeps the keys it edits with and passes other window shortcuts through. `Ctrl+W` also closes the current tab from an embedded web page. It does nothing while any modal overlay is on screen, while the quit dialog is up, or while any other modal dialog is open, such as a save-changes prompt, a launch or schedule dialog, a file-navigator conflict dialog, or a confirmation. The dialog keeps the chord, and no tab behind it closes.
 
 | Key | Action |
 |---|---|
 | `Return` | Execute the input line |
-| `Ctrl+C` | Quit the application; with a shell tab's command bar focused, interrupt zsh or copy selected command text |
+| `Ctrl+C` | No window action. In a shell command bar, interrupt zsh or copy selected command text; in a focused shell, harness, or SSH terminal, send it to the program |
 | `←` | Move the input cursor left |
 | `→` | Move the input cursor right |
-| `Shift+←` / `Cmd+Shift+[` | Switch to the previous tab |
-| `Shift+→` / `Cmd+Shift+]` | Switch to the next tab |
+| `Shift+←` / `Cmd+Shift+[` | Switch to the previous tab; no-op with only one eligible center tab |
+| `Shift+→` / `Cmd+Shift+]` | Switch to the next tab; no-op with only one eligible center tab |
 | `Ctrl+←` | Move the current tab one position left, within its group |
 | `Ctrl+→` | Move the current tab one position right, within its group |
 | `↑` | Walk backward through command history; in a shell tab, recall a line sent from that tab's command bar |
@@ -35,12 +35,14 @@ The command bar accepts the shortcuts below while a shell tab is active. The one
 | `Ctrl+T` | Expand or collapse the current tab's agent tool steps |
 | `Cmd+W` / `Ctrl+W` | Close the current tab |
 | `Cmd+F` | Search the current tab's transcript |
-| `Cmd+Shift+F` | Open the [project search tab](/user-documentation/command-bar/project-search), or focus it if it is open |
-| `Cmd+P` | Open the Quick Open file finder |
+| `Cmd+Shift+F` | Open or focus the [project search tab](/user-documentation/command-bar/project-search) when the key reaches Janissary; a focused harness or SSH terminal sends it to its program |
+| `Cmd+P` | Open Quick Open when the key reaches Janissary; a focused harness or SSH terminal sends it to its program |
 | `Cmd+T` | Open a new [workspaced shell tab](/user-documentation/advanced-agents/workspaced-agent) |
 | `Cmd+I` / `Ctrl+I` | Start a chat with the current text selection |
 | `Tab` | Complete a file path, agent name, connection, browser subcommand, or window ID |
-| `Backspace` / `Delete` | Delete the character before the cursor |
+| `Backspace` | Delete the character before the cursor |
+| `Delete` | Delete the character after the cursor |
+| Printable characters | Insert at the focused text cursor; in a focused shell, harness, or SSH terminal, send to its program |
 
 ## Move focus between application sections
 
