@@ -32,6 +32,17 @@ function tracked(root: string, target: string): boolean {
   return git(root, ['ls-files', '--', target]).length > 0;
 }
 
+function readExcludeFile(absoluteExclude: string): string {
+  try {
+    const excludeStat = lstatSync(absoluteExclude);
+    if (excludeStat.isSymbolicLink() || !excludeStat.isFile()) throw new Error(`Unsafe Git exclude file: ${absoluteExclude}`);
+    return readFileSync(absoluteExclude, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    return '';
+  }
+}
+
 export function ensureSystemScheduleExcluded(projectRoot: string): void {
   const root = path.resolve(projectRoot);
   if (ensuredRoots.has(root)) return;
@@ -62,14 +73,7 @@ export function ensureSystemScheduleExcluded(projectRoot: string): void {
   }
   const excludePath = git(worktree, ['rev-parse', '--git-path', 'info/exclude']);
   const absoluteExclude = path.resolve(worktree, excludePath);
-  let existing = '';
-  try {
-    const excludeStat = lstatSync(absoluteExclude);
-    if (excludeStat.isSymbolicLink() || !excludeStat.isFile()) throw new Error(`Unsafe Git exclude file: ${absoluteExclude}`);
-    existing = readFileSync(absoluteExclude, 'utf8');
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-  }
+  const existing = readExcludeFile(absoluteExclude);
   const separator = existing.length > 0 && !existing.endsWith('\n') ? '\n' : '';
   const rules = missing.map((target) => `/${target}`);
   atomicWriteFile(absoluteExclude, `${existing}${separator}${rules.join('\n')}\n`);
