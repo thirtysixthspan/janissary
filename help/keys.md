@@ -7,14 +7,14 @@
 | `Shift+←` / `Shift+→` / `Cmd+Shift+[` / `Cmd+Shift+]` | Switch to the previous / next tab |
 | `Ctrl+←` / `Ctrl+→` | Move the current tab left / right |
 | `Ctrl+R` | Open the command history picker (a shell tab opens its own history instead — see **Shell tab controls**) |
-| `Ctrl+Shift+V` / `Cmd+Shift+V` | Open the clipboard-history popup (`clipboard`); choosing an entry pastes it at the cursor in the command bar, an editor buffer, or a terminal prompt. `Ctrl+V` and `Cmd+V` are untouched |
+| `Ctrl+Shift+V` / `Cmd+Shift+V` | Open the clipboard-history popup (type `clip` for the same thing); choosing an entry pastes it at the cursor in the command bar, an editor buffer, or a terminal prompt. `Ctrl+V` and `Cmd+V` are untouched |
 | `Ctrl+G` | Open the fuzzy tab navigator (also closes it if already open) |
 | `Ctrl+A` | Open the task picker (executable `ai/tasks/*.md` files, project and Janissary); Return inserts it into the command line at the cursor without running. Reaches the terminal instead while a shell tab's terminal holds the keyboard |
 | `Cmd+P` | Open the Quick Open file finder (fuzzy-match a project file; Return opens it in an editor tab) |
 | `Cmd+Shift+F` | Open or focus the project-wide search tab, scoped to the workspace of the focused tab |
 | `Cmd+T` | Open a new shell tab (same as typing `shell`); a shell tab opens another shell instead |
 | `Cmd+W` / `Ctrl+W` | Close the current tab (no-op while a picker or any modal dialog is open) |
-| `Shift+Tab` | Move keyboard focus to the next application section (left → center → right sidebar/panel → reporting), looping; the visible tab in that section gets focus. No-op while a modal dialog is open. A shell tab keeps the key for its own two surfaces; in an editor tab's text it outdents instead; in a pending question panel it moves backward between its buttons |
+| `Shift+Tab` | Move keyboard focus to the next application section (left → center → right sidebar/panel → reporting), looping; the visible tab in that section gets focus. No-op while a picker, the clipboard-history popup, or a modal dialog is open. A shell tab keeps the key for its own two surfaces; in an editor tab's text it outdents instead; in a pending question panel it moves backward between its buttons |
 
 **Command bar controls**:
 

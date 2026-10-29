@@ -28,7 +28,7 @@ The command bar accepts the shortcuts below while a shell tab is active. The one
 | `Ctrl+R` | Open the command history picker; in a shell tab, open that tab's own history |
 | `Ctrl+D` (shell tab) | Send end-of-input to zsh while its command bar is focused |
 | `Ctrl+Z` (shell tab) | Suspend the running zsh command while its command bar is focused |
-| `Ctrl+Shift+V` / `Cmd+Shift+V` | Open the clipboard-history popup — everything you have copied this session, newest at the bottom; choosing an entry pastes it at the cursor. `Ctrl+V` and `Cmd+V` are untouched |
+| `Ctrl+Shift+V` / `Cmd+Shift+V` | Open the [clipboard-history popup](/user-documentation/command-bar/clipboard) (typing `clip` does the same): everything you have copied inside Janissary this session, newest at the bottom; choosing an entry pastes it at the cursor. `Ctrl+V` and `Cmd+V` are untouched |
 | `Ctrl+A` | Open the task picker |
 | `Ctrl+G` | Open the fuzzy tab navigator, or close it if it is open |
 | `Ctrl+E` | Open the queue picker for a shell tab; does nothing on tabs without a queue |
@@ -78,6 +78,8 @@ The eight overlays that float above the command bar are mutually exclusive: only
 6. command queue popup
 7. task picker
 8. profile picker
+
+The [clipboard-history popup](/user-documentation/command-bar/clipboard) ranks after those eight. It opens only when none of them is up, and while it is open it claims keystrokes the same way. `Shift+Tab` does not move focus between sections, and `Ctrl+W` closes no tab.
 
 An open overlay claims every keystroke. Nothing underneath it scrolls the transcript, switches tabs, or reorders them, and the shortcut that would open another overlay does nothing until the open one is dismissed. Quick Open holds its own text input and answers its own typing, arrows, `Enter`, and `Escape` there. The command queue popup is the one exception: its selected command is edited in the command bar, so the bar keeps working while it is open, with only `Enter`, the arrows, and `Backspace`/`Delete` on an empty line reserved by the popup.
 

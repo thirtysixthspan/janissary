@@ -7,7 +7,7 @@
 | `audio` | `audio <path>` queues audio into the single audio tab through the bundled audio plugin; accepts the same paths and wildcards as `open` |
 | `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |
 | `clear` | Clear the tab's output log; in a shell tab, bare `clear` is sent to zsh so it clears the terminal instead (use `/clear` to clear the output log) |
-| `clipboard` | Open the clipboard-history popup: everything copied in this session, newest at the bottom (Ctrl+Shift+V or Cmd+Shift+V); choosing an entry pastes it at the cursor rather than running it |
+| `clipboard` | Help page for the clipboard-history popup: everything copied inside Janissary this session, newest at the bottom. Open it with `clip`, Ctrl+Shift+V, or Cmd+Shift+V (typing `clipboard` does not open it); choosing an entry pastes it at the cursor rather than running it |
 | `close` | Close the current tab (exits if last); `close <tabname>` closes a tab by its label (`page`, `page-2`, `image`, …) or display alias. `/close` and `/exit` are equivalent |
 | `connection` | List or close open connections (sqlite/shell/acp/browser/ssh/terminal) |
 | `conversation <title>` | Open a saved conversation by title, ignoring case; if no title matches, create a conversation and send `<title>` as its first query |
