@@ -31,7 +31,7 @@ Many sites send headers refusing to be embedded. When the app runs in its own ma
 
 The app doesn't read a page's contents, with one exception. While the app's bundled browser extension is running, it picks up the page title and the text currently in view, skipping hidden elements, anything scrolled out of sight, and scripts and styles. About half a second after the page changes or scrolls, it sends that text to the app. The same message carries the address the page is on, which is how the tab follows you from link to link.
 
-The text stays on the server. The app keeps only the latest snapshot in memory, and never sends it back to the app window or saves it. The only reader is a [monitor](/user-documentation/automation/monitoring#what-a-monitor-sees) you attached to the tab. It gets the whole snapshot first, then a diff each time the visible text changes, with a very long snapshot cut short. Without the extension, such as after a fallback to your system browser, nothing is captured, so a monitor watching a page tab has nothing to read.
+The text stays on the server. The app keeps only the latest snapshot in memory, and never sends it back to the app window or saves it. The only reader is a [monitor](/user-documentation/automation/monitoring#what-a-monitor-sees) you attached to the tab. It gets the visible text first, then a size-capped diff when that text changes. Each entry is limited to 20,000 bytes; a longer one ends with a truncation note. Without the extension, such as after a fallback to your system browser, nothing is captured, so a monitor watching a page tab has nothing to read.
 
 ## Names and labels
 

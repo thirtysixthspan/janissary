@@ -62,7 +62,7 @@ A `connections` panel floats at the top right of a shell tab or an editor tab an
 
 - Its shell and working directory, such as `bash:~/dir`.
 - Its ACP agent, as `acp:<provider/model>`.
-- Each [monitor](/user-documentation/automation/monitoring) it started, as `monitor:<name> (<provider/model>)`. The name is the one you address the monitor by, which is its persona unless you named it yourself. The model shows once the monitor's session has one.
+- Each [monitor](/user-documentation/automation/monitoring) it started, as `monitor:<persona> (<provider/model>)`. The persona name is also the monitor's name for `unmonitor` and `monitor ask`. The provider and model appear once the session has connected.
 - Each browser window with its mode, such as `browser:w1 (headless)`.
 - Each terminal the tab runs, as `terminal:<program>`.
 - On a [remote](/user-documentation/advanced-agents/remote-agents) tab, the `ssh:<address>` transport it runs over, next to its terminals.
