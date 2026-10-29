@@ -2,8 +2,6 @@
 
 ## ready
 
-* pull-request-testing (9/10) — 0 of 24 workflow facts are covered, 24 are missing, and none are wrong. Add `documentation/user-documentation/workflows/testing-a-pull-request.md` and link it from `documentation/user-documentation/command-bar/tasks.md`, explaining the browser prerequisite, tested branch/dependency handling, verification cases, reruns, failure recording, and the boundary between testing and fixing. Ground this in `product/specs/pull-request-testing.md`, `ai/tasks/feature/test-pull-request.md`, `ai/tasks/feature/work-pull-request-issue.md`, and `scripts/test-pull-request-playbook.test.mjs`; `help/tasks.md` describes only the picker.
-
 * pull-request-updating (9/10) — 1 of 11 workflow facts is covered, 10 are missing, and none are wrong. Add a concise task-specific section to `documentation/user-documentation/command-bar/tasks.md` covering target selection, branch/description/plan/spec/help/backlog updates, commit/push and no-op behavior, and that the PR remains open without code changes or checks. Evidence is `product/specs/pull-request-updating.md`, `ai/tasks/feature/update-pull-request.md`, `product/specs/pull-request-review.md`, `product/specs/pull-request-testing.md`, and `product/specs/task-picker.md`; `help/tasks.md` has no updater workflow details.
 
 * quick-open (8/10) — 20 of 28 facts are covered, 4 are missing, and 4 are wrong. Correct the `.gitignore`/fallback file-list description, type-specific open destination, and Escape focus return in `documentation/user-documentation/command-bar/quick-open.md` and `help/keys.md`; add the default selection, non-wrapping arrows, matching boundary bonuses, and failed-list behavior. Evidence is `product/specs/quick-open.md`, `src/file-navigator/search.ts`, `src/file-navigator/search.test.ts`, `src/open/file-manager.ts`, `web/src/pickers/useQuickOpen.ts`, `web/src/shared/ranked-overlay-keys.ts`, and `web/src/shared/fuzzy-match.ts`; link to `documentation/user-documentation/tab-types/opening-files.md` for type-specific opening.
@@ -106,3 +104,4 @@
 * pdf-tab — documented in documentation/user-documentation/tab-types/pdf-viewer.md, documentation/user-documentation/tab-types/opening-files.md, help/pdf.md, help/open.md (removed 2026-10-29)
 * profiles — documented in documentation/user-documentation/automation/profiles.md, help/profile.md (removed 2026-10-29)
 * pull-request-review — documented in documentation/user-documentation/workflows/pull-request-review.md, documentation/user-documentation/command-bar/tasks.md (removed 2026-10-29)
+* pull-request-testing — documented in documentation/user-documentation/workflows/testing-a-pull-request.md, documentation/user-documentation/command-bar/tasks.md (removed 2026-10-29)
