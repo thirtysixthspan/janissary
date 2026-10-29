@@ -9,14 +9,14 @@ connection list
 connection close shell:bash
 ```
 
-A bare `connection` prints a `Usage:` line, and so does an action it doesn't know, such as `connection status`.
+A bare `connection` prints `Usage: connection <list|close> [kind:id]  (e.g. connection close sqlite:mydb)`, and so does an action it doesn't know, such as `connection status`.
 
 ## Kinds and scope
 
 | Kind | Id | Scope |
 |---|---|---|
 | `sqlite` | database name | Global, shared across every tab |
-| `shell` | shell program name (`bash`, `zsh`, …) | Current tab |
+| `shell` | shell program name (`bash`, `zsh`, …), taken from your `SHELL` environment variable; `bash` when it isn't set | Current tab |
 | `acp` | a supported tab's ACP provider and model (`opencode/big-pickle`); a monitor's name; a persona's name on an [editor tab](/user-documentation/tab-types/editor-persona-query) | Current tab |
 | `browser` | window id (`w1`, `w2`, …) | Current tab |
 | `ssh` | the ssh tab's label, or its destination as typed | Global; an ssh tab has no command bar of its own |
@@ -36,7 +36,7 @@ The tab's own ACP agent only appears once its handshake has named it, so a sessi
 
 - `sqlite:<name>`: closes the database connection. It reopens automatically the next time a `db` command or the SQL database browser uses that name.
 - `shell:<name>`: kills the tab's shell process. `<name>` is not compared. A shell tab has exactly one shell, and closing the connection closes it whatever you typed after the colon, so `connection close shell:zsh` on a bash machine closes the bash shell. A fresh shell spawns, restoring its working directory, on your next shell command.
-- `acp:<name>`: kills the tab's ACP session. It reconnects on your next `acp` prompt. If `<name>` is one of the tab's monitors, only that monitor stops, the same as `unmonitor <name>`. On an editor tab, `<name>` can be a persona instead, and closing one leaves that tab's other persona connections alone; the next request to that persona opens a fresh one.
+- `acp:<name>`: closes one ACP connection. Three things can match, and the first match wins. On an editor tab, `<name>` can be one of its personas: only that persona's connection closes, the tab's other persona connections stay open, and the next request to that persona opens a fresh one. Next, if `<name>` is one of the tab's monitors, only that monitor stops, the same as `unmonitor <name>`. Anything else kills the tab's own ACP session, which reconnects on your next `acp` prompt.
 - `browser:<id>`: closes that window. Closing a tab's last window ends its browser process.
 - `ssh:<id>`: kills the matching ssh tab's terminal, which closes the tab. `<id>` matches the tab's label first, then its destination.
 - `terminal:<program>`: kills the tab's terminal running that program. An inline terminal ends; a harness tab closes with it. A remote tab's ssh transport never answers to a `terminal:` id — it is the `ssh:` row, as above.
@@ -58,17 +58,35 @@ Those are the whole list, and none of them closes anything on the way.
 
 ## The connections window
 
+A `connections` panel floats at the top right of a shell tab or an editor tab and lists that tab's live connections. The rows read like the entries in `connection list`, with a little more detail:
+
+- Its shell and working directory, such as `bash:~/dir`.
+- Its ACP agent, as `acp:<provider/model>`.
+- Each [monitor](/user-documentation/automation/monitoring) it started, as `monitor:<name> (<provider/model>)`. The name is the one you address the monitor by, which is its persona unless you named it yourself. The model shows once the monitor's session has one.
+- Each browser window with its mode, such as `browser:w1 (headless)`.
+- Each terminal the tab runs, as `terminal:<program>`.
+- On a [remote](/user-documentation/advanced-agents/remote-agents) tab, the `ssh:<address>` transport it runs over, next to its terminals.
+- Every SQLite database the tab has queried. A database you close with `connection close sqlite:<name>` or delete with `db sqlite delete` drops off the list.
+
+An [editor tab](/user-documentation/tab-types/editor-persona-query) lists each persona it has consulted as `<persona> (acp)`. Those rows are the one kind with their own ×. Clicking it closes just that persona's connection, the same as `connection close acp:<persona>`.
+
 <img class="agent-float" src="/agents/selim-south-west.png" alt="" />
 
-A floating `connections` panel floats at the top right of the tab and lists the active tab's live connections: its shell and working directory (`bash:~/dir`), its ACP agent, each browser window with its mode, and every SQLite database the tab has queried. A database you then close with `connection close sqlite:<name>` or delete with `db sqlite delete` drops off the list. Any [monitor](/user-documentation/automation/monitoring) watching from that tab appears as `monitor:<persona>`. An [editor tab](/user-documentation/tab-types/editor-persona-query) lists each persona it has consulted as `<persona> (acp)`, and those rows are the one kind with their own × — clicking it closes just that persona's connection, the same as `connection close acp:<persona>`.
+Over an ssh tab, the panel shows only that tab's own `ssh:<destination>` row, and its metadata bar keeps both the connections and schedule buttons. Any other harness tab has no connections button at all, since its terminal already is the connection. It keeps its schedule button.
 
-Over an ssh tab, the panel shows only that tab's own `ssh:<destination>` row. A harness tab that isn't ssh has no connections button at all, since its terminal already is the connection.
+In the web app, a link icon in the tab's metadata bar opens this panel. It lights up whenever the tab has a live connection, and stays dark and unclickable, with a tooltip saying there are none, when it doesn't. Hovering the lit icon shows the panel; moving away hides it again. Clicking pins the panel open until you click a second time.
 
-In the web app, a link icon in the tab's metadata bar opens this panel: it lights up whenever the tab has a live connection, and stays dark and unclickable with an explanatory tooltip when it doesn't. Hovering the lit icon shows the panel; moving away hides it again. Clicking pins the panel open until you click a second time. Switching to a tab with live connections auto-shows its panel for five seconds before fading; moving the pointer onto the icon or panel during that window cancels the fade and hands off to normal hover behavior.
+The panel also shows itself for a moment. Switching to a tab with live connections auto-shows its panel for five seconds before it fades. A tab with no connections auto-shows the panel the same way the moment it gains its first one. Moving the pointer onto the icon or panel during the auto-show cancels the fade and hands off to normal hover behavior. A harness tab that isn't the active tab, such as the one in the other split pane, never auto-shows its panel. It stays hidden even if you had pinned it.
 
 ## Read what an agent session has said
 
-Every ACP row in the panel — the tab's own `acp:<provider/model>`, a `monitor:<persona>`, or an editor tab's `<persona> (acp)` — carries a small clipboard button. Click it to open a snapshot as plain text in an [editor tab](/user-documentation/tab-types/editor), which is the way to read what a monitor or a persona has actually been sent and what it answered. What you get depends on the row: a monitor or a persona gives you that exchange alone, while the tab's own row gives you the tab's whole transcript, since the session and the tab are the same conversation.
+On an editor tab, every ACP row in the panel carries a small clipboard button. That covers a `monitor:<name>` row, a `<persona> (acp)` row, and the tab's own `acp:<provider/model>` row when it has one. The panels on shell tabs and harness tabs list the same kinds of row, but only the editor tab's panel draws the button.
+
+Click it to open a snapshot as plain text in an [editor tab](/user-documentation/tab-types/editor). It's the way to read what a monitor or a persona has actually been sent and what it answered. What you get depends on the row:
+
+- A persona row gives you that persona's exchange alone, with each block marked as sent to the model or as the model's response.
+- A monitor row gives you the same kind of exchange, but only for a monitor that reports in a [reporting tab](/user-documentation/automation/monitoring). An inline monitor, which posts into the tab you started it from, has nothing to show and opens `No transcript yet.`.
+- The tab's own row gives you the tab's whole transcript, since the session and the tab are the same conversation.
 
 What you get is a snapshot taken at the moment you clicked, not a live view. Click again for a fresh one; the first tab stays as it was. A session that hasn't exchanged anything yet still opens a tab, reading `No transcript yet.`, so the button always does something visible.
 
