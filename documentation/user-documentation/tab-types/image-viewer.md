@@ -10,7 +10,7 @@ open diagram.png
 
 If that image is already open, `open <image>` focuses the existing image tab instead of creating a duplicate.
 
-The tab shows a compact header with the file's name, size, and location, and the image fills the space below, fit to the tab: a landscape image spans the full width, a portrait one the full height. In the strip the tab is named after the file, with a × close button right after the name that closes that tab without selecting it first; `image` is only the label behind `close image`, so a second image tab is `image-2`. An image tab can be reordered inside its [group](/user-documentation/getting-started/groups) like any other, and the header's **Split** control moves it into the other pane — see [Working in two panes](/user-documentation/getting-started/tabs#working-in-two-panes).
+The tab shows a compact header with the file's name, size, and location, and the image fills the space below, fit to the tab: a landscape image spans the full width, a portrait one the full height. Its proportions stay the same, and the fit adjusts when the image loads or you resize the tab. An image tab has no transcript or command bar. In the strip the tab is named after the file, with a × close button right after the name that closes that tab without selecting it first; `image` is only the label behind `close image`, so a second image tab is `image-2`. An image tab can be reordered inside its [group](/user-documentation/getting-started/groups) like any other, and the header's **Split** control moves it into the other pane — see [Working in two panes](/user-documentation/getting-started/tabs#working-in-two-panes).
 
 Opening an image focuses its tab. If it is already open, Janissary focuses that same tab instead of making another one. The viewer's keyboard controls work only while that image is visible: a hidden image tab in another pane or behind another tab ignores them. Switching back to an image resets its zoom and pan to the centered 100% view.
 
@@ -20,25 +20,25 @@ Opening an image focuses its tab. If it is already open, Janissary focuses that 
 
 | Control | Action |
 |---|---|
-| `PageUp` / scroll wheel up | Zoom in, 10% per step |
-| `PageDown` / scroll wheel down | Zoom out, 10% per step |
+| `Page Up` / scroll wheel up | Zoom in, 10% per step |
+| `Page Down` / scroll wheel down | Zoom out, 10% per step |
 | `Escape` | Reset to 100% and center |
 | Arrow keys | Pan (hold to keep panning) |
 | Click and drag | Pan freely |
 
-100% is the fit-to-tab size; zoom runs from 10% to 800%. While zoomed away from 100%, the current percentage is shown on the view. There are no scrollbars — reaching the out-of-view parts of a zoomed image is what panning is for. Panning with a held arrow key is continuous, and dragging follows the mouse.
+100% is the fit-to-tab size; zoom runs from 10% to 800%. Each press or wheel step changes it by 10%, and holding `Page Up` or `Page Down` repeats the change. While zoomed away from 100%, the current percentage is shown on the view. There are no scrollbars — reaching the out-of-view parts of a zoomed image is what panning is for. Panning with a held arrow key is continuous, and dragging follows the mouse.
 
 ## Editing an image
 
 <img class="agent-float left" src="/agents/bilal-south-east.png" alt="" />
 
-Click the pen button in the header to swap the viewer for an editing canvas. `edit <image>` opens a tab straight into it, as does `Shift`+double-clicking an image in the [file navigator](/user-documentation/tab-types/file-navigator). Picking the image from [Quick Open](/user-documentation/command-bar/quick-open) with `Cmd+P` does the same, because Quick Open issues the same `edit` command. If that image is already open, any of these focuses the existing tab and flips it to the editor rather than opening a second one.
+Click the pen-shaped **Edit image** button in the header to swap the viewer for an editing canvas. `edit <image>` opens a tab straight into it, as does `Shift`+double-clicking an image in the [file navigator](/user-documentation/tab-types/file-navigator). Picking the image from [Quick Open](/user-documentation/command-bar/quick-open) with `Cmd+P` does the same, because Quick Open issues the same `edit` command. If that image is already open, any of these focuses the existing tab and flips it to the editor rather than opening a second one.
 
 Editing is geometry only, with five controls in the toolbar:
 
 | Control | What it does |
 |---|---|
-| **Crop** | Draws a rectangle over the whole image. Drag it, or pull its edges and corners, and it reports the pixel size it will produce as you go. It can't be dragged outside the image. |
+| **Crop** | Starts with a rectangle covering the whole image. Drag it, or pull its edges and corners, and it reports the pixel size it will produce as you go. The rectangle stays inside the image; a drag stops at the edge and cannot make an empty crop. |
 | **Rotate left** / **Rotate right** | Turns the image 90°, swapping its width and height. |
 | **Flip horizontal** / **Flip vertical** | Mirrors it about that axis. |
 
@@ -60,17 +60,17 @@ If a save fails, the original file stays unchanged and the edits remain unsaved 
 
 Whether the tab counts as saved is a question about your edits, not about how many steps you have taken. Undoing back to exactly what was written reads as saved again, and redoing forward to it does too. A different edit applied on top of an undone one lands at the same step but is not what was written, so the tab still reads as unsaved. Two routes to the same picture are never recognised as equal, so the tab leans toward calling the work unsaved. While a dot beside the tab name marks the tab unsaved, it clears the moment the save lands. An edit you make while a save is still in flight is not covered by that save, so the dot stays until you save again.
 
-Every save is a **PNG**, whatever the file started as. Two consequences are worth knowing before you save: an animated GIF flattens to the single frame you're looking at, and an SVG is rasterized at the size it was rendered, losing its vector nature. Both replace the original file.
+Every save is a **PNG**, whatever the file started as. Two consequences are worth knowing before you save: an animated GIF flattens to the single frame you're looking at, and an SVG is rasterized at the size it was rendered, losing its vector nature. Both replace the original file. A saved SVG keeps its `.svg` name but contains PNG data, and it still opens as an image tab.
 
 ### Leaving the editor
 
 **Done**, or `Escape`, returns to the viewer without discarding anything. The edit list stays live, the tab stays marked unsaved, and the pen button brings you back to exactly where you left off.
 
-Unsaved edits aren't dropped quietly the way zoom and pan are. Closing a tab that holds them asks first, with **Save**, **Don't Save**, and **Cancel** — the same dialog an [editor tab](/user-documentation/tab-types/editor) raises, on every close path, and they hold up `quit` and a browser reload too. **Save** closes the tab only once the file is written; if the write fails the tab stays open with your edits intact, still marked unsaved.
+Unsaved edits aren't dropped quietly the way zoom and pan are. Closing a tab that holds them asks first, with **Save**, **Don't Save**, and **Cancel** — the same dialog an [editor tab](/user-documentation/tab-types/editor) raises, on every close path, and they hold up `quit` and a browser reload too. **Save** closes the tab only once the file is written; if the write fails the tab stays open with your edits intact, still marked unsaved. **Cancel** keeps the tab open.
 
 ## Lifecycle
 
-An image tab is a live view, not saved state: zoom and pan reset when you switch away to another image tab, and image tabs are not restored. An edit in progress isn't saved either — it belongs to the open tab. Closing one — via its × button or `close` — just removes the view; the file is untouched. Unsaved edits also bring up the save-changes dialog if you reload the browser page, just as they do when you close the tab. Only files you've explicitly opened are ever served to the viewer.
+An image tab is a live view, not saved state: zoom and pan reset when you switch away to another image tab, and image tabs are not restored. An edit in progress isn't saved either — it belongs to the open tab. Closing an unchanged image tab with its × button or `close` removes the view and leaves the file alone. If the image has unsaved edits, the save-changes dialog lets you save, discard the edits, or cancel and keep the tab open. Only files you've explicitly opened are ever served to the viewer.
 
 A profile can open an image tab by its file. Launching that profile opens the image; if it was already open, Janissary reuses its tab. A profile carries nothing of the image's zoom, pan, or unfinished edits. See [Profiles](/user-documentation/automation/profiles) for how profiles open tabs.
 
