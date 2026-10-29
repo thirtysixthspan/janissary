@@ -13,7 +13,7 @@
 | `conversation` | Bare `conversation` opens the conversation list; `conversation <title>` opens a saved conversation by title, ignoring case, or creates one and sends `<title>` as its first query |
 | `conversations` | Open the conversation list; `conversations left`/`right` docks it, and `conversations <title>` opens a saved conversation by title, ignoring case |
 | `db` | Create, delete, query, or list SQLite databases |
-| `diff` | `diff` opens the diff tab on the project's changes versus HEAD; `diff <path>` scopes it to that path's changes; `diff on <tab name>` opens that tab's workspace diff |
+| `diff` | `diff` opens the diff tab on the project's changes versus HEAD; `diff <path>` scopes it to that directory's changes; `diff on <tab name>` opens that tab's workspace diff |
 | `edit` | Open a file for editing (`edit <file>[:line]`); a bare existing runscript name opens it when no exact file exists |
 | `execute` | Run an existing project runscript immediately in the managed system shell (`execute <name>`) |
 | `files` | `files [path]` opens a tree; `files <path> in <label>` targets another tab (quote labels with spaces or quotes). Remote paths use the host's workspace. `with <name\|size\|modified\|permissions>` sets details; `expand <path>`, `collapse <path>`, `cursor <path>`, `anchor <path>`, and `select <path>` restore view. `files print <tab>` prints a command |
