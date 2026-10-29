@@ -28,7 +28,7 @@ export function ClipboardHistoryPopup({ rows, selected, choose }: Properties) {
   const pick = (row: ClipboardHistoryRow) => choose(row.text);
 
   return (
-    <div className="picker clipboard-history" ref={rootRef} tabIndex={-1}>
+    <div className="picker clipboard-history" ref={rootRef} tabIndex={-1} data-doc-shot="clipboard-overlay">
       <div className="picker-title">clipboard</div>
       {rows.length === 0 ? (
         <div className="picker-row picker-empty">(no clipboard history)</div>
