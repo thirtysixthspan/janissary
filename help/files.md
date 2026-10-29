@@ -41,3 +41,7 @@ Open a file navigator in the current tab's working directory, or target a path o
 - `files with size src` opens `src` with each row's size.
 - `files expand src cursor src/index.ts select src/index.ts` opens `src` and selects `src/index.ts`.
 - `files print navigator` prints a `files` command for the open `navigator` tree.
+
+Malformed `files` commands, including malformed `files print` requests, write one parser error in the issuing tab and open or change no tree. `files print <tab>` prints the tree's root, dock side, non-default detail mode, expanded folders, cursor, anchor, and selected rows. If the navigator does not answer the selection request before the timeout, it prints without selection clauses. A remote tree's printed command has no view clauses.
+
+File-operation failures are reported in the notifications feed with the affected item, reason, and recovery guidance. Bulk move and delete failures use one line and name up to three failed items. Remote file requests wait up to one minute; git pull and commit, search, bulk operations, history replay, and whole-file transfers wait up to ten minutes. A timed-out request reports `The remote machine did not answer in time.` and is not retried because the operation may have completed despite its lost reply.

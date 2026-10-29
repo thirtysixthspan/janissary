@@ -55,7 +55,7 @@ The active tab is also highlighted: full-strength text on the content background
 
 ## Working in two panes
 
-Action tabs have a **Split** button at the right edge of their metadata header. Click it to move that tab into a second pane
+Action tabs and a file navigator in the center strip have a **Split** button at the right edge of their metadata header. A docked file navigator has no Split button. Click it to move that tab into a second pane
 beside the first one. The first Split sends the tab you clicked into the **right** pane and leaves the most recently
 focused eligible tab on the left. Each pane gets its own tab strip and keeps one tab visible; click anywhere in
 a pane to make it the focused one. The focused pane keeps its tab-colored left border; the other pane's border turns muted gray. New tabs opened from an action tab join that tab's pane.
