@@ -34,7 +34,7 @@ The command bar accepts the shortcuts below while a shell tab is active. Window 
 | `Ctrl+E` | Open the [queue popup](/user-documentation/command-bar/queue#edit-queued-commands) for a shell tab; does nothing on a tab that lacks a command queue or a command bar, such as a harness |
 | `Ctrl+T` | Expand or collapse the current tab's agent tool steps |
 | `Cmd+W` / `Ctrl+W` | Close the current tab |
-| `Cmd+F` | Search the current tab's transcript |
+| `Cmd+F` | Open the find bar in an editor tab; does nothing in other tabs, including a shell tab's terminal. To search a transcript, run [`search transcript <pattern>`](/user-documentation/command-bar/transcript-search) |
 | `Cmd+Shift+F` | Open or focus the [project search tab](/user-documentation/command-bar/project-search) when the key reaches Janissary; a focused harness or SSH terminal sends it to its program |
 | `Cmd+P` | Open Quick Open when the key reaches Janissary; a focused harness or SSH terminal sends it to its program |
 | `Cmd+T` | Open a new [workspaced shell tab](/user-documentation/advanced-agents/workspaced-agent) |

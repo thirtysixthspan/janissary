@@ -141,7 +141,7 @@ The search runs over the buffer as it stands, so it finds edits you haven't save
 
 While a persona suggestion is waiting for your review, every keystroke goes to that review, `Cmd+F` included, so the find overlay can't open on top of it.
 
-`Ctrl+F` is not the same key here: it stays the Emacs-style "move the cursor right". In a shell tab, `Cmd+F` still opens that tab's own transcript search instead.
+`Ctrl+F` is not the same key here: it stays the Emacs-style "move the cursor right". `Cmd+F` does nothing in a shell tab's terminal. To search a shell session, press **Open transcript** in its metadata row and use `Cmd+F` in the editor tab that opens. See [Shell commands](/user-documentation/command-bar/shell#read-a-shell-session-s-transcript).
 
 ## Saving
 
