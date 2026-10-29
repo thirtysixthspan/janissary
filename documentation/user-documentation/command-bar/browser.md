@@ -2,7 +2,7 @@
 
 <img class="agent-float" src="/agents/cavus-south-west.png" alt="" />
 
-The `browser` command drives a real Chromium browser from a tab, so you (or that tab's agent) can open a page, read its rendered text, run JavaScript against it, and capture a screenshot:
+The `browser` command drives a real Chromium browser from a tab, so you (or that tab's agent) can open a page, read its text, run JavaScript against it, and capture a screenshot:
 
 ```
 browser goto https://example.com
@@ -17,12 +17,12 @@ browser content
 | `browser list` | List this tab's windows, marking the current one |
 | `browser use <id>` | Make a window current |
 | `browser goto <url>` | Navigate the current window |
-| `browser content` | Print the current page's rendered text |
+| `browser content` | Print the page title and the text of the page body |
 | `browser eval <js>` | Run JavaScript in the page and print the result |
 | `browser shot` | Screenshot the viewport to a PNG |
 | `browser close [id]` / `browser window close <id>` | Close the current window, or a specific one by id |
 
-A bare `browser` prints a `Usage:` line listing every subcommand. Every `browser` command shows a `Running…` line in the transcript while it works, then fills that same line in with the result. See [Tab completion](/user-documentation/command-bar/tab-completion) for completing subcommands and window ids with `Tab`.
+A bare `browser` prints a `Usage:` line listing every subcommand; [Usage errors and missing windows](#usage-errors-and-missing-windows) has the exact text. When you type a `browser` command, its command line is marked as running in the transcript until the result arrives, and the result then appears under it. Commands that an agent runs on its own don't get that marker. They show up as collapsed tool steps, as described in [Markdown rendering](/user-documentation/advanced-agents/markdown-rendering). See [Tab completion](/user-documentation/command-bar/tab-completion) for completing subcommands and window ids with `Tab`.
 
 ## One browser per tab, with its own windows
 
@@ -59,20 +59,50 @@ Some sites look for automated browsers and refuse to serve them a page. This bro
 
 - It runs Chromium's current headless mode, which is a real browser with nothing drawn on screen, rather than the older headless shell that sites recognize easily.
 - The switch that makes a browser announce itself as automated is turned off, and every page in every window is told `navigator.webdriver` is `false`, so a site that checks that property finds nothing to report.
-- Each window gets its own random desktop identity: a browser version matching the engine actually running, with a platform, language, time zone, and window size that agree with it. Two windows never look alike, and no part of the identity contradicts another.
+- Each window gets its own desktop identity: a browser version matching the engine actually running, with a platform, language, time zone, and window size that agree with each other. A window draws its identity at random from short lists of common choices, so two windows usually differ but can end up looking alike. No part of an identity contradicts another.
 
 None of this is a guarantee. A site that blocks automated traffic outright can still refuse to serve a page.
 
 ## Reading a page
 
-`browser goto <url>` waits for the page to load, then answers with its title and address, so you can see where you landed. `browser content` returns the page title and its `textContent`, cut off at roughly 10,000 characters with a note that it was truncated. That keeps a long page from overflowing the transcript. `browser eval <js>` runs JavaScript in the page and prints the result as JSON.
+`browser goto <url>` waits for the page to load, then answers with its title and address, so you can see where you landed. A page with no title shows as `(untitled)`. `browser content` returns the page title, a blank line, and the raw text of the page body. It isn't limited to what you can see on screen. Text in hidden elements, scripts, and style blocks comes along, and runs of whitespace stay as they are. A long page is cut off at 10,000 characters, with the title counted in that total, and the output ends with a line like `… (truncated, 2500 more chars)` that says how much was dropped. That keeps a long page from overflowing the transcript.
+
+`browser eval <js>` runs JavaScript in the page and prints the result as formatted JSON. An expression with no value prints `undefined`. If the script throws, or `goto` can't load the address, the transcript shows a `Browser error: …` line with the reason.
 
 ## Screenshots
 
-`browser shot` captures the current window's viewport to a PNG in a temporary directory and prints the path. On macOS it also opens the image in Preview; on other platforms only the path is printed.
+`browser shot` captures the current window's viewport to a PNG in a temporary directory and prints `Screenshot saved: <path>`. On macOS it also opens the image in Preview and adds `(opening in Preview)` to that line; on other platforms only the path is printed. The command takes no arguments.
 
 ## Closing windows and browsers
 
-`browser close` closes the current window; `browser close <id>` and `browser window close <id>` close a specific one (the two forms are equivalent). Closing a tab's last window ends that tab's browser process. Closing the tab, or quitting the app, closes every window it had open.
+`browser close` closes the current window; `browser close <id>` and `browser window close <id>` close a specific one (the two forms are equivalent), and `connection close browser:<id>` does the same through the [connections](/user-documentation/command-bar/connections) command. If you close the current window, the oldest window still open becomes current. Closing a tab's last window ends that tab's browser process. Closing the tab, or quitting the app, closes every window it had open.
 
 Browser windows are live, per-tab state: unlike a SQLite connection, they are **not** restored. Start with `browser open` again after a relaunch if you need one.
+
+## Usage errors and missing windows
+
+If a command is missing its argument, or the subcommand isn't one `browser` knows, you get a `Usage:` line and nothing else happens. A bare `browser`, or an unknown subcommand, prints the full line:
+
+```
+Usage: browser <open [name] [--headed]|list|use <id>|goto <url>|eval <js>|shot|content|close [id]|window close <id>>
+```
+
+The subcommands that need an argument have shorter lines of their own:
+
+| You type | You get |
+|---|---|
+| `browser use` | `Usage: browser use <id>` |
+| `browser goto` | `Usage: browser goto <url>` |
+| `browser eval` | `Usage: browser eval <js>` |
+| `browser window`, or `browser window close` with no id | `Usage: browser window close <id>` |
+
+When the window you name isn't there, or no window is open, the answer is a plain line and nothing changes:
+
+| You type | When | You get |
+|---|---|---|
+| `browser list` | No window is open | `No browser windows.` |
+| `browser use w9` | `w9` doesn't exist | `No browser window w9.` |
+| `browser use w2` | `w2` exists | `Using browser window w2.` |
+| `browser close` | No window is open | `No browser window to close.` |
+| `browser close w9` | `w9` doesn't exist | `No open connection browser:w9.` |
+| `browser close w1` | `w1` exists | `Closed connection browser:w1.` |
