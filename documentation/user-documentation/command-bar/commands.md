@@ -51,7 +51,7 @@ Three replies mean nothing ran: `Usage: execute <name>` for a missing or invalid
 
 Use `edit <name>` to open an existing runscript. If a file with that exact name already exists at the path your working directory resolves to, Janissary opens that file instead. Other paths such as `edit notes/new-idea.md` keep the usual editor behavior.
 
-Type `scripts` to open the **scripts** tab, where each row has **Run**, **Duplicate**, and **Delete** buttons, and a double-click opens that runscript in an editor tab.
+Type `scripts` to open the **scripts** tab, where each row has **Run**, **Duplicate**, and **Delete** buttons, and a double-click opens that runscript in an editor tab. See [Scripts](/user-documentation/tab-types/scripts) for the keys, the delete dialog, and what each failure message means.
 
 ## `help`
 

@@ -111,6 +111,7 @@ export function ScriptsTab({ payload, capabilities }: {
   return (
     <div
       className="scripts-tab"
+      data-doc-shot="scripts-tab"
       ref={containerRef}
       tabIndex={0}
       onKeyDown={onKeyDown}

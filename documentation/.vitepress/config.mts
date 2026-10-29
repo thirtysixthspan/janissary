@@ -118,6 +118,7 @@ export default defineConfig({
             { text: "Diff tab", link: "/user-documentation/tab-types/diff-tab" },
             { text: "Sessions", link: "/user-documentation/tab-types/sessions" },
             { text: "SQL database browser", link: "/user-documentation/tab-types/sql-browser" },
+            { text: "Scripts", link: "/user-documentation/tab-types/scripts" },
           ],
         },
         {
