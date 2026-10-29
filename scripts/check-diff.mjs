@@ -7,6 +7,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { changedFiles } from './changed-files.mjs';
+import { hasHelpMarkdownChanges } from './help-doc-changes.mjs';
 import { scriptPath } from './script-path.mjs';
 
 // Named from this file's own directory, not the working directory — see `script-path.mjs`.
@@ -28,6 +29,7 @@ const hasLintable = files.some((f) => {
 });
 const touchesSrc = files.some((f) => f.startsWith('src/'));
 const touchesWeb = files.some((f) => f.startsWith('web/'));
+const touchesHelp = hasHelpMarkdownChanges(files);
 // The server project also carries the tests for scripts/ (see vitest.config.ts), which have no
 // TypeScript project of their own to typecheck.
 const touchesScripts = files.some((f) => f.startsWith('scripts/'));
@@ -60,6 +62,13 @@ if (touchesWeb) {
   tools.push({
     name: 'test:web',
     run: () => execFileSync('npm', ['run', 'test:diff:web'], { stdio: 'pipe', encoding: 'utf8' }),
+  });
+}
+
+if (touchesHelp) {
+  tools.push({
+    name: 'test:help',
+    run: () => execFileSync('npm', ['run', 'test:server', '--', 'src/commands.test.ts'], { stdio: 'pipe', encoding: 'utf8' }),
   });
 }
 
