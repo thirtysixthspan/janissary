@@ -48,13 +48,13 @@ Two things, both set up ahead of time:
 - `janus` on the remote account's `PATH`. Nothing is shipped over the connection, so the remote is a normal janissary install, not something Janissary uploads. Janissary runs `janus remote-serve` there through your own login shell, so a `janus` installed by a version manager such as nvm is found the same way it is when you SSH in and type the command yourself.
 - A git repository with an `origin` remote at the path you named, or above your SSH login directory when you named no path.
 
-A path you name is used exactly as given, with no walk upward from it. `on devbox:/tmp` fails with `/tmp is not a git repository.` rather than searching above `/tmp` for one.
+A path you name is used exactly as given, with no walk upward from it. `on devbox:/tmp` fails with `Cannot launch "<name>": /tmp on devbox is not a git repository.` rather than searching above `/tmp` for one. Your remote home directory is the one exception. If `on devbox:~` names a home directory that isn't a git repository, it's treated like naming no path, so a missing clone can be offered there (see [When the host has no clone of the project](#when-the-host-has-no-clone-of-the-project)).
 
 ## Sign in through the tab
 
 <img class="agent-float left" src="/agents/malik-south-west.png" alt="" />
 
-The tab opens right away, before anything is checked, and shows the live SSH session as its body. Whatever SSH asks for appears there: a password, a key passphrase, host key verification, a 2FA code. Answer by typing into the tab. There's no dialog and nothing is asked in the tab you launched from.
+Janissary first checks the name against your open tabs and the [Sessions](/user-documentation/tab-types/sessions) list. A name you typed that's already taken is refused, and no tab opens. Otherwise the tab opens right away, before the host has checked anything, and shows the live SSH session as its body. Whatever SSH asks for appears there: a password, a key passphrase, host key verification, a 2FA code. Answer by typing into the tab. There's no dialog and nothing is asked in the tab you launched from.
 
 Each independent remote launch opens its own session, so a [profile](/user-documentation/automation/profiles) that opens several remote tabs asks you several times. Shells created with a remote tab's ➕ button share that tab's existing workspace and session, so they do not ask you to sign in again.
 
@@ -117,9 +117,39 @@ The remote path has to be a clone of this project: a git repository whose `origi
 /srv/proj is not a clone of this project. Clone https://github.com/you/project.git into /srv/proj? [y/N]
 ```
 
-Press `y` to clone. `n`, Enter, Escape, or Ctrl-C declines. The question comes up when the address names a path that doesn't exist, or when it names no path (or `~`) and nothing is found above your login directory. In the second case the clone goes into a folder named after the repository in the remote home directory, such as `~/project`, and later `on <host>` launches use that folder without asking.
+Press `y` to clone. `n`, Enter, Escape, or Ctrl-C declines. Any other key is ignored and the question stays up. The question comes up when the address names a path that doesn't exist, or when it names no path (or `~`) and no clone of this project is found above your login directory. That includes finding a repository that belongs to a different project. In the second case the clone goes into a folder named after the repository in the remote home directory, such as `~/project`, and later `on <host>` launches use that folder without asking. That question reads `<home> has no clone of this project. Clone <url> into <home>/<repo-name>? [y/N]`.
 
-The clone uses this project's `.janissary/github-token` when the `origin` is on GitHub, so a host with no GitHub access of its own can still clone a private repository. The token is never written to the remote host. Once the workspace is ready, `Cloned <url> into $root on <host>.` appears in the notifications feed — the clone landed in that host's own copy of the project, which `on <host>` identifies.
+The clone is silent. While it runs, the placeholder shows `Cloning <url> into <path>…`, and git's own output isn't shown. Once the workspace is ready, `Cloned <url> into $root on <host>.` appears in the notifications feed. The clone landed in that host's own copy of the project, which `on <host>` identifies.
+
+Two clones happen, and they use the token differently. The project clone uses only the GitHub token you forward, and only when the `origin` is on `github.com`, in which case it fetches the HTTPS form of the `origin`. The workspace clone that follows uses the forwarded token too, but falls back to the remote's own `github-token` when you forward none. Neither clone writes the token to the remote host, puts it in a URL, or keeps it in git's config. With no token, or an `origin` on another host, a clone uses the git access the host already has. Your machine's other git credentials, such as a credential helper or SSH keys, are never used. An `origin` that git would read as an option (it starts with `-`) or as a command (`ext::` or `fd::`) is refused at once, and nothing is created.
+
+A workspace clone is shallow, the same as a local one. A shell takes the newest commit of each branch, and a harness takes the newest ten. Every branch is there either way, and `git fetch --unshallow` inside the workspace fetches the rest of the history.
+
+#### When two launches want the same clone
+
+If two launches reach the same missing folder on the same host at once, such as two tabs from one profile, only the first asks. The other waits silently, then uses the clone without asking. If the first is declined, cancelled, or fails, the waiting launch asks for itself. A host that can't check for the other launch fails the offer instead of hanging, and a later launch can try again.
+
+#### Cancel a clone
+
+Closing the placeholder tab or losing the SSH session while the question is up counts as declining. Doing either while the clone runs stops it. A cancelled or failed clone removes the folders it created, including any parent folders it had to make. If `~/<repo-name>` already existed and was empty, the folder stays and only what the clone put in it goes. Nothing that existed before the clone is touched.
+
+#### When the host can't give you a root
+
+Every failure to settle a root shows in the placeholder before it closes. It is also posted to the notifications feed, attributed to the tab you typed the launch in. These lines keep the absolute path, since it's the folder you'd go and fix. Credentials in the other repository's `origin` or in git's error line are removed before anything is shown.
+
+- `Cannot launch "<name>": <path> on <host> is not a clone of this project — clone declined.`
+- `Cannot launch "<name>": cloning <url> into <path> on <host> failed — <reason>.`, where `<reason>` is git's first error line.
+- `Cannot launch "<name>": <path> on <host> is a clone of <other-url>, not <this-url>.`
+- `Cannot launch "<name>": <path> on <host> is not a git repository.`
+- `Cannot launch "<name>": <path> on <host> exists and is not a clone of this project.`, when `~/<repo-name>` holds something else.
+- `Cannot launch "<name>": <path> on <host> has no "origin" remote.`
+- `Cannot launch "<name>": cannot name a folder for <url> under <home> on <host>.`
+
+If your own project has no `origin`, nothing is offered. A missing path then fails with `Cannot launch "<name>": <path> on <host> does not exist.` No repository above the login directory fails with `Cannot launch "<name>": no git repository found at or above <dir> on <host>.` Attaching a parked session never offers a clone either.
+
+### When a process won't start on the host
+
+A terminal that can't start, or a shell program that's missing or not executable, ends only that one process, with exit code 1. The tab sees the process exit. The reason isn't forwarded to it. Every other tab on the same connection keeps running, and later requests are still answered. A remote shell whose zsh exits before its first prompt posts `Failed to start "<name>" on <host>: zsh exited before its first prompt.` to the notifications feed.
 
 ### When the name is already in use
 
@@ -158,7 +188,7 @@ While connected, screen captures, recordings, and busy detection are worked out 
 
 Remote harnesses continue to handle permission prompts while detached or reconnecting when auto-accept is enabled. If Janissary cannot clear a prompt, its notification is queued and appears in the notifications feed after you attach again, in the order it happened. Captures and queued notifications do not survive the remote session expiring or being terminated.
 
-A remote tab still can't launch its own remote tab. There is no `files on <address>` form without an existing tab on that host, and files cannot be copied between machines or handed to `open external` from a remote tree.
+A remote shell can't launch another remote shell, though `agent on <host>` does work from a remote tab. There is no `files on <address>` form without an existing tab on that host, and files cannot be copied between machines or handed to `open external` from a remote tree.
 
 ## Open a standalone remote shell
 
