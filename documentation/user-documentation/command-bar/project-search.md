@@ -8,7 +8,7 @@ The search tab finds every place a phrase appears across your whole project and 
 search parseConfig
 ```
 
-Or press `Cmd+Shift+F` from any tab, which does the same as a bare `search`. Use [Quick open](/user-documentation/command-bar/quick-open) when you know a file's name and want to jump to it. Use the search tab when you want to know where something is used.
+Or press `Cmd+Shift+F` while the app has keyboard focus, which does the same as a bare `search`. A focused full-screen harness or SSH terminal sends that chord to its program, and an embedded web page keeps it for its browser; switch to another app tab to start project search. Use [Quick open](/user-documentation/command-bar/quick-open) when you know a file's name and want to jump to it. Use the search tab when you want to know where something is used.
 
 ## Open the search tab
 

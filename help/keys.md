@@ -4,14 +4,14 @@
 
 | Key | Action |
 | --- | ------ |
-| `Shift+←` / `Shift+→` / `Cmd+Shift+[` / `Cmd+Shift+]` | Switch to the previous / next tab |
+| `Shift+←` / `Shift+→` / `Cmd+Shift+[` / `Cmd+Shift+]` | Switch to the previous / next tab; no-op with only one eligible center tab |
 | `Ctrl+←` / `Ctrl+→` | Move the current tab left / right |
 | `Ctrl+R` | Open the command history picker (a shell tab opens its own history instead — see **Shell tab controls**) |
 | `Ctrl+Shift+V` / `Cmd+Shift+V` | Open the clipboard-history popup (type `clip` for the same thing); choosing an entry pastes it at the cursor in the command bar, an editor buffer, or a terminal prompt. `Ctrl+V` and `Cmd+V` are untouched |
 | `Ctrl+G` | Open the fuzzy tab navigator (also closes it if already open) |
 | `Ctrl+A` | Open the task picker (executable `ai/tasks/*.md` files, project and Janissary); Return inserts it into the command line at the cursor without running. Reaches the terminal instead while a shell tab's terminal holds the keyboard |
-| `Cmd+P` | Open the Quick Open file finder (fuzzy-match a project file; Return opens it in an editor tab) |
-| `Cmd+Shift+F` | Open or focus the project-wide search tab, scoped to the workspace of the focused tab |
+| `Cmd+P` | Open the Quick Open file finder when the key reaches Janissary; a focused harness or SSH terminal sends it to its program |
+| `Cmd+Shift+F` | Open or focus the project-wide search tab when the key reaches Janissary; a focused harness or SSH terminal sends it to its program |
 | `Cmd+T` | Open a new shell tab (same as typing `shell`); a shell tab opens another shell instead |
 | `Cmd+W` / `Ctrl+W` | Close the current tab (no-op while a picker or any modal dialog is open) |
 | `Shift+Tab` | Move keyboard focus to the next application section (left → center → right sidebar/panel → reporting), looping; the visible tab in that section gets focus. No-op while a picker, the clipboard-history popup, or a modal dialog is open. A shell tab keeps the key for its own two surfaces; in an editor tab's text it outdents instead; in a pending question panel it moves backward between its buttons |
@@ -28,7 +28,8 @@
 | `Ctrl+T` | Expand / collapse ACP tool steps in the response panel |
 | `Cmd+F` | Search for a line in an editor buffer |
 | `Cmd+N` / `Ctrl+N` (conversation list) | Create and open a new conversation |
-| `Ctrl+C` | Exit |
+| `Backspace` / `Delete` | Delete the character before / after the cursor |
+| Printable characters | Insert at the command cursor |
 
 Within a `files` command, Tab offers matching clause words before paths. It completes tab labels after `in`, sides after `on`, detail modes after `with`, and open navigator labels after `print`. Paths after a view clause complete against the local tab named by `in`; a quoted label is decoded for this lookup, while a remote or unknown tab has no path suggestions. Names with spaces or quotes are offered quoted, and nothing completes inside an open quote. Whitespace inside a quoted directory does not stop path completion: `files expand "my dir"/ne` completes a child of `my dir`. For example, `files s` can offer `select` and matching paths.
 
