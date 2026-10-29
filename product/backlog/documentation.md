@@ -2,8 +2,6 @@
 
 ## ready
 
-* sql-database (8/10) — 47 of 95 facts are covered, 43 are missing, and 5 are wrong. Correct primary-key fallback, bare-`sql` recency, docking case, insert pending-state, export limits/failures, and deleted-database connection wording in `documentation/user-documentation/tab-types/sql-browser.md`, `documentation/user-documentation/command-bar/connections.md`, and `help/sql.md`; fill in filter/null, object-switch, foreign-key, CSV/JSON, focus, and result-file behavior. Evidence is `product/specs/sql-database.md`, `src/plugins/dock-argument.ts`, `src/plugins/sql/activate.ts`, `src/database/grid-sql.ts`, `src/connections.ts`, `src/database/export.ts`, `src/database/console-read.ts`, `web/src/plugins/sql/InsertForm.tsx`, `web/src/plugins/sql/SqlConsole.tsx`, and `web/src/plugins/sql/selection.tsx`; retain concise command guidance in `documentation/user-documentation/command-bar/database.md` and `help/sql.md`.
-
 * ssh-tab (5/10) — 19 of 20 facts are covered, 0 are missing, and 1 is wrong. Correct the statement in `documentation/user-documentation/advanced-agents/harness.md` that `!ssh <host>` opens an inline terminal: it runs through the captured-shell path. Verify against `product/specs/ssh-tab.md`, `src/commands/shell.ts`, `src/shell/manager.ts`, and `src/shell/index.ts`; `help/ssh.md` correctly documents bare `ssh` launches.
 
 * state-directory (8/10) — 7 of 10 facts are covered, 2 are missing, and 1 is wrong. State that `.janissary/scripts/` survives launch cleanup and explain system-schedule Git exclusion/tracked-target behavior in `documentation/user-documentation/automation/scheduling.md`; remove the unsupported assurance that all project `.janissary/` directories are ignored from `documentation/user-documentation/advanced-agents/tokens.md`. Evidence is `product/specs/state-directory.md`, `src/state/dirs.ts`, `src/schedule/system/store.ts`, `src/schedule/system/local-exclude.ts`, `src/schedule/system/runscript-files.ts`, and `src/project/init.ts`; keep `help/schedule.md`, `help/scripts.md`, and `help/commands.md` consistent.
@@ -34,6 +32,7 @@
 
 ## resolved
 
+* sql-database — documented in documentation/user-documentation/tab-types/sql-browser.md, help/sql.md (removed 2026-10-29)
 * sleep-and-resume — documented in documentation/user-documentation/getting-started/sleep-and-resume.md, documentation/user-documentation/tab-types/file-navigator.md, documentation/user-documentation/advanced-agents/remote-agents.md (removed 2026-10-29)
 * sidebars — documented in documentation/user-documentation/getting-started/tabs.md, documentation/user-documentation/tab-types/file-navigator.md (removed 2026-10-29)
 * shell-tab — documented in documentation/user-documentation/command-bar/shell.md, documentation/user-documentation/getting-started/keyboard.md, documentation/user-documentation/tab-types/editor.md (removed 2026-10-29)
