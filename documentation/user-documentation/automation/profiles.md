@@ -9,13 +9,15 @@ profile launch writing-code
 profile list
 ```
 
-`profile launch <name>` runs the profile's commands one after another, the way [`execute`](/user-documentation/automation/scheduling#run-a-runscript-now) runs a runscript. `profile list` names the profiles you have. A name that doesn't exist gets `No profile named "<name>".`
+`profile launch <name>` runs the profile's commands one after another, the way [`execute`](/user-documentation/automation/scheduling#run-a-runscript-now) runs a runscript. `profile list` prints the names of the profiles you have, one per line, in the transcript of the tab you typed it in. Your project's profiles come first, then the built-in ones, and each group is sorted alphabetically. With none to show, it prints `No profiles.` A name that doesn't exist gets `No profile named "<name>".`
+
+A mistyped command prints its usage line instead. `profile` on its own, or with a subcommand other than `launch` or `list`, prints `Usage: profile launch <name> | profile list`. Only the first word after `launch` is the name, so anything after it is ignored.
 
 ![The tab strip after profile launch demo: the two editor tabs its runscript opened, beside the launch shell.](/screenshots/profile-group.png)
 
 ## Picking a profile to launch
 
-Bare `profile launch`, with no name, opens a picker with a **Project** section followed by a **Janissary** section for the profiles bundled with the app. `↑`/`↓` move the selection and skip the section labels. `Enter` or a click fills the command line with `profile launch <name>` without submitting it, so you can review or edit it first. `Escape` closes the picker without picking anything.
+Bare `profile launch`, with no name, opens a picker with a **Project** section followed by a **Janissary** section for the profiles bundled with the app. Each section lists its profiles alphabetically. A built-in profile you've overridden appears only under **Project**, and a section with nothing in it is left out. With no profiles at all, the picker shows `(no profiles)`. `↑`/`↓` move the selection and skip the section labels. `Enter` or a click fills the command line with `profile launch <name>` without submitting it, so you can review or edit it first. `Escape` closes the picker without picking anything.
 
 Opened from a shell's command bar, the selection replaces that shell's draft, including when the shell is docked. If the shell closes while the picker is open, selection does not put the command into another tab. Opened from a harness, selection sends the command directly to that harness.
 
@@ -27,7 +29,7 @@ The bundled ones are `debugging`, `default`, `features`, `planning`, and `produc
 
 <img class="agent-float left" src="/agents/dogan-south-east.png" alt="" />
 
-Your profiles live in the `profiles/` directory in your project: plain files meant to be committed and shared. Janissary doesn't create that directory for you, so add it yourself the first time. Each profile is a runscript named after the profile, like `writing-code.rs`. Janissary also includes built-in profiles. If both sources use the same name, your project copy wins, so you can customize a built-in profile by adding a same-named file to your own `profiles/` directory.
+Your profiles live in the `profiles/` directory in your project: plain files meant to be committed and shared. Janissary doesn't create that directory for you, so add it yourself the first time. It sits outside the `.janissary/` state folder, and Janissary never clears it when it starts, so your profiles are still there on the next launch. Each profile is a runscript named after the profile, like `writing-code.rs`. Janissary also includes built-in profiles. If both sources use the same name, your project copy wins, so you can customize a built-in profile by adding a same-named file to your own `profiles/` directory.
 
 A runscript holds one command per line, and Janissary skips blank lines and lines that start with `#`. A line is anything you could type into a command bar: a Janissary command such as `harness`, `edit`, `files`, or `layout`, or a shell command.
 
@@ -43,13 +45,17 @@ tab focus builder
 
 The lines run in the project's managed system shell, in order, and each command finishes before the next one starts. Nothing is printed when the profile starts. A line's output goes to the system shell rather than the tab you launched from, and a failing line doesn't stop the lines after it.
 
-Only `.rs` files are profiles. Any other file in `profiles/` is ignored, so it never shows up in `profile list` or the picker.
+Only `.rs` files are profiles. Any other file in `profiles/` is ignored, so it never shows up in `profile list` or the picker. The same goes for folders, and for a `.rs` file that is really a symlink. Launching a symlinked profile by name still finds it, and it still takes the place of a built-in profile with that name, but Janissary refuses to read it and reports `Could not read runscript for profile "<name>".` rather than falling back to the built-in copy.
 
 ## Launching a profile again
 
 <img class="agent-float" src="/agents/ekrem-south-west.png" alt="" />
 
 Launching a profile runs its commands again against whatever is already open. It doesn't close the tabs the last launch opened. A `harness … as <name>` line whose name is still in use is refused, with its `Cannot launch "<name>": …` line in the [notifications](/user-documentation/tab-types/notifications) feed, and the rest of the profile keeps going. Close the old tabs first when you want fresh ones.
+
+If the system shell can't start, nothing from the profile runs, and the [notifications](/user-documentation/tab-types/notifications) feed gets `System shell could not start: <reason>.`
+
+A profile can launch other profiles, itself included. Nothing checks for a loop, so a profile with the line `profile launch <its own name>` keeps queuing itself again.
 
 A runscript that can't be read safely, such as a symlink, reports `Could not read runscript for profile "<name>".`. If a launch fails partway, the tab you launched it from gets `Profile command failed: <reason>.` so the command does not appear unfinished.
 

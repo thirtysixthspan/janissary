@@ -15,4 +15,6 @@ Launch a profile or list the available profiles.
 **Examples**
 
 - `profile launch review` launches the profile named `review`.
-- `profile list` opens the list of available profiles.
+- `profile list` prints the available profiles in the transcript, one name per line, project profiles first and then built-in ones, or `No profiles.` when there are none.
+
+Bare `profile launch` opens a picker of the available profiles. `profile` alone, or with any other subcommand, prints `Usage: profile launch <name> | profile list`. A name with no profile prints `No profile named "<name>".`
