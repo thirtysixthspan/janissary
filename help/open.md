@@ -22,7 +22,7 @@ Open files in the application or show web pages in an embedded tab. Use `open ex
 - View a web page inside the application, including a bare address with `page`.
 - Hand a file or web address to its configured or default external viewer.
 
-The `external` and `page` keywords work in either order. `open` only handles known file types, so a file with no extension reports `No opener for "(none)" files.`; use `edit <path>` to open it as text.
+The `external` and `page` keywords work in either order. `open` only handles known file types, so a file with no extension reports `No opener for "(none)" files.`; use `edit <path>` to open it as text. If nothing can open an external file, the message names the viewer, such as `No PDF viewer available. The file is at <file>`.
 
 **Examples**
 
