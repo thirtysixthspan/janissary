@@ -24,6 +24,8 @@ The query follows the shape `> <persona> <request text>`, for example `> assista
 
 While your caret is in the persona-name word, `Tab` completes it against the personas available for editor requests — a separate list from the ones `monitor` offers, since a persona written for watching a transcript and one written for editing a buffer do different jobs. This is the only autocomplete the editor offers; it doesn't complete words anywhere else in the buffer.
 
+The query line takes the same editing keys as the buffer. `Cmd+Z` undoes and `Cmd+Shift+Z` redoes, `Cmd+A` selects the whole query, `Cmd+C` and `Cmd+X` copy and cut, and `Cmd+←` and `Cmd+→` jump to the ends of the line. The emacs-style keys such as `Ctrl+B`, `Ctrl+F`, and `Ctrl+K` work too, and `Home`, `End`, `Backspace`, and `Delete` do what you'd expect. `Cmd+S` or `Ctrl+S` still saves the file you're editing. Undo only covers the query's own edits, and a fresh query line never inherits the history of one you closed. Pasting or typing with an IME while the query has focus lands in the query, not in the buffer.
+
 The buffer and the query line are edited interchangeably while the query is open: click into either one to move focus there, and typing affects whichever one currently has it. Up/Down at the query's first or last line move focus into the buffer at the same column, landing on the line just above or below the query's anchor; the reverse works the same way from the buffer.
 
 ## Sending the request
@@ -48,7 +50,9 @@ Only one request can be in flight or awaiting resolution per editor tab at a tim
 
 The persona is primed with the buffer's current content — including any unsaved edits, but never the query text itself — plus your request. It can propose one or more edits anywhere in the file, not just at the query's own location. Each proposed change previews inline immediately: removed lines are struck through, and inserted lines are highlighted with a `+` in place of a line number.
 
-Each change carries its own thumbs-up/thumbs-down so you can accept or decline it independently of any others. With more than one change pending, a banner above the buffer reads "Accept or decline each change below" with a count of what's left; typing elsewhere in the buffer is blocked until every change is resolved.
+Each change carries its own thumbs-up/thumbs-down, right-aligned on its last inserted line, so you can accept or decline it independently of any others. Click them in any order. With more than one change pending, a banner above the buffer reads "Accept or decline each change below" with a count such as `2 of 3 remaining`. With a single change there's no banner, because its own icons are all you need. Every other keystroke is ignored until every change is resolved, so you can't edit the buffer in the meantime. Switching to another tab and back leaves the pending changes as they were.
+
+Accepting a change is its own undo step. `Cmd+Z` right afterward puts the buffer back exactly as it was before that accept, and your earlier edits stay in place for later undos. The caret and any other selections stay where they were, pulled back to the nearest line that still exists if the change shortened or removed theirs. Declining a change never touches the buffer. If the buffer no longer matches the text a change was written against, that change is dropped without editing anything or adding an undo step, and it counts as not accepted.
 
 The query line closes automatically once you've accepted at least one change. If you decline them all — or the persona proposed nothing — it stays open with your text intact so you can edit and retry.
 

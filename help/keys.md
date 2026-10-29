@@ -112,6 +112,7 @@ View clauses restore only the named parts of a local tree; remote view clauses a
 | `Tab` / `Shift+Tab` | Indent a multiline selection / outdent the selected lines |
 | `Cmd+D` | Select the word under the caret, then add its next exact occurrence |
 | `Cmd+U` | Drop the most recently added selection |
+| `>` (on an empty line) | Open the persona request line; it takes the same editing keys as the buffer, with its own undo history |
 | `Escape` (with multiple selections) | Collapse to the most recently added selection |
 | Window shortcuts | Tab switching, tab moving, `Ctrl+G`, `Ctrl+R`, `Cmd+P` and `Cmd+T` work from the buffer too |
 
