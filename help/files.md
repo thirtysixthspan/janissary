@@ -18,6 +18,8 @@ Open a file navigator in the current tab's working directory, or target a path o
 
 `files print <tab>` prints a command that reopens an existing navigator.
 
+Press `Tab` to complete clause words before matching paths. The once-only `in`, `on`, and `with` clauses disappear after use; `print` is available only as the first word. After `in`, Tab offers open tab labels and display titles; after `on`, sides; after `with`, detail modes; after `print`, open navigator labels. Once you enter the target of `files print`, Tab offers no more candidates. Paths after a view clause use the local working directory named by `in`, or the current tab's directory if you omit it. An unknown or remote target has no path suggestions.
+
 **Use cases**
 
 - Browse the current working directory or start at a specific path.

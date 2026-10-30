@@ -2,8 +2,6 @@
 
 ## ready
 
-* tab-completion (6/10) — 28 of 42 facts are covered, 13 are missing, and 1 is wrong. Correct the generic spaced-target quoting claim and explain that `send`, `queue`, and `schedule` parse a single target token while `close` consumes the remainder; add the meaningful files/help/catalog and monitor candidate rules to `documentation/user-documentation/command-bar/tab-completion.md` and `help/keys.md`. Evidence is `product/specs/tab-completion.md`, `src/completion/index.ts`, `src/completion/files.ts`, `src/completion/target-handlers.ts`, `src/completion/runscript-commands.ts`, `src/completion/handlers.ts`, `src/commands/send.ts`, `src/commands/queue.ts`, `src/schedule/index.ts`, and `src/tab/lookup.ts`; reconcile `documentation/user-documentation/getting-started/tabs.md` and `help/files.md`.
-
 * tab-navigator (6/10) — 16 of 23 facts are covered, 6 are missing, and 1 is wrong. State that hidden tabs are excluded, correct the claim that aliases are not searched, and clarify `nav <query>` consumption and substring matching in `documentation/user-documentation/command-bar/tab-navigator.md` and `help/nav.md`. Evidence is `product/specs/tab-navigator.md`, `web/src/pickers/tab-nav-match.ts`, `web/src/pickers/TabNavPicker.tsx`, `web/src/pickers/tab-nav-keys.ts`, and `web/src/shared/command-bar/AppCommandBar.tsx`; `help/keys.md` already gives the chord.
 
 * tab-plugins (8/10) — 44 of 48 facts are covered, 1 is missing, and 3 are wrong. Correct `plugins` output as transcript text rather than a list tab, refresh the stale bundled-plugin roster, and replace stale API versions in `documentation/user-documentation/command-bar/plugins.md` and `help/plugins.md`; add exact shell fallback/clone-failure notices to `documentation/user-documentation/command-bar/shell.md`. Verify against `product/specs/tab-plugins.md`, `src/plugins/catalog.ts`, `src/plugins/status.ts`, `src/commands/plugins.ts`, `src/plugins/api-capabilities.ts`, `src/plugins/shell/activate.ts`, and `src/plugins/launch-tab.ts`.
@@ -28,6 +26,7 @@
 
 ## resolved
 
+* tab-completion — documented in documentation/user-documentation/command-bar/tab-completion.md, documentation/user-documentation/getting-started/tabs.md, help/keys.md, help/files.md (removed 2026-10-30)
 * state-directory — documented in documentation/user-documentation/automation/scheduling.md, documentation/user-documentation/advanced-agents/tokens.md, help/schedule.md, help/scripts.md, help/commands.md (removed 2026-10-30)
 * ssh-tab — documented in documentation/user-documentation/advanced-agents/harness.md (removed 2026-10-30)
 * sql-database — documented in documentation/user-documentation/tab-types/sql-browser.md, help/sql.md (removed 2026-10-29)
