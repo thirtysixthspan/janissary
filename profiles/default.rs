@@ -1,4 +1,4 @@
-files left expand product expand product/backlog $root select product/backlog
+files left expand product expand product/backlog select product/backlog $root
 sessions right
 notifications right
 layout window 1440 900
