@@ -41,7 +41,8 @@ Create or manage a tab's timers, or schedule an existing project runscript.
 - Run a tab command at a later time or on a recurring schedule.
 - Target another tab's schedule by its label or display alias with `in <tab>`; omit it to use the issuing tab.
 - List, cancel, or clear timers for the issuing tab or a named tab.
-- Schedule, list, cancel, or clear project-owned runscripts that persist across restarts.
+- Schedule, list, cancel, or clear project-owned schedules that run existing runscripts and persist across restarts.
+- System schedules and runscripts survive launch cleanup in `.janissary/system-schedules.json` and `.janissary/scripts/`. In a Git project, Janissary adds either path to the clone's `.git/info/exclude` when Git does not already ignore it; it never edits `.gitignore`. If Git already tracks the schedule file or a runscript, saving a system schedule fails with `Could not save system schedule.`
 - For one-shot schedules, `at <time>` uses the next occurrence of that time, and `on <date>` defaults to 9:00am when no time is given.
 - A time that is now or earlier rolls to the next day. A date that has passed this year rolls to next year.
 - Month and weekday names need at least three letters, so `aug` and `mon` work.

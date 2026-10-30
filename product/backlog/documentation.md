@@ -2,8 +2,6 @@
 
 ## ready
 
-* state-directory (8/10) — 7 of 10 facts are covered, 2 are missing, and 1 is wrong. State that `.janissary/scripts/` survives launch cleanup and explain system-schedule Git exclusion/tracked-target behavior in `documentation/user-documentation/automation/scheduling.md`; remove the unsupported assurance that all project `.janissary/` directories are ignored from `documentation/user-documentation/advanced-agents/tokens.md`. Evidence is `product/specs/state-directory.md`, `src/state/dirs.ts`, `src/schedule/system/store.ts`, `src/schedule/system/local-exclude.ts`, `src/schedule/system/runscript-files.ts`, and `src/project/init.ts`; keep `help/schedule.md`, `help/scripts.md`, and `help/commands.md` consistent.
-
 * tab-completion (6/10) — 28 of 42 facts are covered, 13 are missing, and 1 is wrong. Correct the generic spaced-target quoting claim and explain that `send`, `queue`, and `schedule` parse a single target token while `close` consumes the remainder; add the meaningful files/help/catalog and monitor candidate rules to `documentation/user-documentation/command-bar/tab-completion.md` and `help/keys.md`. Evidence is `product/specs/tab-completion.md`, `src/completion/index.ts`, `src/completion/files.ts`, `src/completion/target-handlers.ts`, `src/completion/runscript-commands.ts`, `src/completion/handlers.ts`, `src/commands/send.ts`, `src/commands/queue.ts`, `src/schedule/index.ts`, and `src/tab/lookup.ts`; reconcile `documentation/user-documentation/getting-started/tabs.md` and `help/files.md`.
 
 * tab-navigator (6/10) — 16 of 23 facts are covered, 6 are missing, and 1 is wrong. State that hidden tabs are excluded, correct the claim that aliases are not searched, and clarify `nav <query>` consumption and substring matching in `documentation/user-documentation/command-bar/tab-navigator.md` and `help/nav.md`. Evidence is `product/specs/tab-navigator.md`, `web/src/pickers/tab-nav-match.ts`, `web/src/pickers/TabNavPicker.tsx`, `web/src/pickers/tab-nav-keys.ts`, and `web/src/shared/command-bar/AppCommandBar.tsx`; `help/keys.md` already gives the chord.
@@ -30,6 +28,7 @@
 
 ## resolved
 
+* state-directory — documented in documentation/user-documentation/automation/scheduling.md, documentation/user-documentation/advanced-agents/tokens.md, help/schedule.md, help/scripts.md, help/commands.md (removed 2026-10-30)
 * ssh-tab — documented in documentation/user-documentation/advanced-agents/harness.md (removed 2026-10-30)
 * sql-database — documented in documentation/user-documentation/tab-types/sql-browser.md, help/sql.md (removed 2026-10-29)
 * sleep-and-resume — documented in documentation/user-documentation/getting-started/sleep-and-resume.md, documentation/user-documentation/tab-types/file-navigator.md, documentation/user-documentation/advanced-agents/remote-agents.md (removed 2026-10-29)
