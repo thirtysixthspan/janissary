@@ -216,7 +216,7 @@ outside the remote workspace. The window titlebar reads `Janissary (<version>): 
 
 Shell commands keep their output in the terminal’s scrollback. Application replies appear there as rendered Markdown; ACP replies stream in the panel above the command bar. Paths in supported rendered replies open an editor at the referenced line.
 
-While the transcript is pinned at the bottom, it follows incoming output. Scrolling away pauses following so you can read earlier lines. Scroll back near the bottom or press `Escape` to resume following and return to the latest output.
+While you stay at the bottom, the transcript follows incoming output and keeps the latest lines in view, even through a long stream. Scrolling away pauses following. It resumes when you scroll to within 40 pixels of the bottom. Press `Escape` to jump to the bottom and resume following.
 
 ## Agent tool steps fold up
 
