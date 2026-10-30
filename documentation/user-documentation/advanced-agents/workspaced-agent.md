@@ -8,9 +8,9 @@ shell emrah --no-workspace
 harness claude
 ```
 
-The clone is made from your repository's `origin` remote and lands at `$root/workspace/<name>`; the shell starts inside it, so everything the agent does happens in the clone, not your checkout. Harness workspaces keep the newest ten commits of every branch; shell workspaces keep one. You can fetch the rest from inside the clone with `git fetch --unshallow`. `-w`/`--workspace` explicitly confirms the default. `--no-workspace` opts out. Why you'd want a workspace — and exactly what the isolation allows and blocks — is covered in [Workspacing](/user-documentation/advanced-agents/workspacing).
+The clone is made from your repository's `origin` remote and lands at `$root/workspace/<name>`; the shell starts inside it, so everything the agent does happens in the clone, not your checkout. Shell workspaces keep the newest commit of every branch; harness workspaces keep the newest ten commits of every branch. Both include every branch, but older history is left out. Run `git fetch --unshallow` inside the clone to fetch the rest. `-w`/`--workspace` explicitly confirms the default, and `--no-workspace` wins if you pass both. A command with `on <address>` always uses a remote workspace, even with `--no-workspace`; see [Remote shells and harnesses](/user-documentation/advanced-agents/remote-agents). Why you'd want a workspace — and exactly what the isolation allows and blocks — is covered in [Workspacing](/user-documentation/advanced-agents/workspacing).
 
-Without a repository or an origin remote, a shell opens unsandboxed and explains why; a harness launch is refused.
+If the project has no Git repository, or its `origin` cannot be read, a shell opens without a workspace. A harness launch without a usable repository is refused. The [shell guide](/user-documentation/command-bar/shell#open-a-shell-tab) gives the exact fallback and clone-failure messages.
 
 Because the name becomes a folder, a workspaced launch has to be a name and nothing else. Empty, `.`, `..`, and anything containing a `/` or a `\` are refused before anything is cloned or removed, with the line spelled out in full:
 
@@ -20,7 +20,7 @@ Cannot launch "feature/x": a workspace name must be a single folder name — not
 
 This is the one name rule that only applies with `-w`; without a workspace the name is free to be an IP address or anything else you like. A harness workspace folder follows the tab's label, so a second `harness claude` gets the folder `claude-2`.
 
-The tab appears while its workspace is being provisioned. Shell command-bar input waits in the queue until zsh reaches its first prompt. The metadata row shows a provisioning spinner until the workspace is ready. A failed clone is reported and the tab closes shortly afterwards.
+The tab appears while its workspace is being provisioned. Shell command-bar input waits in the queue until zsh reaches its first prompt. The metadata row shows a provisioning spinner until the workspace is ready.
 
 The ➕ button on a shell or harness opens another shell in that same workspace and group. It retains the clone while either tab uses it. Typed `shell` and `harness` launches create fresh workspaces instead.
 

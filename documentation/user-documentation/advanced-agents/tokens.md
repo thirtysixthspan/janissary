@@ -7,7 +7,7 @@ Janissary reads five optional token files from a `.janissary/` directory. Each i
 | `github-token` | working `git push` and `gh` | you want to push or open pull requests from inside a workspace |
 | `claude-token` | a signed-in `claude` harness | the machine running the tab has no usable keychain |
 | `opencode-token` | access to OpenCode Zen and OpenCode Go | your harness uses either of those providers |
-| `kilo-token` | access to the Kilo gateway | your opencode harness routes through Kilo |
+| `kilo-token` | access to the Kilo gateway as `KILO_API_KEY` | your opencode harness routes through Kilo |
 | `gemini-token` | a working Google provider | your harness talks to Gemini |
 
 None of them is required. Without them, workspaces still clone, run, commit, fetch, and pull.
@@ -62,6 +62,12 @@ A workspaced `opencode` harness uses this file for OpenCode Zen and OpenCode Go.
 
 The key covers the OpenCode Zen and OpenCode Go providers only.
 
+## Get a Kilo key
+
+Save your Kilo gateway API key to `.janissary/kilo-token`. Janissary passes it to workspaced processes as `KILO_API_KEY`.
+
+Janissary doesn't inspect which variable your OpenCode Kilo provider reads. If your setup expects a different name, set that variable in the environment of the Janissary process that will run the workspace.
+
 ## Get a Gemini key
 
 Create an API key in Google AI Studio and save it to `.janissary/gemini-token`. Janissary hands it to workspaced tabs as both `GEMINI_API_KEY` and `GOOGLE_GENERATIVE_AI_API_KEY` — opencode looks for the first when deciding whether the provider is set up and reads the second when it actually sends a request — so a harness pointed at a Google model works from a workspace without you exporting anything.
@@ -70,7 +76,7 @@ You need this for the same reason as the OpenCode key: a workspace can't read th
 
 ## Other providers
 
-Anthropic and OpenAI API keys have no token file. Set the provider's own variable in the environment you start Janissary from and it reaches the workspace untouched:
+Anthropic and OpenAI API keys have no token file. Set the provider's own variable in the environment of the Janissary process that will run the workspace. Workspaced processes inherit it untouched:
 
 | Provider | Variable |
 | --- | --- |
@@ -78,7 +84,7 @@ Anthropic and OpenAI API keys have no token file. Set the provider's own variabl
 | OpenAI | `OPENAI_API_KEY` |
 | Google | `.janissary/gemini-token`, or `GOOGLE_GENERATIVE_AI_API_KEY` |
 
-For ChatGPT subscription authentication, sign in with Codex on the machine running Janissary before starting the app. Janissary reads that saved login at startup and gives each workspace a private OpenCode OAuth copy outside the git clone before its first process starts. OpenCode can refresh its copy, which lasts until the workspace closes; your saved Codex login is never overwritten. Later launches preserve the copy and do not re-create it if you remove it. Missing or invalid saved credentials leave API-key authentication unchanged. Remote workspaces use the remote machine's saved Codex login; your local ChatGPT login is not forwarded.
+For ChatGPT subscription authentication, sign in with Codex on the machine running Janissary before starting the app. Janissary reads that saved login at startup and gives each workspace a private OpenCode OAuth copy outside the git clone before its first process starts. OpenCode can refresh its copy, which lasts until the workspace closes; your saved Codex login is never overwritten. Later launches preserve the copy and do not re-create it if you remove it. This login is available to OpenCode's OpenAI provider in workspaced processes only; non-workspaced processes and browser children don't receive it. Missing or invalid saved credentials leave API-key authentication unchanged. Remote workspaces use the remote machine's saved Codex login; your local ChatGPT login is not forwarded.
 
 If that private copy cannot be prepared, the workspace still starts and reports `ChatGPT OAuth unavailable: could not prepare private OpenCode credentials.`. Existing environment settings and API keys keep working; the failed copy is not used for authentication.
 
