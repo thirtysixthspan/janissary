@@ -2,8 +2,6 @@
 
 ## ready
 
-* websocket-rpc (6/10) — 10 of 14 facts are covered, 4 are missing, and none of the current user docs are wrong. Explain that an unanswered file-navigator mutation may have completed despite its lost reply, and that unanswered file search/Quick Open settles to an empty result; document the shell completion failure path without claiming typed input is preserved. Evidence is `product/specs/websocket-rpc.md`, `web/src/shared/ws/rpc-exchange.ts`, `src/message/file-navigator.ts`, `src/file-navigator/manager/item-operations.ts`, `web/src/file-navigator/useFileNavigatorSearch.ts`, `web/src/pickers/useQuickOpen.ts`, `web/src/plugins/shell/ShellTab.tsx`, and `web/src/plugins/plugin-client-capabilities.ts`; update `documentation/user-documentation/tab-types/file-navigator.md`, `documentation/user-documentation/command-bar/quick-open.md`, `documentation/user-documentation/command-bar/tab-completion.md`, and `help/files.md`.
-
 * workspaced-agent (4/10) — 33 of 42 user-facing facts are covered, 9 are missing, and none of the allowed docs are wrong. Add shell/harness clone-depth and `--no-workspace` precedence, exact shell fallback/failure messages, Kilo credential-variable guidance, and OpenCode OAuth scope/failure details to `documentation/user-documentation/advanced-agents/workspaced-agent.md`, `documentation/user-documentation/advanced-agents/remote-agents.md`, and `documentation/user-documentation/advanced-agents/tokens.md`. Evidence is `product/specs/workspaced-agent.md`, `src/workspace/clone-depth.ts`, `src/plugins/shell/parse-argument.ts`, `src/harness/command-parse.ts`, `src/plugins/shell/activate.ts`, `src/plugins/launch-tab.ts`, `src/project/tokens.ts`, `src/sandbox/environment.ts`, `src/sandbox/opencode-data.ts`, and `src/remote/serve-provision.ts`; the current guide already explains the `gh` credential fallback.
 
 ## development
@@ -14,6 +12,7 @@
 
 ## resolved
 
+* websocket-rpc — documented in documentation/user-documentation/tab-types/file-navigator.md, documentation/user-documentation/command-bar/quick-open.md, documentation/user-documentation/command-bar/tab-completion.md, help/files.md (removed 2026-10-30)
 * video-tab — documented in documentation/user-documentation/tab-types/video-player.md (removed 2026-10-30)
 * task-picker — documented in documentation/user-documentation/command-bar/tasks.md (removed 2026-10-30)
 * tabs — documented in documentation/user-documentation/getting-started/tabs.md, documentation/user-documentation/getting-started/agents.md, documentation/user-documentation/command-bar/shell.md (removed 2026-10-30)
