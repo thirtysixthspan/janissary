@@ -1,6 +1,6 @@
 ### plugins
 
-List bundled tab plugins with their API version, activation state and duration, or their disabled reason.
+Print one status line per bundled tab plugin in the current transcript. Each line shows its required API version and state; active plugins also show their activation time, and disabled plugins show the recorded reason.
 
 **Usage**
 
@@ -13,4 +13,4 @@ List bundled tab plugins with their API version, activation state and duration, 
 
 **Examples**
 
-- `plugins` opens the bundled plugin list.
+- `plugins` prints the bundled plugin statuses without opening a tab.

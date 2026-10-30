@@ -33,7 +33,7 @@
 | `open` | Open images/files in a tab, or web pages embedded (`open https://…` / `open page …`) — sites that refuse framing render too; `open external` uses the OS viewer/browser |
 | `pdf` | `pdf <path>` opens a PDF through the bundled PDF tab plugin; accepts the same paths and wildcards as `open` |
 | `play` | Play a file in the tab for its type: `play devbox` opens its newest `.cast` recording, `play clip.mp4` opens a video, and `play song.mp3` queues audio |
-| `plugins` | List bundled tab plugins with their API version, activation state and duration, or disabled reason |
+| `plugins` | Print bundled tab plugin statuses in the transcript, including API version, state, activation time, or disabled reason |
 | `profile` | Use `profile launch <name>` to launch a profile, or bare `profile launch` to pick one. `profile list` lists the available profiles |
 | `question` | `question ask "<question>"` opens a free-text answer panel; `question approve "<question>" <option> …` opens an option-button panel |
 | `queue` | Queue a command for a shell or another tab supporting queues (`queue <tab> <command>`); bare `queue` opens the interactive queue picker (Ctrl+E) |
