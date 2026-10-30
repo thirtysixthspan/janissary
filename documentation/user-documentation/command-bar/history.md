@@ -2,7 +2,9 @@
 
 <img class="agent-float" src="/agents/ahmed-south.png" alt="" />
 
-Every command you run is remembered, and there are three ways back to one: the `↑`/`↓` arrows, ghost-text suggestions as you type, and the `Ctrl+R` picker. You can also [double-click a past prompt line](/user-documentation/getting-started/tabs#reading-the-transcript) (`❯ <command>`) to run it again. Drag-select text anywhere in the transcript, including across prompt lines, to copy it without running a command or moving keyboard focus. On an ordinary prompt line a single click does nothing. A prompt line belonging to an agent's tool steps is the exception: a single click folds it away or brings it back, the same as `Ctrl+T`.
+Every command you run is remembered, and there are three ways back to one: the `↑`/`↓` arrows, ghost-text suggestions as you type, and the `Ctrl+R` picker. You can also [double-click a past prompt line](/user-documentation/getting-started/tabs#shell-output-and-acp-replies) (`❯ <command>`) to run it again.
+
+If the prompt shows a working directory, double-click the command text after it to run it. Double-clicking the directory or text that is still selected does nothing. Drag-select text anywhere in the transcript, including across prompt lines, to copy it without running a command or moving keyboard focus. On an ordinary prompt line, a single click does nothing. A prompt line belonging to an agent's tool steps is the exception: a single click folds it away or brings it back, the same as `Ctrl+T`.
 
 ## Arrow-key recall
 
