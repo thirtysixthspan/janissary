@@ -2,6 +2,242 @@
 
 All notable changes to this project are documented here.
 
+## [0.22.0] - 2026-10-30
+
+### ⚠ Breaking Changes
+
+- feat(profile)!: remove JSON profiles (#1821)
+- feat(profile)!: remove profile validate (#1818)
+- feat(profile)!: remove profile save (#1817)
+- feat(cli)!: remove the --relaunch flag (#1728)
+
+### Features
+
+- remove JSON profiles (#1821)
+- add runscripts for the built-in profiles (#1820)
+- run a profile's runscript instead of its tabs (#1819)
+- remove profile validate (#1818)
+- remove profile save (#1817)
+- add command-line tab arranging (#1802)
+- restore tree views from files commands (#1803)
+- add layout sizing command (#1801)
+- add command-specific help pages (#1799)
+- add singular conversation command (#1793)
+- offer Open this URL for a selected web address (#1776)
+- clone agent run workspaces ten commits deep (#1775)
+- clone remote workspaces as shallow as local ones (#1774)
+- make shell and harness workspace clones shallow (#1773)
+- configure alerts per event (#1768)
+- type dropped navigator paths as $root and $workspace paths (#1764)
+- search the workspace of the tab a search starts from (#1760)
+- add Search for this above Chat about this (#1758)
+- show the shared git-sync clone as $git-sync (#1748)
+- add a scripts tab for runscripts (#1739)
+- add a New schedule button to the schedules tab (#1737)
+- title sections and size schedule columns to their content (#1736)
+- add create script to make an empty runscript (#1735)
+- add a trash icon to each schedule row (#1734)
+- clear each owner from its section header (#1732)
+- show system schedules in their own section (#1731)
+- pass a Kilo token into workspaced tabs (#1730)
+- persistent system schedules (#1729)
+- remove the --relaunch flag (#1728)
+
+### Bug Fixes
+
+- anchor claude gate detection on the lowest menu (#1868)
+- run command tests for help changes (#1847)
+- copy pointer selections of terminal output and rendered replies (#1823)
+- return list output to shell callers (#1822)
+- npm audit fix package changes
+- release only the current PTY output attachment (#1811)
+- deprecate unused shell capability (#1810)
+- save edits atomically (#1809)
+- share pid lock-file primitives (#1808)
+- notify on protocol version mismatch (#1796)
+- add space after directory indicator (#1794)
+- allow selecting and copying rendered replies (#1792)
+- rename clip command to clipboard (#1791)
+- cache runscript exclusions and split visibility (#1790)
+- bound Git actions and capture overlay shortcuts (#1789)
+- address Git actions by label (#1788)
+- retarget editors after local moves (#1787)
+- share one pending-request primitive and bound live capture queries (#1785)
+- report ACP activity through one mapping for local and remote runs (#1784)
+- let a tab plugin prune per-tab state against its open tabs (#1783)
+- resolve a tab's working directory through one fallback (#1781)
+- withdraw a remote harness's pending auto-resume when its limit clears (#1778)
+- act through each call's own plugin capabilities (#1777)
+- use a shallow sparse product clone (#1772)
+- scope persistence to projects (#1770)
+- block unused keys from command line (#1769)
+- keep saving a renamed remote file to its remote workspace (#1763)
+- clear the selection after a confirmed delete (#1762)
+- keep Ctrl+left-click from opening the row context menu (#1761)
+- run lint-files with the working directory's own ESLint
+- load the matching worker's TypeScript on Node releases where tsx skips worker threads (#1757)
+- report why the matching worker failed instead of "Search matching cancelled" (#1755)
+- let a workspaced process read the installation's security/ directory (#1756)
+- load the matching worker's tsx from Janissary, not the working directory (#1752)
+- give every tree a location button that cycles through the center strip (#1750)
+- coordinate initial and watched reads (#1754)
+- contain tab resource release failures (#1753)
+- scope remote filesystem ports to tab lifetimes (#1749)
+- ellipsis long schedule cells with full text on hover (#1733)
+
+### Documentation
+
+- clarify workspace and credential guidance (#1909)
+- document unavailable request outcomes (#1908)
+- clarify playback controls and seeking (#1907)
+- clarify transcript behavior in user guides (#1906)
+- clarify picker behavior and workflows (#1905)
+- document unread and naming behavior (#1904)
+- refresh bundled plugin documentation (#1903)
+- clarify filtering and command behavior (#1902)
+- clarify tab completion behavior (#1901)
+- clarify persistent schedule storage (#1900)
+- clarify !ssh behavior in harness guide (#1899)
+- cover object switching, filter semantics, foreign keys, focus, and export details in the SQL browser (#1898)
+- correct navigator close on dropped connection and cover expiry cleanup and termination notices (#1897)
+- correct resize button and cover drag limits, default width, hidden tabs, and focusing a docked tab (#1896)
+- correct Cmd+F guidance and cover reply selection, OSC 52, history edge cases, provisioning controls, and transcript limits (#1895)
+- correct captured shell startup and cover bang trimming, unknown commands, cwd tracking, and connection close (#1894)
+- correct confirmation wording and terminate order and cover attach restore and failure lines (#1893)
+- correct spaced-alias targets and cover inline cards and whitespace normalization (#1892)
+- correct file-set, scope fallback, and error visibility in project search (#1890)
+- add a scripts tab page covering rows, keys, actions, and failure messages (#1889)
+- cover rollover rules, exact replies, target limits, missed runs, and create script (#1888)
+- cover the reserved browser port range and the 256-browser limit (#1887)
+- correct remote fallback, scope path shortening, and cover typed prefixes (#1886)
+- cover file format, fallbacks, recovery messages, and what roles do not do (#1885)
+- cover root-clone outcomes, clone tokens, start failures, and session expiry (#1884)
+- clarify quit scope, system tab counting, and cancel focus (#1883)
+- correct file list, open destination, and focus behavior (#1881)
+- add pull request updating how-to (#1880)
+- add pull request testing how-to (#1879)
+- add pull request review how-to (#1877)
+- document list output, usage lines, symlink handling, and launch failures (#1876)
+- correct page-drawing claims and add no-command-bar, selection, and failure details (#1875)
+- correct extensionless open, external fallback, and add keyword order (#1874)
+- document exact messages, banner behavior, and delivery rules (#1872)
+- clarify lifecycle and feed behavior (#1864)
+- clarify preview path and lifecycle (#1863)
+- clarify transcript rendering and links (#1862)
+- clarify launcher configuration and tab summaries (#1861)
+- clarify keyboard navigation (#1858)
+- clarify image editing behavior (#1856)
+- clarify command history behavior (#1854)
+- clarify harness recording behavior (#1852)
+- fill harness guide gaps (#1850)
+- clarify activation and command behavior (#1848)
+- shorten clipboard and SQL descriptions (#1846)
+- explain what the extension reads from a page tab, shell reply links and the missing command bar (#1845)
+- document edit transcript and repeated line jumps, remote save and rename failures, query-line keys, suggestion undo and sync timeouts (#1844)
+- explain that bundled editor shortcuts run locally, fall back when disabled and do nothing silently (#1843)
+- correct diff target to directory only, add status words, collapse rules, layout, comment and refresh details (#1842)
+- correct sql browser ordering, bare sql recency, docking case, result limits and connection close wording, add db usage errors (#1841)
+- correct project scope and sandbox claims, add bare singular command, list ordering, setup failures and scroll behavior (#1840)
+- correct focus restoration, add menu styling, live entries, tab targeting and URL whitespace rules (#1839)
+- correct panel rows and transcript button, add auto-show, close precedence and usage (#1838)
+- state that command text is trimmed after comments are stripped (#1837)
+- correct popup availability, draft and scheduled-label claims, add target parsing, system-shell delivery and scheduled batch outcomes (#1836)
+- correct the clip route, pasteboard access, click targeting and focus rules, add capture and disabled-plugin behavior (#1835)
+- cover help, version and usage outcomes, browser fallback, signals and init output (#1834)
+- correct content, fingerprint and Running claims, add usage errors and missing-window responses (#1833)
+- correct last-track fallback and notification channels, add docking and no-transcript notes (#1832)
+- correct shell terminal theming and cover fixed palettes and unknown-name list (#1831)
+- correct parked remote session restore and cover system shell restart (#1830)
+- correct clipboard cap rules and cover monitor cap, search settings, alert backfill (#1829)
+- correct rename and burst notes, fill execute, help, layout, tab gaps (#1828)
+- correct name pool size, exhaustion, and override guidance (#1827)
+- separate feed record from alerts and cover acp reset (#1826)
+- document monitor, cleanup, clone depth, and launch errors (#1825)
+- document default model, error kinds, and docked link behavior (#1824)
+- refresh documentation gap candidates
+- colocate event classification rationales (#1812)
+- require pull request reviews to cover every changed line and promise
+- promote the restoring a file tree's view plan to ready
+- add draft plan for restoring a file tree's view from the command line (#1800)
+- promote the per-command help pages plan to ready
+- draft the per-command help pages plan (#1798)
+- promote the arranging tabs plan to ready
+- add draft plan for arranging tabs from the command line (#1797)
+- promote the layout command plan to ready
+- add draft plan for the layout command (#1795)
+- plan a silent auto-approved notification type (#1771)
+- end build-a-feature with a review/repair cycle and a pull request update (#1767)
+- skip workspace preparation for every subplan improvement in build-a-complex-feature
+- skip workspace preparation in plan-a-new-feature's improvement passes (#1766)
+- draft per-type notification alerts configuration (#1765)
+- plan workspace-scoped search for the search tab (#1759)
+- explain $janissary and use it to find tasks and scripts
+- allow small FTA rise from extraction in reduce-complexity (#1744)
+- draft scripts tab plan (#1738)
+- promote add system schedules plan to ready
+- improve add system schedules plan
+- update add system schedules plan
+- draft plan for add system schedules (#1727)
+
+### Refactoring
+
+- extract pty data delivery from onEvent (#1873)
+- extract occurrence scoring from contiguousMatch (#1871)
+- extract exclude file read from ensureSystemScheduleExcluded (#1870)
+- extract named schedule parsing from parseScheduleCommand (#1869)
+- extract system schedule cancel from scheduleTopicAction (#1867)
+- extract local launch from launchTab callback (#1866)
+- isolate system schedule date completion checks (#1865)
+- reduce system schedule command complexity (#1859)
+- extract existing shell recovery (#1857)
+- simplify due system schedule firing (#1855)
+- extract tab view flags to reduce complexity (#1853)
+- extract contained skill validation helper (#1851)
+- reduce argument parser complexity (#1849)
+- extract plugin capability bookkeeping (#1816)
+- enforce app-shell import boundaries (#1815)
+- route clipboard access through paste hook (#1814)
+- centralize default layout sizes (#1813)
+- give terminal runtimes their own manager (#1807)
+- open trees from parsed arguments (#1806)
+- centralize shell terminal id validation (#1805)
+- move launch orchestration into agent feature (#1804)
+- build every xterm terminal through one shared factory (#1786)
+- give the session entry one definition of its ending, readiness, cache owner and usability (#1782)
+- give path containment one neutral home (#1780)
+- resolve technical debt backlog (#1747)
+- extract linkRunToCaller() from runAgent's run setup (#1746)
+- extract openRunMonitorTab() from runAgent (#1745)
+- look up launch-clause field keys from a map (#1743)
+- extract finishRunCollectingWarnings() to cut runAgent complexity (#1742)
+- use errorText() in SystemScheduleManager.fireDue (#1741)
+- extract runAgent error-path cleanup into a helper (#1740)
+
+### Chores
+
+- defer complexity refactors blocked by baseline tests (#1860)
+- log complexity hotspots
+- log react organization debt
+- log new technical debt findings
+- log new technical debt findings
+- log new technical debt findings
+- log new technical debt findings
+- log new technical debt findings
+- log new technical debt findings
+- log new product gap findings
+- log new feature implementation gaps
+- log new technical debt findings
+
+### Other
+
+- test(harness): pin auto-approval of claude's clipped subagent gate (#1891)
+- build(web): make the Vite config load under the native config loader (#1882)
+- test(web): guard stylesheet minification against lightningcss warnings (#1878)
+- test(harness): wait for recorder output to flush
+- test(sandbox): run the harness spawn builder's tests on every platform (#1779)
+- security: dompurify update
+- sync
+
 ## [0.20.0] - 2026-10-14
 
 ### ⚠ Breaking Changes
