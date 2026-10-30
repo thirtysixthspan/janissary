@@ -2,6 +2,8 @@
 
 Press `Tab` to complete the token just before the cursor. One match replaces the token, adding `/` for a directory or a space for a file. Several matches fill in their longest common prefix and show the candidates above the command bar. No match leaves the line alone. You can read the candidate strip, but you can't move through it or accept an entry; keep typing to narrow the list, then press `Tab` again.
 
+In a shell tab, a failed completion request reports a shell plugin failure and can close the tab. The typed line isn't guaranteed to survive that failure.
+
 Type `help s`, then press `Tab` to see matching help pages.
 
 ## Complete the current token

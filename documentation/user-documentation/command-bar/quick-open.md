@@ -20,7 +20,7 @@ Typing narrows the list with a case-insensitive fuzzy match against each file's 
 
 Each matched character earns a point, and some earn more. A character scores extra when it sits in the filename rather than the folders, when it starts a word, and when it comes straight after the previous matched character. A character starts a word when it is the first in the path, comes right after `/`, `-`, `_`, `.`, or a space, or is a capital letter that follows a character that isn't a capital. So tightly clustered matches rank above scattered ones. When two paths score exactly the same, the shorter one comes first, then the one that sorts first alphabetically. The list shows the top 10 results, best first. Each row shows the filename plainly with its containing directory dimmed beside it.
 
-If nothing matches, the window shows `No matching files`, and `Return` does nothing. The same is true if Janissary can't read the file list at all: the `Searching…` state clears, the window behaves as if the project had no files, and closing and reopening it tries the read again.
+If nothing matches, the window shows `No matching files`, and `Return` does nothing. If Janissary can't read the file list or the request gets no answer, `Searching…` clears and the window behaves as if the project had no files. Close and reopen it to try the read again.
 
 ## Open a file
 
