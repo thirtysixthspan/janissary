@@ -38,7 +38,9 @@ The video starts playing as soon as the tab opens — you don't have to click pl
 
 Only the tab you're actually looking at starts itself. A video tab that comes back behind another one when you reload the page stays paused, so a session holding several videos never starts them all at once, and switching to a video tab later never starts it either. A video you paused stays paused.
 
-Playback uses your platform's standard video controls, shown on the player itself: play and pause, the timeline scrubber, volume, and fullscreen. There are no separate app shortcuts for playback — while the player has focus, the keyboard belongs to those controls.
+Video tabs are view-only, with no command bar or transcript. Use the player's built-in controls for play and pause, timeline scrubbing, volume, and fullscreen. There are no separate app shortcuts for playback. While the player has focus, the keyboard belongs to those controls.
+
+When you seek through a large video, the player loads the part it needs instead of waiting for the whole file. That keeps scrubbing responsive.
 
 ## Playing while you work in another tab
 
