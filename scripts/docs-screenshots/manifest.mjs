@@ -69,27 +69,6 @@ export default [
     actions: [{ press: 'Control+r' }],
     target: 'history-overlay',
   },
-  {
-    // The scratch fixture has no `ai/` directory, so seed one with a few realistically named task
-    // files before opening the picker — otherwise Ctrl+A would capture the empty `(no tasks)` state.
-    // They go under `ai/tasks/` to match the real layout: the root issue task is listed first and
-    // the subdirectories last, so the picker opens on `work-an-issue.md`. Step down onto the
-    // feature directory (Down), expand it (Right), and step onto a file inside
-    // it (Down) so the shot shows both a nested and a top-level task, as the doc page describes.
-    name: 'task-picker',
-    setup: [
-      'mkdir -p ai/tasks/feature ai/tasks/hygiene ai/tasks/workspace',
-      'touch ai/tasks/feature/build-a-feature.md ai/tasks/work-an-issue.md ai/tasks/hygiene/improve-test-coverage.md ai/tasks/workspace/merge-change-to-master.md ai/tasks/workspace/open-feature-pull-request.md ai/tasks/hygiene/reduce-complexity.md',
-    ],
-    // Longer than the default settle: the lines go to zsh, which the first of them may reach before
-    // the shell has finished starting.
-    settle: 1500,
-    actions: [
-      { press: 'Control+a' }, { press: 'ArrowDown' },
-      { press: 'ArrowRight' }, { press: 'ArrowDown' },
-    ],
-    target: 'task-overlay',
-  },
   { name: 'ghost-text', setup: ['git status'], actions: [{ type: 'git' }], target: 'command-bar' },
   {
     // `tides` appears in both the fixture's Markdown sample and its source tree, so the result window
