@@ -40,9 +40,9 @@
 | `quit` | Exit the application (asks for confirmation); `/quit` is equivalent |
 | `rename` | Rename the current tab's display name (`rename <name>`); bare `rename` clears the alias; in an editor tab, renames the file |
 | `roles` | Open the roles tab, where named roles map to an ordered list of harness/model/effort choices in `roles.json` (a saved list; nothing launches from it); bare `roles` only |
-| `schedule` | Run a tab command later with `schedule <name> <form> <command>`, or manage project runscripts with `schedule system <name> <form> script <name>` |
+| `schedule` | Run a tab command later with `schedule <name> <form> <command>`, or manage project schedules that run persistent runscripts with `schedule system <name> <form> script <name>` |
 | `schedules` | Open the aggregated tab listing every scheduled command across all tabs, through the bundled schedules tab plugin (`schedules left`/`right` to dock it). Its **+** button opens the New schedule dialog |
-| `scripts` | Open the project's runscripts in .janissary/scripts. Run, duplicate, or delete one from its row, or create one with **+**. |
+| `scripts` | Open the project's runscripts in `.janissary/scripts/`, which survive launch cleanup. Run, duplicate, or delete one from its row, or create one with **+**. |
 | `search` | `search` opens project search; `search <phrase>` searches for a phrase. From a workspaced tab, it searches that workspace. Use `search transcript <pattern>` to search the transcript |
 | `send` | Deliver a line to a harness, or submit it through a shell tab's command bar — application commands run in the app and unclaimed lines go to zsh |
 | `sessions` | Open the remote sessions list — every host you're connected to or parked on (`sessions left`/`right` to dock it) |

@@ -1,6 +1,6 @@
 # Tokens for agents
 
-Janissary reads five optional token files from a `.janissary/` directory. Each is a plain text file holding just the token value. Janissary only ever reads them, never writes to them, and a project's `.janissary/` is gitignored by default so none of them gets committed.
+Janissary reads five optional token files from a `.janissary/` directory. Each is a plain text file holding just the token value. Janissary only ever reads them, never writes to them. If you keep a token in a project, add that file to your Git ignore rules so you don't commit it.
 
 | File | What it gives a workspaced tab | Set it up when |
 | --- | --- | --- |
