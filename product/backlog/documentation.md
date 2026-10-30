@@ -2,8 +2,6 @@
 
 ## ready
 
-* tab-plugins (8/10) — 44 of 48 facts are covered, 1 is missing, and 3 are wrong. Correct `plugins` output as transcript text rather than a list tab, refresh the stale bundled-plugin roster, and replace stale API versions in `documentation/user-documentation/command-bar/plugins.md` and `help/plugins.md`; add exact shell fallback/clone-failure notices to `documentation/user-documentation/command-bar/shell.md`. Verify against `product/specs/tab-plugins.md`, `src/plugins/catalog.ts`, `src/plugins/status.ts`, `src/commands/plugins.ts`, `src/plugins/api-capabilities.ts`, `src/plugins/shell/activate.ts`, and `src/plugins/launch-tab.ts`.
-
 * tabs (8/10) — 38 of 53 facts are covered, 11 are missing, and 4 are wrong. Correct the shell name-pool/exhaustion wording, restrict unread escalation to harnesses, and fix the shell command’s unread-badge behavior in `documentation/user-documentation/getting-started/tabs.md`, `documentation/user-documentation/getting-started/agents.md`, and `documentation/user-documentation/command-bar/shell.md`. Add the exact three-second dwell, command-entry unread mark, docked-badge retention, notification focus, full filename rename prefill, pane drag release, and draft-loss behavior; evidence is `product/specs/tabs.md`, `src/tab/dwell.ts`, `src/tab/transcript/events.ts`, `src/harness/idle-notification.ts`, `src/harness/busy-status.ts`, `src/shell/manager.ts`, `src/tab/split-selection.ts`, `web/src/useTabReorder.ts`, and `web/src/TabItem.tsx`.
 
 * task-picker (8/10) — 19 of 43 facts are covered, 18 are missing, and 6 are wrong or stale. Remove the nonexistent `auto-build-a-feature` task from `documentation/user-documentation/command-bar/tasks.md` and correct the empty-directory/selection claims; add dedicated task-workflow guidance or links for PR review, testing, updating, build repair, feature removal, and bug research. Evidence is `product/specs/task-picker.md`, `src/tasks.ts`, `web/src/pickers/useTaskPicker.ts`, `web/src/pickers/sectioned-rows.ts`, `ai/tasks/feature/build-a-feature.md`, `ai/tasks/feature/plan-a-new-feature.md`, `ai/tasks/feature/review-pull-request.md`, `ai/tasks/feature/test-pull-request.md`, `ai/tasks/feature/update-pull-request.md`, `ai/tasks/workspace/fix-build.md`, `ai/tasks/feature/remove-an-existing-feature.md`, and `ai/tasks/research/find-bugs.md`.
@@ -24,6 +22,7 @@
 
 ## resolved
 
+* tab-plugins — documented in documentation/user-documentation/command-bar/plugins.md, documentation/user-documentation/command-bar/shell.md, help/commands.md, help/plugins.md (removed 2026-10-30)
 * tab-navigator — documented in documentation/user-documentation/command-bar/tab-navigator.md, help/nav.md (removed 2026-10-30)
 * tab-completion — documented in documentation/user-documentation/command-bar/tab-completion.md, documentation/user-documentation/getting-started/tabs.md, help/keys.md, help/files.md (removed 2026-10-30)
 * state-directory — documented in documentation/user-documentation/automation/scheduling.md, documentation/user-documentation/advanced-agents/tokens.md, help/schedule.md, help/scripts.md, help/commands.md (removed 2026-10-30)
