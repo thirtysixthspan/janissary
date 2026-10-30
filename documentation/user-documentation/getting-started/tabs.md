@@ -1,6 +1,6 @@
 # Tabs
 
-Shell tabs keep their own terminal, command history, working directory, and unfinished command line. Harness tabs keep their own live terminal. File and other view tabs retain their own content and view state while you switch tabs.
+Shell tabs keep their own terminal, command history, working directory, and unfinished command line. Harness tabs keep their own live terminal. File and other view tabs retain their own content and view state while you switch tabs. Switching away keeps an unsubmitted command-line draft with its tab. The draft lives in the browser, so reloading the page or closing the tab discards it.
 
 A session starts with a visible zsh [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab) named `janus` and one hidden `system` shell. The hidden shell starts in the project directory without a workspace. Run `tab focus system` to reveal it; closing it hides it without stopping its process. If its zsh exits, Janissary hides the tab and starts a fresh shell there. Focus `system` again to return to it. New tabs are otherwise created on demand — shell tabs with the `shell` command (below), harness tabs with `harness`, and view tabs by opening files, pages, or harnesses (see [Tab Types](/user-documentation/tab-types/opening-files)).
 
@@ -51,7 +51,7 @@ shell             create a tab with a random unused name
 shell bilal     create a tab named "bilal"
 ```
 
-The new tab is focused immediately. Names are always lowercased, and each must be free before the tab opens: a name an open tab already has, or a live row in the [sessions](/user-documentation/tab-types/sessions) tab, is refused, no tab opens, and the refusal goes to the [notifications](/user-documentation/tab-types/notifications) feed rather than the transcript. Random names come from a pool of 50 (see [Agents](/user-documentation/getting-started/agents)); when every pool name is in use, new shell tabs are called `shell`, `shell-2`, and so on.
+The new tab is focused immediately. Names are always lowercased, and each must be free before the tab opens: a name an open tab or a [Sessions](/user-documentation/tab-types/sessions) row for a shell or harness that can still return already has is refused, no tab opens, and the refusal goes to the [notifications](/user-documentation/tab-types/notifications) feed rather than the transcript. A workspace shell also skips names held by running workspaces. Random names come from a pool of 50 (see [Agents](/user-documentation/getting-started/agents)); when every pool name is in use, a shell uses `shell`, then `shell-2`, `shell-3`, and so on.
 
 The exact name `system` is reserved, ignoring case, even when no managed system tab is open. Trying `shell SyStEm` reports `Cannot use "system": that name is reserved for the system tab.` Names such as `system-2` remain available.
 
@@ -61,7 +61,7 @@ The strip tells you what every tab is doing without switching to it. Three signa
 
 - **The colored dot.** Every tab gets a dot color picked to stand apart from the colors already on screen, so adjacent tabs are easy to tell apart. The colored band along the top of a tab is its [group](/user-documentation/getting-started/groups).
 - **A blinking dot means busy.** While a tab is working — a shell command, an agent turn, anything in flight — its dot blinks on and off. It settles back to a steady fill when the work finishes.
-- **A flag icon means unread output.** When a tab that is not visible in either pane receives new content — a shell command finishing, agent output — a flag badge appears on it. A backgrounded shell tab also gets a flag when its command finishes. If that badge stays unread and hidden for 30 seconds, Janissary raises an `Agent '<tab>' is waiting` notification. Selecting the tab starts a short dwell rather than clearing the flag outright: stay on the tab for a moment and the flag goes, which is how a tab you actually stopped to read is told apart from one you flicked past on the way somewhere else. The flag is never drawn on the tab you are currently on, so a dwell never shows a flag appearing on the tab under your eyes. A tab you have docked into a sidebar never badges, however much it has to say, because it is on screen. The badge lives only in the app's memory: a fresh `janus` brings no flags with it.
+- **A flag icon means unread output.** A tab gets a flag when new content arrives while it is neither active nor the visible selection in the other pane, and is not docked. A shell command marks the tab when its command entry appears and again when it finishes; partial shell output alone does not mark it. Harness output marks the tab when a run finishes or an unanswered permission prompt needs you. Focusing a badged tab starts a dwell: the flag clears after the tab stays active for three continuous seconds. Switching tabs restarts the timer, so a quick glance does not clear the flag. The active tab never draws its flag, even while its dwell is running. A tab that remains visible in the other pane clears immediately. Docked tabs never gain a new flag, but docking a badged tab keeps its existing flag. Only a hidden harness badge that remains unread for 30 seconds raises an `Agent '<tab>' is waiting` notification; click the tab name in that notification to focus the harness. Shell badges do not raise this notification. The badge lives only in the app's memory: a fresh `janus` brings no flags with it.
 
 The active tab is also highlighted: full-strength text on the content background, while inactive tabs are muted. The band along the top of a group dims uniformly while the app window itself is behind something else, and comes back when you return to it.
 
@@ -84,11 +84,12 @@ the session rather than for the tab: reloading the page puts it back in the midd
 closing, or docking the last tab from one side collapses the split back to a single strip.
 
 Dragging within a tab strip and `Ctrl+←` / `Ctrl+→` reorder tabs only inside the focused pane.
-To move a tab between panes, drag its label onto the other pane's tab strip. The tab keeps its
-place in the overall tab order, regardless of which destination label you release it over. Global
-navigation still crosses both panes: `Shift+←` / `Shift+→`, `next`, and `Ctrl+G` move through every
-central action tab. Sidebars remain outside the split, and the lower reporting area stays full
-width.
+To move a tab between panes, drag its label and release over the other pane's center strip. The drop
+moves it into that pane through the same selection and collapse behavior as the **Split** button. The
+tab keeps its place in the overall tab order; the destination label under the pointer does not set
+its position. Global navigation still crosses both panes: `Shift+←` / `Shift+→`, `next`, and `Ctrl+G`
+move through every central action tab. Sidebars remain outside the split, and the lower reporting
+area stays full width.
 
 ## The tab metadata row
 
@@ -124,7 +125,7 @@ A tab's label in the strip is not something you can select and copy. The metadat
 
 <img class="agent-float left" src="/agents/orhan-south.png" alt="" />
 
-`rename <newname>` gives the current tab a display alias — a name shown in the strip in place of its real label. Bare `rename` clears the alias. You can also double-click the label of the active tab and type a new name in place; the current name arrives selected, so typing replaces it, and Enter commits, clicking away commits, Escape cancels. Either way the new name is capped at 50 characters, which is its own limit and not the shorter one the strip uses to truncate a label it has to fit.
+`rename <newname>` gives the current tab a display alias, a name shown in the strip in place of its real label. Bare `rename` clears the alias. You can also double-click the label of the active tab and type a new name in place. The current name arrives selected; for a file-backed tab, the field contains the full filename even when the strip shortens it. Enter or clicking away commits, and Escape cancels. Either way the new name is capped at 50 characters, which is its own limit and not the shorter one the strip uses to truncate a label it has to fit.
 
 An [editor tab](/user-documentation/tab-types/editor#renaming-a-tab-renames-the-file) is the exception. It stands for a file on disk, so it has no alias: `rename notes.txt` renames the file itself. Bare `rename` in an editor tab changes nothing. If the new name is taken or contains a path separator, the reply starts with `Could not rename <old> to <new>.` and gives the reason.
 
