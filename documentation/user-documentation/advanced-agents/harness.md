@@ -475,7 +475,7 @@ If the recording can't be opened or written, the SSH session carries on while re
 
 The ssh tab closes as soon as the `ssh` process exits, whether that's a normal logout, a dropped connection, or an immediate failure. Closing the [last remaining tab](/user-documentation/getting-started/tabs#closing-tabs) quits the app, same as any other tab.
 
-Typing `!ssh <host>` runs SSH in an inline terminal card in the current tab's transcript, the same as any other interactive program run through `!`. Only a bare `ssh …` command opens its own tab.
+Typing `!ssh <host>` runs SSH through the current tab's captured shell; it does not open an inline terminal card. Use a bare `ssh …` command to open a dedicated tab.
 
 SSH tabs are in-memory only. They are not restored, so each launch starts a
 new session.
