@@ -196,5 +196,6 @@ export type BusChannels = {
   tabs: TabsEvent;
   agent: AgentEvent;
   runscripts: { type: 'changed' };
+  connections: { type: 'changed' };
 };
 export const messageBus = new MessageBus<BusChannels>();

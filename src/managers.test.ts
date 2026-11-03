@@ -54,6 +54,17 @@ describe('MANAGER_DISPOSE_ORDER', () => {
     expect(MANAGER_DISPOSE_ORDER.slice(-3)).toEqual(['questions', 'tab', 'database']);
   });
 
+  it('flushes retained records after every producer and immediately before remote teardown', () => {
+    expect(MANAGER_DISPOSE_ORDER.filter((name) => name === 'acpRecords')).toHaveLength(1);
+    expect(positionOf('acpRecords')).toBe(positionOf('sessions') + 1);
+    expect(positionOf('remote')).toBe(positionOf('acpRecords') + 1);
+    for (const producer of ['agent', 'acp', 'plugins', 'conversations', 'sessions']) {
+      expect(positionOf(producer)).toBeLessThan(positionOf('acpRecords'));
+    }
+    expect(positionOf('acpRecords')).toBeLessThan(positionOf('tab'));
+    expect(MANAGER_TAB_RELEASE).not.toContain('acpRecords');
+  });
+
   it('awaits agent cleanup before its dependencies and shares concurrent shutdown', async () => {
     const controller = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
     const gate = Promise.withResolvers<void>();

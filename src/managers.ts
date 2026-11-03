@@ -1,6 +1,7 @@
 import type { TabManager } from './tab/manager.js';
 import type { ShellManager } from './shell/manager.js';
 import type { AcpManager } from './acp/manager.js';
+import type { AcpSessionRecords } from './acp-records/manager.js';
 import type { DatabaseManager } from './database/manager.js';
 import type { HarnessManager } from './harness/manager.js';
 import type { ShellTranscriptManager } from './shell/transcript/manager.js';
@@ -39,6 +40,7 @@ type ManagerRegistry = {
   tab: TabManager;
   shell: ShellManager;
   acp: AcpManager;
+  acpRecords: AcpSessionRecords;
   database: DatabaseManager;
   harness: HarnessManager;
   terminalRuntime: TerminalRuntimeManager;
@@ -116,6 +118,7 @@ export const MANAGER_DISPOSE_ORDER = [
   // Before `remote`, because it reads channels — their addresses, workspaces, and session ids —
   // while tearing down, and after them there would be nothing left to read.
   'sessions',
+  'acpRecords',
   'remote',
   // With the last group, for the same reason: the feed, the toast path, and `notifications clear`
   // all read the queue while tearing down, and it owns no process or handle of its own to release.

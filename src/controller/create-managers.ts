@@ -4,6 +4,7 @@ import { SshManager } from '../ssh-manager.js';
 import { RemoteManager } from '../remote/manager.js';
 import { DatabaseManager } from '../database/manager.js';
 import { AcpManager } from '../acp/manager.js';
+import { AcpSessionRecords } from '../acp-records/manager.js';
 import { ShellManager } from '../shell/manager.js';
 import { WorkspaceManager } from '../workspace/manager.js';
 import { workspaceReadyMessage } from '../workspace/ready-notice.js';
@@ -45,6 +46,7 @@ import { TerminalRuntimeManager } from '../terminal-runtime/manager.js';
 // reordering two lines here silently reordered dispose. Teardown is stated by
 // `MANAGER_DISPOSE_ORDER` in `../managers.ts`; change that when a teardown dependency changes.
 export function createManagers(managers: Managers, projectDir?: string): void {
+  managers.acpRecords = new AcpSessionRecords({ projectDir });
   managers.agent = new AgentRunManager(managers);
   // First: it takes no other manager, and `TabManager` below can already reach it when a feed is
   // opened.
