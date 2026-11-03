@@ -1,0 +1,86 @@
+import React, { useRef } from 'react';
+import { act, fireEvent, render } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { useConnectionHistoryScroll } from './useConnectionHistoryScroll';
+
+function Mount({ active, offset, hasOlder, loadOlder, contentKey }: {
+  active: boolean; offset: number; hasOlder: boolean; loadOlder: () => Promise<unknown>; contentKey: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const scroll = useConnectionHistoryScroll(ref, active, offset, hasOlder, loadOlder, contentKey);
+  return <div data-testid="scroller" ref={ref} onScroll={(event) => scroll.onScroll(event.currentTarget)}>
+    <div style={{ height: `${contentKey * 100}px` }} />
+  </div>;
+}
+
+function metrics(element: HTMLElement, values: { height: number; top: number; client: number }) {
+  Object.defineProperties(element, {
+    scrollHeight: { configurable: true, value: values.height },
+    scrollTop: { configurable: true, writable: true, value: values.top },
+    clientHeight: { configurable: true, value: values.client },
+  });
+}
+
+describe('useConnectionHistoryScroll', () => {
+  it('starts at newest content and follows active output only while near bottom', () => {
+    const loadOlder = vi.fn(async () => null);
+    const view = render(<Mount active offset={0} hasOlder={false} loadOlder={loadOlder} contentKey={1} />);
+    const element = view.getByTestId('scroller');
+    metrics(element, { height: 500, top: 500, client: 100 });
+    view.rerender(<Mount active offset={0} hasOlder={false} loadOlder={loadOlder} contentKey={2} />);
+    expect(element.scrollTop).toBe(500);
+    metrics(element, { height: 600, top: 500, client: 100 });
+    fireEvent.scroll(element);
+    view.rerender(<Mount active offset={0} hasOlder={false} loadOlder={loadOlder} contentKey={3} />);
+    expect(element.scrollTop).toBe(600);
+  });
+
+  it('requests a top page once per offset and skips it without older history', async () => {
+    const loadOlder = vi.fn(async () => null);
+    const view = render(<Mount active offset={4} hasOlder loadOlder={loadOlder} contentKey={1} />);
+    const element = view.getByTestId('scroller');
+    metrics(element, { height: 500, top: 500, client: 100 });
+    fireEvent.scroll(element);
+    metrics(element, { height: 500, top: 0, client: 100 });
+    fireEvent.scroll(element);
+    fireEvent.scroll(element);
+    expect(loadOlder).toHaveBeenCalledTimes(1);
+    view.rerender(<Mount active offset={5} hasOlder={false} loadOlder={loadOlder} contentKey={2} />);
+    metrics(element, { height: 600, top: 0, client: 100 });
+    fireEvent.scroll(element);
+    expect(loadOlder).toHaveBeenCalledTimes(1);
+    await act(async () => {});
+  });
+
+  it('clears the page guard after rejection so the same offset can be retried', async () => {
+    const loadOlder = vi.fn().mockRejectedValueOnce(new Error('rejected')).mockResolvedValueOnce(null);
+    const view = render(<Mount active offset={4} hasOlder loadOlder={loadOlder} contentKey={1} />);
+    const element = view.getByTestId('scroller');
+    metrics(element, { height: 500, top: 0, client: 100 });
+    fireEvent.scroll(element);
+    await act(async () => { await Promise.resolve(); });
+    fireEvent.scroll(element);
+    expect(loadOlder).toHaveBeenCalledTimes(2);
+  });
+
+  it('preserves the viewport after older blocks are prepended', () => {
+    const loadOlder = vi.fn(async () => null);
+    const view = render(<Mount active offset={4} hasOlder loadOlder={loadOlder} contentKey={1} />);
+    const element = view.getByTestId('scroller');
+    metrics(element, { height: 500, top: 500, client: 100 });
+    fireEvent.scroll(element);
+    metrics(element, { height: 500, top: 0, client: 100 });
+    fireEvent.scroll(element);
+    metrics(element, { height: 700, top: 0, client: 100 });
+    view.rerender(<Mount active offset={2} hasOlder loadOlder={loadOlder} contentKey={2} />);
+    expect(element.scrollTop).toBe(200);
+  });
+
+  it('does not follow output while inactive', () => {
+    const view = render(<Mount active={false} offset={0} hasOlder={false} loadOlder={async () => null} contentKey={1} />);
+    const element = view.getByTestId('scroller');
+    metrics(element, { height: 500, top: 0, client: 100 });
+    view.rerender(<Mount active={false} offset={0} hasOlder={false} loadOlder={async () => null} contentKey={2} />);
+    expect(element.scrollTop).toBe(0);
+  });
+});

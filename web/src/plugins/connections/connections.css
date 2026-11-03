@@ -12,3 +12,16 @@
 .connections-row-kind, .connections-row-owner, .connections-row-status { color: var(--muted); font-size: 12px; }
 .connections-row button { border: 0; background: transparent; color: var(--muted); cursor: pointer; }
 .connections-row button:hover { color: var(--fg); }
+.connections-record.plugin-tab { padding: 0; gap: 0; }
+.connections-record-header { display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 12px; }
+.connections-record-title { font-weight: 600; }
+.connections-record-metadata { display: flex; flex-wrap: wrap; gap: 8px 14px; color: var(--muted); font-size: 12px; }
+.connections-record .plugin-actions { display: flex; gap: 8px; }
+.connections-history { overflow: auto; min-height: 0; flex: 1; padding: 12px; }
+.connections-history-loading { color: var(--muted); }
+.connections-history-content { display: flex; flex-direction: column; gap: 16px; }
+.connections-block { display: flex; flex-direction: column; gap: 8px; }
+.connections-prompt, .connections-answer { padding: 10px; border-radius: 4px; background: var(--bg-soft); white-space: pre-wrap; }
+.connections-activity { padding-left: 10px; border-left: 2px solid var(--border); }
+.connections-activity-label, .connections-activity summary { color: var(--muted); font-size: 12px; }
+.connections-record-error { color: var(--error); padding: 8px 12px; }

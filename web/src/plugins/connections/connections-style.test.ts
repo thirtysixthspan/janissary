@@ -10,6 +10,9 @@ describe('connections list styles', () => {
     expect(entry).toContain("import './connections.css';");
     expect(styles).toContain('.connections-list.plugin-tab');
     expect(styles).toContain('.connections-row.selected');
+    expect(styles).toContain('.connections-record-header');
+    expect(styles).toContain('.connections-history {');
+    expect(styles).toContain('.connections-activity');
     expect(styles).not.toContain('.conversation-');
   });
 });
