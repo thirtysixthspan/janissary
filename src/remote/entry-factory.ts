@@ -14,7 +14,7 @@ import {
   cloneAnswerEcho, cloneKeyAnswer, clonePromptText, cloningLine, type CloneOfferText,
 } from './clone-prompt.js';
 import {
-  notifyBrowserGone, notifyBrowserStarted, reportRemoteRefusal, reportTruncatedReplay,
+  notifyBrowserGone, notifyBrowserStarted, reportRemoteRefusal, reportRemoteWorkspaceReady, reportTruncatedReplay,
 } from './manager-reports.js';
 import type { RemoteLaunchHandlers } from './manager.js';
 import { answerSessionState, handleAttachResult, type RemoteResume } from './resume.js';
@@ -114,6 +114,7 @@ export function createRemoteEntry({
           const onReady = entry.handlers.get(label)?.onReady;
           if (frame.home === undefined) onReady?.(frame.dir, frame.notice, frame.cleaned, frame.cloned);
           else onReady?.(frame.dir, frame.notice, frame.cleaned, frame.cloned, frame.home);
+          reportRemoteWorkspaceReady(managers, label, address.host, frame.dir, frame.elapsedMs);
           sessionsChanged();
           break;
         }

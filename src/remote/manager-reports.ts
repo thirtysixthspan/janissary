@@ -1,6 +1,7 @@
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
+import { workspaceReadyMessage } from '../workspace/ready-notice.js';
 import type { RemoteEntry } from './attach.js';
 
 // What a channel has to say to the tabs riding it, kept out of `RemoteManager` so the manager holds
@@ -49,6 +50,17 @@ export function reportRemoteRefusal(managers: Managers, entry: RemoteEntry, mess
   const label = entry.labels.values().next().value;
   if (label === undefined) return;
   notify(managers, 'remote-refused', label, `Remote janus on ${entry.address.host} refused a request: ${message}`);
+}
+
+/**
+ * A remote host finished provisioning the launch's workspace and said how long the clone took. A
+ * host running an older janus sends no time, and then nothing is reported.
+ */
+export function reportRemoteWorkspaceReady(
+  managers: Managers, label: string, host: string, dir: string, elapsedMs: number | undefined,
+): void {
+  if (elapsedMs === undefined) return;
+  notify(managers, 'workspace-ready', label, workspaceReadyMessage(dir, elapsedMs, host));
 }
 
 /**

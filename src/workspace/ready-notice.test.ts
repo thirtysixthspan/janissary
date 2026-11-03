@@ -20,4 +20,9 @@ describe('workspaceReadyMessage', () => {
     expect(workspaceReadyMessage('/repo/.janissary/workspace/claude', 4210))
       .toBe('Prepared workspace $workspace/claude in 4.2s.');
   });
+
+  it('names the remote host a clone ran on', () => {
+    expect(workspaceReadyMessage('/srv/proj/.janissary/workspace/claude', 65_000, 'devbox'))
+      .toBe('Prepared workspace $workspace/claude on devbox in 1m 05s.');
+  });
 });
