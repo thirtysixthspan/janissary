@@ -3,7 +3,14 @@ import { parseConnectionCommand } from './parsing.js';
 import { closeConnection } from './close.js';
 import { connectionCatalog } from './catalog.js';
 import type { Managers } from '../managers.js';
+import type { CommandInvocationContext } from '../commands/types.js';
+import type { ConnectionKind } from './types.js';
 import { listLines, listCompletionConnections } from './list.js';
+import { appendCommandOutput } from '../command/append.js';
+import { notify } from '../notifications/index.js';
+import { errorFirstLine } from '../error-text.js';
+
+const CLOSED_PREFIX = 'Closed connection ';
 
 export class ConnectionManager {
   constructor(private managers: Managers) {}
@@ -17,24 +24,39 @@ export class ConnectionManager {
       .map((e) => (e.acpRef ? { text: e.display, kind: e.kind, acpRef: e.acpRef } : { text: e.display, kind: e.kind }));
   }
 
-  run(command: string, label: string): void {
+  // Listing and usage errors are written through the invocation, so a shell tab's capture prints
+  // them. A close reports its outcome as a notification instead.
+  async run(command: string, label: string, invocation?: CommandInvocationContext): Promise<void> {
     const parsed = parseConnectionCommand(command);
-    const out = (text: string) => this.managers.tab.append(label, { input: command, output: text });
+    const out = (text: string) => { appendCommandOutput(this.managers, label, { input: command, output: text }, invocation); };
     if ('error' in parsed) { out(parsed.error); return; }
     if (parsed.action === 'list') {
       const lines = listLines(this.managers, label);
       out(lines.length > 0 ? lines.join('\n') : 'No open connections.');
       return;
     }
-    if (parsed.kind === 'browser') {
-      this.managers.tab.startRunning(label, command);
-      void this.managers.browser.run(label, `browser window close ${parsed.id}`).then((o) => this.managers.tab.finishRunning(label, o, { command }));
-      return;
+    const report = (text: string) => { this.reportClose(label, text); };
+    try {
+      await this.close(parsed.kind, parsed.id, label, report);
+    } catch (error) {
+      notify(this.managers, 'connection-close-failed', label, `Could not close connection ${parsed.kind}:${parsed.id}: ${errorFirstLine(error)}.`);
     }
-    closeConnection(parsed.kind, parsed.id, this.managers, label, out);
   }
 
   completionConnections(label: string): string[] {
     return listCompletionConnections(this.managers, label);
+  }
+
+  private async close(kind: ConnectionKind, id: string, label: string, report: (text: string) => void): Promise<void> {
+    if (kind === 'browser') {
+      report(await this.managers.browser.run(label, `browser window close ${id}`));
+      return;
+    }
+    closeConnection(kind, id, this.managers, label, report);
+  }
+
+  private reportClose(label: string, text: string): void {
+    const event = text.startsWith(CLOSED_PREFIX) ? 'connection-closed' : 'connection-close-failed';
+    notify(this.managers, event, label, text);
   }
 }

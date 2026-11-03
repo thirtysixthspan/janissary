@@ -106,7 +106,7 @@ export class AcpSessionManager {
   }
 
   // Kill and forget a tab's session (and its info). Returns whether one was open — the
-  // `connection close acp` path re-renders and reports only when it actually closed one. A close is
+  // `connections close acp` path re-renders and reports only when it actually closed one. A close is
   // how a prompt in flight is settled when a reset tears the session down underneath it, so the
   // waiting caller hears a refusal rather than an answer.
   close(label: string, output?: AcpPromptResult | string): boolean {

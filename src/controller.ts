@@ -80,7 +80,7 @@ export class ControllerCore {
   }
 
   // Tab-completion for the command line (reuses the shared `completeCommandLine`): filesystem
-  // paths against the active tab's cwd, `connection close` targets,
+  // paths against the active tab's cwd, `connections close` targets,
   // and `browser` subcommands / window ids.
   complete(text: string, cursor: number): CompletionResult {
     return completeCommand(this.managers, text, cursor);

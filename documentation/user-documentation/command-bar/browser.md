@@ -75,7 +75,7 @@ None of this is a guarantee. A site that blocks automated traffic outright can s
 
 ## Closing windows and browsers
 
-`browser close` closes the current window; `browser close <id>` and `browser window close <id>` close a specific one (the two forms are equivalent), and `connection close browser:<id>` does the same through the [connections](/user-documentation/command-bar/connections) command. If you close the current window, the oldest window still open becomes current. Closing a tab's last window ends that tab's browser process. Closing the tab, or quitting the app, closes every window it had open.
+`browser close` closes the current window; `browser close <id>` and `browser window close <id>` close a specific one (the two forms are equivalent), and `connections close browser:<id>` does the same through the [connections](/user-documentation/command-bar/connections) command. If you close the current window, the oldest window still open becomes current. Closing a tab's last window ends that tab's browser process. Closing the tab, or quitting the app, closes every window it had open.
 
 Browser windows are live, per-tab state: unlike a SQLite connection, they are **not** restored. Start with `browser open` again after a relaunch if you need one.
 

@@ -102,7 +102,7 @@ export class DatabaseManager {
   }
 
   // Close one globally open SQLite connection by name; returns whether one was open (drives the
-  // `connection close sqlite` result message).
+  // `connections close sqlite` result message).
   close(name: string): boolean {
     return closeConnection(name);
   }

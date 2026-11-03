@@ -437,12 +437,12 @@ ssh devbox
 ssh -p 2222 admin@host
 ```
 
-Everything after `ssh` is passed to the real `ssh` binary verbatim — flags, `user@host`, jump hosts, a trailing remote command. The tab is labeled with the bare host name (`admin@10.0.0.5` → `10.0.0.5`), the session appears in the connections panel as `ssh:<destination>`, and [`connection close ssh:<name>`](/user-documentation/command-bar/connections) ends it from any tab. Input, focus, lifecycle, and `send`/schedule delivery all behave exactly as for a harness tab. There's no `as` or `-w` here — anything after the destination belongs to ssh itself.
+Everything after `ssh` is passed to the real `ssh` binary verbatim — flags, `user@host`, jump hosts, a trailing remote command. The tab is labeled with the bare host name (`admin@10.0.0.5` → `10.0.0.5`), the session appears in the connections panel as `ssh:<destination>`, and [`connections close ssh:<name>`](/user-documentation/command-bar/connections) ends it from any tab. Input, focus, lifecycle, and `send`/schedule delivery all behave exactly as for a harness tab. There's no `as` or `-w` here — anything after the destination belongs to ssh itself.
 
 An `ssh://` prefix is removed from the destination used in the connections panel. The tab label
 also removes a leading `user@` and a trailing `:port`. If two SSH tabs would have the same label,
 the later tabs use `-2`, `-3`, and so on. The connections panel stays visible while an SSH tab is
-active. `connection close ssh:<id>` matches the tab's unique label before its destination, so two
+active. `connections close ssh:<id>` matches the tab's unique label before its destination, so two
 tabs connected to `devbox` can be closed separately. If nothing matches, the command reports
 `No open connection ssh:<id>.` See [Connections](/user-documentation/command-bar/connections) for
 the global SSH rows.

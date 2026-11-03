@@ -110,6 +110,8 @@ describe('notificationText', () => {
     ['launch-workspace-cleaned', 'Removed leftover workspace "foo" ($workspace/foo) before launching.'],
     ['launch-root-cloned', 'Cloned https://github.com/o/repo.git into $root on devbox.'],
     ['remote-refused', 'Remote janus on devbox refused a request: Unexpected remote frame "capture-request".'],
+    ['connection-closed', 'Closed connection sqlite:mydb.'],
+    ['connection-close-failed', 'No open connection sqlite:mydb.'],
   ] as const)('renders the %s message verbatim', (event, text) => {
     expect(notificationText(event, 'janus', text)).toBe(text);
   });

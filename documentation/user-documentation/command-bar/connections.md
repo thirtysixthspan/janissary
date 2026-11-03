@@ -2,14 +2,14 @@
 
 <img class="agent-float" src="/agents/mahir-south.png" alt="" />
 
-The `connection` command lists and closes the long-lived connections a tab holds: its shell, its ACP agent and monitors, its browser windows, its terminals, plus the app-wide SQLite and SSH connections. Each connection is addressed as `<kind>:<id>`:
+The `connections` command lists and closes the long-lived connections a tab holds: its shell, its ACP agent and monitors, its browser windows, its terminals, plus the app-wide SQLite and SSH connections. Each connection is addressed as `<kind>:<id>`:
 
 ```
-connection list
-connection close shell:bash
+connections list
+connections close shell:bash
 ```
 
-A bare `connection` prints `Usage: connection <list|close> [kind:id]  (e.g. connection close sqlite:mydb)`, and so does an action it doesn't know, such as `connection status`.
+A bare `connections` prints `Usage: connections <list|close> [kind:id]  (e.g. connections close sqlite:mydb)`, and so does an action it doesn't know, such as `connections status`.
 
 ## Kinds and scope
 
@@ -26,39 +26,39 @@ A bare `connection` prints `Usage: connection <list|close> [kind:id]  (e.g. conn
 
 <img class="agent-float left" src="/agents/orhan-south-east.png" alt="" />
 
-`connection list` prints one line per open connection. The current tab's own come first: its shell (`shell:bash`), its ACP connection when supported (`acp:opencode/big-pickle`), its monitors and editor personas (`acp:<name>`), its browser windows (`browser:w1`), its terminals (`terminal:vim`), and the SQLite databases it has used. After those come every other ssh tab and every other open SQLite connection, since those are global. A database you've opened in the [SQL database browser](/user-documentation/tab-types/sql-browser) is one of these: it's listed as `sqlite:<name>` and offered by tab completion, but it isn't credited to the browser tab, so it never shows in that tab's own panel. An ssh connection shows its tab's label with the destination in parentheses, like `ssh:devbox (admin@devbox)`. A monitor and an editor persona are listed as `acp:` connections too, under the name you address them by; the model behind a monitor, and the `monitor:` prefix, belong to the [panel](#the-connections-window), not to this list. A [remote](/user-documentation/advanced-agents/remote-agents) agent or harness started with `on <address>` is listed here too, under the label of the tab that runs it with its address in parentheses, the same shape as a local ssh tab. Every name on the list is one you can pass straight to `connection close`. With nothing open it prints `No open connections.`
+`connections list` prints one line per open connection, in a shell tab as well as anywhere else you type it. The current tab's own come first: its shell (`shell:bash`), its ACP connection when supported (`acp:opencode/big-pickle`), its monitors and editor personas (`acp:<name>`), its browser windows (`browser:w1`), its terminals (`terminal:vim`), and the SQLite databases it has used. After those come every other ssh tab and every other open SQLite connection, since those are global. A database you've opened in the [SQL database browser](/user-documentation/tab-types/sql-browser) is one of these: it's listed as `sqlite:<name>` and offered by tab completion, but it isn't credited to the browser tab, so it never shows in that tab's own panel. An ssh connection shows its tab's label with the destination in parentheses, like `ssh:devbox (admin@devbox)`. A monitor and an editor persona are listed as `acp:` connections too, under the name you address them by; the model behind a monitor, and the `monitor:` prefix, belong to the [panel](#the-connections-window), not to this list. A [remote](/user-documentation/advanced-agents/remote-agents) agent or harness started with `on <address>` is listed here too, under the label of the tab that runs it with its address in parentheses, the same shape as a local ssh tab. Every name on the list is one you can pass straight to `connections close`. With nothing open it prints `No open connections.`
 
 The tab's own ACP agent only appears once its handshake has named it, so a session you have just started with an `acp` prompt can be missing from the list for a moment.
 
 ## Closing a connection
 
-`connection close <kind>:<id>` closes one connection and reports what happened:
+`connections close <kind>:<id>` closes one connection and reports what happened as a [notification](/user-documentation/tab-types/notifications), not as a line in your transcript:
 
 - `sqlite:<name>`: closes the database connection. It reopens automatically the next time a `db` command or the SQL database browser uses that name.
-- `shell:<name>`: kills the tab's shell process. `<name>` is not compared. A shell tab has exactly one shell, and closing the connection closes it whatever you typed after the colon, so `connection close shell:zsh` on a bash machine closes the bash shell. A fresh shell spawns, restoring its working directory, on your next shell command. A command still running in a local shell ends its reply with `(shell exited)` once it stops producing output; see [Shell commands](/user-documentation/command-bar/shell).
+- `shell:<name>`: kills the tab's shell process. `<name>` is not compared. A shell tab has exactly one shell, and closing the connection closes it whatever you typed after the colon, so `connections close shell:zsh` on a bash machine closes the bash shell. A fresh shell spawns, restoring its working directory, on your next shell command. A command still running in a local shell ends its reply with `(shell exited)` once it stops producing output; see [Shell commands](/user-documentation/command-bar/shell).
 - `acp:<name>`: closes one ACP connection. Three things can match, and the first match wins. On an editor tab, `<name>` can be one of its personas: only that persona's connection closes, the tab's other persona connections stay open, and the next request to that persona opens a fresh one. Next, if `<name>` is one of the tab's monitors, only that monitor stops, the same as `unmonitor <name>`. Anything else kills the tab's own ACP session, which reconnects on your next `acp` prompt.
 - `browser:<id>`: closes that window. Closing a tab's last window ends its browser process.
 - `ssh:<id>`: kills the matching ssh tab's terminal, which closes the tab. `<id>` matches the tab's label first, then its destination.
 - `terminal:<program>`: kills the tab's terminal running that program. An inline terminal ends; a harness tab closes with it. A remote tab's ssh transport never answers to a `terminal:` id — it is the `ssh:` row, as above.
 
-Each case reports `Closed connection <kind>:<id>.` on success, or `No open connection <kind>:<id>.` when nothing matched, with two exceptions worth knowing. A successful `shell` close names the shell it actually killed, so `connection close shell:zsh` on a bash machine reports `Closed connection shell:bash.`. And closing an ACP session that is still connecting, before it has a name, works — with nothing to name it in the reply, it echoes the id you typed, so `connection close acp:agent` reports `Closed connection acp:agent.`. Press `Tab` at the close target to complete against the same names `connection list` prints; see [Tab completion](/user-documentation/command-bar/tab-completion). Closing a browser window takes a moment: until it settles, the command line sits in your transcript marked as running with nothing after it yet.
+Each case reports `Closed connection <kind>:<id>.` on success. When nothing matched you get an error notification reading `No open connection <kind>:<id>.`, and when closing fails partway it reads `Could not close connection <kind>:<id>: <reason>.` There are two exceptions worth knowing. A successful `shell` close names the shell it actually killed, so `connections close shell:zsh` on a bash machine reports `Closed connection shell:bash.`. And closing an ACP session that is still connecting, before it has a name, works — with nothing to name it in the reply, it echoes the id you typed, so `connections close acp:agent` reports `Closed connection acp:agent.`. Press `Tab` at the close target to complete against the same names `connections list` prints; see [Tab completion](/user-documentation/command-bar/tab-completion). Closing a browser window takes a moment, so its notification arrives once the window has closed.
 
 ## When a close target is malformed
 
-`connection close` needs a `<kind>:<id>` pair, and a half-typed one is refused before anything is closed:
+`connections close` needs a `<kind>:<id>` pair, and a half-typed one is refused before anything is closed:
 
 | What you typed | What you get |
 |---|---|
-| `connection close` | `Usage: connection close <kind>:<id>` |
-| `connection close mydb` | `Invalid connection "mydb". Expected <kind>:<id>, e.g. sqlite:mydb.` |
-| `connection close postgres:notes` | `Unknown connection kind "postgres". Expected one of: sqlite, shell, acp, browser, ssh, terminal.` |
-| `connection close sqlite:` | `Missing id in "sqlite:".` |
+| `connections close` | `Usage: connections close <kind>:<id>` |
+| `connections close mydb` | `Invalid connection "mydb". Expected <kind>:<id>, e.g. sqlite:mydb.` |
+| `connections close postgres:notes` | `Unknown connection kind "postgres". Expected one of: sqlite, shell, acp, browser, ssh, terminal.` |
+| `connections close sqlite:` | `Missing id in "sqlite:".` |
 
 Those are the whole list, and none of them closes anything on the way.
 
 ## The connections window
 
-A `connections` panel floats at the top right of a shell tab or an editor tab and lists that tab's live connections. The rows read like the entries in `connection list`, with a little more detail:
+A `connections` panel floats at the top right of a shell tab or an editor tab and lists that tab's live connections. The rows read like the entries in `connections list`, with a little more detail:
 
 - Its shell and working directory, such as `bash:~/dir`.
 - Its ACP agent, as `acp:<provider/model>`.
@@ -66,9 +66,9 @@ A `connections` panel floats at the top right of a shell tab or an editor tab an
 - Each browser window with its mode, such as `browser:w1 (headless)`.
 - Each terminal the tab runs, as `terminal:<program>`.
 - On a [remote](/user-documentation/advanced-agents/remote-agents) tab, the `ssh:<address>` transport it runs over, next to its terminals.
-- Every SQLite database the tab has queried. A database you close with `connection close sqlite:<name>` or delete with `db sqlite delete` drops off the list.
+- Every SQLite database the tab has queried. A database you close with `connections close sqlite:<name>` or delete with `db sqlite delete` drops off the list.
 
-An [editor tab](/user-documentation/tab-types/editor-persona-query) lists each persona it has consulted as `<persona> (acp)`. Those rows are the one kind with their own ×. Clicking it closes just that persona's connection, the same as `connection close acp:<persona>`.
+An [editor tab](/user-documentation/tab-types/editor-persona-query) lists each persona it has consulted as `<persona> (acp)`. Those rows are the one kind with their own ×. Clicking it closes just that persona's connection, the same as `connections close acp:<persona>`.
 
 <img class="agent-float" src="/agents/selim-south-west.png" alt="" />
 

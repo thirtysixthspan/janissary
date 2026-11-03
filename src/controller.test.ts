@@ -420,7 +420,7 @@ describe('Controller', () => {
   it('lists connections (none open) and profiles (none)', () => {
     initProfileDir(mkdtempSync(path.join(tmpdir(), 'janus-noprof-'))); // isolate from other tests' profiles
     const { c } = makeController();
-    c.dispatch('connection list');
+    c.dispatch('connections list');
     expect(allText(c)).toContain('No open connections.');
     c.dispatch('profile list');
     expect(allText(c)).toContain('No profiles.');
@@ -866,11 +866,11 @@ describe('Controller ssh tab', () => {
     expect(c.view().map((t) => t.label)).not.toContain('devbox');
   });
 
-  it('connection close ssh:devbox from another tab kills the PTY', () => {
+  it('connections close ssh:devbox from another tab kills the PTY', () => {
     const { c } = makeController();
     c.dispatch('ssh devbox');
     c.setActiveTab(0); // dispatch from janus, not the ssh tab (which has no command bar)
-    c.dispatch('connection close ssh:devbox');
+    c.dispatch('connections close ssh:devbox');
     expect(capturedKill).toHaveBeenCalled();
   });
 

@@ -96,7 +96,7 @@ export type TabPluginDeclaration = {
   // An entry the file navigator offers for a multi-row selection of this plugin's own file types.
   // A declaration carrying one must supply a `selectionAction` handler.
   selectionAction?: TabPluginSelectionAction;
-  // Host state this plugin's tabs want pushed into their payloads: the connection list, the schedule
+  // Host state this plugin's tabs want pushed into their payloads: the connections list, the schedule
   // list, or both. A declaration naming any must supply a `hostState` handler. The host delivers a
   // named slice only when it differs from what it last pushed to that tab, so this is a change
   // signal rather than a subscription to every state broadcast.

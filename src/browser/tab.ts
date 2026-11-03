@@ -26,7 +26,7 @@ export class BrowserManager {
     return this.browsers.has(label);
   }
 
-  // Live window state for a tab (for the connections panel / `connection list`).
+  // Live window state for a tab (for the connections panel / `connections list`).
   info(label: string): { ids: string[]; mode: string; current?: string } | null {
     const entry = this.browsers.get(label);
     return entry ? { ids: entry.browser.windowIds(), mode: entry.browser.mode, current: entry.current } : null;
@@ -81,7 +81,7 @@ export class BrowserManager {
   }
 
   // Run a `browser ...` command against a tab's browser, returning text to show/return. Shared by
-  // the interactive `browser` command, `connection close browser:*`, and the ACP tool loop.
+  // the interactive `browser` command, `connections close browser:*`, and the ACP tool loop.
   async run(label: string, command: string): Promise<string> {
     const parsed = parseBrowserCommand(command);
     if ('error' in parsed) return parsed.error;

@@ -74,4 +74,4 @@ A connection failure starts with `ACP:`, for example `ACP: ACP agent exited.` or
 
 A prompt failure, such as a rate limit, starts with `ACP error:` and appears in the reply. The connection stays, and so does the conversation, so you can send the prompt again.
 
-The connection is listed as `acp:<provider/model>`. Use its close control or `connection close` to end it. Its transcript button opens a snapshot in an editor tab. See [Connections](/user-documentation/command-bar/connections).
+The connection is listed as `acp:<provider/model>`. Use its close control or `connections close` to end it. Its transcript button opens a snapshot in an editor tab. See [Connections](/user-documentation/command-bar/connections).

@@ -59,8 +59,8 @@ panel is shown even while the ssh tab is active (harness tabs otherwise suppress
 list over themselves, since the terminal *is* the connection) because listing the destination is
 the point.
 
-`connection list` includes a global `ssh:<label> (<destination>)` row for every open ssh tab, since ssh tabs
-have no command bar of their own to run `connection list` from. `connection close ssh:<id>` closes
+`connections list` includes a global `ssh:<label> (<destination>)` row for every open ssh tab, since ssh tabs
+have no command bar of their own to run `connections list` from. `connections close ssh:<id>` closes
 one: `<id>` is matched against an ssh tab's (unique) **label** first, then against its
 **destination** (two `ssh devbox` tabs share destination `devbox` but have labels `devbox` /
 `devbox-2`, so the label match takes priority). No match returns `No open connection ssh:<id>.`,
@@ -74,7 +74,7 @@ open ssh tab.
 - **Running** — the ssh process receives all input; the connections panel lists `ssh:<destination>`.
 - **Closed** — the tab closes as soon as the ssh process exits (logout, `exit`, connection drop,
   or the binary/host being unreachable), or via the tab strip's × / `close` command (which kills
-  the PTY first), or `connection close ssh:<id>` from any tab. If the ssh tab is the last
+  the PTY first), or `connections close ssh:<id>` from any tab. If the ssh tab is the last
   remaining tab, closing it quits the app (see `tabs.md`). ssh's own error output (auth failure,
   unreachable host) dies with the tab — it is not echoed back to the creator's transcript. It does,
   however, land in the session recording: ssh prints those errors before the process exits, so they

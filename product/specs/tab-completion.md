@@ -59,10 +59,10 @@ The shell uses the following rules, in order of precedence:
 - **Candidates:** The labels of other action tabs in tab order, including hidden tabs, followed by one `group:<n>` selector for each action-tab group in ascending order. Display titles are not offered.
 - **Behavior:** A display title can still be typed as a target and resolves to its tab.
 
-### 2. Connection Management (`connection close`)
+### 2. Connection Management (`connections close`)
 
-- **Context:** The target argument of `connection close`.
-- **Candidates:** The same `<kind>:<id>` strings `connection list` prints for the tab (e.g., `sqlite:my-db`, `shell:bash`, `acp:opencode/big-pickle`, `browser:w1`, `ssh:devbox`, `terminal:vim`).
+- **Context:** The target argument of `connections close`.
+- **Candidates:** The same `<kind>:<id>` strings `connections list` prints for the tab (e.g., `sqlite:my-db`, `shell:bash`, `acp:opencode/big-pickle`, `browser:w1`, `ssh:devbox`, `terminal:vim`).
 
 ### 3. Browser Command (`browser`)
 

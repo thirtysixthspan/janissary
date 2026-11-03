@@ -125,7 +125,7 @@ export class RemoteManager {
     return true;
   }
 
-  // `connection close ssh:<id>` — the user ending the shared session on purpose. The far side is
+  // `connections close ssh:<id>` — the user ending the shared session on purpose. The far side is
   // genuinely finished (`terminateRemoteEntry` sends the shutdown frames), recovery stops, and every
   // tab and navigator holding the channel closes, which is the only reason a remote tab's `ssh:` row
   // is separately closable at all. Nothing reaches the notifications feed: `remote-session-terminated`

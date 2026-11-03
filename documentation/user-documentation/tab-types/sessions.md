@@ -108,4 +108,4 @@ Two things about that control are worth knowing. **Detach** acts on the whole sh
 
 ## Scope
 
-The list is specific to the project you have open — launching a remote session from a different project shows only that project's sessions. It's also separate from the connections surface: `connection list` and the [connections](/user-documentation/command-bar/connections) panel describe connections that are open right now, so a parked session shows up in neither. See [Remote agents and harnesses](/user-documentation/advanced-agents/remote-agents) for how a remote session is created in the first place.
+The list is specific to the project you have open — launching a remote session from a different project shows only that project's sessions. It's also separate from the connections surface: `connections list` and the [connections](/user-documentation/command-bar/connections) panel describe connections that are open right now, so a parked session shows up in neither. See [Remote agents and harnesses](/user-documentation/advanced-agents/remote-agents) for how a remote session is created in the first place.

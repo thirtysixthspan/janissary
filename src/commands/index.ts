@@ -6,7 +6,7 @@ import { command as acpReset } from './acp-reset.js';
 import { command as agent } from './agent.js';
 import { command as database } from './db.js';
 import { command as browser } from './browser.js';
-import { command as connection } from './connection.js';
+import { command as connections } from './connections.js';
 import { command as clear } from './clear.js';
 import { command as hist } from './hist.js';
 import { command as clipboard } from './clipboard.js';
@@ -49,7 +49,7 @@ const coreCommands: Command[] = [
   acp,
   database,
   browser,
-  connection,
+  connections,
   clear,
   hist,
   clipboard,

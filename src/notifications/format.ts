@@ -53,6 +53,8 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'system-schedule-fire': { return detail ?? ''; }
     case 'manual':
     case 'layout':
+    case 'connection-closed':
+    case 'connection-close-failed':
     case 'auto-approve':
     case 'auto-approve-no-workspace':
     case 'auto-resume':

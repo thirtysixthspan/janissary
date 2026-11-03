@@ -120,8 +120,8 @@ Both buttons are unavailable while the tab is waiting on another request, and wh
 
 ## When a database goes away
 
-If you delete a database with `db sqlite delete` while its tab is open, the grid empties and the header reads `Database "<name>" does not exist. Create it to start.` Deleting also closes the database's connection, so it leaves `connection list` right away. **Refresh** gives you the same message. It doesn't bring the empty file back. Run `db sqlite create <name>` to make the database again.
+If you delete a database with `db sqlite delete` while its tab is open, the grid empties and the header reads `Database "<name>" does not exist. Create it to start.` Deleting also closes the database's connection, so it leaves `connections list` right away. **Refresh** gives you the same message. It doesn't bring the empty file back. Run `db sqlite create <name>` to make the database again.
 
 ## Close a database's connection
 
-`connection close sqlite:<name>` closes the connection but leaves the database file alone. An open tab keeps showing what it last read. The next time the tab reads from the database, for example when you press **Refresh**, the connection opens again. Until then the database is missing from `connection list`. The browser doesn't add a row to the tab's own connections panel, even while the connection is open. See [Connections](/user-documentation/command-bar/connections).
+`connections close sqlite:<name>` closes the connection but leaves the database file alone. An open tab keeps showing what it last read. The next time the tab reads from the database, for example when you press **Refresh**, the connection opens again. Until then the database is missing from `connections list`. The browser doesn't add a row to the tab's own connections panel, even while the connection is open. See [Connections](/user-documentation/command-bar/connections).

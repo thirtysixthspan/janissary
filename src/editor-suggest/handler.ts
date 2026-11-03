@@ -25,7 +25,7 @@ export function ownerLabel(managers: Managers, url: string): string {
 // session sends just the live buffer content and the request text, since the model already has the
 // instructions from the first turn. An unknown persona, a connect/prompt error, or a reply
 // proposing nothing each post a notification (Decision 10) and resolve with no hunks; the session
-// itself is never killed on a prompt error — only an explicit close (`connection close acp:<persona>`)
+// itself is never killed on a prompt error — only an explicit close (`connections close acp:<persona>`)
 // or the tab closing does, and `EditorAcpManager` forgets it when its agent dies.
 export function editorSuggest(
   managers: Managers,

@@ -37,6 +37,8 @@ export type NotificationEventType =
   | 'launch-root-cloned'
   | 'remote-refused'
   | 'layout'
+  | 'connection-closed'
+  | 'connection-close-failed'
 
 // Background activity requires its own opt-in toggle and is suppressed for the active tab.
 export type AmbientNotificationEvent =
@@ -119,6 +121,10 @@ export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
   'remote-refused': true,
   // A layout command could not resize, read bounds, or report a size.
   layout: true,
+  // `connections close` closed the named connection.
+  'connection-closed': true,
+  // `connections close` found nothing to close or failed while closing it.
+  'connection-close-failed': true,
   // Project-owned schedule outcomes use their own default-on toggle below.
   'system-schedule-fire': true,
 };

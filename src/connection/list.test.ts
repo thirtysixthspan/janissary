@@ -27,7 +27,7 @@ function remoteTab(label = 'claude'): Tab {
 // A remote tab shows both rows: `ssh:` for the transport it runs over, and `terminal:` for the
 // process on the far side — each visible and separately closable. The ssh session itself is never
 // listed as `terminal:ssh`, which is why the transport PTY is marked as such in the registry.
-describe('connection list for a remote tab', () => {
+describe('connections list for a remote tab', () => {
   it('lists both the transport, by the label close accepts, and the remote process', () => {
     const managers = makeManagers([remoteTab()], ['claude']);
     expect(listLines(managers, 'claude')).toEqual(['ssh:claude (admin@devbox:/srv/proj)', 'terminal:claude']);
@@ -71,7 +71,7 @@ describe('connection list for a remote tab', () => {
   });
 });
 
-describe('connection list and completion names', () => {
+describe('connections list and completion names', () => {
   function populated(): Managers {
     const managers = makeManagers([makeTab('main', 'red')], ['vim']);
     Object.assign(managers.acp, { has: vi.fn(() => true), label: vi.fn(() => 'anthropic/claude-sonnet') });

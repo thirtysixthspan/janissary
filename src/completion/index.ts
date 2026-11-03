@@ -25,7 +25,7 @@ const HELP_DIRECTORY = path.join(path.dirname(fileURLToPath(import.meta.url)), '
  *
  * - For tab-target arguments of `send`, `queue`, `close`/`exit`, `schedule`, and `tab`, completes
  *   against open tab labels and display titles.
- * - For the target of `connection close`, completes against open connection strings
+ * - For the target of `connections close`, completes against open connection strings
  *   (e.g. `sqlite:movies`, `shell:bash`, `acp:opencode`, `browser:w1`).
  * - For the `browser` command, completes subcommands and, where a window id is expected
  *   (`browser use`, `browser window close`), the current tab's open window ids.

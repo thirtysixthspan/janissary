@@ -84,7 +84,7 @@ Commits made in the remote workspace use the name and email of the person who op
 
 ## Find the connections
 
-A remote tab lists two connections: `ssh:<address>` for the transport, and `terminal:<program>` for the process on the far side, so a remote claude harness shows `terminal:claude` exactly as a local one does. Both are closable on their own. `connection close ssh:<id>` matches the tab's label first, then the address it was launched with. Closing a shared SSH connection closes every shell, harness, and file navigator using it. See [Connections](/user-documentation/command-bar/connections).
+A remote tab lists two connections: `ssh:<address>` for the transport, and `terminal:<program>` for the process on the far side, so a remote claude harness shows `terminal:claude` exactly as a local one does. Both are closable on their own. `connections close ssh:<id>` matches the tab's label first, then the address it was launched with. Closing a shared SSH connection closes every shell, harness, and file navigator using it. See [Connections](/user-documentation/command-bar/connections).
 
 ## Browse and edit remote files
 

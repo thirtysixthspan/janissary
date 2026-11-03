@@ -1,9 +1,9 @@
 import { connectionCatalog } from './catalog.js';
 import type { Managers } from '../managers.js';
 
-// The `connection list` lines and the `connection close` completion candidates, both read off the
+// The `connections list` lines and the `connections close` completion candidates, both read off the
 // one catalog the connections panel is also built from, so every name either surface offers is one
-// `connection close` accepts.
+// `connections close` accepts.
 
 // One `<kind>:<id>` line per catalog entry — the issuing tab's own connections, then every other
 // tab's ssh connection and every other open SQLite database — with any detail (an ssh destination)

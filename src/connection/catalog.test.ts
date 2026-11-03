@@ -6,6 +6,9 @@ import { makeTab } from '../tab/index.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 
+const notifications = vi.hoisted(() => ({ notify: vi.fn() }));
+vi.mock('../notifications/index.js', () => ({ notify: notifications.notify }));
+
 function remoteTab(label: string): Tab {
   const tab = makeTab(label, 'red');
   tab.remote = { address: 'admin@devbox:/srv/proj', host: 'devbox' };
@@ -96,25 +99,21 @@ describe('connectionCatalog', () => {
   });
 });
 
-// Every name the catalog hands out — and so every name the panel, `connection list`, and completion
-// offer — must parse as a `connection close` target and close exactly that connection.
-describe('every catalog entry round-trips through connection close', () => {
+// Every name the catalog hands out — and so every name the panel, `connections list`, and completion
+// offer — must parse as a `connections close` target and close exactly that connection.
+describe('every catalog entry round-trips through connections close', () => {
   const entries = connectionCatalog(populated(), 'main');
 
   it.each(entries.map((e) => [`${e.kind}:${e.id}`, e.kind]))('closes %s', async (target, kind) => {
     const managers = populated();
-    const command = `connection close ${target}`;
+    const command = `connections close ${target}`;
 
-    new ConnectionManager(managers).run(command, 'main');
-    await Promise.resolve();
-    await Promise.resolve();
+    await new ConnectionManager(managers).run(command, 'main');
 
     if (kind === 'browser') {
       expect(managers.browser.run).toHaveBeenCalledWith('main', `browser window close ${target.slice('browser:'.length)}`);
-      expect(managers.tab.finishRunning).toHaveBeenCalledWith('main', `Closed connection ${target}.`, { command });
-    } else {
-      expect(managers.tab.append).toHaveBeenCalledWith('main', { input: command, output: `Closed connection ${target}.` });
     }
+    expect(notifications.notify).toHaveBeenLastCalledWith(managers, 'connection-closed', 'main', `Closed connection ${target}.`);
   });
 
   it('covers every kind the catalog produces', () => {
