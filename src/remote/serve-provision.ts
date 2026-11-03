@@ -76,6 +76,7 @@ export async function provisionRemoteWorkspace(
   const tokens = { ...own, ...forwarded };
   // The clone fetches with the same GitHub credential the workspace's processes will get, so a host
   // with no GitHub access of its own can still clone a private repository.
+  const startedAt = performance.now();
   const result = depth === undefined
     ? workspaces.create(label, tokens.github)
     : workspaces.create(label, tokens.github, workspaceCloneOptions(depth));
@@ -87,6 +88,7 @@ export async function provisionRemoteWorkspace(
     return;
   }
   if (context.stopping()) { workspaces.removeAll(); return; }
+  const elapsedMs = performance.now() - startedAt;
   // The identity, unlike the tokens, is replaced whole or not at all: a name from the local
   // machine paired with an email from this one belongs to nobody, so a forwarded identity either
   // stands on its own or this machine's own stays as the fallback.
@@ -104,5 +106,6 @@ export async function provisionRemoteWorkspace(
     notice: workspaceReadyNotice(sandboxNotice(), githubTokenNotice(forwarded.github, own.github), result.oauthNotice),
     ...(leftover !== undefined && { cleaned: leftover }),
     ...(cloned !== undefined && { cloned }),
+    elapsedMs,
   });
 }

@@ -9,6 +9,8 @@ export function formatPrepareDuration(milliseconds: number): string {
   return `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, '0')}s`;
 }
 
-export function workspaceReadyMessage(dir: string, milliseconds: number): string {
-  return `Prepared workspace ${abbreviateWorkspaceDir(dir)} in ${formatPrepareDuration(milliseconds)}.`;
+// A clone on a remote host names that host after the workspace, as a remote leftover cleanup does.
+export function workspaceReadyMessage(dir: string, milliseconds: number, host?: string): string {
+  const where = host === undefined ? '' : ` on ${host}`;
+  return `Prepared workspace ${abbreviateWorkspaceDir(dir)}${where} in ${formatPrepareDuration(milliseconds)}.`;
 }

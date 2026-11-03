@@ -220,12 +220,15 @@ These event types can produce a notification line:
   (`No open connection <kind>:<id>.`) or failed while closing
   (`Could not close connection <kind>:<id>: <reason>.`). Attributed like `connection-closed`. The
   event defaults to a desktop banner with the `error` cue.
-- **`workspace-ready`** — a workspace clone made on this machine finished provisioning (the clone
-  and its follow-up setup). The line reports how long that took, timed from the moment the clone
-  started: `Prepared workspace $workspace/<name> in <duration>.`, where the duration reads in tenths
-  of a second under a minute (`4.2s`) and in minutes and seconds from a minute on (`1m 05s`).
-  Attributed to the tab that owns the workspace. A clone that fails, is cancelled, or whose tab
-  closed before it finished reports nothing. The event defaults to a desktop banner with the
+- **`workspace-ready`** — a workspace clone finished provisioning (the clone and its follow-up
+  setup), on this machine or on a remote launch's host. The line reports how long that took, timed
+  from the moment the clone started: `Prepared workspace $workspace/<name> in <duration>.`, or
+  `Prepared workspace $workspace/<name> on <host> in <duration>.` for a remote clone, where the
+  duration reads in tenths of a second under a minute (`4.2s`) and in minutes and seconds from a
+  minute on (`1m 05s`). A remote clone is timed on its host, so the time leaves out the SSH
+  connection and any root clone offer answered before it. Attributed to the tab that owns the
+  workspace. A clone that fails, is cancelled, or whose tab closed before it finished reports
+  nothing, and neither does a remote host running a janus too old to send the time. The event defaults to a desktop banner with the
   `success` cue.
 - **`tab`** — an arranging command cannot carry out a well-formed request. The exact messages are
   `Cannot dock "<name>".` for an undockable kind or the last visible center tab,

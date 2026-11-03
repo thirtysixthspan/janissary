@@ -316,7 +316,8 @@ it is turned into a capture filename.
 A name-refusal frame must carry a nonempty name, and its path and reason come together or not at
 all, each nonempty when present; a workspace-ready frame's removed-leftover path is optional but,
 when present, must be nonempty, and its cloned-root record is optional but, when present, must carry
-a nonempty URL and path. A provisioning request's origin is optional but, when present, must be
+a nonempty URL and path; its provisioning time, in milliseconds, is optional but, when present, must
+be a finite, non-negative number. A provisioning request's origin is optional but, when present, must be
 nonempty. A clone offer must carry a nonempty path and URL, and its home directory is optional but
 nonempty when present; a clone answer's `accept` must be a boolean. A root refusal must carry one of
 its declared kinds, a nonempty path, and every nonempty field that kind carries; an unknown kind is

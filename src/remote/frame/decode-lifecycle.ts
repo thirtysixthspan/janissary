@@ -113,17 +113,24 @@ export function decodeBrowserStarted(record: Record<string, unknown>): DecodeRes
   return nonEmptyString(record.id) ? { type: 'browser-started', id: record.id } : malformed('browser-started');
 }
 
+// How long the host took to provision the workspace, when it says: a finite, non-negative count of
+// milliseconds. A host running an older janus sends none.
+function optionalDuration(value: unknown): value is number | undefined {
+  return value === undefined || (typeof value === 'number' && Number.isFinite(value) && value >= 0);
+}
+
 export function decodeWorkspaceReady(record: Record<string, unknown>): DecodeResult {
-  const { dir, home, notice, cleaned } = record;
+  const { dir, home, notice, cleaned, elapsedMs } = record;
   const cloned = decodeCloned(record.cloned);
   if (!nonEmptyString(dir) || !optionalNonEmptyString(home) || !optionalNonEmptyString(notice) || !optionalNonEmptyString(cleaned)
-    || cloned === false) return malformed('workspace-ready');
+    || cloned === false || !optionalDuration(elapsedMs)) return malformed('workspace-ready');
   return {
     type: 'workspace-ready', dir,
     ...(home !== undefined && { home }),
     ...(notice !== undefined && { notice }),
     ...(cleaned !== undefined && { cleaned }),
     ...(cloned !== undefined && { cloned }),
+    ...(elapsedMs !== undefined && { elapsedMs }),
   };
 }
 

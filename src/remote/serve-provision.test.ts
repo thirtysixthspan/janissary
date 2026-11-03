@@ -72,6 +72,16 @@ describe('provisionRemoteWorkspace', () => {
     expect(frames).toContainEqual(expect.objectContaining({ type: 'workspace-ready', home: homedir() }));
   });
 
+  it('sends how long the clone took to become ready with workspace-ready', async () => {
+    const now = vi.spyOn(performance, 'now').mockReturnValueOnce(2000).mockReturnValueOnce(9500);
+    const { context, frames } = harness();
+
+    await provisionRemoteWorkspace(context, 'alpha', {}, {});
+
+    expect(frames).toContainEqual(expect.objectContaining({ type: 'workspace-ready', elapsedMs: 7500 }));
+    now.mockRestore();
+  });
+
   it('clones as shallow as the launch asked, keeping every branch', async () => {
     const { context, workspaces } = harness();
 

@@ -211,9 +211,10 @@ Workspace directories are ephemeral:
   cancels that tab's clone right away, the same as any other close. If another launch reuses its
   name before the earlier clone settles, the earlier attempt cannot clear or cancel the new tab's
   provisioning state or report its credential notice on the new tab's behalf.
-- **Ready notice**: When a clone made on this machine finishes provisioning, the notifications feed
-  reports how long it took, attributed to the owning tab: `Prepared workspace $workspace/<name> in
-  4.2s.` A shell tab still posts its own `Shell "<name>" ready.` line as well. A failed, cancelled,
+- **Ready notice**: When a clone finishes provisioning, the notifications feed reports how long it
+  took, attributed to the owning tab: `Prepared workspace $workspace/<name> in 4.2s.`, with
+  ` on <host>` after the name for a clone on a remote host, which times it there. A shell tab still
+  posts its own `Shell "<name>" ready.` line as well. A failed, cancelled,
   or abandoned clone reports no time (see [[notifications]]).
 - **Shared references**: A clone starts with one reference. Each agent joined through the source
   tab's ➕ button retains another reference, locally or remotely. Closing the tab that originally
