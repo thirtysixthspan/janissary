@@ -14,9 +14,10 @@ export function ConnectionTab({ record, capabilities }: {
   const historyRef = useRef<HTMLDivElement>(null);
   const { window } = record;
   const latestBlock = window?.blocks.at(-1);
+  const latestActivityText = latestBlock?.entries.at(-1)?.text;
   const contentKey = useMemo(() => [window?.offset, window?.blocks.length, latestBlock?.answer,
-    latestBlock?.entries.length, latestBlock?.prompt], [window?.offset, window?.blocks.length,
-    latestBlock?.answer, latestBlock?.entries.length, latestBlock?.prompt]);
+    latestActivityText, latestBlock?.entries.length, latestBlock?.prompt], [window?.offset, window?.blocks.length,
+    latestActivityText, latestBlock?.answer, latestBlock?.entries.length, latestBlock?.prompt]);
   const scroll = useConnectionHistoryScroll(historyRef, capabilities.active, window?.offset,
     window?.hasOlder ?? false, () => controller.loadOlder(record.id), contentKey);
 

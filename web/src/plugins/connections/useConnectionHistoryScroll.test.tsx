@@ -1,13 +1,15 @@
-import React, { useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { act, fireEvent, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useConnectionHistoryScroll } from './useConnectionHistoryScroll';
 
-function Mount({ active, offset, hasOlder, loadOlder, contentKey }: {
-  active: boolean; offset: number; hasOlder: boolean; loadOlder: () => Promise<unknown>; contentKey: number;
+function Mount({ active, offset, hasOlder, loadOlder, contentKey, activityText = '' }: {
+  active: boolean; offset: number; hasOlder: boolean; loadOlder: () => Promise<unknown>;
+  contentKey: number; activityText?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const scroll = useConnectionHistoryScroll(ref, active, offset, hasOlder, loadOlder, contentKey);
+  const scrollContentKey = useMemo(() => [contentKey, 'message', activityText], [activityText, contentKey]);
+  const scroll = useConnectionHistoryScroll(ref, active, offset, hasOlder, loadOlder, scrollContentKey);
   return <div data-testid="scroller" ref={ref} onScroll={(event) => scroll.onScroll(event.currentTarget)}>
     <div style={{ height: `${contentKey * 100}px` }} />
   </div>;
@@ -22,6 +24,28 @@ function metrics(element: HTMLElement, values: { height: number; top: number; cl
 }
 
 describe('useConnectionHistoryScroll', () => {
+  it('follows streamed activity text growth while active and near the bottom', () => {
+    const loadOlder = vi.fn(async () => null);
+    const view = render(<Mount active offset={0} hasOlder={false} loadOlder={loadOlder} contentKey={1} activityText="first" />);
+    const element = view.getByTestId('scroller');
+    metrics(element, { height: 500, top: 500, client: 100 });
+    fireEvent.scroll(element);
+    metrics(element, { height: 600, top: 500, client: 100 });
+    view.rerender(<Mount active offset={0} hasOlder={false} loadOlder={loadOlder} contentKey={1} activityText="first chunk" />);
+    expect(element.scrollTop).toBe(600);
+  });
+
+  it('does not follow streamed activity text growth after the reader scrolls away', () => {
+    const loadOlder = vi.fn(async () => null);
+    const view = render(<Mount active offset={0} hasOlder={false} loadOlder={loadOlder} contentKey={1} activityText="first" />);
+    const element = view.getByTestId('scroller');
+    metrics(element, { height: 500, top: 200, client: 100 });
+    fireEvent.scroll(element);
+    metrics(element, { height: 600, top: 200, client: 100 });
+    view.rerender(<Mount active offset={0} hasOlder={false} loadOlder={loadOlder} contentKey={1} activityText="first chunk" />);
+    expect(element.scrollTop).toBe(200);
+  });
+
   it('starts at newest content and follows active output only while near bottom', () => {
     const loadOlder = vi.fn(async () => null);
     const view = render(<Mount active offset={0} hasOlder={false} loadOlder={loadOlder} contentKey={1} />);
