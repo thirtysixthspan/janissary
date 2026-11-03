@@ -232,7 +232,9 @@ Workspace directories are ephemeral:
   count as an owner. If nothing holds it but the project has no git repository or no `origin`
   remote, the folder is left alone and the launch fails with its usual workspace error, since it
   could never have cloned. Otherwise
-  the folder and its scratch sibling are removed, even with uncommitted or unpushed work in them,
+  the folder and its scratch sibling are removed, even with uncommitted or unpushed work in them.
+  Their names are freed at once, however large the folders are, and their contents are deleted in
+  the background without stalling the app, so the clone never waits on the old files. Then
   `Removed leftover workspace "<name>" ($workspace/<name>) before launching.` is posted to the notifications
   feed, and the clone goes ahead. A cleanup that fails — including a failure to update the Claude
   trust file, which is tried first and leaves the folder untouched — refuses the launch with

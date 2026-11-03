@@ -148,7 +148,8 @@ reason), the placeholder shows the connection's error and closes shortly after a
 
 A leftover workspace folder under the chosen label with nothing running in it is removed before the
 clone, locally for `-w` and on the host for `on <address>`, even with uncommitted or unpushed work in
-it. The removal is announced as `Removed leftover workspace "<label>" ($workspace/<label>) before launching.` (with
+it. The folder's name is freed at once, so the launch and its clone never wait on the old files
+being deleted; its contents are deleted in the background without stalling the app. The removal is announced as `Removed leftover workspace "<label>" ($workspace/<label>) before launching.` (with
 ` on <host>` after the label for a remote one). A removal that fails refuses the launch with
 `Cannot launch "<label>": could not remove leftover workspace "<label>" ($workspace/<label>) — <reason>.`, closing
 a remote placeholder at once. The folder is named by its workspace rather than by its absolute path,
