@@ -112,6 +112,7 @@ describe('notificationText', () => {
     ['remote-refused', 'Remote janus on devbox refused a request: Unexpected remote frame "capture-request".'],
     ['connection-closed', 'Closed connection sqlite:mydb.'],
     ['connection-close-failed', 'No open connection sqlite:mydb.'],
+    ['workspace-ready', 'Prepared workspace $workspace/foo in 4.2s.'],
   ] as const)('renders the %s message verbatim', (event, text) => {
     expect(notificationText(event, 'janus', text)).toBe(text);
   });

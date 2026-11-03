@@ -75,6 +75,54 @@ describe('WorkspaceManager', () => {
     });
   });
 
+  describe('ready report', () => {
+    const dir = '/repo/.janissary/workspace/agent';
+
+    function startClone(ready: Promise<void>, onReady: (label: string, dir: string, elapsedMs: number) => void) {
+      findRepoRootMock.mockReturnValue('/repo');
+      getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
+      provisionWorkspaceMock.mockReturnValue({ ...handle(dir), ready });
+      const manager = new WorkspaceManager('/repo', undefined, onReady);
+      const result = manager.create('agent');
+      if (!('ready' in result)) throw new Error('clone did not start');
+      return { manager, result };
+    }
+
+    it('reports the time between create and readiness with the label and directory', async () => {
+      const now = vi.spyOn(performance, 'now').mockReturnValueOnce(1000).mockReturnValueOnce(5200);
+      const ready = Promise.withResolvers<void>();
+      const report = vi.fn();
+      const { result } = startClone(ready.promise, report);
+      expect(report).not.toHaveBeenCalled();
+      ready.resolve();
+      await result.ready;
+      expect(report).toHaveBeenCalledExactlyOnceWith('agent', dir, 4200);
+      now.mockRestore();
+    });
+
+    it('does not report a clone that fails', async () => {
+      const report = vi.fn();
+      const { result } = startClone(Promise.reject(new Error('clone failed')), report);
+      await expect(result.ready).rejects.toThrow('clone failed');
+      expect(report).not.toHaveBeenCalled();
+    });
+
+    it('does not report a workspace released before it finished', async () => {
+      const ready = Promise.withResolvers<void>();
+      const report = vi.fn();
+      const { manager, result } = startClone(ready.promise, report);
+      manager.release(dir);
+      ready.resolve();
+      await result.ready;
+      expect(report).not.toHaveBeenCalled();
+    });
+
+    it('does not reject readiness when the report throws', async () => {
+      const { result } = startClone(Promise.resolve(), () => { throw new Error('notification unavailable'); });
+      await expect(result.ready).resolves.toBeUndefined();
+    });
+  });
+
   describe('create', () => {
     it('does not reject readiness when optional notice delivery fails', async () => {
       findRepoRootMock.mockReturnValue('/repo');

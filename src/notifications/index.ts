@@ -39,6 +39,7 @@ export type NotificationEventType =
   | 'layout'
   | 'connection-closed'
   | 'connection-close-failed'
+  | 'workspace-ready'
 
 // Background activity requires its own opt-in toggle and is suppressed for the active tab.
 export type AmbientNotificationEvent =
@@ -125,6 +126,8 @@ export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
   'connection-closed': true,
   // `connections close` found nothing to close or failed while closing it.
   'connection-close-failed': true,
+  // A workspace clone the user launched finished provisioning; the line reports how long it took.
+  'workspace-ready': true,
   // Project-owned schedule outcomes use their own default-on toggle below.
   'system-schedule-fire': true,
 };

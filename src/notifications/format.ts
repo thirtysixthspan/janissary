@@ -55,6 +55,7 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'layout':
     case 'connection-closed':
     case 'connection-close-failed':
+    case 'workspace-ready':
     case 'auto-approve':
     case 'auto-approve-no-workspace':
     case 'auto-resume':
