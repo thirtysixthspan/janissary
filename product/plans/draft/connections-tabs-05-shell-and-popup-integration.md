@@ -9,7 +9,7 @@ Make shell ACP prompts asynchronous, render their settled replies at the shell o
 ## Decisions and dependencies
 
 - Covers source-plan requirements 3–4, 9–10, 20, 31, 35, 37, and tests for shell replies and popup row callbacks.
-- Depends on ACP cancel/feed subplan 02 for settled outcomes and record ids, plus plugin subplan 04 for opening/focusing a connection tab. Can proceed after both are complete; it does not require API-v3 panel removal.
+- Depends on ACP cancel/feed subplan 02 for settled outcomes and record ids, plus ordered plugin plans 04a, 04b, and 04c for the record-tab contract and opening/focusing a connection tab. It can start after 02 and finish after 04c; it does not require API-v3 panel removal.
 - Every shell `acp` invocation settles exactly one background reply: answer, second-prompt refusal, usage, ACP error, reset/close result, or cancellation. The echoed line is `acp <prompt>` (or the actual typed usage line) and is rendered Markdown. Monitor replies retain their existing `monitor` line.
 - Preserve `acpEntries` tagging because the transcript settlement path still uses it. Popup ACP snapshot buttons remain wherever already available; opening a row is a distinct callback and applies only to a record id or a tab-scoped ACP reference.
 
@@ -17,7 +17,7 @@ Make shell ACP prompts asynchronous, render their settled replies at the shell o
 
 - `backgroundReplies`, `onBackgroundReply`, and `useBackgroundReplies`; shell Markdown `displayReply` in `web/src/plugins/shell/useShellSubmit.ts`.
 - `settleAcpPrompt` in `src/acp/response.ts`, and existing popup rows in `StatusPanels`/`ShellTabMeta` plus editor and harness popup integrations.
-- Plugin open/focus intent route established by subplan 04.
+- Plugin open/focus intent route established by subplans 04a–04c.
 
 ## Proposed changes
 
@@ -40,4 +40,4 @@ Make shell ACP prompts asynchronous, render their settled replies at the shell o
 ## Out of scope
 
 - Removing the streaming response panel and changing plugin API version (subplan 06).
-- Connections plugin rendering/command implementation (subplan 04), ACP record model, remote cancel, and documentation.
+- Connections plugin server/command implementation (04a), list UI (04b), record-tab UI (04c), ACP record model, remote cancel, and documentation.

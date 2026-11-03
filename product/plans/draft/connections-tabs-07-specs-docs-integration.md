@@ -9,7 +9,7 @@ Bring contributor and user documentation into line with the implemented connecti
 ## Decisions and dependencies
 
 - Covers source-plan proposed change 7, all named spec/documentation updates, the full manual verification list, final lazy chunk/build check, and cross-subplan integration verification.
-- Depends on subplans 01–06. This is an explicit integration deliverable, not deferred cleanup.
+- Depends on completed subplans 01–03, ordered plugin plans 04a–04c, and integration/API plans 05–06. This is an explicit integration deliverable, not deferred cleanup.
 - Specs describe observable behavior precisely; user docs explain the user's workflow without implementation details. Keep unrelated existing sessions-tab, agent-monitor, task-picker, and non-tracked ACP consumer behavior unchanged.
 
 ## Existing code to reuse
@@ -37,7 +37,7 @@ Bring contributor and user documentation into line with the implemented connecti
 
 - Run `$janissary/scripts/run.mjs check-diff` after each docs/integration change.
 - Build the production web bundle and confirm the connections plugin remains a separate lazy chunk.
-- Review the requirement map against all six preceding plans and the resulting specs/tests; no requirement is left as implied work.
+- Review the requirement map against plans 01–03, 04a–04c, 05–06, and the resulting specs/tests; no requirement is left as implied work.
 
 ## Out of scope
 
