@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { messageBus } from '../bus.js';
+import { commands } from '../commands/index.js';
 import type { Managers } from '../managers.js';
 import { fakeNotificationsHost } from '../notifications/tab-test-fixture.js';
 import { NotificationQueue } from '../notifications/queue.js';
@@ -73,6 +74,13 @@ describe('tab plugin discovery', () => {
       tabPluginCatalog.map((item) => item.id).toSorted((a, b) => a.localeCompare(b)),
     );
     expect(tabPluginCatalog.map((item) => item.id)).not.toContain('fixture-v1');
+    expect(tabPluginCatalog.find((item) => item.id === 'connections')).toMatchObject({
+      command: 'connections', commandAliases: ['connection'], notifications: ['connections'],
+      capabilities: expect.arrayContaining(['closeOwnTab', 'originTab', 'topicAction']),
+    });
+    expect(tabPluginCatalog.find((item) => item.id === 'connections')?.capabilities).not.toContain('dispatchLineWithOutput');
+    expect(commands.find((command) => command.name === 'tasks')?.match('tasks')).toBe(true);
+    expect(tabPluginCatalog.flatMap((item) => [item.command, ...(item.commandAliases ?? [])])).not.toContain('tasks');
   });
 
   it('rejects duplicate plugin ids at host construction', () => {

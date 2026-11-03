@@ -1,0 +1,72 @@
+import { noFileOpener, type TabPluginActivation, type TabPluginServerCapabilities } from '../api.js';
+import { isConnectionsPayload, isIdIntent, isKindIdIntent, type ConnectionRow } from './shared.js';
+import { runConnectionsCommand } from './command.js';
+import { ConnectionTabs, connectionsData } from './tabs.js';
+
+function rowForId(rows: ConnectionRow[], id: string, kind?: string): ConnectionRow | undefined {
+  return rows.find((row) => row.id === id && (kind === undefined || row.kind === kind));
+}
+
+function openOrClose(name: 'open' | 'close', row: ConnectionRow | undefined, tabs: ConnectionTabs, capabilities: TabPluginServerCapabilities): null {
+  if (!row) return capabilities.rejectRequest(`invalid ${name} payload`);
+  switch (name) {
+    case 'open': {
+      if (row.type === 'record') tabs.openRecord(row, capabilities);
+      else capabilities.topicAction({ topic: 'connections', action: 'open', kind: row.kind, id: row.id, ownerLabel: row.ownerLabel });
+      break;
+    }
+    case 'close': {
+      if (row.type === 'live') capabilities.topicAction({ topic: 'connections', action: 'close', kind: row.kind, id: row.id, ownerLabel: row.ownerLabel });
+      else if (row.kind === 'acp' && ['Idle', 'Running'].includes(row.status)) {
+        capabilities.topicAction({ topic: 'connections', action: 'closeSession', id: row.id });
+      } else capabilities.topicAction({ topic: 'connections', action: 'delete', id: row.id });
+      break;
+    }
+  }
+  return null;
+}
+
+function recordAction(name: string, id: string, capabilities: TabPluginServerCapabilities): null {
+  switch (name) {
+    case 'cancel': { capabilities.topicAction({ topic: 'connections', action: 'cancel', id }); break; }
+    case 'close-session': { capabilities.topicAction({ topic: 'connections', action: 'closeSession', id }); break; }
+    case 'terminate': { capabilities.topicAction({ topic: 'connections', action: 'terminate', id }); break; }
+    case 'delete': { capabilities.topicAction({ topic: 'connections', action: 'delete', id }); break; }
+    default: { capabilities.topicAction({ topic: 'connections', action: 'loadOlder', id }); }
+  }
+  return null;
+}
+
+function intent(
+  request: { intent: string; payload: unknown; tabPayload: unknown },
+  tabs: ConnectionTabs,
+  capabilities: TabPluginServerCapabilities,
+): null {
+  if (!isConnectionsPayload(request.tabPayload)) return capabilities.reportFailure('invalid connections tab payload');
+  if (request.intent === 'open' || request.intent === 'close') {
+    if (!isKindIdIntent(request.payload)) return capabilities.rejectRequest(`invalid ${request.intent} payload`);
+    const row = rowForId(connectionsData(capabilities).rows, request.payload.id, request.payload.kind);
+    return openOrClose(request.intent, row, tabs, capabilities);
+  }
+  const validIdIntents = ['cancel', 'close-session', 'terminate', 'delete', 'load-older'];
+  if (validIdIntents.includes(request.intent)) {
+    if (!isIdIntent(request.payload)) return capabilities.rejectRequest(`invalid ${request.intent} payload`);
+    return recordAction(request.intent, request.payload.id, capabilities);
+  }
+  return capabilities.rejectRequest(`unknown connections intent "${request.intent}"`);
+}
+
+export function activate(): TabPluginActivation {
+  const tabs = new ConnectionTabs();
+  return {
+    isPayload: isConnectionsPayload,
+    opener: noFileOpener('connections'),
+    command: (argument, capabilities, name = 'connections') => runConnectionsCommand(argument, name, tabs, capabilities),
+    notify: (event, capabilities) => {
+      if (event.topic !== 'connections') return;
+      tabs.update(event, capabilities);
+    },
+    intent: (request, capabilities) => intent(request, tabs, capabilities),
+    dispose: () => tabs.dispose(),
+  };
+}

@@ -1,12 +1,9 @@
 import type { ConnectionView } from '../protocol.js';
-import { parseConnectionCommand } from './parsing.js';
 import { closeConnection } from './close.js';
 import { connectionCatalog } from './catalog.js';
 import type { Managers } from '../managers.js';
-import type { CommandInvocationContext } from '../commands/types.js';
 import type { ConnectionKind } from './types.js';
-import { listLines, listCompletionConnections } from './list.js';
-import { appendCommandOutput } from '../command/append.js';
+import { listCompletionConnections } from './list.js';
 import { notify } from '../notifications/index.js';
 import { errorFirstLine } from '../error-text.js';
 
@@ -22,20 +19,6 @@ export class ConnectionManager {
     return connectionCatalog(this.managers, label)
       .filter((e) => e.scope === 'tab')
       .map((e) => (e.acpRef ? { text: e.display, kind: e.kind, acpRef: e.acpRef } : { text: e.display, kind: e.kind }));
-  }
-
-  // Listing and usage errors are written through the invocation, so a shell tab's capture prints
-  // them. A close reports its outcome as a notification instead.
-  async run(command: string, label: string, invocation?: CommandInvocationContext): Promise<void> {
-    const parsed = parseConnectionCommand(command);
-    const out = (text: string) => { appendCommandOutput(this.managers, label, { input: command, output: text }, invocation); };
-    if ('error' in parsed) { out(parsed.error); return; }
-    if (parsed.action === 'list') {
-      const lines = listLines(this.managers, label);
-      out(lines.length > 0 ? lines.join('\n') : 'No open connections.');
-      return;
-    }
-    await this.closeTarget(parsed.kind, parsed.id, label);
   }
 
   async closeTarget(kind: ConnectionKind, id: string, label: string): Promise<void> {

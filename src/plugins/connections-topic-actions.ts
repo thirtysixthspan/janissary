@@ -92,6 +92,10 @@ export function connectionsTopicAction(
     actOnLive(managers, action, requested);
     return undefined;
   }
+  if (action.action === 'closeCommand') {
+    void managers.connection.closeTarget(action.kind, action.id, action.label).catch(() => {});
+    return undefined;
+  }
   if (isRecordAction(action)) {
     actOnRecord(managers, action, requested);
     return undefined;

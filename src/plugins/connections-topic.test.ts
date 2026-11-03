@@ -134,6 +134,30 @@ describe('connections topic actions', () => {
     expect(closeTarget).toHaveBeenCalledTimes(1);
   });
 
+  it('runs command close without live-row validation for every connection kind', () => {
+    const { managers, closeTarget } = fixture();
+    for (const kind of ['sqlite', 'shell', 'acp', 'browser', 'ssh', 'terminal'] as const) {
+      runConnectionsTopicAction(managers, {
+        topic: 'connections', action: 'closeCommand', kind, id: 'target', label: 'invoking-tab',
+      });
+    }
+    expect(closeTarget).toHaveBeenCalledTimes(6);
+    expect(closeTarget).toHaveBeenNthCalledWith(1, 'sqlite', 'target', 'invoking-tab');
+    expect(closeTarget).toHaveBeenNthCalledWith(4, 'browser', 'target', 'invoking-tab');
+  });
+
+  it('starts browser command close without awaiting its notification', async () => {
+    const { managers, closeTarget } = fixture();
+    const pending = Promise.withResolvers<void>();
+    closeTarget.mockReturnValue(pending.promise as never);
+    runConnectionsTopicAction(managers, {
+      topic: 'connections', action: 'closeCommand', kind: 'browser', id: 'missing', label: 'owner',
+    });
+    expect(closeTarget).toHaveBeenCalledWith('browser', 'missing', 'owner');
+    pending.resolve();
+    await pending.promise;
+  });
+
   it('validates core ACP and agent run ownership and deletes only terminal records', async () => {
     const { managers, recordRows, cancel, close, finish } = fixture();
     runConnectionsTopicAction(managers, { topic: 'connections', action: 'cancel', id: 'core-id' });

@@ -448,11 +448,11 @@ describe('Controller', () => {
     expect(Array.isArray(v.connections)).toBe(true);
   });
 
-  it('lists connections (none open) and profiles (none)', () => {
+  it('lists connections (none open) and profiles (none)', async () => {
     initProfileDir(mkdtempSync(path.join(tmpdir(), 'janus-noprof-'))); // isolate from other tests' profiles
     const { c } = makeController();
     c.dispatch('connections list');
-    expect(allText(c)).toContain('No open connections.');
+    await vi.waitFor(() => expect(allText(c)).toContain('No open connections.'));
     c.dispatch('profile list');
     expect(allText(c)).toContain('No profiles.');
   });
@@ -897,12 +897,12 @@ describe('Controller ssh tab', () => {
     expect(c.view().map((t) => t.label)).not.toContain('devbox');
   });
 
-  it('connections close ssh:devbox from another tab kills the PTY', () => {
+  it('connections close ssh:devbox from another tab kills the PTY', async () => {
     const { c } = makeController();
     c.dispatch('ssh devbox');
     c.setActiveTab(0); // dispatch from janus, not the ssh tab (which has no command bar)
     c.dispatch('connections close ssh:devbox');
-    expect(capturedKill).toHaveBeenCalled();
+    await vi.waitFor(() => expect(capturedKill).toHaveBeenCalled());
   });
 
   it('registers a screen reader for the ssh PTY so the tab is monitorable', async () => {

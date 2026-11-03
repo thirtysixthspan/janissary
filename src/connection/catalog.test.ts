@@ -106,9 +106,7 @@ describe('every catalog entry round-trips through connections close', () => {
 
   it.each(entries.map((e) => [`${e.kind}:${e.id}`, e.kind]))('closes %s', async (target, kind) => {
     const managers = populated();
-    const command = `connections close ${target}`;
-
-    await new ConnectionManager(managers).run(command, 'main');
+    await new ConnectionManager(managers).closeTarget(kind, target.slice(`${kind}:`.length), 'main');
 
     if (kind === 'browser') {
       expect(managers.browser.run).toHaveBeenCalledWith('main', `browser window close ${target.slice('browser:'.length)}`);

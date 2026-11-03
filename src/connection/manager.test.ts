@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ConnectionManager } from './manager.js';
 import { SHELL_NAME } from '../shell/manager.js';
 import type { Managers } from '../managers.js';
-import type { CommandInvocationContext } from '../commands/types.js';
 
 const notifications = vi.hoisted(() => ({ notify: vi.fn() }));
 vi.mock('../notifications/index.js', () => ({ notify: notifications.notify }));
@@ -10,189 +9,103 @@ vi.mock('../notifications/index.js', () => ({ notify: notifications.notify }));
 function makeManagers(overrides: Partial<Managers> = {}): Managers {
   return {
     shell: { has: vi.fn(() => false) },
-    acp: { has: vi.fn(() => false), label: vi.fn(() => { /* no acp connection */ }) },
+    acp: { has: vi.fn(() => false), label: vi.fn() },
     monitor: { connectionsFor: vi.fn(() => []) },
     editorAcp: { connectionsFor: vi.fn(() => []) },
-    browser: { info: vi.fn(() => { /* no browser connection */ }), run: vi.fn(() => Promise.resolve('closed')) },
+    browser: { info: vi.fn(), run: vi.fn(() => Promise.resolve('closed')) },
     pty: { terminalsFor: vi.fn(() => []) },
     database: { openDbs: vi.fn(() => []), listOpen: vi.fn(() => []) },
-    tab: { tabs: [], byLabel: vi.fn(), shorten: vi.fn((p: string) => p), cwdOf: vi.fn(() => '/repo'), append: vi.fn(), appendForInvocation: vi.fn() },
+    tab: { tabs: [], byLabel: vi.fn(), shorten: vi.fn((value: string) => value), cwdOf: vi.fn(() => '/repo') },
     ...overrides,
   } as unknown as Managers;
 }
 
-describe('ConnectionManager', () => {
-  describe('closeTarget', () => {
-    beforeEach(() => { notifications.notify.mockClear(); });
+describe('ConnectionManager closeTarget', () => {
+  beforeEach(() => { notifications.notify.mockClear(); });
 
-    it('reports synchronous close results immediately through the existing event selection', () => {
-      const managers = makeManagers({
-        database: { openDbs: vi.fn(() => []), listOpen: vi.fn(() => []), close: vi.fn(() => true) },
-      } as unknown as Partial<Managers>);
+  it('reports successful synchronous close results', () => {
+    const managers = makeManagers({
+      database: { openDbs: vi.fn(() => []), listOpen: vi.fn(() => []), close: vi.fn(() => true) },
+    } as unknown as Partial<Managers>);
+    new ConnectionManager(managers).closeTarget('sqlite', 'inventory', 'owner');
+    expect(notifications.notify).toHaveBeenCalledWith(
+      managers, 'connection-closed', 'owner', 'Closed connection sqlite:inventory.',
+    );
+  });
 
-      new ConnectionManager(managers).closeTarget('sqlite', 'inventory', 'owner');
+  it('reports a missing target through the existing notification', () => {
+    const managers = makeManagers({
+      database: { openDbs: vi.fn(() => []), listOpen: vi.fn(() => []), close: vi.fn(() => false) },
+    } as unknown as Partial<Managers>);
+    new ConnectionManager(managers).closeTarget('sqlite', 'missing', 'owner');
+    expect(notifications.notify).toHaveBeenCalledWith(
+      managers, 'connection-close-failed', 'owner', 'No open connection sqlite:missing.',
+    );
+  });
 
-      expect(notifications.notify).toHaveBeenCalledWith(
-        managers, 'connection-closed', 'owner', 'Closed connection sqlite:inventory.',
-      );
-    });
+  it('converts thrown close errors to the first-line notification', () => {
+    const managers = makeManagers({
+      database: { openDbs: vi.fn(() => []), listOpen: vi.fn(() => []), close: vi.fn(() => { throw new Error('locked\nmore'); }) },
+    } as unknown as Partial<Managers>);
+    new ConnectionManager(managers).closeTarget('sqlite', 'inventory', 'owner');
+    expect(notifications.notify).toHaveBeenCalledWith(
+      managers, 'connection-close-failed', 'owner', 'Could not close connection sqlite:inventory: locked.',
+    );
+  });
 
-    it('starts browser close without awaiting and reports its eventual result', async () => {
-      const { promise, resolve: finishClose } = Promise.withResolvers<string>();
-      const browserRun = vi.fn(() => promise);
-      const managers = makeManagers({ browser: { info: vi.fn(), run: browserRun } } as unknown as Partial<Managers>);
+  it('starts browser close without awaiting and reports its eventual result', async () => {
+    const pending = Promise.withResolvers<string>();
+    const browserRun = vi.fn(() => pending.promise);
+    const managers = makeManagers({ browser: { info: vi.fn(), run: browserRun } } as unknown as Partial<Managers>);
+    new ConnectionManager(managers).closeTarget('browser', 'window-1', 'owner');
+    expect(browserRun).toHaveBeenCalledWith('owner', 'browser window close window-1');
+    expect(notifications.notify).not.toHaveBeenCalled();
+    pending.resolve('Closed connection browser:window-1.');
+    await pending.promise;
+    await Promise.resolve();
+    expect(notifications.notify).toHaveBeenCalledWith(
+      managers, 'connection-closed', 'owner', 'Closed connection browser:window-1.',
+    );
+  });
+});
 
-      new ConnectionManager(managers).closeTarget('browser', 'window-1', 'owner');
+describe('ConnectionManager connectionsFor', () => {
+  it('includes the tab-owned shell and ACP connections', () => {
+    const managers = makeManagers({
+      shell: { has: vi.fn(() => true) },
+      acp: { has: vi.fn(() => true), label: vi.fn(() => 'opencode') },
+    } as unknown as Partial<Managers>);
+    expect(new ConnectionManager(managers).connectionsFor('main')).toContainEqual(
+      { text: `${SHELL_NAME}:/repo`, kind: 'shell' },
+    );
+    expect(new ConnectionManager(managers).connectionsFor('main')).toContainEqual(
+      { text: 'acp:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'main' } },
+    );
+  });
 
-      expect(browserRun).toHaveBeenCalledWith('owner', 'browser window close window-1');
-      expect(notifications.notify).not.toHaveBeenCalled();
-      finishClose('Closed connection browser:window-1.');
-      await Promise.resolve();
-      expect(notifications.notify).toHaveBeenCalledWith(
-        managers, 'connection-closed', 'owner', 'Closed connection browser:window-1.',
-      );
-    });
+  it('omits the shell connection when no shell is open', () => {
+    expect(new ConnectionManager(makeManagers()).connectionsFor('main').some((row) => row.kind === 'shell')).toBe(false);
+  });
 
-    it('converts close exceptions to the existing first-line failure message', () => {
-      const managers = makeManagers({
-        database: { openDbs: vi.fn(() => []), listOpen: vi.fn(() => []), close: vi.fn(() => { throw new Error('locked\nmore'); }) },
-      } as unknown as Partial<Managers>);
-
-      new ConnectionManager(managers).closeTarget('sqlite', 'inventory', 'owner');
-
-      expect(notifications.notify).toHaveBeenCalledWith(
-        managers, 'connection-close-failed', 'owner', 'Could not close connection sqlite:inventory: locked.',
-      );
+  it('includes editor ACP rows with their owner reference', () => {
+    const managers = makeManagers({
+      editorAcp: {
+        connectionsFor: vi.fn(() => [{
+          text: 'reviewer (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' },
+        }]),
+      },
+    } as unknown as Partial<Managers>);
+    expect(new ConnectionManager(managers).connectionsFor('notes')).toContainEqual({
+      text: 'reviewer (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' },
     });
   });
 
-  describe('connectionsFor', () => {
-    it('includes a shell row when a shell is open', () => {
-      const managers = makeManagers({ shell: { has: vi.fn(() => true) } } as unknown as Partial<Managers>);
-      const manager = new ConnectionManager(managers);
-
-      const rows = manager.connectionsFor('main');
-
-      expect(rows).toContainEqual({ text: `${SHELL_NAME}:/repo`, kind: 'shell' });
-    });
-
-    it('omits the shell row when no shell is open', () => {
-      const managers = makeManagers();
-      const manager = new ConnectionManager(managers);
-
-      const rows = manager.connectionsFor('main');
-
-      expect(rows.some((r) => r.kind === 'shell')).toBe(false);
-    });
-
-    it('includes the tab\'s own agent row with a tab-scoped acpRef', () => {
-      const managers = makeManagers({ acp: { has: vi.fn(() => true), label: vi.fn(() => 'opencode') } } as unknown as Partial<Managers>);
-      const manager = new ConnectionManager(managers);
-
-      const rows = manager.connectionsFor('main');
-
-      expect(rows).toContainEqual({ text: 'acp:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'main' } });
-    });
-
-    it('includes an editor tab\'s persona connection rows', () => {
-      const managers = makeManagers({
-        editorAcp: { connectionsFor: vi.fn(() => [{ text: 'reviewer (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' } }]) },
-      } as unknown as Partial<Managers>);
-      const manager = new ConnectionManager(managers);
-
-      const rows = manager.connectionsFor('notes');
-
-      expect(rows).toContainEqual({ text: 'reviewer (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' } });
-    });
-
-    it('leaves out connections only the app-wide list reaches', () => {
-      const other = { label: 'bastion', harness: { name: 'ssh', ptyId: 'pty-1', destination: 'host' } };
-      const managers = makeManagers({
-        database: { openDbs: vi.fn(() => ['mine']), listOpen: vi.fn(() => ['mine', 'shared']) },
-        tab: { tabs: [other], byLabel: vi.fn(), shorten: vi.fn((p: string) => p), cwdOf: vi.fn(() => '/repo') },
-      } as unknown as Partial<Managers>);
-      const manager = new ConnectionManager(managers);
-
-      expect(manager.connectionsFor('main')).toEqual([{ text: 'sqlite:mine', kind: 'sqlite' }]);
-    });
-  });
-
-  describe('run', () => {
-    const invocation = { invocationId: 'inv-1' } as unknown as CommandInvocationContext;
-
-    beforeEach(() => { notifications.notify.mockClear(); });
-
-    it('writes the list through the invocation so a shell tab captures it', async () => {
-      const managers = makeManagers({ database: { openDbs: vi.fn(() => ['mine']), listOpen: vi.fn(() => ['mine']) } } as unknown as Partial<Managers>);
-
-      await new ConnectionManager(managers).run('connections list', 'shell', invocation);
-
-      expect(managers.tab.appendForInvocation).toHaveBeenCalledWith('shell', { input: 'connections list', output: 'sqlite:mine' }, 'inv-1');
-      expect(managers.tab.append).not.toHaveBeenCalled();
-    });
-
-    it('reports when nothing is open', async () => {
-      const managers = makeManagers();
-
-      await new ConnectionManager(managers).run('connections list', 'main');
-
-      expect(managers.tab.append).toHaveBeenCalledWith('main', { input: 'connections list', output: 'No open connections.' });
-    });
-
-    it('writes a usage error through the invocation', async () => {
-      const managers = makeManagers();
-
-      await new ConnectionManager(managers).run('connections close', 'shell', invocation);
-
-      expect(managers.tab.appendForInvocation).toHaveBeenCalledWith('shell', { input: 'connections close', output: 'Usage: connections close <kind>:<id>' }, 'inv-1');
-      expect(notifications.notify).not.toHaveBeenCalled();
-    });
-
-    it('notifies a successful close and writes nothing to the transcript', async () => {
-      const managers = makeManagers({ database: { openDbs: vi.fn(() => []), listOpen: vi.fn(() => []), close: vi.fn(() => true) } } as unknown as Partial<Managers>);
-
-      await new ConnectionManager(managers).run('connections close sqlite:mydb', 'main', invocation);
-
-      expect(notifications.notify).toHaveBeenCalledWith(managers, 'connection-closed', 'main', 'Closed connection sqlite:mydb.');
-      expect(managers.tab.appendForInvocation).not.toHaveBeenCalled();
-    });
-
-    it('sends an error notification when the connection does not exist', async () => {
-      const managers = makeManagers({ database: { openDbs: vi.fn(() => []), listOpen: vi.fn(() => []), close: vi.fn(() => false) } } as unknown as Partial<Managers>);
-
-      await new ConnectionManager(managers).run('connections close sqlite:mydb', 'main');
-
-      expect(notifications.notify).toHaveBeenCalledWith(managers, 'connection-close-failed', 'main', 'No open connection sqlite:mydb.');
-    });
-
-    it('sends an error notification when closing throws', async () => {
-      const close = vi.fn(() => { throw new Error('database is locked.\nstack'); });
-      const managers = makeManagers({ database: { openDbs: vi.fn(() => []), listOpen: vi.fn(() => []), close } } as unknown as Partial<Managers>);
-
-      await new ConnectionManager(managers).run('connections close sqlite:mydb', 'main');
-
-      expect(notifications.notify).toHaveBeenCalledWith(
-        managers, 'connection-close-failed', 'main', 'Could not close connection sqlite:mydb: database is locked.',
-      );
-    });
-
-    it('closes a browser window via the browser manager and notifies its result', async () => {
-      const browserRun = vi.fn(() => Promise.resolve('Closed connection browser:1.'));
-      const managers = makeManagers({ browser: { info: vi.fn(() => { /* no browser connection */ }), run: browserRun } } as unknown as Partial<Managers>);
-
-      await new ConnectionManager(managers).run('connections close browser:1', 'main');
-
-      expect(browserRun).toHaveBeenCalledWith('main', 'browser window close 1');
-      expect(notifications.notify).toHaveBeenCalledWith(managers, 'connection-closed', 'main', 'Closed connection browser:1.');
-    });
-
-    it('sends an error notification when the browser window is not open', async () => {
-      const browserRun = vi.fn(() => Promise.resolve('No open connection browser:9.'));
-      const managers = makeManagers({ browser: { info: vi.fn(() => { /* no browser connection */ }), run: browserRun } } as unknown as Partial<Managers>);
-
-      await new ConnectionManager(managers).run('connections close browser:9', 'main');
-
-      expect(notifications.notify).toHaveBeenCalledWith(managers, 'connection-close-failed', 'main', 'No open connection browser:9.');
-    });
+  it('keeps global-only connections out of a tab-owned projection', () => {
+    const managers = makeManagers({
+      database: { openDbs: vi.fn(() => ['mine']), listOpen: vi.fn(() => ['mine', 'shared']) },
+    } as unknown as Partial<Managers>);
+    expect(new ConnectionManager(managers).connectionsFor('main')).toEqual([
+      { text: 'sqlite:mine', kind: 'sqlite' },
+    ]);
   });
 });

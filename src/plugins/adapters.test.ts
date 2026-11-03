@@ -129,6 +129,15 @@ describe('tab plugin web claim', () => {
 });
 
 describe('tab plugin command adapter', () => {
+  it('routes both connections command claims through the adapter without claiming tasks', () => {
+    const plugin = createPluginCommands([
+      manifest('connections', { command: 'connections', commandAliases: ['connection'] }),
+    ], coreCommands());
+    expect(plugin.map((command) => command.name)).toEqual(['connections', 'connection']);
+    expect(plugin.map((command) => command.match(command.name))).toEqual([true, true]);
+    expect(plugin.some((command) => command.name === 'tasks')).toBe(false);
+  });
+
   it('refuses every production reserved name without contributing a command', () => {
     // A name is reserved when a built-in actually answers to that bare name. The transcript search
     // is registered as `search` but matches only `search transcript <pattern>`, so it does not

@@ -7,6 +7,7 @@ import { SCHEDULES_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/schedules/shar
 import { SCRIPTS_PAYLOAD_SCHEMA_VERSION, isScriptsPayload } from '@shared/plugins/scripts/shared';
 import { VIDEO_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/video/shared';
 import { CONVERSATIONS_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/conversations/shared';
+import { CONNECTIONS_PAYLOAD_SCHEMA_VERSION, isConnectionsPayload } from '@shared/plugins/connections/shared';
 import { DIFF_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/diff/shared';
 import { SQL_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/sql/shared';
 import { SHELL_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/shell/shared';
@@ -21,6 +22,7 @@ describe('client plugin registry', () => {
     expect(clientPluginRegistry.get('image')?.schemaVersion).toBe(IMAGE_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('conversations')?.schemaVersion)
       .toBe(CONVERSATIONS_PAYLOAD_SCHEMA_VERSION);
+    expect(clientPluginRegistry.get('connections')?.schemaVersion).toBe(CONNECTIONS_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('diff')?.schemaVersion).toBe(DIFF_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('markdown')?.schemaVersion).toBe(MARKDOWN_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('pdf')?.schemaVersion).toBe(PDF_PAYLOAD_SCHEMA_VERSION);
@@ -74,5 +76,18 @@ describe('client plugin registry', () => {
   it('resolves the scripts entry to the shared payload guard', async () => {
     const { isPayload } = await clientPluginLoaders.scripts();
     expect(isPayload).toBe(isScriptsPayload);
+  });
+
+  it('reaches the connections entry only through its literal dynamic import', () => {
+    const source = readFileSync('web/src/plugins/registry.tsx', 'utf8');
+    const statics = [...source.matchAll(/^import\s[^;]*?from\s+'(?<path>[^']+)'/gmu)]
+      .map((match) => match.groups?.path ?? '');
+    expect(statics.filter((path) => path.includes('connections'))).toEqual([]);
+    expect(source).toContain("connections: () => import('./connections/index')");
+  });
+
+  it('resolves the connections entry to the shared payload guard', async () => {
+    const { isPayload } = await clientPluginLoaders.connections();
+    expect(isPayload).toBe(isConnectionsPayload);
   });
 });
