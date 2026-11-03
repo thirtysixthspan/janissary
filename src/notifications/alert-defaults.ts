@@ -38,4 +38,5 @@ export const NOTIFICATION_ALERT_DEFAULTS: Record<NotificationEventType, Notifica
   'system-schedule-fire': { desktop: true, sound: 'warning' },
   tab: { desktop: true, sound: 'warning' },
   'transcript-unavailable': { desktop: true, sound: 'error' },
+  'workspace-ready': { desktop: true, sound: 'success' },
 };

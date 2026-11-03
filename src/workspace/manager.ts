@@ -13,6 +13,9 @@ export type ProvisioningWorkspace = {
 
 type PendingWorkspace = { cancel: () => void; dir: string; ready: Promise<void> };
 
+// Told how long a clone took to provision — the clone plus its follow-up git setup — once it is ready.
+type ReadyReport = (label: string, dir: string, elapsedMs: number) => void;
+
 // Owns the set of workspace clones the app has created — an independent `git clone` of the repo's
 // `origin` remote, made for a shell (`shell --workspace`) or a harness tab (`harness <name>
 // --workspace`) so it works in isolation. Tracks each clone so it can be removed when its tab
@@ -24,7 +27,11 @@ export class WorkspaceManager {
   private pending = new Map<string, PendingWorkspace>();
   private projectDir: string;
 
-  constructor(projectDir?: string, private onCredentialFailure?: (label: string, message: string) => void) {
+  constructor(
+    projectDir?: string,
+    private onCredentialFailure?: (label: string, message: string) => void,
+    private onReady?: ReadyReport,
+  ) {
     this.projectDir = projectDir ?? process.cwd();
   }
 
@@ -41,13 +48,14 @@ export class WorkspaceManager {
   ): ProvisioningWorkspace | { error: string } {
     const origin = this.originUrl();
     if ('error' in origin) return origin;
+    const startedAt = performance.now();
     const handle = cloneOptions === undefined
       ? provisionWorkspace(name, origin.url, githubToken)
       : provisionWorkspace(name, origin.url, githubToken, cloneOptions);
     this.refs.set(handle.dir, 1);
     this.names.set(name, handle.dir);
     const pending: PendingWorkspace = { cancel: handle.cancel, dir: handle.dir, ready: Promise.resolve() };
-    pending.ready = this.trackReady(name, handle, pending);
+    pending.ready = this.trackReady(name, handle, pending, startedAt);
     this.pending.set(name, pending);
     return {
       dir: handle.dir, ready: pending.ready, cancel: () => this.cancelAttempt(name, pending),
@@ -79,10 +87,14 @@ export class WorkspaceManager {
     }
   }
 
-  private async trackReady(name: string, handle: ProvisionHandle, pending: PendingWorkspace): Promise<void> {
+  private async trackReady(
+    name: string, handle: ProvisionHandle, pending: PendingWorkspace, startedAt: number,
+  ): Promise<void> {
     try {
       await handle.ready;
-      if (this.pending.get(name) === pending && this.refs.has(handle.dir) && handle.oauthNotice) {
+      if (this.pending.get(name) !== pending || !this.refs.has(handle.dir)) return;
+      try { this.onReady?.(name, handle.dir, performance.now() - startedAt); } catch { /* optional notice */ }
+      if (handle.oauthNotice) {
         try { this.onCredentialFailure?.(name, handle.oauthNotice); } catch { return; }
       }
     } finally {

@@ -6,6 +6,7 @@ import { DatabaseManager } from '../database/manager.js';
 import { AcpManager } from '../acp/manager.js';
 import { ShellManager } from '../shell/manager.js';
 import { WorkspaceManager } from '../workspace/manager.js';
+import { workspaceReadyMessage } from '../workspace/ready-notice.js';
 import { GitSync } from '../git/sync.js';
 import { refreshLaunchDirBranch } from '../open/launch-dir-branch.js';
 import { PseudoterminalManager } from '../pseudoterminal-manager.js';
@@ -59,7 +60,11 @@ export function createManagers(managers: Managers, projectDir?: string): void {
   managers.conversations = new ConversationsManager(managers, { projectDir });
   managers.sessions = new SessionsManager(managers);
   managers.plugins = new TabPluginHost(managers);
-  managers.workspace = new WorkspaceManager(projectDir, (label, message) => { notify(managers, 'manual', label, message); });
+  managers.workspace = new WorkspaceManager(
+    projectDir,
+    (label, message) => { notify(managers, 'manual', label, message); },
+    (label, dir, elapsedMs) => { notify(managers, 'workspace-ready', label, workspaceReadyMessage(dir, elapsedMs)); },
+  );
   managers.gitSync = new GitSync(managers.workspace);
   void refreshLaunchDirBranch(managers.tab.launchDir);
   managers.browser = new BrowserManager(managers);
