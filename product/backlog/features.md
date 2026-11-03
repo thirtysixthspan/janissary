@@ -2,8 +2,6 @@
 
 ## ready
 
-* ACP sessions should be tracked in a new tasks tab which lists ACP sessions (open and closed) and a task tab lists the transcript, thinking, turn taking and output of the model.  These tabs should be modelled after the conversations tab lists conversations and a conversation tab shows the individual conversation history. The goal of this feature is to have a persistent place to monitor and control ongoing and past acp channel activity. This feature will remove the ACP popup from the shell tab. When an ACP task is launched from the shell tab, only the output of the task will rendered in the shell. The acp connection should be listed in the connection popup and clicking on the item should open the relevant task tab with the full details of the acp interactions.  
-
 ## development
 
 * add an ACP skill to allow an agent to spin up other agents with different models, pass them ai tasks (form the repository) to execute and access to monitor the transcript as the agent works, and to recieve the response.
