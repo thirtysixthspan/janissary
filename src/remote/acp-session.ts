@@ -1,6 +1,8 @@
-import type { AcpSession, PromptHandlers } from '../acp/types.js';
+import type { AcpSession } from '../acp/types.js';
+import { AcpPromptControl } from '../acp/prompt-control.js';
 import type { RemoteChannel } from './channel/index.js';
-import type { RemoteAcpActivityKind } from './protocol-frames.js';
+import type { ClientFrame, RemoteAcpActivityKind } from './protocol-frames.js';
+import { errorText } from '../error-text.js';
 
 // What the local side decides and sends across: which agent runs, with what arguments and
 // environment, and whether it is confined offline. The remote supplies the workspace directory it
@@ -48,7 +50,7 @@ export function createRemoteAcpSession(
 ): RemoteAcpSession {
   const { id, command, args, env, offline, autonomous, effort } = options;
   // The one in-flight prompt, matching the discipline `connectAcp` keeps with its own `current`.
-  let current: PromptHandlers | undefined;
+  const control = new AcpPromptControl();
   let live = true;
   let resolveReady = (_sandboxed: boolean) => {};
   let rejectReady = (_error: Error) => {};
@@ -59,41 +61,66 @@ export function createRemoteAcpSession(
   let resolveRelease: (released: boolean) => void = () => {};
   let releasePromise: Promise<boolean> | undefined;
   let releaseTimer: ReturnType<typeof setTimeout> | undefined;
+  let failure: string | undefined;
+
+  const detach = (message: string, report: () => void) => {
+    const wasLive = live;
+    live = false;
+    failure = message;
+    rejectReady(new Error(message));
+    if (releaseTimer) clearTimeout(releaseTimer);
+    resolveRelease(false);
+    channel.detachAcp(id);
+    if (wasLive) report();
+    control.release(message);
+  };
+  const send = (frame: ClientFrame) => {
+    try { channel.send(frame); }
+    catch (error) {
+      const message = frame.type === 'acp-cancel' ? `ACP: cancellation failed: ${errorText(error)}` : errorText(error);
+      detach(message, () => hooks.onError(message));
+    }
+  };
 
   channel.attachAcp(id, {
-    onReady: (sandboxed) => { resolveReady(sandboxed); hooks.onConnect(sandboxed); },
-    onChunk: (text) => current?.onChunk(text),
-    onActivity: (kind, text) => hooks.onActivity?.(kind, text),
+    onReady: (sandboxed) => {
+      if (!live) return;
+      resolveReady(sandboxed);
+      hooks.onConnect(sandboxed);
+    },
+    onChunk: (text) => control.current?.handlers.onChunk(text),
+    onActivity: (kind, text) => { if (live && control.current) hooks.onActivity?.(kind, text); },
     onClosed: (released) => {
       if (releaseTimer) clearTimeout(releaseTimer);
       channel.detachAcp(id);
+      live = false;
+      rejectReady(new Error('ACP session closed.'));
+      control.release();
       resolveRelease(released);
     },
     onTransportLost: () => {
-      rejectReady(new Error('Remote connection lost before agent readiness.'));
-      if (releaseTimer) clearTimeout(releaseTimer);
-      if (releasePromise) resolveRelease(false);
-      channel.detachAcp(id);
-      hooks.onTransportLost?.();
+      detach('Remote connection lost before agent readiness.', () => hooks.onTransportLost?.());
     },
     onEnd: (stopReason) => {
-      const handlers = current;
-      current = undefined;
-      handlers?.onEnd(stopReason);
+      const turn = control.current;
+      if (turn) control.end(turn, stopReason);
     },
     // A prompt that merely failed goes to the running loop, which reports it and leaves the session
     // alone. A fatal one also goes to the connection hook, which is what drops the session — and to
     // the in-flight prompt as well, so the loop terminates rather than waiting on a reply that is
     // never coming.
     onError: (message, fatal) => {
-      const handlers = current;
-      if (fatal) current = undefined;
-      if (fatal) rejectReady(new Error(message));
-      handlers?.onError(message);
-      if (fatal) hooks.onError(message);
+      if (fatal) {
+        const wasLive = live;
+        detach(message, () => hooks.onError(message));
+        if (wasLive) send({ type: 'acp-close', id });
+      } else {
+        const turn = control.current;
+        if (turn) control.error(turn, message);
+      }
     },
   });
-  channel.send({
+  send({
     type: 'acp-open', id, command, args,
     ...(env !== undefined && { env }), ...(offline !== undefined && { offline }),
     ...(autonomous !== undefined && { autonomous }), ...(effort !== undefined && { effort }),
@@ -103,7 +130,8 @@ export function createRemoteAcpSession(
     if (releasePromise) return releasePromise;
     if (!live) return Promise.resolve(false);
     live = false;
-    current = undefined;
+    rejectReady(new Error('ACP session closed.'));
+    control.release();
     // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the project targets ES2023
     const pending = new Promise<boolean>((resolve) => { resolveRelease = resolve; });
     releasePromise = pending;
@@ -111,7 +139,7 @@ export function createRemoteAcpSession(
       channel.detachAcp(id);
       resolveRelease(false);
     }, 5000);
-    channel.send({ type: 'acp-close', id });
+    send({ type: 'acp-close', id });
     return pending;
   };
 
@@ -122,8 +150,21 @@ export function createRemoteAcpSession(
       if (!await release()) throw new Error('Remote agent close was not acknowledged.');
     },
     prompt: (text, handlers) => {
-      current = handlers;
-      channel.send({ type: 'acp-prompt', id, text });
+      if (!control.admit(handlers)) return;
+      send({ type: 'acp-prompt', id, text });
+    },
+    cancel: () => {
+      if (!live) return Promise.resolve();
+      if (!control.current) {
+        return (async () => {
+          send({ type: 'acp-cancel', id });
+          if (!live) throw new Error(failure ?? 'Remote connection unavailable.');
+        })();
+      }
+      return control.cancel(async () => {
+        send({ type: 'acp-cancel', id });
+        if (!live) throw new Error(failure ?? 'Remote connection unavailable.');
+      });
     },
     kill: () => { void release(); },
   };

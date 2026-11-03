@@ -12,6 +12,9 @@ import { parseRemoteAddress } from '../remote/address.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
 import { command } from './agent.js';
 import { makeTab } from '../tab/index.js';
+import type { AgentRun } from '../agent/run.js';
+import * as models from '../harness/models.js';
+import { AcpRecordStore } from '../acp-records/store.js';
 
 const execute = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<AgentResult>>());
 vi.mock('../agent/execute.js', () => {
@@ -62,6 +65,11 @@ beforeEach(() => {
 
 afterEach(async () => {
   await controller.shutdown();
+  const store = new AcpRecordStore({ projectDir: workspace });
+  for (const row of managers.acpRecords.rows()) {
+    expect(['Completed', 'Failed', 'Terminated']).toContain(row.status);
+    expect(store.read(row.id)?.outcome).toBe(row.status);
+  }
   rmSync(workspace, { recursive: true, force: true });
   rmSync(cloneWorkspace, { recursive: true, force: true });
   vi.restoreAllMocks();
@@ -87,6 +95,116 @@ function nestedContext(snapshot: AgentSnapshot): CommandInvocationContext {
 }
 
 describe('agent command', () => {
+  it.each([false, true])('records remote launch provenance and completion (headed: %s)', async (headed) => {
+    const address = parseRemoteAddress('devbox');
+    if ('error' in address) throw new Error(address.error);
+    const channel = { attached: true, resolveAgentSnapshot: vi.fn(async () => ({
+      taskPath: '/remote/resolved/task.md', taskText: 'Remote task', skills: [], grants: [],
+    })) } as unknown as RemoteChannel;
+    vi.spyOn(managers.remote, 'addressOf').mockReturnValue(address);
+    vi.spyOn(managers.remote, 'get').mockReturnValue(channel);
+    vi.spyOn(managers.remote, 'workspaceOf').mockReturnValue('/remote/workspace');
+    vi.spyOn(managers.remote, 'acquireAgentLease').mockReturnValue(async () => {});
+    execute.mockImplementation(async (value) => {
+      const active = value as AgentRun;
+      active.record!.prompt('Remote task');
+      return { status: 'completed', response: 'Remote answer', cleanupWarnings: [] };
+    });
+    await run(`agent ${headed ? 'in a tab ' : ''}on devbox execute task.md`);
+    const row = managers.acpRecords.rows()[0];
+    expect(managers.acpRecords.window(row.id)).toMatchObject({
+      status: 'Completed', source: { taskPath: 'task.md', ownerLabel: 'janus' },
+      blocks: [{ answer: 'Remote answer' }],
+    });
+  });
+
+  it('retains the launch selector on remote task resolution failure', async () => {
+    const address = parseRemoteAddress('devbox');
+    if ('error' in address) throw new Error(address.error);
+    const channel = { attached: true, resolveAgentSnapshot: vi.fn(async () => { throw new Error('remote task missing'); }) } as unknown as RemoteChannel;
+    vi.spyOn(managers.remote, 'addressOf').mockReturnValue(address);
+    vi.spyOn(managers.remote, 'get').mockReturnValue(channel);
+    vi.spyOn(managers.remote, 'workspaceOf').mockReturnValue('/remote/workspace');
+    vi.spyOn(managers.remote, 'acquireAgentLease').mockReturnValue(async () => {});
+    await expect(run('agent on devbox execute missing.md')).resolves.toMatchObject({ status: 'failed' });
+    expect(managers.acpRecords.window(managers.acpRecords.rows()[0].id)).toMatchObject({
+      status: 'Failed', source: { taskPath: 'missing.md' }, blocks: [],
+    });
+  });
+  it.each([false, true])('records local launch and exact final answer (headed: %s)', async (headed) => {
+    execute.mockImplementation(async (value) => {
+      const active = value as AgentRun;
+      expect(managers.acpRecords.window(active.recordId!)).toMatchObject({ source: { taskPath: 'task.md' } });
+      active.record!.prompt('exact logical task');
+      active.reportActivity('message', 'partial ');
+      return { status: 'completed', response: 'exact final\nanswer ', cleanupWarnings: [] };
+    });
+    await run(`agent ${headed ? 'in a tab ' : ''}execute task.md`);
+    expect(managers.acpRecords.rows()).toHaveLength(1);
+    expect(managers.acpRecords.window(managers.acpRecords.rows()[0].id)).toMatchObject({
+      status: 'Completed', source: { ownerLabel: 'janus', taskPath: 'task.md' },
+      blocks: [{ prompt: 'exact logical task', answer: 'exact final\nanswer ', entries: [{ text: 'partial ' }] }],
+    });
+  });
+
+  it.each(['task', 'skill', 'monitor', 'provision'])('retains a failed header without fabricating a prompt on %s failure', async (phase) => {
+    let line = 'agent execute missing-task.md';
+    switch (phase) {
+    case 'skill': { line = 'agent with skill missing-skill execute task.md'; break; }
+    case 'monitor': {
+      line = 'agent in a tab execute task.md';
+      vi.spyOn(managers.tab, 'openPluginTab').mockImplementation(() => { throw new Error('monitor failed'); });
+      break;
+    }
+    case 'provision': {
+      line = 'agent execute task.md';
+      vi.mocked(managers.workspace.create).mockReturnValue({ dir: cloneWorkspace, ready: Promise.reject(new Error('clone failed')) });
+      break;
+    }
+    default: { break; }
+    }
+    const result = await run(line);
+    expect(result.status).toBe('failed');
+    expect(execute).not.toHaveBeenCalled();
+    const row = managers.acpRecords.rows()[0];
+    expect(managers.acpRecords.window(row.id)).toMatchObject({ status: 'Failed', blocks: [], source: { taskPath: phase === 'task' ? 'missing-task.md' : 'task.md' } });
+  });
+
+  it('captures the automatic model at creation even if the catalog changes during provisioning', async () => {
+    const ready = Promise.withResolvers<void>();
+    vi.mocked(managers.workspace.create).mockReturnValue({ dir: cloneWorkspace, ready: ready.promise });
+    const catalog = vi.spyOn(models, 'modelsFor').mockReturnValue(['provider/first']);
+    execute.mockResolvedValue({ status: 'completed', response: 'Done.', cleanupWarnings: [] });
+    const pending = run();
+    await vi.waitFor(() => expect(managers.agent.runs.size).toBe(1));
+    catalog.mockReturnValue(['provider/second']);
+    ready.resolve();
+    await pending;
+    expect(execute.mock.calls[0][2]).toBe('provider/first');
+    expect(managers.acpRecords.rows()[0].model).toBe('provider/first');
+  });
+
+  it('releases upstream workspace allocation if automatic model selection fails before creating a run', async () => {
+    vi.spyOn(models, 'modelsFor').mockReturnValue([]);
+    await expect(run()).resolves.toMatchObject({ status: 'failed', response: 'Agent: unknown model "".' });
+    expect(workspaceRelease).toHaveBeenCalledOnce();
+    expect(managers.acpRecords.rows()).toEqual([]);
+    expect(managers.agent.runs.size).toBe(0);
+  });
+
+  it('keeps termination when completion races and retains its record after headless map removal', async () => {
+    let recordId: string | undefined;
+    execute.mockImplementation(async (value) => {
+      const active = value as AgentRun;
+      recordId = active.recordId;
+      active.record!.prompt('task');
+      await managers.agent.finish(active.id, 'terminated');
+      return { status: 'completed', response: 'late completed answer', cleanupWarnings: [] };
+    });
+    await expect(run()).resolves.toMatchObject({ status: 'terminated', response: 'Agent terminated.' });
+    expect(managers.agent.runs.size).toBe(0);
+    expect(managers.acpRecords.window(recordId!)).toMatchObject({ status: 'Terminated', blocks: [{ answer: 'Agent terminated.' }] });
+  });
   it('runs headlessly and returns the structured result after cleanup', async () => {
     execute.mockImplementation(async (agentRun) => {
       expect(agentRun).toMatchObject({ executionDir: cloneWorkspace, snapshot: { taskText: 'Cloned task.' } });

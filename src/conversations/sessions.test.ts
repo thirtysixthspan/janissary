@@ -7,7 +7,7 @@ vi.mock('../acp/index.js', () => ({ connectAcp: mocks.connectAcp }));
 import { ConversationSessions } from './sessions.js';
 
 function session(): AcpSession {
-  return { prompt: vi.fn(), kill: vi.fn() };
+  return { prompt: vi.fn(), kill: vi.fn(), cancel: vi.fn(async () => {}), shutdown: vi.fn(async () => {}) };
 }
 
 beforeEach(() => { mocks.connectAcp.mockReset(); });

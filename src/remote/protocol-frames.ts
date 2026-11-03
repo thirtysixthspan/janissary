@@ -149,6 +149,7 @@ export type ClientFrame =
     autonomous?: true; effort?: { level: string; model: string };
   }
   | { type: 'acp-prompt'; id: string; text: string }
+  | { type: 'acp-cancel'; id: string }
   | { type: 'acp-close'; id: string };
 
 // Remote → local: the process family's output/exit, the provisioning answer, and the transcript
@@ -286,7 +287,7 @@ export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
   provision: true, 'clone-answer': true, spawn: true, input: true, resize: true, kill: true, 'capture-request': true, 'resume-ack': true,
   'filesystem-open': true, 'filesystem-close': true, 'filesystem-request': true,
   'agent-resolve': true,
-  'acp-open': true, 'acp-prompt': true, 'acp-close': true,
+  'acp-open': true, 'acp-prompt': true, 'acp-cancel': true, 'acp-close': true,
 };
 export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'attach-result': true, 'session-state-result': true, 'clone-offer': true, 'root-refused': true,

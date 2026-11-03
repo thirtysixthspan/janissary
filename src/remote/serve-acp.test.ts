@@ -10,11 +10,12 @@ const acpMock = vi.hoisted(() => ({
   prompt: vi.fn(),
   kill: vi.fn(),
   shutdown: vi.fn(),
+  cancel: vi.fn(),
 }));
 vi.mock('../acp/index.js', () => ({
   connectAcp: vi.fn((options: AcpOptions) => {
     acpMock.options.push(options);
-    return { prompt: acpMock.prompt, kill: acpMock.kill, shutdown: acpMock.shutdown };
+    return { prompt: acpMock.prompt, kill: acpMock.kill, shutdown: acpMock.shutdown, cancel: acpMock.cancel };
   }),
 }));
 
@@ -44,6 +45,7 @@ beforeEach(() => {
   acpMock.prompt.mockReset();
   acpMock.kill.mockReset();
   acpMock.shutdown.mockReset().mockResolvedValue(undefined);
+  acpMock.cancel.mockReset().mockResolvedValue(undefined);
 });
 
 afterEach(() => vi.useRealTimers());
@@ -144,6 +146,31 @@ describe('RemoteAcp — opening a session', () => {
 });
 
 describe('RemoteAcp — prompting', () => {
+  it('delegates cancellation to a live addressed holder and preserves its original terminal frame', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    acp.prompt({ type: 'acp-prompt', id: 'racp1', text: 'held' });
+    acp.cancel('missing');
+    acp.cancel('racp1');
+    expect(acpMock.cancel).toHaveBeenCalledOnce();
+    expect(frames).toEqual([]);
+    lastHandlers().onEnd('cancelled');
+    expect(frames).toEqual([{ type: 'acp-end', id: 'racp1', stopReason: 'cancelled' }]);
+    acp.prompt({ type: 'acp-prompt', id: 'racp1', text: 'next' });
+    expect(acpMock.prompt).toHaveBeenCalledTimes(2);
+    await acp.close('racp1');
+    acp.cancel('racp1');
+    expect(acpMock.cancel).toHaveBeenCalledOnce();
+  });
+
+  it('contains cancellation rejection as a session-local fatal error', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    acpMock.cancel.mockRejectedValue(new Error('write failed'));
+    acp.cancel('racp1');
+    await Promise.resolve();
+    expect(frames).toEqual([{ type: 'acp-error', id: 'racp1', message: 'ACP: cancellation failed: write failed', fatal: true }]);
+  });
   it('emits a chunk frame per chunk and an end frame on completion', () => {
     const { acp, frames } = makeAcp();
     acp.open(OPEN);

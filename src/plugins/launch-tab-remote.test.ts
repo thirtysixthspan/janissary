@@ -35,6 +35,7 @@ function harness(options: {
     if (index !== -1) tabs.splice(index, 1);
   });
   const managers = {
+    acpRecords: { begin: vi.fn(() => 'record-id'), prompt: vi.fn(), activity: vi.fn(), answer: vi.fn(), close: vi.fn() },
     tab: {
       launchDir: '/repo', tabs, allLabels: () => tabs.map((tab) => tab.label),
       cwdOf: () => options.cwd ?? '/repo/src', workingDirOf: () => options.cwd ?? '/repo/src', byLabel: (label: string) => tabs.find((tab) => tab.label === label),

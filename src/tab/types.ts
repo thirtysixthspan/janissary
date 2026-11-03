@@ -1,6 +1,6 @@
 // The tab's own shapes. A leaf module on purpose: it imports nothing but this one type, which the
 // tab's in-flight ACP prompt settles with.
-import type { AcpPromptResult } from '../acp/types.js';
+import type { AcpPendingPrompt } from '../acp/prompt-state.js';
 import type { AgentRunView } from '../agent/types.js';
 import type { QueueEntry } from '../command-queue/entry.js';
 import type { ReceiptRecord } from '../command-queue/receipts.js';
@@ -283,7 +283,8 @@ export type TabRuntime = {
   serverPtyExitId?: string;
   editorSyncGeneration?: number;
   acpEntries?: WeakSet<LogEntry>;
-  acpPrompt?: { finish: (result: AcpPromptResult) => void; abort: AbortController };
+  acpPrompt?: AcpPendingPrompt;
+  acpRecordId?: string;
   // Whether this tab's core ACP session runs without a tool table, asked for by whichever consumer
   // started it with `{ withoutTools: true }`. It is the tab's own policy rather than a screen or content
   // fact, and it is sticky: a session that dies is replaced by one held to the same rule, and only the

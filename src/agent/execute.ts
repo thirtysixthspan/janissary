@@ -5,7 +5,8 @@ import { connectAcp } from '../acp/index.js';
 import { createRemoteAcpSession } from '../remote/acp-session.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
 import { runAcpToolLoop } from '../acp/loop.js';
-import { modelsFor } from '../harness/models.js';
+import { selectedModel } from './model.js';
+import { guardAcpHandlers } from '../acp/guard-handlers.js';
 import type { CommandInvocationContext } from '../commands/types.js';
 import type { Managers } from '../managers.js';
 import { errorText } from '../error-text.js';
@@ -25,13 +26,6 @@ export type AgentResult = Readonly<{
 }>;
 
 export type RemoteAgentTarget = Readonly<{ channel: RemoteChannel; offline?: boolean }>;
-
-function selectedModel(model: string | undefined): string {
-  const available = modelsFor('opencode');
-  const selected = model ?? available.find((item) => item === 'google/gemini-3.1-flash-lite') ?? available[0];
-  if (!selected || !available.includes(selected)) throw new Error(`Agent: unknown model "${model ?? ''}".`);
-  return selected;
-}
 
 function taskPrompt(task: string, parameters: string): string {
   return [task, parameters].filter(Boolean).join('\n');
@@ -62,6 +56,9 @@ export async function executeAgentRun(
   managers: Managers,
   remote?: RemoteAgentTarget,
 ): Promise<AgentResult> {
+  if (run.outcome || run.abortController.signal.aborted) return { status: 'terminated', response: 'Agent terminated.', cleanupWarnings: [] };
+  const prompt = taskPrompt(agentPrimer(run.snapshot), parameters);
+  run.record?.prompt(prompt);
   const selected = selectedModel(model);
   const launch = acpLaunchFor({ harness: 'opencode', model: selected, variant: effort ?? 'medium' });
   const env = {
@@ -127,21 +124,35 @@ export async function executeAgentRun(
     };
     connectionFailure = (message) => fail(new Error(`Agent: ${message}`));
     run.abortController.signal.addEventListener('abort', () => finish('Agent terminated.'), { once: true });
-    runAcpToolLoop(session, taskPrompt(agentPrimer(run.snapshot), parameters), {
+    const active = () => !run.outcome && !run.abortController.signal.aborted;
+    runAcpToolLoop({
+      prompt: (text, handlers) => {
+        if (!active()) return;
+        session.prompt(text, {
+          onChunk: (chunk) => { if (active()) handlers.onChunk(chunk); },
+          onEnd: (reason) => { if (active()) handlers.onEnd(reason); },
+          onError: (message) => { if (active()) handlers.onError(message); },
+        });
+      },
+    }, prompt, {
       signal: run.abortController.signal,
       primer: MARKDOWN_INSTRUCTION,
       maxSteps: Infinity,
       extractCommand: (text) => extractAgentCommand(text, run.snapshot.skills.some(({ name }) => name === 'ask-user')),
       runCommand: async (command) => {
+        if (run.outcome || run.abortController.signal.aborted) throw new Error('Agent terminated.');
+        run.record?.activity('tool', command);
         const isQuestion = command.startsWith('question ');
         if (isQuestion) run.setStatus('Waiting for answer');
         try {
-          return await runGrantedAgentCommand(command, run.snapshot, managers, invocation);
+          const result = await runGrantedAgentCommand(command, run.snapshot, managers, invocation);
+          if (!run.outcome && !run.abortController.signal.aborted) run.record?.activity('tool', result);
+          return result;
         } finally {
           if (isQuestion && !run.abortController.signal.aborted) run.setStatus('Running');
         }
       },
-    }, {
+    }, guardAcpHandlers({
       startTurn: () => {},
       chunk: () => {},
       endTurn: (answer) => { finalAnswer = answer; },
@@ -151,7 +162,7 @@ export async function executeAgentRun(
         else fail(new Error('Agent: task returned an empty response.'));
       },
       error: (message) => fail(new Error(`Agent: ${message}`)),
-    });
+    }, active));
   });
   return { status: run.abortController.signal.aborted ? 'terminated' : 'completed', response, cleanupWarnings: [] };
 }

@@ -5,6 +5,8 @@ import type { Managers } from '../managers.js';
 import { messageBus } from '../bus.js';
 import { AgentRun, copyAgentCaller, type AgentOutcome, type AgentRunOptions } from './run.js';
 import type { AgentRunView } from './types.js';
+import { selectedModel } from './model.js';
+import { AgentRecordFeed, validateAgentRecordMetadata } from './record-feed.js';
 
 export class AgentRunManager {
   readonly runs = new Map<string, AgentRun>();
@@ -21,6 +23,7 @@ export class AgentRunManager {
     if (runtime.closing) throw new Error(`Agent caller is closing: ${tab.label}`);
     return copyAgentCaller({
       label: tab.label,
+      ownerName: tab.title ?? tab.label,
       incarnation: runtime.incarnation,
       cwd: this.managers.tab.workingDirOf(tab.label),
       context: runtime.context,
@@ -33,16 +36,22 @@ export class AgentRunManager {
     if (!callerTab || callerTab.runtime?.incarnation !== options.caller.incarnation || callerTab.runtime.closing) {
       throw new Error(`Agent caller is stale: ${options.caller.label}`);
     }
+    const model = options.model ?? selectedModel(undefined);
+    const metadata = validateAgentRecordMetadata({
+      model, taskPath: options.snapshot.taskPath, ownerLabel: options.caller.label,
+      ownerName: options.caller.ownerName ?? callerTab.title ?? callerTab.label,
+    });
     const releaseWorkspace = options.releaseWorkspace ?? (options.workspaceDir === undefined
       ? undefined
       : this.managers.workspace.acquireAgentLease(options.workspaceDir));
     const run = new AgentRun(copyAgentCaller(options.caller), options.snapshot, releaseWorkspace, {
       command: options.command ?? `agent execute ${options.snapshot.taskPath.split('/').at(-1) ?? options.snapshot.taskPath}`,
-      model: options.model ?? '',
+      model,
       effort: options.effort ?? 'medium',
       host: options.executionHost ?? 'Local',
       workspace: options.executionWorkspace ?? options.executionDir ?? options.caller.cwd,
     }, options.executionDir ?? options.caller.cwd);
+    run.record = new AgentRecordFeed(this.managers.acpRecords, metadata, run.id);
     this.runs.set(run.id, run);
     this.knownRunIds.add(run.id);
     run.subscribe((view) => {

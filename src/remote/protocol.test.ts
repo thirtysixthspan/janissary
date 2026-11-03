@@ -92,6 +92,7 @@ describe('frame codec', () => {
       },
       { type: 'acp-prompt', id: 'racp1', text: 'summarize this project' },
       { type: 'acp-close', id: 'racp1' },
+      { type: 'acp-cancel', id: 'racp1' },
     ];
     for (const frame of frames) expect(roundTrip(frame)).toEqual(frame);
   });
@@ -297,6 +298,9 @@ describe('frame codec', () => {
     ['acp-prompt without an id', { type: 'acp-prompt', text: 'aGk=' }],
     ['acp-prompt without string text', { type: 'acp-prompt', id: 'racp1', text: 7 }],
     ['acp-close without an id', { type: 'acp-close' }],
+    ['acp-cancel without an id', { type: 'acp-cancel' }],
+    ['acp-cancel empty id', { type: 'acp-cancel', id: '' }],
+    ['acp-cancel numeric id', { type: 'acp-cancel', id: 7 }],
     ['acp-ready without an id', { type: 'acp-ready' }],
     ['acp-ready without sandbox state', { type: 'acp-ready', id: 'racp1' }],
     ['acp-chunk without string text', { type: 'acp-chunk', id: 'racp1', text: null }],
@@ -528,6 +532,7 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   },
   'acp-prompt': { type: 'acp-prompt', id: 'racp1', text: 'summarize this project' },
   'acp-close': { type: 'acp-close', id: 'racp1' },
+  'acp-cancel': { type: 'acp-cancel', id: 'racp1' },
   'attach-result': { type: 'attach-result', accepted: true, truncated: true },
   'session-state-result': {
     type: 'session-state-result',
@@ -676,8 +681,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 36', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(36);
+  it('is 37', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(37);
   });
 });
 
@@ -687,7 +692,7 @@ describe('protocol version', () => {
 describe('admitted frame types', () => {
   it('admits exactly the declared client frame types', () => {
     expect(Object.keys(CLIENT_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-close', 'acp-open', 'acp-prompt', 'agent-resolve', 'attach', 'capture-request', 'clone-answer',
+      'acp-cancel', 'acp-close', 'acp-open', 'acp-prompt', 'agent-resolve', 'attach', 'capture-request', 'clone-answer',
       'filesystem-close', 'filesystem-open', 'filesystem-request',
       'input', 'kill', 'provision', 'resize', 'resume-ack', 'session-state', 'shutdown', 'spawn',
     ]);

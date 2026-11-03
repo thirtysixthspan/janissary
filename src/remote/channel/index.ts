@@ -9,6 +9,7 @@ import { ShutdownDrain } from '../shutdown-drain.js';
 import { RemoteAgentRequests } from './agent-requests.js';
 import type { AgentSnapshot } from '../../agent/types.js';
 import { isChannelFrame, type ChannelTransport, type NavigatorListener, type RemoteChannelHandlers } from './types.js';
+import { unavailableSend } from './unavailable.js';
 
 type ChannelState = 'authenticating' | 'attached' | 'closed' | 'reconnecting' | 'attaching';
 
@@ -78,21 +79,7 @@ export class RemoteChannel {
 
   send(frame: ClientFrame): void {
     if (this.state !== 'attached' && !(this.state === 'attaching' && frame.type === 'attach')) {
-      switch (frame.type) {
-      case 'filesystem-request': {
-        this.navigators.get(frame.session)?.onReply({
-          type: 'filesystem-reply', session: frame.session, request: frame.request, error: 'Remote connection unavailable.',
-        });
-        break;
-      }
-      case 'acp-open':
-      case 'acp-prompt': {
-        this.acpSessions.get(frame.id)?.onError('Remote connection unavailable.', frame.type === 'acp-open');
-        break;
-      }
-      case 'capture-request': { this.captures.fail(frame.request, 'Remote connection unavailable.'); break; }
-      default: { break; }
-      }
+      unavailableSend(frame, this.navigators, this.acpSessions, this.captures);
       return;
     }
     if (frame.type === 'spawn') { this.router.record(frame); this.handlers.onProcesses?.(); }
@@ -108,12 +95,13 @@ export class RemoteChannel {
 
   close(): void {
     this.shutdownDrain.cancel();
+    this.settleAcp();
     this.transport.kill();
   }
 
   disconnect(): void {
     this.state = 'closed';
-    for (const listener of this.acpSessions.values()) listener.onTransportLost?.();
+    this.settleAcp();
     this.agentRequests.failAll('Remote session detached.');
     this.transport.kill();
   }
@@ -135,7 +123,8 @@ export class RemoteChannel {
     this.router.finish();
     for (const listener of this.navigators.values()) listener.onClose?.();
     this.navigators.clear();
-    for (const listener of this.acpSessions.values()) listener.onError('Remote session ended.', true);
+    const acpListeners = [...this.acpSessions.values()];
+    for (const listener of acpListeners) listener.onError('Remote session ended.', true);
     this.acpSessions.clear();
     this.captures.settleAll();
     this.agentRequests.failAll('Remote session ended.');
@@ -163,12 +152,12 @@ export class RemoteChannel {
     if (this.notifiedClose) return;
     this.notifiedClose = true;
     this.shutdownDrain.cancel();
+    this.settleAcp();
     if (this.sessionId) {
       this.captures.settleAll();
       this.agentRequests.failAll('Remote connection lost.');
       this.state = 'reconnecting';
       this.buffer = '';
-      for (const listener of this.acpSessions.values()) listener.onTransportLost?.();
       this.handlers.onClose();
       return;
     }
@@ -247,6 +236,16 @@ export class RemoteChannel {
   private fail(message: string): void {
     this.handlers.onError(message);
     this.state = 'closed';
+    this.settleAcp();
     this.transport.kill();
+  }
+
+  private settleAcp(): void {
+    const listeners = [...this.acpSessions.values()];
+    this.acpSessions.clear();
+    for (const listener of listeners) {
+      if (listener.onTransportLost) listener.onTransportLost();
+      else listener.onError('Remote connection lost.', true);
+    }
   }
 }

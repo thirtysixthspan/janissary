@@ -270,6 +270,12 @@ tab withdraws its own. A version-35 peer would never send it or would refuse it 
 remote harness would still get the resume prompt typed into it at the old reset time. The handshake
 refuses the mismatch.
 
+Protocol version 37 adds addressed ACP cancellation. Both hosts must speak 37; version 36 is refused during handshake. A cancellation names one existing ACP transport id. Missing, closing, and settled holders ignore it, and it never closes another session sharing the channel. The id must be a nonempty string and undeclared fields are discarded before dispatch.
+
+Cancellation retains the viable ACP session. The original end or error response terminates the old provider turn; there is no separate cancellation acknowledgment or record data on the wire. The end response is sent only after the native notification write and original prompt have both settled. Cancellation before handshake still produces the original cancelled end response without sending the cancelled prompt. Cancelling while the host loop is between provider turns needs no end acknowledgment. A failed cancellation send is a fatal session-scoped error, not a channel failure or a session-close acknowledgment.
+
+Unavailable sends, explicit disconnect, transport loss, protocol failure, and channel finish settle and detach ACP listeners, including before readiness. Late frames for detached ids are ignored. A lost core ACP session is closed locally and replaced by a later request once its channel is ready; autonomous runs retain their transport-loss termination. Durable activity capture belongs only to the initiating project's recorder. The sessions tab's existing shell/harness restoration policy is unchanged.
+
 The handshake check is narrower for an attach than for a launch. An attach is answered by the
 freshly started remote server that then relays into the parked peer, so the version it announces is
 whatever is installed on that host now — not the version of the peer waiting behind it. A session

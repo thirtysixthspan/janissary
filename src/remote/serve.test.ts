@@ -31,6 +31,7 @@ const acpMock = vi.hoisted(() => ({
   prompt: vi.fn(),
   kill: vi.fn(),
   shutdown: vi.fn(),
+  cancel: vi.fn(),
   killedBeforeCloneRemoved: false,
 }));
 vi.mock('../acp/index.js', () => ({
@@ -38,6 +39,7 @@ vi.mock('../acp/index.js', () => ({
     acpMock.options.push(options);
     return {
       prompt: acpMock.prompt,
+      cancel: acpMock.cancel,
       kill: () => {
         acpMock.killedBeforeCloneRemoved = existsSync(options.cwd);
         acpMock.kill();
@@ -148,6 +150,7 @@ describe('RemoteServer', () => {
     acpMock.prompt.mockReset();
     acpMock.kill.mockReset();
     acpMock.shutdown.mockReset().mockResolvedValue(undefined);
+    acpMock.cancel.mockReset().mockResolvedValue(undefined);
     acpMock.killedBeforeCloneRemoved = false;
   });
 
@@ -343,6 +346,8 @@ describe('RemoteServer', () => {
 
     server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
     server.receive(`${encodeFrame({ type: 'acp-prompt', id: 'racp1', text: 'hi' })}\n`);
+    server.receive(`${encodeFrame({ type: 'acp-cancel', id: 'racp1' })}\n`);
+    expect(acpMock.cancel).not.toHaveBeenCalled();
 
     expect(frames).toEqual([
       { type: 'workspace-failed', message: 'No remote workspace has been provisioned.' },
@@ -357,7 +362,13 @@ describe('RemoteServer', () => {
     const dir = frames.find((f) => f.type === 'workspace-ready')!.dir;
 
     server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
+    server.receive(`${encodeFrame({ ...ACP_OPEN_FRAME, id: 'racp2' })}\n`);
     server.receive(`${encodeFrame({ type: 'acp-prompt', id: 'racp1', text: 'summarize this' })}\n`);
+    server.receive(`${encodeFrame({ type: 'acp-cancel', id: 'missing' })}\n`);
+    server.receive('{"type":"acp-cancel","id":"racp1","undeclared":true}\n');
+    expect(acpMock.cancel).toHaveBeenCalledOnce();
+    server.receive('{"type":"acp-cancel","id":""}\n');
+    expect(acpMock.cancel).toHaveBeenCalledOnce();
     server.receive(`${encodeFrame({ type: 'acp-close', id: 'racp1' })}\n`);
 
     expect(acpMock.options[0]).toMatchObject({ command: 'opencode', args: ['acp'], cwd: dir, workspaceDir: dir });

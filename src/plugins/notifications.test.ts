@@ -126,6 +126,8 @@ describe('tab plugin notifications', () => {
     const session: AcpSession = {
       prompt: (_text, value) => { handlers = value; },
       kill: vi.fn(),
+      cancel: vi.fn(async () => {}),
+      shutdown: vi.fn(async () => {}),
     };
     const sessions = {
       has: () => false,

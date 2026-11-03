@@ -2,10 +2,13 @@ import { randomUUID } from 'node:crypto';
 import { getConfig } from '../config.js';
 import type { AgentRunView, AgentSnapshot } from './types.js';
 import type { AcpActivityKind } from '../acp/activity.js';
+import type { AgentRecordFeed } from './record-feed.js';
+import { cleanupAgentRun } from './run-cleanup.js';
 
 export type AgentOutcome = 'completed' | 'failed' | 'terminated';
 export type AgentCaller = Readonly<{
   label: string;
+  ownerName?: string;
   incarnation: string;
   cwd: string;
   context: readonly string[];
@@ -38,6 +41,7 @@ export class AgentRun {
   readonly monitorIds = new Set<string>();
   readonly createdTabs = new Set<string>();
   outcome?: AgentOutcome;
+  record?: AgentRecordFeed;
   private revision = 0;
   private status: AgentRunView['status'] = 'Running';
   private response?: string;
@@ -64,6 +68,8 @@ export class AgentRun {
   get snapshot(): AgentSnapshot {
     return this.currentSnapshot;
   }
+
+  get recordId(): string | undefined { return this.record?.id; }
 
   setSnapshot(snapshot: AgentSnapshot): void {
     if (this.outcome) throw new Error('Agent run has already ended.');
@@ -103,6 +109,8 @@ export class AgentRun {
   }
 
   reportActivity(kind: AcpActivityKind, text: string): void {
+    if (this.outcome) return;
+    this.record?.activity(kind, text);
     if (!text.trim()) return;
     this.activity.push({ id: this.activity.length + 1, kind, text });
     if (this.activity.length > getConfig().transcriptMaxLines) this.activity.shift();
@@ -158,28 +166,26 @@ export class AgentRun {
 
   finish(outcome: AgentOutcome): Promise<void> {
     if (this.cleanupPromise) return this.cleanupPromise;
+    const completion = { resolve: () => {}, reject: (_error: unknown) => {} };
+    this.cleanupPromise = new Promise<void>((resolve, reject) => { completion.resolve = resolve; completion.reject = reject; });
     this.outcome = outcome;
+    this.record?.finish(outcome, this.response);
     this.setStatus(outcome === 'completed' ? 'Completed' : outcome === 'failed' ? 'Failed' : 'Terminated');
     if (outcome === 'terminated') this.abortController.abort();
-    this.cleanupPromise = this.cleanup();
+    void (async () => {
+      try { await this.cleanup(); completion.resolve(); }
+      catch (error) { completion.reject(error); }
+    })();
     return this.cleanupPromise;
   }
 
   private async cleanup(): Promise<void> {
-    const failures: unknown[] = [];
-    await Promise.all(this.allocations);
-    const cleanups = this.cleanups;
+    await cleanupAgentRun({
+      id: this.id, allocations: this.allocations, cleanups: this.cleanups,
+      releaseWorkspace: this.releaseWorkspace, childIds: this.childIds, createdTabs: this.createdTabs,
+      clearListeners: () => { this.listeners.clear(); },
+    });
     this.cleanups = [];
-    for (const cleanup of cleanups) {
-      try { await cleanup(); } catch (error) { failures.push(error); }
-    }
-    if (this.releaseWorkspace) {
-      try { await this.releaseWorkspace(); } catch (error) { failures.push(error); }
-    }
-    this.childIds.clear();
-    this.createdTabs.clear();
-    this.listeners.clear();
-    if (failures.length > 0) throw new AggregateError(failures, `Agent run ${this.id} cleanup failed.`);
   }
 }
 

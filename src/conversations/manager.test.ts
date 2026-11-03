@@ -27,6 +27,8 @@ function fakeSession(): FakeSession {
     prompts,
     prompt: (text, handlers) => { prompts.push({ text, handlers }); },
     kill: vi.fn(),
+    cancel: vi.fn(async () => {}),
+    shutdown: vi.fn(async () => {}),
   };
 }
 

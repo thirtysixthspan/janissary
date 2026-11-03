@@ -1,12 +1,22 @@
 # ACP session records
 
-The backend retains project-scoped records for core ACP sessions and agent runs independently of their tabs and processes. This checkpoint delivers the recording service and its lifecycle. Live ACP and agent feeds arrive in the next step; production sessions do not yet create these records automatically. See [[acp]].
+The backend automatically retains project-scoped records for every core tab ACP session and every created autonomous agent run, independently of their tabs and processes. Local and remote sessions use the initiating project's recorder. See [[acp]] and [[agent-command]].
 
 ### Identity and provenance
 
 Each accepted begin creates a fresh UUID, independent of the transient ACP session identity or agent run id. Sources distinguish core ACP from agent runs. Both supply a nonempty model, original owner label, and copied owner display name. An agent additionally supplies a nonempty run id and task path. Invalid metadata throws `Invalid ACP record source.` without creating a record.
 
 Owner metadata is a snapshot. Closing a tab or reusing its label cannot replace the retained owner name. Records contain only tracked ACP and agent history; conversations, monitors, editor persona sessions, and other connection kinds are not recorded here.
+
+### Live feed ownership
+
+A core tab's record begins after its successful handshake, including sessions used by plugins and the launcher summarizer. Starting a local connection alone need not finish a handshake or create a record. The first accepted prompt is reserved before the handshake and starts its block as soon as the record exists, before activity is captured. Failed, closed, or superseded handshakes cannot publish a record. Reset or replacement creates a fresh UUID; successful cancellation keeps the session and UUID.
+
+All core prompt entry points share admission. Usage, readiness, model, and overlap refusals create no block and cannot answer the active block. Each accepted logical request creates one block across tool turns and cold-start retry. Its stored prompt excludes the transport primer. Native activity is captured once, independently of streamed display text. Dispatched host commands and returned results are separate ordered tool entries in the same block.
+
+Each agent record begins at run creation before execution, with the original task selector, selected model, copied caller name, and run linkage. Later task resolution does not change that provenance. The run's single block begins before opening its ACP transport or awaiting readiness and contains the exact task, skill instructions, and parameter text, excluding the separate Markdown primer. Failures or termination before execution leave a terminal header without a fabricated prompt. Whitespace and activity beyond the monitor's bounded projection are retained.
+
+Settlement saves the exact answer or error text. Core cancellation saves `ACP: prompt cancelled.` after provider drain; reset or close saves `ACP session closed.`. Prompt errors settle their block but keep a viable record open. Fatal connection failure settles the request and closes the record. Agent completion, failure, and termination settle an existing block and close once before cleanup. Termination saves `Agent terminated.`; low-level failure without captured text uses `Agent failed.`. The first outcome wins, and cleanup warnings do not replace it or the task answer. Closing or disabling a monitor only detaches observation.
 
 ### Titles and statuses
 
@@ -47,6 +57,8 @@ Records are stored separately per project as versioned JSON documents with UUID 
 Durability boundaries are begin, prompt metadata, answer, and close. Begin saves an empty header immediately. Starting a prompt saves its title and metadata plus already-completed history, but excludes the new in-flight block. Streaming activity performs no writes. An answer saves the completed block. Ordinary close and disposal also save an unanswered block's current activity.
 
 A crash may therefore lose the running prompt and its activity, while retaining the header, first-prompt title, and completed blocks. Even a session that never completed a prompt can be recovered. Missing storage is empty history and is created lazily on the first write. Replacements are atomic.
+
+Cancellation aborts the host loop immediately but remains `Running` until the old provider turn drains and settlement persists its final activity and cancellation answer. There is no cancellation timeout or per-chunk persistence. A reset, fatal loss, or close during drain settles and persists immediately. Awaited shutdown records real agent `Terminated` and core `Closed` outcomes before recorder disposal, including when resource cleanup fails.
 
 ### Startup recovery and retention
 

@@ -194,7 +194,8 @@
 // resume prompt typed into it at the old reset time. A version-35 client would refuse the frame as
 // unknown, and a version-35 remote never sends it, so either way the withdrawal would silently not
 // happen while both ends looked healthy.
-export const REMOTE_PROTOCOL_VERSION = 36;
+// Version 37 adds addressed ACP cancellation; the original end/error remains the provider drain barrier.
+export const REMOTE_PROTOCOL_VERSION = 37;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.

@@ -45,7 +45,7 @@ export function decodeAcpText(type: 'acp-prompt' | 'acp-chunk', record: Record<s
   return { type, id: record.id, text: Buffer.from(record.text, 'base64').toString('utf8') };
 }
 
-export function decodeAcpAddressed(type: 'acp-close' | 'acp-ready', record: Record<string, unknown>): DecodeResult {
+export function decodeAcpAddressed(type: 'acp-close' | 'acp-cancel' | 'acp-ready', record: Record<string, unknown>): DecodeResult {
   if (!nonEmptyString(record.id)) return malformed(type);
   if (type === 'acp-ready') {
     return typeof record.sandboxed === 'boolean'

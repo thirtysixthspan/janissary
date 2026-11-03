@@ -67,6 +67,7 @@ function makeManagers(seed = true): Managers {
   if (seed) seedRootTab(managers.tab);
   let spawned = 0;
   Object.assign(managers, {
+    acpRecords: { begin: vi.fn(() => 'record-id'), prompt: vi.fn(), activity: vi.fn(), answer: vi.fn(), close: vi.fn() },
     workspace: workspaceStub(),
     sessions: { view: () => [] },
     pty: {

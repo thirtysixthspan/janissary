@@ -12,6 +12,11 @@ import { ACP_RECORD_RETENTION_MS } from '../acp-records/model.js';
 import { AcpRecordStore } from '../acp-records/store.js';
 import type { AcpRecordSource } from '../acp-records/types.js';
 import { createControllerTestProject } from './test-project.js';
+import type { AcpOptions } from '../acp/types.js';
+import { executeAgentRun } from '../agent/execute.js';
+
+const acpMock = vi.hoisted(() => ({ connect: vi.fn() }));
+vi.mock('../acp/index.js', () => ({ connectAcp: acpMock.connect }));
 
 // The external-open path shells out to the OS image viewer; stub it so tests never launch an app.
 vi.mock('../openers/os-open.js', () => ({ didOsOpen: () => true }));
@@ -94,6 +99,44 @@ describe('createManagers durable ACP records', () => {
   afterEach(async () => {
     for (const controller of controllers) await controller.shutdown();
     rmSync(projectDir, { recursive: true, force: true });
+  });
+
+  it.each([false, true])('persists producer outcomes before recorder disposal even on cleanup rejection: %s', async (rejectCleanup) => {
+    const first = make();
+    const caller = seedRootTab(first.managers.tab);
+    acpMock.connect.mockImplementation((options: AcpOptions) => {
+      options.onConnect?.({ provider: 'mock' });
+      return { prompt: vi.fn(), cancel: async () => {}, kill: vi.fn(), shutdown: async () => {} };
+    });
+    const coreAnswer = first.managers.acp.prompt(caller.label, 'core task');
+    const coreId = caller.runtime!.acpRecordId!;
+    const run = first.managers.agent.create({
+      caller: first.managers.agent.captureCaller(caller),
+      snapshot: { taskPath: 'task.md', taskText: 'Agent task', skills: [], grants: [] }, executionDir: projectDir,
+    });
+    const execution = executeAgentRun(run, {
+      runId: run.id, invocationId: 'shutdown', caller: run.caller, signal: run.abortController.signal,
+    }, run.view().model, undefined, '', first.managers);
+    run.reportActivity('thought', 'partial thought');
+    if (rejectCleanup) run.addResource('broken', () => { throw new Error('cleanup failed'); });
+    const originalDispose = first.managers.acpRecords.dispose.bind(first.managers.acpRecords);
+    const dispose = vi.spyOn(first.managers.acpRecords, 'dispose');
+    dispose.mockImplementation(() => {
+      expect(first.managers.acpRecords.window(run.recordId!)?.status).toBe('Terminated');
+      expect(first.managers.acpRecords.window(coreId)?.status).toBe('Closed');
+      originalDispose();
+    });
+    if (rejectCleanup) await expect(first.shutdown()).rejects.toThrow();
+    else await first.shutdown();
+    controllers = controllers.filter((controller) => controller !== first);
+    await expect(coreAnswer).resolves.toBe('ACP session closed.');
+    await expect(execution).resolves.toMatchObject({ status: 'terminated' });
+    const store = new AcpRecordStore({ projectDir });
+    expect(store.read(coreId)).toMatchObject({ outcome: 'Closed', blocks: [{ prompt: 'core task', answer: 'ACP session closed.' }] });
+    expect(store.read(run.recordId!)).toMatchObject({ outcome: 'Terminated', blocks: [{ answer: 'Agent terminated.', entries: [{ text: 'partial thought' }] }] });
+    const restarted = make();
+    expect(restarted.managers.acpRecords.window(run.recordId!)?.status).toBe('Terminated');
+    expect(restarted.managers.acpRecords.window(coreId)?.status).toBe('Closed');
   });
 
   it('registers the service before agent and ACP without creating storage or live records', () => {

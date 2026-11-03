@@ -18,12 +18,49 @@ function setup() {
 }
 
 describe('AgentRunManager', () => {
+  it('validates record provenance before acquiring an optional workspace lease', () => {
+    const { manager, captured, controller } = setup();
+    const acquire = vi.spyOn(controller.managers.workspace, 'acquireAgentLease');
+    expect(() => manager.create({ caller: captured, snapshot: { ...snapshot, taskPath: '' }, workspaceDir: '/unused' }))
+      .toThrow('Invalid ACP record source.');
+    expect(acquire).not.toHaveBeenCalled();
+    expect(manager.runs.size).toBe(0);
+    expect(controller.managers.acpRecords.rows()).toEqual([]);
+  });
+
+  it('copies caller name and original task selector before later renames and snapshot resolution', async () => {
+    const { manager, caller, controller } = setup();
+    caller.title = 'Original';
+    const captured = manager.captureCaller(caller);
+    caller.title = 'Renamed';
+    const run = manager.create({ caller: captured, snapshot, model: 'explicit/unknown' });
+    run.setSnapshot({ ...snapshot, taskPath: '/resolved/other.md' });
+    await manager.finish(run.id, 'failed');
+    expect(controller.managers.acpRecords.window(run.recordId!)).toMatchObject({
+      status: 'Failed', ownerName: 'Original', model: 'explicit/unknown', runId: run.id,
+      source: { taskPath: '/task.md' }, blocks: [],
+    });
+  });
+
+  it('does not terminate an old caller run when a reused label closes', async () => {
+    const { manager, caller, captured, controller } = setup();
+    const run = manager.create({ caller: captured, snapshot });
+    const replacement = makeTab(caller.label, '#abc');
+    controller.managers.tab.tabs = [replacement];
+    manager.captureCaller(replacement);
+    manager.closeCaller(replacement);
+    expect(run.outcome).toBeUndefined();
+    expect(controller.managers.acpRecords.window(run.recordId!)?.status).toBe('Running');
+    await manager.finish(run.id, 'terminated');
+  });
   it('gives concurrent runs distinct ids and independent snapshots and abort state', () => {
     const { manager, captured } = setup();
     const first = manager.create({ caller: captured, snapshot });
     const second = manager.create({ caller: captured, snapshot });
 
     expect(first.id).not.toBe(second.id);
+    expect(first.recordId).not.toBe(second.recordId);
+    expect(first.recordId).not.toBe(first.id);
     expect(first.snapshot).toEqual(snapshot);
     expect(first.snapshot).not.toBe(snapshot);
     expect(Object.isFrozen(first.snapshot)).toBe(true);
@@ -42,6 +79,7 @@ describe('AgentRunManager', () => {
     await Promise.all([completed, failed]);
 
     expect(run.outcome).toBe('completed');
+    expect(manager['managers'].acpRecords.window(run.recordId!)?.status).toBe('Completed');
     expect(cleanup).toHaveBeenCalledOnce();
     expect(manager.runs).toHaveProperty('size', 0);
   });
@@ -140,6 +178,7 @@ describe('AgentRunManager', () => {
     })();
     await Promise.resolve();
     expect(child.abortController.signal.aborted).toBe(true);
+    expect(manager['managers'].acpRecords.window(child.recordId!)?.status).toBe('Terminated');
     expect(settled).toBe(false);
 
     completion.resolve();
@@ -156,6 +195,7 @@ describe('AgentRunManager', () => {
 
     expect(run.monitorIds.size).toBe(0);
     expect(run.outcome).toBeUndefined();
+    expect(manager['managers'].acpRecords.window(run.recordId!)?.status).toBe('Running');
     expect(run.abortController.signal.aborted).toBe(false);
     await manager.finish(run.id, 'completed');
   });
@@ -226,6 +266,7 @@ describe('AgentRunManager', () => {
       errors: [expect.objectContaining({ message: 'cleanup failed' })],
     });
     expect(run.outcome).toBe('terminated');
+    expect(manager['managers'].acpRecords.window(run.recordId!)?.status).toBe('Terminated');
     expect(manager.runs.has(run.id)).toBe(false);
   });
 
