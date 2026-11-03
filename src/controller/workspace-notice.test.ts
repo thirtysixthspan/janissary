@@ -1,5 +1,5 @@
-import { it, expect, vi } from 'vitest';
-import { createController } from '../controller.js';
+import { afterEach, it, expect, vi } from 'vitest';
+import { createControllerTestProject } from './test-project.js';
 import { notify } from '../notifications/index.js';
 
 type Reporter = (label: string, message: string) => void;
@@ -13,8 +13,11 @@ vi.mock('../workspace/manager.js', () => ({
 }));
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 
+const project = createControllerTestProject();
+afterEach(async () => { await project.dispose(); });
+
 it('routes workspace credential failures through the established notification service', () => {
-  const controller = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
+  const controller = project.create();
   try {
     expect(workspace.report).toBeDefined();
     workspace.report?.('alpha', 'ChatGPT OAuth unavailable');

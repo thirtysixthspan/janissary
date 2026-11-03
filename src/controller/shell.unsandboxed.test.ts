@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { createController } from '../controller.js';
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import { createControllerTestProject } from './test-project.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 
 // These tests spawn a real persistent shell (ShellManager.getShell → child_process.spawn) and
@@ -10,9 +10,12 @@ import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 // `npm run check` for that reason — run via `npm run test:unsandboxed` on the host.
 vi.mock('./openers/os-open.js', () => ({ didOsOpen: () => true }));
 
+const project = createControllerTestProject();
+afterEach(async () => { await project.dispose(); });
+
 const makeController = () => {
   let states = 0;
-  const c = createController({ emitState: () => { states++; }, sendPty: () => {}, sendPtyExit: () => {} });
+  const c = project.create({ emitState: () => { states++; }, sendPty: () => {}, sendPtyExit: () => {} });
   seedRootTab(c.managers.tab);
   return { c, get states() { return states; } };
 };
@@ -20,7 +23,7 @@ const makeController = () => {
 describe('Controller root-path display', () => {
   it('abbreviates the working directory on a command prompt to $root', () => {
     const { c } = makeController(); // janus cwd is the launch (root) directory
-    c.dispatch('shell true');
+    c.dispatch('!true');
     const prompt = c.view()[0].bufferLines.find((l) => l.type === 'prompt');
     expect(prompt?.cwd).toBe('$root/');
     c.shutdown();
@@ -28,7 +31,7 @@ describe('Controller root-path display', () => {
 
   it('abbreviates the shell working directory in the connections panel', () => {
     const { c } = makeController();
-    c.dispatch('shell true');
+    c.dispatch('!true');
     const shellConn = c.view()[0].connections.find((r) => r.kind === 'shell');
     expect(shellConn?.text).toContain('$root/');
     c.shutdown();

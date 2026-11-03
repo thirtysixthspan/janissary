@@ -39,7 +39,7 @@ beforeEach(() => {
   writeFileSync(path.join(workspace, 'ai', 'tasks', 'task.md'), 'Do the work.');
   mkdirSync(path.join(cloneWorkspace, 'ai', 'tasks'), { recursive: true });
   writeFileSync(path.join(cloneWorkspace, 'ai', 'tasks', 'task.md'), 'Cloned task.');
-  controller = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
+  controller = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} }, workspace);
   const tab = seedRootTab(controller.managers.tab);
   tab.runtime!.cwd = workspace;
   managers = controller.managers;

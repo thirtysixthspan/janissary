@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createController, type Controller } from '../controller.js';
+import type { Controller } from '../controller.js';
+import { createControllerTestProject } from '../controller/test-project.js';
 import type { ClientMessage, TabView } from '../protocol.js';
 import { handle } from '../message/handler.js';
 import { seedRootTab, seedTestTab } from './root-tab-test-fixture.js';
@@ -19,13 +20,14 @@ const exit = vi.fn();
 const notice = vi.fn();
 const kill = vi.fn();
 const replies = vi.fn();
+const project = createControllerTestProject();
 
 beforeEach(() => {
   snapshots = [];
   vi.mocked(spawnPty).mockImplementation((program) => ({
     id: 'fixture-pty', program, write: vi.fn(), resize: vi.fn(), kill,
   }));
-  controller = createController({
+  controller = project.create({
     emitState: () => { snapshots.push({
       tabs: controller.view(), activeTab: controller.managers.tab.activeTab,
       secondaryTabLabel: controller.managers.tab.secondaryTabLabel,
@@ -36,7 +38,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  await controller.shutdown();
+  await project.dispose();
   vi.restoreAllMocks();
   vi.clearAllMocks();
   vi.useRealTimers();

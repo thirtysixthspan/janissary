@@ -11,14 +11,18 @@ import { AcpSessionRecords } from '../acp-records/manager.js';
 import { ACP_RECORD_RETENTION_MS } from '../acp-records/model.js';
 import { AcpRecordStore } from '../acp-records/store.js';
 import type { AcpRecordSource } from '../acp-records/types.js';
+import { createControllerTestProject } from './test-project.js';
 
 // The external-open path shells out to the OS image viewer; stub it so tests never launch an app.
 vi.mock('../openers/os-open.js', () => ({ didOsOpen: () => true }));
 // Mock spawnPty so harness/tab creation never spawns real processes.
 vi.mock('../pty.js');
 
+const project = createControllerTestProject();
+afterEach(async () => { await project.dispose(); });
+
 const makeController = () => {
-  const c = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
+  const c = project.create();
   seedRootTab(c.managers.tab);
   return c;
 };

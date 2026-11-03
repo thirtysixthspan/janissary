@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { createController } from '../controller.js';
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import { createControllerTestProject } from './test-project.js';
 import { createControllerAdapters } from './create-adapters.js';
 import { createTabControllerAdapter } from './tab-adapter.js';
 import { createMonitorControllerAdapter } from './monitor-adapter.js';
@@ -12,8 +12,9 @@ vi.mock('../openers/os-open.js', () => ({ didOsOpen: () => true }));
 // Mock spawnPty so tab creation never spawns real processes.
 vi.mock('../pty.js');
 
-const makeManagers = () =>
-  createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} }).managers;
+const project = createControllerTestProject();
+afterEach(async () => { await project.dispose(); });
+const makeManagers = () => project.create().managers;
 
 describe('createControllerAdapters', () => {
   it('contributes every member of all five adapter factories', () => {

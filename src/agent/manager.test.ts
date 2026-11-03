@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { createController } from '../controller.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createControllerTestProject } from '../controller/test-project.js';
 import { tabRuntime } from '../tab/runtime.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 import { makeTab } from '../tab/index.js';
@@ -7,9 +7,11 @@ import type { AgentSnapshot } from './types.js';
 import { createRunCompletion, trackChildRun } from './nested-run.js';
 
 const snapshot: AgentSnapshot = Object.freeze({ taskPath: '/task.md', taskText: 'captured task', skills: [], grants: [] });
+const project = createControllerTestProject();
+afterEach(async () => { await project.dispose(); });
 
 function setup() {
-  const controller = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
+  const controller = project.create();
   const caller = seedRootTab(controller.managers.tab);
   const captured = controller.managers.agent.captureCaller(caller);
   return { controller, caller, captured, manager: controller.managers.agent };

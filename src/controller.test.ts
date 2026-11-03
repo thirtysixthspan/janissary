@@ -19,11 +19,19 @@ import { openMonitorTab } from './monitor/window.js';
 import { initHarnessCaptureDirectory } from './harness/capture/file.js';
 import { UNREAD_DWELL_MS } from './tab/dwell.js';
 import { createControllerAdapters } from './controller/create-adapters.js';
+import { seedRecordHistory } from './acp-records/history-test-fixture.js';
 
 // The external-open path shells out to the OS image viewer; stub it so tests never launch an app.
 vi.mock('./openers/os-open.js', () => ({ didOsOpen: () => true }));
 // Mock spawnPty so harness tests never spawn real processes.
 vi.mock('./pty.js');
+vi.mock('./acp-records/store.js', () => ({
+  AcpRecordStore: class {
+    scan = vi.fn(() => []);
+    write = vi.fn();
+    delete = vi.fn();
+  },
+}));
 
 // Sinks that just count state emissions; no PTY/shell spawning is exercised here.
 // Every controller the tests create is tracked and shut down after each test: shutdown() clears the
@@ -39,14 +47,37 @@ const makeController = () => {
   return { c, get states() { return states; } };
 };
 
-afterEach(() => {
-  for (const c of liveControllers) c.shutdown();
+afterEach(async () => {
+  await Promise.all(liveControllers.map((c) => c.shutdown()));
   liveControllers.length = 0;
 });
 
 const allText = (c: Controller) => c.view().flatMap((t) => t.bufferLines).map((l) => l.text).join('\n');
 
 describe('Controller rootDir', () => {
+  it('preserves default-root semantics without recovering or pruning checkout history', async () => {
+    const scratchRoot = path.join(import.meta.dirname, '../temp');
+    mkdirSync(scratchRoot, { recursive: true });
+    const checkout = mkdtempSync(path.join(scratchRoot, 'controller-checkout-'));
+    const files = seedRecordHistory(checkout);
+    const cwd = vi.spyOn(process, 'cwd').mockReturnValue(checkout);
+    try {
+      const { c } = makeController();
+      expect(c.rootDir).toBe(checkout);
+      expect(c.managers.tab.launchDir).toBe(checkout);
+      expect(c.managers.acpRecords.rows()).toEqual([]);
+      await c.shutdown();
+      for (const [file, bytes] of files) expect(readFileSync(file, 'utf8')).toBe(bytes);
+    } finally {
+      try {
+        await Promise.all(liveControllers.map((c) => c.shutdown()));
+      } finally {
+        cwd.mockRestore();
+        rmSync(checkout, { recursive: true, force: true });
+      }
+    }
+  });
+
   it('returns the constructor-supplied projectDir', () => {
     const c = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} }, '/some/project');
     liveControllers.push(c);
