@@ -8,6 +8,8 @@ export type ProviderTurn = {
   notificationPending: boolean;
   drained: Promise<void>;
   resolveDrain: () => void;
+  released: Promise<void>;
+  resolveRelease: () => void;
   cancellation?: Promise<void>;
 };
 
@@ -22,7 +24,12 @@ export class AcpPromptControl {
     }
     const completion = { resolve: () => {} };
     const drained = new Promise<void>((resolve) => { completion.resolve = resolve; });
-    const turn = { handlers, cancelled: false, sent: false, notificationPending: false, drained, resolveDrain: completion.resolve };
+    const release = { resolve: () => {} };
+    const released = new Promise<void>((resolve) => { release.resolve = resolve; });
+    const turn = {
+      handlers, cancelled: false, sent: false, notificationPending: false,
+      drained, resolveDrain: completion.resolve, released, resolveRelease: release.resolve,
+    };
     this.current = turn;
     return turn;
   }
@@ -46,10 +53,9 @@ export class AcpPromptControl {
     turn.cancelled = true;
     turn.notificationPending = true;
     turn.cancellation = (async () => {
-      await Promise.race([send(turn), turn.drained]);
+      await Promise.all([Promise.race([send(turn), turn.released]), turn.drained]);
       turn.notificationPending = false;
       this.flush(turn);
-      await turn.drained;
     })();
     return turn.cancellation;
   }
@@ -60,12 +66,14 @@ export class AcpPromptControl {
     this.current = undefined;
     if (!turn) return;
     turn.resolveDrain();
+    turn.resolveRelease();
     turn.handlers.onError(message);
   }
 
   private terminal(turn: ProviderTurn, callback: () => void): void {
     if (!this.owns(turn) || turn.terminal) return;
     turn.terminal = callback;
+    turn.resolveDrain();
     this.flush(turn);
   }
 

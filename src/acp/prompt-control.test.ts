@@ -18,6 +18,39 @@ describe('provider turn admission and drain', () => {
     control.release('cancellation failed');
     expect(h.onError).toHaveBeenCalledWith('cancellation failed');
   });
+  it('keeps a drained provider turn reserved until its cancellation write completes', async () => {
+    const control = new AcpPromptControl();
+    const h = handlers();
+    const turn = control.admit(h)!;
+    const notification = Promise.withResolvers<void>();
+    const pending = control.cancel(() => notification.promise);
+    control.end(turn, 'cancelled');
+
+    expect(h.onEnd).not.toHaveBeenCalled();
+    expect(control.current).toBe(turn);
+    const next = handlers();
+    expect(control.admit(next)).toBeUndefined();
+    expect(next.onError).toHaveBeenCalledWith('ACP: a prompt is already running.');
+
+    notification.resolve();
+    await pending;
+    expect(h.onEnd).toHaveBeenCalledExactlyOnceWith('cancelled');
+    expect(control.current).toBeUndefined();
+  });
+  it('does not publish a terminal callback when cancellation fails after provider drain', async () => {
+    const control = new AcpPromptControl();
+    const h = handlers();
+    const turn = control.admit(h)!;
+    const notification = Promise.withResolvers<void>();
+    const pending = control.cancel(() => notification.promise);
+    control.end(turn, 'cancelled');
+    notification.reject(new Error('write failed'));
+
+    await expect(pending).rejects.toThrow('write failed');
+    expect(h.onEnd).not.toHaveBeenCalled();
+    expect(control.current).toBe(turn);
+    control.release('cancellation failed');
+  });
   it('releases a cancellation even if the notification write never finishes', async () => {
     const control = new AcpPromptControl();
     control.admit(handlers());
