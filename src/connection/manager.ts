@@ -35,11 +35,19 @@ export class ConnectionManager {
       out(lines.length > 0 ? lines.join('\n') : 'No open connections.');
       return;
     }
+    await this.closeTarget(parsed.kind, parsed.id, label);
+  }
+
+  async closeTarget(kind: ConnectionKind, id: string, label: string): Promise<void> {
     const report = (text: string) => { this.reportClose(label, text); };
     try {
-      await this.close(parsed.kind, parsed.id, label, report);
+      if (kind === 'browser') {
+        report(await this.managers.browser.run(label, `browser window close ${id}`));
+      } else {
+        closeConnection(kind, id, this.managers, label, report);
+      }
     } catch (error) {
-      notify(this.managers, 'connection-close-failed', label, `Could not close connection ${parsed.kind}:${parsed.id}: ${errorFirstLine(error)}.`);
+      this.reportCloseFailure(kind, id, label, error);
     }
   }
 
@@ -47,12 +55,8 @@ export class ConnectionManager {
     return listCompletionConnections(this.managers, label);
   }
 
-  private async close(kind: ConnectionKind, id: string, label: string, report: (text: string) => void): Promise<void> {
-    if (kind === 'browser') {
-      report(await this.managers.browser.run(label, `browser window close ${id}`));
-      return;
-    }
-    closeConnection(kind, id, this.managers, label, report);
+  private reportCloseFailure(kind: ConnectionKind, id: string, label: string, error: unknown): void {
+    notify(this.managers, 'connection-close-failed', label, `Could not close connection ${kind}:${id}: ${errorFirstLine(error)}.`);
   }
 
   private reportClose(label: string, text: string): void {

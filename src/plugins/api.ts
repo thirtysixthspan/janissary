@@ -36,6 +36,7 @@ export {
 export type {
   TabPluginNotification, TabPluginNotificationTopic, TabPluginTopicAction,
 } from './api-topics.js';
+export type { ConnectionsTopicAction, ConnectionsTopicNotification } from './api-topics-connections.js';
 export type {
   TabPluginLaunchFactory, TabPluginLaunchReady, TabPluginLaunchReadyHandler, TabPluginLaunchRequest,
   TabPluginLaunchResult, TabPluginLaunchStart,

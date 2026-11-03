@@ -22,6 +22,50 @@ function makeManagers(overrides: Partial<Managers> = {}): Managers {
 }
 
 describe('ConnectionManager', () => {
+  describe('closeTarget', () => {
+    beforeEach(() => { notifications.notify.mockClear(); });
+
+    it('reports synchronous close results immediately through the existing event selection', () => {
+      const managers = makeManagers({
+        database: { openDbs: vi.fn(() => []), listOpen: vi.fn(() => []), close: vi.fn(() => true) },
+      } as unknown as Partial<Managers>);
+
+      new ConnectionManager(managers).closeTarget('sqlite', 'inventory', 'owner');
+
+      expect(notifications.notify).toHaveBeenCalledWith(
+        managers, 'connection-closed', 'owner', 'Closed connection sqlite:inventory.',
+      );
+    });
+
+    it('starts browser close without awaiting and reports its eventual result', async () => {
+      const { promise, resolve: finishClose } = Promise.withResolvers<string>();
+      const browserRun = vi.fn(() => promise);
+      const managers = makeManagers({ browser: { info: vi.fn(), run: browserRun } } as unknown as Partial<Managers>);
+
+      new ConnectionManager(managers).closeTarget('browser', 'window-1', 'owner');
+
+      expect(browserRun).toHaveBeenCalledWith('owner', 'browser window close window-1');
+      expect(notifications.notify).not.toHaveBeenCalled();
+      finishClose('Closed connection browser:window-1.');
+      await Promise.resolve();
+      expect(notifications.notify).toHaveBeenCalledWith(
+        managers, 'connection-closed', 'owner', 'Closed connection browser:window-1.',
+      );
+    });
+
+    it('converts close exceptions to the existing first-line failure message', () => {
+      const managers = makeManagers({
+        database: { openDbs: vi.fn(() => []), listOpen: vi.fn(() => []), close: vi.fn(() => { throw new Error('locked\nmore'); }) },
+      } as unknown as Partial<Managers>);
+
+      new ConnectionManager(managers).closeTarget('sqlite', 'inventory', 'owner');
+
+      expect(notifications.notify).toHaveBeenCalledWith(
+        managers, 'connection-close-failed', 'owner', 'Could not close connection sqlite:inventory: locked.',
+      );
+    });
+  });
+
   describe('connectionsFor', () => {
     it('includes a shell row when a shell is open', () => {
       const managers = makeManagers({ shell: { has: vi.fn(() => true) } } as unknown as Partial<Managers>);

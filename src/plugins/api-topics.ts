@@ -5,6 +5,7 @@ import type {
   TabActivityEntry,
 } from './api.js';
 import type { DatabaseGridQuery, RemoteSessionView, RunscriptsView } from '../protocol.js';
+import type { ConnectionsTopicAction, ConnectionsTopicNotification } from './api-topics-connections.js';
 
 // The topic half of the v1 tab plugin contract: the host topics a plugin may declare an interest in,
 // the shape of one delivery, and the actions it may ask the host to perform on them. Split out of
@@ -21,7 +22,7 @@ import type { DatabaseGridQuery, RemoteSessionView, RunscriptsView } from '../pr
 // latest rows at delivery time. Last activity is minute-rounded, and the launcher drops unchanged
 // rows as a second guard against repeated payloads.
 export type TabPluginNotificationTopic =
-  | 'schedules' | 'conversations' | 'sessions' | 'databases' | 'tabs' | 'runscripts';
+  | 'schedules' | 'conversations' | 'sessions' | 'databases' | 'tabs' | 'runscripts' | 'connections';
 
 // Keyed by the union for the same reason `CAPABILITIES` is: a topic added to the type without a
 // source here is a compile error rather than a name the host would silently never deliver.
@@ -32,6 +33,7 @@ const NOTIFICATION_TOPICS: Record<TabPluginNotificationTopic, true> = {
   databases: true,
   tabs: true,
   runscripts: true,
+  connections: true,
 };
 
 export const TAB_PLUGIN_NOTIFICATION_TOPICS =
@@ -45,6 +47,7 @@ export function isTabPluginNotificationTopic(name: string): name is TabPluginNot
 // `tabs` are the instance keys of this plugin's own open tabs — the host works that set out to
 // decide whether to deliver at all, so passing it leaves the plugin with no bookkeeping of its own.
 export type TabPluginNotification =
+  | ConnectionsTopicNotification
   | {
     topic: 'schedules';
     data: readonly AggregatedScheduleView[];
@@ -89,6 +92,7 @@ export type TabPluginNotification =
 // already agreed to show it, which keeps the grant as narrow as the view that motivates it. Each
 // topic names its own actions, so adding a topic never widens what an existing one can do.
 export type TabPluginTopicAction =
+  | ConnectionsTopicAction
   | { topic: 'schedules'; action: 'cancel'; tab: string; id: string; owner?: 'tab' }
   | { topic: 'schedules'; action: 'cancel'; tab: 'system'; id: string; owner: 'system'; key: string }
   // Clear one owner's schedules. Each owner is cleared separately, so clearing tab timers never
