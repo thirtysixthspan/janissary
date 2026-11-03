@@ -2,6 +2,10 @@
 
 ## ready
 
+* the acp command fails to start with error:
+ACP: failed to start ACP agent: spawn opencode ENOENT
+It looks like opencode cannot be found, possibly because the executing shell is not interactive.
+
 ## development
 
 ## deferred
