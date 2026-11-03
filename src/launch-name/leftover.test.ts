@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type * as Workspace from '../workspace/index.js';
@@ -90,6 +90,19 @@ describe('removeLeftoverWorkspace', () => {
     expect(existsSync(workspacePath('foo'))).toBe(false);
     expect(existsSync(`${workspacePath('foo')}.tmp`)).toBe(false);
     expect(hasLeftoverWorkspace('foo')).toBe(false);
+  });
+
+  it('moves the folder aside at once and deletes its contents in the background', async () => {
+    mkdirSync(workspacePath('foo'), { recursive: true });
+    writeFileSync(path.join(workspacePath('foo'), 'uncommitted.txt'), 'work');
+    mkdirSync(`${workspacePath('foo')}.tmp`, { recursive: true });
+    const trash = path.join(root, '.janissary', 'workspace-trash');
+
+    expect(removeLeftoverWorkspace('foo')).toBeUndefined();
+
+    expect(existsSync(workspacePath('foo'))).toBe(false);
+    expect(readdirSync(trash)).toHaveLength(2);
+    await vi.waitFor(() => { expect(readdirSync(trash)).toHaveLength(0); });
   });
 
   it('untrusts the folder in the Claude configuration given to initWorkspaceDir', () => {

@@ -1,7 +1,8 @@
-import { existsSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { isOwnInstanceAlive, isPidAlive, readLockPid } from '../instance-lock.js';
 import { untrustWorkspace, workspaceClaudeConfigPath, workspacePath, workspaceProjectDir } from '../workspace/index.js';
+import { discardDirectory, emptyWorkspaceTrash } from '../workspace/discard.js';
 import { peerRecordDir, readPeerRecord } from '../remote/peer-record.js';
 import { workspaceLabelError } from '../workspace/label.js';
 import { errorText } from '../error-text.js';
@@ -48,7 +49,9 @@ export function isWorkspaceRunning(label: string, tabUses: (dir: string) => bool
  * when there was nothing to remove. Unlike `removeWorkspace`, which swallows every error, a failure
  * here is reported: the launch it would have cleared the way for is refused instead. The trust
  * entry goes first, so a failed trust-file write leaves the folder untouched; a removal that fails
- * partway leaves the rest in place for the next launch to try again. A label that cannot name one
+ * partway leaves the rest in place for the next launch to try again. The folders are moved into the
+ * trash rather than deleted here, and the trash is emptied in the background, so a large clone frees
+ * its name at once instead of holding the launch (and the event loop) while every file is unlinked. A label that cannot name one
  * folder under the workspace base is refused the same way, before anything is touched, so no caller
  * can reach outside the base through this.
  */
@@ -59,11 +62,12 @@ export function removeLeftoverWorkspace(label: string): string | undefined {
   const scratch = `${dir}.tmp`;
   try {
     untrustWorkspace(dir, workspaceClaudeConfigPath());
-    if (existsSync(dir)) rmSync(dir, { recursive: true });
-    if (existsSync(scratch)) rmSync(scratch, { recursive: true });
+    discardDirectory(dir);
+    discardDirectory(scratch);
   } catch (error) {
     return errorText(error);
   }
+  void emptyWorkspaceTrash();
   return undefined;
 }
 
