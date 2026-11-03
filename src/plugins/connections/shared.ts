@@ -47,6 +47,7 @@ export type ConnectionsPayload =
 
 export type ConnectionsIntent =
   | { intent: 'open' | 'close'; payload: { kind: ConnectionKind; id: string } }
+  | { intent: 'open-record'; payload: { id: string } }
   | { intent: 'cancel' | 'close-session' | 'terminate' | 'delete' | 'load-older'; payload: { id: string } };
 
 const kinds = ['sqlite', 'shell', 'acp', 'browser', 'ssh', 'terminal'] as const;

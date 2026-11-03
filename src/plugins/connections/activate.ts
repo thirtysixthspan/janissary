@@ -43,6 +43,13 @@ function intent(
   capabilities: TabPluginServerCapabilities,
 ): null {
   if (!isConnectionsPayload(request.tabPayload)) return capabilities.reportFailure('invalid connections tab payload');
+  if (request.intent === 'open-record') {
+    if (!isIdIntent(request.payload)) return capabilities.rejectRequest('invalid open-record payload');
+    const row = rowForId(connectionsData(capabilities).rows, request.payload.id);
+    if (!row || row.type !== 'record') return capabilities.rejectRequest('invalid open-record payload');
+    tabs.openRecord(row, capabilities);
+    return null;
+  }
   if (request.intent === 'open' || request.intent === 'close') {
     if (!isKindIdIntent(request.payload)) return capabilities.rejectRequest(`invalid ${request.intent} payload`);
     const row = rowForId(connectionsData(capabilities).rows, request.payload.id, request.payload.kind);

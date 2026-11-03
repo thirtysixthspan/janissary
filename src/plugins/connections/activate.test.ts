@@ -28,6 +28,10 @@ const recordRow = {
   type: 'record', id: 'uuid', kind: 'acp', title: 'ACP title', model: 'model', ownerLabel: 'owner', ownerName: 'Owner',
   startedAt: 1, updatedAt: 2, status: 'Running', orderingTimestamp: 2,
 };
+const agentRow = {
+  type: 'record', id: 'agent-run', kind: 'agent', title: 'Agent task', model: 'model', ownerLabel: 'owner', ownerName: 'Owner',
+  startedAt: 1, updatedAt: 2, status: 'Completed', orderingTimestamp: 2,
+};
 
 describe('connections plugin activation', () => {
   it('declares the command aliases and only the capabilities this slice uses', () => {
@@ -84,5 +88,37 @@ describe('connections plugin activation', () => {
     }, f.capabilities)).toBeNull();
     expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action: 'open', kind: 'sqlite', id: 'db', ownerLabel: 'owner' });
     f.activation.dispose?.();
+  });
+
+  it('opens a current agent record by id without trusting client row data', () => {
+    const f = fixture([agentRow]);
+    expect(f.activation.intent({
+      tab: 'connections', intent: 'open-record', payload: { id: 'agent-run' },
+      tabPayload: { kind: 'list', rows: [agentRow] },
+    }, f.capabilities)).toBeNull();
+    expect(f.topicData).toHaveBeenCalledWith('connections');
+    expect(f.openOrFocusTab).toHaveBeenCalledWith('agent-run', expect.any(Function));
+  });
+
+  it.each([
+    ['missing', 'missing', []],
+    ['live', 'db', [liveRow]],
+  ])('rejects a %s row for open-record', (_case, id, rows) => {
+    const f = fixture(rows);
+    expect(() => f.activation.intent({
+      tab: 'connections', intent: 'open-record', payload: { id },
+      tabPayload: { kind: 'list', rows },
+    }, f.capabilities)).toThrow('invalid open-record payload');
+    expect(f.openOrFocusTab).not.toHaveBeenCalled();
+    expect(f.reportFailure).not.toHaveBeenCalled();
+  });
+
+  it('rejects a stale agent id using current topic data', () => {
+    const f = fixture([]);
+    expect(() => f.activation.intent({
+      tab: 'connections', intent: 'open-record', payload: { id: 'agent-run' },
+      tabPayload: { kind: 'list', rows: [agentRow] },
+    }, f.capabilities)).toThrow('invalid open-record payload');
+    expect(f.openOrFocusTab).not.toHaveBeenCalled();
   });
 });

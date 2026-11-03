@@ -1,0 +1,14 @@
+.connections-list.plugin-tab { padding: 0; gap: 0; outline: none; }
+.connections-empty { color: var(--muted); padding: 10px 12px; }
+.connections-rows { overflow: auto; min-height: 0; padding: 4px 8px; }
+.connections-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+  gap: 12px; align-items: center; padding: 8px; border-radius: 4px;
+  cursor: pointer; border-left: 2px solid transparent;
+}
+.connections-row:hover { background: var(--bg-soft); }
+.connections-row.selected { background: var(--bg-soft); border-left-color: var(--accent); }
+.connections-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.connections-row-kind, .connections-row-owner, .connections-row-status { color: var(--muted); font-size: 12px; }
+.connections-row button { border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+.connections-row button:hover { color: var(--fg); }
