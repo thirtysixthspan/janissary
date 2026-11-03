@@ -16,6 +16,7 @@ import { errorText } from '../error-text.js';
 import { childOutputTail, withChildOutput } from '../child-output.js';
 import { selectAcpEffort } from './effort.js';
 import { shutdownProcessTree } from './process-tree.js';
+import { locateAcpCommand } from './command-path.js';
 
 /**
  * Connect to an arbitrary ACP agent launched as a subprocess and drive it as an ACP
@@ -31,7 +32,7 @@ import { shutdownProcessTree } from './process-tree.js';
  * src/sandbox/index.ts); omitted (monitor sessions never set them), the command runs exactly as before.
  */
 export function connectAcp(options: AcpOptions): AcpSession {
-  const baseEnv = options.env ? { ...process.env, ...options.env } : process.env;
+  const located = locateAcpCommand(options.command, options.env ? { ...process.env, ...options.env } : process.env);
   const { command, args, env } = sandboxSpawn(
     {
       workspaceDir: options.workspaceDir,
@@ -39,7 +40,7 @@ export function connectAcp(options: AcpOptions): AcpSession {
       offline: options.offline,
       tokens: options.workspaceDir ? (options.tokens ?? getProjectTokens()) : undefined,
     },
-    options.command, options.args, baseEnv,
+    located.command, options.args, located.env,
   );
   const proc = spawn(command, args, {
     cwd: options.cwd,

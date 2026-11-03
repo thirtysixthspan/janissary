@@ -14,7 +14,7 @@ For an autonomous task that runs until completion and may use skill-granted Jani
 
 ## Before the first prompt
 
-OpenCode must be installed, authenticated, and on your `PATH`. Run `opencode auth login` in a terminal if you have not signed in. There is no setting to choose a different provider for this connection.
+OpenCode must be installed, authenticated, and on your `PATH`. The `PATH` your shell's rc file sets up counts too, so an `opencode` installed through a version manager such as nvm is found even when the app was started without that setup. Run `opencode auth login` in a terminal if you have not signed in. There is no setting to choose a different provider for this connection.
 
 Use the explicit `acp` prefix for a model reply; unclaimed text in a shell bar goes to zsh.
 
