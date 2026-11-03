@@ -12,6 +12,8 @@ Shell and harness launches create a fresh clone of the project origin by default
 
 The clone is shallow so it lands quickly on a large repository. A shell's clone holds only the newest commit of each branch, and a harness's holds the newest ten commits of each branch. Every branch of `origin` is present, as in a full clone; only older history is left out. Running `git fetch --unshallow` inside the workspace fetches the rest of the history when it is needed.
 
+The clone still fetches from `origin`, but it copies any object the project's own repository already holds from local disk and downloads only what is missing. Once the clone lands, it holds its own copy of every object and does not depend on the project repository. A project repository that is itself shallow can't lend its objects, and the clone then downloads everything from `origin`.
+
 Provisioning records the clone as trusted in Claude's user configuration. A missing configuration is
 created, and a valid configuration keeps all unrelated fields and per-project settings. If the file
 cannot be read, contains malformed JSON, or has an invalid root, projects, or matching-project

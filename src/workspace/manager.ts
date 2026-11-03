@@ -49,9 +49,9 @@ export class WorkspaceManager {
     const origin = this.originUrl();
     if ('error' in origin) return origin;
     const startedAt = performance.now();
-    const handle = cloneOptions === undefined
-      ? provisionWorkspace(name, origin.url, githubToken)
-      : provisionWorkspace(name, origin.url, githubToken, cloneOptions);
+    // The repository whose `origin` this clones already holds most of its objects, so the clone
+    // borrows them from disk and downloads only what is missing.
+    const handle = provisionWorkspace(name, origin.url, githubToken, { ...cloneOptions, reference: origin.root });
     this.refs.set(handle.dir, 1);
     this.names.set(name, handle.dir);
     const pending: PendingWorkspace = { cancel: handle.cancel, dir: handle.dir, ready: Promise.resolve() };
@@ -77,11 +77,11 @@ export class WorkspaceManager {
     return 'url' in origin ? origin.url : undefined;
   }
 
-  private originUrl(): { url: string } | { error: string } {
+  private originUrl(): { url: string; root: string } | { error: string } {
     const root = findRepoRoot(this.projectDir);
     if (!root) return { error: NO_REPO };
     try {
-      return { url: getRemoteUrl(root) };
+      return { url: getRemoteUrl(root), root };
     } catch (error) {
       return { error: `Failed to create workspace: ${errorText(error)}` };
     }

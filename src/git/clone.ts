@@ -1,5 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { promisify } from 'node:util';
 import { cloneUrlError, isGitHubUrl, toHttpsUrl } from './repository-url.js';
 
@@ -25,6 +27,9 @@ export type GitCloneOptions = {
   depth?: number;
   allBranches?: boolean;
   sparseDirectories?: string[];
+  // A local repository holding the same history, whose objects the clone copies from disk instead
+  // of downloading. Skipped for a sparse clone and a shallow repository.
+  reference?: string;
 };
 
 export type GitCloneHandle = {
@@ -34,12 +39,22 @@ export type GitCloneHandle = {
   cancel: () => void;
 };
 
+// `--dissociate` copies the borrowed objects in once the clone lands, so the clone never depends on
+// the reference afterwards. A shallow repository can't lend its objects, and git says so on stderr,
+// which would then be reported as a failed clone's first error line, so it is never offered.
+function referenceOptions({ reference, sparseDirectories }: GitCloneOptions): string[] {
+  if (reference === undefined || sparseDirectories !== undefined) return [];
+  if (existsSync(path.join(reference, '.git', 'shallow'))) return [];
+  return [`--reference-if-able=${reference}`, '--dissociate'];
+}
+
 function cloneCommand(url: string, target: string, options: GitCloneOptions): { args: string[]; env?: NodeJS.ProcessEnv } {
   const { githubToken, keepStderr, depth, allBranches, sparseDirectories } = options;
   const cloneOptions = [
     ...(depth === undefined ? [] : [`--depth=${depth}`]),
     ...(allBranches ? ['--no-single-branch'] : []),
     ...(sparseDirectories === undefined ? [] : ['--filter=blob:none', '--sparse']),
+    ...referenceOptions(options),
   ];
   if (githubToken === undefined || !isGitHubUrl(url)) {
     // A clone whose errors are being kept runs where no terminal can answer git, so a credential

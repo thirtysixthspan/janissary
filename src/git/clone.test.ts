@@ -78,6 +78,33 @@ describe('startGitClone', () => {
     expect(git('git rev-list --count origin/feature')).toBe('1');
   });
 
+  it('borrows objects from a local reference and leaves the clone standing alone', async () => {
+    const reference = path.join(tmpDir, 'reference');
+    execSync(`git clone --no-single-branch "${bareDir}" "${reference}"`, { stdio: 'pipe' });
+    const target = path.join(tmpDir, 'referenced-clone');
+    await startGitClone(`file://${bareDir}`, target, { depth: 1, allBranches: true, reference }).ready;
+    const call = spawnSpy.calls.at(-1)!;
+    expect(call.args).toContain(`--reference-if-able=${reference}`);
+    expect(call.args).toContain('--dissociate');
+    expect(existsSync(path.join(target, '.git', 'objects', 'info', 'alternates'))).toBe(false);
+    const git = (command: string) => execSync(command, { cwd: target, stdio: 'pipe' }).toString().trim();
+    expect(git('git rev-parse --is-shallow-repository')).toBe('true');
+    expect(git('git rev-list --count origin/feature')).toBe('1');
+  });
+
+  it('passes no reference for a shallow repository', async () => {
+    const reference = path.join(tmpDir, 'shallow-reference');
+    execSync(`git clone --depth=1 "file://${bareDir}" "${reference}"`, { stdio: 'pipe' });
+    await startGitClone(`file://${bareDir}`, path.join(tmpDir, 'shallow-referenced-clone'), { depth: 1, reference }).ready;
+    expect(spawnSpy.calls.at(-1)!.args).toEqual(['clone', '--depth=1', '--', `file://${bareDir}`, path.join(tmpDir, 'shallow-referenced-clone')]);
+  });
+
+  it('passes no reference for a sparse clone', async () => {
+    const target = path.join(tmpDir, 'sparse-referenced-clone');
+    await startGitClone(`file://${bareDir}`, target, { depth: 1, sparseDirectories: ['product'], reference: path.join(tmpDir, 'seed') }).ready;
+    expect(spawnSpy.calls.at(-1)!.args.join(' ')).not.toMatch(/--reference|--dissociate/);
+  });
+
   it('rejects with git\'s first stderr line when stderr is kept', async () => {
     const missing = path.join(tmpDir, 'missing.git');
     const clone = startGitClone(missing, path.join(tmpDir, 'kept-clone'), { keepStderr: true });

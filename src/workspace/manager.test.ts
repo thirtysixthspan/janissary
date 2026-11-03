@@ -221,7 +221,15 @@ describe('WorkspaceManager', () => {
       const manager = new WorkspaceManager();
       const result = manager.create('agent-1');
       expect(result).toMatchObject({ dir: '/repo/.janissary/workspace/agent-1' });
-      expect(provisionWorkspaceMock).toHaveBeenCalledWith('agent-1', 'https://example.com/repo.git', undefined);
+      expect(provisionWorkspaceMock).toHaveBeenCalledWith('agent-1', 'https://example.com/repo.git', undefined, { reference: '/repo' });
+    });
+
+    it('lends the project repository\'s objects to the clone alongside its options', () => {
+      findRepoRootMock.mockReturnValue('/repo');
+      getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
+      provisionWorkspaceMock.mockReturnValue(handle('/repo/.janissary/workspace/agent-1'));
+      new WorkspaceManager().create('agent-1', undefined, { depth: 10, allBranches: true });
+      expect(provisionWorkspaceMock).toHaveBeenCalledWith('agent-1', 'https://example.com/repo.git', undefined, { depth: 10, allBranches: true, reference: '/repo' });
     });
 
     it('passes a forwarded GitHub token through to the clone', () => {
@@ -229,7 +237,7 @@ describe('WorkspaceManager', () => {
       getRemoteUrlMock.mockReturnValue('https://github.com/owner/repo.git');
       provisionWorkspaceMock.mockReturnValue(handle('/repo/.janissary/workspace/agent-1'));
       new WorkspaceManager().create('agent-1', 'ghp_forwarded');
-      expect(provisionWorkspaceMock).toHaveBeenCalledWith('agent-1', 'https://github.com/owner/repo.git', 'ghp_forwarded');
+      expect(provisionWorkspaceMock).toHaveBeenCalledWith('agent-1', 'https://github.com/owner/repo.git', 'ghp_forwarded', { reference: '/repo' });
     });
 
     it('returns an error when reading the remote throws', () => {
