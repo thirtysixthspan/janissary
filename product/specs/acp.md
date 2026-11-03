@@ -22,7 +22,7 @@ The shell's ordinary application-command dispatcher recognizes these commands an
 
 ## Provider and model
 
-The provider remains OpenCode, launched with `opencode acp`. It must be installed, authenticated, and on PATH. Model selection uses the harness catalog's OpenCode list, including project overrides. `google/gemini-3.1-flash-lite` is preferred while listed; otherwise the first available model is used. An empty list refuses the operation with `ACP: no opencode model is available in the harness catalog.`.
+The provider remains OpenCode, launched with `opencode acp`. It must be installed, authenticated, and on PATH. A bare agent command missing from the server's own PATH is looked up on the PATH the user's interactive shell sets up, so an agent installed through a version manager's rc-file setup starts the same way it does in the user's terminal. The agent then runs with that PATH. Model selection uses the harness catalog's OpenCode list, including project overrides. `google/gemini-3.1-flash-lite` is preferred while listed; otherwise the first available model is used. An empty list refuses the operation with `ACP: no opencode model is available in the harness catalog.`.
 
 The session's configured provider/model appears in its connection row after the handshake. The shared ACP transport still denies native permission requests except where a separate consumer explicitly supplies its own allowlist.
 

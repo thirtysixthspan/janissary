@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { connectAcp } from './index.js';
@@ -361,6 +361,49 @@ describe('connectAcp — the agent process ending', () => {
     expect(errors[0]).toContain('ACP agent exited.');
     expect(errors[0]).toContain('opencode: session expired');
     expect(errors[0]).toContain('Run "opencode auth login", then start a new session.');
+  });
+});
+
+// A server started without the user's interactive rc file (a launcher, a `--no-rcs` tab shell) has
+// a PATH that lacks what a version manager adds there, so `opencode` installed under nvm was not
+// found and the agent failed with `spawn opencode ENOENT`. The user's shell is a stand-in here that
+// only knows the agent's directory once it is asked to run something.
+describe('connectAcp — an agent only the user\'s shell can find', () => {
+  const originalShell = process.env.SHELL;
+
+  afterEach(() => {
+    if (originalShell === undefined) delete process.env.SHELL;
+    else process.env.SHELL = originalShell;
+  });
+
+  function installAgentOutsidePath(): { binDir: string; shell: string } {
+    const directory = mkdtempSync(path.join(os.tmpdir(), 'janissary-acp-shell-'));
+    roots.push(directory);
+    const binDir = path.join(directory, 'bin');
+    mkdirSync(binDir);
+    writeFileSync(path.join(binDir, 'stub-acp-agent'), `#!${process.execPath}\n${STUB_AGENT}`, { mode: 0o755 });
+    const shell = path.join(directory, 'user-shell');
+    writeFileSync(shell, `#!/bin/sh\nPATH="${binDir}:$PATH"; export PATH\nfor last; do :; done\nexec /bin/sh -c "$last"\n`, { mode: 0o755 });
+    return { binDir, shell };
+  }
+
+  it('starts a bare agent command found on the user\'s interactive shell PATH', async () => {
+    const { shell } = installAgentOutsidePath();
+    process.env.SHELL = shell;
+    const errors: string[] = [];
+    const session = connectAcp({
+      command: 'stub-acp-agent',
+      args: ['basic'],
+      cwd: os.tmpdir(),
+      env: { PATH: '/usr/bin:/bin' },
+      onError: (message) => { errors.push(message); },
+    });
+    sessions.push(session);
+
+    const reply = await prompt(session, 'hi');
+
+    expect(reply.text).toBe('protocol=1 sessions=1 hello');
+    expect(errors).toEqual([]);
   });
 });
 
