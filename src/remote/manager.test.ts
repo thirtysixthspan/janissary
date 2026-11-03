@@ -397,7 +397,7 @@ describe('RemoteManager shared channels', () => {
     expect(h.remote.get('joined')).toBeUndefined();
   });
 
-  // `connection close ssh:<id>` is the user ending the session, not something that happened to it,
+  // `connections close ssh:<id>` is the user ending the session, not something that happened to it,
   // so the tabs go rather than sitting open in an exited state and the feed records nothing.
   it('closes every tab on the channel without announcing an ended session', () => {
     const h = managerHarness(true, '12345678-1234-1234-1234-123456789abc');

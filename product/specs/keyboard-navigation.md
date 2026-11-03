@@ -31,7 +31,7 @@
 | Escape | Reset scroll to bottom |
 | Backspace / Delete | Delete character before cursor |
 | (printable) | Insert character at cursor |
-| Tab | Complete the token at the cursor: a file path, a `connection close` connection string, or a `browser` subcommand / window id |
+| Tab | Complete the token at the cursor: a file path, a `connections close` connection string, or a `browser` subcommand / window id |
 | Shift+Tab | Move keyboard focus to the next application section (left sidebar → center → right sidebar → reporting, wrapping back to left, skipping any section that is not currently present). The section's currently-visible tab receives focus. Does nothing while a modal dialog or keyboard-capturing overlay is open, so focus stays with that surface. Left to an editor tab's text buffer, where it outdents (see [[editor-tab]]), to a pending question panel's controls, where it moves backward between the panel's buttons (see [[agent-questions]]), and to a shell tab, where it moves between the terminal and the command bar (see [[shell-tab]]). |
 
 The UI is composed of up to four **application sections**: the left sidebar, the center action

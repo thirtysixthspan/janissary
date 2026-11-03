@@ -8,7 +8,7 @@ export type BrowserWindow = {
   shot: () => Promise<string>;
   // The page's rendered text (title + body innerText), truncated for agent consumption.
   content: () => Promise<string>;
-  // Current page URL, for `connection list` display.
+  // Current page URL, for `connections list` display.
   url: () => string;
 };
 

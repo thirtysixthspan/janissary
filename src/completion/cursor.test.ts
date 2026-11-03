@@ -30,9 +30,9 @@ describe('readCompletionCursor', () => {
   });
 
   it('gives an empty token after a trailing space and counts every preceding word', () => {
-    const cursor = readCompletionCursor('connection  close ', 18);
+    const cursor = readCompletionCursor('connections  close ', 19);
     expect(cursor.token).toBe('');
-    expect(cursor.preceding).toEqual(['connection', 'close']);
+    expect(cursor.preceding).toEqual(['connections', 'close']);
     expect(cursor.argumentIndex).toBe(2);
   });
 

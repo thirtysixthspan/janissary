@@ -48,7 +48,7 @@ export function removeDatabaseFile(name: string): void {
 
 // Open SQLite connections keyed by database name: opened lazily on the first
 // `db` command targeting a database and kept open — across commands and tabs —
-// until closed explicitly (`connection close sqlite:<name>`) or at app exit.
+// until closed explicitly (`connections close sqlite:<name>`) or at app exit.
 // Multiple databases can be connected at once.
 const connections = new Map<string, DatabaseSync>();
 

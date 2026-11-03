@@ -138,25 +138,25 @@ describe('completeCommandLine — connection strings', () => {
   const conns = ['shell:bash', 'acp:opencode', 'sqlite:movies', 'sqlite:shop'];
 
   it('completes a unique connection string and adds a space', () => {
-    expect(completeCommandLine('connection close acp', 20, noFiles, [], conns).newInput).toBe(
-      'connection close acp:opencode ',
+    expect(completeCommandLine('connections close acp', 21, noFiles, [], conns).newInput).toBe(
+      'connections close acp:opencode ',
     );
   });
 
   it('fills the common prefix when several connections match', () => {
-    const r = completeCommandLine('connection close sq', 19, noFiles, [], conns);
-    expect(r.newInput).toBe('connection close sqlite:');
+    const r = completeCommandLine('connections close sq', 20, noFiles, [], conns);
+    expect(r.newInput).toBe('connections close sqlite:');
     expect(r.matches.toSorted((a, b) => a.localeCompare(b))).toEqual(['sqlite:movies', 'sqlite:shop']);
   });
 
   it('offers every open connection for an empty target', () => {
-    const r = completeCommandLine('connection close ', 17, noFiles, [], conns);
+    const r = completeCommandLine('connections close ', 18, noFiles, [], conns);
     expect(r.matches.toSorted((a, b) => a.localeCompare(b))).toEqual(['acp:opencode', 'shell:bash', 'sqlite:movies', 'sqlite:shop']);
   });
 
-  it('does not offer connections for `connection list` or the command word', () => {
-    expect(completeCommandLine('connection lis', 14, noFiles, [], conns).matches).toEqual([]);
-    expect(completeCommandLine('connection close ', 17, noFiles, [], []).matches).toEqual([]);
+  it('does not offer connections for `connections list` or the command word', () => {
+    expect(completeCommandLine('connections lis', 15, noFiles, [], conns).matches).toEqual([]);
+    expect(completeCommandLine('connections close ', 18, noFiles, [], []).matches).toEqual([]);
   });
 });
 

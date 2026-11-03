@@ -14,7 +14,7 @@ const FORMERLY_SILENT = [
   ['close', 'close'],
   ['acp summarize', 'acp'],
   ['db sqlite query mydb SELECT 1', 'db'],
-  ['connection close sqlite:mydb', 'connection'],
+  ['connections close sqlite:mydb', 'connections'],
   ['next', 'next'],
 ];
 
@@ -24,7 +24,7 @@ describe('getOutput', () => {
     expect(result.kind).toBe('output');
     if (result.kind !== 'output') return;
     expect(result.text).toContain('Commands');
-    expect(result.text).toContain('connection');
+    expect(result.text).toContain('connections');
     expect(result.text).not.toContain('Key Bindings');
   });
 

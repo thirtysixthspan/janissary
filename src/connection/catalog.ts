@@ -5,9 +5,9 @@ import type { Tab } from '../tab/types.js';
 import type { ConnectionKind } from './types.js';
 
 // One open connection as every connection surface sees it. `id` is exactly what
-// `connection close <kind>:<id>` accepts; `display` is the connections-panel text; `scope` is
+// `connections close <kind>:<id>` accepts; `display` is the connections-panel text; `scope` is
 // `'tab'` for a connection the issuing tab holds (its panel shows it) and `'global'` for one only the
-// app-wide `connection list` and completion reach; `detail` is a parenthetical the text list appends.
+// app-wide `connections list` and completion reach; `detail` is a parenthetical the text list appends.
 export type ConnectionEntry = {
   kind: ConnectionKind;
   id: string;

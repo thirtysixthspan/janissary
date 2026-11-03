@@ -753,8 +753,8 @@ workspace** action.
 
 A remote tab lists two rows: `ssh:<address>` for the transport it runs over, and
 `terminal:<program>` for the process on the far side — a remote claude harness reports
-`terminal:claude`, exactly as a local one does. Both are visible and separately closable, and `connection list` names the transport by the tab's label (`ssh:<label> (<address>)`);
-`connection close ssh:<id>` matches the tab's label first, then the address it was launched with,
+`terminal:claude`, exactly as a local one does. Both are visible and separately closable, and `connections list` names the transport by the tab's label (`ssh:<label> (<address>)`);
+`connections close ssh:<id>` matches the tab's label first, then the address it was launched with,
 and closes the channel (and therefore the tab).
 
 ### `janus remote-serve [<project-dir>]`

@@ -46,7 +46,7 @@ A database name must match `^[A-Za-z0-9_-]+$` — letters, numbers, `-`, and `_`
 
 <img class="agent-float" src="/agents/malik-south-west.png" alt="" />
 
-The first command that touches a database opens a connection that stays open, shared across every tab and not just the one that opened it, until you close it, delete the database, or quit the app. Creating a database counts as touching it: `db sqlite create notes` opens a connection for `notes`, creating the file on the way, so the database appears in `connection list` straight away. Because the connection is reused, connection-scoped state like open transactions and `TEMP` tables survives between commands. See [Connections](/user-documentation/command-bar/connections) for listing and closing connections, including `connection close sqlite:<name>`.
+The first command that touches a database opens a connection that stays open, shared across every tab and not just the one that opened it, until you close it, delete the database, or quit the app. Creating a database counts as touching it: `db sqlite create notes` opens a connection for `notes`, creating the file on the way, so the database appears in `connections list` straight away. Because the connection is reused, connection-scoped state like open transactions and `TEMP` tables survives between commands. See [Connections](/user-documentation/command-bar/connections) for listing and closing connections, including `connections close sqlite:<name>`.
 
 ## Browse a database instead
 

@@ -57,7 +57,7 @@ export class ShellManager {
   private shellQueues = new Map<string, Promise<void>>();
   // Shells this manager killed itself, and what becomes of the command each was running. Killing ends
   // a shell's streams, which completes that command. A tab close or shutdown kills `silent`ly: the
-  // completion is dropped, because the tab it would report to may already be gone. `connection close
+  // completion is dropped, because the tab it would report to may already be gone. `connections close
   // shell` kills with `report`: its tab stays open, so the command finishes as if the shell had exited
   // on its own — only the pwd query is skipped, there being no shell left to answer it.
   private retired = new WeakMap<ShellProcess, 'silent' | 'report'>();
@@ -161,7 +161,7 @@ export class ShellManager {
     this.shellQueues.set(label, next);
   }
 
-  // Kill and forget a tab's shell on `connection close shell`. The tab stays open, so the command the
+  // Kill and forget a tab's shell on `connections close shell`. The tab stays open, so the command the
   // shell was running still finishes. Returns whether a shell was actually open (drives the result
   // message).
   close(label: string): boolean { return this.retire(label, 'report'); }

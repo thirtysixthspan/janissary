@@ -50,7 +50,7 @@ describe('resolveCommand', () => {
     expect(resolveCommand('acp summarize this repo')).toEqual({ kind: 'app', name: 'acp', cmd: 'acp summarize this repo' });
     expect(resolveCommand('db sqlite query mydb SELECT 1')).toEqual({ kind: 'app', name: 'db', cmd: 'db sqlite query mydb SELECT 1' });
     expect(resolveCommand('browser goto https://example.com')).toEqual({ kind: 'app', name: 'browser', cmd: 'browser goto https://example.com' });
-    expect(resolveCommand('connection close sqlite:mydb')).toEqual({ kind: 'app', name: 'connection', cmd: 'connection close sqlite:mydb' });
+    expect(resolveCommand('connections close sqlite:mydb')).toEqual({ kind: 'app', name: 'connections', cmd: 'connections close sqlite:mydb' });
     expect(resolveCommand('clear')).toEqual({ kind: 'app', name: 'clear', cmd: 'clear' });
     expect(resolveCommand('hist')).toEqual({ kind: 'app', name: 'hist', cmd: 'hist' });
     expect(resolveCommand('close')).toEqual({ kind: 'app', name: 'close', cmd: 'close' });

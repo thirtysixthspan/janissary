@@ -160,7 +160,7 @@ export class PseudoterminalManager {
     return programs;
   }
 
-  // Kill a tab's first live PTY running `program` (`connection close terminal:<program>`); its exit
+  // Kill a tab's first live PTY running `program` (`connections close terminal:<program>`); its exit
   // then flows through `handleExit`. A transport never matches, for the same reason `terminalsFor`
   // never lists one. Returns false when the tab has no such PTY.
   killTerminal(label: string, program: string): boolean {

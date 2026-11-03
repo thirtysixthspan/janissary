@@ -207,13 +207,13 @@ describe('completeHarnessModel', () => {
 });
 
 describe('completeConnectionClose', () => {
-  it('completes a connection string at argument 2 after "connection close"', () => {
-    const r = completeConnectionClose(at('connection close sh'), ['shell:bash']);
-    expect(r?.newInput).toBe('connection close shell:bash ');
+  it('completes a connection string at argument 2 after "connections close"', () => {
+    const r = completeConnectionClose(at('connections close sh'), ['shell:bash']);
+    expect(r?.newInput).toBe('connections close shell:bash ');
   });
 
-  it('returns null for "connection list"', () => {
-    expect(completeConnectionClose(at('connection list sh'), ['shell:bash'])).toBeNull();
+  it('returns null for "connections list"', () => {
+    expect(completeConnectionClose(at('connections list sh'), ['shell:bash'])).toBeNull();
   });
 
   it('returns null for a non-connection command', () => {

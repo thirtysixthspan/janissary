@@ -78,7 +78,7 @@ export function completeScheduleTarget(cursor: CompletionCursor, labels: string[
 
 export function completeConnectionClose(cursor: CompletionCursor, connections: string[]): CompletionResult | null {
   const { command, argumentIndex, preceding } = cursor;
-  if (argumentIndex !== 2 || command !== 'connection' || preceding[1]?.toLowerCase() !== 'close') {
+  if (argumentIndex !== 2 || command !== 'connections' || preceding[1]?.toLowerCase() !== 'close') {
     return null;
   }
   return completeWord(cursor, connections);

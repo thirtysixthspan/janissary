@@ -212,6 +212,14 @@ These event types can produce a notification line:
   of the error with terminal punctuation removed and one period added. These notices are attributed
   to the tab that ran `layout`, appear only in notifications, and have no config toggle. The event
   defaults to a desktop banner with the `warning` cue.
+- **`connection-closed`** — `connections close` closed the named connection. The line is the
+  close result, such as `Closed connection sqlite:mydb.`, attributed to the tab that ran the
+  command; the transcript receives no line. The event defaults to a desktop banner with the
+  `success` cue.
+- **`connection-close-failed`** — `connections close` found nothing to close
+  (`No open connection <kind>:<id>.`) or failed while closing
+  (`Could not close connection <kind>:<id>: <reason>.`). Attributed like `connection-closed`. The
+  event defaults to a desktop banner with the `error` cue.
 - **`tab`** — an arranging command cannot carry out a well-formed request. The exact messages are
   `Cannot dock "<name>".` for an undockable kind or the last visible center tab,
   `Cannot group "<name>".` for a monitor reporting tab,
@@ -266,7 +274,7 @@ The four ambient events (`state-change`, `schedule-fire`, `agent-start`,
 `rate-limited`) are each **independently togglable and default off** — opt in by editing
 `.janissary/config.json` (see `application-config.md`). The `harness-idle`, `manual`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`,
 `editor-suggest`, `question`, `transcript-unavailable`, `e2e-browser-gone`, `file-operation`,
-`open-unsupported`, `layout`, `tab`, `plugin-failure`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`,
+`open-unsupported`, `layout`, `connection-closed`, `connection-close-failed`, `tab`, `plugin-failure`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`,
 `launch-refused`, `launch-workspace-cleaned`, `launch-root-cloned`, and `remote-refused` events have no toggle, and like the other explicit
 events they are shown even when the tab they are attributed to is the active one. `system-schedule-fire` is the only explicit event with a toggle. A `question` event fires only for a
 background tab.
@@ -277,7 +285,7 @@ An ambient event on the **currently active** tab never produces a notification �
 tabs feed the notifications tab. The notifications tab itself is a view tab that produces no such
 events, so it never notifies about itself. The `harness-idle`, `manual`, `auto-approve`, `auto-approve-no-workspace`,
 `auto-resume`, `editor-suggest`, `system-schedule-fire`,
-`transcript-unavailable`, `e2e-browser-gone`, `file-operation`, `open-unsupported`, `layout`, `tab`,
+`transcript-unavailable`, `e2e-browser-gone`, `file-operation`, `open-unsupported`, `layout`, `connection-closed`, `connection-close-failed`, `tab`,
 `plugin-failure`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`, and `remote-refused` events **bypass focus suppression**: they still
 record a line even when their tab is active, because they report an explicit, user-armed action, a
 system schedule outcome, a capability degrading, or a plugin's own deliberate report, rather than

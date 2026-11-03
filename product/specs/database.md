@@ -1,6 +1,6 @@
 # Databases
 
-SQLite database management via the `db` command, backed by Node's built-in `node:sqlite` module (no external dependency). The underlying connection registry lives in `src/connections.ts` and is shared with the `connection` command (see the Connections section).
+SQLite database management via the `db` command, backed by Node's built-in `node:sqlite` module (no external dependency). The underlying connection registry lives in `src/connections.ts` and is shared with the `connections` command (see the Connections section).
 
 ### Storage location
 
@@ -12,7 +12,7 @@ Unlike `.janissary/workspace/`, the database directory is **never cleared** — 
 
 ### Connection model
 
-Connections are persistent, not per-command. The first `db` command targeting a database opens a `DatabaseSync` connection that is cached in a module-level `Map` keyed by database name and kept open across subsequent commands and tabs. Connections are global (a database is a shared resource, not tab-scoped) and several may be open at once. A connection is closed only by `connection close sqlite:<name>`, by `db delete` (which closes before removing the file), or at app exit (`closeAllConnections`). Because the connection is reused, connection-scoped state — transactions, `TEMP` tables, pragmas — survives between commands. `db create` opens (and lazily creates the file for) a connection; `db query` reuses or opens one; `db delete` closes any open connection first so the file is not locked.
+Connections are persistent, not per-command. The first `db` command targeting a database opens a `DatabaseSync` connection that is cached in a module-level `Map` keyed by database name and kept open across subsequent commands and tabs. Connections are global (a database is a shared resource, not tab-scoped) and several may be open at once. A connection is closed only by `connections close sqlite:<name>`, by `db delete` (which closes before removing the file), or at app exit (`closeAllConnections`). Because the connection is reused, connection-scoped state — transactions, `TEMP` tables, pragmas — survives between commands. `db create` opens (and lazily creates the file for) a connection; `db query` reuses or opens one; `db delete` closes any open connection first so the file is not locked.
 
 ### Name validation
 

@@ -196,6 +196,6 @@ header keeps its host chip and gains no control, matching what its row offers.
 The list is the project's own: opening janissary on another project shows only that project's remote
 sessions, which matches what a remote launch is — a clone of *this* project's origin.
 
-The sessions tab and the connections surface stay disjoint. `connection list` and the connections
+The sessions tab and the connections surface stay disjoint. `connections list` and the connections
 panel describe connections open now, so a parked session appears in neither. See [[connection]] and
 [[remote-server]].

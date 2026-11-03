@@ -9,6 +9,8 @@ export const NOTIFICATION_ALERT_DEFAULTS: Record<NotificationEventType, Notifica
   'auto-approve': { desktop: true, sound: 'warning' },
   'auto-approve-no-workspace': { desktop: true, sound: 'warning' },
   'auto-resume': { desktop: true, sound: 'warning' },
+  'connection-close-failed': { desktop: true, sound: 'error' },
+  'connection-closed': { desktop: true, sound: 'success' },
   'e2e-browser-gone': { desktop: true, sound: 'error' },
   'editor-suggest': { desktop: true, sound: 'error' },
   'file-operation': { desktop: true, sound: 'error' },

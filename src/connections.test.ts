@@ -4,31 +4,31 @@ import { parseConnectionCommand } from './connection/parsing.js';
 
 describe('parseConnectionCommand', () => {
   it('parses list', () => {
-    expect(parseConnectionCommand('connection list')).toEqual({ action: 'list' });
+    expect(parseConnectionCommand('connections list')).toEqual({ action: 'list' });
   });
 
   it('parses close for each kind', () => {
-    expect(parseConnectionCommand('connection close sqlite:mydb')).toEqual({
+    expect(parseConnectionCommand('connections close sqlite:mydb')).toEqual({
       action: 'close',
       kind: 'sqlite',
       id: 'mydb',
     });
-    expect(parseConnectionCommand('connection close shell:bash')).toEqual({
+    expect(parseConnectionCommand('connections close shell:bash')).toEqual({
       action: 'close',
       kind: 'shell',
       id: 'bash',
     });
-    expect(parseConnectionCommand('connection close acp:opencode')).toEqual({
+    expect(parseConnectionCommand('connections close acp:opencode')).toEqual({
       action: 'close',
       kind: 'acp',
       id: 'opencode',
     });
-    expect(parseConnectionCommand('connection close browser:w1')).toEqual({
+    expect(parseConnectionCommand('connections close browser:w1')).toEqual({
       action: 'close',
       kind: 'browser',
       id: 'w1',
     });
-    expect(parseConnectionCommand('connection close ssh:devbox')).toEqual({
+    expect(parseConnectionCommand('connections close ssh:devbox')).toEqual({
       action: 'close',
       kind: 'ssh',
       id: 'devbox',
@@ -36,27 +36,34 @@ describe('parseConnectionCommand', () => {
   });
 
   it('requires a usage hint when empty', () => {
-    expect('error' in parseConnectionCommand('connection')).toBe(true);
+    expect('error' in parseConnectionCommand('connections')).toBe(true);
+  });
+
+  it('names the connections command in its usage messages', () => {
+    const bare = parseConnectionCommand('connections');
+    const close = parseConnectionCommand('connections close');
+    expect('error' in bare && bare.error).toBe('Usage: connections <list|close> [kind:id]  (e.g. connections close sqlite:mydb)');
+    expect('error' in close && close.error).toBe('Usage: connections close <kind>:<id>');
   });
 
   it('rejects a close target without a kind:id form', () => {
-    const r = parseConnectionCommand('connection close mydb');
+    const r = parseConnectionCommand('connections close mydb');
     expect('error' in r && r.error).toContain('<kind>:<id>');
   });
 
   it('rejects an unknown kind', () => {
-    const r = parseConnectionCommand('connection close redis:cache');
+    const r = parseConnectionCommand('connections close redis:cache');
     expect('error' in r && r.error).toContain('Unknown connection kind');
     expect('error' in r && r.error).toContain('ssh');
   });
 
   it('rejects a missing id', () => {
-    const r = parseConnectionCommand('connection close sqlite:');
+    const r = parseConnectionCommand('connections close sqlite:');
     expect('error' in r && r.error).toContain('Missing id');
   });
 
   it('rejects a missing close target', () => {
-    const r = parseConnectionCommand('connection close');
+    const r = parseConnectionCommand('connections close');
     expect('error' in r && r.error).toContain('Usage');
   });
 });

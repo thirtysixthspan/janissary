@@ -423,4 +423,4 @@ the empty database back.
 - It does not undo. A cell edit commits or it does not.
 - It adds no `sqlite:` row to the tab's own connections panel: a plugin tab runs no `db` command, so
   the tab is not credited with the connection. The connection is global, so the database appears in
-  `connection list` and in tab-completion app-wide, and `connection close sqlite:<name>` closes it.
+  `connections list` and in tab-completion app-wide, and `connections close sqlite:<name>` closes it.
