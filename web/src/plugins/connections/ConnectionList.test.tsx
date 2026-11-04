@@ -211,7 +211,7 @@ describe('ConnectionList', () => {
     fireEvent.keyDown(confirm, { key: 'Enter' });
     expect(screen.queryByText('Delete "Finished session"?')).toBeNull();
     expect(intent).toHaveBeenCalledTimes(1);
-    expect(intent).toHaveBeenCalledWith('close', { kind: 'acp', id: 'closed', ownerLabel: 'owner' });
+    expect(intent).toHaveBeenCalledWith('delete', { id: 'closed' });
   });
 
   it('preserves Enter on a focused row', () => {
@@ -284,7 +284,8 @@ describe('ConnectionList', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete Finished session' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     expect(intent).toHaveBeenCalledTimes(1);
-    expect(intent).toHaveBeenCalledWith('close', { kind: 'acp', id: 'closed', ownerLabel: 'owner' });
+    expect(intent).toHaveBeenCalledWith('delete', { id: 'closed' });
+    expect(intent).not.toHaveBeenCalledWith('close', expect.anything());
   });
 
   it('shows a refused open inline and leaves no unhandled rejection', async () => {
@@ -314,6 +315,24 @@ describe('ConnectionList', () => {
       render(<ConnectionList rows={[live('db', 'sqlite', 'Database')]} capabilities={value} />);
       fireEvent.click(screen.getByRole('button', { name: 'Close Database' }));
       expect(await screen.findByRole('alert')).toHaveTextContent('invalid close payload');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(unhandled).not.toHaveBeenCalled();
+    } finally {
+      process.off('unhandledRejection', unhandled);
+    }
+  });
+
+  it('does not delete when a Close on a since-closed record is refused', async () => {
+    const { intent, value } = capabilities();
+    intent.mockRejectedValueOnce(new Error('invalid close payload'));
+    const unhandled = vi.fn();
+    process.on('unhandledRejection', unhandled);
+    try {
+      render(<ConnectionList rows={[record('closing', 'acp', 'Running', 'Closing session')]} capabilities={value} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Close Closing session' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent('invalid close payload');
+      expect(intent).toHaveBeenCalledWith('close', { kind: 'acp', id: 'closing', ownerLabel: 'owner' });
+      expect(intent).not.toHaveBeenCalledWith('delete', expect.anything());
       await new Promise((resolve) => setTimeout(resolve, 0));
       expect(unhandled).not.toHaveBeenCalled();
     } finally {

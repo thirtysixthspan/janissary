@@ -148,6 +148,28 @@ describe('connections plugin activation', () => {
     expect(f.openOrFocusTab).not.toHaveBeenCalled();
   });
 
+  it('refuses a close intent for a record that has since closed without deleting it', () => {
+    const closed = { ...recordRow, status: 'Closed' } as const;
+    const f = fixture([closed]);
+    expect(() => f.activation.intent({
+      tab: 'connections', intent: 'close',
+      payload: { kind: 'acp', id: 'uuid', ownerLabel: 'owner' },
+      tabPayload: { kind: 'list', rows: [recordRow] },
+    }, f.capabilities)).toThrow('invalid close payload');
+    expect(f.rejectRequest).toHaveBeenCalledWith('invalid close payload');
+    expect(f.topicAction).not.toHaveBeenCalled();
+  });
+
+  it('passes a terminal record delete intent through to the delete topic action', () => {
+    const closed = { ...recordRow, status: 'Closed' } as const;
+    const f = fixture([closed]);
+    expect(f.activation.intent({
+      tab: 'connections', intent: 'delete', payload: { id: 'uuid' },
+      tabPayload: { kind: 'list', rows: [closed] },
+    }, f.capabilities)).toBeNull();
+    expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action: 'delete', id: 'uuid' });
+  });
+
   it.each([
     ['attributed', 'first', 'first'],
     ['unattributed', '', undefined],

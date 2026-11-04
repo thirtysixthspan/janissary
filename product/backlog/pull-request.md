@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Functionality: refuse a stale connections-list Close on a record that has since closed, and reserve deletion for the confirmed Delete control.
-
-Existing Issue: `web/src/plugins/connections/ConnectionList.tsx` sends the same `close` intent from an open record's Close button and from the confirmed Delete dialog, and `src/plugins/connections/activate.ts` re-resolves that intent against the record's current status, choosing `closeSession` while the record is open and the `delete` topic action once it is closed, so a second Close click or one delivered after the session closes deletes the retained record without the `Delete "<title>"?` confirmation. Severity: 8/10
-
-Existing Risk: 7/10 - A double-click on Close, or a click that arrives during the 100 ms topic coalescing window after the session closed, silently removes the project's retained ACP history and its JSON file, and the user never sees the required confirmation.
-
-Proposal Risk: 1/10 - The explicit delete intent keeps the destructive path behind the dialog; the only remaining risk is a client that ignores the new rejection, which the list's existing inline error surface reports.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "make closed-record deletion explicit and refuse a stale close". In `web/src/plugins/connections/useConnectionsController.ts`, add a delete operation that awaits `capabilities.intent('delete', { id })` through the existing `guarded` error path, and in `web/src/plugins/connections/ConnectionList.tsx` call it from the confirmation dialog's `onConfirm` instead of `close`; keep the Delete control limited to records whose status is `Closed` and leave the exact `Delete "<title>"?` wording unchanged. In `src/plugins/connections/activate.ts`, make the record branch of `openOrClose('close', ...)` send `closeSession` only when the freshly resolved row is `Idle` or `Running`, and otherwise reject with the existing `invalid close payload` message without invoking any topic action; keep `recordAction`'s `delete` arm as the only path to the `delete` topic action. Add `src/plugins/connections/activate.test.ts` cases proving that a `close` intent against a current `Closed` record rejects without calling the topic `delete`, while an explicit `delete` intent on a terminal record still reaches `acpRecords.delete`; extend `web/src/plugins/connections/ConnectionList.test.tsx` to expect a `delete` intent after confirmation and to prove a stale Close does not delete. Update `product/specs/connections-tab.md` to say a Close on a record that has since closed is refused and only the confirmed Delete deletes. The existing owner-aware identity and list error surface stay unchanged.
-
-
 * Plan fidelity: preserve the connection-history viewport when new prompt blocks arrive while an older page is loading.
 
 Existing Issue: `web/src/plugins/connections/useConnectionHistoryScroll.ts` stores only the offset at which an older-page request started and treats any later offset change as the arrival of that older window, but a new prompt block increases `window.offset`, so the effect applies the stored height delta and clears the restoration before the older blocks arrive. Severity: 4/10

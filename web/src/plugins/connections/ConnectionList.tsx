@@ -111,7 +111,7 @@ export function ConnectionList({
           title={`Delete "${title}"?`}
           confirmLabel="Delete"
           onCancel={() => { setPendingDelete(null); }}
-          onConfirm={() => { controller.close(pendingDelete); setPendingDelete(null); }}
+          onConfirm={() => { controller.delete(pendingDelete.id); setPendingDelete(null); }}
         />
       )}
     </div>

@@ -28,7 +28,7 @@ function openOrClose(name: 'open' | 'close', row: ConnectionRow | undefined, tab
       if (row.type === 'live') capabilities.topicAction({ topic: 'connections', action: 'close', kind: row.kind, id: row.id, ownerLabel: row.ownerLabel });
       else if (row.kind === 'acp' && ['Idle', 'Running'].includes(row.status)) {
         capabilities.topicAction({ topic: 'connections', action: 'closeSession', id: row.id });
-      } else capabilities.topicAction({ topic: 'connections', action: 'delete', id: row.id });
+      } else capabilities.rejectRequest(`invalid ${name} payload`);
       break;
     }
   }
