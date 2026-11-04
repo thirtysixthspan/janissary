@@ -4,7 +4,7 @@ import { nextListSelection } from '../api';
 export type ConnectionClickConfirmation = { identity: string; order: string };
 
 export function connectionRowIdentity(row: ConnectionRow): string {
-  return JSON.stringify([row.type, row.kind, row.id]);
+  return JSON.stringify([row.type, row.kind, row.id, row.ownerLabel]);
 }
 
 export function connectionListOrder(rows: ConnectionRow[]): string {

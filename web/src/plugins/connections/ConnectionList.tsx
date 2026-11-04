@@ -5,6 +5,7 @@ import {
   connectionClickSelection,
   connectionKeyboardNavigation,
   connectionListOrder,
+  connectionRowIdentity,
   nextConnectionSelection,
   type ConnectionClickConfirmation,
 } from './connection-list-keys';
@@ -68,7 +69,7 @@ export function ConnectionList({
           const closedRecord = row.type === 'record' && row.kind === 'acp' && row.status === 'Closed';
           return (
             <div
-              key={`${row.type}:${row.kind}:${row.id}`}
+              key={connectionRowIdentity(row)}
               className={`connections-row${selection.selected === index ? ' selected' : ''}`}
               data-index={index}
               role="button"

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Functionality: give connections-list rows a unique identity that includes their owner so duplicate shell rows cannot collide.
-
-Existing Issue: The React key and the selection and order identity for a list row are built from type, kind, and id only, so two tabs' shell rows with the same `shell:<name>` identity collide in the same list. Severity: 5/10
-
-Existing Risk: 5/10 - React can reuse one row's DOM and state for another, and a two-click confirmation can survive a same-length reorder and open the wrong owner's row.
-
-Proposal Risk: 2/10 - Including the captured owner in the identity makes each rendered row distinct, though the server must still reject a stale owner on the action.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "give connections-list rows a unique owner-aware identity". Add `ownerLabel` to `connectionRowIdentity` and `connectionListOrder` in `web/src/plugins/connections/connection-list-keys.ts`, and include the same value in the JSX key built in `web/src/plugins/connections/ConnectionList.tsx`. Keep the server's supplied row order and the existing two-click behavior unchanged. Extend `web/src/plugins/connections/connection-list-keys.test.ts` and `ConnectionList.test.tsx` with two live shell rows that share an id but have different owners, then reorder or replace the rows while keeping the same length and assert a stale confirmation does not open the other row. Keep record rows keyed by their UUID and SQLite rows keyed by their unique database id; this change is identity plumbing only and must not sort, merge, or deduplicate rows on the client.
-
-
 * Functionality: keep keyboard activation of a list row's Close, Delete, and confirmation controls from opening the row.
 
 Existing Issue: The list container handles Enter for every descendant, so a focused Close or Delete button or a confirmation dialog button also triggers the selected row's open handler and may have its own activation prevented. Severity: 6/10

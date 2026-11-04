@@ -4,12 +4,18 @@ import {
   connectionClickSelection,
   connectionKeyboardNavigation,
   connectionListOrder,
+  connectionRowIdentity,
   nextConnectionSelection,
 } from './connection-list-keys';
 
 const row = (id: string): ConnectionRow => ({
   type: 'record', id, kind: 'acp', title: id, model: 'model', ownerLabel: 'owner', ownerName: 'Owner',
   startedAt: 1, updatedAt: 1, status: 'Closed', orderingTimestamp: 1,
+});
+
+const shell = (ownerLabel: string, display: string): ConnectionRow => ({
+  type: 'live', id: 'zsh', kind: 'shell', display, ownerLabel, ownerName: ownerLabel,
+  status: 'Open', orderingTimestamp: 2,
 });
 
 describe('connections list selection helpers', () => {
@@ -41,5 +47,37 @@ describe('connections list selection helpers', () => {
     expect(connectionClickSelection(0, [row('replacement'), row('second')], confirmation).opens).toBe(false);
     expect(connectionClickSelection(0, [row('second'), row('first')], confirmation).opens).toBe(false);
     expect(connectionListOrder(rows)).not.toBe(connectionListOrder([row('second'), row('first')]));
+  });
+
+  it('gives same-id shell rows from different owners distinct identities and order', () => {
+    const first = shell('first', 'shell:~/first');
+    const second = shell('second', 'shell:~/second');
+    const replacement = shell('replacement', 'shell:~/replacement');
+
+    expect(connectionRowIdentity(first)).not.toBe(connectionRowIdentity(second));
+    expect(connectionListOrder([first, second])).not.toBe(connectionListOrder([second, first]));
+    expect(connectionListOrder([first, second])).not.toBe(connectionListOrder([first, replacement]));
+    expect(connectionListOrder([first, second])).toBe(connectionListOrder([{ ...first }, { ...second }]));
+  });
+
+  it('does not carry a confirmation to another same-id shell row with a different owner', () => {
+    const first = shell('first', 'shell:~/first');
+    const second = shell('second', 'shell:~/second');
+    const confirmation = connectionClickSelection(0, [first, second], null).confirmation;
+
+    expect(connectionClickSelection(1, [first, second], confirmation).opens).toBe(false);
+    expect(connectionClickSelection(0, [second, first], confirmation).opens).toBe(false);
+    expect(connectionClickSelection(0, [first, second], confirmation).opens).toBe(true);
+  });
+
+  it('invalidates a same-id shell confirmation when another row is replaced at the same length', () => {
+    const first = shell('first', 'shell:~/first');
+    const second = shell('second', 'shell:~/second');
+    const replacement = shell('replacement', 'shell:~/replacement');
+    const confirmation = connectionClickSelection(0, [first, second], null).confirmation;
+
+    expect(connectionClickSelection(1, [first, replacement], confirmation).opens).toBe(false);
+    const fresh = connectionClickSelection(1, [first, replacement], confirmation);
+    expect(connectionClickSelection(1, [first, replacement], fresh.confirmation).opens).toBe(true);
   });
 });

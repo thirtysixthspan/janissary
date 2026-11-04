@@ -30,6 +30,13 @@ function record(
   };
 }
 
+function shell(ownerLabel: string, display: string): ConnectionRow {
+  return {
+    type: 'live', id: 'zsh', kind: 'shell', display, ownerLabel, ownerName: ownerLabel,
+    status: 'Open', orderingTimestamp: 2,
+  };
+}
+
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
 });
@@ -94,6 +101,55 @@ describe('ConnectionList', () => {
     expect(intent).toHaveBeenLastCalledWith('close', { kind: 'shell', id: 'zsh', ownerLabel: 'second' });
     expect(intent).not.toHaveBeenCalledWith('close', expect.objectContaining({ ownerLabel: 'first' }));
     expect(intent).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps two same-id shell rows with different owners distinct for rendering and clicks', () => {
+    const { intent, value } = capabilities();
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const first = shell('first', 'shell:~/first');
+    const second = shell('second', 'shell:~/second');
+    const { container } = render(<ConnectionList rows={[first, second]} capabilities={value} />);
+    const keyWarning = error.mock.calls.some(([message]) => String(message).includes('same key'));
+    expect(keyWarning).toBe(false);
+
+    const rows = container.querySelectorAll('.connections-row');
+    fireEvent.click(rows[0]!);
+    expect(intent).not.toHaveBeenCalled();
+    fireEvent.click(rows[1]!);
+    expect(intent).not.toHaveBeenCalled();
+    fireEvent.click(rows[1]!);
+    expect(intent).toHaveBeenLastCalledWith('open', { kind: 'shell', id: 'zsh', ownerLabel: 'second' });
+    expect(intent).not.toHaveBeenCalledWith('open', expect.objectContaining({ ownerLabel: 'first' }));
+    error.mockRestore();
+  });
+
+  it('does not carry a click confirmation across a same-length reorder of same-id shell rows', () => {
+    const { intent, value } = capabilities();
+    const first = shell('first', 'shell:~/first');
+    const second = shell('second', 'shell:~/second');
+    const { container, rerender } = render(<ConnectionList rows={[first, second]} capabilities={value} />);
+    fireEvent.click(container.querySelector('.connections-row')!);
+    rerender(<ConnectionList rows={[second, first]} capabilities={value} />);
+    fireEvent.click(container.querySelector('.connections-row')!);
+    expect(intent).not.toHaveBeenCalled();
+    fireEvent.click(container.querySelector('.connections-row')!);
+    expect(intent).toHaveBeenLastCalledWith('open', { kind: 'shell', id: 'zsh', ownerLabel: 'second' });
+    expect(intent).not.toHaveBeenCalledWith('open', expect.objectContaining({ ownerLabel: 'first' }));
+  });
+
+  it('discards a click confirmation when a same-id shell row is replaced at the same length', () => {
+    const { intent, value } = capabilities();
+    const first = shell('first', 'shell:~/first');
+    const second = shell('second', 'shell:~/second');
+    const replacement = shell('replacement', 'shell:~/replacement');
+    const { container, rerender } = render(<ConnectionList rows={[first, second]} capabilities={value} />);
+    fireEvent.click(container.querySelector('.connections-row')!);
+    rerender(<ConnectionList rows={[first, replacement]} capabilities={value} />);
+    fireEvent.click(container.querySelectorAll('.connections-row')[1]!);
+    expect(intent).not.toHaveBeenCalled();
+    fireEvent.click(container.querySelectorAll('.connections-row')[1]!);
+    expect(intent).toHaveBeenLastCalledWith('open', { kind: 'shell', id: 'zsh', ownerLabel: 'replacement' });
+    expect(intent).not.toHaveBeenCalledWith('open', expect.objectContaining({ ownerLabel: 'first' }));
   });
 
   it('focuses the active list and supports bounded keyboard selection and Enter', () => {
