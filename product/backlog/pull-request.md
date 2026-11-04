@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Functionality: keep keyboard activation of a list row's Close, Delete, and confirmation controls from opening the row.
-
-Existing Issue: The list container handles Enter for every descendant, so a focused Close or Delete button or a confirmation dialog button also triggers the selected row's open handler and may have its own activation prevented. Severity: 6/10
-
-Existing Risk: 6/10 - Keyboard users can open a record while trying to close or delete a row, or find the control does nothing, producing the wrong destructive action or no action.
-
-Proposal Risk: 2/10 - Guarding the container leaves the row itself keyboard-operable and restores the button's normal Enter behavior.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "keep list row controls from triggering row opening on Enter". In `web/src/plugins/connections/ConnectionList.tsx`, make the container `onKeyDown` ignore events whose `event.target` is not the container before handling navigation or Enter, or stop `onKeyDown` propagation on the row action buttons and the confirmation dialog wrapper. Preserve Enter on the focused row container and Space on buttons. Extend `web/src/plugins/connections/ConnectionList.test.tsx` with Enter on a focused Close button, Enter on a focused Delete button, and Enter on the Delete or Cancel button in the confirmation dialog; each must perform only its own action and must not emit the row `open` intent. Keep the existing keyboard navigation and two-click tests unchanged, and do not alter the dialog's own focus behavior.
-
-
 * Plan fidelity: match a running agent row in the caller popup to the caller tab's incarnation, not only its label.
 
 Existing Issue: `src/connection/manager.ts` includes any live run whose caller label matches, without comparing the run's captured incarnation to the open tab's runtime incarnation, so a run from a closed tab can appear under a new tab that reused its label. Severity: 5/10

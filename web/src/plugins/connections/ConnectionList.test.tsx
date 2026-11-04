@@ -169,6 +169,60 @@ describe('ConnectionList', () => {
     expect(intent).toHaveBeenCalledWith('open', { kind: 'acp', id: 'run', ownerLabel: 'owner' });
   });
 
+  it('keeps Enter on a focused Close control from opening the row', () => {
+    const { intent, value } = capabilities();
+    render(<ConnectionList rows={[live('db', 'sqlite', 'Database')]} capabilities={value} />);
+    const close = screen.getByRole('button', { name: 'Close Database' });
+    close.focus();
+    fireEvent.keyDown(close, { key: 'Enter' });
+    expect(intent).not.toHaveBeenCalled();
+    fireEvent.click(close);
+    expect(intent).toHaveBeenCalledTimes(1);
+    expect(intent).toHaveBeenCalledWith('close', { kind: 'sqlite', id: 'db', ownerLabel: 'owner' });
+  });
+
+  it('keeps Enter on a focused Delete control from opening the row', () => {
+    const { intent, value } = capabilities();
+    render(<ConnectionList rows={[record('closed', 'acp', 'Closed', 'Finished session')]} capabilities={value} />);
+    const remove = screen.getByRole('button', { name: 'Delete Finished session' });
+    remove.focus();
+    fireEvent.keyDown(remove, { key: 'Enter' });
+    expect(intent).not.toHaveBeenCalled();
+    fireEvent.click(remove);
+    expect(intent).not.toHaveBeenCalled();
+    expect(screen.getByText('Delete "Finished session"?')).toBeInTheDocument();
+  });
+
+  it('keeps Enter on the confirmation dialog buttons from opening the row', () => {
+    const { intent, value } = capabilities();
+    render(<ConnectionList rows={[record('closed', 'acp', 'Closed', 'Finished session')]} capabilities={value} />);
+    const remove = screen.getByRole('button', { name: 'Delete Finished session' });
+    fireEvent.click(remove);
+    const cancel = screen.getByRole('button', { name: 'Cancel' });
+    cancel.focus();
+    fireEvent.keyDown(cancel, { key: 'Enter' });
+    expect(screen.queryByText('Delete "Finished session"?')).toBeNull();
+    expect(intent).not.toHaveBeenCalled();
+
+    fireEvent.click(remove);
+    const confirm = screen.getByRole('button', { name: 'Delete' });
+    fireEvent.keyDown(confirm, { key: 'ArrowLeft' });
+    confirm.focus();
+    fireEvent.keyDown(confirm, { key: 'Enter' });
+    expect(screen.queryByText('Delete "Finished session"?')).toBeNull();
+    expect(intent).toHaveBeenCalledTimes(1);
+    expect(intent).toHaveBeenCalledWith('close', { kind: 'acp', id: 'closed', ownerLabel: 'owner' });
+  });
+
+  it('preserves Enter on a focused row', () => {
+    const { intent, value } = capabilities();
+    const { container } = render(<ConnectionList rows={[live('db', 'sqlite', 'Database')]} capabilities={value} />);
+    const row = container.querySelector('.connections-row') as HTMLElement;
+    row.focus();
+    fireEvent.keyDown(row, { key: 'Enter' });
+    expect(intent).toHaveBeenCalledWith('open', { kind: 'sqlite', id: 'db', ownerLabel: 'owner' });
+  });
+
   it('opens rows only on a second click, including an initially selected or keyboard-selected row', () => {
     const { intent, value } = capabilities();
     const { container } = render(<ConnectionList rows={[live('db', 'sqlite', 'Database'), record('run', 'agent', 'Completed')]} capabilities={value} />);

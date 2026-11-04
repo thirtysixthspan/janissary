@@ -38,6 +38,8 @@ export function ConnectionList({
   useEffect(() => { setConfirmed(null); }, [order]);
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    if (target !== event.currentTarget && target.getAttribute('role') !== 'button') return;
     const navigation = connectionKeyboardNavigation(rows.length, selection.selected, event.key);
     if (navigation) {
       selection.navigate(event.key, nextConnectionSelection);
