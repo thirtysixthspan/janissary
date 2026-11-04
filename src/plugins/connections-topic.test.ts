@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { AcpRecord } from '../acp-records/types.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
+import { recordWindow } from '../acp-records/model.js';
 import { messageBus } from '../bus.js';
 import { readConnectionsTopic, runConnectionsTopicAction, subscribeConnectionsTopic } from './connections-topic.js';
 
@@ -112,6 +114,41 @@ describe('connections topic actions', () => {
     const another = fixture().managers;
     expect(readConnectionsTopic(another).rows.find((row) => row.type === 'record' && row.id === 'core-id'))
       .not.toHaveProperty('window');
+  });
+
+  it('refuses loadOlder for a record with no blocks and keeps its empty window', () => {
+    const { managers, tabs, recordRows, windows } = fixture();
+    const empty: AcpRecord = {
+      schemaVersion: 1, id: 'empty-id',
+      source: { kind: 'acp', model: 'm', ownerLabel: 'owner', ownerName: 'Owner' },
+      title: 'Empty', startedAt: 1, updatedAt: 3, blocks: [],
+    };
+    recordRows.push({
+      id: 'empty-id', kind: 'acp', title: 'Empty', model: 'm', ownerLabel: 'owner', ownerName: 'Owner',
+      startedAt: 1, updatedAt: 3, status: 'Idle',
+    });
+    tabs.push({
+      label: 'empty-tab', title: 'Empty record', dotColor: '', number: 4, log: [], view: 'plugin',
+      plugin: { id: 'connections', instanceKey: 'empty-id', schemaVersion: 1, payload: {}, fileRefs: [], sourceLabel: 'owner' },
+      runtime: { busy: false, context: [], queue: [] },
+    });
+    const original = windows.getMockImplementation()!;
+    windows.mockImplementation((id: string, count = 20) => id === 'empty-id'
+      ? recordWindow(empty, count)
+      : original(id, count));
+    const row = () => readConnectionsTopic(managers).rows
+      .find((candidate) => candidate.type === 'record' && candidate.id === 'empty-id');
+
+    runConnectionsTopicAction(managers, { topic: 'connections', action: 'load', id: 'empty-id' });
+    expect(row()).toMatchObject({ window: { blocks: [], totalBlocks: 0, offset: 0, hasOlder: false } });
+
+    runConnectionsTopicAction(managers, { topic: 'connections', action: 'loadOlder', id: 'empty-id' });
+    expect(() => row()).not.toThrow();
+    expect(row()).toMatchObject({ window: { blocks: [], totalBlocks: 0, offset: 0, hasOlder: false } });
+
+    runConnectionsTopicAction(managers, { topic: 'connections', action: 'loadOlder', id: 'empty-id' });
+    expect(row()).toMatchObject({ window: { blocks: [], totalBlocks: 0, offset: 0, hasOlder: false } });
+    expect(windows.mock.calls.filter(([id]) => id === 'empty-id').every(([, count]) => count === 20)).toBe(true);
   });
 
   it('releases a loaded window when its record tab closes and reloads 20 blocks on reopen', () => {

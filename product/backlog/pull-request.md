@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Functionality: refuse a connections `loadOlder` request for a record with no blocks instead of storing a zero window count.
-
-Existing Issue: `src/plugins/connections-topic-actions.ts` implements `loadOlder` by setting the requested count to `Math.min(window.totalBlocks, requested + PAGE_SIZE)`, so a zero-block record such as a core session that handshook without a prompt, or an agent run that failed before execution, gets a stored count of `0`; the next `composeConnectionsTopicData` passes that count to `AcpSessionRecords.window`, which throws `Invalid ACP record window count.`. Severity: 6/10
-
-Existing Risk: 6/10 - The throw happens inside the coalesced topic timer's unguarded `readTopicData` path rather than inside a plugin callback, so one `load` followed by `loadOlder` can turn every later `connections:changed` or `state:dirty` delivery into an uncaught exception and terminate the app or break the topic for every plugin.
-
-Proposal Risk: 2/10 - The action becomes a no-op when there is no older page; records with older blocks still page exactly as before, and the record-service count validation remains the final invariant rather than being weakened.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "refuse loadOlder for a connection record with no older blocks". In `src/plugins/connections-topic-actions.ts`, change the `loadOlder` branch of `actOnRecord` to read `managers.acpRecords.window(action.id, requested.get(action.id))` first and return without mutating the requested count when the window is absent or `window.hasOlder` is false. Only when `hasOlder` is true should it store the next count, clamped to the record's `totalBlocks` and never below the current page size. Leave `load` resetting to the initial page size, `delete`, and every action signature unchanged. Add a case to `src/plugins/connections-topic.test.ts` using a zero-block record: after `load`, call `loadOlder` and assert that `readConnectionsTopic` still returns the record with an empty window and does not throw, then call `loadOlder` again to prove it is idempotent; keep the existing multi-block paging, load-reset, and window-release cases. Verify with the focused server suite for the connections topic and `AcpSessionRecords.window`, then `$janissary/scripts/run.mjs check-diff`. Do not weaken `AcpSessionRecords.window`'s `Invalid ACP record window count.` check or add a second page-size value.
-
-
 * Plan fidelity: correct the 07 verification ledger's claim that no production, test, documentation, or spec change followed the head it re-verified.
 
 Existing Issue: The completed 07 plan says the production build, documentation build, and documentation suite were re-run at `dc491bd5` and that "only this correction's plan, ledger edit, and backlog removal follow that SHA", but `52cbde7e` changed the Connections user guide and the connections-tab spec and `f2e9e26c` changed the server list-row projection, its test, and the same spec after `dc491bd5`, so the ledger's evidence is scoped to a tree older than HEAD and the recurrence of the earlier ledger problem is not recorded. Severity: 5/10

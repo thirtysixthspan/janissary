@@ -32,9 +32,11 @@ function actOnRecord(managers: Managers, action: RecordAction, requested: Map<st
     return;
   }
   if (action.action === 'loadOlder') {
-    if (!requested.has(action.id)) return;
-    const window = managers.acpRecords.window(action.id, requested.get(action.id));
-    if (window) requested.set(action.id, Math.min(window.totalBlocks, requested.get(action.id)! + PAGE_SIZE));
+    const count = requested.get(action.id);
+    if (count === undefined) return;
+    const window = managers.acpRecords.window(action.id, count);
+    if (!window?.hasOlder) return;
+    requested.set(action.id, Math.max(PAGE_SIZE, Math.min(window.totalBlocks, count + PAGE_SIZE)));
     return;
   }
   if (action.action === 'delete') {
