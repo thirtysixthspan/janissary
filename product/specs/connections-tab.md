@@ -10,7 +10,7 @@ Non-ACP connections appear only while live and leave the list when they close. A
 
 Keyboard movement uses Up, Down, Home, End, and Enter. A row opens on a second click on the same row, matching the conversations list. Opening a non-ACP row focuses the tab that owns the connection: for a SQLite row, the first tab in strip order that has the database attributed, or no tab when none does. Opening an ACP row opens or focuses its connection tab. Live-only monitor and editor-persona rows focus the tab that owns them and never open a record tab. A SQLite row's close control closes the database app-wide, exactly like `connections close sqlite:<name>`, including when no tab is attributed and the owning-tab column still reads `global`. A non-ACP row's close control acts exactly like `connections close <kind>:<id>` and reports the same notification. A row action carrying an owner from before an attribution or strip-order change does nothing. An open ACP row's control closes its session; a closed ACP row's control deletes it after `Delete "<title>"?`. A live row offers **Close**, a closed ACP record row offers **Delete**, and an agent record row offers no list control; its **Terminate** lives in its connection tab. An empty list reads `No connections yet`. The command grammar and reference lookup are described in [[connection]].
 
-Closed ACP records are kept per project and removed automatically 30 days after they close. An open record cannot be deleted.
+Closed ACP records are kept per project; records closed more than 30 days before startup are removed at startup, not on a rolling timer. See [[acp-records]]. An open record cannot be deleted.
 
 ### The connection tab
 

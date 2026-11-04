@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Description fidelity: describe ACP record retention as a startup prune rather than automatic removal 30 days after closure.
-
-Existing Issue: The Connections guide says closed ACP records are "removed automatically 30 days after they close", while `src/acp-records/manager.ts` prunes only during startup against `ACP_RECORD_RETENTION_MS`, and `documentation/user-documentation/advanced-agents/acp-agent.md` correctly says records closed more than 30 days before startup are removed then, not on a rolling timer. Severity: 4/10
-
-Existing Risk: 4/10 - A user expects a closed record to disappear at the 30-day mark and is surprised when it remains until the next restart, or trusts a retention guarantee the store does not provide.
-
-Proposal Risk: 1/10 - The guide will state the real startup boundary, but retention remains startup-only and can still surprise a user who never restarts; making the rule explicit is the honest limit.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "state startup-only ACP record retention". In `documentation/user-documentation/command-bar/connections.md`, change the retention sentence to say records closed more than 30 days before startup are removed at startup, not on a rolling timer, matching `documentation/user-documentation/advanced-agents/acp-agent.md`. Align `product/specs/connections-tab.md`'s retention sentence with the same wording and link it to `[[acp-records]]` as the 07 reconciliation requires; do not change `src/acp-records/manager.ts` or the fixed `ACP_RECORD_RETENTION_MS` behavior. The existing `src/acp-records/manager.test.ts` strictly-beyond-30-days closure case remains the source of truth.
-
-
 * Description fidelity: correct the guides' claims about monitor and editor-persona rows in a tab's connections window.
 
 Existing Issue: The Connections guide says a monitor or editor-persona row "focuses its owning tab", but in a tab's connections window `web/src/shared/status-windows/StatusPanels.tsx` only makes durable-record and tab-scoped ACP rows openable, so those rows cannot focus anything; the ACP guide also says monitor rows keep snapshot buttons, while only `web/src/editor/EditorConnectionsPanel.tsx` passes `onOpenAcpTranscript` and shell or harness windows draw no such button. Severity: 3/10

@@ -65,7 +65,7 @@ A live SQLite row is titled `sqlite:<name>`, and its owning-tab column reads exa
 
 A live row offers **Close**, which reports the same notification as `connections close <kind>:<id>`. An open ACP record row's **Close** ends that session. A closed ACP record row offers **Delete**, which asks `Delete "<title>"?` before removing it. An agent record row has no list control; its **Terminate** control is in its connection tab. An empty list reads `No connections yet`.
 
-Closed ACP records are kept per project and removed automatically 30 days after they close. An open record cannot be deleted. The connections tab itself is a live, in-memory view and is not restored at restart, but the retained ACP and agent records are.
+Closed ACP records are kept per project. Records closed more than 30 days before startup are removed at startup, not on a rolling timer. An open record cannot be deleted. The connections tab itself is a live, in-memory view and is not restored at restart, but the retained ACP and agent records are.
 
 ## Connection tabs
 
