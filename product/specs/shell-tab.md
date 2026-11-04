@@ -105,7 +105,7 @@ The shell opts into the core [[command-queue]]. Its bar queues while zsh is busy
 
 An application command that answers with text rather than opening something — `help`, for one — is
 shown in the terminal as a command line, followed by its reply on the next line. The reply is markdown, as
-it is in transcript snapshots and connection tabs, and is rendered for the terminal rather than shown as raw markup:
+it is in connection-tab answers, and is rendered for the terminal rather than shown as raw markup:
 headings and bold text are bold, the top heading underlined, italic and struck-through text keep
 their styles, inline and fenced code is colored and code blocks are indented, list items get bullets
 or numbers, quotes get a bar, links show their target after the text, and tables are lined up in
