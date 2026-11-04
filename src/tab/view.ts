@@ -10,6 +10,7 @@ import { remoteFileNavigatorRoot } from './remote-file-navigator-root.js';
 import { remoteFileNavigatorTarget } from './remote-file-navigator-view.js';
 import { tabGroupName } from './groups.js';
 import { queueEntryLine } from '../command-queue/entry.js';
+import { backgroundRepliesFor } from './background-replies.js';
 
 export function buildTabViews(
   tabs: Tab[],
@@ -96,7 +97,7 @@ export function buildTabView(
     label: tab.label,
     ...(tab.hidden && { hidden: true }),
     ...(tab.systemShell && { systemShell: true }),
-    backgroundReplies: tab.log.flatMap((entry) => entry.background && !entry.running ? [{ id: entry.background, output: entry.output }] : []),
+    backgroundReplies: backgroundRepliesFor(tab),
     number: tab.number,
     dotColor: tab.dotColor,
     group: tab.group,

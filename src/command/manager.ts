@@ -35,7 +35,11 @@ export class CommandManager {
       case 'output':
       case 'unknown': { this.managers.tab.append(label, { input, output: res.output, markdown: res.kind === 'output' }); return;
       }
-      case 'app': { void this.executeCommand(res.name, res.cmd, label, index); return;
+      case 'app': {
+        void this.executeCommandWithContext(
+          res.name, res.cmd, label, index, this.createInvocationContext(label, input),
+        );
+        return;
       }
     }
   }
@@ -55,7 +59,7 @@ export class CommandManager {
     input: string,
     captureLimitMs = DISPATCH_CAPTURE_LIMIT_MS,
   ): Promise<{ dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown }> {
-    return this.dispatchLine(label, input, captureLimitMs, this.createInvocationContext(label));
+    return this.dispatchLine(label, input, captureLimitMs, this.createInvocationContext(label, input));
   }
 
   async dispatchQueuedLine(
@@ -63,7 +67,7 @@ export class CommandManager {
     input: string,
     systemSchedule?: CommandInvocationContext['systemSchedule'],
   ): Promise<{ dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown }> {
-    const invocation = this.createInvocationContext(label);
+    const invocation = this.createInvocationContext(label, input);
     const withProvenance = systemSchedule
       ? Object.freeze({ ...invocation, systemSchedule: Object.freeze({ ...systemSchedule }) })
       : invocation;
@@ -76,7 +80,7 @@ export class CommandManager {
     parent: CommandInvocationContext,
     captureLimitMs = DISPATCH_CAPTURE_LIMIT_MS,
   ): Promise<{ dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown }> {
-    return this.dispatchLine(label, input, captureLimitMs, this.childInvocationContext(parent));
+    return this.dispatchLine(label, input, captureLimitMs, this.childInvocationContext(parent, input));
   }
 
   private async dispatchLine(
@@ -161,7 +165,7 @@ export class CommandManager {
     }
   }
 
-  private createInvocationContext(label: string): CommandInvocationContext {
+  private createInvocationContext(label: string, line?: string): CommandInvocationContext {
     const tab = this.managers.tab.byLabel(label);
     const runtime = tab ? tabRuntime(tab) : undefined;
     return Object.freeze({
@@ -174,15 +178,17 @@ export class CommandManager {
         context: Object.freeze([...(runtime?.context ?? [])]),
       }),
       signal: new AbortController().signal,
+      ...(line !== undefined && { line }),
     });
   }
 
-  private childInvocationContext(parent: CommandInvocationContext): CommandInvocationContext {
+  private childInvocationContext(parent: CommandInvocationContext, line?: string): CommandInvocationContext {
     return Object.freeze({
       runId: parent.runId,
       invocationId: randomUUID(),
       caller: parent.caller,
       signal: parent.signal,
+      ...(line !== undefined && { line }),
       ...(parent.awaitResult && { awaitResult: true }),
       ...(parent.systemSchedule && { systemSchedule: parent.systemSchedule }),
     });

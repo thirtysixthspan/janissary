@@ -8,6 +8,7 @@ import { StatusPanels } from '../shared/status-windows/StatusPanels';
 import { useStatusWindows } from '../shared/status-windows/useStatusWindows';
 import { tabBodyBorder } from '../shared/tab/body-border';
 import { statusButton } from '../shared/status-windows/status-button';
+import { openConnectionRow } from './harness-tab-intents';
 
 type Properties = {
   // Narrowed by the caller's guard, so the harness payload is read without asserting: a harness tab
@@ -68,6 +69,8 @@ export function HarnessTabLayer({
         scheduleOnly={scheduleOnly}
         connectionsWindow={statusWindows.connections}
         scheduleWindow={statusWindows.schedule}
+        interactive={!scheduleOnly}
+        onOpenRow={(row) => { openConnectionRow(client, t.label, row); }}
       />
       {isActive && pickerOverlays}
     </div>

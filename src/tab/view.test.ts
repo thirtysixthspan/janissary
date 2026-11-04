@@ -21,8 +21,20 @@ describe('buildTabView', () => {
 
   it('projects completed background replies with stable IDs and excludes ordinary or unfinished entries', () => {
     const tab = makeTab('shell', '#fff');
-    tab.log = [{ input: '', output: 'ordinary' }, { input: '', output: 'pending', background: 'pending', running: true }, { input: '', output: 'suggestion', background: 'finished' }];
-    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).backgroundReplies).toEqual([{ id: 'finished', output: 'suggestion' }]);
+    tab.log = [{ input: 'acp ordinary', output: 'ordinary' }, { input: '', output: 'pending', background: 'pending', running: true }, { input: 'acp hello', output: 'suggestion', background: 'finished' }];
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).backgroundReplies).toEqual([{ id: 'finished', output: 'suggestion', line: 'acp hello' }]);
+  });
+
+  it('leaves monitor and other background inputs without a line', () => {
+    const tab = makeTab('shell', '#fff');
+    tab.log = [
+      { input: 'monitor ask now', output: 'suggestion', background: 'monitor' },
+      { input: 'unrelated', output: 'other', background: 'other' },
+    ];
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).backgroundReplies).toEqual([
+      { id: 'monitor', output: 'suggestion' },
+      { id: 'other', output: 'other' },
+    ]);
   });
   const missingWorkspace = (): string | undefined => {};
   it('projects right-pane membership and keeps left as the absent wire value', () => {

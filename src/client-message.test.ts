@@ -74,6 +74,7 @@ describe('isClientMessage', () => {
       'pluginIntent',
     ]);
     expect(clientReplyMode('command')).toBe('ack');
+    expect(clientReplyMode('openConnectionRecord')).toBe('ack');
     expect(clientReplyMode('unknown')).toBeUndefined();
   });
 });

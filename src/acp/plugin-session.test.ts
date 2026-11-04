@@ -193,14 +193,115 @@ describe('core ACP for plugin tabs', () => {
     managers.acp.closeAll();
   });
 
-  it('waits for core streaming instead of returning a duplicate terminal reply', async () => {
+  it('returns core streaming dispatch immediately and appends one background reply when it settles', async () => {
     const { managers, handlers } = setup();
     const result = managers.command.dispatchLineWithOutput('consumer', 'acp hello', 1);
-    await new Promise((resolve) => setTimeout(resolve, 5));
+    await expect(result).resolves.toEqual({ dispatched: true, output: '', coreResponse: true });
+    expect(managers.tab.byLabel('consumer')!.log.some((entry) => entry.background)).toBe(false);
+
     handlers().onChunk('Answer');
     handlers().onEnd('end_turn');
-    await expect(result).resolves.toEqual({ dispatched: true, output: '', coreResponse: true });
+
+    await vi.waitFor(() => {
+      const replies = managers.tab.byLabel('consumer')!.log.filter((entry) => entry.background);
+      expect(replies).toHaveLength(1);
+      expect(replies[0]).toMatchObject({ input: 'acp hello', output: 'Answer' });
+    });
     expect(acpResponseFor(managers.tab.byLabel('consumer')!)?.lines.map((line) => line.text).join(' ')).toContain('Answer');
+    managers.acp.closeAll();
+  });
+
+  it('refuses a second shell prompt without replacing the first', async () => {
+    const { managers, handlers } = setup();
+    await managers.command.dispatchLineWithOutput('consumer', 'acp first', 1);
+    await managers.command.dispatchLineWithOutput('consumer', 'acp second', 1);
+
+    await vi.waitFor(() => {
+      const replies = managers.tab.byLabel('consumer')!.log.filter((entry) => entry.background);
+      expect(replies).toHaveLength(1);
+      expect(replies[0]).toMatchObject({ input: 'acp second', output: 'ACP: a prompt is already running.' });
+    });
+
+    handlers().onChunk('first answer');
+    handlers().onEnd('end_turn');
+
+    await vi.waitFor(() => {
+      const replies = managers.tab.byLabel('consumer')!.log.filter((entry) => entry.background);
+      expect(replies).toHaveLength(2);
+      expect(replies[1]).toMatchObject({ input: 'acp first', output: 'first answer' });
+    });
+    managers.acp.closeAll();
+  });
+
+  it('settles a pending shell prompt once when its session closes', async () => {
+    const { managers } = setup();
+    await managers.command.dispatchLineWithOutput('consumer', 'acp held', 1);
+    managers.acp.close('consumer');
+
+    await vi.waitFor(() => {
+      const replies = managers.tab.byLabel('consumer')!.log.filter((entry) => entry.background);
+      expect(replies).toHaveLength(1);
+      expect(replies[0]).toMatchObject({ input: 'acp held', output: 'ACP session closed.' });
+    });
+    managers.acp.closeAll();
+  });
+
+  it('settles a pending shell prompt once when it is cancelled', async () => {
+    const { managers } = setup();
+    await managers.command.dispatchLineWithOutput('consumer', 'acp held', 1);
+    await expect(managers.acp.cancel('consumer')).resolves.toBe(true);
+
+    await vi.waitFor(() => {
+      const replies = managers.tab.byLabel('consumer')!.log.filter((entry) => entry.background);
+      expect(replies).toHaveLength(1);
+      expect(replies[0]).toMatchObject({ input: 'acp held', output: 'ACP: prompt cancelled.' });
+    });
+    managers.acp.closeAll();
+  });
+
+  it('settles a pending shell prompt once when cancellation cannot be sent', async () => {
+    const { managers, session } = setup();
+    await managers.command.dispatchLineWithOutput('consumer', 'acp held', 1);
+    session.cancel.mockRejectedValue(new Error('write failed'));
+    await expect(managers.acp.cancel('consumer')).resolves.toBe(true);
+
+    await vi.waitFor(() => {
+      const replies = managers.tab.byLabel('consumer')!.log.filter((entry) => entry.background);
+      expect(replies).toHaveLength(1);
+      expect(replies[0]).toMatchObject({ input: 'acp held', output: 'ACP: cancellation failed: write failed' });
+    });
+    managers.acp.closeAll();
+  });
+
+  it('settles a pending shell prompt once when close wins a cancellation race', async () => {
+    const { managers, session } = setup();
+    await managers.command.dispatchLineWithOutput('consumer', 'acp held', 1);
+    const drain = Promise.withResolvers<void>();
+    session.cancel.mockReturnValue(drain.promise);
+    const cancel = managers.acp.cancel('consumer');
+    managers.acp.close('consumer');
+    drain.resolve();
+
+    await expect(cancel).resolves.toBe(true);
+    await vi.waitFor(() => {
+      const replies = managers.tab.byLabel('consumer')!.log.filter((entry) => entry.background);
+      expect(replies).toHaveLength(1);
+      expect(replies[0]).toMatchObject({ input: 'acp held', output: 'ACP session closed.' });
+    });
+    managers.acp.closeAll();
+  });
+
+  it('ignores a late prompt error after close settled the one background reply', async () => {
+    const { managers, handlers } = setup();
+    await managers.command.dispatchLineWithOutput('consumer', 'acp held', 1);
+    managers.acp.close('consumer');
+    handlers().onError('late failure');
+
+    await vi.waitFor(() => {
+      const replies = managers.tab.byLabel('consumer')!.log.filter((entry) => entry.background);
+      expect(replies).toHaveLength(1);
+      expect(replies[0]).toMatchObject({ input: 'acp held', output: 'ACP session closed.' });
+    });
     managers.acp.closeAll();
   });
 

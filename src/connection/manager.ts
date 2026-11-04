@@ -16,9 +16,23 @@ export class ConnectionManager {
   // transport alongside its processes, since the ssh session it runs over is a connection in its own
   // right and closing it closes the tab.
   connectionsFor(label: string): ConnectionView[] {
-    return connectionCatalog(this.managers, label)
+    const rows = connectionCatalog(this.managers, label)
       .filter((e) => e.scope === 'tab')
       .map((e) => (e.acpRef ? { text: e.display, kind: e.kind, acpRef: e.acpRef } : { text: e.display, kind: e.kind }));
+    return [...rows, ...this.activeAgentRows(label)];
+  }
+
+  // A run the caller started is one of the caller's own connections while it is live. It has a
+  // durable record to open, but no `acpRef`: the snapshot RPC has no agent-run scope.
+  private activeAgentRows(label: string): ConnectionView[] {
+    const rows: ConnectionView[] = [];
+    for (const run of this.managers.agent.runs.values()) {
+      if (run.outcome !== undefined || run.caller.label !== label) continue;
+      const recordId = run.recordId;
+      if (recordId === undefined) continue;
+      rows.push({ text: `Agent: ${run.view().task}`, kind: 'acp', recordId });
+    }
+    return rows;
   }
 
   async closeTarget(kind: ConnectionKind, id: string, label: string): Promise<void> {

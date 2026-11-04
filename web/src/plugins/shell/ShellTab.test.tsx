@@ -125,6 +125,7 @@ function makeCapabilities(overrides: {
   label?: string;
   dotColor?: string;
   recording?: string;
+  onBackgroundReply?: TabPluginClientCapabilities['onBackgroundReply'];
 } = {}) {
   const written: Written = [];
   const resized: { cols: number; rows: number }[] = [];
@@ -175,6 +176,7 @@ function makeCapabilities(overrides: {
       recording: overrides.recording,
       openRecording: vi.fn(),
     }),
+    ...(overrides.onBackgroundReply !== undefined && { onBackgroundReply: overrides.onBackgroundReply }),
   } as unknown as TabPluginClientCapabilities;
   return {
     capabilities, closed, handle, resized, written,
@@ -1004,6 +1006,19 @@ describe('ShellTab', () => {
     expect(shown).toContain(`${escape}[1mUsage${escape}[22m`);
     expect(shown).toContain(`Run ${escape}[1mzsh${escape}[22m`);
     expect(shown).not.toContain('**');
+    expect(shown).not.toContain('##');
+  });
+
+  it('writes a settled ACP background reply at the current bottom under its exact line', () => {
+    let receive: (reply: { id: string; output: string; line?: string }) => void = () => {};
+    const onBackgroundReply = vi.fn((callback: typeof receive) => { receive = callback; return () => {}; });
+    const { terminal } = renderTab({ onBackgroundReply });
+
+    act(() => receive({ id: 'acp-1', output: '## Answer\n\nDone', line: 'acp summarize this' }));
+
+    const shown = terminal.written.at(-1) ?? '';
+    expect(shown).toContain('> acp summarize this');
+    expect(shown).toContain('Answer');
     expect(shown).not.toContain('##');
   });
 

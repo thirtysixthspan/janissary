@@ -38,6 +38,16 @@ const CASES: Array<[keyof typeof CORE_PARAMS, Record<string, unknown>, Array<Rec
     { acpRef: { scope: 'editor', label: 'one' } },
     { acpRef: 'one' },
   ]],
+  ['openConnectionRecord', { tab: 'one', recordId: 'record-1' }, [
+    {},
+    { tab: 'one' },
+    { tab: 1, recordId: 'record-1' },
+    { tab: 'one', recordId: 1 },
+    { tab: 'one', recordId: 'record-1', acpRef: { scope: 'tab', label: 'one' } },
+    { tab: 'one', acpRef: { scope: 'monitor', name: 'watch' } },
+    { tab: 'one', acpRef: { scope: 'editor', label: 'one', persona: 'critic' } },
+    { tab: 'one', acpRef: { scope: 'tab', label: 'other' } },
+  ]],
 ];
 
 describe('core RPC params decoders', () => {
@@ -61,5 +71,9 @@ describe('core RPC params decoders', () => {
   it('accepts the editor scope of an ACP ref when both of its fields are present', () => {
     expect(CORE_PARAMS.openAcpTranscript({ acpRef: { scope: 'editor', label: 'one', persona: 'critic' } })).toBe(true);
     expect(CORE_PARAMS.openAcpTranscript({ acpRef: { scope: 'monitor', name: 'watch' } })).toBe(true);
+  });
+
+  it('accepts a tab-scoped ACP target that names the popup-owning tab', () => {
+    expect(CORE_PARAMS.openConnectionRecord({ tab: 'one', acpRef: { scope: 'tab', label: 'one' } })).toBe(true);
   });
 });

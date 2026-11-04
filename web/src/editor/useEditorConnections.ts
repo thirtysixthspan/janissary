@@ -14,6 +14,7 @@ export type EditorConnectionsApi = {
   connectionsButton: StatusWindowButtonProps;
   closeRow: (row: ConnectionView) => void;
   openAcpTranscript: (acpRef: AcpRef) => void;
+  openRow: (row: ConnectionView) => void;
 };
 
 export function useEditorConnections(client: JanusClient, tab: TabView): EditorConnectionsApi {
@@ -31,7 +32,16 @@ export function useEditorConnections(client: JanusClient, tab: TabView): EditorC
     client.send({ method: 'openAcpTranscript', params: { acpRef } });
   };
 
+  const openRow = (row: ConnectionView) => {
+    if (row.recordId !== undefined) {
+      client.send({ method: 'openConnectionRecord', params: { tab: tab.label, recordId: row.recordId } });
+      return;
+    }
+    if (row.acpRef?.scope !== 'tab' || row.acpRef.label !== tab.label) return;
+    client.send({ method: 'openConnectionRecord', params: { tab: tab.label, acpRef: row.acpRef } });
+  };
+
   const connectionsButton = statusButton(tab.connections.length > 0, windows.connections);
 
-  return { windows, connectionsButton, closeRow, openAcpTranscript };
+  return { windows, connectionsButton, closeRow, openAcpTranscript, openRow };
 }

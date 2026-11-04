@@ -126,6 +126,7 @@ export type {
 } from './protocol/file-navigator.js';
 export type {
   AcpRef,
+  BackgroundReplyView,
   ConnectionView,
   HarnessLaunchView,
   QuestionKind,

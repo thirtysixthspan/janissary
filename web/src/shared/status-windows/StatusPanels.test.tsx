@@ -25,9 +25,15 @@ type Rows = { connections?: ConnectionView[]; schedule?: ScheduleView[] };
 function renderPanels(rows: Rows, windowOverrides: Partial<{
   connectionsWindow: StatusWindowHandlers;
   scheduleWindow: StatusWindowHandlers;
-}> & { onCloseRow?: (row: ConnectionView, index: number) => void; onOpenAcpTranscript?: (ref: NonNullable<ConnectionView['acpRef']>) => void; interactive?: boolean; scheduleOnly?: boolean } = {}) {
+}> & {
+  onCloseRow?: (row: ConnectionView, index: number) => void;
+  onOpenAcpTranscript?: (ref: NonNullable<ConnectionView['acpRef']>) => void;
+  onOpenRow?: (row: ConnectionView) => void;
+  interactive?: boolean;
+  scheduleOnly?: boolean;
+} = {}) {
   const {
-    onCloseRow, onOpenAcpTranscript, interactive, scheduleOnly,
+    onCloseRow, onOpenAcpTranscript, onOpenRow, interactive, scheduleOnly,
     connectionsWindow = windowState(), scheduleWindow = windowState(),
   } = windowOverrides;
   return render(
@@ -40,6 +46,7 @@ function renderPanels(rows: Rows, windowOverrides: Partial<{
       interactive={interactive}
       onCloseRow={onCloseRow}
       onOpenAcpTranscript={onOpenAcpTranscript}
+      onOpenRow={onOpenRow}
     />,
   );
 }
@@ -160,5 +167,98 @@ describe('StatusPanels', () => {
     );
     expect(container.querySelector('.panel-row-transcript')).toBeInTheDocument();
     expect(container.querySelector('.panel-row-close')).toBeInTheDocument();
+  });
+
+  it('opens a record-id row by pointer and keyboard', () => {
+    const row: ConnectionView = { text: 'Agent: task.md', kind: 'acp', recordId: 'record-1' };
+    const onOpenRow = vi.fn();
+    const { container } = renderPanels({ connections: [row] }, { onOpenRow });
+    const element = container.querySelector('.panel-row')!;
+
+    expect(element).toHaveAttribute('role', 'button');
+    expect(element).toHaveAttribute('tabindex', '0');
+    fireEvent.click(element);
+    fireEvent.keyDown(element, { key: 'Enter' });
+    fireEvent.keyDown(element, { key: ' ' });
+
+    expect(onOpenRow).toHaveBeenNthCalledWith(1, row);
+    expect(onOpenRow).toHaveBeenNthCalledWith(2, row);
+    expect(onOpenRow).toHaveBeenNthCalledWith(3, row);
+    expect(container.querySelector('.panel-row-transcript')).toBeNull();
+  });
+
+  it('opens a tab-scoped ACP row by pointer and keyboard', () => {
+    const row: ConnectionView = {
+      text: 'acp:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'janus' },
+    };
+    const onOpenRow = vi.fn();
+    const { container } = renderPanels({ connections: [row] }, { onOpenRow });
+    const element = container.querySelector('.panel-row')!;
+
+    fireEvent.click(element);
+    fireEvent.keyDown(element, { key: 'Enter' });
+
+    expect(onOpenRow).toHaveBeenNthCalledWith(1, row);
+    expect(onOpenRow).toHaveBeenNthCalledWith(2, row);
+  });
+
+  it.each([
+    ['monitor', { scope: 'monitor' as const, name: 'watch' }],
+    ['editor', { scope: 'editor' as const, label: 'notes', persona: 'reviewer' }],
+  ])('leaves a %s-scoped ACP row non-openable', (_scope, acpRef) => {
+    const onOpenRow = vi.fn();
+    const { container } = renderPanels(
+      { connections: [{ text: 'row', kind: 'acp', acpRef }] },
+      { onOpenRow },
+    );
+    const element = container.querySelector('.panel-row')!;
+
+    expect(element).not.toHaveAttribute('role');
+    expect(element).not.toHaveAttribute('tabindex');
+    fireEvent.click(element);
+    fireEvent.keyDown(element, { key: 'Enter' });
+
+    expect(onOpenRow).not.toHaveBeenCalled();
+  });
+
+  it('does not open rows when the callback is omitted', () => {
+    const { container } = renderPanels({
+      connections: [{ text: 'Agent: task.md', kind: 'acp', recordId: 'record-1' }],
+    });
+    const element = container.querySelector('.panel-row')!;
+
+    expect(element).not.toHaveAttribute('role');
+    fireEvent.click(element);
+  });
+
+  it('keeps the snapshot button separate from row opening', () => {
+    const acpRef = { scope: 'tab' as const, label: 'janus' };
+    const onOpenAcpTranscript = vi.fn();
+    const onOpenRow = vi.fn();
+    const { container } = renderPanels(
+      { connections: [{ text: 'acp:opencode', kind: 'acp', acpRef }] },
+      { onOpenAcpTranscript, onOpenRow },
+    );
+    const button = container.querySelector('.panel-row-transcript')!;
+
+    fireEvent.click(button);
+    fireEvent.keyDown(button, { key: 'Enter' });
+
+    expect(onOpenAcpTranscript).toHaveBeenCalledExactlyOnceWith(acpRef);
+    expect(onOpenRow).not.toHaveBeenCalled();
+  });
+
+  it('keeps the close button separate from row opening', () => {
+    const onCloseRow = vi.fn();
+    const onOpenRow = vi.fn();
+    const { container } = renderPanels(
+      { connections: [{ text: 'Agent: task.md', kind: 'acp', recordId: 'record-1' }] },
+      { onCloseRow, onOpenRow },
+    );
+
+    fireEvent.click(container.querySelector('.panel-row-close')!);
+
+    expect(onCloseRow).toHaveBeenCalledOnce();
+    expect(onOpenRow).not.toHaveBeenCalled();
   });
 });

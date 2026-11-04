@@ -91,6 +91,39 @@ describe('ShellTabMeta remote controls', () => {
   });
 });
 
+describe('ShellTabMeta connections rows', () => {
+  it('opens a record row through the tab-bound capability without adding a snapshot button', () => {
+    const openConnection = vi.fn();
+    const row = { text: 'Agent: task.md', kind: 'acp' as const, recordId: 'record-1' };
+    render(<ShellTabMeta
+      payload={{ ...payload, connections: [row] }}
+      capabilities={capabilities({ active: true, openConnection })}
+    />);
+
+    const element = document.querySelector('.panel-row')!;
+    fireEvent.click(element);
+
+    expect(openConnection).toHaveBeenCalledWith(row);
+    expect(document.querySelector('.panel-row-transcript')).toBeNull();
+  });
+
+  it('opens a supported row from the keyboard as well as the pointer', () => {
+    const openConnection = vi.fn();
+    const row = { text: 'acp:opencode', kind: 'acp' as const, acpRef: { scope: 'tab' as const, label: 'shell-1' } };
+    render(<ShellTabMeta
+      payload={{ ...payload, connections: [row] }}
+      capabilities={capabilities({ active: true, openConnection })}
+    />);
+
+    const element = document.querySelector('.panel-row')!;
+    fireEvent.keyDown(element, { key: 'Enter' });
+    fireEvent.keyDown(element, { key: ' ' });
+
+    expect(openConnection).toHaveBeenNthCalledWith(1, row);
+    expect(openConnection).toHaveBeenNthCalledWith(2, row);
+  });
+});
+
 describe('ShellTabMeta diff button', () => {
   it('offers the diff of this workspace and sends it through the capability', () => {
     const openDiffHere = vi.fn();

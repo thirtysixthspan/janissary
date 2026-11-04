@@ -12,9 +12,20 @@ export type AcpRef =
   | { scope: 'monitor'; name: string }
   | { scope: 'editor'; label: string; persona: string };
 
-// One row in the floating "connections" panel (shell / acp / terminal card / sqlite). `acpRef` is
-// set on every `kind: 'acp'` row, identifying which session the row's transcript button opens.
-export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' | 'ssh'; acpRef?: AcpRef };
+// One row in the floating "connections" panel (shell / acp / terminal card / sqlite). `acpRef`
+// identifies which session a row's transcript button opens. `recordId` identifies a durable ACP
+// record (a tracked core session or an active agent run), whose connection tab the row opens on
+// click; a row with one has no transcript snapshot to offer.
+export type ConnectionView = {
+  text: string;
+  kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' | 'ssh';
+  acpRef?: AcpRef;
+  recordId?: string;
+};
+
+// One completed background reply, replayed on every snapshot and deduplicated by its stable id.
+// `line` is the exact command an ACP reply settles under; monitor replies leave it absent.
+export type BackgroundReplyView = { id: string; output: string; line?: string };
 
 /**
  * A remote tab's target as the client sees it: everything stored on the tab, plus the facts only
@@ -59,7 +70,7 @@ export type TabView = {
   hidden?: true;
   systemShell?: true;
   label: string;
-  backgroundReplies?: { id: string; output: string }[];
+  backgroundReplies?: BackgroundReplyView[];
   number: number;
   dotColor: string;
   group: number;

@@ -48,6 +48,14 @@ export function createPluginClientCapabilities(
       const acpRef: AcpRef = { scope: 'tab', label };
       client.send({ method: 'openAcpTranscript', params: { acpRef } });
     },
+    openConnection: (row) => {
+      if (row.recordId !== undefined) {
+        client.send({ method: 'openConnectionRecord', params: { tab: label, recordId: row.recordId } });
+        return;
+      }
+      if (row.acpRef?.scope !== 'tab' || row.acpRef.label !== label) return;
+      client.send({ method: 'openConnectionRecord', params: { tab: label, acpRef: row.acpRef } });
+    },
     registerDirtyHandle: onDirtyHandle,
     resourceUrl,
     copyText: (text: string) => { systemCopyText(text); },

@@ -1,6 +1,6 @@
 # ACP
 
-ACP is a core service for starting and querying Agent Client Protocol connections. Shell tabs use it through their command bar and a core streaming response panel. Any tab plugin can request the scoped core API without owning a terminal. Shell and harness tabs have no ACP command or prose route. Monitors, conversations, and editor queries retain their separate sessions over the shared protocol transport.
+ACP is a core service for starting and querying Agent Client Protocol connections. Shell tabs use it through their command bar, a core streaming response panel, and a settled Markdown reply beneath the typed line. Any tab plugin can request the scoped core API without owning a terminal. Shell and harness tabs have no ACP command or prose route. Monitors, conversations, and editor queries retain their separate sessions over the shared protocol transport.
 
 ## Availability and plugin API
 
@@ -17,7 +17,9 @@ A plugin requesting `promptAcp` supports the core `acp` and `acp reset` commands
 
 `acp <prompt>` queries the current supported tab's connection. Bare `acp` prints `Usage: acp <prompt>.`. `acp reset` ends that connection and reports `ACP session reset — next acp prompt will start fresh.`, or `No active ACP session to reset.`.
 
-The shell's ordinary application-command dispatcher recognizes these commands and marks their replies as core-rendered. It waits for the ACP operation without duplicating the reply in zsh's terminal. Unclaimed shell-bar lines still go to zsh; use an explicit `acp` prefix to query the connection. See [[shell-tab]].
+A shell's `acp` prompt does not hold its command bar. Other lines keep working while it runs. When it settles, the shell appends exactly one Markdown reply at the current bottom of its output, beneath an echo of the exact `acp <prompt>` line that was typed, so it still reads correctly after other commands ran in between. That happens once for an answer, a refusal with `ACP: a prompt is already running.`, a usage line, an `ACP error: …` line, `ACP session closed.` after reset or close, and `ACP: prompt cancelled.` after cancellation. A second prompt while one is running is refused without disturbing the active prompt, and nothing queues. Callbacks arriving after settlement add no second reply.
+
+The shell's ordinary application-command dispatcher recognizes these commands and marks their replies as core-rendered, so dispatch itself adds no immediate terminal line. Unclaimed shell-bar lines still go to zsh; use an explicit `acp` prefix to query the connection. See [[shell-tab]].
 
 
 ## Provider and model
@@ -42,13 +44,15 @@ Core cancellation returns false when no logical request is active and starts no 
 
 The request stays reserved and `Running` until both the native cancellation notification write and the original provider turn finish. Provider completion does not release the turn while its cancellation notification is still pending, and notification completion alone is not provider drain. Another prompt during that interval receives `ACP: a prompt is already running.`. Final native activity stays in the cancelling block. After both boundaries complete, the request settles once with `ACP: prompt cancelled.`, becomes `Idle`, and a later prompt reuses the same session identity and record UUID. Cancellation before handshake finishes initialization on the viable session but never sends the cancelled prompt or a notification with an undefined session id. Native permission requests after cancellation are denied as cancelled.
 
-Reset or close wins during drain, settles immediately with `ACP session closed.`, closes the record, and releases cancellation callers. Fatal loss also settles and closes once. A cancellation-send rejection, including one after provider completion, closes the failed session with `ACP: cancellation failed: <reason>` and does not settle as a successful cancellation. There is no cancellation timeout or forced process kill for a healthy provider: one that never drains stays reserved until reset, close, or fatal loss. This backend operation adds no command, plugin capability, or button.
+Reset or close wins during drain, settles immediately with `ACP session closed.`, closes the record, and releases cancellation callers. Fatal loss also settles and closes once. A cancellation-send rejection, including one after provider completion, closes the failed session with `ACP: cancellation failed: <reason>` and does not settle as a successful cancellation. There is no cancellation timeout or forced process kill for a healthy provider: one that never drains stays reserved until reset, close, or fatal loss. A shell prompt settled this way still produces exactly one background reply. This backend operation adds no command, plugin capability, or button.
 
 New response identity and pending-request metadata are owned by the tab runtime. Core records ACP entries in the tab's existing transcript and tracks their identity without copying the text. Immutable running-entry replacements retain that identity. Responses are projected only for plugin tabs, through `TabView.acpResponse`, using the server's existing `flattenBuffer`. Other application-command entries do not appear in the ACP panel. Existing transcript limits and persistence behavior remain in force; no saved configuration, transcript, or profile is migrated or cleaned up.
 
 ## Streaming response panel
 
-The core response panel sits above the shell command bar. It shows streamed, sanitized GitHub-flavored Markdown, tool steps, and a responding status while a prompt is active. It keeps previous ACP exchanges for the tab and follows new output while the user remains at the bottom. The shell's tab dot blinks during the operation.
+The core response panel sits above the shell command bar. It shows streamed, sanitized GitHub-flavored Markdown, tool steps, and a responding status while a prompt is active. It keeps previous ACP exchanges for the tab and follows new output while the user remains at the bottom. The shell's tab dot blinks during the operation. In API v2 the panel remains the streaming surface; it is not replaced by the settled background reply, which is written to the shell output.
+
+The connections panel's ACP rows open or focus the corresponding connection tab when they carry a durable record or the tab's own live ACP reference. Rows that offer a transcript snapshot keep that separate button, and clicking it never opens the record tab. See [[connection]].
 
 The panel's **Reset ACP** control acts immediately on its owning tab, including while a shell-bar submission is still awaiting completion. Tool-step expansion uses the same server-owned collapse state, with an explicit tab label so a docked panel never changes another tab. File-link actions likewise run in the source tab. A plugin renders the core surface through the scoped client hook rather than implementing another response renderer.
 
@@ -58,7 +62,7 @@ Questions use the existing core question panel and answer protocol. A centre tab
 
 Reset or close aborts the current ACP request's question, whether active or queued, and preserves unrelated questions. An aborted loop does not issue another provider prompt after a tool returns. Calls without an abort signal retain the existing question lifecycle.
 
-The connections panel retains the `acp:<provider/model>` row, close action, and transcript snapshot button. The snapshot uses the existing tab transcript; monitor and editor transcript scopes retain their own recorded exchanges. See [[connection]].
+The connections panel retains the `acp:<provider/model>` row, its close action, and the transcript snapshot button on surfaces that offer one. The snapshot uses the existing tab transcript; monitor and editor transcript scopes retain their own recorded exchanges. See [[connection]].
 
 ## Autonomous tool loop
 

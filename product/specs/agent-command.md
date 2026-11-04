@@ -103,3 +103,5 @@ The server owns one run projection and revision. Monitor updates are coalesced a
 `Terminate` ends only the bound run. It is disabled after cleanup begins. Once termination is accepted, the monitor remains `Terminated` through cleanup and in its final projection; a later execution result cannot replace that outcome. Closing the monitor tab or disabling the monitor plugin detaches observation and does not terminate execution. Closing the originating caller still terminates the run.
 
 The monitor waits for the host's bounded run cleanup to finish after accepting termination. Cleanup may take longer than the plugin handler's five-second budget without disabling the monitor.
+
+While a run is live, its caller's connections window lists it as an ACP-kind row titled `Agent: <task filename>` carrying the run's durable record. Pressing that row opens the run's connection tab. It has no transcript snapshot button, because an agent run has no transcript snapshot scope. The row leaves the caller's window when the run ends; the durable row remains in the connections tab.

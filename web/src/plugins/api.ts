@@ -3,7 +3,7 @@ export { isProgrammaticScroll, isWithinBottomFollowThreshold } from '../shared/s
 import type { TerminalColors } from '../shared/terminal/colors';
 import type { JanusClient } from '../shared/ws/ws';
 import type { PluginHost } from './host';
-import type { RemoteTargetView } from '@shared/protocol';
+import type { BackgroundReplyView, ConnectionView, RemoteTargetView } from '@shared/protocol';
 import type { RemoteSessionState } from '../shared/RemoteSessionButton';
 
 export { renderMarkdown } from '../shared/transcript/markdown';
@@ -268,7 +268,11 @@ export type TabPluginClientCapabilities = {
   // Open this plugin tab's own ACP transcript as an editor tab. The host supplies the label so a
   // plugin cannot ask to open another tab's transcript.
   openAcpTranscript?(): void;
-  onBackgroundReply?(receive: (reply: { id: string; output: string }) => void): () => void;
+  // Open or focus the connection tab behind a popup row. Bound to this plugin tab's label by the
+  // host, and only a durable `recordId` or a tab-scoped `acpRef` is sent: monitor and editor rows
+  // stay snapshot-only. Additive, so the plugin API version does not move.
+  openConnection?(row: ConnectionView): void;
+  onBackgroundReply?(receive: (reply: BackgroundReplyView) => void): () => void;
   // This tab's asciicast recording, or absent before the tab's terminal has produced any output. Its
   // presence is also what makes the recording flag pressable, so a plugin drawing that flag reads
   // this field rather than keeping its own state — the host is the only thing that knows when the

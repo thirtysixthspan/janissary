@@ -33,6 +33,34 @@ describe('harnessTabIntents', () => {
     expect(send).toHaveBeenNthCalledWith(2, { method: 'openAcpTranscript', params: { acpRef } });
   });
 
+  it('opens a record row and this tab\'s tab-scoped ACP row through the record RPC', () => {
+    const { client, send } = fakeClient();
+    const intents = harnessTabIntents(client, 'agent2', 'openTranscriptFileFor');
+
+    intents.onOpenConnection({ text: 'Agent: task.md', kind: 'acp', recordId: 'record-1' });
+    intents.onOpenConnection({ text: 'acp:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'agent2' } });
+
+    expect(send).toHaveBeenNthCalledWith(1, {
+      method: 'openConnectionRecord', params: { tab: 'agent2', recordId: 'record-1' },
+    });
+    expect(send).toHaveBeenNthCalledWith(2, {
+      method: 'openConnectionRecord', params: { tab: 'agent2', acpRef: { scope: 'tab', label: 'agent2' } },
+    });
+  });
+
+  it.each([
+    ['monitor', { scope: 'monitor' as const, name: 'watch' }],
+    ['editor', { scope: 'editor' as const, label: 'agent2', persona: 'reviewer' }],
+    ['another tab', { scope: 'tab' as const, label: 'other' }],
+  ])('leaves a %s row snapshot-only', (_case, acpRef) => {
+    const { client, send } = fakeClient();
+    const intents = harnessTabIntents(client, 'agent2', 'openTranscriptFileFor');
+
+    intents.onOpenConnection({ text: 'row', kind: 'acp', acpRef });
+
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it('sends the transcript method its caller supplied', () => {
     const { client, send } = fakeClient();
     const intents = harnessTabIntents(client, 'claude', 'openTranscriptFileFor');

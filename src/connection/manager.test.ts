@@ -15,6 +15,7 @@ function makeManagers(overrides: Partial<Managers> = {}): Managers {
     browser: { info: vi.fn(), run: vi.fn(() => Promise.resolve('closed')) },
     pty: { terminalsFor: vi.fn(() => []) },
     database: { openDbs: vi.fn(() => []), listOpen: vi.fn(() => []) },
+    agent: { runs: new Map() },
     tab: { tabs: [], byLabel: vi.fn(), shorten: vi.fn((value: string) => value), cwdOf: vi.fn(() => '/repo') },
     ...overrides,
   } as unknown as Managers;
@@ -107,5 +108,41 @@ describe('ConnectionManager connectionsFor', () => {
     expect(new ConnectionManager(managers).connectionsFor('main')).toEqual([
       { text: 'sqlite:mine', kind: 'sqlite' },
     ]);
+  });
+
+  it('includes an active caller-owned agent run once with its record id and no acpRef', () => {
+    const run = { caller: { label: 'main' }, recordId: 'record-1', view: () => ({ task: 'task.md' }) };
+    const managers = makeManagers({
+      agent: { runs: new Map([['run-1', run]]) },
+    } as unknown as Partial<Managers>);
+    const rows = new ConnectionManager(managers).connectionsFor('main');
+    const agentRows = rows.filter((row) => row.text.startsWith('Agent: '));
+    expect(agentRows).toEqual([{ text: 'Agent: task.md', kind: 'acp', recordId: 'record-1' }]);
+    expect(agentRows[0]).not.toHaveProperty('acpRef');
+  });
+
+  it('omits another caller\'s run, completed runs, and runs without a record id', () => {
+    const managers = makeManagers({
+      agent: {
+        runs: new Map([
+          ['run-1', { caller: { label: 'other' }, recordId: 'record-1', view: () => ({ task: 'other.md' }) }],
+          ['run-2', { caller: { label: 'main' }, recordId: 'record-2', outcome: 'completed', view: () => ({ task: 'done.md' }) }],
+          ['run-3', { caller: { label: 'main' }, view: () => ({ task: 'unrecorded.md' }) }],
+        ]),
+      },
+    } as unknown as Partial<Managers>);
+    expect(new ConnectionManager(managers).connectionsFor('main').some((row) => row.text.startsWith('Agent: '))).toBe(false);
+  });
+
+  it('keeps an agent row distinct from the tab\'s catalog rows', () => {
+    const managers = makeManagers({
+      shell: { has: vi.fn(() => true) },
+      agent: {
+        runs: new Map([['run-1', { caller: { label: 'main' }, recordId: 'record-1', view: () => ({ task: 'task.md' }) }]]),
+      },
+    } as unknown as Partial<Managers>);
+    const rows = new ConnectionManager(managers).connectionsFor('main');
+    expect(rows.filter((row) => row.text === `${SHELL_NAME}:/repo`)).toHaveLength(1);
+    expect(rows.filter((row) => row.text === 'Agent: task.md')).toHaveLength(1);
   });
 });

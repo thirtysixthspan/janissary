@@ -3,6 +3,13 @@
 // `RpcCall` union by ../protocol.ts.
 import type { AcpRef } from './tab.js';
 
+// A popup row's opener: either a durable record id, or the ACP session the requesting tab currently
+// owns. `tab` is the popup-owning tab, which the server binds the request to rather than trusting it
+// as a target of its own.
+export type OpenConnectionRecordParams =
+  | { tab: string; recordId: string }
+  | { tab: string; acpRef: Extract<AcpRef, { scope: 'tab' }> };
+
 // Tab creation/closing flow through `command` (`agent`, `close`); `setActiveTab`/`moveTab`/
 // `toggleCollapse` are pure-UI shortcuts.
 export type CoreRpcCall =
@@ -64,6 +71,10 @@ export type CoreRpcCall =
   // read-only editor tab, triggered by the clipboard button on a connections-panel ACP row. An
   // empty exchange substitutes a `No transcript yet.` placeholder rather than no-opping.
   | { method: 'openAcpTranscript'; params: { acpRef: AcpRef } }
+  // Open or focus the connection tab for a popup row: a durable record id, or the requesting tab's
+  // own live ACP record. Dispatches the connections plugin's existing `connection <id>` command in
+  // the owning tab; a missing record or stale tab binding is a no-op. It never opens a snapshot.
+  | { method: 'openConnectionRecord'; params: OpenConnectionRecordParams }
   // List every gitignore-aware file under the project/launch directory, for the Cmd+P quick-open
   // overlay. Replies (deferred) with `{ root, paths }` — `root` is the absolute launch directory,
   // `paths` are its root-relative paths — so the client can join them into an absolute path for

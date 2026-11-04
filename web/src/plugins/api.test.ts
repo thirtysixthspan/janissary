@@ -60,6 +60,21 @@ describe('createPluginClientCapabilities', () => {
     });
   });
 
+  it('opens a popup row\'s connection through the tab-bound RPC', () => {
+    const { client, send } = makeClient();
+    const capabilities = createPluginClientCapabilities({ host, pluginId: 'shell', label: 'shell-1', client, active: true, dock: null, onClose: vi.fn() });
+
+    capabilities.openConnection?.({ text: 'Agent: task.md', kind: 'acp', recordId: 'record-1' });
+    capabilities.openConnection?.({ text: 'acp:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'shell-1' } });
+
+    expect(send).toHaveBeenNthCalledWith(1, {
+      method: 'openConnectionRecord', params: { tab: 'shell-1', recordId: 'record-1' },
+    });
+    expect(send).toHaveBeenNthCalledWith(2, {
+      method: 'openConnectionRecord', params: { tab: 'shell-1', acpRef: { scope: 'tab', label: 'shell-1' } },
+    });
+  });
+
   it('authorizes a terminal attachment against the owning tab before listening', async () => {
     const { client, send } = makeClient(async () => ({ ok: true, value: true }));
     const attachPty = vi.fn(() => vi.fn());

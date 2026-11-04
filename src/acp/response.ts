@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { Managers } from '../managers.js';
 import type { LogEntry, Tab } from '../tab/types.js';
 import type { AcpPromptResult } from './types.js';
@@ -13,6 +14,14 @@ export function appendAcp(managers: Managers, label: string, entry: LogEntry): v
     tab.runtime.acpEntries.add(entry);
   }
   managers.tab.append(label, entry);
+}
+
+export function appendAcpBackgroundReply(managers: Managers, label: string, input: string, result: AcpPromptResult): void {
+  managers.tab.append(label, {
+    input,
+    output: result.answered ? result.reply : result.error,
+    background: randomUUID(),
+  });
 }
 
 export function acpResponseFor(tab: Tab) {

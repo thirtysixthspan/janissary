@@ -13,6 +13,9 @@ export type CommandInvocationContext = Readonly<{
     context: readonly string[];
   }>;
   signal: AbortSignal;
+  // The line exactly as the caller typed it, before `resolveCommand` trims and strips a leading
+  // slash. A command that echoes its own invocation reads this rather than reconstructing one.
+  line?: string;
   awaitResult?: true;
   systemSchedule?: Readonly<SystemScheduleOrigin>;
 }>;

@@ -17,6 +17,7 @@ export function EditorConnectionsPanel({ tab, api }: { tab: TabView; api: Editor
       interactive
       onCloseRow={api.closeRow}
       onOpenAcpTranscript={api.openAcpTranscript}
+      onOpenRow={api.openRow}
     />
   );
 }

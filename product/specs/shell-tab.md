@@ -292,6 +292,12 @@ fade over 300 ms unless pinned or hovered. If an empty window gains its first ro
 it auto-shows again; a window with no rows stays hidden.
 Both popups begin below the metadata row, which remains visible.
 
+A row in the connections window that names a durable ACP record, including a running agent run
+started from this shell, opens or focuses that record's connection tab when clicked or pressed with
+Enter or Space. A row carrying this shell's own live ACP reference opens the current session's
+connection tab the same way. A monitor row stays a plain row. The shell's panels offer no transcript
+snapshot button, and opening a row never opens a snapshot.
+
 A shell tab can hold scheduled commands (see [[scheduling]]): `schedule` from its own command bar, or
 `schedule … in <shell tab>` from another tab, attaches the entry to it, and the "New schedule" dialog
 offers it as a target. Its entries appear in the schedule window. When one falls due, the command is
@@ -584,3 +590,5 @@ See also [[tab-plugins]], [[shell]], [[agents]], and [[tabs]].
 ## Core ACP connections
 
 The shell requests the core ACP start, prompt, and reset capabilities. `acp <prompt>` streams Markdown and tool steps in the core response panel above the bar, rather than duplicating them in zsh. The panel's Reset ACP control works while the bar is awaiting a response. It and the tool-step controls target this shell even when docked. A selected docked shell also shows its pending core question. Protocol, model selection, session reuse, local sandboxing, remote workspaces, and tool-loop rules live in [[acp]].
+
+The command bar does not wait for the prompt. While it runs, ordinary shell and application commands keep working. When it settles, one Markdown reply is written at the current bottom of the shell output beneath an echo of the exact typed `acp <prompt>` line, even after other output has appeared in between. The reply is written once for an answer, a refusal, a usage or error line, a reset or close, or a cancellation; cancellation's reply reads `ACP: prompt cancelled.` and reset or close settles it as `ACP session closed.`. A second `acp` prompt while one is running is refused with `ACP: a prompt is already running.` and leaves the running prompt alone; nothing queues. The core response panel continues to stream the exchange in API v2, and a settled reply never writes a second ordinary command reply.
