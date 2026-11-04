@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Functionality: preserve the reader's place when older connection history arrives after streamed activity.
-
-Existing Issue: `web/src/plugins/connections/useConnectionHistoryScroll.ts` treats any content-key change as the arrival of older blocks, so a streamed activity update between a top-page request and the response consumes the saved scroll height and clears the viewport restoration. Severity: 4/10
-
-Existing Risk: 4/10 - A reader paging an active record can have the viewport jump when the older blocks arrive instead of keeping their place.
-
-Proposal Risk: 2/10 - Keying restoration on the window offset separates a prepend from ordinary streamed growth while retaining the existing bottom-follow rule.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "preserve connection history viewport across streamed updates". In `web/src/plugins/connections/useConnectionHistoryScroll.ts`, record the requested window offset (or a dedicated request token) when a top-page request starts and apply the saved height delta only when that offset changes; a content-key change at the same offset must continue to use the existing follow and threshold behavior without clearing the pending restoration. Keep the rejection path that clears the request guard, and do not change the 40px follow threshold or the server window size. Add a case to `web/src/plugins/connections/useConnectionHistoryScroll.test.tsx` that requests older blocks at the top, inserts a growing latest activity entry before the older window arrives, then verifies the viewport is preserved and does not jump to the bottom. Retain the existing inactive-view, page-deduplication, rejection-retry, and scroll-restoration cases.
-
-
 * Technical debt: remove stale references to the deleted connection parser and `ConnectionManager.run`.
 
 Existing Issue: `src/connection/close.ts` and `src/browser/command.ts` still direct readers to the deleted `ConnectionManager.run` close path and `src/connection/parsing.ts` parser, and `product/specs/acp.md` still calls the shell's error output a `response entry` after the response panel was removed. Severity: 2/10

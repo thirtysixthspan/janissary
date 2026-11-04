@@ -9,18 +9,18 @@ export function useConnectionHistoryScroll(
   const follow = useRef(true);
   const lastTop = useRef(0);
   const requestedOffset = useRef<number | null>(null);
-  const restoreHeight = useRef<{ height: number; contentKey: unknown } | null>(null);
+  const restoreHeight = useRef<{ height: number; offset: number } | null>(null);
 
   const requestOlder = useCallback(() => {
     const element = elementRef.current;
     if (!element || !hasOlder || offset === undefined || requestedOffset.current === offset) return;
     requestedOffset.current = offset;
-    restoreHeight.current = { height: element.scrollHeight, contentKey };
+    restoreHeight.current = { height: element.scrollHeight, offset };
     void loadOlder().catch(() => {
       requestedOffset.current = null;
       restoreHeight.current = null;
     });
-  }, [contentKey, elementRef, hasOlder, loadOlder, offset]);
+  }, [elementRef, hasOlder, loadOlder, offset]);
 
   const onScroll = useCallback((element: HTMLDivElement) => {
     if (element.scrollTop === 0) requestOlder();
@@ -32,13 +32,14 @@ export function useConnectionHistoryScroll(
   useEffect(() => {
     const element = elementRef.current;
     if (!element) return;
-    if (restoreHeight.current !== null && !Object.is(restoreHeight.current.contentKey, contentKey)) {
-      element.scrollTop += element.scrollHeight - restoreHeight.current.height;
+    const restore = restoreHeight.current;
+    if (restore !== null && restore.offset !== offset) {
+      element.scrollTop += element.scrollHeight - restore.height;
       lastTop.current = element.scrollTop;
       restoreHeight.current = null;
       return;
     }
-    if (restoreHeight.current !== null) return;
+    if (restore !== null) restore.height = element.scrollHeight;
     if (active && follow.current) {
       element.scrollTop = element.scrollHeight;
       lastTop.current = element.scrollTop;
