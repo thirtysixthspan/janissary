@@ -58,6 +58,21 @@ describe('ConnectionList', () => {
       .toEqual(['Open', 'Completed', 'Running', 'Open']);
   });
 
+  it('renders the host-supplied global SQLite owner and sends kind/id only for open and close', () => {
+    const { intent, value } = capabilities();
+    const { container } = render(<ConnectionList rows={[live('shared', 'sqlite', 'sqlite:shared', 'global')]} capabilities={value} />);
+    expect(container.querySelector('.connections-row-title')?.textContent).toBe('sqlite:shared');
+    expect(container.querySelector('.connections-row-kind')?.textContent).toBe('sqlite');
+    expect(container.querySelector('.connections-row-owner')?.textContent).toBe('global');
+
+    const row = container.querySelector('.connections-row')!;
+    fireEvent.click(row);
+    fireEvent.click(row);
+    expect(intent).toHaveBeenLastCalledWith('open', { kind: 'sqlite', id: 'shared' });
+    fireEvent.click(screen.getByRole('button', { name: 'Close sqlite:shared' }));
+    expect(intent).toHaveBeenLastCalledWith('close', { kind: 'sqlite', id: 'shared' });
+  });
+
   it('focuses the active list and supports bounded keyboard selection and Enter', () => {
     const { intent, value } = capabilities();
     const { container } = render(<ConnectionList rows={[live('db', 'sqlite', 'Database'), record('run', 'acp', 'Idle')]} capabilities={value} />);

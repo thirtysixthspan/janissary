@@ -27,7 +27,8 @@ function parseClose(target: string | undefined): ParsedConnectionCommand {
 export function parseConnectionsCommand(input: string, name = 'connections'): ParsedConnectionCommand {
   const commandName = name.trim().toLowerCase();
   if (commandName !== 'connections' && commandName !== 'connection') return { error: USAGE };
-  const args = input.trim() ? input.trim().split(/\s+/u) : [];
+  const argument = input.trim();
+  const args = argument ? argument.split(/\s+/u) : [];
   const subcommand = args[0]?.toLowerCase();
   if (args.length === 0) return { action: 'open-list', centre: true };
   if (commandName === 'connections' && (subcommand === 'left' || subcommand === 'right')) {
@@ -35,5 +36,5 @@ export function parseConnectionsCommand(input: string, name = 'connections'): Pa
   }
   if (subcommand === 'list') return { action: 'list' };
   if (subcommand === 'close') return parseClose(args[1]);
-  return { action: 'lookup', text: args[0] ?? '' };
+  return { action: 'lookup', text: argument };
 }

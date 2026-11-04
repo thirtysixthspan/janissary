@@ -121,4 +121,30 @@ describe('connections plugin activation', () => {
     }, f.capabilities)).toThrow('invalid open-record payload');
     expect(f.openOrFocusTab).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['attributed', 'first', 'first'],
+    ['unattributed', '', undefined],
+  ] as const)('forwards the current %s SQLite owner from a global row intent', (_case, ownerLabel, focusTarget) => {
+    const current = {
+      type: 'live', id: 'shared', kind: 'sqlite', display: 'sqlite:shared', ownerLabel, ownerName: 'global',
+      status: 'Open', orderingTimestamp: 1, ...(focusTarget && { focusTarget }),
+    } as const;
+    const stale = { ...current, ownerLabel: 'stale' };
+    const f = fixture([current]);
+    const tabPayload = { kind: 'list', rows: [stale] };
+
+    expect(f.activation.intent({
+      tab: 'connections', intent: 'open', payload: { kind: 'sqlite', id: 'shared' }, tabPayload,
+    }, f.capabilities)).toBeNull();
+    expect(f.topicAction).toHaveBeenLastCalledWith({
+      topic: 'connections', action: 'open', kind: 'sqlite', id: 'shared', ownerLabel,
+    });
+    expect(f.activation.intent({
+      tab: 'connections', intent: 'close', payload: { kind: 'sqlite', id: 'shared' }, tabPayload,
+    }, f.capabilities)).toBeNull();
+    expect(f.topicAction).toHaveBeenLastCalledWith({
+      topic: 'connections', action: 'close', kind: 'sqlite', id: 'shared', ownerLabel,
+    });
+  });
 });

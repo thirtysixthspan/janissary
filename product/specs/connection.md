@@ -1,6 +1,6 @@
 # Connection
 
-The `connections` command inspects and closes the six kinds of long-lived connection the app holds. Each connection is addressed as `<kind>:<id>`.
+The `connections` and `connection` commands open the connections tab, inspect and close the six kinds of long-lived connection the app holds, and open a live connection's owning tab or a retained record by title. Each live connection is addressed as `<kind>:<id>`.
 
 ### Kinds
 
@@ -42,7 +42,7 @@ Closing a tab kills that tab's shell, ACP, and browser connections — and, for 
 
 ### Validation
 
-A close target must be `<kind>:<id>` with a known kind (`sqlite`, `shell`, `acp`, `browser`, `ssh`, `terminal`) and a non-empty id; otherwise a descriptive error is returned. A bare `connections` or an unrecognized action returns the `Usage:` message.
+A close target must be `<kind>:<id>` with a known kind (`sqlite`, `shell`, `acp`, `browser`, `ssh`, `terminal`) and a non-empty id; otherwise a descriptive error is returned with its exact wording, including `Usage: connections close <kind>:<id>`, the unknown-kind list, and the missing-id message. A bare `connections` or `connection` opens the connections tab instead of reporting usage, and any other text is a lookup rather than an unrecognized action.
 
 ### Connection window
 
@@ -70,9 +70,11 @@ An editor tab carries the same connections button and window, listing its open p
 
 An ACP connection row that offers a transcript snapshot carries a small clipboard-icon button, alongside any close control the row already has. Clicking it opens that session's transcript as a point-in-time, read-only snapshot in a scrollable editor tab: the tab's own agent shows its full tab transcript, a monitor row shows its accumulated exchange tagged into "sent to model" and "model response" blocks, and an editor-persona row shows that persona's own accumulated exchange the same way. The snapshot reflects the exchange at the moment of the click — clicking the button again opens a fresh snapshot rather than updating the first one. A session that has not yet exchanged anything still opens a tab, reading `No transcript yet.`, so every click gives visible feedback. A row without a snapshot button, such as a shell or harness agent row or a running agent-run row, opens its record tab when pressed instead; its lack of a snapshot control is deliberate because there is no transcript scope to show.
 
-### `connections` command
+### `connection` and `connections` commands
 
-`connection <list|close> [kind:id]` lists or closes open connections. See the Connections section. `connections list` shows every open connection; `connections close <kind>:<id>` closes one, where `<kind>` is `sqlite`, `shell`, `acp`, `browser`, `ssh`, or `terminal`. Malformed invocations return a `Usage:` message.
+`connections` and `connection` are the same command under two names. Bare invocation opens or focuses the connections tab; `connections left` and `connections right` dock it, while singular `connection left` and `connection right` are lookup text. `connections list` shows every open connection; `connections close <kind>:<id>` closes one, where `<kind>` is `sqlite`, `shell`, `acp`, `browser`, `ssh`, or `terminal`. Trailing arguments after those forms are ignored, and their list output, close notifications, and completion are unchanged.
+
+Any other text is resolved as a connection reference. Lookup first tries the text as a retained record's exact id, then resolves the invoking tab's own `acp:<id>` session, then a live `<kind>:<id>` target by focusing the tab that owns it, and finally the complete title of a retained record, newest match first. A retained record's title can match even when that record is closed or belonged to another tab. Title matching ignores letter case but compares the whole title, including its generated `ACP:` or `Agent:` prefix and every interior space; it is not a prefix, substring, fuzzy, or whitespace-normalized match, so a title containing two spaces does not match one containing a single space. A lookup with no match reports `No connection matching "<text>".` using the complete entered text, without its surrounding whitespace and with its original case and interior spacing.
 
 ### Parked remote sessions
 

@@ -58,9 +58,16 @@ describe('connections topic rows', () => {
       .toEqual(expect.arrayContaining([expect.objectContaining({ id: 'monitor-1' })]));
     expect(core).toMatchObject({ ownerName: 'First tab', orderingTimestamp: 400 });
     expect(data.rows.filter((row) => row.type === 'live' && row.kind === 'sqlite')).toEqual([
-      expect.objectContaining({ id: 'shared-db', ownerLabel: 'first', focusTarget: 'first', orderingTimestamp: 300 }),
-      expect.objectContaining({ id: 'orphan-db', ownerLabel: '', ownerName: 'Global', orderingTimestamp: 0 }),
+      expect.objectContaining({
+        id: 'shared-db', display: 'sqlite:shared-db', ownerName: 'global', ownerLabel: 'first',
+        focusTarget: 'first', orderingTimestamp: 300,
+      }),
+      expect.objectContaining({
+        id: 'orphan-db', display: 'sqlite:orphan-db', ownerName: 'global', ownerLabel: '',
+        orderingTimestamp: 0,
+      }),
     ]);
+    expect(data.rows.find((row) => row.type === 'live' && row.id === 'orphan-db')).not.toHaveProperty('focusTarget');
     expect(data.rows.find((row) => row.type === 'record' && row.id === 'agent-record'))
       .toMatchObject({ ownerName: 'Captured name', orderingTimestamp: 200 });
     expect(data.rows.filter((row) => row.type === 'live' && row.id === 'same-session-name')).toHaveLength(0);
@@ -85,5 +92,30 @@ describe('connections topic rows', () => {
       .toMatchObject({ window: { id: 'core-record', count: 20 } });
     expect(data.rows.find((row) => row.type === 'record' && row.id === 'agent-record')).not.toHaveProperty('window');
     expect(managers.acpRecords.window).toHaveBeenCalledWith('core-record', 20);
+  });
+
+  it('keeps the SQLite owner display global while focus follows strip order independently', () => {
+    const { managers, tabs } = fixture();
+    tabs[0]!.title = 'Renamed first';
+    tabs.reverse();
+
+    let data = composeConnectionsTopicData(managers, new Map());
+    expect(data.rows.filter((row) => row.type === 'live' && row.kind === 'sqlite')).toEqual([
+      expect.objectContaining({
+        id: 'shared-db', display: 'sqlite:shared-db', ownerName: 'global',
+        ownerLabel: 'second', focusTarget: 'second',
+      }),
+      expect.objectContaining({ id: 'orphan-db', ownerName: 'global', ownerLabel: '' }),
+    ]);
+    expect(data.rows.filter((row) => row.type === 'live' && row.kind === 'sqlite')).toHaveLength(2);
+
+    managers.database.openDbs = vi.fn(() => []) as unknown as typeof managers.database.openDbs;
+    data = composeConnectionsTopicData(managers, new Map());
+    const rows = data.rows.filter((row) => row.type === 'live' && row.kind === 'sqlite');
+    expect(rows).toEqual([
+      expect.objectContaining({ id: 'orphan-db', display: 'sqlite:orphan-db', ownerName: 'global', ownerLabel: '' }),
+      expect.objectContaining({ id: 'shared-db', display: 'sqlite:shared-db', ownerName: 'global', ownerLabel: '' }),
+    ]);
+    for (const row of rows) expect(row).not.toHaveProperty('focusTarget');
   });
 });

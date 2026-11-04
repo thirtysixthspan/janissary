@@ -57,7 +57,7 @@ function databaseRows(managers: Managers): ConnectionsTopicLiveRow[] {
     for (const tab of attributed) orderingTimestamp = Math.max(orderingTimestamp, tab.runtime?.lastActivity ?? 0);
     return {
       type: 'live', id: name, kind: 'sqlite', display: `sqlite:${name}`,
-      ownerLabel: focusTab?.label ?? '', ownerName: focusTab?.title ?? focusTab?.label ?? 'Global',
+      ownerLabel: focusTab?.label ?? '', ownerName: 'global',
       status: 'Open', orderingTimestamp,
       ...(focusTab && { focusTarget: focusTab.label }),
     };

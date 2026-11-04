@@ -19,6 +19,13 @@ function fixture(rows: unknown[] = []) {
   return { capabilities, topicAction, note, rejectRequest, openOrFocusTab, dockTab, topicData, originTab };
 }
 
+function recordRow(id: string, title: string, updatedAt: number) {
+  return {
+    type: 'record', id, kind: 'acp', title, model: 'model', ownerLabel: 'other',
+    ownerName: 'Other', startedAt: 1, updatedAt, status: 'Closed', orderingTimestamp: updatedAt,
+  };
+}
+
 describe('connections command', () => {
   it('routes list output through the topic action and note', () => {
     const f = fixture();
@@ -67,4 +74,77 @@ describe('connections command', () => {
     expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action: 'load', id: 'uuid' });
     expect(f.openOrFocusTab).toHaveBeenCalledWith('uuid', expect.any(Function));
   });
+
+  it.each(['connection', 'connections'] as const)(
+    'passes the complete multiword title through %s and opens the newest match',
+    (name) => {
+      const f = fixture([
+        recordRow('older', 'ACP: EXPLAIN THIS TEST', 100),
+        recordRow('newer', 'ACP: explain this test', 300),
+      ]);
+      const tabs = new ConnectionTabs();
+      runConnectionsCommand('  ACP: Explain This Test  ', name, tabs, f.capabilities);
+      expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action: 'load', id: 'newer' });
+      expect(f.openOrFocusTab).toHaveBeenCalledWith('newer', expect.any(Function));
+      expect(f.rejectRequest).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['connection', 'connections'] as const)(
+    'keeps live kind/id action identity and owner forwarding through %s',
+    (name) => {
+      const live = {
+        type: 'live', id: 'shared', kind: 'sqlite', display: 'sqlite:shared', ownerLabel: 'second',
+        ownerName: 'global', status: 'Open', orderingTimestamp: 1, focusTarget: 'second',
+      };
+      const f = fixture([live]);
+      const tabs = new ConnectionTabs();
+      runConnectionsCommand('sqlite:shared', name, tabs, f.capabilities);
+      expect(f.topicAction).toHaveBeenCalledWith({
+        topic: 'connections', action: 'open', kind: 'sqlite', id: 'shared', ownerLabel: 'second',
+      });
+      expect(f.openOrFocusTab).not.toHaveBeenCalled();
+      expect(f.rejectRequest).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['connection', 'connections'] as const)(
+    'rejects an exact full-text miss through %s without shortening the text',
+    (name) => {
+      const f = fixture([recordRow('spaced', 'ACP: explain  this test', 100)]);
+      const tabs = new ConnectionTabs();
+      const query = 'ACP: Explain   This Test';
+      expect(() => runConnectionsCommand(query, name, tabs, f.capabilities))
+        .toThrow(`No connection matching "${query}".`);
+      expect(f.openOrFocusTab).not.toHaveBeenCalled();
+    },
+  );
+
+  it('resolves the invoking tab ACP reference before a newer same-model record owned elsewhere', () => {
+    const other = { ...recordRow('other', 'ACP: other', 300), ownerLabel: 'elsewhere', status: 'Idle' };
+    const mine = { ...recordRow('mine', 'ACP: mine', 100), ownerLabel: 'owner', status: 'Idle' };
+    const f = fixture([other, mine]);
+    const tabs = new ConnectionTabs();
+    runConnectionsCommand('acp:model', 'connection', tabs, f.capabilities);
+    expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action: 'load', id: 'mine' });
+    expect(f.openOrFocusTab).toHaveBeenCalledWith('mine', expect.any(Function));
+  });
+
+  it.each(['connection', 'connections'] as const)(
+    'resolves an unattributed SQLite row through %s without inventing an owner',
+    (name) => {
+      const live = {
+        type: 'live', id: 'orphan', kind: 'sqlite', display: 'sqlite:orphan', ownerLabel: '',
+        ownerName: 'global', status: 'Open', orderingTimestamp: 0,
+      };
+      const f = fixture([live]);
+      const tabs = new ConnectionTabs();
+      runConnectionsCommand('sqlite:orphan', name, tabs, f.capabilities);
+      expect(f.topicAction).toHaveBeenCalledWith({
+        topic: 'connections', action: 'open', kind: 'sqlite', id: 'orphan', ownerLabel: '',
+      });
+      expect(f.openOrFocusTab).not.toHaveBeenCalled();
+      expect(f.rejectRequest).not.toHaveBeenCalled();
+    },
+  );
 });

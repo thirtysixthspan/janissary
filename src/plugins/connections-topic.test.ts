@@ -134,6 +134,54 @@ describe('connections topic actions', () => {
     expect(closeTarget).toHaveBeenCalledTimes(1);
   });
 
+  it('shows SQLite rows as global and validates their open and close against the current owner', () => {
+    const { managers, setActiveTab, closeTarget, windows } = fixture();
+    managers.database.listOpen = vi.fn(() => ['shared-db', 'orphan-db']);
+    managers.database.openDbs = vi.fn((label: string) => (label === 'owner' ? ['shared-db'] : []));
+
+    const sqlite = readConnectionsTopic(managers).rows.filter((row) => row.type === 'live' && row.kind === 'sqlite');
+    expect(sqlite).toEqual([
+      expect.objectContaining({
+        id: 'orphan-db', display: 'sqlite:orphan-db', ownerName: 'global', ownerLabel: '',
+      }),
+      expect.objectContaining({
+        id: 'shared-db', display: 'sqlite:shared-db', ownerName: 'global', ownerLabel: 'owner', focusTarget: 'owner',
+      }),
+    ]);
+    expect(sqlite.find((row) => row.id === 'orphan-db')).not.toHaveProperty('focusTarget');
+
+    runConnectionsTopicAction(managers, {
+      topic: 'connections', action: 'open', kind: 'sqlite', id: 'shared-db', ownerLabel: 'owner',
+    });
+    expect(setActiveTab).toHaveBeenLastCalledWith(0);
+    runConnectionsTopicAction(managers, {
+      topic: 'connections', action: 'open', kind: 'sqlite', id: 'shared-db', ownerLabel: 'global',
+    });
+    runConnectionsTopicAction(managers, {
+      topic: 'connections', action: 'open', kind: 'sqlite', id: 'orphan-db', ownerLabel: '',
+    });
+    expect(setActiveTab).toHaveBeenCalledTimes(1);
+    expect(closeTarget).not.toHaveBeenCalled();
+
+    runConnectionsTopicAction(managers, {
+      topic: 'connections', action: 'close', kind: 'sqlite', id: 'shared-db', ownerLabel: 'global',
+    });
+    expect(closeTarget).not.toHaveBeenCalled();
+    runConnectionsTopicAction(managers, {
+      topic: 'connections', action: 'close', kind: 'sqlite', id: 'shared-db', ownerLabel: 'owner',
+    });
+    runConnectionsTopicAction(managers, {
+      topic: 'connections', action: 'close', kind: 'sqlite', id: 'orphan-db', ownerLabel: '',
+    });
+    runConnectionsTopicAction(managers, {
+      topic: 'connections', action: 'closeCommand', kind: 'sqlite', id: 'orphan-db', label: 'invoking-tab',
+    });
+    expect(closeTarget).toHaveBeenNthCalledWith(1, 'sqlite', 'shared-db', 'owner');
+    expect(closeTarget).toHaveBeenNthCalledWith(2, 'sqlite', 'orphan-db', '');
+    expect(closeTarget).toHaveBeenNthCalledWith(3, 'sqlite', 'orphan-db', 'invoking-tab');
+    expect(windows).not.toHaveBeenCalled();
+  });
+
   it('runs command close without live-row validation for every connection kind', () => {
     const { managers, closeTarget } = fixture();
     for (const kind of ['sqlite', 'shell', 'acp', 'browser', 'ssh', 'terminal'] as const) {

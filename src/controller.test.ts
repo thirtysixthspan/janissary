@@ -53,6 +53,7 @@ afterEach(async () => {
 });
 
 const allText = (c: Controller) => c.view().flatMap((t) => t.bufferLines).map((l) => l.text).join('\n');
+const connectionPluginTabs = (c: Controller) => c.view().filter((t) => t.view === 'plugin' && t.plugin?.id === 'connections');
 
 describe('Controller rootDir', () => {
   it('preserves default-root semantics without recovering or pruning checkout history', async () => {
@@ -455,6 +456,130 @@ describe('Controller', () => {
     await vi.waitFor(() => expect(allText(c)).toContain('No open connections.'));
     c.dispatch('profile list');
     expect(allText(c)).toContain('No profiles.');
+  });
+
+  it('opens and focuses a full generated multiword ACP title through both command names', async () => {
+    const { c } = makeController();
+    const root = c.managers.tab.tabs[0]!;
+    const recordId = c.managers.acpRecords.begin({
+      kind: 'acp', model: 'provider/model', ownerLabel: root.label, ownerName: root.label,
+    });
+    expect(c.managers.acpRecords.prompt(recordId, 'explain  this test')).toBe(true);
+    expect(c.managers.acpRecords.answer(recordId, 'answer')).toBe(true);
+    expect(c.managers.acpRecords.close(recordId, 'Closed')).toBe(true);
+
+    c.dispatch('connection ACP: explain  this test');
+    await vi.waitFor(() => expect(connectionPluginTabs(c)).toHaveLength(1));
+    const opened = connectionPluginTabs(c)[0]!;
+    expect(opened.title).toBe('ACP: explain  this test');
+    expect(c.managers.tab.tabs.find((tab) => tab.plugin?.instanceKey === recordId)).toBeDefined();
+    expect(opened.plugin?.payload).toMatchObject({
+      kind: 'connection',
+      record: {
+        id: recordId,
+        title: 'ACP: explain  this test',
+        status: 'Closed',
+        window: {
+          totalBlocks: 1,
+          offset: 0,
+          hasOlder: false,
+          blocks: [expect.objectContaining({ prompt: 'explain  this test', answer: 'answer' })],
+        },
+      },
+    });
+
+    c.setActiveTab(0);
+    c.dispatch('connections ACP: explain  this test');
+    await vi.waitFor(() => expect(c.managers.tab.tabs[c.managers.tab.activeTab]?.plugin?.instanceKey).toBe(recordId));
+    expect(connectionPluginTabs(c)).toHaveLength(1);
+
+    c.setActiveTab(0);
+    c.dispatch('connection no such generated title exists');
+    await vi.waitFor(() => expect(allText(c)).toContain('No connection matching "no such generated title exists".'));
+    expect(c.managers.plugins.statusFor('connections')?.state).toBe('active');
+  });
+
+  it('shows SQLite rows as global and opens and closes them app-wide', async () => {
+    const scratch = mkdtempSync(path.join(tmpdir(), 'janus-connections-global-'));
+    initDbDir(scratch);
+    const { c } = makeController();
+    try {
+      seedTestTab(c.managers.tab, 'second');
+      seedTestTab(c.managers.tab, 'third');
+      c.setActiveTab(c.managers.tab.findIndex('second'));
+      c.dispatch('db sqlite create shared');
+      c.setActiveTab(c.managers.tab.findIndex('third'));
+      c.dispatch('db sqlite query shared "select 1"');
+      expect(isConnectionOpen('shared')).toBe(true);
+
+      const second = c.managers.tab.byLabel('second')!;
+      const third = c.managers.tab.byLabel('third')!;
+      const expectedActivity = Math.max(second.runtime?.lastActivity ?? 0, third.runtime?.lastActivity ?? 0);
+
+      c.setActiveTab(0);
+      c.dispatch('connections');
+      await vi.waitFor(() => expect(connectionPluginTabs(c)).toHaveLength(1));
+      const listLabel = connectionPluginTabs(c)[0]!.label;
+      const listRows = () => {
+        const payload = connectionPluginTabs(c)[0]?.plugin?.payload as { rows: Array<Record<string, unknown>> } | undefined;
+        return payload?.rows ?? [];
+      };
+      const sqliteRow = () => listRows().find(
+        (row) => row.type === 'live' && row.kind === 'sqlite' && row.id === 'shared',
+      );
+
+      await vi.waitFor(() => expect(sqliteRow()).toMatchObject({
+        display: 'sqlite:shared', ownerName: 'global', ownerLabel: 'second', focusTarget: 'second',
+      }));
+      expect(listRows().filter((row) => row.type === 'live' && row.kind === 'sqlite')).toHaveLength(1);
+      expect(sqliteRow()).toMatchObject({ orderingTimestamp: expectedActivity });
+
+      await c.pluginIntent(listLabel, 'open', { kind: 'sqlite', id: 'shared' });
+      expect(c.managers.tab.cur().label).toBe('second');
+
+      c.setActiveTab(0);
+      c.dispatch('connection sqlite:shared');
+      await vi.waitFor(() => expect(c.managers.tab.cur().label).toBe('second'));
+
+      c.setActiveTab(0);
+      c.dispatch('close second');
+      await vi.waitFor(() => expect(c.managers.tab.byLabel('second')).toBeUndefined());
+      c.setActiveTab(0);
+      c.dispatch('close third');
+      await vi.waitFor(() => expect(c.managers.tab.byLabel('third')).toBeUndefined());
+      expect(isConnectionOpen('shared')).toBe(true);
+
+      await vi.waitFor(() => expect(sqliteRow()).toMatchObject({ ownerName: 'global', ownerLabel: '' }));
+      expect(sqliteRow()).not.toHaveProperty('focusTarget');
+      const activeAfterCloses = c.managers.tab.activeTab;
+      await c.pluginIntent(listLabel, 'open', { kind: 'sqlite', id: 'shared' });
+      expect(c.managers.tab.activeTab).toBe(activeAfterCloses);
+
+      await c.pluginIntent(listLabel, 'close', { kind: 'sqlite', id: 'shared' });
+      await vi.waitFor(() => expect(isConnectionOpen('shared')).toBe(false));
+      expect(c.managers.notifications.all.some(
+        (entry) => entry.event === 'connection-closed' && entry.message === 'Closed connection sqlite:shared.',
+      )).toBe(true);
+      expect(c.managers.notifications.all.some(
+        (entry) => entry.event === 'connection-close-failed' && entry.message.includes('sqlite:shared'),
+      )).toBe(false);
+
+      c.setActiveTab(0);
+      c.dispatch('db sqlite query shared "select 1"');
+      seedTestTab(c.managers.tab, 'fourth');
+      c.dispatch('connections close sqlite:shared');
+      await vi.waitFor(() => expect(isConnectionOpen('shared')).toBe(false));
+      expect(c.managers.notifications.all.some(
+        (entry) => entry.event === 'connection-closed'
+          && entry.message === 'Closed connection sqlite:shared.' && entry.tabLabel === 'fourth',
+      )).toBe(true);
+
+      for (const tab of c.managers.tab.tabs) expect(c.managers.database.openDbs(tab.label)).toEqual([]);
+      for (const tab of c.view()) expect(tab.connections.some((row) => row.text === 'sqlite:shared')).toBe(false);
+    } finally {
+      closeAllConnections();
+      rmSync(scratch, { recursive: true, force: true });
+    }
   });
 
   const flush = () => new Promise((r) => setTimeout(r, 0));
