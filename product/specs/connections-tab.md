@@ -24,7 +24,7 @@ Each prompt block holds the prompt, then its activity entries in order, each lab
 
 The connections popup in shell, editor, and harness tabs opens record tabs. A row carrying a durable record id opens or focuses that record's connection tab. A row carrying the popup-owning tab's own live ACP reference resolves to that tab's current record and opens or focuses its connection tab. Rows are operable by pointer and by Enter or Space.
 
-A running agent run started from the caller appears in the caller's popup as an ACP-kind row titled `Agent: <task filename>`. It carries the run's durable record id and no ACP reference, so it opens the run's record tab and has no transcript snapshot button. It leaves the popup when the run ends.
+A running agent run started from the caller appears in the caller's popup as an ACP-kind row titled `Agent: <task filename>` as soon as the run starts, its title following the resolved task path. It carries the run's durable record id and no ACP reference, so it opens the run's record tab and has no transcript snapshot button. It leaves the popup as soon as the run ends.
 
 A row that already offers a transcript snapshot keeps that separate button. Pressing the snapshot button opens the point-in-time transcript and never opens the record tab. Monitor and editor-persona rows stay snapshot-only and do not open a record tab. Surfaces that render no snapshot button today gain none.
 

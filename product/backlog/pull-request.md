@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the caller popup's live agent row when a run starts, instead of only on the next unrelated state broadcast.
-
-Existing Issue: `ConnectionManager.connectionsFor` now projects an `Agent: <task>` row for a caller's live run, but starting a headless agent run emits no `state: dirty`, so a shell's connections popup is not rebuilt and the row does not appear until some unrelated state change. Severity: 5/10
-
-Existing Risk: 5/10 - A user who starts `agent execute task.md` and hovers the connections button sees no row for the running agent, so the subplan's central popup integration is missing in the common headless case and the caller cannot open the run's connection tab from that popup.
-
-Proposal Risk: 2/10 - A single state broadcast on create and finish refreshes every client, but wiring state into every run status or activity update would flood clients with full state snapshots.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "broadcast state when an agent run starts and finishes so the caller popup lists it". In `src/agent/manager.ts`, emit `messageBus.emit('state', { type: 'dirty' })` from `AgentRunManager.create` after `this.runs.set(run.id, run)` and from `AgentRunManager.finish` after the `finally` block removes a run with no monitors (the `attachMonitor` path already emits one). The title can change when `launchAgent` in `src/agent/launch.ts` calls `run.setSnapshot(snapshot)` after resolution, which publishes no view and no state, so emit once more after that call rather than from `AgentRun.publish`, whose activity path is too chatty. `src/connection/manager.ts` (`activeAgentRows`) and its tests stay as they are: they already assert the projection itself. Add a test in `src/agent/manager.test.ts` that subscribes to `messageBus.on('state', 'dirty', ...)`, creates a run, asserts a broadcast and that `connectionsFor(run.caller.label)` contains the `Agent: ...` row, then finishes the run and asserts the row is gone. Keep `src/plugins/host-state.test.ts` and `src/tab/view.test.ts` green; they read the projection, not the trigger. Verify by running `agent execute <task>` in a shell, hovering the connections button while it runs, and confirming the row appears immediately and disappears when the run ends.
-
-
 * Extend the shell plugin's published connection-row contract with the new durable record id so the popup's record target is validated and typed, not smuggled through an unchecked cast.
 
 Existing Issue: `ConnectionView` gained `recordId` and the shell popup now depends on it, but the shell plugin's mirrored `ShellConnectionRow` in `src/plugins/shell/shared.ts` still declares only `text`, `kind`, and `acpRef`: `isConnectionRow` validates no `recordId`, the contract test in `src/plugins/shell/shared.test.ts` no longer covers every `ConnectionView`, and `src/plugins/shell/activate.ts` passes the field through with an `as ShellPayload['connections']` cast. Severity: 4/10

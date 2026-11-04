@@ -54,6 +54,7 @@ export class AgentRunManager {
     run.record = new AgentRecordFeed(this.managers.acpRecords, metadata, run.id);
     this.runs.set(run.id, run);
     this.knownRunIds.add(run.id);
+    messageBus.emit('state', { type: 'dirty' });
     run.subscribe((view) => {
       for (const label of run.monitorIds) this.pendingViews.set(label, view);
       if (this.flushScheduled) return;
@@ -93,8 +94,11 @@ export class AgentRunManager {
 
   async finish(runId: string, outcome: AgentOutcome): Promise<void> {
     const run = this.requireRun(runId);
+    const starting = run.outcome === undefined;
     try {
-      await run.finish(outcome);
+      const finishing = run.finish(outcome);
+      if (starting) messageBus.emit('state', { type: 'dirty' });
+      await finishing;
     } finally {
       if (this.runs.get(runId) === run && run.monitorIds.size === 0) this.runs.delete(runId);
     }

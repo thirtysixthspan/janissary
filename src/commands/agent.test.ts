@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { AgentResult } from '../agent/execute.js';
 import type { AgentSnapshot } from '../agent/types.js';
 import type { Managers } from '../managers.js';
+import { messageBus } from '../bus.js';
 import { createController } from '../controller.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 import type { CommandInvocationContext } from './types.js';
@@ -220,6 +221,43 @@ describe('agent command', () => {
     expect(managers.workspace.create).toHaveBeenCalledOnce();
     expect(vi.mocked(managers.workspace.create).mock.calls[0]?.[2]).toEqual({ depth: 10, allBranches: true });
     expect(workspaceRelease).toHaveBeenCalledOnce();
+  });
+
+  it('broadcasts its caller row under the resolved remote task title while the run is live', async () => {
+    const address = parseRemoteAddress('devbox');
+    if ('error' in address) throw new Error(address.error);
+    const channel = { attached: true, resolveAgentSnapshot: vi.fn(async () => ({
+      taskPath: '/remote/resolved/other.md', taskText: 'Remote task', skills: [], grants: [],
+    })) } as unknown as RemoteChannel;
+    vi.spyOn(managers.remote, 'addressOf').mockReturnValue(address);
+    vi.spyOn(managers.remote, 'get').mockReturnValue(channel);
+    vi.spyOn(managers.remote, 'workspaceOf').mockReturnValue('/remote/workspace');
+    vi.spyOn(managers.remote, 'acquireAgentLease').mockReturnValue(async () => {});
+    const agentRows: string[][] = [];
+    const subscription = messageBus.on('state', 'dirty', () => {
+      agentRows.push(
+        managers.connection.connectionsFor('janus')
+          .filter((row) => row.text.startsWith('Agent: '))
+          .map((row) => row.text),
+      );
+    });
+    let runningRows: string[] = [];
+    execute.mockImplementation(async () => {
+      runningRows = managers.connection.connectionsFor('janus')
+        .filter((row) => row.text.startsWith('Agent: '))
+        .map((row) => row.text);
+      return { status: 'completed', response: 'Finished.', cleanupWarnings: [] };
+    });
+    try {
+      await expect(run('agent on devbox execute task.md')).resolves.toMatchObject({ status: 'completed' });
+    } finally {
+      subscription.unsubscribe();
+    }
+
+    expect(agentRows[0]).toEqual(['Agent: task.md']);
+    expect(agentRows).toContainEqual(['Agent: other.md']);
+    expect(agentRows.at(-1)).toEqual([]);
+    expect(runningRows).toEqual(['Agent: other.md']);
   });
 
   it('cancels provisioning and releases its workspace before a terminated result settles', async () => {

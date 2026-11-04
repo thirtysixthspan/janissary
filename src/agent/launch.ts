@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { messageBus } from '../bus.js';
 import type { CommandInvocationContext, CommandManagers } from '../commands/types.js';
 import { resolveAgentSnapshot } from './task-resolution.js';
 import { janissaryRoot } from '../janissary-root.js';
@@ -146,6 +147,7 @@ export async function launchAgent(
     if (!run) throw new Error('Agent run was not created.');
     if (parent) snapshot = applyNestedAgentPolicy(snapshot, parent.snapshot);
     run.setSnapshot(snapshot);
+    messageBus.emit('state', { type: 'dirty' });
     const activeRun = run;
     const monitorFailure = await openRunMonitor(activeRun, launch, label, selectedGroup, managers);
     if (monitorFailure) return monitorFailure;

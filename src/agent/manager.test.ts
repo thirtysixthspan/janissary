@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { messageBus } from '../bus.js';
 import { createControllerTestProject } from '../controller/test-project.js';
 import { tabRuntime } from '../tab/runtime.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
@@ -82,6 +83,53 @@ describe('AgentRunManager', () => {
     expect(manager['managers'].acpRecords.window(run.recordId!)?.status).toBe('Completed');
     expect(cleanup).toHaveBeenCalledOnce();
     expect(manager.runs).toHaveProperty('size', 0);
+  });
+
+  it('broadcasts a caller-owned run when it starts and again when it finishes', async () => {
+    const { manager, captured, controller } = setup();
+    const rowsAtBroadcast: string[][] = [];
+    const subscription = messageBus.on('state', 'dirty', () => {
+      rowsAtBroadcast.push(
+        controller.managers.connection.connectionsFor(captured.label)
+          .filter((row) => row.text.startsWith('Agent: '))
+          .map((row) => row.text),
+      );
+    });
+    try {
+      const run = manager.create({ caller: captured, snapshot });
+      expect(rowsAtBroadcast).toEqual([['Agent: task.md']]);
+      expect(controller.managers.connection.connectionsFor(captured.label)).toContainEqual({
+        text: 'Agent: task.md', kind: 'acp', recordId: run.recordId,
+      });
+
+      await manager.finish(run.id, 'completed');
+      expect(rowsAtBroadcast).toEqual([['Agent: task.md'], []]);
+    } finally {
+      subscription.unsubscribe();
+    }
+  });
+
+  it('broadcasts the caller row gone when a monitored run finishes and stays retained for the monitor', async () => {
+    const { manager, captured, controller } = setup();
+    const rowsAtBroadcast: string[][] = [];
+    const subscription = messageBus.on('state', 'dirty', () => {
+      rowsAtBroadcast.push(
+        controller.managers.connection.connectionsFor(captured.label)
+          .filter((row) => row.text.startsWith('Agent: '))
+          .map((row) => row.text),
+      );
+    });
+    try {
+      const run = manager.create({ caller: captured, snapshot });
+      manager.attachMonitor(run.id, 'monitor-1');
+
+      await manager.finish(run.id, 'completed');
+
+      expect(manager.runs.has(run.id)).toBe(true);
+      expect(rowsAtBroadcast.at(-1)).toEqual([]);
+    } finally {
+      subscription.unsubscribe();
+    }
   });
 
   it.each(['completed', 'failed', 'terminated'] as const)('closes only run-created tabs after %s', async (outcome) => {
