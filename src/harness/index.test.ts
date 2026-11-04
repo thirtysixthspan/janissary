@@ -7,6 +7,7 @@ import { HARNESS_NAMES, buildHarnessCommand } from './index.js';
 import { parseHarnessCommand } from './command-parse.js';
 
 const CODEX_NO_DAEMON_PROBE = '$(codex --help 2>/dev/null | grep -q -e --no-daemon && echo --no-daemon)';
+const OPENCODE_STANDALONE_PROBE = '$(opencode --help 2>/dev/null | grep -q -e --standalone && echo --standalone)';
 
 describe('parseHarnessCommand', () => {
   it('accepts valid harness names', () => {
@@ -279,15 +280,21 @@ describe('parseHarnessCommand', () => {
 
 describe('buildHarnessCommand', () => {
   it('returns just the binary when no model is given', () => {
-    expect(buildHarnessCommand('opencode')).toBe('opencode');
+    expect(buildHarnessCommand('claude')).toBe('claude');
+  });
+
+  it('probes opencode for --standalone even with no model or effort', () => {
+    expect(buildHarnessCommand('opencode')).toBe(`opencode ${OPENCODE_STANDALONE_PROBE}`);
   });
 
   it('appends a quoted --model flag when a model is given', () => {
-    expect(buildHarnessCommand('opencode', 'opencode-go/deepseek-v4-pro')).toBe("opencode --model 'opencode-go/deepseek-v4-pro'");
+    expect(buildHarnessCommand('opencode', 'opencode-go/deepseek-v4-pro')).toBe(
+      `opencode ${OPENCODE_STANDALONE_PROBE} --model 'opencode-go/deepseek-v4-pro'`,
+    );
   });
 
   it('safely quotes a model value containing a single quote', () => {
-    expect(buildHarnessCommand('opencode', "a'b")).toBe(String.raw`opencode --model 'a'\''b'`);
+    expect(buildHarnessCommand('claude', "a'b")).toBe(String.raw`claude --model 'a'\''b'`);
   });
 
   it('appends claude\'s --effort flag when given, with no model', () => {
@@ -310,21 +317,42 @@ describe('buildHarnessCommand', () => {
 
   it('drops effort for opencode, which has no effort flag, keeping the model', () => {
     expect(buildHarnessCommand('opencode', 'opencode-go/deepseek-v4-pro', 'high')).toBe(
-      "opencode --model 'opencode-go/deepseek-v4-pro'",
+      `opencode ${OPENCODE_STANDALONE_PROBE} --model 'opencode-go/deepseek-v4-pro'`,
     );
   });
 });
 
-// Runs the built codex command through real shells with a fake `codex` first on PATH: `--help`
-// prints HELP_TEXT, anything else echoes its arguments one per line, so the output is exactly the
-// argv the real launch would receive.
-describe('buildHarnessCommand codex --no-daemon probe', () => {
+// Each probed harness: the flag its probe looks for, help text from a release with and without it,
+// and the arguments a `buildHarnessCommand(name, model, 'high')` launch passes after the flag.
+const PROBES = [
+  {
+    name: 'codex',
+    model: 'gpt-5',
+    flag: '--no-daemon',
+    withFlag: 'Options:\n      --no-daemon\n          Run without the shared background server',
+    withoutFlag: 'Options:\n      --no-alt-screen\n          Disable alternate screen mode',
+    rest: ['--model', 'gpt-5', '-c', 'model_reasoning_effort=high'],
+  },
+  {
+    name: 'opencode',
+    model: 'opencode-go/deepseek-v4-pro',
+    flag: '--standalone',
+    withFlag: 'FLAGS\n  --standalone            Run with a private server instead of the background service',
+    withoutFlag: 'Options:\n  --port      port to listen on',
+    rest: ['--model', 'opencode-go/deepseek-v4-pro'],
+  },
+];
+
+// Runs each built command through real shells with a fake binary of the same name first on PATH:
+// `--help` prints HELP_TEXT, anything else echoes its arguments one per line, so the output is
+// exactly the argv the real launch would receive.
+describe.each(PROBES)('buildHarnessCommand $name $flag probe', ({ name, model, flag, withFlag, withoutFlag, rest }) => {
   const shells = ['/bin/sh', '/bin/bash', '/bin/zsh'].filter((shell) => existsSync(shell));
   let binDir: string;
 
   beforeAll(() => {
-    binDir = mkdtempSync(path.join(tmpdir(), 'fake-codex-'));
-    const fake = path.join(binDir, 'codex');
+    binDir = mkdtempSync(path.join(tmpdir(), `fake-${name}-`));
+    const fake = path.join(binDir, name);
     writeFileSync(fake, '#!/bin/sh\nif [ "$1" = "--help" ]; then printf \'%s\\n\' "$HELP_TEXT"; exit 0; fi\nprintf \'%s\\n\' "$@"\n');
     chmodSync(fake, 0o755);
   });
@@ -332,20 +360,18 @@ describe('buildHarnessCommand codex --no-daemon probe', () => {
   afterAll(() => { rmSync(binDir, { recursive: true, force: true }); });
 
   function launchArgs(shell: string, helpText: string): string[] {
-    const output = execFileSync(shell, ['-c', buildHarnessCommand('codex', 'gpt-5', 'high')], {
+    const output = execFileSync(shell, ['-c', buildHarnessCommand(name, model, 'high')], {
       env: { PATH: `${binDir}:/usr/bin:/bin`, HELP_TEXT: helpText },
       encoding: 'utf8',
     });
     return output.split('\n').slice(0, -1);
   }
 
-  it.each(shells)('passes --no-daemon when the installed codex supports it (%s)', (shell) => {
-    const help = 'Options:\n      --no-daemon\n          Run without the shared background server';
-    expect(launchArgs(shell, help)).toEqual(['--no-daemon', '--model', 'gpt-5', '-c', 'model_reasoning_effort=high']);
+  it.each(shells)(`passes ${flag} when the installed ${name} supports it (%s)`, (shell) => {
+    expect(launchArgs(shell, withFlag)).toEqual([flag, ...rest]);
   });
 
-  it.each(shells)('adds no argument for an older codex without the flag (%s)', (shell) => {
-    const help = 'Options:\n      --no-alt-screen\n          Disable alternate screen mode';
-    expect(launchArgs(shell, help)).toEqual(['--model', 'gpt-5', '-c', 'model_reasoning_effort=high']);
+  it.each(shells)(`adds no argument for an older ${name} without the flag (%s)`, (shell) => {
+    expect(launchArgs(shell, withoutFlag)).toEqual(rest);
   });
 });

@@ -31,12 +31,15 @@ function effortArg(name: string, effort: string): string | undefined {
 // setuid, which Seatbelt refuses to execute — and the hand-off would be worse if it worked: a
 // workspaced session would run inside a server another, unconfined codex started, with that
 // process's environment and credentials instead of its own tab's. `--no-daemon` keeps each tab's
-// session in its own process. It is probed rather than passed outright because older codex releases
-// reject the unknown flag and exit; the command runs through the user's shell, so the substitution
-// asks the same binary the launch resolves, on whichever host the launch runs, and expands to
-// nothing when the flag is absent.
+// session in its own process. opencode (2.x) likewise attaches its TUI to a shared background
+// service by default, with the same escape from the workspace and from the tab's process group;
+// `--standalone` gives each tab its own private server instead. Both flags are probed rather than
+// passed outright because older releases reject the unknown flag and exit; the command runs through
+// the user's shell, so the substitution asks the same binary the launch resolves, on whichever host
+// the launch runs, and expands to nothing when the flag is absent.
 const LAUNCH_ARGS: Record<string, string> = {
   codex: '$(codex --help 2>/dev/null | grep -q -e --no-daemon && echo --no-daemon)',
+  opencode: '$(opencode --help 2>/dev/null | grep -q -e --standalone && echo --standalone)',
 };
 
 // Build the shell command string that launches a harness binary, optionally with a model and/or an
