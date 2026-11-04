@@ -174,6 +174,43 @@ describe('connections topic actions', () => {
     expect(windows.mock.calls.filter(([id]) => id === 'empty-id').every(([, count]) => count === ACP_RECORD_WINDOW_SIZE)).toBe(true);
   });
 
+  it('refuses loadOlder for a short record whose window already holds every block', () => {
+    const { managers, tabs, recordRows, windows } = fixture();
+    const blocks = Array.from({ length: 5 }, (_, index) => ({
+      prompt: `Prompt ${index}`, startedAt: index, entries: [], answer: `Answer ${index}`,
+    }));
+    const short: AcpRecord = {
+      schemaVersion: 1, id: 'short-id',
+      source: { kind: 'acp', model: 'm', ownerLabel: 'owner', ownerName: 'Owner' },
+      title: 'Short', startedAt: 1, updatedAt: 3, blocks,
+    };
+    recordRows.push({
+      id: 'short-id', kind: 'acp', title: 'Short', model: 'm', ownerLabel: 'owner', ownerName: 'Owner',
+      startedAt: 1, updatedAt: 3, status: 'Idle',
+    });
+    tabs.push({
+      label: 'short-tab', title: 'Short record', dotColor: '', number: 5, log: [], view: 'plugin',
+      plugin: { id: 'connections', instanceKey: 'short-id', schemaVersion: 1, payload: {}, fileRefs: [], sourceLabel: 'owner' },
+      runtime: { busy: false, context: [], queue: [] },
+    });
+    const original = windows.getMockImplementation()!;
+    windows.mockImplementation((id: string, count = ACP_RECORD_WINDOW_SIZE) => id === 'short-id'
+      ? recordWindow(short, count)
+      : original(id, count));
+    const row = () => readConnectionsTopic(managers).rows
+      .find((candidate) => candidate.type === 'record' && candidate.id === 'short-id');
+
+    runConnectionsTopicAction(managers, { topic: 'connections', action: 'load', id: 'short-id' });
+    expect(row()).toMatchObject({ window: { blocks, totalBlocks: 5, offset: 0, hasOlder: false } });
+
+    runConnectionsTopicAction(managers, { topic: 'connections', action: 'loadOlder', id: 'short-id' });
+    expect(row()).toMatchObject({ window: { blocks, totalBlocks: 5, offset: 0, hasOlder: false } });
+
+    runConnectionsTopicAction(managers, { topic: 'connections', action: 'loadOlder', id: 'short-id' });
+    expect(row()).toMatchObject({ window: { blocks, totalBlocks: 5, offset: 0, hasOlder: false } });
+    expect(windows.mock.calls.filter(([id]) => id === 'short-id').every(([, count]) => count === ACP_RECORD_WINDOW_SIZE)).toBe(true);
+  });
+
   it('releases a loaded window when its record tab closes and reloads the newest window on reopen', () => {
     const { managers, tabs, totalBlocks } = fixture();
     const recordTab = tabs.find((tab) => tab.plugin?.instanceKey === 'core-id')!;
