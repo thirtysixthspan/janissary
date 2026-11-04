@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Plan fidelity: record the commits after 7e42ec0b in the 07 verification ledger.
-
-Existing Issue: The corrected 07 ledger names later commits only through 7e42ec0b, while 2f8782d4 changed the web history hook and its test plus the Connections guide and connections-tab spec, 5f226510 changed the guide and spec, and 1a6ee959 changed the connections topic action and its test, so the current head still has later client and server production changes whose coverage the ledger never names. Severity: 4/10
-
-Existing Risk: 4/10 - A reviewer reads the ledger as the complete later-commit accounting for the evidence it scopes to dc491bd5 and misses that the current head's web hook and topic action are covered only by their focused tests, which is the same staleness the correction was written to remove.
-
-Proposal Risk: 2/10 - The ledger will name every post-dc491bd5 source, test, and documentation change and state the historical evidence scope accurately, but the build, docs, and suite results remain historical unless they are rerun.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "name every later commit in the 07 verification ledger". In `product/plans/complete/connections-tabs-07-specs-docs-integration.md`, extend the "Verification resources and evidence ledger" paragraph and the "Implementation SHA and help/keys repair", "Documentation seam", "Docs build", and "Production lazy graph" rows to name `2f8782d4` (the `web/src/plugins/connections/useConnectionHistoryScroll.ts` and `.test.tsx` change plus the Connections guide and connections-tab spec), `5f226510` (the guide and spec wording), and `1a6ee959` (the `src/plugins/connections-topic-actions.ts` and `src/plugins/connections-topic.test.ts` change); state that the later client hook change is covered by its focused hook test and the later server change by the topic test, and that the dc491bd5 build, docs, and suite evidence remains historical with no later rerun. Keep every manual-scenario result, the M7 blocked row, the source-report caveat, and the no-full-pass statement unchanged; do not rerun builds or suites for this correction; do not change production, test, spec, or user-documentation files.
-
-
 * Plan fidelity: align the canonical plan's record-tab Terminate presentation with the delivered hide-at-terminal UI.
 
 Existing Issue: `product/plans/complete/connections-tabs.md` decision 22 still says the record-tab Terminate "is disabled once cleanup begins", while `web/src/plugins/connections/ConnectionTab.tsx` renders the control only while the run is `Running`, disables it on the click, and removes it when the record reports `Completed`, `Failed`, or `Terminated`, and the current spec and user guide describe that hide-at-terminal behavior plus the monitor's separate visible disabled control. Severity: 3/10
