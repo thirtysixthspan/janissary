@@ -1,8 +1,8 @@
 # Update an Open Pull Request
 
-Your job: take a pull request that is **already open** and has usually been built, reviewed, tested, and revised several times, check out its head branch, and read what its code does now. Then bring everything that describes the pull request back in line with the code: its description, its plan, the product specs, and the applicable files under `help/`. The fix plans that `work-pull-request-issue.md` added along the way are folded into the pull request's own plan and removed, so the pull request ends with one plan. Anything still in the branch's backlog is cleared. The file edits are committed and pushed to the pull request's own head branch, the description is rewritten, and the pull request is **left open**.
+Your job: take a pull request that is **already open** and has usually been built, reviewed, tested, and revised several times, check out its head branch, and clear anything blocking its merge. Merge conflicts with `master` go to [`resolve-conflicts.md`](../workspace/resolve-conflicts.md) and a failing CI build goes to [`fix-build.md`](../workspace/fix-build.md), each in a fresh subagent. Then read what its code does now, and bring everything that describes the pull request back in line with the code: its description, its plan, the product specs, and the applicable files under `help/`. The fix plans that `work-pull-request-issue.md` added along the way are folded into the pull request's own plan and removed, so the pull request ends with one plan. Anything still in the branch's backlog is cleared. The file edits are committed and pushed to the pull request's own head branch, the description is rewritten, and the pull request is **left open**.
 
-This task **describes**. The code on the head branch is the ground truth: when the text and the code disagree, the text changes and the code never does. The task edits no source, test, or config file, and so it runs no test suite, no lint, and no typecheck. It installs dependencies while preparing the workspace, and nothing else it does consumes them.
+This task **describes**. The code on the head branch is the ground truth: when the text and the code disagree, the text changes and the code never does. The task edits no source, test, or config file, and so it runs no test suite, no lint, and no typecheck. It installs dependencies while preparing the workspace, and nothing else it does consumes them. The one exception is Step 2. A delegated `resolve-conflicts.md` or `fix-build.md` changes code, runs checks, and pushes under its own task's rules, and those repairs are the only code changes a run makes.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
@@ -22,19 +22,19 @@ This task **describes**. The code on the head branch is the ground truth: when t
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Check out the pull request's head branch. Run Steps 2 and 3 of `ai/tasks/workspace/prepare-workspace.md` on it. Run read-only `git` and `gh` commands. Edit the pull request's own plan, and delete with `git rm` the fix plans the diff adds to `./product/plans/complete/`. Edit or create files in `./product/specs/`. Edit the applicable files in `help/`. Restore `./product/backlog/pull-request.md` to its skeleton. Commit and push those files to the pull request's own head branch. Rewrite the pull request's description with `gh pr edit --body-file`, as Step 8 describes.
+Read any file in the repo. Check out the pull request's head branch. Run Steps 2 and 3 of `ai/tasks/workspace/prepare-workspace.md` on it. Run read-only `git` and `gh` commands. Read the pull request's merge status and CI checks with `pr-resolve-remote`, `pr-check-mergeable`, and `pr-wait-checks`. Delegate `ai/tasks/workspace/resolve-conflicts.md` and `ai/tasks/workspace/fix-build.md` to fresh subagents as Step 2 describes. Edit the pull request's own plan, and delete with `git rm` the fix plans the diff adds to `./product/plans/complete/`. Edit or create files in `./product/specs/`. Edit the applicable files in `help/`. Restore `./product/backlog/pull-request.md` to its skeleton. Commit and push those files to the pull request's own head branch. Rewrite the pull request's description with `gh pr edit --body-file`, as Step 9 describes.
 
 ### Forbidden — no exceptions
 
 1. **Merging or closing the pull request, opening a replacement, or pushing anywhere but its head branch.** Never run `gh pr merge` and never execute `ai/tasks/workspace/merge-change-to-master.md`. Merging is the human's decision.
 2. **Working a pull request that is not `OPEN`, or an ambiguous target.** Report and stop; never substitute another pull request or branch.
-3. **Editing any source, test, or config file, or any file outside the Allowed list.** The code is what the text is measured against. Changing it would make the run a fix, and nothing here verifies a fix. `documentation/`, `README.md`, `AGENTS.md`, and `ai/guidelines/` are outside the list too: user documentation belongs to `update-documentation.md`.
+3. **Editing any source, test, or config file, or any file outside the Allowed list.** The code is what the text is measured against. Changing it would make the run a fix, and nothing here verifies a fix. The repairs Step 2 delegates are the only exception: each follows its own task's scope rules and proves its own build. `documentation/`, `README.md`, `AGENTS.md`, and `ai/guidelines/` are outside the list too: user documentation belongs to `update-documentation.md`.
 4. **Deleting a plan that exists on `master`, a plan outside `./product/plans/complete/`, or `./product/backlog/pull-request.md`.** Only the fix plans this pull request adds are removed. The backlog file belongs on `master` with its leading comment and heading, and the branch's copy stays.
 5. **Editing the pull request's title, or its Additional test cases section.** The title has to match the commit subject under this repo's Conventional Commits rules, so changing one alone breaks the pair. The Additional test cases section belongs to [`test-pull-request.md`](test-pull-request.md), which dates it to the commit it tested.
-6. **Posting to GitHub.** No `gh pr comment`, no `gh pr review`, no inline annotations. The description edit in Step 8 is the only write to GitHub.
-7. **Running the project's build, lint, test, or quality tooling, or starting the app.** No `npm run lint`, no `npm run typecheck`, no test run, no `npm run check`, no `$janissary/scripts/run.mjs check-diff`, no `pr-check-gate`, and no start task. This run changes no code, and every example it writes comes from reading the code.
+6. **Posting to GitHub.** No `gh pr comment`, no `gh pr review`, no inline annotations. The description edit in Step 9 is the only write to GitHub this task makes itself.
+7. **Running the project's build, lint, test, or quality tooling, or starting the app.** No `npm run lint`, no `npm run typecheck`, no test run, no `npm run check`, no `$janissary/scripts/run.mjs check-diff`, no `pr-check-gate`, and no start task. This run changes no code, and every example it writes comes from reading the code. `pr-wait-checks` only reads GitHub's checks and runs nothing locally. The subagents Step 2 delegates run their own tasks' gates.
 8. **Recording a finding in any backlog.** Code that looks wrong is described as it is and listed in the report's `Divergences` line for a human to judge.
-9. **Force-pushing,** or amending, squashing, or otherwise rewriting commits already on the branch.
+9. **Force-pushing,** or amending, squashing, or otherwise rewriting commits already on the branch. The only rewrite a run makes is the rebase a delegated `resolve-conflicts.md` pushes through `pr-rebase`'s `--force-with-lease`.
 
 ---
 
@@ -50,17 +50,35 @@ State the pull request you are updating and how you identified it, in one senten
 
 ## Step 1 — Check out and prepare
 
-1. Confirm the working tree is clean with `git status`. The commit in Step 7 stages everything, so a stray file present now would ride along. If the tree is not clean, stop and report what is there.
+1. Confirm the working tree is clean with `git status`. The commit in Step 8 stages everything, so a stray file present now would ride along. If the tree is not clean, stop and report what is there.
 2. Run `gh pr checkout <number>`. Do not create a new branch.
 3. Run `git pull --rebase` to bring the branch up to date through the upstream `gh pr checkout` configured.
 4. Confirm `git branch --show-current` is the head branch recorded in Step 0. If the checkout or pull cannot complete, report the error and stop.
 5. Execute only Steps 2 and 3 of `ai/tasks/workspace/prepare-workspace.md`, the supply-chain audit, the install, and the native rebuilds, with its gate verdicts as written: only an audit exit of `0` permits the install. Do not execute its Step 1, which would switch back to `master`.
 
-An install that rewrites `package-lock.json` needs no handling here. Step 7 reverts every change outside the Allowed list before it commits.
+An install that rewrites `package-lock.json` needs no handling here. Step 8 reverts every change outside the Allowed list before it commits.
 
 ---
 
-## Step 2 — Read the pull request as it stands
+## Step 2 — Clear merge blockers
+
+The description has to describe the code that will merge. So before reading anything, make sure the pull request can merge: no conflicts with `master`, and no failing CI build. Each repair goes to a fresh subagent. Run them one at a time and never concurrently, because they share this checkout. Announce each delegation and its result as the "Make delegation visible" rule requires. A subagent's commit stages everything in the tree, so start each delegation from a clean one: when `git status --porcelain` lists anything, revert it with `git checkout -- <file>`, such as a `package-lock.json` the install rewrote, or delete an untracked stray.
+
+1. Run `$janissary/scripts/run.mjs pr-resolve-remote`. It prints one line, `OWNER_REPO BRANCH GH_URL`. Substitute the literal owner/repo and branch into the commands below.
+2. **Merge conflicts.** Run `$janissary/scripts/run.mjs pr-check-mergeable <branch> <owner/repo>`.
+   - `MERGEABLE` → go to item 3.
+   - `UNKNOWN` → re-run it once. If it is still `UNKNOWN`, treat it as `CONFLICTING`.
+   - `CONFLICTING` → delegate `ai/tasks/workspace/resolve-conflicts.md` to a fresh subagent with the recorded pull request number. Preserve every rule of that task: it rebases through `pr-rebase`, checks the plan's goal survived, proves the build with `pr-check-gate`, pushes, and leaves the pull request open. When it reports conflicts unresolved after 5 attempts, a red build, or any other stop, the blocker stands.
+3. **CI build.** Run `$janissary/scripts/run.mjs pr-wait-checks <branch> <owner/repo>`. It blocks until every check on the head finishes.
+   - Exit `0` → the checks passed, or none are configured. The helper reads "no checks reported" as a pass, so when a subagent has just pushed and it reports none configured, re-run it once in case the new head had not registered its checks yet. Note which of the two outcomes it was for the report.
+   - Exit `1` → a check failed. Delegate `ai/tasks/workspace/fix-build.md` to a fresh subagent with the recorded pull request number. Preserve every rule of that task: it diagnoses the root cause, repairs only implementation and tests, proves the local build, pushes, and confirms GitHub's checks pass on the pushed head. When it reports anything but `Status: complete; PR open`, the blocker stands.
+4. **After each subagent returns,** confirm `git branch --show-current` is still the head branch recorded in Step 0 and `git status` shows a clean tree. Then run `git pull --rebase` to pick up anything it pushed. A dirty tree means the subagent left work behind: stop and report what is there.
+5. **Repeat from item 2 after any delegation,** because a rebase reruns CI and `master` can move while a build repair runs. Stop repeating once a pass delegates nothing. Make at most **3** passes. A blocker still standing after the third pass is unresolved.
+6. **When a blocker is unresolved,** the code is not settled and describing it would be premature. Skip Steps 3 to 10 and go straight to Step 11's report, naming the blocker. The pull request stays open.
+
+---
+
+## Step 3 — Read the pull request as it stands
 
 This step is reconnaissance. Write nothing yet.
 
@@ -76,9 +94,9 @@ As you read, note every place the code does something the plan or a spec did not
 
 ---
 
-## Step 3 — Update the plan
+## Step 4 — Update the plan
 
-Skip this step when Step 2 found no own plan. Leave every plan exactly as it is.
+Skip this step when Step 3 found no own plan. Leave every plan exactly as it is.
 
 Otherwise:
 
@@ -90,21 +108,21 @@ Never touch a plan the diff does not add, and never a plan it adds outside `./pr
 
 ---
 
-## Step 4 — Update the specs
+## Step 5 — Update the specs
 
-1. For every behavior Step 2 listed, find the spec in `./product/specs/` that describes it: first the specs the diff edits, then the rest of the directory.
+1. For every behavior Step 3 listed, find the spec in `./product/specs/` that describes it: first the specs the diff edits, then the rest of the directory.
 2. Correct each spec so it describes what the code does, in that spec's existing style. Keep edits to the behavior the pull request touched. The rest of the spec is not this run's to rewrite.
 3. When a changed behavior has no spec at all, create one following [`build-a-feature.md`](build-a-feature.md) Step 5's conventions: a `# Title`, a `###` subsection for each aspect, and prose describing behavior rather than implementation.
 
 ---
 
-## Step 5 — Update help pages
+## Step 6 — Update help pages
 
 When the diff changes a command, correct its row in `help/commands.md` and its detailed `help/<command>.md` page. Add both when the diff introduces a command. When the diff changes a key binding, update its row in `help/keys.md`. Keep command-table descriptions to one line; the command page carries the usage, use cases, and examples. The docs site's Command Reference pages are generated from `help/`, so edit the help page rather than a generated page under `documentation/`. When the pull request changes no command or key binding, leave the help files alone.
 
 ---
 
-## Step 6 — Clear the backlog
+## Step 7 — Clear the backlog
 
 When `./product/backlog/pull-request.md` holds any entry, updating the pull request ends its revision cycle, so the entries go. First keep each entry's lead `*` summary bullet for the report. Then rewrite the file to the master skeleton, byte-for-byte, the state `work-pull-request-issue.md` Step 7 leaves a drained backlog in:
 
@@ -118,10 +136,10 @@ Leave a file already at the skeleton alone, and leave a missing file missing. Ne
 
 ---
 
-## Step 7 — Commit and push
+## Step 8 — Commit and push
 
 1. Run `git status --porcelain`. Every line must name a file the Allowed list covers: the own plan, a deleted fix plan, a file in `./product/specs/`, a help page under `help/`, or `./product/backlog/pull-request.md`. Revert anything else: `git checkout -- <file>` for a tracked file, such as a `package-lock.json` the install rewrote, and deleting the file for an untracked stray. `pr-commit` stages everything, so anything left would ride along.
-2. **When nothing remains,** Steps 3 to 6 changed nothing. Skip the rest of this step: there is no commit and no push.
+2. **When nothing remains,** Steps 4 to 7 changed nothing. Skip the rest of this step: there is no commit and no push.
 3. Otherwise write **one** commit. `pr-commit` stages everything and commits with a **single author and no `Co-Authored-By:` trailer**. The body names the pull request and each file updated, created, or deleted:
 
 ```bash
@@ -135,11 +153,11 @@ $janissary/scripts/run.mjs pr-commit "docs: update the pull request plan, specs,
 $janissary/scripts/run.mjs pr-push-branch origin <branch>
 ```
 
-If the push is rejected because the remote branch advanced, run `git pull --rebase`, resolve any conflicts preserving both sides, and retry the push. Repeat at most **3 times**. Never resolve a rejection with a force-push. If the third attempt fails, leave the local commit intact, skip Step 8 so the description never describes work that is not on the branch, and report the failure.
+If the push is rejected because the remote branch advanced, run `git pull --rebase`, resolve any conflicts preserving both sides, and retry the push. Repeat at most **3 times**. Never resolve a rejection with a force-push. If the third attempt fails, leave the local commit intact, skip Step 9 so the description never describes work that is not on the branch, and report the failure.
 
 ---
 
-## Step 8 — Update the description
+## Step 9 — Update the description
 
 This comes after the push, never before. The description is live on GitHub the moment it is edited, so an earlier edit could describe work that never reached the branch.
 
@@ -161,23 +179,25 @@ Use the body file rather than an inline `--body` string, because multi-line mark
 
 ---
 
-## Step 9 — Confirm the pull request is still open
+## Step 10 — Confirm the pull request is still open
 
 ```bash
 gh pr view <number> --json state,headRefName,headRefOid,url
 ```
 
-Confirm the state is `OPEN` and, when Step 7 pushed, that `headRefOid` matches `git rev-parse HEAD`. **Do not merge it.**
+Confirm the state is `OPEN` and, when Step 8 pushed, that `headRefOid` matches `git rev-parse HEAD`. **Do not merge it.**
 
 ---
 
-## Step 10 — Report
+## Step 11 — Report
 
-Give the user a short report in this exact shape:
+Give the user a short report in this exact shape. When Step 2 stopped on an unresolved blocker, mark every line from `Description` to `Recorded` as `not run`:
 
 ```
 PR:           <url> (#<number>)
 Branch:       <head branch>
+Conflicts:    none | resolved by resolve-conflicts — <its adjustments line> | unresolved — <reason>
+CI build:     passing | none configured | fixed by fix-build — <its root cause line> | blocked — <reason>
 Description:  updated — <what changed> | unchanged | edit failed — <error>
 Plan:         <plan> — <n> fix plans folded in and removed | updated | unchanged | none on this PR | several in the first commit, left as they are: <plans>
 Specs:        <files updated or created> | unchanged
@@ -185,8 +205,8 @@ Help:         <rows corrected or added> | unchanged
 Backlog:      <n> entries removed: <summary bullets> | already empty
 Divergences:  none | <code behavior that looks unintended, one per line>
 Recorded:     <short-sha> pushed | nothing to commit | push failed
-Not checked:  no test suite was run
-Status:       open (not merged)
+Not checked:  this task ran no test suite; any delegated repair's checks are in its line above
+Status:       open (not merged) | blocked — <the unresolved blocker>; open (not merged)
 ```
 
 Keep it brief. Done.
