@@ -660,8 +660,8 @@ terminals ask it which keys to let bubble, so a changed chord cannot keep workin
 stop in another.
 
 Other Ctrl-combinations (`Ctrl+C`, `Ctrl+D`, `Ctrl+R`, `Ctrl+E`, `Ctrl+Z`, etc.) are sent to the harness.
-Reorder/collapse chords (`Ctrl+←/→`, `Ctrl+T`) are **not** available while a harness is focused;
-switch to another tab first.
+Reorder chords (`Ctrl+←/→`) are **not** available while a harness is focused; switch to another tab
+first.
 
 A file navigator drag released over the terminal types the dragged paths into the harness, as if
 they had been typed there — space-separated, anchored with `$workspace/<clone-name>/…` or

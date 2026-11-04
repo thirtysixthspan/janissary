@@ -82,7 +82,7 @@ function renderPromptLine(
 ): React.ReactNode {
   if (line.acp) {
     return (
-      <div key={index} className="line prompt acp" onClick={onToggleCollapse} title="Click or Ctrl+T to collapse" {...hitProps}>
+      <div key={index} className="line prompt acp" onClick={onToggleCollapse} title="Click to collapse" {...hitProps}>
         + {highlightText(line.text, highlight, index)}
       </div>
     );
@@ -132,7 +132,7 @@ export function renderLine(
 
   if (line.type === 'collapsed') {
     return (
-      <div key={index} className="line collapsed" onClick={onToggleCollapse} title="Click or Ctrl+T to expand" {...hitProps}>
+      <div key={index} className="line collapsed" onClick={onToggleCollapse} title="Click to expand" {...hitProps}>
         <FontAwesomeIcon icon={collapsedIcon} /> {highlightText(line.text, highlight, index)} (click to expand)
       </div>
     );
@@ -166,7 +166,7 @@ export function renderLine(
   }
   if (line.acp) {
     return (
-      <div key={index} className="line output acp" onClick={onToggleCollapse} title="Click or Ctrl+T to collapse" {...hitProps}>
+      <div key={index} className="line output acp" onClick={onToggleCollapse} title="Click to collapse" {...hitProps}>
         {line.text ? renderOutputText(line.text, highlight, index) : ' '}
       </div>
     );

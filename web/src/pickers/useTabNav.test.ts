@@ -17,7 +17,7 @@ function TestComponent({
 
 function makeTabs(overrides: Partial<TabView> = {}): TabView[] {
   return [
-    { label: 'tab1', number: 1, dotColor: '', group: 0, groupColor: '', busy: false, hasUnread: false, cwd: '', connections: [], schedule: [], bufferLines: [], cmdHistory: [], commandQueue: [], toolStepsExpanded: false, ...overrides },
+    { label: 'tab1', number: 1, dotColor: '', group: 0, groupColor: '', busy: false, hasUnread: false, cwd: '', connections: [], schedule: [], bufferLines: [], cmdHistory: [], commandQueue: [], ...overrides },
   ];
 }
 

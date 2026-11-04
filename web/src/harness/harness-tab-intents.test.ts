@@ -21,16 +21,14 @@ describe('harnessTabIntents', () => {
     expect(send).toHaveBeenNthCalledWith(3, { method: 'openTranscriptFileFor', params: { label: 'agent2' } });
   });
 
-  it('sends transcript and ACP connection intents', () => {
+  it('sends the ACP connection intent', () => {
     const { client, send } = fakeClient();
     const intents = harnessTabIntents(client, 'agent2', 'openTranscriptFileFor');
     const acpRef = { scope: 'tab' as const, label: 'agent2' };
 
-    intents.onToggleCollapse();
     intents.onOpenAcpTranscript(acpRef);
 
-    expect(send).toHaveBeenNthCalledWith(1, { method: 'toggleCollapse', params: {} });
-    expect(send).toHaveBeenNthCalledWith(2, { method: 'openAcpTranscript', params: { acpRef } });
+    expect(send).toHaveBeenCalledWith({ method: 'openAcpTranscript', params: { acpRef } });
   });
 
   it('opens a record row and this tab\'s tab-scoped ACP row through the record RPC', () => {

@@ -10,8 +10,8 @@ export type OpenConnectionRecordParams =
   | { tab: string; recordId: string }
   | { tab: string; acpRef: Extract<AcpRef, { scope: 'tab' }> };
 
-// Tab creation/closing flow through `command` (`agent`, `close`); `setActiveTab`/`moveTab`/
-// `toggleCollapse` are pure-UI shortcuts.
+// Tab creation/closing flow through `command` (`agent`, `close`); `setActiveTab`/`moveTab` are
+// pure-UI shortcuts.
 export type CoreRpcCall =
   | { method: 'init'; params: Record<string, never> }
   | { method: 'command'; params: { text: string; tab?: string } }
@@ -28,7 +28,6 @@ export type CoreRpcCall =
   | { method: 'moveTabToOtherPane'; params: { index: number } }
   | { method: 'reorderTab'; params: { dir: -1 | 1 } }
   | { method: 'reorderTabTo'; params: { from: number; to: number } }
-  | { method: 'toggleCollapse'; params: { tab?: string } }
   | { method: 'resetAcp'; params: { tab: string } }
   // Close the "New harness" launch dialog without launching (Cancel/Escape).
   | { method: 'closeHarnessLaunch'; params: Record<string, never> }

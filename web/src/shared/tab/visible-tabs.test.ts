@@ -6,7 +6,7 @@ function tab(label: string, overrides: Partial<TabView> = {}): TabView {
   return {
     label, number: 1, dotColor: '#fff', group: 0, groupColor: '#000', busy: false, hasUnread: false,
     cwd: '/repo', connections: [], schedule: [], bufferLines: [], cmdHistory: [], commandQueue: [],
-    toolStepsExpanded: false, ...overrides,
+    ...overrides,
   };
 }
 

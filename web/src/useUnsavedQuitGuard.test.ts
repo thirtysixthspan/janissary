@@ -8,7 +8,7 @@ function makeTab(label: string): TabView {
   return {
     label, number: 1, dotColor: '#fff', group: 1, groupColor: '#fff', busy: false, hasUnread: false,
     cwd: '/', connections: [], schedule: [], bufferLines: [], cmdHistory: [], commandQueue: [],
-    toolStepsExpanded: false, editor: { name: 'a.txt', path: '/a.txt', size: '1 B', url: '/open/1' },
+    editor: { name: 'a.txt', path: '/a.txt', size: '1 B', url: '/open/1' },
   } as unknown as TabView;
 }
 

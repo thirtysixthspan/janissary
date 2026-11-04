@@ -28,7 +28,7 @@ function pluginTab(label: string, id: string): TabView {
   return {
     label, number: 1, dotColor: '#5b9cff', group: 1, groupColor: '#5b9cff', busy: false,
     hasUnread: false, cwd: '/tmp', connections: [], schedule: [], bufferLines: [], cmdHistory: [],
-    commandQueue: [], toolStepsExpanded: false, view: 'plugin', dock: 'left', title: label,
+    commandQueue: [], view: 'plugin', dock: 'left', title: label,
     plugin: { id, schemaVersion: 1, payload: { text: `${label} body` } },
   };
 }

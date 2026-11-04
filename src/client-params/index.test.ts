@@ -3,9 +3,9 @@ import { CLIENT_METHOD_CONTRACTS } from '../client-message.js';
 import { CLIENT_PARAMS_DECODERS, clientParamsValid } from './index.js';
 import type { ClientMessage } from '../protocol.js';
 
-// The seven methods declaring `params: Record<string, never>`; their dispatch arms read nothing.
+// The five methods declaring `params: Record<string, never>`; their dispatch arms read nothing.
 const NO_PARAMS_METHODS = [
-  'init', 'toggleCollapse', 'closeHarnessLaunch',
+  'init', 'closeHarnessLaunch',
   'projectFiles', 'editorPersonas', 'closeScheduleLaunch',
 ] as const;
 

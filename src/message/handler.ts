@@ -34,7 +34,6 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'moveTabToOtherPane':
     case 'reorderTab':
     case 'reorderTabTo':
-    case 'toggleCollapse':
     case 'resetAcp':
     case 'revealNotifications':
     case 'setDock':

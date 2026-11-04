@@ -10,7 +10,7 @@ function tab(label: string, pane?: 'right'): TabView {
   return {
     label, pane, number: 1, dotColor: '#fff', group: 1, groupColor: '#fff',
     busy: false, hasUnread: false, cwd: '/tmp', connections: [], schedule: [],
-    bufferLines: [], cmdHistory: [], commandQueue: [], toolStepsExpanded: false,
+    bufferLines: [], cmdHistory: [], commandQueue: [],
   };
 }
 

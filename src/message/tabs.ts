@@ -5,7 +5,7 @@ import { unhandledClientMethod } from '../client-message.js';
 type TabMessage = Extract<ClientMessage, {
   method: 'command' | 'setActiveTab' | 'focusTab' | 'closeTab' | 'renameTab'
     | 'editQueuedCommand' | 'deleteQueuedCommand' | 'moveTab' | 'moveTabToOtherPane'
-    | 'reorderTab' | 'reorderTabTo' | 'toggleCollapse' | 'resetAcp' | 'revealNotifications'
+    | 'reorderTab' | 'reorderTabTo' | 'resetAcp' | 'revealNotifications'
     | 'setDock' | 'openFileNavigatorFor' | 'launchShellFor' | 'openDiffFor'
     | 'openTranscriptFileFor' | 'openAcpTranscript' | 'openConnectionRecord' | 'openRecordingFor';
 }>;
@@ -41,11 +41,6 @@ export function dispatchTabMessage(controller: Controller, message: TabMessage):
     case 'reorderTab': { controller.reorderTab(message.params.dir); break;
     }
     case 'reorderTabTo': { controller.reorderTabTo(message.params.from, message.params.to); break;
-    }
-    case 'toggleCollapse': {
-      if (message.params.tab === undefined) controller.toggleCollapse();
-      else controller.toggleCollapse(message.params.tab);
-      break;
     }
     case 'resetAcp': {
       const label = message.params.tab;

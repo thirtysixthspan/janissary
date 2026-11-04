@@ -83,7 +83,6 @@ export const CLIENT_METHOD_CONTRACTS = {
   saveFile: 'ack',
   setActiveTab: 'ack',
   setDock: 'ack',
-  toggleCollapse: 'ack',
   undoFileNavigatorItem: 'result',
 } as const satisfies Record<ClientMessage['method'], ClientReplyMode>;
 

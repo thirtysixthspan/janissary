@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Restore or retire the Ctrl+T tool-step collapse shortcut, which no longer controls a visible ACP surface after the response panel's removal.
-
-Existing Issue: `web/src/useWindowKeys.ts` still intercepts Ctrl+T and sends `toggleCollapse`, but the only renderer of the collapsed ACP entries was the removed response panel; the connection tab uses its own `<details>` rather than `Tab.toolStepsExpanded`, and the only remaining `bufferLines` renderer is the notifications tab, whose entries are not ACP steps, so the key toggles an invisible flag and also prevents Ctrl+T from reaching the shell. Severity: 4/10
-
-Existing Risk: 4/10 - A documented shortcut does nothing and steals a common shell editing chord, while `help/keys.md`, `product/specs/keyboard-navigation.md`, and `product/specs/transcript.md` still describe a collapse the interface no longer shows.
-
-Proposal Risk: 1/10 - The dead interception is removed or re-targeted and the documentation agrees with what is rendered; no ACP result or record data changes.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "retire or re-target the dead Ctrl+T collapse shortcut". Remove the Ctrl+T branch in `web/src/useWindowKeys.ts` (`ctrlLetterShortcut`) and the `toggleCollapse` client RPC if no remaining client renders collapsed ACP entries; remove the now-unused `toolStepsExpanded` projection in `src/tab/view.ts`, the toggle in `src/tab/operations.ts`, and the field in `src/tab/types.ts` only after confirming the notifications tab's `Transcript` remains unaffected. Alternatively, if the shortcut is retained, send the tab's collapse state through the connections plugin payload and make `web/src/plugins/connections/ConnectionHistory.tsx` render its thought and tool entries from it. Update `help/keys.md`, `product/specs/keyboard-navigation.md`, `product/specs/transcript.md`, and the API v3 sentence in `product/specs/tab-plugins.md` to match. Add a client test that Ctrl+T is not swallowed in a shell when no collapse surface exists, or that the connection details toggle if re-targeted; keep `src/tab/view.test.ts` and `src/tab/transcript/events.test.ts` coverage passing.
-
-
 * Limit the editor connections window's close control to editor-persona rows, so a running agent row cannot send a persona close.
 
 Existing Issue: `web/src/editor/EditorConnectionsPanel.tsx` passes `onCloseRow` to `StatusPanels` for every row, and `web/src/editor/useEditorConnections.ts` turns `row.text` into a `closeEditorConnection` persona; a running agent row has no editor persona, so its close button does nothing or, when the editor tab has a core ACP session, can close that unrelated session. Severity: 4/10

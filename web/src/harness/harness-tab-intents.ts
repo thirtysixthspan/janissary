@@ -13,7 +13,6 @@ export type AgentTabIntents = {
   // Set only on a workspaced tab: the metadata row's diff button, which opens the diff tab on this
   // tab's own workspace.
   onOpenDiffHere?: () => void;
-  onToggleCollapse: () => void;
   onOpenAcpTranscript: (acpRef: AcpRef) => void;
   // Only on a tab that has a recording, because it is the metadata row's own signal that there is
   // one: the row draws its flag inert when this is absent and pressable when it is set, so the two
@@ -47,7 +46,6 @@ export function harnessTabIntents(
       onOpenDiffHere: () => client.send({ method: 'openDiffFor', params: { label } }),
     }),
     onOpenTranscript: () => client.send({ method: transcriptMethod, params: { label } }),
-    onToggleCollapse: () => client.send({ method: 'toggleCollapse', params: {} }),
     onOpenAcpTranscript: (acpRef) => client.send({ method: 'openAcpTranscript', params: { acpRef } }),
     ...(recording !== undefined && {
       onOpenRecording: () => client.send({ method: 'openRecordingFor', params: { label } }),

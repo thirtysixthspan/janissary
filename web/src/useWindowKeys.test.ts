@@ -25,9 +25,11 @@ function publishClaiming(chords: string[]) {
 }
 
 function dispatchKey(key: string, opts: { metaKey?: boolean; ctrlKey?: boolean; shiftKey?: boolean } = {}) {
-  globalThis.dispatchEvent(new KeyboardEvent('keydown', {
+  const event = new KeyboardEvent('keydown', {
     key, metaKey: opts.metaKey ?? false, ctrlKey: opts.ctrlKey ?? false, shiftKey: opts.shiftKey ?? false, bubbles: true,
-  }));
+  });
+  globalThis.dispatchEvent(event);
+  return event;
 }
 
 function TestComponent({
@@ -356,7 +358,7 @@ describe('useWindowKeys', () => {
     expect(runCommand).toHaveBeenCalledWith('shell');
   });
 
-  it('Ctrl+T does not run the Cmd+T new-tab action', () => {
+  it('leaves Ctrl+T to the focused surface when no transcript collapse surface exists', () => {
     const runCommand = vi.fn();
     const sendMock = vi.fn();
     const client = { send: sendMock } as never;
@@ -378,9 +380,10 @@ describe('useWindowKeys', () => {
       return null;
     }
     render(React.createElement(C));
-    dispatchKey('t', { ctrlKey: true });
+    const event = dispatchKey('t', { ctrlKey: true });
+    expect(event.defaultPrevented).toBe(false);
     expect(runCommand).not.toHaveBeenCalled();
-    expect(sendMock).toHaveBeenCalledWith({ method: 'toggleCollapse', params: {} });
+    expect(sendMock).not.toHaveBeenCalled();
   });
 
   it('routes keys to the queue popup when open', () => {

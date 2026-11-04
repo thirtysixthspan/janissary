@@ -49,7 +49,7 @@ The reply streams verbatim into its running transcript entry as the agent produc
 
 ACP replies and the `help` command output are flagged `markdown`; shell output, `db`/`browser` 
 command results, and messages are plain text and are never passed through the Markdown pipeline. 
-Auto-run agent **tool steps** (the collapsed `acp` entries) are command/result pairs, also rendered 
+Auto-run agent **tool steps** (`acp` entries) are command/result pairs, also rendered
 as plain text — only the agent's prose turns and `help` are Markdown.
 
 ### File:line links

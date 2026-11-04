@@ -24,7 +24,6 @@ function makeManagers(overrides: Partial<Tab> = {}): { managers: Managers; tab: 
     cmdHistory: [],
     cursor: 0,
     hasUnread: false,
-    toolStepsExpanded: false,
     createdAt: Date.now(),
     ...overrides,
   };

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { closeTab, insertTab, moveTabToOtherPane, reorderTab, reorderTabTo, setActiveTab, setDock, toggleCollapse } from './operations.js';
+import { closeTab, insertTab, moveTabToOtherPane, reorderTab, reorderTabTo, setActiveTab, setDock } from './operations.js';
 import { MANAGER_TAB_RELEASE } from '../managers.js';
 import type { TabOperationsPort } from './operations.js';
 import type { CenterPane, Tab } from './types.js';
@@ -237,22 +237,6 @@ describe('closeTab', () => {
     port.focusHistory = ['left-1', 'right-1'];
     closeTab(port, 1);
     expect(port.focusHistory).toEqual(['left-1']);
-  });
-});
-
-describe('toggleCollapse', () => {
-  it('flips the active tab\'s expanded tool steps and clears its unread mark path', () => {
-    const port = makePort([tab('a')]);
-    toggleCollapse(port);
-    expect(port.tabs[0].toolStepsExpanded).toBe(true);
-    toggleCollapse(port);
-    expect(port.tabs[0].toolStepsExpanded).toBe(false);
-  });
-
-  it('does nothing when no tab is active', () => {
-    const port = makePort([tab('a')], 9);
-    expect(() => { toggleCollapse(port); }).not.toThrow();
-    expect(port.tabs[0].toolStepsExpanded).toBeUndefined();
   });
 });
 

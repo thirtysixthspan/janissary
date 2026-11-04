@@ -93,7 +93,7 @@ Two clears are **not** dwelled, because neither is the user visiting the tab. A 
 
 **The active tab never shows the badge.** This is a rule about what is drawn, not about what is stored: a tab that is active and still badged renders no flag, so selecting a tab does not make a flag appear on it for the three seconds before the dwell finishes. The badge on the active tab is real state, and the strip simply does not show it.
 
-**Persistence.** `hasUnread` is in-memory only (same policy as `scrollOffset` and `toolStepsExpanded`).
+**Persistence.** `hasUnread` is in-memory only (same policy as `scrollOffset`).
 
 ### Tab switching with arrow keys
 

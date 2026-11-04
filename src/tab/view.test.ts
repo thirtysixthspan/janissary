@@ -47,6 +47,19 @@ describe('buildTabView', () => {
     expect('systemShell' in visible).toBe(false);
   });
 
+  it('projects ACP tool steps expanded and sends no collapse state', () => {
+    const tab = makeTab('shell', '#fff');
+    tab.log = [{ input: 'browser content', output: 'Widgets', acp: true }];
+
+    const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p);
+
+    expect(view.bufferLines).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'prompt', text: 'browser content', acp: true }),
+      expect.objectContaining({ type: 'output', text: 'Widgets', acp: true }),
+    ]));
+    expect(view).not.toHaveProperty('toolStepsExpanded');
+  });
+
   it('projects completed background replies with stable IDs and excludes ordinary or unfinished entries', () => {
     const tab = makeTab('shell', '#fff');
     tab.log = [{ input: 'acp ordinary', output: 'ordinary' }, { input: '', output: 'pending', background: 'pending', running: true }, { input: 'acp hello', output: 'suggestion', background: 'finished' }];

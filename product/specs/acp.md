@@ -56,7 +56,7 @@ The shell shows only the settled answer as sanitized GitHub-flavored Markdown in
 
 The connections panel's ACP rows open or focus the corresponding connection tab when they carry a durable record or the tab's own live ACP reference. Rows that offer a transcript snapshot keep that separate button, and clicking it never opens the record tab. See [[connection]].
 
-Reset remains available through `acp reset`, the connection tab's **Close session**, and `connections close acp:<name>`. Transcript snapshot actions and shared tool-step collapse remain available without a response panel. File and web links in Markdown replies retain their existing targets.
+Reset remains available through `acp reset`, the connection tab's **Close session**, and `connections close acp:<name>`. Transcript snapshot actions remain available without a response panel. File and web links in Markdown replies retain their existing targets.
 
 Questions use the existing core question panel and answer protocol. A centre tab's question is shown once when that tab is current. Any selected active docked plugin tab shows its pending question, even before any ACP response exists and without a plugin hook, terminal, or command bar. A hidden docked body does not raise one; returning to it restores a still-pending question. The question's tab/id determine where the answer goes. See [[agent-questions]].
 
@@ -72,7 +72,7 @@ The tools are declared once in `src/acp/tool-table.ts`: browser, question, then 
 
 A session a plugin started with `withoutTools` builds no tool table at all. Its primer carries no tool text, no reply line is read as a command, and an emitted command has nothing that runs it — the loop answers with the reply as prose. This policy belongs to the tab and applies to every prompt on it, including a prompt typed with the `acp` command, until the tab closes. A typed `acp` command on an unrestricted tab still runs the full table.
 
-Tool results are recorded as ACP steps and collapse through the existing transcript rendering. When the tool loop reaches its cap, the settled shell reply and the record's final answer end with a trailing `(stopped after 8 tool steps)` paragraph rather than a separate transcript entry. Arbitrary shell commands are not ACP tools. Database/browser/question execution remains on the machine running Janissary, even when the provider runs remotely.
+Tool results are recorded as ACP steps and appear in the connection tab as expandable thought and tool entries. When the tool loop reaches its cap, the settled shell reply and the record's final answer end with a trailing `(stopped after 8 tool steps)` paragraph rather than a separate transcript entry. Arbitrary shell commands are not ACP tools. Database/browser/question execution remains on the machine running Janissary, even when the provider runs remotely.
 
 ## Remote connections
 

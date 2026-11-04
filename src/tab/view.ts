@@ -130,11 +130,10 @@ export function buildTabView(
     acp,
     connections,
     schedule,
-    bufferLines: flattenBuffer(tab.log, !tab.toolStepsExpanded)
+    bufferLines: flattenBuffer(tab.log)
       .map((l) => (l.cwd ? { ...l, cwd: shorten(l.cwd) } : l)),
     cmdHistory: tab.cmdHistory,
     ...queue,
-    toolStepsExpanded: !!tab.toolStepsExpanded,
     pendingQuestion,
     view: tab.view,
     title: tab.title,

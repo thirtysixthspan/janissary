@@ -30,7 +30,6 @@ export const CORE_PARAMS: Record<CoreRpcCall['method'], ParamsDecoder> = {
   moveTabToOtherPane: (p) => isInteger(p.index),
   reorderTab: (p) => isOneOf(p.dir, DIRECTIONS),
   reorderTabTo: (p) => isInteger(p.from) && isInteger(p.to),
-  toggleCollapse: (p) => p.tab === undefined || isString(p.tab),
   resetAcp: (p) => isString(p.tab),
   closeHarnessLaunch: noParams,
   answerQuestion: (p) => isString(p.tab) && isString(p.id) && (p.answer === null || isString(p.answer)),

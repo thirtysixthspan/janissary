@@ -378,15 +378,13 @@ describe('Controller', () => {
     }
   });
 
-  it('cycles and toggles via UI shortcuts', () => {
+  it('cycles via UI shortcuts', () => {
     const { c } = makeController();
     seedTestTab(c.managers.tab, 'bob');
     c.setActiveTab(0);
     expect(c.managers.tab.activeTab).toBe(0);
     c.moveTab(1);
     expect(c.managers.tab.activeTab).toBe(1);
-    c.toggleCollapse();
-    expect(c.view()[1].toolStepsExpanded).toBe(true);
   });
 
   it('reorders the active tab within its group, renumbering and following the move', () => {

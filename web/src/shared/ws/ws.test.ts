@@ -66,22 +66,22 @@ describe('JanusClient', () => {
 
   it('send writes JSON to the socket when open', () => {
     const client = new JanusClient();
-    client.send({ method: 'toggleCollapse', params: {} });
+    client.send({ method: 'closeHarnessLaunch', params: {} });
     expect(inst.send).toHaveBeenCalledWith(
-      expect.stringContaining('"method":"toggleCollapse"'),
+      expect.stringContaining('"method":"closeHarnessLaunch"'),
     );
   });
 
   it('send is silent when the socket is not open', () => {
     inst.readyState = 3;
     const client = new JanusClient();
-    client.send({ method: 'toggleCollapse', params: {} });
+    client.send({ method: 'closeHarnessLaunch', params: {} });
     expect(inst.send).not.toHaveBeenCalled();
   });
 
   it('request resolves with the server reply via rpc-reply event', async () => {
     const client = new JanusClient();
-    const promise = client.request<string>({ method: 'toggleCollapse', params: {} });
+    const promise = client.request<string>({ method: 'closeHarnessLaunch', params: {} });
     messageHandler!({ data: JSON.stringify({ t: 'rpc-reply', id: 1, result: 'bar' }) });
     await expect(promise).resolves.toEqual({ ok: true, value: 'bar' });
   });
@@ -89,7 +89,7 @@ describe('JanusClient', () => {
   it('settles a silent request at its deadline and ignores a late reply', async () => {
     const client = new JanusClient();
     const timersBeforeRequest = vi.getTimerCount();
-    const promise = client.request<string>({ method: 'toggleCollapse', params: {} }, { timeoutMs: 100 });
+    const promise = client.request<string>({ method: 'closeHarnessLaunch', params: {} }, { timeoutMs: 100 });
 
     await vi.advanceTimersByTimeAsync(100);
 
@@ -101,7 +101,7 @@ describe('JanusClient', () => {
   it('clears a request deadline when its reply arrives first', async () => {
     const client = new JanusClient();
     const timersBeforeRequest = vi.getTimerCount();
-    const promise = client.request<string>({ method: 'toggleCollapse', params: {} }, { timeoutMs: 100 });
+    const promise = client.request<string>({ method: 'closeHarnessLaunch', params: {} }, { timeoutMs: 100 });
 
     await vi.advanceTimersByTimeAsync(99);
 
@@ -115,7 +115,7 @@ describe('JanusClient', () => {
   it('clears a request deadline when the connection ends first', async () => {
     const client = new JanusClient();
     const timersBeforeRequest = vi.getTimerCount();
-    const promise = client.request<string>({ method: 'toggleCollapse', params: {} }, { timeoutMs: 100 });
+    const promise = client.request<string>({ method: 'closeHarnessLaunch', params: {} }, { timeoutMs: 100 });
 
     closeHandler!();
 
@@ -126,7 +126,7 @@ describe('JanusClient', () => {
   it('request resolves with a failed result and no error when socket is closed', async () => {
     inst.readyState = 3;
     const client = new JanusClient();
-    await expect(client.request({ method: 'toggleCollapse', params: {} })).resolves.toEqual({ ok: false });
+    await expect(client.request({ method: 'closeHarnessLaunch', params: {} })).resolves.toEqual({ ok: false });
   });
 
   it('onState listener is called when a state event arrives', () => {
@@ -681,7 +681,7 @@ describe('JanusClient', () => {
   describe('requests outstanding when the connection ends', () => {
     it('settles every pending request when the socket closes', async () => {
       const client = new JanusClient();
-      const completion = client.request<string>({ method: 'toggleCollapse', params: {} });
+      const completion = client.request<string>({ method: 'closeHarnessLaunch', params: {} });
       const save = client.saveFile('/file.txt', 'content');
 
       closeHandler!();
@@ -692,7 +692,7 @@ describe('JanusClient', () => {
 
     it('drops a reply that arrives after the connection ended', async () => {
       const client = new JanusClient();
-      const completion = client.request<string>({ method: 'toggleCollapse', params: {} });
+      const completion = client.request<string>({ method: 'closeHarnessLaunch', params: {} });
       closeHandler!();
       await expect(completion).resolves.toEqual({ ok: false, error: 'connection closed' });
 
@@ -714,7 +714,7 @@ describe('JanusClient', () => {
 
     it('settles a request outstanding at dispose rather than abandoning it', async () => {
       const client = new JanusClient();
-      const completion = client.request<string>({ method: 'toggleCollapse', params: {} });
+      const completion = client.request<string>({ method: 'closeHarnessLaunch', params: {} });
       const save = client.saveFile('/file.txt', 'content');
 
       client.dispose();
@@ -778,12 +778,12 @@ describe('JanusClient reconnection', () => {
     const state = vi.fn(), layout = vi.fn(), exit = vi.fn(), output = vi.fn(), status = vi.fn();
     client.onState(state); client.onLayout(layout); client.onPtyExit(exit); client.attachPty('p', output);
     const unsubscribe = client.onConnectionStatus(status);
-    const request = client.request({ method: 'toggleCollapse', params: {} });
+    const request = client.request({ method: 'closeHarnessLaunch', params: {} });
     const save = client.saveFile('/file', 'contents');
     sockets[0].close();
     await expect(request).resolves.toEqual({ ok: false, error: 'connection closed' });
     await expect(save).resolves.toBe('connection closed');
-    client.send({ method: 'toggleCollapse', params: {} });
+    client.send({ method: 'closeHarnessLaunch', params: {} });
     vi.advanceTimersByTime(250);
     expect(sockets).toHaveLength(2);
     sockets[1].open();

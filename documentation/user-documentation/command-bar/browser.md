@@ -22,7 +22,7 @@ browser content
 | `browser shot` | Screenshot the viewport to a PNG |
 | `browser close [id]` / `browser window close <id>` | Close the current window, or a specific one by id |
 
-A bare `browser` prints a `Usage:` line listing every subcommand; [Usage errors and missing windows](#usage-errors-and-missing-windows) has the exact text. When you type a `browser` command, its command line is marked as running in the transcript until the result arrives, and the result then appears under it. Commands that an agent runs on its own don't get that marker. They show up as collapsed tool steps, as described in [Markdown rendering](/user-documentation/advanced-agents/markdown-rendering). See [Tab completion](/user-documentation/command-bar/tab-completion) for completing subcommands and window ids with `Tab`.
+A bare `browser` prints a `Usage:` line listing every subcommand; [Usage errors and missing windows](#usage-errors-and-missing-windows) has the exact text. When you type a `browser` command, its command line is marked as running in the transcript until the result arrives, and the result then appears under it. Commands that an agent runs on its own don't get that marker. They and the agent's other thought and tool activity appear in the session's connection tab, where each entry starts collapsed and expands on a click. See [Markdown rendering](/user-documentation/advanced-agents/markdown-rendering). See [Tab completion](/user-documentation/command-bar/tab-completion) for completing subcommands and window ids with `Tab`.
 
 ## One browser per tab, with its own windows
 

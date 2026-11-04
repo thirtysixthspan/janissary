@@ -32,7 +32,7 @@ function api(overrides: Partial<EditorConnectionsApi> = {}): EditorConnectionsAp
 function makeTab(connections: TabView['connections']): TabView {
   return {
     label: 'notes', number: 1, dotColor: '#fff', group: 1, groupColor: '#fff', busy: false, hasUnread: false,
-    cwd: '/repo', connections, schedule: [], bufferLines: [], cmdHistory: [], commandQueue: [], toolStepsExpanded: false,
+    cwd: '/repo', connections, schedule: [], bufferLines: [], cmdHistory: [], commandQueue: [],
     view: 'editor', editor: { name: 'notes.txt', path: '/repo/notes.txt', size: '1 B', url: '/open/1' },
   };
 }
