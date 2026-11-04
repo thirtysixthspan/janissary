@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AcpRecord } from '../acp-records/types.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
-import { recordWindow } from '../acp-records/model.js';
+import { ACP_RECORD_WINDOW_SIZE, recordWindow } from '../acp-records/model.js';
 import { messageBus } from '../bus.js';
 import { readConnectionsTopic, runConnectionsTopicAction, subscribeConnectionsTopic } from './connections-topic.js';
 
@@ -21,9 +21,10 @@ function fixture() {
     { id: 'agent-id', kind: 'agent', title: 'Agent', model: 'm', ownerLabel: 'gone', ownerName: 'Captured', runId: 'run-id', startedAt: 1, updatedAt: 1, status: 'Running' },
     { id: 'done-id', kind: 'acp', title: 'Done', model: 'm', ownerLabel: 'gone', ownerName: 'Captured', startedAt: 1, updatedAt: 1, endedAt: 2, status: 'Completed' },
   ];
-  const windows = vi.fn((id: string, count = 20) => ({
-    id, count, blocks: Array.from({ length: Math.min(count, 45) }, (_, index) => index),
-    totalBlocks: 45, offset: Math.max(0, 45 - count), hasOlder: count < 45,
+  const totalBlocks = ACP_RECORD_WINDOW_SIZE * 2 + 5;
+  const windows = vi.fn((id: string, count = ACP_RECORD_WINDOW_SIZE) => ({
+    id, count, blocks: Array.from({ length: Math.min(count, totalBlocks) }, (_, index) => index),
+    totalBlocks, offset: Math.max(0, totalBlocks - count), hasOlder: count < totalBlocks,
   }));
   const cancel = vi.fn(() => Promise.resolve(true));
   const close = vi.fn(() => true);
@@ -50,7 +51,7 @@ function fixture() {
     connection: { closeTarget },
     agent: { isLive: vi.fn(() => true), isAgentRun: vi.fn(() => true), finish },
   } as unknown as Managers;
-  return { managers, tabs, recordRows, windows, cancel, close, finish, setActiveTab, closeTarget };
+  return { managers, tabs, recordRows, windows, cancel, close, finish, setActiveTab, closeTarget, totalBlocks };
 }
 
 afterEach(() => {
@@ -96,23 +97,45 @@ describe('connections topic delivery', () => {
 
 describe('connections topic actions', () => {
   it('loads and pages requested windows, resets on load, and isolates manager state', () => {
-    const { managers, windows } = fixture();
-    expect(readConnectionsTopic(managers).rows.find((row) => row.type === 'record' && row.id === 'core-id'))
-      .not.toHaveProperty('window');
+    const { managers, windows, totalBlocks } = fixture();
+    const row = () => {
+      const found = readConnectionsTopic(managers).rows
+        .find((candidate) => candidate.type === 'record' && candidate.id === 'core-id');
+      if (found?.type !== 'record') throw new Error('missing core record row');
+      return found;
+    };
+    expect(row()).not.toHaveProperty('window');
     runConnectionsTopicAction(managers, { topic: 'connections', action: 'loadOlder', id: 'core-id' });
     expect(windows).not.toHaveBeenCalled();
     runConnectionsTopicAction(managers, { topic: 'connections', action: 'load', id: 'missing' });
     runConnectionsTopicAction(managers, { topic: 'connections', action: 'load', id: 'core-id' });
-    expect(readConnectionsTopic(managers).rows.find((row) => row.type === 'record' && row.id === 'core-id'))
-      .toMatchObject({ window: { count: 20, offset: 25, hasOlder: true } });
+    const loadedCount = row().window?.count;
+    expect(loadedCount).toBe(ACP_RECORD_WINDOW_SIZE);
+    expect(row()).toMatchObject({
+      window: {
+        count: ACP_RECORD_WINDOW_SIZE,
+        offset: totalBlocks - ACP_RECORD_WINDOW_SIZE,
+        hasOlder: true,
+      },
+    });
     runConnectionsTopicAction(managers, { topic: 'connections', action: 'loadOlder', id: 'core-id' });
-    expect(readConnectionsTopic(managers).rows.find((row) => row.type === 'record' && row.id === 'core-id'))
-      .toMatchObject({ window: { count: 40, offset: 5, hasOlder: true } });
+    expect(row().window?.count).toBe((loadedCount ?? 0) + ACP_RECORD_WINDOW_SIZE);
+    expect(row()).toMatchObject({
+      window: {
+        count: ACP_RECORD_WINDOW_SIZE * 2,
+        offset: totalBlocks - ACP_RECORD_WINDOW_SIZE * 2,
+        hasOlder: true,
+      },
+    });
     runConnectionsTopicAction(managers, { topic: 'connections', action: 'load', id: 'core-id' });
-    expect(readConnectionsTopic(managers).rows.find((row) => row.type === 'record' && row.id === 'core-id'))
-      .toMatchObject({ window: { count: 20, offset: 25 } });
+    expect(row()).toMatchObject({
+      window: {
+        count: ACP_RECORD_WINDOW_SIZE,
+        offset: totalBlocks - ACP_RECORD_WINDOW_SIZE,
+      },
+    });
     const another = fixture().managers;
-    expect(readConnectionsTopic(another).rows.find((row) => row.type === 'record' && row.id === 'core-id'))
+    expect(readConnectionsTopic(another).rows.find((candidate) => candidate.type === 'record' && candidate.id === 'core-id'))
       .not.toHaveProperty('window');
   });
 
@@ -133,7 +156,7 @@ describe('connections topic actions', () => {
       runtime: { busy: false, context: [], queue: [] },
     });
     const original = windows.getMockImplementation()!;
-    windows.mockImplementation((id: string, count = 20) => id === 'empty-id'
+    windows.mockImplementation((id: string, count = ACP_RECORD_WINDOW_SIZE) => id === 'empty-id'
       ? recordWindow(empty, count)
       : original(id, count));
     const row = () => readConnectionsTopic(managers).rows
@@ -148,17 +171,23 @@ describe('connections topic actions', () => {
 
     runConnectionsTopicAction(managers, { topic: 'connections', action: 'loadOlder', id: 'empty-id' });
     expect(row()).toMatchObject({ window: { blocks: [], totalBlocks: 0, offset: 0, hasOlder: false } });
-    expect(windows.mock.calls.filter(([id]) => id === 'empty-id').every(([, count]) => count === 20)).toBe(true);
+    expect(windows.mock.calls.filter(([id]) => id === 'empty-id').every(([, count]) => count === ACP_RECORD_WINDOW_SIZE)).toBe(true);
   });
 
-  it('releases a loaded window when its record tab closes and reloads 20 blocks on reopen', () => {
-    const { managers, tabs } = fixture();
+  it('releases a loaded window when its record tab closes and reloads the newest window on reopen', () => {
+    const { managers, tabs, totalBlocks } = fixture();
     const recordTab = tabs.find((tab) => tab.plugin?.instanceKey === 'core-id')!;
     const row = (id: string) => readConnectionsTopic(managers).rows
       .find((candidate) => candidate.type === 'record' && candidate.id === id);
 
     runConnectionsTopicAction(managers, { topic: 'connections', action: 'load', id: 'core-id' });
-    expect(row('core-id')).toMatchObject({ window: { count: 20, offset: 25, hasOlder: true } });
+    expect(row('core-id')).toMatchObject({
+      window: {
+        count: ACP_RECORD_WINDOW_SIZE,
+        offset: totalBlocks - ACP_RECORD_WINDOW_SIZE,
+        hasOlder: true,
+      },
+    });
     expect(row('agent-id')).not.toHaveProperty('window');
 
     tabs.splice(tabs.indexOf(recordTab), 1);
@@ -167,9 +196,17 @@ describe('connections topic actions', () => {
     tabs.push(recordTab);
     expect(row('core-id')).not.toHaveProperty('window');
     runConnectionsTopicAction(managers, { topic: 'connections', action: 'load', id: 'core-id' });
-    expect(row('core-id')).toMatchObject({ window: { count: 20, offset: 25 } });
+    expect(row('core-id')).toMatchObject({
+      window: { count: ACP_RECORD_WINDOW_SIZE, offset: totalBlocks - ACP_RECORD_WINDOW_SIZE },
+    });
     runConnectionsTopicAction(managers, { topic: 'connections', action: 'loadOlder', id: 'core-id' });
-    expect(row('core-id')).toMatchObject({ window: { count: 40, offset: 5, hasOlder: true } });
+    expect(row('core-id')).toMatchObject({
+      window: {
+        count: ACP_RECORD_WINDOW_SIZE * 2,
+        offset: totalBlocks - ACP_RECORD_WINDOW_SIZE * 2,
+        hasOlder: true,
+      },
+    });
 
     tabs.splice(tabs.indexOf(recordTab), 1);
     expect(row('core-id')).not.toHaveProperty('window');

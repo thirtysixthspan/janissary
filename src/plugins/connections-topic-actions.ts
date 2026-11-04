@@ -1,10 +1,9 @@
 import type { Managers } from '../managers.js';
 import type { ConnectionsTopicData } from '../protocol/connections.js';
 import type { ConnectionsTopicAction } from './api-topics-connections.js';
+import { ACP_RECORD_WINDOW_SIZE } from '../acp-records/model.js';
 import { listLines } from '../connection/list.js';
 import { composeConnectionsTopicData } from './connections-topic-rows.js';
-
-const PAGE_SIZE = 20;
 
 function consume(pending: Promise<unknown>): void {
   void pending.catch(() => {});
@@ -28,7 +27,7 @@ function isCoreRecordAction(action: ConnectionsTopicAction): action is CoreRecor
 function actOnRecord(managers: Managers, action: RecordAction, requested: Map<string, number>): void {
   if (action.action === 'load') {
     if (managers.acpRecords.rows().every((record) => record.id !== action.id)) return;
-    requested.set(action.id, PAGE_SIZE);
+    requested.set(action.id, ACP_RECORD_WINDOW_SIZE);
     return;
   }
   if (action.action === 'loadOlder') {
@@ -36,7 +35,7 @@ function actOnRecord(managers: Managers, action: RecordAction, requested: Map<st
     if (count === undefined) return;
     const window = managers.acpRecords.window(action.id, count);
     if (!window?.hasOlder) return;
-    requested.set(action.id, Math.max(PAGE_SIZE, Math.min(window.totalBlocks, count + PAGE_SIZE)));
+    requested.set(action.id, Math.max(ACP_RECORD_WINDOW_SIZE, Math.min(window.totalBlocks, count + ACP_RECORD_WINDOW_SIZE)));
     return;
   }
   if (action.action === 'delete') {
