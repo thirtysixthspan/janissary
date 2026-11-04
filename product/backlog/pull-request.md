@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Description fidelity: correct the ACP guide's claim that a second `acp` prompt can run while the first is still in flight.
-
-Existing Issue: The guide says the shell stays usable so you can run other commands, including another `acp` prompt, while the same page's next section and the implementation refuse a second concurrent prompt with exactly `ACP: a prompt is already running.` Severity: 4/10
-
-Existing Risk: 4/10 - A reader submits a second ACP prompt expecting concurrent work and reads the refusal as a regression or a documentation error, undermining trust in the rest of the workflow.
-
-Proposal Risk: 1/10 - The guide will match the refusal, but the shell still accepts the line and reports it, so a skimming user may still try it; no production behavior change is needed.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "correct the ACP guide's concurrent-prompt claim". In `documentation/user-documentation/advanced-agents/acp-agent.md`, change the opening paragraph's "including another `acp` prompt" wording to say ordinary non-ACP commands keep working while the prompt runs, while a second ACP prompt is refused with exactly `ACP: a prompt is already running.` and nothing is queued. Keep the settled-answer, no-panel, and retained-record text. Cross-check the later "One conversation per tab" section, `src/acp/manager.ts`'s `runtime.acpPrompt` refusal, and `src/commands/acp.test.ts`'s already-running case; no test change is required because this is a prose correction.
-
-
 * Plan fidelity: correct the plugin guideline's claim that API v3 removed the agent launch contract.
 
 Existing Issue: The present-tense v3 paragraph in `ai/guidelines/plugins-tabs.md` says API v3 removes the agent launch contract, while `product/specs/tab-plugins.md` and the developer reference's v2 section record the agent-tab launch removal as a v2 change and v3 only removes `useAcpResponse`, `TabView.acpResponse`, `launchShellHere`, and the panel/Reset controls. Severity: 3/10
