@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Plan fidelity: align the canonical plan's record-tab Terminate presentation with the delivered hide-at-terminal UI.
-
-Existing Issue: `product/plans/complete/connections-tabs.md` decision 22 still says the record-tab Terminate "is disabled once cleanup begins", while `web/src/plugins/connections/ConnectionTab.tsx` renders the control only while the run is `Running`, disables it on the click, and removes it when the record reports `Completed`, `Failed`, or `Terminated`, and the current spec and user guide describe that hide-at-terminal behavior plus the monitor's separate visible disabled control. Severity: 3/10
-
-Existing Risk: 3/10 - The canonical design record disagrees with the delivered UI and the current spec, so a later reader or a future control change can follow the obsolete disabled-through-cleanup expectation and treat the hide-at-terminal behavior as a regression.
-
-Proposal Risk: 2/10 - The presentation sentence will match the delivered and documented behavior, but the file is a completed historical plan, so the edit must stay limited to that sentence and must not move the action semantics or the 8/10 rating.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "align the canonical plan's record-tab Terminate presentation with the delivered UI". In `product/plans/complete/connections-tabs.md` decision 22, replace "is disabled once cleanup begins" with the delivered presentation: the record tab disables the control from the click until the record reports a terminal status and then removes it, while the agent monitor's own Terminate stays visible and disabled through cleanup. Keep "acts exactly like the agent-monitor's Terminate", the action semantics, the 8/10 rating, and every other line unchanged. Cross-check the sentence against `web/src/plugins/connections/ConnectionTab.tsx` (`canTerminate` and `pendingTerminate`), `web/src/plugins/agent-monitor/view.tsx`, and the already-corrected `product/specs/connections-tab.md` and `documentation/user-documentation/command-bar/connections.md`. Do not change code, tests, the spec, the guide, or any other plan; `web/src/plugins/connections/ConnectionTab.test.tsx` already pins the in-flight disable, rejection reset, and terminal removal.
-
-
 * Plan fidelity: state that a record with no older blocks keeps its current window, not only an empty one, and pin the non-empty case.
 
 Existing Issue: `product/specs/connections-tab.md` says a record with no older blocks "keeps its current empty window", but a record with between one and twenty blocks has `hasOlder: false` and a non-empty window, and `loadOlder` returns unchanged for it too, so the sentence describes only the zero-block case and misstates the general no-older behavior while `src/plugins/connections-topic.test.ts` covers only the zero-block record. Severity: 2/10
