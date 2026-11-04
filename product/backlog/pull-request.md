@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Plan fidelity: correct the plugin guideline's claim that API v3 removed the agent launch contract.
-
-Existing Issue: The present-tense v3 paragraph in `ai/guidelines/plugins-tabs.md` says API v3 removes the agent launch contract, while `product/specs/tab-plugins.md` and the developer reference's v2 section record the agent-tab launch removal as a v2 change and v3 only removes `useAcpResponse`, `TabView.acpResponse`, `launchShellHere`, and the panel/Reset controls. Severity: 3/10
-
-Existing Risk: 3/10 - A plugin author reading the current guideline attributes the removal to v3 and may misread a v2-era plugin as still supported or look for a v2 migration path that no longer applies.
-
-Proposal Risk: 1/10 - The wording will agree with the spec, but the historical v2 note remains deep in the changelog and could still be missed; no behavior changes.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "correct the guideline's API version for the agent launch removal". In `ai/guidelines/plugins-tabs.md`, change the API-version paragraph to state that the agent launch contract was removed in API v2, and keep the v3 removal list limited to `useAcpResponse`, `TabView.acpResponse`, `launchShellHere`, and the panel/Reset controls. Align it with `product/specs/tab-plugins.md`'s API v2 and v3 sections and `documentation/developer-documentation/tab-plugins.md`'s v2 changelog, preserving the historical v1 `useAcpResponse` introduction note. Verify by rereading the guideline's version paragraph against both sources; the migrated `src/plugins/documentation.test.ts` topic/count assertions must keep passing unchanged.
-
-
 * Plan fidelity: remove the transcript spec's stale claim that the removed core ACP panel reuses the collapse formatter.
 
 Existing Issue: `product/specs/transcript.md` still says the core ACP panel reuses `flattenBuffer` for its response slice, but API v3 removed that panel and the delivered shell shows a settled reply while connection-tab history renders separately. Severity: 4/10
