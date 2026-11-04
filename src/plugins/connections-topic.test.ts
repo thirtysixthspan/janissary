@@ -8,6 +8,11 @@ function fixture() {
   const tabs: Tab[] = [
     { label: 'owner', title: 'Owner', dotColor: '', number: 1, log: [], runtime: { busy: false, context: [], queue: [], acpRecordId: 'core-id' } },
     { label: 'second', dotColor: '', number: 2, log: [], runtime: { busy: false, context: [], queue: [] } },
+    {
+      label: 'core-tab', title: 'Core record', dotColor: '', number: 3, log: [], view: 'plugin',
+      plugin: { id: 'connections', instanceKey: 'core-id', schemaVersion: 1, payload: {}, fileRefs: [], sourceLabel: 'owner' },
+      runtime: { busy: false, context: [], queue: [] },
+    },
   ];
   const recordRows = [
     { id: 'core-id', kind: 'acp', title: 'ACP', model: 'm', ownerLabel: 'owner', ownerName: 'Owner', startedAt: 1, updatedAt: 2, status: 'Running' },
@@ -107,6 +112,31 @@ describe('connections topic actions', () => {
     const another = fixture().managers;
     expect(readConnectionsTopic(another).rows.find((row) => row.type === 'record' && row.id === 'core-id'))
       .not.toHaveProperty('window');
+  });
+
+  it('releases a loaded window when its record tab closes and reloads 20 blocks on reopen', () => {
+    const { managers, tabs } = fixture();
+    const recordTab = tabs.find((tab) => tab.plugin?.instanceKey === 'core-id')!;
+    const row = (id: string) => readConnectionsTopic(managers).rows
+      .find((candidate) => candidate.type === 'record' && candidate.id === id);
+
+    runConnectionsTopicAction(managers, { topic: 'connections', action: 'load', id: 'core-id' });
+    expect(row('core-id')).toMatchObject({ window: { count: 20, offset: 25, hasOlder: true } });
+    expect(row('agent-id')).not.toHaveProperty('window');
+
+    tabs.splice(tabs.indexOf(recordTab), 1);
+    expect(row('core-id')).not.toHaveProperty('window');
+
+    tabs.push(recordTab);
+    expect(row('core-id')).not.toHaveProperty('window');
+    runConnectionsTopicAction(managers, { topic: 'connections', action: 'load', id: 'core-id' });
+    expect(row('core-id')).toMatchObject({ window: { count: 20, offset: 25 } });
+    runConnectionsTopicAction(managers, { topic: 'connections', action: 'loadOlder', id: 'core-id' });
+    expect(row('core-id')).toMatchObject({ window: { count: 40, offset: 5, hasOlder: true } });
+
+    tabs.splice(tabs.indexOf(recordTab), 1);
+    expect(row('core-id')).not.toHaveProperty('window');
+    expect(row('agent-id')).not.toHaveProperty('window');
   });
 
   it('lists legacy text and validates live open and close actions against the current owner', () => {

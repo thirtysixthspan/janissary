@@ -9,8 +9,9 @@ export function composeConnectionsTopicData(
 ): ConnectionsTopicData {
   const records = managers.acpRecords.rows();
   const recordIds = new Set(records.map((record) => record.id));
+  const openTabIds = openPluginTabIds(managers);
   for (const id of requestedWindows.keys()) {
-    if (!recordIds.has(id)) requestedWindows.delete(id);
+    if (!recordIds.has(id) || !openTabIds.has(id)) requestedWindows.delete(id);
   }
   const rows = [
     ...liveTabRows(managers, recordIds),
@@ -21,6 +22,10 @@ export function composeConnectionsTopicData(
   rows.sort((a, b) => b.orderingTimestamp - a.orderingTimestamp
     || a.kind.localeCompare(b.kind) || a.id.localeCompare(b.id));
   return { rows };
+}
+
+function openPluginTabIds(managers: Managers): Set<string> {
+  return new Set(managers.tab.tabs.flatMap((tab) => (tab.plugin ? [tab.plugin.instanceKey] : [])));
 }
 
 function liveTabRows(managers: Managers, recordIds: Set<string>): ConnectionsTopicLiveRow[] {

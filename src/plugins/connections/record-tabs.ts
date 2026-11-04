@@ -7,13 +7,16 @@ type PluginRecord = Extract<ConnectionRow, { type: 'record' }>;
 export class ConnectionRecordTabs {
   open(row: ConnectionRow, capabilities: TabPluginServerCapabilities): void {
     if (row.type !== 'record') return;
-    capabilities.topicAction({ topic: 'connections', action: 'load', id: row.id });
-    const record = this.currentRecord(row.id, capabilities);
-    if (!record) return capabilities.rejectRequest(`No connection matching "${row.id}".`);
+    const current = this.currentRecord(row.id, capabilities);
+    if (!current) return capabilities.rejectRequest(`No connection matching "${row.id}".`);
     capabilities.openOrFocusTab(row.id, () => ({
-      title: record.title,
-      payload: { kind: 'connection', record },
+      title: current.title,
+      payload: { kind: 'connection', record: current },
     }));
+    capabilities.topicAction({ topic: 'connections', action: 'load', id: row.id });
+    const loaded = this.currentRecord(row.id, capabilities);
+    if (!loaded?.window) return;
+    capabilities.updateTab(row.id, () => ({ title: loaded.title, payload: { kind: 'connection', record: loaded } }));
   }
 
   update(event: ConnectionsTopicNotification, capabilities: TabPluginServerCapabilities): void {

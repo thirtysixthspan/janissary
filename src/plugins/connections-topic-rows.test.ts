@@ -7,7 +7,10 @@ function fixture() {
   const tabs: Tab[] = [
     { label: 'first', title: 'First tab', dotColor: '', number: 1, log: [], runtime: { busy: false, context: [], queue: [], lastActivity: 100 } },
     { label: 'second', dotColor: '', number: 2, log: [], runtime: { busy: false, context: [], queue: [], lastActivity: 300 } },
-    { label: 'idle', dotColor: '', number: 3, log: [], runtime: { busy: false, context: [], queue: [] } },
+    {
+      label: 'idle', dotColor: '', number: 3, log: [], runtime: { busy: false, context: [], queue: [] },
+      plugin: { id: 'connections', instanceKey: 'core-record', schemaVersion: 1, payload: {}, fileRefs: [], sourceLabel: 'first' },
+    },
   ];
   tabs[0]!.runtime!.acpRecordId = 'core-record';
   const recordRows = [
@@ -92,6 +95,48 @@ describe('connections topic rows', () => {
       .toMatchObject({ window: { id: 'core-record', count: 20 } });
     expect(data.rows.find((row) => row.type === 'record' && row.id === 'agent-record')).not.toHaveProperty('window');
     expect(managers.acpRecords.window).toHaveBeenCalledWith('core-record', 20);
+  });
+
+  it('keeps a requested window while its plugin tab is docked or hidden and prunes it after the tab closes', () => {
+    const { managers, tabs } = fixture();
+    const recordTab = tabs.find((tab) => tab.plugin?.instanceKey === 'core-record')!;
+    const requested = new Map([['core-record', 20]]);
+    recordTab.dock = 'left';
+
+    expect(composeConnectionsTopicData(managers, requested).rows
+      .find((row) => row.type === 'record' && row.id === 'core-record'))
+      .toMatchObject({ window: { id: 'core-record', count: 20 } });
+
+    recordTab.hidden = true;
+    expect(composeConnectionsTopicData(managers, requested).rows
+      .find((row) => row.type === 'record' && row.id === 'core-record'))
+      .toMatchObject({ window: { id: 'core-record', count: 20 } });
+    expect(requested.has('core-record')).toBe(true);
+
+    tabs.splice(tabs.indexOf(recordTab), 1);
+    const closed = composeConnectionsTopicData(managers, requested).rows
+      .find((row) => row.type === 'record' && row.id === 'core-record');
+    expect(requested.has('core-record')).toBe(false);
+    expect(closed).not.toHaveProperty('window');
+  });
+
+  it('starts a reopened record tab without a window until it requests one again', () => {
+    const { managers, tabs } = fixture();
+    const recordTab = tabs.find((tab) => tab.plugin?.instanceKey === 'core-record')!;
+    const requested = new Map<string, number>([['core-record', 20]]);
+    tabs.splice(tabs.indexOf(recordTab), 1);
+    composeConnectionsTopicData(managers, requested);
+    expect(requested.size).toBe(0);
+
+    tabs.push(recordTab);
+    expect(composeConnectionsTopicData(managers, requested).rows
+      .find((row) => row.type === 'record' && row.id === 'core-record'))
+      .not.toHaveProperty('window');
+
+    requested.set('core-record', 20);
+    expect(composeConnectionsTopicData(managers, requested).rows
+      .find((row) => row.type === 'record' && row.id === 'core-record'))
+      .toMatchObject({ window: { id: 'core-record', count: 20 } });
   });
 
   it('keeps the SQLite owner display global while focus follows strip order independently', () => {
