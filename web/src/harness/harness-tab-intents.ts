@@ -15,7 +15,6 @@ export type AgentTabIntents = {
   onOpenDiffHere?: () => void;
   onToggleCollapse: () => void;
   onOpenAcpTranscript: (acpRef: AcpRef) => void;
-  onOpenConnection: (row: ConnectionView) => void;
   // Only on a tab that has a recording, because it is the metadata row's own signal that there is
   // one: the row draws its flag inert when this is absent and pressable when it is set, so the two
   // cannot disagree. An tab never has one and so never sends it.
@@ -50,7 +49,6 @@ export function harnessTabIntents(
     onOpenTranscript: () => client.send({ method: transcriptMethod, params: { label } }),
     onToggleCollapse: () => client.send({ method: 'toggleCollapse', params: {} }),
     onOpenAcpTranscript: (acpRef) => client.send({ method: 'openAcpTranscript', params: { acpRef } }),
-    onOpenConnection: (row) => { openConnectionRow(client, label, row); },
     ...(recording !== undefined && {
       onOpenRecording: () => client.send({ method: 'openRecordingFor', params: { label } }),
     }),

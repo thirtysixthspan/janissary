@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { JanusClient } from '../shared/ws/ws';
-import { harnessTabIntents } from './harness-tab-intents';
+import { harnessTabIntents, openConnectionRow } from './harness-tab-intents';
 
 function fakeClient() {
   const send = vi.fn();
@@ -35,10 +35,9 @@ describe('harnessTabIntents', () => {
 
   it('opens a record row and this tab\'s tab-scoped ACP row through the record RPC', () => {
     const { client, send } = fakeClient();
-    const intents = harnessTabIntents(client, 'agent2', 'openTranscriptFileFor');
 
-    intents.onOpenConnection({ text: 'Agent: task.md', kind: 'acp', recordId: 'record-1' });
-    intents.onOpenConnection({ text: 'acp:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'agent2' } });
+    openConnectionRow(client, 'agent2', { text: 'Agent: task.md', kind: 'acp', recordId: 'record-1' });
+    openConnectionRow(client, 'agent2', { text: 'acp:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'agent2' } });
 
     expect(send).toHaveBeenNthCalledWith(1, {
       method: 'openConnectionRecord', params: { tab: 'agent2', recordId: 'record-1' },
@@ -54,9 +53,8 @@ describe('harnessTabIntents', () => {
     ['another tab', { scope: 'tab' as const, label: 'other' }],
   ])('leaves a %s row snapshot-only', (_case, acpRef) => {
     const { client, send } = fakeClient();
-    const intents = harnessTabIntents(client, 'agent2', 'openTranscriptFileFor');
 
-    intents.onOpenConnection({ text: 'row', kind: 'acp', acpRef });
+    openConnectionRow(client, 'agent2', { text: 'row', kind: 'acp', acpRef });
 
     expect(send).not.toHaveBeenCalled();
   });
