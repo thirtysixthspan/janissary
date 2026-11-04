@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Plan fidelity: remove the transcript spec's stale claim that the removed core ACP panel reuses the collapse formatter.
-
-Existing Issue: `product/specs/transcript.md` still says the core ACP panel reuses `flattenBuffer` for its response slice, but API v3 removed that panel and the delivered shell shows a settled reply while connection-tab history renders separately. Severity: 4/10
-
-Existing Risk: 4/10 - An implementer reading the current transcript spec preserves or reintroduces a panel-shaped response slice that the delivered UI no longer has, and the authoritative behavior doc keeps the removed surface alive.
-
-Proposal Risk: 1/10 - The spec will describe the retained shared tool-step collapse without the panel, but it remains prose with no direct test; the existing transcript and connection-tab tests still pin the actual collapse and history behavior.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "remove the stale ACP panel reference from the transcript spec". In `product/specs/transcript.md`, replace the sentence claiming the core ACP panel reuses `flattenBuffer` for its response slice with a description of the retained per-tab `Tab.toolStepsExpanded` collapse for shell and agent transcript entries, and state that connection-tab thought/tool entries use their own expandable rendering rather than a panel response slice. Keep the `Ctrl+T` and `flattenBuffer` description and the `[[acp]]` link. Cross-check `product/specs/acp.md`, `product/specs/keyboard-navigation.md`, and `web/src/shared/transcript/transcript-line.tsx`; the existing transcript and formatting tests must keep passing unchanged.
-
-
 * Description fidelity: describe ACP record retention as a startup prune rather than automatic removal 30 days after closure.
 
 Existing Issue: The Connections guide says closed ACP records are "removed automatically 30 days after they close", while `src/acp-records/manager.ts` prunes only during startup against `ACP_RECORD_RETENTION_MS`, and `documentation/user-documentation/advanced-agents/acp-agent.md` correctly says records closed more than 30 days before startup are removed then, not on a rolling timer. Severity: 4/10
