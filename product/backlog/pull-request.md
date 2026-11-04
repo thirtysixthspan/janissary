@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Plan fidelity: correct the connections-tab documentation's blanket claim that every ACP session remains listed after it closes.
-
-Existing Issue: `product/specs/connections-tab.md` says ACP sessions stay listed after they close and that an ACP session reads Running, Idle, or Closed, and `documentation/user-documentation/command-bar/connections.md` repeats the blanket retention claim, while `src/plugins/connections-topic-rows.ts` emits monitor and editor-persona ACP rows as live-only rows with status `Open` that disappear with their connection and keep no durable record. Severity: 3/10
-
-Existing Risk: 3/10 - A user or implementer reading the authoritative spec expects monitor and persona rows to behave like tracked records, and can mistake the correct live-only behavior for missing history or a broken status.
-
-Proposal Risk: 1/10 - The wording becomes precise with no behavior change; the live-only rows still look different from retained records, as intended.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "distinguish live-only monitor and persona rows from retained ACP records in the connections documentation". In `product/specs/connections-tab.md` under "The connections tab", qualify the retention sentence to tracked core ACP and agent sessions, state that monitor and editor-persona ACP rows are live-only and leave the list when their connection closes, and state that such a live-only row reads `Open` while a tracked core ACP record reads `Running`, `Idle`, or `Closed`. Make the same distinction in `documentation/user-documentation/command-bar/connections.md`'s introduction to live versus retained rows. Verify against `src/plugins/connections-topic-rows.ts` and the monitor and persona fixtures in `src/plugins/connections-topic-rows.test.ts`; no behavior or test change is required.
-
-
 * Technical debt: keep loaded prompt windows out of the connections-list payload.
 
 Existing Issue: `src/plugins/connections/tabs.ts` builds both the initial and updated list payload from the connections topic's rows unchanged, so whenever a record tab has loaded a window the singleton list tab receives that full prompt history even though `ConnectionList` renders only title, kind, owner, and status; every coalesced delivery duplicates the record history to the list. Severity: 4/10

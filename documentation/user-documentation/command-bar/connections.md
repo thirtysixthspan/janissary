@@ -24,7 +24,7 @@ A bare `connections` or `connection` opens or focuses the connections tab. Runni
 | `ssh` | the ssh tab's label, or its destination as typed | Global; an ssh tab has no command bar of its own |
 | `terminal` | the program the terminal runs (`vim`, `claude`, …) | Current tab |
 
-Non-ACP connections appear in the connections tab only while they are live. ACP and agent sessions stay listed after they close.
+Non-ACP connections appear in the connections tab only while they are live. Tracked core ACP sessions and agent runs stay listed after they close. Monitor and editor-persona ACP rows are live-only: they leave the list when their connection closes, are not retained, and read `Open`. A tracked core ACP record reads `Running`, `Idle`, or `Closed`.
 
 ## List live connections
 
