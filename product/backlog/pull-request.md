@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's stale branch statistics and its claim that the canonical plan is the branch's only plan.
-
-Existing Issue: The description says the branch carries 93 commits and 232 changed files from `139aaf43` and that `product/plans/complete/connections-tabs.md` is the branch's only plan, while the reviewed head has 99 commits and 284 changed files and five repair plans beside the canonical plan. Severity: 3/10
-
-Existing Risk: 4/10 - A reviewer scoping the change from the description underestimates the branch and never sees the five repair plans whose behavior and verification the later commits rely on.
-
-Proposal Risk: 1/10 - Only the pull request body changes; the description then matches the branch and lists the repair plans the review is judging.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "refresh the pull request description's branch statistics and plan inventory". Recompute the counts from `139aaf43` to the current head (the head reviewed here was 99 commits and 284 changed files) or replace the exact numbers with a count-free statement, and replace the "only plan for this feature" sentence in "Source plan and subplans" with links to `product/plans/complete/acp-capped-tool-step-notice.md`, `product/plans/complete/retire-ctrl-t-collapse.md`, `product/plans/complete/editor-connections-persona-only-close.md`, `product/plans/complete/correct-tab-plugin-api-history-and-counts.md`, and `product/plans/complete/surface-refused-record-tab-lifecycle-actions.md` beside the canonical plan. Keep the rest of the description unchanged. Verify with `git rev-list --count 139aaf43..HEAD`, `git diff --name-only 139aaf43...HEAD | wc -l`, and `ls product/plans/complete/` after the edit; no source, test, or plan changes.
-
-
 * Correct the connection spec's claim that every non-persona row in an editor connections window opens a record tab.
 
 Existing Issue: `product/specs/connection.md` now says "Any other row in that window, including a running agent row, carries no close control there: pressing it opens its record tab", but monitor, browser, terminal, and SQLite rows carry no durable record or tab-scoped ACP reference and `StatusPanels.rowCanOpen` leaves them without an open action. Severity: 3/10
