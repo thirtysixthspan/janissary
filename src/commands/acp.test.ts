@@ -59,6 +59,24 @@ describe('acp command', () => {
     });
   });
 
+  it('appends one capped reply carrying the tool-step notice', async () => {
+    const pending = Promise.withResolvers<AcpPromptResult>();
+    const { append } = run(() => pending.promise, '/acp hello');
+
+    pending.resolve({
+      answered: true,
+      reply: 'Partial answer\n\n(stopped after 8 tool steps)',
+      session: 'session-1',
+    });
+    await settle();
+
+    expect(append).toHaveBeenCalledExactlyOnceWith('main', {
+      input: '/acp hello',
+      output: 'Partial answer\n\n(stopped after 8 tool steps)',
+      background: expect.any(String),
+    });
+  });
+
   it.each([
     ['usage', { answered: false, error: 'Usage: acp <prompt>.' }],
     ['already running', { answered: false, error: 'ACP: a prompt is already running.' }],

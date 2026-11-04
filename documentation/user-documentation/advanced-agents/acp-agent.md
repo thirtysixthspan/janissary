@@ -44,7 +44,7 @@ Closing the shell also closes its ACP connection. Reset cancels a question from 
 
 <img class="agent-float left" src="/agents/ekrem-south.png" alt="" />
 
-The agent can run the app's database, browser, and question tools while answering: query a database, fetch a page, read its content, or ask you for an answer. The result goes back to the agent so it can continue, up to eight tool steps per prompt.
+The agent can run the app's database, browser, and question tools while answering: query a database, fetch a page, read its content, or ask you for an answer. The result goes back to the agent so it can continue, up to eight tool steps per prompt. If a prompt reaches that cap, the settled shell reply and the record's final answer in the connection tab end with a `(stopped after 8 tool steps)` paragraph, so you can tell the answer was cut short and retry a narrower request.
 
 Tool steps and the agent's thinking appear in the connection tab, not in the shell output. Thought and tool entries start collapsed there; click one to expand it and see its content. Only these three tools are available in this loop; it cannot run arbitrary shell commands.
 

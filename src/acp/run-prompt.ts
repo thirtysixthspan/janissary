@@ -64,9 +64,11 @@ export function runCorePrompt(
     finished: (reason, maxSteps) => {
       notify(managers, 'state-change', label);
       if (isRateLimitError(lastAnswer)) notify(managers, 'rate-limited', label);
-      if (reason === 'capped') appendAcp(managers, label, { input: '', output: `(stopped after ${maxSteps} tool steps)` });
+      const reply = reason === 'capped'
+        ? `${lastAnswer}${lastAnswer ? '\n\n' : ''}(stopped after ${maxSteps} tool steps)`
+        : lastAnswer;
       messageBus.emit('state', { type: 'dirty' });
-      settleAcpPrompt(managers, label, { answered: true, reply: lastAnswer, session: identity });
+      settleAcpPrompt(managers, label, { answered: true, reply, session: identity });
     },
     error: (message) => {
       const error = `ACP error: ${message}`;

@@ -196,13 +196,20 @@ describe('AcpManager.run', () => {
     expect(onDone).toHaveBeenCalledWith({ answered: true, reply: 'the final answer', session: expect.any(String) });
   });
 
-  it('finished handler appends a capped message when reason is capped', () => {
-    const { acp, append } = setup();
-    acp.run('tab1', 'acp hello');
+  it('finished handler settles a capped answer with the notice and appends no separate entry', () => {
+    const { acp, append, deleteBusy } = setup();
+    const onDone = vi.fn();
+    acp.run('tab1', 'acp hello', onDone);
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.endTurn('partial');
     handlers.finished('capped', 5);
-    expect(append).toHaveBeenCalledWith('tab1', { input: '', output: '(stopped after 5 tool steps)' });
+    expect(deleteBusy).toHaveBeenCalledOnce();
+    expect(onDone).toHaveBeenCalledWith({
+      answered: true,
+      reply: 'partial\n\n(stopped after 5 tool steps)',
+      session: expect.any(String),
+    });
+    expect(append).not.toHaveBeenCalledWith('tab1', { input: '', output: '(stopped after 5 tool steps)' });
   });
 
   it('startTurn calls addBusy and appends the prompt on first turn', () => {

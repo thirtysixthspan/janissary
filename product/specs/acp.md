@@ -72,7 +72,7 @@ The tools are declared once in `src/acp/tool-table.ts`: browser, question, then 
 
 A session a plugin started with `withoutTools` builds no tool table at all. Its primer carries no tool text, no reply line is read as a command, and an emitted command has nothing that runs it — the loop answers with the reply as prose. This policy belongs to the tab and applies to every prompt on it, including a prompt typed with the `acp` command, until the tab closes. A typed `acp` command on an unrestricted tab still runs the full table.
 
-Tool results are recorded as ACP steps and collapse through the existing transcript rendering. The cap reports `(stopped after 8 tool steps)`. Arbitrary shell commands are not ACP tools. Database/browser/question execution remains on the machine running Janissary, even when the provider runs remotely.
+Tool results are recorded as ACP steps and collapse through the existing transcript rendering. When the tool loop reaches its cap, the settled shell reply and the record's final answer end with a trailing `(stopped after 8 tool steps)` paragraph rather than a separate transcript entry. Arbitrary shell commands are not ACP tools. Database/browser/question execution remains on the machine running Janissary, even when the provider runs remotely.
 
 ## Remote connections
 

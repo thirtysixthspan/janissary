@@ -224,6 +224,33 @@ describe('core ACP for plugin tabs', () => {
     managers.acp.closeAll();
   });
 
+  it('reports the capped tool-step notice once in the settled reply and record answer', async () => {
+    const { managers, handlers, session } = setup();
+    vi.mocked(managers.browser.run).mockResolvedValue('page');
+    await managers.command.dispatchLineWithOutput('consumer', 'acp hello', 1);
+
+    for (let step = 0; step < 8; step += 1) {
+      handlers().onChunk('browser open https://example.com');
+      handlers().onEnd('end_turn');
+      await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalledTimes(step + 2); });
+    }
+    handlers().onChunk('Partial answer\nbrowser open https://example.com');
+    handlers().onEnd('end_turn');
+
+    const tab = managers.tab.byLabel('consumer')!;
+    await vi.waitFor(() => {
+      const replies = tab.log.filter((entry) => entry.background);
+      expect(replies).toHaveLength(1);
+      expect(replies[0]).toMatchObject({
+        input: 'acp hello',
+        output: 'Partial answer\n\n(stopped after 8 tool steps)',
+      });
+    });
+    expect(managers.acpRecords.window(managers.acpRecords.rows()[0].id)?.blocks)
+      .toMatchObject([{ answer: 'Partial answer\n\n(stopped after 8 tool steps)' }]);
+    managers.acp.closeAll();
+  });
+
   it('refuses a second shell prompt without replacing the first', async () => {
     const { managers, handlers } = setup();
     await managers.command.dispatchLineWithOutput('consumer', 'acp first', 1);

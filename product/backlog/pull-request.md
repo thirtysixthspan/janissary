@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the spec's capped tool-step report through the settled shell reply and the connection tab, because the removed response panel was its only visible surface.
-
-Existing Issue: The ACP loop still appends `(stopped after N tool steps)` to the invoking tab's log, but the web shell renders only the one settled background reply, the connection tab renders only recorded activity, and the record feed never receives that entry, so the cap has no user-facing surface after the panel removal even though the ACP spec still says it reports. Severity: 4/10
-
-Existing Risk: 5/10 - A prompt that reaches the eight-step cap returns an apparently complete but truncated answer, so a reader cannot tell the result was cut short or whether to retry a narrower request.
-
-Proposal Risk: 1/10 - The notice becomes part of the single settled reply and the recorded answer; the only residual risk is a deliberate product decision that the cap should not be reported, which would instead require correcting the spec and user docs.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "restore the capped tool-step notice in the settled reply". In `src/acp/run-prompt.ts`, compose the settlement reply as the existing `lastAnswer` plus a trailing `(stopped after <maxSteps> tool steps)` paragraph when `finished` receives `reason === 'capped'`, pass that composed text to `settleAcpPrompt`, and remove the separate `appendAcp` cap entry so the same notice does not appear twice. Keep `answerCoreRecord` saving the composed text so the connection tab's final answer carries it, and keep every other settlement path unchanged. Add coverage in `src/acp/plugin-session.test.ts` and `src/commands/acp.test.ts` that a capped prompt produces exactly one background reply whose output contains the notice and no second reply, and that the record's answer contains it. Update `product/specs/acp.md` and `documentation/user-documentation/advanced-agents/acp-agent.md` to name the settled shell reply as the surface; if the product instead chooses not to report the cap, change the code to remove the notice consistently and update those documents to say so. Existing answer, refusal, usage, error, close, and cancellation tests must keep passing unchanged.
-
-
 * Restore or retire the Ctrl+T tool-step collapse shortcut, which no longer controls a visible ACP surface after the response panel's removal.
 
 Existing Issue: `web/src/useWindowKeys.ts` still intercepts Ctrl+T and sends `toggleCollapse`, but the only renderer of the collapsed ACP entries was the removed response panel; the connection tab uses its own `<details>` rather than `Tab.toolStepsExpanded`, and the only remaining `bufferLines` renderer is the notifications tab, whose entries are not ACP steps, so the key toggles an invisible flag and also prevents Ctrl+T from reaching the shell. Severity: 4/10
