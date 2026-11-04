@@ -4,11 +4,11 @@ Read ACP replies and `help` output as formatted GitHub-flavored Markdown in the 
 
 <img class="agent-float" src="/agents/hakim-south-east.png" alt="" />
 
-## See formatting as the reply arrives
+## See formatting after a shell answer settles
 
-When you use `acp <prompt>`, the reply renders while the agent writes it, with your prompt remaining above it. The app keeps each Markdown reply together, so multi-line lists, tables, and fenced code blocks keep their structure. A partial table or code fence can look unfinished during the turn and settle as more text arrives.
+When you use `acp <prompt>`, the shell returns immediately and the answer arrives once it has settled. There is no streaming panel and no responding status. The app keeps each Markdown reply together and appends it at the current bottom of the shell output under the exact `acp <prompt>` line, so an answer still reads correctly after other commands ran in between. Multi-line lists, tables, and fenced code blocks keep their structure.
 
-Replies come back structured because the app asks for that before your prompt reaches the agent. Every `acp` prompt is prefixed with an instruction to answer in GitHub-flavored Markdown, naming headings, lists, tables, and fenced code blocks. The agent's prose is rendered as Markdown because of that instruction; ordinary command output remains plain text. Automatic `db`, `browser`, and `question` tool steps remain plain text and appear as collapsed command/result entries. Consecutive steps share one summary. Empty continuation turns between steps don't split the group or add to its count, but a visible reply or message does start a new group. Your prompt and the agent's final answer stay visible. Click a tool-step summary to inspect it; `Ctrl+T` also works while the ACP panel has focus. Shell output, database results, browser results, and inter-agent messages also remain plain text.
+Replies come back structured because the app asks for that before your prompt reaches the agent. Every `acp` prompt is prefixed with an instruction to answer in GitHub-flavored Markdown, naming headings, lists, tables, and fenced code blocks. The agent's prose is rendered as Markdown because of that instruction; ordinary command output remains plain text. Automatic `db`, `browser`, and `question` activity stays plain text in the session's connection tab, where thought and tool entries start collapsed and expand on a click. Shell output, database results, browser results, and inter-agent messages also remain plain text.
 
 <img class="agent-float left" src="/agents/yusuf-south-west.png" alt="" />
 
@@ -24,7 +24,7 @@ Regular transcript output and Markdown replies turn text like `src/app.ts:42` in
 src/app.ts:42
 ```
 
-A single click opens the file in an editor at the named line. A value like `error:42` has no path separator, so it isn't a file link. Links beginning with `http://` or `https://` open through the app's page-opening behavior. A web address with a port, such as `http://localhost:3000`, stays a web link. A URL ending in `:42` also opens as a web page instead of a file-and-line reference. Other Markdown links keep their normal link behavior. In a docked shell's ACP panel, a link opens from the shell that owns the panel, as described in [Query ACP from a shell](/user-documentation/advanced-agents/acp-agent).
+A single click opens the file in an editor at the named line. A value like `error:42` has no path separator, so it isn't a file link. Links beginning with `http://` or `https://` open through the app's page-opening behavior. A web address with a port, such as `http://localhost:3000`, stays a web link. A URL ending in `:42` also opens as a web page instead of a file-and-line reference. Other Markdown links keep their normal link behavior. In a shell's ACP answer, a link acts for the shell that owns the answer, as described in [Query ACP from a shell](/user-documentation/advanced-agents/acp-agent).
 
 Color, bold, and underline styling in shell output appears while a command runs and after it finishes. A file-and-line reference in a colored shell-output line stays clickable. Terminal control sequences such as cursor movement and clearing a line are omitted from the transcript.
 

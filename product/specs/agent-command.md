@@ -105,3 +105,5 @@ The server owns one run projection and revision. Monitor updates are coalesced a
 The monitor waits for the host's bounded run cleanup to finish after accepting termination. Cleanup may take longer than the plugin handler's five-second budget without disabling the monitor.
 
 While a run is live, its caller's connections window lists it as an ACP-kind row titled `Agent: <task filename>` carrying the run's durable record. The row appears as soon as the run is created, and its title follows the task path once the run resolves it. Pressing that row opens the run's connection tab. It has no transcript snapshot button, because an agent run has no transcript snapshot scope. The row leaves the caller's window as soon as the run ends; the durable row remains in the connections tab.
+
+Every headed and headless run also has a row in the connections tab, whether or not `in a tab` opened a monitor, and that row opens the run's connection tab. The record tab's **Terminate** acts exactly like the monitor's Terminate and ends only the run; the optional monitor remains a separate view whose close does not terminate the run. See [[connections-tab]].

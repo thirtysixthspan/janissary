@@ -25,7 +25,7 @@
 | `Tab` | Complete file paths; tab targets for `send` / `queue` / `close` / `schedule`; `tab` subcommands, targets, and pane/dock sides; connection strings; `browser` subcommands / window IDs; `monitor` personas, names, and targets; the `schedule system` grammar; `files` clauses and paths; runscript names; system schedule names; and help pages including `commands` and `keys` |
 | `Enter` | Execute the current command |
 | `Ctrl+E` | Open the queue picker for a shell or another tab with a queue and command bar (no-op on tabs without queues) |
-| `Ctrl+T` | Expand / collapse ACP tool steps in the response panel |
+| `Ctrl+T` | Toggle the current tab's shared transcript tool-step collapse state |
 | `Cmd+F` | Search for a line in an editor buffer |
 | `Cmd+N` / `Ctrl+N` (conversation list) | Create and open a new conversation |
 | `Backspace` / `Delete` | Delete the character before / after the cursor |

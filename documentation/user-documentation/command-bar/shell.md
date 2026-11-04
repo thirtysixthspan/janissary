@@ -96,7 +96,7 @@ The recording captures terminal output and resizes, not keystrokes as input. But
 
 ## Query ACP from a shell
 
-Use `acp <prompt>` in the shell command bar to query OpenCode. Replies stream as Markdown in the ACP panel above the bar, with tool steps and a responding status. **Reset ACP** stops the current connection immediately, including while a reply is in progress. The panel and its controls belong to that shell when it is docked too. See [ACP agents](/user-documentation/advanced-agents/acp-agent) for setup, tools, and remote connections.
+Use `acp <prompt>` in the shell command bar to query OpenCode. The command returns immediately and the bar stays usable, so ordinary commands keep working while the prompt runs. The answer appears once at the current bottom of the shell output as rendered Markdown, under an echo of the exact `acp <prompt>` line, even if other output arrived in between. A second prompt while one runs is refused with `ACP: a prompt is already running.` and nothing is queued. Tool steps and thinking appear in the session's connection tab, not in the shell. Cancel, Close session, and reset are described in [ACP agents](/user-documentation/advanced-agents/acp-agent); the list and retained records are in [Connections](/user-documentation/command-bar/connections).
 
 ## Inline monitors
 
