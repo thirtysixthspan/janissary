@@ -54,7 +54,7 @@ Questions identify the tab asking them. Answer or cancel in the question surface
 
 Every ACP session started from a shell has a retained connection record. The shell's row in the connections window, and its row in the connections tab, opens the session's connection tab. The record survives the shell closing and an application restart, and a closed record opens read-only. A clean close saves completed history; a crash can lose activity from the prompt that was running, because streaming activity is not written continuously. Records closed more than 30 days before startup are removed then, not on a rolling timer.
 
-The connection tab is the full live view: metadata, prompt blocks, activity, and the final answer. It is not a plain-text snapshot. A shell row has no snapshot button; the separate **Open transcript** button in the shell metadata row opens the terminal's own transcript file. Editor persona and monitor rows keep their plain-text snapshot buttons.
+The connection tab is the full live view: metadata, prompt blocks, activity, and the final answer. It is not a plain-text snapshot. A shell row has no snapshot button; the separate **Open transcript** button in the shell metadata row opens the terminal's own transcript file. Only an editor tab's connections panel draws the monitor and persona snapshot buttons; shell and harness windows do not.
 
 A run started from this tab with `agent in a tab` also appears in the window as an `Agent: <task filename>` row while it runs. That row opens the run's connection tab and disappears when the run ends. See [Connections](/user-documentation/command-bar/connections) for the list, lookup, close, delete, and retention rules.
 

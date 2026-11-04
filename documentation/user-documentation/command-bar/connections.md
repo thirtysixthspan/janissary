@@ -53,7 +53,7 @@ connections acp: explain this test
 
 Title matching ignores letter case. Otherwise it compares the whole stored title, including its `ACP:` or `Agent:` prefix and every interior space, and picks the most recently updated match. It is not a prefix, substring, fuzzy, or whitespace-normalized match. Don't wrap the title in quotation marks: quotation marks are ordinary text, not syntax. An incomplete or differently spaced title reports exactly `No connection matching "<text>".`
 
-The [connections window](#the-connections-window) and the connections tab open retained records the same way. A monitor or editor-persona row is live-only: it focuses its owning tab and never opens a record.
+The [connections window](#the-connections-window) and the connections tab open retained records the same way. In the connections tab, a monitor or editor-persona row is live-only: it focuses its owning tab and never opens a record. In a tab's connections window, those rows stay snapshot-only and do not open or focus a record.
 
 ## The connections tab
 
