@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Description fidelity: replace the plan-only pull request description with the delivered feature, its verification, and its limitations.
-
-Existing Issue: The body still describes the initial publication of seven Markdown plans in one commit and says no implementation, tests, specs, API change, screenshots, or manual feature behavior exists, while the head has 47 commits and 251 changed files including records, ACP and agent feeds, cancellation, the connections topic, plugin UI, shell integration, tests, specs, and API v3. Severity: 9/10
-
-Existing Risk: 9/10 - Reviewers can approve or merge on a false scope and never see the security, compatibility, and manual-verification work that actually landed.
-
-Proposal Risk: 2/10 - The description will match the branch, while the unexercised manual scenarios remain a separate limitation that must be stated rather than hidden.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "rewrite the stalled plan-only pull request description". Use the pull request editing route available to that task, not this review, to replace the title and body with the delivered feature. Describe the record store and retention, ACP and agent feeds, local and remote cancellation, the coalesced connections topic and catalog/actions, the plugin-owned list and record tabs, asynchronous shell replies and popup opening, API v3, and the specs/docs/tests that shipped. Remove every initial-publication claim: the seven-file, 307-line, one-commit status; the statement that no implementation exists; the pinned initial SHA; the statement that all drafts remain initial; and the instruction to verify only the plan publication. Link the source and subplans under `product/plans/complete/` and use the current head rather than the initial SHA. Replace Setup and How to verify with application steps for a scratch project: async shell prompt plus intervening command and cancellation, connections list navigation and duplicate-looking rows, record history and paging, close/delete confirmation, agent run Terminate, restart recovery, and remote cancel. Add screenshots or state honestly that none were captured, and record the manual verification status and resource blockers from the 07 ledger. Keep the pull request open and use a Conventional Commits title; add no AI attribution anywhere.
-
-
 * Plan fidelity: complete and record the manual acceptance scenarios that the completed 07 plan still lists as unexercised.
 
 Existing Issue: The completed 07 plan says completion requires evidence for every requirement-map row and manual scenarios M1 through M8, but its own ledger records M1, M2, and M6 as partial and M3, M4, M5, and M7 as not exercised, with no browser or remote-host evidence in the pull request. Severity: 6/10
