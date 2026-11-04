@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Plan fidelity: correct the 07 verification ledger's claim that no production or test change followed its implementation.
-
-Existing Issue: The completed 07 plan says every commit after `5fa9845` through the prepared head is documentation, plan, or backlog only, and its evidence table says "No production or test change followed it", while the branch commits after that SHA include production and test repairs for owner-aware rows, control-only Enter handling, caller-incarnation matching, streamed viewport preservation, and cancellation boundaries. Severity: 5/10
-
-Existing Risk: 5/10 - A reviewer treats the 07 build and test evidence as covering the current tree, so later source and test fixes can ship without the build, documentation, and suite checks the ledger says were performed at that head.
-
-Proposal Risk: 2/10 - The ledger will match the commit graph, but unless the checks are rerun the production and documentation evidence remains scoped to `37324fd4` rather than the final head.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "correct the 07 verification ledger's claim that no production or test change followed its implementation". In `product/plans/complete/connections-tabs-07-specs-docs-integration.md`'s "Verification resources and evidence ledger", replace the sentence claiming all later commits are documentation, plan, and backlog only and the table row saying "No production or test change followed it" with the actual sequence after `5fa9845`, naming the production and test repair commits `80a9b527`, `0739efc0`, `cadc9a2c`, `40387192`, `5b4cdde8`, `160a2cd7`, `1b33cd66`, and `8ba3e563`. Scope the recorded production build, docs build, and documentation-suite results explicitly to `37324fd4`, or rerun them at the final head and record the new SHA and results. Preserve the existing per-scenario manual status and keep M7 blocked; do not claim a full manual pass.
-
-
 * Plan fidelity: correct the connections-tab documentation's blanket claim that every ACP session remains listed after it closes.
 
 Existing Issue: `product/specs/connections-tab.md` says ACP sessions stay listed after they close and that an ACP session reads Running, Idle, or Closed, and `documentation/user-documentation/command-bar/connections.md` repeats the blanket retention claim, while `src/plugins/connections-topic-rows.ts` emits monitor and editor-persona ACP rows as live-only rows with status `Open` that disappear with their connection and keep no durable record. Severity: 3/10
