@@ -33,6 +33,17 @@ const agentRow = {
   startedAt: 1, updatedAt: 2, status: 'Completed', orderingTimestamp: 2,
 };
 
+function loadedWindow() {
+  return {
+    id: 'uuid',
+    source: { kind: 'acp' as const, model: 'model', ownerLabel: 'owner', ownerName: 'Owner' },
+    blocks: Array.from({ length: 20 }, (_, index) => ({ prompt: `prompt ${index}`, startedAt: index, entries: [] })),
+    totalBlocks: 25,
+    offset: 5,
+    hasOlder: true,
+  };
+}
+
 describe('connections plugin activation', () => {
   it('declares the command aliases and only the capabilities this slice uses', () => {
     expect(connectionsManifest).toMatchObject({
@@ -70,15 +81,32 @@ describe('connections plugin activation', () => {
     expect(f.closeOwnTab).toHaveBeenCalledWith('uuid');
   });
 
+  it('keeps a loaded record window on the record tab and out of the list payload', () => {
+    const window = loadedWindow();
+    const loaded = { ...recordRow, window };
+    const f = fixture([loaded]);
+
+    f.activation.command?.('', f.capabilities, 'connections');
+    const [, openList] = f.openOrFocusTab.mock.calls[0];
+    const opened = openList();
+    expect(opened).toStrictEqual({ title: 'Connections', payload: { kind: 'list', rows: [recordRow] } });
+    expect(opened.payload.rows[0]).not.toHaveProperty('window');
+
+    const event = { topic: 'connections', data: { rows: [loaded] }, tabs: ['connections', 'uuid'] } as const;
+    f.activation.notify?.(event, f.capabilities);
+
+    const [, refreshList] = f.updateTab.mock.calls.find(([key]) => key === 'connections')!;
+    const listed = refreshList();
+    expect(listed).toStrictEqual({ payload: { kind: 'list', rows: [recordRow] } });
+    expect(listed.payload.rows[0]).not.toHaveProperty('window');
+
+    const [, refreshRecord] = f.updateTab.mock.calls.find(([key]) => key === 'uuid')!;
+    expect(refreshRecord()).toMatchObject({ payload: { kind: 'connection', record: { id: 'uuid', window } } });
+    expect(loaded).toHaveProperty('window');
+  });
+
   it('opens the record tab before requesting its window and refreshes it with the loaded record', () => {
-    const window = {
-      id: 'uuid',
-      source: { kind: 'acp', model: 'model', ownerLabel: 'owner', ownerName: 'Owner' },
-      blocks: Array.from({ length: 20 }, (_, index) => ({ prompt: `prompt ${index}`, startedAt: index, entries: [] })),
-      totalBlocks: 25,
-      offset: 5,
-      hasOlder: true,
-    };
+    const window = loadedWindow();
     const f = fixture([recordRow]);
     let loaded = false;
     f.topicAction.mockImplementation((action) => {
