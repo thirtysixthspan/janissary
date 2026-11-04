@@ -8,7 +8,7 @@ function fixture(rows: unknown[] = []) {
   const updateTab = vi.fn((_key: string, _factory: () => unknown) => {});
   const closeOwnTab = vi.fn();
   const dockTab = vi.fn();
-  const topicAction = vi.fn((_action: { action?: string }) => 'connections output');
+  const topicAction = vi.fn((_action: { action?: string }) => undefined as string | undefined);
   const topicData = vi.fn(() => ({ rows }));
   const rejectRequest = vi.fn((message: string): never => { throw new Error(message); });
   const reportFailure = vi.fn((message: string): never => { throw new Error(message); });
@@ -196,6 +196,32 @@ describe('connections plugin activation', () => {
       tabPayload: { kind: 'list', rows: [closed] },
     }, f.capabilities)).toBeNull();
     expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action: 'delete', id: 'uuid' });
+  });
+
+  it.each([
+    ['cancel', 'cancel', 'Only a running record can be cancelled.'],
+    ['close-session', 'closeSession', 'Only an open record can be closed.'],
+    ['terminate', 'terminate', 'The run is no longer live.'],
+    ['delete', 'delete', 'An open record cannot be deleted.'],
+  ] as const)('rejects a refused %s intent with the topic message', (intent, action, message) => {
+    const f = fixture([recordRow]);
+    f.topicAction.mockReturnValue(message);
+    expect(() => f.activation.intent({
+      tab: 'connections', intent, payload: { id: 'uuid' },
+      tabPayload: { kind: 'connection', record: recordRow },
+    }, f.capabilities)).toThrow(message);
+    expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action, id: 'uuid' });
+    expect(f.rejectRequest).toHaveBeenCalledWith(message);
+  });
+
+  it('leaves load-older without a refusal even when the topic answers', () => {
+    const f = fixture([recordRow]);
+    f.topicAction.mockReturnValue('ignored');
+    expect(f.activation.intent({
+      tab: 'connections', intent: 'load-older', payload: { id: 'uuid' },
+      tabPayload: { kind: 'connection', record: recordRow },
+    }, f.capabilities)).toBeNull();
+    expect(f.rejectRequest).not.toHaveBeenCalled();
   });
 
   it.each([

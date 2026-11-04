@@ -24,25 +24,26 @@ function isCoreRecordAction(action: ConnectionsTopicAction): action is CoreRecor
   return ['cancel', 'closeSession'].includes(action.action);
 }
 
-function actOnRecord(managers: Managers, action: RecordAction, requested: Map<string, number>): void {
+function actOnRecord(managers: Managers, action: RecordAction, requested: Map<string, number>): string | undefined {
   if (action.action === 'load') {
-    if (managers.acpRecords.rows().every((record) => record.id !== action.id)) return;
+    if (managers.acpRecords.rows().every((record) => record.id !== action.id)) return undefined;
     requested.set(action.id, ACP_RECORD_WINDOW_SIZE);
-    return;
+    return undefined;
   }
   if (action.action === 'loadOlder') {
     const count = requested.get(action.id);
-    if (count === undefined) return;
+    if (count === undefined) return undefined;
     const window = managers.acpRecords.window(action.id, count);
-    if (!window?.hasOlder) return;
+    if (!window?.hasOlder) return undefined;
     requested.set(action.id, Math.max(ACP_RECORD_WINDOW_SIZE, Math.min(window.totalBlocks, count + ACP_RECORD_WINDOW_SIZE)));
-    return;
+    return undefined;
   }
-  if (action.action === 'delete') {
-    const record = managers.acpRecords.rows().find((row) => row.id === action.id);
-    if (!record || ['Idle', 'Running'].includes(record.status)) return;
-    if (managers.acpRecords.delete(action.id)) requested.delete(action.id);
-  }
+  const record = managers.acpRecords.rows().find((row) => row.id === action.id);
+  if (!record) return 'The record no longer exists.';
+  if (['Idle', 'Running'].includes(record.status)) return 'An open record cannot be deleted.';
+  if (!managers.acpRecords.delete(action.id)) return 'The record no longer exists.';
+  requested.delete(action.id);
+  return undefined;
 }
 
 type LiveAction = Extract<ConnectionsTopicAction, { action: 'open' | 'close' }>;
@@ -61,23 +62,32 @@ function actOnLive(managers: Managers, action: LiveAction, requested: Map<string
   }
 }
 
-function actOnCoreRecord(managers: Managers, action: CoreRecordAction, requested: Map<string, number>): void {
+function actOnCoreRecord(managers: Managers, action: CoreRecordAction, requested: Map<string, number>): string | undefined {
   const record = rows(managers, requested).find((candidate) => candidate.type === 'record' && candidate.id === action.id);
-  if (!record || record.type !== 'record' || record.kind !== 'acp') return;
+  if (!record || record.type !== 'record' || record.kind !== 'acp') return 'The record no longer exists.';
   const owner = managers.tab.byLabel(record.ownerLabel);
-  if (!owner || owner.runtime?.acpRecordId !== record.id) return;
-  if (action.action === 'cancel' && record.status === 'Running') consume(managers.acp.cancel(record.ownerLabel));
-  if (action.action === 'closeSession' && ['Idle', 'Running'].includes(record.status)) managers.acp.close(record.ownerLabel);
+  if (!owner || owner.runtime?.acpRecordId !== record.id) return 'The owning tab no longer holds this record.';
+  if (action.action === 'cancel') {
+    if (record.status !== 'Running') return 'Only a running record can be cancelled.';
+    consume(managers.acp.cancel(record.ownerLabel));
+  } else {
+    if (!['Idle', 'Running'].includes(record.status)) return 'Only an open record can be closed.';
+    managers.acp.close(record.ownerLabel);
+  }
+  return undefined;
 }
 
 type TerminateAction = Extract<ConnectionsTopicAction, { action: 'terminate' }>;
 
-function actOnAgentRecord(managers: Managers, action: TerminateAction, requested: Map<string, number>): void {
+function actOnAgentRecord(managers: Managers, action: TerminateAction, requested: Map<string, number>): string | undefined {
   const record = rows(managers, requested).find((candidate) => candidate.type === 'record' && candidate.id === action.id);
-  if (!record || record.type !== 'record' || record.kind !== 'agent' || !record.runId) return;
+  if (!record || record.type !== 'record' || record.kind !== 'agent' || !record.runId) return 'The run is no longer live.';
   if (managers.agent.isLive(record.runId) && managers.agent.isAgentRun(record.runId)) {
     consume(managers.agent.finish(record.runId, 'terminated'));
+  } else {
+    return 'The run is no longer live.';
   }
+  return undefined;
 }
 
 export function connectionsTopicAction(
@@ -98,13 +108,10 @@ export function connectionsTopicAction(
     return undefined;
   }
   if (isRecordAction(action)) {
-    actOnRecord(managers, action, requested);
-    return undefined;
+    return actOnRecord(managers, action, requested);
   }
   if (isCoreRecordAction(action)) {
-    actOnCoreRecord(managers, action, requested);
-    return undefined;
+    return actOnCoreRecord(managers, action, requested);
   }
-  actOnAgentRecord(managers, action, requested);
-  return undefined;
+  return actOnAgentRecord(managers, action, requested);
 }

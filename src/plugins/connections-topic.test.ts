@@ -266,9 +266,9 @@ describe('connections topic actions', () => {
       topic: 'connections', action: 'open', kind: 'shell', id: 'zsh', ownerLabel: 'second',
     });
     expect(setActiveTab).toHaveBeenLastCalledWith(1);
-    runConnectionsTopicAction(managers, {
+    expect(runConnectionsTopicAction(managers, {
       topic: 'connections', action: 'open', kind: 'shell', id: 'zsh', ownerLabel: 'stale',
-    });
+    })).toBeUndefined();
     runConnectionsTopicAction(managers, {
       topic: 'connections', action: 'close', kind: 'shell', id: 'zsh', ownerLabel: 'owner',
     });
@@ -277,9 +277,9 @@ describe('connections topic actions', () => {
       topic: 'connections', action: 'close', kind: 'shell', id: 'zsh', ownerLabel: 'second',
     });
     expect(closeTarget).toHaveBeenLastCalledWith('shell', 'zsh', 'second');
-    runConnectionsTopicAction(managers, {
+    expect(runConnectionsTopicAction(managers, {
       topic: 'connections', action: 'close', kind: 'shell', id: 'missing', ownerLabel: 'owner',
-    });
+    })).toBeUndefined();
     expect(closeTarget).toHaveBeenCalledTimes(2);
     expect(setActiveTab).toHaveBeenCalledTimes(2);
   });
@@ -358,25 +358,67 @@ describe('connections topic actions', () => {
 
   it('validates core ACP and agent run ownership and deletes only terminal records', async () => {
     const { managers, recordRows, cancel, close, finish } = fixture();
-    runConnectionsTopicAction(managers, { topic: 'connections', action: 'cancel', id: 'core-id' });
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'cancel', id: 'core-id' }))
+      .toBeUndefined();
     expect(cancel).toHaveBeenCalledWith('owner');
-    runConnectionsTopicAction(managers, { topic: 'connections', action: 'closeSession', id: 'core-id' });
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'closeSession', id: 'core-id' }))
+      .toBeUndefined();
     expect(close).toHaveBeenCalledWith('owner');
 
     recordRows[0]!.status = 'Idle';
-    runConnectionsTopicAction(managers, { topic: 'connections', action: 'cancel', id: 'core-id' });
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'cancel', id: 'core-id' }))
+      .toBe('Only a running record can be cancelled.');
     expect(cancel).toHaveBeenCalledTimes(1);
     recordRows[0]!.status = 'Running';
     managers.tab.byLabel = vi.fn(() => ({ label: 'owner', runtime: { acpRecordId: 'different-id' } })) as never;
-    runConnectionsTopicAction(managers, { topic: 'connections', action: 'cancel', id: 'core-id' });
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'cancel', id: 'core-id' }))
+      .toBe('The owning tab no longer holds this record.');
     expect(cancel).toHaveBeenCalledTimes(1);
 
-    runConnectionsTopicAction(managers, { topic: 'connections', action: 'terminate', id: 'agent-id' });
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'terminate', id: 'agent-id' }))
+      .toBeUndefined();
     expect(finish).toHaveBeenCalledWith('run-id', 'terminated');
     await Promise.resolve();
-    runConnectionsTopicAction(managers, { topic: 'connections', action: 'delete', id: 'core-id' });
-    runConnectionsTopicAction(managers, { topic: 'connections', action: 'delete', id: 'done-id' });
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'delete', id: 'core-id' }))
+      .toBe('An open record cannot be deleted.');
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'delete', id: 'done-id' }))
+      .toBeUndefined();
     expect(managers.acpRecords.delete).toHaveBeenCalledTimes(1);
     expect(managers.acpRecords.delete).toHaveBeenCalledWith('done-id');
+  });
+
+  it('returns a refusal for stale lifecycle actions and leaves the record unchanged', () => {
+    const { managers, recordRows, cancel, close, finish } = fixture();
+    const core = recordRows[0]!;
+
+    core.status = 'Idle';
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'cancel', id: 'core-id' }))
+      .toBe('Only a running record can be cancelled.');
+    core.status = 'Completed';
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'closeSession', id: 'core-id' }))
+      .toBe('Only an open record can be closed.');
+    expect(cancel).not.toHaveBeenCalled();
+    expect(close).not.toHaveBeenCalled();
+
+    core.status = 'Running';
+    managers.tab.byLabel = vi.fn(() => ({ label: 'owner', runtime: { acpRecordId: 'different-id' } })) as never;
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'cancel', id: 'core-id' }))
+      .toBe('The owning tab no longer holds this record.');
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'closeSession', id: 'core-id' }))
+      .toBe('The owning tab no longer holds this record.');
+    expect(cancel).not.toHaveBeenCalled();
+    expect(close).not.toHaveBeenCalled();
+
+    managers.agent.isLive = vi.fn(() => false);
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'terminate', id: 'agent-id' }))
+      .toBe('The run is no longer live.');
+    expect(finish).not.toHaveBeenCalled();
+
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'delete', id: 'core-id' }))
+      .toBe('An open record cannot be deleted.');
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'delete', id: 'missing-id' }))
+      .toBe('The record no longer exists.');
+    expect(managers.acpRecords.delete).not.toHaveBeenCalled();
+    expect(core).toMatchObject({ id: 'core-id', status: 'Running' });
   });
 });

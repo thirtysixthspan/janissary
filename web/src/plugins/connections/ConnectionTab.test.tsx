@@ -73,6 +73,22 @@ describe('ConnectionTab', () => {
     expect(intent).toHaveBeenCalledWith('close-session', { id: 'uuid' });
   });
 
+  it.each([
+    ['Cancel', 'cancel', 'Only a running record can be cancelled.'],
+    ['Close session', 'close-session', 'Only an open record can be closed.'],
+  ] as const)('shows a refused %s action and leaves the record unchanged', async (label, intentName, message) => {
+    const value = record();
+    const before = structuredClone(value);
+    const { intent } = setup(value, async () => { throw new Error(message); });
+    fireEvent.click(screen.getByRole('button', { name: label }));
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(message));
+    expect(intent).toHaveBeenCalledWith(intentName, { id: 'uuid' });
+    expect(screen.getByText('Running')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close session' })).toBeInTheDocument();
+    expect(value).toEqual(before);
+  });
+
   it('keeps closed records read-only and renders a missing window as loading', () => {
     const value = record('acp', 'Closed');
     value.window = undefined;
