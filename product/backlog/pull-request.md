@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Plan fidelity: correct the 07 verification ledger's claim that no production, test, documentation, or spec change followed the head it re-verified.
-
-Existing Issue: The completed 07 plan says the production build, documentation build, and documentation suite were re-run at `dc491bd5` and that "only this correction's plan, ledger edit, and backlog removal follow that SHA", but `52cbde7e` changed the Connections user guide and the connections-tab spec and `f2e9e26c` changed the server list-row projection, its test, and the same spec after `dc491bd5`, so the ledger's evidence is scoped to a tree older than HEAD and the recurrence of the earlier ledger problem is not recorded. Severity: 5/10
-
-Existing Risk: 5/10 - A reviewer can read the ledger as describing the current head and approve the branch without the documentation and suite evidence that the latest commits need, while the earlier correction of this same ledger then appears to have closed a problem that has reopened.
-
-Proposal Risk: 2/10 - The ledger will match the commit graph and name the exact evidence head, but unless the checks are rerun at the new head the build and suite results remain historical rather than current.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "correct the 07 verification ledger's claim that no later change followed its re-verified head". In `product/plans/complete/connections-tabs-07-specs-docs-integration.md`, revise the "Verification resources and evidence ledger" text that says only the correction's plan, ledger edit, and backlog removal follow `dc491bd5`, and the table rows that scope the documentation-suite, docs-build, and production-build results to that SHA, to name the later commits `52cbde7e` (Connections guide and connections-tab spec) and `f2e9e26c` (server list-row projection, activation test, and connections-tab spec). Keep every per-scenario manual status unchanged, keep M7 blocked, keep the source-report caveat for the older suite counts, and do not claim a full manual pass. If current-head evidence is required, rerun `npm run test:server -- src/plugins/documentation.test.ts`, `npm run docs:build`, and `npm run build:web -- --manifest --sourcemap` at the final head and record the new SHA and results; otherwise state explicitly that the build, documentation, and suite evidence is historical and that the later server and spec changes are covered only by their focused tests. Verify the commit list with `git log --oneline 5fa9845..HEAD` and confirm every named commit changed the files it is said to change. Do not change production code, tests, the description, or the source plan's 8/10 rating in this correction.
-
-
 * Functionality: load older connection history when the newest window already fits the viewport, so a reader at the top is not trapped without a scroll event.
 
 Existing Issue: `web/src/plugins/connections/useConnectionHistoryScroll.ts` only calls `requestOlder` from the scroll handler when `scrollTop` is `0`, so a record whose newest window is shorter than the history viewport, for example 21 short prompt-only blocks on a tall display, opens with `scrollTop` clamped to `0`, never emits a scroll event, and offers no other paging control even though `window.hasOlder` is true. Severity: 4/10
