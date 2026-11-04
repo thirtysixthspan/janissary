@@ -43,6 +43,28 @@ describe('ConnectionTab', () => {
     expect(screen.getByText('tool', { selector: 'summary' }).closest('details')).not.toHaveAttribute('open');
   });
 
+  it('keeps expanded entries and block order when older blocks are prepended', () => {
+    const value = record();
+    value.window!.offset = 2;
+    value.window!.totalBlocks = 3;
+    value.window!.blocks[0]!.prompt = 'existing';
+    const { view, capabilities } = setup(value);
+    const thought = screen.getByText('thought', { selector: 'summary' });
+    fireEvent.click(thought);
+    const details = thought.closest('details');
+    expect(details).toHaveAttribute('open');
+    const older = ['oldest', 'older'].map((prompt, index) => ({
+      prompt, startedAt: 10 + index,
+      entries: [{ kind: 'message' as const, text: prompt, timestamp: 10 + index }],
+    }));
+    view.rerender(<ConnectionTab record={{ ...value, window: { ...value.window!, offset: 0, hasOlder: false,
+      blocks: [...older, value.window!.blocks[0]!] } }} capabilities={capabilities} />);
+    expect(details?.isConnected).toBe(true);
+    expect(screen.getByText('thought', { selector: 'summary' }).closest('details')).toHaveAttribute('open');
+    expect([...document.querySelectorAll('.connections-prompt')].map((element) => element.textContent))
+      .toEqual(['oldest', 'older', 'existing']);
+  });
+
   it('gates ACP actions by authoritative status and sends their intents', () => {
     const { intent } = setup(record());
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));

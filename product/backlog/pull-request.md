@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Key connection-history blocks by their absolute position so loading an older page does not remount every existing block and collapse the reader's expanded entries.
-
-Existing Issue: `web/src/plugins/connections/ConnectionHistory.tsx` keys each block by `${block.startedAt}:${index}` where `index` is relative to the current window, so prepending older blocks shifts every existing index, remounts every existing block in React, and discards any expanded thought or tool `<details>` and text selection even though `useConnectionHistoryScroll` preserves `scrollTop`. Severity: 3/10
-
-Existing Risk: 3/10 - Paging older history silently closes entries the reader had opened and churns the whole history DOM on every page, and any later key change can make the scroll restoration depend on remount timing.
-
-Proposal Risk: 1/10 - `window.offset + index` is stable for the same absolute block across prepends; only the key expression and one focused test change.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "use absolute block positions as connection-history keys". In `web/src/plugins/connections/ConnectionHistory.tsx`, change the block key to `window.offset + index`; `window.offset` is the server-supplied zero-based absolute position of the first block in the window, so an existing block keeps its key when older blocks are prepended. Keep each block's entry keys relative within that block. Extend `web/src/plugins/connections/ConnectionTab.test.tsx` with a rerender from a window at `offset: 2` to `offset: 0` with two prepended blocks: expand a thought entry in an existing block before the rerender, assert it remains open afterward, and assert the rendered block order is the new oldest-to-newest order. The existing `useConnectionHistoryScroll.test.tsx` cases must keep passing unchanged; do not alter the scroll hook, the server window, or the spec. Run the focused client suite and `$janissary/scripts/run.mjs check-diff`.
-
-
 * Correct the architecture guideline's reference to the removed `parseConnectionCommand` so it names the parser the branch actually ships.
 
 Existing Issue: `ai/guidelines/architecture-principles.md` still cites `parseConnectionCommand` in its pure-parser examples, but the branch deletes `src/connection/parsing.ts` and moves the parser to `src/plugins/connections/parse.ts` as `parseConnectionsCommand`, leaving a current guideline pointing at a function and file that no longer exist. Severity: 2/10

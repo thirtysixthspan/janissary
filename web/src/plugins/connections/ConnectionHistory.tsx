@@ -16,7 +16,7 @@ export function ConnectionHistory({ window, openLink }: {
   return (
     <div className="connections-history-content" onClick={handleClick}>
       {window.blocks.map((block, index) => (
-        <article className="connections-block" key={`${block.startedAt}:${index}`}>
+        <article className="connections-block" key={window.offset + index}>
           <div className="connections-prompt">{block.prompt}</div>
           {block.entries.map((entry, entryIndex) => {
             const content = <div className="connections-activity-text">{entry.text}</div>;
