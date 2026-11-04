@@ -29,6 +29,30 @@ export function useConnectionHistoryScroll(
     follow.current = isWithinBottomFollowThreshold(element.scrollHeight, element.scrollTop, element.clientHeight);
   }, [requestOlder]);
 
+  const requestOlderIfFits = useCallback(() => {
+    const element = elementRef.current;
+    if (!element || !active || !hasOlder || offset === undefined) return;
+    if (element.scrollHeight <= element.clientHeight) requestOlder();
+  }, [active, elementRef, hasOlder, offset, requestOlder]);
+  const requestOlderIfFitsRef = useRef(requestOlderIfFits);
+
+  useEffect(() => {
+    requestOlderIfFitsRef.current = requestOlderIfFits;
+  }, [requestOlderIfFits]);
+
+  useEffect(() => {
+    const element = elementRef.current;
+    if (!element) return;
+    const onResize = () => requestOlderIfFitsRef.current();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', onResize);
+      return () => { window.removeEventListener('resize', onResize); };
+    }
+    const observer = new ResizeObserver(onResize);
+    observer.observe(element);
+    return () => { observer.disconnect(); };
+  }, [elementRef]);
+
   useEffect(() => {
     const element = elementRef.current;
     if (!element) return;

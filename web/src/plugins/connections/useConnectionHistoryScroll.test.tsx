@@ -100,6 +100,20 @@ describe('useConnectionHistoryScroll', () => {
     expect(loadOlder).toHaveBeenCalledTimes(2);
   });
 
+  it('loads older pages when a resize makes the history fit the viewport', () => {
+    const loadOlder = vi.fn(async () => null);
+    const view = render(<Mount active offset={2} hasOlder loadOlder={loadOlder} contentKey={1}
+      initial={{ height: 600, top: 600, client: 300 }} />);
+    const element = view.getByTestId('scroller');
+    expect(loadOlder).not.toHaveBeenCalled();
+    metrics(element, { height: 600, top: 600, client: 700 });
+    fireEvent(globalThis.window, new Event('resize'));
+    expect(loadOlder).toHaveBeenCalledTimes(1);
+    metrics(element, { height: 600, top: 600, client: 800 });
+    fireEvent(globalThis.window, new Event('resize'));
+    expect(loadOlder).toHaveBeenCalledTimes(1);
+  });
+
   it('clears the page guard after rejection so the same offset can be retried', async () => {
     const loadOlder = vi.fn().mockRejectedValueOnce(new Error('rejected')).mockResolvedValueOnce(null);
     const view = render(<Mount active offset={4} hasOlder loadOlder={loadOlder} contentKey={1} />);
