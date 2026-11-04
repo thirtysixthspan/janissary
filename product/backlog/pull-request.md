@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Extend the shell plugin's published connection-row contract with the new durable record id so the popup's record target is validated and typed, not smuggled through an unchecked cast.
-
-Existing Issue: `ConnectionView` gained `recordId` and the shell popup now depends on it, but the shell plugin's mirrored `ShellConnectionRow` in `src/plugins/shell/shared.ts` still declares only `text`, `kind`, and `acpRef`: `isConnectionRow` validates no `recordId`, the contract test in `src/plugins/shell/shared.test.ts` no longer covers every `ConnectionView`, and `src/plugins/shell/activate.ts` passes the field through with an `as ShellPayload['connections']` cast. Severity: 4/10
-
-Existing Risk: 4/10 - The popup works only because the object survives untyped; a payload with a non-string `recordId` passes the plugin guard and is sent as an invalid RPC parameter, and any future row mapping or contract change silently drops the field and disables row opening.
-
-Proposal Risk: 1/10 - Adding an optional, validated string to the mirrored type and its guard changes no behavior for existing rows; the only hazard is leaving a second copy unupdated, which the extended contract test pins.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "add recordId to the shell plugin's connection row contract". In `src/plugins/shell/shared.ts`, add `recordId?: string` to `ShellConnectionRow` (comment that it is the durable ACP or agent record the popup opens, mirroring `ConnectionView.recordId`) and extend `isConnectionRow` with `(value.recordId === undefined || typeof value.recordId === 'string')`. In `src/plugins/shell/shared.test.ts`, add a `recordId` row to the `accepts every ConnectionView the protocol admits` case and a rejection case for a non-string `recordId`; pinning the re-declared row against `ConnectionView` is that file's purpose. Leave `web/src/plugins/shell/ShellTabMeta.tsx` (it already passes `payload.connections` to `StatusPanels`) and the shell host-state merge in `src/plugins/shell/activate.ts` as they are: `recordId` is additive, so `SHELL_PAYLOAD_SCHEMA_VERSION` does not need a bump and `web/src/plugins/registry.tsx`'s literal stays 4. Verify with `src/plugins/shell/shared.test.ts`, `web/src/plugins/shell/ShellTabMeta.test.tsx`, and `web/src/plugins/plugin-client-capabilities.test.ts`; manually click a record-id row in a shell popup and confirm it opens the record tab.
-
-
 * Consolidate the connection-record-tab rules the new connections-tab spec restates from the connection and acp-records specs, and keep the streamed-follow nuance in one place.
 
 Existing Issue: `product/specs/connections-tab.md` newly restates the record-tab follow behavior and the 20-block window that `product/specs/connection.md` and `product/specs/acp-records.md` already own, and its one-line version omits the rule that streamed updates to the latest activity entry keep following without a new entry. Severity: 3/10

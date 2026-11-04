@@ -667,9 +667,9 @@ describe('shell plugin activation', () => {
     expect(() => ask(capabilities, 'queue', { line: 'ls' })).toThrow(TabPluginRejection);
   });
 
-  it('merges pushed host state into the tab payload without losing the terminal', () => {
+  it('merges pushed host state into the tab payload without losing the terminal or a record id', () => {
     const { capabilities, updated } = fakeCapabilities();
-    const rows = [{ text: 'zsh', kind: 'terminal' }];
+    const rows = [{ text: 'zsh', kind: 'terminal' }, { text: 'Agent: task.md', kind: 'acp', recordId: 'record-1' }];
     const schedule = [{ id: 's1', spec: 'every 1h', next: 'in 1h', recurring: true }];
 
     activate().hostState?.({
