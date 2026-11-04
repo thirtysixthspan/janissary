@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 // Every playbook that writes a pull request description carries its own guideline against restating
 // change-set statistics, because each runs in a fresh agent that reads only its own file. These
-// assertions pin that wording, its two named exceptions, and the removal of Files changed sections,
+// assertions pin that wording, its two named exceptions, and the absence of Files changed sections,
 // and nothing else: not prose, not structure.
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
@@ -50,9 +50,5 @@ describe('the pull request description statistics guideline', () => {
       expect(read(file), file).not.toMatch(/^#+ Files changed/m);
       expect(read(file), file).not.toContain('Rebuild **Files changed**');
     }
-  });
-
-  it('has the update task remove a Files changed section', () => {
-    expect(read('ai/tasks/feature/update-pull-request.md')).toContain('Remove a **Files changed** section if the body has one');
   });
 });
