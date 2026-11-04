@@ -10,6 +10,8 @@ Your job: take the uncommitted work in this repository, package it into a well-d
 
 The PR body is the deliverable. It must be **thorough and self-contained** — a reviewer should understand the feature without reading the code. Write it to `./temp/pr-body.md`, then pass that file to the create-PR script.
 
+**Leave change-set statistics out of the description.** This is a guideline, not a hard rule. Don't state how many commits, files, or lines the pull request changes, don't cite commit SHAs, and don't list the changed files or restate anything else a reader can read straight off the change set. GitHub already shows all of it beside the description, and a copy in the prose goes stale with the next push. Say what changed and why instead. The screenshot links in Step 7 pin a commit SHA so the images still resolve after the branch is deleted; those are links, not claims, and they stay.
+
 The body must include **every section below**, in this order:
 
 ### What
