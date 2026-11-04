@@ -16,7 +16,7 @@ This task suits the end of a pull request's life, after it has been [reviewed](/
 
 The agent checks out the pull request's branch and reads its whole diff. Then it corrects four things:
 
-- The pull request description: wrong claims are fixed, missing behavior is added, and the list of changed files is rebuilt from the current diff.
+- The pull request description: wrong claims are fixed, missing behavior is added, and any list of changed files is removed, since GitHub already shows it.
 - The pull request's own plan, with the fix plans from earlier repairs folded in.
 - Every product spec that describes behavior the pull request changes, plus a new spec for behavior that has none.
 - The in-app help: rows for changed commands and key bindings are corrected, and rows are added for new ones.

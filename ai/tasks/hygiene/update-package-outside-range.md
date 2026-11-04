@@ -266,6 +266,8 @@ A breaking upgrade adopts new third-party code into the product, so a human appr
 
 The PR body is the deliverable a reviewer reads before trusting the upgrade, so it replaces that document's feature-shaped sections with the ones below, in this order. Write it to `./temp/pr-body.md` as that document directs, using natural line breaks.
 
+**Leave change-set statistics out of the description.** This is a guideline, not a hard rule. Don't state how many commits, files, or lines the pull request changes, don't cite commit SHAs, and don't list the changed files or restate anything else a reader can read straight off the change set. GitHub already shows all of it beside the description, and a copy in the prose goes stale with the next push. The upstream package's diff size and the test counts below aren't part of this pull request's change set, so they stay.
+
 ### What changed in the package
 
 The heart of the description: **what the new version of the package actually does differently**, from the release history in Step 2 and the code diff in Step 8 — not a version-number announcement and not a paraphrase of the changelog headings. Cover the breaking changes and which of them reach this project, the behavioral changes that reach it silently, and anything the diff showed that the changelog did not mention. Say plainly how large the diff was and how much of it you read.
@@ -283,10 +285,6 @@ The widened range and the coordinated set, every code change you made in Steps 5
 ### Verification
 
 The behavior contract from Step 3 and how each statement was confirmed, the tests added in Step 7 and what they pin, the compiler/lint/test results with the test count before and after, and anything you could **not** verify automatically — an untested surface is a thing the reviewer needs to know about, not a thing to leave out.
-
-### Files changed
-
-A concise summary of every file touched, grouped by area, with a one-line description of what changed in each.
 
 *(When [`resolve-technical-debt.md`](../resolve-technical-debt.md) triggers this task, this step still runs and still opens a PR rather than merging — that task's Step 8 defers to the shipping choice made here. It runs it late, though: it stops at this step, finishes its own spec check and backlog edits first so they are in the working tree, and then comes back and runs it. The backlog edits and any deferrals ride in the same pull request, and its report carries the security findings from Step 8 forward.)*
 

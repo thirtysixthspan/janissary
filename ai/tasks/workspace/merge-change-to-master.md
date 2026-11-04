@@ -76,6 +76,8 @@ If the push fails with an HTTP 400 RPC error ("unexpected disconnect while readi
 
 Use the commit subject (which follows Conventional Commits format) as `<title>`. The PR title must match the commit subject and therefore also follows the Conventional Commits specification. Write the PR body to a file first — this avoids shell quoting issues with multi-line content. The body should have a **What** (one or two sentences on the change) and a **Why** (the warning/goal it addresses).
 
+**Leave change-set statistics out of the description.** This is a guideline, not a hard rule. Don't state how many commits, files, or lines the pull request changes, don't cite commit SHAs, and don't list the changed files or restate anything else a reader can read straight off the change set. GitHub already shows all of it beside the description, and a copy in the prose goes stale with the next push. Say what changed and why instead.
+
 Write the body to `./temp/pr-body.md`, then open the PR:
 
 ```bash
