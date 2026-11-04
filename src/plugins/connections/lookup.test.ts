@@ -88,6 +88,29 @@ describe('openConnectionLookup', () => {
     expect(f.openOrFocusTab).not.toHaveBeenCalled();
   });
 
+  it('prefers the invoking tab own live row when two tabs expose the same kind and id', () => {
+    const first = liveRow('zsh', 'shell', 'first');
+    const second = liveRow('zsh', 'shell', 'second');
+
+    const mine = fixture([first, second], 'second');
+    expect(openConnectionLookup('shell:zsh', mine.tabs, mine.capabilities)).toBe(true);
+    expect(mine.topicAction).toHaveBeenCalledWith({
+      topic: 'connections', action: 'open', kind: 'shell', id: 'zsh', ownerLabel: 'second',
+    });
+
+    const unrelated = fixture([first, second], 'third');
+    expect(openConnectionLookup('shell:zsh', unrelated.tabs, unrelated.capabilities)).toBe(true);
+    expect(unrelated.topicAction).toHaveBeenCalledWith({
+      topic: 'connections', action: 'open', kind: 'shell', id: 'zsh', ownerLabel: 'first',
+    });
+
+    const absent = fixture([first, second], null);
+    expect(openConnectionLookup('shell:zsh', absent.tabs, absent.capabilities)).toBe(true);
+    expect(absent.topicAction).toHaveBeenCalledWith({
+      topic: 'connections', action: 'open', kind: 'shell', id: 'zsh', ownerLabel: 'first',
+    });
+  });
+
   it('resolves the invoking tab ACP reference before a newer same-model record owned elsewhere', () => {
     const other = recordRow({ id: 'other-owner', title: 'ACP: other', ownerLabel: 'other', status: 'Idle', updatedAt: 300 });
     const mine = recordRow({ id: 'mine', title: 'ACP: mine', ownerLabel: 'owner', status: 'Idle', updatedAt: 100 });

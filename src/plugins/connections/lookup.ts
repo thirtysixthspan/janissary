@@ -1,5 +1,5 @@
 import type { TabPluginServerCapabilities } from '../api.js';
-import type { ConnectionRow } from './shared.js';
+import type { ConnectionRow, LiveConnectionRow } from './shared.js';
 import { connectionsData, type ConnectionTabs } from './tabs.js';
 
 function parsedTarget(text: string): { kind: string; id: string } | undefined {
@@ -17,8 +17,14 @@ function acpRecordForOwner(rows: ConnectionRow[], ownerLabel: string, model: str
     && ['Idle', 'Running'].includes(row.status) && row.ownerLabel === ownerLabel && row.model === model);
 }
 
-function liveTarget(rows: ConnectionRow[], target: { kind: string; id: string }): ConnectionRow | undefined {
-  return rows.find((row) => row.type === 'live' && row.kind === target.kind && row.id === target.id);
+function liveTarget(
+  rows: ConnectionRow[],
+  target: { kind: string; id: string },
+  ownerLabel?: string,
+): ConnectionRow | undefined {
+  const matches = rows.filter((row): row is LiveConnectionRow =>
+    row.type === 'live' && row.kind === target.kind && row.id === target.id);
+  return matches.find((row) => row.ownerLabel === ownerLabel) ?? matches[0];
 }
 
 function newestTitle(rows: ConnectionRow[], title: string): ConnectionRow | undefined {
@@ -57,7 +63,7 @@ export function openConnectionLookup(
     }
   }
   if (target) {
-    const live = liveTarget(rows, target);
+    const live = liveTarget(rows, target, origin?.label);
     if (live) {
       openRow(live, tabs, capabilities);
       return true;

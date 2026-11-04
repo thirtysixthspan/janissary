@@ -14,6 +14,7 @@ import { loadConfig } from './config.js';
 import { openNotificationsTab } from './notifications/tab.js';
 import { spawnPty } from './pty.js';
 import type { PtyHandlers } from './pty.js';
+import { SHELL_NAME } from './shell/manager.js';
 import type { BusEvent } from './bus.js';
 import { openMonitorTab } from './monitor/window.js';
 import { initHarnessCaptureDirectory } from './harness/capture/file.js';
@@ -534,7 +535,7 @@ describe('Controller', () => {
       expect(listRows().filter((row) => row.type === 'live' && row.kind === 'sqlite')).toHaveLength(1);
       expect(sqliteRow()).toMatchObject({ orderingTimestamp: expectedActivity });
 
-      await c.pluginIntent(listLabel, 'open', { kind: 'sqlite', id: 'shared' });
+      await c.pluginIntent(listLabel, 'open', { kind: 'sqlite', id: 'shared', ownerLabel: 'second' });
       expect(c.managers.tab.cur().label).toBe('second');
 
       c.setActiveTab(0);
@@ -552,10 +553,10 @@ describe('Controller', () => {
       await vi.waitFor(() => expect(sqliteRow()).toMatchObject({ ownerName: 'global', ownerLabel: '' }));
       expect(sqliteRow()).not.toHaveProperty('focusTarget');
       const activeAfterCloses = c.managers.tab.activeTab;
-      await c.pluginIntent(listLabel, 'open', { kind: 'sqlite', id: 'shared' });
+      await c.pluginIntent(listLabel, 'open', { kind: 'sqlite', id: 'shared', ownerLabel: '' });
       expect(c.managers.tab.activeTab).toBe(activeAfterCloses);
 
-      await c.pluginIntent(listLabel, 'close', { kind: 'sqlite', id: 'shared' });
+      await c.pluginIntent(listLabel, 'close', { kind: 'sqlite', id: 'shared', ownerLabel: '' });
       await vi.waitFor(() => expect(isConnectionOpen('shared')).toBe(false));
       expect(c.managers.notifications.all.some(
         (entry) => entry.event === 'connection-closed' && entry.message === 'Closed connection sqlite:shared.',
@@ -580,6 +581,41 @@ describe('Controller', () => {
       closeAllConnections();
       rmSync(scratch, { recursive: true, force: true });
     }
+  });
+
+  it('binds duplicate shell rows to their owning tab through the connections list', async () => {
+    const { c } = makeController();
+    seedTestTab(c.managers.tab, 'second');
+    seedTestTab(c.managers.tab, 'third');
+    vi.spyOn(c.managers.shell, 'has').mockImplementation((label) => label === 'second' || label === 'third');
+    const closeTarget = vi.spyOn(c.managers.connection, 'closeTarget').mockResolvedValue();
+
+    c.setActiveTab(0);
+    c.dispatch('connections');
+    await vi.waitFor(() => expect(connectionPluginTabs(c)).toHaveLength(1));
+    const listLabel = connectionPluginTabs(c)[0]!.label;
+    const listRows = () => {
+      const payload = connectionPluginTabs(c)[0]?.plugin?.payload as { rows: Array<Record<string, unknown>> } | undefined;
+      return payload?.rows ?? [];
+    };
+    const shellRows = () => listRows().filter(
+      (row) => row.type === 'live' && row.kind === 'shell' && row.id === SHELL_NAME,
+    );
+    await vi.waitFor(() => expect(shellRows()).toHaveLength(2));
+
+    await c.pluginIntent(listLabel, 'open', { kind: 'shell', id: SHELL_NAME, ownerLabel: 'second' });
+    expect(c.managers.tab.cur().label).toBe('second');
+
+    await c.pluginIntent(listLabel, 'close', { kind: 'shell', id: SHELL_NAME, ownerLabel: 'second' });
+    expect(closeTarget).toHaveBeenCalledWith('shell', SHELL_NAME, 'second');
+    expect(closeTarget).not.toHaveBeenCalledWith('shell', SHELL_NAME, 'third');
+    expect(closeTarget).toHaveBeenCalledTimes(1);
+    expect(c.managers.tab.byLabel('third')).toBeDefined();
+
+    await expect(c.pluginIntent(listLabel, 'close', {
+      kind: 'shell', id: SHELL_NAME, ownerLabel: 'invented',
+    })).rejects.toThrow('invalid close payload');
+    expect(closeTarget).toHaveBeenCalledTimes(1);
   });
 
   const flush = () => new Promise((r) => setTimeout(r, 0));

@@ -10,11 +10,11 @@ export function useConnectionsController(capabilities: TabPluginClientCapabiliti
       void capabilities.intent('open-record', { id: row.id });
       return;
     }
-    void capabilities.intent('open', { kind: row.kind, id: row.id });
+    void capabilities.intent('open', { kind: row.kind, id: row.id, ownerLabel: row.ownerLabel });
   }, [capabilities]);
 
   const close = useCallback((row: LiveConnectionRow | RecordConnectionRow) => {
-    void capabilities.intent('close', { kind: row.kind, id: row.id });
+    void capabilities.intent('close', { kind: row.kind, id: row.id, ownerLabel: row.ownerLabel });
   }, [capabilities]);
 
   const act = useCallback(async (name: 'cancel' | 'close-session' | 'terminate' | 'load-older', id: string) => {

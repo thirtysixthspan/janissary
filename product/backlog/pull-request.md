@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Functionality: bind each live connection row's open, close, and lookup to the row's owning tab, not the first row with the same kind and id.
-
-Existing Issue: Two tabs that both hold a shell connection produce list rows with the same kind and id, while the list sends only kind and id and both the plugin intent resolver and lookup select the first matching row, so opening or closing the second row acts on the first tab. Severity: 7/10
-
-Existing Risk: 7/10 - A user can close or focus another tab's shell, ACP terminal, or browser connection and receive a notification naming a tab they did not act on.
-
-Proposal Risk: 2/10 - The row's owner becomes validated data instead of an implicit first match, so stale owners are rejected without widening focus beyond a current row.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "bind live connection row actions and lookup to their owner". Extend the live-row `open` and `close` intents in `src/plugins/connections/shared.ts` and their guards to carry the row's `ownerLabel`; update `web/src/plugins/connections/ConnectionList.tsx` and `web/src/plugins/connections/useConnectionsController.ts` to send it; and make `src/plugins/connections/activate.ts` match kind, id, and owner before forwarding the topic action. In `src/plugins/connections/lookup.ts`, prefer the invoking tab's own live row for a `<kind>:<id>` target before another owner's row, and keep record UUID and `open-record` resolution unchanged. The command grammar, current-row server validation, and `connections close` notifications must stay untouched. Extend `src/plugins/connections/shared.test.ts`, `activate.test.ts`, `command.test.ts`, `lookup.test.ts`, `web/src/plugins/connections/ConnectionList.test.tsx`, and the controller/topic tests with two tabs exposing the same shell id: the second row must open and close the second tab while the first tab stays open, and an invented owner must be a no-op. Update `product/specs/connection.md` and `product/specs/connections-tab.md` only where they describe action ownership and lookup preference.
-
-
 * Functionality: give connections-list rows a unique identity that includes their owner so duplicate shell rows cannot collide.
 
 Existing Issue: The React key and the selection and order identity for a list row are built from type, kind, and id only, so two tabs' shell rows with the same `shell:<name>` identity collide in the same list. Severity: 5/10

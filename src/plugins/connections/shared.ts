@@ -46,7 +46,7 @@ export type ConnectionsPayload =
   | { kind: 'list'; rows: ConnectionRow[] };
 
 export type ConnectionsIntent =
-  | { intent: 'open' | 'close'; payload: { kind: ConnectionKind; id: string } }
+  | { intent: 'open' | 'close'; payload: { kind: ConnectionKind; id: string; ownerLabel: string } }
   | { intent: 'open-record'; payload: { id: string } }
   | { intent: 'cancel' | 'close-session' | 'terminate' | 'delete' | 'load-older'; payload: { id: string } };
 
@@ -131,7 +131,8 @@ export function isIdIntent(value: unknown): value is { id: string } {
   return object(value) && Object.keys(value).length === 1 && typeof value.id === 'string';
 }
 
-export function isKindIdIntent(value: unknown): value is { kind: ConnectionKind; id: string } {
-  return object(value) && Object.keys(value).length === 2
-    && kinds.includes(value.kind as typeof kinds[number]) && typeof value.id === 'string';
+export function isKindIdOwnerIntent(value: unknown): value is { kind: ConnectionKind; id: string; ownerLabel: string } {
+  return object(value) && Object.keys(value).length === 3
+    && kinds.includes(value.kind as typeof kinds[number]) && typeof value.id === 'string'
+    && typeof value.ownerLabel === 'string';
 }

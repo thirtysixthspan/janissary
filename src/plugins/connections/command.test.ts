@@ -3,7 +3,7 @@ import type { TabPluginServerCapabilities } from '../api.js';
 import { runConnectionsCommand } from './command.js';
 import { ConnectionTabs } from './tabs.js';
 
-function fixture(rows: unknown[] = []) {
+function fixture(rows: unknown[] = [], originLabel = 'owner') {
   const topicAction = vi.fn(() => 'No open connections.');
   const note = vi.fn();
   const rejectRequest = vi.fn((reason: string): never => { throw new Error(reason); });
@@ -11,7 +11,7 @@ function fixture(rows: unknown[] = []) {
   const updateTab = vi.fn();
   const dockTab = vi.fn();
   const topicData = vi.fn(() => ({ rows }));
-  const originTab = vi.fn(() => ({ label: 'owner', cwd: '/repo', root: '/repo' }));
+  const originTab = vi.fn(() => ({ label: originLabel, cwd: '/repo', root: '/repo' }));
   const capabilities = {
     topicAction, note, rejectRequest, openOrFocusTab, updateTab, dockTab, topicData, originTab,
     reportFailure: vi.fn((reason: string): never => { throw new Error(reason); }),
@@ -61,6 +61,28 @@ describe('connections command', () => {
     });
     expect(() => runConnectionsCommand('absent', 'connections', tabs, f.capabilities))
       .toThrow('No connection matching "absent".');
+  });
+
+  it('prefers the invoking tab own shell row when two tabs expose the same id', () => {
+    const first = {
+      type: 'live', id: 'zsh', kind: 'shell', display: 'shell:~/first', ownerLabel: 'first', ownerName: 'First',
+      status: 'Open', orderingTimestamp: 1,
+    };
+    const second = {
+      ...first, display: 'shell:~/second', ownerLabel: 'second', ownerName: 'Second',
+    };
+
+    const mine = fixture([first, second], 'second');
+    runConnectionsCommand('shell:zsh', 'connection', new ConnectionTabs(), mine.capabilities);
+    expect(mine.topicAction).toHaveBeenLastCalledWith({
+      topic: 'connections', action: 'open', kind: 'shell', id: 'zsh', ownerLabel: 'second',
+    });
+
+    const unrelated = fixture([first, second], 'third');
+    runConnectionsCommand('shell:zsh', 'connections', new ConnectionTabs(), unrelated.capabilities);
+    expect(unrelated.topicAction).toHaveBeenLastCalledWith({
+      topic: 'connections', action: 'open', kind: 'shell', id: 'zsh', ownerLabel: 'first',
+    });
   });
 
   it('resolves UUID before acp reference and opens a record after requesting its window', () => {

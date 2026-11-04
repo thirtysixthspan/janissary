@@ -122,6 +122,10 @@ describe('connections topic actions', () => {
     });
     expect(setActiveTab).toHaveBeenCalledWith(0);
     runConnectionsTopicAction(managers, {
+      topic: 'connections', action: 'open', kind: 'shell', id: 'zsh', ownerLabel: 'second',
+    });
+    expect(setActiveTab).toHaveBeenLastCalledWith(1);
+    runConnectionsTopicAction(managers, {
       topic: 'connections', action: 'open', kind: 'shell', id: 'zsh', ownerLabel: 'stale',
     });
     runConnectionsTopicAction(managers, {
@@ -129,9 +133,14 @@ describe('connections topic actions', () => {
     });
     expect(closeTarget).toHaveBeenCalledWith('shell', 'zsh', 'owner');
     runConnectionsTopicAction(managers, {
+      topic: 'connections', action: 'close', kind: 'shell', id: 'zsh', ownerLabel: 'second',
+    });
+    expect(closeTarget).toHaveBeenLastCalledWith('shell', 'zsh', 'second');
+    runConnectionsTopicAction(managers, {
       topic: 'connections', action: 'close', kind: 'shell', id: 'missing', ownerLabel: 'owner',
     });
-    expect(closeTarget).toHaveBeenCalledTimes(1);
+    expect(closeTarget).toHaveBeenCalledTimes(2);
+    expect(setActiveTab).toHaveBeenCalledTimes(2);
   });
 
   it('shows SQLite rows as global and validates their open and close against the current owner', () => {

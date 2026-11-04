@@ -82,9 +82,14 @@ describe('connections plugin activation', () => {
     expect(() => f.activation.intent({
       tab: 'connections', intent: 'open', payload: { id: 'db' }, tabPayload: { kind: 'list', rows: [liveRow] },
     }, f.capabilities)).toThrow('invalid open payload');
+    expect(() => f.activation.intent({
+      tab: 'connections', intent: 'open', payload: { kind: 'sqlite', id: 'db' }, tabPayload: { kind: 'list', rows: [liveRow] },
+    }, f.capabilities)).toThrow('invalid open payload');
     expect(f.reportFailure).not.toHaveBeenCalled();
     expect(f.activation.intent({
-      tab: 'connections', intent: 'open', payload: { kind: 'sqlite', id: 'db' }, tabPayload: { kind: 'list', rows: [liveRow] },
+      tab: 'connections', intent: 'open',
+      payload: { kind: 'sqlite', id: 'db', ownerLabel: 'owner' },
+      tabPayload: { kind: 'list', rows: [liveRow] },
     }, f.capabilities)).toBeNull();
     expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action: 'open', kind: 'sqlite', id: 'db', ownerLabel: 'owner' });
     f.activation.dispose?.();
@@ -125,7 +130,7 @@ describe('connections plugin activation', () => {
   it.each([
     ['attributed', 'first', 'first'],
     ['unattributed', '', undefined],
-  ] as const)('forwards the current %s SQLite owner from a global row intent', (_case, ownerLabel, focusTarget) => {
+  ] as const)('forwards the current %s SQLite owner from the intent owner', (_case, ownerLabel, focusTarget) => {
     const current = {
       type: 'live', id: 'shared', kind: 'sqlite', display: 'sqlite:shared', ownerLabel, ownerName: 'global',
       status: 'Open', orderingTimestamp: 1, ...(focusTarget && { focusTarget }),
@@ -135,16 +140,58 @@ describe('connections plugin activation', () => {
     const tabPayload = { kind: 'list', rows: [stale] };
 
     expect(f.activation.intent({
-      tab: 'connections', intent: 'open', payload: { kind: 'sqlite', id: 'shared' }, tabPayload,
+      tab: 'connections', intent: 'open',
+      payload: { kind: 'sqlite', id: 'shared', ownerLabel }, tabPayload,
     }, f.capabilities)).toBeNull();
     expect(f.topicAction).toHaveBeenLastCalledWith({
       topic: 'connections', action: 'open', kind: 'sqlite', id: 'shared', ownerLabel,
     });
     expect(f.activation.intent({
-      tab: 'connections', intent: 'close', payload: { kind: 'sqlite', id: 'shared' }, tabPayload,
+      tab: 'connections', intent: 'close',
+      payload: { kind: 'sqlite', id: 'shared', ownerLabel }, tabPayload,
     }, f.capabilities)).toBeNull();
     expect(f.topicAction).toHaveBeenLastCalledWith({
       topic: 'connections', action: 'close', kind: 'sqlite', id: 'shared', ownerLabel,
     });
+    expect(() => f.activation.intent({
+      tab: 'connections', intent: 'close',
+      payload: { kind: 'sqlite', id: 'shared', ownerLabel: 'stale' }, tabPayload,
+    }, f.capabilities)).toThrow('invalid close payload');
+    expect(f.topicAction).toHaveBeenCalledTimes(2);
+  });
+
+  it('acts on the second tab when two tabs expose the same shell id', () => {
+    const first = {
+      type: 'live', id: 'zsh', kind: 'shell', display: 'shell:~/first', ownerLabel: 'first', ownerName: 'First',
+      status: 'Open', orderingTimestamp: 2, focusTarget: 'first',
+    } as const;
+    const second = {
+      ...first, display: 'shell:~/second', ownerLabel: 'second', ownerName: 'Second', focusTarget: 'second',
+    } as const;
+    const f = fixture([first, second]);
+    const tabPayload = { kind: 'list', rows: [first, second] };
+
+    expect(f.activation.intent({
+      tab: 'connections', intent: 'open',
+      payload: { kind: 'shell', id: 'zsh', ownerLabel: 'second' }, tabPayload,
+    }, f.capabilities)).toBeNull();
+    expect(f.topicAction).toHaveBeenLastCalledWith({
+      topic: 'connections', action: 'open', kind: 'shell', id: 'zsh', ownerLabel: 'second',
+    });
+    expect(f.activation.intent({
+      tab: 'connections', intent: 'close',
+      payload: { kind: 'shell', id: 'zsh', ownerLabel: 'second' }, tabPayload,
+    }, f.capabilities)).toBeNull();
+    expect(f.topicAction).toHaveBeenLastCalledWith({
+      topic: 'connections', action: 'close', kind: 'shell', id: 'zsh', ownerLabel: 'second',
+    });
+    expect(f.topicAction).not.toHaveBeenCalledWith(expect.objectContaining({ ownerLabel: 'first' }));
+    expect(f.topicAction).toHaveBeenCalledTimes(2);
+
+    expect(() => f.activation.intent({
+      tab: 'connections', intent: 'open',
+      payload: { kind: 'shell', id: 'zsh', ownerLabel: 'invented' }, tabPayload,
+    }, f.capabilities)).toThrow('invalid open payload');
+    expect(f.topicAction).toHaveBeenCalledTimes(2);
   });
 });

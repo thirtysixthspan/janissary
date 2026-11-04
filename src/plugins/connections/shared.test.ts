@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CONNECTIONS_PAYLOAD_SCHEMA_VERSION, isConnectionsPayload, isEmptyIntent, isIdIntent, isKindIdIntent,
+  CONNECTIONS_PAYLOAD_SCHEMA_VERSION, isConnectionsPayload, isEmptyIntent, isIdIntent, isKindIdOwnerIntent,
 } from './shared.js';
 
 const live = {
@@ -40,7 +40,9 @@ describe('connections shared contract', () => {
     expect(isEmptyIntent({ extra: true })).toBe(false);
     expect(isIdIntent({ id: 'uuid' })).toBe(true);
     expect(isIdIntent({ id: 'uuid', extra: true })).toBe(false);
-    expect(isKindIdIntent({ kind: 'acp', id: 'uuid' })).toBe(true);
-    expect(isKindIdIntent({ kind: 'agent', id: 'uuid' })).toBe(false);
+    expect(isKindIdOwnerIntent({ kind: 'acp', id: 'uuid', ownerLabel: 'owner' })).toBe(true);
+    expect(isKindIdOwnerIntent({ kind: 'acp', id: 'uuid' })).toBe(false);
+    expect(isKindIdOwnerIntent({ kind: 'acp', id: 'uuid', ownerLabel: 'owner', extra: true })).toBe(false);
+    expect(isKindIdOwnerIntent({ kind: 'agent', id: 'uuid', ownerLabel: 'owner' })).toBe(false);
   });
 });

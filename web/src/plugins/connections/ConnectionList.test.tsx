@@ -68,9 +68,32 @@ describe('ConnectionList', () => {
     const row = container.querySelector('.connections-row')!;
     fireEvent.click(row);
     fireEvent.click(row);
-    expect(intent).toHaveBeenLastCalledWith('open', { kind: 'sqlite', id: 'shared' });
+    expect(intent).toHaveBeenLastCalledWith('open', { kind: 'sqlite', id: 'shared', ownerLabel: 'owner' });
     fireEvent.click(screen.getByRole('button', { name: 'Close sqlite:shared' }));
-    expect(intent).toHaveBeenLastCalledWith('close', { kind: 'sqlite', id: 'shared' });
+    expect(intent).toHaveBeenLastCalledWith('close', { kind: 'sqlite', id: 'shared', ownerLabel: 'owner' });
+  });
+
+  it('sends each live shell row owner so two tabs with the same id act on their own row', () => {
+    const { intent, value } = capabilities();
+    const first: ConnectionRow = {
+      type: 'live', id: 'zsh', kind: 'shell', display: 'shell:~/first', ownerLabel: 'first', ownerName: 'First',
+      status: 'Open', orderingTimestamp: 2,
+    };
+    const second: ConnectionRow = {
+      ...first, display: 'shell:~/second', ownerLabel: 'second', ownerName: 'Second',
+    };
+    const { container } = render(<ConnectionList rows={[first, second]} capabilities={value} />);
+    const rows = container.querySelectorAll('.connections-row');
+
+    fireEvent.click(rows[1]!);
+    fireEvent.click(rows[1]!);
+    expect(intent).toHaveBeenLastCalledWith('open', { kind: 'shell', id: 'zsh', ownerLabel: 'second' });
+    expect(intent).not.toHaveBeenCalledWith('open', expect.objectContaining({ ownerLabel: 'first' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close shell:~/second' }));
+    expect(intent).toHaveBeenLastCalledWith('close', { kind: 'shell', id: 'zsh', ownerLabel: 'second' });
+    expect(intent).not.toHaveBeenCalledWith('close', expect.objectContaining({ ownerLabel: 'first' }));
+    expect(intent).toHaveBeenCalledTimes(2);
   });
 
   it('focuses the active list and supports bounded keyboard selection and Enter', () => {
@@ -87,7 +110,7 @@ describe('ConnectionList', () => {
     expect(rows[0]).toHaveClass('selected');
     fireEvent.keyDown(list, { key: 'End' });
     fireEvent.keyDown(list, { key: 'Enter' });
-    expect(intent).toHaveBeenCalledWith('open', { kind: 'acp', id: 'run' });
+    expect(intent).toHaveBeenCalledWith('open', { kind: 'acp', id: 'run', ownerLabel: 'owner' });
   });
 
   it('opens rows only on a second click, including an initially selected or keyboard-selected row', () => {
@@ -98,7 +121,7 @@ describe('ConnectionList', () => {
     fireEvent.click(rows[0]);
     expect(intent).not.toHaveBeenCalled();
     fireEvent.click(rows[0]);
-    expect(intent).toHaveBeenLastCalledWith('open', { kind: 'sqlite', id: 'db' });
+    expect(intent).toHaveBeenLastCalledWith('open', { kind: 'sqlite', id: 'db', ownerLabel: 'owner' });
     fireEvent.keyDown(list, { key: 'ArrowDown' });
     fireEvent.click(rows[1]);
     expect(intent).toHaveBeenCalledTimes(1);
@@ -137,7 +160,7 @@ describe('ConnectionList', () => {
     expect(screen.queryByRole('button', { name: 'Delete agent' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Close other' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Close Monitor' }));
-    expect(intent).toHaveBeenCalledWith('close', { kind: 'acp', id: 'monitor' });
+    expect(intent).toHaveBeenCalledWith('close', { kind: 'acp', id: 'monitor', ownerLabel: 'owner' });
   });
 
   it('stops row clicks for actions and confirms closed-record deletion with the exact wording', () => {
@@ -151,6 +174,6 @@ describe('ConnectionList', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete Finished session' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     expect(intent).toHaveBeenCalledTimes(1);
-    expect(intent).toHaveBeenCalledWith('close', { kind: 'acp', id: 'closed' });
+    expect(intent).toHaveBeenCalledWith('close', { kind: 'acp', id: 'closed', ownerLabel: 'owner' });
   });
 });

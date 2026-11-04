@@ -1,10 +1,19 @@
 import { noFileOpener, type TabPluginActivation, type TabPluginServerCapabilities } from '../api.js';
-import { isConnectionsPayload, isIdIntent, isKindIdIntent, type ConnectionRow } from './shared.js';
+import {
+  isConnectionsPayload, isIdIntent, isKindIdOwnerIntent, type ConnectionKind, type ConnectionRow,
+} from './shared.js';
 import { runConnectionsCommand } from './command.js';
 import { ConnectionTabs, connectionsData } from './tabs.js';
 
+type RowTarget = { kind: ConnectionKind; id: string; ownerLabel: string };
+
 function rowForId(rows: ConnectionRow[], id: string, kind?: string): ConnectionRow | undefined {
   return rows.find((row) => row.id === id && (kind === undefined || row.kind === kind));
+}
+
+function rowForTarget(rows: ConnectionRow[], target: RowTarget): ConnectionRow | undefined {
+  return rows.find((row) => row.kind === target.kind && row.id === target.id
+    && row.ownerLabel === target.ownerLabel);
 }
 
 function openOrClose(name: 'open' | 'close', row: ConnectionRow | undefined, tabs: ConnectionTabs, capabilities: TabPluginServerCapabilities): null {
@@ -51,8 +60,8 @@ function intent(
     return null;
   }
   if (request.intent === 'open' || request.intent === 'close') {
-    if (!isKindIdIntent(request.payload)) return capabilities.rejectRequest(`invalid ${request.intent} payload`);
-    const row = rowForId(connectionsData(capabilities).rows, request.payload.id, request.payload.kind);
+    if (!isKindIdOwnerIntent(request.payload)) return capabilities.rejectRequest(`invalid ${request.intent} payload`);
+    const row = rowForTarget(connectionsData(capabilities).rows, request.payload);
     return openOrClose(request.intent, row, tabs, capabilities);
   }
   const validIdIntents = ['cancel', 'close-session', 'terminate', 'delete', 'load-older'];
