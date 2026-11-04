@@ -5,29 +5,35 @@ import type { TabPluginClientCapabilities } from '../api';
 export function useConnectionsController(capabilities: TabPluginClientCapabilities) {
   const [pendingTerminate, setPendingTerminate] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const open = useCallback((row: ConnectionRow) => {
-    if (row.type === 'record' && row.kind === 'agent') {
-      void capabilities.intent('open-record', { id: row.id });
-      return;
+  const guarded = useCallback(async (action: () => Promise<unknown>): Promise<Error | null> => {
+    setError(null);
+    try {
+      await action();
+      return null;
+    } catch (error_) {
+      const failure = error_ instanceof Error ? error_ : new Error(String(error_));
+      setError(failure.message);
+      return failure;
     }
-    void capabilities.intent('open', { kind: row.kind, id: row.id, ownerLabel: row.ownerLabel });
-  }, [capabilities]);
+  }, []);
+
+  const open = useCallback((row: ConnectionRow) => {
+    void guarded(() => (row.type === 'record' && row.kind === 'agent'
+      ? capabilities.intent('open-record', { id: row.id })
+      : capabilities.intent('open', { kind: row.kind, id: row.id, ownerLabel: row.ownerLabel })));
+  }, [capabilities, guarded]);
 
   const close = useCallback((row: LiveConnectionRow | RecordConnectionRow) => {
-    void capabilities.intent('close', { kind: row.kind, id: row.id, ownerLabel: row.ownerLabel });
-  }, [capabilities]);
+    void guarded(() => capabilities.intent('close', { kind: row.kind, id: row.id, ownerLabel: row.ownerLabel }));
+  }, [capabilities, guarded]);
 
   const act = useCallback(async (name: 'cancel' | 'close-session' | 'terminate' | 'load-older', id: string) => {
-    setError(null);
     if (name === 'terminate') setPendingTerminate(true);
-    try {
-      await capabilities.intent(name, { id });
-    } catch (error_) {
-      if (name === 'terminate') setPendingTerminate(false);
-      setError(error_ instanceof Error ? error_.message : String(error_));
-      if (name === 'load-older') throw error_;
-    }
-  }, [capabilities]);
+    const failure = await guarded(() => capabilities.intent(name, { id }));
+    if (failure === null) return;
+    if (name === 'terminate') setPendingTerminate(false);
+    else if (name === 'load-older') throw failure;
+  }, [capabilities, guarded]);
 
   const recordUpdated = useCallback((terminal: boolean) => {
     setError(null);

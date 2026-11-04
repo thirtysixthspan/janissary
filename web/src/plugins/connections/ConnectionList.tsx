@@ -36,6 +36,11 @@ export function ConnectionList({
     if (capabilities.active) selection.listRef.current?.focus();
   }, [capabilities.active, selection.listRef]);
   useEffect(() => { setConfirmed(null); }, [order]);
+  useEffect(() => {
+    if (pendingDelete === null) return;
+    const identity = connectionRowIdentity(pendingDelete);
+    if (rows.every((row) => connectionRowIdentity(row) !== identity)) setPendingDelete(null);
+  }, [pendingDelete, rows]);
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
@@ -65,6 +70,7 @@ export function ConnectionList({
   return (
     <div className="connections-list plugin-tab" ref={selection.listRef} tabIndex={0} onKeyDown={onKeyDown}>
       {rows.length === 0 && <div className="connections-empty">No connections yet</div>}
+      {controller.error && <div className="connections-list-error" role="alert">{controller.error}</div>}
       <div className="connections-rows">
         {rows.map((row, index) => {
           const label = rowTitle(row);

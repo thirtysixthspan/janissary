@@ -286,4 +286,49 @@ describe('ConnectionList', () => {
     expect(intent).toHaveBeenCalledTimes(1);
     expect(intent).toHaveBeenCalledWith('close', { kind: 'acp', id: 'closed', ownerLabel: 'owner' });
   });
+
+  it('shows a refused open inline and leaves no unhandled rejection', async () => {
+    const { intent, value } = capabilities();
+    intent.mockRejectedValueOnce(new Error('invalid open payload'));
+    const unhandled = vi.fn();
+    process.on('unhandledRejection', unhandled);
+    try {
+      const { container } = render(<ConnectionList rows={[live('db', 'sqlite', 'Database')]} capabilities={value} />);
+      const row = container.querySelector('.connections-row')!;
+      fireEvent.click(row);
+      fireEvent.click(row);
+      expect(await screen.findByRole('alert')).toHaveTextContent('invalid open payload');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(unhandled).not.toHaveBeenCalled();
+    } finally {
+      process.off('unhandledRejection', unhandled);
+    }
+  });
+
+  it('shows a refused close inline and leaves no unhandled rejection', async () => {
+    const { intent, value } = capabilities();
+    intent.mockRejectedValueOnce(new Error('invalid close payload'));
+    const unhandled = vi.fn();
+    process.on('unhandledRejection', unhandled);
+    try {
+      render(<ConnectionList rows={[live('db', 'sqlite', 'Database')]} capabilities={value} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Close Database' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent('invalid close payload');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(unhandled).not.toHaveBeenCalled();
+    } finally {
+      process.off('unhandledRejection', unhandled);
+    }
+  });
+
+  it('discards a pending delete when its row disappears and sends no intent', () => {
+    const { intent, value } = capabilities();
+    const closed = record('closed', 'acp', 'Closed', 'Finished session');
+    const { rerender } = render(<ConnectionList rows={[closed]} capabilities={value} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Finished session' }));
+    expect(screen.getByText('Delete "Finished session"?')).toBeInTheDocument();
+    rerender(<ConnectionList rows={[]} capabilities={value} />);
+    expect(screen.queryByText('Delete "Finished session"?')).toBeNull();
+    expect(intent).not.toHaveBeenCalled();
+  });
 });
