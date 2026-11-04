@@ -5,10 +5,10 @@ import { activate } from './activate.js';
 
 function fixture(rows: unknown[] = []) {
   const openOrFocusTab = vi.fn();
-  const updateTab = vi.fn();
+  const updateTab = vi.fn((_key: string, _factory: () => unknown) => {});
   const closeOwnTab = vi.fn();
   const dockTab = vi.fn();
-  const topicAction = vi.fn(() => 'connections output');
+  const topicAction = vi.fn((_action: { action?: string }) => 'connections output');
   const topicData = vi.fn(() => ({ rows }));
   const rejectRequest = vi.fn((message: string): never => { throw new Error(message); });
   const reportFailure = vi.fn((message: string): never => { throw new Error(message); });
@@ -70,11 +70,32 @@ describe('connections plugin activation', () => {
     expect(f.closeOwnTab).toHaveBeenCalledWith('uuid');
   });
 
-  it('opens a durable record after requesting its newest window', () => {
+  it('opens the record tab before requesting its window and refreshes it with the loaded record', () => {
+    const window = {
+      id: 'uuid',
+      source: { kind: 'acp', model: 'model', ownerLabel: 'owner', ownerName: 'Owner' },
+      blocks: Array.from({ length: 20 }, (_, index) => ({ prompt: `prompt ${index}`, startedAt: index, entries: [] })),
+      totalBlocks: 25,
+      offset: 5,
+      hasOlder: true,
+    };
     const f = fixture([recordRow]);
+    let loaded = false;
+    f.topicAction.mockImplementation((action) => {
+      if (action.action === 'load') loaded = true;
+      return 'connections output';
+    });
+    f.topicData.mockImplementation(() => ({ rows: [{ ...recordRow, ...(loaded && { window }) }] }));
+
     f.activation.command?.('uuid', f.capabilities, 'connection');
-    expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action: 'load', id: 'uuid' });
+
     expect(f.openOrFocusTab).toHaveBeenCalledWith('uuid', expect.any(Function));
+    expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action: 'load', id: 'uuid' });
+    expect(f.openOrFocusTab.mock.invocationCallOrder[0]).toBeLessThan(f.topicAction.mock.invocationCallOrder[0]);
+    expect(f.updateTab).toHaveBeenCalledWith('uuid', expect.any(Function));
+    const [key, refresh] = f.updateTab.mock.calls[0];
+    expect(key).toBe('uuid');
+    expect(refresh()).toMatchObject({ title: 'ACP title', payload: { kind: 'connection', record: { id: 'uuid', window } } });
   });
 
   it('rejects malformed intents without failing the plugin and disposes cleanly', () => {

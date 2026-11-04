@@ -4,11 +4,11 @@ import { runConnectionsCommand } from './command.js';
 import { ConnectionTabs } from './tabs.js';
 
 function fixture(rows: unknown[] = [], originLabel = 'owner') {
-  const topicAction = vi.fn(() => 'No open connections.');
+  const topicAction = vi.fn((_action: { action?: string }) => 'No open connections.');
   const note = vi.fn();
   const rejectRequest = vi.fn((reason: string): never => { throw new Error(reason); });
   const openOrFocusTab = vi.fn();
-  const updateTab = vi.fn();
+  const updateTab = vi.fn((_key: string, _factory: () => unknown) => {});
   const dockTab = vi.fn();
   const topicData = vi.fn(() => ({ rows }));
   const originTab = vi.fn(() => ({ label: originLabel, cwd: '/repo', root: '/repo' }));
@@ -16,7 +16,7 @@ function fixture(rows: unknown[] = [], originLabel = 'owner') {
     topicAction, note, rejectRequest, openOrFocusTab, updateTab, dockTab, topicData, originTab,
     reportFailure: vi.fn((reason: string): never => { throw new Error(reason); }),
   } as unknown as TabPluginServerCapabilities;
-  return { capabilities, topicAction, note, rejectRequest, openOrFocusTab, dockTab, topicData, originTab };
+  return { capabilities, topicAction, note, rejectRequest, openOrFocusTab, updateTab, dockTab, topicData, originTab };
 }
 
 function recordRow(id: string, title: string, updatedAt: number) {
@@ -85,16 +85,37 @@ describe('connections command', () => {
     });
   });
 
-  it('resolves UUID before acp reference and opens a record after requesting its window', () => {
+  it('resolves UUID before acp reference and opens a record before requesting its window', () => {
     const record = {
       type: 'record', id: 'uuid', kind: 'acp', title: 'ACP title', model: 'model', ownerLabel: 'owner',
       ownerName: 'Owner', startedAt: 1, updatedAt: 2, status: 'Running', orderingTimestamp: 2,
     };
+    const window = {
+      id: 'uuid',
+      source: { kind: 'acp', model: 'model', ownerLabel: 'owner', ownerName: 'Owner' },
+      blocks: Array.from({ length: 20 }, (_, index) => ({ prompt: `prompt ${index}`, startedAt: index, entries: [] })),
+      totalBlocks: 25,
+      offset: 5,
+      hasOlder: true,
+    };
     const f = fixture([record]);
+    let loaded = false;
+    f.topicAction.mockImplementation((action) => {
+      if (action.action === 'load') loaded = true;
+      return 'connections output';
+    });
+    f.topicData.mockImplementation(() => ({ rows: [{ ...record, ...(loaded && { window }) }] }));
     const tabs = new ConnectionTabs();
+
     runConnectionsCommand('uuid', 'connection', tabs, f.capabilities);
-    expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action: 'load', id: 'uuid' });
+
     expect(f.openOrFocusTab).toHaveBeenCalledWith('uuid', expect.any(Function));
+    expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action: 'load', id: 'uuid' });
+    expect(f.openOrFocusTab.mock.invocationCallOrder[0]).toBeLessThan(f.topicAction.mock.invocationCallOrder[0]);
+    expect(f.updateTab).toHaveBeenCalledWith('uuid', expect.any(Function));
+    const [key, refresh] = f.updateTab.mock.calls[0];
+    expect(key).toBe('uuid');
+    expect(refresh()).toMatchObject({ title: 'ACP title', payload: { kind: 'connection', record: { id: 'uuid', window } } });
   });
 
   it.each(['connection', 'connections'] as const)(
