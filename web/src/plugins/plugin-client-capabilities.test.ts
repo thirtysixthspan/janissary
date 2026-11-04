@@ -60,7 +60,7 @@ describe('openConnection capability', () => {
     expect(capabilities).not.toHaveProperty('rpc');
   });
 
-  it('does not change the plugin API version', () => {
-    expect(TAB_PLUGIN_API_VERSION).toBe(2);
+  it('provides openConnection under plugin API v3', () => {
+    expect(TAB_PLUGIN_API_VERSION).toBe(3);
   });
 });

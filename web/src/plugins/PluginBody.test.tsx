@@ -235,3 +235,69 @@ describe('PluginBody command bar scope', () => {
     expect(intercept).toHaveBeenCalledWith('tasks', 'shell-hidden', false);
   });
 });
+
+describe('PluginBody core docked questions without a plugin response hook', () => {
+  beforeEach(() => {
+    registry.set('fixture', registration(async () => ({
+      default: () => <div>no-hook plugin</div>, isPayload: acceptsAnyPayload,
+    })));
+  });
+
+  it.each(['left', 'right'] as const)('routes free text, approval and Cancel to the %s dock owner', async (dock) => {
+    const fixture = client();
+    const question = { id: `q-${dock}`, tab: `owner-${dock}`, kind: 'ask' as const, question: 'Which port?' };
+    const element = (pendingQuestion: TabView['pendingQuestion']) => <>
+      <PluginBody plugin={plugin()} label="centre-other" client={fixture.value} active onClose={() => {}} />
+      <PluginBody plugin={plugin()} label={`owner-${dock}`} client={fixture.value} active dock={dock}
+        pendingQuestion={pendingQuestion} onClose={() => {}} />
+    </>;
+    const rendered = render(element(question));
+    expect(await screen.findByRole('dialog')).toHaveTextContent(`Question from owner-${dock}`);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Answer' }), { target: { value: '8080' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(fixture.send).toHaveBeenLastCalledWith({ method: 'answerQuestion', params: { tab: question.tab, id: question.id, answer: '8080' } });
+
+    const approval = { ...question, id: `approve-${dock}`, kind: 'approve' as const, question: 'Proceed?', options: ['Allow', 'Deny'] };
+    rendered.rerender(element(approval));
+    fireEvent.click(screen.getByRole('button', { name: 'Allow' }));
+    expect(fixture.send).toHaveBeenLastCalledWith({ method: 'answerQuestion', params: { tab: question.tab, id: approval.id, answer: 'Allow' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(fixture.send).toHaveBeenLastCalledWith({ method: 'answerQuestion', params: { tab: question.tab, id: approval.id, answer: null } });
+    expect(fixture.send).toHaveBeenCalledTimes(3);
+    rendered.rerender(element(undefined));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it.each(['left', 'right'] as const)('follows active and resolved state in the %s sidebar independently of responses', async (dock) => {
+    const fixture = client();
+    const question = { id: 'q-visibility', tab: 'owner', kind: 'ask' as const, question: 'Still pending?' };
+    const element = (active: boolean, pendingQuestion: TabView['pendingQuestion'] = question) => (
+      <PluginBody plugin={plugin()} label="owner" client={fixture.value} active={active} dock={dock}
+        pendingQuestion={pendingQuestion} onClose={() => {}} />
+    );
+    const rendered = render(element(false));
+    await screen.findByText('no-hook plugin');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    rendered.rerender(element(true));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    rendered.rerender(element(false));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    rendered.rerender(element(true));
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    rendered.rerender(<PluginBody plugin={plugin()} label="owner" client={fixture.value} active dock={dock} onClose={() => {}} />);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(fixture.send).not.toHaveBeenCalled();
+  });
+
+  it('leaves centre questions to the app and keeps disabled docked plugins isolated', async () => {
+    const fixture = client();
+    const question = { id: 'q-centre', tab: 'centre-other', kind: 'approve' as const, question: 'Proceed?' };
+    const rendered = render(<PluginBody plugin={plugin()} label="centre-other" client={fixture.value} active pendingQuestion={question} onClose={() => {}} />);
+    await screen.findByText('no-hook plugin');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    host.disable('fixture', 'disabled');
+    rendered.rerender(<PluginBody plugin={plugin()} label="owner" client={fixture.value} active dock="left" pendingQuestion={question} onClose={() => {}} />);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('no-hook plugin')).not.toBeInTheDocument();
+  });
+});

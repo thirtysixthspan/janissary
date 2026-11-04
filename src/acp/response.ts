@@ -1,8 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Managers } from '../managers.js';
-import type { LogEntry, Tab } from '../tab/types.js';
+import type { LogEntry } from '../tab/types.js';
 import type { AcpPromptResult } from './types.js';
-import { flattenBuffer } from '../tab/formatting.js';
 import { messageBus } from '../bus.js';
 import { answerCoreRecord } from './record-feed.js';
 
@@ -22,15 +21,6 @@ export function appendAcpBackgroundReply(managers: Managers, label: string, inpu
     output: result.answered ? result.reply : result.error,
     background: randomUUID(),
   });
-}
-
-export function acpResponseFor(tab: Tab) {
-  const entries = tab.runtime?.acpEntries;
-  if (tab.view !== 'plugin' || !entries) return;
-  return {
-    lines: flattenBuffer(tab.log.filter((entry) => entries.has(entry)), !tab.toolStepsExpanded),
-    running: tab.runtime?.acpPrompt !== undefined,
-  };
 }
 
 // Settle the prompt a tab is running with the result it produced, whether the tool loop finished, the

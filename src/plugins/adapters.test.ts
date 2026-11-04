@@ -216,8 +216,9 @@ describe('tab plugin command adapter', () => {
     expect(command.match('fixture-extra path')).toBe(false);
   });
 
-  it('does not register the frozen fixture in production', () => {
+  it('does not register either frozen fixture in production', () => {
     expect(commands.map((command) => command.name)).not.toContain('fixture-v1');
+    expect(commands.map((command) => command.name)).not.toContain('fixture-v2');
   });
 
   // `command` is optional. A plugin that only claims extensions contributes an opener and nothing

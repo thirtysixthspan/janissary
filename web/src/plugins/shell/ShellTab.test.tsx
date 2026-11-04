@@ -119,6 +119,7 @@ function makeCapabilities(overrides: {
   active?: boolean;
   dispatched?: boolean;
   output?: string;
+  coreResponse?: boolean;
   completions?: { matches: string[]; newInput: string; newCursor: number };
   status?: { ptyId: string; running: boolean };
   claimedChords?: readonly string[];
@@ -150,7 +151,7 @@ function makeCapabilities(overrides: {
       if (name === 'dispatch-command' && typeof _payload === 'object' && _payload !== null && 'discard' in _payload) return null;
       if (name === 'dispatch' || name === 'dispatch-command') {
         await answered;
-        return { dispatched: overrides.dispatched ?? false, output: overrides.output ?? '' };
+        return { dispatched: overrides.dispatched ?? false, output: overrides.output ?? '', coreResponse: overrides.coreResponse };
       }
       if (name === 'complete') {
         return overrides.completions ?? { matches: [], newInput: '', newCursor: 0 };
@@ -1009,17 +1010,31 @@ describe('ShellTab', () => {
     expect(shown).not.toContain('##');
   });
 
-  it('writes a settled ACP background reply at the current bottom under its exact line', () => {
+  it('keeps the bar usable without a response panel and renders the settled reply exactly once after other output', async () => {
     let receive: (reply: { id: string; output: string; line?: string }) => void = () => {};
     const onBackgroundReply = vi.fn((callback: typeof receive) => { receive = callback; return () => {}; });
-    const { terminal } = renderTab({ onBackgroundReply });
+    const { terminal, releaseDispatch, capabilities } = renderTab({ onBackgroundReply, dispatched: true, coreResponse: true });
+    fireEvent.change(bar(), { target: { value: 'acp summarize this' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+    expect(capabilities.intent).toHaveBeenCalledWith('dispatch', 'acp summarize this');
+    expect(terminal.written.join('')).not.toContain('> acp summarize this');
+    expect(screen.queryByRole('region', { name: 'ACP responses' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reset ACP' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    fireEvent.change(bar(), { target: { value: 'ls' } });
+    expect(bar()).toHaveValue('ls');
+    act(() => { terminal.written.push('ordinary output\r\n'); });
 
+    act(() => receive({ id: 'acp-1', output: '## Answer\n\nDone', line: 'acp summarize this' }));
     act(() => receive({ id: 'acp-1', output: '## Answer\n\nDone', line: 'acp summarize this' }));
 
     const shown = terminal.written.at(-1) ?? '';
     expect(shown).toContain('> acp summarize this');
     expect(shown).toContain('Answer');
     expect(shown).not.toContain('##');
+    expect(terminal.written.filter((text) => text.includes('> acp summarize this'))).toHaveLength(1);
+    expect(terminal.written.at(-2)).toBe('ordinary output\r\n');
   });
 
   it.each([

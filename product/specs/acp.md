@@ -1,6 +1,6 @@
 # ACP
 
-ACP is a core service for starting and querying Agent Client Protocol connections. Shell tabs use it through their command bar, a core streaming response panel, and a settled Markdown reply beneath the typed line. Any tab plugin can request the scoped core API without owning a terminal. Shell and harness tabs have no ACP command or prose route. Monitors, conversations, and editor queries retain their separate sessions over the shared protocol transport.
+ACP is a core service for starting and querying Agent Client Protocol connections. Shell tabs use it through their command bar and a settled Markdown reply beneath the typed line. Live activity belongs to the connection tab, not an in-tab response panel. Any tab plugin can request the scoped core API without owning a terminal. Harness tabs have no ACP command or prose route. Monitors, conversations, and editor queries retain their separate sessions over the shared protocol transport.
 
 ## Availability and plugin API
 
@@ -11,11 +11,13 @@ A plugin requests `startAcp`, `promptAcp`, and `resetAcp` in its declaration. Ea
 - `promptAcpResult(prompt)` runs the same prompt and resolves with a result rather than a string: the reply and the session that produced it, or the reason there was none. A refusal resolves with a line of prose, so a caller handed one string cannot tell an answer from a refusal without reading its text.
 - `resetAcp()` closes the connection and returns whether one existed. It settles in-flight requests and prevents obsolete callbacks from updating a replacement prompt.
 
-A plugin requesting `promptAcp` supports the core `acp` and `acp reset` commands. The shell requests all three operations. A terminal, `spawnTerminal`, and `hostsCommandBar` are not prerequisites for the ACP API. The client publishes `useAcpResponse` through its plugin API; it returns only the owning tab's host-rendered response surface. Core owns protocol I/O, session lifecycle, tools, transcript state, Markdown rendering, reset controls, and tool-step controls. There is no ACP plugin.
+A plugin requesting `promptAcp` supports the core `acp` and `acp reset` commands. The shell requests all three operations. A terminal, `spawnTerminal`, and `hostsCommandBar` are not prerequisites for the ACP API. Core owns protocol I/O, session lifecycle, tools, transcript state, and settlement. There is no ACP plugin or client response hook. Plugins retain their scoped transcript-snapshot action and completed background-reply subscription.
 
 ## Commands
 
 `acp <prompt>` queries the current supported tab's connection. Bare `acp` prints `Usage: acp <prompt>.`. `acp reset` ends that connection and reports `ACP session reset — next acp prompt will start fresh.`, or `No active ACP session to reset.`.
+
+Reset confirmation is one completed background reply beneath the exact reset line typed, with no immediate duplicate. Interrupting a prompt produces two distinct replies: the original prompt's one `ACP session closed.` reply and the reset invocation's one confirmation. Reset again reports the no-session message once.
 
 A shell's `acp` prompt does not hold its command bar. Other lines keep working while it runs. When it settles, the shell appends exactly one Markdown reply at the current bottom of its output, beneath an echo of the exact `acp <prompt>` line that was typed, so it still reads correctly after other commands ran in between. That happens once for an answer, a refusal with `ACP: a prompt is already running.`, a usage line, an `ACP error: …` line, `ACP session closed.` after reset or close, and `ACP: prompt cancelled.` after cancellation. A second prompt while one is running is refused without disturbing the active prompt, and nothing queues. Callbacks arriving after settlement add no second reply.
 
@@ -46,19 +48,17 @@ The request stays reserved and `Running` until both the native cancellation noti
 
 Reset or close wins during drain, settles immediately with `ACP session closed.`, closes the record, and releases cancellation callers. Fatal loss also settles and closes once. A cancellation-send rejection, including one after provider completion, closes the failed session with `ACP: cancellation failed: <reason>` and does not settle as a successful cancellation. There is no cancellation timeout or forced process kill for a healthy provider: one that never drains stays reserved until reset, close, or fatal loss. A shell prompt settled this way still produces exactly one background reply. This backend operation adds no command, plugin capability, or button.
 
-New response identity and pending-request metadata are owned by the tab runtime. Core records ACP entries in the tab's existing transcript and tracks their identity without copying the text. Immutable running-entry replacements retain that identity. Responses are projected only for plugin tabs, through `TabView.acpResponse`, using the server's existing `flattenBuffer`. Other application-command entries do not appear in the ACP panel. Existing transcript limits and persistence behavior remain in force; no saved configuration, transcript, or profile is migrated or cleaned up.
+Response identity and pending-request metadata are owned by the tab runtime. Core records ACP entries in the tab's existing transcript and tracks their identity without copying the text. Immutable running-entry replacements retain that identity, so settlement never finalizes an unrelated running shell entry. Existing transcript limits and persistence behavior remain in force; no saved configuration, transcript, or profile is migrated or cleaned up.
 
-## Streaming response panel
+## Answers, activity, and questions
 
-The core response panel sits above the shell command bar. It shows streamed, sanitized GitHub-flavored Markdown, tool steps, and a responding status while a prompt is active. It keeps previous ACP exchanges for the tab and follows new output while the user remains at the bottom. The shell's tab dot blinks during the operation. In API v2 the panel remains the streaming surface; it is not replaced by the settled background reply, which is written to the shell output.
+The shell shows only the settled answer as sanitized GitHub-flavored Markdown in its output. It has no ACP response panel, responding status, or Reset ACP button. Thinking, tool steps, live activity, and prompt history appear in the connection tab. The shell's tab dot still blinks during the operation. See [[connections-tab]].
 
 The connections panel's ACP rows open or focus the corresponding connection tab when they carry a durable record or the tab's own live ACP reference. Rows that offer a transcript snapshot keep that separate button, and clicking it never opens the record tab. See [[connection]].
 
-The panel's **Reset ACP** control acts immediately on its owning tab, including while a shell-bar submission is still awaiting completion. Tool-step expansion uses the same server-owned collapse state, with an explicit tab label so a docked panel never changes another tab. File-link actions likewise run in the source tab. A plugin renders the core surface through the scoped client hook rather than implementing another response renderer.
+Reset remains available through `acp reset`, the connection tab's **Close session**, and `connections close acp:<name>`. Transcript snapshot actions and shared tool-step collapse remain available without a response panel. File and web links in Markdown replies retain their existing targets.
 
-Reset, collapse, and command actions from a docked response panel remain bound to its owning tab. Other transcript actions keep their original parameters and targets.
-
-Questions use the existing core question panel and answer protocol. A centre tab's question is shown when that tab is current. A selected docked shell also exposes its question through its scoped ACP surface; a hidden docked body does not raise one. The question's tab/id determine where the answer goes. See [[agent-questions]].
+Questions use the existing core question panel and answer protocol. A centre tab's question is shown once when that tab is current. Any selected active docked plugin tab shows its pending question, even before any ACP response exists and without a plugin hook, terminal, or command bar. A hidden docked body does not raise one; returning to it restores a still-pending question. The question's tab/id determine where the answer goes. See [[agent-questions]].
 
 Reset or close aborts the current ACP request's question, whether active or queued, and preserves unrelated questions. An aborted loop does not issue another provider prompt after a tool returns. Calls without an abort signal retain the existing question lifecycle.
 

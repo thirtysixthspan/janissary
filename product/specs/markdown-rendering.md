@@ -1,10 +1,6 @@
 # Markdown Rendering
 
-ACP agent replies are written in Markdown and rendered as formatted Markdown in the core response panel
-(headings, lists, tables, fenced code, blockquotes, links). Every other transcript line — shell
-output, command echoes, background monitor replies — stays plain text; only entries explicitly flagged as
-Markdown are interpreted. Tab ACP orchestration lives in `src/acp/manager.ts`, the buffer model in
-`src/tab/types.ts` and `src/tab/formatting.ts`, and the shared rendering in `web/src/shared/transcript/Transcript.tsx`. The core panel projects ACP entries from the same log without copying their text. See [[acp]].
+ACP agent replies are written in Markdown and rendered as formatted Markdown in settled shell replies, transcript snapshots, and connection-tab answers (headings, lists, tables, fenced code, blockquotes, links). Shell ACP output has no separate streaming response panel. Ordinary shell output and command echoes stay plain text; only transcript entries explicitly flagged as Markdown are interpreted. Completed shell background replies, including monitor replies, use the shell's Markdown reply renderer. Core transcript tagging and immutable entry identity remain intact. See [[acp]] and [[shell-tab]].
 
 ### Requesting Markdown
 
@@ -45,11 +41,7 @@ accent-colored links, with the per-line `pre-wrap` overridden so block elements 
 
 ### Streaming
 
-The reply streams into its running entry as the agent produces it; the client re-parses and
-re-renders the (possibly partial) Markdown on each update, so formatting appears progressively.
-`marked` tolerates incomplete Markdown, so a half-finished table or code fence renders without error
-and resolves once the turn completes. While the turn is in flight the tab's busy dot blinks (see
-Tabs → Busy indicator).
+The reply streams verbatim into its running transcript entry as the agent produces it. Live activity is visible in the connection tab, while the shell renders its one Markdown answer only on settlement. Transcript snapshots preserve the text present when opened. The shared renderer tolerates incomplete Markdown without executing active markup. While the turn is in flight the tab's busy dot blinks (see Tabs → Busy indicator).
 
 ### Scope
 

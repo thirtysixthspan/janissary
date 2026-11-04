@@ -1,6 +1,6 @@
 import { useBackgroundReplies } from './useBackgroundReplies';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CommandBarShell, useAppCommandBar, useCommandBarKeys, usePluginChordClaims, useAcpResponse } from '../api';
+import { CommandBarShell, useAppCommandBar, useCommandBarKeys, usePluginChordClaims } from '../api';
 import type { TabPluginClientCapabilities } from '../api';
 import type { ShellCompletion, ShellPayload } from '@shared/plugins/shell/shared';
 import { useShellTabTerminal } from './useShellTabTerminal';
@@ -35,7 +35,6 @@ export function ShellTab({ payload, capabilities }: Properties) {
   const inputReference = useRef<HTMLTextAreaElement>(null);
   const terminalReference = useRef<HTMLDivElement>(null);
   const appBar = useAppCommandBar();
-  const acpResponse = useAcpResponse();
   const [draft, setDraft] = useState('');
   // Lines the bar has sent, oldest first. Direct terminal input belongs to zsh's own history.
   const [sent, setSent] = useState<string[]>([]);
@@ -186,7 +185,6 @@ export function ShellTab({ payload, capabilities }: Properties) {
           inputReference.current?.focus();
         }}
       />
-      {acpResponse}
       <CommandBarShell
         value={draft}
         disabled={appBar.blockingOverlayOpen}

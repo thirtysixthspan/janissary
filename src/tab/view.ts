@@ -1,6 +1,5 @@
 import { queueProjection } from '../command-queue/support.js';
 import type { Tab } from './types.js';
-import { acpResponseFor } from '../acp/response.js';
 import type { ConnectionView, PendingQuestionView, ScheduleView, TabView } from '../protocol.js';
 import type { Managers } from '../managers.js';
 import type { TabPluginDeclaration } from '../plugins/api.js';
@@ -129,7 +128,6 @@ export function buildTabView(
       ...(remoteProvisioning && { provisioning: true }),
     },
     acp,
-    acpResponse: acpResponseFor(tab),
     connections,
     schedule,
     bufferLines: flattenBuffer(tab.log, !tab.toolStepsExpanded)

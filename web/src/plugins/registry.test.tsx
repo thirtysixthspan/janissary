@@ -18,6 +18,11 @@ import { clientPluginLoaders, clientPluginRegistry } from './registry';
 // pull plugin guards into the entry bundle. That duplication is only safe while something checks it,
 // which is this file's whole job — a test never ships to the browser, so it may import freely.
 describe('client plugin registry', () => {
+  it.each(['fixture-v1', 'fixture-v2'])('does not register or load %s in production', (id) => {
+    expect(clientPluginRegistry.has(id)).toBe(false);
+    expect(clientPluginLoaders).not.toHaveProperty(id);
+  });
+
   it('pins every registered schema literal to its plugin\'s own constant', () => {
     expect(clientPluginRegistry.get('image')?.schemaVersion).toBe(IMAGE_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('conversations')?.schemaVersion)

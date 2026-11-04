@@ -74,6 +74,9 @@ describe('tab plugin discovery', () => {
       tabPluginCatalog.map((item) => item.id).toSorted((a, b) => a.localeCompare(b)),
     );
     expect(tabPluginCatalog.map((item) => item.id)).not.toContain('fixture-v1');
+    expect(tabPluginCatalog.map((item) => item.id)).not.toContain('fixture-v2');
+    expect(TAB_PLUGIN_API_VERSION).toBe(3);
+    expect(tabPluginCatalog.every((item) => item.apiVersion === TAB_PLUGIN_API_VERSION)).toBe(true);
     expect(tabPluginCatalog.find((item) => item.id === 'connections')).toMatchObject({
       command: 'connections', commandAliases: ['connection'], notifications: ['connections'],
       capabilities: expect.arrayContaining(['closeOwnTab', 'originTab', 'topicAction']),
@@ -166,7 +169,7 @@ describe('TabPluginHost commands', () => {
 
     const outcome = await host.runCommandResult('fixture', 'fixture value', origin);
 
-    expect(outcome).toEqual({ status: 'failed', error: 'requires tab plugin API 3; host provides 2' });
+    expect(outcome).toEqual({ status: 'failed', error: `requires tab plugin API ${TAB_PLUGIN_API_VERSION + 1}; host provides ${TAB_PLUGIN_API_VERSION}` });
     expect(load).not.toHaveBeenCalled();
     expect(host.statusFor('fixture')?.state).toBe('disabled');
   });
@@ -374,6 +377,17 @@ describe('system-shell restart authorization', () => {
 });
 
 describe('TabPluginHost activation', () => {
+  it('refuses explicit API v2 before loading behavior under v3', async () => {
+    const { managers } = makeManagers();
+    const load = vi.fn(loader(activation()));
+    const host = new TabPluginHost(managers, [declaration({ apiVersion: 2 })], { fixture: load });
+
+    await host.runOpener('fixture', 'inline', '/tmp/a.fixture', origin);
+
+    expect(load).not.toHaveBeenCalled();
+    expect(host.statusFor('fixture')).toEqual({ state: 'disabled', reason: 'requires tab plugin API 2; host provides 3' });
+  });
+
   it('refuses an incompatible API before importing behavior', async () => {
     const { append, managers } = makeManagers();
     const load = vi.fn(loader(activation()));

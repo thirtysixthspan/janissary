@@ -271,11 +271,21 @@ describe('updateRunningEntry', () => {
       { input: 'git status', output: '', running: true, cwd: '/repo' },
     ]);
     const emit = vi.spyOn(messageBus, 'emit');
+    const original = tab.log[0];
+    tab.runtime!.acpEntries = new WeakSet([original]);
 
     updateRunningEntry([tab], 'bob', { markdown: true }, 'streamed reply', true, {});
 
     expect(tab.log[1]).toEqual({ input: 'git status', output: '', running: true, cwd: '/repo' });
     expect(tab.log[0]).toEqual({ input: 'acp hi', output: 'streamed reply', running: true, markdown: true });
+    expect(tab.log[0]).not.toBe(original);
+    expect(tab.runtime!.acpEntries.has(tab.log[0])).toBe(true);
+    expect(tab.runtime!.acpEntries.has(tab.log[1])).toBe(false);
+    const streamed = tab.log[0];
+    updateRunningEntry([tab], 'bob', { markdown: true }, 'final reply', false, {});
+    expect(tab.log[0]).not.toBe(streamed);
+    expect(tab.runtime!.acpEntries.has(tab.log[0])).toBe(true);
+    expect(tab.log[1]).toMatchObject({ input: 'git status', running: true });
     expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
   });
 

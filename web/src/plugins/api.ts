@@ -38,7 +38,6 @@ export { spliceIntoTextarea } from '../shared/command-bar/textarea-splice';
 export { useCommandQueue } from '../shared/command-queue/useCommandQueue';
 export { CommandQueue } from '../shared/command-queue/command-queue';
 export { useAppCommandBar } from '../shared/command-bar/AppCommandBar';
-export { useAcpResponse } from '../shared/acp/AcpResponseScope';
 export type { AppCommandBar } from '../shared/command-bar/app-command-bar-scope';
 
 // The host's "double-click to rename, Enter or blur to commit, Escape to cancel" field, published on
@@ -245,19 +244,11 @@ export type TabPluginClientCapabilities = {
   // to a terminal nothing is rendering. Optional, like `registerDirtyHandle`, because a plugin with no
   // terminal behaves exactly as it did before this existed.
   attachTerminal?(ptyId: string, onData: (data: string) => void): Promise<PluginTerminal>;
-  // The two metadata-row actions that are tab-scoped RPCs rather than commands: open a file navigator
-  // rooted at this tab, and launch a shell in this tab's directory. Capabilities rather than a
-  // dispatched command line because the two are not the same thing — the shell action roots the new
-  // tab at *this* tab's cwd and joins its group, which a command run in this tab does not. Optional
-  // for the same reason as `attachTerminal`.
+  // Open a file navigator rooted at this tab through a tab-scoped RPC rather than a command.
+  // Optional for the same reason as `attachTerminal`.
   openFileNavigator?(): void;
-  /**
-   * @deprecated Use this plugin's own sibling intent instead; the shell plugin uses `intent('sibling', null)`.
-   * Scheduled for removal in tab plugin API v3 after at least two host minor releases.
-   */
-  launchShellHere?(): void;
-  // Open the diff tab on this tab's own workspace. The third of the metadata-row actions that are
-  // tab-scoped RPCs rather than commands, for the same reason as the two above: a command run in
+  // Open the diff tab on this tab's own workspace. Like the navigator action above, this is a
+  // tab-scoped RPC rather than a command: a command run in
   // this tab would diff whatever its command line resolves, not the environment this tab is working
   // in. Optional for the same reason as `attachTerminal`.
   openDiffHere?(): void;

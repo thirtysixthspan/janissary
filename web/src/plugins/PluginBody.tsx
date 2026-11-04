@@ -13,7 +13,7 @@ import { usePluginHost } from './host';
 import { type ClientPluginRegistration } from './registry';
 import { usePluginRemote } from './usePluginRemote';
 import { usePluginCapabilities } from './usePluginCapabilities';
-import { AcpResponseScope } from '../shared/acp/AcpResponseScope';
+import { QuestionPanel } from '../shared/questions/QuestionPanel';
 
 const CLIENT_ACTIVATION_MS = 5000;
 
@@ -120,7 +120,6 @@ export function PluginBody({
   active,
   dock = null,
   remote,
-  acpResponse,
   agentRun,
   pendingQuestion,
   dotColor,
@@ -134,7 +133,6 @@ export function PluginBody({
   active: boolean;
   dock?: 'left' | 'right' | null;
   remote?: TabView['remote'];
-  acpResponse?: TabView['acpResponse'];
   agentRun?: TabView['agentRun'];
   pendingQuestion?: TabView['pendingQuestion'];
   dotColor?: string;
@@ -167,9 +165,8 @@ export function PluginBody({
   // the plugin passes: a plugin cannot then act on the bar, queue or focus of a tab it does not own.
   return (
     <AppCommandBarTabScope label={label} active={active}>
-      <AcpResponseScope response={acpResponse} question={dock !== null && active ? pendingQuestion : undefined} label={label} client={client}>
-        {contentForPlugin(plugin, agentRun, host.registry.get(pluginId), capabilities, fail)}
-      </AcpResponseScope>
+      {contentForPlugin(plugin, agentRun, host.registry.get(pluginId), capabilities, fail)}
+      {dock !== null && active && pendingQuestion && <QuestionPanel question={pendingQuestion} client={client} />}
     </AppCommandBarTabScope>
   );
 }

@@ -8,7 +8,6 @@ import type { Managers } from '../managers.js';
 import { TabManager } from '../tab/manager.js';
 import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
-import { acpResponseFor } from './response.js';
 import { acpCapabilities } from '../plugins/acp-capabilities.js';
 import { guardPluginCall } from '../plugins/guard.js';
 import { Questions, QUESTION_CANCELLED } from '../questions.js';
@@ -150,20 +149,32 @@ describe('core ACP for plugin tabs', () => {
     expect(managers.acpRecords.rows()[0].status).toBe('Closed');
   });
 
-  it('starts without a terminal, reuses the session, and projects only ACP entries', async () => {
+  it('starts without a terminal, reuses the session, and retains tagged transcript entries', async () => {
     const { managers, handlers } = setup();
     expect(managers.acp.start('consumer').model).toBeDefined();
     const answer = managers.acp.prompt('consumer', 'acp hello');
-    handlers().onChunk('# Partial');
     const tab = managers.tab.byLabel('consumer')!;
+    const original = tab.log.find((entry) => entry.running)!;
+    expect(tab.runtime?.acpEntries?.has(original)).toBe(true);
+    handlers().onChunk('# Partial');
+    const replacement = tab.log.find((entry) => entry.running)!;
+    expect(replacement).not.toBe(original);
+    expect(tab.runtime?.acpEntries?.has(replacement)).toBe(true);
     managers.tab.append('consumer', { input: 'help', output: 'unrelated' });
-    expect(acpResponseFor(tab)).toMatchObject({ running: true });
-    expect(acpResponseFor(tab)?.lines.map((line) => line.text).join(' ')).toContain('# Partial');
-    expect(acpResponseFor(tab)?.lines.map((line) => line.text).join(' ')).not.toContain('unrelated');
+    expect(tab.runtime?.acpPrompt).toBeDefined();
+    expect(replacement.output).toBe('# Partial');
+    expect(tab.runtime?.acpEntries?.has(tab.log.at(-1)!)).toBe(false);
     handlers().onEnd('end_turn');
     await expect(answer).resolves.toBe('# Partial');
     expect(mock.connect).toHaveBeenCalledTimes(1);
-    expect(acpResponseFor(tab)?.running).toBe(false);
+    expect(tab.runtime?.acpPrompt).toBeUndefined();
+    expect(tab.log.find((entry) => entry.markdown)).toMatchObject({ output: '# Partial', running: false });
+    expect(managers.acpRecords.window(tab.runtime!.acpRecordId!)?.blocks).toMatchObject([{ answer: '# Partial' }]);
+    const next = managers.acp.prompt('consumer', 'again');
+    handlers().onChunk('Reused');
+    handlers().onEnd('end_turn');
+    await expect(next).resolves.toBe('Reused');
+    expect(mock.connect).toHaveBeenCalledOnce();
     managers.acp.closeAll();
   });
 
@@ -175,7 +186,7 @@ describe('core ACP for plugin tabs', () => {
     await expect(first).resolves.toBe('ACP session closed.');
     const second = managers.acp.prompt('consumer', 'acp second');
     old.onChunk('obsolete');
-    expect(acpResponseFor(managers.tab.byLabel('consumer')!)?.lines.some((line) => line.text.includes('obsolete'))).toBe(false);
+    expect(managers.tab.byLabel('consumer')!.log.some((entry) => entry.output.includes('obsolete'))).toBe(false);
     handlers().onChunk('new');
     handlers().onEnd('end_turn');
     await expect(second).resolves.toBe('new');
@@ -207,7 +218,9 @@ describe('core ACP for plugin tabs', () => {
       expect(replies).toHaveLength(1);
       expect(replies[0]).toMatchObject({ input: 'acp hello', output: 'Answer' });
     });
-    expect(acpResponseFor(managers.tab.byLabel('consumer')!)?.lines.map((line) => line.text).join(' ')).toContain('Answer');
+    const tab = managers.tab.byLabel('consumer')!;
+    expect(tab.log.find((entry) => tab.runtime?.acpEntries?.has(entry) && entry.markdown)).toMatchObject({ output: 'Answer', running: false });
+    expect(tab.runtime?.acpPrompt).toBeUndefined();
     managers.acp.closeAll();
   });
 
@@ -244,6 +257,54 @@ describe('core ACP for plugin tabs', () => {
       expect(replies[0]).toMatchObject({ input: 'acp held', output: 'ACP session closed.' });
     });
     managers.acp.closeAll();
+  });
+
+  it('dispatches idle resets once under the exact reset invocation', async () => {
+    const { managers } = setup();
+    managers.acp.start('consumer');
+    for (const line of ['  /AcP   ReSeT  ', '/acp reset']) {
+      await expect(managers.command.dispatchLineWithOutput('consumer', line, 1))
+        .resolves.toEqual({ dispatched: true, output: '', coreResponse: true });
+    }
+    const tab = managers.tab.byLabel('consumer')!;
+    const replies = tab.log.filter((entry) => entry.background);
+    expect(replies).toMatchObject([
+      { input: '  /AcP   ReSeT  ', output: 'ACP session reset — next acp prompt will start fresh.' },
+      { input: '/acp reset', output: 'No active ACP session to reset.' },
+    ]);
+    expect(replies).toHaveLength(2);
+    expect(new Set(replies.map((entry) => entry.background)).size).toBe(2);
+    expect(replies.every((entry) => tab.runtime?.acpEntries?.has(entry) && !entry.running)).toBe(true);
+  });
+
+  it('dispatches reset during a prompt with distinct once-only prompt-close and reset replies', async () => {
+    const { managers, handlers } = setup();
+    const promptLine = '/acp held';
+    await managers.command.dispatchLineWithOutput('consumer', promptLine, 1);
+    handlers().onChunk('Partial');
+    const tab = managers.tab.byLabel('consumer')!;
+    const shell = { input: 'sleep 10', output: 'still working', running: true };
+    managers.tab.append('consumer', shell);
+    const resetLine = ' /ACP  reset ';
+
+    await expect(managers.command.dispatchLineWithOutput('consumer', resetLine, 1))
+      .resolves.toEqual({ dispatched: true, output: '', coreResponse: true });
+    handlers().onChunk('obsolete');
+    handlers().onError('obsolete error');
+    await vi.waitFor(() => { expect(tab.log.filter((entry) => entry.background)).toHaveLength(2); });
+
+    const replies = tab.log.filter((entry) => entry.background);
+    expect(replies).toEqual(expect.arrayContaining([
+      expect.objectContaining({ input: promptLine, output: 'ACP session closed.' }),
+      expect.objectContaining({ input: resetLine, output: 'ACP session reset — next acp prompt will start fresh.' }),
+    ]));
+    expect(new Set(replies.map((entry) => entry.background)).size).toBe(2);
+    expect(tab.log.filter((entry) => entry.output === 'ACP session reset — next acp prompt will start fresh.')).toHaveLength(1);
+    expect(tab.log).toContain(shell);
+    expect(shell.running).toBe(true);
+    expect(tab.runtime?.acpPrompt).toBeUndefined();
+    expect(managers.acpRecords.rows()[0].status).toBe('Closed');
+    expect(managers.acpRecords.window(managers.acpRecords.rows()[0].id)?.blocks).toMatchObject([{ answer: 'ACP session closed.' }]);
   });
 
   it('settles a pending shell prompt once when it is cancelled', async () => {
