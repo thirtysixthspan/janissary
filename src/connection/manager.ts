@@ -25,9 +25,11 @@ export class ConnectionManager {
   // A run the caller started is one of the caller's own connections while it is live. It has a
   // durable record to open, but no `acpRef`: the snapshot RPC has no agent-run scope.
   private activeAgentRows(label: string): ConnectionView[] {
+    const incarnation = this.managers.tab.byLabel(label)?.runtime?.incarnation;
+    if (incarnation === undefined) return [];
     const rows: ConnectionView[] = [];
     for (const run of this.managers.agent.runs.values()) {
-      if (run.outcome !== undefined || run.caller.label !== label) continue;
+      if (run.outcome !== undefined || run.caller.label !== label || run.caller.incarnation !== incarnation) continue;
       const recordId = run.recordId;
       if (recordId === undefined) continue;
       rows.push({ text: `Agent: ${run.view().task}`, kind: 'acp', recordId });

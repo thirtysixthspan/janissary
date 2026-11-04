@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Plan fidelity: match a running agent row in the caller popup to the caller tab's incarnation, not only its label.
-
-Existing Issue: `src/connection/manager.ts` includes any live run whose caller label matches, without comparing the run's captured incarnation to the open tab's runtime incarnation, so a run from a closed tab can appear under a new tab that reused its label. Severity: 5/10
-
-Existing Risk: 5/10 - The new tab can open a record that belongs to another tab's run and shows an Agent row it did not start.
-
-Proposal Risk: 2/10 - Comparing the existing incarnation metadata closes the stale-label path without changing run ownership or the record format.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "match caller popup agent rows by incarnation". In `src/connection/manager.ts`, make `activeAgentRows` look up the caller with `managers.tab.byLabel(label)` and include a run only when `run.caller.incarnation` equals that tab's `runtime.incarnation`; skip a missing tab or mismatched incarnation. Keep the existing outcome and record-id filters, the `Agent: <task filename>` text, and the no-acpRef shape. Add a case to `src/connection/manager.test.ts` with two runs, one caller incarnation matching the live tab and one from a previous incarnation of the same label, and assert only the matching row appears; keep the existing close-caller coverage in `src/agent/manager.test.ts`. Update `product/specs/agent-command.md` or `product/specs/connections-tab.md` only if their popup ownership wording needs the incarnation rule.
-
-
 * Functionality: preserve the reader's place when older connection history arrives after streamed activity.
 
 Existing Issue: `web/src/plugins/connections/useConnectionHistoryScroll.ts` treats any content-key change as the arrival of older blocks, so a streamed activity update between a top-page request and the response consumes the saved scroll height and clears the viewport restoration. Severity: 4/10

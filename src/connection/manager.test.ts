@@ -16,7 +16,12 @@ function makeManagers(overrides: Partial<Managers> = {}): Managers {
     pty: { terminalsFor: vi.fn(() => []) },
     database: { openDbs: vi.fn(() => []), listOpen: vi.fn(() => []) },
     agent: { runs: new Map() },
-    tab: { tabs: [], byLabel: vi.fn(), shorten: vi.fn((value: string) => value), cwdOf: vi.fn(() => '/repo') },
+    tab: {
+      tabs: [],
+      byLabel: vi.fn((label: string) => ({ label, runtime: { incarnation: `inc-${label}` } })),
+      shorten: vi.fn((value: string) => value),
+      cwdOf: vi.fn(() => '/repo'),
+    },
     ...overrides,
   } as unknown as Managers;
 }
@@ -111,7 +116,7 @@ describe('ConnectionManager connectionsFor', () => {
   });
 
   it('includes an active caller-owned agent run once with its record id and no acpRef', () => {
-    const run = { caller: { label: 'main' }, recordId: 'record-1', view: () => ({ task: 'task.md' }) };
+    const run = { caller: { label: 'main', incarnation: 'inc-main' }, recordId: 'record-1', view: () => ({ task: 'task.md' }) };
     const managers = makeManagers({
       agent: { runs: new Map([['run-1', run]]) },
     } as unknown as Partial<Managers>);
@@ -125,11 +130,36 @@ describe('ConnectionManager connectionsFor', () => {
     const managers = makeManagers({
       agent: {
         runs: new Map([
-          ['run-1', { caller: { label: 'other' }, recordId: 'record-1', view: () => ({ task: 'other.md' }) }],
-          ['run-2', { caller: { label: 'main' }, recordId: 'record-2', outcome: 'completed', view: () => ({ task: 'done.md' }) }],
-          ['run-3', { caller: { label: 'main' }, view: () => ({ task: 'unrecorded.md' }) }],
+          ['run-1', { caller: { label: 'other', incarnation: 'inc-other' }, recordId: 'record-1', view: () => ({ task: 'other.md' }) }],
+          ['run-2', { caller: { label: 'main', incarnation: 'inc-main' }, recordId: 'record-2', outcome: 'completed', view: () => ({ task: 'done.md' }) }],
+          ['run-3', { caller: { label: 'main', incarnation: 'inc-main' }, view: () => ({ task: 'unrecorded.md' }) }],
         ]),
       },
+    } as unknown as Partial<Managers>);
+    expect(new ConnectionManager(managers).connectionsFor('main').some((row) => row.text.startsWith('Agent: '))).toBe(false);
+  });
+
+  it('omits a live run captured from a previous incarnation of the same label', () => {
+    const managers = makeManagers({
+      agent: {
+        runs: new Map([
+          ['run-1', { caller: { label: 'main', incarnation: 'inc-main' }, recordId: 'record-1', view: () => ({ task: 'current.md' }) }],
+          ['run-2', { caller: { label: 'main', incarnation: 'inc-previous' }, recordId: 'record-2', view: () => ({ task: 'stale.md' }) }],
+        ]),
+      },
+    } as unknown as Partial<Managers>);
+    const agentRows = new ConnectionManager(managers).connectionsFor('main')
+      .filter((row) => row.text.startsWith('Agent: '));
+    expect(agentRows).toEqual([{ text: 'Agent: current.md', kind: 'acp', recordId: 'record-1' }]);
+    expect(agentRows[0]).not.toHaveProperty('acpRef');
+  });
+
+  it('omits agent rows when no tab holds the caller label', () => {
+    const managers = makeManagers({
+      agent: {
+        runs: new Map([['run-1', { caller: { label: 'main', incarnation: 'inc-main' }, recordId: 'record-1', view: () => ({ task: 'task.md' }) }]]),
+      },
+      tab: { tabs: [], byLabel: vi.fn(), shorten: vi.fn((value: string) => value), cwdOf: vi.fn(() => '/repo') },
     } as unknown as Partial<Managers>);
     expect(new ConnectionManager(managers).connectionsFor('main').some((row) => row.text.startsWith('Agent: '))).toBe(false);
   });
@@ -138,7 +168,7 @@ describe('ConnectionManager connectionsFor', () => {
     const managers = makeManagers({
       shell: { has: vi.fn(() => true) },
       agent: {
-        runs: new Map([['run-1', { caller: { label: 'main' }, recordId: 'record-1', view: () => ({ task: 'task.md' }) }]]),
+        runs: new Map([['run-1', { caller: { label: 'main', incarnation: 'inc-main' }, recordId: 'record-1', view: () => ({ task: 'task.md' }) }]]),
       },
     } as unknown as Partial<Managers>);
     const rows = new ConnectionManager(managers).connectionsFor('main');
