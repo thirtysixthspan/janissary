@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Surface the connection list's refused Close on an open ACP record row, which still completes silently.
-
-Existing Issue: The list's Close control on an open ACP record row sends a `close` intent that `openOrClose` turns into a `closeSession` topic action, but `src/plugins/connections/activate.ts` discards the returned refusal, so an owner mismatch or status change ends the intent successfully and the inline `role="alert"` never appears. Severity: 4/10
-
-Existing Risk: 4/10 - A reader clicks Close on a row that has moved on and sees no response, leaving the record and its tab in an ambiguous state and making the lifecycle-refusal surface look broken.
-
-Proposal Risk: 1/10 - The same topic refusal is forwarded through `rejectRequest`; successful closes and the intentionally silent live-row open/close topic actions are unchanged.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "surface the connection list's refused Close on an open ACP record row". In `src/plugins/connections/activate.ts`, make the `close` branch of `openOrClose` capture the string returned by the `closeSession` topic action and pass a non-undefined value to `capabilities.rejectRequest`, or delegate that branch to the existing `recordAction('close-session', row.id, capabilities)` helper. Keep the live-row `open`/`close` branches as fire-and-forget calls and keep the `invalid close payload` rejection for a row no longer present. Add a case to `src/plugins/connections/activate.test.ts` where the current row is an open ACP record and `topicAction` returns `The owning tab no longer holds this record.`, asserting the intent throws that message and `rejectRequest` receives it; add or extend a `web/src/plugins/connections/ConnectionList.test.tsx` case that the Close control on an open ACP record row renders the refusal in `role="alert"`. Do not change the record-tab Cancel/Close session/Terminate paths, the list Delete path, or the intentional no-op `actOnLive` topic behavior.
-
-
 * Correct the pull request description's stale branch statistics and its claim that the canonical plan is the branch's only plan.
 
 Existing Issue: The description says the branch carries 93 commits and 232 changed files from `139aaf43` and that `product/plans/complete/connections-tabs.md` is the branch's only plan, while the reviewed head has 99 commits and 284 changed files and five repair plans beside the canonical plan. Severity: 3/10

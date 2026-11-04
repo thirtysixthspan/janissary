@@ -188,6 +188,20 @@ describe('connections plugin activation', () => {
     expect(f.topicAction).not.toHaveBeenCalled();
   });
 
+  it('refuses an open ACP record close with the topic message', () => {
+    const message = 'The owning tab no longer holds this record.';
+    const f = fixture([recordRow]);
+    f.topicAction.mockReturnValue(message);
+    expect(() => f.activation.intent({
+      tab: 'connections', intent: 'close',
+      payload: { kind: 'acp', id: 'uuid', ownerLabel: 'owner' },
+      tabPayload: { kind: 'list', rows: [recordRow] },
+    }, f.capabilities)).toThrow(message);
+    expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action: 'closeSession', id: 'uuid' });
+    expect(f.rejectRequest).toHaveBeenCalledWith(message);
+    expect(f.closeOwnTab).not.toHaveBeenCalled();
+  });
+
   it('passes a terminal record delete intent through to the delete topic action', () => {
     const closed = { ...recordRow, status: 'Closed' } as const;
     const f = fixture([closed]);

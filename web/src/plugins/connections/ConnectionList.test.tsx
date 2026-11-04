@@ -322,6 +322,15 @@ describe('ConnectionList', () => {
     }
   });
 
+  it('shows a refused close on an open ACP record row inline', async () => {
+    const { intent, value } = capabilities();
+    intent.mockRejectedValueOnce(new Error('The owning tab no longer holds this record.'));
+    render(<ConnectionList rows={[record('session', 'acp', 'Running', 'Open session')]} capabilities={value} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Close Open session' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('The owning tab no longer holds this record.');
+    expect(intent).toHaveBeenCalledWith('close', { kind: 'acp', id: 'session', ownerLabel: 'owner' });
+  });
+
   it('does not delete when a Close on a since-closed record is refused', async () => {
     const { intent, value } = capabilities();
     intent.mockRejectedValueOnce(new Error('invalid close payload'));
