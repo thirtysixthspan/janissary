@@ -2,8 +2,6 @@
 
 ## ready
 
-* integrate cmdk library and use it to replace similar existing functionality in janissary.
-
 ## development
 
 * add an ACP skill to allow an agent to spin up other agents with different models, pass them ai tasks (form the repository) to execute and access to monitor the transcript as the agent works, and to recieve the response.
