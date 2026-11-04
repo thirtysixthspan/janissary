@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Technical debt: remove stale references to the deleted connection parser and `ConnectionManager.run`.
-
-Existing Issue: `src/connection/close.ts` and `src/browser/command.ts` still direct readers to the deleted `ConnectionManager.run` close path and `src/connection/parsing.ts` parser, and `product/specs/acp.md` still calls the shell's error output a `response entry` after the response panel was removed. Severity: 2/10
-
-Existing Risk: 2/10 - A future change can follow a dead path or reintroduce a panel-shaped contract that no longer exists.
-
-Proposal Risk: 1/10 - Correcting the comments and the one stale spec term carries no runtime behavior.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "remove stale connection and ACP panel references". In `src/connection/close.ts`, change the comment to name `ConnectionManager.closeTarget` and the connections plugin command instead of the removed `ConnectionManager.run`; in `src/browser/command.ts`, point the parser reference at `src/plugins/connections/parse.ts`. In `product/specs/acp.md`, replace the sentence that says prompt errors appear in a `response entry` with wording that names the settled shell background reply and the record block. Do not change code behavior, tests, the command grammar, or the history in completed plans. Run the documentation assertions and diff-scoped checks once the wording is corrected.
-
-
 * Description fidelity: replace the plan-only pull request description with the delivered feature, its verification, and its limitations.
 
 Existing Issue: The body still describes the initial publication of seven Markdown plans in one commit and says no implementation, tests, specs, API change, screenshots, or manual feature behavior exists, while the head has 47 commits and 251 changed files including records, ACP and agent feeds, cancellation, the connections topic, plugin UI, shell integration, tests, specs, and API v3. Severity: 9/10

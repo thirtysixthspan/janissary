@@ -84,7 +84,7 @@ Closing a remote ACP session waits for the remote child process to exit before r
 
 ## Errors and notifications
 
-Fatal errors are shown as `ACP: <message>` and forget the connection. Existing bounded stderr details remain available: the last 2000 characters, restricted to the last ten lines. Prompt errors appear as `ACP error: <message>` in the response entry. Existing start, state-change, and rate-limit notification events remain in use.
+Fatal errors are shown as `ACP: <message>` and forget the connection. Existing bounded stderr details remain available: the last 2000 characters, restricted to the last ten lines. Prompt errors appear as `ACP error: <message>` in the settled shell background reply and in the record's prompt block. Existing start, state-change, and rate-limit notification events remain in use.
 
 ## Shared consumers
 
