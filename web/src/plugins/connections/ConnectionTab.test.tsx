@@ -7,12 +7,14 @@ import { ConnectionTab } from './ConnectionTab';
 
 function setup(record: RecordConnectionRow, impl?: (name: string, payload: unknown) => Promise<unknown>) {
   const intent = vi.fn(impl ?? (async () => null));
+  const openLink = vi.fn();
   const capabilities = {
     resourceUrl: (value: string) => value,
     intent: async <Result,>(name: string, payload: unknown) => intent(name, payload) as Promise<Result>,
     copyText: vi.fn(), splitAction: null, active: true, dock: null, close: vi.fn(), reportFailure: vi.fn(),
+    openLink,
   } as TabPluginClientCapabilities;
-  return { intent, capabilities, view: render(<ConnectionTab record={record} capabilities={capabilities} />) };
+  return { intent, openLink, capabilities, view: render(<ConnectionTab record={record} capabilities={capabilities} />) };
 }
 
 function record(kind: 'acp' | 'agent' = 'acp', status: RecordConnectionRow['status'] = 'Running'): RecordConnectionRow {
@@ -65,6 +67,21 @@ describe('ConnectionTab', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('not allowed'));
     expect(button).not.toBeDisabled();
     expect(intent).toHaveBeenCalledWith('terminate', { id: 'uuid' });
+  });
+
+  it('routes answer links through openLink without navigating and leaves activity text alone', () => {
+    const value = record();
+    value.window!.blocks[0]!.answer = 'See [the docs](https://example.com/docs).';
+    const { openLink } = setup(value);
+    const linkClick = new MouseEvent('click', { bubbles: true, cancelable: true });
+    screen.getByRole('link', { name: 'the docs' }).dispatchEvent(linkClick);
+    expect(linkClick.defaultPrevented).toBe(true);
+    expect(openLink).toHaveBeenCalledOnce();
+    expect(openLink).toHaveBeenCalledWith('https://example.com/docs');
+    const activityClick = new MouseEvent('click', { bubbles: true, cancelable: true });
+    screen.getByText('message', { selector: '.connections-activity-text' }).dispatchEvent(activityClick);
+    expect(activityClick.defaultPrevented).toBe(false);
+    expect(openLink).toHaveBeenCalledOnce();
   });
 
   it('offers no Terminate for terminal agent statuses and renders activity text plainly', () => {

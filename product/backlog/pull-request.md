@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Route links in connection-tab answers through the application instead of letting a click navigate the whole app away, as the embedded-web-page spec promises.
-
-Existing Issue: The connection history renders a final answer through `renderMarkdown` and injects the resulting HTML with `dangerouslySetInnerHTML` in `web/src/plugins/connections/ConnectionHistory.tsx` without any anchor-click handler, so an answer's `http(s)` link replaces the app window even though `product/specs/embedded-web-page.md` says a connection-tab answer's web link opens a page tab and `product/specs/markdown-rendering.md` names connection answers among rendered Markdown surfaces. Severity: 5/10
-
-Existing Risk: 5/10 - A reader who clicks a model answer's link leaves the running session and the app's current view, and the promised `open` route never runs, so a model-generated or attacker-influenced link can navigate the window instead of being handed to the app's opener.
-
-Proposal Risk: 2/10 - The existing optional `openLink` capability routes web addresses and `path:line` references, but a surface that omits it must still cancel the native anchor action so the navigation hazard does not return.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "route links in connection-tab answers through the application". In `web/src/plugins/connections/ConnectionTab.tsx`, pass a link callback to `ConnectionHistory` that calls `capabilities.openLink?.(href)`. In `web/src/plugins/connections/ConnectionHistory.tsx`, attach one React click handler to the history content container, find the nearest `a[href]` with `closest`, call `event.preventDefault()` unconditionally, and invoke the callback when supplied; do not add a global listener, a second Markdown renderer, or a new capability. Extend `web/src/plugins/connections/ConnectionTab.test.tsx` (or add a colocated `ConnectionHistory.test.tsx`) with an answer containing an `https://` link: clicking the anchor calls `openLink` once with that href and never navigates, and plain activity text is not routed. Keep the existing shell link-routing tests in `web/src/plugins/shell/markdown-block.test.ts` and the transcript `open-link.test.ts` untouched; run the focused client suite and `$janissary/scripts/run.mjs check-diff`.
-
-
 * Restore the completed connection-tab window-rule consolidation by keeping the 20-block window and paging counts only in the ACP records spec.
 
 Existing Issue: `product/specs/connections-tab.md` again states "newest 20 prompt blocks", "20 older blocks", and "newest 20 blocks again" after the later `release-connection-window-on-tab-close` repair, while `product/plans/complete/consolidate-connection-tab-follow-and-window-rules.md` requires `connections-tab.md` to contain no "20" and `product/specs/acp-records.md` to remain the sole owner of the window size and paging increments, so the two specs now duplicate the number that a later window-size change would have to update twice. Severity: 4/10

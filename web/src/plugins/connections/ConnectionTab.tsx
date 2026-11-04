@@ -50,7 +50,7 @@ export function ConnectionTab({ record, capabilities }: {
       </header>
       {controller.error && <div className="connections-record-error" role="alert">{controller.error}</div>}
       <div className="connections-history" ref={historyRef} onScroll={(event) => scroll.onScroll(event.currentTarget)}>
-        <ConnectionHistory window={window} />
+        <ConnectionHistory window={window} openLink={(href) => capabilities.openLink?.(href)} />
       </div>
     </section>
   );

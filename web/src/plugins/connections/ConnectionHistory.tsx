@@ -2,10 +2,19 @@ import React from 'react';
 import type { ConnectionWindow } from '@shared/plugins/connections/shared';
 import { renderMarkdown } from '../api';
 
-export function ConnectionHistory({ window }: { window: ConnectionWindow | undefined }) {
+export function ConnectionHistory({ window, openLink }: {
+  window: ConnectionWindow | undefined;
+  openLink?: (href: string) => void;
+}) {
   if (!window) return <div className="connections-history-loading">Loading connection history…</div>;
+  const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
+    if (!anchor || !event.currentTarget.contains(anchor)) return;
+    event.preventDefault();
+    openLink?.(anchor.getAttribute('href') ?? '');
+  };
   return (
-    <div className="connections-history-content">
+    <div className="connections-history-content" onClick={handleClick}>
       {window.blocks.map((block, index) => (
         <article className="connections-block" key={`${block.startedAt}:${index}`}>
           <div className="connections-prompt">{block.prompt}</div>
