@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Description fidelity: refresh the pull request body's head counts, paging text, and pinned spec and ledger links after the later fixes.
-
-Existing Issue: The body still says the branch carries 78 commits and 278 changed files from `139aaf43` while the head carries 84 and 283, its record-tab paragraph and "Record history and paging" step do not mention automatic older-history loading while the loaded history fits, and its pinned `37324fd4` links for `product/specs/connections-tab.md` and the 07 plan open versions that still show the old Terminate and paging wording and the pre-correction ledger claim. Severity: 4/10
-
-Existing Risk: 4/10 - A reviewer follows the body's own source links and reads the superseded behavior and evidence, so the description, its linked spec, and its linked ledger disagree and the review can approve or report against stale wording.
-
-Proposal Risk: 1/10 - The body and its links will match the branch and the corrected spec and ledger, with no code or behavior change.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "refresh the pull request body's counts, paging text, and pinned links". Update the "As of this head" sentence to the current commit and changed-file counts, add the automatic older-history loading to the "Plugin-owned list and record tabs" record-tab paragraph and to the "Record history and paging" verification step (noting that a tall viewport may load older blocks before the reader scrolls and that a record with enough blocks still requires the top-scroll check), and repoint the links in "Specs, docs, and tests" and "Source plan and subplans" for `product/specs/connections-tab.md` and `product/plans/complete/connections-tabs-07-specs-docs-integration.md` (and any other link whose file changed) at the current head or the relevant fix commits. Confirm each linked file at the pinned SHA shows the corrected Terminate and paging wording and the corrected ledger scope; keep the manual acceptance table, the M7 blocked row, and every other paragraph byte-for-byte. Do not change code, tests, specs, plans, or user documentation.
-
-
 * Functionality: load older history when a resize makes the loaded history fit the viewport.
 
 Existing Issue: `web/src/plugins/connections/useConnectionHistoryScroll.ts` evaluates the fit condition only when its effect runs after a content, offset, or active change; it has no element or window size observer, so a record opened in a short window that later grows tall enough for the loaded history to fit stops offering the older pages and never issues `loadOlder`.
