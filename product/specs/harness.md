@@ -900,8 +900,9 @@ separate rule for a harness on another host.
   is sent SIGKILL. A child that ignores the hangup a closing terminal sends, or one still running
   when the harness quits, would otherwise outlive the tab and hold its ports and files. A process
   that deliberately leaves the group, such as a daemon that starts its own session, is beyond this
-  reach; that is what codex's shared background server was, and it is why codex launches with
-  `--no-daemon` (see [Launching with a model and effort level](#launching-with-a-model-and-effort-level)).
+  reach; that is what codex's shared background server and opencode's background service were, and
+  it is why codex launches with `--no-daemon` and opencode with `--standalone` (see
+  [Launching with a model and effort level](#launching-with-a-model-and-effort-level)).
   The same applies to every program janissary runs in a terminal, including an ssh tab and an
   inline terminal card, and to a remote harness on its own host.
 
@@ -1085,6 +1086,15 @@ process and closes it with the tab. The launch asks the installed codex whether 
 first, so a codex release from before the shared server launches exactly as it did, rather than
 exiting on an option it does not know. This applies to a remote codex tab the same way, checked
 against the codex installed on that host.
+
+An opencode harness tab likewise always runs with its own private server rather than attaching to
+the shared background service recent opencode releases start by default. A workspaced session
+attached to a service some other, unconfined opencode started would run outside the workspace with
+that process's environment and credentials, and the service outlives the tab that first started it.
+As with codex, the launch first asks the installed opencode whether it offers the switch, so an
+older release launches exactly as it did, and a remote opencode tab is checked against the opencode
+on that host. opencode's ACP connections are launched without the switch, since its ACP server
+does not accept it.
 
 `--model` and `--effort` may be given independently or together, in any order relative to each other
 and to `as <label>`, `-w`/`--workspace`, `--offline`, and `-y`/`--yes`.

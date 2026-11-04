@@ -146,6 +146,8 @@ A harness tab joins the same [group](/user-documentation/getting-started/groups)
 
 A codex tab always runs its session in its own process rather than handing it to the shared background server recent codex releases start, which a workspace sandbox can't run at all and which would otherwise run a workspaced session with another codex's environment and credentials. The app checks whether the installed codex offers the switch before asking for it, so a release from before the shared server launches exactly as it did. This holds for a remote codex tab too, checked against the codex on that host.
 
+An opencode tab likewise always runs its own private server rather than attaching to the shared background service recent opencode releases start, which would otherwise run a workspaced session with another opencode's environment and credentials and keep running after the tab closes. As with codex, the app checks that the installed opencode offers the switch first, on whichever host the tab runs.
+
 On macOS, Codex can load your administrator's managed requirements while workspace isolation stays active. This also applies to remote Codex tabs. If a remote host still reports `account/read failed` with `failed to load workspace requirements`, update Janissary on that host as well as on the machine launching the tab.
 
 ## Auto-approving permission prompts

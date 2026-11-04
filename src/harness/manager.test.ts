@@ -805,7 +805,7 @@ describe('HarnessManager model/effort', () => {
     const manager = new HarnessManager(managers);
     expect(manager.run('harness opencode --no-workspace --model opencode-go/glm-5.2 --effort high')).toBeUndefined();
     expect(managers.pty.spawn).toHaveBeenCalledWith(
-      'opencode', 'opencode', "opencode --model 'opencode-go/glm-5.2'",
+      'opencode', 'opencode', "opencode $(opencode --help 2>/dev/null | grep -q -e --standalone && echo --standalone) --model 'opencode-go/glm-5.2'",
       '/project', undefined, false, undefined,
     );
   });
