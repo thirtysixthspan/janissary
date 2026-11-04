@@ -70,16 +70,30 @@ describe('tab plugin developer documentation', () => {
     expect(guideline).toContain(`v3 defines ${word} topics`);
   });
 
-  it('keeps the v3 changelog honest about the current counts', () => {
+  it('keeps the current counts only in the v3 changelog', () => {
     const word = COUNT_WORDS[TAB_PLUGIN_CAPABILITY_NAMES.length];
     const start = documentation.indexOf('### v3');
     expect(start).toBeGreaterThanOrEqual(0);
     const end = documentation.indexOf('### v2', start);
     expect(end).toBeGreaterThan(start);
-    // A historical v2 count elsewhere on the page is not current-contract evidence, so the
-    // assertion is bounded by the next version heading.
     const v3Section = documentation.slice(start, end);
-    expect(v3Section.toLowerCase())
-      .toContain(`${word} server and ${CLIENT_CAPABILITY_COUNT_WORD} client capabilities.`);
+    const counts = `${word} server and ${CLIENT_CAPABILITY_COUNT_WORD} client capabilities.`;
+    expect(v3Section.toLowerCase()).toContain(counts);
+    // `openConnection` and the reply `line` were added in v3, never shipped in v2, so the
+    // current-contract phrase must stay in the v3 section rather than being repeated by history.
+    expect(documentation.toLowerCase().split(counts)).toHaveLength(2);
+  });
+
+  it('keeps the v2 changelog historical', () => {
+    const start = documentation.indexOf('### v2');
+    expect(start).toBeGreaterThanOrEqual(0);
+    const end = documentation.indexOf('### v1', start);
+    expect(end).toBeGreaterThan(start);
+    const v2Section = documentation.slice(start, end);
+    expect(v2Section).not.toContain('openConnection');
+    expect(v2Section).not.toContain('optional `line`');
+    expect(v2Section).not.toContain('Twenty-eight');
+    expect(v2Section).toContain('Twenty-seven client capabilities');
+    expect(v2Section).toContain('`launchShellHere()`');
   });
 });
