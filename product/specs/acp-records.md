@@ -48,7 +48,7 @@ Rows are detached summaries sorted by descending update time, then ascending id 
 
 A window returns detached metadata, source provenance, and the newest chronological suffix of blocks, including a running block. Its default size is 20. A supplied count must be a positive safe integer or the read throws `Invalid ACP record window count.`. Counts beyond the total return all blocks. The result includes total block count, zero-based offset, and `hasOlder`, which is true exactly when offset is positive. Missing or invalid ids return no window for a valid count.
 
-Reads do not publish changes or remember requested window sizes. Mutating a returned row, source, block, or entry cannot alter stored state. Ownership of later loaded windows and 20-block paging increments belongs to the downstream topic.
+Reads do not publish changes or remember requested window sizes. Mutating a returned row, source, block, or entry cannot alter stored state. Later loaded windows and their 20-block paging increments follow the same rules.
 
 ### Durability and loss boundaries
 

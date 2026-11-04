@@ -18,7 +18,7 @@ An ACP session's connection tab and row are titled `ACP: <first line of its firs
 
 A core ACP connection tab offers **Cancel** and **Close session**. Cancel stops the running prompt and leaves the session open and `Idle`; Close session ends the connection as `acp reset` does. An agent run's tab offers **Terminate** instead, acting exactly like the agent monitor's Terminate and disabling once cleanup begins. A closed session's connection tab is read-only and has no prompt input. A closed record's row can be deleted from the list.
 
-Each prompt block holds the prompt, then its activity entries in order, each labelled `message`, `thought`, `tool`, `plan`, or `permission`, then the rendered final answer. Thought and tool entries start collapsed. An active connection tab follows new output at the bottom while the reader remains there; scrolling away pauses following until the reader returns. The tab starts with the newest 20 blocks. Reaching the top loads 20 older blocks and preserves the viewport.
+Each prompt block holds the prompt, then its activity entries in order, each labelled `message`, `thought`, `tool`, `plan`, or `permission`, then the rendered final answer. Thought and tool entries start collapsed. An active connection tab follows its newest activity while the reader is at or near the bottom. This includes streamed text updates to the latest activity entry, even when no new entry is added. Scrolling away from the bottom pauses following until the reader returns. The tab opens on the newest history window and loads older blocks when the reader reaches the top, preserving their viewport; see [[acp-records]] for the window and its paging.
 
 ### Opening a connection tab from the popup
 

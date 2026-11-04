@@ -62,7 +62,7 @@ A row that already offers a transcript snapshot keeps that separate button. The 
 
 ### Connection record history
 
-A connection record history follows its newest activity while the record tab is active and the reader is at or near the bottom. This includes streamed text updates to the latest activity entry, even when no new entry is added. Scrolling away from the bottom pauses following until the reader returns. Loading older history preserves the reader's viewport as earlier blocks are prepended.
+Connection record history belongs to the record tab described in [[connections-tab]].
 
 An editor tab carries the same connections button and window, listing its open persona connections (each shown as `<persona> (acp)`) alongside any other connections that tab has opened. Unlike every other kind of connection row, an editor tab's persona connection rows carry their own small close control; clicking it closes just that one persona's connection immediately, the same as running `connections close acp:<persona>`, without affecting any other open persona connection in that tab. A persona connection whose agent exits or fails to start leaves the window on its own, and the next request to that persona opens a fresh one (see [[editor-tab]] "In-editor persona suggestions").
 
