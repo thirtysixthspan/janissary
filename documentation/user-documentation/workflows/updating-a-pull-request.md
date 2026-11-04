@@ -12,9 +12,17 @@ The target can be a number (`232`), `#232`, a full pull request URL, or the head
 
 This task suits the end of a pull request's life, after it has been [reviewed](/user-documentation/workflows/pull-request-review), [tested](/user-documentation/workflows/testing-a-pull-request), and revised a few times. The code on the branch is the truth. Where the text and the code disagree, the text changes.
 
+## Merge blockers come first
+
+The agent checks out the pull request's branch and makes sure it can merge before reading anything. A repair changes the code, and the description has to match the code that merges.
+
+It checks for conflicts with `master` first. If there are any, it hands the pull request to a fresh agent running `resolve-conflicts`. Then it waits for the CI checks to finish. If one fails, a fresh agent running `fix-build` diagnoses and repairs it. Each one pushes to the pull request's own branch and leaves it open. The agent tells you when it hands work off and what came back.
+
+It checks again after a repair, up to three times. If a conflict or a failing build still can't be cleared, the agent stops there. Its report names the blocker and marks the rest of the update as not run.
+
 ## What gets updated
 
-The agent checks out the pull request's branch and reads its whole diff. Then it corrects four things:
+Once the pull request can merge, the agent reads its whole diff. Then it corrects four things:
 
 - The pull request description: wrong claims are fixed and missing behavior is added.
 - The pull request's own plan, with the fix plans from earlier repairs folded in.
@@ -53,6 +61,6 @@ Otherwise it makes one commit and pushes it to the pull request's own branch. If
 
 ## What the agent never does
 
-The agent changes no source, test, or configuration file. It runs no tests, lint, or checks, and it doesn't start the app. It never posts a comment, never records a finding, and never merges or closes the pull request. The pull request stays open for you to merge.
+Apart from the merge-blocker repairs it hands off, the agent changes no source, test, or configuration file and runs no tests, lint, or checks itself. It doesn't start the app. It never posts a comment, never records a finding, and never merges or closes the pull request. The pull request stays open for you to merge.
 
 Code that looks unintended is described as it stands. The agent lists it in its report under `Divergences` so you can judge it yourself.

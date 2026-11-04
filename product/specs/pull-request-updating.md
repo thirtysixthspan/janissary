@@ -2,11 +2,19 @@
 
 ### What an update changes
 
-An update takes an open pull request and brings everything that describes it back in line with the code on its head branch: the pull request description, its plan, the product specs, and the in-app help. The code is the ground truth. Where the text and the code disagree, the text changes and the code never does, so an update changes no source, test, or configuration file and runs no test suite. It installs the branch's dependencies behind the supply-chain audit while preparing the workspace, and nothing else it does uses them. It is meant for the end of a pull request's life, after it has been reviewed, tested, and revised several times, and it leaves the pull request open.
+An update takes an open pull request and brings everything that describes it back in line with the code on its head branch: the pull request description, its plan, the product specs, and the in-app help. The code is the ground truth. Where the text and the code disagree, the text changes and the code never does, so an update changes no source, test, or configuration file and runs no test suite of its own. The only code changes a run makes come from the merge-blocker repairs described below, which it hands to other workflows. It installs the branch's dependencies behind the supply-chain audit while preparing the workspace, and nothing else it does uses them. It is meant for the end of a pull request's life, after it has been reviewed, tested, and revised several times, and it leaves the pull request open.
 
 The description is corrected and completed in the author's own structure. Claims the code no longer supports are fixed, and behavior the code has that the description never mentions is added. As a guideline, the description leaves out anything a reader can see in the pull request's change set, such as commit, file, or line counts and commit SHAs; a stated figure is removed rather than updated. The section headings stay as the author wrote them, and text that is already accurate is left alone. Behavior examples and verification steps that no longer match are rewritten from the code, its tests, and the specs; the app is never started to produce them. The title is never changed, because it has to match the commit subject. The "Additional test cases" section is never changed either, because it belongs to [[pull-request-testing]] and names the commit it was written for. The description is edited only after the branch has been pushed, so it never describes work that is not on the branch.
 
 Every spec that describes behavior the pull request changes is corrected, whether or not the pull request already edits it, and behavior with no spec at all gets a new one. In the in-app help, rows for changed commands and key bindings are corrected, and rows are added for new ones. The user documentation pages are left to the documentation workflow.
+
+### Merge blockers come first
+
+Before it reads the code, an update makes sure the pull request can merge, because a repair changes the code the description has to match. It checks for conflicts with `master` first. A conflicting pull request, or one whose merge status stays unknown, is handed to the conflict-resolution workflow in a fresh agent. Then it waits for the pull request's CI checks to finish. A failing check is handed to the build-fixing workflow in a fresh agent. Each of those workflows keeps its own rules: it proves its own build, pushes to the pull request's own branch, and leaves the pull request open. They run one at a time, and the update announces each handoff and its result.
+
+After any handoff the update checks again, since a rebase reruns CI and `master` can move during a repair. It makes at most three passes. A pull request with no conflicts and passing checks, or with no checks configured, goes straight on to the description work with nothing handed off.
+
+When a conflict or a failing build can't be cleared, the update stops before describing anything. Its report names the blocker, marks the description, plan, specs, help, and backlog work as not run, and leaves the pull request open.
 
 ### One plan per pull request
 
@@ -26,4 +34,4 @@ When the description, plan, specs, and help already match the code and the backl
 
 ### What an update never does
 
-An update never changes code, runs the project's tests or checks, starts the app, edits the pull request's title or its "Additional test cases" section, posts to the pull request, records a finding, force-pushes, or merges or closes the pull request.
+An update never changes code or runs the project's tests or checks itself, outside the merge-blocker repairs it hands off. It never starts the app, edits the pull request's title or its "Additional test cases" section, posts to the pull request, records a finding, force-pushes, or merges or closes the pull request.
