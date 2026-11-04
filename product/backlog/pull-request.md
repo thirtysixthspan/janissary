@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the connection spec's claim that every non-persona row in an editor connections window opens a record tab.
-
-Existing Issue: `product/specs/connection.md` now says "Any other row in that window, including a running agent row, carries no close control there: pressing it opens its record tab", but monitor, browser, terminal, and SQLite rows carry no durable record or tab-scoped ACP reference and `StatusPanels.rowCanOpen` leaves them without an open action. Severity: 3/10
-
-Existing Risk: 3/10 - The spec is the project's source of truth for connection surfaces, so a later change can add record-opening to rows that have no record or treat monitor rows as if they opened a tab, contradicting the canonical plan's snapshot-only rule.
-
-Proposal Risk: 1/10 - The sentence narrows to the row the fix actually changed; the behavior and tests stay as they are.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "correct the editor connections window's record-opening spec sentence". In `product/specs/connection.md`, replace the "Any other row in that window..." sentence with the narrower statement that a running agent row carries no close control and pressing it opens its record tab, while monitor rows remain snapshot-only and browser, terminal, and SQLite rows remain non-openable. Keep the earlier paragraph's durable-record, tab-scoped ACP, and monitor/editor-persona rules unchanged. Verify the wording against `web/src/shared/status-windows/StatusPanels.tsx` (`rowCanOpen`) and `web/src/editor/useEditorConnections.ts` (`openRow`); no code, test, or other spec changes.
-
-
 * Remove the stale Ctrl+T references and interception the retirement left in the shared transcript card.
 
 Existing Issue: `web/src/shared/transcript/TerminalCard.tsx` still describes Ctrl+T as an app-level collapse chord in two comments, its `cardKeyFilter` still rejects every Ctrl key so an inline terminal card never receives Ctrl+T, and `web/src/theme.css` still labels the ACP line style as expanded-and-click-to-recollapse. Severity: 2/10
