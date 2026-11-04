@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Description fidelity: state that the record-tab Terminate control is disabled while the termination is pending and removed when the record reports a terminal status, not disabled through cleanup.
-
-Existing Issue: The pull request body says an agent run's record-tab Terminate control "disables once cleanup begins" and its agent-runs "How to verify" step asks the reader to confirm that disabled state, while `product/specs/connections-tab.md` and `documentation/user-documentation/command-bar/connections.md` repeat the same claim, but `web/src/plugins/connections/ConnectionTab.tsx` hides the control as soon as `record.status` is `Completed`, `Failed`, or `Terminated` and `AgentRun.finish` records the terminal status before asynchronous cleanup, so the control is removed rather than left visible and disabled; the manual acceptance table already records that the disabled state was never observed because the button disappeared before its check. Severity: 3/10
-
-Existing Risk: 3/10 - A reviewer or user follows a verification step for a control state the UI never shows, and the body's "disabling once cleanup begins" misdescription can mask a real cleanup-window regression behind an accepted partial scenario.
-
-Proposal Risk: 1/10 - The description, spec, and guide will match the intentional hide-at-terminal UI, with no behavior change; the monitor's separate visible disabled control remains described where it applies.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "correct the record-tab Terminate control's documented disabled state". Rewrite the body's "What shipped" sentence and its agent-runs "How to verify" step, the sentence under "The connection tab" in `product/specs/connections-tab.md`, and the sentence under "Connection tabs" in `documentation/user-documentation/command-bar/connections.md` to say the record-tab Terminate control is disabled from the click until the record reports its terminal status and is then removed. Distinguish the agent monitor's control, which stays visible and disabled through cleanup, from the record tab's hidden control, and keep the source plan's action semantics for Terminate distinct from this presentation wording. Leave `web/src/plugins/connections/ConnectionTab.tsx`, `web/src/plugins/connections/ConnectionTab.test.tsx`, and the cleanup and outcome behavior unchanged because hide-at-terminal is the delivered behavior of the record-tab UI; if the source plan's visible disabled control is still required, that is a separate source and UI decision and must be made before this wording correction. Do not change the source plan's 8/10 rating, the record retention rules, or any other manual acceptance row.
-
-
 * Technical debt: share the record window size with the existing ACP record window constant instead of declaring a second 20 in the connections topic actions.
 
 Existing Issue: `src/plugins/connections-topic-actions.ts` declares a local `PAGE_SIZE` of 20 for both the initial `load` request and each `loadOlder` increment while `src/acp-records/model.ts` already owns that same value as `ACP_RECORD_WINDOW_SIZE`, and no compile-time or test link ties the two, so a future change to the record window default leaves the topic paging at the old size. Severity: 2/10

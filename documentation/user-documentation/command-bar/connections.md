@@ -69,7 +69,7 @@ Closed ACP records are kept per project. Records closed more than 30 days before
 
 ## Connection tabs
 
-A connection tab shows one retained ACP session or one agent run. Its metadata row names the title, model, owning tab, status, and start and end times, and it carries the controls available for that status. A core ACP session offers **Cancel** and **Close session**. Cancel appears while the session is running and leaves it open, keeping the same session and record for the next prompt. Close session ends the connection. An agent run offers **Terminate**, which acts like the monitor's Terminate and is disabled once cleanup begins. A closed session's tab is read-only and has no prompt input.
+A connection tab shows one retained ACP session or one agent run. Its metadata row names the title, model, owning tab, status, and start and end times, and it carries the controls available for that status. A core ACP session offers **Cancel** and **Close session**. Cancel appears while the session is running and leaves it open, keeping the same session and record for the next prompt. Close session ends the connection. An agent run offers **Terminate**, which ends only that run, exactly like the monitor's Terminate. The record tab's control is disabled from the click until the record reports its terminal status and is then removed, while the monitor's own **Terminate** stays visible and disabled through cleanup. A closed session's tab is read-only and has no prompt input.
 
 Each prompt block holds the prompt, then its activity in order, each entry labelled `message`, `thought`, `tool`, `plan`, or `permission`, then the final answer. Thought and tool entries start collapsed; click one to expand it. Final answers render as Markdown.
 
