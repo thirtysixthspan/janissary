@@ -33,7 +33,7 @@ export function useConnectionHistoryScroll(
     const element = elementRef.current;
     if (!element) return;
     const restore = restoreHeight.current;
-    if (restore !== null && restore.offset !== offset) {
+    if (restore !== null && offset !== undefined && offset < restore.offset) {
       element.scrollTop += element.scrollHeight - restore.height;
       lastTop.current = element.scrollTop;
       restoreHeight.current = null;

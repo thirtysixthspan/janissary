@@ -117,6 +117,23 @@ describe('useConnectionHistoryScroll', () => {
     expect(element.scrollTop).not.toBe(element.scrollHeight);
   });
 
+  it('keeps the viewport and pending restoration when a new block arrives before an older page', () => {
+    const loadOlder = vi.fn(async () => null);
+    const view = render(<Mount active offset={24} hasOlder loadOlder={loadOlder} contentKey={1} />);
+    const element = view.getByTestId('scroller');
+    metrics(element, { height: 500, top: 500, client: 100 });
+    fireEvent.scroll(element);
+    metrics(element, { height: 500, top: 0, client: 100 });
+    fireEvent.scroll(element);
+    expect(loadOlder).toHaveBeenCalledTimes(1);
+    metrics(element, { height: 620, top: 0, client: 100 });
+    view.rerender(<Mount active offset={25} hasOlder loadOlder={loadOlder} contentKey={2} />);
+    expect(element.scrollTop).toBe(0);
+    metrics(element, { height: 820, top: 0, client: 100 });
+    view.rerender(<Mount active offset={4} hasOlder loadOlder={loadOlder} contentKey={3} />);
+    expect(element.scrollTop).toBe(200);
+  });
+
   it('does not follow output while inactive', () => {
     const view = render(<Mount active={false} offset={0} hasOlder={false} loadOlder={async () => null} contentKey={1} />);
     const element = view.getByTestId('scroller');
