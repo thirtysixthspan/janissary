@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's manual-acceptance section, which still reports the pre-evidence state and denies the browser evidence the branch now records.
-
-Existing Issue: The description still says the completed 07 ledger is the latest manual evidence, that no later commit records browser or real-host acceptance, that M3, M4, and M5 were not exercised, and that no screenshots were captured, while the 07 ledger at the head now records the 2026-11-04 browser run from `37324fd4` and the new 08 plan records its evidence; the same stale snapshot also counts 55 commits where the head has 56. Severity: 6/10
-
-Existing Risk: 6/10 - A reviewer or release reader trusts a stale verification statement, either withholding approval for evidence that exists or treating an honestly partial manual pass as a completed one.
-
-Proposal Risk: 2/10 - The description will match the ledger, but the underlying manual evidence remains partial and M7 remains blocked, so the new wording must not imply a full pass.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "resync the pull request description with the current manual acceptance ledger". Read `product/plans/complete/connections-tabs-07-specs-docs-integration.md` and `product/plans/complete/connections-tabs-08-manual-acceptance-verification.md` at the head, then rewrite only the body's Verification and Manual acceptance status sections: give M1, M2, M3, M4, M5, M6, and M8 the ledger's actual per-scenario status and evidence, keep M7 blocked, and replace the claims that the 07 ledger is the latest evidence, that no later browser acceptance exists, and that no screenshots were captured with the browser-run evidence and its limits. Update the commit count from 55 to `git rev-list --count origin/master..HEAD`, and keep the 261-file count only if `git diff --shortstat origin/master...HEAD` still reports it. Do not edit code, tests, specs, plans, or evidence, and do not claim the full automated suite was rerun after the description rewrite. Verify by re-reading the body against both plans and `git log --oneline origin/master..HEAD`, then run `git diff --check`; no source checks apply.
-
-
 * Technical debt: release a loaded record window when its connection tab closes instead of retaining it in every connections delivery for the manager's lifetime.
 
 Existing Issue: `src/plugins/connections-topic.ts` keeps every loaded record id in `requestedWindows` for the lifetime of the `Managers` instance, and `src/plugins/connections-topic-rows.ts` removes an id only when the record itself disappears, so after a connection tab closes every later `connections:changed` or `state:dirty` delivery still includes that record's full prompt window even though no tab displays it. Severity: 5/10
