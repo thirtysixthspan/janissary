@@ -37,15 +37,16 @@ export function useConnectionHistoryScroll(
       element.scrollTop += element.scrollHeight - restore.height;
       lastTop.current = element.scrollTop;
       restoreHeight.current = null;
-      return;
+    } else {
+      if (restore !== null) restore.height = element.scrollHeight;
+      if (active && follow.current) {
+        element.scrollTop = element.scrollHeight;
+        lastTop.current = element.scrollTop;
+      }
     }
-    if (restore !== null) restore.height = element.scrollHeight;
-    if (active && follow.current) {
-      element.scrollTop = element.scrollHeight;
-      lastTop.current = element.scrollTop;
-    }
+    if (active && hasOlder && offset !== undefined && element.scrollHeight <= element.clientHeight) requestOlder();
     if (offset !== undefined && requestedOffset.current !== offset) requestedOffset.current = null;
-  }, [active, contentKey, elementRef, offset]);
+  }, [active, contentKey, elementRef, hasOlder, offset, requestOlder]);
 
   return { onScroll };
 }

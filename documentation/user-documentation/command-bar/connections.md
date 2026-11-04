@@ -73,7 +73,7 @@ A connection tab shows one retained ACP session or one agent run. Its metadata r
 
 Each prompt block holds the prompt, then its activity in order, each entry labelled `message`, `thought`, `tool`, `plan`, or `permission`, then the final answer. Thought and tool entries start collapsed; click one to expand it. Final answers render as Markdown.
 
-An active connection tab follows new output while you are at or near the bottom, including text arriving in the current activity entry. Scrolling away pauses following until you return. The tab opens with the newest 20 prompt blocks. Reaching the top loads 20 older blocks and keeps your place in the view.
+An active connection tab follows new output while you are at or near the bottom, including text arriving in the current activity entry. Scrolling away pauses following until you return. The tab opens with the newest 20 prompt blocks. Reaching the top loads 20 older blocks, and older blocks also load automatically while the history fits the tab, until it scrolls or no older blocks remain. Loading keeps your place in the view.
 
 ## Close a live connection
 

@@ -1,21 +1,28 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import { act, fireEvent, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useConnectionHistoryScroll } from './useConnectionHistoryScroll';
 
-function Mount({ active, offset, hasOlder, loadOlder, contentKey, activityText = '' }: {
+type ScrollMetrics = { height: number; top: number; client: number };
+
+function Mount({ active, offset, hasOlder, loadOlder, contentKey, activityText = '',
+  initial = { height: 500, top: 500, client: 100 } }: {
   active: boolean; offset: number; hasOlder: boolean; loadOlder: () => Promise<unknown>;
-  contentKey: number; activityText?: string;
+  contentKey: number; activityText?: string; initial?: ScrollMetrics;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const initialMetrics = useRef(initial);
   const scrollContentKey = useMemo(() => [contentKey, 'message', activityText], [activityText, contentKey]);
   const scroll = useConnectionHistoryScroll(ref, active, offset, hasOlder, loadOlder, scrollContentKey);
+  useLayoutEffect(() => {
+    if (ref.current) metrics(ref.current, initialMetrics.current);
+  }, []);
   return <div data-testid="scroller" ref={ref} onScroll={(event) => scroll.onScroll(event.currentTarget)}>
     <div style={{ height: `${contentKey * 100}px` }} />
   </div>;
 }
 
-function metrics(element: HTMLElement, values: { height: number; top: number; client: number }) {
+function metrics(element: HTMLElement, values: ScrollMetrics) {
   Object.defineProperties(element, {
     scrollHeight: { configurable: true, value: values.height },
     scrollTop: { configurable: true, writable: true, value: values.top },
@@ -74,6 +81,23 @@ describe('useConnectionHistoryScroll', () => {
     fireEvent.scroll(element);
     expect(loadOlder).toHaveBeenCalledTimes(1);
     await act(async () => {});
+  });
+
+  it('loads older pages automatically while the history fits the viewport', () => {
+    const loadOlder = vi.fn(async () => null);
+    const view = render(<Mount active offset={1} hasOlder loadOlder={loadOlder} contentKey={1}
+      initial={{ height: 300, top: 0, client: 400 }} />);
+    const element = view.getByTestId('scroller');
+    expect(loadOlder).toHaveBeenCalledTimes(1);
+    expect(element.scrollTop).toBe(300);
+    metrics(element, { height: 350, top: 300, client: 400 });
+    view.rerender(<Mount active offset={0} hasOlder loadOlder={loadOlder} contentKey={2} />);
+    expect(element.scrollTop).toBe(350);
+    expect(loadOlder).toHaveBeenCalledTimes(2);
+    metrics(element, { height: 700, top: 350, client: 400 });
+    view.rerender(<Mount active offset={0} hasOlder loadOlder={loadOlder} contentKey={3} />);
+    expect(element.scrollTop).toBe(700);
+    expect(loadOlder).toHaveBeenCalledTimes(2);
   });
 
   it('clears the page guard after rejection so the same offset can be retried', async () => {
