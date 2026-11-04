@@ -23,7 +23,7 @@ export function useEditorConnections(client: JanusClient, tab: TabView): EditorC
   // There is no connection to close without the editor payload that names the file, so a tab missing
   // it is left alone rather than dereferenced — the row simply does nothing.
   const closeRow = (row: ConnectionView) => {
-    if (!isEditorTabView(tab)) return;
+    if (!isEditorTabView(tab) || row.acpRef?.scope !== 'editor') return;
     const persona = row.text.replace(/ \(acp\)$/, '');
     client.send({ method: 'closeEditorConnection', params: { url: tab.editor.url, persona } });
   };

@@ -16,6 +16,7 @@ export function EditorConnectionsPanel({ tab, api }: { tab: TabView; api: Editor
       scheduleWindow={api.windows.schedule}
       interactive
       onCloseRow={api.closeRow}
+      canCloseRow={(row) => row.acpRef?.scope === 'editor'}
       onOpenAcpTranscript={api.openAcpTranscript}
       onOpenRow={api.openRow}
     />

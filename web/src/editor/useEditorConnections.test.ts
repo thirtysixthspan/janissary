@@ -43,7 +43,10 @@ describe('useEditorConnections', () => {
     const tab = makeTab();
     const { result } = renderHook(() => useEditorConnections(client, tab));
 
-    result.current.closeRow({ text: 'reviewer (acp)', kind: 'acp' });
+    result.current.closeRow({
+      text: 'reviewer (acp)', kind: 'acp',
+      acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' },
+    });
 
     expect(client.send).toHaveBeenCalledWith({
       method: 'closeEditorConnection',
@@ -59,7 +62,10 @@ describe('useEditorConnections', () => {
     expect(editor).toBeDefined();
     const { result } = renderHook(() => useEditorConnections(client, withoutEditor as TabView));
 
-    result.current.closeRow({ text: 'reviewer (acp)', kind: 'acp' });
+    result.current.closeRow({
+      text: 'reviewer (acp)', kind: 'acp',
+      acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' },
+    });
 
     expect(client.send).not.toHaveBeenCalled();
   });
@@ -68,12 +74,28 @@ describe('useEditorConnections', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { result } = renderHook(() => useEditorConnections(client, makeTab()));
 
-    result.current.closeRow({ text: 'reviewer', kind: 'shell' });
+    result.current.closeRow({
+      text: 'reviewer', kind: 'shell',
+      acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' },
+    });
 
     expect(client.send).toHaveBeenCalledWith({
       method: 'closeEditorConnection',
       params: { url: '/open/1', persona: 'reviewer' },
     });
+  });
+
+  it.each([
+    ['a record-id agent row', { text: 'Agent: task.md', kind: 'acp' as const, recordId: 'record-1' }],
+    ['a monitor-scoped row', { text: 'watch (acp)', kind: 'acp' as const, acpRef: { scope: 'monitor' as const, name: 'watch' } }],
+    ['a tab-scoped row', { text: 'acp:opencode', kind: 'acp' as const, acpRef: { scope: 'tab' as const, label: 'notes' } }],
+  ])('closeRow refuses %s instead of sending a persona close', (_case, row) => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { result } = renderHook(() => useEditorConnections(client, makeTab()));
+
+    result.current.closeRow(row);
+
+    expect(client.send).not.toHaveBeenCalled();
   });
 
   it('openAcpTranscript addresses the agent connection by its own reference', () => {

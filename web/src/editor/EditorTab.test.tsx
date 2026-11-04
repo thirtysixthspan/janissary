@@ -1649,7 +1649,13 @@ describe('EditorTab', () => {
     it('shows the connections window with a persona row once tab.connections is non-empty', async () => {
       const { client } = makeClient();
       const view = makeView();
-      const tab = makeTab({ editor: view, connections: [{ text: 'reviewer (acp)', kind: 'acp' }] });
+      const tab = makeTab({
+        editor: view,
+        connections: [{
+          text: 'reviewer (acp)', kind: 'acp',
+          acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' },
+        }],
+      });
       const { container } = await renderLoaded(client, view, tab);
       const button = container.querySelector('.tab-connections')!;
       expect(button).not.toHaveClass('status-window-button-empty');
@@ -1661,7 +1667,13 @@ describe('EditorTab', () => {
     it('clicking a row\'s close control fires closeEditorConnection with the tab\'s url and persona', async () => {
       const { client } = makeClient();
       const view = makeView();
-      const tab = makeTab({ editor: view, connections: [{ text: 'reviewer (acp)', kind: 'acp' }] });
+      const tab = makeTab({
+        editor: view,
+        connections: [{
+          text: 'reviewer (acp)', kind: 'acp',
+          acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' },
+        }],
+      });
       const { container } = await renderLoaded(client, view, tab);
       const button = container.querySelector('.tab-connections')!;
       fireEvent.mouseEnter(button);

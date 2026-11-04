@@ -27,13 +27,14 @@ function renderPanels(rows: Rows, windowOverrides: Partial<{
   scheduleWindow: StatusWindowHandlers;
 }> & {
   onCloseRow?: (row: ConnectionView, index: number) => void;
+  canCloseRow?: (row: ConnectionView) => boolean;
   onOpenAcpTranscript?: (ref: NonNullable<ConnectionView['acpRef']>) => void;
   onOpenRow?: (row: ConnectionView) => void;
   interactive?: boolean;
   scheduleOnly?: boolean;
 } = {}) {
   const {
-    onCloseRow, onOpenAcpTranscript, onOpenRow, interactive, scheduleOnly,
+    onCloseRow, canCloseRow, onOpenAcpTranscript, onOpenRow, interactive, scheduleOnly,
     connectionsWindow = windowState(), scheduleWindow = windowState(),
   } = windowOverrides;
   return render(
@@ -45,6 +46,7 @@ function renderPanels(rows: Rows, windowOverrides: Partial<{
       scheduleOnly={scheduleOnly}
       interactive={interactive}
       onCloseRow={onCloseRow}
+      canCloseRow={canCloseRow}
       onOpenAcpTranscript={onOpenAcpTranscript}
       onOpenRow={onOpenRow}
     />,
@@ -133,6 +135,24 @@ describe('StatusPanels', () => {
   it('renders no close control when onCloseRow is omitted', () => {
     const { container } = renderPanels({ connections: [{ text: 'ssh:devbox', kind: 'ssh' }] });
     expect(container.querySelector('.panel-row-close')).not.toBeInTheDocument();
+  });
+
+  it('renders a close control only on rows the predicate accepts', () => {
+    const onCloseRow = vi.fn();
+    const persona = {
+      text: 'reviewer (acp)', kind: 'acp' as const,
+      acpRef: { scope: 'editor' as const, label: 'notes', persona: 'reviewer' },
+    };
+    const agent = { text: 'Agent: task.md', kind: 'acp' as const, recordId: 'record-1' };
+    const { container } = renderPanels(
+      { connections: [persona, agent] },
+      { onCloseRow, canCloseRow: (row) => row.acpRef?.scope === 'editor' },
+    );
+    const closes = container.querySelectorAll('.panel-row-close');
+
+    expect(closes).toHaveLength(1);
+    fireEvent.click(closes[0]!);
+    expect(onCloseRow).toHaveBeenCalledExactlyOnceWith(persona, 0);
   });
 
   it('renders the transcript button on a row with acpRef and calls onOpenAcpTranscript with it', () => {

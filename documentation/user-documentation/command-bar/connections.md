@@ -115,7 +115,7 @@ A `connections` panel floats at the top right of a shell tab or an editor tab an
 
 A row that carries a retained ACP or agent record opens that record's connection tab. A row for the tab's own live ACP session opens its current connection tab. Monitor and editor-persona rows have no retained record, so they keep their snapshot behavior and do not open a record tab. While a run started from this tab is live, the window also lists it as an `Agent: <task filename>` row; that row opens the run's connection tab and leaves the window when the run ends.
 
-An [editor tab](/user-documentation/tab-types/editor-persona-query) lists each persona it has consulted as `<persona> (acp)`. Those rows are the one kind with their own ×. Clicking it closes just that persona's connection, the same as `connections close acp:<persona>`.
+An [editor tab](/user-documentation/tab-types/editor-persona-query) lists each persona it has consulted as `<persona> (acp)`. Those rows are the one kind with their own ×. Clicking it closes just that persona's connection, the same as `connections close acp:<persona>`. A running agent row has no × there; its **Terminate** is in its record tab.
 
 <img class="agent-float" src="/agents/selim-south-west.png" alt="" />
 

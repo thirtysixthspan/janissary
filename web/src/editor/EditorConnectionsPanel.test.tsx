@@ -63,6 +63,21 @@ describe('EditorConnectionsPanel', () => {
 
     expect(onOpenRow).toHaveBeenCalledWith(row);
     expect(document.querySelector('.panel-row-transcript')).toBeNull();
-    expect(document.querySelector('.panel-row-close')).not.toBeNull();
+    expect(document.querySelector('.panel-row-close')).toBeNull();
+  });
+
+  it('renders a close control only on the persona row, not the record-id agent row', () => {
+    const onCloseRow = vi.fn();
+    const persona = {
+      text: 'reviewer (acp)', kind: 'acp' as const,
+      acpRef: { scope: 'editor' as const, label: 'notes', persona: 'reviewer' },
+    };
+    const agent = { text: 'Agent: task.md', kind: 'acp' as const, recordId: 'record-1' };
+    render(<EditorConnectionsPanel tab={makeTab([persona, agent])} api={api({ closeRow: onCloseRow })} />);
+
+    const closes = document.querySelectorAll('.panel-row-close');
+    expect(closes).toHaveLength(1);
+    fireEvent.click(closes[0]!);
+    expect(onCloseRow).toHaveBeenCalledExactlyOnceWith(persona, 0);
   });
 });

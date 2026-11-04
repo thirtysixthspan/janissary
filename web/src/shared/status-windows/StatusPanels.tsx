@@ -14,9 +14,11 @@ type Properties = {
   connectionsWindow: StatusWindowHandlers;
   scheduleWindow: StatusWindowHandlers;
   interactive?: boolean;
-  // Renders a close control on each connection row when supplied (editor tabs' persona
-  // connections); omitted elsewhere, so agent-tab rows stay read-only, as today.
+  // Renders a close control when supplied (editor tabs' persona connections); omitted elsewhere,
+  // so agent-tab rows stay read-only, as today. `canCloseRow` narrows that control to the rows the
+  // caller can actually close, keeping a window's other rows read-only.
   onCloseRow?: (row: ConnectionView, index: number) => void;
+  canCloseRow?: (row: ConnectionView) => boolean;
   // Renders a clipboard-icon transcript button on any row carrying an `acpRef`, when supplied;
   // omitted on the non-interactive harness-tab panel, where no button renders.
   onOpenAcpTranscript?: (ref: AcpRef) => void;
@@ -29,15 +31,17 @@ function rowCanOpen(row: ConnectionView): boolean {
   return row.recordId !== undefined || row.acpRef?.scope === 'tab';
 }
 
-function ConnectionRow({ row, index, onCloseRow, onOpenAcpTranscript, onOpenRow }: {
+function ConnectionRow({ row, index, onCloseRow, canCloseRow, onOpenAcpTranscript, onOpenRow }: {
   row: ConnectionView;
   index: number;
   onCloseRow?: (row: ConnectionView, index: number) => void;
+  canCloseRow?: (row: ConnectionView) => boolean;
   onOpenAcpTranscript?: (ref: AcpRef) => void;
   onOpenRow?: (row: ConnectionView) => void;
 }) {
   const acpRef = row.acpRef;
   const openRow = onOpenRow !== undefined && rowCanOpen(row) ? () => { onOpenRow(row); } : undefined;
+  const closeRow = onCloseRow !== undefined && (canCloseRow === undefined || canCloseRow(row)) ? onCloseRow : undefined;
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (!openRow || event.target !== event.currentTarget) return;
     if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -64,13 +68,13 @@ function ConnectionRow({ row, index, onCloseRow, onOpenAcpTranscript, onOpenRow 
           <FontAwesomeIcon icon={viewCaptureIcon} />
         </button>
       )}
-      {onCloseRow && (
+      {closeRow && (
         <button
           type="button"
           className="panel-row-close"
           title="Close connection"
           aria-label="Close connection"
-          onClick={(event) => { event.stopPropagation(); onCloseRow(row, index); }}
+          onClick={(event) => { event.stopPropagation(); closeRow(row, index); }}
         >
           ×
         </button>
@@ -87,7 +91,7 @@ function ConnectionRow({ row, index, onCloseRow, onOpenAcpTranscript, onOpenRow 
 // *is* the terminal connection and only the timers are worth overlaying. `interactive` accepts
 // pointer events on the panels themselves (tabs, Decision 8); surfaces whose rows are actionable
 // pass it, while non-interactive panels never intercept terminal input.
-export function StatusPanels({ connections: connectionRows, schedule: scheduleRows, scheduleOnly = false, connectionsWindow, scheduleWindow, interactive = false, onCloseRow, onOpenAcpTranscript, onOpenRow }: Properties) {
+export function StatusPanels({ connections: connectionRows, schedule: scheduleRows, scheduleOnly = false, connectionsWindow, scheduleWindow, interactive = false, onCloseRow, canCloseRow, onOpenAcpTranscript, onOpenRow }: Properties) {
   const connectionList = scheduleOnly ? [] : connectionRows;
   const showConnections = connectionList.length > 0 && connectionsWindow.visible;
   const showSchedule = scheduleRows.length > 0 && scheduleWindow.visible;
@@ -103,7 +107,7 @@ export function StatusPanels({ connections: connectionRows, schedule: scheduleRo
         >
           <div className="panel-title">connections</div>
           {connectionList.map((c, index) => (
-            <ConnectionRow key={index} row={c} index={index} onCloseRow={onCloseRow} onOpenAcpTranscript={onOpenAcpTranscript} onOpenRow={onOpenRow} />
+            <ConnectionRow key={index} row={c} index={index} onCloseRow={onCloseRow} canCloseRow={canCloseRow} onOpenAcpTranscript={onOpenAcpTranscript} onOpenRow={onOpenRow} />
           ))}
         </div>
       )}

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Limit the editor connections window's close control to editor-persona rows, so a running agent row cannot send a persona close.
-
-Existing Issue: `web/src/editor/EditorConnectionsPanel.tsx` passes `onCloseRow` to `StatusPanels` for every row, and `web/src/editor/useEditorConnections.ts` turns `row.text` into a `closeEditorConnection` persona; a running agent row has no editor persona, so its close button does nothing or, when the editor tab has a core ACP session, can close that unrelated session. Severity: 4/10
-
-Existing Risk: 4/10 - A user clicking the only close control on the new agent row can terminate an unrelated ACP connection or get silent inaction, and the agent run's intended Terminate path is in its record tab instead.
-
-Proposal Risk: 1/10 - The control is limited to rows that actually have an editor persona; the agent row still opens through its record id and keeps its record-tab Terminate.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "limit the editor window's close control to persona rows". Add an optional row predicate to `web/src/shared/status-windows/StatusPanels.tsx` (for example `canCloseRow?: (row: ConnectionView) => boolean`) and render the close button only when both `onCloseRow` and the predicate pass; have `web/src/editor/EditorConnectionsPanel.tsx` pass `canCloseRow={(row) => row.acpRef?.scope === 'editor'}`. Also guard `useEditorConnections.closeRow` with the same scope check so a future caller cannot send a persona close for a record row. Update `web/src/editor/EditorConnectionsPanel.test.tsx` to assert the record-id agent row has no close button while a persona row still does, and keep `StatusPanels.test.tsx` covering the close-button isolation. No server or plugin payload change is needed; the record tab's Terminate remains the agent run's control.
-
-
 * Correct the tab-plugin changelog's v2 history: `openConnection` and the reply `line` are v3 additions, and the client capability count is 27, not 28.
 
 Existing Issue: `documentation/developer-documentation/tab-plugins.md` places `openConnection` and the optional `line` in the v2 paragraph and adds a v2 bullet claiming twenty-eight client capabilities, while the same page's v3 section and the shipped `TabPluginClientCapabilities` contain twenty-seven members; `product/specs/tab-plugins.md`'s API v2 section repeats the same misattribution. Severity: 4/10
