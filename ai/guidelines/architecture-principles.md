@@ -30,7 +30,7 @@ The pressure did not disappear — it moved. No file under `src/` or `web/src/` 
 
 ## 4. Parse pure, execute effectful — and never blur the seam
 
-The codebase's biggest strength: `parseXCommand` functions (`parseDbCommand`, `parseScheduleCommand`, `parseConnectionCommand`, `parseOpen`) are pure — they return structured data or `{ error }` and do no I/O. Side effects live in the execution layer. This makes parsing trivially testable and routing predictable.
+The codebase's biggest strength: `parseXCommand` functions (`parseDbCommand`, `parseScheduleCommand`, `parseConnectionsCommand`, `parseOpen`) are pure — they return structured data or `{ error }` and do no I/O. Side effects live in the execution layer. This makes parsing trivially testable and routing predictable.
 
 **Rule.** A parser returns a value; it never spawns a process, touches the filesystem, mutates state, or writes to a transcript. Effects happen only in the execution layer, which consumes parsed data. Protect this seam — it is why the parser and command tests stay simple.
 
