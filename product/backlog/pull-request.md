@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Restore the completed connection-tab window-rule consolidation by keeping the 20-block window and paging counts only in the ACP records spec.
-
-Existing Issue: `product/specs/connections-tab.md` again states "newest 20 prompt blocks", "20 older blocks", and "newest 20 blocks again" after the later `release-connection-window-on-tab-close` repair, while `product/plans/complete/consolidate-connection-tab-follow-and-window-rules.md` requires `connections-tab.md` to contain no "20" and `product/specs/acp-records.md` to remain the sole owner of the window size and paging increments, so the two specs now duplicate the number that a later window-size change would have to update twice. Severity: 4/10
-
-Existing Risk: 4/10 - A future window-size or paging change can update `acp-records.md` and leave the connection-tab spec promising a different count, so an implementation following the wrong spec silently disagrees with the recorder and the other surface.
-
-Proposal Risk: 1/10 - This is wording only; the tab-scoped lifetime rule and every runtime behavior stay exactly as they are.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1916 "remove the duplicated window counts from the connection-tab spec". In `product/specs/connections-tab.md`, replace the numeric phrases with the non-numeric wording the consolidation used: the tab opens on the newest history window, loads older blocks at the top while preserving the viewport, and reopening loads the newest window again. Keep the existing `[[acp-records]]` link and the tab-scoped lifetime sentence, and do not add a new spec section. Leave `product/specs/acp-records.md` as the only spec naming the 20-block size and paging increments, and leave `product/specs/connection.md`'s `[[connections-tab]]` pointer unchanged. Do not edit the completed plans; they are historical records. Verify by reading the edited section, confirming `connections-tab.md` contains no "20", and running `npm run docs:build` to prove every wiki target resolves. No source, test, or user-documentation change is needed.
-
-
 * Key connection-history blocks by their absolute position so loading an older page does not remount every existing block and collapse the reader's expanded entries.
 
 Existing Issue: `web/src/plugins/connections/ConnectionHistory.tsx` keys each block by `${block.startedAt}:${index}` where `index` is relative to the current window, so prepending older blocks shifts every existing index, remounts every existing block in React, and discards any expanded thought or tool `<details>` and text selection even though `useConnectionHistoryScroll` preserves `scrollTop`. Severity: 3/10
