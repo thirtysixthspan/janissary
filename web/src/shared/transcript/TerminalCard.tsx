@@ -8,17 +8,20 @@ import { collapsedIcon } from '../icons';
 
 type Properties = { entry: TerminalEntry; actions: PtyActions };
 
-// App-level chords (Shift/Ctrl+Arrow for tab switch/reorder, Ctrl+T for collapse) must reach the
-// window handler rather than the PTY so tab switching still works while a card is focused.
+// App-level Ctrl/Shift chords must reach the window handler rather than the PTY so tab navigation
+// and the other shortcuts keep working while a card is focused. Ctrl+T is no longer one of them:
+// it passes through to the PTY.
 function cardKeyFilter(e: KeyboardEvent): boolean {
   if (e.type !== 'keydown') return true;
+  if (e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && e.key.toLowerCase() === 't') return true;
   return !(e.shiftKey || e.ctrlKey);
 }
 
 // An inline xterm.js card hosting one PTY (an interactive program or AI harness). It lives in the
 // transcript flow; "maximize" pops it to fill the window. On exit it freezes (input detached) so
-// scrolling back still shows the session. App-level chords (Shift+Arrow, Ctrl+T) are not consumed
-// by the terminal — they bubble to the window handler so tab switching still works while focused.
+// scrolling back still shows the session. Ctrl/Shift chords bubble to the window handler so tab
+// navigation and the other shortcuts keep working while focused; Ctrl+T, which is no longer one
+// of them, reaches the PTY.
 export function TerminalCard({ entry, actions }: Properties) {
   const hostReference = useRef<HTMLDivElement>(null);
   const [maximized, setMaximized] = useState(false);

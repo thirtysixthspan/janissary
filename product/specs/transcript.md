@@ -6,6 +6,10 @@ The scrollable output area that displays command inputs and their results. The t
 
 Log entries are flattened into a `BufferLine[]` array. Each entry produces one prompt line (`>` + command text). If the entry is in `Running...` state, it produces one running-indicator line. Otherwise, its output text is split by newlines, producing one output line per segment.
 
+### Inline terminal cards
+
+An inline terminal card inside a transcript hosts an interactive PTY. Plain keys and Ctrl+T reach the PTY while the card is focused. Other Ctrl and Shift chords bubble to the window, so tab switching, tab reordering, and the application's other shortcuts keep working.
+
 ### ACP tool steps
 
 Auto-run ACP tool steps (entries flagged `acp`, produced by the ACP tool loop) appear as a `+ <command>` prompt line followed by the command's response on the output lines beneath it. Empty continuation turns between steps are not shown. The shell shows only the settled answer, and connection-tab thought and tool entries use their own expandable rendering rather than a transcript collapse. No transcript surface collapses ACP tool steps. See [[acp]].
