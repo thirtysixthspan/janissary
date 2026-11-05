@@ -68,7 +68,7 @@ export function browserSpawn(
     appManifest: dualPath(path.join(browser.appDir, 'package.json')),
     appTsconfig: dualPath(path.join(browser.appDir, 'tsconfig.json')),
     appAgentNames: dualPath(path.join(browser.appDir, 'agent-names.json')),
-    appHarnessModels: dualPath(path.join(browser.appDir, 'harness-models.json')),
+    appKnownModels: dualPath(path.join(browser.appDir, 'known-models.json')),
     appState: dualPath(path.join(browser.appDir, '.janissary')),
   });
   return {

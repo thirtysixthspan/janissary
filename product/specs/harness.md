@@ -1038,18 +1038,22 @@ interactive command (`harness <name> --model <name> --effort <level>`).
 
 `--model <name>` is passed to the harness binary's `--model` flag verbatim, but is validated first
 against that harness's known model catalog; an unknown model is rejected with `Unknown model
-"<model>" for harness "<name>" — add it to harness-models.json.` and no tab is opened.
+"<model>" for harness "<name>" — add it to known-models.json.` and no tab is opened.
 
-A project can supply its own `.janissary/harness-models.json` (a JSON object mapping harness name to
+A project can supply its own `.janissary/known-models.json` (a JSON object mapping harness name to
 a list of model ids) to replace the bundled catalog entirely for that project. If the file is
 missing, the bundled catalog is used; if it exists but isn't valid JSON, a warning is printed and
 the bundled catalog is used. A file that parses but isn't an object whose every value is a list of
-strings is treated the same way, with the warning `.janissary/harness-models.json is not an object of
+strings is treated the same way, with the warning `.janissary/known-models.json is not an object of
 model-id lists — using the bundled catalog`.
 
 ### What the bundled catalog holds
 
-The bundled catalog names models for the `claude`, `codex`, and `opencode` harnesses. The `opencode`
+The bundled catalog, `known-models.json`, names models for the `claude`, `codex`, and `opencode`
+harnesses: Anthropic's Claude models, OpenAI's GPT models, and the opencode providers' models. It
+holds every model a default role names, so a fresh roles file never offers a model a launch would
+refuse. A project override left under the catalog's former name, `.janissary/harness-models.json`,
+is not read. The `opencode`
 list spans the three providers that harness reaches — OpenCode Zen, OpenCode Go, and Google AI
 directly — with each model carrying its provider prefix, and is the list the conversation tab's model
 picker is built from alongside the `claude` list. See [[conversations]].

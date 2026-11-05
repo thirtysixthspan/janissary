@@ -72,7 +72,7 @@ export class HarnessManager extends HarnessTabSpawn {
     if ('capture' in parsed) return captureSubcommand(this.managers, (l) => this.latestScreenText(l), input, parsed.label);
     if ('transcript' in parsed) return transcriptSubcommand(this.managers, (l) => this.transcriptTailer(l), input, parsed.label);
     if (parsed.model && !isKnownModel(parsed.name, parsed.model)) {
-      return `Unknown model "${parsed.model}" for harness "${parsed.name}" — add it to harness-models.json.`;
+      return `Unknown model "${parsed.model}" for harness "${parsed.name}" — add it to known-models.json.`;
     }
     return this.open(parsed, invocation);
   }
@@ -92,7 +92,7 @@ export class HarnessManager extends HarnessTabSpawn {
 
   // The launch dialog's catalog while open, or null when closed: the harness names and each
   // harness's known models, built fresh from `HARNESS_NAMES`/`modelsFor` so a project override of
-  // `harness-models.json` is reflected.
+  // `known-models.json` is reflected.
   harnessLaunchView(): HarnessLaunchView | null {
     if (!this.launchDialogOpen) return null;
     const models = Object.fromEntries(HARNESS_NAMES.map((name) => [name, modelsFor(name)]));

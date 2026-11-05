@@ -795,7 +795,7 @@ describe('HarnessManager model/effort', () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
     expect(manager.run('harness opencode --model not-a-real-model')).toBe(
-      'Unknown model "not-a-real-model" for harness "opencode" — add it to harness-models.json.',
+      'Unknown model "not-a-real-model" for harness "opencode" — add it to known-models.json.',
     );
     expect(managers.pty.spawn).not.toHaveBeenCalled();
   });
