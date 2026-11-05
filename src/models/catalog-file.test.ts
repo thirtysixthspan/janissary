@@ -138,6 +138,23 @@ describe('loadHarnessModels', () => {
     expect(isKnownModel('claude', 'claude-sonnet-5')).toBe(false);
   });
 
+  it('keeps hidden models launchable while excluding disabled models', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'known-models.json'), JSON.stringify({ claude: [
+      { id: 'disabled-model', disabled: true },
+      { id: 'hidden-model', hidden: true },
+      { id: 'enabled-model' },
+    ] }));
+
+    loadHarnessModels(tmpDir);
+
+    expect(modelsFor('claude')).toEqual(['hidden-model', 'enabled-model']);
+    expect(isKnownModel('claude', 'disabled-model')).toBe(false);
+    expect(isKnownModel('claude', 'hidden-model')).toBe(true);
+    expect(isKnownModel('claude', 'enabled-model')).toBe(true);
+  });
+
   it('ignores an override left under the old harness-models.json name', () => {
     const configDir = path.join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });

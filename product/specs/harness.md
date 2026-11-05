@@ -1043,8 +1043,9 @@ against that harness's known model catalog; an unknown model is rejected with `U
 A project can supply its own `.janissary/known-models.json` to replace the bundled catalog entirely
 for that project. It is a JSON object mapping each harness name to an ordered list of model records.
 Each record has a required nonempty string `id` and may have a string `name` and boolean `disabled`
-and `hidden` flags. The `disabled` flag excludes a model from launch choices; the `hidden` flag is
-reserved for the models list. When a flag is false, it is omitted when the catalog is written.
+and `hidden` flags. The `disabled` flag excludes a model from launch choices. The `hidden` flag only
+controls whether the models list shows it; a hidden model remains available for launch. When a flag
+is false, it is omitted when the catalog is written.
 
 If the file is missing, the bundled catalog is used. If it exists but isn't valid JSON, a warning is
 printed and the bundled catalog is used. A file that parses but isn't an object of model-record
