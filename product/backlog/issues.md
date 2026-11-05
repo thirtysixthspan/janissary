@@ -2,6 +2,8 @@
 
 ## ready
 
+* update plan-a-feature.md to add a question round and plan section specifically for UI concerns.
+
 * rename the 'acp' command to the 'ask' command
 
 * add a default 'ask' role with description 'When you ask a question via ACP.' include the following models:
