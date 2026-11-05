@@ -1040,17 +1040,26 @@ interactive command (`harness <name> --model <name> --effort <level>`).
 against that harness's known model catalog; an unknown model is rejected with `Unknown model
 "<model>" for harness "<name>" — add it to known-models.json.` and no tab is opened.
 
-A project can supply its own `.janissary/known-models.json` (a JSON object mapping harness name to
-a list of model ids) to replace the bundled catalog entirely for that project. If the file is
-missing, the bundled catalog is used; if it exists but isn't valid JSON, a warning is printed and
-the bundled catalog is used. A file that parses but isn't an object whose every value is a list of
-strings is treated the same way, with the warning `.janissary/known-models.json is not an object of
-model-id lists — using the bundled catalog`.
+A project can supply its own `.janissary/known-models.json` to replace the bundled catalog entirely
+for that project. It is a JSON object mapping each harness name to an ordered list of model records.
+Each record has a required nonempty string `id` and may have a string `name` and boolean `disabled`
+and `hidden` flags. The `disabled` flag excludes a model from launch choices; the `hidden` flag is
+reserved for the models list. When a flag is false, it is omitted when the catalog is written.
+
+If the file is missing, the bundled catalog is used. If it exists but isn't valid JSON, a warning is
+printed and the bundled catalog is used. A file that parses but isn't an object of model-record
+lists is treated the same way, with the warning `.janissary/known-models.json is not an object of
+model-record lists — using the bundled catalog`. A record with an empty or missing `id`, a `name`
+that isn't a string, or a flag that isn't a boolean invalidates the whole override. The change from
+id lists to records is breaking for hand-written project overrides; those files now use the bundled
+catalog until they are converted to records.
 
 ### What the bundled catalog holds
 
 The bundled catalog, `known-models.json`, names models for the `claude`, `codex`, and `opencode`
-harnesses: Anthropic's Claude models, OpenAI's GPT models, and the opencode providers' models. It
+harnesses: Anthropic's Claude models, OpenAI's GPT models, and the opencode providers' models. Its
+records initially contain only the model `id`; display names and flags are added by a project refresh
+or by hand. It
 holds every model a default role names, so a fresh roles file never offers a model a launch would
 refuse. A project override left under the catalog's former name, `.janissary/harness-models.json`,
 is not read. The `opencode`

@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdirSync, writeFileSync, rmSync, mkdtempSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { modelsFor, isKnownModel, loadHarnessModels } from './models.js';
+import { modelsFor, isKnownModel, loadHarnessModels } from '../harness/models.js';
+import { decodeModelCatalog, encodeModelCatalog, readCatalog } from './catalog-file.js';
 import { DEFAULT_ROLES } from '../plugins/roles/roles-file.js';
 
 describe('known-models', () => {
@@ -117,6 +118,11 @@ describe('loadHarnessModels', () => {
   });
 
   it('falls back to the bundled catalog when no override file exists', () => {
+    const catalog = readCatalog(tmpDir);
+    expect(catalog.fromOverride).toBe(false);
+    expect(catalog.overridePath).toBe(path.join(tmpDir, '.janissary', 'known-models.json'));
+    expect(catalog.catalog.claude).toContainEqual({ id: 'claude-sonnet-5' });
+
     loadHarnessModels(tmpDir);
     expect(modelsFor('claude')).toContain('claude-sonnet-5');
   });
@@ -124,7 +130,7 @@ describe('loadHarnessModels', () => {
   it('reads a valid override file and uses it in place of the bundled catalog', () => {
     const configDir = path.join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });
-    writeFileSync(path.join(configDir, 'known-models.json'), JSON.stringify({ claude: ['custom-model'] }));
+    writeFileSync(path.join(configDir, 'known-models.json'), JSON.stringify({ claude: [{ id: 'custom-model' }] }));
 
     loadHarnessModels(tmpDir);
     expect(modelsFor('claude')).toEqual(['custom-model']);
@@ -161,8 +167,13 @@ describe('loadHarnessModels', () => {
     ['a list instead of an object', ['custom-model']],
     ['a bare string', 'custom-model'],
     ['null', null],
-    ['a string instead of a model list', { claude: 'custom-model' }],
-    ['a list holding a non-string', { claude: ['custom-model', 7] }],
+    ['a string instead of a model-record list', { claude: 'custom-model' }],
+    ['a list holding a non-record', { claude: ['custom-model'] }],
+    ['a record without an id', { claude: [{ name: 'Custom name' }] }],
+    ['a record with an empty id', { claude: [{ id: '' }] }],
+    ['a record with a non-string name', { claude: [{ id: 'custom-model', name: 7 }] }],
+    ['a record with a non-boolean disabled flag', { claude: [{ id: 'custom-model', disabled: 'yes' }] }],
+    ['a record with a non-boolean hidden flag', { claude: [{ id: 'custom-model', hidden: 1 }] }],
   ])('falls back to the bundled catalog and warns when the override holds %s', (_case, contents) => {
     const configDir = path.join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });
@@ -171,11 +182,81 @@ describe('loadHarnessModels', () => {
     const writeSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     loadHarnessModels(tmpDir);
     expect(writeSpy).toHaveBeenCalledWith(
-      expect.stringContaining('.janissary/known-models.json is not an object of model-id lists — using the bundled catalog'),
+      expect.stringContaining('.janissary/known-models.json is not an object of model-record lists — using the bundled catalog'),
     );
     writeSpy.mockRestore();
 
     expect(modelsFor('claude')).toContain('claude-sonnet-5');
     expect(isKnownModel('claude', 'custom-model')).toBe(false);
+  });
+});
+
+describe('model catalog records', () => {
+  it('decodes ordered model records with optional names and flags', () => {
+    expect(decodeModelCatalog({
+      claude: [{ id: 'first', name: 'First', disabled: true, hidden: true }, { id: 'second' }],
+      codex: [],
+    })).toEqual({
+      claude: [{ id: 'first', name: 'First', disabled: true, hidden: true }, { id: 'second' }],
+      codex: [],
+    });
+  });
+
+  it.each([
+    ['an empty id', { claude: [{ id: '' }] }],
+    ['a missing id', { claude: [{ name: 'No id' }] }],
+    ['a non-string name', { claude: [{ id: 'model', name: 3 }] }],
+    ['a non-boolean disabled flag', { claude: [{ id: 'model', disabled: 'yes' }] }],
+    ['a non-boolean hidden flag', { claude: [{ id: 'model', hidden: 1 }] }],
+  ])('rejects the entire catalog when a record has %s', (_case, value) => {
+    expect(decodeModelCatalog({ ...value, codex: [{ id: 'valid' }] })).toBeUndefined();
+  });
+
+  it('encodes records with two-space JSON, a trailing newline, and true-only flags', () => {
+    const encoded = encodeModelCatalog({
+      claude: [
+        { id: 'enabled', name: 'Enabled', disabled: false, hidden: false },
+        { id: 'disabled', disabled: true },
+        { id: 'hidden', hidden: true },
+      ],
+    });
+    expect(encoded).toBe(`{
+  "claude": [
+    {
+      "id": "enabled",
+      "name": "Enabled"
+    },
+    {
+      "id": "disabled",
+      "disabled": true
+    },
+    {
+      "id": "hidden",
+      "hidden": true
+    }
+  ]
+}
+`);
+    expect(JSON.parse(encoded)).toEqual({
+      claude: [
+        { id: 'enabled', name: 'Enabled' },
+        { id: 'disabled', disabled: true },
+        { id: 'hidden', hidden: true },
+      ],
+    });
+  });
+
+  it('reports whether the whole project override supplied the catalog', () => {
+    const tmpDir = mkdtempSync(path.join(tmpdir(), 'known-model-records-'));
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'known-models.json'), JSON.stringify({ claude: [{ id: 'custom' }] }));
+
+    const result = readCatalog(tmpDir);
+
+    expect(result.fromOverride).toBe(true);
+    expect(result.overridePath).toBe(path.join(configDir, 'known-models.json'));
+    expect(result.catalog.claude).toEqual([{ id: 'custom' }]);
+    rmSync(tmpDir, { recursive: true, force: true });
   });
 });
