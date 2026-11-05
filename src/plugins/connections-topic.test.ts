@@ -333,6 +333,28 @@ describe('connections topic actions', () => {
     expect(windows).not.toHaveBeenCalled();
   });
 
+  it('refuses a list close for the system tab shell rows while still opening them', () => {
+    const { managers, tabs, setActiveTab, closeTarget } = fixture();
+    tabs[1]!.systemShell = true;
+    managers.pty.terminalsFor = vi.fn(() => ['zsh']);
+
+    for (const [kind, id] of [['shell', SHELL_NAME], ['terminal', 'zsh']] as const) {
+      expect(runConnectionsTopicAction(managers, {
+        topic: 'connections', action: 'close', kind, id, ownerLabel: 'second',
+      })).toBeUndefined();
+    }
+    expect(closeTarget).not.toHaveBeenCalled();
+
+    runConnectionsTopicAction(managers, {
+      topic: 'connections', action: 'open', kind: 'terminal', id: 'zsh', ownerLabel: 'second',
+    });
+    expect(setActiveTab).toHaveBeenCalledWith(1);
+    runConnectionsTopicAction(managers, {
+      topic: 'connections', action: 'close', kind: 'terminal', id: 'zsh', ownerLabel: 'owner',
+    });
+    expect(closeTarget).toHaveBeenCalledExactlyOnceWith('terminal', 'zsh', 'owner');
+  });
+
   it('runs command close without live-row validation for every connection kind', () => {
     const { managers, closeTarget } = fixture();
     for (const kind of ['sqlite', 'shell', 'acp', 'browser', 'ssh', 'terminal'] as const) {

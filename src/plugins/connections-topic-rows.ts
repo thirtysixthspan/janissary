@@ -1,4 +1,5 @@
 import { connectionCatalog } from '../connection/catalog.js';
+import type { ConnectionKind } from '../connection/types.js';
 import type { AcpRef } from '../protocol/tab.js';
 import { bareHost } from '../remote/address.js';
 import type { Tab } from '../tab/types.js';
@@ -51,10 +52,17 @@ function liveTabRows(managers: Managers, recordIds: Set<string>): ConnectionsTop
         ownerLabel: tab.label, ownerName: tab.title ?? tab.label, status: 'Open',
         orderingTimestamp: tab.runtime?.lastActivity ?? 0, focusTarget: tab.label,
         ...(connection.acpRef && { acpRef: connection.acpRef }),
+        ...(isSystemShellConnection(tab, connection.kind) && { permanent: true }),
       });
     }
   }
   return rows;
+}
+
+// The managed system tab's shell is its PTY (`terminal`) and its background shell process (`shell`).
+// A user close only hides that tab, so the list offers no close for its shell either.
+function isSystemShellConnection(tab: Tab, kind: ConnectionKind): boolean {
+  return tab.systemShell === true && (kind === 'terminal' || kind === 'shell');
 }
 
 function isTrackedCoreAcp(

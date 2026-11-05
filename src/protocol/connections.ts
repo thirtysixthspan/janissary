@@ -19,6 +19,8 @@ export type ConnectionsTopicLiveRow = {
   orderingTimestamp: number;
   focusTarget?: string;
   acpRef?: AcpRef;
+  // Set on the managed system tab's shell rows, which the list offers no close for.
+  permanent?: true;
 };
 
 export type ConnectionsTopicRecordRow = {

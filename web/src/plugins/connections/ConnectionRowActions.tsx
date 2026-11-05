@@ -8,7 +8,8 @@ import type { ConnectionRow, LiveConnectionRow, RecordConnectionRow } from '@sha
 // glyph and Delete its forget glyph, because each does the same thing to its row there.
 
 export function canClose(row: ConnectionRow): row is LiveConnectionRow | RecordConnectionRow {
-  return row.type === 'live' || (row.kind === 'acp' && ['Running', 'Idle'].includes(row.status));
+  if (row.type === 'live') return row.permanent !== true;
+  return row.kind === 'acp' && ['Running', 'Idle'].includes(row.status);
 }
 
 export function canDelete(row: ConnectionRow): row is RecordConnectionRow {

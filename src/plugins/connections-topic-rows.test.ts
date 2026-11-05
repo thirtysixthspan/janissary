@@ -194,4 +194,26 @@ describe('connections topic rows', () => {
     ]);
     for (const row of rows) expect(row).not.toHaveProperty('focusTarget');
   });
+
+  it('marks only the managed system tab shell rows permanent', () => {
+    const { managers, tabs } = fixture();
+    tabs.push({
+      label: 'system', dotColor: '', number: 4, log: [], systemShell: true,
+      runtime: { busy: false, context: [], queue: [] },
+    });
+    managers.shell.has = vi.fn((label: string) => ['first', 'system'].includes(label));
+    managers.pty.terminalsFor = vi.fn((label: string) => (['first', 'system'].includes(label) ? ['zsh'] : []));
+    managers.browser.info = vi.fn((label: string) => (label === 'system' ? { ids: ['w1'], mode: 'headless' } : null)) as unknown as typeof managers.browser.info;
+
+    const live = composeConnectionsTopicData(managers, new Map()).rows.filter((row) => row.type === 'live');
+    const owned = (label: string) => live.filter((row) => row.ownerLabel === label && row.kind !== 'sqlite');
+
+    expect(owned('system').map((row) => [row.kind, 'permanent' in row ? row.permanent : undefined])).toEqual([
+      ['browser', undefined],
+      ['shell', true],
+      ['terminal', true],
+    ]);
+    for (const row of owned('first')) expect(row).not.toHaveProperty('permanent');
+    expect(owned('first').map((row) => row.kind)).toEqual(expect.arrayContaining(['shell', 'terminal']));
+  });
 });

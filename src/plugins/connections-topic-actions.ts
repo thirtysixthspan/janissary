@@ -57,7 +57,7 @@ function actOnLive(managers: Managers, action: LiveAction, requested: Map<string
     if (row.focusTarget === undefined) return;
     const index = managers.tab.findIndex(row.focusTarget);
     if (index !== -1) managers.tab.setActiveTab(index);
-  } else if (action.action === 'close') {
+  } else if (action.action === 'close' && !row.permanent) {
     void managers.connection.closeTarget(row.kind, row.id, row.ownerLabel).catch(() => {});
   }
 }

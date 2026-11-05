@@ -26,6 +26,10 @@ describe('connections shared contract', () => {
     expect(isConnectionsPayload({ kind: 'connection', record: live })).toBe(false);
   });
 
+  it('accepts a live row marked permanent', () => {
+    expect(isConnectionsPayload({ kind: 'list', rows: [{ ...live, permanent: true }] })).toBe(true);
+  });
+
   it('names a record by its kind and owning tab name', () => {
     expect(recordConnectionName({ kind: 'acp', ownerName: 'build' })).toBe('acp:build');
     expect(recordConnectionName({ kind: 'agent', ownerName: 'release notes' })).toBe('agent:release notes');
@@ -37,6 +41,8 @@ describe('connections shared contract', () => {
     { kind: 'list', rows: [{ ...record, window: { ...record.window, blocks: null } }] },
     { kind: 'list', rows: [{ ...live, ownerLabel: undefined }] },
     { kind: 'list', rows: [{ ...live, host: undefined }] },
+    { kind: 'list', rows: [{ ...live, permanent: false }] },
+    { kind: 'list', rows: [{ ...live, permanent: 'yes' }] },
     { kind: 'list', rows: [{ ...record, host: 7 }] },
     { kind: 'connection', record: { ...record, model: undefined } },
   ])('rejects malformed payload %j', (value) => {

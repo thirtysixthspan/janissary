@@ -34,7 +34,7 @@ type ConnectionRowBase = {
 };
 
 export type LiveConnectionRow = ConnectionRowBase & {
-  type: 'live'; kind: ConnectionKind; display: string; status: 'Open'; focusTarget?: string;
+  type: 'live'; kind: ConnectionKind; display: string; status: 'Open'; focusTarget?: string; permanent?: true;
 };
 export type RecordConnectionRow = ConnectionRowBase & {
   type: 'record'; kind: ConnectionKind | 'agent'; title: string; model: string;
@@ -116,7 +116,7 @@ export function isConnectionRow(value: unknown): value is ConnectionRow {
     || (hasOwn(value, 'acpRef') && !isAcpRef(value.acpRef))) return false;
   if (value.type === 'live') {
     return kinds.includes(value.kind as typeof kinds[number]) && typeof value.display === 'string'
-      && value.status === 'Open';
+      && value.status === 'Open' && (!hasOwn(value, 'permanent') || value.permanent === true);
   }
   return value.type === 'record' && (kinds.includes(value.kind as typeof kinds[number]) || value.kind === 'agent')
     && typeof value.title === 'string' && typeof value.model === 'string'

@@ -339,6 +339,24 @@ describe('ConnectionList', () => {
     expect(intent).toHaveBeenCalledWith('close', { kind: 'acp', id: 'monitor', ownerLabel: 'owner' });
   });
 
+  it.each([null, 'left'] as const)('offers no Close on a permanent live row, docked %s', (dock) => {
+    const fixture = capabilities();
+    fixture.value.dock = dock;
+    const system: ConnectionRow = {
+      type: 'live', id: 'zsh', kind: 'terminal', display: 'terminal:zsh', host: 'Local', ownerLabel: 'system',
+      ownerName: 'system', status: 'Open', orderingTimestamp: 1, permanent: true,
+    };
+    const rows = [system, live('vim', 'terminal', 'terminal:vim')];
+    const { container } = render(<ConnectionList rows={rows} capabilities={fixture.value} />);
+    expect(screen.queryByRole('button', { name: 'Close terminal:zsh' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Close terminal:vim' })).toBeInTheDocument();
+    const permanent = container.querySelector('.connections-row') as HTMLElement;
+    expect(permanent.querySelector('.connections-row-actions')?.childElementCount).toBe(0);
+    fireEvent.click(permanent);
+    fireEvent.click(permanent);
+    expect(fixture.intent).toHaveBeenCalledExactlyOnceWith('open', { kind: 'terminal', id: 'zsh', ownerLabel: 'system' });
+  });
+
   it('stops row clicks for actions and confirms closed-record deletion with the exact wording', () => {
     const { intent, value } = capabilities();
     render(<ConnectionList rows={[record('closed', 'acp', 'Closed', 'Finished session')]} capabilities={value} />);
