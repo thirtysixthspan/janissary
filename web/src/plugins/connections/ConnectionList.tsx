@@ -104,9 +104,9 @@ export function ConnectionList({
         <div className="connections-columns" aria-hidden="true">
           <span className="connections-columns-host">Host</span>
           <span className="connections-columns-owner">Tab</span>
-          <span className="connections-columns-id">Connection ID</span>
-          <span className="connections-columns-title">Connection Name</span>
-          <span className="connections-columns-status">Connection State</span>
+          <span className="connections-columns-id">ID</span>
+          <span className="connections-columns-title">Name</span>
+          <span className="connections-columns-status">State</span>
           <span className="connections-columns-activity">Last activity</span>
           <span />
         </div>

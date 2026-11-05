@@ -53,7 +53,13 @@ describe('ConnectionList', () => {
     const heading = container.querySelector('.connections-columns')!;
     expect(heading).toHaveAttribute('aria-hidden', 'true');
     expect([...heading.children].map((node) => node.textContent))
-      .toEqual(['Host', 'Tab', 'Connection ID', 'Connection Name', 'Connection State', 'Last activity', '']);
+      .toEqual(['Host', 'Tab', 'ID', 'Name', 'State', 'Last activity', '']);
+  });
+
+  it('keeps the word "connection" out of the column headings', () => {
+    const { container } = render(<ConnectionList rows={[live('db', 'sqlite', 'Database')]} capabilities={capabilities().value} />);
+    const heading = container.querySelector('.connections-columns')!;
+    expect(heading.textContent).not.toMatch(/connection/i);
   });
 
   it('renders mixed rows in supplied order with hosts, owners, titles, and statuses', () => {

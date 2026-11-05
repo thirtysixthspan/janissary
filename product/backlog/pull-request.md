@@ -5,7 +5,3 @@
 * all connection types should have a last activity timestamp
 
 * all connection types should get a unique uuid.
-
-* remove the word 'connection' from the connections table headers.
-
- 

@@ -20,7 +20,7 @@
 .connections-empty { color: var(--muted); padding: 8px 12px; }
 .connections-rows { display: flex; flex-direction: column; }
 /* The column names sit over the rows in the same grid, so each label lines up with its column —
-   Host, Tab, Connection ID, Connection Name, Connection State, Last activity, and the unlabeled
+   Host, Tab, ID, Name, State, Last activity, and the unlabeled
    actions column. Rows are the sessions table's: full-bleed, with hover and the current row in two
    different shades. */
 .connections-columns, .connections-row {
