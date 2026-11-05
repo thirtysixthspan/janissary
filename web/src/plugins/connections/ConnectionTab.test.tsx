@@ -39,7 +39,33 @@ describe('ConnectionTab', () => {
     expect([...document.querySelectorAll('.connections-activity-label')].map((el) => el.textContent))
       .toEqual(['message', 'plan', 'permission']);
     expect(screen.getByText('thought', { selector: 'summary' }).closest('details')).not.toHaveAttribute('open');
-    expect(screen.getByText('tool', { selector: 'summary' }).closest('details')).not.toHaveAttribute('open');
+    expect(screen.getByText('tool', { selector: 'summary' }).closest('details')).toHaveAttribute('open');
+  });
+
+  it('pretty-prints an entry whose text is JSON and leaves plain text as it is', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [
+      { kind: 'tool', text: '{"query":"select 1","rows":[1]}', timestamp: 1 },
+      { kind: 'tool', text: 'db query select 1', timestamp: 2 },
+    ];
+    setup(value);
+    const json = document.querySelector('pre.connections-activity-json');
+    expect(json?.textContent).toBe('{\n  "query": "select 1",\n  "rows": [\n    1\n  ]\n}');
+    expect(document.querySelectorAll('pre')).toHaveLength(1);
+    expect(screen.getByText('db query select 1').tagName).toBe('DIV');
+  });
+
+  it('keeps a tool entry the reader collapsed closed through a streamed update', () => {
+    const value = record();
+    const { view, capabilities } = setup(value);
+    const details = screen.getByText('tool', { selector: 'summary' }).closest('details')!;
+    details.open = false;
+    const entries = value.window!.blocks[0]!.entries.map((entry) =>
+      entry.kind === 'tool' ? { ...entry, text: 'tool output' } : entry);
+    view.rerender(<ConnectionTab record={{ ...value, window: { ...value.window!,
+      blocks: [{ ...value.window!.blocks[0]!, entries }] } }} capabilities={capabilities} />);
+    expect(screen.getByText('tool output').closest('details')).toBe(details);
+    expect(details).not.toHaveAttribute('open');
   });
 
   it('keeps expanded entries and block order when older blocks are prepended', () => {

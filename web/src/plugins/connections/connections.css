@@ -58,6 +58,8 @@
 .connections-prompt, .connections-answer { padding: 10px; border-radius: 4px; background: var(--bg-soft); white-space: pre-wrap; }
 .connections-activity { padding-left: 10px; border-left: 2px solid var(--border); }
 .connections-activity-label, .connections-activity summary { color: var(--muted); font-size: 12px; }
+/* JSON activity keeps its indentation and wraps long values instead of widening the tab. */
+.connections-activity-json { margin: 0; font-size: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
 .connections-list-error, .connections-record-error { color: var(--error); padding: 8px 12px; }
 
 /* Docked, each row stacks onto two lines the way a docked sessions row does: the connection's name

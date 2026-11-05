@@ -2,8 +2,6 @@
 
 # pull-request
 
-* tool calls hsould be expanded by default in connection tabs. json should be pretty printed.
-
 * all connection types should have a last activity timestamp
 
 * all connection types should get a unique uuid.

@@ -52,6 +52,14 @@ describe('connections list styles', () => {
     expect(styles).toMatch(/\.connections-columns, \.connections-row \{[^}]*grid-template-columns:/);
     expect(styles).toContain('.connections-row-actions button');
   });
+
+  it('keeps JSON activity indented and wrapped', () => {
+    const styles = readFileSync('web/src/plugins/connections/connections.css', 'utf8');
+    const json = styles.match(/\.connections-activity-json \{[^}]+\}/)?.[0];
+    expect(json).toContain('white-space: pre-wrap');
+    expect(json).toContain('overflow-wrap: anywhere');
+    expect(json).toContain('margin: 0');
+  });
 });
 
 describe('connections rows follow the sessions rows', () => {

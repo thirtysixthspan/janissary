@@ -220,4 +220,4 @@ While you stay at the bottom, the transcript follows incoming output and keeps t
 
 ## Agent tool steps fold up
 
-ACP thinking and tool steps appear in the session's connection tab, not in the shell. There, thought and tool entries start collapsed; click one to expand it. The connection tab follows new output while you stay near the bottom. Harness session transcripts remain available from the harness metadata button.
+ACP thinking and tool steps appear in the session's connection tab, not in the shell. There, thought entries start collapsed and tool entries start expanded. Click an entry's label to open or close it. A tool step whose text is JSON reads as indented JSON. The connection tab follows new output while you stay near the bottom. Harness session transcripts remain available from the harness metadata button.

@@ -1,6 +1,7 @@
 import React from 'react';
 import type { ConnectionWindow } from '@shared/plugins/connections/shared';
 import { renderMarkdown } from '../api';
+import { prettyJson } from './activity-text';
 
 export function ConnectionHistory({ window, openLink }: {
   window: ConnectionWindow | undefined;
@@ -19,9 +20,10 @@ export function ConnectionHistory({ window, openLink }: {
         <article className="connections-block" key={window.offset + index}>
           <div className="connections-prompt">{block.prompt}</div>
           {block.entries.map((entry, entryIndex) => {
-            const content = <div className="connections-activity-text">{entry.text}</div>;
+            const content = <ActivityText text={entry.text} />;
             return entry.kind === 'thought' || entry.kind === 'tool'
-              ? <details className="connections-activity" key={`${entry.timestamp}:${entryIndex}`}>
+              ? <details className="connections-activity" key={`${entry.timestamp}:${entryIndex}`}
+                  open={entry.kind === 'tool'}>
                   <summary>{entry.kind}</summary>{content}
                 </details>
               : <div className="connections-activity" key={`${entry.timestamp}:${entryIndex}`}>
@@ -33,6 +35,13 @@ export function ConnectionHistory({ window, openLink }: {
       ))}
     </div>
   );
+}
+
+function ActivityText({ text }: { text: string }) {
+  const json = prettyJson(text);
+  return json === undefined
+    ? <div className="connections-activity-text">{text}</div>
+    : <pre className="connections-activity-text connections-activity-json">{json}</pre>;
 }
 
 function Answer({ answer }: { answer: string }) {
