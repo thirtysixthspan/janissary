@@ -115,7 +115,7 @@ describe('connections command', () => {
     expect(f.updateTab).toHaveBeenCalledWith('uuid', expect.any(Function));
     const [key, refresh] = f.updateTab.mock.calls[0];
     expect(key).toBe('uuid');
-    expect(refresh()).toMatchObject({ title: 'ACP title', payload: { kind: 'connection', record: { id: 'uuid', window } } });
+    expect(refresh()).toMatchObject({ title: 'acp:Owner', payload: { kind: 'connection', record: { id: 'uuid', window } } });
   });
 
   it.each(['connection', 'connections'] as const)(

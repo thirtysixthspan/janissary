@@ -89,7 +89,7 @@ describe('connections plugin activation', () => {
     f.activation.command?.('', f.capabilities, 'connections');
     const [, openList] = f.openOrFocusTab.mock.calls[0];
     const opened = openList();
-    expect(opened).toStrictEqual({ title: 'Connections', payload: { kind: 'list', rows: [recordRow] } });
+    expect(opened).toStrictEqual({ title: 'connections', payload: { kind: 'list', rows: [recordRow] } });
     expect(opened.payload.rows[0]).not.toHaveProperty('window');
 
     const event = { topic: 'connections', data: { rows: [loaded] }, tabs: ['connections', 'uuid'] } as const;
@@ -121,9 +121,21 @@ describe('connections plugin activation', () => {
     expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action: 'load', id: 'uuid' });
     expect(f.openOrFocusTab.mock.invocationCallOrder[0]).toBeLessThan(f.topicAction.mock.invocationCallOrder[0]);
     expect(f.updateTab).toHaveBeenCalledWith('uuid', expect.any(Function));
+    const [, open] = f.openOrFocusTab.mock.calls[0];
+    expect(open()).toMatchObject({ title: 'acp:Owner', payload: { kind: 'connection', record: { id: 'uuid' } } });
     const [key, refresh] = f.updateTab.mock.calls[0];
     expect(key).toBe('uuid');
-    expect(refresh()).toMatchObject({ title: 'ACP title', payload: { kind: 'connection', record: { id: 'uuid', window } } });
+    expect(refresh()).toMatchObject({ title: 'acp:Owner', payload: { kind: 'connection', record: { id: 'uuid', window } } });
+  });
+
+  it.each([
+    ['ACP session', recordRow, 'uuid', 'acp:Owner'],
+    ['agent run', agentRow, 'agent-run', 'agent:Owner'],
+  ] as const)('titles a refreshed %s connection tab by its kind and owning tab', (_case, row, key, title) => {
+    const f = fixture([row]);
+    f.activation.notify?.({ topic: 'connections', data: { rows: [row] }, tabs: [key] }, f.capabilities);
+    const [, refresh] = f.updateTab.mock.calls.find(([updated]) => updated === key)!;
+    expect(refresh()).toMatchObject({ title, payload: { kind: 'connection', record: { id: key, title: row.title } } });
   });
 
   it('rejects malformed intents without failing the plugin and disposes cleanly', () => {

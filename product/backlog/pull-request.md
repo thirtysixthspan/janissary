@@ -2,8 +2,6 @@
 
 # pull-request
 
-* Connections tab should be titled 'connections'. Connection tab should be titled 'acp:<tab name>'
- 
 * in the connections tab, like the sessions tab, include a metadata row with refresh and split actions.
 
 * in the connections tab, follow the row styling and keyboard interactions of the sessions tab.

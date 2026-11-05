@@ -470,7 +470,7 @@ describe('Controller', () => {
     c.dispatch('connection ACP: explain  this test');
     await vi.waitFor(() => expect(connectionPluginTabs(c)).toHaveLength(1));
     const opened = connectionPluginTabs(c)[0]!;
-    expect(opened.title).toBe('ACP: explain  this test');
+    expect(opened.title).toBe(`acp:${root.label}`);
     expect(c.managers.tab.tabs.find((tab) => tab.plugin?.instanceKey === recordId)).toBeDefined();
     expect(opened.plugin?.payload).toMatchObject({
       kind: 'connection',

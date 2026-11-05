@@ -29,7 +29,7 @@ export class ConnectionTabs {
 
   openList(capabilities: TabPluginServerCapabilities, dock: boolean): void {
     capabilities.openOrFocusTab(CONNECTIONS_LIST_KEY, () => ({
-      title: 'Connections',
+      title: 'connections',
       payload: { kind: 'list', rows: listRows(connectionsData(capabilities).rows) },
     }));
     if (!dock) capabilities.dockTab(CONNECTIONS_LIST_KEY, null);

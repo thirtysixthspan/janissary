@@ -54,7 +54,9 @@ describe('openConnectionLookup', () => {
     expect(openConnectionLookup('acp: Explain This Test', f.tabs, f.capabilities)).toBe(true);
     expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action: 'load', id: 'newer' });
     expect(f.opened).toEqual([expect.objectContaining({
-      id: 'newer', value: expect.objectContaining({ title: 'ACP: explain this test' }),
+      id: 'newer', value: expect.objectContaining({
+        title: 'acp:Owner', payload: expect.objectContaining({ record: expect.objectContaining({ title: 'ACP: explain this test' }) }),
+      }),
     })]);
   });
 
