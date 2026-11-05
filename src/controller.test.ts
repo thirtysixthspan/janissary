@@ -14,16 +14,25 @@ import { loadConfig } from './config.js';
 import { openNotificationsTab } from './notifications/tab.js';
 import { spawnPty } from './pty.js';
 import type { PtyHandlers } from './pty.js';
+import { SHELL_NAME } from './shell/manager.js';
 import type { BusEvent } from './bus.js';
 import { openMonitorTab } from './monitor/window.js';
 import { initHarnessCaptureDirectory } from './harness/capture/file.js';
 import { UNREAD_DWELL_MS } from './tab/dwell.js';
 import { createControllerAdapters } from './controller/create-adapters.js';
+import { seedRecordHistory } from './acp-records/history-test-fixture.js';
 
 // The external-open path shells out to the OS image viewer; stub it so tests never launch an app.
 vi.mock('./openers/os-open.js', () => ({ didOsOpen: () => true }));
 // Mock spawnPty so harness tests never spawn real processes.
 vi.mock('./pty.js');
+vi.mock('./acp-records/store.js', () => ({
+  AcpRecordStore: class {
+    scan = vi.fn(() => []);
+    write = vi.fn();
+    delete = vi.fn();
+  },
+}));
 
 // Sinks that just count state emissions; no PTY/shell spawning is exercised here.
 // Every controller the tests create is tracked and shut down after each test: shutdown() clears the
@@ -39,14 +48,38 @@ const makeController = () => {
   return { c, get states() { return states; } };
 };
 
-afterEach(() => {
-  for (const c of liveControllers) c.shutdown();
+afterEach(async () => {
+  await Promise.all(liveControllers.map((c) => c.shutdown()));
   liveControllers.length = 0;
 });
 
 const allText = (c: Controller) => c.view().flatMap((t) => t.bufferLines).map((l) => l.text).join('\n');
+const connectionPluginTabs = (c: Controller) => c.view().filter((t) => t.view === 'plugin' && t.plugin?.id === 'connections');
 
 describe('Controller rootDir', () => {
+  it('preserves default-root semantics without recovering or pruning checkout history', async () => {
+    const scratchRoot = path.join(import.meta.dirname, '../temp');
+    mkdirSync(scratchRoot, { recursive: true });
+    const checkout = mkdtempSync(path.join(scratchRoot, 'controller-checkout-'));
+    const files = seedRecordHistory(checkout);
+    const cwd = vi.spyOn(process, 'cwd').mockReturnValue(checkout);
+    try {
+      const { c } = makeController();
+      expect(c.rootDir).toBe(checkout);
+      expect(c.managers.tab.launchDir).toBe(checkout);
+      expect(c.managers.acpRecords.rows()).toEqual([]);
+      await c.shutdown();
+      for (const [file, bytes] of files) expect(readFileSync(file, 'utf8')).toBe(bytes);
+    } finally {
+      try {
+        await Promise.all(liveControllers.map((c) => c.shutdown()));
+      } finally {
+        cwd.mockRestore();
+        rmSync(checkout, { recursive: true, force: true });
+      }
+    }
+  });
+
   it('returns the constructor-supplied projectDir', () => {
     const c = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} }, '/some/project');
     liveControllers.push(c);
@@ -345,15 +378,13 @@ describe('Controller', () => {
     }
   });
 
-  it('cycles and toggles via UI shortcuts', () => {
+  it('cycles via UI shortcuts', () => {
     const { c } = makeController();
     seedTestTab(c.managers.tab, 'bob');
     c.setActiveTab(0);
     expect(c.managers.tab.activeTab).toBe(0);
     c.moveTab(1);
     expect(c.managers.tab.activeTab).toBe(1);
-    c.toggleCollapse();
-    expect(c.view()[1].toolStepsExpanded).toBe(true);
   });
 
   it('reorders the active tab within its group, renumbering and following the move', () => {
@@ -417,13 +448,172 @@ describe('Controller', () => {
     expect(Array.isArray(v.connections)).toBe(true);
   });
 
-  it('lists connections (none open) and profiles (none)', () => {
+  it('lists connections (none open) and profiles (none)', async () => {
     initProfileDir(mkdtempSync(path.join(tmpdir(), 'janus-noprof-'))); // isolate from other tests' profiles
     const { c } = makeController();
     c.dispatch('connections list');
-    expect(allText(c)).toContain('No open connections.');
+    await vi.waitFor(() => expect(allText(c)).toContain('No open connections.'));
     c.dispatch('profile list');
     expect(allText(c)).toContain('No profiles.');
+  });
+
+  it('opens and focuses a full generated multiword ACP title through both command names', async () => {
+    const { c } = makeController();
+    const root = c.managers.tab.tabs[0]!;
+    const recordId = c.managers.acpRecords.begin({
+      kind: 'acp', model: 'provider/model', ownerLabel: root.label, ownerName: root.label,
+    });
+    expect(c.managers.acpRecords.prompt(recordId, 'explain  this test')).toBe(true);
+    expect(c.managers.acpRecords.answer(recordId, 'answer')).toBe(true);
+    expect(c.managers.acpRecords.close(recordId, 'Closed')).toBe(true);
+
+    c.dispatch('connection ACP: explain  this test');
+    await vi.waitFor(() => expect(connectionPluginTabs(c)).toHaveLength(1));
+    const opened = connectionPluginTabs(c)[0]!;
+    expect(opened.title).toBe(`acp:${root.label}`);
+    expect(c.managers.tab.tabs.find((tab) => tab.plugin?.instanceKey === recordId)).toBeDefined();
+    expect(opened.plugin?.payload).toMatchObject({
+      kind: 'connection',
+      record: {
+        id: recordId,
+        title: 'ACP: explain  this test',
+        status: 'Closed',
+        window: {
+          totalBlocks: 1,
+          offset: 0,
+          hasOlder: false,
+          blocks: [expect.objectContaining({ prompt: 'explain  this test', answer: 'answer' })],
+        },
+      },
+    });
+
+    c.setActiveTab(0);
+    c.dispatch('connections ACP: explain  this test');
+    await vi.waitFor(() => expect(c.managers.tab.tabs[c.managers.tab.activeTab]?.plugin?.instanceKey).toBe(recordId));
+    expect(connectionPluginTabs(c)).toHaveLength(1);
+
+    c.setActiveTab(0);
+    c.dispatch('connection no such generated title exists');
+    await vi.waitFor(() => expect(allText(c)).toContain('No connection matching "no such generated title exists".'));
+    expect(c.managers.plugins.statusFor('connections')?.state).toBe('active');
+  });
+
+  it('shows SQLite rows as global and opens and closes them app-wide', async () => {
+    const scratch = mkdtempSync(path.join(tmpdir(), 'janus-connections-global-'));
+    initDbDir(scratch);
+    const { c } = makeController();
+    try {
+      seedTestTab(c.managers.tab, 'second');
+      seedTestTab(c.managers.tab, 'third');
+      c.setActiveTab(c.managers.tab.findIndex('second'));
+      c.dispatch('db sqlite create shared');
+      c.setActiveTab(c.managers.tab.findIndex('third'));
+      c.dispatch('db sqlite query shared "select 1"');
+      expect(isConnectionOpen('shared')).toBe(true);
+
+      const second = c.managers.tab.byLabel('second')!;
+      const third = c.managers.tab.byLabel('third')!;
+      const expectedActivity = Math.max(second.runtime?.lastActivity ?? 0, third.runtime?.lastActivity ?? 0);
+
+      c.setActiveTab(0);
+      c.dispatch('connections');
+      await vi.waitFor(() => expect(connectionPluginTabs(c)).toHaveLength(1));
+      const listLabel = connectionPluginTabs(c)[0]!.label;
+      const listRows = () => {
+        const payload = connectionPluginTabs(c)[0]?.plugin?.payload as { rows: Array<Record<string, unknown>> } | undefined;
+        return payload?.rows ?? [];
+      };
+      const sqliteRow = () => listRows().find(
+        (row) => row.type === 'live' && row.kind === 'sqlite' && row.id === 'shared',
+      );
+
+      await vi.waitFor(() => expect(sqliteRow()).toMatchObject({
+        display: 'sqlite:shared', ownerName: 'global', ownerLabel: 'second', focusTarget: 'second',
+      }));
+      expect(listRows().filter((row) => row.type === 'live' && row.kind === 'sqlite')).toHaveLength(1);
+      expect(sqliteRow()).toMatchObject({ orderingTimestamp: expectedActivity });
+
+      await c.pluginIntent(listLabel, 'open', { kind: 'sqlite', id: 'shared', ownerLabel: 'second' });
+      expect(c.managers.tab.cur().label).toBe('second');
+
+      c.setActiveTab(0);
+      c.dispatch('connection sqlite:shared');
+      await vi.waitFor(() => expect(c.managers.tab.cur().label).toBe('second'));
+
+      c.setActiveTab(0);
+      c.dispatch('close second');
+      await vi.waitFor(() => expect(c.managers.tab.byLabel('second')).toBeUndefined());
+      c.setActiveTab(0);
+      c.dispatch('close third');
+      await vi.waitFor(() => expect(c.managers.tab.byLabel('third')).toBeUndefined());
+      expect(isConnectionOpen('shared')).toBe(true);
+
+      await vi.waitFor(() => expect(sqliteRow()).toMatchObject({ ownerName: 'global', ownerLabel: '' }));
+      expect(sqliteRow()).not.toHaveProperty('focusTarget');
+      const activeAfterCloses = c.managers.tab.activeTab;
+      await c.pluginIntent(listLabel, 'open', { kind: 'sqlite', id: 'shared', ownerLabel: '' });
+      expect(c.managers.tab.activeTab).toBe(activeAfterCloses);
+
+      await c.pluginIntent(listLabel, 'close', { kind: 'sqlite', id: 'shared', ownerLabel: '' });
+      await vi.waitFor(() => expect(isConnectionOpen('shared')).toBe(false));
+      expect(c.managers.notifications.all.some(
+        (entry) => entry.event === 'connection-closed' && entry.message === 'Closed connection sqlite:shared.',
+      )).toBe(true);
+      expect(c.managers.notifications.all.some(
+        (entry) => entry.event === 'connection-close-failed' && entry.message.includes('sqlite:shared'),
+      )).toBe(false);
+
+      c.setActiveTab(0);
+      c.dispatch('db sqlite query shared "select 1"');
+      seedTestTab(c.managers.tab, 'fourth');
+      c.dispatch('connections close sqlite:shared');
+      await vi.waitFor(() => expect(isConnectionOpen('shared')).toBe(false));
+      expect(c.managers.notifications.all.some(
+        (entry) => entry.event === 'connection-closed'
+          && entry.message === 'Closed connection sqlite:shared.' && entry.tabLabel === 'fourth',
+      )).toBe(true);
+
+      for (const tab of c.managers.tab.tabs) expect(c.managers.database.openDbs(tab.label)).toEqual([]);
+      for (const tab of c.view()) expect(tab.connections.some((row) => row.text === 'sqlite:shared')).toBe(false);
+    } finally {
+      closeAllConnections();
+      rmSync(scratch, { recursive: true, force: true });
+    }
+  });
+
+  it('binds duplicate shell rows to their owning tab through the connections list', async () => {
+    const { c } = makeController();
+    seedTestTab(c.managers.tab, 'second');
+    seedTestTab(c.managers.tab, 'third');
+    vi.spyOn(c.managers.shell, 'has').mockImplementation((label) => label === 'second' || label === 'third');
+    const closeTarget = vi.spyOn(c.managers.connection, 'closeTarget').mockResolvedValue();
+
+    c.setActiveTab(0);
+    c.dispatch('connections');
+    await vi.waitFor(() => expect(connectionPluginTabs(c)).toHaveLength(1));
+    const listLabel = connectionPluginTabs(c)[0]!.label;
+    const listRows = () => {
+      const payload = connectionPluginTabs(c)[0]?.plugin?.payload as { rows: Array<Record<string, unknown>> } | undefined;
+      return payload?.rows ?? [];
+    };
+    const shellRows = () => listRows().filter(
+      (row) => row.type === 'live' && row.kind === 'shell' && row.id === SHELL_NAME,
+    );
+    await vi.waitFor(() => expect(shellRows()).toHaveLength(2));
+
+    await c.pluginIntent(listLabel, 'open', { kind: 'shell', id: SHELL_NAME, ownerLabel: 'second' });
+    expect(c.managers.tab.cur().label).toBe('second');
+
+    await c.pluginIntent(listLabel, 'close', { kind: 'shell', id: SHELL_NAME, ownerLabel: 'second' });
+    expect(closeTarget).toHaveBeenCalledWith('shell', SHELL_NAME, 'second');
+    expect(closeTarget).not.toHaveBeenCalledWith('shell', SHELL_NAME, 'third');
+    expect(closeTarget).toHaveBeenCalledTimes(1);
+    expect(c.managers.tab.byLabel('third')).toBeDefined();
+
+    await expect(c.pluginIntent(listLabel, 'close', {
+      kind: 'shell', id: SHELL_NAME, ownerLabel: 'invented',
+    })).rejects.toThrow('invalid close payload');
+    expect(closeTarget).toHaveBeenCalledTimes(1);
   });
 
   const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -866,12 +1056,12 @@ describe('Controller ssh tab', () => {
     expect(c.view().map((t) => t.label)).not.toContain('devbox');
   });
 
-  it('connections close ssh:devbox from another tab kills the PTY', () => {
+  it('connections close ssh:devbox from another tab kills the PTY', async () => {
     const { c } = makeController();
     c.dispatch('ssh devbox');
     c.setActiveTab(0); // dispatch from janus, not the ssh tab (which has no command bar)
     c.dispatch('connections close ssh:devbox');
-    expect(capturedKill).toHaveBeenCalled();
+    await vi.waitFor(() => expect(capturedKill).toHaveBeenCalled());
   });
 
   it('registers a screen reader for the ssh PTY so the tab is monitorable', async () => {

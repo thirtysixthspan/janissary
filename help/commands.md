@@ -2,14 +2,15 @@
 
 | Command | Description |
 | ------- | ----------- |
-| `acp` | Query a core OpenCode ACP connection from a shell or another supported plugin tab; replies stream in the ACP panel (`acp reset` starts a fresh session) |
+| `acp` | Query a core OpenCode ACP connection from a shell or another supported plugin tab; the settled Markdown answer appears in shell output and activity in its connection tab (`acp reset` starts fresh) |
 | `agent` | Run task: [on <host>] [in a tab] [in group <name|id>] [in workspace <label>] [with skill <name>] [using model <id>] [with effort <level>] execute <task> [parameters...] (effort: medium) |
 | `audio` | `audio <path>` queues audio into the single audio tab through the bundled audio plugin; accepts the same paths and wildcards as `open` |
 | `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |
 | `clear` | Clear the tab's output log; in a shell tab, bare `clear` is sent to zsh so it clears the terminal instead (use `/clear` to clear the output log) |
 | `clipboard` | Show session clipboard history with `clip`, Ctrl+Shift+V, or Cmd+Shift+V. Selecting an entry pastes it at the cursor; typing `clipboard` opens this help page |
 | `close` | Close the current tab (exits if last); `close <tabname>` closes a tab by its label (`page`, `page-2`, `image`, …) or display alias. `/close` and `/exit` are equivalent |
-| `connections` | List or close open connections (sqlite/shell/acp/browser/ssh/terminal) |
+| `connection` | Open the connections tab; `connection <text>` opens a live connection or retained session by UUID or full title, and `connection list`/`connection close <connection>` manage live connections |
+| `connections` | Open the connections tab; `connections left`/`right` docks it, `connections <text>` looks up a session, and `connections list`/`connections close <connection>` manage live connections |
 | `conversation` | Bare `conversation` opens the conversation list; `conversation <title>` opens a saved conversation by title, ignoring case, or creates one and sends `<title>` as its first query |
 | `conversations` | Open the conversation list; `conversations left`/`right` docks it, and `conversations <title>` opens a saved conversation by title, ignoring case |
 | `db` | Create, delete, query, or list SQLite databases |

@@ -32,7 +32,6 @@ const makeController = () =>
     moveTab: vi.fn(),
     reorderTab: vi.fn(),
     reorderTabTo: vi.fn(),
-    toggleCollapse: vi.fn(),
     complete: vi.fn(() => ({ suggestions: [] })),
     resize: vi.fn(),
     ptyInput: vi.fn(),
@@ -72,6 +71,7 @@ const makeController = () =>
     reportFileNavigatorSelection: vi.fn(),
     openTranscriptFileFor: vi.fn(),
     openAcpTranscript: vi.fn(),
+    openConnectionRecord: vi.fn(),
     reportLayout: vi.fn(),
     projectFiles: vi.fn(async () => ({ root: '/proj', paths: [] })),
     projectFilesFallback: vi.fn(() => ({ root: '/proj', paths: [] })),
@@ -204,12 +204,6 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 33, { method: 'reorderTabTo', params: { from: 1, to: 3 } });
     expect(controller.reorderTabTo).toHaveBeenCalledWith(1, 3);
-  });
-
-  it('routes toggleCollapse', () => {
-    const controller = makeController();
-    dispatchCall(controller, 6, { method: 'toggleCollapse', params: {} });
-    expect(controller.toggleCollapse).toHaveBeenCalled();
   });
 
   it('routes resize', () => {
@@ -510,6 +504,13 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 29, { method: 'openAcpTranscript', params: { acpRef: { scope: 'tab', label: 'janus' } } });
     expect(controller.openAcpTranscript).toHaveBeenCalledWith({ scope: 'tab', label: 'janus' });
+  });
+
+  it('routes openConnectionRecord through the controller façade', () => {
+    const controller = makeController();
+    dispatchCall(controller, 29, { method: 'openConnectionRecord', params: { tab: 'janus', recordId: 'record-1' } });
+    expect(controller.openConnectionRecord).toHaveBeenCalledWith({ tab: 'janus', recordId: 'record-1' });
+    expect(controller.openAcpTranscript).not.toHaveBeenCalled();
   });
 
   it('routes reportLayout through the controller façade', () => {

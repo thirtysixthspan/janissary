@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { messageBus } from '../bus.js';
+import { commands } from '../commands/index.js';
 import type { Managers } from '../managers.js';
 import { fakeNotificationsHost } from '../notifications/tab-test-fixture.js';
 import { NotificationQueue } from '../notifications/queue.js';
@@ -73,6 +74,16 @@ describe('tab plugin discovery', () => {
       tabPluginCatalog.map((item) => item.id).toSorted((a, b) => a.localeCompare(b)),
     );
     expect(tabPluginCatalog.map((item) => item.id)).not.toContain('fixture-v1');
+    expect(tabPluginCatalog.map((item) => item.id)).not.toContain('fixture-v2');
+    expect(TAB_PLUGIN_API_VERSION).toBe(3);
+    expect(tabPluginCatalog.every((item) => item.apiVersion === TAB_PLUGIN_API_VERSION)).toBe(true);
+    expect(tabPluginCatalog.find((item) => item.id === 'connections')).toMatchObject({
+      command: 'connections', commandAliases: ['connection'], notifications: ['connections'],
+      capabilities: expect.arrayContaining(['closeOwnTab', 'originTab', 'topicAction']),
+    });
+    expect(tabPluginCatalog.find((item) => item.id === 'connections')?.capabilities).not.toContain('dispatchLineWithOutput');
+    expect(commands.find((command) => command.name === 'tasks')?.match('tasks')).toBe(true);
+    expect(tabPluginCatalog.flatMap((item) => [item.command, ...(item.commandAliases ?? [])])).not.toContain('tasks');
   });
 
   it('rejects duplicate plugin ids at host construction', () => {
@@ -158,7 +169,7 @@ describe('TabPluginHost commands', () => {
 
     const outcome = await host.runCommandResult('fixture', 'fixture value', origin);
 
-    expect(outcome).toEqual({ status: 'failed', error: 'requires tab plugin API 3; host provides 2' });
+    expect(outcome).toEqual({ status: 'failed', error: `requires tab plugin API ${TAB_PLUGIN_API_VERSION + 1}; host provides ${TAB_PLUGIN_API_VERSION}` });
     expect(load).not.toHaveBeenCalled();
     expect(host.statusFor('fixture')?.state).toBe('disabled');
   });
@@ -366,6 +377,17 @@ describe('system-shell restart authorization', () => {
 });
 
 describe('TabPluginHost activation', () => {
+  it('refuses explicit API v2 before loading behavior under v3', async () => {
+    const { managers } = makeManagers();
+    const load = vi.fn(loader(activation()));
+    const host = new TabPluginHost(managers, [declaration({ apiVersion: 2 })], { fixture: load });
+
+    await host.runOpener('fixture', 'inline', '/tmp/a.fixture', origin);
+
+    expect(load).not.toHaveBeenCalled();
+    expect(host.statusFor('fixture')).toEqual({ state: 'disabled', reason: 'requires tab plugin API 2; host provides 3' });
+  });
+
   it('refuses an incompatible API before importing behavior', async () => {
     const { append, managers } = makeManagers();
     const load = vi.fn(loader(activation()));

@@ -36,7 +36,8 @@ function closeSsh(managers: Managers, id: string, out: (text: string) => void): 
   else out(`No open connection ssh:${id}.`);
 }
 
-// Every kind but `browser`, whose window close is asynchronous and runs from `ConnectionManager.run`.
+// Every kind but `browser`, whose window close is asynchronous and runs from
+// `ConnectionManager.closeTarget` through the connections plugin command.
 export function closeConnection(
   kind: Exclude<ConnectionKind, 'browser'>,
   id: string,

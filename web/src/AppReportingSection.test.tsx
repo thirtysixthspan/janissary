@@ -15,7 +15,7 @@ function tab(label: string): TabView {
   return {
     label, view: 'monitor', number: 1, dotColor: '#fff', group: 0, groupColor: '#000',
     monitor: { name: 'writer', persona: 'p', targets: [], contextBytes: 0, suggestions: [] },
-    connections: [], schedule: [], bufferLines: [], cmdHistory: [], toolStepsExpanded: false,
+    connections: [], schedule: [], bufferLines: [], cmdHistory: [],
   } as unknown as TabView;
 }
 

@@ -3,6 +3,8 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { AcpSession, AcpLoopDeps, AcpLoopHandlers } from './types.js';
+import type { Tab } from '../tab/types.js';
+import { makeTab } from '../tab/index.js';
 
 const mocks = vi.hoisted(() => ({
   connectAcp: vi.fn(),
@@ -31,7 +33,7 @@ vi.mock('../browser/command.js', () => ({
 import { AcpManager } from './manager.js';
 import { loadHarnessModels } from '../harness/models.js';
 
-const makeSession = (): AcpSession => ({ prompt: vi.fn(), kill: vi.fn() });
+const makeSession = (): AcpSession => ({ prompt: vi.fn(), kill: vi.fn(), cancel: vi.fn(async () => {}), shutdown: vi.fn(async () => {}) });
 
 const setup = () => {
   mocks.connectAcp.mockReturnValue(makeSession());
@@ -39,8 +41,10 @@ const setup = () => {
   const addBusy = vi.fn();
   const deleteBusy = vi.fn();
   const registerQuestion = vi.fn(async () => 'Production');
-  const tabs: { label: string }[] = [];
+  const tabs: Tab[] = [makeTab('tab1', '#fff')];
+  const records = { begin: vi.fn(() => 'record-id'), prompt: vi.fn(() => true), activity: vi.fn(), answer: vi.fn(), close: vi.fn() };
   const managers = {
+    acpRecords: records,
     tab: {
       tabs,
       byLabel: (label: string) => tabs.find((t) => t.label === label),
@@ -67,9 +71,7 @@ const setup = () => {
 // `promptResult` looks the tab up first, which `run` on its own does not, and the tool restriction is
 // recorded on the tab record — so the cases that need one give the stub a tab to find.
 function withTab() {
-  const base = setup();
-  (base.managers as unknown as { tab: { tabs: { label: string }[] } }).tab.tabs.push({ label: 'tab1' });
-  return base;
+  return setup();
 }
 
 describe('AcpManager.run', () => {
@@ -113,7 +115,7 @@ describe('AcpManager.run', () => {
       kind: 'approve',
       question: 'Deploy?',
       options: ['Staging', 'Production'],
-    });
+    }, expect.any(AbortSignal));
   });
 
   // A session started without tools must not be able to reach them, and the proof has to be in what
@@ -194,13 +196,20 @@ describe('AcpManager.run', () => {
     expect(onDone).toHaveBeenCalledWith({ answered: true, reply: 'the final answer', session: expect.any(String) });
   });
 
-  it('finished handler appends a capped message when reason is capped', () => {
-    const { acp, append } = setup();
-    acp.run('tab1', 'acp hello');
+  it('finished handler settles a capped answer with the notice and appends no separate entry', () => {
+    const { acp, append, deleteBusy } = setup();
+    const onDone = vi.fn();
+    acp.run('tab1', 'acp hello', onDone);
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.endTurn('partial');
     handlers.finished('capped', 5);
-    expect(append).toHaveBeenCalledWith('tab1', { input: '', output: '(stopped after 5 tool steps)' });
+    expect(deleteBusy).toHaveBeenCalledOnce();
+    expect(onDone).toHaveBeenCalledWith({
+      answered: true,
+      reply: 'partial\n\n(stopped after 5 tool steps)',
+      session: expect.any(String),
+    });
+    expect(append).not.toHaveBeenCalledWith('tab1', { input: '', output: '(stopped after 5 tool steps)' });
   });
 
   it('startTurn calls addBusy and appends the prompt on first turn', () => {
@@ -432,7 +441,7 @@ describe('AcpManager — remote tabs', () => {
       tab: { tabs: unknown[] };
       remote: { get: (label: string) => unknown };
     };
-    managers.tab.tabs.push({ label: 'tab1', remote: { address: 'devbox', host: 'devbox' } });
+    Object.assign(managers.tab.tabs[0]!, { remote: { address: 'devbox', host: 'devbox' } });
     const channel = {
       attached: options.attached ?? true,
       send: vi.fn(),
@@ -545,7 +554,7 @@ describe('AcpManager — remote tabs', () => {
 
     expect(append).toHaveBeenCalledWith('tab1', { input: '', output: 'ACP: ACP agent exited.' });
     expect(acp.has('tab1')).toBe(false);
-    expect(channel.send).toHaveBeenCalledWith({ type: 'acp-close', id: 'racp1' });
+    expect(channel.detachAcp).toHaveBeenCalledWith('racp1');
 
     acp.run('tab1', 'acp again');
     expect(channel.attachAcp).toHaveBeenCalledTimes(2);
@@ -556,7 +565,7 @@ describe('AcpManager — remote tabs', () => {
     const { acp, channel } = remoteSetup();
     acp.run('tab1', 'acp hello');
     const promptHandlers = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
-    acp.session('tab1', '/cwd', { onError: vi.fn(), onConnect: vi.fn() }).prompt('hi', promptHandlers);
+    acp.session('tab1', '/cwd', 'google/gemini-3.1-flash-lite', { onError: vi.fn(), onConnect: vi.fn() }).prompt('hi', promptHandlers);
 
     acpListener(channel).onError('rate limited', false);
 
@@ -568,7 +577,7 @@ describe('AcpManager — remote tabs', () => {
     const { acp, channel } = remoteSetup();
     acp.run('tab1', 'acp hello');
     const promptHandlers = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
-    acp.session('tab1', '/cwd', { onError: vi.fn(), onConnect: vi.fn() }).prompt('hi', promptHandlers);
+    acp.session('tab1', '/cwd', 'google/gemini-3.1-flash-lite', { onError: vi.fn(), onConnect: vi.fn() }).prompt('hi', promptHandlers);
 
     acpListener(channel).onChunk('partial ');
     acpListener(channel).onEnd('end_turn');

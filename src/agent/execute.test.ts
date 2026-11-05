@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { AcpOptions } from '../acp/types.js';
 import type { CommandInvocationContext } from '../commands/types.js';
@@ -9,6 +11,10 @@ import type { AgentSnapshot } from './types.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
 import type { AcpSessionListener } from '../remote/channel/acp.js';
 import { NotificationQueue } from '../notifications/queue.js';
+import { AcpSessionRecords } from '../acp-records/manager.js';
+import { AgentRecordFeed } from './record-feed.js';
+import type { AcpLoopDeps, AcpLoopHandlers } from '../acp/types.js';
+import * as commandTools from './command-tools.js';
 
 const { connectAcp, runAcpToolLoop, sandboxWillConfine } = vi.hoisted(() => ({
   connectAcp: vi.fn(), runAcpToolLoop: vi.fn(), sandboxWillConfine: vi.fn(() => true),
@@ -18,6 +24,74 @@ vi.mock('../acp/loop.js', () => ({ runAcpToolLoop }));
 vi.mock('../sandbox/confinement.js', () => ({ sandboxWillConfine }));
 
 const { executeAgentRun } = await import('./execute.js');
+
+describe('agent execution record capture', () => {
+  let root: string;
+  let records: AcpSessionRecords;
+  beforeEach(() => {
+    root = mkdtempSync(path.join(tmpdir(), 'execute-agent-records-'));
+    records = new AcpSessionRecords({ projectDir: root });
+    runAcpToolLoop.mockReset();
+    sandboxWillConfine.mockReturnValue(true);
+  });
+  afterEach(() => { records.dispose(); rmSync(root, { recursive: true, force: true }); vi.restoreAllMocks(); });
+
+  it.each([false, true])('captures exact task/skills/parameters, native and host activity (remote: %s)', async (remote) => {
+    const model = modelsFor('opencode')[0];
+    const caller = { label: 'janus', incarnation: 'one', cwd: root, context: [] };
+    const run = new AgentRun(caller, {
+      taskPath: 'task.md', taskText: 'Task\nverbatim ',
+      skills: [{ source: 'project', name: 'skill', path: '/skill.md', instructions: 'Skill\nverbatim ' }], grants: ['help'],
+    }, undefined, undefined, root);
+    run.record = new AgentRecordFeed(records, { model, ownerLabel: 'janus', ownerName: 'Caller', taskPath: 'task.md' }, run.id);
+    const invocation: CommandInvocationContext = { runId: run.id, invocationId: 'one', caller, signal: run.abortController.signal };
+    let options: AcpOptions | undefined;
+    connectAcp.mockImplementation((value: AcpOptions) => {
+      options = value;
+      expect(records.window(run.recordId!)?.totalBlocks).toBe(1);
+      return { prompt: vi.fn(), kill: vi.fn(), shutdown: async () => {}, cancel: async () => {} };
+    });
+    let listener: AcpSessionListener | undefined;
+    const channel = {
+      attachAcp: (_id: string, value: AcpSessionListener) => { listener = value; }, detachAcp: vi.fn(),
+      send: (frame: { type: string }) => { if (frame.type === 'acp-close') listener?.onClosed(true); },
+    } as unknown as RemoteChannel;
+    let dependencies: AcpLoopDeps | undefined;
+    let handlers: AcpLoopHandlers | undefined;
+    runAcpToolLoop.mockImplementation((session, prompt, deps, h) => {
+      dependencies = deps;
+      handlers = h;
+      session.prompt(prompt, { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() });
+    });
+    const execution = executeAgentRun(run, invocation, model, undefined, 'Parameters\nverbatim ', {} as never, remote ? { channel } : undefined);
+    expect(records.window(run.recordId!)?.blocks[0].prompt).toBe(`${commandTools.agentPrimer(run.snapshot)}\nParameters\nverbatim `);
+    if (remote) {
+      expect(runAcpToolLoop).not.toHaveBeenCalled();
+      listener!.onReady(true);
+      await vi.waitFor(() => expect(handlers).toBeDefined());
+      listener!.onActivity('thought', ' ');
+      listener!.onActivity('tool', 'native tool');
+    } else {
+      options!.onActivity?.({ sessionUpdate: 'agent_thought_chunk', content: ' ' });
+      options!.onActivity?.({ sessionUpdate: 'tool_call', content: 'native tool' });
+    }
+    vi.spyOn(commandTools, 'runGrantedAgentCommand').mockResolvedValue('host result');
+    await expect(dependencies!.runCommand('help')).resolves.toBe('host result');
+    handlers!.endTurn('Final answer');
+    handlers!.finished('answered', Infinity);
+    const result = await execution;
+    run.setStatus('Cleaning up', result.response);
+    await run.finish(result.status);
+    if (remote) listener!.onActivity('message', 'late');
+    else options!.onActivity?.({ sessionUpdate: 'agent_message_chunk', content: 'late' });
+    await expect(dependencies!.runCommand('help')).rejects.toThrow('Agent terminated.');
+    expect(records.window(run.recordId!)).toMatchObject({ status: 'Completed', blocks: [{ answer: 'Final answer', entries: [
+      { kind: 'thought', text: ' ' }, { kind: 'tool', text: 'native tool' },
+      { kind: 'tool', text: 'help' }, { kind: 'tool', text: 'host result' },
+    ] }] });
+    expect(run.view().activity).toEqual([{ id: 1, kind: 'tool', text: 'native tool' }]);
+  });
+});
 
 function notificationManagers() {
   const callerTab = { label: 'janus', view: 'harness', log: [] as { output: string }[] };

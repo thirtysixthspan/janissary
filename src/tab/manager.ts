@@ -183,9 +183,6 @@ export class TabManager extends TabTranscriptState {
 
   renameTab(index: number, title: string): string | undefined { return tabOperations.renameTab(this, index, title); }
 
-
-  toggleCollapse(label?: string): void { tabOperations.toggleCollapse(this, label); }
-
   insertTabInGroup(tab: Tab): void {
     inheritGroupNames([...this.tabs, tab]);
     tabOperations.insertTab(this, tab);

@@ -149,6 +149,7 @@ export class RemoteServer {
     case 'acp-open': { if (this.requireWorkspace()) this.acp?.open(frame); return; }
     case 'acp-prompt': { if (this.requireWorkspace()) this.acp?.prompt(frame); return; }
     case 'acp-close': { this.acp?.close(frame.id); return; }
+    case 'acp-cancel': { this.acp?.cancel(frame.id); return; }
     default: { this.refuse(`Unexpected remote frame "${frame.type}".`); }
     }
   }

@@ -6,17 +6,6 @@ import { transcriptIntents } from '../shared/transcript/transcript-intents';
 import type { PluginClientCapabilityOptions, TabPluginClientCapabilities } from './api';
 import type { AcpRef } from '@shared/protocol';
 
-let warnedAboutLaunchShellHere = false;
-
-function warnAboutLaunchShellHere(): void {
-  if (warnedAboutLaunchShellHere) return;
-  warnedAboutLaunchShellHere = true;
-  console.warn(
-    'Tab plugin client capability "launchShellHere" is deprecated; use your plugin\'s own sibling intent instead. '
-      + 'It is scheduled for removal in tab plugin API v3 after at least two host minor releases.',
-  );
-}
-
 export function createPluginClientCapabilities(
   options: PluginClientCapabilityOptions,
 ): TabPluginClientCapabilities {
@@ -47,6 +36,14 @@ export function createPluginClientCapabilities(
     openAcpTranscript: () => {
       const acpRef: AcpRef = { scope: 'tab', label };
       client.send({ method: 'openAcpTranscript', params: { acpRef } });
+    },
+    openConnection: (row) => {
+      if (row.recordId !== undefined) {
+        client.send({ method: 'openConnectionRecord', params: { tab: label, recordId: row.recordId } });
+        return;
+      }
+      if (row.acpRef?.scope !== 'tab' || row.acpRef.label !== label) return;
+      client.send({ method: 'openConnectionRecord', params: { tab: label, acpRef: row.acpRef } });
     },
     registerDirtyHandle: onDirtyHandle,
     resourceUrl,
@@ -82,10 +79,6 @@ export function createPluginClientCapabilities(
     },
     onBackgroundReply: (receive) => subscribeBackgroundReplies(client, label, receive),
     openFileNavigator: () => { client.send({ method: 'openFileNavigatorFor', params: { label } }); },
-    launchShellHere: () => {
-      warnAboutLaunchShellHere();
-      client.send({ method: 'launchShellFor', params: { label } });
-    },
     openDiffHere: () => { client.send({ method: 'openDiffFor', params: { label } }); },
     openScheduleLaunch: () => { client.send({ method: 'command', params: { text: 'schedule' } }); },
     // Each path and its opener are supplied together or not at all: a plugin drawing the recording

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
+import { TAB_PLUGIN_API_VERSION } from '../plugins/api-capabilities.js';
 import { tabPluginCatalog } from '../plugins/catalog.js';
 import type { TabPluginStatus } from '../plugins/status.js';
 import { command } from './plugins.js';
@@ -17,9 +18,9 @@ function run(status: TabPluginStatus) {
 
 describe('plugins command', () => {
   it.each([
-    [{ state: 'declared' }, 'video 1.0.0 api=2 state=declared'],
-    [{ state: 'active', activationMs: 7 }, 'video 1.0.0 api=2 state=active activation=7ms'],
-    [{ state: 'disabled', reason: 'chunk rejected' }, 'video 1.0.0 api=2 state=disabled reason=chunk rejected'],
+    [{ state: 'declared' }, `video 1.0.0 api=${TAB_PLUGIN_API_VERSION} state=declared`],
+    [{ state: 'active', activationMs: 7 }, `video 1.0.0 api=${TAB_PLUGIN_API_VERSION} state=active activation=7ms`],
+    [{ state: 'disabled', reason: 'chunk rejected' }, `video 1.0.0 api=${TAB_PLUGIN_API_VERSION} state=disabled reason=chunk rejected`],
   ] satisfies Array<[TabPluginStatus, string]>)('prints the catalog status %#', (status, expected) => {
     const fixture = run(status);
     expect(fixture.append).toHaveBeenCalledWith('janus', { input: 'plugins', output: expected });

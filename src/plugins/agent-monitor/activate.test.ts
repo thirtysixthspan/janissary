@@ -1,21 +1,19 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { createController } from '../../controller.js';
+import { createControllerTestProject } from '../../controller/test-project.js';
 import type { AgentSnapshot } from '../../agent/types.js';
 import { seedRootTab } from '../../tab/root-tab-test-fixture.js';
 
 const snapshot: AgentSnapshot = Object.freeze({ taskPath: '/task.md', taskText: 'work', skills: [], grants: [] });
 
 describe('agent monitor plugin', () => {
-  const controllers: ReturnType<typeof createController>[] = [];
+  const project = createControllerTestProject();
 
   afterEach(async () => {
-    await Promise.all(controllers.map((controller) => controller.shutdown()));
-    controllers.length = 0;
+    await project.dispose();
   });
 
   it('terminates only the local run bound to the requesting monitor tab', async () => {
-    const controller = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
-    controllers.push(controller);
+    const controller = project.create();
     const { managers } = controller;
     const caller = managers.agent.captureCaller(seedRootTab(managers.tab));
     const first = managers.agent.create({ caller, snapshot });
@@ -37,8 +35,7 @@ describe('agent monitor plugin', () => {
   });
 
   it('detaches monitoring after client failure without ending the run', async () => {
-    const controller = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
-    controllers.push(controller);
+    const controller = project.create();
     const { managers } = controller;
     const caller = managers.agent.captureCaller(seedRootTab(managers.tab));
     const run = managers.agent.create({ caller, snapshot });

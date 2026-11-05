@@ -14,7 +14,6 @@ export type TabControllerAdapter = {
   renameTab(index: number, title: string): void;
   editQueuedCommand(index: number, text: string, tab?: string): void;
   deleteQueuedCommand(index: number, tab?: string): void;
-  toggleCollapse(tab?: string): void;
   revealNotifications(): void;
   ptyInput(id: string, data: string, tab?: string): void;
   ptyResize(id: string, cols: number, rows: number, tab?: string): void;
@@ -51,7 +50,6 @@ export function createTabControllerAdapter(managers: Managers): TabControllerAda
     renameTab: (index, title) => managers.tab.renameTab(index, title),
     editQueuedCommand: (index, text, tab) => managers.tab.editQueued(tab ?? managers.tab.cur().label, index, text),
     deleteQueuedCommand: (index, tab) => managers.tab.deleteQueued(tab ?? managers.tab.cur().label, index),
-    toggleCollapse: (tab) => tab === undefined ? managers.tab.toggleCollapse() : managers.tab.toggleCollapse(tab),
     revealNotifications: () => escalateToFeed(managers),
     ptyInput: (id, data, tab) => { if (!tab || managers.pty.isRunningFor(id, [tab])) managers.pty.input(id, data); },
     ptyResize: (id, cols, rows, tab) => { if (!tab || managers.pty.isRunningFor(id, [tab])) managers.pty.resizeOne(id, cols, rows); },

@@ -3,7 +3,7 @@ export { isProgrammaticScroll, isWithinBottomFollowThreshold } from '../shared/s
 import type { TerminalColors } from '../shared/terminal/colors';
 import type { JanusClient } from '../shared/ws/ws';
 import type { PluginHost } from './host';
-import type { RemoteTargetView } from '@shared/protocol';
+import type { BackgroundReplyView, ConnectionView, RemoteTargetView } from '@shared/protocol';
 import type { RemoteSessionState } from '../shared/RemoteSessionButton';
 
 export { renderMarkdown } from '../shared/transcript/markdown';
@@ -38,7 +38,6 @@ export { spliceIntoTextarea } from '../shared/command-bar/textarea-splice';
 export { useCommandQueue } from '../shared/command-queue/useCommandQueue';
 export { CommandQueue } from '../shared/command-queue/command-queue';
 export { useAppCommandBar } from '../shared/command-bar/AppCommandBar';
-export { useAcpResponse } from '../shared/acp/AcpResponseScope';
 export type { AppCommandBar } from '../shared/command-bar/app-command-bar-scope';
 
 // The host's "double-click to rename, Enter or blur to commit, Escape to cancel" field, published on
@@ -134,6 +133,9 @@ export { usePluginChordClaims,  } from './PluginChords';
 // identical copy before this, kept in step only by comments. Additive, so `TAB_PLUGIN_API_VERSION`
 // does not move.
 export { nextListSelection } from '../shared/list-selection';
+// The relative last-activity wording, published so the sessions and connections tables read the same
+// age the same way. Additive, so `TAB_PLUGIN_API_VERSION` does not move.
+export { relativeActivity } from '../shared/relative-activity';
 export { HistoryPicker } from '../shared/command-bar/HistoryPicker';
 export { handlePickerKey } from '../shared/picker-keyboard';
 
@@ -245,19 +247,11 @@ export type TabPluginClientCapabilities = {
   // to a terminal nothing is rendering. Optional, like `registerDirtyHandle`, because a plugin with no
   // terminal behaves exactly as it did before this existed.
   attachTerminal?(ptyId: string, onData: (data: string) => void): Promise<PluginTerminal>;
-  // The two metadata-row actions that are tab-scoped RPCs rather than commands: open a file navigator
-  // rooted at this tab, and launch a shell in this tab's directory. Capabilities rather than a
-  // dispatched command line because the two are not the same thing — the shell action roots the new
-  // tab at *this* tab's cwd and joins its group, which a command run in this tab does not. Optional
-  // for the same reason as `attachTerminal`.
+  // Open a file navigator rooted at this tab through a tab-scoped RPC rather than a command.
+  // Optional for the same reason as `attachTerminal`.
   openFileNavigator?(): void;
-  /**
-   * @deprecated Use this plugin's own sibling intent instead; the shell plugin uses `intent('sibling', null)`.
-   * Scheduled for removal in tab plugin API v3 after at least two host minor releases.
-   */
-  launchShellHere?(): void;
-  // Open the diff tab on this tab's own workspace. The third of the metadata-row actions that are
-  // tab-scoped RPCs rather than commands, for the same reason as the two above: a command run in
+  // Open the diff tab on this tab's own workspace. Like the navigator action above, this is a
+  // tab-scoped RPC rather than a command: a command run in
   // this tab would diff whatever its command line resolves, not the environment this tab is working
   // in. Optional for the same reason as `attachTerminal`.
   openDiffHere?(): void;
@@ -268,7 +262,11 @@ export type TabPluginClientCapabilities = {
   // Open this plugin tab's own ACP transcript as an editor tab. The host supplies the label so a
   // plugin cannot ask to open another tab's transcript.
   openAcpTranscript?(): void;
-  onBackgroundReply?(receive: (reply: { id: string; output: string }) => void): () => void;
+  // Open or focus the connection tab behind a popup row. Bound to this plugin tab's label by the
+  // host, and only a durable `recordId` or a tab-scoped `acpRef` is sent: monitor and editor rows
+  // stay snapshot-only. Additive, so the plugin API version does not move.
+  openConnection?(row: ConnectionView): void;
+  onBackgroundReply?(receive: (reply: BackgroundReplyView) => void): () => void;
   // This tab's asciicast recording, or absent before the tab's terminal has produced any output. Its
   // presence is also what makes the recording flag pressable, so a plugin drawing that flag reads
   // this field rather than keeping its own state — the host is the only thing that knows when the

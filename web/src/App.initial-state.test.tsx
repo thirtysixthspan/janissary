@@ -34,7 +34,7 @@ describe('App mounted after the first state snapshot arrived', () => {
   const tab: TabView = {
     label: 'janus', number: 1, dotColor: '#fff', group: 0, groupColor: '#000',
     busy: false, hasUnread: false, cwd: '/tmp', connections: [], schedule: [],
-    bufferLines: [], cmdHistory: [], commandQueue: [], toolStepsExpanded: false,
+    bufferLines: [], cmdHistory: [], commandQueue: [],
     view: 'harness', harness: { name: 'zsh', program: 'zsh', ptyId: 'pty1', status: 'running' },
   };
   const snapshot: StateEvent = {

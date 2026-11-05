@@ -7,8 +7,10 @@ import { messageBus } from './bus.js';
 import type { TabView } from './protocol.js';
 import { MANAGER_DISPOSE_ORDER, type Managers } from './managers.js';
 import type { AcpRef } from './protocol.js';
+import type { OpenConnectionRecordParams } from './protocol/core-rpc.js';
 import { buildStateEvent } from './state/event.js';
 import { openTranscriptFileFor, openAcpTranscript } from './controller/transcript.js';
+import { openConnectionRecord } from './controller/connection-records.js';
 import { openRecordingFor } from './controller/recording.js';
 import { setClientLayout } from './client-layout.js';
 import { createControllerAdapters, type ControllerMembers } from './controller/create-adapters.js';
@@ -74,6 +76,7 @@ export class ControllerCore {
 
   openTranscriptFileFor(label: string): void { openTranscriptFileFor(this.managers, label); }
   openAcpTranscript(acpRef: AcpRef): void { openAcpTranscript(this.managers, acpRef); }
+  openConnectionRecord(params: OpenConnectionRecordParams): void { openConnectionRecord(this.managers, params); }
   openRecordingFor(label: string): void { openRecordingFor(this.managers, label); }
   reportLayout(layout: { sidebarLeft: number; sidebarRight: number; tabAreaPct: number; splitPct: number }): void {
     setClientLayout(layout);

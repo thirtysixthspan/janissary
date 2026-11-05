@@ -68,6 +68,7 @@ describe('shell shared contract', () => {
         kind: 'acp',
         acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' },
       },
+      { text: 'Agent: task.md', kind: 'acp', recordId: 'record-1' },
     ];
 
     for (const row of rows) {
@@ -105,6 +106,15 @@ describe('shell shared contract', () => {
 
   it('rejects a row whose kind is not one the protocol admits', () => {
     expect(isShellPayload({ ...PAYLOAD, connections: [{ text: 'x', kind: 'ftp' }] })).toBe(false);
+  });
+
+  it('rejects a record id that is not a string', () => {
+    expect(isShellPayload({ ...PAYLOAD, connections: [{ text: 'x', kind: 'acp', recordId: 7 }] })).toBe(false);
+    expect(isShellPayload({
+      ...PAYLOAD,
+      connections: [{ text: 'x', kind: 'acp', recordId: { id: 'record-1' } }],
+    })).toBe(false);
+    expect(isShellPayload({ ...PAYLOAD, connections: [{ text: 'x', kind: 'acp', recordId: null }] })).toBe(false);
   });
 
   it('rejects a payload missing any field it declares', () => {

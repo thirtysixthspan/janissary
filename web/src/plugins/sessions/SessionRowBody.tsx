@@ -1,8 +1,7 @@
 import React from 'react';
 import type { SessionRow, SessionRowAction } from '@shared/plugins/sessions/shared';
-import { ConnectionPlug } from '../api';
+import { ConnectionPlug, relativeActivity } from '../api';
 import { SessionRowActions } from './SessionRowActions';
-import { relativeActivity } from './sessions-keys';
 
 type SessionRowProperties = {
   row: SessionRow;

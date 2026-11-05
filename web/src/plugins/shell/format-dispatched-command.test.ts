@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDispatchedCommand } from './format-dispatched-command';
+import { formatDispatchedCommand, formatEchoedCommand } from './format-dispatched-command';
 
 describe('formatDispatchedCommand', () => {
   it('renders the command and reply as terminal output followed by a fresh prompt', () => {
@@ -19,5 +19,17 @@ describe('formatDispatchedCommand', () => {
   it('shows a command with no reply without submitting it', () => {
     expect(formatDispatchedCommand('close other', ''))
       .toBe('\r\u{1B}[2K\u{1B}[1m> close other\u{1B}[22m\r\n\r\n\u{1B}[1m>\u{1B}[22m ');
+  });
+
+  it('continues a reply on the cleared prompt row beneath an echo when given no line', () => {
+    expect(formatDispatchedCommand(undefined, 'first line\nsecond line'))
+      .toBe('\r\u{1B}[2Kfirst line\r\nsecond line\r\n\u{1B}[1m>\u{1B}[22m ');
+  });
+});
+
+describe('formatEchoedCommand', () => {
+  it('writes the bold command line and a fresh prompt beneath it', () => {
+    expect(formatEchoedCommand('acp summarize this'))
+      .toBe('\r\u{1B}[2K\u{1B}[1m> acp summarize this\u{1B}[22m\r\n\u{1B}[1m>\u{1B}[22m ');
   });
 });

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JanusClient } from '../shared/ws/ws';
 import { createPluginClientCapabilities, nextListSelection, spliceIntoTextarea } from './api';
+import * as clientApi from './api';
 import { nextListSelection as sharedNextListSelection } from '../shared/list-selection';
 import { spliceIntoTextarea as sharedSpliceIntoTextarea } from '../shared/command-bar/textarea-splice';
 import { createPluginHost, type PluginHost } from './host';
@@ -27,20 +28,11 @@ describe('createPluginClientCapabilities', () => {
     expect(send).toHaveBeenCalledWith({ method: 'openDiffFor', params: { label: 'shell-1' } });
   });
 
-  it('keeps deprecated launchShellHere working and warns once per runtime', () => {
-    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const { client, send } = makeClient();
+  it('omits the removed v2 client surfaces from the v3 API', () => {
+    const { client } = makeClient();
     const capabilities = createPluginClientCapabilities({ host, pluginId: 'shell', label: 'shell-1', client, active: true, dock: null, onClose: vi.fn() });
-    const secondTab = createPluginClientCapabilities({ host, pluginId: 'shell', label: 'shell-2', client, active: true, dock: null, onClose: vi.fn() });
-
-    capabilities.launchShellHere?.();
-    secondTab.launchShellHere?.();
-
-    expect(send).toHaveBeenNthCalledWith(1, { method: 'launchShellFor', params: { label: 'shell-1' } });
-    expect(send).toHaveBeenNthCalledWith(2, { method: 'launchShellFor', params: { label: 'shell-2' } });
-    expect(warning).toHaveBeenCalledOnce();
-    expect(warning).toHaveBeenCalledWith(expect.stringContaining('tab plugin API v3'));
-    warning.mockRestore();
+    expect(capabilities).not.toHaveProperty('launchShellHere');
+    expect(clientApi).not.toHaveProperty('useAcpResponse');
   });
 
   it('opens the New schedule dialog by sending the bare schedule command', () => {
@@ -57,6 +49,21 @@ describe('createPluginClientCapabilities', () => {
     expect(send).toHaveBeenCalledWith({
       method: 'openAcpTranscript',
       params: { acpRef: { scope: 'tab', label: 'launcher-2' } },
+    });
+  });
+
+  it('opens a popup row\'s connection through the tab-bound RPC', () => {
+    const { client, send } = makeClient();
+    const capabilities = createPluginClientCapabilities({ host, pluginId: 'shell', label: 'shell-1', client, active: true, dock: null, onClose: vi.fn() });
+
+    capabilities.openConnection?.({ text: 'Agent: task.md', kind: 'acp', recordId: 'record-1' });
+    capabilities.openConnection?.({ text: 'acp:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'shell-1' } });
+
+    expect(send).toHaveBeenNthCalledWith(1, {
+      method: 'openConnectionRecord', params: { tab: 'shell-1', recordId: 'record-1' },
+    });
+    expect(send).toHaveBeenNthCalledWith(2, {
+      method: 'openConnectionRecord', params: { tab: 'shell-1', acpRef: { scope: 'tab', label: 'shell-1' } },
     });
   });
 

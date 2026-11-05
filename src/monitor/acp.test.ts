@@ -22,7 +22,7 @@ function makePersona(harness: 'opencode' | 'claude', tools: string[] = []): Pers
 }
 
 function makeSession(): AcpSession {
-  return { prompt: vi.fn(), kill: vi.fn() };
+  return { prompt: vi.fn(), kill: vi.fn(), cancel: vi.fn(async () => {}), shutdown: vi.fn(async () => {}) };
 }
 
 describe('spawnMonitorSession', () => {

@@ -1226,7 +1226,7 @@ describe('FileNavigatorTab', () => {
       const tab: TabView = {
         label: 'files', number: 1, dotColor: '#5b9cff', group: 1, groupColor: '#5b9cff',
         busy: false, hasUnread: false, cwd: '/tmp', connections: [], schedule: [],
-        bufferLines: [], cmdHistory: [], commandQueue: [], toolStepsExpanded: false,
+        bufferLines: [], cmdHistory: [], commandQueue: [],
         view: 'files', dock: 'left', files: makeFiles(),
       };
       const { container } = render(

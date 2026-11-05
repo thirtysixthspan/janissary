@@ -115,13 +115,6 @@ export function renameTab(port: TabOperationsPort, index: number, title: string)
   return refusal;
 }
 
-export function toggleCollapse(port: TabOperationsPort, label?: string): void {
-  const tab = label === undefined ? port.tabs[port.activeTab] : port.tabs.find((entry) => entry.label === label);
-  if (!tab) return;
-  tab.toolStepsExpanded = !tab.toolStepsExpanded;
-  messageBus.emit('state', { type: 'dirty' });
-}
-
 export function insertTab(port: TabOperationsPort, tab: Tab): void {
   if (isCenterActionTab(tab)) tab.pane = focusedPane(port.tabs, port.activeTab) === 'right' ? 'right' : undefined;
   port.tabs = insertTabInGroup(port.tabs, tab);

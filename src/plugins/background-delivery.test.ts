@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { TabPluginRejection, type TabPluginActivation, type TabPluginServerCapabilities } from './api.js';
+import { TAB_PLUGIN_API_VERSION, TabPluginRejection, type TabPluginActivation, type TabPluginServerCapabilities } from './api.js';
 import type { PluginCallOutcome } from './invoke.js';
 import type { PluginRecord } from './status.js';
 import { BACKGROUND_ORIGIN, deliverBackground, type BackgroundDeliveryPort } from './background-delivery.js';
@@ -8,7 +8,7 @@ function recordWith(activation: TabPluginActivation | undefined): PluginRecord {
   return {
     state: 'active',
     declaration: {
-      id: 'fixture', version: '1.0.0', apiVersion: 2, payloadSchemaVersion: 1,
+      id: 'fixture', version: '1.0.0', apiVersion: TAB_PLUGIN_API_VERSION, payloadSchemaVersion: 1,
       tabLabelPrefix: 'fixture', fileExtensions: {},
     },
     ...(activation && { activation }),

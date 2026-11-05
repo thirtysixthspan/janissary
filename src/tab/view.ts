@@ -1,6 +1,5 @@
 import { queueProjection } from '../command-queue/support.js';
 import type { Tab } from './types.js';
-import { acpResponseFor } from '../acp/response.js';
 import type { ConnectionView, PendingQuestionView, ScheduleView, TabView } from '../protocol.js';
 import type { Managers } from '../managers.js';
 import type { TabPluginDeclaration } from '../plugins/api.js';
@@ -10,6 +9,7 @@ import { remoteFileNavigatorRoot } from './remote-file-navigator-root.js';
 import { remoteFileNavigatorTarget } from './remote-file-navigator-view.js';
 import { tabGroupName } from './groups.js';
 import { queueEntryLine } from '../command-queue/entry.js';
+import { backgroundRepliesFor } from './background-replies.js';
 
 export function buildTabViews(
   tabs: Tab[],
@@ -96,7 +96,7 @@ export function buildTabView(
     label: tab.label,
     ...(tab.hidden && { hidden: true }),
     ...(tab.systemShell && { systemShell: true }),
-    backgroundReplies: tab.log.flatMap((entry) => entry.background && !entry.running ? [{ id: entry.background, output: entry.output }] : []),
+    backgroundReplies: backgroundRepliesFor(tab),
     number: tab.number,
     dotColor: tab.dotColor,
     group: tab.group,
@@ -128,14 +128,12 @@ export function buildTabView(
       ...(remoteProvisioning && { provisioning: true }),
     },
     acp,
-    acpResponse: acpResponseFor(tab),
     connections,
     schedule,
-    bufferLines: flattenBuffer(tab.log, !tab.toolStepsExpanded)
+    bufferLines: flattenBuffer(tab.log)
       .map((l) => (l.cwd ? { ...l, cwd: shorten(l.cwd) } : l)),
     cmdHistory: tab.cmdHistory,
     ...queue,
-    toolStepsExpanded: !!tab.toolStepsExpanded,
     pendingQuestion,
     view: tab.view,
     title: tab.title,

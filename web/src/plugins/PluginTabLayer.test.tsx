@@ -31,7 +31,7 @@ function tab(id = 'fixture', schemaVersion = 1, label = id): TabView {
   return {
     label, number: 1, dotColor: '#123', group: 1, groupColor: '#fff', busy: false,
     hasUnread: false, cwd: '/', connections: [], schedule: [], bufferLines: [], cmdHistory: [],
-    commandQueue: [], toolStepsExpanded: false, view: 'plugin',
+    commandQueue: [], view: 'plugin',
     plugin: { id, schemaVersion, payload: { valid: true } },
   };
 }

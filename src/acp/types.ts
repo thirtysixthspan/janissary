@@ -9,6 +9,7 @@ export type PromptHandlers = {
 export type AcpSession = {
   // Send a prompt and stream the agent's text reply through `handlers`.
   prompt: (text: string, handlers: PromptHandlers) => void;
+  cancel: () => Promise<void>;
   kill: () => void;
   shutdown: () => Promise<void>;
 };

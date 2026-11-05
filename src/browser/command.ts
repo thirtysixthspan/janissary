@@ -1,6 +1,6 @@
 // Parser for the `browser` command plus the helpers the ACP tool loop needs
-// (`isBrowserCommandLine` / `BROWSER_PRIMER`), mirroring `parseConnectionCommand`
-// (src/connection/parsing.ts) and `parseDatabaseCommand` in src/database/parsing.ts. Pure — no I/O.
+// (`isBrowserCommandLine` / `BROWSER_PRIMER`), mirroring `parseConnectionsCommand`
+// (src/plugins/connections/parse.ts) and `parseDatabaseCommand` in src/database/parsing.ts. Pure — no I/O.
 // The host (src/browser/index.ts) performs the actual Playwright actions against the tab's browser.
 
 import { findLastCommandLine } from '../acp/command-line.js';

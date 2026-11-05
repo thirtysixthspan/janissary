@@ -28,6 +28,8 @@ export type ShellAcpRef =
 export type ShellConnectionRow = {
   text: string;
   kind: ShellConnectionKind;
+  // The durable ACP or agent record the popup's row opens, mirroring `ConnectionView.recordId`.
+  recordId?: string;
   acpRef?: ShellAcpRef;
 };
 
@@ -135,6 +137,7 @@ function isConnectionRow(value: unknown): value is ShellConnectionRow {
   if (!isRecord(value)) return false;
   if (typeof value.text !== 'string') return false;
   if (typeof value.kind !== 'string' || !CONNECTION_KINDS.has(value.kind)) return false;
+  if (value.recordId !== undefined && typeof value.recordId !== 'string') return false;
   return value.acpRef === undefined || isAcpRef(value.acpRef);
 }
 

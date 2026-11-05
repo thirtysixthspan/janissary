@@ -1,10 +1,8 @@
 # Markdown Rendering
 
-ACP agent replies are written in Markdown and rendered as formatted Markdown in the core response panel
-(headings, lists, tables, fenced code, blockquotes, links). Every other transcript line — shell
-output, command echoes, background monitor replies — stays plain text; only entries explicitly flagged as
-Markdown are interpreted. Tab ACP orchestration lives in `src/acp/manager.ts`, the buffer model in
-`src/tab/types.ts` and `src/tab/formatting.ts`, and the shared rendering in `web/src/shared/transcript/Transcript.tsx`. The core panel projects ACP entries from the same log without copying their text. See [[acp]].
+ACP agent replies are written in Markdown and rendered as formatted Markdown in settled shell replies and connection-tab answers (headings, lists, tables, fenced code, blockquotes, links). Shell ACP output has no separate streaming response panel. Ordinary shell output and command echoes stay plain text; only transcript entries explicitly flagged as Markdown are interpreted. Completed shell background replies, including monitor replies, use the shell's Markdown reply renderer. Core transcript tagging and immutable entry identity remain intact. See [[acp]] and [[shell-tab]].
+
+ACP transcript snapshots instead open as plain-text `.txt` captures in an editor tab. Markdown markup and link targets remain literal text, not formatted Markdown or clickable links. These captures are separate from the retained shared transcript renderer described below.
 
 ### Requesting Markdown
 
@@ -30,7 +28,7 @@ still renders above it as usual.
 
 ### Client rendering
 
-The web client renders a `markdown` buffer line by:
+The web client's shared transcript renderer renders a `markdown` buffer line by:
 
 1. **Parsing** the Markdown to HTML with `marked` (GFM enabled — tables, fenced code, task lists;
    single newlines become line breaks).
@@ -45,19 +43,15 @@ accent-colored links, with the per-line `pre-wrap` overridden so block elements 
 
 ### Streaming
 
-The reply streams into its running entry as the agent produces it; the client re-parses and
-re-renders the (possibly partial) Markdown on each update, so formatting appears progressively.
-`marked` tolerates incomplete Markdown, so a half-finished table or code fence renders without error
-and resolves once the turn completes. While the turn is in flight the tab's busy dot blinks (see
-Tabs → Busy indicator).
+The reply streams verbatim into its running transcript entry as the agent produces it. Live activity is visible in the connection tab, while the shell renders its one Markdown answer only on settlement. Transcript snapshots preserve the text present when opened. The shared renderer tolerates incomplete Markdown without executing active markup. While the turn is in flight the tab's busy dot blinks (see Tabs → Busy indicator).
 
 ### Scope
 
 ACP replies and the `help` command output are flagged `markdown`; shell output, `db`/`browser` 
 command results, and messages are plain text and are never passed through the Markdown pipeline. 
-Auto-run agent **tool steps** (the collapsed `acp` entries) are command/result pairs, also rendered 
+Auto-run agent **tool steps** (`acp` entries) are command/result pairs, also rendered
 as plain text — only the agent's prose turns and `help` are Markdown.
 
 ### File:line links
 
-Patterns that look like `filepath:line` or `filepath:line:col` (e.g. `src/foo.ts:42`, `tests/test.py:10:5`) in any transcript output — plain text or Markdown — are detected and rendered as clickable links. The detection requires a path separator (`/` or `\`) in the text before the colon, so bare `word:42` patterns are not matched. Clicking a file:line link opens the file in an editor tab, same as typing `edit <filepath>:<line>`, with the cursor placed on the target line and scrolled to the middle of the tab (see Editor Tab → Scrolling). Turns compiler errors, linter output, grep results, and other tool output into directly navigable source links with no extra commands.
+Patterns that look like `filepath:line` or `filepath:line:col` (e.g. `src/foo.ts:42`, `tests/test.py:10:5`) in output shown by the shared transcript renderer, whether plain text or Markdown, are detected and rendered as clickable links. The detection requires a path separator (`/` or `\`) in the text before the colon, so bare `word:42` patterns are not matched. Clicking a file:line link opens the file in an editor tab, same as typing `edit <filepath>:<line>`, with the cursor placed on the target line and scrolled to the middle of the tab (see Editor Tab → Scrolling). Turns compiler errors, linter output, grep results, and other tool output into directly navigable source links with no extra commands.

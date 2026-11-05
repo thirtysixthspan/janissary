@@ -30,7 +30,6 @@ export const CORE_PARAMS: Record<CoreRpcCall['method'], ParamsDecoder> = {
   moveTabToOtherPane: (p) => isInteger(p.index),
   reorderTab: (p) => isOneOf(p.dir, DIRECTIONS),
   reorderTabTo: (p) => isInteger(p.from) && isInteger(p.to),
-  toggleCollapse: (p) => p.tab === undefined || isString(p.tab),
   resetAcp: (p) => isString(p.tab),
   closeHarnessLaunch: noParams,
   answerQuestion: (p) => isString(p.tab) && isString(p.id) && (p.answer === null || isString(p.answer)),
@@ -54,6 +53,13 @@ export const CORE_PARAMS: Record<CoreRpcCall['method'], ParamsDecoder> = {
   openTranscriptFileFor: (p) => isString(p.label),
   openRecordingFor: (p) => isString(p.label),
   openAcpTranscript: (p) => isAcpRef(p.acpRef),
+  // Exactly one target, and a tab-scoped reference must name the popup-owning tab itself. Monitor
+  // and editor scopes are snapshot-only and never reach the record opener.
+  openConnectionRecord: (p) => isString(p.tab) && (
+    (isString(p.recordId) && p.acpRef === undefined)
+    || (p.recordId === undefined && isRecord(p.acpRef) && p.acpRef.scope === 'tab'
+      && isString(p.acpRef.label) && p.acpRef.label === p.tab)
+  ),
   projectFiles: noParams,
   revealNotifications: noParams,
 };

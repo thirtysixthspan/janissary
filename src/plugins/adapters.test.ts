@@ -129,6 +129,15 @@ describe('tab plugin web claim', () => {
 });
 
 describe('tab plugin command adapter', () => {
+  it('routes both connections command claims through the adapter without claiming tasks', () => {
+    const plugin = createPluginCommands([
+      manifest('connections', { command: 'connections', commandAliases: ['connection'] }),
+    ], coreCommands());
+    expect(plugin.map((command) => command.name)).toEqual(['connections', 'connection']);
+    expect(plugin.map((command) => command.match(command.name))).toEqual([true, true]);
+    expect(plugin.some((command) => command.name === 'tasks')).toBe(false);
+  });
+
   it('refuses every production reserved name without contributing a command', () => {
     // A name is reserved when a built-in actually answers to that bare name. The transcript search
     // is registered as `search` but matches only `search transcript <pattern>`, so it does not
@@ -207,8 +216,9 @@ describe('tab plugin command adapter', () => {
     expect(command.match('fixture-extra path')).toBe(false);
   });
 
-  it('does not register the frozen fixture in production', () => {
+  it('does not register either frozen fixture in production', () => {
     expect(commands.map((command) => command.name)).not.toContain('fixture-v1');
+    expect(commands.map((command) => command.name)).not.toContain('fixture-v2');
   });
 
   // `command` is optional. A plugin that only claims extensions contributes an opener and nothing

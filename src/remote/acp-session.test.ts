@@ -63,6 +63,7 @@ describe('createRemoteAcpSession — opening', () => {
       onError: vi.fn(), onConnect: vi.fn(), onActivity,
     });
     fake.listeners.get('racp1')?.onReady(false);
+    session.prompt('hi', { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() });
     fake.listeners.get('racp1')?.onActivity('thought', 'planning');
 
     await expect(session.ready).resolves.toBe(false);
@@ -121,6 +122,55 @@ describe('createRemoteAcpSession — opening', () => {
 });
 
 describe('createRemoteAcpSession — prompting', () => {
+  it('retains cancelled routing until the old terminal frame, then allows reuse', async () => {
+    const s = makeSession();
+    s.session.prompt('held', s.handlers);
+    const cancellation = s.session.cancel();
+    expect(s.session.cancel()).toBe(cancellation);
+    expect(s.sent.at(-1)).toEqual({ type: 'acp-cancel', id: 'racp1' });
+    const overlap = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
+    s.session.prompt('overlap', overlap);
+    expect(overlap.onError).toHaveBeenCalledWith('ACP: a prompt is already running.');
+    s.listener().onChunk('final');
+    s.listener().onEnd('cancelled');
+    await cancellation;
+    expect(s.handlers.onChunk).toHaveBeenCalledWith('final');
+    expect(s.handlers.onEnd).toHaveBeenCalledExactlyOnceWith('cancelled');
+    s.session.prompt('next', overlap);
+    s.listener().onChunk('new');
+    expect(overlap.onChunk).toHaveBeenCalledWith('new');
+  });
+
+  it('sends an idle addressed cancel without waiting for a nonexistent end', async () => {
+    const s = makeSession();
+    await s.session.cancel();
+    expect(s.sent.at(-1)).toEqual({ type: 'acp-cancel', id: 'racp1' });
+  });
+
+  it.each(['fatal', 'lost', 'kill'])('releases cancel and readiness waiters on %s', async (reason) => {
+    const s = makeSession();
+    s.session.prompt('held', s.handlers);
+    const pending = s.session.cancel();
+    const listener = s.listener();
+    if (reason === 'fatal') listener.onError('gone', true);
+    else if (reason === 'lost') listener.onTransportLost?.();
+    else s.session.kill();
+    await pending;
+    await expect(s.session.ready).rejects.toThrow();
+    listener.onChunk('late');
+    expect(s.handlers.onChunk).not.toHaveBeenCalled();
+    if (reason === 'kill') listener.onClosed(true);
+  });
+
+  it('clears a nonfatal terminal before a handler starts its successor', () => {
+    const s = makeSession();
+    const next = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
+    s.handlers.onError.mockImplementation(() => { s.session.prompt('next', next); });
+    s.session.prompt('first', s.handlers);
+    s.listener().onError('rate limit', false);
+    s.listener().onChunk('new');
+    expect(next.onChunk).toHaveBeenCalledWith('new');
+  });
   it('sends the prompt frame and routes chunks and the stop reason to its handlers', () => {
     const s = makeSession();
 
@@ -158,6 +208,22 @@ describe('createRemoteAcpSession — prompting', () => {
 // The split the design rests on: killing a session over a rate limit would throw away the whole
 // accumulated conversation, and keeping a dead one means the next prompt writes into a corpse.
 describe('createRemoteAcpSession — errors', () => {
+  it.each([false, true])('fails a cancellation write without stranding an active turn (active: %s)', async (active) => {
+    const s = makeSession();
+    if (active) s.session.prompt('held', s.handlers);
+    s.channel.send = () => { throw new Error('write failed'); };
+    await expect(s.session.cancel()).rejects.toThrow('ACP: cancellation failed: write failed');
+    await expect(s.session.ready).rejects.toThrow('write failed');
+    expect(s.onError).toHaveBeenCalledExactlyOnceWith('ACP: cancellation failed: write failed');
+    expect(s.detached).toEqual(['racp1']);
+  });
+
+  it('settles release immediately when its close frame cannot be written', async () => {
+    const s = makeSession();
+    s.channel.send = () => { throw new Error('write failed'); };
+    await expect(s.session.release()).resolves.toBe(false);
+    expect(s.detached).toEqual(['racp1']);
+  });
   it('sends a non-fatal error to the running prompt only', () => {
     const s = makeSession();
     s.session.prompt('hi', s.handlers);
@@ -191,9 +257,10 @@ describe('createRemoteAcpSession — errors', () => {
   it('clears the in-flight prompt after a fatal error, so a late chunk reaches nothing', () => {
     const s = makeSession();
     s.session.prompt('hi', s.handlers);
-    s.listener().onError('ACP agent exited.', true);
+    const listener = s.listener();
+    listener.onError('ACP agent exited.', true);
 
-    s.listener().onChunk('too late');
+    listener.onChunk('too late');
 
     expect(s.handlers.onChunk).not.toHaveBeenCalled();
   });

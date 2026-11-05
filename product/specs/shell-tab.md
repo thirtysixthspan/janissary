@@ -105,7 +105,7 @@ The shell opts into the core [[command-queue]]. Its bar queues while zsh is busy
 
 An application command that answers with text rather than opening something — `help`, for one — is
 shown in the terminal as a command line, followed by its reply on the next line. The reply is markdown, as
-it is in the ACP response panel, and is rendered for the terminal rather than shown as raw markup:
+it is in connection-tab answers, and is rendered for the terminal rather than shown as raw markup:
 headings and bold text are bold, the top heading underlined, italic and struck-through text keep
 their styles, inline and fenced code is colored and code blocks are indented, list items get bullets
 or numbers, quotes get a bar, links show their target after the text, and tables are lined up in
@@ -119,7 +119,7 @@ The reply waits for the command for at most 30 seconds. A command still running 
 it had produced so far, and keeps running.
 
 When the terminal is in its normal buffer and can measure the reply, it is rendered as HTML — the same
-markdown rendering the ACP response panel uses, in the terminal's theme colors — in a block placed
+Markdown rendering used by transcripts and connection answers, in the terminal's theme colors — in a block placed
 in the terminal's scrollback directly under the echoed command and followed by zsh's prompt. Its
 rendered content fits the block without an internal scrollbar, and the reply scrolls with the
 terminal without adding an application-window scrollbar. The decoration stays inside the terminal
@@ -140,7 +140,7 @@ clears whichever is held, and a double-click or a resize of the terminal clears 
 right-click keeps it. When a full-screen program holds the terminal, or the reply cannot be
 measured or placed, it falls back to the styled terminal text described above.
 
-A link in a reply rendered as HTML opens the way the same link opens from the ACP response panel: a
+A link in a reply rendered as HTML opens the way the same link opens from a transcript: a
 web address opens through `open`, and a `path:line` reference opens in an editor tab. A click on any
 link in the block never navigates the application window, so a link the application does not open
 does nothing.
@@ -291,6 +291,12 @@ connections and schedule windows auto-show for five seconds whenever the tab bec
 fade over 300 ms unless pinned or hovered. If an empty window gains its first row after that interval,
 it auto-shows again; a window with no rows stays hidden.
 Both popups begin below the metadata row, which remains visible.
+
+A row in the connections window that names a durable ACP record, including a running agent run
+started from this shell, opens or focuses that record's connection tab when clicked or pressed with
+Enter or Space. A row carrying this shell's own live ACP reference opens the current session's
+connection tab the same way. A monitor row stays a plain row. The shell's panels offer no transcript
+snapshot button, and opening a row never opens a snapshot.
 
 A shell tab can hold scheduled commands (see [[scheduling]]): `schedule` from its own command bar, or
 `schedule … in <shell tab>` from another tab, attaches the entry to it, and the "New schedule" dialog
@@ -583,4 +589,8 @@ See also [[tab-plugins]], [[shell]], [[agents]], and [[tabs]].
 
 ## Core ACP connections
 
-The shell requests the core ACP start, prompt, and reset capabilities. `acp <prompt>` streams Markdown and tool steps in the core response panel above the bar, rather than duplicating them in zsh. The panel's Reset ACP control works while the bar is awaiting a response. It and the tool-step controls target this shell even when docked. A selected docked shell also shows its pending core question. Protocol, model selection, session reuse, local sandboxing, remote workspaces, and tool-loop rules live in [[acp]].
+The shell requests the core ACP start, prompt, and reset capabilities. It has no response panel, streaming status, or Reset ACP button. Live activity, thinking, and tool steps belong to the connection tab; the shell shows the settled Markdown answer. A selected docked shell on either side shows its pending core question even before any ACP response, including questions typed directly in its command bar. Hidden docked shells show no question until selected again; centre questions remain app-owned and appear once. Protocol, model selection, session reuse, local sandboxing, remote workspaces, and tool-loop rules live in [[acp]].
+
+The command bar does not wait for the prompt. The exact typed `acp <prompt>` line is echoed into the terminal as soon as the application accepts it, with a fresh prompt beneath it. While it runs, ordinary shell and application commands keep working. When it settles, one Markdown reply is written. If nothing else has reached the terminal since the echo, the reply goes directly beneath it, on the prompt row the echo left, without repeating the line. If anything else was written in between (shell output, another command's reply, another echo, or a redraw such as zsh's prompt after a resize), the reply is written at the current bottom of the shell output beneath a second echo of the same line, so it still reads correctly. A reply that reaches the tab before the application's answer to the line itself is written beneath its own echo, and no later echo follows it. Every write to the terminal counts as something in between, including output the terminal has received but not yet drawn. The reply is written once for an answer, a refusal, a usage or error line, a reset or close, or a cancellation; cancellation's reply reads `ACP: prompt cancelled.` and reset or close settles it as `ACP session closed.`. A second `acp` prompt while one is running is refused with `ACP: a prompt is already running.` and leaves the running prompt alone; nothing queues. A settled reply never writes a second ordinary command reply.
+
+`acp reset` is echoed and placed the same way and reports once beneath its own exact typed line: `ACP session reset — next acp prompt will start fresh.`, or `No active ACP session to reset.`. Reset during a prompt preserves both the prompt's one closed reply and the reset's separate one confirmation. **Close session** in the connection tab and `connections close acp:<name>` remain available; neither requires a shell response panel.

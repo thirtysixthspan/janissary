@@ -8,7 +8,7 @@ import { useEditorConnections } from './useEditorConnections';
 function makeTab(overrides: Partial<TabView> = {}): TabView {
   return {
     label: 'notes', number: 1, dotColor: '#fff', group: 1, groupColor: '#fff', busy: false, hasUnread: false,
-    cwd: '/repo', connections: [], schedule: [], bufferLines: [], cmdHistory: [], commandQueue: [], toolStepsExpanded: false,
+    cwd: '/repo', connections: [], schedule: [], bufferLines: [], cmdHistory: [], commandQueue: [],
     view: 'editor', editor: { name: 'notes.txt', path: '/repo/notes.txt', size: '1 B', url: '/open/1' },
     ...overrides,
   };
@@ -43,7 +43,10 @@ describe('useEditorConnections', () => {
     const tab = makeTab();
     const { result } = renderHook(() => useEditorConnections(client, tab));
 
-    result.current.closeRow({ text: 'reviewer (acp)', kind: 'acp' });
+    result.current.closeRow({
+      text: 'reviewer (acp)', kind: 'acp',
+      acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' },
+    });
 
     expect(client.send).toHaveBeenCalledWith({
       method: 'closeEditorConnection',
@@ -59,7 +62,10 @@ describe('useEditorConnections', () => {
     expect(editor).toBeDefined();
     const { result } = renderHook(() => useEditorConnections(client, withoutEditor as TabView));
 
-    result.current.closeRow({ text: 'reviewer (acp)', kind: 'acp' });
+    result.current.closeRow({
+      text: 'reviewer (acp)', kind: 'acp',
+      acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' },
+    });
 
     expect(client.send).not.toHaveBeenCalled();
   });
@@ -68,12 +74,28 @@ describe('useEditorConnections', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { result } = renderHook(() => useEditorConnections(client, makeTab()));
 
-    result.current.closeRow({ text: 'reviewer', kind: 'shell' });
+    result.current.closeRow({
+      text: 'reviewer', kind: 'shell',
+      acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' },
+    });
 
     expect(client.send).toHaveBeenCalledWith({
       method: 'closeEditorConnection',
       params: { url: '/open/1', persona: 'reviewer' },
     });
+  });
+
+  it.each([
+    ['a record-id agent row', { text: 'Agent: task.md', kind: 'acp' as const, recordId: 'record-1' }],
+    ['a monitor-scoped row', { text: 'watch (acp)', kind: 'acp' as const, acpRef: { scope: 'monitor' as const, name: 'watch' } }],
+    ['a tab-scoped row', { text: 'acp:opencode', kind: 'acp' as const, acpRef: { scope: 'tab' as const, label: 'notes' } }],
+  ])('closeRow refuses %s instead of sending a persona close', (_case, row) => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { result } = renderHook(() => useEditorConnections(client, makeTab()));
+
+    result.current.closeRow(row);
+
+    expect(client.send).not.toHaveBeenCalled();
   });
 
   it('openAcpTranscript addresses the agent connection by its own reference', () => {
@@ -86,5 +108,33 @@ describe('useEditorConnections', () => {
       method: 'openAcpTranscript',
       params: { acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' } },
     });
+  });
+
+  it('openRow sends a durable record id and this tab\'s own tab-scoped ACP reference', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { result } = renderHook(() => useEditorConnections(client, makeTab()));
+
+    result.current.openRow({ text: 'Agent: task.md', kind: 'acp', recordId: 'record-1' });
+    result.current.openRow({ text: 'acp:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'notes' } });
+
+    expect(client.send).toHaveBeenNthCalledWith(1, {
+      method: 'openConnectionRecord', params: { tab: 'notes', recordId: 'record-1' },
+    });
+    expect(client.send).toHaveBeenNthCalledWith(2, {
+      method: 'openConnectionRecord', params: { tab: 'notes', acpRef: { scope: 'tab', label: 'notes' } },
+    });
+  });
+
+  it.each([
+    ['monitor', { scope: 'monitor' as const, name: 'watch' }],
+    ['editor', { scope: 'editor' as const, label: 'notes', persona: 'reviewer' }],
+    ['another tab', { scope: 'tab' as const, label: 'other' }],
+  ])('openRow leaves a %s reference snapshot-only', (_case, acpRef) => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { result } = renderHook(() => useEditorConnections(client, makeTab()));
+
+    result.current.openRow({ text: 'row', kind: 'acp', acpRef });
+
+    expect(client.send).not.toHaveBeenCalled();
   });
 });

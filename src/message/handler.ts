@@ -34,7 +34,6 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'moveTabToOtherPane':
     case 'reorderTab':
     case 'reorderTabTo':
-    case 'toggleCollapse':
     case 'resetAcp':
     case 'revealNotifications':
     case 'setDock':
@@ -43,7 +42,8 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'openDiffFor':
     case 'openTranscriptFileFor':
     case 'openRecordingFor':
-    case 'openAcpTranscript': {
+    case 'openAcpTranscript':
+    case 'openConnectionRecord': {
       return dispatchTabMessage(controller, message);
     }
     case 'closeHarnessLaunch': { controller.closeHarnessLaunch(); break;

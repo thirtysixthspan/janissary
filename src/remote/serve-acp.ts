@@ -4,6 +4,7 @@ import type { AcpSession } from '../acp/types.js';
 import type { ProjectTokens } from '../project/tokens.js';
 import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 import { sandboxWillConfine } from '../sandbox/confinement.js';
+import { errorText } from '../error-text.js';
 
 const ACP_SHUTDOWN_TIMEOUT_MS = 5000;
 
@@ -109,6 +110,16 @@ export class RemoteAcp {
       this.settle(id, record, released);
     }
     this.send({ type: 'acp-closed', id, released });
+  }
+
+  cancel(id: string): void {
+    const record = this.records.get(id);
+    if (record?.state !== 'live') return;
+    void record.session.cancel().catch((error: unknown) => {
+      if (this.records.get(id) === record) {
+        this.send({ type: 'acp-error', id, message: `ACP: cancellation failed: ${errorText(error)}`, fatal: true });
+      }
+    });
   }
 
   detachRuns(): void {

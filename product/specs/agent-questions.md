@@ -18,6 +18,8 @@ A pending question appears in a panel on its owning tab. The panel identifies th
 
 The panel is non-modal. It does not trap global keyboard or pointer input, and the human can switch tabs or use unrelated controls while it remains pending. The panel is shown when its owning tab is active and remains associated with that tab across tab switches.
 
+For centre tabs, only the current tab's question appears, once in the app-owned panel. For docked plugin tabs on either side, the selected active body shows its own question even before any ACP response exists, with no terminal, command bar, or plugin hook required. Switching sidebar entries hides the old body's question; selecting it again restores a still-pending question. Resolved questions disappear. Answers and Cancel always use the question's own tab and id, not the current centre tab.
+
 ### Keyboard focus and navigation
 
 When an approval panel opens, keyboard focus starts on **Cancel**. When a free-text panel opens, keyboard focus starts on the text field. Tab moves focus forward between the panel's buttons (each approval option, or Submit, plus Cancel), wrapping from the last button back to the first instead of leaving the panel; Shift+Tab moves backward the same way, wrapping from the first to the last. Shift+Tab from a free-text panel's text field moves to Cancel, the last button, rather than leaving the panel. The left and right arrow keys move between the same buttons in the same directions as Shift+Tab and Tab, respectively.

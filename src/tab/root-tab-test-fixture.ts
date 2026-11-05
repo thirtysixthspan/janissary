@@ -9,7 +9,6 @@ import { tabRuntime } from './runtime.js';
 // active, in the launch directory, the first palette colour, group 1.
 export function seedRootTab(manager: TabManager): Tab {
   const tab = makeTab('janus', distinctColor([]));
-  tab.toolStepsExpanded = false;
   manager.tabs = [tab, ...manager.tabs];
   manager.activeTab = 0;
   tabRuntime(tab).cwd = manager.launchDir;

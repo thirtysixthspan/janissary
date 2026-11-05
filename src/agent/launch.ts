@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { messageBus } from '../bus.js';
 import type { CommandInvocationContext, CommandManagers } from '../commands/types.js';
 import { resolveAgentSnapshot } from './task-resolution.js';
 import { janissaryRoot } from '../janissary-root.js';
@@ -29,6 +30,7 @@ async function finishRunAfterError(
 ): Promise<AgentResult> {
   if (!run) return agentFailure(error);
   const outcome = run.abortController.signal.aborted ? 'terminated' : 'failed';
+  if (!run.outcome) run.setStatus('Cleaning up', agentFailure(error).response);
   const cleanupWarnings = await settleAgentRun(run, outcome, managers);
   const result = run.outcome === 'terminated' ? terminatedResult() : agentFailure(error);
   return cleanupWarnings.length > 0 ? { ...result, cleanupWarnings } : result;
@@ -56,6 +58,7 @@ async function openRunMonitor(
     openAgentMonitorTab(run.id, run.snapshot.taskPath, label, group, managers);
     return undefined;
   } catch (error) {
+    if (!run.outcome) run.setStatus('Cleaning up', agentFailure(error).response);
     const cleanupWarnings = await settleAgentRun(run, 'failed', managers);
     const result = agentFailure(error);
     return { ...result, cleanupWarnings: [...result.cleanupWarnings, ...cleanupWarnings] };
@@ -71,7 +74,7 @@ async function executeAgentRunSafely(
   offline: boolean | undefined,
 ): Promise<AgentResult> {
   try {
-    return await executeAgentRun(run, invocation, launch.model, launch.effort, launch.parameters, managers,
+    return await executeAgentRun(run, invocation, run.view().model, launch.effort, launch.parameters, managers,
       remoteTarget ? { channel: remoteTarget.channel, offline } : undefined);
   } catch (error) {
     return agentFailure(error);
@@ -99,6 +102,7 @@ export async function launchAgent(
     const target = resolveAgentLaunchTarget(managers, launch, label, caller.caller.cwd, caller.signal);
     const capturedCaller = {
       ...caller.caller,
+      ownerName: managers.tab.byLabel(label)?.title ?? label,
       incarnation: caller.caller.incarnation ?? randomUUID(),
     };
     let snapshot: AgentSnapshot;
@@ -126,7 +130,7 @@ export async function launchAgent(
       snapshot = await remoteTarget.channel.resolveAgentSnapshot(launch.task, [...launch.skills]);
     } else {
       const local = await startLocalAgentRun(
-        managers, capturedCaller, commandText, launch.model, launch.effort, target.workspaceName,
+        managers, capturedCaller, commandText, launch.task, launch.model, launch.effort, target.workspaceName,
       );
       run = local.run;
       abortRun = linkRunToCaller(run, parent, caller.signal, managers, completion.promise);
@@ -143,6 +147,7 @@ export async function launchAgent(
     if (!run) throw new Error('Agent run was not created.');
     if (parent) snapshot = applyNestedAgentPolicy(snapshot, parent.snapshot);
     run.setSnapshot(snapshot);
+    messageBus.emit('state', { type: 'dirty' });
     const activeRun = run;
     const monitorFailure = await openRunMonitor(activeRun, launch, label, selectedGroup, managers);
     if (monitorFailure) return monitorFailure;

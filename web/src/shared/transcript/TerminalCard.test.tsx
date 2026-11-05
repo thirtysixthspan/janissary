@@ -92,7 +92,7 @@ describe('TerminalCard', () => {
     expect(mockedUseXterm.mock.calls[0][0].exited).toBe(true);
   });
 
-  it('passes a keyFilter that blocks shift+ctrl and allows plain keys', () => {
+  it('passes a keyFilter that lets Ctrl+T through and blocks shift/ctrl chords', () => {
     mockedUseXterm.mockClear();
     render(<TerminalCard entry={{ ptyId: 'p1', program: 'test', status: 'running', exitCode: undefined }} actions={fakeActions()} />);
     const opts = mockedUseXterm.mock.calls[0][0];
@@ -100,7 +100,13 @@ describe('TerminalCard', () => {
 
     expect(filter(new KeyboardEvent('keyup', { key: 'a' }))).toBe(true);
     expect(filter(new KeyboardEvent('keydown', { key: 'a' }))).toBe(true);
+    expect(filter(new KeyboardEvent('keydown', { key: 't', ctrlKey: true }))).toBe(true);
+    expect(filter(new KeyboardEvent('keydown', { key: 'T', ctrlKey: true, shiftKey: true }))).toBe(false);
     expect(filter(new KeyboardEvent('keydown', { key: 'a', shiftKey: true }))).toBe(false);
     expect(filter(new KeyboardEvent('keydown', { key: 'a', ctrlKey: true }))).toBe(false);
+    expect(filter(new KeyboardEvent('keydown', { key: 'ArrowLeft', ctrlKey: true }))).toBe(false);
+    expect(filter(new KeyboardEvent('keydown', { key: 'ArrowRight', ctrlKey: true }))).toBe(false);
+    expect(filter(new KeyboardEvent('keydown', { key: 'ArrowUp', shiftKey: true }))).toBe(false);
+    expect(filter(new KeyboardEvent('keydown', { key: 'ArrowDown', shiftKey: true }))).toBe(false);
   });
 });

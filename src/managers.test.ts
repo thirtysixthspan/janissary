@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { createController } from './controller.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createControllerTestProject } from './controller/test-project.js';
 import {
   MANAGER_DISPOSE_ORDER,
   MANAGER_DISPOSE_ORDER_IS_COMPLETE,
@@ -9,6 +9,8 @@ import {
 } from './managers.js';
 
 const positionOf = (name: string) => MANAGER_DISPOSE_ORDER.indexOf(name as never);
+const project = createControllerTestProject();
+afterEach(async () => { await project.dispose(); });
 
 describe('MANAGER_DISPOSE_ORDER', () => {
   it('is declared complete, which the compiler checks by naming any missing manager', () => {
@@ -18,7 +20,7 @@ describe('MANAGER_DISPOSE_ORDER', () => {
   // The `satisfies` clause rejects a name that is not a manager and the type assertion beside it
   // rejects a manager with no position, but neither can see a key written twice.
   it('lists every registered manager exactly once', () => {
-    const controller = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
+    const controller = project.create();
     const registered = Object.keys(controller.managers);
     controller.shutdown();
 
@@ -54,8 +56,19 @@ describe('MANAGER_DISPOSE_ORDER', () => {
     expect(MANAGER_DISPOSE_ORDER.slice(-3)).toEqual(['questions', 'tab', 'database']);
   });
 
+  it('flushes retained records after every producer and immediately before remote teardown', () => {
+    expect(MANAGER_DISPOSE_ORDER.filter((name) => name === 'acpRecords')).toHaveLength(1);
+    expect(positionOf('acpRecords')).toBe(positionOf('sessions') + 1);
+    expect(positionOf('remote')).toBe(positionOf('acpRecords') + 1);
+    for (const producer of ['agent', 'acp', 'plugins', 'conversations', 'sessions']) {
+      expect(positionOf(producer)).toBeLessThan(positionOf('acpRecords'));
+    }
+    expect(positionOf('acpRecords')).toBeLessThan(positionOf('tab'));
+    expect(MANAGER_TAB_RELEASE).not.toContain('acpRecords');
+  });
+
   it('awaits agent cleanup before its dependencies and shares concurrent shutdown', async () => {
-    const controller = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
+    const controller = project.create();
     const gate = Promise.withResolvers<void>();
     const calls: string[] = [];
     for (const name of MANAGER_DISPOSE_ORDER) {

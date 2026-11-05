@@ -4,13 +4,7 @@ import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { isLauncherPayload, type LauncherCommand, type LauncherPayload, type LauncherTabRow } from '@shared/plugins/launcher/shared';
 import type { TabPluginClientCapabilities } from '../api';
-import { AcpResponseScope } from '../../shared/acp/AcpResponseScope';
-import type { JanusClient } from '../../shared/ws/ws';
 import { LauncherTab } from './LauncherTab';
-
-function client(): JanusClient {
-  return { send: vi.fn(), attachPty: vi.fn() } as unknown as JanusClient;
-}
 
 function capabilities(dock: TabPluginClientCapabilities['dock'] = 'left') {
   const intent = vi.fn<(name: string, payload: unknown) => Promise<unknown>>(async () => null);
@@ -66,11 +60,6 @@ function withResolvers<T>(): { promise: Promise<T>; resolve: (value: T) => void 
 
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
-  // A response may still be provided by the host, though the launcher no longer renders it.
-  vi.stubGlobal('ResizeObserver', class {
-    observe() {}
-    disconnect() {}
-  });
 });
 
 describe('the command rail', () => {
@@ -679,21 +668,11 @@ describe('the tab list', () => {
   });
 
 describe('the launcher ACP response and transcript action', () => {
-  const STREAMED = { lines: [{ type: 'markdown' as const, text: '# Streamed answer' }], running: true };
-
-  function mounted(caps: ReturnType<typeof capabilities>) {
-    return render(
-      <AcpResponseScope label="launcher" client={client()} response={STREAMED}>
-        <LauncherTab payload={payload()} capabilities={caps.value} />
-      </AcpResponseScope>,
-    );
-  }
-
   it('does not render a command bar or the host ACP response surface', () => {
     const caps = capabilities();
-    mounted(caps);
+    launcher(payload(), caps);
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Streamed answer' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'ACP responses' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reset ACP' })).not.toBeInTheDocument();
   });
 

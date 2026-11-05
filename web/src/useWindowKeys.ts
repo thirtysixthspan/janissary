@@ -79,28 +79,18 @@ function dispatchModalKey(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks):
   }
 }
 
-// Ctrl/Shift+Arrow tab reorder/move shortcuts, Ctrl+T tool-step collapse
-// — the tail of the key handler once no picker/chooser/search state intercepts the key.
+// Ctrl/Shift+Arrow tab reorder/move shortcuts — the tail of the key handler once no
+// picker/chooser/search state intercepts the key.
 function handleTabShortcuts(e: KeyboardEvent, client: JanusClient): void {
   if (e.ctrlKey && !e.shiftKey && e.key === 'ArrowLeft') { e.preventDefault(); client.send({ method: 'reorderTab', params: { dir: -1 } }); }
   else if (e.ctrlKey && !e.shiftKey && e.key === 'ArrowRight') { e.preventDefault(); client.send({ method: 'reorderTab', params: { dir: 1 } }); }
   // Shift+←/→ and Cmd+Shift+[/] — the one tab-switch definition the full-tab terminals also read to
   // decide which keys to let bubble here.
   else if (isTabSwitchChord(e)) { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: tabSwitchDirection(e.key) } }); }
-  else if (e.ctrlKey) { ctrlLetterShortcut(e, client); }
 }
 
 function tabSwitchDirection(key: string): -1 | 1 {
   return ['ArrowLeft', '[', '{'].includes(key) ? -1 : 1;
-}
-
-// The plain Ctrl+letter sends (Ctrl+T tool-step collapse), split out of
-// `handleTabShortcuts` to keep its cognitive complexity under the file's lint threshold. Both go
-// out unconditionally: the server already no-ops when the action does not apply, so gating them
-// here would duplicate a decision the server owns.
-function ctrlLetterShortcut(e: KeyboardEvent, client: JanusClient): void {
-  const key = e.key.toLowerCase();
-  if (key === 't') { e.preventDefault(); client.send({ method: 'toggleCollapse', params: {} }); }
 }
 
 // The chords this handler dispatches, resolved through `shared/app-chords.ts` — the same table the
@@ -110,8 +100,8 @@ function ctrlLetterShortcut(e: KeyboardEvent, client: JanusClient): void {
 // silently stops working.
 function ctrlChordOpener(action: AppChordAction | undefined, cb: Callbacks): (() => void) | undefined {
   switch (action) {
-  // Most Ctrl chords are not application chords — Ctrl+T and the tab moves are dispatched further
-  // down by `handleTabShortcuts` — so "none of these" is an ordinary answer, not a missing case.
+  // Most Ctrl chords are not application chords — the tab moves are dispatched further down by
+  // `handleTabShortcuts` — so "none of these" is an ordinary answer, not a missing case.
   case undefined: { return undefined; }
   case 'history': { return cb.openPicker; }
   case 'tabNav': { return cb.openTabNav; }

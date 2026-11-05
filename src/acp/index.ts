@@ -8,7 +8,8 @@ import {
   type RequestPermissionOutcome,
   type RequestPermissionResponse,
 } from '@agentclientprotocol/sdk';
-import type { PromptHandlers, AcpSession, AcpOptions } from './types.js';
+import type { AcpSession, AcpOptions } from './types.js';
+import { AcpPromptControl } from './prompt-control.js';
 import { sandboxSpawn } from '../sandbox/index.js';
 import { getProjectTokens } from '../project/tokens.js';
 import { decidePermission } from './tools.js';
@@ -53,6 +54,7 @@ export function connectAcp(options: AcpOptions): AcpSession {
     proc.once('error', resolve);
   });
   let spawnError: Error | undefined;
+  const control = new AcpPromptControl();
   // Set by `kill()` before the subprocess is signalled, so a deliberate close reports nothing.
   let killed = false;
   // The agent's stdout is the ACP transport, so stderr is where it says anything a human needs —
@@ -63,25 +65,28 @@ export function connectAcp(options: AcpOptions): AcpSession {
   proc.on('error', (error) => {
     spawnError = error;
     options.onError(withChildOutput(`failed to start ACP agent: ${error.message}`, stderr.text()));
+    control.release(error.message);
   });
   // Without this, an agent that dies after a successful spawn leaves a session whose next prompt
   // writes into a closed stdin and never returns. The connection-level channel already means "this
   // session is gone", so the caller can drop it and start a fresh one.
-  proc.on('exit', () => { if (!killed) options.onError(withChildOutput('ACP agent exited.', stderr.text())); });
-
-  // The current in-flight prompt's handlers; session updates are routed here.
-  let current: PromptHandlers | undefined;
+  proc.on('exit', () => {
+    if (!killed) options.onError(withChildOutput('ACP agent exited.', stderr.text()));
+    control.release('ACP agent exited.');
+  });
 
   const client: Client = {
     async sessionUpdate(parameters) {
+      if (killed || !control.current) return;
       const update = parameters.update;
       options.onActivity?.(update);
       if (update.sessionUpdate === 'agent_message_chunk' && update.content.type === 'text') {
-        current?.onChunk(update.content.text);
+        control.current?.handlers.onChunk(update.content.text);
       }
     },
     // Deny every tool request unless the persona's allowlist opts a classified web tool in.
     async requestPermission(params): Promise<RequestPermissionResponse> {
+      if (killed || !control.current || control.current.cancelled) return { outcome: { outcome: 'cancelled' } };
       if (options.autonomous === true) {
         const approval = params.options.find((option) => option.kind === 'allow_once')
           ?? params.options.find((option) => option.kind === 'allow_always');
@@ -105,12 +110,15 @@ export function connectAcp(options: AcpOptions): AcpSession {
   const ensureSession = (): Promise<void> => {
     ready ??= (async () => {
       const init = await conn.initialize({ protocolVersion: PROTOCOL_VERSION, clientCapabilities: {} });
+      if (killed) throw new Error('ACP session closed.');
       const response = await conn.newSession({ cwd: options.cwd, mcpServers: [] });
+      if (killed) throw new Error('ACP session closed.');
       sessionId = response.sessionId;
       if (options.effort) {
         const selection = selectAcpEffort(response.configOptions, options.effort.level, options.effort.model);
         if ('error' in selection) throw new Error(selection.error);
         await conn.setSessionConfigOption({ sessionId, configId: selection.configId, value: selection.value });
+        if (killed) throw new Error('ACP session closed.');
       }
       // Provider from the agent's reported name (fallback: the command basename);
       // model is best-effort from the session's current mode (ACP has no model field).
@@ -124,30 +132,40 @@ export function connectAcp(options: AcpOptions): AcpSession {
     return ready;
   };
 
+  if (options.autonomous) void (async () => {
+    try { await ensureSession(); }
+    catch (error) { if (!killed) options.onError(errorText(error)); }
+  })();
+
   return {
     prompt: (text, handlers) => {
-      current = handlers;
+      const turn = control.admit(handlers);
+      if (!turn) return;
       void (async () => {
         try {
           await ensureSession();
+          if (!control.owns(turn)) return;
+          if (turn.cancelled) { control.end(turn, 'cancelled'); return; }
+          turn.sent = true;
           const response = await conn.prompt({ sessionId: sessionId!, prompt: [{ type: 'text', text }] });
-          handlers.onEnd(response.stopReason);
+          control.end(turn, response.stopReason);
         } catch (error) {
-          handlers.onError(errorText(error));
-        } finally {
-          if (current === handlers) current = undefined;
+          control.error(turn, errorText(error));
         }
       })();
     },
-    // Only the connection-level exit report is suppressed: a pending prompt's `onEnd`/`onError`
-    // still fire after this, unlike `src/remote/acp-session.ts`, whose `kill` detaches them.
+    cancel: () => control.cancel(async (turn) => {
+      if (turn.sent && sessionId) await conn.cancel({ sessionId });
+    }),
     kill: () => {
       killed = true;
+      control.release();
       try { proc.kill(); } catch { /* already gone */ }
     },
     shutdown: () => {
       shutdownPromise ??= (async () => {
         killed = true;
+        control.release();
         if (spawnError) throw spawnError;
         await shutdownProcessTree(proc, exited);
       })();

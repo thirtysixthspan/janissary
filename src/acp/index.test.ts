@@ -8,17 +8,25 @@ import type * as SandboxModule from '../sandbox/index.js';
 import type { SandboxOptions } from '../sandbox/index.js';
 import type { AcpInfo, AcpSession } from './types.js';
 import { shutdownProcessTree } from './process-tree.js';
+import { AcpManager } from './manager.js';
+import { AcpSessionRecords } from '../acp-records/manager.js';
+import { TabManager } from '../tab/manager.js';
+import { makeTab } from '../tab/index.js';
+import type { Managers } from '../managers.js';
+import { RemoteChannel } from '../remote/channel/index.js';
+import { RemoteAcp } from '../remote/serve-acp.js';
+import { decodeFrame, encodeFrame, encodeHandshake } from '../remote/protocol.js';
 
 // The sandbox is left real — these tests drive actual subprocesses — but every call's options are
 // recorded, so what `connectAcp` decides to inject can be asserted without mocking the spawn itself.
-const sandboxCalls = vi.hoisted(() => ({ options: [] as SandboxOptions[] }));
+const sandboxCalls = vi.hoisted(() => ({ options: [] as SandboxOptions[], bypassWorkspace: false }));
 vi.mock('../sandbox/index.js', async (importOriginal) => {
   const actual = await importOriginal<typeof SandboxModule>();
   return {
     ...actual,
     sandboxSpawn: (options: SandboxOptions, command: string, args: string[], env: NodeJS.ProcessEnv) => {
       sandboxCalls.options.push(options);
-      return actual.sandboxSpawn(options, command, args, env);
+      return actual.sandboxSpawn(sandboxCalls.bypassWorkspace ? { ...options, workspaceDir: undefined } : options, command, args, env);
     },
   };
 });
@@ -34,6 +42,7 @@ let sessions = 0;
 let negotiated = null;
 let promptId = null;
 let configuredEffort = false;
+let cancels = 0;
 
 function write(message) {
   const line = JSON.stringify(message) + '\n';
@@ -58,6 +67,15 @@ function chunk(text) {
 }
 
 function handle(message) {
+  if (message.method === 'session/cancel') {
+    if (message.id !== undefined || message.params.sessionId !== sessionId) process.exit(2);
+    cancels += 1;
+    setTimeout(() => {
+      chunk('final activity');
+      write({ jsonrpc: '2.0', id: promptId, result: { stopReason: 'cancelled' } });
+    }, 60);
+    return;
+  }
   if (message.id !== undefined && message.method === undefined) {
     chunk('outcome=' + JSON.stringify(message.result.outcome));
     write({ jsonrpc: '2.0', id: promptId, result: { stopReason: 'end_turn' } });
@@ -73,6 +91,10 @@ function handle(message) {
     return;
   }
   if (message.method === 'initialize') {
+    if (mode === 'fail-init') {
+      write({ jsonrpc: '2.0', id: message.id, error: { code: -32603, message: 'initialization failed' } });
+      return;
+    }
     negotiated = message.params.protocolVersion;
     write({
       jsonrpc: '2.0',
@@ -100,6 +122,18 @@ function handle(message) {
     return;
   }
   if (message.method !== 'session/prompt') return;
+  if (mode === 'exit-held') {
+    promptId = message.id;
+    chunk('held');
+    setTimeout(() => process.exit(1), 10);
+    return;
+  }
+  if (mode === 'cancel' && message.params.prompt[0].text.split('\n').at(-1) === 'hold') {
+    promptId = message.id;
+    chunk('held');
+    return;
+  }
+  if (mode === 'cancel') chunk('cancels=' + cancels + ' ');
   if (mode === 'permission') {
     promptId = message.id;
     write({
@@ -194,6 +228,7 @@ function prompt(session: AcpSession, text: string): Promise<{ text: string; stop
 }
 
 afterEach(() => {
+  sandboxCalls.bypassWorkspace = false;
   for (const session of sessions) session.kill();
   sessions = [];
   for (const directory of roots) rmSync(directory, { recursive: true, force: true });
@@ -201,6 +236,137 @@ afterEach(() => {
 });
 
 describe('connectAcp', () => {
+  it('records and cancels a real held provider turn through a version-37 remote channel in a scratch project', async () => {
+    sandboxCalls.bypassWorkspace = true;
+    const script = agentScript();
+    const root = path.dirname(script);
+    const records = new AcpSessionRecords({ projectDir: root });
+    const managers = { acpRecords: records } as Managers;
+    managers.tab = new TabManager(managers, root);
+    managers.tab.tabs.push(makeTab('owner', '#fff'), makeTab('other', '#abc'));
+    for (const tab of managers.tab.tabs) tab.remote = { address: 'stub-host', host: 'stub-host' };
+    const channel = new RemoteChannel({
+      id: 'stdio', kill: () => {},
+      write: (line) => {
+        const frame = decodeFrame(line.trim());
+        if (!('type' in frame)) throw new Error(frame.error);
+        switch (frame.type) {
+        case 'acp-open': { holder.open({ ...frame, command: process.execPath, args: [script, 'cancel'], env: {} }); break; }
+        case 'acp-prompt': { holder.prompt(frame); break; }
+        case 'acp-cancel': { holder.cancel(frame.id); break; }
+        case 'acp-close': { void holder.close(frame.id); break; }
+        default: { throw new Error(`Unexpected test frame ${frame.type}`); }
+        }
+      },
+    }, { onAttached: () => {}, onTerminalData: () => {}, onFrame: () => {}, onError: () => {}, onClose: () => {} });
+    const holder = new RemoteAcp((frame) => channel.receive(`${encodeFrame(frame)}\n`), root);
+    channel.receive(`${encodeHandshake()}\n`);
+    managers.remote = { get: () => channel } as Managers['remote'];
+    managers.acp = new AcpManager(managers);
+    try {
+      managers.acp.start('owner', { withoutTools: true });
+      const pending = managers.acp.prompt('owner', 'hold');
+      await vi.waitFor(() => expect(records.rows()[0]?.status).toBe('Running'));
+      await vi.waitFor(() => expect(records.window(records.rows()[0].id)?.blocks[0].entries[0]?.text).toBe('held'));
+      const id = managers.tab.byLabel('owner')!.runtime!.acpRecordId!;
+      const identity = managers.acp.sessionIdentity('owner');
+      managers.acp.start('other', { withoutTools: true });
+      await expect(managers.acp.prompt('other', 'independent')).resolves.toContain('cancels=0');
+      const cancellation = managers.acp.cancel('owner');
+      await expect(managers.acp.prompt('owner', 'overlap')).resolves.toBe('ACP: a prompt is already running.');
+      await cancellation;
+      await expect(pending).resolves.toBe('ACP: prompt cancelled.');
+      expect(records.window(id)).toMatchObject({ status: 'Idle', blocks: [{ answer: 'ACP: prompt cancelled.', entries: [{ text: 'heldfinal activity' }] }] });
+      expect(managers.acp.sessionIdentity('owner')).toBe(identity);
+      await expect(managers.acp.prompt('owner', 'next')).resolves.toContain('cancels=1 protocol=1 sessions=1');
+      expect(managers.tab.byLabel('owner')!.runtime!.acpRecordId).toBe(id);
+      expect(records.window(id)?.totalBlocks).toBe(2);
+    } finally {
+      managers.acp.closeAll();
+      await holder.dispose();
+      records.dispose();
+    }
+  });
+  it('releases a cancelling turn when initialization fails', async () => {
+    const { session } = connect('fail-init');
+    const pending = prompt(session, 'hi');
+    const failed = expect(pending).rejects.toThrow('initialization failed');
+    await session.cancel();
+    await failed;
+  });
+
+  it('releases drain on an unexpected process exit during a held prompt', async () => {
+    const { session } = connect('exit-held');
+    const held = Promise.withResolvers<void>();
+    const ended = Promise.withResolvers<void>();
+    session.prompt('hold', {
+      onChunk: held.resolve, onEnd: () => ended.reject(new Error('unexpected end')), onError: () => ended.resolve(),
+    });
+    await held.promise;
+    await session.cancel();
+    await ended.promise;
+  });
+
+  it('releases cancellation on kill before handshake and publishes no late identity', async () => {
+    const { session } = connect('basic');
+    const h = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
+    session.prompt('hi', h);
+    const pending = session.cancel();
+    session.kill();
+    await pending;
+    expect(h.onError).toHaveBeenCalledExactlyOnceWith('ACP session closed.');
+    expect(h.onEnd).not.toHaveBeenCalled();
+  });
+  it('initializes an autonomous session before its first prompt so remote readiness can complete', async () => {
+    const { session, info } = connect('basic', undefined, true);
+    expect(await info).toMatchObject({ provider: 'stub-agent' });
+    const reply = await prompt(session, 'task');
+    expect(reply.text).toBe('protocol=1 sessions=1 hello');
+  });
+  it('sends native cancellation immediately but retains the old turn until provider drain', async () => {
+    const { session } = connect('cancel');
+    const held = Promise.withResolvers<void>();
+    const ended = Promise.withResolvers<string>();
+    const chunks: string[] = [];
+    session.prompt('hold', {
+      onChunk: (text) => { chunks.push(text); held.resolve(); },
+      onEnd: ended.resolve,
+      onError: (message) => ended.reject(new Error(message)),
+    });
+    await held.promise;
+    const cancellation = session.cancel();
+    const overlap = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
+    session.prompt('steal', overlap);
+    expect(overlap.onError).toHaveBeenCalledWith('ACP: a prompt is already running.');
+    expect(chunks).toEqual(['held']);
+    await cancellation;
+    expect(await ended.promise).toBe('cancelled');
+    expect(chunks).toEqual(['held', 'final activity']);
+    const next = await prompt(session, 'next');
+    expect(next.text).toBe('cancels=1 protocol=1 sessions=1 hello');
+  });
+
+  it('cancels an unsent pre-handshake turn and reuses its completed initialization', async () => {
+    const { session, info } = connect('cancel');
+    const pending = prompt(session, 'hold');
+    await session.cancel();
+    expect(await pending).toEqual({ text: '', stopReason: 'cancelled' });
+    expect(await info).toMatchObject({ provider: 'stub-agent' });
+    const next = await prompt(session, 'next');
+    expect(next.text).toBe('cancels=0 protocol=1 sessions=1 hello');
+  });
+
+  it('allows a terminal handler to synchronously start a new provider turn', async () => {
+    const { session } = connect('basic');
+    const next = Promise.withResolvers<{ text: string; stopReason: string }>();
+    session.prompt('first', {
+      onChunk: () => {},
+      onEnd: () => { void prompt(session, 'next').then(next.resolve, next.reject); },
+      onError: next.reject,
+    });
+    const reply = await next.promise;
+    expect(reply.text).toBe('protocol=1 sessions=1 hello');
+  });
   it('negotiates the protocol version the SDK exports and streams the reply', async () => {
     const { session, info, errors } = connect('basic');
 

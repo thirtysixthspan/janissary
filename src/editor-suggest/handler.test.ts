@@ -19,7 +19,7 @@ import { EditorAcpManager } from '../editor/acp-manager.js';
 function makeSession(): { session: AcpSession; prompt: ReturnType<typeof vi.fn>; kill: ReturnType<typeof vi.fn> } {
   const prompt = vi.fn();
   const kill = vi.fn();
-  return { session: { prompt, kill }, prompt, kill };
+  return { session: { prompt, kill, cancel: vi.fn(async () => {}), shutdown: vi.fn(async () => {}) }, prompt, kill };
 }
 
 function makeManagers(session: ReturnType<typeof vi.fn>, record: ReturnType<typeof vi.fn> = vi.fn()): Managers {

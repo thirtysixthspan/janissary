@@ -5,6 +5,34 @@ import type { Managers } from '../managers.js';
 import type { Tab } from './types.js';
 
 describe('buildTabView', () => {
+  it('omits the removed response property while retaining ACP, transcript, question, busy and replies', () => {
+    const tab = makeTab('shell', '#fff');
+    tab.view = 'plugin';
+    tab.plugin = { id: 'shell', instanceKey: 'shell', schemaVersion: 4, payload: {}, fileRefs: [] };
+    const running = { input: 'working', output: '# Partial', running: true, markdown: true };
+    const settled = { input: 'acp previous', output: '# Answer', markdown: true };
+    tab.log = [settled, running, { input: '/acp previous ', output: '# Answer', background: 'reply' }];
+    tab.runtime = {
+      busy: true, context: [], queue: [], acpEntries: new WeakSet([settled, running]),
+      acpPrompt: { prompt: 'working', abort: new AbortController(), finish: () => {} },
+    };
+    const question = { id: 'q-shell', tab: 'shell', kind: 'ask' as const, question: 'Which?' };
+    const view = buildTabView(tab, true, '/repo', 'provider/model', [], [], [], (p) => p, question);
+
+    expect(view).not.toHaveProperty('acpResponse');
+    expect(view).toMatchObject({
+      acp: 'provider/model', busy: true, pendingQuestion: question,
+      backgroundReplies: [{ id: 'reply', output: '# Answer', line: '/acp previous ' }],
+    });
+    expect(view.bufferLines).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'markdown', text: '# Partial' }),
+      expect.objectContaining({ type: 'markdown', text: '# Answer' }),
+    ]));
+    delete tab.runtime.acpPrompt;
+    running.running = false;
+    expect(buildTabView(tab, false, '/repo', 'provider/model', [], [], [], (p) => p)).not.toHaveProperty('acpResponse');
+  });
+
   it('broadcasts lifecycle markers only while they are true', () => {
     const tab = makeTab('system', '#fff');
     tab.hidden = true;
@@ -19,10 +47,35 @@ describe('buildTabView', () => {
     expect('systemShell' in visible).toBe(false);
   });
 
+  it('projects ACP tool steps expanded and sends no collapse state', () => {
+    const tab = makeTab('shell', '#fff');
+    tab.log = [{ input: 'browser content', output: 'Widgets', acp: true }];
+
+    const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p);
+
+    expect(view.bufferLines).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'prompt', text: 'browser content', acp: true }),
+      expect.objectContaining({ type: 'output', text: 'Widgets', acp: true }),
+    ]));
+    expect(view).not.toHaveProperty('toolStepsExpanded');
+  });
+
   it('projects completed background replies with stable IDs and excludes ordinary or unfinished entries', () => {
     const tab = makeTab('shell', '#fff');
-    tab.log = [{ input: '', output: 'ordinary' }, { input: '', output: 'pending', background: 'pending', running: true }, { input: '', output: 'suggestion', background: 'finished' }];
-    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).backgroundReplies).toEqual([{ id: 'finished', output: 'suggestion' }]);
+    tab.log = [{ input: 'acp ordinary', output: 'ordinary' }, { input: '', output: 'pending', background: 'pending', running: true }, { input: 'acp hello', output: 'suggestion', background: 'finished' }];
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).backgroundReplies).toEqual([{ id: 'finished', output: 'suggestion', line: 'acp hello' }]);
+  });
+
+  it('leaves monitor and other background inputs without a line', () => {
+    const tab = makeTab('shell', '#fff');
+    tab.log = [
+      { input: 'monitor ask now', output: 'suggestion', background: 'monitor' },
+      { input: 'unrelated', output: 'other', background: 'other' },
+    ];
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).backgroundReplies).toEqual([
+      { id: 'monitor', output: 'suggestion' },
+      { id: 'other', output: 'other' },
+    ]);
   });
   const missingWorkspace = (): string | undefined => {};
   it('projects right-pane membership and keeps left as the absent wire value', () => {

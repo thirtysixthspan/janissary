@@ -7,13 +7,11 @@ import {
 } from '../api';
 import { shellTerminalTheme } from './shell-terminal-theme';
 import { registerShellMarkerHandlers } from './shell-marker-handlers';
-import { insertMarkdownBlock } from './markdown-block';
 import { attachPromptMask } from './prompt-mask';
 import { holdFocusOffSinglePress } from './press-focus';
 import { holdReplySelection, shellSelectionText, type ReplySelection } from './reply-selection';
-import { formatDispatchedCommand } from './format-dispatched-command';
-import { markdownToAnsi } from './markdown-to-ansi';
-import { stripTerminalControls } from './strip-terminal-controls';
+import { ReplyPlacement } from './reply-placement';
+import { writeShellEcho, writeShellReply } from './write-shell-reply';
 
 export type AttachTerminal = (
   ptyId: string, onData: (data: string) => void,
@@ -53,6 +51,8 @@ export type ShellTerminalHandle = {
   write(data: string): void;
   display(data: string): void;
   displayReply(line: string, markdown: string): void;
+  // Writes the line of a command whose reply arrives later through `displayReply`.
+  echoCommand(line: string): void;
   focus(): void;
   selection(): string;
   clearSelection(): void;
@@ -67,6 +67,7 @@ export function useShellTerminal({
   const handleRef = useRef<PluginTerminal | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const replyRef = useRef<ReplySelection | null>(null);
+  const placementRef = useRef(new ReplyPlacement());
   const [attachedPtyId, setAttachedPtyId] = useState<string | null>(null);
   const exitRef = useRef(onExit);
   exitRef.current = onExit;
@@ -177,6 +178,8 @@ export function useShellTerminal({
     observer.observe(container);
 
     terminalRef.current = terminal;
+    const placement = new ReplyPlacement();
+    placementRef.current = placement;
     let disposed = false;
     const onAttached = (handle: PluginTerminal) => {
       if (disposed) { handle.detach(); return; }
@@ -186,7 +189,10 @@ export function useShellTerminal({
       handle.onExit(() => { exitRef.current(attachId); });
       resize();
     };
-    const attachment = attach(attachId, (data) => { terminal.write(data); });
+    const attachment = attach(attachId, (data) => {
+      placement.wrote();
+      terminal.write(data);
+    });
     if (attachment instanceof Promise) {
       void attachment.then(onAttached).catch(() => { /* The server refused a terminal not owned by this tab. */ });
     } else {
@@ -210,14 +216,18 @@ export function useShellTerminal({
   }, [ptyId, connectPtyId, containerRef]);
 
   const write = useCallback((data: string) => { handleRef.current?.write(data); }, []);
-  const display = useCallback((data: string) => { terminalRef.current?.write(data); }, []);
+  const display = useCallback((data: string) => {
+    placementRef.current.wrote();
+    terminalRef.current?.write(data);
+  }, []);
   const displayReply = useCallback((rawLine: string, rawMarkdown: string) => {
     const terminal = terminalRef.current;
-    const line = stripTerminalControls(rawLine);
-    const markdown = stripTerminalControls(rawMarkdown);
-    const openReplyLink = (href: string) => { openLinkRef.current?.(href); };
-    if (!terminal || insertMarkdownBlock(terminal, line, markdown, openReplyLink)) return;
-    terminal.write(formatDispatchedCommand(line, markdownToAnsi(markdown)));
+    if (!terminal) return;
+    writeShellReply(terminal, placementRef.current, rawLine, rawMarkdown, (href) => { openLinkRef.current?.(href); });
+  }, []);
+  const echoCommand = useCallback((rawLine: string) => {
+    const terminal = terminalRef.current;
+    if (terminal) writeShellEcho(terminal, placementRef.current, rawLine);
   }, []);
   const focus = useCallback(() => { terminalRef.current?.focus(); }, []);
   const selection = useCallback(() => shellSelectionText(replyRef.current, terminalRef.current), []);
@@ -229,7 +239,7 @@ export function useShellTerminal({
   const scrollToBottom = useCallback(() => { terminalRef.current?.scrollToBottom(); }, []);
   const rows = useCallback(() => terminalRef.current?.rows ?? 0, []);
   return {
-    write, display, displayReply, focus, selection, clearSelection, scrollLines, scrollToBottom, rows,
+    write, display, displayReply, echoCommand, focus, selection, clearSelection, scrollLines, scrollToBottom, rows,
     terminalReady: ptyId !== undefined && attachedPtyId === ptyId,
   };
 }

@@ -10,7 +10,7 @@ const persona = (name: string): Persona => ({
   body: '',
   tools: [],
 });
-const session: AcpSession = { prompt: () => {}, kill: () => {} };
+const session: AcpSession = { prompt: () => {}, kill: () => {}, cancel: async () => {}, shutdown: async () => {} };
 
 function makeSub(overrides: Partial<MonitorSub> = {}): MonitorSub {
   return {

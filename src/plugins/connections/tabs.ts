@@ -1,0 +1,60 @@
+import type { ConnectionsTopicNotification, TabPluginServerCapabilities } from '../api.js';
+import { isConnectionRow, isConnectionsPayload, type ConnectionRow, type ConnectionsPayload } from './shared.js';
+import { ConnectionRecordTabs } from './record-tabs.js';
+
+export const CONNECTIONS_LIST_KEY = 'connections';
+
+function listRow(row: ConnectionRow): ConnectionRow {
+  if (!('window' in row)) return row;
+  const summary = { ...row };
+  delete summary.window;
+  return summary;
+}
+
+function listPayload(rows: ConnectionRow[]): ConnectionsPayload {
+  return { kind: 'list', rows: rows.map((row) => listRow(row)) };
+}
+
+export function connectionsData(capabilities: TabPluginServerCapabilities): ConnectionsTopicNotification['data'] {
+  const data = capabilities.topicData('connections');
+  if (typeof data !== 'object' || data === null || !('rows' in data) || !Array.isArray(data.rows)
+    || !data.rows.every(isConnectionRow)) {
+    return capabilities.reportFailure('invalid connections topic data');
+  }
+  return data as ConnectionsTopicNotification['data'];
+}
+
+export class ConnectionTabs {
+  private readonly records = new ConnectionRecordTabs();
+
+  openList(capabilities: TabPluginServerCapabilities, dock: boolean): void {
+    capabilities.openOrFocusTab(CONNECTIONS_LIST_KEY, () => ({
+      title: 'connections',
+      payload: listPayload(connectionsData(capabilities).rows),
+    }));
+    if (!dock) capabilities.dockTab(CONNECTIONS_LIST_KEY, null);
+  }
+
+  refreshList(capabilities: TabPluginServerCapabilities): void {
+    const payload = listPayload(connectionsData(capabilities).rows);
+    capabilities.updateTab(CONNECTIONS_LIST_KEY, () => ({ payload }));
+  }
+
+  openRecord(row: ConnectionRow, capabilities: TabPluginServerCapabilities): void {
+    this.records.open(row, capabilities);
+  }
+
+  update(event: ConnectionsTopicNotification, capabilities: TabPluginServerCapabilities): void {
+    for (const key of event.tabs) {
+      if (key !== CONNECTIONS_LIST_KEY) continue;
+      const payload = listPayload(event.data.rows);
+      if (!isConnectionsPayload(payload)) return capabilities.reportFailure('invalid connections payload');
+      capabilities.updateTab(key, () => ({ payload }));
+    }
+    this.records.update(event, capabilities);
+  }
+
+  dispose(): void {
+    this.records.dispose();
+  }
+}

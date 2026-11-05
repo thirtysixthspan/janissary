@@ -290,6 +290,37 @@ describe('RemoteChannel — attached', () => {
 });
 
 describe('RemoteChannel — ACP session routing', () => {
+  it.each(['authentication', 'disconnect', 'closed', 'fail', 'finish'])('settles all ACP listeners on %s', (phase) => {
+    const h = harness();
+    if (phase !== 'authentication') h.channel.receive(`${encodeHandshake()}\n`);
+    const first = { onReady: vi.fn(), onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn(), onTransportLost: vi.fn() };
+    const second = { ...first, onTransportLost: vi.fn() };
+    first.onTransportLost.mockImplementation(() => { h.channel.detachAcp('second'); });
+    h.channel.attachAcp('first', first);
+    h.channel.attachAcp('second', second);
+    switch (phase) {
+    case 'disconnect': { h.channel.disconnect(); break; }
+    case 'fail': { h.channel.receive('{"type":"acp-cancel","id":"first"}\n'); break; }
+    case 'finish': { h.channel.finish(); break; }
+    default: { h.channel.closed(); }
+    }
+    if (phase === 'finish') expect(first.onError).toHaveBeenCalledTimes(2);
+    else {
+      expect(first.onTransportLost).toHaveBeenCalledOnce();
+      expect(second.onTransportLost).toHaveBeenCalledOnce();
+    }
+  });
+
+  it('fails an unavailable cancel only on its addressed session', () => {
+    const h = harness();
+    const onError = vi.fn();
+    const otherError = vi.fn();
+    h.channel.attachAcp('first', { onReady: vi.fn(), onChunk: vi.fn(), onEnd: vi.fn(), onError });
+    h.channel.attachAcp('second', { onReady: vi.fn(), onChunk: vi.fn(), onEnd: vi.fn(), onError: otherError });
+    h.channel.send({ type: 'acp-cancel', id: 'first' });
+    expect(onError).toHaveBeenCalledWith('ACP: cancellation failed: Remote connection unavailable.', true);
+    expect(otherError).not.toHaveBeenCalled();
+  });
   function acpHarness() {
     const h = harness();
     h.channel.receive(`${encodeHandshake()}\n`);
@@ -427,7 +458,7 @@ describe('RemoteChannel — closing', () => {
     expect(h.kill).toHaveBeenCalled();
   });
 });
-it('preserves all session routing while replacing a dropped peer transport', () => {
+it('preserves process and navigator routing but detaches ACP on a dropped peer transport', () => {
   const h = harness();
   h.channel.receive(`${encodeHandshake('12345678-1234-1234-1234-123456789abc')}\n`);
   const onOutput = vi.fn(), onReply = vi.fn(), onChunk = vi.fn(), onClose = vi.fn();
@@ -444,7 +475,7 @@ it('preserves all session routing while replacing a dropped peer transport', () 
   h.channel.receive(`${encodeFrame({ type: 'filesystem-reply', session: 'n', request: 'q', result: [] })}\n`);
   h.channel.receive(`${encodeFrame({ type: 'acp-chunk', id: 'a', text: 'same agent' })}\n`);
   expect(onOutput).toHaveBeenCalledWith('still running');
-  expect(onReply).toHaveBeenCalledOnce(); expect(onChunk).toHaveBeenCalledWith('same agent');
+  expect(onReply).toHaveBeenCalledOnce(); expect(onChunk).not.toHaveBeenCalled();
 });
 it('settles a capture-request made while still authenticating with an error, rather than hanging', async () => {
   const h = harness();

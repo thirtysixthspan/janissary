@@ -17,7 +17,7 @@ function spawnHook(call: number): SpawnHooks {
 
 function makeSession(): { session: AcpSession; kill: ReturnType<typeof vi.fn> } {
   const kill = vi.fn();
-  return { session: { prompt: vi.fn(), kill }, kill };
+  return { session: { prompt: vi.fn(), kill, cancel: vi.fn(async () => {}), shutdown: vi.fn(async () => {}) }, kill };
 }
 
 function persona(name: string): Persona {

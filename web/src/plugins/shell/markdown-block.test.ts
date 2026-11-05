@@ -84,6 +84,17 @@ describe('insertMarkdownBlock', () => {
     expect(element.querySelector(':scope table td')?.textContent).toBe('1');
   });
 
+  it('starts the block on the cleared prompt row beneath an echo when given no line', () => {
+    const fake = fakeTerminal({ probeHeight: 48, screenHeight: 240, rows: 20 });
+
+    expect(insertMarkdownBlock(fake.terminal, undefined, '# Answer', vi.fn())).toBe(true);
+
+    expect(fake.written[0]).toBe(`\r\u{1B}[2K${'\r\n'.repeat(4)}`);
+    expect(fake.markers).toEqual([-1]);
+    expect(fake.decorations).toEqual([{ width: 100, height: 4, layer: 'top' }]);
+    expect(fake.written.at(-1)).toBe('\u{1B}[1m>\u{1B}[22m ');
+  });
+
   it('reserves the full measured height for a reply taller than the viewport', () => {
     const fake = fakeTerminal({ probeHeight: 240, screenHeight: 240, rows: 4 });
 

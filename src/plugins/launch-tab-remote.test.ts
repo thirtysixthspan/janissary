@@ -4,7 +4,7 @@ import { AgentRunManager } from '../agent/manager.js';
 import { PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
 import type { RemoteLaunchHandlers } from '../remote/manager.js';
 import type { TabPluginDeclaration, TabPluginLaunchRequest, TabPluginLaunchStart } from './api.js';
-import { TabPluginRejection } from './api-capabilities.js';
+import { TAB_PLUGIN_API_VERSION, TabPluginRejection } from './api-capabilities.js';
 import { launchRemotePluginTab } from './launch-tab-remote.js';
 import { launchCapabilities, type LaunchInput } from './launch-tab.js';
 import { notify } from '../notifications/index.js';
@@ -15,7 +15,7 @@ beforeEach(() => { vi.clearAllMocks(); });
 afterEach(() => { vi.useRealTimers(); });
 
 const declaration: TabPluginDeclaration = {
-  id: 'shell', version: '1', apiVersion: 2, payloadSchemaVersion: 4, tabLabelPrefix: 'shell', fileExtensions: {},
+  id: 'shell', version: '1', apiVersion: TAB_PLUGIN_API_VERSION, payloadSchemaVersion: 4, tabLabelPrefix: 'shell', fileExtensions: {},
 };
 
 function harness(options: {
@@ -35,6 +35,7 @@ function harness(options: {
     if (index !== -1) tabs.splice(index, 1);
   });
   const managers = {
+    acpRecords: { begin: vi.fn(() => 'record-id'), prompt: vi.fn(), activity: vi.fn(), answer: vi.fn(), close: vi.fn() },
     tab: {
       launchDir: '/repo', tabs, allLabels: () => tabs.map((tab) => tab.label),
       cwdOf: () => options.cwd ?? '/repo/src', workingDirOf: () => options.cwd ?? '/repo/src', byLabel: (label: string) => tabs.find((tab) => tab.label === label),

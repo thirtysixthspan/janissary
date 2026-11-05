@@ -132,6 +132,7 @@ export function ShellTabMeta({ payload, capabilities }: {
         connectionsWindow={windows.connections}
         scheduleWindow={windows.schedule}
         interactive
+        onOpenRow={capabilities.openConnection}
       />
     </div>
   );

@@ -6,6 +6,6 @@ export function useBackgroundReplies(subscribe: TabPluginClientCapabilities['onB
   useEffect(() => subscribe?.((reply) => {
     if (seen.current.has(reply.id)) return;
     seen.current.add(reply.id);
-    displayReply('monitor', reply.output);
+    displayReply(reply.line ?? 'monitor', reply.output);
   }), [subscribe, displayReply]);
 }

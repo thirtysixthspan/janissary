@@ -513,9 +513,9 @@ button.tab-recording { cursor: pointer; }
 /* Collapsed agent tool steps: a prominent, clickable summary line. */
 .line.collapsed { color: var(--accent); cursor: pointer; }
 .line.collapsed:hover { text-decoration: underline; }
-/* Expanded agent tool steps: dimmed + indented, click anywhere to re-collapse. */
-.line.prompt.acp { color: var(--muted); cursor: pointer; }
-.line.output.acp { color: var(--faint); cursor: pointer; padding-left: 1.5em; }
+/* Read-only ACP prompt and output lines: muted, with output indented beneath its prompt. */
+.line.prompt.acp { color: var(--muted); }
+.line.output.acp { color: var(--faint); padding-left: 1.5em; }
 .line.message {
   display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 8px;
   border-left: 3px solid var(--from-color, var(--border)); padding-left: 8px;

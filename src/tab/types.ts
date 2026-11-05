@@ -1,6 +1,6 @@
 // The tab's own shapes. A leaf module on purpose: it imports nothing but this one type, which the
 // tab's in-flight ACP prompt settles with.
-import type { AcpPromptResult } from '../acp/types.js';
+import type { AcpPendingPrompt } from '../acp/prompt-state.js';
 import type { AgentRunView } from '../agent/types.js';
 import type { QueueEntry } from '../command-queue/entry.js';
 import type { ReceiptRecord } from '../command-queue/receipts.js';
@@ -283,7 +283,12 @@ export type TabRuntime = {
   serverPtyExitId?: string;
   editorSyncGeneration?: number;
   acpEntries?: WeakSet<LogEntry>;
-  acpPrompt?: { finish: (result: AcpPromptResult) => void; abort: AbortController };
+  acpPrompt?: AcpPendingPrompt;
+  acpRecordId?: string;
+  // Every ACP and agent record that began in this tab incarnation, kept after each one ends. A record's
+  // owner label alone cannot tell this tab from a later one that reused the label, so the connections
+  // topic reads this to decide whether a record still has its own tab to focus. In-memory only.
+  acpRecordIds?: Set<string>;
   // Whether this tab's core ACP session runs without a tool table, asked for by whichever consumer
   // started it with `{ withoutTools: true }`. It is the tab's own policy rather than a screen or content
   // fact, and it is sticky: a session that dies is replaced by one held to the same rule, and only the
@@ -410,10 +415,6 @@ export type Tab = {
   // this tab and its endpoint injected into the harness's environment. Harness-only; set once at
   // spawn time, and kept so the metadata row can report it.
   browser?: boolean;
-  // When false/undefined, contiguous runs of auto-run agent tool steps (acp entries) are
-  // collapsed into a single summary line in the transcript. Toggled with Ctrl+T. In-memory
-  // only (like scrollOffset).
-  toolStepsExpanded?: boolean;
   // Set when new transcript content arrives on this tab while it is NOT the active tab; cleared
   // when the tab is activated. Drives the unread badge in the tab strip. In-memory only (like
   // scrollOffset).

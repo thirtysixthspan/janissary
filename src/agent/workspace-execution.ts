@@ -42,12 +42,13 @@ export async function startLocalAgentRun(
   managers: Managers,
   caller: AgentCaller,
   command: string,
+  task: string,
   model: string | undefined,
   effort: string | undefined,
   workspaceName?: string,
 ): Promise<{ run: AgentRun; workspace: AgentWorkspace }> {
   const workspace = prepareAgentWorkspace(managers.workspace, caller.cwd, workspaceName);
-  const placeholder: AgentSnapshot = { taskPath: '', taskText: '', skills: [], grants: [] };
+  const placeholder: AgentSnapshot = { taskPath: task, taskText: '', skills: [], grants: [] };
   try {
     const run = managers.agent.create({
       caller,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import type { HarnessTabView } from '../shared/tab/view-guards';
@@ -34,11 +34,11 @@ function makeAgentTab(label: string): TabView {
   } as unknown as TabView;
 }
 
-function layer(t: HarnessTabView, current: TabView) {
+function layer(t: HarnessTabView, current: TabView, client: JanusClient = {} as JanusClient) {
   const harnessHandles = { current: new Map<string, HarnessTabHandle>() };
   return (
     <HarnessTabLayer
-      t={t} current={current} client={{} as JanusClient} harnessHandles={harnessHandles} visible index={0}
+      t={t} current={current} client={client} harnessHandles={harnessHandles} visible index={0}
     />
   );
 }
@@ -70,5 +70,22 @@ describe('HarnessTabLayer status windows', () => {
 
     rerender(layer(harness, makeAgentTab('agent2')));
     expect(screen.queryByText('schedule')).toBeNull();
+  });
+
+  it('opens an ssh harness popup record row through the client with its own label', () => {
+    const send = vi.fn();
+    const harness = makeHarnessTab('ssh1');
+    harness.harness = { ptyId: 'pty-ssh1', name: 'ssh' } as unknown as HarnessTabView['harness'];
+    harness.connections = [{ text: 'Agent: task.md', kind: 'acp', recordId: 'record-1' }];
+    render(layer(harness, harness, { send } as unknown as JanusClient));
+
+    const row = document.querySelector('.panel-row')!;
+    expect(document.querySelector('.status-panels')).toHaveClass('status-panels-interactive');
+    fireEvent.click(row);
+
+    expect(send).toHaveBeenCalledWith({
+      method: 'openConnectionRecord', params: { tab: 'ssh1', recordId: 'record-1' },
+    });
+    expect(document.querySelector('.panel-row-transcript')).toBeNull();
   });
 });

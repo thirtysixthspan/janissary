@@ -15,7 +15,7 @@ import type { TabPluginOwnTabCapabilities } from './api-own-tab.js';
 import type { TabPluginProjectCapabilities } from './api-project.js';
 
 // The capability half of the contract, and the topic half below it, live in modules of their own and
-// are re-exported here, so a plugin still reads the whole v2 contract from one module.
+// are re-exported here, so a plugin still reads the whole v3 contract from one module.
 export {
   TAB_PLUGIN_API_VERSION, TAB_PLUGIN_CAPABILITY_NAMES, isTabPluginCapability, TabPluginRejection,
 } from './api-capabilities.js';
@@ -36,6 +36,7 @@ export {
 export type {
   TabPluginNotification, TabPluginNotificationTopic, TabPluginTopicAction,
 } from './api-topics.js';
+export type { ConnectionsTopicAction, ConnectionsTopicNotification } from './api-topics-connections.js';
 export type {
   TabPluginLaunchFactory, TabPluginLaunchReady, TabPluginLaunchReadyHandler, TabPluginLaunchRequest,
   TabPluginLaunchResult, TabPluginLaunchStart,

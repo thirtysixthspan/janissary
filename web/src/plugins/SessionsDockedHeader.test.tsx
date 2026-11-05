@@ -12,7 +12,7 @@ function sessionTab(dock: 'left' | 'right', label = 'sessions'): TabView {
   return {
     label, number: 1, dotColor: '#5b9cff', group: 1, groupColor: '#5b9cff', busy: false,
     hasUnread: false, cwd: '/tmp', connections: [], schedule: [], bufferLines: [], cmdHistory: [],
-    commandQueue: [], toolStepsExpanded: false, view: 'plugin', dock, title: label,
+    commandQueue: [], view: 'plugin', dock, title: label,
     plugin: { id: 'sessions', schemaVersion: 1, payload: { entries: [] } },
   };
 }

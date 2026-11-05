@@ -5,9 +5,9 @@ import { unhandledClientMethod } from '../client-message.js';
 type TabMessage = Extract<ClientMessage, {
   method: 'command' | 'setActiveTab' | 'focusTab' | 'closeTab' | 'renameTab'
     | 'editQueuedCommand' | 'deleteQueuedCommand' | 'moveTab' | 'moveTabToOtherPane'
-    | 'reorderTab' | 'reorderTabTo' | 'toggleCollapse' | 'resetAcp' | 'revealNotifications'
+    | 'reorderTab' | 'reorderTabTo' | 'resetAcp' | 'revealNotifications'
     | 'setDock' | 'openFileNavigatorFor' | 'launchShellFor' | 'openDiffFor'
-    | 'openTranscriptFileFor' | 'openAcpTranscript' | 'openRecordingFor';
+    | 'openTranscriptFileFor' | 'openAcpTranscript' | 'openConnectionRecord' | 'openRecordingFor';
 }>;
 
 // The tab-tree RPC cases, split out of the main dispatcher to keep both files focused: these act on
@@ -42,11 +42,6 @@ export function dispatchTabMessage(controller: Controller, message: TabMessage):
     }
     case 'reorderTabTo': { controller.reorderTabTo(message.params.from, message.params.to); break;
     }
-    case 'toggleCollapse': {
-      if (message.params.tab === undefined) controller.toggleCollapse();
-      else controller.toggleCollapse(message.params.tab);
-      break;
-    }
     case 'resetAcp': {
       const label = message.params.tab;
       return controller.managers.command.executeCommand('acp-reset', 'acp reset', label, controller.managers.tab.findIndex(label));
@@ -67,6 +62,8 @@ export function dispatchTabMessage(controller: Controller, message: TabMessage):
     case 'openTranscriptFileFor': { controller.openTranscriptFileFor(message.params.label); break;
     }
     case 'openAcpTranscript': { controller.openAcpTranscript(message.params.acpRef); break;
+    }
+    case 'openConnectionRecord': { controller.openConnectionRecord(message.params); break;
     }
     case 'openRecordingFor': { controller.openRecordingFor(message.params.label); break;
     }

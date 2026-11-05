@@ -5,6 +5,9 @@ import type { Managers } from '../managers.js';
 import { messageBus } from '../bus.js';
 import { AgentRun, copyAgentCaller, type AgentOutcome, type AgentRunOptions } from './run.js';
 import type { AgentRunView } from './types.js';
+import { selectedModel } from './model.js';
+import { AgentRecordFeed, validateAgentRecordMetadata } from './record-feed.js';
+import { ownRecord } from '../acp/record-feed.js';
 
 export class AgentRunManager {
   readonly runs = new Map<string, AgentRun>();
@@ -21,6 +24,7 @@ export class AgentRunManager {
     if (runtime.closing) throw new Error(`Agent caller is closing: ${tab.label}`);
     return copyAgentCaller({
       label: tab.label,
+      ownerName: tab.title ?? tab.label,
       incarnation: runtime.incarnation,
       cwd: this.managers.tab.workingDirOf(tab.label),
       context: runtime.context,
@@ -33,18 +37,27 @@ export class AgentRunManager {
     if (!callerTab || callerTab.runtime?.incarnation !== options.caller.incarnation || callerTab.runtime.closing) {
       throw new Error(`Agent caller is stale: ${options.caller.label}`);
     }
+    const model = options.model ?? selectedModel(undefined);
+    const metadata = validateAgentRecordMetadata({
+      model, taskPath: options.snapshot.taskPath, ownerLabel: options.caller.label,
+      ownerName: options.caller.ownerName ?? callerTab.title ?? callerTab.label,
+      ...(options.executionHost !== undefined && { host: options.executionHost }),
+    });
     const releaseWorkspace = options.releaseWorkspace ?? (options.workspaceDir === undefined
       ? undefined
       : this.managers.workspace.acquireAgentLease(options.workspaceDir));
     const run = new AgentRun(copyAgentCaller(options.caller), options.snapshot, releaseWorkspace, {
       command: options.command ?? `agent execute ${options.snapshot.taskPath.split('/').at(-1) ?? options.snapshot.taskPath}`,
-      model: options.model ?? '',
+      model,
       effort: options.effort ?? 'medium',
       host: options.executionHost ?? 'Local',
       workspace: options.executionWorkspace ?? options.executionDir ?? options.caller.cwd,
     }, options.executionDir ?? options.caller.cwd);
+    run.record = new AgentRecordFeed(this.managers.acpRecords, metadata, run.id);
+    ownRecord(tabRuntime(callerTab), run.record.id);
     this.runs.set(run.id, run);
     this.knownRunIds.add(run.id);
+    messageBus.emit('state', { type: 'dirty' });
     run.subscribe((view) => {
       for (const label of run.monitorIds) this.pendingViews.set(label, view);
       if (this.flushScheduled) return;
@@ -84,8 +97,11 @@ export class AgentRunManager {
 
   async finish(runId: string, outcome: AgentOutcome): Promise<void> {
     const run = this.requireRun(runId);
+    const starting = run.outcome === undefined;
     try {
-      await run.finish(outcome);
+      const finishing = run.finish(outcome);
+      if (starting) messageBus.emit('state', { type: 'dirty' });
+      await finishing;
     } finally {
       if (this.runs.get(runId) === run && run.monitorIds.size === 0) this.runs.delete(runId);
     }

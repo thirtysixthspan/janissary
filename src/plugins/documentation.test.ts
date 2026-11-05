@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { TAB_PLUGIN_CAPABILITY_NAMES } from './api.js';
+import { TAB_PLUGIN_API_VERSION } from './api-capabilities.js';
 import { TAB_PLUGIN_NOTIFICATION_TOPICS } from './api-topics.js';
 import { fixtureV1Manifest } from './fixture-v1/manifest.js';
 
@@ -31,6 +32,10 @@ const COUNT_WORDS = [
 const CLIENT_CAPABILITY_COUNT_WORD = 'twenty-seven';
 
 describe('tab plugin developer documentation', () => {
+  it('pins the current API version the docs describe', () => {
+    expect(TAB_PLUGIN_API_VERSION).toBe(3);
+  });
+
   it('shows the fixture manifest the repository actually ships', () => {
     const block = /```ts\n(?<manifest>export const fixtureV1Manifest = \{[^`]*?)```/u
       .exec(documentation)?.groups?.manifest;
@@ -60,15 +65,35 @@ describe('tab plugin developer documentation', () => {
   // list the code declares.
   it('states the notification topic count in each doc that carries it', () => {
     const word = COUNT_WORDS[TAB_PLUGIN_NOTIFICATION_TOPICS.length];
-    expect(documentation).toContain(`v2 defines ${word} topics`);
+    expect(documentation).toContain(`v3 defines ${word} topics`);
     expect(specification).toContain(`This version defines ${word} kinds of host state`);
-    expect(guideline).toContain(`v2 defines ${word} topics`);
+    expect(guideline).toContain(`v3 defines ${word} topics`);
   });
 
-  it('keeps the API changelog honest about the same count', () => {
+  it('keeps the current counts only in the v3 changelog', () => {
     const word = COUNT_WORDS[TAB_PLUGIN_CAPABILITY_NAMES.length];
-    // The changelog entry opens a sentence, so match the count word however it is capitalized.
-    expect(documentation.toLowerCase())
-      .toContain(`${word} server and ${CLIENT_CAPABILITY_COUNT_WORD} client capabilities.`);
+    const start = documentation.indexOf('### v3');
+    expect(start).toBeGreaterThanOrEqual(0);
+    const end = documentation.indexOf('### v2', start);
+    expect(end).toBeGreaterThan(start);
+    const v3Section = documentation.slice(start, end);
+    const counts = `${word} server and ${CLIENT_CAPABILITY_COUNT_WORD} client capabilities.`;
+    expect(v3Section.toLowerCase()).toContain(counts);
+    // `openConnection` and the reply `line` were added in v3, never shipped in v2, so the
+    // current-contract phrase must stay in the v3 section rather than being repeated by history.
+    expect(documentation.toLowerCase().split(counts)).toHaveLength(2);
+  });
+
+  it('keeps the v2 changelog historical', () => {
+    const start = documentation.indexOf('### v2');
+    expect(start).toBeGreaterThanOrEqual(0);
+    const end = documentation.indexOf('### v1', start);
+    expect(end).toBeGreaterThan(start);
+    const v2Section = documentation.slice(start, end);
+    expect(v2Section).not.toContain('openConnection');
+    expect(v2Section).not.toContain('optional `line`');
+    expect(v2Section).not.toContain('Twenty-eight');
+    expect(v2Section).toContain('Twenty-seven client capabilities');
+    expect(v2Section).toContain('`launchShellHere()`');
   });
 });

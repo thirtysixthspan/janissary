@@ -15,3 +15,12 @@ export const SHELL_PROMPT_WIDTH = 2;
 export function shellCommandLine(line: string): string {
   return `${BOLD}> ${line}${NORMAL_INTENSITY}`;
 }
+
+const CLEAR_ROW = '\r\u{1B}[2K';
+
+// What starts a reply written into the terminal: the row it lands on cleared, then the command line it
+// answers. With no line, the reply continues beneath an echo already on screen, starting on the
+// prompt row that echo left.
+export function commandHead(line?: string): string {
+  return line === undefined ? CLEAR_ROW : `${CLEAR_ROW}${shellCommandLine(line)}\r\n`;
+}

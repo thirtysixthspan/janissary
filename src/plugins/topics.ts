@@ -9,6 +9,7 @@ import { tabActivityRows } from './activity.js';
 import { scheduleTopicAction } from './schedule-topic-actions.js';
 import { runscriptTopicAction } from './runscript-topic-actions.js';
 import { readRunscriptRows } from '../schedule/system/runscript-rows.js';
+import { readConnectionsTopic, runConnectionsTopicAction, subscribeConnectionsTopic } from './connections-topic.js';
 
 const TABS_NOTIFICATION_WINDOW_MS = 100;
 
@@ -187,6 +188,13 @@ const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
     subscribe: (fire) => messageBus.on('runscripts', 'changed', fire),
     read: (managers) => readRunscriptRows(managers),
     act: (managers, action) => { runscriptTopicAction(managers, action); },
+    empty: { rows: [] },
+  },
+  connections: {
+    subscribe: subscribeConnectionsTopic,
+    read: readConnectionsTopic,
+    act: (managers, action) => action.topic === 'connections'
+      ? runConnectionsTopicAction(managers, action) : undefined,
     empty: { rows: [] },
   },
 };

@@ -157,6 +157,7 @@ describe('completeCommandLine — connection strings', () => {
   it('does not offer connections for `connections list` or the command word', () => {
     expect(completeCommandLine('connections lis', 15, noFiles, [], conns).matches).toEqual([]);
     expect(completeCommandLine('connections close ', 18, noFiles, [], []).matches).toEqual([]);
+    expect(completeCommandLine('connection close ', 17, noFiles, [], conns).matches).toEqual([]);
   });
 });
 

@@ -32,6 +32,8 @@ Activity lists the agent's messages, thoughts, tool calls, plans, and permission
 
 Select **Terminate** to stop that run. The button is disabled once cleanup begins, and the status stays `Terminated` through cleanup. Closing the monitor only closes the view; the task continues, and you can still collect its result in the caller tab.
 
+Every run, headed or headless, also has a retained record in [Connections](/user-documentation/command-bar/connections). Open its `Agent: <task filename>` row from the connections list or your tab's connections window to reach the run's connection tab. The record tab's **Terminate** acts exactly like the monitor's Terminate and ends only that run, so closing a monitor still doesn't stop the task. The record survives the caller and an application restart, and a finished record opens read-only.
+
 Add `in group <name|id>` to place that monitor in an existing tab group. Names match without regard to case; numeric IDs select a group by number. A group that isn't open, or an invalid ID, fails before the task starts with `Agent: group "<selector>" does not exist.` This check also applies when the run is headless. Without a group selector, the monitor joins the caller's group.
 
 ## Fix a failed launch

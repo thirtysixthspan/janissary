@@ -214,10 +214,10 @@ outside the remote workspace. The window titlebar reads `Janissary (<version>): 
 
 ## Shell output and ACP replies
 
-Shell commands keep their output in the terminal’s scrollback. Application replies appear there as rendered Markdown; ACP replies stream in the panel above the command bar. Paths in supported rendered replies open an editor at the referenced line.
+Shell commands keep their output in the terminal’s scrollback. Application replies appear there as rendered Markdown. An `acp` line is printed as soon as you send it. Its answer arrives after the prompt settles as one rendered Markdown reply, right beneath that line when nothing else was printed in between, or at the current bottom under a fresh copy of the line when something was. It does not stream in a panel. Paths in supported rendered replies open an editor at the referenced line. See [Query ACP from a shell](/user-documentation/advanced-agents/acp-agent).
 
 While you stay at the bottom, the transcript follows incoming output and keeps the latest lines in view, even through a long stream. Scrolling away pauses following. It resumes when you scroll to within 40 pixels of the bottom. Press `Escape` to jump to the bottom and resume following.
 
 ## Agent tool steps fold up
 
-The ACP response panel collapses consecutive tool steps into a summary. Click it or press `Ctrl+T` to expand the steps for that shell’s ACP response. Harness session transcripts remain available from the harness metadata button.
+ACP thinking and tool steps appear in the session's connection tab, not in the shell. There, thought entries start collapsed and tool entries start expanded. Click an entry's label to open or close it. A tool step whose text is JSON reads as indented JSON. The connection tab follows new output while you stay near the bottom. Harness session transcripts remain available from the harness metadata button.
