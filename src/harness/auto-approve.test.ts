@@ -184,9 +184,34 @@ const SUBAGENT_AUTO_MODE_CLIPPED = [
   ' Esc to cancel · Tab to amend · ctrl+x ctrl+k twice to stop background ag',
 ].join('\n');
 
+// The subagent gate with background agents running: the auto-mode option wraps its "for you" onto
+// a second line, and the footer's background-agent hint is truncated with an ellipsis.
+const SUBAGENT_AUTO_MODE_WRAPPED_TRUNCATED = [
+  '─────────────────────────────────────────────────────────────────────',
+  ' Bash command · from the general-purpose agent',
+  ' Tip: auto mode handles these prompts for you — choose "switch to',
+  ' auto mode" below',
+  ' Run checks and promote plan to complete',
+  '╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌',
+  ' │ $janissary/scripts/run.mjs check-diff && mv',
+  ' │ ./product/plans/ready/connections-list-short-column-headings.md .',
+  ' │ /product/plans/complete/connections-list-short-column-headings.md',
+  '╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌',
+  " A variable in this command can't be checked before it runs",
+  '',
+  ' Do you want to proceed?',
+  ' ❯ 1. Yes',
+  '   2. Yes, and switch to auto mode · auto mode handles these prompts',
+  '      for you',
+  '   3. No',
+  '',
+  ' Esc to cancel · Tab to amend · ctrl+x ctrl+k twice to stop backgro…',
+].join('\n');
+
 const ALL_GATES = {
   BASH_IN_PROJECT, BASH_OUT_OF_PROJECT, FETCH, SUBAGENT_TWO_OPTION, MCP_TOOL, GATE_WITH_TASK_LIST, BASH_TEMP_CLEANUP,
   REQUIRES_APPROVAL_FOUR_OPTION, READ_FOUR_OPTION, SUBAGENT_AUTO_MODE_TIP, SUBAGENT_AUTO_MODE_CLIPPED,
+  SUBAGENT_AUTO_MODE_WRAPPED_TRUNCATED,
 };
 
 // A codex command-execution overlay: distinct title and `›` selection glyph from claude's gates.
@@ -259,6 +284,13 @@ describe('detectPermissionGate — claude', () => {
     expect(detectPermissionGate(screen, 'claude')).toBe(true);
   });
 
+  it('matches the wrapped, truncated subagent gate below a quoted copy of it and a `❯` prompt line', () => {
+    const screen = [
+      SUBAGENT_AUTO_MODE_WRAPPED_TRUNCATED, '', ' ❯ execute ./ai/tasks/work-an-issue.md', '', SUBAGENT_AUTO_MODE_WRAPPED_TRUNCATED,
+    ].join('\n');
+    expect(detectPermissionGate(screen, 'claude')).toBe(true);
+  });
+
   it('still matches a gate followed by passive chrome (status lines, no input caret)', () => {
     const withChrome = [BASH_TEMP_CLEANUP, '', ' ? for shortcuts', '   Context left until auto-compact: 23%'].join('\n');
     expect(detectPermissionGate(withChrome, 'claude')).toBe(true);
@@ -322,6 +354,12 @@ describe('HarnessAutoApprover', () => {
   it('approves the clipped subagent gate with a carriage return', () => {
     const { approver, approve } = make();
     approver.onCapture(capture(SUBAGENT_AUTO_MODE_CLIPPED));
+    expect(approve).toHaveBeenCalledWith('\r');
+  });
+
+  it('approves the wrapped, truncated subagent gate with a carriage return', () => {
+    const { approver, approve } = make();
+    approver.onCapture(capture(SUBAGENT_AUTO_MODE_WRAPPED_TRUNCATED));
     expect(approve).toHaveBeenCalledWith('\r');
   });
 
