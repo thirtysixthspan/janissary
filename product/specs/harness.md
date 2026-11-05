@@ -1084,6 +1084,10 @@ already listed. A model a provider offers only for a limited time is listed like
 provider lists it, and removed under the same rule once it is gone; the same model offered by both
 OpenCode Zen and OpenCode Go appears once under each prefix.
 
+Refreshing the catalog reports provider outcomes to the notifications feed. If `opencode models` or
+`codex debug models` reaches its 30-second deadline, the provider is reported as failed with the
+reason `timed out after 30 s`. A refresh canceled by its owner is discarded without reporting.
+
 `--effort <level>` selects an effort level with no validation against any fixed set of levels — the
 level is forwarded verbatim, translated to whichever flag the target harness actually understands so
 the launch never breaks on a flag the binary would reject:

@@ -40,4 +40,26 @@ describe('fetchCodexModels', () => {
       status: 'failed', reason: 'failed',
     });
   });
+
+  it('recognizes the execFile timeout shape without relabeling caller aborts', async () => {
+    const timeout = Object.assign(new Error('Command failed: codex debug models'), {
+      code: null,
+      killed: true,
+      signal: 'SIGTERM',
+    });
+    const abort = new Error('The operation was aborted');
+    Object.defineProperties(abort, {
+      name: { value: 'AbortError' },
+      code: { value: 'ABORT_ERR' },
+      killed: { value: true },
+      signal: { value: 'SIGTERM' },
+    });
+
+    await expect(fetchCodexModels(new AbortController().signal, async () => { throw timeout; })).resolves.toEqual({
+      status: 'failed', reason: 'timed out after 30 s',
+    });
+    await expect(fetchCodexModels(new AbortController().signal, async () => { throw abort; })).resolves.toEqual({
+      status: 'failed', reason: 'The operation was aborted',
+    });
+  });
 });

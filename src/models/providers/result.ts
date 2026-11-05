@@ -44,10 +44,18 @@ export function firstLine(error: unknown): string {
 }
 
 export function isTimeout(error: unknown): boolean {
-  return error instanceof Error && (
-    error.name === 'TimeoutError'
+  if (!(error instanceof Error) || isAbortError(error)) return false;
+  return error.name === 'TimeoutError'
     || hasErrorCode(error, 'ETIMEDOUT')
-  );
+    || isKilledChildProcess(error);
+}
+
+function isAbortError(error: Error): boolean {
+  return error.name === 'AbortError' || hasErrorCode(error, 'ABORT_ERR');
+}
+
+function isKilledChildProcess(error: Error): boolean {
+  return 'killed' in error && error.killed === true;
 }
 
 export function hasErrorCode(error: unknown, code: string): boolean {
