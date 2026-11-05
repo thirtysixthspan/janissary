@@ -57,13 +57,13 @@ The [connections window](#the-connections-window) and the connections tab open r
 
 ## The connections tab
 
-The connections tab is titled **Connections**. It is a flat list ordered by most recent activity, with each row showing the connection's title, kind, owning tab, and status. Use Up, Down, Home, End, and Enter to move and open rows. A row also opens on a second click on the same row.
+The connections tab is titled **Connections**. It is a table ordered by most recent activity, laid out like the sessions tab. A heading row names the columns: **Host**, **Tab**, **Connection Name**, **Connection State**, and **Last activity**, followed by an actions column. **Host** reads the remote host for a connection on a remote or ssh tab, and `Local` for everything else, including every SQLite database. **Tab** is the tab that owns the connection. **Last activity** reads like `3m ago`, and stays empty when no activity is known. Hover a row to see its connection kind. Use Up, Down, Home, End, and Enter to move and open rows. A row also opens on a second click on the same row.
 
 Opening a non-ACP row focuses the tab that owns the connection. A SQLite row focuses the first tab in strip order that has the database attributed, or does nothing when no tab has it. An ACP or agent record row opens its connection tab.
 
 A live SQLite row is titled `sqlite:<name>`, and its owning-tab column reads exactly `global`, whether or not any tab has the database attributed. Its **Close** control closes the database app-wide, exactly like `connections close sqlite:<name>`, including when no tab is attributed. Focus and close are separate: opening the row uses the first attributed tab, and the close control still acts on the database everywhere.
 
-A live row offers **Close**, which reports the same notification as `connections close <kind>:<id>`. An open ACP record row's **Close** ends that session. A closed ACP record row offers **Delete**, which asks `Delete "<title>"?` before removing it. An agent record row has no list control; its **Terminate** control is in its connection tab. An empty list reads `No connections yet`.
+A live row offers **Close**, which reports the same notification as `connections close <kind>:<id>`. An open ACP record row's **Close** ends that session. A closed ACP record row offers **Delete**, which asks `Delete "<title>"?` before removing it. An agent record row has no list control; its **Terminate** control is in its connection tab. **Close** is a circled-cross icon and **Delete** a trash icon, both in the actions column. An empty list reads `No connections yet`.
 
 Closed ACP records are kept per project. Records closed more than 30 days before startup are removed at startup, not on a rolling timer. An open record cannot be deleted. The connections tab itself is a live, in-memory view and is not restored at restart, but the retained ACP and agent records are.
 

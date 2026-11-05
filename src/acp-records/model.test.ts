@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { appendActivity, ACP_RECORD_RETENTION_MS, durableRecord, isExpired, recordRows, recordStatus, recordTitle, recordWindow } from './model.js';
 import type { AcpRecord, AcpRecordBlock, AcpRecordSource } from './types.js';
+import { isRecordSource } from './validation.js';
 
 const core: AcpRecordSource = { kind: 'acp', model: 'provider/model', ownerLabel: 'bob', ownerName: 'Bob' };
 const agent: AcpRecordSource = { ...core, kind: 'agent', runId: 'run', taskPath: '/tasks/execute.md' };
@@ -73,6 +74,20 @@ describe('record model', () => {
     expect(rows[1]).not.toHaveProperty('blocks');
     rows[1].ownerName = 'changed';
     expect(a.source.ownerName).toBe('Bob');
+  });
+
+  it('copies a captured host onto the row and leaves a local record without one', () => {
+    const remote = { ...record(), id: 'remote', source: { ...core, host: 'devbox' } };
+    const [remoteRow, localRow] = recordRows([remote, { ...record(), id: 'local', updatedAt: 0 }]);
+    expect(remoteRow).toMatchObject({ id: 'remote', host: 'devbox' });
+    expect(localRow).not.toHaveProperty('host');
+  });
+
+  it('accepts a source with a nonempty host and refuses an empty one', () => {
+    expect(isRecordSource({ ...core, host: 'devbox' })).toBe(true);
+    expect(isRecordSource({ ...agent, host: 'devbox' })).toBe(true);
+    expect(isRecordSource({ ...core, host: ' ' })).toBe(false);
+    expect(isRecordSource({ ...core, host: 7 })).toBe(false);
   });
 
   it.each([0, 20, 21, 41])('projects the newest default suffix of %s blocks', (count) => {

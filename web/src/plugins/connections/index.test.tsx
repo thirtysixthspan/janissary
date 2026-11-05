@@ -20,7 +20,7 @@ describe('connections entry routing', () => {
   it('routes a record payload to ConnectionTab', () => {
     const payload: ConnectionsPayload = { kind: 'connection', record: {
       type: 'record', id: 'id', kind: 'acp', title: 'Session', model: 'model', status: 'Idle',
-      ownerLabel: 'owner', ownerName: 'Captured owner', orderingTimestamp: 1, startedAt: 1, updatedAt: 2,
+      host: 'Local', ownerLabel: 'owner', ownerName: 'Captured owner', orderingTimestamp: 1, startedAt: 1, updatedAt: 2,
     } };
     render(<ConnectionsPlugin payload={payload} capabilities={capabilities} />);
     expect(screen.getByText('record:Session')).toBeInTheDocument();

@@ -139,6 +139,37 @@ describe('connections topic rows', () => {
       .toMatchObject({ window: { id: 'core-record', count: 20 } });
   });
 
+  it('reads Local for local tabs, SQLite databases, and records captured without a host', () => {
+    const { managers } = fixture();
+    const rows = composeConnectionsTopicData(managers, new Map()).rows;
+    expect(new Set(rows.map((row) => row.host))).toEqual(new Set(['Local']));
+  });
+
+  it('reads the bare remote host for a remote tab and an ssh tab, keeping SQLite Local', () => {
+    const { managers, tabs } = fixture();
+    tabs[1]!.remote = { address: 'me@devbox:/srv/repo', host: 'devbox' };
+    tabs.push({
+      label: 'ssh-tab', dotColor: '', number: 4, log: [],
+      harness: { name: 'ssh', destination: 'ops@jump-host' },
+    } as unknown as Tab);
+    const rows = composeConnectionsTopicData(managers, new Map()).rows;
+    const hostOf = (id: string) => rows.find((row) => row.id === id)?.host;
+
+    expect(hostOf('reviewer')).toBe('devbox');
+    expect(rows.find((row) => row.kind === 'ssh' && row.ownerLabel === 'second')?.host).toBe('devbox');
+    expect(rows.find((row) => row.kind === 'ssh' && row.ownerLabel === 'ssh-tab')?.host).toBe('jump-host');
+    expect(hostOf('monitor-1')).toBe('Local');
+    expect(hostOf('shared-db')).toBe('Local');
+  });
+
+  it('carries the host captured on a record', () => {
+    const { managers, recordRows } = fixture();
+    Object.assign(recordRows[1]!, { host: 'build-box' });
+    const rows = composeConnectionsTopicData(managers, new Map()).rows;
+    expect(rows.find((row) => row.id === 'agent-record')?.host).toBe('build-box');
+    expect(rows.find((row) => row.id === 'core-record')?.host).toBe('Local');
+  });
+
   it('keeps the SQLite owner display global while focus follows strip order independently', () => {
     const { managers, tabs } = fixture();
     tabs[0]!.title = 'Renamed first';

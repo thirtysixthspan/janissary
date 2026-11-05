@@ -1,17 +1,29 @@
 .connections-list.plugin-tab { padding: 0; gap: 0; outline: none; }
 .connections-empty { color: var(--muted); padding: 10px 12px; }
 .connections-rows { overflow: auto; min-height: 0; padding: 4px 8px; }
+/* The column names sit over the rows in the same grid, so each label lines up with its column —
+   Host, Tab, Connection Name, Connection State, Last activity, and the unlabeled actions column. */
+.connections-columns, .connections-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr) 8em 8em 4em;
+  gap: 12px; align-items: center;
+}
+.connections-columns { padding: 4px 16px 0 18px;color: var(--muted); font-size: 12px; text-align: left; }
 .connections-row {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto auto;
-  gap: 12px; align-items: center; padding: 8px; border-radius: 4px;
-  cursor: pointer; border-left: 2px solid transparent;
+  padding: 8px; border-radius: 4px; cursor: pointer; border-left: 2px solid transparent;
 }
 .connections-row:hover { background: var(--bg-soft); }
 .connections-row.selected { background: var(--bg-soft); border-left-color: var(--accent); }
-.connections-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.connections-row-kind, .connections-row-owner, .connections-row-status { color: var(--muted); font-size: 12px; }
-.connections-row button { border: 0; background: transparent; color: var(--muted); cursor: pointer; }
-.connections-row button:hover { color: var(--fg); }
+.connections-row-host, .connections-row-owner, .connections-row-title {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.connections-row-host, .connections-row-owner, .connections-row-status { color: var(--muted); font-size: 12px; }
+.connections-row-activity { color: var(--faint); font-size: 12px; white-space: nowrap; }
+.connections-row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
+.connections-row-actions button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
+  padding: 0 4px; line-height: 1;
+}
+.connections-row-actions button:hover { color: var(--fg); }
 .connections-record.plugin-tab { padding: 0; gap: 0; }
 .connections-record-header { display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 12px; }
 .connections-record-title { font-weight: 600; }

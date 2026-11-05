@@ -43,6 +43,7 @@ export function recordRow(record: AcpRecord): AcpRecordRow {
     model: source.model,
     ownerLabel: source.ownerLabel,
     ownerName: source.ownerName,
+    ...(source.host !== undefined && { host: source.host }),
     ...(source.kind === 'agent' && { runId: source.runId }),
     ...(endedAt !== undefined && { endedAt }),
     status: recordStatus(record),

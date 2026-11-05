@@ -19,7 +19,7 @@ function setup(record: RecordConnectionRow, impl?: (name: string, payload: unkno
 
 function record(kind: 'acp' | 'agent' = 'acp', status: RecordConnectionRow['status'] = 'Running'): RecordConnectionRow {
   return { type: 'record', id: 'uuid', kind, title: 'Authoritative title', model: 'model-x', status,
-    ownerLabel: 'other-label', ownerName: 'Captured owner', startedAt: 0, updatedAt: 2, endedAt: 3,
+    host: 'Local', ownerLabel: 'other-label', ownerName: 'Captured owner', startedAt: 0, updatedAt: 2, endedAt: 3,
     runId: 'run-id', orderingTimestamp: 4,
     window: { id: 'uuid', source: kind === 'agent'
       ? { kind: 'agent', model: 'model-x', ownerLabel: 'other-label', ownerName: 'Captured owner', runId: 'run-id', taskPath: '/task' }

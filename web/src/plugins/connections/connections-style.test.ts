@@ -15,4 +15,10 @@ describe('connections list styles', () => {
     expect(styles).toContain('.connections-activity');
     expect(styles).not.toContain('.conversation-');
   });
+
+  it('lays the heading row and the rows out on one shared grid', () => {
+    const styles = readFileSync('web/src/plugins/connections/connections.css', 'utf8');
+    expect(styles).toMatch(/\.connections-columns, \.connections-row \{[^}]*grid-template-columns:/);
+    expect(styles).toContain('.connections-row-actions button');
+  });
 });

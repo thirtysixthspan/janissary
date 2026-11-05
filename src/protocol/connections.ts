@@ -9,6 +9,8 @@ export type ConnectionsTopicLiveRow = {
   id: string;
   kind: ConnectionKind;
   display: string;
+  // Bare host the connection runs on: a remote tab's host, an ssh tab's destination host, or `Local`.
+  host: string;
   ownerLabel: string;
   ownerName: string;
   status: 'Open';
@@ -25,6 +27,8 @@ export type ConnectionsTopicRecordRow = {
   kind: AcpRecordRow['kind'];
   title: string;
   model: string;
+  // The host captured on the record when its session or run started remotely, otherwise `Local`.
+  host: string;
   ownerLabel: string;
   ownerName: string;
   runId?: string;

@@ -25,6 +25,7 @@ export type ConnectionWindow = {
 
 type ConnectionRowBase = {
   id: string;
+  host: string;
   ownerLabel: string;
   ownerName: string;
   orderingTimestamp: number;
@@ -101,7 +102,8 @@ function isAcpRef(value: unknown): boolean {
 }
 
 export function isConnectionRow(value: unknown): value is ConnectionRow {
-  if (!object(value) || typeof value.id !== 'string' || typeof value.ownerLabel !== 'string'
+  if (!object(value) || typeof value.id !== 'string' || typeof value.host !== 'string'
+    || typeof value.ownerLabel !== 'string'
     || typeof value.ownerName !== 'string' || typeof value.orderingTimestamp !== 'number'
     || !Number.isFinite(value.orderingTimestamp) || !optionalString(value, 'focusTarget') || !optionalString(value, 'runId')
     || !optionalNumber(value, 'startedAt') || !optionalNumber(value, 'updatedAt')

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ConnectionRow } from '@shared/plugins/connections/shared';
 import {
+  connectionActivity,
   connectionClickSelection,
   connectionKeyboardNavigation,
   connectionListOrder,
@@ -9,12 +10,12 @@ import {
 } from './connection-list-keys';
 
 const row = (id: string): ConnectionRow => ({
-  type: 'record', id, kind: 'acp', title: id, model: 'model', ownerLabel: 'owner', ownerName: 'Owner',
+  type: 'record', id, kind: 'acp', title: id, model: 'model', host: 'Local', ownerLabel: 'owner', ownerName: 'Owner',
   startedAt: 1, updatedAt: 1, status: 'Closed', orderingTimestamp: 1,
 });
 
 const shell = (ownerLabel: string, display: string): ConnectionRow => ({
-  type: 'live', id: 'zsh', kind: 'shell', display, ownerLabel, ownerName: ownerLabel,
+  type: 'live', id: 'zsh', kind: 'shell', display, host: 'Local', ownerLabel, ownerName: ownerLabel,
   status: 'Open', orderingTimestamp: 2,
 });
 
@@ -79,5 +80,18 @@ describe('connections list selection helpers', () => {
     expect(connectionClickSelection(1, [first, replacement], confirmation).opens).toBe(false);
     const fresh = connectionClickSelection(1, [first, replacement], confirmation);
     expect(connectionClickSelection(1, [first, replacement], fresh.confirmation).opens).toBe(true);
+  });
+});
+
+describe('connectionActivity', () => {
+  const NOW = 1_000_000_000;
+
+  it('renders a known timestamp as relative age with its ISO stamp', () => {
+    expect(connectionActivity(NOW - 2 * 60 * 60_000, NOW))
+      .toEqual({ text: '2h ago', dateTime: new Date(NOW - 2 * 60 * 60_000).toISOString() });
+  });
+
+  it('renders no activity for the zero timestamp', () => {
+    expect(connectionActivity(0, NOW)).toEqual({ text: '' });
   });
 });

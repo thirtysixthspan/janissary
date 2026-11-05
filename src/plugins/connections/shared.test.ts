@@ -4,11 +4,11 @@ import {
 } from './shared.js';
 
 const live = {
-  type: 'live', id: 'sqlite:db', kind: 'sqlite', display: 'sqlite:db', ownerLabel: 'owner', ownerName: 'Owner',
+  type: 'live', id: 'sqlite:db', kind: 'sqlite', display: 'sqlite:db', host: 'Local', ownerLabel: 'owner', ownerName: 'Owner',
   status: 'Open', orderingTimestamp: 1,
 };
 const record = {
-  type: 'record', id: 'uuid', kind: 'acp', title: 'Record', model: 'model', ownerLabel: 'owner', ownerName: 'Owner',
+  type: 'record', id: 'uuid', kind: 'acp', title: 'Record', model: 'model', host: 'Local', ownerLabel: 'owner', ownerName: 'Owner',
   startedAt: 1, updatedAt: 2, status: 'Completed', orderingTimestamp: 2,
   window: {
     id: 'uuid', source: { kind: 'acp', model: 'model', ownerLabel: 'owner', ownerName: 'Owner' },
@@ -30,6 +30,8 @@ describe('connections shared contract', () => {
     { kind: 'list', rows: [{ ...live, status: 'Closed' }] },
     { kind: 'list', rows: [{ ...record, window: { ...record.window, blocks: null } }] },
     { kind: 'list', rows: [{ ...live, ownerLabel: undefined }] },
+    { kind: 'list', rows: [{ ...live, host: undefined }] },
+    { kind: 'list', rows: [{ ...record, host: 7 }] },
     { kind: 'connection', record: { ...record, model: undefined } },
   ])('rejects malformed payload %j', (value) => {
     expect(isConnectionsPayload(value)).toBe(false);

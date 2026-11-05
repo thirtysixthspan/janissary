@@ -93,6 +93,17 @@ describe('core record feeds', () => {
     expect(f.records.window(oldId)?.status).toBe('Closed');
     expect(f.records.window(newId)?.status).toBe('Idle');
   });
+  it.each([false, true])('captures the remote host on the record only for a remote tab (remote: %s)', async (remote) => {
+    const f = setup(remote);
+    const pending = f.managers.acp.prompt('owner', 'where');
+    f.handshake();
+    const [row] = f.records.rows();
+    if (remote) expect(row).toMatchObject({ host: 'host' });
+    else expect(row).not.toHaveProperty('host');
+    f.chunk('here');
+    f.end();
+    await pending;
+  });
   it.each([false, true])('settles and closes on fatal loss while cancellation drains (remote: %s)', async (remote) => {
     const f = setup(remote);
     const pending = f.managers.acp.prompt('owner', 'held');

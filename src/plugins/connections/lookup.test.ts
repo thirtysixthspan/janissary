@@ -15,7 +15,7 @@ type RecordOptions = {
 
 function liveRow(id: string, kind: ConnectionKind, ownerLabel = 'first'): LiveConnectionRow {
   return {
-    type: 'live', id, kind, display: `${kind}:${id}`, ownerLabel, ownerName: 'global',
+    type: 'live', id, kind, display: `${kind}:${id}`, host: 'Local', ownerLabel, ownerName: 'global',
     status: 'Open', orderingTimestamp: 1,
   };
 }
@@ -24,7 +24,7 @@ function recordRow({
   id, title, ownerLabel = 'elsewhere', status = 'Closed', model = 'model-a', updatedAt = 100,
 }: RecordOptions): RecordConnectionRow {
   return {
-    type: 'record', id, kind: 'acp', title, model, ownerLabel, ownerName: 'Owner',
+    type: 'record', id, kind: 'acp', title, model, host: 'Local', ownerLabel, ownerName: 'Owner',
     startedAt: 1, updatedAt, status, orderingTimestamp: updatedAt,
   };
 }

@@ -14,7 +14,8 @@ function nonempty(value: unknown): value is string {
 
 export function isRecordSource(value: unknown): value is AcpRecordSource {
   if (!isRecord(value) || !nonempty(value.model)
-    || !nonempty(value.ownerLabel) || !nonempty(value.ownerName)) return false;
+    || !nonempty(value.ownerLabel) || !nonempty(value.ownerName)
+    || (value.host !== undefined && !nonempty(value.host))) return false;
   return value.kind === 'acp'
     || (value.kind === 'agent' && nonempty(value.runId) && nonempty(value.taskPath));
 }

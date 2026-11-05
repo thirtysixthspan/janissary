@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import type { ConnectionRow, LiveConnectionRow, RecordConnectionRow } from '@shared/plugins/connections/shared';
+import type { ConnectionRow, RecordConnectionRow } from '@shared/plugins/connections/shared';
 import { ConfirmDialog, useListSelection, type TabPluginClientCapabilities } from '../api';
+import { ConnectionRowActions } from './ConnectionRowActions';
 import {
+  connectionActivity,
   connectionClickSelection,
   connectionKeyboardNavigation,
   connectionListOrder,
@@ -15,9 +17,6 @@ function rowTitle(row: ConnectionRow): string {
   return row.type === 'live' ? row.display : row.title;
 }
 
-function canClose(row: ConnectionRow): row is LiveConnectionRow | RecordConnectionRow {
-  return row.type === 'live' || (row.kind === 'acp' && ['Running', 'Idle'].includes(row.status));
-}
 
 export function ConnectionList({
   rows,
@@ -67,14 +66,25 @@ export function ConnectionList({
   };
 
   const title = pendingDelete === null ? '' : rowTitle(pendingDelete);
+  const now = Date.now();
   return (
     <div className="connections-list plugin-tab" ref={selection.listRef} tabIndex={0} onKeyDown={onKeyDown}>
       {rows.length === 0 && <div className="connections-empty">No connections yet</div>}
       {controller.error && <div className="connections-list-error" role="alert">{controller.error}</div>}
+      {rows.length > 0 && (
+        <div className="connections-columns" aria-hidden="true">
+          <span className="connections-columns-host">Host</span>
+          <span className="connections-columns-owner">Tab</span>
+          <span className="connections-columns-title">Connection Name</span>
+          <span className="connections-columns-status">Connection State</span>
+          <span className="connections-columns-activity">Last activity</span>
+          <span />
+        </div>
+      )}
       <div className="connections-rows">
         {rows.map((row, index) => {
           const label = rowTitle(row);
-          const closedRecord = row.type === 'record' && row.kind === 'acp' && row.status === 'Closed';
+          const activity = connectionActivity(row.orderingTimestamp, now);
           return (
             <div
               key={connectionRowIdentity(row)}
@@ -82,26 +92,20 @@ export function ConnectionList({
               data-index={index}
               role="button"
               tabIndex={-1}
+              title={`${label}\n${row.kind}`}
               onClick={() => { clickRow(index); }}
             >
-              <span className="connections-row-title">{label}</span>
-              <span className="connections-row-kind">{row.kind}</span>
+              <span className="connections-row-host">{row.host}</span>
               <span className="connections-row-owner">{row.ownerName}</span>
+              <span className="connections-row-title">{label}</span>
               <span className="connections-row-status">{row.status}</span>
-              {canClose(row) && (
-                <button
-                  type="button"
-                  aria-label={`Close ${label}`}
-                  onClick={(event) => { event.stopPropagation(); controller.close(row); }}
-                >Close</button>
-              )}
-              {closedRecord && (
-                <button
-                  type="button"
-                  aria-label={`Delete ${label}`}
-                  onClick={(event) => { event.stopPropagation(); setPendingDelete(row); }}
-                >Delete</button>
-              )}
+              <time className="connections-row-activity" dateTime={activity.dateTime}>{activity.text}</time>
+              <ConnectionRowActions
+                row={row}
+                label={label}
+                onClose={controller.close}
+                onDelete={setPendingDelete}
+              />
             </div>
           );
         })}

@@ -1,5 +1,7 @@
 import { connectionCatalog } from '../connection/catalog.js';
 import type { AcpRef } from '../protocol/tab.js';
+import { bareHost } from '../remote/address.js';
+import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 import type { ConnectionsTopicData, ConnectionsTopicLiveRow, ConnectionsTopicRecordRow } from '../protocol/connections.js';
 
@@ -24,6 +26,16 @@ export function composeConnectionsTopicData(
   return { rows };
 }
 
+const LOCAL_HOST = 'Local';
+
+// The host a tab's connections run on: a remote tab runs over its ssh session, and an ssh harness tab
+// is that session, so both read as the bare host they reach. Everything else runs here.
+function tabHost(tab: Tab): string {
+  if (tab.remote) return tab.remote.host;
+  if (tab.harness?.name === 'ssh' && tab.harness.destination) return bareHost(tab.harness.destination);
+  return LOCAL_HOST;
+}
+
 function openPluginTabIds(managers: Managers): Set<string> {
   return new Set(managers.tab.tabs.flatMap((tab) => (tab.plugin ? [tab.plugin.instanceKey] : [])));
 }
@@ -35,7 +47,7 @@ function liveTabRows(managers: Managers, recordIds: Set<string>): ConnectionsTop
       if (connection.scope !== 'tab' || connection.kind === 'sqlite') continue;
       if (isTrackedCoreAcp(connection.acpRef, tab.runtime?.acpRecordId, tab.label, recordIds)) continue;
       rows.push({
-        type: 'live', id: connection.id, kind: connection.kind, display: connection.display,
+        type: 'live', id: connection.id, kind: connection.kind, display: connection.display, host: tabHost(tab),
         ownerLabel: tab.label, ownerName: tab.title ?? tab.label, status: 'Open',
         orderingTimestamp: tab.runtime?.lastActivity ?? 0, focusTarget: tab.label,
         ...(connection.acpRef && { acpRef: connection.acpRef }),
@@ -61,7 +73,7 @@ function databaseRows(managers: Managers): ConnectionsTopicLiveRow[] {
     let orderingTimestamp = 0;
     for (const tab of attributed) orderingTimestamp = Math.max(orderingTimestamp, tab.runtime?.lastActivity ?? 0);
     return {
-      type: 'live', id: name, kind: 'sqlite', display: `sqlite:${name}`,
+      type: 'live', id: name, kind: 'sqlite', display: `sqlite:${name}`, host: LOCAL_HOST,
       ownerLabel: focusTab?.label ?? '', ownerName: 'global',
       status: 'Open', orderingTimestamp,
       ...(focusTab && { focusTarget: focusTab.label }),
@@ -78,7 +90,7 @@ function durableRows(
     const count = requestedWindows.get(record.id);
     const window = count === undefined ? undefined : managers.acpRecords.window(record.id, count);
     return {
-      type: 'record', ...record, orderingTimestamp: record.updatedAt,
+      type: 'record', ...record, host: record.host ?? LOCAL_HOST, orderingTimestamp: record.updatedAt,
       ...(window && { window }),
     };
   });

@@ -133,6 +133,9 @@ export { usePluginChordClaims,  } from './PluginChords';
 // identical copy before this, kept in step only by comments. Additive, so `TAB_PLUGIN_API_VERSION`
 // does not move.
 export { nextListSelection } from '../shared/list-selection';
+// The relative last-activity wording, published so the sessions and connections tables read the same
+// age the same way. Additive, so `TAB_PLUGIN_API_VERSION` does not move.
+export { relativeActivity } from '../shared/relative-activity';
 export { HistoryPicker } from '../shared/command-bar/HistoryPicker';
 export { handlePickerKey } from '../shared/picker-keyboard';
 

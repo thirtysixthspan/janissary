@@ -1,7 +1,14 @@
 import type { ConnectionRow } from '@shared/plugins/connections/shared';
-import { nextListSelection } from '../api';
+import { nextListSelection, relativeActivity } from '../api';
 
 export type ConnectionClickConfirmation = { identity: string; order: string };
+
+// The Last activity cell. Zero is the host's "no activity known", which reads as an empty cell
+// rather than as an age measured from 1970.
+export function connectionActivity(timestamp: number, now: number): { text: string; dateTime?: string } {
+  if (timestamp === 0) return { text: '' };
+  return { text: relativeActivity(timestamp, now), dateTime: new Date(timestamp).toISOString() };
+}
 
 export function connectionRowIdentity(row: ConnectionRow): string {
   return JSON.stringify([row.type, row.kind, row.id, row.ownerLabel]);

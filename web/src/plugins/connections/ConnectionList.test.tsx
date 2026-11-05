@@ -17,7 +17,7 @@ function capabilities() {
 
 function live(id: string, kind: ConnectionKind, display: string, ownerName = 'Owner'): ConnectionRow {
   return {
-    type: 'live', id, kind, display, ownerLabel: 'owner', ownerName, status: 'Open', orderingTimestamp: 1,
+    type: 'live', id, kind, display, host: 'Local', ownerLabel: 'owner', ownerName, status: 'Open', orderingTimestamp: 1,
   };
 }
 
@@ -25,14 +25,14 @@ function record(
   id: string, kind: ConnectionKind | 'agent', status: ConnectionStatus, title = id,
 ): ConnectionRow {
   return {
-    type: 'record', id, kind, title, model: 'model', ownerLabel: 'owner', ownerName: 'Owner',
+    type: 'record', id, kind, title, model: 'model', host: 'Local', ownerLabel: 'owner', ownerName: 'Owner',
     startedAt: 1, updatedAt: 2, status, orderingTimestamp: 2,
   };
 }
 
 function shell(ownerLabel: string, display: string): ConnectionRow {
   return {
-    type: 'live', id: 'zsh', kind: 'shell', display, ownerLabel, ownerName: ownerLabel,
+    type: 'live', id: 'zsh', kind: 'shell', display, host: 'Local', ownerLabel, ownerName: ownerLabel,
     status: 'Open', orderingTimestamp: 2,
   };
 }
@@ -42,34 +42,84 @@ beforeEach(() => {
 });
 
 describe('ConnectionList', () => {
-  it('shows the exact empty message', () => {
-    render(<ConnectionList rows={[]} capabilities={capabilities().value} />);
+  it('shows the exact empty message and no column headings', () => {
+    const { container } = render(<ConnectionList rows={[]} capabilities={capabilities().value} />);
     expect(screen.getByText('No connections yet')).toBeInTheDocument();
+    expect(container.querySelector('.connections-columns')).toBeNull();
   });
 
-  it('renders mixed rows in supplied order with host titles, kinds, owners, and statuses', () => {
+  it('names the columns in the heading row, in table order, with an unlabeled actions column', () => {
+    const { container } = render(<ConnectionList rows={[live('db', 'sqlite', 'Database')]} capabilities={capabilities().value} />);
+    const heading = container.querySelector('.connections-columns')!;
+    expect(heading).toHaveAttribute('aria-hidden', 'true');
+    expect([...heading.children].map((node) => node.textContent))
+      .toEqual(['Host', 'Tab', 'Connection Name', 'Connection State', 'Last activity', '']);
+  });
+
+  it('renders mixed rows in supplied order with hosts, owners, titles, and statuses', () => {
     const rows = [
       live('db', 'sqlite', 'SQLite database', 'Database owner'),
-      record('run', 'agent', 'Completed', 'Agent record'),
+      { ...record('run', 'agent', 'Completed', 'Agent record'), host: 'build-box' },
       record('session', 'acp', 'Running', 'ACP session'),
-      live('editor', 'acp', 'Editor session'),
+      { ...live('editor', 'acp', 'Editor session'), host: 'devbox' },
     ];
     const { container } = render(<ConnectionList rows={rows} capabilities={capabilities().value} />);
+    expect([...container.querySelectorAll('.connections-row-host')].map((node) => node.textContent))
+      .toEqual(['Local', 'build-box', 'Local', 'devbox']);
     expect([...container.querySelectorAll('.connections-row-title')].map((node) => node.textContent))
       .toEqual(['SQLite database', 'Agent record', 'ACP session', 'Editor session']);
-    expect([...container.querySelectorAll('.connections-row-kind')].map((node) => node.textContent))
-      .toEqual(['sqlite', 'agent', 'acp', 'acp']);
     expect([...container.querySelectorAll('.connections-row-owner')].map((node) => node.textContent))
       .toEqual(['Database owner', 'Owner', 'Owner', 'Owner']);
     expect([...container.querySelectorAll('.connections-row-status')].map((node) => node.textContent))
       .toEqual(['Open', 'Completed', 'Running', 'Open']);
   });
 
+  it('lays each row out as host, tab, name, state, last activity, then actions', () => {
+    const now = Date.now();
+    const row = { ...live('db', 'sqlite', 'Database', 'Owner tab'), orderingTimestamp: now - 3 * 60_000 };
+    const { container } = render(<ConnectionList rows={[row]} capabilities={capabilities().value} />);
+    const cells = [...container.querySelector('.connections-row')!.children];
+    expect(cells.map((node) => node.className)).toEqual([
+      'connections-row-host', 'connections-row-owner', 'connections-row-title',
+      'connections-row-status', 'connections-row-activity', 'connections-row-actions',
+    ]);
+    expect(cells.slice(0, 5).map((node) => node.textContent)).toEqual(['Local', 'Owner tab', 'Database', 'Open', '3m ago']);
+    expect(cells[4]).toHaveAttribute('dateTime', new Date(row.orderingTimestamp).toISOString());
+  });
+
+  it('leaves the last activity empty when the host knows no activity', () => {
+    const row = { ...live('db', 'sqlite', 'Database'), orderingTimestamp: 0 };
+    const { container } = render(<ConnectionList rows={[row]} capabilities={capabilities().value} />);
+    const activity = container.querySelector('.connections-row-activity')!;
+    expect(activity.textContent).toBe('');
+    expect(activity).not.toHaveAttribute('dateTime');
+  });
+
+  it('carries the connection kind in the row tooltip rather than a column', () => {
+    const { container } = render(<ConnectionList rows={[record('run', 'agent', 'Completed', 'Agent record')]} capabilities={capabilities().value} />);
+    expect(container.querySelector('.connections-row')).toHaveAttribute('title', 'Agent record\nagent');
+    expect(container.querySelector('.connections-row-kind')).toBeNull();
+  });
+
+  it('renders Close and Delete as icon buttons in the actions column', () => {
+    const rows = [live('db', 'sqlite', 'Database'), record('closed', 'acp', 'Closed', 'Finished session')];
+    const { container } = render(<ConnectionList rows={rows} capabilities={capabilities().value} />);
+    const [first, second] = [...container.querySelectorAll('.connections-row-actions')];
+    const close = screen.getByRole('button', { name: 'Close Database' });
+    const remove = screen.getByRole('button', { name: 'Delete Finished session' });
+    expect(first).toContainElement(close);
+    expect(second).toContainElement(remove);
+    for (const button of [close, remove]) {
+      expect(button.textContent).toBe('');
+      expect(button.querySelector('svg')).not.toBeNull();
+    }
+  });
+
   it('renders the host-supplied global SQLite owner and sends kind/id only for open and close', () => {
     const { intent, value } = capabilities();
     const { container } = render(<ConnectionList rows={[live('shared', 'sqlite', 'sqlite:shared', 'global')]} capabilities={value} />);
     expect(container.querySelector('.connections-row-title')?.textContent).toBe('sqlite:shared');
-    expect(container.querySelector('.connections-row-kind')?.textContent).toBe('sqlite');
+    expect(container.querySelector('.connections-row')).toHaveAttribute('title', 'sqlite:shared\nsqlite');
     expect(container.querySelector('.connections-row-owner')?.textContent).toBe('global');
 
     const row = container.querySelector('.connections-row')!;
@@ -83,7 +133,7 @@ describe('ConnectionList', () => {
   it('sends each live shell row owner so two tabs with the same id act on their own row', () => {
     const { intent, value } = capabilities();
     const first: ConnectionRow = {
-      type: 'live', id: 'zsh', kind: 'shell', display: 'shell:~/first', ownerLabel: 'first', ownerName: 'First',
+      type: 'live', id: 'zsh', kind: 'shell', display: 'shell:~/first', host: 'Local', ownerLabel: 'first', ownerName: 'First',
       status: 'Open', orderingTimestamp: 2,
     };
     const second: ConnectionRow = {

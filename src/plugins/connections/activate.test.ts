@@ -21,15 +21,15 @@ function fixture(rows: unknown[] = []) {
 }
 
 const liveRow = {
-  type: 'live', id: 'db', kind: 'sqlite', display: 'sqlite:db', ownerLabel: 'owner', ownerName: 'Owner',
+  type: 'live', id: 'db', kind: 'sqlite', display: 'sqlite:db', host: 'Local', ownerLabel: 'owner', ownerName: 'Owner',
   status: 'Open', orderingTimestamp: 1,
 };
 const recordRow = {
-  type: 'record', id: 'uuid', kind: 'acp', title: 'ACP title', model: 'model', ownerLabel: 'owner', ownerName: 'Owner',
+  type: 'record', id: 'uuid', kind: 'acp', title: 'ACP title', model: 'model', host: 'Local', ownerLabel: 'owner', ownerName: 'Owner',
   startedAt: 1, updatedAt: 2, status: 'Running', orderingTimestamp: 2,
 };
 const agentRow = {
-  type: 'record', id: 'agent-run', kind: 'agent', title: 'Agent task', model: 'model', ownerLabel: 'owner', ownerName: 'Owner',
+  type: 'record', id: 'agent-run', kind: 'agent', title: 'Agent task', model: 'model', host: 'Local', ownerLabel: 'owner', ownerName: 'Owner',
   startedAt: 1, updatedAt: 2, status: 'Completed', orderingTimestamp: 2,
 };
 
@@ -243,7 +243,7 @@ describe('connections plugin activation', () => {
     ['unattributed', '', undefined],
   ] as const)('forwards the current %s SQLite owner from the intent owner', (_case, ownerLabel, focusTarget) => {
     const current = {
-      type: 'live', id: 'shared', kind: 'sqlite', display: 'sqlite:shared', ownerLabel, ownerName: 'global',
+      type: 'live', id: 'shared', kind: 'sqlite', display: 'sqlite:shared', host: 'Local', ownerLabel, ownerName: 'global',
       status: 'Open', orderingTimestamp: 1, ...(focusTarget && { focusTarget }),
     } as const;
     const stale = { ...current, ownerLabel: 'stale' };
@@ -273,7 +273,7 @@ describe('connections plugin activation', () => {
 
   it('acts on the second tab when two tabs expose the same shell id', () => {
     const first = {
-      type: 'live', id: 'zsh', kind: 'shell', display: 'shell:~/first', ownerLabel: 'first', ownerName: 'First',
+      type: 'live', id: 'zsh', kind: 'shell', display: 'shell:~/first', host: 'Local', ownerLabel: 'first', ownerName: 'First',
       status: 'Open', orderingTimestamp: 2, focusTarget: 'first',
     } as const;
     const second = {

@@ -21,7 +21,7 @@ function fixture(rows: unknown[] = [], originLabel = 'owner') {
 
 function recordRow(id: string, title: string, updatedAt: number) {
   return {
-    type: 'record', id, kind: 'acp', title, model: 'model', ownerLabel: 'other',
+    type: 'record', id, kind: 'acp', title, model: 'model', host: 'Local', ownerLabel: 'other',
     ownerName: 'Other', startedAt: 1, updatedAt, status: 'Closed', orderingTimestamp: updatedAt,
   };
 }
@@ -50,7 +50,7 @@ describe('connections command', () => {
 
   it('opens the matching live owner and rejects an unmatched title', () => {
     const row = {
-      type: 'live', id: 'db', kind: 'sqlite', display: 'sqlite:db', ownerLabel: 'owner', ownerName: 'Owner',
+      type: 'live', id: 'db', kind: 'sqlite', display: 'sqlite:db', host: 'Local', ownerLabel: 'owner', ownerName: 'Owner',
       status: 'Open', orderingTimestamp: 1,
     };
     const f = fixture([row]);
@@ -65,7 +65,7 @@ describe('connections command', () => {
 
   it('prefers the invoking tab own shell row when two tabs expose the same id', () => {
     const first = {
-      type: 'live', id: 'zsh', kind: 'shell', display: 'shell:~/first', ownerLabel: 'first', ownerName: 'First',
+      type: 'live', id: 'zsh', kind: 'shell', display: 'shell:~/first', host: 'Local', ownerLabel: 'first', ownerName: 'First',
       status: 'Open', orderingTimestamp: 1,
     };
     const second = {
@@ -87,7 +87,7 @@ describe('connections command', () => {
 
   it('resolves UUID before acp reference and opens a record before requesting its window', () => {
     const record = {
-      type: 'record', id: 'uuid', kind: 'acp', title: 'ACP title', model: 'model', ownerLabel: 'owner',
+      type: 'record', id: 'uuid', kind: 'acp', title: 'ACP title', model: 'model', host: 'Local', ownerLabel: 'owner',
       ownerName: 'Owner', startedAt: 1, updatedAt: 2, status: 'Running', orderingTimestamp: 2,
     };
     const window = {
@@ -137,7 +137,7 @@ describe('connections command', () => {
     'keeps live kind/id action identity and owner forwarding through %s',
     (name) => {
       const live = {
-        type: 'live', id: 'shared', kind: 'sqlite', display: 'sqlite:shared', ownerLabel: 'second',
+        type: 'live', id: 'shared', kind: 'sqlite', display: 'sqlite:shared', host: 'Local', ownerLabel: 'second',
         ownerName: 'global', status: 'Open', orderingTimestamp: 1, focusTarget: 'second',
       };
       const f = fixture([live]);
@@ -177,7 +177,7 @@ describe('connections command', () => {
     'resolves an unattributed SQLite row through %s without inventing an owner',
     (name) => {
       const live = {
-        type: 'live', id: 'orphan', kind: 'sqlite', display: 'sqlite:orphan', ownerLabel: '',
+        type: 'live', id: 'orphan', kind: 'sqlite', display: 'sqlite:orphan', host: 'Local', ownerLabel: '',
         ownerName: 'global', status: 'Open', orderingTimestamp: 0,
       };
       const f = fixture([live]);

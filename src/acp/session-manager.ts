@@ -33,7 +33,10 @@ export class AcpSessionManager {
     if (existing?.runtime === runtime && existing.session) return existing.session;
     const holder: CoreSession = { runtime, identity: `acp-${++this.sessionCounter}` };
     this.sessions.set(label, holder);
-    const source = { kind: 'acp' as const, model, ownerLabel: label, ownerName: tab.title ?? label };
+    const source = {
+      kind: 'acp' as const, model, ownerLabel: label, ownerName: tab.title ?? label,
+      ...(tab.remote && { host: tab.remote.host }),
+    };
     const current = () => this.sessions.get(label) === holder
       && this.managers.tab.byLabel(label)?.runtime === runtime && !runtime.closing;
     let connecting = true;

@@ -4,7 +4,7 @@ The backend automatically retains project-scoped records for every core tab ACP 
 
 ### Identity and provenance
 
-Each accepted begin creates a fresh UUID, independent of the transient ACP session identity or agent run id. Sources distinguish core ACP from agent runs. Both supply a nonempty model, original owner label, and copied owner display name. An agent additionally supplies a nonempty run id and task path. Invalid metadata throws `Invalid ACP record source.` without creating a record.
+Each accepted begin creates a fresh UUID, independent of the transient ACP session identity or agent run id. Sources distinguish core ACP from agent runs. Both supply a nonempty model, original owner label, and copied owner display name. An agent additionally supplies a nonempty run id and task path. A core session on a remote tab, or an agent run executing on a remote host, also supplies that host, so the record keeps it after its tab closes; a local source supplies none, and a supplied host must be nonempty. Invalid metadata throws `Invalid ACP record source.` without creating a record.
 
 Owner metadata is a snapshot. Closing a tab or reusing its label cannot replace the retained owner name. Records contain only tracked ACP and agent history; conversations, monitors, editor persona sessions, and other connection kinds are not recorded here.
 
@@ -44,7 +44,7 @@ Successful prompt, activity, answer, close, and delete operations return true. U
 
 Every accepted begin, prompt, activity, answer, and close uses the clock. Mutation times are clamped to at least the record's previous update time, so a backwards clock cannot reorder history. The same mutation time supplies its update, block, entry, or end timestamp. Times are finite nonnegative epoch milliseconds. Start time never changes.
 
-Rows are detached summaries sorted by descending update time, then ascending id for ties. They include identity, source kind, title, model, owner label/name, optional agent run id, start/update/end times, and derived status. They expose no prompt or activity text.
+Rows are detached summaries sorted by descending update time, then ascending id for ties. They include identity, source kind, title, model, owner label/name, optional remote host, optional agent run id, start/update/end times, and derived status. They expose no prompt or activity text.
 
 A window returns detached metadata, source provenance, and the newest chronological suffix of blocks, including a running block. Its default size is 20. A supplied count must be a positive safe integer or the read throws `Invalid ACP record window count.`. Counts beyond the total return all blocks. The result includes total block count, zero-based offset, and `hasOlder`, which is true exactly when offset is positive. Missing or invalid ids return no window for a valid count.
 

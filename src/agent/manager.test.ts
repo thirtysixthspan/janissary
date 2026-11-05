@@ -43,6 +43,17 @@ describe('AgentRunManager', () => {
     });
   });
 
+  it('captures the execution host on a remote run record and none on a local one', async () => {
+    const { manager, captured, controller } = setup();
+    const remote = manager.create({ caller: captured, snapshot, executionHost: 'build-box' });
+    const local = manager.create({ caller: captured, snapshot });
+    const rows = controller.managers.acpRecords.rows();
+    expect(rows.find((row) => row.id === remote.recordId)).toMatchObject({ host: 'build-box' });
+    expect(rows.find((row) => row.id === local.recordId)).not.toHaveProperty('host');
+    await manager.finish(remote.id, 'terminated');
+    await manager.finish(local.id, 'terminated');
+  });
+
   it('does not terminate an old caller run when a reused label closes', async () => {
     const { manager, caller, captured, controller } = setup();
     const run = manager.create({ caller: captured, snapshot });

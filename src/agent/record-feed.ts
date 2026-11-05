@@ -2,7 +2,7 @@ import type { AcpSessionRecords } from '../acp-records/manager.js';
 import type { AcpActivityKind } from '../acp/activity.js';
 import type { AgentOutcome } from './run.js';
 
-type AgentRecordMetadata = { model: string; ownerLabel: string; ownerName: string; taskPath: string };
+type AgentRecordMetadata = { model: string; ownerLabel: string; ownerName: string; taskPath: string; host?: string };
 
 export function validateAgentRecordMetadata(source: AgentRecordMetadata): AgentRecordMetadata {
   if (Object.values(source).some((value) => typeof value !== 'string' || !value.trim())) {

@@ -40,6 +40,7 @@ export class AgentRunManager {
     const metadata = validateAgentRecordMetadata({
       model, taskPath: options.snapshot.taskPath, ownerLabel: options.caller.label,
       ownerName: options.caller.ownerName ?? callerTab.title ?? callerTab.label,
+      ...(options.executionHost !== undefined && { host: options.executionHost }),
     });
     const releaseWorkspace = options.releaseWorkspace ?? (options.workspaceDir === undefined
       ? undefined

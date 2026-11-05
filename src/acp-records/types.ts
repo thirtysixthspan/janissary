@@ -4,6 +4,8 @@ type SourceMetadata = {
   model: string;
   ownerLabel: string;
   ownerName: string;
+  // The remote host the session or run executes on; absent for a local one.
+  host?: string;
 };
 
 export type AcpRecordSource = SourceMetadata & (
@@ -46,6 +48,7 @@ export type AcpRecordRow = {
   model: string;
   ownerLabel: string;
   ownerName: string;
+  host?: string;
   runId?: string;
   startedAt: number;
   updatedAt: number;

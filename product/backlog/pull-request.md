@@ -2,8 +2,6 @@
 
 # pull-request
 
-* connections table should have a header row, like sessions table. Table should be organized Host, Tab, Connection Name, Connection State, Last activity, actions mirroring the sessions table. Close button should be a close icon in the actions column just like in sessions table.
-
 * Connections tab should be titled 'connections'. Connection tab should be titled 'acp:<tab name>'
  
 * in the connections tab, like the sessions tab, include a metadata row with refresh and split actions.
