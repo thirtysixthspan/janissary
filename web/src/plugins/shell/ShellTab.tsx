@@ -50,7 +50,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
 
   const terminalHistory = useTerminalCommandHistory(setSent);
   const {
-    write, displayReply, focus: focusTerminal, selection: terminalSelection, clearSelection, scrollLines, scrollToBottom,
+    write, displayReply, echoCommand, focus: focusTerminal, selection: terminalSelection, clearSelection, scrollLines, scrollToBottom,
     rows: terminalRows, terminalReady,
   } = useShellTabTerminal({
     payload,
@@ -82,7 +82,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
 
   const openHistory = useCallback(() => { setHistoryOpen(true); }, []);
   const run = useShellSubmit({
-    appBar, capabilities, displayReply, expectCommand: terminalHistory.expect, openHistory, setMatches, setSent, write,
+    appBar, capabilities, displayReply, echoCommand, expectCommand: terminalHistory.expect, openHistory, setMatches, setSent, write,
   });
   const { queue, submit } = useShellCommandQueue(capabilities, run, commandRunning, (line) => {
     setMatches([]);

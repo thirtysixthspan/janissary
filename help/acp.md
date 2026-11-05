@@ -1,6 +1,6 @@
 ### acp
 
-Send a prompt to the core OpenCode ACP session. The shell returns to the bar immediately, and the settled answer appears once in its output as rendered Markdown under the exact `acp <prompt>` line. Live activity appears in the session's connection tab, not a response panel.
+Send a prompt to the core OpenCode ACP session. The shell prints the exact `acp <prompt>` line and returns to the bar immediately, and the settled answer appears once in its output as rendered Markdown under that line. Live activity appears in the session's connection tab, not a response panel.
 
 **Usage**
 
@@ -22,7 +22,7 @@ Send a prompt to the core OpenCode ACP session. The shell returns to the bar imm
 **Notes**
 
 - A second prompt while one is running is refused with `ACP: a prompt is already running.`. The running prompt is unaffected and nothing is queued.
-- The answer arrives once the prompt settles. Other commands can run in the shell in the meantime.
+- The answer arrives once the prompt settles. Other commands can run in the shell in the meantime. If nothing else was printed since your line, the answer appears right beneath it. Otherwise the shell prints your line again at the bottom with the answer under it.
 - **Cancel** in the connection tab stops the running prompt but keeps the session, so the next prompt reuses it. The status stays `Running` until the provider drain finishes, then reads `Idle`.
 - **Close session** in the connection tab and `connections close acp:<name>` both end the session. Reset does too: the next prompt starts fresh, and reset reports its own confirmation. A pending prompt reports `ACP session closed.`.
 - `acp reset` reports `ACP session reset — next acp prompt will start fresh.` or `No active ACP session to reset.`. A pending prompt reports `ACP session closed.`.

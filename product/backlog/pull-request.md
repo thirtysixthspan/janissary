@@ -2,7 +2,5 @@
 
 # pull-request
 
-* after issuing an acp command in the shell, the acp command should be immediately printed in the terminal, even though there is no response. when the response comes back, print the response after the command line. if other commands have run in the meantime, reprint the command and the response.
-
 * in the connection tab, there should be a metadatabar which contains the host tab id name model state started-time and floated right <stop icon> and <close icon>
 

@@ -1,6 +1,6 @@
 import type { Terminal } from '@xterm/xterm';
 import { renderMarkdown } from '../api';
-import { SHELL_PROMPT, shellCommandLine } from './shell-prompt';
+import { SHELL_PROMPT, commandHead } from './shell-prompt';
 
 const BLOCK_CLASSES = ['line', 'markdown', 'shell-output-block'];
 
@@ -52,7 +52,7 @@ function position(element: HTMLElement, terminal: Terminal, markerLine: number, 
 }
 
 export function insertMarkdownBlock(
-  terminal: Terminal, line: string, markdown: string, openLink: (href: string) => void,
+  terminal: Terminal, line: string | undefined, markdown: string, openLink: (href: string) => void,
 ): boolean {
   const html = renderMarkdown(markdown);
   const screen = terminal.element?.querySelector<HTMLElement>('.xterm-screen');
@@ -62,7 +62,7 @@ export function insertMarkdownBlock(
   const height = measure(screen, html, rowHeight);
   if (height <= 0) return false;
   const rows = Math.ceil(height / rowHeight);
-  terminal.write(`\r\u{1B}[2K${shellCommandLine(line)}\r\n${'\r\n'.repeat(rows)}`, () => {
+  terminal.write(`${commandHead(line)}${'\r\n'.repeat(rows)}`, () => {
     const marker = terminal.registerMarker(-1);
     const decoration = terminal.registerDecoration({ marker, width: terminal.cols, height: rows, layer: 'top' });
     decoration?.onRender((element) => {

@@ -14,13 +14,14 @@ export function useShellSubmit(input: {
   appBar: { intercept: (line: string) => boolean };
   capabilities: TabPluginClientCapabilities;
   displayReply: (line: string, markdown: string) => void;
+  echoCommand: (line: string) => void;
   setMatches: Dispatch<SetStateAction<string[]>>;
   setSent: Dispatch<SetStateAction<string[]>>;
   write: (data: string) => void;
   expectCommand: (line: string) => void;
   openHistory: () => void;
 }) {
-  const { appBar, capabilities, displayReply, expectCommand, openHistory, setMatches, setSent, write } = input;
+  const { appBar, capabilities, displayReply, echoCommand, expectCommand, openHistory, setMatches, setSent, write } = input;
   return useCallback(async (text: string, record = true, receipt?: string): Promise<boolean> => {
     setMatches([]);
     // A line the bar records in its own history enters the application's global history too, which
@@ -67,7 +68,9 @@ export function useShellSubmit(input: {
         : await capabilities.intent<ShellDispatchResult>('dispatch', text);
       remember(text);
       if (result.dispatched) {
-        if (!result.coreResponse) displayReply(text, result.output);
+        // A core-response command answers later, beneath this echo of its line.
+        if (result.coreResponse) echoCommand(text);
+        else displayReply(text, result.output);
         return false;
       }
       runInShell(text);
@@ -77,5 +80,5 @@ export function useShellSubmit(input: {
       reportShellIntentFailure(capabilities, 'shell dispatch intent refused', error);
       return false;
     }
-  }, [appBar, capabilities, displayReply, expectCommand, openHistory, setMatches, setSent, write]);
+  }, [appBar, capabilities, displayReply, echoCommand, expectCommand, openHistory, setMatches, setSent, write]);
 }

@@ -214,7 +214,7 @@ outside the remote workspace. The window titlebar reads `Janissary (<version>): 
 
 ## Shell output and ACP replies
 
-Shell commands keep their output in the terminal’s scrollback. Application replies appear there as rendered Markdown. An `acp` answer arrives after the prompt settles as one rendered Markdown reply at the current bottom of the shell output, under an echo of the exact `acp <prompt>` line. It does not stream in a panel. Paths in supported rendered replies open an editor at the referenced line. See [Query ACP from a shell](/user-documentation/advanced-agents/acp-agent).
+Shell commands keep their output in the terminal’s scrollback. Application replies appear there as rendered Markdown. An `acp` line is printed as soon as you send it. Its answer arrives after the prompt settles as one rendered Markdown reply, right beneath that line when nothing else was printed in between, or at the current bottom under a fresh copy of the line when something was. It does not stream in a panel. Paths in supported rendered replies open an editor at the referenced line. See [Query ACP from a shell](/user-documentation/advanced-agents/acp-agent).
 
 While you stay at the bottom, the transcript follows incoming output and keeps the latest lines in view, even through a long stream. Scrolling away pauses following. It resumes when you scroll to within 40 pixels of the bottom. Press `Escape` to jump to the bottom and resume following.
 

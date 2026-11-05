@@ -296,6 +296,11 @@ function renderTab(options: Parameters<typeof makeCapabilities>[0] & AppBarOptio
   return { ...made, ...view, terminal: terminals.at(-1)! };
 }
 
+// What the shell behind the tab prints: the callback the tab handed its terminal attachment.
+function shellOutput(capabilities: TabPluginClientCapabilities): (data: string) => void {
+  return vi.mocked(capabilities.attachTerminal!).mock.calls.at(-1)![1];
+}
+
 function bar(): HTMLTextAreaElement {
   return screen.getByLabelText('Shell command') as HTMLTextAreaElement;
 }
@@ -1010,7 +1015,7 @@ describe('ShellTab', () => {
     expect(shown).not.toContain('##');
   });
 
-  it('keeps the bar usable without a response panel and renders the settled reply exactly once after other output', async () => {
+  it('echoes an ACP line at once, keeps the bar usable, and repeats the line with its settled reply after other output', async () => {
     let receive: (reply: { id: string; output: string; line?: string }) => void = () => {};
     const onBackgroundReply = vi.fn((callback: typeof receive) => { receive = callback; return () => {}; });
     const { terminal, releaseDispatch, capabilities } = renderTab({ onBackgroundReply, dispatched: true, coreResponse: true });
@@ -1018,13 +1023,13 @@ describe('ShellTab', () => {
     fireEvent.keyDown(bar(), { key: 'Enter' });
     await act(async () => { releaseDispatch(); });
     expect(capabilities.intent).toHaveBeenCalledWith('dispatch', 'acp summarize this');
-    expect(terminal.written.join('')).not.toContain('> acp summarize this');
+    expect(terminal.written.at(-1)).toBe('\r\u{1B}[2K\u{1B}[1m> acp summarize this\u{1B}[22m\r\n\u{1B}[1m>\u{1B}[22m ');
     expect(screen.queryByRole('region', { name: 'ACP responses' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reset ACP' })).not.toBeInTheDocument();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     fireEvent.change(bar(), { target: { value: 'ls' } });
     expect(bar()).toHaveValue('ls');
-    act(() => { terminal.written.push('ordinary output\r\n'); });
+    act(() => { shellOutput(capabilities)('ordinary output\r\n'); });
 
     act(() => receive({ id: 'acp-1', output: '## Answer\n\nDone', line: 'acp summarize this' }));
     act(() => receive({ id: 'acp-1', output: '## Answer\n\nDone', line: 'acp summarize this' }));
@@ -1033,8 +1038,36 @@ describe('ShellTab', () => {
     expect(shown).toContain('> acp summarize this');
     expect(shown).toContain('Answer');
     expect(shown).not.toContain('##');
-    expect(terminal.written.filter((text) => text.includes('> acp summarize this'))).toHaveLength(1);
+    expect(terminal.written.filter((text) => text.includes('> acp summarize this'))).toHaveLength(2);
     expect(terminal.written.at(-2)).toBe('ordinary output\r\n');
+  });
+
+  it('writes an ACP reply straight beneath its echo when nothing else reached the terminal', async () => {
+    let receive: (reply: { id: string; output: string; line?: string }) => void = () => {};
+    const onBackgroundReply = vi.fn((callback: typeof receive) => { receive = callback; return () => {}; });
+    const { terminal, releaseDispatch } = renderTab({ onBackgroundReply, dispatched: true, coreResponse: true });
+    fireEvent.change(bar(), { target: { value: 'acp summarize this' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+
+    act(() => receive({ id: 'acp-1', output: 'Done', line: 'acp summarize this' }));
+
+    expect(terminal.written.at(-1)).toBe('\r\u{1B}[2KDone\r\n\u{1B}[1m>\u{1B}[22m ');
+    expect(terminal.written.filter((text) => text.includes('> acp summarize this'))).toHaveLength(1);
+  });
+
+  it('writes no late echo for an ACP reply that arrived before its dispatch answer', async () => {
+    let receive: (reply: { id: string; output: string; line?: string }) => void = () => {};
+    const onBackgroundReply = vi.fn((callback: typeof receive) => { receive = callback; return () => {}; });
+    const { terminal, releaseDispatch } = renderTab({ onBackgroundReply, dispatched: true, coreResponse: true });
+    fireEvent.change(bar(), { target: { value: 'acp reset' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+
+    act(() => receive({ id: 'reset-1', output: 'No active ACP session to reset.', line: 'acp reset' }));
+    await act(async () => { releaseDispatch(); });
+
+    expect(terminal.written.at(-1)).toContain('No active ACP session to reset.');
+    expect(terminal.written.filter((text) => text.includes('> acp reset'))).toHaveLength(1);
   });
 
   it.each([

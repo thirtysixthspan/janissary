@@ -96,7 +96,7 @@ The recording captures terminal output and resizes, not keystrokes as input. But
 
 ## Query ACP from a shell
 
-Use `acp <prompt>` in the shell command bar to query OpenCode. The command returns immediately and the bar stays usable, so ordinary commands keep working while the prompt runs. The answer appears once at the current bottom of the shell output as rendered Markdown, under an echo of the exact `acp <prompt>` line, even if other output arrived in between. A second prompt while one runs is refused with `ACP: a prompt is already running.` and nothing is queued. Tool steps and thinking appear in the session's connection tab, not in the shell. Cancel, Close session, and reset are described in [ACP agents](/user-documentation/advanced-agents/acp-agent); the list and retained records are in [Connections](/user-documentation/command-bar/connections).
+Use `acp <prompt>` in the shell command bar to query OpenCode. The shell prints the exact `acp <prompt>` line right away, and the bar stays usable, so ordinary commands keep working while the prompt runs. The answer appears once as rendered Markdown. If nothing else was printed since your line, it appears right beneath it. If other output arrived in between, the shell prints your line again at the current bottom and puts the answer under it. A second prompt while one runs is refused with `ACP: a prompt is already running.` and nothing is queued. Tool steps and thinking appear in the session's connection tab, not in the shell. Cancel, Close session, and reset are described in [ACP agents](/user-documentation/advanced-agents/acp-agent); the list and retained records are in [Connections](/user-documentation/command-bar/connections).
 
 ## Inline monitors
 

@@ -6,7 +6,7 @@ Use `acp <prompt>` in a shell tab's command bar to query OpenCode:
 acp summarize the open TODO comments in this project
 ```
 
-The command returns to the bar immediately. The shell stays usable while the prompt runs, so ordinary non-ACP commands keep working; a second `acp` prompt is refused with exactly `ACP: a prompt is already running.`, and nothing is queued. When the answer is ready, it appears once at the current bottom of the shell output as rendered Markdown, headed by an echo of the exact line you typed. Intervening output stays above it. There is no ACP response panel, no responding status, and no Reset ACP button. The agent uses the Agent Client Protocol (ACP), and the app manages its connection for you.
+The command returns to the bar immediately. The shell stays usable while the prompt runs, so ordinary non-ACP commands keep working; a second `acp` prompt is refused with exactly `ACP: a prompt is already running.`, and nothing is queued. The shell prints the exact line you typed as soon as you send it. When the answer is ready, it appears once as rendered Markdown, right beneath that line if nothing else was printed in the meantime. If other output arrived first, the shell prints your line again at the current bottom with the answer under it, and the intervening output stays above. There is no ACP response panel, no responding status, and no Reset ACP button. The agent uses the Agent Client Protocol (ACP), and the app manages its connection for you.
 
 For an autonomous task that runs until completion and may use skill-granted Janissary commands, see [Run an autonomous task](/user-documentation/advanced-agents/agent-command). It uses a separate local session and its own retained record.
 
