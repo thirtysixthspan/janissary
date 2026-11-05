@@ -2,6 +2,8 @@
 
 ## ready
 
+* move the models section out of the roles tab and into a new tab models tab. The tab should have a metadata bar with split and dock buttons floated right. an additional button should be a refresh button that fetches the latest models from providers and creates an updated available-models.json file in the project .janissary directory which overrides the available-models.json file in the project. the `models` command opens the models tab `models left|right` dock the tab. models should be grouped by provider. an action row in the table should contain a delete button which disables and hides a model from the list (but does not remove it from available-models, instead only sets the disabled and hidden fields in the model record). The styling of the models should use a table similar to the tables using in sessions and conversations tabs.  
+
 ## development
 
 * add an ACP skill to allow an agent to spin up other agents with different models, pass them ai tasks (form the repository) to execute and access to monitor the transcript as the agent works, and to recieve the response.
