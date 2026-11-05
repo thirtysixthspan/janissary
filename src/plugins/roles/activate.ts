@@ -41,6 +41,7 @@ export function activate(home: string = homedir()): TabPluginActivation {
   // interleave and lose one: the second reads only once the first has settled, whichever way it
   // went.
   let queue: Promise<unknown> = Promise.resolve();
+  let rememberedRoot: string | undefined;
 
   const settle = async (previous: Promise<unknown>): Promise<void> => {
     try {
@@ -50,19 +51,30 @@ export function activate(home: string = homedir()): TabPluginActivation {
     }
   };
 
-  const rootOf = (capabilities: TabPluginServerCapabilities): string =>
-    capabilities.originTab()?.root ?? process.cwd();
+  const rememberRoot = (capabilities: TabPluginServerCapabilities): string => {
+    rememberedRoot = capabilities.originTab()?.root ?? process.cwd();
+    return rememberedRoot;
+  };
 
   const payloadFrom = (read: RolesRead, catalog: LaunchCatalog): RolesPayload => ({
-    roles: read.roles,
+    roles: read.roles.map((role) => ({
+      ...role,
+      entries: role.entries.map(({ harness, model, effort }) => {
+        const models = Object.hasOwn(catalog.models, harness) ? catalog.models[harness] : undefined;
+        const entry = { harness, model, ...(effort !== undefined && { effort }) };
+        return models?.includes(model) ? entry : { ...entry, missing: true };
+      }),
+    })),
     source: read.source,
     path: read.path,
     ...(read.problem !== undefined && { problem: read.problem }),
     catalog,
   });
 
-  const publish = (capabilities: TabPluginServerCapabilities): void => {
-    const read = readRolesFile(home, rootOf(capabilities));
+  const publish = (
+    capabilities: TabPluginServerCapabilities, root: string, create = true,
+  ): void => {
+    const read = readRolesFile(home, root, { create });
     capabilities.updateTab(INSTANCE_KEY, () => ({
       payload: payloadFrom(read, capabilities.harnessLaunchCatalog()),
     }));
@@ -76,8 +88,9 @@ export function activate(home: string = homedir()): TabPluginActivation {
     apply: (roles: Role[]) => Role[],
     precondition?: EntryPrecondition,
   ): Promise<null> => {
+    const root = rememberRoot(capabilities);
     const run = async (): Promise<null> => {
-      const read = readRolesFile(home, rootOf(capabilities));
+      const read = readRolesFile(home, root);
       // A read whose `unusablePath` is set is one whose own file does not fully back an edit — either
       // nothing decoded, or some roles/entries were dropped — and writing from it would rewrite the
       // whole file from the decoded part, silently discarding what was dropped. Refuse the edit
@@ -88,13 +101,13 @@ export function activate(home: string = homedir()): TabPluginActivation {
         return capabilities.rejectRequest(`roles.json at ${read.unusablePath ?? read.path} is unusable — fix the file before editing roles.`);
       }
       if (precondition && !matchesEntrySnapshot(read.roles, precondition)) {
-        publish(capabilities);
+        publish(capabilities, root);
         return capabilities.rejectRequest(`The entries of role "${precondition.role}" changed elsewhere — retry the edit on the current list. Nothing was written.`);
       }
       if (!writeRolesFile(read.path, apply(read.roles))) {
         return capabilities.rejectRequest(`Could not write roles.json at ${read.path}.`);
       }
-      publish(capabilities);
+      publish(capabilities, root);
       return null;
     };
     const next = (async () => {
@@ -109,11 +122,16 @@ export function activate(home: string = homedir()): TabPluginActivation {
     isPayload: isRolesPayload,
     opener: noFileOpener('roles'),
     command(argument, capabilities) {
+      const root = rememberRoot(capabilities);
       if (argument.trim().length > 0) return capabilities.rejectRequest('Usage: roles');
       capabilities.openOrFocusTab(INSTANCE_KEY, () => ({
         title: TAB_TITLE,
-        payload: payloadFrom(readRolesFile(home, rootOf(capabilities)), capabilities.harnessLaunchCatalog()),
+        payload: payloadFrom(readRolesFile(home, root), capabilities.harnessLaunchCatalog()),
       }));
+    },
+    notify(notification, capabilities) {
+      if (notification.topic !== 'models') return;
+      publish(capabilities, rememberedRoot ?? process.cwd(), false);
     },
     intent: defineIntents('roles', isRolesPayload, {
       'add-role': {

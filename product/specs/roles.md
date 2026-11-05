@@ -53,13 +53,16 @@ and risk.`), `implementation` (`Implementation of an approved plan or a describe
 
 ### What the tab shows
 
-Two columns. The catalog on the left lists every harness with its known model ids, as loaded from
-`known-models.json` and a project's `.janissary/known-models.json` override; the roles on the
-right are the role cards. Above the cards a line names the file in effect — its full path — or, when
-no file decodes, `No roles file in effect`. A problem line appears under it when the roles on screen
-are not what the file literally holds.
+The tab shows role cards and no model catalog column. Above the cards, a line names the file in
+effect — its full path — or, when no file decodes, `No roles file in effect`. A problem line appears
+under it when the roles on screen are not what the file literally holds.
 
-Each card carries the role's name, its description, and its entries in order. The name and
+Each card carries the role's name, its description, and its entries in order. An entry whose model
+is no longer enabled is dimmed and titled `Not in the model catalog`; the entry remains on the card
+and in `roles.json`. The marker is recomputed when the model catalog changes and is not stored in
+the roles file. The entry picker offers only the enabled models from the current catalog.
+
+The name and
 description edit in place: the change is written when the field loses focus, Enter commits, and
 Escape reverts. Every entry row shows the model, the harness, an effort dropdown (`default` plus
 the levels above, and the entry's own stored effort as its own option when that value is outside
@@ -84,14 +87,12 @@ to be noticed here: `The description of role "<name>" changed elsewhere — noth
 
 ### Dragging
 
-The tab drags on the browser's own gesture. Dragging a model from the catalog onto a card appends
-it as that role's next entry; the drop lands anywhere on the card — its entry rows and the controls
-on them included — and every drop appends, nothing is replaced in place, so changing a model is a
-remove plus an add. Dragging an entry row onto a sibling row moves it to that position, and dragging
-a role's grip onto another card moves the role to that card's position, whether the grip lands on the
-card's own space or on one of its entry rows. A card outlines itself while a compatible drag is over
-it. Dragging an entry back onto the catalog column removes it from its role. Every completed drop
-writes the file before the tab redraws.
+The tab drags on the browser's own gesture. Dragging an entry row onto a sibling row moves it to that
+position, and dragging a role's grip onto another card moves the role to that card's position,
+whether the grip lands on the card's own space or on one of its entry rows. A card outlines itself
+while a compatible drag is over it. The entry picker adds models, and the row remove control removes
+an entry; there are no catalog drag targets. Every completed reorder writes the file before the tab
+redraws.
 
 ### Names
 

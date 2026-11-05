@@ -1,18 +1,13 @@
 import React, { useState } from 'react';
-import { errorText } from '@shared/error-text';
 import type { RolesPayload } from '@shared/plugins/roles/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { RoleCard } from './RoleCard';
-import { allowDrop, dragCatalogModel, dragEnd, dropOnCatalog } from './roles-dnd';
 import { useRoleCreation } from './useRoleCreation';
 
 type Properties = { payload: RolesPayload; capabilities: TabPluginClientCapabilities };
 
-// The roles tab: the harness model catalog on the left, the roles on the right. A model dragged
-// from the catalog onto a role card becomes that role's next entry; an entry dragged back onto the
-// catalog leaves its role. The names, descriptions, efforts, and order are edited in place, and
-// every edit is one intent — the server writes the file and republishes, so nothing shown here is
-// local state the file does not hold.
+// The roles tab edits names, descriptions, efforts, and order in place; every edit is one intent,
+// so nothing shown here is local state the file does not hold.
 export function RolesTab({ payload, capabilities }: Properties) {
   const { roles, source, path, problem, catalog } = payload;
   const [refusal, setRefusal] = useState<string | null>(null);
@@ -21,43 +16,8 @@ export function RolesTab({ payload, capabilities }: Properties) {
     setRefusal,
   );
 
-  const raise = (intent: string, value: Record<string, unknown>) => {
-    setRefusal(null);
-    void capabilities.intent(intent, value).catch((error: unknown) => {
-      setRefusal(errorText(error));
-    });
-  };
-
   return (
     <div className="roles-tab" data-doc-shot="roles-tab">
-      <div
-        className="roles-catalog"
-        onDragOver={(event) => allowDrop(event, (drag) => drag.kind === 'entry')}
-        onDrop={(event) => {
-          const result = dropOnCatalog(event);
-          if (result) raise(result.intent, result.payload);
-        }}
-      >
-        <div className="roles-column-title">Models</div>
-        {Object.entries(catalog.models).map(([harness, models]) => (
-          <div key={harness} className="roles-catalog-group">
-            <div className="roles-catalog-harness">{harness}</div>
-            <ul>
-              {models.map((model) => (
-                <li
-                  key={model}
-                  draggable
-                  onDragStart={(event) => dragCatalogModel(event, harness, model)}
-                  onDragEnd={dragEnd}
-                  title="Drag onto a role"
-                >
-                  {model}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
       <div className="roles-list">
         <div className="roles-source">
           {source === 'default' ? 'No roles file in effect' : `Editing ${path}`}

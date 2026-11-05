@@ -69,17 +69,50 @@ function deferred<T>() {
 }
 
 describe('RolesTab', () => {
-  it('renders the catalog beside the roles and names the file in effect', () => {
+  it('renders role cards without a catalog column and names the file in effect', () => {
     const { container } = renderTab();
 
-    expect(container.querySelector('.roles-catalog')).not.toBeNull();
+    expect(container.querySelector('.roles-catalog')).toBeNull();
     expect(container.querySelector('.roles-list')).not.toBeNull();
     expect(screen.getByText('Editing /home/me/.janissary/roles.json')).toBeInTheDocument();
-    // The catalog column lists every harness and model the host published.
     expect(screen.getAllByText('codex').length).toBeGreaterThan(0);
-    expect(screen.getByText('claude-opus-5-5')).toBeInTheDocument();
     expect(screen.getByDisplayValue('planning')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Research.')).toBeInTheDocument();
+  });
+
+  it('dims a missing entry and shows its tooltip without adding visible text', () => {
+    const payload = makePayload();
+    payload.roles[0] = {
+      ...payload.roles[0],
+      entries: [{ ...payload.roles[0].entries[0], missing: true }],
+    };
+    const { container } = renderTab(payload);
+    const entry = container.querySelector('.roles-entry')!;
+
+    expect(entry).toHaveClass('roles-entry-missing');
+    expect(entry).toHaveAttribute('title', 'Not in the model catalog');
+    expect(entry).toHaveTextContent('gpt-6-sol');
+    expect(entry).not.toHaveTextContent('missing');
+  });
+
+  it('keeps a missing saved entry but offers only enabled catalog models in the picker', () => {
+    const payload = makePayload({
+      roles: [{
+        name: 'research', description: 'Research.',
+        entries: [{ harness: 'codex', model: 'disabled-model', missing: true }],
+      }],
+      catalog: { models: { codex: ['enabled-model'] }, efforts: ['low'] },
+    });
+    const { container } = renderTab(payload);
+    const card = screen.getByDisplayValue('research').closest('.roles-card') as HTMLElement;
+
+    expect(screen.getByText('disabled-model')).toBeInTheDocument();
+    fireEvent.click(card.querySelector('.roles-add-entry') as HTMLElement);
+    const modelPicker = screen.getByLabelText('Model for the new entry') as HTMLSelectElement;
+    const modelOptions = [...modelPicker.options].map(({ value }) => value);
+    expect(modelOptions).toContain('enabled-model');
+    expect(modelOptions).not.toContain('disabled-model');
+    expect(container.querySelector('.roles-catalog')).toBeNull();
   });
 
   it('shows a problem line and the no-file-in-effect wording when no file decodes', () => {
@@ -422,15 +455,6 @@ describe('RolesTab', () => {
 
     fireEvent.change(select, { target: { value: '' } });
     expect(intent).toHaveBeenCalledWith('set-entry-effort', { role: 'planning', index: 0, effort: null, expected: payload.roles[0].entries });
-  });
-
-  it('refuses an entry dropped from the catalog onto no card without raising anything', () => {
-    const { container, intent } = renderTab();
-    const catalog = container.querySelector('.roles-catalog') as HTMLElement;
-
-    fireEvent.drop(catalog, { dataTransfer: { effectAllowed: '', dropEffect: '' } });
-
-    expect(intent).not.toHaveBeenCalled();
   });
 
   describe('showing a refusal', () => {

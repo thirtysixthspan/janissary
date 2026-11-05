@@ -13,6 +13,7 @@ import { DIFF_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/diff/shared';
 import { SQL_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/sql/shared';
 import { SHELL_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/shell/shared';
 import { SEARCH_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/search/shared';
+import { ROLES_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/roles/shared';
 import { clientPluginLoaders, clientPluginRegistry } from './registry';
 
 // The registry hardcodes each plugin's payload schema version so importing a shared contract cannot
@@ -32,6 +33,7 @@ describe('client plugin registry', () => {
     expect(clientPluginRegistry.get('diff')?.schemaVersion).toBe(DIFF_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('markdown')?.schemaVersion).toBe(MARKDOWN_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('models')?.schemaVersion).toBe(MODELS_PAYLOAD_SCHEMA_VERSION);
+    expect(clientPluginRegistry.get('roles')?.schemaVersion).toBe(ROLES_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('pdf')?.schemaVersion).toBe(PDF_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('schedules')?.schemaVersion).toBe(SCHEDULES_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('scripts')?.schemaVersion).toBe(SCRIPTS_PAYLOAD_SCHEMA_VERSION);

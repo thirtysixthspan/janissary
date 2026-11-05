@@ -17,6 +17,7 @@ export const rolesManifest = {
   tabLabelPrefix: 'roles',
   fileExtensions: {},
   command: 'roles',
+  notifications: ['models'],
   capabilities: [
     'openOrFocusTab',
     'updateTab',
