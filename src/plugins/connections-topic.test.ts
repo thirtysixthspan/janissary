@@ -4,6 +4,7 @@ import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 import { ACP_RECORD_WINDOW_SIZE, recordWindow } from '../acp-records/model.js';
 import { messageBus } from '../bus.js';
+import { SHELL_NAME } from '../shell/manager.js';
 import { readConnectionsTopic, runConnectionsTopicAction, subscribeConnectionsTopic } from './connections-topic.js';
 
 function fixture() {
@@ -253,30 +254,30 @@ describe('connections topic actions', () => {
   it('lists legacy text and validates live open and close actions against the current owner', () => {
     const { managers, setActiveTab, closeTarget } = fixture();
     expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'list', label: 'owner' }))
-      .toBe('shell:zsh');
+      .toBe(`shell:${SHELL_NAME}`);
     managers.shell.has = vi.fn(() => false);
     expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'list', label: 'owner' }))
       .toBe('No open connections.');
     managers.shell.has = vi.fn(() => true);
     runConnectionsTopicAction(managers, {
-      topic: 'connections', action: 'open', kind: 'shell', id: 'zsh', ownerLabel: 'owner',
+      topic: 'connections', action: 'open', kind: 'shell', id: SHELL_NAME, ownerLabel: 'owner',
     });
     expect(setActiveTab).toHaveBeenCalledWith(0);
     runConnectionsTopicAction(managers, {
-      topic: 'connections', action: 'open', kind: 'shell', id: 'zsh', ownerLabel: 'second',
+      topic: 'connections', action: 'open', kind: 'shell', id: SHELL_NAME, ownerLabel: 'second',
     });
     expect(setActiveTab).toHaveBeenLastCalledWith(1);
     expect(runConnectionsTopicAction(managers, {
-      topic: 'connections', action: 'open', kind: 'shell', id: 'zsh', ownerLabel: 'stale',
+      topic: 'connections', action: 'open', kind: 'shell', id: SHELL_NAME, ownerLabel: 'stale',
     })).toBeUndefined();
     runConnectionsTopicAction(managers, {
-      topic: 'connections', action: 'close', kind: 'shell', id: 'zsh', ownerLabel: 'owner',
+      topic: 'connections', action: 'close', kind: 'shell', id: SHELL_NAME, ownerLabel: 'owner',
     });
-    expect(closeTarget).toHaveBeenCalledWith('shell', 'zsh', 'owner');
+    expect(closeTarget).toHaveBeenCalledWith('shell', SHELL_NAME, 'owner');
     runConnectionsTopicAction(managers, {
-      topic: 'connections', action: 'close', kind: 'shell', id: 'zsh', ownerLabel: 'second',
+      topic: 'connections', action: 'close', kind: 'shell', id: SHELL_NAME, ownerLabel: 'second',
     });
-    expect(closeTarget).toHaveBeenLastCalledWith('shell', 'zsh', 'second');
+    expect(closeTarget).toHaveBeenLastCalledWith('shell', SHELL_NAME, 'second');
     expect(runConnectionsTopicAction(managers, {
       topic: 'connections', action: 'close', kind: 'shell', id: 'missing', ownerLabel: 'owner',
     })).toBeUndefined();
