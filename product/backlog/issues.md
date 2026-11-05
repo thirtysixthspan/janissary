@@ -2,6 +2,8 @@
 
 ## ready
 
+* when the auto-approve can not clear the permission prompt, a snapshot should be taken and associated with the notification.
+
 * rename the 'acp' command to the 'ask' command
 
 * add a default 'ask' role with description 'When you ask a question via ACP.' include the following models:
