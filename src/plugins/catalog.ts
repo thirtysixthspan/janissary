@@ -8,6 +8,7 @@ import { diffManifest } from './diff/manifest.js';
 import { imageManifest } from './image/manifest.js';
 import { launcherManifest } from './launcher/manifest.js';
 import { markdownManifest } from './markdown/manifest.js';
+import { modelsManifest } from './models/manifest.js';
 import { pageManifest } from './page/manifest.js';
 import { pdfManifest } from './pdf/manifest.js';
 import { rolesManifest } from './roles/manifest.js';
@@ -21,7 +22,7 @@ import { videoManifest } from './video/manifest.js';
 
 export const tabPluginCatalog = [
   agentMonitorManifest, asciicastManifest, audioManifest, connectionsManifest, conversationsManifest, diffManifest, imageManifest, launcherManifest,
-  markdownManifest, pageManifest, pdfManifest, rolesManifest, schedulesManifest, scriptsManifest, searchManifest, sessionsManifest,
+  markdownManifest, modelsManifest, pageManifest, pdfManifest, rolesManifest, schedulesManifest, scriptsManifest, searchManifest, sessionsManifest,
   shellManifest, sqlManifest, videoManifest,
 ] as const satisfies readonly TabPluginDeclaration[];
 export type ProductionTabPluginId = (typeof tabPluginCatalog)[number]['id'];

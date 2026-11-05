@@ -17,4 +17,9 @@ describe('tabPluginLoaders', () => {
     const byName = (a: string, b: string) => a.localeCompare(b);
     expect(ids.toSorted(byName)).toEqual(tabPluginCatalog.map((d) => d.id).toSorted(byName));
   });
+
+  it('registers a models command with a loadable activation', async () => {
+    expect(tabPluginCatalog.find((declaration) => declaration.id === 'models')?.command).toBe('models');
+    await expect(tabPluginLoaders.models()).resolves.toHaveProperty('activate');
+  });
 });

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { IMAGE_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/image/shared';
 import { MARKDOWN_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/markdown/shared';
+import { MODELS_PAYLOAD_SCHEMA_VERSION, isModelsPayload } from '@shared/plugins/models/shared';
 import { PDF_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/pdf/shared';
 import { SCHEDULES_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/schedules/shared';
 import { SCRIPTS_PAYLOAD_SCHEMA_VERSION, isScriptsPayload } from '@shared/plugins/scripts/shared';
@@ -30,6 +31,7 @@ describe('client plugin registry', () => {
     expect(clientPluginRegistry.get('connections')?.schemaVersion).toBe(CONNECTIONS_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('diff')?.schemaVersion).toBe(DIFF_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('markdown')?.schemaVersion).toBe(MARKDOWN_PAYLOAD_SCHEMA_VERSION);
+    expect(clientPluginRegistry.get('models')?.schemaVersion).toBe(MODELS_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('pdf')?.schemaVersion).toBe(PDF_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('schedules')?.schemaVersion).toBe(SCHEDULES_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('scripts')?.schemaVersion).toBe(SCRIPTS_PAYLOAD_SCHEMA_VERSION);
@@ -94,5 +96,19 @@ describe('client plugin registry', () => {
   it('resolves the connections entry to the shared payload guard', async () => {
     const { isPayload } = await clientPluginLoaders.connections();
     expect(isPayload).toBe(isConnectionsPayload);
+  });
+
+  it('reaches the models entry only through its literal dynamic import', () => {
+    const source = readFileSync('web/src/plugins/registry.tsx', 'utf8');
+    const statics = [...source.matchAll(/^import\s[^;]*?from\s+'(?<path>[^']+)'/gmu)]
+      .map((match) => match.groups?.path ?? '');
+    expect(statics.filter((path) => path.includes('models'))).toEqual([]);
+    expect(source).toContain("models: () => import('./models/index')");
+  });
+
+  it('pins and resolves the models entry to its shared payload guard', async () => {
+    expect(clientPluginRegistry.get('models')?.schemaVersion).toBe(MODELS_PAYLOAD_SCHEMA_VERSION);
+    const { isPayload } = await clientPluginLoaders.models();
+    expect(isPayload).toBe(isModelsPayload);
   });
 });
