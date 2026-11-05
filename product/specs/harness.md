@@ -1087,7 +1087,8 @@ OpenCode Zen and OpenCode Go appears once under each prefix.
 On the Models tab, OpenCode rows group by the id prefix before the first `/` and retain the order
 in which each prefix first appears. The `opencode`, `opencode-go`, `google`, and `openai` prefixes
 use the headings `OpenCode Zen`, `OpenCode Go`, `Google`, and `OpenAI`. Any other prefix appears
-unchanged as its heading; a bare id uses the raw heading `opencode`.
+unchanged as its heading; a bare id uses the fallback `opencode` prefix and therefore the
+`OpenCode Zen` heading.
 
 Refreshing the catalog reports provider outcomes to the notifications feed. If `opencode models` or
 `codex debug models` reaches its 30-second deadline, the provider is reported as failed with the
