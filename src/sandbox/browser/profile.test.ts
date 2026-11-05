@@ -29,7 +29,7 @@ const PATHS = {
   appManifest: dual(`${ROOT}/package.json`),
   appTsconfig: dual(`${ROOT}/tsconfig.json`),
   appAgentNames: dual(`${ROOT}/agent-names.json`),
-  appHarnessModels: dual(`${ROOT}/harness-models.json`),
+  appKnownModels: dual(`${ROOT}/known-models.json`),
   appState: dual(STATE),
 };
 
@@ -142,7 +142,7 @@ describe('BROWSER_SANDBOX_PROFILE', () => {
     expect(readable(PATHS.appManifest.literal)).toBe(true);
     expect(readable(PATHS.appTsconfig.literal)).toBe(true);
     expect(readable(PATHS.appAgentNames.literal)).toBe(true);
-    expect(readable(PATHS.appHarnessModels.literal)).toBe(true);
+    expect(readable(PATHS.appKnownModels.literal)).toBe(true);
     expect(readable(`${ROOT}/README.md`)).toBe(false);
   });
 

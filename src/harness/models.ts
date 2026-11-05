@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import catalog from '../../harness-models.json' with { type: 'json' };
+import catalog from '../../known-models.json' with { type: 'json' };
 
 let models: Record<string, string[]> = catalog;
 
@@ -19,23 +19,23 @@ export function decodeHarnessModels(value: unknown): Record<string, string[]> | 
   return decoded;
 }
 
-// Reads `.janissary/harness-models.json` from the project directory and, when present and valid,
+// Reads `.janissary/known-models.json` from the project directory and, when present and valid,
 // uses it in place of the bundled catalog for the rest of this run — the same load-with-fallback
 // contract as `config.ts`'s `.janissary/config.json`.
 export function loadHarnessModels(projectDirectory: string): void {
-  const overridePath = path.join(projectDirectory, '.janissary', 'harness-models.json');
+  const overridePath = path.join(projectDirectory, '.janissary', 'known-models.json');
   if (!existsSync(overridePath)) { models = catalog; return; }
   let parsed: unknown;
   try {
     parsed = JSON.parse(readFileSync(overridePath, 'utf8'));
   } catch {
-    process.stderr.write('warning: .janissary/harness-models.json is invalid JSON — using the bundled catalog\n');
+    process.stderr.write('warning: .janissary/known-models.json is invalid JSON — using the bundled catalog\n');
     models = catalog;
     return;
   }
   const decoded = decodeHarnessModels(parsed);
   if (decoded === undefined) {
-    process.stderr.write('warning: .janissary/harness-models.json is not an object of model-id lists — using the bundled catalog\n');
+    process.stderr.write('warning: .janissary/known-models.json is not an object of model-id lists — using the bundled catalog\n');
   }
   models = decoded ?? catalog;
 }

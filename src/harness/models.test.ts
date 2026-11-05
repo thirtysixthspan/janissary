@@ -3,8 +3,9 @@ import { mkdirSync, writeFileSync, rmSync, mkdtempSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { modelsFor, isKnownModel, loadHarnessModels } from './models.js';
+import { DEFAULT_ROLES } from '../plugins/roles/roles-file.js';
 
-describe('harness-models', () => {
+describe('known-models', () => {
   it('returns the catalog for a known harness', () => {
     expect(modelsFor('opencode')).toContain('opencode-go/deepseek-v4-pro');
   });
@@ -92,13 +93,22 @@ describe('the bundled catalog', () => {
   it('keeps the model the ACP agent launches with', () => {
     expect(modelsFor('opencode')).toContain('google/gemini-3.1-flash-lite');
   });
+
+  // The default roles seed every new roles file, and the `ask` role picks the models ACP prompts
+  // run on, so a default entry the catalog lacks is a choice the launcher would refuse.
+  it.each(DEFAULT_ROLES.flatMap((role) => role.entries.map((entry) => [role.name, entry.harness, entry.model])))(
+    'knows the default %s role model %s %s',
+    (_role, harness, model) => {
+      expect(isKnownModel(harness, model)).toBe(true);
+    },
+  );
 });
 
 describe('loadHarnessModels', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(path.join(tmpdir(), 'harness-models-test-'));
+    tmpDir = mkdtempSync(path.join(tmpdir(), 'known-models-test-'));
   });
 
   afterEach(() => {
@@ -114,7 +124,7 @@ describe('loadHarnessModels', () => {
   it('reads a valid override file and uses it in place of the bundled catalog', () => {
     const configDir = path.join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });
-    writeFileSync(path.join(configDir, 'harness-models.json'), JSON.stringify({ claude: ['custom-model'] }));
+    writeFileSync(path.join(configDir, 'known-models.json'), JSON.stringify({ claude: ['custom-model'] }));
 
     loadHarnessModels(tmpDir);
     expect(modelsFor('claude')).toEqual(['custom-model']);
@@ -122,15 +132,25 @@ describe('loadHarnessModels', () => {
     expect(isKnownModel('claude', 'claude-sonnet-5')).toBe(false);
   });
 
+  it('ignores an override left under the old harness-models.json name', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'harness-models.json'), JSON.stringify({ claude: ['custom-model'] }));
+
+    loadHarnessModels(tmpDir);
+    expect(isKnownModel('claude', 'custom-model')).toBe(false);
+    expect(modelsFor('claude')).toContain('claude-sonnet-5');
+  });
+
   it('falls back to the bundled catalog and warns on stderr when the override file is invalid JSON', () => {
     const configDir = path.join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });
-    writeFileSync(path.join(configDir, 'harness-models.json'), 'not-json');
+    writeFileSync(path.join(configDir, 'known-models.json'), 'not-json');
 
     const writeSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     loadHarnessModels(tmpDir);
     expect(writeSpy).toHaveBeenCalledWith(
-      expect.stringContaining('.janissary/harness-models.json is invalid JSON — using the bundled catalog'),
+      expect.stringContaining('.janissary/known-models.json is invalid JSON — using the bundled catalog'),
     );
     writeSpy.mockRestore();
 
@@ -146,12 +166,12 @@ describe('loadHarnessModels', () => {
   ])('falls back to the bundled catalog and warns when the override holds %s', (_case, contents) => {
     const configDir = path.join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });
-    writeFileSync(path.join(configDir, 'harness-models.json'), JSON.stringify(contents));
+    writeFileSync(path.join(configDir, 'known-models.json'), JSON.stringify(contents));
 
     const writeSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     loadHarnessModels(tmpDir);
     expect(writeSpy).toHaveBeenCalledWith(
-      expect.stringContaining('.janissary/harness-models.json is not an object of model-id lists — using the bundled catalog'),
+      expect.stringContaining('.janissary/known-models.json is not an object of model-id lists — using the bundled catalog'),
     );
     writeSpy.mockRestore();
 

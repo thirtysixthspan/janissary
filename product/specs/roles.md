@@ -54,7 +54,7 @@ and risk.`), `implementation` (`Implementation of an approved plan or a describe
 ### What the tab shows
 
 Two columns. The catalog on the left lists every harness with its known model ids, as loaded from
-`harness-models.json` and a project's `.janissary/harness-models.json` override; the roles on the
+`known-models.json` and a project's `.janissary/known-models.json` override; the roles on the
 right are the role cards. Above the cards a line names the file in effect — its full path — or, when
 no file decodes, `No roles file in effect`. A problem line appears under it when the roles on screen
 are not what the file literally holds.

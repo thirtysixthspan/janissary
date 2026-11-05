@@ -28,8 +28,6 @@
     ]
   }
 
-* update the list of models in harness-models.json to include claude, opencode and openai models. rename the file to known-models.json and any code or tests that use the old name.
-
 
 ## development
 

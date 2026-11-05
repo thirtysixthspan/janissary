@@ -152,7 +152,7 @@ export function createPluginContext(
     },
     // The harness launch vocabulary: the model catalog the launcher dialog reads, plus the effort
     // levels. Built fresh per call from the already-loaded catalog (a project's
-    // `.janissary/harness-models.json` override is reflected), and empty while the plugin is
+    // `.janissary/known-models.json` override is reflected), and empty while the plugin is
     // disabled, the way `projectFileList` answers its empty values.
     harnessLaunchCatalog: () => ({
       models: isEnabled()

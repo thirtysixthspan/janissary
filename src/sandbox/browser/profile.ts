@@ -56,7 +56,7 @@ export type BrowserProfilePaths = {
   appManifest: DualPath;
   appTsconfig: DualPath;
   appAgentNames: DualPath;
-  appHarnessModels: DualPath;
+  appKnownModels: DualPath;
   // `<root>/.janissary`, denied rather than allowed. Not redundant with the `$HOME` deny: reads
   // outside `$HOME` are never denied by this profile at all, so an installation at `/opt/janissary`
   // or on a remote host outside the home directory would otherwise expose all of it.
@@ -201,7 +201,7 @@ export function browserProfileParams(paths: BrowserProfilePaths): string[] {
     paths.chromium, paths.node, paths.appModules, paths.appEntry, paths.playwright, paths.playwrightCore,
   ];
   const files = [
-    paths.appManifest, paths.appTsconfig, paths.appAgentNames, paths.appHarnessModels,
+    paths.appManifest, paths.appTsconfig, paths.appAgentNames, paths.appKnownModels,
   ];
   const denies = [paths.appState];
   return [

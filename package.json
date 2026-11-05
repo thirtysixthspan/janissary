@@ -92,7 +92,7 @@
     "web/dist",
     "chrome-extension",
     "agent-names.json",
-    "harness-models.json",
+    "known-models.json",
     "help",
     "scripts",
     "security"
