@@ -4,7 +4,7 @@ Your job: pick one feature — the first entry under the `## ready` section of `
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
-This is an **interactive** task. Unlike the autonomous `ai/tasks/*.md` playbooks, you must stop and ask the user questions in phases — product decisions first, then implementation decisions, then a final phase after the plan exists and again after its improvement passes — until every product and implementation design decision is settled. Do not guess scope, behavior, or edge cases on the user's behalf when a question would resolve it.
+This is an **interactive** task. Unlike the autonomous `ai/tasks/*.md` playbooks, you must stop and ask the user questions in phases — product decisions first, then UI decisions when the feature has a UI, then implementation decisions, then a final phase after the plan exists and again after its improvement passes — until every product and implementation design decision is settled. Do not guess scope, behavior, or edge cases on the user's behalf when a question would resolve it.
 
 **Follow the steps below in order, exactly as written.** Do not skip a step, do not merge two steps together. If you are ever unsure whether you have done enough — re-read the checklist for that step before moving on, don't guess.
 
@@ -68,7 +68,7 @@ Answer these four yes/no checks about the feature, using only what the feature's
 3. Does it involve **concurrency, background processes, or timing/race conditions**?
 4. Did Step 2a find **no close existing precedent** in the codebase to model it on?
 
-**If you answered "yes" to any of the four, this feature is high complexity** — Phase 2 (`2e`) asks the implementation questions (where should this live, which existing mechanism does it extend or replace) after Phase 1's product questions are settled. **If all four are "no,"** Phase 2 carries no questions — do not ask the user to make implementation decisions for a small, precedented feature.
+**If you answered "yes" to any of the four, this feature is high complexity** — Phase 3 (`2f`) asks the implementation questions (where should this live, which existing mechanism does it extend or replace) after the product and UI questions are settled. **If all four are "no,"** Phase 3 carries no questions — do not ask the user to make implementation decisions for a small, precedented feature.
 
 If you are unsure whether a check is "yes" or "no," treat it as "no" — the default is product-only questions. When in doubt, ask fewer implementation questions rather than more.
 
@@ -83,9 +83,10 @@ The initial draft records only the feature text and facts established in Step 2a
 3. Design decisions established by the feature text or existing behavior.
 4. A "What already exists (reuse, don't rebuild)" table when Step 2a surfaced precedent to point at. If 2a found nothing relevant, write "None found" rather than omitting the section.
 5. Proposed changes, described in prose (module/function/type names and their contracts) — no code blocks.
-6. Tests section naming what should be covered and where (mirroring existing test conventions for the touched area).
-7. Out of scope, listing boundaries already established by the feature text.
-8. Verification section: `$janissary/scripts/run.mjs check-diff` plus a concrete manual check.
+6. UI design, only when the feature has a UI (see 2e for what counts). In the initial draft, record just the UI facts Step 2a established: the surface the feature extends and the existing components it resembles. Leave the section out entirely when the feature has no UI.
+7. Tests section naming what should be covered and where (mirroring existing test conventions for the touched area).
+8. Out of scope, listing boundaries already established by the feature text.
+9. Verification section: `$janissary/scripts/run.mjs check-diff` plus a concrete manual check.
 
 Do not add a `**Complexity: N/10**` line — that is `ai/tasks/planning/improve-plan.md`'s job during the later verification pass, not this task's.
 
@@ -110,13 +111,31 @@ Every question must offer concrete options grounded in what you found in Step 2a
 
 Keep asking rounds until the phase's frontier is empty — every product decision settled, none silently assumed. After the user answers each round, update the initial draft with every answer before continuing. Each answer must become a decision, behavior, scope boundary, or exact user-visible wording in the relevant existing section.
 
-### 2e. Phase 2 — resolve implementation decisions
+### 2e. Phase 2 — resolve UI decisions
+
+**This phase runs only when the feature has a UI**: it adds or changes something the user sees or operates in the web UI, such as a tab view, sidebar panel, popup, picker, dialog, control, status display, or key binding. A feature that changes only a command's behavior or its transcript text has no UI for this purpose; Phase 1's naming/wording category already covers transcript text. If the feature has no UI, skip directly to 2f without asking anything here, and leave the UI design section out of the plan.
+
+UI decisions hang off product decisions, so start this phase only once Phase 1's frontier is empty. Before the first round, open the existing UI surface closest to the feature (the component it extends, or the one it most resembles) and read it, so every option can name a real component, style, or convention rather than a hypothetical one.
+
+Work the UI-decision tree using the same mechanism and no limits. Ask the user questions using `AskUserQuestion`, one call per round. Before the first round, make sure you have at least one question in each of these categories that isn't already answered by the feature's existing text or by Phase 1's answers:
+
+- **Placement and layout** — where the UI appears (a centre tab, a docked sidebar, a popup over the command bar, a status area) and how its contents are arranged.
+- **Interaction** — how the user opens, operates, and dismisses it, and where focus goes when it opens and when it closes.
+- **States** — what the user sees while it is empty, loading, busy, failed, or disabled, and when content overflows (a long list, a long label, a narrow pane).
+- **Keyboard and accessibility** — the key bindings it adds and whether they collide with any in `help/keys.md`, focus order, what Escape does, and the accessible name of each control.
+- **Visual consistency** — which existing component, style, or theme convention it matches, named from what you just read.
+
+Every question offers concrete options with your recommended default, exactly as in Phase 1. Skip a category only when the feature text or Phase 1's answers already settle it unambiguously, and quote that text back to the user as your understanding.
+
+Keep asking rounds until the phase's frontier is empty. After each round, write every answer into the plan's UI design section as a layout, interaction, state, binding, or convention it must follow. That section also states, as fact rather than as a question for the user, where the client code goes under `ai/guidelines/react-code-organization.md`: a feature directory named for the feature, decisions in pure modules and hooks, thin components, and no import from another feature. It keeps every piece of state the server owns on the server, per `ai/guidelines/architecture-principles.md` §1.
+
+### 2f. Phase 3 — resolve implementation decisions
 
 **If Step 2b said this feature is high complexity**, work the implementation-decision tree with the same mechanism and no limits: rounds of numbered questions, each with your recommended answer, phrased as a choice between concrete approaches (e.g. "extend module X" vs "add a new module") — never as an open "how should this be built?" — covering where the code should live, which existing mechanism it extends or replaces, and any new protocol message or concurrency concern 2b flagged. Keep going until every implementation decision is settled, updating the draft after each round as above.
 
-**If all four checks said "no"**, this phase carries no questions to ask: the default is product-only decisions for a small, precedented feature, so skip directly to 2f without asking the user anything here.
+**If all four checks said "no"**, this phase carries no questions to ask: the default is product-only decisions for a small, precedented feature, so skip directly to 2g without asking the user anything here.
 
-### 2f. Improve the answered draft
+### 2g. Improve the answered draft
 
 Execute these tasks in order, each in full except for its `Step 0 — Prepare the workspace`:
 
@@ -127,7 +146,7 @@ Skip that Step 0 in both. They reuse the workspace this task already prepared in
 
 The improvement passes may uncover product or implementation decisions the draft has not settled. Continue to the next step after both passes complete.
 
-### 2g. Final question phase — resolve remaining and new questions
+### 2h. Final question phase — resolve remaining and new questions
 
 **After the plan is complete, another questioning phase occurs in order to resolve any open questions.** Read the improved plan and check this list:
 
@@ -135,21 +154,22 @@ The improvement passes may uncover product or implementation decisions the draft
 - [ ] You know the behavior for every edge case you identified.
 - [ ] You know what is out of scope.
 - [ ] You know the exact user-visible wording, if any.
+- [ ] If the feature has a UI, you know its placement, interaction, every state, and its key bindings.
 
 If every box is checked and both improvement passes surfaced nothing new, the plan is complete. Otherwise, work one more decision-tree phase over: the unchecked items, plus any new questions the improvement passes raised — new and remaining decisions alike join the same tree. Unchecked items with no dependency are askable now; items whose answers hang on another open question wait for a later round in this phase, with no limit on rounds. Target only the open items, and apply every answer to the draft, then re-read it and repeat this step. Continue until every box is checked and nothing surfaced remains unresolved; do not leave unresolved product or implementation decisions in the plan.
 
 Before moving on, check the completed plan against this list:
 
 - [ ] No code blocks containing function bodies, JSX, or CSS.
-- [ ] All 8 sections above are present, in order.
+- [ ] All 9 sections above are present, in order. The UI design section is present only when the feature has a UI.
 - [ ] Every product decision traces back to either the feature text, established behavior, or a user answer.
 - [ ] Every question identified by the final review is resolved in the plan.
 
-### 2h. Remove the entry from the backlog
+### 2i. Remove the entry from the backlog
 
 Edit `./product/backlog/features.md` to remove that feature's `### ` entry (title and body) from the `## ready` section. Leave every other section, heading, and entry byte-for-byte untouched — do not reformat or reflow surrounding text. If the feature came from the task invocation and was never listed in the file, there is nothing to remove: leave the file untouched.
 
-### 2i. Merge the completed plan
+### 2j. Merge the completed plan
 
 Once the completed draft plan and backlog update are complete, execute `ai/tasks/workspace/merge-change-to-master.md` in full.
 

@@ -65,6 +65,7 @@ Expand **workspace** and choose `fix-build` to diagnose and repair a failing pul
 Picking a task only inserts the command; the agent then reads that file and follows it, so what happens next depends on the task. `plan-a-new-feature`, the task that drafts a new plan, works in phases and asks you a lot along the way:
 
 - It questions you about product decisions first: user flow, edge cases, scope, wording.
+- If the feature has something you see or operate on screen, it then asks about that UI: where it appears, how you use it, what it shows when empty, loading, or failed, its keys, and which existing UI it should match.
 - Then it decides whether the feature needs implementation questions at all, and if so asks about those: where code lives, what it extends or replaces.
 - It runs two improvement passes over the answered draft.
 - A final phase settles whatever is still open, including anything the two passes raised.
