@@ -37,7 +37,7 @@ export class AgentRunManager {
     if (!callerTab || callerTab.runtime?.incarnation !== options.caller.incarnation || callerTab.runtime.closing) {
       throw new Error(`Agent caller is stale: ${options.caller.label}`);
     }
-    const model = options.model ?? selectedModel(undefined);
+    const model = options.model ?? selectedModel(undefined, this.managers.models.modelsFor('opencode'));
     const metadata = validateAgentRecordMetadata({
       model, taskPath: options.snapshot.taskPath, ownerLabel: options.caller.label,
       ownerName: options.caller.ownerName ?? callerTab.title ?? callerTab.label,

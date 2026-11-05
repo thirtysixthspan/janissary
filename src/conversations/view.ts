@@ -1,5 +1,4 @@
 import { MARKDOWN_INSTRUCTION } from '../acp/launch.js';
-import { modelsFor } from '../harness/models.js';
 import type {
   ConversationModelPair,
   ConversationTurnView,
@@ -18,17 +17,19 @@ export const DEFAULT_CONVERSATION_TITLE = 'New conversation';
 // query, or a rename.
 export const CONVERSATION_TITLE_MAX_LENGTH = 60;
 
+export type ConversationModelsFor = (harness: string) => string[];
+
 export function conversationTitle(query: string): string {
   return (query.split('\n', 1)[0] ?? '').slice(0, CONVERSATION_TITLE_MAX_LENGTH) || DEFAULT_CONVERSATION_TITLE;
 }
 
-export function availableConversationModels(): ConversationModelPair[] {
+export function availableConversationModels(modelsFor: ConversationModelsFor): ConversationModelPair[] {
   return (['claude', 'opencode'] as const).flatMap((harness) =>
     modelsFor(harness).map((model) => ({ harness, model })));
 }
 
-export function hasConversationModel(pair: ConversationModelPair): boolean {
-  return availableConversationModels().some((candidate) =>
+export function hasConversationModel(pair: ConversationModelPair, modelsFor: ConversationModelsFor): boolean {
+  return availableConversationModels(modelsFor).some((candidate) =>
     candidate.harness === pair.harness && candidate.model === pair.model);
 }
 

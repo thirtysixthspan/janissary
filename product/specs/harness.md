@@ -1039,12 +1039,16 @@ interactive command (`harness <name> --model <name> --effort <level>`).
 `--model <name>` is passed to the harness binary's `--model` flag verbatim, but is validated first
 against that harness's known model catalog; an unknown model is rejected with `Unknown model
 "<model>" for harness "<name>" — add it to known-models.json.` and no tab is opened.
+Disabled models are unavailable to launches and launch choices, and a `--model` naming one receives
+the same unknown-model refusal. Catalog changes take effect without a restart when the model
+manager next reloads the file through the Models command, Delete, or Refresh. Consumers then use
+the updated catalog for subsequent launches and model choices.
 
 A project can supply its own `.janissary/known-models.json` to replace the bundled catalog entirely
 for that project. It is a JSON object mapping each harness name to an ordered list of model records.
 Each record has a required nonempty string `id` and may have a string `name` and boolean `disabled`
 and `hidden` flags. The `disabled` flag excludes a model from launch choices. The `hidden` flag only
-controls whether the models list shows it; a hidden model remains available for launch. When a flag
+controls whether the models list shows it; a hidden model remains available for launch and selection. When a flag
 is false, it is omitted when the catalog is written.
 
 If the file is missing, the bundled catalog is used. If it exists but isn't valid JSON, a warning is

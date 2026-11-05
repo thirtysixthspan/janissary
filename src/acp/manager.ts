@@ -124,7 +124,11 @@ export class AcpManager extends AcpSessionManager {
   }
 
   private queueFor(label: string): RoleEntry[] {
-    return attemptOrder(this.askModels(this.managers.tab.launchDir), this.entryOf(label));
+    const current = this.entryOf(label);
+    const queue = attemptOrder(this.askModels(this.managers.tab.launchDir), current)
+      .filter(({ harness, model }) => this.managers.models.isKnownModel(harness, model));
+    if (current && !this.managers.models.isKnownModel(current.harness, current.model)) this.close(label);
+    return queue;
   }
 
   cancel(label: string): Promise<boolean> {

@@ -43,6 +43,7 @@ const setup = (entries: RoleEntry[] = [GEMINI]) => {
   const tabs: Tab[] = [makeTab('tab1', '#fff')];
   const records = { begin: vi.fn(() => 'record-id'), prompt: vi.fn(() => true), activity: vi.fn(), answer: vi.fn(), close: vi.fn() };
   const managers = {
+    models: { isKnownModel: vi.fn(() => true) },
     acpRecords: records,
     tab: {
       tabs,

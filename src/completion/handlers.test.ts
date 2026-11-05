@@ -6,7 +6,11 @@ import {
   completeSendTarget, completeScheduleTarget, completeConnectionClose, completeTabCommand,
 } from './target-handlers.js';
 import { readCompletionCursor } from './cursor.js';
-import { modelsFor } from '../harness/models.js';
+import { BUNDLED_MODEL_CATALOG } from '../models/catalog-file.js';
+
+const modelsFor = (harness: string) => (BUNDLED_MODEL_CATALOG[harness] ?? [])
+  .filter(({ disabled }) => disabled !== true)
+  .map(({ id }) => id);
 
 // Every handler reads the same parsed cursor; build it from a whole line with the cursor at its end.
 const at = (line: string) => readCompletionCursor(line, line.length);
@@ -178,12 +182,12 @@ const uniquelyCompleted = modelsFor('claude').find((model) =>
 describe('completeHarnessModel', () => {
   it('completes a single match for the harness model flag', () => {
     const prefix = uniquelyCompleted.slice(0, -1);
-    const r = completeHarnessModel(at(`harness claude --model ${prefix}`));
+    const r = completeHarnessModel(at(`harness claude --model ${prefix}`), modelsFor);
     expect(r?.newInput).toBe(`harness claude --model ${uniquelyCompleted} `);
   });
 
   it('completes multiple matches to their longest common prefix', () => {
-    const r = completeHarnessModel(at('harness claude --model claude-'));
+    const r = completeHarnessModel(at('harness claude --model claude-'), modelsFor);
     // Sorted, because completion offers its matches in that order rather than the catalog's.
     expect(r?.matches).toEqual(
       modelsFor('claude').filter((model) => model.startsWith('claude-')).toSorted((a, b) => a.localeCompare(b)),
@@ -193,15 +197,22 @@ describe('completeHarnessModel', () => {
   });
 
   it('returns null for a non-harness command', () => {
-    expect(completeHarnessModel(at('msg claude --model claude-op'))).toBeNull();
+    expect(completeHarnessModel(at('msg claude --model claude-op'), modelsFor)).toBeNull();
   });
 
   it('returns null when the preceding token is not --model', () => {
-    expect(completeHarnessModel(at('harness clau'))).toBeNull();
+    expect(completeHarnessModel(at('harness clau'), modelsFor)).toBeNull();
   });
 
   it('finds no matches for an unknown harness name', () => {
-    const r = completeHarnessModel(at('harness bogus --model '));
+    const r = completeHarnessModel(at('harness bogus --model '), modelsFor);
+    expect(r?.matches).toEqual([]);
+  });
+
+  it('omits disabled ids supplied by the catalog manager', () => {
+    const enabledModels = (harness: string) => harness === 'claude' ? ['enabled-model'] : [];
+    const r = completeHarnessModel(at('harness claude --model disabled'), enabledModels);
+
     expect(r?.matches).toEqual([]);
   });
 });

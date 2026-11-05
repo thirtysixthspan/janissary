@@ -142,6 +142,8 @@ describe('tab plugin notifications', () => {
     const responder = new ConversationResponder(
       store, sessions, () => 2,
       () => { messageBus.emit('conversations', { type: 'changed' }); },
+      () => {},
+      (harness) => harness === 'opencode' ? ['model'] : [],
     );
     responder.send({
       schemaVersion: CONVERSATION_SCHEMA_VERSION,

@@ -14,7 +14,6 @@ import type { RemoteChannel } from '../remote/channel/index.js';
 import { command } from './agent.js';
 import { makeTab } from '../tab/index.js';
 import type { AgentRun } from '../agent/run.js';
-import * as models from '../harness/models.js';
 import { AcpRecordStore } from '../acp-records/store.js';
 
 const execute = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<AgentResult>>());
@@ -174,7 +173,7 @@ describe('agent command', () => {
   it('captures the automatic model at creation even if the catalog changes during provisioning', async () => {
     const ready = Promise.withResolvers<void>();
     vi.mocked(managers.workspace.create).mockReturnValue({ dir: cloneWorkspace, ready: ready.promise });
-    const catalog = vi.spyOn(models, 'modelsFor').mockReturnValue(['provider/first']);
+    const catalog = vi.spyOn(managers.models, 'modelsFor').mockReturnValue(['provider/first']);
     execute.mockResolvedValue({ status: 'completed', response: 'Done.', cleanupWarnings: [] });
     const pending = run();
     await vi.waitFor(() => expect(managers.agent.runs.size).toBe(1));
@@ -186,7 +185,7 @@ describe('agent command', () => {
   });
 
   it('releases upstream workspace allocation if automatic model selection fails before creating a run', async () => {
-    vi.spyOn(models, 'modelsFor').mockReturnValue([]);
+    vi.spyOn(managers.models, 'modelsFor').mockReturnValue([]);
     await expect(run()).resolves.toMatchObject({ status: 'failed', response: 'Agent: unknown model "".' });
     expect(workspaceRelease).toHaveBeenCalledOnce();
     expect(managers.acpRecords.rows()).toEqual([]);

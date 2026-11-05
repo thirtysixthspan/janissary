@@ -17,6 +17,7 @@ import {
   DEFAULT_CONVERSATION_TITLE,
   hasConversationModel,
 } from './view.js';
+import { findConversationWorkspaceTarget } from './workspace-target.js';
 
 type ManagerOptions = {
   projectDir?: string;
@@ -51,6 +52,7 @@ export class ConversationsManager {
           });
         report(id, message);
       },
+      (harness) => this.managers.models.modelsFor(harness),
     );
     this.tabRemoved = messageBus.on('transcript', 'tab:removed', () => {
       queueMicrotask(() => { this.releaseClosedConversations(); });
@@ -70,16 +72,17 @@ export class ConversationsManager {
         const window = this.window(id);
         return window ? [window] : [];
       }),
-      models: availableConversationModels(),
+      models: availableConversationModels((harness) => this.managers.models.modelsFor(harness)),
     };
   }
 
   create(id: string): boolean {
     if (this.conversations.has(id) || this.store.read(id)) return false;
     const remembered = this.store.readLastUsedPair();
-    const pair = remembered && hasConversationModel(remembered)
+    const modelsFor = (harness: string) => this.managers.models.modelsFor(harness);
+    const pair = remembered && hasConversationModel(remembered, modelsFor)
       ? remembered
-      : availableConversationModels()[0];
+      : availableConversationModels(modelsFor)[0];
     if (!pair) throw new Error('No ACP conversation models configured.');
     const timestamp = this.now();
     this.conversations.set(id, {
@@ -124,7 +127,7 @@ export class ConversationsManager {
 
   selectModel(id: string, pair: ConversationModelPair): boolean {
     const conversation = this.get(id);
-    if (!conversation || !hasConversationModel(pair)) return false;
+    if (!conversation || !hasConversationModel(pair, (harness) => this.managers.models.modelsFor(harness))) return false;
     this.cancel(id);
     conversation.pair = pair;
     if (this.store.hasRecord(id)) this.store.write(conversation);
@@ -194,14 +197,7 @@ export class ConversationsManager {
   }
 
   private workspaceTarget(id: string): { label: string; workspace: string } | undefined {
-    const conversation = this.get(id);
-    const tab = this.managers.tab.tabs.find((candidate) =>
-      candidate.plugin?.id === 'conversations' && candidate.plugin.instanceKey === id);
-    if (!conversation || !tab) return;
-    if (conversation.turns.length === 0) this.store.write(conversation);
-    const workspace = this.store.ensure(id);
-    this.managers.tab.setCwd(tab.label, workspace);
-    return { label: tab.label, workspace };
+    return findConversationWorkspaceTarget(this.managers, this.store, id, this.get(id));
   }
 
   // A conversation no open tab shows lets go of everything it held for that tab: a reply still
