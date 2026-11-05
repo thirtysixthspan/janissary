@@ -11,8 +11,8 @@ function listRow(row: ConnectionRow): ConnectionRow {
   return summary;
 }
 
-function listRows(rows: ConnectionRow[]): ConnectionRow[] {
-  return rows.map((row) => listRow(row));
+function listPayload(rows: ConnectionRow[]): ConnectionsPayload {
+  return { kind: 'list', rows: rows.map((row) => listRow(row)) };
 }
 
 export function connectionsData(capabilities: TabPluginServerCapabilities): ConnectionsTopicNotification['data'] {
@@ -30,9 +30,14 @@ export class ConnectionTabs {
   openList(capabilities: TabPluginServerCapabilities, dock: boolean): void {
     capabilities.openOrFocusTab(CONNECTIONS_LIST_KEY, () => ({
       title: 'connections',
-      payload: { kind: 'list', rows: listRows(connectionsData(capabilities).rows) },
+      payload: listPayload(connectionsData(capabilities).rows),
     }));
     if (!dock) capabilities.dockTab(CONNECTIONS_LIST_KEY, null);
+  }
+
+  refreshList(capabilities: TabPluginServerCapabilities): void {
+    const payload = listPayload(connectionsData(capabilities).rows);
+    capabilities.updateTab(CONNECTIONS_LIST_KEY, () => ({ payload }));
   }
 
   openRecord(row: ConnectionRow, capabilities: TabPluginServerCapabilities): void {
@@ -42,7 +47,7 @@ export class ConnectionTabs {
   update(event: ConnectionsTopicNotification, capabilities: TabPluginServerCapabilities): void {
     for (const key of event.tabs) {
       if (key !== CONNECTIONS_LIST_KEY) continue;
-      const payload: ConnectionsPayload = { kind: 'list', rows: listRows(event.data.rows) };
+      const payload = listPayload(event.data.rows);
       if (!isConnectionsPayload(payload)) return capabilities.reportFailure('invalid connections payload');
       capabilities.updateTab(key, () => ({ payload }));
     }

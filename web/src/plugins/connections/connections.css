@@ -1,4 +1,12 @@
 .connections-list.plugin-tab { padding: 0; gap: 0; outline: none; }
+/* The list's metadata band, holding Refresh and Split at its right edge, as the sessions list's does.
+   Its buttons take the muted icon treatment so the refresh icon doesn't arrive with browser chrome. */
+.connections-list-header { min-height: 28px; padding: 6px 12px; font-size: 12px; border-bottom: 1px solid var(--border); }
+.connections-list-header .plugin-actions button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 0 4px; line-height: 1;
+}
+.connections-list-header .plugin-actions button:hover { color: var(--fg); }
 .connections-empty { color: var(--muted); padding: 10px 12px; }
 .connections-rows { overflow: auto; min-height: 0; padding: 4px 8px; }
 /* The column names sit over the rows in the same grid, so each label lines up with its column —

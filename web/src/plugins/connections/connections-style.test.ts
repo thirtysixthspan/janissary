@@ -16,6 +16,19 @@ describe('connections list styles', () => {
     expect(styles).not.toContain('.conversation-');
   });
 
+  it('gives the metadata row the sessions band and muted icon buttons', () => {
+    const styles = readFileSync('web/src/plugins/connections/connections.css', 'utf8');
+    const band = styles.match(/\.connections-list-header \{[^}]+\}/)?.[0];
+    expect(band).toContain('min-height: 28px');
+    expect(band).toContain('padding: 6px 12px');
+    expect(band).toContain('border-bottom: 1px solid var(--border)');
+    const buttons = styles.match(/\.connections-list-header \.plugin-actions button \{[^}]+\}/)?.[0];
+    expect(buttons).toContain('background: transparent');
+    expect(buttons).toContain('border: none');
+    expect(buttons).toContain('color: var(--muted)');
+    expect(styles).toContain('.connections-list-header .plugin-actions button:hover { color: var(--fg); }');
+  });
+
   it('lays the heading row and the rows out on one shared grid', () => {
     const styles = readFileSync('web/src/plugins/connections/connections.css', 'utf8');
     expect(styles).toMatch(/\.connections-columns, \.connections-row \{[^}]*grid-template-columns:/);

@@ -2,6 +2,4 @@
 
 # pull-request
 
-* in the connections tab, like the sessions tab, include a metadata row with refresh and split actions.
-
 * in the connections tab, follow the row styling and keyboard interactions of the sessions tab.

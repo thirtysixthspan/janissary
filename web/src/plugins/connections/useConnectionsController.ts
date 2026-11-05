@@ -27,6 +27,10 @@ export function useConnectionsController(capabilities: TabPluginClientCapabiliti
     void guarded(() => capabilities.intent('close', { kind: row.kind, id: row.id, ownerLabel: row.ownerLabel }));
   }, [capabilities, guarded]);
 
+  const refresh = useCallback(() => {
+    void guarded(() => capabilities.intent('refresh', {}));
+  }, [capabilities, guarded]);
+
   const act = useCallback(async (name: 'cancel' | 'close-session' | 'terminate' | 'delete' | 'load-older', id: string) => {
     if (name === 'terminate') setPendingTerminate(true);
     const failure = await guarded(() => capabilities.intent(name, { id }));
@@ -41,7 +45,7 @@ export function useConnectionsController(capabilities: TabPluginClientCapabiliti
   }, []);
 
   return {
-    open, close, cancel: (id: string) => { void act('cancel', id); },
+    open, close, refresh, cancel: (id: string) => { void act('cancel', id); },
     closeSession: (id: string) => { void act('close-session', id); },
     terminate: (id: string) => { void act('terminate', id); },
     delete: (id: string) => { void act('delete', id); },

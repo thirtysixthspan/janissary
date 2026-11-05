@@ -1,6 +1,6 @@
 import { noFileOpener, type TabPluginActivation, type TabPluginServerCapabilities } from '../api.js';
 import {
-  isConnectionsPayload, isIdIntent, isKindIdOwnerIntent, type ConnectionKind, type ConnectionRow,
+  isConnectionsPayload, isEmptyIntent, isIdIntent, isKindIdOwnerIntent, type ConnectionKind, type ConnectionRow,
 } from './shared.js';
 import { runConnectionsCommand } from './command.js';
 import { ConnectionTabs, connectionsData } from './tabs.js';
@@ -54,6 +54,12 @@ function intent(
   capabilities: TabPluginServerCapabilities,
 ): null {
   if (!isConnectionsPayload(request.tabPayload)) return capabilities.reportFailure('invalid connections tab payload');
+  if (request.intent === 'refresh') {
+    if (!isEmptyIntent(request.payload)) return capabilities.rejectRequest('invalid refresh payload');
+    if (request.tabPayload.kind !== 'list') return capabilities.rejectRequest('refresh applies only to the connections list');
+    tabs.refreshList(capabilities);
+    return null;
+  }
   if (request.intent === 'open-record') {
     if (!isIdIntent(request.payload)) return capabilities.rejectRequest('invalid open-record payload');
     const row = rowForId(connectionsData(capabilities).rows, request.payload.id);

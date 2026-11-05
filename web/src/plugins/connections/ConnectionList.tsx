@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faRotate } from '@fortawesome/free-solid-svg-icons';
 import type { ConnectionRow, RecordConnectionRow } from '@shared/plugins/connections/shared';
-import { ConfirmDialog, useListSelection, type TabPluginClientCapabilities } from '../api';
+import {
+  ConfirmDialog,
+  PluginActionsHeader,
+  useListSelection,
+  type TabPluginClientCapabilities,
+} from '../api';
 import { ConnectionRowActions } from './ConnectionRowActions';
 import {
   connectionActivity,
@@ -69,6 +76,14 @@ export function ConnectionList({
   const now = Date.now();
   return (
     <div className="connections-list plugin-tab" ref={selection.listRef} tabIndex={0} onKeyDown={onKeyDown}>
+      <PluginActionsHeader className="plugin-meta connections-list-header">
+        <span className="plugin-actions">
+          <button type="button" title="Refresh" aria-label="Refresh" onClick={controller.refresh}>
+            <FontAwesomeIcon icon={faRotate} />
+          </button>
+          {capabilities.splitAction}
+        </span>
+      </PluginActionsHeader>
       {rows.length === 0 && <div className="connections-empty">No connections yet</div>}
       {controller.error && <div className="connections-list-error" role="alert">{controller.error}</div>}
       {rows.length > 0 && (

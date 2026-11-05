@@ -156,6 +156,33 @@ describe('connections plugin activation', () => {
     f.activation.dispose?.();
   });
 
+  it('refreshes the list from the current topic rows, keeping record windows out of it', () => {
+    const loaded = { ...recordRow, window: loadedWindow() };
+    const f = fixture([liveRow, loaded]);
+    expect(f.activation.intent({
+      tab: 'connections', intent: 'refresh', payload: {}, tabPayload: { kind: 'list', rows: [] },
+    }, f.capabilities)).toBeNull();
+    expect(f.topicData).toHaveBeenCalledWith('connections');
+    expect(f.updateTab).toHaveBeenCalledExactlyOnceWith('connections', expect.any(Function));
+    const [, refresh] = f.updateTab.mock.calls[0];
+    const result = refresh() as { title?: string; payload: { kind: string; rows: Record<string, unknown>[] } };
+    expect(result.title).toBeUndefined();
+    expect(result.payload).toEqual({ kind: 'list', rows: [liveRow, recordRow] });
+    expect(result.payload.rows[1]).not.toHaveProperty('window');
+  });
+
+  it.each([
+    ['a non-empty payload', { extra: true }, { kind: 'list', rows: [liveRow] }, 'invalid refresh payload'],
+    ['a record tab', {}, { kind: 'connection', record: recordRow }, 'refresh applies only to the connections list'],
+  ])('rejects refresh with %s without failing the plugin', (_case, payload, tabPayload, message) => {
+    const f = fixture([liveRow]);
+    expect(() => f.activation.intent({
+      tab: 'connections', intent: 'refresh', payload, tabPayload,
+    }, f.capabilities)).toThrow(message);
+    expect(f.updateTab).not.toHaveBeenCalled();
+    expect(f.reportFailure).not.toHaveBeenCalled();
+  });
+
   it('opens a current agent record by id without trusting client row data', () => {
     const f = fixture([agentRow]);
     expect(f.activation.intent({

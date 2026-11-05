@@ -410,3 +410,60 @@ describe('ConnectionList', () => {
     expect(intent).not.toHaveBeenCalled();
   });
 });
+
+describe('ConnectionList metadata row', () => {
+  function withSplit() {
+    const fixture = capabilities();
+    const split = vi.fn();
+    fixture.value.splitAction = <button type="button" aria-label="Split" onClick={split} />;
+    return { ...fixture, split };
+  }
+
+  it.each([
+    ['an empty list', []],
+    ['a list with rows', [live('db', 'sqlite', 'Database')]],
+  ])('leads %s with Refresh and Split together in the metadata row', (_case, rows: ConnectionRow[]) => {
+    const { value } = withSplit();
+    const { container } = render(<ConnectionList rows={rows} capabilities={value} />);
+    const header = container.querySelector('.connections-list-header')!;
+    expect(container.querySelector('.connections-list')?.firstElementChild).toBe(header);
+    expect(header).toHaveClass('plugin-meta');
+    const actions = header.querySelector('.plugin-actions')!;
+    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    expect([...actions.children]).toEqual([refresh, screen.getByRole('button', { name: 'Split' })]);
+    expect(refresh).toHaveAttribute('title', 'Refresh');
+    expect(refresh.textContent).toBe('');
+    expect(refresh.querySelector('svg')).not.toBeNull();
+  });
+
+  it('sends refresh with an empty payload and neither moves nor opens a row', () => {
+    const { intent, value, split } = withSplit();
+    const rows = [live('db', 'sqlite', 'Database'), live('web', 'browser', 'Browser')];
+    const { container } = render(<ConnectionList rows={rows} capabilities={value} />);
+    const list = container.querySelector('.connections-list') as HTMLElement;
+    fireEvent.keyDown(list, { key: 'End' });
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(intent).toHaveBeenCalledExactlyOnceWith('refresh', {});
+    expect(container.querySelectorAll('.connections-row')[1]).toHaveClass('selected');
+    fireEvent.click(screen.getByRole('button', { name: 'Split' }));
+    expect(split).toHaveBeenCalledOnce();
+    expect(intent).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps Enter on a focused Refresh control from opening the selected row', () => {
+    const { intent, value } = withSplit();
+    render(<ConnectionList rows={[live('db', 'sqlite', 'Database')]} capabilities={value} />);
+    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    refresh.focus();
+    fireEvent.keyDown(refresh, { key: 'Enter' });
+    expect(intent).not.toHaveBeenCalled();
+  });
+
+  it('shows a refused refresh inline', async () => {
+    const { intent, value } = withSplit();
+    intent.mockRejectedValueOnce(new Error('refresh applies only to the connections list'));
+    render(<ConnectionList rows={[]} capabilities={value} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('refresh applies only to the connections list');
+  });
+});
