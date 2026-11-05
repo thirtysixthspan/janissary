@@ -333,13 +333,39 @@ describe('createRemotePtySession', () => {
       expect(tab.harness?.autoApproved).toBe(true);
     });
 
-    it('stays unlit on a stand-down, which carries no capture', () => {
+    it('stays unlit on a stand-down from a remote that sends no capture', () => {
       const { channel, tab } = gateTab();
       channel.receive(`${encodeFrame({
         type: 'gate-event', id: 'r1', message: 'Auto-approve could not clear the permission prompt; standing down', capturedAt: 1000,
       })}\n`);
       expect(tab.harness?.autoApproved).toBeUndefined();
     });
+
+    it('stays unlit on a stand-down that carries its capture', () => {
+      const { channel, tab } = gateTab();
+      channel.receive(`${encodeFrame({
+        type: 'gate-event', id: 'r1', message: 'Auto-approve could not clear the permission prompt; standing down', capturedAt: 1000, capture: 'the screen text',
+      })}\n`);
+      expect(tab.harness?.autoApproved).toBeUndefined();
+    });
+  });
+
+  it('writes and links the capture a stand-down gate-event carries', () => {
+    const { channel } = attachedChannel();
+    const managers = makeManagers([makeTab('claude', 'red')]);
+    createRemotePtySession(channel, managers, {
+      id: 'r1', program: 'claude', command: 'claude', harness: 'claude', cols: 80, rows: 24, agentName: 'claude',
+    }, vi.fn());
+
+    channel.receive(`${encodeFrame({
+      type: 'gate-event', id: 'r1', message: 'Auto-approve could not clear the permission prompt; standing down', capturedAt: 2000, capture: 'the stuck screen',
+    })}\n`);
+
+    expect(vi.mocked(writeCaptureFile)).toHaveBeenCalledWith('claude', 2000, 'the stuck screen');
+    expect(vi.mocked(notify)).toHaveBeenCalledWith(
+      managers, 'auto-approve', 'claude', 'Auto-approve could not clear the permission prompt; standing down',
+      { openFile: '/project/.janissary/captures/claude-now.txt', detectedAt: undefined },
+    );
   });
 
   it('translates a gate-event frame replayed on reattach into notify(), stamped with the original detection time', async () => {

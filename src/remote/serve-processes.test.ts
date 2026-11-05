@@ -436,7 +436,7 @@ describe('RemoteProcesses harness detection', () => {
 
   // The same loop guard `HarnessAutoApprover` already has locally: an unchanged, unanswered gate is
   // reported once as standing down rather than re-sending the keystroke forever.
-  it('stands down on a gate that does not clear, without re-sending the keystroke', async () => {
+  it('stands down on a gate that does not clear, without re-sending the keystroke, carrying its capture', async () => {
     const { feed } = spawnClaude(true);
     await feed(GATE_TEXT);
     write.mockClear();
@@ -445,6 +445,7 @@ describe('RemoteProcesses harness detection', () => {
     expect(write).not.toHaveBeenCalled();
     expect(send).toHaveBeenCalledWith(expect.objectContaining({
       type: 'gate-event', id: 'r1', message: 'Auto-approve could not clear the permission prompt; standing down',
+      capture: GATE_TEXT,
     }));
   });
 

@@ -473,13 +473,16 @@ file and attaches a clickable, outline-style clipboard-icon link before that sam
 text; clicking the link opens the captured text in an ordinary editor tab, so the user can review
 exactly what was auto-approved after the fact. The capture file is written whenever the notification
 is recorded, which is every successful auto-approval — the line is held in the notification queue
-whether or not a feed is open, so there is no approval whose capture nobody could read. This link is
-added only for successful auto-approvals — a prompt still awaiting the user, and the stand-down
-"could not clear the permission prompt" case, get no capture and no link.
+whether or not a feed is open, so there is no approval whose capture nobody could read. A prompt
+still awaiting the user with auto-approve off gets no capture and no link.
 
 If an approved prompt does not clear (the same gate screen redraws unchanged), the app does not
 re-send the keystroke; it records `<label>: Auto-approve could not clear the permission prompt;
-standing down` once and leaves that gate alone until the screen changes. Auto-approval is in-memory
+standing down` once and leaves that gate alone until the screen changes. That stand-down line carries
+its own capture link the same way an approval does: the screen that redrew unchanged is saved to a
+capture file when the line is recorded, and clicking the link opens it in an editor tab, so the user
+can see which prompt auto-approve could not get past without switching to the harness tab. A
+stand-down never turns the metadata row's auto-approve flag green. Auto-approval is in-memory
 per launch — like the harness tab itself, it is never persisted or restored. As with
 every notification, the `auto-approve` line is held in the notification queue and shown as a toast
 when no feed is on screen — except when it is replayed from a detached session, which never toasts.
