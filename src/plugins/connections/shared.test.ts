@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CONNECTIONS_PAYLOAD_SCHEMA_VERSION, isConnectionsPayload, isEmptyIntent, isIdIntent, isKindIdOwnerIntent,
+  recordConnectionName,
 } from './shared.js';
 
 const live = {
@@ -23,6 +24,11 @@ describe('connections shared contract', () => {
     expect(isConnectionsPayload({ kind: 'list', rows: [live, record] })).toBe(true);
     expect(isConnectionsPayload({ kind: 'connection', record })).toBe(true);
     expect(isConnectionsPayload({ kind: 'connection', record: live })).toBe(false);
+  });
+
+  it('names a record by its kind and owning tab name', () => {
+    expect(recordConnectionName({ kind: 'acp', ownerName: 'build' })).toBe('acp:build');
+    expect(recordConnectionName({ kind: 'agent', ownerName: 'release notes' })).toBe('agent:release notes');
   });
 
   it.each([

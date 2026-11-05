@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faRotate } from '@fortawesome/free-solid-svg-icons';
-import type { ConnectionRow, RecordConnectionRow } from '@shared/plugins/connections/shared';
+import { recordConnectionName, type ConnectionRow, type RecordConnectionRow } from '@shared/plugins/connections/shared';
 import {
   ConfirmDialog,
   PluginActionsHeader,
@@ -24,6 +24,13 @@ function rowTitle(row: ConnectionRow): string {
   return row.type === 'live' ? row.display : row.title;
 }
 
+function connectionName(row: ConnectionRow): string {
+  return row.type === 'live' ? row.display : recordConnectionName(row);
+}
+
+function rowTooltip(row: ConnectionRow, name: string): string {
+  return row.type === 'live' ? `${name}\n${row.kind}` : `${name}\n${row.title}\n${row.kind}`;
+}
 
 export function ConnectionList({
   rows,
@@ -97,6 +104,7 @@ export function ConnectionList({
         <div className="connections-columns" aria-hidden="true">
           <span className="connections-columns-host">Host</span>
           <span className="connections-columns-owner">Tab</span>
+          <span className="connections-columns-id">Connection ID</span>
           <span className="connections-columns-title">Connection Name</span>
           <span className="connections-columns-status">Connection State</span>
           <span className="connections-columns-activity">Last activity</span>
@@ -106,6 +114,7 @@ export function ConnectionList({
       <div className="connections-rows">
         {rows.map((row, index) => {
           const label = rowTitle(row);
+          const name = connectionName(row);
           const activity = connectionActivity(row.orderingTimestamp, now);
           return (
             <div
@@ -115,11 +124,12 @@ export function ConnectionList({
               data-status={row.status}
               role="button"
               tabIndex={-1}
-              title={`${label}\n${row.kind}`}
+              title={rowTooltip(row, name)}
               onClick={() => { clickRow(index); }}
             >
               <RowBody
                 row={row}
+                name={name}
                 label={label}
                 activity={activity}
                 onClose={controller.close}

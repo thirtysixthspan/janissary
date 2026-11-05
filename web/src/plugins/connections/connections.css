@@ -13,10 +13,11 @@
 .connections-empty { color: var(--muted); padding: 8px 12px; }
 .connections-rows { display: flex; flex-direction: column; }
 /* The column names sit over the rows in the same grid, so each label lines up with its column —
-   Host, Tab, Connection Name, Connection State, Last activity, and the unlabeled actions column.
-   Rows are the sessions table's: full-bleed, with hover and the current row in two different shades. */
+   Host, Tab, Connection ID, Connection Name, Connection State, Last activity, and the unlabeled
+   actions column. Rows are the sessions table's: full-bleed, with hover and the current row in two
+   different shades. */
 .connections-columns, .connections-row {
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr) 8em 8em 4em;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr) 8em 8em 4em;
   gap: 12px; align-items: baseline; padding: 0 12px; color: var(--muted); font-size: 12px; text-align: left;
 }
 .connections-row {
@@ -24,10 +25,10 @@
 }
 .connections-row:hover { background: var(--border); }
 .connections-row.selected { background: var(--bg-soft); }
-.connections-row-host, .connections-row-owner, .connections-row-title {
+.connections-row-host, .connections-row-owner, .connections-row-id, .connections-row-title {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.connections-row-host, .connections-row-owner, .connections-row-status { color: var(--muted); }
+.connections-row-host, .connections-row-owner, .connections-row-id, .connections-row-status { color: var(--muted); }
 .connections-row-activity { color: var(--faint); white-space: nowrap; }
 /* A connection waiting between prompts reads like a parked session, and one that is over reads muted
    like a terminated session, so working rows stand apart from the rest. */

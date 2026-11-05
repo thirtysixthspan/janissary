@@ -2,8 +2,6 @@
 
 # pull-request
 
-* connection name in the table should be 'acp:<tab name>'. Include connection id in a column before connection name.
-
 * shell connection for the system tab should not be closable. no button should show on that row.
 
 * after issuing an acp command in the shell, the acp command should be immediately printed in the terminal, even though there is no response. when the response comes back, print the response after the command line. if other commands have run in the meantime, reprint the command and the response.

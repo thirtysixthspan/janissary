@@ -42,6 +42,10 @@ export type RecordConnectionRow = ConnectionRowBase & {
 };
 export type ConnectionRow = LiveConnectionRow | RecordConnectionRow;
 
+export function recordConnectionName(row: Pick<RecordConnectionRow, 'kind' | 'ownerName'>): string {
+  return `${row.kind}:${row.ownerName}`;
+}
+
 export type ConnectionsPayload =
   | { kind: 'connection'; record: ConnectionRow }
   | { kind: 'list'; rows: ConnectionRow[] };

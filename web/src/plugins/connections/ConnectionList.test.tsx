@@ -53,7 +53,7 @@ describe('ConnectionList', () => {
     const heading = container.querySelector('.connections-columns')!;
     expect(heading).toHaveAttribute('aria-hidden', 'true');
     expect([...heading.children].map((node) => node.textContent))
-      .toEqual(['Host', 'Tab', 'Connection Name', 'Connection State', 'Last activity', '']);
+      .toEqual(['Host', 'Tab', 'Connection ID', 'Connection Name', 'Connection State', 'Last activity', '']);
   });
 
   it('renders mixed rows in supplied order with hosts, owners, titles, and statuses', () => {
@@ -67,24 +67,34 @@ describe('ConnectionList', () => {
     expect([...container.querySelectorAll('.connections-row-host')].map((node) => node.textContent))
       .toEqual(['Local', 'build-box', 'Local', 'devbox']);
     expect([...container.querySelectorAll('.connections-row-title')].map((node) => node.textContent))
-      .toEqual(['SQLite database', 'Agent record', 'ACP session', 'Editor session']);
+      .toEqual(['SQLite database', 'agent:Owner', 'acp:Owner', 'Editor session']);
+    expect([...container.querySelectorAll('.connections-row-id')].map((node) => node.textContent))
+      .toEqual(['db', 'run', 'session', 'editor']);
     expect([...container.querySelectorAll('.connections-row-owner')].map((node) => node.textContent))
       .toEqual(['Database owner', 'Owner', 'Owner', 'Owner']);
     expect([...container.querySelectorAll('.connections-row-status')].map((node) => node.textContent))
       .toEqual(['Open', 'Completed', 'Running', 'Open']);
   });
 
-  it('lays each row out as host, tab, name, state, last activity, then actions', () => {
+  it('lays each row out as host, tab, id, name, state, last activity, then actions', () => {
     const now = Date.now();
     const row = { ...live('db', 'sqlite', 'Database', 'Owner tab'), orderingTimestamp: now - 3 * 60_000 };
     const { container } = render(<ConnectionList rows={[row]} capabilities={capabilities().value} />);
     const cells = [...container.querySelector('.connections-row')!.children];
     expect(cells.map((node) => node.className)).toEqual([
-      'connections-row-host', 'connections-row-owner', 'connections-row-title',
+      'connections-row-host', 'connections-row-owner', 'connections-row-id', 'connections-row-title',
       'connections-row-status', 'connections-row-activity', 'connections-row-actions',
     ]);
-    expect(cells.slice(0, 5).map((node) => node.textContent)).toEqual(['Local', 'Owner tab', 'Database', 'Open', '3m ago']);
-    expect(cells[4]).toHaveAttribute('dateTime', new Date(row.orderingTimestamp).toISOString());
+    expect(cells.slice(0, 6).map((node) => node.textContent)).toEqual(['Local', 'Owner tab', 'db', 'Database', 'Open', '3m ago']);
+    expect(cells[5]).toHaveAttribute('dateTime', new Date(row.orderingTimestamp).toISOString());
+  });
+
+  it('names a record row by its kind and owning tab, with its record id before the name', () => {
+    const id = '0b6f1c2e-8a4d-4f3b-9c1e-2d7a5b9e4f10';
+    const row = { ...record(id, 'acp', 'Running', 'ACP: summarize the diff'), ownerName: 'build' };
+    const { container } = render(<ConnectionList rows={[row]} capabilities={capabilities().value} />);
+    const cells = [...container.querySelector('.connections-row')!.children];
+    expect(cells.slice(2, 4).map((node) => node.textContent)).toEqual([id, 'acp:build']);
   });
 
   it('leaves the last activity empty when the host knows no activity', () => {
@@ -97,8 +107,14 @@ describe('ConnectionList', () => {
 
   it('carries the connection kind in the row tooltip rather than a column', () => {
     const { container } = render(<ConnectionList rows={[record('run', 'agent', 'Completed', 'Agent record')]} capabilities={capabilities().value} />);
-    expect(container.querySelector('.connections-row')).toHaveAttribute('title', 'Agent record\nagent');
+    expect(container.querySelector('.connections-row')).toHaveAttribute('title', 'agent:Owner\nAgent record\nagent');
     expect(container.querySelector('.connections-row-kind')).toBeNull();
+  });
+
+  it('keeps the record title in the Delete control and its confirmation', () => {
+    render(<ConnectionList rows={[record('closed', 'acp', 'Closed', 'ACP: finished session')]} capabilities={capabilities().value} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete ACP: finished session' }));
+    expect(screen.getByText('Delete "ACP: finished session"?')).toBeInTheDocument();
   });
 
   it('renders Close and Delete as icon buttons in the actions column', () => {
@@ -480,7 +496,7 @@ describe('ConnectionList rows', () => {
   }
 
   const WIDE_CELLS = [
-    'connections-row-host', 'connections-row-owner', 'connections-row-title',
+    'connections-row-host', 'connections-row-owner', 'connections-row-id', 'connections-row-title',
     'connections-row-status', 'connections-row-activity', 'connections-row-actions',
   ];
 
@@ -516,6 +532,14 @@ describe('ConnectionList rows', () => {
     ]);
     expect([...secondary.children].map((child) => child.textContent)).toEqual(['Open', 'devbox', 'Owner tab', '3m ago']);
     expect(node).toHaveAttribute('title', 'Database\nsqlite');
+  });
+
+  it('names a docked record row by its kind and owning tab, with no id field', () => {
+    const row = record('run', 'agent', 'Running', 'Agent: task.md');
+    const { container } = render(<ConnectionList rows={[row]} capabilities={docked('left').value} />);
+    const node = container.querySelector('.connections-row')!;
+    expect(node.querySelector(':scope .connections-row-primary .connections-row-title')?.textContent).toBe('agent:Owner');
+    expect(node.querySelector('.connections-row-id')).toBeNull();
   });
 
   it('returns to the table when the list comes back to the centre', () => {

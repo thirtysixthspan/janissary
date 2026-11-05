@@ -1,12 +1,8 @@
 import type { ConnectionsTopicNotification, TabPluginServerCapabilities } from '../api.js';
-import { isConnectionRow, type ConnectionRow } from './shared.js';
+import { isConnectionRow, recordConnectionName, type ConnectionRow } from './shared.js';
 
 type TopicRecord = Extract<ConnectionsTopicNotification['data']['rows'][number], { type: 'record' }>;
 type PluginRecord = Extract<ConnectionRow, { type: 'record' }>;
-
-export function recordTabTitle(row: Pick<PluginRecord, 'kind' | 'ownerName'>): string {
-  return `${row.kind}:${row.ownerName}`;
-}
 
 export class ConnectionRecordTabs {
   open(row: ConnectionRow, capabilities: TabPluginServerCapabilities): void {
@@ -14,13 +10,13 @@ export class ConnectionRecordTabs {
     const current = this.currentRecord(row.id, capabilities);
     if (!current) return capabilities.rejectRequest(`No connection matching "${row.id}".`);
     capabilities.openOrFocusTab(row.id, () => ({
-      title: recordTabTitle(current),
+      title: recordConnectionName(current),
       payload: { kind: 'connection', record: current },
     }));
     capabilities.topicAction({ topic: 'connections', action: 'load', id: row.id });
     const loaded = this.currentRecord(row.id, capabilities);
     if (!loaded?.window) return;
-    capabilities.updateTab(row.id, () => ({ title: recordTabTitle(loaded), payload: { kind: 'connection', record: loaded } }));
+    capabilities.updateTab(row.id, () => ({ title: recordConnectionName(loaded), payload: { kind: 'connection', record: loaded } }));
   }
 
   update(event: ConnectionsTopicNotification, capabilities: TabPluginServerCapabilities): void {
@@ -37,7 +33,7 @@ export class ConnectionRecordTabs {
       if (!row.window) {
         capabilities.topicAction({ topic: 'connections', action: 'load', id: key });
       }
-      capabilities.updateTab(key, () => ({ title: recordTabTitle(row), payload: { kind: 'connection', record: row } }));
+      capabilities.updateTab(key, () => ({ title: recordConnectionName(row), payload: { kind: 'connection', record: row } }));
     }
   }
 

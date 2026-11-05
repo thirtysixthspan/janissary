@@ -62,6 +62,18 @@ describe('connections rows follow the sessions rows', () => {
     expect(grid).not.toContain('align-items: center');
   });
 
+  it('gives the connection id its own muted, ellipsized track before the name', () => {
+    const grid = rule('.connections-columns, .connections-row');
+    const tracks = grid?.match(/grid-template-columns: ([^;]+);/)?.[1];
+    expect(tracks).toBe('minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr) 8em 8em 4em');
+    const ellipsized = rule('.connections-row-host, .connections-row-owner, .connections-row-id, .connections-row-title');
+    expect(ellipsized).toContain('text-overflow: ellipsis');
+    expect(ellipsized).toContain('white-space: nowrap');
+    expect(styles).toContain(
+      '.connections-row-host, .connections-row-owner, .connections-row-id, .connections-row-status { color: var(--muted); }',
+    );
+  });
+
   it('draws full-bleed rows with distinct hover and selection shades', () => {
     const row = rule('.connections-row');
     expect(row).toContain('padding: 4px 12px');
