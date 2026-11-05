@@ -6,8 +6,6 @@
 
 * all connection types should get a unique uuid.
 
-* add a focus icon button in the connection metadata row next to the focuses the relevant tab.
-
 * remove the word 'connection' from the connections table headers.
 
  

@@ -31,6 +31,7 @@ export function ConnectionTab({ record, capabilities }: {
       <ConnectionTabMeta
         record={record}
         pendingTerminate={controller.pendingTerminate}
+        onFocus={() => { controller.focus(record.id); }}
         onCancel={() => { controller.cancel(record.id); }}
         onCloseSession={() => { controller.closeSession(record.id); }}
         onTerminate={() => { controller.terminate(record.id); }}

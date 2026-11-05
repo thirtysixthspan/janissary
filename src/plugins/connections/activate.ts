@@ -42,6 +42,7 @@ function recordAction(name: string, id: string, capabilities: TabPluginServerCap
     case 'close-session': { refusal = capabilities.topicAction({ topic: 'connections', action: 'closeSession', id }); break; }
     case 'terminate': { refusal = capabilities.topicAction({ topic: 'connections', action: 'terminate', id }); break; }
     case 'delete': { refusal = capabilities.topicAction({ topic: 'connections', action: 'delete', id }); break; }
+    case 'focus': { refusal = capabilities.topicAction({ topic: 'connections', action: 'focus', id }); break; }
     default: { capabilities.topicAction({ topic: 'connections', action: 'loadOlder', id }); }
   }
   if (refusal !== undefined) return capabilities.rejectRequest(refusal);
@@ -72,7 +73,7 @@ function intent(
     const row = rowForTarget(connectionsData(capabilities).rows, request.payload);
     return openOrClose(request.intent, row, tabs, capabilities);
   }
-  const validIdIntents = ['cancel', 'close-session', 'terminate', 'delete', 'load-older'];
+  const validIdIntents = ['cancel', 'close-session', 'terminate', 'delete', 'focus', 'load-older'];
   if (validIdIntents.includes(request.intent)) {
     if (!isIdIntent(request.payload)) return capabilities.rejectRequest(`invalid ${request.intent} payload`);
     return recordAction(request.intent, request.payload.id, capabilities);

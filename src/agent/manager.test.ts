@@ -54,6 +54,13 @@ describe('AgentRunManager', () => {
     await manager.finish(local.id, 'terminated');
   });
 
+  it('records each run as owned by its caller tab, after the run ends too', async () => {
+    const { manager, caller, captured } = setup();
+    const run = manager.create({ caller: captured, snapshot });
+    await manager.finish(run.id, 'completed');
+    expect(tabRuntime(caller).acpRecordIds?.has(run.recordId!)).toBe(true);
+  });
+
   it('does not terminate an old caller run when a reused label closes', async () => {
     const { manager, caller, captured, controller } = setup();
     const run = manager.create({ caller: captured, snapshot });

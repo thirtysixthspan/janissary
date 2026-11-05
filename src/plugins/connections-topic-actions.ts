@@ -77,6 +77,16 @@ function actOnCoreRecord(managers: Managers, action: CoreRecordAction, requested
   return undefined;
 }
 
+type FocusAction = Extract<ConnectionsTopicAction, { action: 'focus' }>;
+
+function focusRecordOwner(managers: Managers, action: FocusAction, requested: Map<string, number>): string | undefined {
+  const record = rows(managers, requested).find((candidate) => candidate.type === 'record' && candidate.id === action.id);
+  const index = record?.focusTarget === undefined ? -1 : managers.tab.findIndex(record.focusTarget);
+  if (index === -1) return 'The owning tab is no longer open.';
+  managers.tab.setActiveTab(index);
+  return undefined;
+}
+
 type TerminateAction = Extract<ConnectionsTopicAction, { action: 'terminate' }>;
 
 function actOnAgentRecord(managers: Managers, action: TerminateAction, requested: Map<string, number>): string | undefined {
@@ -112,6 +122,9 @@ export function connectionsTopicAction(
   }
   if (isCoreRecordAction(action)) {
     return actOnCoreRecord(managers, action, requested);
+  }
+  if (action.action === 'focus') {
+    return focusRecordOwner(managers, action, requested);
   }
   return actOnAgentRecord(managers, action, requested);
 }

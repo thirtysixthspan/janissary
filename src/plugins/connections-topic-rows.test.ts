@@ -236,6 +236,25 @@ describe('connections topic rows', () => {
     for (const row of rows) expect(row).not.toHaveProperty('focusTarget');
   });
 
+  it('names a record\'s owning tab as its focus target only while the tab it began in is open', () => {
+    const { managers, recordRows, tabs } = fixture();
+    tabs[0]!.runtime!.acpRecordIds = new Set(['core-record']);
+    const focusOf = () => composeConnectionsTopicData(managers, new Map()).rows
+      .find((row) => row.type === 'record' && row.id === 'core-record')?.focusTarget;
+
+    expect(focusOf()).toBe('first');
+    recordRows[0]!.status = 'Closed';
+    delete tabs[0]!.runtime!.acpRecordId;
+    expect(focusOf()).toBe('first');
+
+    tabs[0] = { label: 'first', dotColor: '', number: 1, log: [], runtime: { busy: false, context: [], queue: [] } };
+    expect(focusOf()).toBeUndefined();
+    tabs.shift();
+    expect(focusOf()).toBeUndefined();
+    expect(composeConnectionsTopicData(managers, new Map()).rows
+      .find((row) => row.type === 'record' && row.id === 'agent-record')).not.toHaveProperty('focusTarget');
+  });
+
   it('marks only the managed system tab shell rows permanent', () => {
     const { managers, tabs } = fixture();
     tabs.push({

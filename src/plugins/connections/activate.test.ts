@@ -256,6 +256,7 @@ describe('connections plugin activation', () => {
     ['close-session', 'closeSession', 'Only an open record can be closed.'],
     ['terminate', 'terminate', 'The run is no longer live.'],
     ['delete', 'delete', 'An open record cannot be deleted.'],
+    ['focus', 'focus', 'The owning tab is no longer open.'],
   ] as const)('rejects a refused %s intent with the topic message', (intent, action, message) => {
     const f = fixture([recordRow]);
     f.topicAction.mockReturnValue(message);
@@ -265,6 +266,17 @@ describe('connections plugin activation', () => {
     }, f.capabilities)).toThrow(message);
     expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action, id: 'uuid' });
     expect(f.rejectRequest).toHaveBeenCalledWith(message);
+  });
+
+  it('passes a focus intent through to the focus topic action and refuses a malformed one', () => {
+    const f = fixture([recordRow]);
+    const request = (payload: unknown) => ({
+      tab: 'connections', intent: 'focus', payload, tabPayload: { kind: 'connection', record: recordRow },
+    });
+    expect(f.activation.intent(request({ id: 'uuid' }), f.capabilities)).toBeNull();
+    expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action: 'focus', id: 'uuid' });
+    expect(() => f.activation.intent(request({ id: 'uuid', extra: true }), f.capabilities)).toThrow('invalid focus payload');
+    expect(f.topicAction).toHaveBeenCalledTimes(1);
   });
 
   it('leaves load-older without a refusal even when the topic answers', () => {

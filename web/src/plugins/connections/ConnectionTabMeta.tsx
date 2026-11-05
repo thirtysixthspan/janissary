@@ -1,16 +1,17 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleStop, faCircleXmark } from '@fortawesome/free-solid-svg-icons';
+import { faCircleStop, faCircleXmark, faLocationCrosshairs } from '@fortawesome/free-solid-svg-icons';
 import { recordConnectionName, type RecordConnectionRow } from '@shared/plugins/connections/shared';
 
 // The connection tab's metadata bar: the list row's facts in the list's order, then the model and the
-// started time, with the lifecycle controls as icons at its right edge. Stop halts the work in
-// progress, a core prompt's Cancel or an agent run's Terminate, and Close ends a core session. Each
-// keeps its verb as its accessible name.
+// started time, with the controls as icons at its right edge. Focus brings the owning tab forward
+// while the server names one, stop halts the work in progress, a core prompt's Cancel or an agent
+// run's Terminate, and Close ends a core session. Each keeps its verb as its accessible name.
 
 type Properties = {
   record: RecordConnectionRow;
   pendingTerminate: boolean;
+  onFocus(): void;
   onCancel(): void;
   onCloseSession(): void;
   onTerminate(): void;
@@ -22,7 +23,7 @@ function Field({ className, label, value, tooltip }: {
   return <span className={className} title={tooltip ?? `${label}: ${value}`}>{value}</span>;
 }
 
-export function ConnectionTabMeta({ record, pendingTerminate, onCancel, onCloseSession, onTerminate }: Properties) {
+export function ConnectionTabMeta({ record, pendingTerminate, onFocus, onCancel, onCloseSession, onTerminate }: Properties) {
   const acp = record.kind === 'acp';
   const running = record.status === 'Running';
   const canCancel = acp && running;
@@ -42,6 +43,8 @@ export function ConnectionTabMeta({ record, pendingTerminate, onCancel, onCloseS
       <time className="connections-record-started" dateTime={started.toISOString()}
         title={`Started: ${started.toLocaleString()}`}>Started {started.toLocaleString()}</time>
       <span className="plugin-actions">
+        {record.focusTarget !== undefined && <IconButton action="focus" label="Focus tab" icon={faLocationCrosshairs}
+          onClick={onFocus} />}
         {canCancel && <IconButton action="cancel" label="Cancel" icon={faCircleStop} onClick={onCancel} />}
         {canTerminate && <IconButton action="terminate" label="Terminate" icon={faCircleStop}
           disabled={pendingTerminate} onClick={onTerminate} />}

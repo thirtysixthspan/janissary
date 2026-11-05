@@ -118,7 +118,14 @@ function durableRows(
     const window = count === undefined ? undefined : managers.acpRecords.window(record.id, count);
     return {
       type: 'record', ...record, host: record.host ?? LOCAL_HOST, orderingTimestamp: record.updatedAt,
+      ...(ownsRecord(managers, record.ownerLabel, record.id) && { focusTarget: record.ownerLabel }),
       ...(window && { window }),
     };
   });
+}
+
+// A record's tab is the one it began in. The label alone could name a later tab that reused it, so
+// only the tab whose runtime recorded the id counts, and it keeps counting after the record ends.
+function ownsRecord(managers: Managers, label: string, id: string): boolean {
+  return managers.tab.byLabel(label)?.runtime?.acpRecordIds?.has(id) === true;
 }

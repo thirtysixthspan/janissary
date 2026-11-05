@@ -203,6 +203,21 @@ describe('core record feeds', () => {
     expect(f.records.window(id)).toMatchObject({ status: 'Closed', ownerName: 'Original owner', blocks: [{ answer: 'ACP session closed.', entries: [{ text: 'partial' }] }] });
   });
 
+  it('keeps every record the tab began among its owned ids after each session closes', () => {
+    const f = setup();
+    f.managers.acp.start('owner');
+    f.handshake();
+    const first = f.managers.tab.byLabel('owner')!.runtime!.acpRecordId!;
+    f.managers.acp.close('owner');
+    f.managers.acp.start('owner');
+    f.handshake();
+    const second = f.managers.tab.byLabel('owner')!.runtime!.acpRecordId!;
+    expect(second).not.toBe(first);
+    expect([...f.managers.tab.byLabel('owner')!.runtime!.acpRecordIds!]).toEqual([first, second]);
+    f.managers.tab.tabs = [makeTab('owner', '#abc')];
+    expect(f.managers.tab.byLabel('owner')!.runtime?.acpRecordIds).toBeUndefined();
+  });
+
   it('never publishes a late handshake after close and creates no record for refusals', async () => {
     const f = setup();
     await expect(f.managers.acp.prompt('owner', 'acp')).resolves.toBe('Usage: acp <prompt>.');

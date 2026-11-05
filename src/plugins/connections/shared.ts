@@ -29,12 +29,13 @@ type ConnectionRowBase = {
   ownerLabel: string;
   ownerName: string;
   orderingTimestamp: number;
+  focusTarget?: string;
   acpRef?: { scope: 'tab'; label: string } | { scope: 'monitor'; name: string }
     | { scope: 'editor'; label: string; persona: string };
 };
 
 export type LiveConnectionRow = ConnectionRowBase & {
-  type: 'live'; kind: ConnectionKind; display: string; status: 'Open'; focusTarget?: string; permanent?: true;
+  type: 'live'; kind: ConnectionKind; display: string; status: 'Open'; permanent?: true;
 };
 export type RecordConnectionRow = ConnectionRowBase & {
   type: 'record'; kind: ConnectionKind | 'agent'; title: string; model: string;
@@ -54,7 +55,7 @@ export type ConnectionsIntent =
   | { intent: 'open' | 'close'; payload: { kind: ConnectionKind; id: string; ownerLabel: string } }
   | { intent: 'open-record'; payload: { id: string } }
   | { intent: 'refresh'; payload: Record<string, never> }
-  | { intent: 'cancel' | 'close-session' | 'terminate' | 'delete' | 'load-older'; payload: { id: string } };
+  | { intent: 'cancel' | 'close-session' | 'terminate' | 'delete' | 'focus' | 'load-older'; payload: { id: string } };
 
 const kinds = ['sqlite', 'shell', 'acp', 'browser', 'ssh', 'terminal'] as const;
 const statuses = ['Idle', 'Running', 'Closed', 'Completed', 'Failed', 'Terminated'] as const;

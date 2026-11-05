@@ -285,6 +285,10 @@ export type TabRuntime = {
   acpEntries?: WeakSet<LogEntry>;
   acpPrompt?: AcpPendingPrompt;
   acpRecordId?: string;
+  // Every ACP and agent record that began in this tab incarnation, kept after each one ends. A record's
+  // owner label alone cannot tell this tab from a later one that reused the label, so the connections
+  // topic reads this to decide whether a record still has its own tab to focus. In-memory only.
+  acpRecordIds?: Set<string>;
   // Whether this tab's core ACP session runs without a tool table, asked for by whichever consumer
   // started it with `{ withoutTools: true }`. It is the tab's own policy rather than a screen or content
   // fact, and it is sticky: a session that dies is replaced by one held to the same rule, and only the

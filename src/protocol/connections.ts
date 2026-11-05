@@ -40,6 +40,8 @@ export type ConnectionsTopicRecordRow = {
   status: AcpRecordRow['status'];
   // Durable rows use updatedAt; see the live-row definition for tab and SQLite timestamp semantics.
   orderingTimestamp: number;
+  // The owning tab's label while the tab the record began in is still open, whatever the record's status.
+  focusTarget?: string;
   window?: ConnectionsTopicWindow;
 };
 

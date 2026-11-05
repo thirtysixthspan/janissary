@@ -5,8 +5,14 @@ import type { TabRuntime } from '../tab/types.js';
 import type { AcpPendingPrompt } from './prompt-state.js';
 import type { AcpPromptResult } from './types.js';
 
+export function ownRecord(runtime: TabRuntime, id: string): void {
+  runtime.acpRecordIds ??= new Set();
+  runtime.acpRecordIds.add(id);
+}
+
 export function beginCoreRecord(records: AcpSessionRecords, runtime: TabRuntime, source: AcpRecordSource): void {
   runtime.acpRecordId ??= records.begin(source);
+  ownRecord(runtime, runtime.acpRecordId);
   if (runtime.acpPrompt) promptCoreRecord(records, runtime, runtime.acpPrompt);
 }
 

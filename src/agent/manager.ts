@@ -7,6 +7,7 @@ import { AgentRun, copyAgentCaller, type AgentOutcome, type AgentRunOptions } fr
 import type { AgentRunView } from './types.js';
 import { selectedModel } from './model.js';
 import { AgentRecordFeed, validateAgentRecordMetadata } from './record-feed.js';
+import { ownRecord } from '../acp/record-feed.js';
 
 export class AgentRunManager {
   readonly runs = new Map<string, AgentRun>();
@@ -53,6 +54,7 @@ export class AgentRunManager {
       workspace: options.executionWorkspace ?? options.executionDir ?? options.caller.cwd,
     }, options.executionDir ?? options.caller.cwd);
     run.record = new AgentRecordFeed(this.managers.acpRecords, metadata, run.id);
+    ownRecord(tabRuntime(callerTab), run.record.id);
     this.runs.set(run.id, run);
     this.knownRunIds.add(run.id);
     messageBus.emit('state', { type: 'dirty' });

@@ -410,6 +410,25 @@ describe('connections topic actions', () => {
     expect(managers.acpRecords.delete).toHaveBeenCalledWith('done-id');
   });
 
+  it('focuses a record\'s owning tab and refuses a record with no open owner', () => {
+    const { managers, tabs, setActiveTab } = fixture();
+    tabs[0]!.runtime!.acpRecordIds = new Set(['core-id']);
+    tabs.unshift({ label: 'first', dotColor: '', number: 4, log: [] });
+
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'focus', id: 'core-id' }))
+      .toBeUndefined();
+    expect(setActiveTab).toHaveBeenCalledWith(1);
+
+    for (const id of ['agent-id', 'missing-id']) {
+      expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'focus', id }))
+        .toBe('The owning tab is no longer open.');
+    }
+    tabs[1]!.runtime!.acpRecordIds = new Set();
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'focus', id: 'core-id' }))
+      .toBe('The owning tab is no longer open.');
+    expect(setActiveTab).toHaveBeenCalledTimes(1);
+  });
+
   it('returns a refusal for stale lifecycle actions and leaves the record unchanged', () => {
     const { managers, recordRows, cancel, close, finish } = fixture();
     const core = recordRows[0]!;

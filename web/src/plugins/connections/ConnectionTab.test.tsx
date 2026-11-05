@@ -201,6 +201,31 @@ describe('ConnectionTab', () => {
       expect(actions()).toEqual([{ label: 'Close session', icon: 'circle-xmark', text: '' }]);
     });
 
+    it('leads the icons with Focus tab while the owning tab is open and sends its intent', () => {
+      const { intent } = setup({ ...record('acp', 'Closed'), focusTarget: 'other-label' });
+      expect(actions()).toEqual([{ label: 'Focus tab', icon: 'location-crosshairs', text: '' }]);
+      fireEvent.click(screen.getByRole('button', { name: 'Focus tab' }));
+      expect(intent).toHaveBeenCalledWith('focus', { id: 'uuid' });
+    });
+
+    it('puts Focus tab before a running record\'s stop and close icons', () => {
+      setup({ ...record(), focusTarget: 'other-label' });
+      expect(actions().map((action) => action.label)).toEqual(['Focus tab', 'Cancel', 'Close session']);
+    });
+
+    it('offers no Focus tab without a focus target', () => {
+      setup(record());
+      expect(screen.queryByRole('button', { name: 'Focus tab' })).toBeNull();
+    });
+
+    it('shows a refused focus in the tab', async () => {
+      setup({ ...record('agent', 'Completed'), focusTarget: 'other-label' }, async () => {
+        throw new Error('The owning tab is no longer open.');
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Focus tab' }));
+      await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('The owning tab is no longer open.'));
+    });
+
     it('offers a running agent run only the stop icon, as Terminate', () => {
       const { intent } = setup(record('agent'));
       expect(actions()).toEqual([{ label: 'Terminate', icon: 'circle-stop', text: '' }]);

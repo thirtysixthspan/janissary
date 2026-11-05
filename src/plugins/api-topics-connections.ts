@@ -17,4 +17,5 @@ export type ConnectionsTopicAction =
   | { topic: 'connections'; action: 'closeCommand'; kind: ConnectionKind; id: string; label: string }
   | { topic: 'connections'; action: 'cancel'; id: string }
   | { topic: 'connections'; action: 'closeSession'; id: string }
-  | { topic: 'connections'; action: 'terminate'; id: string };
+  | { topic: 'connections'; action: 'terminate'; id: string }
+  | { topic: 'connections'; action: 'focus'; id: string };
