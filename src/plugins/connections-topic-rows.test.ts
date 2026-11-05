@@ -47,14 +47,13 @@ describe('connections topic rows', () => {
 
     expect(data.rows.map((row) => [row.type, row.id, row.orderingTimestamp])).toEqual([
       ['record', 'core-record', 400],
+      ['live', 'reviewer', 300],
       ['live', 'shared-db', 300],
-      ['record', 'agent-record', 200],
       ['live', 'monitor-1', 100],
       ['live', 'term-a', 100],
-      ['live', 'reviewer', 300],
       ['live', 'orphan-db', 0],
-    ].toSorted((left, right) => Number(right[2]) - Number(left[2])
-      || String(left[0]).localeCompare(String(right[0])) || String(left[1]).localeCompare(String(right[1]))));
+      ['record', 'agent-record', 200],
+    ]);
 
     const core = data.rows.find((row) => row.type === 'record' && row.id === 'core-record');
     expect(data.rows.filter((row) => row.type === 'live' && row.kind === 'acp' && row.ownerLabel === 'first'))
@@ -168,6 +167,48 @@ describe('connections topic rows', () => {
     const rows = composeConnectionsTopicData(managers, new Map()).rows;
     expect(rows.find((row) => row.id === 'agent-record')?.host).toBe('build-box');
     expect(rows.find((row) => row.id === 'core-record')?.host).toBe('Local');
+  });
+
+  it('groups rows by host, Local first and then other hosts alphabetically whatever their activity', () => {
+    const { managers, recordRows, tabs } = fixture();
+    tabs[1]!.remote = { address: 'me@devbox:/srv/repo', host: 'devbox' };
+    tabs.push({
+      label: 'ssh-tab', dotColor: '', number: 4, log: [],
+      harness: { name: 'ssh', destination: 'ops@Zeta-host' },
+      runtime: { busy: false, context: [], queue: [], lastActivity: 9999 },
+    } as unknown as Tab);
+    Object.assign(recordRows[1]!, { host: 'alpha', updatedAt: 8000 });
+
+    const rows = composeConnectionsTopicData(managers, new Map()).rows;
+    const hosts = rows.map((row) => row.host);
+    const groups = ['Local', 'alpha', 'devbox', 'Zeta-host'];
+
+    expect(hosts.filter((host, index) => hosts.indexOf(host) === index)).toEqual(groups);
+    expect(hosts).toEqual(hosts.toSorted((left, right) => groups.indexOf(left) - groups.indexOf(right)));
+    expect(rows.find((row) => row.ownerLabel === 'ssh-tab')?.orderingTimestamp).toBe(9999);
+  });
+
+  it('puts open rows above closed rows within a host, each ordered by most recent activity', () => {
+    const { managers, recordRows } = fixture();
+    recordRows[1]!.updatedAt = 5000;
+    recordRows.push(
+      { id: 'idle-record', kind: 'acp', title: 'ACP: idle', model: 'model-a', ownerLabel: 'closed-owner', ownerName: 'Idle owner', startedAt: 3, updatedAt: 50, status: 'Idle' },
+      { id: 'old-closed', kind: 'acp', title: 'ACP: old', model: 'model-a', ownerLabel: 'closed-owner', ownerName: 'Old owner', startedAt: 4, updatedAt: 10, status: 'Failed' },
+    );
+
+    const rows = composeConnectionsTopicData(managers, new Map()).rows;
+
+    expect(rows.map((row) => [row.id, row.status, row.orderingTimestamp])).toEqual([
+      ['core-record', 'Running', 400],
+      ['reviewer', 'Open', 300],
+      ['shared-db', 'Open', 300],
+      ['monitor-1', 'Open', 100],
+      ['term-a', 'Open', 100],
+      ['idle-record', 'Idle', 50],
+      ['orphan-db', 'Open', 0],
+      ['agent-record', 'Completed', 5000],
+      ['old-closed', 'Failed', 10],
+    ]);
   });
 
   it('keeps the SQLite owner display global while focus follows strip order independently', () => {

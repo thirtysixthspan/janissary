@@ -4,7 +4,12 @@ import type { AcpRef } from '../protocol/tab.js';
 import { bareHost } from '../remote/address.js';
 import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
-import type { ConnectionsTopicData, ConnectionsTopicLiveRow, ConnectionsTopicRecordRow } from '../protocol/connections.js';
+import type {
+  ConnectionsTopicData,
+  ConnectionsTopicLiveRow,
+  ConnectionsTopicRecordRow,
+  ConnectionsTopicRow,
+} from '../protocol/connections.js';
 
 export function composeConnectionsTopicData(
   managers: Managers,
@@ -22,12 +27,26 @@ export function composeConnectionsTopicData(
     ...durableRows(managers, records, requestedWindows),
   ];
 
-  rows.sort((a, b) => b.orderingTimestamp - a.orderingTimestamp
+  rows.sort((a, b) => compareHosts(a.host, b.host)
+    || Number(isClosedRow(a)) - Number(isClosedRow(b))
+    || b.orderingTimestamp - a.orderingTimestamp
     || a.kind.localeCompare(b.kind) || a.id.localeCompare(b.id));
   return { rows };
 }
 
 const LOCAL_HOST = 'Local';
+const OPEN_STATUSES: ReadonlySet<ConnectionsTopicRow['status']> = new Set(['Open', 'Running', 'Idle']);
+
+function compareHosts(left: string, right: string): number {
+  if (left === right) return 0;
+  if (left === LOCAL_HOST) return -1;
+  if (right === LOCAL_HOST) return 1;
+  return left.localeCompare(right, undefined, { sensitivity: 'base' }) || left.localeCompare(right);
+}
+
+function isClosedRow(row: ConnectionsTopicRow): boolean {
+  return !OPEN_STATUSES.has(row.status);
+}
 
 // The host a tab's connections run on: a remote tab runs over its ssh session, and an ssh harness tab
 // is that session, so both read as the bare host they reach. Everything else runs here.

@@ -2,8 +2,6 @@
 
 # pull-request
 
-* connections should be ground by host then open connections should show above closed connections within the host groups then the values are sorted by last activity.
-
 * tool calls hsould be expanded by default in connection tabs. json should be pretty printed.
 
 * all connection types should have a last activity timestamp
