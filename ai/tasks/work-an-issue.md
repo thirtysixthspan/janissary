@@ -10,7 +10,7 @@ This overrides AGENTS.md's "Capturing command output" guidance (write the output
 
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early for the conditions explicitly listed under "Forbidden" below.
 
-**Ordinary issue arguments.** Every supplied argument is ordinary issue text, including a number, `#number`, or PR URL. Match it against master's issues backlog when possible; otherwise use the text as the named work item without adding it to the backlog. This task never selects or updates an existing PR. For PR repairs, execute `./ai/tasks/feature/work-pull-request-issue.md <number> [selector]`.
+**Ordinary issue arguments.** Every supplied argument is ordinary issue text, including a number, `#number`, or PR URL. Match it against master's issues backlog when possible; otherwise use the text as the named work item without adding it to the backlog. This task never selects or updates an existing PR. For PR repairs, execute `./ai/tasks/feature/work-pull-request-issue.md <number> [work item]`.
 
 **Stay within the project directory.** The current working directory is the project directory for this session. Do not read or write any file outside it — no absolute paths escaping the project root, no `..` traversal above it, no touching files elsewhere on the machine (home directory config, other repos, system paths).
 
