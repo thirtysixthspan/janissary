@@ -24,12 +24,12 @@ export function acpCapabilities(input: {
     startAcp: (request) => managers.acp.start(ownLabel(), request),
     promptAcp: (prompt) => {
       const label = ownLabel();
-      const run = () => managers.acp.prompt(label, `acp ${prompt}`);
+      const run = () => managers.acp.prompt(label, `ask ${prompt}`);
       return deadline ? deadline.exempt(run) : run();
     },
     promptAcpResult: (prompt) => {
       const label = ownLabel();
-      const run = () => managers.acp.promptResult(label, `acp ${prompt}`);
+      const run = () => managers.acp.promptResult(label, `ask ${prompt}`);
       return deadline ? deadline.exempt(run) : run();
     },
     resetAcp: () => managers.acp.close(ownLabel()),

@@ -157,7 +157,7 @@ The four ambient events read like this in the feed:
 | `rateLimited` | `Agent '<tab>' is being rate limited` |
 | `scheduleFire` | `Scheduled: <command> in <tab>` |
 
-`notifications.events.rateLimited` covers interactive `acp` queries, periodic monitor queries, and `monitor ask` queries. It recognizes rate limits from error text, and also from an interactive query's ordinary reply text. The feed says `Agent '<tab>' is being rate limited`; the original in-tab output stays available. Other failures don't produce this event.
+`notifications.events.rateLimited` covers interactive `ask` queries, periodic monitor queries, and `monitor ask` queries. It recognizes rate limits from error text, and also from an interactive query's ordinary reply text. The feed says `Agent '<tab>' is being rate limited`; the original in-tab output stays available. Other failures don't produce this event.
 
 A tab-owned scheduled command that fires more than five seconds late ignores the ambient toggles and posts regardless, even from the active tab. See [Sleep and resume](/user-documentation/getting-started/sleep-and-resume#overdue-scheduled-commands) for when that happens.
 

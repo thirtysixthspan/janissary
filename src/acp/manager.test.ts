@@ -81,14 +81,14 @@ describe('AcpManager.run', () => {
 
   it('shows usage when the command has no prompt after stripping acp prefix', () => {
     const { acp, append } = setup();
-    acp.run('tab1', 'acp');
-    expect(append).toHaveBeenCalledWith('tab1', { input: 'acp', output: 'Usage: acp <prompt>.' });
+    acp.run('tab1', 'ask');
+    expect(append).toHaveBeenCalledWith('tab1', { input: 'ask', output: 'Usage: ask <prompt>.' });
     expect(mocks.connectAcp).not.toHaveBeenCalled();
   });
 
   it('creates a session and wires runAcpToolLoop with the prompt, primer, and callbacks', () => {
     const { acp } = setup();
-    acp.run('tab1', 'acp hello world');
+    acp.run('tab1', 'ask hello world');
     expect(mocks.connectAcp).toHaveBeenCalledOnce();
     expect(mocks.runAcpToolLoop).toHaveBeenCalledOnce();
     const deps = mocks.runAcpToolLoop.mock.calls[0][2] as Record<string, unknown>;
@@ -102,7 +102,7 @@ describe('AcpManager.run', () => {
 
   it('runs an agent-issued question command and returns the human answer', async () => {
     const { acp, registerQuestion } = setup();
-    acp.run('tab1', 'acp plan the release');
+    acp.run('tab1', 'ask plan the release');
     const dependencies = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
 
     expect(dependencies.primer).toContain('question ask "<question>"');
@@ -126,7 +126,7 @@ describe('AcpManager.run', () => {
     const { acp } = withTab();
     acp.start('tab1', { withoutTools: true });
 
-    acp.run('tab1', 'acp summarize this');
+    acp.run('tab1', 'ask summarize this');
 
     const deps = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
     expect(deps.primer).toBe('Write your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.');
@@ -143,7 +143,7 @@ describe('AcpManager.run', () => {
     const { acp } = setup();
     acp.start('tab1');
 
-    acp.run('tab1', 'acp summarize this');
+    acp.run('tab1', 'ask summarize this');
 
     const deps = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
     expect(deps.primer).toContain('db primer');
@@ -157,17 +157,17 @@ describe('AcpManager.run', () => {
     const { acp, managers } = withTab();
     const tabs = (managers as unknown as { tab: { tabs: { label: string }[] } }).tab.tabs;
     acp.start('tab1', { withoutTools: true });
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     expect(acp.close('tab1')).toBe(true);
 
-    acp.run('tab1', 'acp hello again');
+    acp.run('tab1', 'ask hello again');
 
     const deps = mocks.runAcpToolLoop.mock.calls[1][2] as AcpLoopDeps;
     expect(deps.primer).not.toContain('db primer');
 
     tabs.length = 0;
     tabs.push({ label: 'tab1' });
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
 
     expect((mocks.runAcpToolLoop.mock.calls[2][2] as AcpLoopDeps).primer)
       .toContain('db primer');
@@ -176,7 +176,7 @@ describe('AcpManager.run', () => {
   it('error handler updates output, cleans up busy, and calls onDone', () => {
     const { acp, deleteBusy, updateRunning } = setup();
     const onDone = vi.fn();
-    acp.run('tab1', 'acp hello', onDone);
+    acp.run('tab1', 'ask hello', onDone);
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.error('something failed');
     expect(updateRunning).toHaveBeenCalledWith('tab1', { markdown: true }, 'ACP error: something failed', false, expect.objectContaining({ trailing: true }));
@@ -187,7 +187,7 @@ describe('AcpManager.run', () => {
   it('finished handler cleans up busy and calls onDone with the last answer when reason is answered', () => {
     const { acp, deleteBusy } = setup();
     const onDone = vi.fn();
-    acp.run('tab1', 'acp hello', onDone);
+    acp.run('tab1', 'ask hello', onDone);
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.endTurn('the final answer');
     handlers.finished('answered', 8);
@@ -199,7 +199,7 @@ describe('AcpManager.run', () => {
   it('finished handler settles a capped answer with the notice and appends no separate entry', () => {
     const { acp, append, deleteBusy } = setup();
     const onDone = vi.fn();
-    acp.run('tab1', 'acp hello', onDone);
+    acp.run('tab1', 'ask hello', onDone);
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.endTurn('partial');
     handlers.finished('capped', 5);
@@ -214,7 +214,7 @@ describe('AcpManager.run', () => {
 
   it('startTurn calls addBusy and appends the prompt on first turn', () => {
     const { acp, addBusy, append } = setup();
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.startTurn(true);
     expect(addBusy).toHaveBeenCalledOnce();
@@ -223,7 +223,7 @@ describe('AcpManager.run', () => {
 
   it('startTurn fires an agent-start notification on the first turn only', () => {
     const { acp, managers } = setup();
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.startTurn(true);
     expect(mocks.notify).toHaveBeenCalledWith(managers, 'agent-start', 'tab1');
@@ -234,7 +234,7 @@ describe('AcpManager.run', () => {
 
   it('finished fires a state-change notification', () => {
     const { acp, managers } = setup();
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.finished('answered', 8);
     expect(mocks.notify).toHaveBeenCalledWith(managers, 'state-change', 'tab1');
@@ -242,7 +242,7 @@ describe('AcpManager.run', () => {
 
   it('error fires a state-change notification', () => {
     const { acp, managers } = setup();
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.error('boom');
     expect(mocks.notify).toHaveBeenCalledWith(managers, 'state-change', 'tab1');
@@ -250,7 +250,7 @@ describe('AcpManager.run', () => {
 
   it('error with a rate-limit-shaped message also fires a rate-limited notification', () => {
     const { acp, managers } = setup();
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.error('request failed with status 429');
     expect(mocks.notify).toHaveBeenCalledWith(managers, 'state-change', 'tab1');
@@ -259,7 +259,7 @@ describe('AcpManager.run', () => {
 
   it('error with an unrelated message does not fire a rate-limited notification', () => {
     const { acp, managers } = setup();
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.error('boom');
     expect(mocks.notify).not.toHaveBeenCalledWith(managers, 'rate-limited', 'tab1');
@@ -267,7 +267,7 @@ describe('AcpManager.run', () => {
 
   it('an answered reply whose text is rate-limit-shaped fires a rate-limited notification', () => {
     const { acp, managers } = setup();
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.endTurn('Error: 429 Too Many Requests. Please try again later.');
     handlers.finished('answered', 8);
@@ -276,7 +276,7 @@ describe('AcpManager.run', () => {
 
   it('an answered reply with ordinary text does not fire a rate-limited notification', () => {
     const { acp, managers } = setup();
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.endTurn('The actors are Keanu and Carrie.');
     handlers.finished('answered', 8);
@@ -285,7 +285,7 @@ describe('AcpManager.run', () => {
 
   it('chunk handler calls updateRunning with the buffer verbatim', () => {
     const { acp, updateRunning } = setup();
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.chunk('response so far');
     expect(updateRunning).toHaveBeenCalledWith('tab1', { markdown: true }, 'response so far', true, expect.anything());
@@ -293,7 +293,7 @@ describe('AcpManager.run', () => {
 
   it('chunk handler leaves an empty buffer unwrapped', () => {
     const { acp, updateRunning } = setup();
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.chunk('');
     expect(updateRunning).toHaveBeenCalledWith('tab1', { markdown: true }, '', true, expect.anything());
@@ -301,7 +301,7 @@ describe('AcpManager.run', () => {
 
   it('endTurn handler calls updateRunning with the final text verbatim', () => {
     const { acp, updateRunning } = setup();
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.endTurn('the final answer');
     expect(updateRunning).toHaveBeenCalledWith('tab1', { markdown: true }, 'the final answer', false, expect.anything());
@@ -309,7 +309,7 @@ describe('AcpManager.run', () => {
 
   it('endTurn handler leaves an empty final string unwrapped', () => {
     const { acp, updateRunning } = setup();
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.endTurn('');
     expect(updateRunning).toHaveBeenCalledWith('tab1', { markdown: true }, '', false, expect.anything());
@@ -317,7 +317,7 @@ describe('AcpManager.run', () => {
 
   it('ranCommand handler appends the command result to the tab', () => {
     const { acp, append } = setup();
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.ranCommand('db query', 'row1\nrow2');
     expect(append).toHaveBeenCalledWith('tab1', { input: 'db query', output: 'row1\nrow2', acp: true });
@@ -329,7 +329,7 @@ describe('AcpManager.run', () => {
       if (typeof opts.onConnect === 'function') opts.onConnect();
       return makeSession();
     });
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     expect(mocks.messageBusEmit).toHaveBeenCalledWith('state', { type: 'dirty' });
   });
 
@@ -339,7 +339,7 @@ describe('AcpManager.run', () => {
       if (typeof opts.onError === 'function') opts.onError('connection refused');
       return makeSession();
     });
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     expect(append).toHaveBeenCalledWith('tab1', { input: '', output: 'ACP: connection refused' });
   });
 });
@@ -349,7 +349,7 @@ describe('AcpManager.run', () => {
 describe('AcpManager.promptResult', () => {
   it('answers with the reply and the session that produced it', async () => {
     const { acp } = withTab();
-    const pending = acp.promptResult('tab1', 'acp hello');
+    const pending = acp.promptResult('tab1', 'ask hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
 
     handlers.endTurn('the answer');
@@ -360,7 +360,7 @@ describe('AcpManager.promptResult', () => {
 
   it('answers a refusal as a failure carrying the line the user is shown', async () => {
     const { acp } = withTab();
-    const pending = acp.promptResult('tab1', 'acp hello');
+    const pending = acp.promptResult('tab1', 'ask hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
 
     handlers.error('rate limited');
@@ -370,14 +370,14 @@ describe('AcpManager.promptResult', () => {
 
   it('resolves prompt with the text alone, either way', async () => {
     const { acp } = withTab();
-    const answered = acp.prompt('tab1', 'acp hello');
+    const answered = acp.prompt('tab1', 'ask hello');
     const first = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     first.endTurn('the answer');
     first.finished('answered', 8);
 
     await expect(answered).resolves.toBe('the answer');
 
-    const refused = acp.prompt('tab1', 'acp hello');
+    const refused = acp.prompt('tab1', 'ask hello');
     const second = mocks.runAcpToolLoop.mock.calls[1][3] as AcpLoopHandlers;
     second.error('rate limited');
 
@@ -408,7 +408,7 @@ describe('AcpManager.label', () => {
       if (typeof opts.onConnect === 'function') opts.onConnect();
       return makeSession();
     });
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     expect(acp.label('tab1')).toContain('/');
   });
 });
@@ -421,7 +421,7 @@ describe('AcpManager.close', () => {
 
   it('closes the session and returns true', () => {
     const { acp } = setup();
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     expect(acp.close('tab1')).toBe(true);
     expect(acp.has('tab1')).toBe(false);
   });
@@ -465,7 +465,7 @@ describe('AcpManager — remote tabs', () => {
   it('backs the session with the channel and never spawns an agent locally', () => {
     const { acp, channel } = remoteSetup();
 
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
 
     expect(mocks.connectAcp).not.toHaveBeenCalled();
     expect(channel.attachAcp).toHaveBeenCalledOnce();
@@ -481,7 +481,7 @@ describe('AcpManager — remote tabs', () => {
   it('sends the locally chosen model across on the open frame', () => {
     const { acp, channel } = remoteSetup();
 
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
 
     const open = channel.send.mock.calls[0][0] as { env: Record<string, string> };
     expect(JSON.parse(open.env.OPENCODE_CONFIG_CONTENT)).toEqual({ model: 'google/gemini-3.1-flash-lite' });
@@ -491,7 +491,7 @@ describe('AcpManager — remote tabs', () => {
   // keeps reading the constant the local side chose — on both paths.
   it('reports the configured model in the connection label, not a mode name', () => {
     const { acp, channel } = remoteSetup();
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
 
     acpListener(channel).onReady();
 
@@ -505,10 +505,10 @@ describe('AcpManager — remote tabs', () => {
     const { acp, append, addBusy, channel } = remoteSetup({ attached: false });
     const onDone = vi.fn();
 
-    acp.run('tab1', 'acp hello', onDone);
+    acp.run('tab1', 'ask hello', onDone);
 
     expect(append).toHaveBeenCalledWith('tab1', {
-      input: 'acp hello', output: 'ACP: the remote session is still connecting.',
+      input: 'ask hello', output: 'ACP: the remote session is still connecting.',
     });
     expect(onDone).toHaveBeenCalledWith({ answered: false, error: 'ACP: the remote session is still connecting.' });
     expect(addBusy).not.toHaveBeenCalled();
@@ -519,10 +519,10 @@ describe('AcpManager — remote tabs', () => {
 
   it('retrying once the channel has attached then works', () => {
     const { acp, channel } = remoteSetup({ attached: false });
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
 
     channel.attached = true;
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
 
     expect(channel.attachAcp).toHaveBeenCalledOnce();
     expect(mocks.runAcpToolLoop).toHaveBeenCalledOnce();
@@ -531,14 +531,14 @@ describe('AcpManager — remote tabs', () => {
   it('falls back to a local session for a remote tab with no channel at all', () => {
     const { acp } = remoteSetup({ channel: false });
 
-    expect(() => { acp.run('tab1', 'acp hello'); }).not.toThrow();
+    expect(() => { acp.run('tab1', 'ask hello'); }).not.toThrow();
     expect(mocks.connectAcp).toHaveBeenCalledOnce();
   });
 
   it('leaves a local tab entirely unchanged', () => {
     const { acp } = setup();
 
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
 
     expect(mocks.connectAcp).toHaveBeenCalledOnce();
     expect(mocks.connectAcp.mock.calls[0][0]).toMatchObject({ cwd: '/cwd', command: 'opencode' });
@@ -548,7 +548,7 @@ describe('AcpManager — remote tabs', () => {
   // writing into a corpse. A prompt that merely failed leaves the conversation intact.
   it('forgets the session on a fatal error and builds a fresh one for the next prompt', () => {
     const { acp, append, channel } = remoteSetup();
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
 
     acpListener(channel).onError('ACP agent exited.', true);
 
@@ -556,14 +556,14 @@ describe('AcpManager — remote tabs', () => {
     expect(acp.has('tab1')).toBe(false);
     expect(channel.detachAcp).toHaveBeenCalledWith('racp1');
 
-    acp.run('tab1', 'acp again');
+    acp.run('tab1', 'ask again');
     expect(channel.attachAcp).toHaveBeenCalledTimes(2);
     expect(channel.attachAcp.mock.calls[1][0]).toBe('racp2');
   });
 
   it('keeps the session alive on a non-fatal error, reporting it through the running prompt only', () => {
     const { acp, channel } = remoteSetup();
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     const promptHandlers = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
     acp.session('tab1', '/cwd', 'google/gemini-3.1-flash-lite', { onError: vi.fn(), onConnect: vi.fn() }).prompt('hi', promptHandlers);
 
@@ -575,7 +575,7 @@ describe('AcpManager — remote tabs', () => {
 
   it('streams chunks and the stop reason to the in-flight prompt', () => {
     const { acp, channel } = remoteSetup();
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     const promptHandlers = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
     acp.session('tab1', '/cwd', 'google/gemini-3.1-flash-lite', { onError: vi.fn(), onConnect: vi.fn() }).prompt('hi', promptHandlers);
 
@@ -589,7 +589,7 @@ describe('AcpManager — remote tabs', () => {
 
   it('closing the tab\'s session sends the close frame and detaches the listener', () => {
     const { acp, channel } = remoteSetup();
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
 
     expect(acp.close('tab1')).toBe(true);
 
@@ -637,7 +637,7 @@ describe('AcpManager model resolution', () => {
     withOpencodeModels(['opencode/something-else', 'google/gemini-3.1-flash-lite']);
     const { acp } = setup();
 
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
 
     expect(launchedModel()).toBe('google/gemini-3.1-flash-lite');
   });
@@ -648,7 +648,7 @@ describe('AcpManager model resolution', () => {
     withOpencodeModels(['opencode-go/glm-5.3', 'opencode-go/kimi-k3']);
     const { acp } = setup();
 
-    acp.run('tab1', 'acp hello');
+    acp.run('tab1', 'ask hello');
     mocks.connectAcp.mock.calls[0][0].onConnect();
 
     expect(launchedModel()).toBe('opencode-go/glm-5.3');
@@ -660,12 +660,12 @@ describe('AcpManager model resolution', () => {
     const { acp, append } = setup();
     const onDone = vi.fn();
 
-    acp.run('tab1', 'acp hello', onDone);
+    acp.run('tab1', 'ask hello', onDone);
 
     expect(mocks.connectAcp).not.toHaveBeenCalled();
     expect(mocks.runAcpToolLoop).not.toHaveBeenCalled();
     expect(append).toHaveBeenCalledWith('tab1', {
-      input: 'acp hello',
+      input: 'ask hello',
       output: 'ACP: no opencode model is available in the harness catalog.',
     });
     expect(onDone).toHaveBeenCalledWith({ answered: false, error: 'ACP: no opencode model is available in the harness catalog.' });

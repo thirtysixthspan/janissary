@@ -1,12 +1,12 @@
 # Query ACP from a shell
 
-Use `acp <prompt>` in a shell tab's command bar to query OpenCode:
+Use `ask <prompt>` in a shell tab's command bar to query OpenCode:
 
 ```
 acp summarize the open TODO comments in this project
 ```
 
-The command returns to the bar immediately. The shell stays usable while the prompt runs, so ordinary non-ACP commands keep working; a second `acp` prompt is refused with exactly `ACP: a prompt is already running.`, and nothing is queued. The shell prints the exact line you typed as soon as you send it. When the answer is ready, it appears once as rendered Markdown, right beneath that line if nothing else was printed in the meantime. If other output arrived first, the shell prints your line again at the current bottom with the answer under it, and the intervening output stays above. There is no ACP response panel, no responding status, and no Reset ACP button. The agent uses the Agent Client Protocol (ACP), and the app manages its connection for you.
+The command returns to the bar immediately. The shell stays usable while the prompt runs, so ordinary non-ACP commands keep working; a second `ask` prompt is refused with exactly `ACP: a prompt is already running.`, and nothing is queued. The shell prints the exact line you typed as soon as you send it. When the answer is ready, it appears once as rendered Markdown, right beneath that line if nothing else was printed in the meantime. If other output arrived first, the shell prints your line again at the current bottom with the answer under it, and the intervening output stays above. There is no ACP response panel, no responding status, and no Reset ACP button. The agent uses the Agent Client Protocol (ACP), and the app manages its connection for you.
 
 For an autonomous task that runs until completion and may use skill-granted Janissary commands, see [Run an autonomous task](/user-documentation/advanced-agents/agent-command). It uses a separate local session and its own retained record.
 
@@ -16,7 +16,7 @@ For an autonomous task that runs until completion and may use skill-granted Jani
 
 OpenCode must be installed, authenticated, and on your `PATH`. The `PATH` your shell's rc file sets up counts too, so an `opencode` installed through a version manager such as nvm is found even when the app was started without that setup. Run `opencode auth login` in a terminal if you have not signed in. There is no setting to choose a different provider for this connection.
 
-Use the explicit `acp` prefix for a model reply; unclaimed text in a shell bar goes to zsh.
+Use the explicit `ask` prefix for a model reply; unclaimed text in a shell bar goes to zsh.
 
 ## Which model it runs
 
@@ -36,7 +36,7 @@ There are three ways to stop work, and they differ:
 
 - **Cancel** a running prompt from its connection tab. The prompt settles as cancelled, the shell receives one `ACP: prompt cancelled.` reply, and the session stays open for the next prompt. The status remains `Running` while the provider finishes its native cancellation and drain, then reads `Idle`. The session and its record keep the same identity.
 - **Close session** in the connection tab, or `connections close acp:<name>`, ends the session. A pending prompt reports `ACP session closed.`. The retained record becomes `Closed` and its tab is read-only.
-- `acp reset` also ends the session. A pending prompt reports `ACP session closed.`. It reports its own single confirmation, `ACP session reset — next acp prompt will start fresh.`, or `No active ACP session to reset.` when there is nothing to reset. The next prompt starts a fresh session and record.
+- `ask reset` also ends the session. A pending prompt reports `ACP session closed.`. It reports its own single confirmation, `ACP session reset — next ask prompt will start fresh.`, or `No active ACP session to reset.` when there is nothing to reset. The next prompt starts a fresh session and record.
 
 Closing the shell also closes its ACP connection. Reset cancels a question from that ACP request, including one waiting behind another question. Questions from unrelated requests stay pending.
 
@@ -76,7 +76,7 @@ Before SSH has finished connecting, a prompt reports `ACP: the remote session is
 
 ## Errors and recovery
 
-Bare `acp` prints `Usage: acp <prompt>.`. Two kinds of failure look alike but behave differently.
+Bare `ask` prints `Usage: ask <prompt>.`. Two kinds of failure look alike but behave differently.
 
 A connection failure starts with `ACP:`, for example `ACP: ACP agent exited.` or `ACP: failed to start ACP agent: <reason>`. The connection is forgotten, so the next prompt starts a new one. When the agent printed anything to its error output, the message ends with that text, limited to its last ten lines and 2000 characters.
 

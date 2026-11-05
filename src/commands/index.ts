@@ -1,8 +1,8 @@
 import type { Command } from './types.js';
 import { command as shell } from './shell.js';
 import { command as next } from './next.js';
-import { command as acp } from './acp.js';
-import { command as acpReset } from './acp-reset.js';
+import { command as ask } from './ask.js';
+import { command as askReset } from './ask-reset.js';
 import { command as agent } from './agent.js';
 import { command as database } from './db.js';
 import { command as browser } from './browser.js';
@@ -43,9 +43,9 @@ import { createPluginCommands } from '../plugins/command-adapter.js';
 const coreCommands: Command[] = [
   shell,
   next,
-  acpReset,
+  askReset,
   agent,
-  acp,
+  ask,
   database,
   browser,
   clear,
@@ -55,7 +55,7 @@ const coreCommands: Command[] = [
   quit,
   schedule,
   // Order here is priority: an entry whose `match` also accepts another's input must come first,
-  // which is why `acpReset` precedes `acp`. Which inputs each command claims is declared by its own
+  // which is why `askReset` precedes `ask`. Which inputs each command claims is declared by its own
   // `samples`, and `../commands.test.ts` walks this list through `./priority.ts` to fail any entry
   // that shadows — or is shadowed by — another, so the constraint no longer rests on this comment.
   harness,

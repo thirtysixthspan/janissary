@@ -128,7 +128,7 @@ describe('core record feeds', () => {
     const f = setup(remote);
     f.managers.acp.start('owner', { withoutTools: true });
     expect(f.records.rows()).toEqual([]);
-    const answer = f.managers.acp.prompt('owner', 'acp first\nsecond line');
+    const answer = f.managers.acp.prompt('owner', 'ask first\nsecond line');
     f.handshake();
     const id = f.managers.tab.byLabel('owner')!.runtime!.acpRecordId!;
     expect(id).not.toBe(f.managers.acp.sessionIdentity('owner'));
@@ -220,7 +220,7 @@ describe('core record feeds', () => {
 
   it('never publishes a late handshake after close and creates no record for refusals', async () => {
     const f = setup();
-    await expect(f.managers.acp.prompt('owner', 'acp')).resolves.toBe('Usage: acp <prompt>.');
+    await expect(f.managers.acp.prompt('owner', 'ask')).resolves.toBe('Usage: ask <prompt>.');
     await expect(f.managers.acp.prompt('missing', 'hi')).resolves.toBe('Tab not found');
     f.managers.acp.start('owner');
     const old = f.sessions[0];

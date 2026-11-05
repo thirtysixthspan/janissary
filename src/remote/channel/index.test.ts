@@ -379,7 +379,7 @@ describe('RemoteChannel — ACP session routing', () => {
     expect(h.listener.onError).toHaveBeenCalledWith('rate limited', false);
   });
 
-  // What makes a chunk still in flight from a session `acp reset` disposed land nowhere instead of
+  // What makes a chunk still in flight from a session `ask reset` disposed land nowhere instead of
   // in its successor's transcript entry.
   it('drops frames for an id with no attached listener, without faulting the channel', () => {
     const h = acpHarness();

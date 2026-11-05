@@ -40,6 +40,11 @@ describe('resolveCommand', () => {
     if (result.kind === 'unknown') expect(result.output).toContain('Unknown command');
   });
 
+  it('treats the former acp command word as unknown now that the command is ask', () => {
+    expect(resolveCommand('acp summarize this repo').kind).toBe('unknown');
+    expect(resolveCommand('acp reset').kind).toBe('unknown');
+  });
+
   it('classifies app/tab-management built-ins', () => {
     expect(resolveCommand('shell')).toEqual({ kind: 'app', name: 'shell', cmd: 'shell' });
     expect(resolveCommand('shell docs --offline')).toEqual({
@@ -47,7 +52,7 @@ describe('resolveCommand', () => {
     });
     expect(resolveCommand('next')).toEqual({ kind: 'app', name: 'next', cmd: 'next' });
     expect(resolveCommand('agent execute task.md')).toEqual({ kind: 'app', name: 'agent', cmd: 'agent execute task.md' });
-    expect(resolveCommand('acp summarize this repo')).toEqual({ kind: 'app', name: 'acp', cmd: 'acp summarize this repo' });
+    expect(resolveCommand('ask summarize this repo')).toEqual({ kind: 'app', name: 'ask', cmd: 'ask summarize this repo' });
     expect(resolveCommand('db sqlite query mydb SELECT 1')).toEqual({ kind: 'app', name: 'db', cmd: 'db sqlite query mydb SELECT 1' });
     expect(resolveCommand('browser goto https://example.com')).toEqual({ kind: 'app', name: 'browser', cmd: 'browser goto https://example.com' });
     expect(resolveCommand('connections close sqlite:mydb')).toEqual({ kind: 'app', name: 'connections', cmd: 'connections close sqlite:mydb' });

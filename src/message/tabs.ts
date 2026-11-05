@@ -44,7 +44,7 @@ export function dispatchTabMessage(controller: Controller, message: TabMessage):
     }
     case 'resetAcp': {
       const label = message.params.tab;
-      return controller.managers.command.executeCommand('acp-reset', 'acp reset', label, controller.managers.tab.findIndex(label));
+      return controller.managers.command.executeCommand('ask-reset', 'ask reset', label, controller.managers.tab.findIndex(label));
     }
     case 'revealNotifications': { controller.revealNotifications(); break;
     }

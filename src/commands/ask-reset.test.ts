@@ -1,21 +1,21 @@
 import { describe, it, expect, vi } from 'vitest';
-import { command } from './acp-reset.js';
+import { command } from './ask-reset.js';
 import type { Managers } from '../managers.js';
 import type { LogEntry } from '../tab/types.js';
 import { makeTab } from '../tab/index.js';
 import { backgroundRepliesFor } from '../tab/background-replies.js';
 
-describe('acp-reset command', () => {
+describe('ask-reset command', () => {
   it.each([
-    [true, 'ACP session reset — next acp prompt will start fresh.'],
+    [true, 'ACP session reset — next ask prompt will start fresh.'],
     [false, 'No active ACP session to reset.'],
   ])('delivers one tagged completed confirmation (session: %s) under the exact input', (hadSession, output) => {
     const tab = makeTab('docked', '#fff');
     const close = vi.fn(() => hadSession);
     const append = vi.fn((_label: string, entry: LogEntry) => { tab.log.push(entry); });
     const managers = { tab: { byLabel: () => tab, append }, acp: { close } } as unknown as Managers;
-    const line = '  /AcP   ReSeT  ';
-    command.run('AcP   ReSeT', { label: 'docked', index: 0 }, managers, {
+    const line = '  /AsK   ReSeT  ';
+    command.run('AsK   ReSeT', { label: 'docked', index: 0 }, managers, {
       runId: 'run', invocationId: 'invocation', caller: { label: 'docked', cwd: '/repo', context: [] },
       signal: new AbortController().signal, line,
     });
@@ -35,35 +35,39 @@ describe('acp-reset command', () => {
       tab: { byLabel: () => tab, append: (_label: string, entry: LogEntry) => { tab.log.push(entry); } },
       acp: { close: () => false },
     } as unknown as Managers;
-    command.run('acp reset', { label: 'shell', index: 0 }, managers);
-    command.run('acp reset', { label: 'shell', index: 0 }, managers);
-    expect(tab.log.map((entry) => entry.input)).toEqual(['acp reset', 'acp reset']);
+    command.run('ask reset', { label: 'shell', index: 0 }, managers);
+    command.run('ask reset', { label: 'shell', index: 0 }, managers);
+    expect(tab.log.map((entry) => entry.input)).toEqual(['ask reset', 'ask reset']);
     expect(new Set(tab.log.map((entry) => entry.background)).size).toBe(2);
   });
 
   it('has the correct name', () => {
-    expect(command.name).toBe('acp-reset');
+    expect(command.name).toBe('ask-reset');
   });
 
-  it('matches "acp reset" case-insensitively', () => {
-    expect(command.match('acp reset')).toBe(true);
-    expect(command.match('ACP RESET')).toBe(true);
-    expect(command.match('Acp Reset')).toBe(true);
+  it('matches "ask reset" case-insensitively', () => {
+    expect(command.match('ask reset')).toBe(true);
+    expect(command.match('ASK RESET')).toBe(true);
+    expect(command.match('Ask Reset')).toBe(true);
   });
 
   it('matches with extra whitespace', () => {
-    expect(command.match('acp  reset')).toBe(true);
+    expect(command.match('ask  reset')).toBe(true);
   });
 
-  it('does not match bare "acp"', () => {
-    expect(command.match('acp')).toBe(false);
+  it('does not match bare "ask"', () => {
+    expect(command.match('ask')).toBe(false);
   });
 
-  it('does not match "acp resume"', () => {
-    expect(command.match('acp resume')).toBe(false);
+  it('does not match "ask resume"', () => {
+    expect(command.match('ask resume')).toBe(false);
   });
 
-  it('does not match "acp" with a prompt', () => {
-    expect(command.match('acp summarize this repo')).toBe(false);
+  it('does not match "ask" with a prompt', () => {
+    expect(command.match('ask summarize this repo')).toBe(false);
+  });
+
+  it('no longer answers to the former "acp reset"', () => {
+    expect(command.match('acp reset')).toBe(false);
   });
 });

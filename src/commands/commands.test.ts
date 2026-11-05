@@ -12,7 +12,7 @@ const FORMERLY_SILENT = [
   ['quit', 'quit'],
   ['exit', 'close'],
   ['close', 'close'],
-  ['acp summarize', 'acp'],
+  ['ask summarize', 'ask'],
   ['db sqlite query mydb SELECT 1', 'db'],
   ['connections close sqlite:mydb', 'connections'],
   ['next', 'next'],
