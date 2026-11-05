@@ -6,7 +6,7 @@ Feature: move the models section out of the roles tab and into a new tab models 
 
 ## Summary
 
-The model catalog lists the model ids each harness may launch with. Today it shows up only as the left "Models" column of the roles tab. It changes only when someone hand-edits `harness-models.json` against each provider's published list (`product/specs/harness.md` § What the bundled catalog holds). A dedicated models tab gives the catalog its own home. It's a table grouped by provider. A Refresh button pulls the current lists from the providers into a project override file. A per-row Delete hides and disables a model without dropping its record. The roles tab then holds roles only.
+The model catalog lists the model ids each harness may launch with. Today it shows up only as the left "Models" column of the roles tab. It changes only when someone hand-edits `known-models.json` against each provider's published list (`product/specs/harness.md` § What the bundled catalog holds). A dedicated models tab gives the catalog its own home. It's a table grouped by provider. A Refresh button pulls the current lists from the providers into a project override file. A per-row Delete hides and disables a model without dropping its record. The roles tab then holds roles only.
 
 The catalog file becomes `known-models.json` and stores one record per model instead of a bare id string. A core service owns the catalog in memory and on disk. It applies every change at once, without a restart, and publishes the catalog to plugins through a new `models` host topic. The models tab is a thin dockable list over that topic, built the way the sessions tab is.
 
@@ -25,14 +25,14 @@ The catalog file becomes `known-models.json` and stores one record per model ins
 
 ### The file
 
-9. The catalog file is renamed from `harness-models.json` to `known-models.json`. That covers both the bundled file at the repo root and the project override at `.janissary/known-models.json`. This folds in the rename issue in `product/backlog/issues.md` ("update the list of models in harness-models.json … rename the file to known-models.json"); the implementation removes that issue entry. An existing `.janissary/harness-models.json` is ignored and left on disk. The commit is marked breaking, so the generated changelog (`scripts/release/changelog.mjs`, built from commit subjects) records the rename.
+9. The catalog file is `known-models.json`: the bundled file at the repo root and the project override at `.janissary/known-models.json`. The rename from `harness-models.json` has already landed on master, and an old `.janissary/harness-models.json` is already ignored (user answer; `product/plans/complete/rename-harness-models-to-known-models.md`). The switch to records (decision 10) breaks hand-written overrides in the old id-list shape. So the commit is marked breaking, and the generated changelog (`scripts/release/changelog.mjs`, built from commit subjects) records it.
 10. The file is an object mapping each harness name to an ordered list of model records. A record has a required nonempty string `id`. It may also have a string `name`, plus `disabled` and `hidden` booleans that are written only when true. The bundled file is converted mechanically: each id string becomes a record holding only `id`.
 11. The project override still replaces the bundled catalog wholesale. Once a project's first Delete or Refresh writes `.janissary/known-models.json`, later bundled updates reach that project only through its next Refresh. When no override exists, the first Delete or Refresh seeds it from the catalog in effect, which is the bundled one. An override that exists but doesn't decode (decision 12) is treated the same way. The catalog in effect is then the bundled fallback, so a Delete or Refresh seeds from it and replaces the broken file (user answer). The broken file is not kept, and the startup warning is the only notice that it was broken.
 12. Loading keeps today's fallback contract from `loadHarnessModels`, with the warnings renamed. A missing override uses the bundled catalog. An override that isn't valid JSON, or doesn't decode to the record shape, prints a warning and uses the bundled catalog. The warnings read `warning: .janissary/known-models.json is invalid JSON — using the bundled catalog` and `warning: .janissary/known-models.json is not an object of model-record lists — using the bundled catalog`.
 
 ### The two flags
 
-13. Each flag also works on its own. `hidden` keeps a model out of the models tab. `disabled` keeps it out of everything that offers or launches models: the roles entry picker, the conversation model picker, the New harness dialog, `harness --model` completion, and ACP and agent model fallback. `harness --model <it>` is also refused with today's unknown-model message. Delete sets both flags. A hand-edited record that is disabled but not hidden shows dimmed with no delete button. One that is hidden but not disabled is still offered and launchable everywhere else.
+13. Each flag also works on its own. `hidden` keeps a model out of the models tab. `disabled` keeps it out of everything that offers or launches models: the roles entry picker, the conversation model picker, the New harness dialog, `harness --model` completion, agent model selection, and the ACP `ask` role's attempt list, which skips a disabled entry (user answer). `harness --model <it>` is also refused with today's unknown-model message. Delete sets both flags. A hand-edited record that is disabled but not hidden shows dimmed with no delete button. One that is hidden but not disabled is still offered and launchable everywhere else.
 
 ### Delete
 
@@ -84,13 +84,9 @@ The catalog file becomes `known-models.json` and stores one record per model ins
 
 Land the steps in this order. Each one leaves typecheck and tests green.
 
-### 1. The `src/models/` feature and the file rename
+### 1. The `src/models/` feature and the record format
 
-Rename `harness-models.json` to `known-models.json` and convert it to records (decision 10). Update every reference to the old file name:
-- the `files` entry in `package.json`
-- the JSON import in the catalog module
-- the browser sandbox profile key: `appHarnessModels` in `src/sandbox/browser/profile.ts` (type and read list) and `src/sandbox/browser/spawn.ts` becomes `appKnownModels`, pointing at `known-models.json`, along with `src/sandbox/browser/profile.test.ts`
-- the unknown-model message in `src/harness/manager.ts` and its test, which becomes `Unknown model "<model>" for harness "<name>" — add it to known-models.json.`
+The file rename has already landed on master (`product/plans/complete/rename-harness-models-to-known-models.md`). That covers the root `known-models.json`, the `package.json` `files` entry, the `appKnownModels` sandbox key, the unknown-model message, and the warnings in `src/harness/models.ts`. An old `.janissary/harness-models.json` is already ignored (`product/specs/harness.md` § What the bundled catalog holds). What's left here is converting `known-models.json` to records (decision 10) and replacing `src/harness/models.ts`. The second warning's text changes from "model-id lists" to "model-record lists" (decision 12).
 
 Create `src/models/` with these modules, each under 200 lines:
 - **`catalog-file.ts`**: pure decode and encode of the record shape (decision 10), the bundled import, and `readCatalog(projectDir)`, which returns the catalog in effect, whether it came from the override, and the override path, with decision 12's fallback and warnings. A record with an empty `id`, a non-string `name`, or a non-boolean flag makes the whole file undecodable, the same all-or-nothing rule `decodeHarnessModels` applies today. Writing goes through `atomicWriteFile` with two-space JSON and a trailing newline.
@@ -111,13 +107,13 @@ Create `src/models/` with these modules, each under 200 lines:
 
 Each of these reads `managers.models` instead of the deleted module-level functions:
 - **`src/harness/manager.ts`**: `isKnownModel` at the `--model` check, plus `modelsFor` in `harnessLaunchView`
-- **`src/acp/manager.ts`**: `resolveAcpModel` takes the manager's `modelsFor('opencode')`
+- **`src/acp/manager.ts`**: it no longer reads the catalog. It launches the `ask` role's entries in order, via `askRoleEntries` and `attemptOrder` in `src/acp/ask-role.ts`. The attempt list built at the `attemptOrder(this.askModels(…), this.entryOf(label))` call filters out entries for which `managers.models.isKnownModel(entry.harness, entry.model)` is false, so a deleted model is never tried (user answer). When the filter leaves nothing, ACP reports the existing `NO_ASK_MODEL` (`ACP: the ask role lists no models.`). The tab's current entry is filtered too, so a session opened before a Delete moves to the next enabled entry on its next attempt.
 - **`src/agent/model.ts`**: `selectedModel` takes the available list as a parameter. Its callers in `src/agent/execute.ts` and `src/agent/manager.ts` pass `managers.models.modelsFor('opencode')`
 - **`src/completion/handlers.ts`**: `completeHarnessModel` takes a `modelsFor` lookup threaded through `completeCommandLine` in `src/completion/index.ts`, the same way `monitor` and `systemSchedule` are. `src/controller/completion.ts` passes `managers.models`
 - **`src/conversations/view.ts`**: `availableConversationModels` and `hasConversationModel` take the catalog lookup as a parameter. `src/conversations/manager.ts` passes `this.managers.models`, and `ConversationResponder` (`src/conversations/responder.ts`) receives it through its constructor
 - **`src/plugins/context.ts`**: `harnessLaunchCatalog` reads `managers.models.modelsFor`
 
-Update the tests that import `harness/models.js`: `src/acp/manager.test.ts`, `src/agent/execute.test.ts`, `src/agent/model.test.ts`, `src/commands/agent.test.ts`, `src/completion/handlers.test.ts`, `src/completion/index.test.ts`, `src/plugins/context.test.ts`. Move `src/harness/models.test.ts` to `src/models/catalog-file.test.ts`.
+Add a disabled-entry case to `src/acp/manager-fallback.test.ts`: the entry is skipped, and if every entry is skipped the result is `NO_ASK_MODEL`. Update the tests that import `harness/models.js`: `src/agent/execute.test.ts`, `src/agent/model.test.ts`, `src/commands/agent.test.ts`, `src/completion/handlers.test.ts`, `src/completion/index.test.ts`, `src/plugins/context.test.ts`. Move `src/harness/models.test.ts` to `src/models/catalog-file.test.ts`.
 
 ### 3. The `models-refresh` notification event and the `models` host topic
 
@@ -168,14 +164,13 @@ Client, in `web/src/plugins/roles/`:
 - **`product/specs/harness.md`** § Launching with a model and effort level and § What the bundled catalog holds: the new file name, record shape, `disabled`, and live reload. The hand-maintenance rules stay for the bundled file.
 - **`product/specs/notifications.md`**: the `models-refresh` event in the event list, the focus-suppression bypass list, and the alert defaults list.
 - **`product/specs/tab-plugins.md`** ("This version defines seven kinds of host state") **and `ai/guidelines/plugins-tabs.md`** ("v3 defines seven topics"): both become eight, with the `models` slice described as the visible catalog grouped by provider plus the `refreshing` flag.
-- **`product/specs/cli.md`**: the warning list names known-models.
+- **`product/specs/acp.md`**: an `ask`-role entry whose model is disabled in the catalog is skipped.
 - **Help**: a new `help/models.md`, a `help/commands.md` row in its alphabetical place (the order `src/commands.test.ts` enforces), and `help/roles.md` updated.
 - **User docs**: a new `documentation/user-documentation/tab-types/models.md`, plus updates to `tab-types/roles.md` and the conversations page's mention of where models come from.
-- **Backlog**: remove the known-models rename entry from `product/backlog/issues.md`.
 
 ## Tests
 
-- **`src/models/catalog-file.test.ts`** (moved from `src/harness/models.test.ts`): bundled load, override replaces wholesale, the two renamed warnings with fallback, record decoding (missing or empty `id`, non-string `name`, non-boolean flag all reject), round-trip encode writes flags only when true, and a stale `.janissary/harness-models.json` alone is ignored.
+- **`src/models/catalog-file.test.ts`** (moved from `src/harness/models.test.ts`): bundled load, override replaces wholesale, the two warnings (the second now naming model-record lists) with fallback, record decoding (missing or empty `id`, non-string `name`, non-boolean flag all reject), round-trip encode writes flags only when true, and a stale `.janissary/harness-models.json` alone is ignored.
 - **`src/models/merge.test.ts`**: append new ids in fetched order, keep flags on listed ids, replace names, drop unlisted ids including flagged ones, leave unreached harnesses untouched, and return the counts. For opencode: a reported prefix is synced, an unreported existing prefix is kept whole and returned as unreported, and a new prefix is appended last.
 - **`src/models/groups.test.ts`**: provider split and heading names, an unknown prefix shown raw, file order and a new prefix last, hidden records dropped, a disabled-visible record kept with `disabled`, name fallback to id, and every summary-line shape in decision 19 (all reached, some skipped, a timeout, none reached).
 - **`src/models/providers/*.test.ts`**: parse each source's real output shape. Codex `visibility` filtering, opencode line parsing, Anthropic paging across two pages, a missing key and a missing binary as skips, a non-2xx answer and a timeout as failures. Spawn and fetch are injected as seams, as `activate(home)` is for roles.
@@ -184,7 +179,7 @@ Client, in `web/src/plugins/roles/`:
 - **`src/plugins/topics.test.ts`**: the `models` source's read, subscribe, and both actions.
 - **`src/plugins/roles/activate.test.ts` and `shared.test.ts`**: the `missing` flag, the schema-2 guard, and republish on a `models` delivery using the remembered root.
 - **Notifications tests** beside `src/notifications/index.ts` and `alert-defaults.ts`: the new event's toggle, alert default, and focus-suppression bypass.
-- **`src/harness/manager.test.ts`**: the renamed unknown-model message, plus a disabled model refused.
+- **`src/harness/manager.test.ts`**: a disabled model refused with the unknown-model message.
 - **Client, `web/src/plugins/models/ModelsTab.test.tsx`**: group headings, columns, name fallback, the narrow rendering when docked, the empty state, the Refresh spin and disabled state, the confirm-then-delete flow, and no delete button on a disabled row. Add a `chunk-imports.test.ts` like `web/src/plugins/roles/chunk-imports.test.ts`.
 - **Client roles tests**: update `RolesTab.test.tsx` and `roles-dnd.test.tsx` for the removed column and drags, and add a dimmed `missing` entry case.
 - **`web/src/plugins/registry.test.tsx`**: the new entry and the roles schema literal.
