@@ -42,6 +42,7 @@ describe('catalog reads', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
