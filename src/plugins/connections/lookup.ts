@@ -1,5 +1,5 @@
 import type { TabPluginServerCapabilities } from '../api.js';
-import type { ConnectionRow, LiveConnectionRow } from './shared.js';
+import { recordConnectionName, type ConnectionRow, type LiveConnectionRow, type RecordConnectionRow } from './shared.js';
 import { connectionsData, type ConnectionTabs } from './tabs.js';
 
 function parsedTarget(text: string): { kind: string; id: string } | undefined {
@@ -27,9 +27,13 @@ function liveTarget(
   return matches.find((row) => row.ownerLabel === ownerLabel) ?? matches[0];
 }
 
-function newestTitle(rows: ConnectionRow[], title: string): ConnectionRow | undefined {
-  return rows.filter((row): row is Extract<ConnectionRow, { type: 'record' }> =>
-    row.type === 'record' && row.title.toLowerCase() === title.toLowerCase())
+function newestRecord(
+  rows: ConnectionRow[],
+  text: string,
+  label: (row: RecordConnectionRow) => string,
+): ConnectionRow | undefined {
+  const wanted = text.toLowerCase();
+  return rows.filter((row): row is RecordConnectionRow => row.type === 'record' && label(row).toLowerCase() === wanted)
     .toSorted((left, right) => (right.updatedAt ?? 0) - (left.updatedAt ?? 0))[0];
 }
 
@@ -69,9 +73,9 @@ export function openConnectionLookup(
       return true;
     }
   }
-  const title = newestTitle(rows, text);
-  if (title) {
-    openRow(title, tabs, capabilities);
+  const record = newestRecord(rows, text, (row) => row.title) ?? newestRecord(rows, text, recordConnectionName);
+  if (record) {
+    openRow(record, tabs, capabilities);
     return true;
   }
   return false;

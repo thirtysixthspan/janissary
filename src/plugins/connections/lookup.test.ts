@@ -154,6 +154,53 @@ describe('openConnectionLookup', () => {
     expect(f.opened[0]).toMatchObject({ id: 'first-row' });
   });
 
+  it('opens the newest record whose list name matches, ignoring letter case', () => {
+    const older = recordRow({ id: 'older', title: 'ACP: first', updatedAt: 100 });
+    const newer = recordRow({ id: 'newer', title: 'ACP: second', updatedAt: 300 });
+    const agent = { ...recordRow({ id: 'agent-run', title: 'Agent: task.md' }), kind: 'agent' as const };
+    const f = fixture([older, newer, agent]);
+
+    expect(openConnectionLookup('ACP:owner', f.tabs, f.capabilities)).toBe(true);
+    expect(openConnectionLookup('agent:Owner', f.tabs, f.capabilities)).toBe(true);
+    expect(f.opened.map((entry) => entry.id)).toEqual(['newer', 'agent-run']);
+  });
+
+  it('prefers a stored title over an unrelated record listed under that name', () => {
+    const named = recordRow({ id: 'named', title: 'ACP: other', updatedAt: 300 });
+    const titled = { ...recordRow({ id: 'titled', title: 'acp:Owner', updatedAt: 100 }), ownerName: 'Elsewhere' };
+    const f = fixture([named, titled]);
+
+    expect(openConnectionLookup('acp:Owner', f.tabs, f.capabilities)).toBe(true);
+    expect(f.opened[0]).toMatchObject({ id: 'titled' });
+  });
+
+  it('keeps the invoking tab ACP reference and live targets ahead of a list name', () => {
+    const named = recordRow({ id: 'named', title: 'ACP: named', updatedAt: 300 });
+    const mine = {
+      ...recordRow({ id: 'mine', title: 'ACP: mine', ownerLabel: 'owner', status: 'Idle', model: 'Owner' }),
+      ownerName: 'Mine',
+    };
+    const reference = fixture([named, mine], 'owner');
+    expect(openConnectionLookup('acp:Owner', reference.tabs, reference.capabilities)).toBe(true);
+    expect(reference.opened[0]).toMatchObject({ id: 'mine' });
+
+    const live = fixture([named, liveRow('Owner', 'acp')], 'third');
+    expect(openConnectionLookup('acp:Owner', live.tabs, live.capabilities)).toBe(true);
+    expect(live.topicAction).toHaveBeenCalledWith({
+      topic: 'connections', action: 'open', kind: 'acp', id: 'Owner', ownerLabel: 'first',
+    });
+    expect(live.openOrFocusTab).not.toHaveBeenCalled();
+  });
+
+  it('requires the whole list name', () => {
+    const f = fixture([recordRow({ id: 'named', title: 'ACP: named' })]);
+
+    for (const query of ['acp:Own', 'Owner', 'acp: Owner']) {
+      expect(openConnectionLookup(query, f.tabs, f.capabilities)).toBe(false);
+    }
+    expect(f.openOrFocusTab).not.toHaveBeenCalled();
+  });
+
   it('forwards the live row owner label and returns false on a whole-text miss', () => {
     const f = fixture([liveRow('shared', 'sqlite', '')]);
 

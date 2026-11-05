@@ -42,6 +42,7 @@ A bare `connections` or `connection` opens the list. Any other text is looked up
 2. The invoking tab's own ACP session, written `acp:<provider/model>`.
 3. A live `<kind>:<id>` connection, which focuses the tab that owns it.
 4. The complete title of a retained ACP or agent record, newest first.
+5. The name the list shows for a retained record, `acp:<tab name>` or `agent:<tab name>`, ignoring letter case, newest first.
 
 Both command names accept the same lookup. A real multiword title works, including its generated prefix and spacing:
 
