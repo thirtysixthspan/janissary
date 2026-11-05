@@ -8,9 +8,9 @@ import { NOTIFICATION_ALERT_DEFAULTS } from './notifications/alert-defaults.js';
 import type { NotificationEventType } from './notifications/index.js';
 import type { NotificationAlert } from './notifications/alert-defaults.js';
 
-// Per-event toggles for the notifications tab (see `notifications/index.ts`). Ambient events default
-// to false; system schedule notices default to true. There is deliberately no toggle for `manual`
-// (an agent-triggered `notify`), which always fires.
+// Per-event notification toggles (see `notifications/index.ts`). Ambient events default to false;
+// system schedule and model refresh notices default to true. There is deliberately no toggle for
+// `manual` (an agent-triggered `notify`), which always fires.
 export type NotificationConfig = {
   events: {
     stateChange: boolean;
@@ -18,6 +18,7 @@ export type NotificationConfig = {
     agentStart: boolean;
     rateLimited: boolean;
     systemScheduleFire: boolean;
+    modelsRefresh: boolean;
   };
   alerts: Record<NotificationEventType, NotificationAlert>;
 };
@@ -98,6 +99,7 @@ const DEFAULT_CONFIG: Config = {
       agentStart: false,
       rateLimited: false,
       systemScheduleFire: true,
+      modelsRefresh: true,
     },
     alerts: NOTIFICATION_ALERT_DEFAULTS,
   },

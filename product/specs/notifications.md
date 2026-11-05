@@ -135,6 +135,7 @@ These event types can produce a notification line:
   configuration toggle and always fires.
 - **`schedule-fire`** — a tab-owned scheduled command fires in a tab (see `scheduling.md`).
 - **`system-schedule-fire`** — a project-owned system schedule fires, is detected as missed, or names a runscript that is missing. A system shell startup failure uses the same event and toggle.
+- **`models-refresh`** — a Models tab refresh finishes and reports its provider results in one line. It is attributed to the open Models tab, or to `models` when the tab is closed; it bypasses focus suppression and has its own default-on toggle.
 - **`agent-start`** — an ACP session begins its first turn (busy false → true).
 - **`rate-limited`** — an ACP query fails because the underlying provider is rate limiting
   requests, detected by a best-effort match against the failure's text. This covers every ACP query
@@ -279,7 +280,7 @@ Every system schedule notice uses the `system-schedule-fire` event, originates f
 - A missing runscript reads `System schedule <name> could not run: script ".janissary/scripts/<runscript-name>.rs" is missing.`
 - A system shell startup failure reads `System shell could not start: <reason>.` The reason is its first line with terminal punctuation removed, followed by one period.
 
-The sole explicit-event toggle, `notifications.events.systemScheduleFire`, defaults to `true`. Turning it off suppresses the event before it reaches the queue, record, feed, toast, desktop alert, or bell. The event bypasses focus suppression and defaults to the warning cue. Clicking its `system` link focuses the managed system tab and reveals it if hidden. If the tab does not exist yet, the notice remains attributed and linked to `system`; focusing the missing target is a no-op and does not create a tab.
+The explicit-event toggles are `notifications.events.systemScheduleFire` and `notifications.events.modelsRefresh`; both default to `true`. Turning either off suppresses its event before it reaches the queue, record, feed, toast, desktop alert, or bell. Both bypass focus suppression. System schedule notices default to the warning cue; model refresh notices default to the success cue.
 
 The four ambient events (`state-change`, `schedule-fire`, `agent-start`,
 `rate-limited`) are each **independently togglable and default off** — opt in by editing
@@ -287,7 +288,7 @@ The four ambient events (`state-change`, `schedule-fire`, `agent-start`,
 `editor-suggest`, `question`, `transcript-unavailable`, `e2e-browser-gone`, `file-operation`,
 `open-unsupported`, `layout`, `connection-closed`, `connection-close-failed`, `workspace-ready`, `tab`, `plugin-failure`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`,
 `launch-refused`, `launch-workspace-cleaned`, `launch-root-cloned`, and `remote-refused` events have no toggle, and like the other explicit
-events they are shown even when the tab they are attributed to is the active one. `system-schedule-fire` is the only explicit event with a toggle. A `question` event fires only for a
+events they are shown even when the tab they are attributed to is the active one. `system-schedule-fire` and `models-refresh` are the explicit events with toggles. A `question` event fires only for a
 background tab.
 
 ### Focus suppression
@@ -295,7 +296,7 @@ background tab.
 An ambient event on the **currently active** tab never produces a notification — only background
 tabs feed the notifications tab. The notifications tab itself is a view tab that produces no such
 events, so it never notifies about itself. The `harness-idle`, `manual`, `auto-approve`, `auto-approve-no-workspace`,
-`auto-resume`, `editor-suggest`, `system-schedule-fire`,
+`auto-resume`, `editor-suggest`, `system-schedule-fire`, `models-refresh`,
 `transcript-unavailable`, `e2e-browser-gone`, `file-operation`, `open-unsupported`, `layout`, `connection-closed`, `connection-close-failed`, `workspace-ready`, `tab`,
 `plugin-failure`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`, and `remote-refused` events **bypass focus suppression**: they still
 record a line even when their tab is active, because they report an explicit, user-armed action, a
@@ -385,7 +386,7 @@ A live notification can also ask each connected browser window to show a desktop
 play a short sound, according to its per-type `notifications.alerts` entry. This includes `question`, `harness-idle`, `manual`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`,
 `editor-suggest`, `transcript-unavailable`, the three recording-failed events, `shell-transcript-failed`,
 `e2e-browser-gone`, `file-operation`, `open-unsupported`, `layout`, `tab`, `plugin-note`, `plugin-failure`,
-`schedule-late`, `system-schedule-fire`, the two remote-session events, the three launch events, and `remote-refused`.
+`schedule-late`, `system-schedule-fire`, `models-refresh`, the two remote-session events, the three launch events, and `remote-refused`.
 Every event type is configured independently in `.janissary/config.json` under `notifications.alerts`, using the event's hyphenated name. Each entry selects whether to show a desktop banner and one of the `success`, `warning`, or `error` cues, or `none`. The four ambient events (`state-change`, `schedule-fire`, `agent-start`, `rate-limited`) default to no banner and no sound; an opted-in ambient event still must pass its `notifications.events` toggle and focus suppression before it can alert.
 A report detected earlier and replayed later does not raise either: its detection time belongs in
 the feed, not in an alert implying it happened just now. A visible notifications feed does not
@@ -409,7 +410,7 @@ granted, it leaves the feed and bell unaffected. Browser autoplay rules can also
 the page has received user interaction. A browser or OS can prevent window activation on click.
 These failures do not interrupt the notification queue or feed.
 
-The default cue uses bundled MP3 files: `success.mp3` for `manual` and `plugin-note`; `warning.mp3` for
+The default cue uses bundled MP3 files: `success.mp3` for `manual`, `plugin-note`, and `models-refresh`; `warning.mp3` for
 `question`, `harness-idle`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`, `schedule-late`, `layout`,
 the two remote-session events, `system-schedule-fire`, `tab`, the three launch events, and `remote-refused`; and `error.mp3` for the remaining explicit
 events. A type's cue can be changed or silenced independently. A banner-only alert carries no cue name. Each client plays at most one bell per second, while every eligible desktop banner may still

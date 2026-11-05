@@ -28,6 +28,7 @@ import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';
 import { TabPluginHost } from '../plugins/host.js';
 import { ConversationsManager } from '../conversations/manager.js';
+import { ModelCatalogManager } from '../models/manager.js';
 import { SessionsManager } from '../sessions/manager.js';
 import { NotificationQueue } from '../notifications/queue.js';
 import { AgentRunManager } from '../agent/manager.js';
@@ -60,6 +61,7 @@ export function createManagers(managers: Managers, projectDir?: string): void {
     }
   });
   managers.conversations = new ConversationsManager(managers, { projectDir });
+  managers.models = new ModelCatalogManager(managers, { projectDir });
   managers.sessions = new SessionsManager(managers);
   managers.plugins = new TabPluginHost(managers);
   managers.workspace = new WorkspaceManager(

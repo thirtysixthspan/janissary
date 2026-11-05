@@ -23,6 +23,7 @@ import type { EditorAcpManager } from './editor/acp-manager.js';
 import type { Questions } from './questions.js';
 import type { TabPluginHost } from './plugins/host.js';
 import type { ConversationsManager } from './conversations/manager.js';
+import type { ModelCatalogManager } from './models/manager.js';
 import type { SessionsManager } from './sessions/manager.js';
 import type { NotificationQueue } from './notifications/queue.js';
 import type { AgentRunManager } from './agent/manager.js';
@@ -64,6 +65,7 @@ type ManagerRegistry = {
   questions: Questions;
   plugins: TabPluginHost;
   conversations: ConversationsManager;
+  models: ModelCatalogManager;
   sessions: SessionsManager;
   notifications: NotificationQueue;
 };
@@ -115,6 +117,7 @@ export const MANAGER_DISPOSE_ORDER = [
   'workspace',
   'plugins',
   'conversations',
+  'models',
   // Before `remote`, because it reads channels — their addresses, workspaces, and session ids —
   // while tearing down, and after them there would be nothing left to read.
   'sessions',
