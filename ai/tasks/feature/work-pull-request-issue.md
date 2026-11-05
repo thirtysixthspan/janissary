@@ -1,8 +1,8 @@
 # Work a Pull Request Issue
 
-Take one recorded work item from the explicitly specified open pull request's head-branch backlog. Plan and implement its repair, verify it, update affected specs and existing documentation, record the completed fix plan, remove the resolved entry, and publish to that same branch. Correct the PR description only when the entry requires it. Leave the PR open.
+Take one work item for the explicitly specified open pull request: a recorded entry from its head-branch backlog, or the work item named when running this task, which need not be recorded there at all. Plan and implement its repair, verify it, update affected specs and existing documentation, record the completed fix plan, remove the resolved entry when that is where it came from, and publish to that same branch. Correct the PR description only when the work item requires it. Leave the PR open.
 
-Invocation: `execute ./ai/tasks/feature/work-pull-request-issue.md <number|#number|PR URL> [selector]`.
+Invocation: `execute ./ai/tasks/feature/work-pull-request-issue.md <number|#number|PR URL> [work item]`. For example, `execute ./ai/tasks/feature/work-pull-request-issue.md 1916 Lookup doesn't match the visible name.` works PR 1916 on that described problem.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
@@ -14,25 +14,25 @@ This overrides AGENTS.md's "Capturing command output" guidance (write the output
 
 **Stay within the project directory.** The current working directory is the project directory for this session. Do not read or write any file outside it — no absolute paths escaping the project root, no `..` traversal above it, no touching files elsewhere on the machine (home directory config, other repos, system paths).
 
-**Explicit target required.** Accept only a positive integer, a `#`-prefixed positive integer, or a GitHub pull request URL. An optional selector chooses an existing backlog entry by title, paraphrase, or position. Never accept a head branch name, infer a target from context, or treat a selector as new work. Missing or malformed targets stop before checkout or installation with `Status: blocked` and `Reason: explicit pull request number, #number, or PR URL required`. Failed lookups and non-open PRs stop with their specific reason and no substituted target.
+**Explicit target required.** Accept only a positive integer, a `#`-prefixed positive integer, or a GitHub pull request URL. Everything after the pull request reference is an optional work item. It is matched first against the branch backlog's entries by title, paraphrase, or position; text that matches no entry is itself the work item. Never accept a head branch name, infer a target from context, or let the work item stand in for the pull request reference. Missing or malformed targets stop before checkout or installation with `Status: blocked` and `Reason: explicit pull request number, #number, or PR URL required`. Failed lookups and non-open PRs stop with their specific reason and no substituted target.
 
 ## What you may and may not do
 
 ### Allowed — do it automatically, never ask
 
-Read files relevant to the fix. Check out and prepare the specified PR's recorded head branch. Edit source, tests, CSS, specs, applicable help pages under `help/`, and existing user documentation as the fix requires. Write and promote the fix plan. Remove the resolved branch-backlog entry, preserving all others and restoring the master comment-and-heading skeleton when empty. Run `$janissary/scripts/run.mjs check-diff` after each change. Commit and push to the same head branch, and use `gh pr edit --body-file` only for description corrections named by the entry.
+Read files relevant to the fix. Check out and prepare the specified PR's recorded head branch. Edit source, tests, CSS, specs, applicable help pages under `help/`, and existing user documentation as the fix requires. Write and promote the fix plan. Remove the resolved branch-backlog entry when the work item was recorded there, preserving all others and restoring the master comment-and-heading skeleton when empty. Run `$janissary/scripts/run.mjs check-diff` after each change. Commit and push to the same head branch, and use `gh pr edit --body-file` only for description corrections named by the entry or the named work item.
 
 ### Forbidden — no exceptions
 
 1. **Editing files the fix does not touch.** Stay in scope. If you discover a fix requires changes beyond what you planned, update the plan first — do not silently expand scope.
 2. **Running `npm run check`.** That is the human's end-of-work gate. Use `$janissary/scripts/run.mjs check-diff` during development.
 3. **Skipping tests.** Every fix needs tests that cover the changed behavior. Verify with `$janissary/scripts/run.mjs check-diff`.
-4. **Choosing an entry rated 7 or higher.** Without a selector, take the first eligible entry below 7. A selected entry at 7 or higher stops the run rather than substituting another entry.
+4. **Choosing an entry rated 7 or higher.** Without a named work item, take the first eligible entry below 7. A selected entry or a named work item at 7 or higher stops the run rather than substituting another entry.
 5. **Merging, closing, or replacing the PR.** Never execute `ai/tasks/workspace/merge-change-to-master.md`, call `gh pr merge`, create a replacement, or push to another branch.
 6. **Working an absent, closed, or substituted target.** Require the specified PR to remain `OPEN` and the current branch to match its recorded head before publication.
-7. **Reading or editing `./product/backlog/issues.md`.** Work comes only from this PR's `./product/backlog/pull-request.md`; never fall back to master's issues or add a named work item.
+7. **Reading or editing `./product/backlog/issues.md`.** Work comes only from this PR's `./product/backlog/pull-request.md` or the work item named at invocation; never fall back to master's issues, and never add a named work item to either backlog.
 8. **Deleting the PR backlog.** Keep its leading comment and `# pull-request` heading, restoring the exact master skeleton when drained. Never discard unresolved entries.
-9. **Changing the PR title or unrelated description text.** Correct only paragraphs the resolved entry names, preserving everything else exactly.
+9. **Changing the PR title or unrelated description text.** Correct only paragraphs the resolved work item names, preserving everything else exactly.
 10. **Rewriting published history or force-pushing.** Add a commit; retain the bounded rebase-and-push retry policy in Step 8.
 
 ---
@@ -49,15 +49,15 @@ Validate the explicit invocation target first as described above, then:
 
 ---
 
-## Step 1 — Select one recorded fix
+## Step 1 — Select one fix
 
-1. Read `./product/backlog/pull-request.md` from the checked-out head branch. If the file does not exist, or exists with no entries under its `# pull-request` heading, report that the pull request has no recorded work and stop — do not fall back to `./product/backlog/issues.md`, and do not invent a work item from the invocation.
+1. Read `./product/backlog/pull-request.md` from the checked-out head branch. If the file does not exist, or exists with no entries under its `# pull-request` heading, and the invocation named no work item, report that the pull request has no recorded work and stop — do not fall back to `./product/backlog/issues.md`. When a work item was named, a missing or empty backlog is not a reason to stop; go on to item 3.
 2. Walk its entries top to bottom in file order. There are no status sections and nothing to skip past: every entry is ready, a human who wants one done sooner moves it up, and a human who decides against one deletes it outright.
-3. If a selector followed the pull request reference, use it to choose the entry — it may be quoted text, a paraphrase, or a position such as "the second one". If it matches no entry, report that and stop; unlike an ordinary named work item, a selector is a lookup into this backlog, never a new work item in its own right.
-4. If a selector is supplied, rate only the selected entry and stop if it is rated 7 or higher; never substitute another entry. Otherwise, rate candidates in file order by reviewing the codebase (do not use a shell loop), and take the **first** one rated below 7. If every entry rates 7 or higher, report the list with ratings and stop — do not implement one.
-5. The entry's `*` summary bullet is the issue text for planning and reporting. Its `Proposal` paragraph is the starting point for Step 2's plan, not a substitute for it — verify what it claims against the code before building on it, since it was written by a reviewer who did not run the tests.
+3. If a work item followed the pull request reference, first look for the entry it refers to — it may be quoted text, a paraphrase, or a position such as "the second one". **If no entry matches, the named text is itself the work item**: take it at face value and fix it on this branch exactly as if it had been recorded, without stopping and without adding it to the backlog. The one exception is a bare position that names no entry, such as "the third one" in a two-entry backlog. It describes no work, so report that it matched nothing and stop.
+4. If a work item is named, rate only the matched entry or the named work item, by reviewing the codebase to understand what areas it touches, and stop if it is rated 7 or higher; never substitute another entry. Otherwise, rate candidates in file order by reviewing the codebase (do not use a shell loop), and take the **first** one rated below 7. If every entry rates 7 or higher, report the list with ratings and stop — do not implement one.
+5. A recorded entry's `*` summary bullet is the issue text for planning and reporting. Its `Proposal` paragraph is the starting point for Step 2's plan, not a substitute for it — verify what it claims against the code before building on it, since it was written by a reviewer who did not run the tests. A named work item that matched no entry is its own issue text, and Step 2's plan starts from the code.
 
-State your pick and its rating, then go to Step 2.
+State your pick, whether it came from the branch backlog or from the invocation, and its rating, then go to Step 2.
 
 ---
 
@@ -123,7 +123,7 @@ The fix only needs a documentation update if it changes behavior that `help/` or
    ```bash
    mv ./product/plans/ready/<fix-name>.md ./product/plans/complete/<fix-name>.md
    ```
-2. Remove the resolved entry whole from `./product/backlog/pull-request.md`: its lead `*` bullet through its `Proposal` paragraph and separating blank lines. Leave every other entry byte-for-byte unchanged. Entries use the five-part format in [review-pull-request.md](review-pull-request.md).
+2. Remove the resolved entry whole from `./product/backlog/pull-request.md`: its lead `*` bullet through its `Proposal` paragraph and separating blank lines. Leave every other entry byte-for-byte unchanged. Entries use the five-part format in [review-pull-request.md](review-pull-request.md). If the named work item was not recorded there, leave the backlog unchanged and skip item 3.
 3. If no entries remain, rewrite the file to the exact master skeleton, retaining the leading comment and `# pull-request` heading. Never delete it.
 
 The empty skeleton is:
@@ -139,16 +139,16 @@ The empty skeleton is:
 ## Step 8 — Publish the resolved change
 
 1. Run `gh pr view <reference> --json state,headRefName,url` again and `git branch --show-current`. Stop if the PR is no longer `OPEN` or the current branch is not its recorded head branch.
-2. Run `$janissary/scripts/run.mjs pr-check-changes`. If it reports no changes to ship, stop. An entry whose only remedy is a description correction still reaches this point with changes to ship — it wrote a plan file to `./product/plans/complete/` and removed its entry from `./product/backlog/pull-request.md` — so this guard never fires merely because the fix was not a code change.
+2. Run `$janissary/scripts/run.mjs pr-check-changes`. If it reports no changes to ship, stop. A work item whose only remedy is a description correction still reaches this point with changes to ship — it wrote a plan file to `./product/plans/complete/`, and a recorded entry was also removed from `./product/backlog/pull-request.md` — so this guard never fires merely because the fix was not a code change.
 3. Compose a Conventional Commits subject and body describing the completed fix, then commit with `$janissary/scripts/run.mjs pr-commit "<subject>" "<body>"`. Do not amend, squash, or otherwise rewrite commits that were already on the PR branch.
 4. Run `git push`, which pushes through the upstream configured by `gh pr checkout`. If the push is rejected because the remote branch advanced, run `git pull --rebase`, resolve any conflicts while preserving both sides, rerun `$janissary/scripts/run.mjs check-diff`, and retry `git push`. Repeat at most three times. Never force-push. If the third attempt fails, leave the local commit intact and report the failure.
-5. **When the resolved entry called for a description correction**, apply it now — after the push, never before. A description is a live artifact on GitHub while a file edit is not until it is pushed, so editing it earlier would leave the pull request describing work that is not on its branch if a later step failed. Read the current body with `gh pr view <reference> --json body`, apply the change the entry's `Proposal` names, and leave every other paragraph exactly as the author wrote it — `gh pr edit` replaces the body wholesale, so preserving the rest is your job, not the tool's. Leave change-set statistics out of the corrected paragraphs. This is a guideline, not a hard rule: don't state how many commits, files, or lines the pull request changes, and don't cite commit SHAs, because GitHub already shows them and a copy goes stale with the next push. When the correction concerns such a figure, remove the claim rather than updating the number. Write the full revised body to `./temp/pr-body.md` and apply it:
+5. **When the resolved entry or named work item called for a description correction**, apply it now — after the push, never before. A description is a live artifact on GitHub while a file edit is not until it is pushed, so editing it earlier would leave the pull request describing work that is not on its branch if a later step failed. Read the current body with `gh pr view <reference> --json body`, apply the change the entry's `Proposal` or the named work item names, and leave every other paragraph exactly as the author wrote it — `gh pr edit` replaces the body wholesale, so preserving the rest is your job, not the tool's. Leave change-set statistics out of the corrected paragraphs. This is a guideline, not a hard rule: don't state how many commits, files, or lines the pull request changes, and don't cite commit SHAs, because GitHub already shows them and a copy goes stale with the next push. When the correction concerns such a figure, remove the claim rather than updating the number. Write the full revised body to `./temp/pr-body.md` and apply it:
 
    ```bash
    gh pr edit <reference> --body-file ./temp/pr-body.md
    ```
 
-   Use the body file rather than an inline `--body` string: multi-line markdown breaks on shell quoting, which is why `scripts/pr-create-pr.sh` takes a body file too. `temp/` is gitignored, so the scratch file cannot reach a commit. Do not touch the title. When the entry called for no description change, skip this sub-step entirely.
+   Use the body file rather than an inline `--body` string: multi-line markdown breaks on shell quoting, which is why `scripts/pr-create-pr.sh` takes a body file too. `temp/` is gitignored, so the scratch file cannot reach a commit. Do not touch the title. When the work item called for no description change, skip this sub-step entirely.
 6. Confirm the PR is still `OPEN` and its `headRefOid` matches `git rev-parse HEAD` using `gh pr view <reference> --json state,headRefName,headRefOid,url`. Do not merge it.
 
 If push or a required description correction fails, preserve local work, report the failure and outstanding obligation, and do not claim successful resolution.
@@ -158,14 +158,14 @@ If push or a required description correction fails, preserve local work, report 
 ## Step 9 — Report
 
 ```
-Issue:          <the resolved entry's summary bullet from ./product/backlog/pull-request.md>
+Issue:          <the resolved entry's summary bullet from ./product/backlog/pull-request.md, or the work item as named in the invocation when it was not recorded there>
 Plan:           ./product/plans/ready/<file> → ./product/plans/complete/<file>
 Complexity:     N/10
 Implementation: <one-line summary of the fix>
 Tests:          <count> new tests across <files>
 Spec:           <spec file(s) created or updated, with one-line description of change>
 Docs:           <help/<command>.md, help/commands.md, help/keys.md, and/or user-documentation file(s) updated, or "none needed">
-Backlog:        entry removed, <n> remaining in product/backlog/pull-request.md | drained — file restored to its comment-and-heading skeleton
+Backlog:        entry removed, <n> remaining in product/backlog/pull-request.md | drained — file restored to its comment-and-heading skeleton | unchanged — named work item was not recorded
 Description:    updated — <one line on what changed> | not needed
 Branch:         <the existing PR head branch>
 PR:             <url> (#<number>)
