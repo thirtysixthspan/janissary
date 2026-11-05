@@ -1084,6 +1084,11 @@ already listed. A model a provider offers only for a limited time is listed like
 provider lists it, and removed under the same rule once it is gone; the same model offered by both
 OpenCode Zen and OpenCode Go appears once under each prefix.
 
+On the Models tab, OpenCode rows group by the id prefix before the first `/` and retain the order
+in which each prefix first appears. The `opencode`, `opencode-go`, `google`, and `openai` prefixes
+use the headings `OpenCode Zen`, `OpenCode Go`, `Google`, and `OpenAI`. Any other prefix appears
+unchanged as its heading; a bare id uses the raw heading `opencode`.
+
 Refreshing the catalog reports provider outcomes to the notifications feed. If `opencode models` or
 `codex debug models` reaches its 30-second deadline, the provider is reported as failed with the
 reason `timed out after 30 s`. A refresh canceled by its owner is discarded without reporting.

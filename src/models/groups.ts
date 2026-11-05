@@ -51,7 +51,8 @@ function appendOpenCodeGroups(groups: ModelGroup[], records: ModelRecord[]): voi
     byPrefix.set(prefix, group);
   }
   for (const [prefix, models] of byPrefix) {
-    appendVisibleGroup(groups, `opencode:${prefix}`, OPEN_CODE_HEADINGS[prefix] ?? prefix, models);
+    const heading = Object.hasOwn(OPEN_CODE_HEADINGS, prefix) ? OPEN_CODE_HEADINGS[prefix] : prefix;
+    appendVisibleGroup(groups, `opencode:${prefix}`, heading, models);
   }
 }
 

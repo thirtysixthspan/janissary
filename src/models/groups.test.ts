@@ -44,6 +44,16 @@ describe('groupModelCatalog', () => {
   it('omits groups that contain only hidden models', () => {
     expect(groupModelCatalog({ claude: [{ id: 'hidden', hidden: true }], opencode: [] })).toEqual([]);
   });
+
+  it.each(['constructor', 'toString', '__proto__'])('uses the raw heading for the %s prefix', (prefix) => {
+    expect(groupModelCatalog({ opencode: [{ id: `${prefix}/model` }] })).toEqual([
+      {
+        key: `opencode:${prefix}`,
+        heading: prefix,
+        records: [{ id: `${prefix}/model`, name: `${prefix}/model` }],
+      },
+    ]);
+  });
 });
 
 describe('summarizeModelRefresh', () => {
