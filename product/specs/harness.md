@@ -465,7 +465,8 @@ prompt line, does not mask a live gate below it. That covers a subagent's gate t
 claude's "auto mode handles these prompts for you" tip, a boxed command, and a "switch to auto mode"
 option wrapped onto a second line. It also covers the same gate clipped at the right edge of the
 screen, where the "switch to auto mode" option, the `No` option, and the footer's background-agent
-hint are cut off mid-word.
+hint are cut off mid-word. And it covers the gate when the wrapped "switch to auto mode" option is
+shown whole but the footer's background-agent hint is truncated with an ellipsis.
 
 At the moment of a successful auto-approval, the app also saves the harness's on-screen text to a
 file and attaches a clickable, outline-style clipboard-icon link before that same notification line's
