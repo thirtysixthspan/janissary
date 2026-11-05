@@ -10,8 +10,8 @@ describe('buildTabView', () => {
     tab.view = 'plugin';
     tab.plugin = { id: 'shell', instanceKey: 'shell', schemaVersion: 4, payload: {}, fileRefs: [] };
     const running = { input: 'working', output: '# Partial', running: true, markdown: true };
-    const settled = { input: 'acp previous', output: '# Answer', markdown: true };
-    tab.log = [settled, running, { input: '/acp previous ', output: '# Answer', background: 'reply' }];
+    const settled = { input: 'ask previous', output: '# Answer', markdown: true };
+    tab.log = [settled, running, { input: '/ask previous ', output: '# Answer', background: 'reply' }];
     tab.runtime = {
       busy: true, context: [], queue: [], acpEntries: new WeakSet([settled, running]),
       acpPrompt: { prompt: 'working', abort: new AbortController(), finish: () => {} },
@@ -22,7 +22,7 @@ describe('buildTabView', () => {
     expect(view).not.toHaveProperty('acpResponse');
     expect(view).toMatchObject({
       acp: 'provider/model', busy: true, pendingQuestion: question,
-      backgroundReplies: [{ id: 'reply', output: '# Answer', line: '/acp previous ' }],
+      backgroundReplies: [{ id: 'reply', output: '# Answer', line: '/ask previous ' }],
     });
     expect(view.bufferLines).toEqual(expect.arrayContaining([
       expect.objectContaining({ type: 'markdown', text: '# Partial' }),
@@ -62,8 +62,8 @@ describe('buildTabView', () => {
 
   it('projects completed background replies with stable IDs and excludes ordinary or unfinished entries', () => {
     const tab = makeTab('shell', '#fff');
-    tab.log = [{ input: 'acp ordinary', output: 'ordinary' }, { input: '', output: 'pending', background: 'pending', running: true }, { input: 'acp hello', output: 'suggestion', background: 'finished' }];
-    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).backgroundReplies).toEqual([{ id: 'finished', output: 'suggestion', line: 'acp hello' }]);
+    tab.log = [{ input: 'ask ordinary', output: 'ordinary' }, { input: '', output: 'pending', background: 'pending', running: true }, { input: 'ask hello', output: 'suggestion', background: 'finished' }];
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).backgroundReplies).toEqual([{ id: 'finished', output: 'suggestion', line: 'ask hello' }]);
   });
 
   it('leaves monitor and other background inputs without a line', () => {

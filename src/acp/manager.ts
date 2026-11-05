@@ -50,10 +50,10 @@ export class AcpManager extends AcpSessionManager {
     const tab = this.managers.tab.byLabel(label);
     if (!tab) { onDone({ answered: false, error: 'Tab not found' }); return; }
     const runtime = tabRuntime(tab);
-    const prompt = command.replace(/^acp\b\s*/i, '').trim();
+    const prompt = command.replace(/^ask\b\s*/i, '').trim();
     const refusal = runtime.acpPrompt ? 'ACP: a prompt is already running.'
       : prompt ? this.stillConnecting(label) ? STILL_CONNECTING : undefined
-        : 'Usage: acp <prompt>.';
+        : 'Usage: ask <prompt>.';
     const model = refusal ? undefined : resolveAcpModel();
     if (refusal || !model) {
       const error = refusal ?? NO_ACP_MODEL;

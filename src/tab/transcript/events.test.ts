@@ -267,7 +267,7 @@ describe('updateRunningEntry', () => {
 
   it('an interleaved shell entry is no clobber target for the ACP markdown match', () => {
     const tab = makeTab('bob', 'red', 1, [], [
-      { input: 'acp hi', output: '', running: true, markdown: true },
+      { input: 'ask hi', output: '', running: true, markdown: true },
       { input: 'git status', output: '', running: true, cwd: '/repo' },
     ]);
     const emit = vi.spyOn(messageBus, 'emit');
@@ -277,7 +277,7 @@ describe('updateRunningEntry', () => {
     updateRunningEntry([tab], 'bob', { markdown: true }, 'streamed reply', true, {});
 
     expect(tab.log[1]).toEqual({ input: 'git status', output: '', running: true, cwd: '/repo' });
-    expect(tab.log[0]).toEqual({ input: 'acp hi', output: 'streamed reply', running: true, markdown: true });
+    expect(tab.log[0]).toEqual({ input: 'ask hi', output: 'streamed reply', running: true, markdown: true });
     expect(tab.log[0]).not.toBe(original);
     expect(tab.runtime!.acpEntries.has(tab.log[0])).toBe(true);
     expect(tab.runtime!.acpEntries.has(tab.log[1])).toBe(false);

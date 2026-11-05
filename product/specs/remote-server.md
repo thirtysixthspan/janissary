@@ -811,7 +811,7 @@ a shared channel's server holds one agent per tab using it.
   attach, a pressed end, or a launch restore.
 - Arbitrating two janissary instances attaching one peer — last attach wins, and the loser enters
   its own reconnect backoff.
-- `acp` in a remote **harness** tab — it is already driving its own agent binary in a terminal.
+- `ask` in a remote **harness** tab — it is already driving its own agent binary in a terminal.
 - Running an ACP agent's `db`, `browser`, and `question` commands on the remote host; the tool loop
   stays local.
 - More than one ACP session per remote tab, and multiplexing one remote agent across tabs.

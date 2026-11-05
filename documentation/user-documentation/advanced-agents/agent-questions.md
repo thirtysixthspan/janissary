@@ -62,4 +62,4 @@ The `osNotifications` and `terminalBell` master switches still apply. [Desktop b
 
 Clicking **Cancel**, closing the tab that asked, or shutting down the server all resolve a pending question the same way: the agent gets back `Question cancelled.` as the command's result.
 
-Resetting the tab's [ACP connection](/user-documentation/advanced-agents/acp-agent) with `acp reset` cancels questions the same way. It cancels the questions the interrupted request asked, including one waiting behind another, and leaves questions from other requests pending. There's no other way to resolve a question: no separate cancel command, no timeout, and no default answer supplied on your behalf.
+Resetting the tab's [ACP connection](/user-documentation/advanced-agents/acp-agent) with `ask reset` cancels questions the same way. It cancels the questions the interrupted request asked, including one waiting behind another, and leaves questions from other requests pending. There's no other way to resolve a question: no separate cancel command, no timeout, and no default answer supplied on your behalf.

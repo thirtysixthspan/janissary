@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { command } from './acp.js';
+import { command } from './ask.js';
 import type { AcpPromptResult } from '../acp/types.js';
 import type { CommandInvocationContext } from './types.js';
 import type { Managers } from '../managers.js';
@@ -17,7 +17,7 @@ function invocation(line?: string): CommandInvocationContext {
 function run(
   promptResult: (label: string, command: string) => Promise<AcpPromptResult>,
   line?: string,
-  dispatcherCommand = 'acp hello',
+  dispatcherCommand = 'ask hello',
 ) {
   const append = vi.fn();
   const managers = { acp: { promptResult }, tab: { append } } as unknown as Managers;
@@ -27,33 +27,39 @@ function run(
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-describe('acp command', () => {
+describe('ask command', () => {
   it('has the correct name', () => {
-    expect(command.name).toBe('acp');
+    expect(command.name).toBe('ask');
   });
 
-  it('matches acp commands', () => {
-    expect(command.match('acp summarize this repo')).toBe(true);
-    expect(command.match('ACP summarize this repo')).toBe(true);
-    expect(command.match('acp')).toBe(true);
+  it('matches ask commands', () => {
+    expect(command.match('ask summarize this repo')).toBe(true);
+    expect(command.match('ASK summarize this repo')).toBe(true);
+    expect(command.match('ask')).toBe(true);
   });
 
-  it('does not match non-acp input', () => {
-    expect(command.match('acp-extra')).toBe(true); // \b matches before '-'
-    expect(command.match('acp  ')).toBe(true);
+  it('does not match non-ask input', () => {
+    expect(command.match('ask-extra')).toBe(true); // \b matches before '-'
+    expect(command.match('ask  ')).toBe(true);
+    expect(command.match('asking')).toBe(false);
     expect(command.match('clear')).toBe(false);
+  });
+
+  it('no longer answers to the former acp command word', () => {
+    expect(command.match('acp summarize this repo')).toBe(false);
+    expect(command.match('acp')).toBe(false);
   });
 
   it('returns immediately and appends one completed background reply when the prompt settles', async () => {
     const pending = Promise.withResolvers<AcpPromptResult>();
-    const { append } = run(() => pending.promise, '/acp hello');
+    const { append } = run(() => pending.promise, '/ask hello');
 
     expect(append).not.toHaveBeenCalled();
     pending.resolve({ answered: true, reply: '## Answer', session: 'session-1' });
     await settle();
 
     expect(append).toHaveBeenCalledExactlyOnceWith('main', {
-      input: '/acp hello',
+      input: '/ask hello',
       output: '## Answer',
       background: expect.any(String),
     });
@@ -61,7 +67,7 @@ describe('acp command', () => {
 
   it('appends one capped reply carrying the tool-step notice', async () => {
     const pending = Promise.withResolvers<AcpPromptResult>();
-    const { append } = run(() => pending.promise, '/acp hello');
+    const { append } = run(() => pending.promise, '/ask hello');
 
     pending.resolve({
       answered: true,
@@ -71,14 +77,14 @@ describe('acp command', () => {
     await settle();
 
     expect(append).toHaveBeenCalledExactlyOnceWith('main', {
-      input: '/acp hello',
+      input: '/ask hello',
       output: 'Partial answer\n\n(stopped after 8 tool steps)',
       background: expect.any(String),
     });
   });
 
   it.each([
-    ['usage', { answered: false, error: 'Usage: acp <prompt>.' }],
+    ['usage', { answered: false, error: 'Usage: ask <prompt>.' }],
     ['already running', { answered: false, error: 'ACP: a prompt is already running.' }],
     ['no model', { answered: false, error: 'ACP: no opencode model is available in the harness catalog.' }],
     ['still connecting', { answered: false, error: 'ACP: the remote session is still connecting.' }],
@@ -88,36 +94,36 @@ describe('acp command', () => {
     ['closed session', { answered: false, error: 'ACP session closed.' }],
     ['cancellation', { answered: false, error: 'ACP: prompt cancelled.' }],
   ])('appends the exact %s text once', async (_case, result) => {
-    const { append } = run(async () => result, '/acp', 'acp');
+    const { append } = run(async () => result, '/ask', 'ask');
 
     await settle();
 
     expect(append).toHaveBeenCalledExactlyOnceWith('main', {
-      input: '/acp',
+      input: '/ask',
       output: result.error,
       background: expect.any(String),
     });
   });
 
   it('echoes the typed line for a malformed invocation rather than the normalized command', async () => {
-    const { append } = run(async () => ({ answered: false, error: 'Usage: acp <prompt>.' }), '/acp   ');
+    const { append } = run(async () => ({ answered: false, error: 'Usage: ask <prompt>.' }), '/ask   ');
 
     await settle();
 
     expect(append).toHaveBeenCalledWith('main', {
-      input: '/acp   ',
-      output: 'Usage: acp <prompt>.',
+      input: '/ask   ',
+      output: 'Usage: ask <prompt>.',
       background: expect.any(String),
     });
   });
 
   it('turns a rejected prompt into one completed error reply', async () => {
-    const { append } = run(async () => { throw new Error('socket gone\nmore'); }, 'acp hello');
+    const { append } = run(async () => { throw new Error('socket gone\nmore'); }, 'ask hello');
 
     await settle();
 
     expect(append).toHaveBeenCalledExactlyOnceWith('main', {
-      input: 'acp hello',
+      input: 'ask hello',
       output: 'ACP error: socket gone\nmore',
       background: expect.any(String),
     });
@@ -142,11 +148,11 @@ describe('acp command', () => {
       tab: { append },
     } as unknown as Managers;
 
-    command.run('acp hello', { label: 'main', index: 0 }, managers, invocation('acp hello'));
+    command.run('ask hello', { label: 'main', index: 0 }, managers, invocation('ask hello'));
     await settle();
 
     expect(append).toHaveBeenCalledExactlyOnceWith('main', {
-      input: 'acp hello',
+      input: 'ask hello',
       output: 'first',
       background: expect.any(String),
     });

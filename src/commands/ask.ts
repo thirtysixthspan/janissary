@@ -5,11 +5,11 @@ import type { AcpPromptResult } from '../acp/types.js';
 import { errorText } from '../error-text.js';
 
 export const command: Command = {
-  name: 'acp',
+  name: 'ask',
   available: acpAvailable,
   coreResponse: true,
-  match: (command_) => /^acp\b/i.test(command_),
-  samples: ['acp', 'acp bob'],
+  match: (command_) => /^ask\b/i.test(command_),
+  samples: ['ask', 'ask bob'],
   run: (command, tab, managers, invocation) => {
     const line = invocation?.line ?? command;
     let settled = false;

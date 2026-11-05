@@ -118,14 +118,14 @@ describe('flattenBuffer running indicator', () => {
 describe('flattenBuffer markdown (ACP reply)', () => {
   it('keeps a markdown entry as one block instead of splitting into output lines', () => {
     const md = '# Title\n\n- one\n- two\n\n| a | b |\n|---|---|\n| 1 | 2 |';
-    const lines = flattenBuffer([{ input: 'acp hi', output: md, markdown: true }]);
+    const lines = flattenBuffer([{ input: 'ask hi', output: md, markdown: true }]);
     const mdLines = lines.filter((l) => l.type === 'markdown');
     expect(mdLines).toHaveLength(1);
     expect(mdLines[0].text).toBe(md); // raw markdown preserved verbatim
     // The prose is not split into per-line plain `output` entries.
     expect(lines.some((l) => l.type === 'output')).toBe(false);
     // The user's prompt line still renders above it.
-    expect(lines.some((l) => l.type === 'prompt' && l.text === 'acp hi')).toBe(true);
+    expect(lines.some((l) => l.type === 'prompt' && l.text === 'ask hi')).toBe(true);
   });
 });
 
