@@ -41,8 +41,7 @@ export function buildHarnessDetection(
       harnessName,
       approve,
       notify: (message, capture) => send({
-        type: 'gate-event', id, message, capturedAt: capture?.capturedAt ?? Date.now(),
-        ...(capture && { capture: capture.text }),
+        type: 'gate-event', id, message, capturedAt: capture.capturedAt, capture: capture.text,
       }),
     });
   }

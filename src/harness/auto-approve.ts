@@ -100,8 +100,15 @@ export function autoApproveWithoutWorkspaceWarning(autoApprove: boolean): string
     : undefined;
 }
 
+// The two lines the approver reports. Exported so the remote translation can tell an approval from a
+// stand-down by what was said, since both carry the screen capture that triggered them.
+export const AUTO_APPROVED_MESSAGE = 'Auto-approved a permission prompt';
+export const AUTO_APPROVE_STUCK_MESSAGE = 'Auto-approve could not clear the permission prompt; standing down';
+
 // Watches a harness's screen captures and injects the approval keystroke when a permission gate is
 // detected, then reports it. A loop guard prevents re-injecting into an identical, uncleared gate.
+// Both reports pass the triggering capture, so a stand-down links the screen that defeated
+// auto-approve the same way an approval links the screen it answered.
 export class HarnessAutoApprover {
   private lastApprovedText: string | undefined;
   private stuckNotified = false;
@@ -110,7 +117,7 @@ export class HarnessAutoApprover {
   constructor(private opts: {
     harnessName: string;
     approve: (keystroke: string) => void;
-    notify: (message: string, capture?: ScreenCapture) => void;
+    notify: (message: string, capture: ScreenCapture) => void;
   }) {
     this.keystroke = GATE_TABLE[opts.harnessName]?.keystroke ?? '\r';
   }
@@ -128,13 +135,13 @@ export class HarnessAutoApprover {
     if (capture.text === this.lastApprovedText) {
       if (!this.stuckNotified) {
         this.stuckNotified = true;
-        this.opts.notify('Auto-approve could not clear the permission prompt; standing down');
+        this.opts.notify(AUTO_APPROVE_STUCK_MESSAGE, capture);
       }
       return;
     }
     this.opts.approve(this.keystroke);
     this.lastApprovedText = capture.text;
     this.stuckNotified = false;
-    this.opts.notify('Auto-approved a permission prompt', capture);
+    this.opts.notify(AUTO_APPROVED_MESSAGE, capture);
   }
 }

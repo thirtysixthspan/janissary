@@ -146,7 +146,8 @@ These event types can produce a notification line:
   unchanged. A non-rate-limit ACP outcome produces no `rate-limited` notification.
 - **`manual`** — an explicit `notify <message>` (see below).
 - **`auto-approve`** — a harness launched with `-y` auto-approves one of its own
-  permission prompts (see `harness.md`).
+  permission prompts, or stands down on one it could not clear; either line links a capture of the
+  prompt's screen (see `harness.md`).
 - **`auto-approve-no-workspace`** — a harness tab launched with `-y` and no workspace: the warning
   reads `auto-approve is on without a workspace: prompts are approved unattended against your real
   files, with no sandbox confining the harness` (see `harness.md`). Attributed to the tab that just

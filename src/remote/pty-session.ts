@@ -3,6 +3,7 @@ import { notify } from '../notifications/index.js';
 import { writeCaptureFile } from '../harness/capture/file.js';
 import { applyBusyTransition } from '../harness/busy-status.js';
 import { reportAutoApproved } from '../harness/auto-approved.js';
+import { AUTO_APPROVED_MESSAGE } from '../harness/auto-approve.js';
 import { reportAutoResumeScheduled, reportAutoResumed } from '../harness/auto-resume-state.js';
 import { RESUME_ENTRY_ID, resumeEntry, resumeInstant } from '../harness/auto-resume.js';
 import { fmtNextRun } from '../schedule/display.js';
@@ -69,8 +70,9 @@ export function createRemotePtySession(
     // makes. A live report (`replayed` false) is stamped with no detection time so it toasts like a
     // local one would; a report replayed after a reattach is stamped with the original detection
     // time (not now) so it is dated in the feed and never toasted. The far-side approver attaches a
-    // capture to an approval and never to a stand-down, so a capture is what lights the tab's
-    // auto-approve flag.
+    // capture to an approval and to a stand-down alike, so only the approval's message lights the
+    // tab's auto-approve flag. A capture can still be absent, from a remote that predates stand-down
+    // captures.
     onGateEvent: (message, capturedAt, replayed, capture) => deliver(() => {
       const label = agentName ?? '';
       const openFile = capture === undefined ? undefined : writeCaptureFile(label, capturedAt, capture);
@@ -78,7 +80,7 @@ export function createRemotePtySession(
         openFile,
         detectedAt: replayed ? new Date(capturedAt) : undefined,
       });
-      if (capture !== undefined) reportAutoApproved(managers, label);
+      if (message === AUTO_APPROVED_MESSAGE) reportAutoApproved(managers, label);
     }),
     onBusyTransition: (busy, unread) => deliver(() => {
       applyBusyTransition(managers, agentName ?? '', { busy, unread });

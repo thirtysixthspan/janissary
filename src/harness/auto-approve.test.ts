@@ -397,7 +397,15 @@ describe('HarnessAutoApprover', () => {
     approver.onCapture(capture(BASH_IN_PROJECT));
     expect(approve).toHaveBeenCalledTimes(1);
     expect(notify).toHaveBeenCalledTimes(2);
-    expect(notify).toHaveBeenLastCalledWith('Auto-approve could not clear the permission prompt; standing down');
+    expect(notify).toHaveBeenLastCalledWith('Auto-approve could not clear the permission prompt; standing down', expect.anything());
+  });
+
+  it('passes the capture of the gate it could not clear to the stand-down notification', () => {
+    const { approver, notify } = make();
+    approver.onCapture({ text: BASH_IN_PROJECT, capturedAt: 1 });
+    const stuck = { text: BASH_IN_PROJECT, capturedAt: 2 };
+    approver.onCapture(stuck);
+    expect(notify).toHaveBeenLastCalledWith('Auto-approve could not clear the permission prompt; standing down', stuck);
   });
 
   it('approves again when the screen changes to a new gate', () => {

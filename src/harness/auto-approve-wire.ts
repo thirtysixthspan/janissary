@@ -5,8 +5,9 @@ import { notify } from '../notifications/index.js';
 import type { Managers } from '../managers.js';
 
 // Build a `-y`/`--yes` tab's auto-approver: it injects the approval keystroke back into the tab's
-// own PTY and reports each approval to the notifications feed (label-free — `notify` prefixes the
-// tab label), linking the screen capture that triggered it. The capture used to be written only for
+// own PTY and reports each approval, and each stand-down on a gate it could not clear, to the
+// notifications feed (label-free — `notify` prefixes the tab label), linking the screen capture that
+// triggered it. The capture used to be written only for
 // an already-open feed; a recorded notification now always has one, so that check would have skipped
 // the capture for the one approval that opens the feed and written it for every approval after.
 // Split out of `HarnessManager` so the manager holds the observer lifecycle and nothing else; the
@@ -19,7 +20,7 @@ export function buildAutoApprover(managers: Managers, name: string, label: strin
       reportAutoApproved(managers, label);
     },
     notify: (message, capture) => {
-      const openFile = capture ? writeCaptureFile(label, capture.capturedAt, capture.text) : undefined;
+      const openFile = writeCaptureFile(label, capture.capturedAt, capture.text);
       notify(managers, 'auto-approve', label, message, { openFile });
     },
   });
