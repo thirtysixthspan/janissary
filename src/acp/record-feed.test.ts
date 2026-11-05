@@ -44,7 +44,7 @@ function setup(remote = false) {
   } as unknown as RemoteChannel;
   managers.remote = { get: () => channel } as Managers['remote'];
   managers.database = { primer: '', isCommandLine: () => false } as unknown as Managers['database'];
-  managers.acp = new AcpManager(managers);
+  managers.acp = new AcpManager(managers, () => [{ harness: 'opencode', model: 'google/gemini-3.1-flash-lite' }]);
   if (remote) managers.tab.tabs[0].remote = { host: 'host', address: 'host' };
   const handshake = () => {
     if (remote) listener!.onReady(true);

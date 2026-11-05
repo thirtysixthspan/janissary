@@ -1,9 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AcpSession, AcpLoopDeps, AcpLoopHandlers } from './types.js';
 import type { Tab } from '../tab/types.js';
+import type { RoleEntry } from '../plugins/roles/shared.js';
 import { makeTab } from '../tab/index.js';
 
 const mocks = vi.hoisted(() => ({
@@ -31,11 +29,12 @@ vi.mock('../browser/command.js', () => ({
 }));
 
 import { AcpManager } from './manager.js';
-import { loadHarnessModels } from '../harness/models.js';
 
 const makeSession = (): AcpSession => ({ prompt: vi.fn(), kill: vi.fn(), cancel: vi.fn(async () => {}), shutdown: vi.fn(async () => {}) });
 
-const setup = () => {
+const GEMINI: RoleEntry = { harness: 'opencode', model: 'google/gemini-3.1-flash-lite' };
+
+const setup = (entries: RoleEntry[] = [GEMINI]) => {
   mocks.connectAcp.mockReturnValue(makeSession());
   const append = vi.fn();
   const addBusy = vi.fn();
@@ -64,8 +63,10 @@ const setup = () => {
     browser: { run: vi.fn() },
     questions: { register: registerQuestion },
   } as never;
-  const acp = new AcpManager(managers);
-  return { acp, append, addBusy, deleteBusy, managers, registerQuestion, updateRunning: (managers as { tab: { updateRunning: ReturnType<typeof vi.fn> } }).tab.updateRunning };
+  const askModels = vi.fn((_root: string) => entries);
+  const acp = new AcpManager(managers, askModels);
+  return {
+    askModels, acp, append, addBusy, deleteBusy, managers, registerQuestion, updateRunning: (managers as { tab: { updateRunning: ReturnType<typeof vi.fn> } }).tab.updateRunning };
 };
 
 // `promptResult` looks the tab up first, which `run` on its own does not, and the tool restriction is
@@ -565,7 +566,7 @@ describe('AcpManager — remote tabs', () => {
     const { acp, channel } = remoteSetup();
     acp.run('tab1', 'ask hello');
     const promptHandlers = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
-    acp.session('tab1', '/cwd', 'google/gemini-3.1-flash-lite', { onError: vi.fn(), onConnect: vi.fn() }).prompt('hi', promptHandlers);
+    acp.session('tab1', '/cwd', GEMINI, { onError: vi.fn(), onConnect: vi.fn() }).prompt('hi', promptHandlers);
 
     acpListener(channel).onError('rate limited', false);
 
@@ -577,7 +578,7 @@ describe('AcpManager — remote tabs', () => {
     const { acp, channel } = remoteSetup();
     acp.run('tab1', 'ask hello');
     const promptHandlers = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
-    acp.session('tab1', '/cwd', 'google/gemini-3.1-flash-lite', { onError: vi.fn(), onConnect: vi.fn() }).prompt('hi', promptHandlers);
+    acp.session('tab1', '/cwd', GEMINI, { onError: vi.fn(), onConnect: vi.fn() }).prompt('hi', promptHandlers);
 
     acpListener(channel).onChunk('partial ');
     acpListener(channel).onEnd('end_turn');
@@ -597,77 +598,5 @@ describe('AcpManager — remote tabs', () => {
     expect(channel.detachAcp).not.toHaveBeenCalled();
     acpListener(channel).onClosed(true);
     expect(channel.detachAcp).toHaveBeenCalledWith('racp1');
-  });
-});
-
-// The model is resolved against the same catalog the monitor and conversation entry points read, so
-// a project's `.janissary/harness-models.json` applies here too. These drive the real loader rather
-// than stubbing it, which is what makes the override path itself the thing under test.
-describe('AcpManager model resolution', () => {
-  let projectDir: string;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    projectDir = mkdtempSync(path.join(tmpdir(), 'janus-acp-models-'));
-    mkdirSync(path.join(projectDir, '.janissary'), { recursive: true });
-  });
-
-  afterEach(() => {
-    // The override file is gone before the loader runs again, so this restores the bundled catalog
-    // rather than leaving the last case's list in place for whatever runs next.
-    rmSync(path.join(projectDir, '.janissary', 'harness-models.json'), { force: true });
-    loadHarnessModels(projectDir);
-    rmSync(projectDir, { recursive: true, force: true });
-  });
-
-  function withOpencodeModels(models: string[]): void {
-    writeFileSync(
-      path.join(projectDir, '.janissary', 'harness-models.json'),
-      JSON.stringify({ opencode: models }),
-    );
-    loadHarnessModels(projectDir);
-  }
-
-  const launchedModel = () => {
-    const call = mocks.connectAcp.mock.calls[0][0] as { env: Record<string, string> };
-    return (JSON.parse(call.env.OPENCODE_CONFIG_CONTENT) as { model: string }).model;
-  };
-
-  it('uses the preferred model when the catalog still offers it', () => {
-    withOpencodeModels(['opencode/something-else', 'google/gemini-3.1-flash-lite']);
-    const { acp } = setup();
-
-    acp.run('tab1', 'ask hello');
-
-    expect(launchedModel()).toBe('google/gemini-3.1-flash-lite');
-  });
-
-  // The case the whole change is for: a project that overrides the catalog was still getting the
-  // built-in model on every prompt, and the connections panel reported that constant either way.
-  it('falls back to the first model an override offers, and the label follows it', () => {
-    withOpencodeModels(['opencode-go/glm-5.3', 'opencode-go/kimi-k3']);
-    const { acp } = setup();
-
-    acp.run('tab1', 'ask hello');
-    mocks.connectAcp.mock.calls[0][0].onConnect();
-
-    expect(launchedModel()).toBe('opencode-go/glm-5.3');
-    expect(acp.label('tab1')).toBe('opencode-go/glm-5.3');
-  });
-
-  it('refuses the prompt when the override leaves no opencode model', () => {
-    withOpencodeModels([]);
-    const { acp, append } = setup();
-    const onDone = vi.fn();
-
-    acp.run('tab1', 'ask hello', onDone);
-
-    expect(mocks.connectAcp).not.toHaveBeenCalled();
-    expect(mocks.runAcpToolLoop).not.toHaveBeenCalled();
-    expect(append).toHaveBeenCalledWith('tab1', {
-      input: 'ask hello',
-      output: 'ACP: no opencode model is available in the harness catalog.',
-    });
-    expect(onDone).toHaveBeenCalledWith({ answered: false, error: 'ACP: no opencode model is available in the harness catalog.' });
   });
 });

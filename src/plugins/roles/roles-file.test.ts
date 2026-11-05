@@ -65,6 +65,16 @@ describe('reading the roles in effect', () => {
     });
   });
 
+  it('answers the default roles without writing a file when asked not to create one', () => {
+    const { home, root } = directories();
+    const read = readRolesFile(home, root, { create: false });
+
+    expect(read.source).toBe('default');
+    expect(read.problem).toBeUndefined();
+    expect(read.roles).toEqual(DEFAULT_ROLES);
+    expect(existsSync(homeFile(home))).toBe(false);
+  });
+
   it('reads the home file when it is the only one', () => {
     const { home, root } = directories();
     writeJson(homeFile(home), { review: { description: 'Second pair of eyes.', entries: [] } });

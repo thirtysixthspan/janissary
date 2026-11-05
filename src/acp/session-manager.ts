@@ -1,7 +1,8 @@
 import type { AcpSession, AcpPromptResult } from './types.js';
 import { connectAcp } from './index.js';
 import { createRemoteAcpSession } from '../remote/acp-session.js';
-import { acpLaunchFor } from './launch.js';
+import { acpLaunchForEntry } from './launch.js';
+import type { RoleEntry } from '../plugins/roles/shared.js';
 import type { Managers } from '../managers.js';
 import { settleAcpPrompt } from './response.js';
 import { tabRuntime } from '../tab/runtime.js';
@@ -10,7 +11,7 @@ import { acpActivity, type AcpActivityKind } from './activity.js';
 import { beginCoreRecord, closeCoreRecord, coreActivity } from './record-feed.js';
 
 type ConnectHooks = { onError: (message: string) => void; onConnect: () => void };
-type CoreSession = { session?: AcpSession; runtime: TabRuntime; identity: string; model?: string };
+type CoreSession = { session?: AcpSession; runtime: TabRuntime; identity: string; entry: RoleEntry; model?: string };
 
 export class AcpSessionManager {
   private sessions = new Map<string, CoreSession>();
@@ -25,13 +26,16 @@ export class AcpSessionManager {
 
   sessionIdentity(label: string): string | undefined { return this.sessions.get(label)?.identity; }
 
-  session(label: string, cwd: string, model: string, hooks: ConnectHooks): AcpSession {
+  session(label: string, cwd: string, entry: RoleEntry, hooks: ConnectHooks): AcpSession {
     const tab = this.managers.tab.byLabel(label);
     if (!tab) throw new Error('Tab not found');
     const runtime = tabRuntime(tab);
     const existing = this.sessions.get(label);
     if (existing?.runtime === runtime && existing.session) return existing.session;
-    const holder: CoreSession = { runtime, identity: `acp-${++this.sessionCounter}` };
+    const launch = acpLaunchForEntry(entry);
+    if (!launch) throw new Error(`no ACP adapter for harness "${entry.harness}".`);
+    const { model } = entry;
+    const holder: CoreSession = { runtime, identity: `acp-${++this.sessionCounter}`, entry };
     this.sessions.set(label, holder);
     const source = {
       kind: 'acp' as const, model, ownerLabel: label, ownerName: tab.title ?? label,
@@ -60,7 +64,6 @@ export class AcpSessionManager {
     const activity = (kind: AcpActivityKind, text: string) => {
       if (current()) coreActivity(this.managers.acpRecords, runtime, kind, text);
     };
-    const launch = acpLaunchFor({ harness: 'opencode', model, variant: 'default' });
     const channel = tab.remote ? this.managers.remote.get(label) : undefined;
     try {
       holder.session = channel
@@ -110,6 +113,13 @@ export class AcpSessionManager {
   dispose(): void { this.closeAll(); }
 
   protected currentSession(label: string): AcpSession | undefined { return this.sessions.get(label)?.session; }
+
+  // The role entry the tab's open session was launched from, while that session is still the tab's.
+  protected entryOf(label: string): RoleEntry | undefined {
+    const holder = this.sessions.get(label);
+    const current = holder?.session !== undefined && holder.runtime === this.managers.tab.byLabel(label)?.runtime;
+    return current ? holder.entry : undefined;
+  }
 
   protected isCurrent(label: string, session: AcpSession): boolean {
     const holder = this.sessions.get(label);

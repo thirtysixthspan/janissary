@@ -144,8 +144,9 @@ function createDefaultFile(homePath: string): boolean {
 // its place editable. Only the file in effect sets `unusablePath`, on its own path, when it is the
 // damaged one. When neither file exists the home file is created with the default roles — the
 // feature's "created by the tab when it is not otherwise present" — and a failed creation falls back
-// to the defaults in memory with the problem named.
-export function readRolesFile(home: string, root: string): RolesRead {
+// to the defaults in memory with the problem named. A reader that is not the tab passes
+// `create: false`: with neither file present it gets the defaults in memory and nothing is written.
+export function readRolesFile(home: string, root: string, options: { create?: boolean } = {}): RolesRead {
   const homePath = path.join(home, '.janissary', FILE_NAME);
   const projectPath = path.join(root, '.janissary', FILE_NAME);
   const candidates: Array<{ path: string; source: 'home' | 'project' }> = [];
@@ -164,6 +165,9 @@ export function readRolesFile(home: string, root: string): RolesRead {
       return { ...attempt.read, problem: `${broken} — showing the ${candidate.source} roles file.` };
     }
     return attempt.read;
+  }
+  if (candidates.length === 0 && options.create === false) {
+    return { roles: [...DEFAULT_ROLES], source: 'default', path: homePath };
   }
   if (candidates.length === 0 && createDefaultFile(homePath)) {
     return { roles: [...DEFAULT_ROLES], source: 'home', path: homePath };
