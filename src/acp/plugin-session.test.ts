@@ -43,7 +43,7 @@ function setup() {
     browser: { run: vi.fn() },
     shell: { run: vi.fn((_label: string, _text: string, options: { onComplete(text: string): void }) => options.onComplete('ran')) },
   });
-  managers.acp = new AcpManager(managers);
+  managers.acp = new AcpManager(managers, () => [{ harness: 'opencode', model: 'google/gemini-3.1-flash-lite' }]);
   managers.command = new CommandManager(managers);
   return { managers, session, handlers: () => handlers! };
 }

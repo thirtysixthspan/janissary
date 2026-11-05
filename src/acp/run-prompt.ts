@@ -59,7 +59,7 @@ export function runCorePrompt(
       appendAcp(managers, label, { input: isFirst ? request.prompt : '', output: '', running: true, markdown: true });
     },
     chunk: (buffer) => updateRunning(buffer, true),
-    endTurn: (final) => { updateRunning(final, false); lastAnswer = final; },
+    endTurn: (final) => { updateRunning(final, false); lastAnswer = final; request.replied = true; },
     ranCommand: (command, result) => appendAcp(managers, label, { input: command, output: result, acp: true }),
     finished: (reason, maxSteps) => {
       notify(managers, 'state-change', label);
@@ -75,6 +75,7 @@ export function runCorePrompt(
       updateRunning(error, false);
       notify(managers, 'state-change', label);
       if (isRateLimitError(message)) notify(managers, 'rate-limited', label);
+      request.modelFailed = true;
       settleAcpPrompt(managers, label, { answered: false, error });
     },
   }, active));

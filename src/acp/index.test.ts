@@ -262,7 +262,7 @@ describe('connectAcp', () => {
     const holder = new RemoteAcp((frame) => channel.receive(`${encodeFrame(frame)}\n`), root);
     channel.receive(`${encodeHandshake()}\n`);
     managers.remote = { get: () => channel } as Managers['remote'];
-    managers.acp = new AcpManager(managers);
+    managers.acp = new AcpManager(managers, () => [{ harness: 'opencode', model: 'google/gemini-3.1-flash-lite' }]);
     try {
       managers.acp.start('owner', { withoutTools: true });
       const pending = managers.acp.prompt('owner', 'hold');

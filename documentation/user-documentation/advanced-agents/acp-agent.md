@@ -1,9 +1,9 @@
 # Query ACP from a shell
 
-Use `ask <prompt>` in a shell tab's command bar to query OpenCode:
+Use `ask <prompt>` in a shell tab's command bar to query the models in your `ask` role:
 
 ```
-acp summarize the open TODO comments in this project
+ask summarize the open TODO comments in this project
 ```
 
 The command returns to the bar immediately. The shell stays usable while the prompt runs, so ordinary non-ACP commands keep working; a second `ask` prompt is refused with exactly `ACP: a prompt is already running.`, and nothing is queued. The shell prints the exact line you typed as soon as you send it. When the answer is ready, it appears once as rendered Markdown, right beneath that line if nothing else was printed in the meantime. If other output arrived first, the shell prints your line again at the current bottom with the answer under it, and the intervening output stays above. There is no ACP response panel, no responding status, and no Reset ACP button. The agent uses the Agent Client Protocol (ACP), and the app manages its connection for you.
@@ -14,13 +14,17 @@ For an autonomous task that runs until completion and may use skill-granted Jani
 
 ## Before the first prompt
 
-OpenCode must be installed, authenticated, and on your `PATH`. The `PATH` your shell's rc file sets up counts too, so an `opencode` installed through a version manager such as nvm is found even when the app was started without that setup. Run `opencode auth login` in a terminal if you have not signed in. There is no setting to choose a different provider for this connection.
+Each harness your `ask` role lists must be installed, signed in, and on your `PATH`. With the default role that's `opencode`, then `claude`, then `codex`. A `claude` or `codex` entry runs its ACP adapter through `npx`. The `PATH` your shell's rc file sets up counts too, so an `opencode` installed through a version manager such as nvm is found even when the app was started without that setup. Run `opencode auth login` in a terminal if you have not signed in. You don't need all three. A model that can't run is skipped.
 
 Use the explicit `ask` prefix for a model reply; unclaimed text in a shell bar goes to zsh.
 
 ## Which model it runs
 
-The model comes from the OpenCode list in the harness catalog, including a project's `.janissary/harness-models.json` override. The app prefers `google/gemini-3.1-flash-lite` while that model is listed; otherwise it uses the first listed model. An empty list produces `ACP: no opencode model is available in the harness catalog.`.
+The models come from the `ask` role in your roles file, in the order the role lists them. That's your project's `.janissary/roles.json` when it has one, otherwise `~/.janissary/roles.json`. Edit the role in the [roles tab](/user-documentation/tab-types/roles) to change which models answer and in what order. If the file has no `ask` role, or the role lists no models, the app uses the default one: `opencode-go/deepseek-v4.1-flash` on `opencode` at `medium`, then `claude-haiku-4-5` on `claude` at `high`, then `gpt-6-luna` on `codex` at `high`. Asking never creates a roles file.
+
+The first prompt tries the first model. If that model fails before it replies, say it isn't signed in or it's out of credits, the shell shows its error and then a line like `ACP: opencode opencode-go/deepseek-v4.1-flash failed — trying claude claude-haiku-4-5.`, and the same prompt runs on the next model. Your prompt fails only when every model has failed. Then the reply reads `ACP: every model in the ask role failed.` with one line per model and its error. An entry naming a harness with no ACP adapter fails straight away with `ACP error: no ACP adapter for harness "<name>".`.
+
+Once a model has replied, the session sticks with it. Later prompts in the tab go to that model first and fall back the same way if it fails before replying. Falling back always starts a fresh conversation on the next model. An error that arrives after the model has replied is reported as usual and isn't retried elsewhere, so a tool the agent already ran never runs twice.
 
 The connections window shows the model the session started with. That choice is separate from the models used by monitors, conversations, and editor queries.
 
@@ -68,7 +72,7 @@ A link in a shell answer acts for the shell that owns the answer, not for the ta
 
 <img class="agent-float" src="/agents/hamza-south-east.png" alt="" />
 
-A sandboxed shell's ACP process uses the same workspace confinement and offline setting. A remote shell starts its ACP process on that host in the remote workspace. Model selection still comes from your local catalog.
+A sandboxed shell's ACP process uses the same workspace confinement and offline setting. A remote shell starts its ACP process on that host in the remote workspace. Model selection still comes from your local `ask` role.
 
 The database, browser, and question tools continue to act on the machine running Janissary. A remote ACP query therefore uses your local database and browser for those tools.
 
@@ -80,6 +84,8 @@ Bare `ask` prints `Usage: ask <prompt>.`. Two kinds of failure look alike but be
 
 A connection failure starts with `ACP:`, for example `ACP: ACP agent exited.` or `ACP: failed to start ACP agent: <reason>`. The connection is forgotten, so the next prompt starts a new one. When the agent printed anything to its error output, the message ends with that text, limited to its last ten lines and 2000 characters.
 
-A prompt failure, such as a rate limit, starts with `ACP error:` and appears in the reply. The connection stays, and so does the conversation, so you can send the prompt again.
+A prompt failure, such as a rate limit, starts with `ACP error:`. The connection stays, and so does the conversation, so you can send the prompt again.
+
+Either kind of failure that happens before the model has replied moves the prompt on to the next model in your `ask` role, as [Which model it runs](#which-model-it-runs) describes. You only see the failure as your reply once every model has failed, or when it arrives after the model already replied.
 
 The connection is listed as `acp:<provider/model>`. Use its close control, its connection tab's **Close session**, or `connections close` to end it. A closed session stays listed as a read-only record until you delete it after confirmation or it expires.

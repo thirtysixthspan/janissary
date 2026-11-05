@@ -1,6 +1,6 @@
 ### ask
 
-Send a prompt to the core OpenCode ACP session. The shell prints the exact `ask <prompt>` line and returns to the bar immediately, and the settled answer appears once in its output as rendered Markdown under that line. Live activity appears in the session's connection tab, not a response panel.
+Send a prompt to the tab's core ACP session, which runs the models of the `ask` role in order of preference. The shell prints the exact `ask <prompt>` line and returns to the bar immediately, and the settled answer appears once in its output as rendered Markdown under that line. Live activity appears in the session's connection tab, not a response panel.
 
 **Usage**
 
@@ -21,6 +21,7 @@ Send a prompt to the core OpenCode ACP session. The shell prints the exact `ask 
 
 **Notes**
 
+- The models come from the `ask` role in `roles.json` (the project's `.janissary/roles.json`, else `~/.janissary/roles.json`), or the default `ask` role when the file has none. When a model fails before it replies, for example because it can't start, isn't signed in, or is out of credits, the shell shows `ACP: <harness> <model> failed — trying <harness> <model>.` and the prompt runs on the next one. The prompt fails only after every model has failed, with `ACP: every model in the ask role failed.` and one line per model.
 - A second prompt while one is running is refused with `ACP: a prompt is already running.`. The running prompt is unaffected and nothing is queued.
 - The answer arrives once the prompt settles. Other commands can run in the shell in the meantime. If nothing else was printed since your line, the answer appears right beneath it. Otherwise the shell prints your line again at the bottom with the answer under it.
 - **Cancel** in the connection tab stops the running prompt but keeps the session, so the next prompt reuses it. The status stays `Running` until the provider drain finishes, then reads `Idle`.

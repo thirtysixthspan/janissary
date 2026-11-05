@@ -3,7 +3,7 @@
 | Command | Description |
 | ------- | ----------- |
 | `agent` | Run task: [on <host>] [in a tab] [in group <name|id>] [in workspace <label>] [with skill <name>] [using model <id>] [with effort <level>] execute <task> [parameters...] (effort: medium) |
-| `ask` | Query a core OpenCode ACP connection from a shell or another supported plugin tab; the settled Markdown answer appears in shell output and activity in its connection tab (`ask reset` starts fresh) |
+| `ask` | Query a core ACP connection using the `ask` role's models in order; the settled Markdown answer appears in shell output and activity in its connection tab (`ask reset` starts fresh) |
 | `audio` | `audio <path>` queues audio into the single audio tab through the bundled audio plugin; accepts the same paths and wildcards as `open` |
 | `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |
 | `clear` | Clear the tab's output log; in a shell tab, bare `clear` is sent to zsh so it clears the terminal instead (use `/clear` to clear the output log) |

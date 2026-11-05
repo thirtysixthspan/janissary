@@ -86,7 +86,7 @@ describe('ask command', () => {
   it.each([
     ['usage', { answered: false, error: 'Usage: ask <prompt>.' }],
     ['already running', { answered: false, error: 'ACP: a prompt is already running.' }],
-    ['no model', { answered: false, error: 'ACP: no opencode model is available in the harness catalog.' }],
+    ['no model', { answered: false, error: 'ACP: the ask role lists no models.' }],
     ['still connecting', { answered: false, error: 'ACP: the remote session is still connecting.' }],
     ['start failure', { answered: false, error: 'ACP error: spawn failed' }],
     ['prompt failure', { answered: false, error: 'ACP error: rate limited' }],

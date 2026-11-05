@@ -1,40 +1,56 @@
 import { AcpSessionManager } from './session-manager.js';
 import { appendAcp, settleAcpPrompt } from './response.js';
 import { messageBus } from '../bus.js';
-import { modelsFor } from '../harness/models.js';
 import { errorText } from '../error-text.js';
 import { tabRuntime } from '../tab/runtime.js';
 import type { AcpPromptResult } from './types.js';
 import type { AcpPendingPrompt } from './prompt-state.js';
 import { promptCoreRecord } from './record-feed.js';
 import { runCorePrompt } from './run-prompt.js';
+import type { Managers } from '../managers.js';
+import type { RoleEntry } from '../plugins/roles/shared.js';
+import {
+  askRoleEntries, attemptOrder, exhaustedError, fallbackNotice, NO_ASK_MODEL,
+  type AskModels, type AttemptFailure,
+} from './ask-role.js';
 
-const PREFERRED_ACP_MODEL = 'google/gemini-3.1-flash-lite';
 const STILL_CONNECTING = 'ACP: the remote session is still connecting.';
-const NO_ACP_MODEL = 'ACP: no opencode model is available in the harness catalog.';
 
-function resolveAcpModel(): string | undefined {
-  const available = modelsFor('opencode');
-  return available.includes(PREFERRED_ACP_MODEL) ? PREFERRED_ACP_MODEL : available[0];
-}
+type Attempt = {
+  command: string;
+  prompt: string;
+  queue: RoleEntry[];
+  failures: AttemptFailure[];
+  onDone: (result: AcpPromptResult) => void;
+};
 
 export class AcpManager extends AcpSessionManager {
+  // `askModels` is a test seam: production reads the `ask` role from the roles file in effect.
+  constructor(managers: Managers, private readonly askModels: AskModels = askRoleEntries) {
+    super(managers);
+  }
+
   start(label: string, request?: { withoutTools?: true }): { model?: string; error?: string; session?: string } {
     const tab = this.managers.tab.byLabel(label);
     if (!tab) return { error: 'Tab not found' };
     if (this.stillConnecting(label)) return { error: STILL_CONNECTING };
-    const model = resolveAcpModel();
-    if (!model) return { error: NO_ACP_MODEL };
+    const entries = this.queueFor(label);
+    if (entries.length === 0) return { error: NO_ASK_MODEL };
     if (request?.withoutTools === true) tabRuntime(tab).acpWithoutTools = true;
-    try {
-      this.acquire(label, model);
-      return { model, session: this.sessionIdentity(label) };
-    } catch (error) {
-      const output = `ACP error: ${errorText(error)}`;
-      appendAcp(this.managers, label, { input: '', output });
-      this.close(label, output);
-      return { error: output };
+    const failures: AttemptFailure[] = [];
+    for (const entry of entries) {
+      try {
+        const session = this.acquire(label, entry);
+        if (this.isCurrent(label, session)) return { model: entry.model, session: this.sessionIdentity(label) };
+        failures.push({ entry, error: 'ACP: the session closed while starting.' });
+      } catch (error) {
+        const output = `ACP error: ${errorText(error)}`;
+        appendAcp(this.managers, label, { input: '', output });
+        this.close(label, output);
+        failures.push({ entry, error: output });
+      }
     }
+    return { error: failures.length > 1 ? exhaustedError(failures) : failures[0].error };
   }
 
   async prompt(label: string, command: string): Promise<string> {
@@ -54,27 +70,61 @@ export class AcpManager extends AcpSessionManager {
     const refusal = runtime.acpPrompt ? 'ACP: a prompt is already running.'
       : prompt ? this.stillConnecting(label) ? STILL_CONNECTING : undefined
         : 'Usage: ask <prompt>.';
-    const model = refusal ? undefined : resolveAcpModel();
-    if (refusal || !model) {
-      const error = refusal ?? NO_ACP_MODEL;
+    const queue = refusal ? [] : this.queueFor(label);
+    if (refusal || queue.length === 0) {
+      const error = refusal ?? NO_ASK_MODEL;
       appendAcp(this.managers, label, { input: command, output: error });
       onDone({ answered: false, error });
       return;
     }
-    const request: AcpPendingPrompt = { finish: onDone, abort: new AbortController(), prompt };
+    this.attempt(label, { command, prompt, queue, failures: [], onDone });
+  }
+
+  // One model's try at the request. A request that settles because this model failed before it
+  // replied closes the failed session and moves on to the next entry; anything else — an answer, a
+  // refusal, a cancellation, a reset, or the last entry failing — settles the caller.
+  private attempt(label: string, attempt: Attempt): void {
+    const tab = this.managers.tab.byLabel(label);
+    const [entry] = attempt.queue;
+    if (!tab) { attempt.onDone({ answered: false, error: 'Tab not found' }); return; }
+    if (!entry) { attempt.onDone({ answered: false, error: NO_ASK_MODEL }); return; }
+    const runtime = tabRuntime(tab);
+    const request: AcpPendingPrompt = {
+      finish: (result) => { this.settleAttempt(label, attempt, request, result); },
+      abort: new AbortController(),
+      prompt: attempt.prompt,
+    };
     runtime.acpPrompt = request;
     try {
       promptCoreRecord(this.managers.acpRecords, runtime, request);
       if (runtime.acpPrompt !== request) return;
-      const session = this.acquire(label, model);
+      const session = this.acquire(label, entry);
       if (runtime.acpPrompt !== request || !this.isCurrent(label, session)) return;
       runCorePrompt(this.managers, label, runtime, request, session, this.sessionIdentity(label) ?? '',
         () => this.isCurrent(label, session));
     } catch (error) {
       const output = `ACP error: ${errorText(error)}`;
-      appendAcp(this.managers, label, { input: command, output });
+      appendAcp(this.managers, label, { input: attempt.command, output });
+      request.modelFailed = true;
       this.close(label, output);
     }
+  }
+
+  private settleAttempt(label: string, attempt: Attempt, request: AcpPendingPrompt, result: AcpPromptResult): void {
+    const [entry, ...rest] = attempt.queue;
+    const failed = !result.answered && request.modelFailed === true && request.replied !== true;
+    const failures = failed && entry ? [...attempt.failures, { entry, error: result.error }] : attempt.failures;
+    if (failed && entry && rest[0] && this.managers.tab.byLabel(label)) {
+      this.close(label);
+      appendAcp(this.managers, label, { input: '', output: fallbackNotice(entry, rest[0]) });
+      this.attempt(label, { ...attempt, queue: rest, failures });
+      return;
+    }
+    attempt.onDone(failed && failures.length > 1 ? { answered: false, error: exhaustedError(failures) } : result);
+  }
+
+  private queueFor(label: string): RoleEntry[] {
+    return attemptOrder(this.askModels(this.managers.tab.launchDir), this.entryOf(label));
   }
 
   cancel(label: string): Promise<boolean> {
@@ -102,11 +152,13 @@ export class AcpManager extends AcpSessionManager {
     return settled;
   }
 
-  private acquire(label: string, model: string) {
-    return this.session(label, this.managers.tab.cwdOf(label) ?? process.cwd(), model, {
+  private acquire(label: string, entry: RoleEntry) {
+    return this.session(label, this.managers.tab.cwdOf(label) ?? process.cwd(), entry, {
       onError: (message) => {
         const output = message.startsWith('ACP:') ? message : `ACP: ${message}`;
         appendAcp(this.managers, label, { input: '', output });
+        const pending = this.managers.tab.byLabel(label)?.runtime?.acpPrompt;
+        if (pending) pending.modelFailed = true;
         this.close(label, output);
       },
       onConnect: () => messageBus.emit('state', { type: 'dirty' }),

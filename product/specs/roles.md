@@ -160,7 +160,10 @@ a key whose name another key already trims to. An empty object is a valid file h
 
 ## Not in this version
 
-Nothing reads the roles file: no launch dialog, no command flag, and no agent consults a role
-description. Consumers read `roles.json` itself. Entries carry harness, model, and effort only.
+The only reader besides the tab is the core ACP session behind `ask`, which launches the `ask`
+role's entries in order and falls back to the default `ask` entries when the file in effect has no
+`ask` role or that role lists none; it never creates the file (see [[acp]]). No launch dialog, no
+command flag, and no agent consults a role description. Other consumers read `roles.json` itself.
+Entries carry harness, model, and effort only.
 Keyboard reordering is not provided — adding and removing entries and roles are pointer-free, but
 order rides the drag.
