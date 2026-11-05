@@ -53,6 +53,15 @@ export const DEFAULT_ROLES: readonly Role[] = [
     description: 'Writing and updating specs, plans, and user or developer documentation.',
     entries: [],
   },
+  {
+    name: 'ask',
+    description: 'When you ask a question via ACP.',
+    entries: [
+      { harness: 'opencode', model: 'opencode-go/deepseek-v4.1-flash', effort: 'medium' },
+      { harness: 'claude', model: 'claude-haiku-4-5', effort: 'high' },
+      { harness: 'codex', model: 'gpt-6-luna', effort: 'high' },
+    ],
+  },
 ];
 
 type ReadAttempt = { ok: true; read: RolesRead } | { ok: false; problem: string };

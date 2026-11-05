@@ -42,11 +42,14 @@ A project's `.janissary/roles.json`, when it exists, **replaces** the home file 
 merging of roles between the two — including when it holds an empty object, which is an explicit
 choice of zero roles rather than a request for the defaults.
 
-When neither file exists, the tab creates `~/.janissary/roles.json` holding five default roles:
+When neither file exists, the tab creates `~/.janissary/roles.json` holding six default roles:
 `planning` (with the two entries above), `research` (`Research, comparison, and information
 gathering for a task or question.`), `code review` (`Review of code changes for correctness, style,
-and risk.`), `implementation` (`Implementation of an approved plan or a described change.`), and
-`documentation` (`Writing and updating specs, plans, and user or developer documentation.`).
+and risk.`), `implementation` (`Implementation of an approved plan or a described change.`),
+`documentation` (`Writing and updating specs, plans, and user or developer documentation.`), and
+`ask` (`When you ask a question via ACP.`) with three entries in order: `opencode`
+`opencode-go/deepseek-v4.1-flash` at `medium`, `claude` `claude-haiku-4-5` at `high`, and `codex`
+`gpt-6-luna` at `high`. Only `planning` and `ask` start with entries.
 
 ### What the tab shows
 

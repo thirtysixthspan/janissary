@@ -14,7 +14,7 @@ The tab opens in the center strip with two columns. **Models** on the left lists
 
 A role has a name, a description, and an ordered list of choices. The description is plain text: write what the role is for, so you or an agent can tell `planning` from `research` at a glance. The tab is an editor for that list. It doesn't launch anything; see [what roles don't do yet](#what-roles-dont-do-yet).
 
-If neither your project nor your home folder has a `roles.json` file, opening the tab creates five roles for you: **planning**, **research**, **code review**, **implementation**, and **documentation**. Each one starts with a description and no model choices, except **planning**, which comes with two. If either file already exists, the tab uses it instead and does not add the defaults. A file holding just `{}` counts as a file: it means you chose zero roles, so the tab shows none.
+If neither your project nor your home folder has a `roles.json` file, opening the tab creates six roles for you: **planning**, **research**, **code review**, **implementation**, **documentation**, and **ask**. Each one starts with a description and no model choices, except **planning**, which comes with two, and **ask**, which comes with three. If either file already exists, the tab uses it instead and does not add the defaults. A file holding just `{}` counts as a file: it means you chose zero roles, so the tab shows none.
 
 ## Add a model to a role
 

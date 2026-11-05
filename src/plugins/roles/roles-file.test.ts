@@ -49,6 +49,22 @@ describe('reading the roles in effect', () => {
     expect(Object.keys(readJson(homeFile(home)))).toEqual(DEFAULT_ROLES.map((role) => role.name));
   });
 
+  it('creates the default ask role last, with its description and ordered entries', () => {
+    const { home, root } = directories();
+    readRolesFile(home, root);
+
+    const file = readJson(homeFile(home));
+    expect(Object.keys(file).at(-1)).toBe('ask');
+    expect(file['ask']).toEqual({
+      description: 'When you ask a question via ACP.',
+      entries: [
+        { harness: 'opencode', model: 'opencode-go/deepseek-v4.1-flash', effort: 'medium' },
+        { harness: 'claude', model: 'claude-haiku-4-5', effort: 'high' },
+        { harness: 'codex', model: 'gpt-6-luna', effort: 'high' },
+      ],
+    });
+  });
+
   it('reads the home file when it is the only one', () => {
     const { home, root } = directories();
     writeJson(homeFile(home), { review: { description: 'Second pair of eyes.', entries: [] } });

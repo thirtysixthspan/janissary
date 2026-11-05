@@ -491,9 +491,7 @@ it('adds an entry, sets and clears its effort, then moves and removes it', async
       send(activation, 'add-role', { name: 'docs' }, capabilities, tab),
     ]);
 
-    expect(roleNames(home)).toEqual([
-      'planning', 'research', 'code review', 'implementation', 'documentation', 'review', 'docs',
-    ]);
+    expect(roleNames(home)).toEqual([...DEFAULT_ROLES.map(({ name }) => name), 'review', 'docs']);
   });
 
   it('republishes a payload the tab can use after every successful edit', async () => {
