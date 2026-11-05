@@ -467,3 +467,95 @@ describe('ConnectionList metadata row', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('refresh applies only to the connections list');
   });
 });
+
+describe('ConnectionList rows', () => {
+  function docked(side: 'left' | 'right' | null) {
+    const fixture = capabilities();
+    fixture.value.dock = side;
+    return fixture;
+  }
+
+  function classes(node: Element): string[] {
+    return [...node.children].map((child) => child.className);
+  }
+
+  const WIDE_CELLS = [
+    'connections-row-host', 'connections-row-owner', 'connections-row-title',
+    'connections-row-status', 'connections-row-activity', 'connections-row-actions',
+  ];
+
+  it('marks each row with its status for the state styling', () => {
+    const rows = [live('db', 'sqlite', 'Database'), record('idle', 'acp', 'Idle'), record('run', 'agent', 'Failed')];
+    const { container } = render(<ConnectionList rows={rows} capabilities={capabilities().value} />);
+    expect([...container.querySelectorAll('.connections-row')].map((row) => (row as HTMLElement).dataset.status))
+      .toEqual(['Open', 'Idle', 'Failed']);
+  });
+
+  it('keeps the table and its heading row in the centre', () => {
+    const { container } = render(<ConnectionList rows={[live('db', 'sqlite', 'Database')]} capabilities={docked(null).value} />);
+    expect(container.querySelector('.connections-list')).not.toHaveClass('connections-list-narrow');
+    expect(container.querySelector('.connections-columns')).not.toBeNull();
+    expect(classes(container.querySelector('.connections-row')!)).toEqual(WIDE_CELLS);
+  });
+
+  it.each(['left', 'right'] as const)('stacks each row onto two lines with no heading row when docked %s', (side) => {
+    const now = Date.now();
+    const row = { ...live('db', 'sqlite', 'Database', 'Owner tab'), host: 'devbox', orderingTimestamp: now - 3 * 60_000 };
+    const { container } = render(<ConnectionList rows={[row]} capabilities={docked(side).value} />);
+    expect(container.querySelector('.connections-list')).toHaveClass('connections-list-narrow');
+    expect(container.querySelector('.connections-columns')).toBeNull();
+
+    const node = container.querySelector('.connections-row')!;
+    expect(classes(node)).toEqual(['connections-row-primary', 'connections-row-secondary']);
+    const [primary, secondary] = [...node.children];
+    expect(classes(primary)).toEqual(['connections-row-title', 'connections-row-actions']);
+    expect(primary.firstElementChild?.textContent).toBe('Database');
+    expect(primary).toContainElement(screen.getByRole('button', { name: 'Close Database' }));
+    expect(classes(secondary)).toEqual([
+      'connections-row-status', 'connections-row-host', 'connections-row-owner', 'connections-row-activity',
+    ]);
+    expect([...secondary.children].map((child) => child.textContent)).toEqual(['Open', 'devbox', 'Owner tab', '3m ago']);
+    expect(node).toHaveAttribute('title', 'Database\nsqlite');
+  });
+
+  it('returns to the table when the list comes back to the centre', () => {
+    const rows = [live('db', 'sqlite', 'Database')];
+    const { container, rerender } = render(<ConnectionList rows={rows} capabilities={docked('left').value} />);
+    rerender(<ConnectionList rows={rows} capabilities={docked(null).value} />);
+    expect(container.querySelector('.connections-list')).not.toHaveClass('connections-list-narrow');
+    expect(container.querySelector('.connections-columns')).not.toBeNull();
+    expect(classes(container.querySelector('.connections-row')!)).toEqual(WIDE_CELLS);
+  });
+
+  it('keeps the keyboard and click gestures when docked', () => {
+    const { intent, value } = docked('right');
+    const rows = [live('db', 'sqlite', 'Database'), record('run', 'acp', 'Idle'), record('agent', 'agent', 'Completed')];
+    const { container } = render(<ConnectionList rows={rows} capabilities={value} />);
+    const list = container.querySelector('.connections-list') as HTMLElement;
+    const nodes = container.querySelectorAll('.connections-row');
+    expect(list).toHaveFocus();
+    fireEvent.keyDown(list, { key: 'ArrowDown' });
+    expect(nodes[1]).toHaveClass('selected');
+    fireEvent.keyDown(list, { key: 'End' });
+    fireEvent.keyDown(list, { key: 'ArrowDown' });
+    expect(nodes[2]).toHaveClass('selected');
+    fireEvent.keyDown(list, { key: 'Home' });
+    fireEvent.keyDown(list, { key: 'ArrowUp' });
+    expect(nodes[0]).toHaveClass('selected');
+    fireEvent.keyDown(list, { key: 'Enter' });
+    expect(intent).toHaveBeenLastCalledWith('open', { kind: 'sqlite', id: 'db', ownerLabel: 'owner' });
+
+    fireEvent.click(nodes[2]);
+    expect(intent).toHaveBeenCalledTimes(1);
+    fireEvent.click(nodes[2]);
+    expect(intent).toHaveBeenLastCalledWith('open-record', { id: 'agent' });
+
+    const close = screen.getByRole('button', { name: 'Close run' });
+    close.focus();
+    fireEvent.keyDown(close, { key: 'Enter' });
+    expect(intent).toHaveBeenCalledTimes(2);
+    fireEvent.click(close);
+    expect(intent).toHaveBeenLastCalledWith('close', { kind: 'acp', id: 'run', ownerLabel: 'owner' });
+    expect(nodes[2]).toHaveClass('selected');
+  });
+});

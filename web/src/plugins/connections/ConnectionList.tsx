@@ -8,7 +8,7 @@ import {
   useListSelection,
   type TabPluginClientCapabilities,
 } from '../api';
-import { ConnectionRowActions } from './ConnectionRowActions';
+import { NarrowConnectionRow, WideConnectionRow } from './ConnectionRowBody';
 import {
   connectionActivity,
   connectionClickSelection,
@@ -74,8 +74,15 @@ export function ConnectionList({
 
   const title = pendingDelete === null ? '' : rowTitle(pendingDelete);
   const now = Date.now();
+  const narrow = capabilities.dock !== null;
+  const RowBody = narrow ? NarrowConnectionRow : WideConnectionRow;
   return (
-    <div className="connections-list plugin-tab" ref={selection.listRef} tabIndex={0} onKeyDown={onKeyDown}>
+    <div
+      className={`connections-list plugin-tab${narrow ? ' connections-list-narrow' : ''}`}
+      ref={selection.listRef}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
+    >
       <PluginActionsHeader className="plugin-meta connections-list-header">
         <span className="plugin-actions">
           <button type="button" title="Refresh" aria-label="Refresh" onClick={controller.refresh}>
@@ -86,7 +93,7 @@ export function ConnectionList({
       </PluginActionsHeader>
       {rows.length === 0 && <div className="connections-empty">No connections yet</div>}
       {controller.error && <div className="connections-list-error" role="alert">{controller.error}</div>}
-      {rows.length > 0 && (
+      {rows.length > 0 && !narrow && (
         <div className="connections-columns" aria-hidden="true">
           <span className="connections-columns-host">Host</span>
           <span className="connections-columns-owner">Tab</span>
@@ -105,19 +112,16 @@ export function ConnectionList({
               key={connectionRowIdentity(row)}
               className={`connections-row${selection.selected === index ? ' selected' : ''}`}
               data-index={index}
+              data-status={row.status}
               role="button"
               tabIndex={-1}
               title={`${label}\n${row.kind}`}
               onClick={() => { clickRow(index); }}
             >
-              <span className="connections-row-host">{row.host}</span>
-              <span className="connections-row-owner">{row.ownerName}</span>
-              <span className="connections-row-title">{label}</span>
-              <span className="connections-row-status">{row.status}</span>
-              <time className="connections-row-activity" dateTime={activity.dateTime}>{activity.text}</time>
-              <ConnectionRowActions
+              <RowBody
                 row={row}
                 label={label}
+                activity={activity}
                 onClose={controller.close}
                 onDelete={setPendingDelete}
               />

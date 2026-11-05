@@ -57,7 +57,9 @@ The [connections window](#the-connections-window) and the connections tab open r
 
 ## The connections tab
 
-The connections tab is titled **connections**. It is a table ordered by most recent activity, laid out like the sessions tab. A heading row names the columns: **Host**, **Tab**, **Connection Name**, **Connection State**, and **Last activity**, followed by an actions column. **Host** reads the remote host for a connection on a remote or ssh tab, and `Local` for everything else, including every SQLite database. **Tab** is the tab that owns the connection. **Last activity** reads like `3m ago`, and stays empty when no activity is known. Hover a row to see its connection kind. Use Up, Down, Home, End, and Enter to move and open rows. A row also opens on a second click on the same row.
+The connections tab is titled **connections**. It is a table ordered by most recent activity, laid out like the sessions tab. A heading row names the columns: **Host**, **Tab**, **Connection Name**, **Connection State**, and **Last activity**, followed by an actions column. **Host** reads the remote host for a connection on a remote or ssh tab, and `Local` for everything else, including every SQLite database. **Tab** is the tab that owns the connection. **Last activity** reads like `3m ago`, and stays empty when no activity is known. Hover a row to see its connection kind. An idle ACP session's state is highlighted, and a row that has closed, completed, failed, or been terminated is dimmed. Use Up, Down, Home, End, and Enter to move and open rows. A row also opens on a second click on the same row.
+
+A docked list stacks each row onto two lines so it reads in a narrow sidebar, the way a docked sessions list does. The first line holds the connection's name and its actions. The second holds its state, host, tab, and last activity. The columns come back when the list returns to the center.
 
 Opening a non-ACP row focuses the tab that owns the connection. A SQLite row focuses the first tab in strip order that has the database attributed, or does nothing when no tab has it. An ACP or agent record row opens its connection tab.
 
