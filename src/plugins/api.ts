@@ -1,6 +1,7 @@
 import type {
-  TabPluginNotification, TabPluginNotificationTopic, TabPluginTopicAction,
+  TabPluginNotification, TabPluginNotificationTopic,
 } from './api-topics.js';
+import type { TabPluginTopicActionCapability } from './api-topic-action-capability.js';
 import type { TabPluginCapabilityName } from './api-capabilities.js';
 import type { TabActivityEntry } from './activity.js';
 import type {
@@ -37,6 +38,7 @@ export type {
   TabPluginNotification, TabPluginNotificationTopic, TabPluginTopicAction,
 } from './api-topics.js';
 export type { ConnectionsTopicAction, ConnectionsTopicNotification } from './api-topics-connections.js';
+export type { ModelsTopicAction, ModelsTopicDeleteAction, ModelsTopicNotification } from './api-topics-models.js';
 export type {
   TabPluginLaunchFactory, TabPluginLaunchReady, TabPluginLaunchReadyHandler, TabPluginLaunchRequest,
   TabPluginLaunchResult, TabPluginLaunchStart,
@@ -285,8 +287,9 @@ export type TabPluginServerCapabilities =QueueCapabilityTypes & TabPluginRemoteW
   // plugin building a tab for the first time learns what the topic currently holds. Asking for a
   // topic this plugin did not declare is a plugin-authoring mistake and disables it.
   topicData(topic: TabPluginNotificationTopic): TabPluginNotification['data'];
-  // Ask the host to perform one of the actions a declared topic defines.
-  topicAction(action: TabPluginTopicAction): string | undefined;
+  // Ask the host to perform one of the actions a declared topic defines. Models delete is queued and
+  // returns its refusal asynchronously; every existing action keeps its synchronous result.
+  topicAction: TabPluginTopicActionCapability;
   // Ask the host to run its ordinary `open` pipeline for `target`, restricted to this plugin's own
   // claimed extensions. The host queues the request and runs it after the guarded call returns, so
   // glob expansion and per-file dispatch never count against the plugin's own call budget.

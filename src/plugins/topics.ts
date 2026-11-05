@@ -10,6 +10,8 @@ import { scheduleTopicAction } from './schedule-topic-actions.js';
 import { runscriptTopicAction } from './runscript-topic-actions.js';
 import { readRunscriptRows } from '../schedule/system/runscript-rows.js';
 import { readConnectionsTopic, runConnectionsTopicAction, subscribeConnectionsTopic } from './connections-topic.js';
+import { readModelsTopic, runModelsTopicAction, subscribeModelsTopic } from './models-topic.js';
+import type { ModelsTopicDeleteAction } from './api-topics-models.js';
 
 const TABS_NOTIFICATION_WINDOW_MS = 100;
 
@@ -20,7 +22,7 @@ const TABS_NOTIFICATION_WINDOW_MS = 100;
 type TopicSource = {
   subscribe(fire: () => void): Subscription;
   read(managers: Managers): TabPluginNotification['data'];
-  act(managers: Managers, action: TabPluginTopicAction): string | undefined;
+  act(managers: Managers, action: TabPluginTopicAction): string | undefined | Promise<string | undefined>;
   empty: TabPluginNotification['data'];
 };
 
@@ -197,6 +199,13 @@ const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
       ? runConnectionsTopicAction(managers, action) : undefined,
     empty: { rows: [] },
   },
+  models: {
+    subscribe: subscribeModelsTopic,
+    read: readModelsTopic,
+    act: (managers, action) => action.topic === 'models'
+      ? runModelsTopicAction(managers, action) : undefined,
+    empty: { groups: [], refreshing: false },
+  },
 };
 
 export function subscribeTopic(topic: TabPluginNotificationTopic, fire: () => void): Subscription {
@@ -215,6 +224,17 @@ export function emptyTopicData(
   return TOPIC_SOURCES[topic].empty;
 }
 
-export function runTopicAction(managers: Managers, action: TabPluginTopicAction): string | undefined {
+export function runTopicAction(
+  managers: Managers, action: ModelsTopicDeleteAction,
+): Promise<string | undefined>;
+export function runTopicAction(
+  managers: Managers, action: Exclude<TabPluginTopicAction, ModelsTopicDeleteAction>,
+): string | undefined;
+export function runTopicAction(
+  managers: Managers, action: TabPluginTopicAction,
+): string | undefined | Promise<string | undefined>;
+export function runTopicAction(
+  managers: Managers, action: TabPluginTopicAction,
+): string | undefined | Promise<string | undefined> {
   return TOPIC_SOURCES[action.topic].act(managers, action);
 }

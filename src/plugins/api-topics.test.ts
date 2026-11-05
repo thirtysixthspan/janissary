@@ -7,7 +7,7 @@ import { isTabPluginNotificationTopic, TAB_PLUGIN_NOTIFICATION_TOPICS } from './
 describe('the notification topic record', () => {
   it('carries every topic the union names, and the database topic with them', () => {
     expect(TAB_PLUGIN_NOTIFICATION_TOPICS).toEqual(
-      ['schedules', 'conversations', 'sessions', 'databases', 'tabs', 'runscripts', 'connections'],
+      ['schedules', 'conversations', 'sessions', 'databases', 'tabs', 'runscripts', 'connections', 'models'],
     );
   });
 
@@ -16,6 +16,7 @@ describe('the notification topic record', () => {
     expect(isTabPluginNotificationTopic('tabs')).toBe(true);
     expect(isTabPluginNotificationTopic('runscripts')).toBe(true);
     expect(isTabPluginNotificationTopic('connections')).toBe(true);
+    expect(isTabPluginNotificationTopic('models')).toBe(true);
     expect(isTabPluginNotificationTopic('schedules')).toBe(true);
     expect(isTabPluginNotificationTopic('transcript')).toBe(false);
   });

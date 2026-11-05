@@ -6,6 +6,7 @@ import type {
 } from './api.js';
 import type { DatabaseGridQuery, RemoteSessionView, RunscriptsView } from '../protocol.js';
 import type { ConnectionsTopicAction, ConnectionsTopicNotification } from './api-topics-connections.js';
+import type { ModelsTopicAction, ModelsTopicNotification } from './api-topics-models.js';
 
 // The topic half of the v1 tab plugin contract: the host topics a plugin may declare an interest in,
 // the shape of one delivery, and the actions it may ask the host to perform on them. Split out of
@@ -22,7 +23,7 @@ import type { ConnectionsTopicAction, ConnectionsTopicNotification } from './api
 // latest rows at delivery time. Last activity is minute-rounded, and the launcher drops unchanged
 // rows as a second guard against repeated payloads.
 export type TabPluginNotificationTopic =
-  | 'schedules' | 'conversations' | 'sessions' | 'databases' | 'tabs' | 'runscripts' | 'connections';
+  | 'schedules' | 'conversations' | 'sessions' | 'databases' | 'tabs' | 'runscripts' | 'connections' | 'models';
 
 // Keyed by the union for the same reason `CAPABILITIES` is: a topic added to the type without a
 // source here is a compile error rather than a name the host would silently never deliver.
@@ -34,6 +35,7 @@ const NOTIFICATION_TOPICS: Record<TabPluginNotificationTopic, true> = {
   tabs: true,
   runscripts: true,
   connections: true,
+  models: true,
 };
 
 export const TAB_PLUGIN_NOTIFICATION_TOPICS =
@@ -48,6 +50,7 @@ export function isTabPluginNotificationTopic(name: string): name is TabPluginNot
 // decide whether to deliver at all, so passing it leaves the plugin with no bookkeeping of its own.
 export type TabPluginNotification =
   | ConnectionsTopicNotification
+  | ModelsTopicNotification
   | {
     topic: 'schedules';
     data: readonly AggregatedScheduleView[];
@@ -93,6 +96,7 @@ export type TabPluginNotification =
 // topic names its own actions, so adding a topic never widens what an existing one can do.
 export type TabPluginTopicAction =
   | ConnectionsTopicAction
+  | ModelsTopicAction
   | { topic: 'schedules'; action: 'cancel'; tab: string; id: string; owner?: 'tab' }
   | { topic: 'schedules'; action: 'cancel'; tab: 'system'; id: string; owner: 'system'; key: string }
   // Clear one owner's schedules. Each owner is cleared separately, so clearing tab timers never
