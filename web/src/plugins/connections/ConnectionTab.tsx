@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import type { RecordConnectionRow } from '@shared/plugins/connections/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { ConnectionHistory } from './ConnectionHistory';
+import { ConnectionTabMeta } from './ConnectionTabMeta';
 import { useConnectionsController } from './useConnectionsController';
 import { useConnectionHistoryScroll } from './useConnectionHistoryScroll';
 
@@ -25,29 +26,15 @@ export function ConnectionTab({ record, capabilities }: {
     recordUpdated(['Closed', 'Completed', 'Failed', 'Terminated'].includes(record.status));
   }, [record, recordUpdated]);
 
-  const acp = record.kind === 'acp';
-  const canCancel = acp && record.status === 'Running';
-  const canClose = acp && ['Running', 'Idle'].includes(record.status);
-  const canTerminate = record.kind === 'agent' && record.status === 'Running';
   return (
     <section className="connections-record plugin-tab">
-      <header className="plugin-meta connections-record-header">
-        <div className="connections-record-title">{record.title}</div>
-        <div className="connections-record-metadata">
-          <span>{record.kind}</span><span>{record.model}</span><span>{record.ownerName}</span>
-          <span>{record.status}</span><span>Started {new Date(record.startedAt).toLocaleString()}</span>
-          {record.endedAt !== undefined && <span>Ended {new Date(record.endedAt).toLocaleString()}</span>}
-          {record.kind === 'agent' && <span>{record.runId}</span>}
-          {record.kind === 'agent' && record.window?.source.kind === 'agent'
-            && <span>{record.window.source.taskPath}</span>}
-        </div>
-        <span className="plugin-actions">
-          {canCancel && <button type="button" onClick={() => controller.cancel(record.id)}>Cancel</button>}
-          {canClose && <button type="button" onClick={() => controller.closeSession(record.id)}>Close session</button>}
-          {canTerminate && <button type="button" disabled={controller.pendingTerminate}
-            onClick={() => controller.terminate(record.id)}>Terminate</button>}
-        </span>
-      </header>
+      <ConnectionTabMeta
+        record={record}
+        pendingTerminate={controller.pendingTerminate}
+        onCancel={() => { controller.cancel(record.id); }}
+        onCloseSession={() => { controller.closeSession(record.id); }}
+        onTerminate={() => { controller.terminate(record.id); }}
+      />
       {controller.error && <div className="connections-record-error" role="alert">{controller.error}</div>}
       <div className="connections-history" ref={historyRef} onScroll={(event) => scroll.onScroll(event.currentTarget)}>
         <ConnectionHistory window={window} openLink={(href) => capabilities.openLink?.(href)} />

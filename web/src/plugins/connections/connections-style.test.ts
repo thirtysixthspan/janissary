@@ -29,6 +29,24 @@ describe('connections list styles', () => {
     expect(styles).toContain('.connections-list-header .plugin-actions button:hover { color: var(--fg); }');
   });
 
+  it('gives a connection tab the list header\'s band and muted icon buttons, dimmed while disabled', () => {
+    const styles = readFileSync('web/src/plugins/connections/connections.css', 'utf8');
+    const band = styles.match(/\.connections-record-header, \.connections-list-header \{[^}]+\}/)?.[0];
+    expect(band).toContain('min-height: 28px');
+    expect(band).toContain('padding: 6px 12px');
+    expect(band).toContain('border-bottom: 1px solid var(--border)');
+    const buttons = styles.match(
+      /\.connections-record-header \.plugin-actions button, \.connections-list-header \.plugin-actions button \{[^}]+\}/,
+    )?.[0];
+    expect(buttons).toContain('background: transparent');
+    expect(buttons).toContain('border: none');
+    expect(buttons).toContain('color: var(--muted)');
+    expect(styles).toContain('.connections-record-header .plugin-actions button:hover,');
+    const disabled = styles.match(/\.connections-record-header \.plugin-actions button:disabled \{[^}]+\}/)?.[0];
+    expect(disabled).toContain('opacity: 0.45');
+    expect(styles).not.toContain('.connections-record-title');
+  });
+
   it('lays the heading row and the rows out on one shared grid', () => {
     const styles = readFileSync('web/src/plugins/connections/connections.css', 'utf8');
     expect(styles).toMatch(/\.connections-columns, \.connections-row \{[^}]*grid-template-columns:/);

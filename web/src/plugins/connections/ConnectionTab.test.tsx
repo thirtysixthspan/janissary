@@ -31,11 +31,10 @@ function record(kind: 'acp' | 'agent' = 'acp', status: RecordConnectionRow['stat
 }
 
 describe('ConnectionTab', () => {
-  it('shows authoritative metadata, captured owner, timestamps, ordered labels and rendered answer', () => {
+  it('shows captured owner, started time, ordered labels and rendered answer', () => {
     setup(record());
-    expect(screen.getByText('Authoritative title')).toBeInTheDocument();
     expect(screen.getByText('Captured owner')).toBeInTheDocument();
-    expect(screen.getAllByText(new Date(0).toLocaleString(), { exact: false })).toHaveLength(2);
+    expect(screen.getAllByText(new Date(0).toLocaleString(), { exact: false })).toHaveLength(1);
     expect(screen.getByText('answer', { exact: false })).toBeInTheDocument();
     expect([...document.querySelectorAll('.connections-activity-label')].map((el) => el.textContent))
       .toEqual(['message', 'plan', 'permission']);
@@ -120,6 +119,68 @@ describe('ConnectionTab', () => {
     screen.getByText('message', { selector: '.connections-activity-text' }).dispatchEvent(activityClick);
     expect(activityClick.defaultPrevented).toBe(false);
     expect(openLink).toHaveBeenCalledOnce();
+  });
+
+  describe('metadata bar', () => {
+    const bar = () => document.querySelector('.connections-record-header') as HTMLElement;
+    const fields = () => [...bar().children].filter((element) => !element.classList.contains('plugin-actions'));
+    const actions = () => [...bar().querySelectorAll(':scope > .plugin-actions > button')].map((button) => ({
+      label: button.getAttribute('aria-label'),
+      icon: button.querySelector('svg')?.dataset.icon,
+      text: button.textContent,
+    }));
+
+    it('leads the tab with host, tab, id, name, model, state, and started time in order', () => {
+      setup(record());
+      expect(document.querySelector('.connections-record')?.firstElementChild).toBe(bar());
+      expect(bar()).toHaveClass('plugin-meta');
+      expect(fields().map((element) => element.textContent)).toEqual([
+        'Local', 'Captured owner', 'uuid', 'acp:Captured owner', 'model-x', 'Running',
+        `Started ${new Date(0).toLocaleString()}`,
+      ]);
+      expect(bar().querySelector('time')).toHaveAttribute('dateTime', new Date(0).toISOString());
+    });
+
+    it('names each field in its tooltip and keeps the record title in the name tooltip only', () => {
+      setup(record());
+      expect(fields().map((element) => element.getAttribute('title'))).toEqual([
+        'Host: Local', 'Tab: Captured owner', 'Connection ID: uuid',
+        'Connection Name: acp:Captured owner\nAuthoritative title', 'Model: model-x', 'Connection State: Running',
+        `Started: ${new Date(0).toLocaleString()}`,
+      ]);
+      expect(screen.queryByText('Authoritative title')).toBeNull();
+    });
+
+    it('leaves out the ended time, run id, and task path', () => {
+      const value = record('agent', 'Completed');
+      value.endedAt = Date.UTC(2001, 1, 2, 3, 4, 5);
+      setup(value);
+      expect(bar()).not.toHaveTextContent(new Date(value.endedAt).toLocaleString());
+      expect(bar()).not.toHaveTextContent('run-id');
+      expect(bar()).not.toHaveTextContent('/task');
+      expect(fields().map((element) => element.textContent)).toContain('agent:Captured owner');
+    });
+
+    it('floats a running ACP record\'s stop and close icons to the right edge', () => {
+      setup(record());
+      expect(bar().lastElementChild).toHaveClass('plugin-actions');
+      expect(actions()).toEqual([
+        { label: 'Cancel', icon: 'circle-stop', text: '' },
+        { label: 'Close session', icon: 'circle-xmark', text: '' },
+      ]);
+    });
+
+    it('offers only the close icon while an ACP record is idle', () => {
+      setup(record('acp', 'Idle'));
+      expect(actions()).toEqual([{ label: 'Close session', icon: 'circle-xmark', text: '' }]);
+    });
+
+    it('offers a running agent run only the stop icon, as Terminate', () => {
+      const { intent } = setup(record('agent'));
+      expect(actions()).toEqual([{ label: 'Terminate', icon: 'circle-stop', text: '' }]);
+      fireEvent.click(screen.getByRole('button', { name: 'Terminate' }));
+      expect(intent).toHaveBeenCalledWith('terminate', { id: 'uuid' });
+    });
   });
 
   it('offers no Terminate for terminal agent statuses and renders activity text plainly', () => {

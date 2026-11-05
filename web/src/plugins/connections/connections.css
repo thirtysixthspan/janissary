@@ -2,14 +2,21 @@
    browser's focus ring around the whole box — the sessions list's frame. */
 .connections-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; outline: none; }
 .connections-list.plugin-tab { padding: 0; gap: 0; }
-/* The list's metadata band, holding Refresh and Split at its right edge, as the sessions list's does.
-   Its buttons take the muted icon treatment so the refresh icon doesn't arrive with browser chrome. */
-.connections-list-header { min-height: 28px; padding: 6px 12px; font-size: 12px; border-bottom: 1px solid var(--border); }
-.connections-list-header .plugin-actions button {
+/* The metadata band of the list and of a connection tab, as the sessions list's: the list holds
+   Refresh and Split at its right edge, and a connection tab its stop and close icons. Their buttons
+   take the muted icon treatment so the icons don't arrive with browser chrome, and a connection
+   tab's Terminate dims while it waits for the run to end. */
+.connections-record-header, .connections-list-header { min-height: 28px; padding: 6px 12px; font-size: 12px; border-bottom: 1px solid var(--border); }
+.connections-record-header .plugin-actions button, .connections-list-header .plugin-actions button {
   background: transparent; border: none; color: var(--muted); cursor: pointer;
   font-size: 13px; padding: 0 4px; line-height: 1;
 }
-.connections-list-header .plugin-actions button:hover { color: var(--fg); }
+.connections-record-header .plugin-actions button:hover, .connections-list-header .plugin-actions button:hover { color: var(--fg); }
+.connections-record-header .plugin-actions button:disabled { color: var(--muted); cursor: default; opacity: 0.45; }
+/* The connection's id and name can outrun a narrow tab, so they ellipsize rather than wrap the bar. */
+.connections-record-id, .connections-record-name {
+  min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .connections-empty { color: var(--muted); padding: 8px 12px; }
 .connections-rows { display: flex; flex-direction: column; }
 /* The column names sit over the rows in the same grid, so each label lines up with its column —
@@ -44,10 +51,6 @@
 }
 .connections-row-actions button:hover { color: var(--fg); }
 .connections-record.plugin-tab { padding: 0; gap: 0; }
-.connections-record-header { display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 12px; }
-.connections-record-title { font-weight: 600; }
-.connections-record-metadata { display: flex; flex-wrap: wrap; gap: 8px 14px; color: var(--muted); font-size: 12px; }
-.connections-record .plugin-actions { display: flex; gap: 8px; }
 .connections-history { overflow: auto; min-height: 0; flex: 1; padding: 12px; }
 .connections-history-loading { color: var(--muted); }
 .connections-history-content { display: flex; flex-direction: column; gap: 16px; }
