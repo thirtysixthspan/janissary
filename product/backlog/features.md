@@ -2,11 +2,7 @@
 
 ## ready
 
-* a role should have access to a set of native sql commands that can be called. the available commands are listed in acp-tools. update the roles UI so that each role has two sections, one for models and one for commands. 
-
-* add a tell command that works just like the ask command but is for instructing the model to do something. add a tell role mirroring the defaults for the ask role.
-
-* when an acp connection is established, it should have access to use the native commands listed in the associated role.
+* a role should have access to a set of native sql commands that can be called. the available commands are listed in acp-tools. update the roles UI so that each role has two sections, one for models and one for commands. add a tell command that works just like the ask command but is for instructing the model to do something. add a tell role mirroring the defaults for the ask role. when an acp connection is established, it should have access to use the native commands listed in the associated role.
 
 ## development
 
