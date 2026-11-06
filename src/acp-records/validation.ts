@@ -1,7 +1,10 @@
 import { isAcpActivityKind } from '../acp/activity.js';
+import { ACP_ROLES } from '../acp/role.js';
 import { isRecord } from '../value-guards.js';
 import { ACP_RECORD_SCHEMA_VERSION } from './model.js';
 import type { AcpRecord, AcpRecordBlock, AcpRecordEntry, AcpRecordOutcome, AcpRecordSource } from './types.js';
+
+const validAcpRoles: readonly string[] = ACP_ROLES;
 
 export function isRecordId(value: unknown): value is string {
   return typeof value === 'string'
@@ -16,8 +19,11 @@ export function isRecordSource(value: unknown): value is AcpRecordSource {
   if (!isRecord(value) || !nonempty(value.model)
     || !nonempty(value.ownerLabel) || !nonempty(value.ownerName)
     || (value.host !== undefined && !nonempty(value.host))) return false;
-  return value.kind === 'acp'
-    || (value.kind === 'agent' && nonempty(value.runId) && nonempty(value.taskPath));
+  if (value.kind === 'acp') {
+    return value.role === undefined || (typeof value.role === 'string'
+      && validAcpRoles.includes(value.role));
+  }
+  return value.kind === 'agent' && nonempty(value.runId) && nonempty(value.taskPath);
 }
 
 export function isRecordOutcome(source: AcpRecordSource, value: unknown): value is AcpRecordOutcome {

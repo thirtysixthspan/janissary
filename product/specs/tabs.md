@@ -77,7 +77,7 @@ cannot be moved into panes; an unsplit strip with fewer than two eligible tabs c
 
 ### Busy indicator
 
-While a tab is busy — running a shell command, an ACP turn, or any other in-flight work (the `busy` flag on the tab) — its colored dot **blinks**, toggling fully on and off (600ms each), so an at-a-glance scan of the strip shows which tabs are working even when they are not focused. The blink applies to every tab regardless of focus; when the work finishes the dot returns to a steady fill in the tab's dot color.
+While a tab is busy — running a shell command, an ACP turn, or any other in-flight work (the `busy` flag on the tab) — its colored dot **blinks**, toggling fully on and off (600ms each), so an at-a-glance scan of the strip shows which tabs are working even when they are not focused. The blink applies to every tab regardless of focus; when operations overlap, the dot stays busy until they have all finished, then returns to a steady fill in the tab's dot color.
 
 ### Unread badge
 

@@ -157,7 +157,7 @@ describe('StatusPanels', () => {
 
   it('renders the transcript button on a row with acpRef and calls onOpenAcpTranscript with it', () => {
     const onOpenAcpTranscript = vi.fn();
-    const acpRef = { scope: 'tab' as const, label: 'janus' };
+    const acpRef = { scope: 'tab' as const, label: 'janus', role: 'ask' as const };
     const { container } = renderPanels(
       { connections: [{ text: 'acp:opencode', kind: 'acp', acpRef }] },
       { onOpenAcpTranscript },
@@ -209,7 +209,7 @@ describe('StatusPanels', () => {
 
   it('opens a tab-scoped ACP row by pointer and keyboard', () => {
     const row: ConnectionView = {
-      text: 'acp:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'janus' },
+      text: 'acp:ask:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'janus', role: 'ask' },
     };
     const onOpenRow = vi.fn();
     const { container } = renderPanels({ connections: [row] }, { onOpenRow });
@@ -252,7 +252,7 @@ describe('StatusPanels', () => {
   });
 
   it('keeps the snapshot button separate from row opening', () => {
-    const acpRef = { scope: 'tab' as const, label: 'janus' };
+    const acpRef = { scope: 'tab' as const, label: 'janus', role: 'ask' as const };
     const onOpenAcpTranscript = vi.fn();
     const onOpenRow = vi.fn();
     const { container } = renderPanels(

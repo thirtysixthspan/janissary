@@ -18,6 +18,10 @@ Each harness your `ask` role lists must be installed, signed in, and on your `PA
 
 Use the explicit `ask` prefix for a model reply; unclaimed text in a shell bar goes to zsh.
 
+Use `tell <prompt>` when you want a model to carry out a task with the commands granted to the
+`tell` role. The [roles tab](/user-documentation/tab-types/roles) lets you choose separate models and
+command grants for `ask` and `tell`.
+
 ## Which model it runs
 
 The models come from the `ask` role in your roles file, in the order the role lists them. That's your project's `.janissary/roles.json` when it has one, otherwise `~/.janissary/roles.json`. Edit the role in the [roles tab](/user-documentation/tab-types/roles) to change which models answer and in what order. If the file has no `ask` role, or the role lists no models, the app uses the default one: `opencode-go/deepseek-v4.1-flash` on `opencode` at `medium`, then `claude-haiku-4-5` on `claude` at `high`, then `gpt-6-luna` on `codex` at `high`. Asking never creates a roles file.
@@ -28,27 +32,47 @@ Once a model has replied, the session sticks with it. Later prompts in the tab g
 
 The connections window shows the model the session started with. That choice is separate from the models used by monitors, conversations, and editor queries.
 
-## One conversation per tab
+The `tell` command uses the matching `tell` role. With the built-in roles, ask can list and query
+databases, browse to a page and read its content, and ask or approve a question. Tell starts with
+those same commands plus database create/delete and browser eval. If you add or remove a grant, the
+next prompt reads the updated role. A missing ask or tell role uses its built-in model and command
+defaults; an existing role with no grants has no native tools.
 
-The first prompt starts a connection in the shell's working directory. Later prompts in the same tab reuse it and remember the earlier conversation. Each tab has its own session. Reset it after changing directories if you want a fresh connection in the new location.
+## Separate ask and tell conversations
 
-A second prompt submitted while one is still running in the same shell is refused with exactly `ACP: a prompt is already running.`. The first prompt keeps running, and nothing is queued behind it. A command that isn't an ACP prompt still runs normally in the meantime.
+The first prompt for each role starts its own connection in the shell's working directory. Later
+prompts for that role reuse its conversation. A tab can keep one ask session and one tell session, so
+one prompt of each role can run at the same time. The two sessions keep their own histories and
+models, while sharing the shell transcript. Reset a role after changing directories if you want its
+next prompt to start fresh in the new location.
+
+A second prompt for the same role while one is still running is refused with exactly `ACP: a prompt is
+already running.`. The first prompt keeps running, and nothing is queued behind it. The other role and
+ordinary shell commands still run while it is active.
 
 ## Cancel, close, and reset
 
-There are three ways to stop work, and they differ:
+You can cancel a prompt, close a session, or reset either role:
 
 - **Cancel** a running prompt from its connection tab. The prompt settles as cancelled, the shell receives one `ACP: prompt cancelled.` reply, and the session stays open for the next prompt. The status remains `Running` while the provider finishes its native cancellation and drain, then reads `Idle`. The session and its record keep the same identity.
-- **Close session** in the connection tab, or `connections close acp:<name>`, ends the session. A pending prompt reports `ACP session closed.`. The retained record becomes `Closed` and its tab is read-only.
+- **Close session** in the connection tab, or `connections close acp:<role>:<provider/model>`, ends that role's session. A pending prompt reports `ACP session closed.`. The retained record becomes `Closed` and its tab is read-only. A legacy `connections close acp:<model>` target still selects ask.
 - `ask reset` also ends the session. A pending prompt reports `ACP session closed.`. It reports its own single confirmation, `ACP session reset — next ask prompt will start fresh.`, or `No active ACP session to reset.` when there is nothing to reset. The next prompt starts a fresh session and record.
+- `tell reset` closes only tell and reports `ACP tell session reset — next tell prompt will start fresh.`, or `No active ACP tell session to reset.`. The ask session remains open.
 
-Closing the shell also closes its ACP connection. Reset cancels a question from that ACP request, including one waiting behind another question. Questions from unrelated requests stay pending.
+Closing the shell also closes its ask and tell sessions. Reset cancels a question from that role's ACP request, including one waiting behind another question. Questions from unrelated requests stay pending.
 
 ## Let the agent look things up
 
 <img class="agent-float left" src="/agents/ekrem-south.png" alt="" />
 
-The agent can run the app's database, browser, and question tools while answering: query a database, fetch a page, read its content, or ask you for an answer. The result goes back to the agent so it can continue, up to eight tool steps per prompt. If a prompt reaches that cap, the settled shell reply and the record's final answer in the connection tab end with a `(stopped after 8 tool steps)` paragraph, so you can tell the answer was cut short and retry a narrower request.
+The agent can use the database, browser, and question tools granted to its role. By default, ask can
+list and query databases, open a page, read its content, and ask or approve a question. Tell has those
+commands plus database create/delete and browser eval. If the model tries a known command its role
+doesn't allow, it receives `Command not allowed for role "<role>": <subcommand>.` and can choose
+another action. The result of each allowed tool step goes back to the model, up to eight tool steps
+per prompt. If a prompt reaches that cap, the settled shell reply and the record's final answer in
+the connection tab end with a `(stopped after 8 tool steps)` paragraph, so you can tell the answer was
+cut short and retry a narrower request.
 
 Tool steps and the agent's thinking appear in the connection tab, not in the shell output. Thought entries start collapsed there and tool entries start expanded. Click an entry's label to open or close it. A tool step whose text is JSON reads as indented JSON. Only these three tools are available in this loop; it cannot run arbitrary shell commands.
 
@@ -72,7 +96,9 @@ A link in a shell answer acts for the shell that owns the answer, not for the ta
 
 <img class="agent-float" src="/agents/hamza-south-east.png" alt="" />
 
-A sandboxed shell's ACP process uses the same workspace confinement and offline setting. A remote shell starts its ACP process on that host in the remote workspace. Model selection still comes from your local `ask` role.
+A sandboxed shell's ACP process uses the same workspace confinement and offline setting. A remote
+shell starts its ACP process on that host in the remote workspace. Model selection and command grants
+still come from your local `ask` or `tell` role.
 
 The database, browser, and question tools continue to act on the machine running Janissary. A remote ACP query therefore uses your local database and browser for those tools.
 
@@ -82,10 +108,17 @@ Before SSH has finished connecting, a prompt reports `ACP: the remote session is
 
 Bare `ask` prints `Usage: ask <prompt>.`. Two kinds of failure look alike but behave differently.
 
+Bare `tell` prints `Usage: tell <prompt>.`. If no enabled tell model is available, the reply is
+`ACP: the tell role lists no models.`. When more than one model is tried and all fail, the reply is
+`ACP: every model in the tell role failed.` followed by one line per attempt.
+
 A connection failure starts with `ACP:`, for example `ACP: ACP agent exited.` or `ACP: failed to start ACP agent: <reason>`. The connection is forgotten, so the next prompt starts a new one. When the agent printed anything to its error output, the message ends with that text, limited to its last ten lines and 2000 characters.
 
 A prompt failure, such as a rate limit, starts with `ACP error:`. The connection stays, and so does the conversation, so you can send the prompt again.
 
-Either kind of failure that happens before the model has replied moves the prompt on to the next model in your `ask` role, as [Which model it runs](#which-model-it-runs) describes. You only see the failure as your reply once every model has failed, or when it arrives after the model already replied.
+Either kind of failure that happens before the model has replied moves the prompt on to the next model in its matching role, as [Which model it runs](#which-model-it-runs) describes. You only see the failure as your reply once every model has failed, or when it arrives after the model already replied.
 
-The connection is listed as `acp:<provider/model>`. Use its close control, its connection tab's **Close session**, or `connections close` to end it. A closed session stays listed as a read-only record until you delete it after confirmation or it expires.
+The live connections are listed separately as `acp:ask:<provider/model>` and
+`acp:tell:<provider/model>`. Use the matching row's close control, its connection tab's **Close
+session**, or `connections close acp:<role>:<provider/model>` to end one. A closed session stays
+listed as a read-only record until you delete it after confirmation or it expires.

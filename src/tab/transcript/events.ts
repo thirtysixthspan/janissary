@@ -1,7 +1,8 @@
-import type { Tab, LogEntry } from '../types.js';
+import type { BusyOwner, Tab, LogEntry } from '../types.js';
 import { messageBus } from '../../bus.js';
 import { appendEntry, clearLog } from './log.js';
 import { runtimeFor } from '../runtime.js';
+import * as runtimeOperations from '../runtime-operations.js';
 
 // Transcript/busy-tracking coordination extracted from TabManager: wraps the pure log
 // mutations in transcript-log.ts with the messageBus emits and unread-marking
@@ -10,7 +11,32 @@ import { runtimeFor } from '../runtime.js';
 // How a producer identifies which running log entry is its own: by the command text it started
 // with (the shell), by its inherent markdown flag (ACP turns), or by the running flag alone
 // (the bare finalize choreography, the prior default).
-export type RunningEntryMatch = { command?: string; markdown?: boolean };
+export type RunningEntryMatch = { command?: string; markdown?: boolean; entries?: Set<LogEntry> };
+
+function matchesRunningEntry(entry: LogEntry, match: RunningEntryMatch | undefined): boolean {
+  return !!entry.running
+    && (match?.command === undefined || entry.input === match.command)
+    && (match?.markdown === undefined || !!entry.markdown)
+    && (match?.entries === undefined || match.entries.has(entry));
+}
+
+function rewriteRunningEntry(tab: Tab, match: RunningEntryMatch | undefined, output: string, running: boolean): number {
+  const log = [...tab.log];
+  const index = log.findLastIndex((entry) => matchesRunningEntry(entry, match));
+  if (index !== -1) {
+    const previous = log[index];
+    log[index] = { ...previous, output, running };
+    if (tab.runtime?.acpEntries?.has(previous)) tab.runtime.acpEntries.add(log[index]);
+    if (match?.entries?.has(previous)) {
+      match.entries.delete(previous);
+      match.entries.add(log[index]);
+    }
+    // The entry was rewritten, so the log is not the log it was — even though its length is.
+    markRevised(tab);
+  }
+  tab.log = log;
+  return index;
+}
 
 // The hooks each producer supplies to `updateRunningEntry`: the steps that run when a running
 // entry stops running (per-tab busy clearing, unread marking) and whether the
@@ -29,29 +55,20 @@ export function updateRunningEntry(
   output: string, running: boolean, hooks: UpdateRunningHooks,
 ): void {
   const tab = tabs.find((t) => t.label === label);
-  if (tab) {
-    const log = [...tab.log];
-    const index = log.findLastIndex((e) => !!e.running
-      && (match?.command === undefined || e.input === match.command)
-      && (match?.markdown === undefined || !!e.markdown));
-    if (index !== -1) {
-      const previous = log[index];
-      log[index] = { ...previous, output, running };
-      if (tab.runtime?.acpEntries?.has(previous)) tab.runtime.acpEntries.add(log[index]);
-      // The entry was rewritten, so the log is not the log it was — even though its length is.
-      markRevised(tab);
-    }
-    tab.log = log;
-    // Output landing in the tab is the tab doing something, so it moves activity whether or not the
-    // entry it wrote into existed — a stream whose match found nothing still wrote.
-    markActive(tabs, label);
-    if (!running) {
-      hooks.finalize?.(tab);
-      hooks.markUnread?.(label);
-      if (index !== -1) messageBus.emit('transcript', { type: 'entry:updated', tabLabel: label, tab });
-      if (hooks.trailing && output) {
-        messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry: { input: '', output }, tab });
-      }
+  if (!tab) {
+    messageBus.emit('state', { type: 'dirty' });
+    return;
+  }
+
+  const index = rewriteRunningEntry(tab, match, output, running);
+  // Output landing in the tab is the tab doing something, even when the selected entry disappeared.
+  markActive(tabs, label);
+  if (!running) {
+    hooks.finalize?.(tab);
+    hooks.markUnread?.(label);
+    if (index !== -1) messageBus.emit('transcript', { type: 'entry:updated', tabLabel: label, tab });
+    if (hooks.trailing && output) {
+      messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry: { input: '', output }, tab });
     }
   }
   messageBus.emit('state', { type: 'dirty' });
@@ -103,26 +120,25 @@ export type RunningEntryFields = Partial<Omit<LogEntry, 'input' | 'output' | 'ru
 
 export function startRunningTab(
   tabsOrBusy: Tab[] | Set<string>, label: string, input: string, append: (label: string, entry: LogEntry) => void,
-  fields: RunningEntryFields = {},
+  fields: RunningEntryFields = {}, owner?: BusyOwner,
 ): void {
   if (tabsOrBusy instanceof Set) tabsOrBusy.add(label);
-  else {
-    const runtime = runtimeFor(tabsOrBusy, label);
-    if (runtime) runtime.busy = true;
-  }
+  else runtimeOperations.addBusy(tabsOrBusy, label, owner);
   append(label, { input, output: '', running: true, ...fields });
 }
 
 export function finishRunningTab(
   tabs: Tab[], label: string, output: string,
-  deleteBusy: (label: string) => void,
+  deleteBusy: (label: string, owner?: BusyOwner) => void,
   markUnread: (label: string) => void,
   match?: RunningEntryMatch,
+  owner?: BusyOwner,
 ): void {
   updateRunningEntry(tabs, label, match, output, false, {
     trailing: true,
     finalize: () => {
-      deleteBusy(label);
+      if (owner === undefined) deleteBusy(label);
+      else deleteBusy(label, owner);
     },
     markUnread,
   });

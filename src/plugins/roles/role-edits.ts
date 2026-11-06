@@ -41,7 +41,19 @@ export function addRole(roles: readonly Role[], name: string): Role[] {
   if (clash(roles, trimmed)) {
     throw new TabPluginRejection(`A role named "${trimmed}" already exists.`);
   }
-  return [...roles, { name: trimmed, description: '', entries: [] }];
+  return [...roles, { name: trimmed, description: '', entries: [], commands: [] }];
+}
+
+export function addRoleCommand(roles: Role[], name: string, command: string): Role[] {
+  const role = find(roles, name);
+  if (role.commands.includes(command)) return roles;
+  return replace(roles, name, { ...role, commands: [...role.commands, command] });
+}
+
+export function removeRoleCommand(roles: Role[], name: string, command: string): Role[] {
+  const role = find(roles, name);
+  if (!role.commands.includes(command)) return roles;
+  return replace(roles, name, { ...role, commands: role.commands.filter((value) => value !== command) });
 }
 
 export function renameRole(roles: readonly Role[], name: string, next: string): Role[] {

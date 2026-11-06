@@ -1,4 +1,6 @@
-export const CONNECTIONS_PAYLOAD_SCHEMA_VERSION = 1;
+export const CONNECTIONS_PAYLOAD_SCHEMA_VERSION = 2;
+
+export type AcpRole = 'ask' | 'tell';
 
 export type ConnectionKind = 'sqlite' | 'shell' | 'acp' | 'browser' | 'ssh' | 'terminal';
 export type ConnectionStatus = 'Idle' | 'Running' | 'Closed' | 'Completed' | 'Failed' | 'Terminated';
@@ -11,7 +13,7 @@ export type ConnectionBlock = {
   endedAt?: number;
 };
 export type ConnectionSource =
-  | { kind: 'acp'; model: string; ownerLabel: string; ownerName: string }
+  | { kind: 'acp'; model: string; ownerLabel: string; ownerName: string; role?: AcpRole }
   | { kind: 'agent'; model: string; ownerLabel: string; ownerName: string; runId: string; taskPath: string };
 
 export type ConnectionWindow = {
@@ -30,7 +32,7 @@ type ConnectionRowBase = {
   ownerName: string;
   orderingTimestamp: number;
   focusTarget?: string;
-  acpRef?: { scope: 'tab'; label: string } | { scope: 'monitor'; name: string }
+  acpRef?: { scope: 'tab'; label: string; role: AcpRole } | { scope: 'monitor'; name: string }
     | { scope: 'editor'; label: string; persona: string };
 };
 
@@ -38,13 +40,15 @@ export type LiveConnectionRow = ConnectionRowBase & {
   type: 'live'; kind: ConnectionKind; display: string; status: 'Open'; permanent?: true;
 };
 export type RecordConnectionRow = ConnectionRowBase & {
-  type: 'record'; kind: ConnectionKind | 'agent'; title: string; model: string;
+  type: 'record'; kind: ConnectionKind | 'agent'; title: string; model: string; role?: AcpRole;
   status: ConnectionStatus; runId?: string; startedAt: number; updatedAt: number; endedAt?: number; window?: ConnectionWindow;
 };
 export type ConnectionRow = LiveConnectionRow | RecordConnectionRow;
 
-export function recordConnectionName(row: Pick<RecordConnectionRow, 'kind' | 'ownerName'>): string {
-  return `${row.kind}:${row.ownerName}`;
+export function recordConnectionName(row: Pick<RecordConnectionRow, 'kind' | 'ownerName' | 'role'>): string {
+  return row.kind === 'acp' && row.role !== undefined
+    ? `acp:${row.role}:${row.ownerName}`
+    : `${row.kind}:${row.ownerName}`;
 }
 
 export type ConnectionsPayload =
@@ -63,6 +67,10 @@ const hasOwn = (value: object, key: string): boolean => Object.hasOwn(value, key
 
 function object(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isAcpRole(value: unknown): value is AcpRole {
+  return value === 'ask' || value === 'tell';
 }
 
 function optionalString(row: Record<string, unknown>, key: string): boolean {
@@ -88,8 +96,9 @@ function isBlock(value: unknown): value is ConnectionBlock {
 function isSource(value: unknown): value is ConnectionSource {
   if (!object(value) || typeof value.model !== 'string' || typeof value.ownerLabel !== 'string'
     || typeof value.ownerName !== 'string') return false;
-  if (value.kind === 'acp') return true;
-  return value.kind === 'agent' && typeof value.runId === 'string' && typeof value.taskPath === 'string';
+  if (value.kind === 'acp') return !hasOwn(value, 'role') || isAcpRole(value.role);
+  return value.kind === 'agent' && !hasOwn(value, 'role')
+    && typeof value.runId === 'string' && typeof value.taskPath === 'string';
 }
 
 function isWindow(value: unknown): value is ConnectionWindow {
@@ -102,7 +111,7 @@ function isWindow(value: unknown): value is ConnectionWindow {
 
 function isAcpRef(value: unknown): boolean {
   if (!object(value)) return false;
-  if (value.scope === 'tab') return typeof value.label === 'string';
+  if (value.scope === 'tab') return typeof value.label === 'string' && isAcpRole(value.role);
   if (value.scope === 'monitor') return typeof value.name === 'string';
   return value.scope === 'editor' && typeof value.label === 'string' && typeof value.persona === 'string';
 }
@@ -117,9 +126,13 @@ export function isConnectionRow(value: unknown): value is ConnectionRow {
     || (hasOwn(value, 'acpRef') && !isAcpRef(value.acpRef))) return false;
   if (value.type === 'live') {
     return kinds.includes(value.kind as typeof kinds[number]) && typeof value.display === 'string'
-      && value.status === 'Open' && (!hasOwn(value, 'permanent') || value.permanent === true);
+      && value.status === 'Open' && (!hasOwn(value, 'permanent') || value.permanent === true)
+      && !hasOwn(value, 'role');
   }
   return value.type === 'record' && (kinds.includes(value.kind as typeof kinds[number]) || value.kind === 'agent')
+    && (value.kind === 'acp'
+      ? !hasOwn(value, 'role') || isAcpRole(value.role)
+      : !hasOwn(value, 'role'))
     && typeof value.title === 'string' && typeof value.model === 'string'
     && statuses.includes(value.status as typeof statuses[number])
     && typeof value.startedAt === 'number' && typeof value.updatedAt === 'number';

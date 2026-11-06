@@ -1,6 +1,7 @@
 import type { AcpRef } from './tab.js';
 import type { AcpRecordRow, AcpRecordWindow } from '../acp-records/types.js';
 import type { ConnectionKind } from '../connection/types.js';
+import type { AcpRole } from '../acp/role.js';
 
 export type ConnectionsTopicWindow = AcpRecordWindow;
 
@@ -23,10 +24,9 @@ export type ConnectionsTopicLiveRow = {
   permanent?: true;
 };
 
-export type ConnectionsTopicRecordRow = {
+type ConnectionsTopicRecordFields = {
   type: 'record';
   id: string;
-  kind: AcpRecordRow['kind'];
   title: string;
   model: string;
   // The host captured on the record when its session or run started remotely, otherwise `Local`.
@@ -43,6 +43,10 @@ export type ConnectionsTopicRecordRow = {
   // The owning tab's label while the tab the record began in is still open, whatever the record's status.
   focusTarget?: string;
   window?: ConnectionsTopicWindow;
+};
+
+export type ConnectionsTopicRecordRow = ConnectionsTopicRecordFields & {
+  kind: AcpRecordRow['kind']; role?: AcpRole;
 };
 
 export type ConnectionsTopicRow = ConnectionsTopicLiveRow | ConnectionsTopicRecordRow;

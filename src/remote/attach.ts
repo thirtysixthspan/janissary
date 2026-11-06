@@ -180,7 +180,7 @@ export function terminateRemoteSession(
       tab.harness.sessionTerminated = text;
     } else {
       tab.log = [...tab.log, { input: '', output: text }];
-      if (tab.runtime) tab.runtime.busy = false;
+      if (tab.runtime) managers.tab.clearBusy(label);
     }
     if (announce && !notified) {
       notify(managers, 'remote-session-terminated', label, text);

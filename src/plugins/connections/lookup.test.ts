@@ -10,6 +10,7 @@ type RecordOptions = {
   ownerLabel?: string;
   status?: RecordConnectionRow['status'];
   model?: string;
+  role?: RecordConnectionRow['role'];
   updatedAt?: number;
 };
 
@@ -21,11 +22,11 @@ function liveRow(id: string, kind: ConnectionKind, ownerLabel = 'first'): LiveCo
 }
 
 function recordRow({
-  id, title, ownerLabel = 'elsewhere', status = 'Closed', model = 'model-a', updatedAt = 100,
+  id, title, ownerLabel = 'elsewhere', status = 'Closed', model = 'model-a', role, updatedAt = 100,
 }: RecordOptions): RecordConnectionRow {
   return {
     type: 'record', id, kind: 'acp', title, model, host: 'Local', ownerLabel, ownerName: 'Owner',
-    startedAt: 1, updatedAt, status, orderingTimestamp: updatedAt,
+    ...(role !== undefined && { role }), startedAt: 1, updatedAt, status, orderingTimestamp: updatedAt,
   };
 }
 
@@ -121,6 +122,44 @@ describe('openConnectionLookup', () => {
     expect(openConnectionLookup('acp:model-a', f.tabs, f.capabilities)).toBe(true);
     expect(f.opened[0]).toMatchObject({ id: 'mine' });
     expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action: 'load', id: 'mine' });
+  });
+
+  it('selects the requested role when ask and tell use the same model', () => {
+    const ask = recordRow({ id: 'ask-record', title: 'ACP: ask', ownerLabel: 'owner', status: 'Idle', role: 'ask' });
+    const tell = recordRow({ id: 'tell-record', title: 'ACP: tell', ownerLabel: 'owner', status: 'Idle', role: 'tell', updatedAt: 300 });
+    const f = fixture([tell, ask]);
+
+    expect(openConnectionLookup('acp:tell:model-a', f.tabs, f.capabilities)).toBe(true);
+    expect(f.opened[0]).toMatchObject({ id: 'tell-record' });
+
+    const askFixture = fixture([tell, ask]);
+    expect(openConnectionLookup('acp:ask:model-a', askFixture.tabs, askFixture.capabilities)).toBe(true);
+    expect(askFixture.opened[0]).toMatchObject({ id: 'ask-record' });
+  });
+
+  it('keeps legacy model lookup on ask when a newer tell record has the same model', () => {
+    const legacyAsk = recordRow({ id: 'legacy-ask', title: 'ACP: ask', ownerLabel: 'owner', status: 'Idle' });
+    const tell = recordRow({ id: 'tell-record', title: 'ACP: tell', ownerLabel: 'owner', status: 'Idle', role: 'tell', updatedAt: 300 });
+    const f = fixture([tell, legacyAsk]);
+
+    expect(openConnectionLookup('acp:model-a', f.tabs, f.capabilities)).toBe(true);
+    expect(f.opened[0]).toMatchObject({ id: 'legacy-ask' });
+  });
+
+  it('matches role-qualified retained names and keeps role-less legacy names unchanged', () => {
+    const ask = recordRow({ id: 'ask-record', title: 'ACP: ask', ownerLabel: 'elsewhere' });
+    const tell = recordRow({ id: 'tell-record', title: 'ACP: tell', ownerLabel: 'elsewhere', role: 'tell' });
+    const f = fixture([ask, tell]);
+
+    expect(openConnectionLookup('acp:tell:Owner', f.tabs, f.capabilities)).toBe(true);
+    expect(f.opened[0]).toMatchObject({ id: 'tell-record' });
+
+    const legacy = fixture([ask]);
+    expect(openConnectionLookup('acp:Owner', legacy.tabs, legacy.capabilities)).toBe(true);
+    expect(legacy.opened[0]).toMatchObject({ id: 'ask-record' });
+
+    const noLegacyRoleMatch = fixture([ask]);
+    expect(openConnectionLookup('acp:ask:Owner', noLegacyRoleMatch.tabs, noLegacyRoleMatch.capabilities)).toBe(false);
   });
 
   it('falls back to a colon-bearing title when no target interpretation matches', () => {

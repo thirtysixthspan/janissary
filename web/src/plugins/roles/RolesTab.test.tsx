@@ -1,7 +1,7 @@
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { RolesPayload } from '@shared/plugins/roles/shared';
+import { NATIVE_ACP_COMMANDS, type RolesPayload } from '@shared/plugins/roles/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { RolesTab } from './RolesTab';
 
@@ -13,9 +13,10 @@ const CATALOG = {
 function makePayload(overrides: Partial<RolesPayload> = {}): RolesPayload {
   return {
     roles: [
-      { name: 'planning', description: 'Plans.', entries: [{ harness: 'codex', model: 'gpt-6-sol', effort: 'xhigh' }] },
-      { name: 'research', description: 'Research.', entries: [] },
+      { name: 'planning', description: 'Plans.', entries: [{ harness: 'codex', model: 'gpt-6-sol', effort: 'xhigh' }], commands: [] },
+      { name: 'research', description: 'Research.', entries: [], commands: [] },
     ],
+    nativeCommands: [...NATIVE_ACP_COMMANDS],
     source: 'home',
     path: '/home/me/.janissary/roles.json',
     catalog: CATALOG,
@@ -78,6 +79,140 @@ describe('RolesTab', () => {
     expect(screen.getAllByText('codex').length).toBeGreaterThan(0);
     expect(screen.getByDisplayValue('planning')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Research.')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Models of role planning' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Commands of role research' })).toBeInTheDocument();
+    expect(screen.getByText('No models')).toBeInTheDocument();
+    expect(screen.getAllByText('No commands')).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Add model' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Add command' })).toHaveLength(2);
+  });
+
+  it('orders native grants, preserves duplicates and unknown values, and offers only missing commands', () => {
+    const payload = makePayload({
+      roles: [{
+        name: 'research', description: 'Research.', entries: [],
+        commands: ['future command', 'browser content', 'db sqlite list', 'browser content'],
+      }],
+    });
+    const { intent } = renderTab(payload);
+    const list = screen.getByRole('list', { name: 'Commands of role research' });
+    const rows = [...list.querySelectorAll('.roles-command-entry')];
+
+    expect(rows.map((row) => row.textContent?.trim())).toEqual([
+      'db sqlite list', 'browser content', 'browser content', 'future command',
+    ]);
+    expect(rows.at(-1)).toHaveClass('roles-entry-missing');
+    expect(rows.at(-1)).toHaveAttribute('title', 'Not a native command');
+    fireEvent.click(screen.getByRole('button', { name: 'Add command' }));
+
+    const picker = screen.getByLabelText('Command to add to role research') as HTMLSelectElement;
+    expect([...picker.options].map(({ value }) => value).slice(1)).toEqual(
+      NATIVE_ACP_COMMANDS.filter((command) => !payload.roles[0].commands.includes(command)),
+    );
+    fireEvent.change(picker, { target: { value: 'browser goto' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(intent).toHaveBeenCalledWith('add-command', { role: 'research', command: 'browser goto' });
+
+    const removeButtons = screen.getAllByRole('button', { name: 'Remove browser content' });
+    expect(removeButtons[0]).toHaveAttribute('title', 'Remove browser content');
+    fireEvent.click(removeButtons[0]);
+    expect(intent).toHaveBeenLastCalledWith('remove-command', { role: 'research', command: 'browser content' });
+    fireEvent.click(screen.getByRole('button', { name: 'Remove future command' }));
+    expect(intent).toHaveBeenLastCalledWith('remove-command', { role: 'research', command: 'future command' });
+  });
+
+  it('hides Add command when all native commands are present, including duplicate and unknown grants', () => {
+    const payload = makePayload({
+      roles: [{
+        name: 'research', description: 'Research.', entries: [],
+        commands: [...NATIVE_ACP_COMMANDS, 'browser goto', 'future command'],
+      }],
+    });
+    renderTab(payload);
+
+    expect(screen.queryByRole('button', { name: 'Add command' })).toBeNull();
+    expect(screen.getByText('future command').closest('.roles-command-entry'))
+      .toHaveAttribute('title', 'Not a native command');
+  });
+
+  it('focuses each picker, cancels on Escape, and restores focus after Add, Cancel, and Escape', () => {
+    const { intent } = renderTab();
+    const addModel = () => screen.getAllByRole('button', { name: 'Add model' })[1];
+
+    fireEvent.click(addModel());
+    expect(screen.getByLabelText('Harness for the new entry')).toHaveFocus();
+    fireEvent.keyDown(screen.getByLabelText('Harness for the new entry'), { key: 'Escape' });
+    expect(addModel()).toHaveFocus();
+
+    fireEvent.click(addModel());
+    fireEvent.change(screen.getByLabelText('Model for the new entry'), { target: { value: 'gpt-6-luna' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(intent).toHaveBeenCalledWith('add-entry', {
+      role: 'research', entry: { harness: 'codex', model: 'gpt-6-luna' },
+    });
+    expect(addModel()).toHaveFocus();
+
+    fireEvent.click(addModel());
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(addModel()).toHaveFocus();
+
+    const researchCard = screen.getByDisplayValue('research').closest('.roles-card') as HTMLElement;
+    const addCommand = () => within(researchCard).getByRole('button', { name: 'Add command' });
+    fireEvent.click(addCommand());
+    const commandPicker = screen.getByLabelText('Command to add to role research');
+    expect(commandPicker).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Add' })).toBeDisabled();
+    fireEvent.keyDown(commandPicker, { key: 'Escape' });
+    expect(addCommand()).toHaveFocus();
+
+    fireEvent.click(addCommand());
+    fireEvent.change(screen.getByLabelText('Command to add to role research'), { target: { value: 'browser goto' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(intent).toHaveBeenCalledWith('add-command', { role: 'research', command: 'browser goto' });
+    expect(addCommand()).toHaveFocus();
+  });
+
+  it('clears a selected command after publication and closes to the heading when none remain', () => {
+    const payload = makePayload({
+      nativeCommands: ['browser goto', 'browser content'],
+      roles: [{ name: 'research', description: 'Research.', entries: [], commands: [] }],
+    });
+    const { publish } = renderTab(payload);
+    fireEvent.click(screen.getByRole('button', { name: 'Add command' }));
+    const picker = screen.getByLabelText('Command to add to role research') as HTMLSelectElement;
+    fireEvent.change(picker, { target: { value: 'browser goto' } });
+
+    publish({
+      ...payload,
+      roles: [{ ...payload.roles[0], commands: ['browser goto'] }],
+    });
+    expect(screen.getByLabelText('Command to add to role research')).toHaveValue('');
+
+    publish({
+      ...payload,
+      roles: [{ ...payload.roles[0], commands: [...payload.nativeCommands] }],
+    });
+    expect(screen.queryByLabelText('Command to add to role research')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Commands of role research' })).toHaveFocus();
+  });
+
+  it('moves focus to Commands when a publication hides the focused Add command button', () => {
+    const payload = makePayload({
+      nativeCommands: ['browser goto', 'browser content'],
+      roles: [{ name: 'research', description: 'Research.', entries: [], commands: [] }],
+    });
+    const { publish } = renderTab(payload);
+    const addCommand = screen.getByRole('button', { name: 'Add command' });
+    addCommand.focus();
+    expect(addCommand).toHaveFocus();
+
+    publish({
+      ...payload,
+      roles: [{ ...payload.roles[0], commands: [...payload.nativeCommands] }],
+    });
+
+    expect(screen.queryByRole('button', { name: 'Add command' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Commands of role research' })).toHaveFocus();
   });
 
   it('dims a missing entry and shows its tooltip without adding visible text', () => {
@@ -100,6 +235,7 @@ describe('RolesTab', () => {
       roles: [{
         name: 'research', description: 'Research.',
         entries: [{ harness: 'codex', model: 'disabled-model', missing: true }],
+        commands: [],
       }],
       catalog: { models: { codex: ['enabled-model'] }, efforts: ['low'] },
     });
@@ -107,7 +243,7 @@ describe('RolesTab', () => {
     const card = screen.getByDisplayValue('research').closest('.roles-card') as HTMLElement;
 
     expect(screen.getByText('disabled-model')).toBeInTheDocument();
-    fireEvent.click(card.querySelector('.roles-add-entry') as HTMLElement);
+    fireEvent.click(card.querySelector('.roles-add-model') as HTMLElement);
     const modelPicker = screen.getByLabelText('Model for the new entry') as HTMLSelectElement;
     const modelOptions = [...modelPicker.options].map(({ value }) => value);
     expect(modelOptions).toContain('enabled-model');
@@ -304,7 +440,7 @@ describe('RolesTab', () => {
     const { intent } = renderTab();
     const card = screen.getByDisplayValue('research').closest('.roles-card') as HTMLElement;
 
-    fireEvent.click(card.querySelector('.roles-add-entry') as HTMLElement);
+    fireEvent.click(card.querySelector('.roles-add-model') as HTMLElement);
     fireEvent.change(screen.getByLabelText('Harness for the new entry'), { target: { value: 'codex' } });
     fireEvent.change(screen.getByLabelText('Model for the new entry'), { target: { value: 'gpt-6-luna' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
@@ -318,7 +454,7 @@ describe('RolesTab', () => {
     const { intent } = renderTab();
     const card = screen.getByDisplayValue('research').closest('.roles-card') as HTMLElement;
 
-    fireEvent.click(card.querySelector('.roles-add-entry') as HTMLElement);
+    fireEvent.click(card.querySelector('.roles-add-model') as HTMLElement);
     fireEvent.change(screen.getByLabelText('Harness for the new entry'), { target: { value: 'codex' } });
     fireEvent.change(screen.getByLabelText('Model for the new entry'), { target: { value: 'gpt-6-luna' } });
     fireEvent.change(screen.getByLabelText('Effort for the new entry'), { target: { value: 'xhigh' } });
@@ -332,7 +468,7 @@ describe('RolesTab', () => {
   it('returns the picker effort to the default on another harness and on a reopen', () => {
     renderTab();
     const card = screen.getByDisplayValue('research').closest('.roles-card') as HTMLElement;
-    const open = () => fireEvent.click(card.querySelector('.roles-add-entry') as HTMLElement);
+    const open = () => fireEvent.click(card.querySelector('.roles-add-model') as HTMLElement);
 
     open();
     fireEvent.change(screen.getByLabelText('Effort for the new entry'), { target: { value: 'xhigh' } });

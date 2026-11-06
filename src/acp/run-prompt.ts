@@ -1,7 +1,7 @@
 import type { Managers } from '../managers.js';
 import type { AcpSession } from './types.js';
 import type { AcpPendingPrompt } from './prompt-state.js';
-import type { TabRuntime } from '../tab/types.js';
+import type { LogEntry, TabRuntime } from '../tab/types.js';
 import { runAcpToolLoop } from './loop.js';
 import { guardAcpHandlers } from './guard-handlers.js';
 import { appendAcp, settleAcpPrompt } from './response.js';
@@ -11,18 +11,24 @@ import { isRateLimitError } from './rate-limit.js';
 import { createAcpToolTable, toolPrimer, toolRunner, toolExtractor } from './tool-table.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { coreActivity } from './record-feed.js';
+import { acpRoleRuntime } from './role-state.js';
+
+const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
 
 export function runCorePrompt(
   managers: Managers, label: string, runtime: TabRuntime, request: AcpPendingPrompt,
   session: AcpSession, identity: string, current: () => boolean,
 ): void {
-  const active = () => current() && runtime.acpPrompt === request && !request.abort.signal.aborted;
+  const roleState = acpRoleRuntime(runtime, request.role);
+  const active = () => current() && roleState.prompt === request && !request.abort.signal.aborted;
   const updateRunning = (output: string, running: boolean) => {
-    managers.tab.updateRunning(label, { markdown: true }, output, running, { trailing: true });
+    managers.tab.updateRunning(label, { markdown: true, entries: request.runningEntries }, output, running, { trailing: true });
   };
-  const tools = runtime.acpWithoutTools === true ? [] : createAcpToolTable(managers, request.abort.signal);
-  const runCommand = toolRunner(tools, label);
-  const recordTool = (text: string) => coreActivity(managers.acpRecords, runtime, 'tool', text);
+  const tools = runtime.acpWithoutTools === true ? [] : createAcpToolTable(
+    managers, request.roleName, request.commands, request.abort.signal,
+  );
+  const runCommand = toolRunner(tools, request.roleName, request.commands, label);
+  const recordTool = (text: string) => coreActivity(managers.acpRecords, runtime, 'tool', text, request.role);
   const recordAsyncResult = async (result: Promise<string>) => {
     const text = await result;
     if (active()) recordTool(text);
@@ -40,7 +46,8 @@ export function runCorePrompt(
     },
   }, request.prompt, {
     signal: request.abort.signal,
-    primer: [toolPrimer(tools), MARKDOWN_INSTRUCTION].filter(Boolean).join('\n\n'),
+    primer: [toolPrimer(tools, request.commands), request.role === 'tell' ? TELL_INSTRUCTION : '', MARKDOWN_INSTRUCTION]
+      .filter(Boolean).join('\n\n'),
     runCommand: (command) => {
       if (!active()) throw new Error('ACP: prompt cancelled.');
       recordTool(command);
@@ -54,9 +61,10 @@ export function runCorePrompt(
     extractCommand: toolExtractor(tools),
   }, guardAcpHandlers({
     startTurn: (isFirst) => {
-      managers.tab.addBusy(label);
       if (isFirst) notify(managers, 'agent-start', label);
-      appendAcp(managers, label, { input: isFirst ? request.prompt : '', output: '', running: true, markdown: true });
+      const entry: LogEntry = { input: isFirst ? request.prompt : '', output: '', running: true, markdown: true };
+      request.runningEntries.add(entry);
+      appendAcp(managers, label, entry);
     },
     chunk: (buffer) => updateRunning(buffer, true),
     endTurn: (final) => { updateRunning(final, false); lastAnswer = final; request.replied = true; },
@@ -68,7 +76,7 @@ export function runCorePrompt(
         ? `${lastAnswer}${lastAnswer ? '\n\n' : ''}(stopped after ${maxSteps} tool steps)`
         : lastAnswer;
       messageBus.emit('state', { type: 'dirty' });
-      settleAcpPrompt(managers, label, { answered: true, reply, session: identity });
+      settleAcpPrompt(managers, label, { answered: true, reply, session: identity }, undefined, request.role);
     },
     error: (message) => {
       const error = `ACP error: ${message}`;
@@ -76,7 +84,7 @@ export function runCorePrompt(
       notify(managers, 'state-change', label);
       if (isRateLimitError(message)) notify(managers, 'rate-limited', label);
       request.modelFailed = true;
-      settleAcpPrompt(managers, label, { answered: false, error });
+      settleAcpPrompt(managers, label, { answered: false, error }, undefined, request.role);
     },
   }, active));
 }

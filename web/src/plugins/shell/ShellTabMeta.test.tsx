@@ -109,7 +109,7 @@ describe('ShellTabMeta connections rows', () => {
 
   it('opens a supported row from the keyboard as well as the pointer', () => {
     const openConnection = vi.fn();
-    const row = { text: 'acp:opencode', kind: 'acp' as const, acpRef: { scope: 'tab' as const, label: 'shell-1' } };
+    const row = { text: 'acp:ask:opencode', kind: 'acp' as const, acpRef: { scope: 'tab' as const, label: 'shell-1', role: 'ask' as const } };
     render(<ShellTabMeta
       payload={{ ...payload, connections: [row] }}
       capabilities={capabilities({ active: true, openConnection })}

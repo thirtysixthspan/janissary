@@ -9,6 +9,7 @@ import type { SandboxOptions } from '../sandbox/index.js';
 import type { AcpInfo, AcpSession } from './types.js';
 import { shutdownProcessTree } from './process-tree.js';
 import { AcpManager } from './manager.js';
+import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { AcpSessionRecords } from '../acp-records/manager.js';
 import { TabManager } from '../tab/manager.js';
 import { makeTab } from '../tab/index.js';
@@ -266,13 +267,16 @@ describe('connectAcp', () => {
     const holder = new RemoteAcp((frame) => channel.receive(`${encodeFrame(frame)}\n`), root);
     channel.receive(`${encodeHandshake()}\n`);
     managers.remote = { get: () => channel } as Managers['remote'];
-    managers.acp = new AcpManager(managers, () => [{ harness: 'opencode', model: 'google/gemini-3.1-flash-lite' }]);
+    managers.acp = new AcpManager(managers, (_root, role) => ({
+      name: role, entries: [{ harness: 'opencode', model: 'google/gemini-3.1-flash-lite' }],
+      commands: [...NATIVE_ACP_COMMANDS],
+    }));
     try {
       managers.acp.start('owner', { withoutTools: true });
       const pending = managers.acp.prompt('owner', 'hold');
       await vi.waitFor(() => expect(records.rows()[0]?.status).toBe('Running'));
       await vi.waitFor(() => expect(records.window(records.rows()[0].id)?.blocks[0].entries[0]?.text).toBe('held'));
-      const id = managers.tab.byLabel('owner')!.runtime!.acpRecordId!;
+      const id = managers.tab.byLabel('owner')!.runtime!.acpRoles!.ask!.recordId!;
       const identity = managers.acp.sessionIdentity('owner');
       managers.acp.start('other', { withoutTools: true });
       await expect(managers.acp.prompt('other', 'independent')).resolves.toContain('cancels=0');
@@ -283,7 +287,7 @@ describe('connectAcp', () => {
       expect(records.window(id)).toMatchObject({ status: 'Idle', blocks: [{ answer: 'ACP: prompt cancelled.', entries: [{ text: 'heldfinal activity' }] }] });
       expect(managers.acp.sessionIdentity('owner')).toBe(identity);
       await expect(managers.acp.prompt('owner', 'next')).resolves.toContain('cancels=1 protocol=1 sessions=1');
-      expect(managers.tab.byLabel('owner')!.runtime!.acpRecordId).toBe(id);
+      expect(managers.tab.byLabel('owner')!.runtime!.acpRoles!.ask!.recordId).toBe(id);
       expect(records.window(id)?.totalBlocks).toBe(2);
     } finally {
       managers.acp.closeAll();

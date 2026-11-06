@@ -28,6 +28,7 @@ export const DEFAULT_ROLES: readonly Role[] = [
   {
     name: 'planning',
     description: 'Research and development of plans for new product features.',
+    commands: [],
     entries: [
       { harness: 'codex', model: 'gpt-6-sol', effort: 'xhigh' },
       { harness: 'claude', model: 'claude-opus-5-5', effort: 'xhigh' },
@@ -37,21 +38,25 @@ export const DEFAULT_ROLES: readonly Role[] = [
     name: 'research',
     description: 'Research, comparison, and information gathering for a task or question.',
     entries: [],
+    commands: [],
   },
   {
     name: 'code review',
     description: 'Review of code changes for correctness, style, and risk.',
     entries: [],
+    commands: [],
   },
   {
     name: 'implementation',
     description: 'Implementation of an approved plan or a described change.',
     entries: [],
+    commands: [],
   },
   {
     name: 'documentation',
     description: 'Writing and updating specs, plans, and user or developer documentation.',
     entries: [],
+    commands: [],
   },
   {
     name: 'ask',
@@ -60,6 +65,23 @@ export const DEFAULT_ROLES: readonly Role[] = [
       { harness: 'opencode', model: 'opencode-go/deepseek-v4.1-flash', effort: 'medium' },
       { harness: 'claude', model: 'claude-haiku-4-5', effort: 'high' },
       { harness: 'codex', model: 'gpt-6-luna', effort: 'high' },
+    ],
+    commands: [
+      'db sqlite list', 'db sqlite query', 'browser goto', 'browser content',
+      'question ask', 'question approve',
+    ],
+  },
+  {
+    name: 'tell',
+    description: 'When you tell a model to carry out a task via ACP.',
+    entries: [
+      { harness: 'opencode', model: 'opencode-go/deepseek-v4.1-flash', effort: 'medium' },
+      { harness: 'claude', model: 'claude-haiku-4-5', effort: 'high' },
+      { harness: 'codex', model: 'gpt-6-luna', effort: 'high' },
+    ],
+    commands: [
+      'db sqlite create', 'db sqlite delete', 'db sqlite query', 'db sqlite list',
+      'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve',
     ],
   },
 ];
@@ -75,6 +97,11 @@ function decodeEntry(value: unknown): RoleEntry | undefined {
   return effort === undefined ? { harness, model } : { harness, model, effort };
 }
 
+function isStringList(value: unknown): value is string[] {
+  return Array.isArray(value)
+    && value.every((item: unknown): item is string => typeof item === 'string');
+}
+
 // One role as the file holds it: a `description` string and an `entries` list. A key whose trimmed
 // name is empty, whose value is not that shape, or whose name another key already trimmed to is
 // damage — dropped and counted rather than served. Inside a surviving role, entries that do not
@@ -86,6 +113,9 @@ function decodeRole(name: string, value: unknown, taken: Set<string>): { role?: 
   if (!isRecord(value)) return { dropped: 1 };
   const { description, entries } = value;
   if (typeof description !== 'string' || !Array.isArray(entries)) return { dropped: 1 };
+  const commandsValue = value.commands;
+  if (commandsValue !== undefined && !isStringList(commandsValue)) return { dropped: 1 };
+  const commands = commandsValue ?? [];
   taken.add(key);
   const decoded: RoleEntry[] = [];
   let dropped = 0;
@@ -94,7 +124,7 @@ function decodeRole(name: string, value: unknown, taken: Set<string>): { role?: 
     if (good) decoded.push(good);
     else dropped += 1;
   }
-  return { role: { name: trimmed, description, entries: decoded }, dropped };
+  return { role: { name: trimmed, description, entries: decoded, commands }, dropped };
 }
 
 // The whole file object. Answers undefined only when the top level is not an object or every key was

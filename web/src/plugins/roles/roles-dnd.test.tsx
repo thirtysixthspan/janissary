@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { RolesPayload } from '@shared/plugins/roles/shared';
+import { NATIVE_ACP_COMMANDS, type RolesPayload } from '@shared/plugins/roles/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { RolesTab } from './RolesTab';
 
@@ -14,13 +14,16 @@ function payload(): RolesPayload {
         name: 'planning',
         description: 'Plans.',
         entries: [{ harness: 'codex', model: 'gpt-6-sol' }, { harness: 'codex', model: 'gpt-6-luna' }],
+        commands: [],
       },
       {
         name: 'research',
         description: 'Research.',
         entries: [{ harness: 'codex', model: 'gpt-6-mini' }],
+        commands: [],
       },
     ],
+    nativeCommands: [...NATIVE_ACP_COMMANDS],
     source: 'home',
     path: '/home/me/.janissary/roles.json',
     catalog: CATALOG,

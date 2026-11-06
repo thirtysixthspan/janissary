@@ -1,9 +1,15 @@
 import type { AcpPromptResult } from './types.js';
+import type { AcpRole } from './role.js';
+import type { LogEntry } from '../tab/types.js';
 
 export type AcpPendingPrompt = {
   finish: (result: AcpPromptResult) => void;
   abort: AbortController;
   prompt: string;
+  role: AcpRole;
+  roleName: string;
+  commands: string[];
+  runningEntries: Set<LogEntry>;
   recordId?: string;
   cancellation?: Promise<boolean>;
   // Set once the model has completed a reply turn for this request: from then on it has answered, and

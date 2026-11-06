@@ -299,6 +299,33 @@ describe('updateRunningEntry', () => {
     expect(tab.log[0]).toEqual({ input: 'git status', output: '', running: true, cwd: '/repo' });
     expect(tab.log[1]).toEqual({ input: 'monitor ask aslan status', output: 'report built', running: false });
   });
+
+  it('matches prompt-owned entries and transfers membership through immutable replacements', () => {
+    const askEntry = { input: 'ask hi', output: '', running: true, markdown: true };
+    const tellEntry = { input: 'tell hi', output: '', running: true, markdown: true };
+    const tab = makeTab('bob', 'red', 1, [], [askEntry, tellEntry]);
+    const askEntries = new Set([askEntry]);
+    const tellEntries = new Set([tellEntry]);
+
+    updateRunningEntry([tab], 'bob', { markdown: true, entries: askEntries }, 'ask partial', true, {});
+    updateRunningEntry([tab], 'bob', { markdown: true, entries: tellEntries }, 'tell partial', true, {});
+
+    expect(tab.log.map(({ output }) => output)).toEqual(['ask partial', 'tell partial']);
+    expect(askEntries.has(askEntry)).toBe(false);
+    expect(askEntries.has(tab.log[0]!)).toBe(true);
+    expect(tellEntries.has(tellEntry)).toBe(false);
+    expect(tellEntries.has(tab.log[1]!)).toBe(true);
+
+    updateRunningEntry([tab], 'bob', { markdown: true, entries: askEntries }, 'ask final', false, {});
+    updateRunningEntry([tab], 'bob', { markdown: true, entries: tellEntries }, 'tell final', false, {});
+
+    expect(tab.log.map(({ output, running }) => ({ output, running }))).toEqual([
+      { output: 'ask final', running: false },
+      { output: 'tell final', running: false },
+    ]);
+    expect(askEntries.has(tab.log[0]!)).toBe(true);
+    expect(tellEntries.has(tab.log[1]!)).toBe(true);
+  });
 });
 
 describe('finishRunningTab', () => {

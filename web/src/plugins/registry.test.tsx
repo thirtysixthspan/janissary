@@ -30,6 +30,7 @@ describe('client plugin registry', () => {
     expect(clientPluginRegistry.get('conversations')?.schemaVersion)
       .toBe(CONVERSATIONS_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('connections')?.schemaVersion).toBe(CONNECTIONS_PAYLOAD_SCHEMA_VERSION);
+    expect(clientPluginRegistry.get('connections')?.schemaVersion).toBe(2);
     expect(clientPluginRegistry.get('diff')?.schemaVersion).toBe(DIFF_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('markdown')?.schemaVersion).toBe(MARKDOWN_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('models')?.schemaVersion).toBe(MODELS_PAYLOAD_SCHEMA_VERSION);
@@ -39,6 +40,7 @@ describe('client plugin registry', () => {
     expect(clientPluginRegistry.get('scripts')?.schemaVersion).toBe(SCRIPTS_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('search')?.schemaVersion).toBe(SEARCH_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('shell')?.schemaVersion).toBe(SHELL_PAYLOAD_SCHEMA_VERSION);
+    expect(clientPluginRegistry.get('shell')?.schemaVersion).toBe(5);
     expect(clientPluginRegistry.get('sql')?.schemaVersion).toBe(SQL_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('video')?.schemaVersion).toBe(VIDEO_PAYLOAD_SCHEMA_VERSION);
   });
@@ -66,7 +68,7 @@ describe('client plugin registry', () => {
   it('refuses a roles payload whose model catalog is not lists of strings', async () => {
     const { isPayload } = await clientPluginLoaders.roles();
     const payload = (catalog: unknown) => ({
-      roles: [], source: 'home', path: '/home/me/.janissary/roles.json', catalog,
+      roles: [], nativeCommands: [], source: 'home', path: '/home/me/.janissary/roles.json', catalog,
     });
 
     expect(isPayload(payload({ models: { codex: ['gpt-6-sol'] }, efforts: ['low'] }))).toBe(true);

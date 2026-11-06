@@ -18,7 +18,7 @@ export const command: Command = {
       settled = true;
       appendAcpBackgroundReply(managers, tab.label, line, result);
     };
-    void managers.acp.promptResult(tab.label, command).then(
+    void managers.acp.promptResult(tab.label, command, undefined, { appendRefusalToTranscript: false }).then(
       settle,
       (error: unknown) => settle({ answered: false, error: `ACP error: ${errorText(error)}` }),
     );

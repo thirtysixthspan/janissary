@@ -46,8 +46,8 @@ export function orderedJsonKeys(text: string): string[] {
 
 export function serializeRoles(roles: readonly Role[]): string {
   if (roles.length === 0) return '{}\n';
-  const members = roles.map(({ name, description, entries }) => {
-    const value = JSON.stringify({ description, entries }, undefined, 2).replaceAll('\n', '\n  ');
+  const members = roles.map(({ name, description, entries, commands }) => {
+    const value = JSON.stringify({ description, entries, commands }, undefined, 2).replaceAll('\n', '\n  ');
     return `  ${JSON.stringify(name)}: ${value}`;
   });
   return `{\n${members.join(',\n')}\n}\n`;

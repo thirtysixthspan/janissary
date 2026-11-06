@@ -5,16 +5,34 @@ import type { Managers } from '../managers.js';
 import type { Tab } from './types.js';
 
 describe('buildTabView', () => {
+  it('keeps the tab ACP projection on the ask session when both roles exist', () => {
+    const tab = makeTab('both-roles', '#fff');
+    tab.runtime = {
+      busy: false, context: [], queue: [], acpRoles: {
+        ask: { recordId: 'ask-record' }, tell: { recordId: 'tell-record' },
+      },
+    };
+
+    const view = buildTabView(tab, false, '/repo', 'ask-provider/model', [], [], [], (path) => path);
+
+    expect(view.acp).toBe('ask-provider/model');
+  });
+
   it('omits the removed response property while retaining ACP, transcript, question, busy and replies', () => {
     const tab = makeTab('shell', '#fff');
     tab.view = 'plugin';
-    tab.plugin = { id: 'shell', instanceKey: 'shell', schemaVersion: 4, payload: {}, fileRefs: [] };
+    tab.plugin = { id: 'shell', instanceKey: 'shell', schemaVersion: 5, payload: {}, fileRefs: [] };
     const running = { input: 'working', output: '# Partial', running: true, markdown: true };
     const settled = { input: 'ask previous', output: '# Answer', markdown: true };
     tab.log = [settled, running, { input: '/ask previous ', output: '# Answer', background: 'reply' }];
     tab.runtime = {
       busy: true, context: [], queue: [], acpEntries: new WeakSet([settled, running]),
-      acpPrompt: { prompt: 'working', abort: new AbortController(), finish: () => {} },
+      acpRoles: { ask: {
+        prompt: {
+          prompt: 'working', role: 'ask', roleName: 'ask', commands: [],
+          abort: new AbortController(), finish: () => {},
+        },
+      } },
     };
     const question = { id: 'q-shell', tab: 'shell', kind: 'ask' as const, question: 'Which?' };
     const view = buildTabView(tab, true, '/repo', 'provider/model', [], [], [], (p) => p, question);
@@ -28,7 +46,7 @@ describe('buildTabView', () => {
       expect.objectContaining({ type: 'markdown', text: '# Partial' }),
       expect.objectContaining({ type: 'markdown', text: '# Answer' }),
     ]));
-    delete tab.runtime.acpPrompt;
+    delete tab.runtime.acpRoles?.ask;
     running.running = false;
     expect(buildTabView(tab, false, '/repo', 'provider/model', [], [], [], (p) => p)).not.toHaveProperty('acpResponse');
   });

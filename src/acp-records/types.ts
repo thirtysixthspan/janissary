@@ -1,4 +1,5 @@
 import type { AcpActivityKind } from '../acp/activity.js';
+import type { AcpRole } from '../acp/role.js';
 
 type SourceMetadata = {
   model: string;
@@ -9,7 +10,7 @@ type SourceMetadata = {
 };
 
 export type AcpRecordSource = SourceMetadata & (
-  | { kind: 'acp' }
+  | { kind: 'acp'; role?: AcpRole }
   | { kind: 'agent'; runId: string; taskPath: string }
 );
 
@@ -49,6 +50,7 @@ export type AcpRecordRow = {
   ownerLabel: string;
   ownerName: string;
   host?: string;
+  role?: AcpRole;
   runId?: string;
   startedAt: number;
   updatedAt: number;

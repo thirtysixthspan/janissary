@@ -15,7 +15,7 @@ beforeEach(() => { vi.clearAllMocks(); });
 afterEach(() => { vi.useRealTimers(); });
 
 const declaration: TabPluginDeclaration = {
-  id: 'shell', version: '1', apiVersion: TAB_PLUGIN_API_VERSION, payloadSchemaVersion: 4, tabLabelPrefix: 'shell', fileExtensions: {},
+  id: 'shell', version: '1', apiVersion: TAB_PLUGIN_API_VERSION, payloadSchemaVersion: 5, tabLabelPrefix: 'shell', fileExtensions: {},
 };
 
 function harness(options: {

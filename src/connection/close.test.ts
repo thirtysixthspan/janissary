@@ -61,8 +61,8 @@ describe('closeConnection', () => {
 
     closeConnection('acp', 'anthropic/claude-sonnet', managers, 'main', out);
 
-    expect(managers.acp.close).toHaveBeenCalledWith('main');
-    expect(out).toHaveBeenCalledWith('Closed connection acp:anthropic/claude-sonnet.');
+    expect(managers.acp.close).toHaveBeenCalledWith('main', undefined, 'ask');
+    expect(out).toHaveBeenCalledWith('Closed connection acp:ask:anthropic/claude-sonnet.');
   });
 
   it('closes a session still connecting, which has no name yet, under the id typed', () => {
@@ -71,7 +71,8 @@ describe('closeConnection', () => {
 
     closeConnection('acp', 'agent', managers, 'main', out);
 
-    expect(out).toHaveBeenCalledWith('Closed connection acp:agent.');
+    expect(managers.acp.close).toHaveBeenCalledWith('main', undefined, 'ask');
+    expect(out).toHaveBeenCalledWith('Closed connection acp:ask:agent.');
   });
 
   it('reports when there is no open acp connection, naming the id typed', () => {
@@ -117,8 +118,51 @@ describe('closeConnection', () => {
 
     expect(managers.editorAcp.close).toHaveBeenCalledWith('main', 'opencode/big-pickle');
     expect(managers.monitor.stop).toHaveBeenCalledWith('main', 'opencode/big-pickle');
-    expect(managers.acp.close).toHaveBeenCalledWith('main');
-    expect(out).toHaveBeenCalledWith('Closed connection acp:opencode/big-pickle.');
+    expect(managers.acp.close).toHaveBeenCalledWith('main', undefined, 'ask');
+    expect(out).toHaveBeenCalledWith('Closed connection acp:ask:opencode/big-pickle.');
+  });
+
+  it('routes the tell alias and tell model prefix to tell and reports the named model', () => {
+    const close = vi.fn((_label: string, _output?: unknown, role?: string) => role === 'tell');
+    const label = vi.fn((_owner: string, role = 'ask') => role === 'tell' ? 'opencode/tell-model' : 'ask/model');
+    const managers = makeManagers({ acp: { close, label } } as unknown as Partial<Managers>);
+    const out = vi.fn();
+
+    closeConnection('acp', 'tell:old-model', managers, 'main', out);
+
+    expect(label).toHaveBeenCalledWith('main', 'tell');
+    expect(close.mock.calls[0]?.[0]).toBe('main');
+    expect(close.mock.calls[0]?.[2]).toBe('tell');
+    expect(out).toHaveBeenCalledWith('Closed connection acp:tell:opencode/tell-model.');
+  });
+
+  it('uses the selected role and supplied suffix when the session is still connecting', () => {
+    const close = vi.fn(() => true);
+    const managers = makeManagers({ acp: { close, label: vi.fn() } } as unknown as Partial<Managers>);
+    const tellOut = vi.fn();
+    const askOut = vi.fn();
+
+    closeConnection('acp', 'tell', managers, 'main', tellOut);
+    closeConnection('acp', 'ask:provider/model', managers, 'main', askOut);
+
+    expect(close.mock.calls[0]?.[0]).toBe('main');
+    expect(close.mock.calls[0]?.[2]).toBe('tell');
+    expect(tellOut).toHaveBeenCalledWith('Closed connection acp:tell.');
+    expect(close.mock.calls[1]?.[0]).toBe('main');
+    expect(close.mock.calls[1]?.[2]).toBe('ask');
+    expect(askOut).toHaveBeenCalledWith('Closed connection acp:ask:provider/model.');
+  });
+
+  it('keeps every unrecognized id on the ask fallback and preserves the entered id on failure', () => {
+    const close = vi.fn(() => false);
+    const managers = makeManagers({ acp: { close, label: vi.fn() } } as unknown as Partial<Managers>);
+    const out = vi.fn();
+
+    closeConnection('acp', 'tellish:model', managers, 'main', out);
+
+    expect(close.mock.calls[0]?.[0]).toBe('main');
+    expect(close.mock.calls[0]?.[2]).toBe('ask');
+    expect(out).toHaveBeenCalledWith('No open connection acp:tellish:model.');
   });
 
   it('closes an ssh connection found by tab label', () => {

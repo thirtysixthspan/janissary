@@ -1,9 +1,8 @@
 # Roles tab
 
 `roles` opens a tab that maps named roles — planning, research, code review, implementation,
-documentation, or any the user adds — onto an ordered list of harness/model/effort choices, so a
-human or an AI task deciding which model to launch for a task reads one role's list instead of
-remembering which harness runs which model. The file is the durable output; the tab is its editor.
+documentation, or any the user adds — onto an ordered list of harness/model/effort choices and
+native ACP command grants. The file is the durable output; the tab is its editor.
 The tab is reached only through its own command: it claims no file extensions, opens on no file, and
 takes no argument. It lives in the center strip like the search tab (see [[tab-plugins]]).
 
@@ -15,8 +14,9 @@ takes no argument. It lives in the center strip like the search tab (see [[tab-p
 ### The file
 
 Roles live in `~/.janissary/roles.json`, a JSON object keyed by role name. Each role is a
-`description` string and an ordered `entries` list; each entry is a `harness` name, a `model` id,
-and an `effort` present only when the entry stores one:
+`description` string, an ordered `entries` list, and a `commands` list of granted native ACP
+commands. Each entry is a `harness` name, a `model` id, and an `effort` present only when the entry
+stores one. The `commands` list follows `entries` in the file; an empty list grants no commands.
 
 ```json
 {
@@ -25,15 +25,18 @@ and an `effort` present only when the entry stores one:
     "entries": [
       { "harness": "codex", "model": "gpt-6-sol", "effort": "xhigh" },
       { "harness": "claude", "model": "claude-opus-5-5", "effort": "xhigh" }
-    ]
+    ],
+    "commands": []
   }
 }
 ```
 
 The textual key order is the role order the tab shows, including numeric names, so a reorder
 rewrites the keys in their new order. Numeric names are never sorted numerically during reading
-or saving. Special names such as `__proto__` retain their descriptions and entries like any other
-role, including duplicate model choices.
+or saving. Special names such as `__proto__` retain their descriptions, entries, and commands like
+any other role, including duplicate model choices. Unknown command strings and duplicate command
+grants from a hand-written file are preserved. A missing `commands` field means the role grants no
+commands.
 The `effort` values are the same fixed levels the New harness dialog offers — `low`, `medium`,
 `high`, `xhigh`, `max` (see [[harness]]) — plus the default of storing none at all; any other string
 a hand-written file carries is passed through verbatim, exactly as `harness --effort` does.
@@ -42,14 +45,19 @@ A project's `.janissary/roles.json`, when it exists, **replaces** the home file 
 merging of roles between the two — including when it holds an empty object, which is an explicit
 choice of zero roles rather than a request for the defaults.
 
-When neither file exists, the tab creates `~/.janissary/roles.json` holding six default roles:
+When neither file exists, the tab creates `~/.janissary/roles.json` holding seven default roles:
 `planning` (with the two entries above), `research` (`Research, comparison, and information
 gathering for a task or question.`), `code review` (`Review of code changes for correctness, style,
 and risk.`), `implementation` (`Implementation of an approved plan or a described change.`),
 `documentation` (`Writing and updating specs, plans, and user or developer documentation.`), and
 `ask` (`When you ask a question via ACP.`) with three entries in order: `opencode`
 `opencode-go/deepseek-v4.1-flash` at `medium`, `claude` `claude-haiku-4-5` at `high`, and `codex`
-`gpt-6-luna` at `high`. Only `planning` and `ask` start with entries.
+`gpt-6-luna` at `high`. The `tell` role follows `ask`, has the description `When you tell a model to
+carry out a task via ACP.`, and starts with the same three entries. The `ask` role grants `db sqlite
+list`, `db sqlite query`, `browser goto`, `browser content`, `question ask`, and `question approve`.
+The `tell` role grants all nine native commands: those six plus `db sqlite create`, `db sqlite
+delete`, and `browser eval`. `planning`, `research`, `code review`, `implementation`, and
+`documentation` start with no command grants. Only `planning`, `ask`, and `tell` start with entries.
 
 ### What the tab shows
 
@@ -57,19 +65,35 @@ The tab shows role cards and no model catalog column. Above the cards, a line na
 effect — its full path — or, when no file decodes, `No roles file in effect`. A problem line appears
 under it when the roles on screen are not what the file literally holds.
 
-Each card carries the role's name, its description, and its entries in order. An entry whose model
-is no longer enabled is dimmed and titled `Not in the model catalog`; the entry remains on the card
-and in `roles.json`. The marker is recomputed when the model catalog changes and is not stored in
-the roles file. The entry picker offers only the enabled models from the current catalog.
+Each card carries the role's name, description, ordered model entries, and command grants. Its
+`Models` and `Commands` lists have the accessible names `Models of role <name>` and
+`Commands of role <name>`. An entry whose model is no longer enabled is dimmed and titled `Not in the
+model catalog`; the entry remains on the card and in `roles.json`. The marker is recomputed when the
+model catalog changes and is not stored in the roles file. The model picker offers only the enabled
+models from the current catalog.
 
-The name and
-description edit in place: the change is written when the field loses focus, Enter commits, and
-Escape reverts. Every entry row shows the model, the harness, an effort dropdown (`default` plus
-the levels above, and the entry's own stored effort as its own option when that value is outside
-them, so a hand-written effort never reads as unset), and a remove control. **Add entry** opens a
-small picker — harness, model, effort, and Add — so an entry can be added without a pointer, and the
-picker starts on `default` and returns there when the harness changes or the picker is reopened, so
-no entry carries an effort nobody chose for it.
+The name and description edit in place: the change is written when the field loses focus, Enter
+commits, and Escape reverts. The `Models` section shows a muted `No models` row when empty. Every
+entry row shows the model, the harness, an effort dropdown (`default` plus the levels above, and the
+entry's own stored effort as its own option when that value is outside them, so a hand-written
+effort never reads as unset), and a remove control. **Add model** opens a small picker — harness,
+model, effort, and Add — so an entry can be added without a pointer. The picker starts on `default`
+and returns there when the harness changes or the picker is reopened, so no entry carries an effort
+nobody chose for it.
+
+The `Commands` section shows native grants in the published vocabulary order, followed by unknown
+hand-written values in their stored order. Duplicate grants remain adjacent and visible. Unknown
+commands are dimmed, titled `Not a native command`, and can be removed. A muted `No commands` row
+appears when a role has none. **Add command** opens a dropdown of native commands the role does not
+already have, followed by Add and Cancel; Add stays disabled until a choice is made. The button is
+hidden when all nine native commands are present. Add sends `add-command`; removing any duplicate
+row sends `remove-command`, which removes every copy. If another client changes a command while the
+picker is open, it clears a selection that is no longer available or closes when no commands remain
+to add, and the card follows the next publication. Both pickers focus their first control when
+opened, cancel on Escape, and return focus to their own add button on Add, Cancel, or Escape. If a
+publication leaves no commands to add while the picker is open, or removes the focused **Add
+command** button, focus moves to the `Commands` heading. At narrow pane widths, command text wraps
+without pushing its remove control out of view.
 
 ### A description the tab did not write
 
@@ -124,7 +148,9 @@ rapid edits are applied one after the other, the second reading the file the fir
 that cannot happen — a read-only directory, a directory in the file's place — is refused with
 `Could not write roles.json at <path>.` and the tab is unchanged. A failed write or replacement
 preserves the previous file contents and removes temporary output. Successful edits retain the
-file's existing permissions.
+file's existing permissions. Adding a command a role already grants, or removing a command it does
+not grant, leaves the roles file unchanged. Removing a granted command removes every duplicate
+copy.
 
 ### An entry list that changed before an edit
 
@@ -156,15 +182,19 @@ is still left exactly as it is.
 
 `roles.json` is a plain JSON object, and the tab re-reads it every time it opens, so editing it by
 hand is supported. A role whose value is not an object with a `description` string and an `entries`
-list is dropped, as is an entry missing a `harness` or `model`, a key whose name trims to empty, and
-a key whose name another key already trims to. An empty object is a valid file holding zero roles.
+list is dropped, as is a role whose `commands` value is not a list of strings. An entry missing a
+`harness` or `model`, a key whose name trims to empty, and a key whose name another key already
+trims to are dropped as well. An empty object is a valid file holding zero roles.
 
-## Not in this version
+## ACP role behavior
 
-The only reader besides the tab is the core ACP session behind `ask`, which launches the `ask`
-role's entries in order and falls back to the default `ask` entries when the file in effect has no
-`ask` role or that role lists none; it never creates the file (see [[acp]]). No launch dialog, no
-command flag, and no agent consults a role description. Other consumers read `roles.json` itself.
-Entries carry harness, model, and effort only.
+The core ACP sessions behind `ask` and `tell` read roles. Each command reads its matching role's
+model entries and command grants fresh for each prompt, never creating a file (see [[acp]]). When
+the matching role does not exist in the file in effect, its built-in entries and grants apply. When
+an existing role has no entries, its model entries fall back to the built-in defaults while its own
+grants stay in effect; an empty or missing `commands` list grants no tools. A nonempty model list
+whose entries are all disabled does not fall back to the built-in models. No launch dialog, command
+flag, or agent consults a role description. Other consumers read `roles.json` itself. Entries carry
+harness, model, and effort; `commands` contains native ACP grants.
 Keyboard reordering is not provided — adding and removing entries and roles are pointer-free, but
 order rides the drag.

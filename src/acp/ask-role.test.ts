@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { askRoleEntries, attemptOrder, defaultAskEntries, exhaustedError, fallbackNotice } from './ask-role.js';
+import {
+  askRoleEntries, attemptOrder, defaultAskEntries, exhaustedError, fallbackNotice, readRoleSettings,
+} from './ask-role.js';
 
 function directories(): { home: string; root: string } {
   const base = mkdtempSync(path.join(tmpdir(), 'janus-ask-role-'));
@@ -21,6 +23,9 @@ function writeRoles(directory: string, roles: Record<string, unknown>): void {
 const CLAUDE = { harness: 'claude', model: 'claude-haiku-4-5', effort: 'high' };
 const OPENCODE = { harness: 'opencode', model: 'opencode-go/deepseek-v4.1-flash', effort: 'medium' };
 const CODEX = { harness: 'codex', model: 'gpt-6-luna', effort: 'high' };
+const ASK_COMMANDS = [
+  'db sqlite list', 'db sqlite query', 'browser goto', 'browser content', 'question ask', 'question approve',
+];
 
 describe('askRoleEntries', () => {
   it('uses the default ask entries, in order, when neither roles file exists, and creates no file', () => {
@@ -64,6 +69,56 @@ describe('askRoleEntries', () => {
     writeRoles(home, { ask: { description: 'Questions.', entries: [] } });
 
     expect(askRoleEntries(root, home)).toEqual(defaultAskEntries());
+  });
+});
+
+describe('readRoleSettings', () => {
+  it('uses built-in entries and command grants when the requested role is absent', () => {
+    const { home, root } = directories();
+    writeRoles(home, { planning: { description: 'Plans.', entries: [], commands: [] } });
+
+    expect(readRoleSettings(root, 'ask', home)).toEqual({
+      name: 'ask', entries: [OPENCODE, CLAUDE, CODEX], commands: ASK_COMMANDS,
+    });
+    expect(readRoleSettings(root, 'tell', home).commands).toHaveLength(9);
+  });
+
+  it('keeps an existing role grant list empty while falling back from empty model entries', () => {
+    const { home, root } = directories();
+    writeRoles(home, { ask: { description: 'Questions.', entries: [], commands: [] } });
+
+    expect(readRoleSettings(root, 'ask', home)).toEqual({
+      name: 'ask', entries: [OPENCODE, CLAUDE, CODEX], commands: [],
+    });
+  });
+
+  it('treats a missing command field on an existing role as no grants', () => {
+    const { home, root } = directories();
+    writeRoles(home, { ask: { description: 'Questions.', entries: [CLAUDE] } });
+
+    expect(readRoleSettings(root, 'ask', home)).toEqual({ name: 'ask', entries: [CLAUDE], commands: [] });
+  });
+
+  it('does not replace nonempty stored model entries or grants when they are unavailable to the caller', () => {
+    const { home, root } = directories();
+    const retired = { harness: 'retired-harness', model: 'retired-model' };
+    writeRoles(home, {
+      ask: { description: 'Questions.', entries: [retired], commands: ['future command'] },
+    });
+
+    expect(readRoleSettings(root, 'ask', home)).toEqual({
+      name: 'ask', entries: [retired], commands: ['future command'],
+    });
+  });
+
+  it('reads the current grants again for the next prompt', () => {
+    const { home, root } = directories();
+    writeRoles(home, { ask: { description: 'Questions.', entries: [CLAUDE], commands: ['browser goto'] } });
+    expect(readRoleSettings(root, 'ask', home).commands).toEqual(['browser goto']);
+
+    writeRoles(home, { ask: { description: 'Questions.', entries: [CLAUDE], commands: ['question ask'] } });
+
+    expect(readRoleSettings(root, 'ask', home).commands).toEqual(['question ask']);
   });
 });
 

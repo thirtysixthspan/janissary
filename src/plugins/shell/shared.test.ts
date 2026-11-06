@@ -16,7 +16,7 @@ const PAYLOAD = {
 // host produced would fail the plugin's guard — disabling the plugin on a shape the host itself made.
 describe('shell shared contract', () => {
   it('declares a payload schema version the host can compare', () => {
-    expect(SHELL_PAYLOAD_SCHEMA_VERSION).toBe(4);
+    expect(SHELL_PAYLOAD_SCHEMA_VERSION).toBe(5);
   });
 
   it('accepts a terminal payload and a provisioning payload, and nothing mixing the two', () => {
@@ -62,7 +62,8 @@ describe('shell shared contract', () => {
       { text: 'ssh:devbox', kind: 'ssh' },
       { text: 'browser', kind: 'browser' },
       { text: 'main.db', kind: 'sqlite' },
-      { text: 'acp:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'janus' } },
+      { text: 'acp:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'janus', role: 'ask' } },
+      { text: 'acp:tell:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'janus', role: 'tell' } },
       {
         text: 'reviewer (acp)',
         kind: 'acp',
@@ -78,7 +79,8 @@ describe('shell shared contract', () => {
 
   it('declares an AcpRef that is the protocol\'s discriminated union, not a flattened field', () => {
     const refs: AcpRef[] = [
-      { scope: 'tab', label: 'janus' },
+      { scope: 'tab', label: 'janus', role: 'ask' },
+      { scope: 'tab', label: 'janus', role: 'tell' },
       { scope: 'editor', label: 'notes', persona: 'reviewer' },
     ];
 
@@ -90,6 +92,14 @@ describe('shell shared contract', () => {
     expect(isShellPayload({
       ...PAYLOAD,
       connections: [{ text: 'x', kind: 'acp', acpRef: { scope: 'editor', label: 'notes' } }],
+    })).toBe(false);
+    expect(isShellPayload({
+      ...PAYLOAD,
+      connections: [{ text: 'x', kind: 'acp', acpRef: { scope: 'tab', label: 'janus' } }],
+    })).toBe(false);
+    expect(isShellPayload({
+      ...PAYLOAD,
+      connections: [{ text: 'x', kind: 'acp', acpRef: { scope: 'tab', label: 'janus', role: 'other' } }],
     })).toBe(false);
   });
 

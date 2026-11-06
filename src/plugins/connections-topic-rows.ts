@@ -2,7 +2,7 @@ import { connectionCatalog } from '../connection/catalog.js';
 import type { ConnectionKind } from '../connection/types.js';
 import type { AcpRef } from '../protocol/tab.js';
 import { bareHost } from '../remote/address.js';
-import type { Tab } from '../tab/types.js';
+import type { Tab, TabRuntime } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 import type {
   ConnectionsTopicData,
@@ -65,7 +65,7 @@ function liveTabRows(managers: Managers, recordIds: Set<string>): ConnectionsTop
   for (const tab of managers.tab.tabs) {
     for (const connection of connectionCatalog(managers, tab.label)) {
       if (connection.scope !== 'tab' || connection.kind === 'sqlite') continue;
-      if (isTrackedCoreAcp(connection.acpRef, tab.runtime?.acpRecordId, tab.label, recordIds)) continue;
+      if (isTrackedCoreAcp(connection.acpRef, tab.runtime?.acpRoles, tab.label, recordIds)) continue;
       rows.push({
         type: 'live', id: connection.id, kind: connection.kind, display: connection.display, host: tabHost(tab),
         ownerLabel: tab.label, ownerName: tab.title ?? tab.label, status: 'Open',
@@ -86,11 +86,13 @@ function isSystemShellConnection(tab: Tab, kind: ConnectionKind): boolean {
 
 function isTrackedCoreAcp(
   acpRef: AcpRef | undefined,
-  recordId: string | undefined,
+  acpRoles: TabRuntime['acpRoles'],
   label: string,
   recordIds: Set<string>,
 ): boolean {
-  return acpRef?.scope === 'tab' && acpRef.label === label && recordId !== undefined && recordIds.has(recordId);
+  if (acpRef?.scope !== 'tab' || acpRef.label !== label) return false;
+  const recordId = acpRoles?.[acpRef.role]?.recordId;
+  return recordId !== undefined && recordIds.has(recordId);
 }
 
 function databaseRows(managers: Managers): ConnectionsTopicLiveRow[] {

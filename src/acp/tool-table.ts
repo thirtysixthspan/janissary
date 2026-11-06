@@ -2,6 +2,8 @@ import { isBrowserCommandLine, BROWSER_PRIMER } from '../browser/command.js';
 import { isQuestionCommandLine, QUESTION_PRIMER, runQuestionCommand } from '../question-command.js';
 import { findLastCommandLine } from './command-line.js';
 import type { Managers } from '../managers.js';
+import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
+import { nativeCommandName, nativeCommandTool, type NativeCommandTool } from './native-commands.js';
 
 // One tool on the ACP run path. The three loop options the agent sees — what it is told the tools
 // are, what runs a command it emitted, and what pulls a command out of its reply — are all derived
@@ -25,38 +27,63 @@ export type AcpTool = {
 // so order is the tie-break and the database entry stays last — its `match` accepts anything, making
 // it the fall-through for a command no other tool recognized. Extraction does not use table order:
 // the reply's last line that any tool recognizes is the command, whichever tool owns it.
-export function createAcpToolTable(managers: Managers, signal?: AbortSignal): AcpTool[] {
-  return [
+export function createAcpToolTable(
+  managers: Managers, _role: string, grants: readonly string[], signal?: AbortSignal,
+): AcpTool[] {
+  const ownedTools: Array<{ owner: NativeCommandTool; tool: AcpTool }> = [
     {
-      primer: BROWSER_PRIMER,
-      match: (command) => /^browser\b/i.test(command),
-      run: (label, command) => managers.browser.run(label, command),
-      isCommandLine: (line) => isBrowserCommandLine(line),
+      owner: 'browser',
+      tool: {
+        primer: BROWSER_PRIMER,
+        match: (command) => /^browser\b/i.test(command),
+        run: (label, command) => managers.browser.run(label, command),
+        isCommandLine: (line) => isBrowserCommandLine(line),
+      },
     },
     {
-      primer: QUESTION_PRIMER,
-      match: (command) => /^question\b/i.test(command),
-      run: (label, command) => runQuestionCommand(command, label, managers.questions, signal),
-      isCommandLine: (line) => isQuestionCommandLine(line),
+      owner: 'question',
+      tool: {
+        primer: QUESTION_PRIMER,
+        match: (command) => /^question\b/i.test(command),
+        run: (label, command) => runQuestionCommand(command, label, managers.questions, signal),
+        isCommandLine: (line) => isQuestionCommandLine(line),
+      },
     },
     {
-      primer: managers.database.primer,
-      match: () => true,
-      run: (label, command) => managers.database.runInTab(label, command),
-      isCommandLine: (line) => managers.database.isCommandLine(line),
+      owner: 'database',
+      tool: {
+        primer: managers.database.primer,
+        match: () => true,
+        run: (label, command) => managers.database.runInTab(label, command),
+        isCommandLine: (line) => managers.database.isCommandLine(line),
+      },
     },
   ];
+  const allowed = NATIVE_ACP_COMMANDS.filter((command) => grants.includes(command));
+  return ownedTools
+    .filter(({ owner }) => allowed.some((command) => nativeCommandTool(command) === owner))
+    .map(({ tool }) => tool);
 }
 
-// The joined primer, in table order.
-export function toolPrimer(tools: AcpTool[]): string {
-  return tools.map((tool) => tool.primer).join('\n\n');
+// The joined primer and canonical allow-list, in table and vocabulary order.
+export function toolPrimer(tools: AcpTool[], grants: readonly string[]): string {
+  if (tools.length === 0) return '';
+  const allowed = NATIVE_ACP_COMMANDS.filter((command) => grants.includes(command));
+  return [
+    ...tools.map((tool) => tool.primer),
+    `Only these commands are allowed: ${allowed.join(', ')}.`,
+  ].join('\n\n');
 }
 
-// Run an emitted command through the first tool that claims it. The last entry matches everything,
-// so this always resolves.
-export function toolRunner(tools: AcpTool[], label: string): (command: string) => string | Promise<string> {
+// Refuse ungranted commands before the database catch-all can claim them.
+export function toolRunner(
+  tools: AcpTool[], role: string, grants: readonly string[], label: string,
+): (command: string) => string | Promise<string> {
+  const allowed = new Set(grants);
   return (command) => {
+    const native = nativeCommandName(command);
+    if (native === undefined) throw new Error(`No ACP tool matched command: ${command}`);
+    if (!allowed.has(native)) return `Command not allowed for role "${role}": ${native}.`;
     const tool = tools.find((candidate) => candidate.match(command));
     if (!tool) throw new Error(`No ACP tool matched command: ${command}`);
     return tool.run(label, command);
@@ -65,5 +92,6 @@ export function toolRunner(tools: AcpTool[], label: string): (command: string) =
 
 // The command on the reply's last line that any tool recognizes, or null when no line is one.
 export function toolExtractor(tools: AcpTool[]): (text: string) => string | null {
-  return (text) => findLastCommandLine(text, (line) => tools.some((tool) => tool.isCommandLine(line)));
+  return (text) => findLastCommandLine(text, (line) => nativeCommandName(line) !== undefined
+    && tools.some((tool) => tool.isCommandLine(line)));
 }

@@ -79,13 +79,14 @@ describe('ConnectionManager connectionsFor', () => {
   it('includes the tab-owned shell and ACP connections', () => {
     const managers = makeManagers({
       shell: { has: vi.fn(() => true) },
-      acp: { has: vi.fn(() => true), label: vi.fn(() => 'opencode') },
+      acp: { has: vi.fn(() => true), label: vi.fn((_label: string, role = 'ask') => `opencode/${role}`) },
     } as unknown as Partial<Managers>);
     expect(new ConnectionManager(managers).connectionsFor('main')).toContainEqual(
       { text: `${SHELL_NAME}:/repo`, kind: 'shell' },
     );
     expect(new ConnectionManager(managers).connectionsFor('main')).toContainEqual(
-      { text: 'acp:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'main' } },
+      { text: 'acp:ask:opencode/ask', kind: 'acp', acpRef: { scope: 'tab', label: 'main', role: 'ask' } },
+      { text: 'acp:tell:opencode/tell', kind: 'acp', acpRef: { scope: 'tab', label: 'main', role: 'tell' } },
     );
   });
 

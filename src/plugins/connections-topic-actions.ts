@@ -66,13 +66,14 @@ function actOnCoreRecord(managers: Managers, action: CoreRecordAction, requested
   const record = rows(managers, requested).find((candidate) => candidate.type === 'record' && candidate.id === action.id);
   if (!record || record.type !== 'record' || record.kind !== 'acp') return 'The record no longer exists.';
   const owner = managers.tab.byLabel(record.ownerLabel);
-  if (!owner || owner.runtime?.acpRecordId !== record.id) return 'The owning tab no longer holds this record.';
+  const role = record.role ?? 'ask';
+  if (!owner || owner.runtime?.acpRoles?.[role]?.recordId !== record.id) return 'The owning tab no longer holds this record.';
   if (action.action === 'cancel') {
     if (record.status !== 'Running') return 'Only a running record can be cancelled.';
-    consume(managers.acp.cancel(record.ownerLabel));
+    consume(managers.acp.cancel(record.ownerLabel, role));
   } else {
     if (!['Idle', 'Running'].includes(record.status)) return 'Only an open record can be closed.';
-    managers.acp.close(record.ownerLabel);
+    managers.acp.close(record.ownerLabel, undefined, role);
   }
   return undefined;
 }

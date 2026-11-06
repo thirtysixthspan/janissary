@@ -48,7 +48,7 @@ describe('createPluginClientCapabilities', () => {
     capabilities.openAcpTranscript?.();
     expect(send).toHaveBeenCalledWith({
       method: 'openAcpTranscript',
-      params: { acpRef: { scope: 'tab', label: 'launcher-2' } },
+      params: { acpRef: { scope: 'tab', label: 'launcher-2', role: 'ask' } },
     });
   });
 
@@ -57,13 +57,13 @@ describe('createPluginClientCapabilities', () => {
     const capabilities = createPluginClientCapabilities({ host, pluginId: 'shell', label: 'shell-1', client, active: true, dock: null, onClose: vi.fn() });
 
     capabilities.openConnection?.({ text: 'Agent: task.md', kind: 'acp', recordId: 'record-1' });
-    capabilities.openConnection?.({ text: 'acp:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'shell-1' } });
+    capabilities.openConnection?.({ text: 'acp:tell:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'shell-1', role: 'tell' } });
 
     expect(send).toHaveBeenNthCalledWith(1, {
       method: 'openConnectionRecord', params: { tab: 'shell-1', recordId: 'record-1' },
     });
     expect(send).toHaveBeenNthCalledWith(2, {
-      method: 'openConnectionRecord', params: { tab: 'shell-1', acpRef: { scope: 'tab', label: 'shell-1' } },
+      method: 'openConnectionRecord', params: { tab: 'shell-1', acpRef: { scope: 'tab', label: 'shell-1', role: 'tell' } },
     });
   });
 

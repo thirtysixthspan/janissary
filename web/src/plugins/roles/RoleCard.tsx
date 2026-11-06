@@ -1,40 +1,44 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import { errorText } from '@shared/error-text';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faTrash } from '@fortawesome/free-solid-svg-icons';
 import type { Role } from '@shared/plugins/roles/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import {
-  allowDrop, dragEnd, dragEntry, dragRole, dropOnEntry, dropOnRole,
+  allowDrop, dragEnd, dragRole, dropOnRole,
 } from './roles-dnd';
 import { useRoleDraft } from './useRoleDraft';
-import { EntryPicker } from './EntryPicker';
+import { RoleCommands } from './RoleCommands';
+import { RoleModels, type EntryDrop } from './RoleModels';
+import { useRolePickerFocus } from './useRolePickerFocus';
 
 type Properties = {
   role: Role;
   index: number;
   efforts: readonly string[];
   models: Record<string, string[]>;
+  nativeCommands: readonly string[];
   capabilities: TabPluginClientCapabilities;
   onRefusal: (message: string | null) => void;
 };
 
-type EntryDrop = { intent: string; payload: Record<string, unknown> } | null;
-
-// One role card: the name and description edit in place, entries carry their effort and a remove
-// control, and the grip moves the role while the card accepts a role reorder.
-export function RoleCard({ role, index, efforts, models, capabilities, onRefusal }: Properties) {
+// One role card: role-level drafts and intents stay here while the model and command sections render
+// their own rows and pickers.
+export function RoleCard({ role, index, efforts, models, nativeCommands, capabilities, onRefusal }: Properties) {
   const nameDraft = useRoleDraft(role.name);
   const descriptionDraft = useRoleDraft(role.description);
-  const [picker, setPicker] = useState(false);
-  const [drop, setDrop] = useState(false);
+  const headingIds = useId();
+  const modelsHeadingRef = useRef<HTMLHeadingElement>(null);
+  const commandsHeadingRef = useRef<HTMLHeadingElement>(null);
+  const modelsPicker = useRolePickerFocus(true, modelsHeadingRef);
+  const commandsPicker = useRolePickerFocus(
+    nativeCommands.some((command) => !role.commands.includes(command)),
+    commandsHeadingRef,
+  );
+  const [drop, setDrop] = React.useState(false);
 
-  // A stored value that arrived while this card was holding a draft has already replaced that draft,
-  // so the one line the tab shows for every other refusal is also what explains this one.
   useEffect(() => {
-    if (nameDraft.conflicted) {
-      onRefusal(`The name of "${role.name}" changed elsewhere — showing the stored one.`);
-    }
+    if (nameDraft.conflicted) onRefusal(`The name of "${role.name}" changed elsewhere — showing the stored one.`);
     if (descriptionDraft.conflicted) {
       onRefusal(`The description of "${role.name}" changed elsewhere — showing the stored one.`);
     }
@@ -42,9 +46,7 @@ export function RoleCard({ role, index, efforts, models, capabilities, onRefusal
 
   const raise = (intent: string, payload: Record<string, unknown>) => {
     onRefusal(null);
-    void capabilities.intent(intent, payload).catch((error: unknown) => {
-      onRefusal(errorText(error));
-    });
+    void capabilities.intent(intent, payload).catch((error: unknown) => onRefusal(errorText(error)));
   };
 
   const commitName = () => {
@@ -57,18 +59,14 @@ export function RoleCard({ role, index, efforts, models, capabilities, onRefusal
 
   const commitDescription = () => {
     const change = descriptionDraft.commit();
-    if (change === null) return;
-    // The stored text the edit was written against travels with it: the server refuses rather than
-    // overwrite a description another client changed while this one was in flight.
-    raise('describe-role', { name: role.name, description: change.text, expected: change.baseline });
+    if (change !== null) {
+      raise('describe-role', { name: role.name, description: change.text, expected: change.baseline });
+    }
   };
 
-  // The file stores no effort at all at the default, which is what an omitted key means in the format,
-  // so the field is absent rather than empty. A model-less selection never reaches here: the picker's
-  // own Add is disabled until one is chosen.
   const addPicked = (harness: string, model: string, effort: string) => {
     raise('add-entry', { role: role.name, entry: { harness, model, ...(effort && { effort }) } });
-    setPicker(false);
+    modelsPicker.closePicker();
   };
 
   const land = (result: EntryDrop) => {
@@ -129,68 +127,31 @@ export function RoleCard({ role, index, efforts, models, capabilities, onRefusal
           else if (event.key === 'Escape') descriptionDraft.revert();
         }}
       />
-      <ul className="roles-entries">
-        {role.entries.map((entry, position) => {
-          // An effort the catalog does not offer still has to be visible: the file stores any string
-          // verbatim, so a value with no option would render the row as though it held none.
-          const stored = entry.effort !== undefined && !efforts.includes(entry.effort) ? entry.effort : null;
-          return (
-          <li
-            key={`${entry.harness}:${entry.model}:${position}`}
-            className={entry.missing === true ? 'roles-entry roles-entry-missing' : 'roles-entry'}
-            title={entry.missing === true ? 'Not in the model catalog' : undefined}
-            draggable
-            onDragStart={(event) => dragEntry(event, role.name, position, role.entries)}
-            onDragEnd={dragEnd}
-            onDragOver={(event) => allowDrop(event, (drag) => drag.kind === 'entry')}
-            onDrop={(event) => {
-              const result = dropOnEntry(event, role.name, position);
-              if (result) raise(result.intent, result.payload);
-            }}
-          >
-            <span className="roles-entry-model">{entry.model}</span>
-            <span className="roles-entry-harness">{entry.harness}</span>
-            <select
-              className="roles-effort"
-              value={entry.effort ?? ''}
-              aria-label={`Effort for ${entry.model}`}
-              onChange={(event) =>
-                raise('set-entry-effort', {
-                  role: role.name,
-                  index: position,
-                  expected: role.entries,
-                  effort: event.target.value === '' ? null : event.target.value,
-                })}
-            >
-              <option value="">default</option>
-              {stored === null ? null : <option value={stored}>{stored}</option>}
-              {efforts.map((effort) => <option key={effort} value={effort}>{effort}</option>)}
-            </select>
-            <button
-              type="button"
-              className="roles-icon"
-              title={`Remove ${entry.model}`}
-              onClick={() => raise('remove-entry', { role: role.name, index: position, expected: role.entries })}
-            >
-              <FontAwesomeIcon icon={faTrash} />
-            </button>
-          </li>
-          );
+      <RoleModels
+        roleName={role.name}
+        entries={role.entries}
+        efforts={efforts}
+        models={models}
+        headingId={`${headingIds}-models`}
+        headingRef={modelsHeadingRef}
+        picker={modelsPicker}
+        onAdd={addPicked}
+        onRemove={(position, expected) => raise('remove-entry', { role: role.name, index: position, expected })}
+        onSetEffort={(position, expected, effort) => raise('set-entry-effort', {
+          role: role.name, index: position, expected, effort,
         })}
-      </ul>
-      {picker ? (
-        <EntryPicker
-          harnesses={Object.keys(models)}
-          models={models}
-          efforts={efforts}
-          onAdd={addPicked}
-          onCancel={() => setPicker(false)}
-        />
-      ) : (
-        <button type="button" className="roles-add-entry" onClick={() => setPicker(true)}>
-          <FontAwesomeIcon icon={faPlus} /> Add entry
-        </button>
-      )}
+        onDropEntry={land}
+      />
+      <RoleCommands
+        roleName={role.name}
+        commands={role.commands}
+        vocabulary={nativeCommands}
+        headingId={`${headingIds}-commands`}
+        headingRef={commandsHeadingRef}
+        picker={commandsPicker}
+        onAdd={(command) => raise('add-command', { role: role.name, command })}
+        onRemove={(command) => raise('remove-command', { role: role.name, command })}
+      />
     </div>
   );
 }

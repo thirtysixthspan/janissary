@@ -6,6 +6,7 @@ import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';
 import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote/file-cache.js';
+import { addBusy, clearBusy, deleteBusy } from '../tab/runtime-operations.js';
 import type { Managers } from '../managers.js';
 import type { ServerFrame } from './protocol-frames.js';
 
@@ -27,7 +28,10 @@ function setup() {
       transports.push(transport);
       return { id: `ssh${transports.length}`, ...transport };
     }) },
-    tab: { tabs: [tab], byLabel: (label: string) => label === tab.label ? tab : undefined, closeTab: vi.fn() },
+    tab: {
+      tabs: [tab], byLabel: (label: string) => label === tab.label ? tab : undefined,
+      clearBusy: vi.fn(), closeTab: vi.fn(),
+    },
   } as unknown as Managers;
   const remote = new RemoteManager(managers);
   const handlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
@@ -122,6 +126,32 @@ describe('remote attachment', () => {
     expect(h.tab.sessionTerminated).toContain(harness ? "Remote harness 'work'" : 'Remote shell');
     expect(notify).toHaveBeenCalledOnce(); expect(clearRemoteFileCacheForWorkspace).toHaveBeenCalledOnce();
     expect(h.managers.tab.closeTab).not.toHaveBeenCalled(); expect(h.transports).toHaveLength(1);
+    h.remote.dispose();
+  });
+
+  it('clears active busy owners when a remote shell is terminated', () => {
+    const h = setup();
+    h.tab.view = 'agent';
+    h.tab.harness = undefined;
+    const tabs = [h.tab];
+    const shellOwner = {};
+    const acpOwner = {};
+    h.managers.tab.clearBusy = vi.fn((label: string) => clearBusy(tabs, label));
+    addBusy(tabs, h.tab.label, shellOwner);
+    addBusy(tabs, h.tab.label, acpOwner);
+    expect(h.tab.runtime?.busy).toBe(true);
+
+    h.channel.attach('r1', { onOutput: vi.fn(), onExit: vi.fn() });
+    h.channel.send({ type: 'spawn', id: 'r1', program: 'work', command: 'work', mode: 'pipe',
+      agentName: 'work', cols: 80, rows: 24 });
+    h.frame({ type: 'exit', id: 'r1', exitCode: 3 });
+
+    expect(h.managers.tab.clearBusy).toHaveBeenCalledExactlyOnceWith(h.tab.label);
+    expect(h.tab.runtime?.busy).toBe(false);
+    expect(h.tab.runtime?.busyOwners?.size).toBe(0);
+    deleteBusy(tabs, h.tab.label, shellOwner);
+    expect(h.tab.runtime?.busy).toBe(false);
+    expect(h.tab.runtime?.busyOwners?.size).toBe(0);
     h.remote.dispose();
   });
 

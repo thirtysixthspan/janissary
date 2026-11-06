@@ -1,4 +1,4 @@
-import type { Tab } from './types.js';
+import type { BusyOwner, Tab, TabRuntime } from './types.js';
 import { runtimeFor } from './runtime.js';
 
 export function isBusy(tabs: Tab[], label: string): boolean {
@@ -14,14 +14,35 @@ export function setCwd(tabs: Tab[], label: string, dir: string): void {
   if (runtime) runtime.cwd = dir;
 }
 
-export function addBusy(tabs: Tab[], label: string): void {
-  const runtime = runtimeFor(tabs, label);
-  if (runtime) runtime.busy = true;
+function updateBusyProjection(runtime: TabRuntime): void {
+  runtime.busy = runtime.unownedBusy === true || (runtime.busyOwners?.size ?? 0) > 0;
 }
 
-export function deleteBusy(tabs: Tab[], label: string): void {
+export function addBusy(tabs: Tab[], label: string, owner?: BusyOwner): void {
   const runtime = runtimeFor(tabs, label);
-  if (runtime) runtime.busy = false;
+  if (!runtime) return;
+  if (owner === undefined) runtime.unownedBusy = true;
+  else {
+    runtime.busyOwners ??= new Set();
+    runtime.busyOwners.add(owner);
+  }
+  updateBusyProjection(runtime);
+}
+
+export function deleteBusy(tabs: Tab[], label: string, owner?: BusyOwner): void {
+  const runtime = runtimeFor(tabs, label);
+  if (!runtime) return;
+  if (owner === undefined) runtime.unownedBusy = false;
+  else runtime.busyOwners?.delete(owner);
+  updateBusyProjection(runtime);
+}
+
+export function clearBusy(tabs: Tab[], label: string): void {
+  const runtime = runtimeFor(tabs, label);
+  if (!runtime) return;
+  runtime.unownedBusy = false;
+  runtime.busyOwners?.clear();
+  updateBusyProjection(runtime);
 }
 
 export function contextFor(tabs: Tab[], label: string): string[] {

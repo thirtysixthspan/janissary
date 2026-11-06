@@ -1,6 +1,7 @@
 // The tab's own shapes. A leaf module on purpose: it imports nothing but this one type, which the
 // tab's in-flight ACP prompt settles with.
 import type { AcpPendingPrompt } from '../acp/prompt-state.js';
+import type { AcpRole } from '../acp/role.js';
 import type { AgentRunView } from '../agent/types.js';
 import type { QueueEntry } from '../command-queue/entry.js';
 import type { ReceiptRecord } from '../command-queue/receipts.js';
@@ -275,6 +276,8 @@ export type MonitorSuggestion = {
 
 export type CenterPane = 'left' | 'right';
 
+export type BusyOwner = object;
+
 export type TabRuntime = {
   // Host-owned id for this open tab incarnation. Unlike its label, it is never reused and survives
   // tab-array projections that shallow-copy the record when another tab closes. In-memory only.
@@ -283,8 +286,7 @@ export type TabRuntime = {
   serverPtyExitId?: string;
   editorSyncGeneration?: number;
   acpEntries?: WeakSet<LogEntry>;
-  acpPrompt?: AcpPendingPrompt;
-  acpRecordId?: string;
+  acpRoles?: Partial<Record<AcpRole, { prompt?: AcpPendingPrompt; recordId?: string }>>;
   // Every ACP and agent record that began in this tab incarnation, kept after each one ends. A record's
   // owner label alone cannot tell this tab from a later one that reused the label, so the connections
   // topic reads this to decide whether a record still has its own tab to focus. In-memory only.
@@ -295,6 +297,10 @@ export type TabRuntime = {
   // tab's own release forgets it, so a recycled label starts on the ordinary policy. In-memory only.
   acpWithoutTools?: boolean;
   cwd?: string;
+  // Activity acquired without an identity token. The public `busy` value also includes every
+  // active owner below, so releasing either kind cannot erase the other.
+  unownedBusy?: boolean;
+  busyOwners?: Set<BusyOwner>;
   busy: boolean;
   context: string[];
   queue: QueueEntry[];

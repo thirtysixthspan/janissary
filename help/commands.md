@@ -3,7 +3,7 @@
 | Command | Description |
 | ------- | ----------- |
 | `agent` | Run task: [on <host>] [in a tab] [in group <name|id>] [in workspace <label>] [with skill <name>] [using model <id>] [with effort <level>] execute <task> [parameters...] (effort: medium) |
-| `ask` | Query a core ACP connection using enabled models from the `ask` role in order; the settled Markdown answer appears in shell output and activity in its connection tab (`ask reset` starts fresh) |
+| `ask` | Query a core ACP connection using enabled models and native command grants from the `ask` role; the settled Markdown answer appears in shell output (`ask reset` starts fresh) |
 | `audio` | `audio <path>` queues audio into the single audio tab through the bundled audio plugin; accepts the same paths and wildcards as `open` |
 | `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |
 | `clear` | Clear the tab's output log; in a shell tab, bare `clear` is sent to zsh so it clears the terminal instead (use `/clear` to clear the output log) |
@@ -42,7 +42,7 @@
 | `queue` | Queue a command for a shell or another tab supporting queues (`queue <tab> <command>`); bare `queue` opens the interactive queue picker (Ctrl+E) |
 | `quit` | Exit the application (asks for confirmation); `/quit` is equivalent |
 | `rename` | Rename the current tab's display name (`rename <name>`); bare `rename` clears the alias; in an editor tab, renames the file |
-| `roles` | Open the roles tab, where named roles map to an ordered list of harness/model/effort choices in `roles.json` (a saved list; nothing launches from it); bare `roles` only |
+| `roles` | Open the roles tab, where named roles map to harness/model/effort choices and native ACP command grants in `roles.json`; bare `roles` only |
 | `schedule` | Run a tab command later with `schedule <name> <form> <command>`, or manage project schedules that run persistent runscripts with `schedule system <name> <form> script <name>` |
 | `schedules` | Open the aggregated tab listing every scheduled command across all tabs, through the bundled schedules tab plugin (`schedules left`/`right` to dock it). Its **+** button opens the New schedule dialog |
 | `scripts` | Open the project's runscripts in `.janissary/scripts/`, which survive launch cleanup. Run, duplicate, or delete one from its row, or create one with **+**. |
@@ -55,6 +55,7 @@
 | `syntax` | `syntax theme <name>` sets the syntax-highlighting theme for every open editor and diff tab; `syntax theme` alone opens a theme-picker modal |
 | `tab` | `focus <name>`, `move <tab> <position>`, `pane <tab> left\|right`, `split <tab>`, `color <tab> <#rrggbb>`, `group <tab> <id\|name>`, `dock <tab> left\|right`, `undock <tab>` arrange tabs |
 | `tasks` | Open the task picker listing executable `ai/tasks/*.md` files from the project and Janissary (Ctrl+A) |
+| `tell` | Instruct a core ACP connection using enabled models and native command grants from the `tell` role; the settled Markdown reply appears in shell output (`tell reset` starts fresh) |
 | `theme` | Set the application UI theme (`theme <name>`); `theme` alone opens a theme-picker modal; `theme sync` sets the syntax theme to match the app theme name |
 | `unmonitor` | Stop a monitor by name, remove one target (`unmonitor <name> <target>`), or stop all monitors started from this tab (`--all`) |
 | `video` | `video <path>` opens a video tab, with the same paths and wildcards as `open`; `video snapshot <video> at <time> <file>` saves one frame as an image |

@@ -12,7 +12,9 @@ import {
 } from '../api.js';
 import { activate } from './activate.js';
 import { DEFAULT_ROLES, readRolesFile, writeRolesFile } from './roles-file.js';
-import { isRolesPayload, type LaunchCatalog, type RoleEntry, type RolesPayload } from './shared.js';
+import {
+  isRolesPayload, NATIVE_ACP_COMMANDS, type LaunchCatalog, type RoleEntry, type RolesPayload,
+} from './shared.js';
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof FileSystem>();
@@ -28,7 +30,7 @@ const CATALOG: LaunchCatalog = {
   efforts: ['low', 'xhigh'],
 };
 
-type WrittenFile = Record<string, { description: string; entries: Array<{ model: string }> }>;
+type WrittenFile = Record<string, { description: string; entries: Array<{ model: string }>; commands: string[] }>;
 
 function fixture(): {
   home: string;
@@ -72,6 +74,7 @@ const roleNames = (home: string): string[] =>
 // own guard exactly as a client's would be.
 const payloadFor = (home: string, source: RolesPayload['source'] = 'home'): RolesPayload => ({
   roles: [],
+  nativeCommands: [...NATIVE_ACP_COMMANDS],
   source,
   path: rolesPath(home),
   catalog: CATALOG,
@@ -90,7 +93,7 @@ function send(
 
 function entriesFixture(entries: RoleEntry[]) {
   const result = fixture();
-  writeRolesFile(rolesPath(result.home), [{ name: 'research', description: 'Research.', entries }]);
+  writeRolesFile(rolesPath(result.home), [{ name: 'research', description: 'Research.', entries, commands: [] }]);
   const activation = activate(result.home);
   const tab = payloadFor(result.home);
   const stored = () => readRolesFile(result.home, result.capabilities.originTab()!.root).roles[0].entries;
@@ -121,6 +124,7 @@ describe('the roles command', () => {
     expect(payload.source).toBe('home');
     expect(payload.path).toBe(rolesPath(home));
     expect(payload.catalog).toEqual(CATALOG);
+    expect(payload.nativeCommands).toEqual(NATIVE_ACP_COMMANDS);
   });
 
   it('answers an argument with a usage refusal and opens nothing', () => {
@@ -136,7 +140,7 @@ describe('the roles command', () => {
     const filePath = path.join(root, '.janissary', 'roles.json');
     mkdirSync(path.dirname(filePath), { recursive: true });
     const roles = [{
-      name: 'research', description: 'Research.', entries: [
+      name: 'research', description: 'Research.', commands: [], entries: [
         { harness: 'codex', model: 'gpt-6-sol' },
         { harness: 'codex', model: 'hidden-model' },
         { harness: 'codex', model: 'disabled-model' },
@@ -175,7 +179,7 @@ describe('models topic deliveries', () => {
     mkdirSync(secondRoot, { recursive: true });
     const firstPath = path.join(firstRoot, '.janissary', 'roles.json');
     const secondPath = path.join(secondRoot, '.janissary', 'roles.json');
-    const startingRoles = (name: string) => [{ name, description: `${name}.`, entries: [] }];
+    const startingRoles = (name: string) => [{ name, description: `${name}.`, entries: [], commands: [] }];
     writeRolesFile(firstPath, startingRoles('first-root'));
     writeRolesFile(secondPath, startingRoles('second-root'));
     const activation = activate(home);
@@ -224,6 +228,65 @@ describe('models topic deliveries', () => {
 });
 
 describe('editing roles through intents', () => {
+  it('serializes command grants through the edit queue and accepts duplicate add and absent remove as no-ops', async () => {
+    const { home, capabilities, updated } = fixture();
+    const activation = activate(home);
+    activation.command?.('', capabilities);
+    const tab = payloadFor(home);
+    const initialWrites = vi.mocked(renameSync).mock.calls.length;
+
+    await Promise.all([
+      send(activation, 'add-command', { role: 'research', command: 'future command' }, capabilities, tab),
+      send(activation, 'add-command', { role: 'research', command: 'browser goto' }, capabilities, tab),
+    ]);
+
+    const stored = readRolesFile(home, capabilities.originTab()!.root).roles.find(({ name }) => name === 'research')!;
+    expect(stored.commands).toEqual(['future command', 'browser goto']);
+    expect((updated.at(-1)!.value.payload as RolesPayload).roles.find(({ name }) => name === 'research')?.commands)
+      .toEqual(stored.commands);
+    expect(vi.mocked(renameSync).mock.calls.length - initialWrites).toBe(2);
+    expect(updated).toHaveLength(2);
+
+    const beforeNoOps = readFileSync(rolesPath(home), 'utf8');
+    await send(activation, 'add-command', { role: 'research', command: 'future command' }, capabilities, tab);
+    await send(activation, 'remove-command', { role: 'research', command: 'not granted' }, capabilities, tab);
+
+    expect(readFileSync(rolesPath(home), 'utf8')).toBe(beforeNoOps);
+    expect(vi.mocked(renameSync).mock.calls.length - initialWrites).toBe(2);
+    expect(updated).toHaveLength(2);
+  });
+
+  it('removes every duplicate copy of a granted command', async () => {
+    const { home, capabilities, updated } = fixture();
+    writeRolesFile(rolesPath(home), [{
+      name: 'research', description: 'Research.', entries: [],
+      commands: ['future command', 'browser goto', 'future command'],
+    }]);
+    const activation = activate(home);
+    const writes = vi.mocked(renameSync).mock.calls.length;
+
+    await send(activation, 'remove-command', { role: 'research', command: 'future command' }, capabilities, payloadFor(home));
+
+    expect(readRolesFile(home, capabilities.originTab()!.root).roles[0].commands).toEqual(['browser goto']);
+    expect(vi.mocked(renameSync).mock.calls.length - writes).toBe(1);
+    expect(updated).toHaveLength(1);
+  });
+
+  it('refuses a command edit for a missing role through the existing refusal path', async () => {
+    const { home, capabilities, updated } = fixture();
+    const activation = activate(home);
+    activation.command?.('', capabilities);
+    const before = readFileSync(rolesPath(home), 'utf8');
+    const writes = vi.mocked(renameSync).mock.calls.length;
+
+    await expect(send(activation, 'add-command', { role: 'missing', command: 'future command' }, capabilities, payloadFor(home)))
+      .rejects.toThrow('No role named "missing".');
+
+    expect(readFileSync(rolesPath(home), 'utf8')).toBe(before);
+    expect(vi.mocked(renameSync).mock.calls.length).toBe(writes);
+    expect(updated).toEqual([]);
+  });
+
   it('rejects the second rapid removal from one snapshot, refreshes state, and permits a fresh retry', async () => {
     const { activation, tab, home, capabilities, updated, stored } = entriesFixture(CHOICES);
     const writes = vi.mocked(renameSync).mock.calls.length;
@@ -315,7 +378,7 @@ describe('editing roles through intents', () => {
     await send(activation, 'add-role', { name: '__proto__' }, capabilities, payloadFor(home));
 
     const read = readRolesFile(home, capabilities.originTab()!.root);
-    expect(read.roles.at(-1)).toEqual({ name: '__proto__', description: '', entries: [] });
+    expect(read.roles.at(-1)).toEqual({ name: '__proto__', description: '', entries: [], commands: [] });
     expect(Object.hasOwn(JSON.parse(readFileSync(rolesPath(home), 'utf8')) as object, '__proto__')).toBe(true);
     expect((updated.at(-1)!.value.payload as RolesPayload).roles).toEqual(read.roles);
   });
@@ -328,10 +391,13 @@ describe('editing roles through intents', () => {
     const entry = { harness: 'codex', model: 'same', effort: 'xhigh' };
     await send(activation, 'add-entry', { role: 'research', entry }, capabilities, tab);
     await send(activation, 'add-entry', { role: 'research', entry }, capabilities, tab);
+    await send(activation, 'add-command', { role: 'research', command: 'custom command' }, capabilities, tab);
     await send(activation, 'rename-role', { name: 'research', next: '__proto__' }, capabilities, tab);
 
     const read = readRolesFile(home, capabilities.originTab()!.root);
-    expect(read.roles[1]).toEqual({ name: '__proto__', description: 'Keep this.', entries: [entry, entry] });
+    expect(read.roles[1]).toEqual({
+      name: '__proto__', description: 'Keep this.', entries: [entry, entry], commands: ['custom command'],
+    });
     expect((updated.at(-1)!.value.payload as RolesPayload).roles).toEqual(read.roles);
   });
 
@@ -344,7 +410,9 @@ describe('editing roles through intents', () => {
     await send(activation, 'describe-role', { name: '__proto__', description: 'Edited', expected: 'Hand written' }, capabilities, payloadFor(home));
 
     const read = readRolesFile(home, capabilities.originTab()!.root);
-    expect(read.roles).toEqual([{ name: '__proto__', description: 'Edited', entries: [{ harness: 'codex', model: 'same' }, { harness: 'codex', model: 'same' }] }]);
+    expect(read.roles).toEqual([{
+      name: '__proto__', description: 'Edited', entries: [{ harness: 'codex', model: 'same' }, { harness: 'codex', model: 'same' }], commands: [],
+    }]);
     expect((updated.at(-1)!.value.payload as RolesPayload).roles).toEqual(read.roles);
   });
 
@@ -505,12 +573,14 @@ it('adds an entry, sets and clears its effort, then moves and removes it', async
     const activation = activate(home);
     await send(activation, 'add-role', { name: 'review' }, capabilities, payloadFor(home));
     await send(activation, 'add-entry', { role: 'review', entry: { harness: 'codex', model: 'gpt-6-sol' } }, capabilities, payloadFor(home));
+    await send(activation, 'add-command', { role: 'review', command: 'future command' }, capabilities, payloadFor(home));
 
     await send(activation, 'describe-role', { name: 'review', description: 'Second pair of eyes.', expected: '' }, capabilities, payloadFor(home));
 
     const file = JSON.parse(readFileSync(rolesPath(home), 'utf8')) as WrittenFile;
     expect(file['review'].description).toBe('Second pair of eyes.');
     expect(file['review'].entries.map((entry) => entry.model)).toEqual(['gpt-6-sol']);
+    expect(file['review'].commands).toEqual(['future command']);
     expect(roleNames(home)).toContain('planning');
   });
 
@@ -542,12 +612,34 @@ it('adds an entry, sets and clears its effort, then moves and removes it', async
     expect(readFileSync(rolesPath(home), 'utf8')).toBe(damaged);
   });
 
+  it('warns about malformed command grants and refuses edits until the file is fixed', async () => {
+    const { home, capabilities, opened, updated } = fixture();
+    const damaged = JSON.stringify({
+      review: { description: 'Good role.', entries: [], commands: [] },
+      broken: { description: 'Bad command grants.', entries: [], commands: 7 },
+    }, undefined, 2);
+    mkdirSync(path.dirname(rolesPath(home)), { recursive: true });
+    writeFileSync(rolesPath(home), damaged);
+    const activation = activate(home);
+
+    activation.command?.('', capabilities);
+    const payload = opened.at(-1)!.value.payload as RolesPayload;
+    expect(payload.problem).toBe(
+      `roles.json dropped 1 malformed role or entry at ${rolesPath(home)} — showing the rest of this file.`,
+    );
+    await expect(send(activation, 'add-command', { role: 'review', command: 'browser goto' }, capabilities, payload))
+      .rejects.toThrow(`roles.json at ${rolesPath(home)} is unusable — fix the file before editing roles.`);
+
+    expect(readFileSync(rolesPath(home), 'utf8')).toBe(damaged);
+    expect(updated).toEqual([]);
+  });
+
   it('edits the home file when the broken file in effect was the project one', async () => {
     const { home, capabilities } = fixture();
     const projectPath = path.join(capabilities.originTab()!.root, '.janissary', 'roles.json');
     mkdirSync(path.dirname(projectPath), { recursive: true });
     writeFileSync(projectPath, '{ broken');
-    writeRolesFile(rolesPath(home), [{ name: 'research', description: 'Research.', entries: [] }]);
+    writeRolesFile(rolesPath(home), [{ name: 'research', description: 'Research.', entries: [], commands: [] }]);
     const activation = activate(home);
 
     await send(activation, 'rename-role', { name: 'research', next: 'r2' }, capabilities, payloadFor(home));
@@ -584,6 +676,8 @@ it('adds an entry, sets and clears its effort, then moves and removes it', async
       .toThrow('invalid add-role payload');
     expect(() => send(activation, 'describe-role', { name: 'review', description: 'x' }, capabilities, payloadFor(home)))
       .toThrow('invalid describe-role payload');
+    expect(() => send(activation, 'add-command', { role: 'review' }, capabilities, payloadFor(home)))
+      .toThrow('invalid add-command payload');
     expect(() => send(activation, 'nope', {}, capabilities, payloadFor(home)))
       .toThrow('unknown roles intent "nope"');
   });
