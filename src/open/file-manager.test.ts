@@ -413,6 +413,27 @@ describe('OpenFileManager.run', () => {
     }]);
   });
 
+  it('names an opener starting with a vowel with "an" when it refuses a file', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-require-'));
+    writeFileSync(path.join(dir, 'notes.txt'), 'text');
+    const notes: { input: string; output: string }[] = [];
+    const runOpener = vi.fn();
+    const managers = {
+      tab: {
+        cwdOf: () => dir, workingDirOf: () => dir, launchDir: dir, registerFile: vi.fn(),
+        append: (_label: string, entry: { input: string; output: string }) => { notes.push(entry); },
+      },
+      plugins: { runOpener },
+    } as unknown as Managers;
+
+    await new OpenFileManager(managers).runAs('open notes.txt', 'image notes.txt', 'janus', 'image');
+
+    expect(runOpener).not.toHaveBeenCalled();
+    expect(notes).toEqual([{
+      input: 'image notes.txt', output: `image: ${path.join(dir, 'notes.txt')}: not an image file`,
+    }]);
+  });
+
   // The web branch resolves ahead of the opener registry, so the pin has to be applied before it.
   // Both a URL scheme and a bare `page` keyword route there — `video page notes.txt` used to open a
   // browser tab pointed at `https://notes.txt/`.

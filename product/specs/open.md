@@ -144,7 +144,7 @@ See [[harness-recording]] § Retrieval for what playing a terminal recording off
 
 ## Image plugin opener
 
-The bundled `image` tab plugin contributes an opener for all common image types — including PNG, JPEG, GIF, WebP, BMP, SVG, AVIF, and ICO (case-insensitive) — and implements all three presentations. Its static declaration is available at startup; its behavior activates only on the first matching `open` or `edit`. It claims no command of its own, so `open` and `edit` are the only routes to it.
+The bundled `image` tab plugin contributes an opener for all common image types — including PNG, JPEG, GIF, WebP, BMP, SVG, AVIF, and ICO (case-insensitive) — and implements all three presentations. Its static declaration is available at startup; its behavior activates only on the first matching `open`, `edit`, or `image` command.
 
 ### `open external <image>`
 
@@ -157,6 +157,12 @@ Opens the image in an **image tab**: a non-agent view tab that displays the imag
 ### `edit <image>` — image editor
 
 Opens the same image tab, already flipped to its **editor**: a canvas and a geometry toolbar in place of the zoom-and-pan stage. The tab is keyed on the file path exactly as the viewer is, so `edit` on an image that is already open focuses that tab and flips it rather than opening a second one. Saving replaces the original file with the edited PNG. See [[image-tab]].
+
+### `image <path>`
+
+The plugin also contributes `image <path>`. It is a second route into the same opener and has the same relative-path resolution, wildcard expansion, sorted processing, ten-file limit, missing-file errors, transcript attribution, and focus-existing behavior as `open <path>`, and `image external <path>` reaches the OS viewer as `open external` does. Bare `image` prints `Usage: image <path>`.
+
+Because it is a route into one opener rather than into the registry, `image` only opens images: a file that exists but belongs to another opener is reported as not an image file rather than opened, and a web address is refused the same way rather than embedded. See [[tab-plugins]] for plugin activation and failure behavior.
 
 ---
 

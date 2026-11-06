@@ -1,6 +1,6 @@
 # Image Tab
 
-An **image tab** displays a single image opened with the `open` command (see Open → Image opener).
+An **image tab** displays a single image opened with the `open` or `image` command (see Open → Image opener).
 It is a non-agent **view tab**: it shows the image and its metadata in place of the usual
 transcript and command bar, and is controlled by direct interaction (zoom, pan, and the scroll wheel)
 rather than a command line.

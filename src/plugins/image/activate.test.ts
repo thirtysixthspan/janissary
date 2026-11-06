@@ -14,6 +14,7 @@ function fakeCapabilities(options: { openExternally?: (file: string) => boolean 
   const opened: TabPluginPayload[] = [];
   const keys: string[] = [];
   const updated: { key: string; payload: unknown }[] = [];
+  const claimedOpens: string[] = [];
   const external = vi.fn(options.openExternally ?? (() => true));
   const capabilities: TabPluginServerCapabilities = {
     note: (text) => { notes.push(text); },
@@ -27,13 +28,13 @@ function fakeCapabilities(options: { openExternally?: (file: string) => boolean 
         payload: factory({ registerFile: (file) => `/open/ref-${file.length}` }).payload,
       });
     },
-    openClaimedFiles: () => { throw new Error('image declares no command'); },
+    openClaimedFiles: (target) => { claimedOpens.push(target); },
     configuredViewer: () => { throw new Error('image declares no configured viewer'); },
     openExternally: external,
     rejectRequest: (reason): never => { throw new TabPluginRejection(reason); },
     reportFailure: (reason): never => { throw new Error(String(reason)); },
   };
-  return { capabilities, external, keys, notes, opened, updated };
+  return { capabilities, claimedOpens, external, keys, notes, opened, updated };
 }
 
 function temporaryImage(name: string, bytes: number): string {
@@ -123,6 +124,22 @@ describe('image plugin edit presentation', () => {
 
     expect(fixture.updated).toHaveLength(0);
     expect(Object.hasOwn(fixture.opened[0].payload as object, 'mode')).toBe(false);
+  });
+});
+
+describe('image plugin command', () => {
+  it('hands the whole argument to the host open pipeline, pinned to its own opener', () => {
+    const fixture = fakeCapabilities();
+    activate().command?.('~/pictures/*.png', fixture.capabilities);
+    expect(fixture.claimedOpens).toEqual(['~/pictures/*.png']);
+    expect(fixture.opened).toEqual([]);
+  });
+
+  it('rejects a bare command with usage instead of disabling the plugin', () => {
+    const fixture = fakeCapabilities();
+    expect(() => activate().command?.('', fixture.capabilities))
+      .toThrow(new TabPluginRejection('Usage: image <path>'));
+    expect(fixture.claimedOpens).toEqual([]);
   });
 });
 

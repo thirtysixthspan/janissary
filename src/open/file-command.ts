@@ -18,7 +18,8 @@ async function runAfter(pending: Promise<void>, action: () => void | Promise<voi
 // How a pinned command refuses a target that is not its own. Shared with `OpenFileManager.openOne`
 // so `video notes.txt` and `video https://example.com` report the same thing.
 export function pinnedOpenerRefusal(requireOpener: string, target: string): string {
-  return `${requireOpener}: ${target}: not a ${requireOpener} file`;
+  const article = /^[aeiou]/iu.test(requireOpener) ? 'an' : 'a';
+  return `${requireOpener}: ${target}: not ${article} ${requireOpener} file`;
 }
 
 function runSequential(
