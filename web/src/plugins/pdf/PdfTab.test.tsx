@@ -31,6 +31,7 @@ function makeDocument(pages = 3): LoadedPdf {
   return {
     pageSizes: Array.from({ length: pages }, () => ({ width: 600, height: 800 })),
     renderPage: vi.fn(async () => {}),
+    readPageText: vi.fn(async () => []),
     destroy: vi.fn(),
   };
 }
