@@ -41,7 +41,7 @@ describe('buildAutoApprover', () => {
   it('writes a capture for a gate it could not clear and links it to the stand-down notification', () => {
     const { managers } = setup();
     const approver = buildAutoApprover(managers, 'claude', 'bot', 'pty1');
-    approver.onCapture({ text: GATE, capturedAt: 5 });
+    for (const capturedAt of [5, 6, 7]) approver.onCapture({ text: GATE, capturedAt });
     vi.mocked(writeCaptureFile).mockClear();
     approver.onCapture({ text: GATE, capturedAt: 9 });
     expect(writeCaptureFile).toHaveBeenCalledWith('bot', 9, GATE);

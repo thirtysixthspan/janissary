@@ -105,12 +105,20 @@ export function autoApproveWithoutWorkspaceWarning(autoApprove: boolean): string
 export const AUTO_APPROVED_MESSAGE = 'Auto-approved a permission prompt';
 export const AUTO_APPROVE_STUCK_MESSAGE = 'Auto-approve could not clear the permission prompt; standing down';
 
+// How many times in a row the approver answers the same gate screen. Captures are throttled, so a
+// gate that clears and is immediately re-asked identically (a subagent re-running the same command)
+// looks exactly like a gate the keystroke failed to clear; only an identical gate that outlasts this
+// many approvals is treated as stuck.
+const MAX_IDENTICAL_APPROVALS = 3;
+
 // Watches a harness's screen captures and injects the approval keystroke when a permission gate is
-// detected, then reports it. A loop guard prevents re-injecting into an identical, uncleared gate.
+// detected, then reports it. A loop guard stops re-injecting into an identical gate that outlasts
+// MAX_IDENTICAL_APPROVALS approvals.
 // Both reports pass the triggering capture, so a stand-down links the screen that defeated
 // auto-approve the same way an approval links the screen it answered.
 export class HarnessAutoApprover {
   private lastApprovedText: string | undefined;
+  private identicalApprovals = 0;
   private stuckNotified = false;
   private keystroke: string;
 
@@ -129,10 +137,12 @@ export class HarnessAutoApprover {
   onCapture(capture: ScreenCapture): void {
     if (!detectPermissionGate(capture.text, this.opts.harnessName)) {
       this.lastApprovedText = undefined;
+      this.identicalApprovals = 0;
       this.stuckNotified = false;
       return;
     }
-    if (capture.text === this.lastApprovedText) {
+    const repeat = capture.text === this.lastApprovedText;
+    if (repeat && this.identicalApprovals >= MAX_IDENTICAL_APPROVALS) {
       if (!this.stuckNotified) {
         this.stuckNotified = true;
         this.opts.notify(AUTO_APPROVE_STUCK_MESSAGE, capture);
@@ -141,6 +151,7 @@ export class HarnessAutoApprover {
     }
     this.opts.approve(this.keystroke);
     this.lastApprovedText = capture.text;
+    this.identicalApprovals = repeat ? this.identicalApprovals + 1 : 1;
     this.stuckNotified = false;
     this.opts.notify(AUTO_APPROVED_MESSAGE, capture);
   }

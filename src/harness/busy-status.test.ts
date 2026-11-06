@@ -419,7 +419,7 @@ describe('busyStatusHandler state push', () => {
   it('clears an auto-approved gate\'s unread badge once the harness resumes work', () => {
     const { tabs, handler } = makeStateful('claude', true);
     const gate = ' Do you want to proceed?\n ❯ 1. Yes\n   2. No';
-    handler(capture(gate));
+    for (let i = 0; i < 3; i++) handler(capture(gate));
     expect(tabs[0].hasUnread).toBe(false);
     handler(capture(gate));
     expect(tabs[0].hasUnread).toBe(true);
@@ -489,11 +489,12 @@ describe('busyStatusHandler and the gate the user has to answer', () => {
     expect(dirtyCount).toBe(1);
   });
 
-  // The identical gate again is what makes the approver stand down, and that is the case it does need
-  // the user — the same capture, read one step later, is the opposite answer.
+  // The identical gate outlasting three approvals is what makes the approver stand down, and that is
+  // the case it does need the user — the same capture, read one step later, is the opposite answer.
   it('records the gate once the approver stands down on it', () => {
     const { tabs, handler } = gated('claude', true);
-    handler(capture(GATE));
+    for (let i = 0; i < 3; i++) handler(capture(GATE));
+    expect(tabs[0].runtime?.gateNeedsUser).not.toBe(true);
     const before = dirtyCount;
     handler(capture(GATE));
 

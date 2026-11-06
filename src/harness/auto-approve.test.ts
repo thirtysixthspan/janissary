@@ -390,20 +390,18 @@ describe('HarnessAutoApprover', () => {
     expect(notify).not.toHaveBeenCalled();
   });
 
-  it('suppresses re-injection when the identical gate text recurs, notifying once', () => {
+  it('suppresses re-injection once the identical gate outlasts three approvals, notifying once', () => {
     const { approver, approve, notify } = make();
-    approver.onCapture(capture(BASH_IN_PROJECT));
-    approver.onCapture(capture(BASH_IN_PROJECT));
-    approver.onCapture(capture(BASH_IN_PROJECT));
-    expect(approve).toHaveBeenCalledTimes(1);
-    expect(notify).toHaveBeenCalledTimes(2);
+    for (let i = 0; i < 5; i++) approver.onCapture(capture(BASH_IN_PROJECT));
+    expect(approve).toHaveBeenCalledTimes(3);
+    expect(notify).toHaveBeenCalledTimes(4);
     expect(notify).toHaveBeenLastCalledWith('Auto-approve could not clear the permission prompt; standing down', expect.anything());
   });
 
   it('passes the capture of the gate it could not clear to the stand-down notification', () => {
     const { approver, notify } = make();
-    approver.onCapture({ text: BASH_IN_PROJECT, capturedAt: 1 });
-    const stuck = { text: BASH_IN_PROJECT, capturedAt: 2 };
+    for (let i = 1; i <= 3; i++) approver.onCapture({ text: BASH_IN_PROJECT, capturedAt: i });
+    const stuck = { text: BASH_IN_PROJECT, capturedAt: 4 };
     approver.onCapture(stuck);
     expect(notify).toHaveBeenLastCalledWith('Auto-approve could not clear the permission prompt; standing down', stuck);
   });
@@ -426,7 +424,7 @@ describe('HarnessAutoApprover', () => {
   it('reports isStuck only once the stuck-notification path fires, and false again after clearing', () => {
     const { approver } = make();
     expect(approver.isStuck).toBe(false);
-    approver.onCapture(capture(BASH_IN_PROJECT));
+    for (let i = 0; i < 3; i++) approver.onCapture(capture(BASH_IN_PROJECT));
     expect(approver.isStuck).toBe(false);
     approver.onCapture(capture(BASH_IN_PROJECT));
     expect(approver.isStuck).toBe(true);
