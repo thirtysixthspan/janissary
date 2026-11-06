@@ -16,6 +16,8 @@ Hidden records do not appear in the Models tab. Disabled records stay visible, a
 
 The bundled catalog is `known-models.json` at the repository root. A project override at `.janissary/known-models.json` replaces it wholesale. Missing or invalid overrides use the bundled catalog with the warning described in [Harness Tab](harness.md#what-the-bundled-catalog-holds). The file maps harness names to ordered model records containing an `id`, an optional `name`, and optional `disabled` and `hidden` flags.
 
+Each record is validated independently; duplicate ids are not rejected. Duplicate rows can appear, and Delete addresses the first matching record.
+
 The catalog is re-read when `models` runs and at the start of Delete and Refresh. Hand edits therefore take effect at the next of those actions; this version does not watch the file continuously. A read that finds a changed catalog replaces the in-memory value and updates open consumers.
 
 ### Delete
