@@ -160,9 +160,10 @@ export class DiffTab {
   // Open a file at a line in an editor tab, through the same containment check the search tab's
   // `openMatch` makes: a path the diff never produced gets nothing. A remote workspace's files are
   // materialized to a local cache first, and that path is what opens, so a remote row's click is the
-  // same open a local row's is.
+  // same open a local row's is. Only the all-changes view opens anything: the staged and last-commit
+  // views show content the working-tree file may no longer hold.
   openFile(relPath: string, line: number, capabilities: TabPluginServerCapabilities): void {
-    if (!isInsideRoot(this.root, path.join(this.root, relPath))) return;
+    if (!this.opensFiles(relPath)) return;
     if (this.payload.host === undefined) {
       capabilities.openInEditor(path.join(this.root, relPath), line);
       return;
@@ -178,7 +179,7 @@ export class DiffTab {
   // Open a binary file in the media tab its extension already opens, by offering the application's
   // own `open` line for the path it opens to the ordinary dispatcher.
   openMedia(relPath: string, capabilities: TabPluginServerCapabilities): void {
-    if (!isInsideRoot(this.root, path.join(this.root, relPath))) return;
+    if (!this.opensFiles(relPath)) return;
     if (this.payload.host === undefined) {
       void capabilities.dispatchLineWithOutput(`open ${path.join(this.root, relPath)}`);
       return;
@@ -233,6 +234,10 @@ export class DiffTab {
       this.inFlight = false;
       if (!this.disposed && this.revision !== revisionAtStart) await this.recompute(capabilities);
     }
+  }
+
+  private opensFiles(relPath: string): boolean {
+    return this.payload.source === 'all' && isInsideRoot(this.root, path.join(this.root, relPath));
   }
 
   private cancelRead(reason: Error): void {

@@ -50,6 +50,25 @@ describe('diff styles', () => {
     expect(getComputedStyle(row(kind).row).cursor).toBe('default');
   });
 
+  it.each([
+    'diff-line diff-context', 'diff-line diff-added',
+    'diff-cell diff-context', 'diff-cell diff-added',
+  ])('shows no pointer and no hover tint for a %s code row in a view that opens nothing', (kind) => {
+    loadStyles();
+    const body = document.createElement('div');
+    body.className = 'diff-body diff-inert';
+    const { row: inert } = row(kind);
+    body.append(inert);
+    document.body.append(body);
+    expect(getComputedStyle(inert).cursor).toBe('default');
+    const rules = [...document.styleSheets[0].cssRules];
+    const hover = rules.find((rule) => rule instanceof CSSStyleRule
+      && rule.selectorText === '.diff-inert .diff-line:hover, .diff-inert .diff-cell:not(.diff-empty):hover');
+    if (!(hover instanceof CSSStyleRule)) throw new Error('Missing inert hover rule');
+    expect(hover.style.getPropertyValue('box-shadow')).toBe('none');
+    expect(inert.matches(hover.selectorText.replaceAll(':hover', ''))).toBe(true);
+  });
+
   it('tints hovered code rows in both layouts without replacing change backgrounds', () => {
     loadStyles();
     const rules = [...document.styleSheets[0].cssRules];
