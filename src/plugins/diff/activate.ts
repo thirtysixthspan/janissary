@@ -14,11 +14,13 @@ import {
   isOpenMediaIntent,
   isRefreshIntent,
   isContextIntent,
+  isSourceIntent,
   type LayoutIntent,
   type OpenIntent,
   type OpenMediaIntent,
   type RefreshIntent,
   type ContextIntent,
+  type SourceIntent,
 } from './shared.js';
 import { DiffSession } from './session.js';
 import { parseDiffArgument } from './parse-argument.js';
@@ -168,6 +170,15 @@ export function activate(): TabPluginActivation {
         payload: isLayoutIntent,
         run: (_tab, payload: LayoutIntent, capabilities) => {
           sessionFor(capabilities).saveLayout(payload.split);
+          return null;
+        },
+      },
+      // Which changes this one tab reads. Not saved: it is a question about this tab's changes rather
+      // than a standing preference.
+      source: {
+        payload: isSourceIntent,
+        run: (tab, payload: SourceIntent, capabilities) => {
+          sessionFor(capabilities).setSource(tab.instanceKey, payload.source, capabilities);
           return null;
         },
       },

@@ -1,4 +1,14 @@
-export const DIFF_PAYLOAD_SCHEMA_VERSION = 9;
+export const DIFF_PAYLOAD_SCHEMA_VERSION = 10;
+
+// Which changes the tab reads: the working tree against `HEAD` (staged, unstaged, and untracked
+// together), the index against `HEAD`, or the most recent commit against its first parent. Listed in
+// the order the header's source button cycles through them.
+export const DIFF_SOURCES = ['all', 'staged', 'commit'] as const;
+export type DiffSource = (typeof DIFF_SOURCES)[number];
+
+export function isDiffSource(value: unknown): value is DiffSource {
+  return (DIFF_SOURCES as readonly unknown[]).includes(value);
+}
 
 // One line of a hunk. `kind` is which side git printed it on; `number` is the line's number on that
 // side — the old-side number for a removed line, the new-side number for an added or context one — so
@@ -59,6 +69,8 @@ export type DiffPayload = {
   state: DiffState;
   message: string;
   split: boolean;
+  // The change source this tab reads, chosen per tab and forgotten when it closes.
+  source: DiffSource;
   files: DiffFile[];
   // The host a remote workspace's changes are read on, and the tab name that names it — both
   // server-decided display facts the client renders rather than computing.
@@ -76,6 +88,7 @@ export type RefreshIntent = Record<string, never>;
 
 // The layout the user chose, which becomes the layout every later diff tab opens with.
 export type LayoutIntent = { split: boolean };
+export type SourceIntent = { source: DiffSource };
 export type ContextIntent = { path: string; fullFile: boolean };
 
 // Open a file at a line in an editor tab. `path` is project-relative; `line` is the line's payload
@@ -130,6 +143,7 @@ export function isDiffPayload(value: unknown): value is DiffPayload {
     && ['loading', 'done', 'not-repository', 'error'].includes(value.state as string)
     && typeof value.message === 'string'
     && typeof value.split === 'boolean'
+    && isDiffSource(value.source)
     && Array.isArray(value.files)
     && value.files.every(isDiffFile)
     && isOptionalString(value.host)
@@ -147,6 +161,10 @@ export function isRefreshIntent(value: unknown): value is RefreshIntent {
 
 export function isLayoutIntent(value: unknown): value is LayoutIntent {
   return isRecord(value) && typeof value.split === 'boolean';
+}
+
+export function isSourceIntent(value: unknown): value is SourceIntent {
+  return isRecord(value) && isDiffSource(value.source);
 }
 
 export function isContextIntent(value: unknown): value is ContextIntent {

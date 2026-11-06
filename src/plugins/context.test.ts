@@ -716,7 +716,7 @@ describe('remote workspace capabilities', () => {
 
     await expect(Promise.resolve(capabilities.readWorkspaceChangeSet([])))
       .resolves.toEqual({ kind: 'files', files: [] });
-    expect(port.changeSet).toHaveBeenCalledWith('/srv/work', []);
+    expect(port.changeSet).toHaveBeenCalledWith('/srv/work', [], 'all');
     expect(port.dispose).not.toHaveBeenCalled();
   });
 

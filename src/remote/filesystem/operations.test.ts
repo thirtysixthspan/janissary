@@ -29,7 +29,7 @@ const PATH_CASES: PathCase[] = [
   ['git-pull', {}, []],
   // The workspace's own change set, with the files to expand to whole-file context. No path of its
   // own: one workspace per peer, so the directory is the session's.
-  ['change-set', { fullFiles: ['a.txt'] }, []],
+  ['change-set', { fullFiles: ['a.txt'], source: 'staged' }, []],
   ['git-commit', { message: 'commit: a.txt', paths: ['a.txt', 'b.txt'] }, ['a.txt', 'b.txt']],
   ['git-commit', { message: 'commit: 2 files', paths: [], root: 'src' }, ['src']],
   ['search', {}, []],
@@ -62,8 +62,10 @@ const INVALID_CASES: [RemoteFilesystemOperation, Record<string, unknown>][] = [
   ['unwatch', {}],
   ['git', { path: 'src' }],
   ['git-pull', { path: 'src' }],
-  ['change-set', { fullFiles: 'a.txt' }],
-  ['change-set', { fullFiles: [3] }],
+  ['change-set', { fullFiles: 'a.txt', source: 'all' }],
+  ['change-set', { fullFiles: [3], source: 'all' }],
+  ['change-set', { fullFiles: ['a.txt'] }],
+  ['change-set', { fullFiles: ['a.txt'], source: 'HEAD~1' }],
   ['git-commit', { message: '', paths: ['a.txt'] }],
   ['git-commit', { message: 'x', paths: [], root: 3 }],
   ['search', { path: 'src' }],

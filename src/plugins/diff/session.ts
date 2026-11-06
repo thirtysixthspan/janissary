@@ -2,6 +2,7 @@ import type { TabPluginServerCapabilities } from '../api.js';
 import { readChangeSet } from './change-set.js';
 import { readRemoteChangeSet } from './remote-change-set.js';
 import { DiffTab, type ChangeSetReader, type DiffOrigin } from './tab-state.js';
+import type { DiffSource } from './shared.js';
 
 // The state the whole plugin holds between calls: one diff tab per workspace it has been asked about,
 // plus the layout they all open with. Kept beside `activate.ts` because it is the plugin's whole
@@ -41,11 +42,11 @@ export type WorkspaceOrigin = { tab: string; root: string; workspace: { dir: str
 // read, so a re-scoped tab reads the directory it now shows; the remote one ignores it, because a peer
 // has one workspace and the far side already knows which.
 function localReader(): ChangeSetReader {
-  return (root, _capabilities, fullFiles, signal) => readChangeSet(root, fullFiles, signal);
+  return (root, _capabilities, fullFiles, signal, source) => readChangeSet(root, fullFiles, signal, source);
 }
 
 function remoteReader(): ChangeSetReader {
-  return (_root, capabilities, fullFiles) => readRemoteChangeSet(capabilities, fullFiles);
+  return (_root, capabilities, fullFiles, _signal, source) => readRemoteChangeSet(capabilities, fullFiles, source);
 }
 
 export class DiffSession {
@@ -112,6 +113,10 @@ export class DiffSession {
 
   async refresh(key: string, capabilities: TabPluginServerCapabilities): Promise<void> {
     await this.tabs.get(key)?.refresh(capabilities);
+  }
+
+  setSource(key: string, source: DiffSource, capabilities: TabPluginServerCapabilities): void {
+    this.tabs.get(key)?.setSource(source, capabilities);
   }
 
   setFullFile(key: string, relPath: string, fullFile: boolean, capabilities: TabPluginServerCapabilities): void {

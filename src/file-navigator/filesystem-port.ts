@@ -24,6 +24,7 @@ import type { HistoryStep } from './moves.js';
 import type { MaybePromise } from '../maybe-promise.js';
 import { replayHistory } from './manager/history.js';
 import { readChangeSet } from '../plugins/diff/change-set.js';
+import type { DiffSource } from '../plugins/diff/shared.js';
 import { searchText as searchTextAtRoot } from './search-text.js';
 import type { SearchMatch, SearchRequest } from '../search/types.js';
 
@@ -82,8 +83,9 @@ export interface FileSystemPort {
   // Read the working tree's changes against `HEAD`, with the named files expanded to their whole
   // contents. Answers the same three results on either machine, so the tab that shows them renders
   // local and remote workspaces the same way — and answers them as they arrived, because a value
-  // that crossed a channel is one the caller has to check rather than one it produced.
-  changeSet(root: string, fullFiles: readonly string[]): Promise<unknown>;
+  // that crossed a channel is one the caller has to check rather than one it produced. `source`
+  // names which changes: all of them, the staged ones, or the most recent commit's.
+  changeSet(root: string, fullFiles: readonly string[], source: DiffSource): Promise<unknown>;
   search(root: string): Promise<string[]>;
   searchText(root: string, request: SearchRequest): Promise<SearchMatch[]>;
   readFile(root: string, relPath: string): Promise<Uint8Array>;
@@ -139,8 +141,8 @@ export class LocalFileSystemPort implements FileSystemPort {
   // a change set is. `src/plugins/loaders.ts` stays the only route to a plugin's *behavior* — this is
   // a pure reader with no activation behind it, and the far side is a separate process where lazy
   // loading buys nothing.
-  changeSet(root: string, fullFiles: readonly string[]): Promise<unknown> {
-    return readChangeSet(root, new Set(fullFiles));
+  changeSet(root: string, fullFiles: readonly string[], source: DiffSource): Promise<unknown> {
+    return readChangeSet(root, new Set(fullFiles), undefined, source);
   }
 
   private async loadGitMetadata(root: string, onResult: (metadata: GitMetadata) => void): Promise<void> {

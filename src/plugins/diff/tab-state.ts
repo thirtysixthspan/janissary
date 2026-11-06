@@ -4,7 +4,7 @@ import type { TabPluginServerCapabilities } from '../api.js';
 import { isInsideRoot } from '../files.js';
 import type { ChangeSetResult } from './change-set.js';
 import { displayRoot } from './display.js';
-import type { DiffFile, DiffPayload } from './shared.js';
+import type { DiffFile, DiffPayload, DiffSource } from './shared.js';
 import { preserveContextErrors } from './context-results.js';
 import { readWithDeadline } from './read-with-deadline.js';
 
@@ -21,13 +21,15 @@ export type DiffOrigin = { root: string; workspace?: { dir: string } };
 // the workspace lives on. The directory is handed over on every read rather than bound once, because
 // a tab is re-scoped from one directory to another and the read has to follow it. The capabilities are
 // the ones the triggering call arrived with, because a remote read is answered through the tab that
-// rides the channel — which is this tab, not the tab the command was typed in.
+// rides the channel — which is this tab, not the tab the command was typed in. The source is the
+// tab's own choice of which changes to read.
 export type ChangeSetReader = (
-  root: string, capabilities: TabPluginServerCapabilities, fullFiles: ReadonlySet<string>, signal?: AbortSignal,
+  root: string, capabilities: TabPluginServerCapabilities, fullFiles: ReadonlySet<string>,
+  signal: AbortSignal | undefined, source: DiffSource,
 ) => Promise<ChangeSetResult>;
 
 function emptyPayload(instanceKey: string, split = false): DiffPayload {
-  return { instanceKey, root: '', state: 'done', message: '', split, files: [] };
+  return { instanceKey, root: '', state: 'done', message: '', split, source: 'all', files: [] };
 }
 
 function reasonOf(error: unknown): string {
@@ -113,7 +115,7 @@ export class DiffTab {
       // was closed.
       this.fullFiles.clear();
       this.revision++;
-      this.payload = { ...this.payload, state: 'loading', message: '', files: [] };
+      this.payload = { ...this.payload, source: 'all', state: 'loading', message: '', files: [] };
       return { title: this.title, payload: this.opening() };
     });
     this.publish({});
@@ -127,6 +129,17 @@ export class DiffTab {
   layout(split: boolean): void {
     this.payload = { ...this.payload, split };
     this.publish({});
+  }
+
+  // Switch which changes the tab reads. What it showed belongs to the other source, so the body clears
+  // and the expansions are forgotten, the way a re-scope treats them.
+  setSource(source: DiffSource, capabilities: TabPluginServerCapabilities): void {
+    if (source === this.payload.source) return;
+    this.fullFiles.clear();
+    this.revision++;
+    this.cancelRead(new Error('Diff source changed'));
+    this.publish({ source, state: 'loading', message: '', files: [] });
+    void this.recompute(capabilities);
   }
 
   setFullFile(relPath: string, fullFile: boolean, capabilities: TabPluginServerCapabilities): void {
@@ -194,10 +207,11 @@ export class DiffTab {
     this.inFlight = true;
     const fullFiles = new Set(this.fullFiles);
     const rootAtStart = this.root;
+    const sourceAtStart = this.payload.source;
     const revisionAtStart = this.revision;
     const controller = new AbortController();
     this.readController = controller;
-    const read = (signal: AbortSignal) => this.read(rootAtStart, capabilities, fullFiles, signal);
+    const read = (signal: AbortSignal) => this.read(rootAtStart, capabilities, fullFiles, signal, sourceAtStart);
     await this.finishRead(capabilities, controller, revisionAtStart, read);
   }
 

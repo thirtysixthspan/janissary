@@ -1,11 +1,13 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { parseDiff } from './parse-diff.js';
-import { isDiffFile, type DiffFile } from './shared.js';
+import { isDiffFile, type DiffFile, type DiffSource } from './shared.js';
 import { git } from './git.js';
 import { expandFullFileContext } from './context-diff.js';
+import { sourceRange } from './source-range.js';
 
-// The effectful half of the diff: the working tree's changes versus `HEAD`, read without ever
+// The effectful half of the diff: the changes a source names — by default the working tree's
+// changes versus `HEAD` — read without ever
 // writing to the repository. Follows the `execFileAsync` pattern `changedPaths` uses in
 // `src/git/status.ts`, with the same 64 MB buffer the project's own file list uses — a workspace's
 // whole diff can exceed the default. Untracked files are read in bounded batches, because one git
@@ -50,18 +52,6 @@ async function prefixIn(root: string, signal?: AbortSignal): Promise<string | nu
   } catch (error) {
     if (signal?.aborted) throw error;
     return null;
-  }
-}
-
-// Whether `HEAD` resolves. A fresh `git init` repository has no commits, and there `git diff HEAD`
-// is a fatal error rather than an empty diff, so the caller takes a different route.
-async function hasHead(root: string, signal?: AbortSignal): Promise<boolean> {
-  try {
-    await git(root, ['rev-parse', '--verify', '--quiet', 'HEAD'], signal);
-    return true;
-  } catch (error) {
-    if (signal?.aborted) throw error;
-    return false;
   }
 }
 
@@ -125,37 +115,44 @@ async function unbornChangeSet(root: string, signal?: AbortSignal): Promise<Diff
   return [...files, ...await untrackedFiles(root, signal)];
 }
 
-// Read the working tree's changes versus `HEAD` under `root`: tracked changes with rename detection,
-// then each untracked file as an all-added record. Never writes to the index — no intent-to-add — so
-// the repository the user is working in is untouched.
+// The changes a range holds: tracked changes with rename detection, then — for the all-changes source
+// only, because untracked files are neither staged nor committed — each untracked file as an
+// all-added record.
+async function rangeChangeSet(
+  root: string, prefix: string, range: string[], source: DiffSource,
+  fullFiles: ReadonlySet<string>, signal?: AbortSignal,
+): Promise<DiffFile[]> {
+  const tracked = parseDiff(
+    // The `-- .` pathspec scopes the diff to the root's own subtree: `git diff` without one is
+    // repository-wide even when run from a subdirectory, the way `changedPaths` handles it.
+    await git(root, ['diff', ...range, '-M', '--no-ext-diff', '--no-color', '--unified=3', '--', '.'], signal),
+    { prefix },
+  );
+  const untracked = source === 'all' ? await untrackedFiles(root, signal) : [];
+  const expanded = await expandFullFileContext(root, tracked, prefix, fullFiles, signal, range);
+  // One list in file path order, the way GitHub's files-changed view lists files and the way the
+  // keyboard walk expects them, rather than tracked files first because that is how they were read.
+  return [...expanded, ...untracked].toSorted((a, b) => a.path.localeCompare(b.path));
+}
+
+// Read the changes `source` names under `root` — by default the working tree's changes versus `HEAD`.
+// Never writes to the index — no intent-to-add — so the repository the user is working in is
+// untouched. A repository with no commits has no last commit, so that source reads as no changes.
 export async function readChangeSet(
   root: string,
   fullFiles: ReadonlySet<string> = new Set(),
   signal?: AbortSignal,
+  source: DiffSource = 'all',
 ): Promise<ChangeSetResult> {
   const prefix = await prefixIn(root, signal);
   if (prefix === null) return { kind: 'not-repository' };
   try {
-    if (!await hasHead(root, signal)) {
-      const files = await unbornChangeSet(root, signal);
-      const branch = await branchName(root, signal);
-      return { kind: 'files', files, ...(branch !== undefined && { branch }) };
-    }
-    const tracked = parseDiff(
-      // The `-- .` pathspec scopes the diff to the root's own subtree: `git diff` without one is
-      // repository-wide even when run from a subdirectory, the way `changedPaths` handles it.
-      await git(root, ['diff', 'HEAD', '-M', '--no-ext-diff', '--no-color', '--unified=3', '--', '.'], signal),
-      { prefix },
-    );
-    const untracked = await untrackedFiles(root, signal);
-    const expanded = await expandFullFileContext(root, tracked, prefix, fullFiles, signal);
+    const range = await sourceRange(root, source, signal);
+    let files: DiffFile[] = [];
+    if (range !== null) files = await rangeChangeSet(root, prefix, range, source, fullFiles, signal);
+    else if (source === 'all') files = await unbornChangeSet(root, signal);
     const branch = await branchName(root, signal);
-    // One list in file path order, the way GitHub's files-changed view lists files and the way the
-    // keyboard walk expects them, rather than tracked files first because that is how they were read.
-    return {
-      kind: 'files', files: [...expanded, ...untracked].toSorted((a, b) => a.path.localeCompare(b.path)),
-      ...(branch !== undefined && { branch }),
-    };
+    return { kind: 'files', files, ...(branch !== undefined && { branch }) };
   } catch (error) {
     if (signal?.aborted) throw error;
     return { kind: 'error', reason: reasonOf(error) };

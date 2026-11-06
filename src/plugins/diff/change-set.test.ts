@@ -145,6 +145,91 @@ describe('readChangeSet', () => {
   });
 });
 
+describe('readChangeSet by source', () => {
+  let root: string;
+
+  beforeEach(() => { root = mkdtempSync(path.join(tmpdir(), 'diff-change-source-')); });
+  afterEach(() => { rmSync(root, { recursive: true, force: true }); });
+
+  const fileAt = (result: Awaited<ReturnType<typeof readChangeSet>>, relPath: string) =>
+    result.kind === 'files' ? result.files.find((file) => file.path === relPath) : undefined;
+
+  it('reads only the index for the staged source, leaving unstaged edits and untracked files out', async () => {
+    initRepo(root);
+    writeFileSync(path.join(root, 'tracked.txt'), 'one\n');
+    writeFileSync(path.join(root, 'other.txt'), 'a\n');
+    commitAll(root, 'init');
+    writeFileSync(path.join(root, 'tracked.txt'), 'two\n');
+    execSync('git add tracked.txt', { cwd: root, stdio: 'pipe' });
+    writeFileSync(path.join(root, 'tracked.txt'), 'three\n');
+    writeFileSync(path.join(root, 'other.txt'), 'b\n');
+    writeFileSync(path.join(root, 'untracked.txt'), 'new\n');
+
+    const result = await readChangeSet(root, new Set(), undefined, 'staged');
+    expect(pathsOf(result)).toEqual(['tracked.txt']);
+    expect(fileAt(result, 'tracked.txt')?.hunks[0].lines.map((line) => line.text)).toEqual(['one', 'two']);
+  });
+
+  it('reads only the most recent commit for the commit source', async () => {
+    initRepo(root);
+    writeFileSync(path.join(root, 'a.txt'), 'one\n');
+    writeFileSync(path.join(root, 'b.txt'), 'one\n');
+    commitAll(root, 'init');
+    writeFileSync(path.join(root, 'b.txt'), 'two\n');
+    commitAll(root, 'second');
+    writeFileSync(path.join(root, 'a.txt'), 'uncommitted\n');
+    writeFileSync(path.join(root, 'untracked.txt'), 'new\n');
+
+    const result = await readChangeSet(root, new Set(), undefined, 'commit');
+    expect(pathsOf(result)).toEqual(['b.txt']);
+    expect(fileAt(result, 'b.txt')?.hunks[0].lines.map((line) => line.text)).toEqual(['one', 'two']);
+  });
+
+  it('reads the first commit as every file it added', async () => {
+    initRepo(root);
+    writeFileSync(path.join(root, 'a.txt'), 'one\n');
+    commitAll(root, 'init');
+
+    const result = await readChangeSet(root, new Set(), undefined, 'commit');
+    expect(pathsOf(result)).toEqual(['a.txt']);
+    expect(fileAt(result, 'a.txt')).toMatchObject({ added: true, additions: 1, deletions: 0 });
+  });
+
+  it('answers no changes for the commit source before the first commit', async () => {
+    initRepo(root);
+    writeFileSync(path.join(root, 'a.txt'), 'one\n');
+
+    expect(await readChangeSet(root, new Set(), undefined, 'commit')).toMatchObject({ kind: 'files', files: [] });
+  });
+
+  it('reads staged files as added before the first commit', async () => {
+    initRepo(root);
+    writeFileSync(path.join(root, 'staged.txt'), 'one\n');
+    writeFileSync(path.join(root, 'loose.txt'), 'one\n');
+    execSync('git add staged.txt', { cwd: root, stdio: 'pipe' });
+
+    const result = await readChangeSet(root, new Set(), undefined, 'staged');
+    expect(pathsOf(result)).toEqual(['staged.txt']);
+    expect(fileAt(result, 'staged.txt')?.added).toBe(true);
+  });
+
+  it('expands a whole file from the same two sides the source compares', async () => {
+    initRepo(root);
+    const lines = Array.from({ length: 20 }, (_, index) => `line ${index + 1}`);
+    writeFileSync(path.join(root, 'a.txt'), `${lines.join('\n')}\n`);
+    commitAll(root, 'init');
+    writeFileSync(path.join(root, 'a.txt'), `${lines.with(9, 'committed').join('\n')}\n`);
+    commitAll(root, 'second');
+    writeFileSync(path.join(root, 'a.txt'), `${lines.with(9, 'committed').with(0, 'uncommitted').join('\n')}\n`);
+
+    const result = await readChangeSet(root, new Set(['a.txt']), undefined, 'commit');
+    const texts = fileAt(result, 'a.txt')?.hunks.flatMap((hunk) => hunk.lines.map((line) => line.text));
+    expect(texts).toHaveLength(21);
+    expect(texts).toContain('committed');
+    expect(texts).not.toContain('uncommitted');
+  });
+});
+
 // The guard that decides whether an answer from another machine becomes the tab's payload. Kept beside
 // the real-repository cases because it is the boundary the same result crosses, not a separate feature.
 describe('isChangeSetResult', () => {

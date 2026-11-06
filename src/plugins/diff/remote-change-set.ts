@@ -1,6 +1,7 @@
 import type { TabPluginServerCapabilities } from '../api.js';
 import type { ChangeSetResult } from './change-set.js';
 import { isChangeSetResult } from './change-set.js';
+import type { DiffSource } from './shared.js';
 
 // The remote half of a change-set read. The directory lives on another machine, so the read happens
 // there and its answer travels back through the capability the host publishes for it; everything
@@ -13,13 +14,13 @@ import { isChangeSetResult } from './change-set.js';
 const UNUSABLE_ANSWER = 'The remote host did not answer with a change set.';
 
 export async function readRemoteChangeSet(
-  capabilities: TabPluginServerCapabilities, fullFiles: ReadonlySet<string>,
+  capabilities: TabPluginServerCapabilities, fullFiles: ReadonlySet<string>, source: DiffSource = 'all',
 ): Promise<ChangeSetResult> {
   // A far side that throws is indistinguishable from one that answered unusably: both are a host that
   // did not give this plugin a change set, and the tab's error state says exactly that.
   let value: unknown;
   try {
-    const answer = capabilities.readWorkspaceChangeSet([...fullFiles]);
+    const answer = capabilities.readWorkspaceChangeSet([...fullFiles], source);
     value = answer === null ? undefined : await answer;
   } catch {
     return { kind: 'error', reason: UNUSABLE_ANSWER };

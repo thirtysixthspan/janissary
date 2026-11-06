@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { readChangeSet } from './change-set.js';
 import { expandFullFileContext } from './context-diff.js';
-import { isContextIntent, isDiffPayload } from './shared.js';
+import { DIFF_SOURCES, isContextIntent, isDiffPayload, isDiffSource, isSourceIntent } from './shared.js';
 
 let root: string;
 const source = Array.from({ length: 80 }, (_, index) => `const value${index + 1} = ${index + 1};`);
@@ -72,16 +72,29 @@ describe('context guards', () => {
       expect(isContextIntent(value)).toBe(false);
     });
 
+  it('accepts a source intent only for one of the three change sources', () => {
+    for (const value of ['all', 'staged', 'commit']) expect(isSourceIntent({ source: value })).toBe(true);
+    for (const value of [null, {}, { source: 'HEAD' }, { source: 1 }, 'staged']) {
+      expect(isSourceIntent(value)).toBe(false);
+    }
+    expect(DIFF_SOURCES.filter((value) => isDiffSource(value))).toEqual(['all', 'staged', 'commit']);
+    expect(isDiffSource('unstaged')).toBe(false);
+  });
+
   it('accepts only full-file intent data and validates retained payload metadata', () => {
     expect(isContextIntent({ path: 'a.ts', fullFile: true })).toBe(true);
     expect(isContextIntent({ path: 'a.ts', fullFile: false })).toBe(true);
     const file = { path: 'a.ts', additions: 0, deletions: 0, hunks: [], contextLines: 1_000_000 };
     const payload = {
-      instanceKey: 'diff', root: '', state: 'done', message: '', split: false, files: [file],
+      instanceKey: 'diff', root: '', state: 'done', message: '', split: false, source: 'all', files: [file],
     };
     expect(isDiffPayload(payload)).toBe(true);
     expect(isDiffPayload({ ...payload, branch: 'feature/diff' })).toBe(true);
     expect(isDiffPayload({ ...payload, branch: 42 })).toBe(false);
+    expect(isDiffPayload({ ...payload, source: 'staged' })).toBe(true);
+    expect(isDiffPayload({ ...payload, source: 'commit' })).toBe(true);
+    expect(isDiffPayload({ ...payload, source: undefined })).toBe(false);
+    expect(isDiffPayload({ ...payload, source: 'HEAD~1' })).toBe(false);
     for (const metadata of [{ contextLines: -1 }, { contextLines: 3.5 }, { contextLines: '23' }, { contextLines: 1_000_001 },
       { expandingContext: 'yes' }, { contextError: [] }]) {
       expect(isDiffPayload({ ...payload, files: [{ ...file, ...metadata }] })).toBe(false);

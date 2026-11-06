@@ -1,9 +1,10 @@
 import React, { useCallback, useLayoutEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlusMinus } from '@fortawesome/free-solid-svg-icons';
-import type { DiffPayload } from '@shared/plugins/diff/shared';
+import type { DiffPayload, DiffSource } from '@shared/plugins/diff/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { FileEntry } from './FileEntry';
+import { SourceControl } from './SourceControl';
 import { hunkOffset } from './hunk-index';
 import { useDiffRefresh } from './useDiffRefresh';
 import { useHunkWalk } from './useHunkWalk';
@@ -22,6 +23,7 @@ export function DiffTab({
 }) {
   const split = payload.split;
   const setLayout = (next: boolean) => { void capabilities.intent('layout', { split: next }); };
+  const setSource = (next: DiffSource) => { void capabilities.intent('source', { source: next }); };
   const files = payload.files;
   const fullFileScroll = useRef<number | null>(null);
 
@@ -83,6 +85,7 @@ export function DiffTab({
         </div>
         <span className="plugin-actions">
           <span className="diff-view">
+            <SourceControl source={payload.source} onChange={setSource} />
             <button
               type="button"
               className={split ? 'on' : ''}
@@ -108,7 +111,7 @@ export function DiffTab({
         {payload.state === 'done' && files.length === 0 && <div className="diff-empty">No changes</div>}
         {files.map((file, index) => (
           <FileEntry
-            key={JSON.stringify([payload.root, file.path])}
+            key={JSON.stringify([payload.root, payload.source, file.path])}
             file={file}
             split={split}
             offset={hunkOffset(files, index)}
