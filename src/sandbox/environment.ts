@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { janissaryRoot, JANISSARY_HOME_ENV } from '../janissary-root.js';
 import { getGitIdentity, gitIdentityEnv } from '../git/identity.js';
-import { PROJECT_TOKENS, type ProjectTokens } from '../project/tokens.js';
+import { PROJECT_TOKENS, type ProjectTokenName, type ProjectTokens } from '../project/tokens.js';
 import { ENV_SCRUB_PATTERNS } from './paths.js';
 import { resolvePath } from './resolve.js';
 import { opencodeDataHome, workspaceOpencodeDataHome } from './opencode-data.js';
@@ -43,14 +43,26 @@ export function scrubEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
 // to work around, but the redirect still keeps that machine's own ambient `gh` login out of the
 // workspace, which is the same guarantee an isolated tab gets.
 function workspaceCredentialEnv(tmpDir: string, tokens: ProjectTokens): NodeJS.ProcessEnv {
-  const credentials: NodeJS.ProcessEnv = {};
-  for (const { name, env } of PROJECT_TOKENS) {
-    const value = tokens[name];
-    if (!value) continue;
-    for (const variable of env) credentials[variable] = value;
-  }
+  const credentials: NodeJS.ProcessEnv = tokenVariables(tokens, () => true);
   if (tokens.github) credentials.GH_CONFIG_DIR = path.join(tmpDir, 'gh-config');
   return credentials;
+}
+
+function tokenVariables(tokens: ProjectTokens, include: (name: ProjectTokenName) => boolean): Record<string, string> {
+  const variables: Record<string, string> = {};
+  for (const { name, env } of PROJECT_TOKENS) {
+    const value = tokens[name];
+    if (!value || !include(name)) continue;
+    for (const variable of env) variables[variable] = value;
+  }
+  return variables;
+}
+
+// The credentials an ACP agent outside any workspace is handed: every harness token, none of
+// GitHub's. Such an agent is unconfined and has no private `gh` config directory to redirect to, so a
+// `GH_TOKEN` would only replace the user's own `gh` login for a process that never asked for one.
+export function agentCredentialEnv(tokens: ProjectTokens): Record<string, string> {
+  return tokenVariables(tokens, (name) => name !== 'github');
 }
 
 // Everything a workspaced spawn's environment gains regardless of whether this machine can confine

@@ -42,7 +42,9 @@ export type AcpOptions = {
   workspaceDir?: string;
   installedSkillDirs?: string[];
   offline?: boolean;
-  // The credentials to inject; defaults to this project's own. The remote server supplies the
+  // The credentials to inject; defaults to this project's own. A workspaced session hands all of them
+  // to the sandbox; any other session gets the harness credentials, never GitHub's, merged straight
+  // into its environment beneath `env`. The remote server supplies the
   // forwarded-over-own map it already computed, so a credential forwarded from the local machine is
   // not dropped in favour of the remote's own file.
   tokens?: ProjectTokens;

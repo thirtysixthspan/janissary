@@ -86,6 +86,10 @@ The remote end resolves its own two locations the same way when nothing is forwa
 fallback described under [[remote-server]] is the remote machine's home directory as well as the
 remote project's file.
 
+The four harness credentials — `claude-token`, `opencode-token`, `kilo-token`, and `gemini-token` — also
+reach an ACP agent that runs outside any workspace, under the same variables; the GitHub token does not
+(see [[acp]]).
+
 Both locations are read by the janissary process itself, never from inside a workspace. `~/.janissary`
 is not carved into the sandbox's read allow-list, so a workspaced process cannot open the home copy
 any more than it can open the project's own state directory (see [[sandbox]]).
