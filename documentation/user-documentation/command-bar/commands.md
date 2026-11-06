@@ -29,6 +29,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `plugins` | List the [bundled tab plugins](/user-documentation/command-bar/plugins) with their version and state |
 | `conversation [<title>]` | Open the [conversation list](/user-documentation/tab-types/conversations), or open a saved conversation by title, or start a new conversation and send `<title>` as the first query |
 | `conversations [left\|right\|<title>]` | Open or dock the [conversation list](/user-documentation/tab-types/conversations), or reopen a saved conversation by its title |
+| `models [left\|right]` | Open the [Models tab](/user-documentation/tab-types/models), or dock it in a sidebar |
 | `shell [name] [-w\|--workspace\|--no-workspace] [--offline]` | Open a separate [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab), in a fresh sandboxed workspace clone unless `--no-workspace` is given |
 | `quit` / `/quit` | Exit the application, after confirmation |
 
@@ -183,7 +184,7 @@ Closing the browser window or reloading the page while work is unsaved gets you 
 ## `notifications` and `notify`
 
 
-`notifications` opens a single feed tab for background activity: an agent finishing, a message arriving, a scheduled command firing, an agent starting a turn, or a model query being rate limited. Background event toggles in `.janissary/config.json` default off; rate-limit reports use `notifications.events.rateLimited`. `notifications left` or `notifications right` docks the feed into a sidebar, and `notifications clear` empties the queue, the record file, and any toasts on screen. `notify <message>` and diagnostic messages bypass event toggles and focus suppression. A notification with no feed on screen appears as a toast instead. When three arrive within ten seconds, the feed is made visible (docked on the right if it didn't exist yet) and the toasts clear. See [Notifications](/user-documentation/tab-types/notifications) for delivery details and [app configuration](/user-documentation/getting-started/configuration) for the settings.
+`notifications` opens a single feed tab for background activity: an agent finishing, a message arriving, a scheduled command firing, an agent starting a turn, or a model query being rate limited. It also reports explicit results from Models refreshes and system schedules. The four ambient event toggles in `.janissary/config.json` default off; the system-schedule and Models-refresh toggles default on. Rate-limit reports use `notifications.events.rateLimited`. `notifications left` or `notifications right` docks the feed into a sidebar, and `notifications clear` empties the queue, the record file, and any toasts on screen. `notify <message>` and diagnostic messages bypass event toggles and focus suppression. A notification with no feed on screen appears as a toast instead. When three arrive within ten seconds, the feed is made visible (docked on the right if it didn't exist yet) and the toasts clear. See [Notifications](/user-documentation/tab-types/notifications) for delivery details and [app configuration](/user-documentation/getting-started/configuration) for the settings.
 
 ## Command comments
 

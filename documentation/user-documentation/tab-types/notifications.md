@@ -46,7 +46,7 @@ toast of its own; the feed is the only place you will see it.
 
 Each notification type can show a desktop banner and play a selected sound. This is
 separate from the in-app toast: the toast stays silent even when a banner or sound is enabled.
-The four ambient types default to no banner and no sound, but you can opt them in. They still need to pass their feed toggle and focus suppression. `scheduleFire` covers tab-owned schedules. System schedule notices default to a banner and warning sound.
+The four ambient types default to no banner and no sound, but you can opt them in. They still need to pass their feed toggle and focus suppression. `scheduleFire` covers tab-owned schedules. System schedule notices default to a banner and warning sound; Models refresh notices default to a banner and success sound. Both have their own default-on feed toggle and bypass focus suppression.
 
 Each browser window handles its own banner and sound. It suppresses both only when Janissary's
 window has focus and the notification's tab is visible there, including the selected tab in either
@@ -120,7 +120,7 @@ Click or move keyboard focus into the feed. While it has focus, `↑` and `↓` 
 
 ## What it reports
 
-The four ambient event toggles default to `false`. The separate `systemScheduleFire` toggle defaults to `true`. Edit `.janissary/config.json` to choose which background events you want and whether to silence system schedule notices; see [app configuration](/user-documentation/getting-started/configuration) for desktop banners and sound settings too:
+The four ambient event toggles default to `false`. The separate `systemScheduleFire` and `modelsRefresh` toggles both default to `true`. Edit `.janissary/config.json` to choose which background events you want and whether to silence system schedule or Models refresh notices; see [app configuration](/user-documentation/getting-started/configuration) for desktop banners and sound settings too:
 
 ```json
 {
@@ -130,7 +130,8 @@ The four ambient event toggles default to `false`. The separate `systemScheduleF
       "scheduleFire": true,
       "agentStart": true,
       "rateLimited": true,
-      "systemScheduleFire": true
+      "systemScheduleFire": true,
+      "modelsRefresh": true
     }
   }
 }
@@ -145,8 +146,9 @@ Each toggle controls one kind of event:
 | `agentStart` | An agent begins a turn |
 | `rateLimited` | A model query is identified as rate limited |
 | `systemScheduleFire` | A system schedule fires, is missed, names a missing runscript, or the system shell cannot start |
+| `modelsRefresh` | A Models refresh finishes and reports provider results |
 
-The four ambient events notify only for a **background** tab. Activity in the currently active tab is suppressed. System schedule notices are explicit, use their own toggle, and are not suppressed when the `system` tab is active.
+The four ambient events notify only for a **background** tab. Activity in the currently active tab is suppressed. System schedule and Models refresh notices are explicit, use their own toggles, and are not suppressed when their tabs are active.
 
 The four ambient events read like this in the feed:
 
@@ -172,6 +174,10 @@ The feed shows the stored script invocation when a runscript is queued. For exam
 - `System shell could not start: <reason>.`
 
 The schedule name is the schedule's name. The missed time uses the same local date and time format shown in the schedules list. A startup failure's reason is shortened to its first line. Each notice is attributed to `system`, and its tab link focuses the system tab, revealing it if hidden. If the system tab has not been created yet, the notice is still held and recorded under `system`; clicking its link does nothing and does not create a placeholder tab.
+
+### Models refresh notices
+
+A Models refresh posts one result line even when the Models tab is active. The `modelsRefresh` toggle defaults to `true`; set it to `false` to suppress the line from the queue, feed, record file, toast, banner, and bell. The default desktop alert uses a banner and the success cue. See [Models](/user-documentation/tab-types/models#refresh-provider-lists) for the provider results in that line.
 
 ## A harness that finished and you weren't looking
 
@@ -204,7 +210,7 @@ Typing either `notifications` or `notify` also writes one line into the transcri
 
 `shell transcript failed` means a shell tab's plain-text transcript could not be written, so it has stopped for the rest of that tab's life. It is reported once per open tab, however many times the transcript fails, and nothing is reported for a failure that shows up after the tab has closed. A later tab that reuses the label is reported afresh. The shell and its recording keep running, and the tab's **Open transcript** button still opens whatever was written.
 
-These diagnostics bypass the five event toggles and focus suppression, and they land in the queue and toast the same way other notifications do.
+These diagnostics bypass the six configured event toggles and focus suppression, and they land in the queue and toast the same way other notifications do.
 
 `No opener for ".xyz" files.` means you opened a file type Janissary has no viewer for, whether you typed `open` or double-clicked a row in the [file navigator](/user-documentation/tab-types/file-navigator). It arrives here rather than in the tab you opened from, because a file navigator has no transcript of its own to print it in. See [Opening files and pages](/user-documentation/tab-types/opening-files).
 
@@ -212,7 +218,7 @@ A launch that never opened reports here too. `Cannot launch "<name>": …` means
 
 Every path on a feed line is shortened the way [paths are shown everywhere else](/user-documentation/getting-started/tabs#how-paths-are-shown-root): a workspace clone as `$workspace/<name>`, whatever host holds it, and anything else inside the project as `$root/…`. The one line that keeps a full path is a directory a remote host was asked to use as its project root and couldn't — a missing path, a folder with no `origin`, an occupied home-directory target — since `$root` would misname it and it's the one thing on that line you can go and fix.
 
-These four bypass the five event toggles and focus suppression, the way the recording diagnostics do, and each is attributed to the tab you typed the command in.
+These four bypass the six configured event toggles and focus suppression, the way the recording diagnostics do, and each is attributed to the tab you typed the command in.
 
 A harness launched with `-y` and no workspace raises this warning as soon as it starts: `auto-approve is on without a workspace: prompts are approved unattended against your real files, with no sandbox confining the harness`. It shows even when that tab is the active one. Nothing is written into the harness tab itself.
 

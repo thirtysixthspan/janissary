@@ -32,6 +32,7 @@ Keep only the settings you want to change. Any setting you leave out uses its de
 | `notifications.events.agentStart` | `false` | Adds background agent-start events to the feed. |
 | `notifications.events.rateLimited` | `false` | Adds background model rate-limit events to the feed. |
 | `notifications.events.systemScheduleFire` | `true` | Adds system schedule firing, missed-run, missing-runscript, and shell-start failure notices. |
+| `notifications.events.modelsRefresh` | `true` | Adds a notice when a Models refresh finishes. It bypasses focus suppression and defaults to a success banner and sound. |
 | `notifications.alerts` | Per-type defaults | Chooses a desktop banner and sound (`success`, `warning`, `error`, or `none`) for each notification type. See [Notifications](/user-documentation/tab-types/notifications#desktop-banners-and-bell-sounds). |
 | `osNotifications` | `true` | Allows each type's configured desktop banner when the browser has permission. Janissary does not request permission. |
 | `terminalBell` | `true` | Allows each type's configured sound cue. Browser autoplay restrictions can block playback before you interact with the page. |
@@ -42,7 +43,7 @@ Keep only the settings you want to change. Any setting you leave out uses its de
 | `externalViewers` | `{ "video": "QuickTime Player" }` | macOS application names used by external file viewers. An empty or missing entry uses the operating system's default. Setting this map replaces the defaults. See [Opening files and pages](/user-documentation/tab-types/opening-files#opening-outside-the-app-open-external). |
 | `pluginSettings` | `{}` | Preferences saved by tab plugins. Each plugin owns its entry; the search tab stores its three search toggles here, as `{ "search": { "regex": false, "matchCase": false, "wholeWord": false } }`. |
 
-The `notifications` object can also be left out. Missing or invalid ambient event toggles default to `false`; `systemScheduleFire` defaults to `true`, including in older partial configs. Set it to `false` if you don't want system schedule notices. These toggles control the listed notification events. Manual notifications and other diagnostics do not use them. See [Notifications](/user-documentation/tab-types/notifications) for delivery behavior.
+The `notifications` object can also be left out. Missing or invalid ambient event toggles default to `false`; the two explicit toggles, `systemScheduleFire` and `modelsRefresh`, default to `true`, including in older partial configs. Set either explicit toggle to `false` to suppress that event. These toggles control the listed notification events. Manual notifications and other diagnostics do not use them. See [Notifications](/user-documentation/tab-types/notifications) for delivery behavior.
 
 ## Editing and validation
 

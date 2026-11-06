@@ -9,24 +9,25 @@ plugins
 ```
 
 ```
-agent-monitor 1.0.0 api=2 state=declared
-asciicast 1.0.0 api=2 state=declared
-audio 1.0.0 api=2 state=declared
-conversations 2.0.0 api=2 state=declared
-diff 1.0.0 api=2 state=declared
-image 1.0.0 api=2 state=declared
-launcher 1.0.0 api=2 state=declared
-markdown 1.0.0 api=2 state=declared
-page 1.0.0 api=2 state=declared
-pdf 1.0.0 api=2 state=declared
-roles 1.0.0 api=2 state=declared
-schedules 1.0.0 api=2 state=declared
-scripts 1.0.0 api=2 state=declared
-search 1.0.0 api=2 state=declared
-sessions 1.0.0 api=2 state=declared
-shell 1.0.0 api=2 state=declared
-sql 1.0.0 api=2 state=declared
-video 1.0.0 api=2 state=declared
+agent-monitor 1.0.0 api=3 state=declared
+asciicast 1.0.0 api=3 state=declared
+audio 1.0.0 api=3 state=declared
+conversations 2.0.0 api=3 state=declared
+diff 1.0.0 api=3 state=declared
+image 1.0.0 api=3 state=declared
+launcher 1.0.0 api=3 state=declared
+markdown 1.0.0 api=3 state=declared
+models 1.0.0 api=3 state=declared
+page 1.0.0 api=3 state=declared
+pdf 1.0.0 api=3 state=declared
+roles 1.0.0 api=3 state=declared
+schedules 1.0.0 api=3 state=declared
+scripts 1.0.0 api=3 state=declared
+search 1.0.0 api=3 state=declared
+sessions 1.0.0 api=3 state=declared
+shell 1.0.0 api=3 state=declared
+sql 1.0.0 api=3 state=declared
+video 1.0.0 api=3 state=declared
 ```
 
 Each line names the plugin, its own version, the API version it requires, and its state. Active plugins also show their activation time; disabled plugins show the recorded reason. A plugin's own version moves independently of the app's, which is why `conversations` is on a later version than the rest. There is nothing to install, enable, or configure. These plugins are part of the app, and no plugin comes from anywhere else.
@@ -35,7 +36,7 @@ Each line names the plugin, its own version, the API version it requires, and it
 
 <img class="agent-float left" src="/agents/yusuf-south-east.png" alt="" />
 
-A plugin owns a kind of tab and the ways you reach it. The [agent monitor](/user-documentation/advanced-agents/agent-command) opens when you add `in a tab` to an `agent` command. The bundled views also include the [image viewer](/user-documentation/tab-types/image-viewer), [markdown preview](/user-documentation/tab-types/markdown-preview), [PDF viewer](/user-documentation/tab-types/pdf-viewer), [embedded web pages](/user-documentation/tab-types/web-pages), [video player](/user-documentation/tab-types/video-player), [audio player](/user-documentation/tab-types/audio-player), [recording player](/user-documentation/tab-types/recording-player), [diff view](/user-documentation/tab-types/diff-tab), [launcher](/user-documentation/tab-types/launcher), [roles](/user-documentation/tab-types/roles), and [shell](/user-documentation/command-bar/shell) tabs. The [schedules](/user-documentation/automation/scheduling) and [scripts](/user-documentation/tab-types/scripts) lists, [conversation list](/user-documentation/tab-types/conversations), [sessions](/user-documentation/tab-types/sessions) list, [project search](/user-documentation/command-bar/project-search) tab, and [SQL database browser](/user-documentation/tab-types/sql-browser) are plugin tabs too. You reach file and page views with `open`, or open a plugin's own view with its command, such as `shell`, `diff`, `launcher`, `roles`, `video`, `audio`, `pdf`, `schedules`, `scripts`, `conversations`, `sessions`, `search`, or `sql`. The search tab also has a shortcut, `Cmd+Shift+F`, which runs the same `search` command you would type. Nothing about typing a command changes because a plugin is behind it.
+A plugin owns a kind of tab and the ways you reach it. The [agent monitor](/user-documentation/advanced-agents/agent-command) opens when you add `in a tab` to an `agent` command. The bundled views also include the [image viewer](/user-documentation/tab-types/image-viewer), [markdown preview](/user-documentation/tab-types/markdown-preview), [PDF viewer](/user-documentation/tab-types/pdf-viewer), [embedded web pages](/user-documentation/tab-types/web-pages), [video player](/user-documentation/tab-types/video-player), [audio player](/user-documentation/tab-types/audio-player), [recording player](/user-documentation/tab-types/recording-player), [diff view](/user-documentation/tab-types/diff-tab), [launcher](/user-documentation/tab-types/launcher), [Models](/user-documentation/tab-types/models), [roles](/user-documentation/tab-types/roles), and [shell](/user-documentation/command-bar/shell) tabs. The [schedules](/user-documentation/automation/scheduling) and [scripts](/user-documentation/tab-types/scripts) lists, [conversation list](/user-documentation/tab-types/conversations), [sessions](/user-documentation/tab-types/sessions) list, [project search](/user-documentation/command-bar/project-search) tab, and [SQL database browser](/user-documentation/tab-types/sql-browser) are plugin tabs too. You reach file and page views with `open`, or open a plugin's own view with its command, such as `shell`, `diff`, `launcher`, `models`, `roles`, `video`, `audio`, `pdf`, `schedules`, `scripts`, `conversations`, `sessions`, `search`, or `sql`. The search tab also has a shortcut, `Cmd+Shift+F`, which runs the same `search` command you would type. Nothing about typing a command changes because a plugin is behind it.
 
 Plugin tabs are live views. They aren't restored, except for remote shell tabs, which return on their existing remote PTYs. A [profile](/user-documentation/automation/profiles) can reopen most plugin tabs by reissuing the same command you would type.
 
