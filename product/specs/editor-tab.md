@@ -473,8 +473,8 @@ Cmd+F opens a find overlay at the bottom of the editor tab, with its own focused
 whose placeholder, also its accessible name, is "Search buffer". It searches the tab's own buffer —
 the lines as they are right now, including unsaved edits — and nothing else: not the transcript, not
 other tabs, and not files on disk. Reaching another file is still Quick Open's job (see
-[[quick-open]]). The browser's own find bar never appears. Pressing Cmd+F again while the overlay is
-open selects the whole query, so typing replaces it. Ctrl+F is unaffected and keeps moving the
+[[quick-open]]). The browser's own find bar never appears. Pressing Cmd+F again in the overlay's
+input selects the whole query, so typing replaces it. Ctrl+F is unaffected and keeps moving the
 cursor one character to the right.
 
 Typing matches lines that contain the query as a contiguous, case-insensitive sequence and lists up

@@ -1,13 +1,3 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
-
-* Correct the editor and shell specs' new second-Cmd+F sentence, which promises query selection even after focus leaves the overlay's input.
-
-Existing Issue: Both specs now say that pressing Cmd+F again while the find overlay is open selects the whole query, but the shared handler is attached only to the overlay's input, and once focus is back in the editor buffer or the shell terminal Cmd+F is handled by the tab, which resets the query to empty instead of selecting it. Severity: 3/10
-
-Existing Risk: 3/10 - A reader or a later test trusts the unconditional claim, while the focus-outside path the PDF work must handle separately stays invisible in the editor and shell specs.
-
-Proposal Risk: 1/10 - The two specs will match the code, but the underlying focus-outside behavior still resets the query; that remains a product decision this documentation-only fix does not change.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1958 "qualify the editor and shell specs' second-Cmd+F sentence to the overlay's input". In product/specs/editor-tab.md § Finding a line and product/specs/shell-tab.md § Transcript search, change the new sentence so it scopes the selection to the overlay's input — for example, "Pressing Cmd+F again in the overlay's input selects the whole query, so typing replaces it", keeping the shell's "and the browser's find bar does not open" clause. Leave the rest of both sections and the matching wording change untouched. The source of truth is the onKeyDown wrapper in web/src/shared/line-find/LineFind.tsx, which only receives events from the input; web/src/editor/useEditorInteractions.ts and the claimed chord handler in web/src/plugins/shell/ShellTab.tsx handle Cmd+F when focus is elsewhere, and both call their tab's find open with an empty initial query. Do not change the component or either caller here: wiring focus and selection for the focus-outside case is a separate behavior change, not part of a spec correction. The input-focused selection is already covered by web/src/shared/line-find/LineFind.test.tsx, and the editor and shell find-opening tests in web/src/editor/EditorTab.test.tsx and web/src/plugins/shell/ShellTab.test.tsx cover the tab-level path, so no test changes are needed. After editing, run $janissary/scripts/run.mjs check-diff and grep both spec sections to confirm the sentence names the input and no other copy of the old unconditional wording remains.

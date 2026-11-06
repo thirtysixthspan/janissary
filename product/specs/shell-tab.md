@@ -237,7 +237,7 @@ is the editor tab's find overlay (see [[editor-tab]]): the same focused input, h
 placeholder and accessible name `Search transcript`, the same ranked rows of up to ten matching
 lines, each with its line number and the matched text highlighted, and the same keys — `↑` / `↓` move
 the highlight, Return highlights the top match, a click highlights a row, and `Escape` closes the
-overlay and returns the keyboard to the command bar. Pressing `Cmd+F` again while the overlay is open
+overlay and returns the keyboard to the command bar. Pressing `Cmd+F` again in the overlay's input
 selects the whole query, so typing replaces it, and the browser's find bar does not open. Matching is
 the editor's: one uninterrupted, case-insensitive occurrence of the typed text. A line that wrapped
 across several screen rows is one line, and the terminal's scrollback is searched along with the
