@@ -1231,8 +1231,28 @@ describe('ShellTab', () => {
     fireEvent.keyDown(bar(), { key: 'Tab' });
 
     await waitFor(() => { expect(screen.getByText('lsof')).toBeInTheDocument(); });
-    expect(screen.getByText('ls')).toBeInTheDocument();
     expect(document.querySelector('.completions')?.textContent).toBe('ls  lsof');
+    expect(bar().value).toBe('ls');
+  });
+
+  it('fills in the common prefix of several matches and still shows the strip', async () => {
+    renderTab({ completions: { matches: ['docs/', 'dotfiles/'], newInput: 'ls do', newCursor: 5 } });
+
+    fireEvent.change(bar(), { target: { value: 'ls d' } });
+    fireEvent.keyDown(bar(), { key: 'Tab' });
+
+    await waitFor(() => { expect(bar().value).toBe('ls do'); });
+    expect(document.querySelector('.completions')?.textContent).toBe('docs/  dotfiles/');
+  });
+
+  it('keeps the typed line when several matches diverge right away', async () => {
+    renderTab({ completions: { matches: ['alpha', 'beta'], newInput: 'ls ', newCursor: 3 } });
+
+    fireEvent.change(bar(), { target: { value: 'ls ' } });
+    fireEvent.keyDown(bar(), { key: 'Tab' });
+
+    await waitFor(() => { expect(document.querySelector('.completions')).not.toBeNull(); });
+    expect(bar().value).toBe('ls ');
   });
 
   it('dismisses completion choices on Escape without changing the command line', async () => {
@@ -1241,11 +1261,12 @@ describe('ShellTab', () => {
     fireEvent.change(bar(), { target: { value: 'l' } });
     fireEvent.keyDown(bar(), { key: 'Tab' });
     await waitFor(() => { expect(document.querySelector('.completions')).not.toBeNull(); });
+    expect(bar().value).toBe('ls');
 
     fireEvent.keyDown(bar(), { key: 'Escape' });
 
     expect(document.querySelector('.completions')).toBeNull();
-    expect(bar().value).toBe('l');
+    expect(bar().value).toBe('ls');
   });
 
   it('accepts a single completion without showing a strip', async () => {

@@ -136,7 +136,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
         cursor: inputReference.current?.selectionStart ?? draft.length,
       }).then((result) => {
         setMatches(result.matches);
-        if (result.matches.length === 1) setDraft(result.newInput);
+        if (result.matches.length > 0) setDraft(result.newInput);
       }).catch((error: unknown) => {
         reportShellIntentFailure(capabilities, 'shell completion intent failed', error);
       });
