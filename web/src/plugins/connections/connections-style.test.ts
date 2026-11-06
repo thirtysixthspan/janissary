@@ -1,6 +1,27 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
+// A selector styles what follows its last sibling combinator (`+` or `~`); what comes before only
+// names a row that precedes it. Commas and combinators inside `:is()` and `:not()` don't count.
+const styledParts = (css: string): string[] => {
+  const parts: string[] = [];
+  for (const [, list] of css.replaceAll(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{/g)) {
+    let depth = 0;
+    let start = 0;
+    for (let index = 0; index <= list.length; index += 1) {
+      const char = list[index];
+      if (char === '(') depth += 1;
+      else if (char === ')') depth -= 1;
+      else if (depth === 0 && (char === '+' || char === '~')) start = index + 1;
+      else if (depth === 0 && (char === ',' || char === undefined)) {
+        parts.push(list.slice(start, index).trim());
+        start = index + 1;
+      }
+    }
+  }
+  return parts;
+};
+
 describe('connections list styles', () => {
   it('loads shared and feature styles from the lazy entry and scopes list selectors', () => {
     const entry = readFileSync('web/src/plugins/connections/index.tsx', 'utf8');
@@ -119,8 +140,13 @@ describe('connections rows follow the sessions rows', () => {
       expect(ended).toContain(`.connections-row[data-status='${status}']`);
     }
     expect(ended).toContain('color: var(--muted)');
-    expect(styles).not.toContain("[data-status='Running']");
-    expect(styles).not.toContain("[data-status='Open']");
+    const styled = styledParts(styles);
+    expect(styled).toContain(".connections-row[data-status='Idle'] .connections-row-status");
+    expect(styled).toContain(
+      ".connections-row:is([data-status='Closed'], [data-status='Completed'], [data-status='Failed'], [data-status='Terminated'])",
+    );
+    expect(styled.filter((part) => part.includes("[data-status='Running']"))).toEqual([]);
+    expect(styled.filter((part) => part.includes("[data-status='Open']"))).toEqual([]);
   });
 });
 
