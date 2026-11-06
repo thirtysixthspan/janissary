@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, type KeyboardEvent, type RefObject } from 'react';
 
 // The add-entry picker: a harness, a model, and an effort for one new entry, so an entry can be added
 // without a pointer. The levels are the catalog the host published, so one the host knows appears here
 // and in the card's per-entry dropdown at once. The picker owns its selection and unmounts when it
 // closes, which is what keeps a choice made for one entry from reaching the next.
 export function EntryPicker({
-  harnesses, models, efforts, onAdd, onCancel,
+  harnesses, models, efforts, firstControlRef, onAdd, onCancel,
 }: {
   harnesses: string[];
   models: Record<string, string[]>;
   efforts: readonly string[];
+  firstControlRef: RefObject<HTMLSelectElement | null>;
   onAdd(harness: string, model: string, effort: string): void;
   onCancel(): void;
 }) {
@@ -25,9 +26,16 @@ export function EntryPicker({
     setEffort('');
   };
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    onCancel();
+  };
+
   return (
-    <div className="roles-picker">
+    <div className="roles-picker" onKeyDown={handleKeyDown}>
       <select
+        ref={firstControlRef}
         value={harness}
         aria-label="Harness for the new entry"
         onChange={(event) => changeHarness(event.target.value)}

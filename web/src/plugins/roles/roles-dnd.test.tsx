@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { RolesPayload } from '@shared/plugins/roles/shared';
+import { NATIVE_ACP_COMMANDS, type RolesPayload } from '@shared/plugins/roles/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { RolesTab } from './RolesTab';
 
@@ -23,7 +23,7 @@ function payload(): RolesPayload {
         commands: [],
       },
     ],
-    nativeCommands: [],
+    nativeCommands: [...NATIVE_ACP_COMMANDS],
     source: 'home',
     path: '/home/me/.janissary/roles.json',
     catalog: CATALOG,

@@ -12,6 +12,10 @@
 .roles-card { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; padding: 6px 8px; }
 .roles-drop { border-color: var(--fg); }
 .roles-card-head { display: flex; align-items: center; gap: 6px; }
+.roles-section { min-width: 0; }
+.roles-section-heading {
+  color: var(--muted); font-size: 12px; font-weight: normal; margin: 6px 0 2px;
+}
 .roles-grip { color: var(--muted); cursor: grab; font-size: 11px; letter-spacing: -2px; user-select: none; }
 .roles-name, .roles-description {
   background: transparent; border: none; color: var(--fg); font-size: 13px;
@@ -23,6 +27,7 @@
 .roles-icon { flex-shrink: 0; padding: 0 4px; font-size: 12px; }
 
 .roles-entries { list-style: none; margin: 4px 0; padding: 0; }
+.roles-empty-row { color: var(--muted); font-size: 12px; padding: 2px 0; }
 .roles-entry {
   display: flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 12px;
   border-top: 1px solid var(--border);
@@ -30,6 +35,8 @@
 .roles-entry-missing { opacity: 0.65; }
 .roles-entry-model { color: var(--fg); }
 .roles-entry-harness { color: var(--muted); }
+.roles-command-entry { min-width: 0; }
+.roles-command-text { color: var(--fg); flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .roles-effort {
   margin-left: auto; background: transparent; color: var(--muted);
   border: 1px solid var(--border); border-radius: 3px; font-size: 12px;
@@ -40,5 +47,5 @@
   background: transparent; color: var(--fg); border: 1px solid var(--border);
   border-radius: 3px; font-size: 12px;
 }
-.roles-add-entry { font-size: 12px; padding: 2px 0; }
+.roles-add-model, .roles-add-command { font-size: 12px; padding: 2px 0; }
 .roles-add-role { display: block; margin: 4px auto; }

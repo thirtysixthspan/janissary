@@ -26,7 +26,8 @@ stores one. The `commands` list follows `entries` in the file; an empty list gra
     "entries": [
       { "harness": "codex", "model": "gpt-6-sol", "effort": "xhigh" },
       { "harness": "claude", "model": "claude-opus-5-5", "effort": "xhigh" }
-    ]
+    ],
+    "commands": []
   }
 }
 ```
@@ -65,19 +66,35 @@ The tab shows role cards and no model catalog column. Above the cards, a line na
 effect — its full path — or, when no file decodes, `No roles file in effect`. A problem line appears
 under it when the roles on screen are not what the file literally holds.
 
-Each card carries the role's name, its description, and its entries in order. An entry whose model
-is no longer enabled is dimmed and titled `Not in the model catalog`; the entry remains on the card
-and in `roles.json`. The marker is recomputed when the model catalog changes and is not stored in
-the roles file. The entry picker offers only the enabled models from the current catalog.
+Each card carries the role's name, description, ordered model entries, and command grants. Its
+`Models` and `Commands` lists have the accessible names `Models of role <name>` and
+`Commands of role <name>`. An entry whose model is no longer enabled is dimmed and titled `Not in the
+model catalog`; the entry remains on the card and in `roles.json`. The marker is recomputed when the
+model catalog changes and is not stored in the roles file. The model picker offers only the enabled
+models from the current catalog.
 
-The name and
-description edit in place: the change is written when the field loses focus, Enter commits, and
-Escape reverts. Every entry row shows the model, the harness, an effort dropdown (`default` plus
-the levels above, and the entry's own stored effort as its own option when that value is outside
-them, so a hand-written effort never reads as unset), and a remove control. **Add entry** opens a
-small picker — harness, model, effort, and Add — so an entry can be added without a pointer, and the
-picker starts on `default` and returns there when the harness changes or the picker is reopened, so
-no entry carries an effort nobody chose for it.
+The name and description edit in place: the change is written when the field loses focus, Enter
+commits, and Escape reverts. The `Models` section shows a muted `No models` row when empty. Every
+entry row shows the model, the harness, an effort dropdown (`default` plus the levels above, and the
+entry's own stored effort as its own option when that value is outside them, so a hand-written
+effort never reads as unset), and a remove control. **Add model** opens a small picker — harness,
+model, effort, and Add — so an entry can be added without a pointer. The picker starts on `default`
+and returns there when the harness changes or the picker is reopened, so no entry carries an effort
+nobody chose for it.
+
+The `Commands` section shows native grants in the published vocabulary order, followed by unknown
+hand-written values in their stored order. Duplicate grants remain adjacent and visible. Unknown
+commands are dimmed, titled `Not a native command`, and can be removed. A muted `No commands` row
+appears when a role has none. **Add command** opens a dropdown of native commands the role does not
+already have, followed by Add and Cancel; Add stays disabled until a choice is made. The button is
+hidden when all nine native commands are present. Add sends `add-command`; removing any duplicate
+row sends `remove-command`, which removes every copy. If another client changes a command while the
+picker is open, it clears a selection that is no longer available or closes when no commands remain
+to add, and the card follows the next publication. Both pickers focus their first control when
+opened, cancel on Escape, and return focus to their own add button on Add, Cancel, or Escape. If a
+publication leaves no commands to add while the picker is open, or removes the focused **Add
+command** button, focus moves to the `Commands` heading. At narrow pane widths, command text wraps
+without pushing its remove control out of view.
 
 ### A description the tab did not write
 
