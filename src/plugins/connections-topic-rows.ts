@@ -27,8 +27,8 @@ export function composeConnectionsTopicData(
     ...durableRows(managers, records, requestedWindows),
   ];
 
-  rows.sort((a, b) => compareHosts(a.host, b.host)
-    || Number(isClosedRow(a)) - Number(isClosedRow(b))
+  rows.sort((a, b) => Number(isClosedRow(a)) - Number(isClosedRow(b))
+    || compareHosts(a.host, b.host)
     || b.orderingTimestamp - a.orderingTimestamp
     || a.kind.localeCompare(b.kind) || a.id.localeCompare(b.id));
   return { rows };

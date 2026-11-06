@@ -177,7 +177,7 @@ describe('connections topic rows', () => {
       harness: { name: 'ssh', destination: 'ops@Zeta-host' },
       runtime: { busy: false, context: [], queue: [], lastActivity: 9999 },
     } as unknown as Tab);
-    Object.assign(recordRows[1]!, { host: 'alpha', updatedAt: 8000 });
+    Object.assign(recordRows[1]!, { host: 'alpha', updatedAt: 8000, status: 'Idle' });
 
     const rows = composeConnectionsTopicData(managers, new Map()).rows;
     const hosts = rows.map((row) => row.host);
@@ -208,6 +208,27 @@ describe('connections topic rows', () => {
       ['orphan-db', 'Open', 0],
       ['agent-record', 'Completed', 5000],
       ['old-closed', 'Failed', 10],
+    ]);
+  });
+
+  it('groups closed rows below every open row across hosts, keeping host order inside each grouping', () => {
+    const { managers, recordRows, tabs } = fixture();
+    tabs[1]!.remote = { address: 'me@devbox:/srv/repo', host: 'devbox' };
+    recordRows.push(
+      { id: 'remote-closed', kind: 'acp', title: 'ACP: remote', model: 'model-a', ownerLabel: 'closed-owner', ownerName: 'Remote owner', startedAt: 3, updatedAt: 9000, status: 'Closed' },
+      { id: 'local-closed', kind: 'acp', title: 'ACP: local', model: 'model-a', ownerLabel: 'closed-owner', ownerName: 'Local owner', startedAt: 4, updatedAt: 10, status: 'Terminated' },
+    );
+    Object.assign(recordRows[2]!, { host: 'devbox' });
+
+    const rows = composeConnectionsTopicData(managers, new Map()).rows;
+    const closed = rows.filter((row) => ['Closed', 'Completed', 'Failed', 'Terminated'].includes(row.status));
+
+    expect(rows.slice(-closed.length)).toEqual(closed);
+    expect(rows.slice(0, -closed.length).at(-1)).toMatchObject({ host: 'devbox', status: 'Open' });
+    expect(closed.map((row) => [row.id, row.host])).toEqual([
+      ['agent-record', 'Local'],
+      ['local-closed', 'Local'],
+      ['remote-closed', 'devbox'],
     ]);
   });
 
