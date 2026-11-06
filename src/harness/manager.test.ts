@@ -933,6 +933,10 @@ describe('HarnessManager busy/ready status', () => {
     expect(managers.tab.deleteBusy).toHaveBeenCalledWith('claude');
     expect(managers.tab.markUnread).not.toHaveBeenCalled();
     await settle(CLEAR + GATE);
+    await settle(CLEAR + GATE);
+    expect(managers.pty.input).toHaveBeenCalledTimes(3);
+    expect(managers.tab.markUnread).not.toHaveBeenCalled();
+    await settle(CLEAR + GATE);
     expect(managers.tab.markUnread).toHaveBeenCalledWith('claude');
     expect(managers.tab.clearUnread).not.toHaveBeenCalled();
     await settle(`${CLEAR}${CLAUDE_BUSY}working`);

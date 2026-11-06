@@ -434,11 +434,14 @@ describe('RemoteProcesses harness detection', () => {
     }));
   });
 
-  // The same loop guard `HarnessAutoApprover` already has locally: an unchanged, unanswered gate is
-  // reported once as standing down rather than re-sending the keystroke forever.
+  // The same loop guard `HarnessAutoApprover` already has locally: a gate that stays unchanged through
+  // three approvals is reported once as standing down rather than re-sending the keystroke forever.
   it('stands down on a gate that does not clear, without re-sending the keystroke, carrying its capture', async () => {
     const { feed } = spawnClaude(true);
     await feed(GATE_TEXT);
+    await feed(GATE_TEXT);
+    await feed(GATE_TEXT);
+    expect(write).toHaveBeenCalledTimes(3);
     write.mockClear();
     send.mockClear();
     await feed(GATE_TEXT);
