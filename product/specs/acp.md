@@ -99,3 +99,7 @@ Fatal errors are shown as `ACP: <message>` and forget the connection. Existing b
 ## Shared consumers
 
 Monitors, conversations, and editor persona queries remain separate ACP consumers, with their existing model choices, workspaces, permission policies, and lifecycle. They do not acquire the shell's tab session or enter its tool loop. See [[monitoring]], [[conversations]], and [[editor-tab]].
+
+### Authentication outside workspaces
+
+ACP sessions in ordinary shells receive the configured harness API tokens and a private copy of the saved ChatGPT login for OpenCode. The private login lasts for that ACP subprocess and is removed when it exits or fails to start. An explicit launch data-location setting takes precedence. Workspace sessions continue to share their workspace-owned login.
