@@ -3,9 +3,9 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ACP_ROLES, type AcpRole } from '../acp/role.js';
 import { AcpRecordStore } from './store.js';
 import type { AcpRecord } from './types.js';
-import type { AcpRole } from '../acp/role.js';
 
 let projectDir: string;
 let root: string;
@@ -55,7 +55,7 @@ describe('AcpRecordStore', () => {
     expect(store.read(value.id)?.title).toBe(value.title);
   });
 
-  it.each(['ask', 'tell'] as const)('round-trips a core record tagged with the %s role', (role) => {
+  it.each(ACP_ROLES)('round-trips a core record tagged with the %s role', (role) => {
     const store = new AcpRecordStore({ projectDir });
     const value = coreFixture(role);
 
