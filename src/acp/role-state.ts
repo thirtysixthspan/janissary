@@ -1,4 +1,4 @@
-import { ACP_ROLES, DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
+import { DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
 import type { AcpPendingPrompt } from './prompt-state.js';
 import type { TabRuntime } from '../tab/types.js';
 
@@ -11,8 +11,4 @@ export function acpRoleRuntime(runtime: TabRuntime, role: AcpRole = DEFAULT_ACP_
 
 export function existingAcpRoleRuntime(runtime: TabRuntime, role: AcpRole = DEFAULT_ACP_ROLE): AcpRoleRuntime | undefined {
   return runtime.acpRoles?.[role];
-}
-
-export function hasAcpPrompt(runtime: TabRuntime): boolean {
-  return ACP_ROLES.some((role) => runtime.acpRoles?.[role]?.prompt !== undefined);
 }

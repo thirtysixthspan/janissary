@@ -276,6 +276,8 @@ export type MonitorSuggestion = {
 
 export type CenterPane = 'left' | 'right';
 
+export type BusyOwner = object;
+
 export type TabRuntime = {
   // Host-owned id for this open tab incarnation. Unlike its label, it is never reused and survives
   // tab-array projections that shallow-copy the record when another tab closes. In-memory only.
@@ -295,6 +297,10 @@ export type TabRuntime = {
   // tab's own release forgets it, so a recycled label starts on the ordinary policy. In-memory only.
   acpWithoutTools?: boolean;
   cwd?: string;
+  // Activity acquired without an identity token. The public `busy` value also includes every
+  // active owner below, so releasing either kind cannot erase the other.
+  unownedBusy?: boolean;
+  busyOwners?: Set<BusyOwner>;
   busy: boolean;
   context: string[];
   queue: QueueEntry[];

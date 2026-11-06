@@ -1,4 +1,4 @@
-import type { Tab } from './types.js';
+import type { BusyOwner, Tab } from './types.js';
 import type { ConnectionView, ScheduleView, TabView } from '../protocol.js';
 import type { TabPluginTerminal, TabPluginTerminalOptions } from '../plugins/api.js';
 import type { Managers } from '../managers.js';
@@ -78,12 +78,16 @@ export class TabManager extends TabTranscriptState {
   setCwd(label: string, dir: string): void {
     runtimeOperations.setCwd(this.tabs, label, dir);
   }
-  addBusy(label: string): void {
-    runtimeOperations.addBusy(this.tabs, label);
+  addBusy(label: string, owner?: BusyOwner): void {
+    runtimeOperations.addBusy(this.tabs, label, owner);
   }
 
-  deleteBusy(label: string): void {
-    runtimeOperations.deleteBusy(this.tabs, label);
+  deleteBusy(label: string, owner?: BusyOwner): void {
+    runtimeOperations.deleteBusy(this.tabs, label, owner);
+  }
+
+  clearBusy(label: string): void {
+    runtimeOperations.clearBusy(this.tabs, label);
   }
 
   protected queueChanged(): void {

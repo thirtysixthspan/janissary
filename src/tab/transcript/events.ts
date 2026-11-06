@@ -1,7 +1,8 @@
-import type { Tab, LogEntry } from '../types.js';
+import type { BusyOwner, Tab, LogEntry } from '../types.js';
 import { messageBus } from '../../bus.js';
 import { appendEntry, clearLog } from './log.js';
 import { runtimeFor } from '../runtime.js';
+import * as runtimeOperations from '../runtime-operations.js';
 
 // Transcript/busy-tracking coordination extracted from TabManager: wraps the pure log
 // mutations in transcript-log.ts with the messageBus emits and unread-marking
@@ -119,26 +120,25 @@ export type RunningEntryFields = Partial<Omit<LogEntry, 'input' | 'output' | 'ru
 
 export function startRunningTab(
   tabsOrBusy: Tab[] | Set<string>, label: string, input: string, append: (label: string, entry: LogEntry) => void,
-  fields: RunningEntryFields = {},
+  fields: RunningEntryFields = {}, owner?: BusyOwner,
 ): void {
   if (tabsOrBusy instanceof Set) tabsOrBusy.add(label);
-  else {
-    const runtime = runtimeFor(tabsOrBusy, label);
-    if (runtime) runtime.busy = true;
-  }
+  else runtimeOperations.addBusy(tabsOrBusy, label, owner);
   append(label, { input, output: '', running: true, ...fields });
 }
 
 export function finishRunningTab(
   tabs: Tab[], label: string, output: string,
-  deleteBusy: (label: string) => void,
+  deleteBusy: (label: string, owner?: BusyOwner) => void,
   markUnread: (label: string) => void,
   match?: RunningEntryMatch,
+  owner?: BusyOwner,
 ): void {
   updateRunningEntry(tabs, label, match, output, false, {
     trailing: true,
     finalize: () => {
-      deleteBusy(label);
+      if (owner === undefined) deleteBusy(label);
+      else deleteBusy(label, owner);
     },
     markUnread,
   });

@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { Managers } from '../managers.js';
 import type { AcpOptions, AcpSession, PromptHandlers } from './types.js';
 import { AcpManager } from './manager.js';
+import { ShellManager } from '../shell/manager.js';
 import { AcpSessionRecords } from '../acp-records/manager.js';
 import { AcpRecordStore } from '../acp-records/store.js';
 import { TabManager } from '../tab/manager.js';
@@ -16,7 +17,13 @@ import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { closeTabResources } from '../tab/cleanup.js';
 
 const mock = vi.hoisted(() => ({ connect: vi.fn() }));
+const shellMock = vi.hoisted(() => ({ spawn: vi.fn(), execute: vi.fn(), pwd: vi.fn() }));
 vi.mock('./index.js', () => ({ connectAcp: mock.connect }));
+vi.mock('../shell/index.js', () => ({
+  spawnShell: (...args: unknown[]) => shellMock.spawn(...args),
+  executeShellCmd: (...args: unknown[]) => shellMock.execute(...args),
+  queryShellPwd: (...args: unknown[]) => shellMock.pwd(...args),
+}));
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 const fixtures: ReturnType<typeof setup>[] = [];
 
@@ -67,13 +74,17 @@ function setup(remote = false) {
       control.end(control.current!, 'end_turn');
     }
   };
-  const fixture = { root, records, managers, sessions, handshake, chunk, end, listener: () => listeners.at(-1)! };
+  const fixture = {
+    root, records, managers, sessions, handshake, chunk, end, shell: undefined as ShellManager | undefined,
+    listener: () => listeners.at(-1)!,
+  };
   fixtures.push(fixture);
   return fixture;
 }
 
 afterEach(() => {
   for (const f of fixtures) {
+    f.shell?.closeAll();
     f.managers.acp.closeAll();
     f.records.dispose();
     rmSync(f.root, { recursive: true, force: true });
@@ -113,6 +124,61 @@ describe('core record feeds', () => {
       { input: 'first', output: 'ask partial' },
       { input: 'second', output: 'tell partial + tell final' },
     ]);
+  });
+
+  it('keeps shell activity busy until both ask and tell prompts settle when shell finishes first', async () => {
+    const f = setup();
+    shellMock.spawn.mockReturnValue({ stdin: { writable: true, write: vi.fn() }, kill: vi.fn() });
+    shellMock.pwd.mockImplementation((_shell, _index, onPwd) => onPwd('/project'));
+    f.shell = new ShellManager(f.managers);
+    const ask = f.managers.acp.prompt('owner', 'ask first');
+    const tell = f.managers.acp.prompt('owner', 'tell second', 'tell');
+    f.shell.run('owner', 'printf shell');
+    await vi.waitFor(() => { expect(shellMock.execute).toHaveBeenCalledOnce(); });
+    f.handshake(0);
+    f.handshake(1);
+    expect(f.managers.tab.isBusy('owner')).toBe(true);
+
+    const shellDone = shellMock.execute.mock.calls[0]![4] as (result: string) => void;
+    shellDone('shell output');
+    expect(f.managers.tab.isBusy('owner')).toBe(true);
+
+    f.chunk('ask answer', 0);
+    f.end(0);
+    await expect(ask).resolves.toBe('ask answer');
+    expect(f.managers.tab.isBusy('owner')).toBe(true);
+
+    f.chunk('tell answer', 1);
+    f.end(1);
+    await expect(tell).resolves.toBe('tell answer');
+    expect(f.managers.tab.isBusy('owner')).toBe(false);
+  });
+
+  it('keeps shell activity busy while ask and tell settle before the shell', async () => {
+    const f = setup();
+    shellMock.spawn.mockReturnValue({ stdin: { writable: true, write: vi.fn() }, kill: vi.fn() });
+    shellMock.pwd.mockImplementation((_shell, _index, onPwd) => onPwd('/project'));
+    f.shell = new ShellManager(f.managers);
+    const ask = f.managers.acp.prompt('owner', 'ask first');
+    const tell = f.managers.acp.prompt('owner', 'tell second', 'tell');
+    f.shell.run('owner', 'printf shell');
+    await vi.waitFor(() => { expect(shellMock.execute).toHaveBeenCalledOnce(); });
+    f.handshake(0);
+    f.handshake(1);
+
+    f.chunk('ask answer', 0);
+    f.end(0);
+    await expect(ask).resolves.toBe('ask answer');
+    expect(f.managers.tab.isBusy('owner')).toBe(true);
+
+    f.chunk('tell answer', 1);
+    f.end(1);
+    await expect(tell).resolves.toBe('tell answer');
+    expect(f.managers.tab.isBusy('owner')).toBe(true);
+
+    const shellDone = shellMock.execute.mock.calls[0]![4] as (result: string) => void;
+    shellDone('shell output');
+    expect(f.managers.tab.isBusy('owner')).toBe(false);
   });
 
   it('allows a close settlement callback to synchronously start a fresh session and record', async () => {

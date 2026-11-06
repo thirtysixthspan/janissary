@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  addBusy, appendContext, contextFor, cwdOf, deleteBusy, isBusy, setContext, setCwd,
+  addBusy, appendContext, clearBusy, contextFor, cwdOf, deleteBusy, isBusy, setContext, setCwd,
 } from './runtime-operations.js';
 import type { Tab } from './types.js';
 
@@ -24,6 +24,7 @@ describe('runtime accessors with no tab behind the label', () => {
     expect(() => {
       setCwd(empty, 'gone', '/elsewhere');
       addBusy(empty, 'gone');
+      addBusy(empty, 'gone', {});
       setContext(empty, 'gone', ['x']);
       appendContext(empty, 'gone', 'x');
     }).not.toThrow();
@@ -65,6 +66,45 @@ describe('runtime accessors', () => {
     addBusy(tabs, 'agent');
 
     deleteBusy(tabs, 'agent');
+
+    expect(isBusy(tabs, 'agent')).toBe(false);
+  });
+
+  it('keeps the projection busy until every owner releases its own activity', () => {
+    const tabs = [tab('agent')];
+    const shell = {};
+    const ask = {};
+
+    addBusy(tabs, 'agent', shell);
+    addBusy(tabs, 'agent', ask);
+    deleteBusy(tabs, 'agent', shell);
+
+    expect(isBusy(tabs, 'agent')).toBe(true);
+    deleteBusy(tabs, 'agent', {});
+    expect(isBusy(tabs, 'agent')).toBe(true);
+    deleteBusy(tabs, 'agent', ask);
+    expect(isBusy(tabs, 'agent')).toBe(false);
+  });
+
+  it('keeps unowned activity active while an owner releases its work', () => {
+    const tabs = [tab('agent')];
+    const shell = {};
+
+    addBusy(tabs, 'agent');
+    addBusy(tabs, 'agent', shell);
+    deleteBusy(tabs, 'agent', shell);
+
+    expect(isBusy(tabs, 'agent')).toBe(true);
+    deleteBusy(tabs, 'agent');
+    expect(isBusy(tabs, 'agent')).toBe(false);
+  });
+
+  it('clears all owners and unowned activity at a terminal boundary', () => {
+    const tabs = [tab('agent')];
+
+    addBusy(tabs, 'agent');
+    addBusy(tabs, 'agent', {});
+    clearBusy(tabs, 'agent');
 
     expect(isBusy(tabs, 'agent')).toBe(false);
   });

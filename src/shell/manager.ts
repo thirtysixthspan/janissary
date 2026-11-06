@@ -112,13 +112,14 @@ export class ShellManager {
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
     if (!this.managers.tab.byLabel(label)) { options?.onComplete?.(''); return; }
 
-    this.managers.tab.startRunning(label, command, { cwd });
+    const busyOwner = {};
+    this.managers.tab.startRunning(label, command, { cwd }, busyOwner);
 
     const update = (output: string, running: boolean, trailing = false) => {
       this.managers.tab.updateRunning(label, { command }, output, running, {
         trailing,
         finalize: () => {
-          this.managers.tab.deleteBusy(label);
+          this.managers.tab.deleteBusy(label, busyOwner);
         },
         markUnread: (l) => this.managers.tab.markUnread(l),
       });

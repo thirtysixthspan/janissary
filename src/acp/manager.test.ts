@@ -561,11 +561,11 @@ describe('AcpManager role sessions', () => {
     expect(tellSession.cancel).not.toHaveBeenCalled();
     expect(askDone).toHaveBeenCalledWith({ answered: false, error: 'ACP: prompt cancelled.' });
     expect(tellDone).not.toHaveBeenCalled();
-    expect(deleteBusy).not.toHaveBeenCalled();
+    expect(deleteBusy).toHaveBeenCalledOnce();
 
     acp.close('tab1', undefined, 'tell');
     expect(tellDone).toHaveBeenCalledWith({ answered: false, error: 'ACP session closed.' });
-    expect(deleteBusy).toHaveBeenCalledOnce();
+    expect(deleteBusy).toHaveBeenCalledTimes(2);
   });
 
   it('keeps the no-tools override in force for both role prompts', () => {

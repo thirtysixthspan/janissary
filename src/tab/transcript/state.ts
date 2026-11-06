@@ -6,7 +6,7 @@ import {
   appendTab, clearTranscriptTab, finishRunningTab, markUnreadTab, startRunningTab, updateRunningEntry,
   type RunningEntryFields, type RunningEntryMatch, type UpdateRunningHooks,
 } from './events.js';
-import type { LogEntry } from '../types.js';
+import type { BusyOwner, LogEntry } from '../types.js';
 
 // A tab's transcript: the log it has written and the still-running entry at the tail of it. Every
 // method here is `TabManager`'s own wiring of the transcript events to tab state — the cap the
@@ -15,16 +15,18 @@ import type { LogEntry } from '../types.js';
 export abstract class TabTranscriptState extends TabOpeningState {
   abstract secondaryTabLabel?: string;
 
-  abstract deleteBusy(label: string): void;
+  abstract deleteBusy(label: string, owner?: BusyOwner): void;
 
   abstract markUnread(label: string): void;
 
-  startRunning(label: string, input: string, fields?: RunningEntryFields): void {
-    startRunningTab(this.tabs, label, input, (l, entry) => this.append(l, entry), fields);
+  startRunning(label: string, input: string, fields?: RunningEntryFields, owner?: BusyOwner): void {
+    startRunningTab(this.tabs, label, input, (l, entry) => this.append(l, entry), fields, owner);
   }
 
-  finishRunning(label: string, output: string, match?: RunningEntryMatch): void {
-    finishRunningTab(this.tabs, label, output, (l) => this.deleteBusy(l), (l) => this.markUnread(l), match);
+  finishRunning(label: string, output: string, match?: RunningEntryMatch, owner?: BusyOwner): void {
+    finishRunningTab(
+      this.tabs, label, output, (l, token) => this.deleteBusy(l, token), (l) => this.markUnread(l), match, owner,
+    );
   }
 
   updateRunning(label: string, match: RunningEntryMatch | undefined, output: string, running: boolean, hooks: UpdateRunningHooks = {}): void {

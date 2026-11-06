@@ -27,7 +27,10 @@ function setup() {
       transports.push(transport);
       return { id: `ssh${transports.length}`, ...transport };
     }) },
-    tab: { tabs: [tab], byLabel: (label: string) => label === tab.label ? tab : undefined, closeTab: vi.fn() },
+    tab: {
+      tabs: [tab], byLabel: (label: string) => label === tab.label ? tab : undefined,
+      clearBusy: vi.fn(), closeTab: vi.fn(),
+    },
   } as unknown as Managers;
   const remote = new RemoteManager(managers);
   const handlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };

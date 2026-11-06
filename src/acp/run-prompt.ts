@@ -58,7 +58,6 @@ export function runCorePrompt(
     extractCommand: toolExtractor(tools),
   }, guardAcpHandlers({
     startTurn: (isFirst) => {
-      managers.tab.addBusy(label);
       if (isFirst) notify(managers, 'agent-start', label);
       const entry: LogEntry = { input: isFirst ? request.prompt : '', output: '', running: true, markdown: true };
       request.runningEntries.add(entry);

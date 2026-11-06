@@ -117,6 +117,7 @@ export class AcpManager extends AcpSessionManager {
       runningEntries: new Set(),
     };
     acpRoleRuntime(runtime, attempt.role).prompt = request;
+    this.managers.tab.addBusy(label, request);
     try {
       promptCoreRecord(this.managers.acpRecords, runtime, request);
       if (acpRoleRuntime(runtime, attempt.role).prompt !== request) return;

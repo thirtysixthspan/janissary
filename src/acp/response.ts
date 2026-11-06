@@ -4,7 +4,7 @@ import type { LogEntry } from '../tab/types.js';
 import type { AcpPromptResult } from './types.js';
 import { messageBus } from '../bus.js';
 import { answerCoreRecord } from './record-feed.js';
-import { acpRoleRuntime, hasAcpPrompt } from './role-state.js';
+import { acpRoleRuntime } from './role-state.js';
 import { DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
 
 export function appendAcp(managers: Managers, label: string, entry: LogEntry): void {
@@ -42,7 +42,7 @@ export function settleAcpPrompt(
   pending.abort.abort();
   const running = tab.log?.findLast((entry) => entry.running && pending.runningEntries.has(entry));
   if (running) managers.tab.updateRunning(label, { markdown: true, entries: pending.runningEntries }, running.output, false);
-  if (!hasAcpPrompt(runtime)) managers.tab.deleteBusy(label);
+  managers.tab.deleteBusy(label, pending);
   afterSettlement?.();
   pending.finish(result);
   messageBus.emit('state', { type: 'dirty' });
