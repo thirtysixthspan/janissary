@@ -1,4 +1,16 @@
-export const ROLES_PAYLOAD_SCHEMA_VERSION = 2;
+export const ROLES_PAYLOAD_SCHEMA_VERSION = 3;
+
+export const NATIVE_ACP_COMMANDS = [
+  'db sqlite create',
+  'db sqlite delete',
+  'db sqlite query',
+  'db sqlite list',
+  'browser goto',
+  'browser content',
+  'browser eval',
+  'question ask',
+  'question approve',
+] as const;
 
 // One harness/model/effort choice inside a role. `effort` is absent for the default (no effort
 // stored); any other value is passed through verbatim, the way `harness --effort` is.
@@ -6,7 +18,7 @@ export type RoleEntry = { harness: string; model: string; effort?: string; missi
 
 // A role as the tab shows it: the name is the file's key, the description is the guidance a human
 // or an AI task reads, and the entries are the ordered choices the role maps to.
-export type Role = { name: string; description: string; entries: RoleEntry[] };
+export type Role = { name: string; description: string; entries: RoleEntry[]; commands: string[] };
 
 // Which roles file the tab is editing: the project's own, the user's home one, or neither — the
 // default set, shown only when a file exists but nothing in it decodes.
@@ -18,6 +30,7 @@ export type LaunchCatalog = { models: Record<string, string[]>; efforts: string[
 
 export type RolesPayload = {
   roles: Role[];
+  nativeCommands: string[];
   source: RolesSource;
   path: string;
   problem?: string;
@@ -34,6 +47,8 @@ export type EntryPrecondition = { role: string; expected: RoleEntry[] };
 export type SetEntryEffortIntent = EntryPrecondition & { index: number; effort: string | null };
 export type RemoveEntryIntent = EntryPrecondition & { index: number };
 export type MoveEntryIntent = EntryPrecondition & { from: number; to: number };
+export type AddCommandIntent = { role: string; command: string };
+export type RemoveCommandIntent = { role: string; command: string };
 
 // Hand-written rather than imported, per the plugin architecture's rule that a shared contract stays
 // import-free: the client reaches this module through `@shared/plugins/roles/shared`, so any import
@@ -76,6 +91,10 @@ function isModelCatalog(value: unknown): value is Record<string, string[]> {
   return isRecord(value)
     && Object.values(value).every((models) => Array.isArray(models)
       && models.every((model) => typeof model === 'string'));
+}
+
+function isStringList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
 export function isAddRoleIntent(value: unknown): value is AddRoleIntent {
@@ -122,6 +141,14 @@ export function isMoveEntryIntent(value: unknown): value is MoveEntryIntent {
   return isRecord(value) && isEntryPrecondition(value) && isIndex(value.from) && isIndex(value.to);
 }
 
+export function isAddCommandIntent(value: unknown): value is AddCommandIntent {
+  return isRecord(value) && isName(value.role) && typeof value.command === 'string';
+}
+
+export function isRemoveCommandIntent(value: unknown): value is RemoveCommandIntent {
+  return isRecord(value) && isName(value.role) && typeof value.command === 'string';
+}
+
 export function isRolesPayload(value: unknown): value is RolesPayload {
   if (!isRecord(value)) return false;
   const { roles, source, path: filePath, catalog, problem } = value;
@@ -130,9 +157,11 @@ export function isRolesPayload(value: unknown): value is RolesPayload {
       && isName(role.name)
       && typeof role.description === 'string'
       && Array.isArray(role.entries)
-      && role.entries.every(isEntry))
+      && role.entries.every(isEntry)
+      && isStringList(role.commands))
     && isRolesSource(source)
     && typeof filePath === 'string'
+    && isStringList(value.nativeCommands)
     && (problem === undefined || typeof problem === 'string')
     && isRecord(catalog)
     && isModelCatalog(catalog.models)

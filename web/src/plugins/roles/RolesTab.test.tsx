@@ -13,9 +13,10 @@ const CATALOG = {
 function makePayload(overrides: Partial<RolesPayload> = {}): RolesPayload {
   return {
     roles: [
-      { name: 'planning', description: 'Plans.', entries: [{ harness: 'codex', model: 'gpt-6-sol', effort: 'xhigh' }] },
-      { name: 'research', description: 'Research.', entries: [] },
+      { name: 'planning', description: 'Plans.', entries: [{ harness: 'codex', model: 'gpt-6-sol', effort: 'xhigh' }], commands: [] },
+      { name: 'research', description: 'Research.', entries: [], commands: [] },
     ],
+    nativeCommands: [],
     source: 'home',
     path: '/home/me/.janissary/roles.json',
     catalog: CATALOG,
@@ -100,6 +101,7 @@ describe('RolesTab', () => {
       roles: [{
         name: 'research', description: 'Research.',
         entries: [{ harness: 'codex', model: 'disabled-model', missing: true }],
+        commands: [],
       }],
       catalog: { models: { codex: ['enabled-model'] }, efforts: ['low'] },
     });

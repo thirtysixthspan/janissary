@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-  isAddEntryIntent, isMoveEntryIntent, isRemoveEntryIntent, isRolesPayload, isSetEntryEffortIntent,
+  isAddCommandIntent, isAddEntryIntent, isMoveEntryIntent, isRemoveCommandIntent,
+  isRemoveEntryIntent, isRolesPayload, isSetEntryEffortIntent, NATIVE_ACP_COMMANDS,
   type RolesPayload,
 } from './shared.js';
 
@@ -43,7 +44,10 @@ describe('new entry intent guard', () => {
 });
 
 function payload(catalog: unknown, roles: RolesPayload['roles'] = []): unknown {
-  return { roles, source: 'home', path: '/home/me/.janissary/roles.json', catalog };
+  return {
+    roles, nativeCommands: [...NATIVE_ACP_COMMANDS],
+    source: 'home', path: '/home/me/.janissary/roles.json', catalog,
+  };
 }
 
 describe('the roles payload guard', () => {
@@ -72,6 +76,7 @@ describe('the roles payload guard', () => {
       name: 'review',
       description: 'Second pair of eyes.',
       entries: [{ harness: 'retired-harness', model: 'retired-model', effort: 'ultra' }],
+      commands: ['custom command', 'browser goto'],
     }];
 
     expect(isRolesPayload(payload(CATALOG, roles))).toBe(true);
@@ -82,6 +87,7 @@ describe('the roles payload guard', () => {
       name: 'review', description: 'Second pair of eyes.', entries: [
         { harness: 'retired-harness', model: 'retired-model', missing: true },
       ],
+      commands: [],
     }];
 
     expect(isRolesPayload(payload(CATALOG, roles))).toBe(true);
@@ -93,6 +99,20 @@ describe('the roles payload guard', () => {
     }]))).toBe(false);
   });
 
+  it('requires each stored role command list to contain only strings', () => {
+    const role = { name: 'review', description: 'Second pair of eyes.', entries: [], commands: [] };
+    expect(isRolesPayload(payload(CATALOG, [role]))).toBe(true);
+    expect(isRolesPayload(payload(CATALOG, [{ ...role, commands: 'browser goto' }]))).toBe(false);
+    expect(isRolesPayload(payload(CATALOG, [{ ...role, commands: ['browser goto', 7] }]))).toBe(false);
+  });
+
+  it('requires a native command vocabulary containing only strings', () => {
+    const valid = payload(CATALOG) as Record<string, unknown>;
+    expect(isRolesPayload(valid)).toBe(true);
+    expect(isRolesPayload({ ...valid, nativeCommands: 'browser goto' })).toBe(false);
+    expect(isRolesPayload({ ...valid, nativeCommands: ['browser goto', 7] })).toBe(false);
+  });
+
   // The client reaches this module through `@shared/plugins/roles/shared`, so an import here is a
   // runtime dependency from a browser chunk into a server module. No lint rule covers one file, and
   // the thirteen sibling contracts that do carry the import are out of this unit's scope, so the
@@ -101,5 +121,24 @@ describe('the roles payload guard', () => {
     const source = readFileSync(path.join(import.meta.dirname, 'shared.ts'), 'utf8');
 
     expect(source).not.toMatch(/^ *(import|export) +(type )?(\*|\{|')/m);
+  });
+});
+
+describe('command edit intent guards', () => {
+  it.each([
+    ['add', isAddCommandIntent],
+    ['remove', isRemoveCommandIntent],
+  ] as const)('accepts unknown strings for %s so stored values remain editable', (_name, guard) => {
+    expect(guard({ role: 'review', command: 'future command' })).toBe(true);
+    expect(guard({ role: 'review', command: '' })).toBe(true);
+  });
+
+  it.each([
+    ['add', isAddCommandIntent],
+    ['remove', isRemoveCommandIntent],
+  ] as const)('rejects malformed role or command shapes for %s', (_name, guard) => {
+    expect(guard({ role: '', command: 'browser goto' })).toBe(false);
+    expect(guard({ role: 'review', command: 7 })).toBe(false);
+    expect(guard({ role: 'review' })).toBe(false);
   });
 });

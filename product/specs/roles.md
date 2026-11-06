@@ -15,8 +15,9 @@ takes no argument. It lives in the center strip like the search tab (see [[tab-p
 ### The file
 
 Roles live in `~/.janissary/roles.json`, a JSON object keyed by role name. Each role is a
-`description` string and an ordered `entries` list; each entry is a `harness` name, a `model` id,
-and an `effort` present only when the entry stores one:
+`description` string, an ordered `entries` list, and a `commands` list of granted native ACP
+commands. Each entry is a `harness` name, a `model` id, and an `effort` present only when the entry
+stores one. The `commands` list follows `entries` in the file; an empty list grants no commands.
 
 ```json
 {
@@ -32,8 +33,10 @@ and an `effort` present only when the entry stores one:
 
 The textual key order is the role order the tab shows, including numeric names, so a reorder
 rewrites the keys in their new order. Numeric names are never sorted numerically during reading
-or saving. Special names such as `__proto__` retain their descriptions and entries like any other
-role, including duplicate model choices.
+or saving. Special names such as `__proto__` retain their descriptions, entries, and commands like
+any other role, including duplicate model choices. Unknown command strings and duplicate command
+grants from a hand-written file are preserved. A missing `commands` field means the role grants no
+commands.
 The `effort` values are the same fixed levels the New harness dialog offers — `low`, `medium`,
 `high`, `xhigh`, `max` (see [[harness]]) — plus the default of storing none at all; any other string
 a hand-written file carries is passed through verbatim, exactly as `harness --effort` does.
@@ -42,14 +45,19 @@ A project's `.janissary/roles.json`, when it exists, **replaces** the home file 
 merging of roles between the two — including when it holds an empty object, which is an explicit
 choice of zero roles rather than a request for the defaults.
 
-When neither file exists, the tab creates `~/.janissary/roles.json` holding six default roles:
+When neither file exists, the tab creates `~/.janissary/roles.json` holding seven default roles:
 `planning` (with the two entries above), `research` (`Research, comparison, and information
 gathering for a task or question.`), `code review` (`Review of code changes for correctness, style,
 and risk.`), `implementation` (`Implementation of an approved plan or a described change.`),
 `documentation` (`Writing and updating specs, plans, and user or developer documentation.`), and
 `ask` (`When you ask a question via ACP.`) with three entries in order: `opencode`
 `opencode-go/deepseek-v4.1-flash` at `medium`, `claude` `claude-haiku-4-5` at `high`, and `codex`
-`gpt-6-luna` at `high`. Only `planning` and `ask` start with entries.
+`gpt-6-luna` at `high`. The `tell` role follows `ask`, has the description `When you tell a model to
+carry out a task via ACP.`, and starts with the same three entries. The `ask` role grants `db sqlite
+list`, `db sqlite query`, `browser goto`, `browser content`, `question ask`, and `question approve`.
+The `tell` role grants all nine native commands: those six plus `db sqlite create`, `db sqlite
+delete`, and `browser eval`. `planning`, `research`, `code review`, `implementation`, and
+`documentation` start with no command grants. Only `planning`, `ask`, and `tell` start with entries.
 
 ### What the tab shows
 
@@ -124,7 +132,9 @@ rapid edits are applied one after the other, the second reading the file the fir
 that cannot happen — a read-only directory, a directory in the file's place — is refused with
 `Could not write roles.json at <path>.` and the tab is unchanged. A failed write or replacement
 preserves the previous file contents and removes temporary output. Successful edits retain the
-file's existing permissions.
+file's existing permissions. Adding a command a role already grants, or removing a command it does
+not grant, leaves the roles file unchanged. Removing a granted command removes every duplicate
+copy.
 
 ### An entry list that changed before an edit
 
@@ -156,8 +166,9 @@ is still left exactly as it is.
 
 `roles.json` is a plain JSON object, and the tab re-reads it every time it opens, so editing it by
 hand is supported. A role whose value is not an object with a `description` string and an `entries`
-list is dropped, as is an entry missing a `harness` or `model`, a key whose name trims to empty, and
-a key whose name another key already trims to. An empty object is a valid file holding zero roles.
+list is dropped, as is a role whose `commands` value is not a list of strings. An entry missing a
+`harness` or `model`, a key whose name trims to empty, and a key whose name another key already
+trims to are dropped as well. An empty object is a valid file holding zero roles.
 
 ## Not in this version
 

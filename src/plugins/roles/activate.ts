@@ -7,28 +7,33 @@ import {
 } from '../api.js';
 import {
   isAddEntryIntent,
+  isAddCommandIntent,
   isAddRoleIntent,
   isDeleteRoleIntent,
   isDescribeRoleIntent,
   isMoveEntryIntent,
   isMoveRoleIntent,
+  isRemoveCommandIntent,
   isRemoveEntryIntent,
   isRenameRoleIntent,
   isRolesPayload,
   isSetEntryEffortIntent,
+  NATIVE_ACP_COMMANDS,
   type AddEntryIntent,
+  type AddCommandIntent,
   type EntryPrecondition,
   type LaunchCatalog,
   type Role,
   type RolesPayload,
   type MoveEntryIntent,
   type RemoveEntryIntent,
+  type RemoveCommandIntent,
   type SetEntryEffortIntent,
 } from './shared.js';
 import { readRolesFile, writeRolesFile, type RolesRead } from './roles-file.js';
 import {
-  addEntry, addRole, deleteRole, describeRole, moveEntry, moveRole, removeEntry, renameRole,
-  matchesEntrySnapshot, setEntryEffort,
+  addEntry, addRole, addRoleCommand, deleteRole, describeRole, moveEntry, moveRole,
+  removeEntry, removeRoleCommand, renameRole, matchesEntrySnapshot, setEntryEffort,
 } from './role-edits.js';
 
 const INSTANCE_KEY = 'roles';
@@ -66,6 +71,7 @@ export function activate(home: string = homedir()): TabPluginActivation {
       }),
     })),
     source: read.source,
+    nativeCommands: [...NATIVE_ACP_COMMANDS],
     path: read.path,
     ...(read.problem !== undefined && { problem: read.problem }),
     catalog,
@@ -104,7 +110,9 @@ export function activate(home: string = homedir()): TabPluginActivation {
         publish(capabilities, root);
         return capabilities.rejectRequest(`The entries of role "${precondition.role}" changed elsewhere — retry the edit on the current list. Nothing was written.`);
       }
-      if (!writeRolesFile(read.path, apply(read.roles))) {
+      const nextRoles = apply(read.roles);
+      if (nextRoles === read.roles) return null;
+      if (!writeRolesFile(read.path, nextRoles)) {
         return capabilities.rejectRequest(`Could not write roles.json at ${read.path}.`);
       }
       publish(capabilities, root);
@@ -138,6 +146,16 @@ export function activate(home: string = homedir()): TabPluginActivation {
         payload: isAddRoleIntent,
         run: (_tab, value: { name: string }, capabilities) =>
           edit(capabilities, (roles) => addRole(roles, value.name)),
+      },
+      'add-command': {
+        payload: isAddCommandIntent,
+        run: (_tab, value: AddCommandIntent, capabilities) =>
+          edit(capabilities, (roles) => addRoleCommand(roles, value.role, value.command)),
+      },
+      'remove-command': {
+        payload: isRemoveCommandIntent,
+        run: (_tab, value: RemoveCommandIntent, capabilities) =>
+          edit(capabilities, (roles) => removeRoleCommand(roles, value.role, value.command)),
       },
       'rename-role': {
         payload: isRenameRoleIntent,

@@ -30,11 +30,11 @@ function writeJson(filePath: string, value: unknown): void {
   writeFileSync(filePath, typeof value === 'string' ? value : JSON.stringify(value, undefined, 2));
 }
 
-function readJson(filePath: string): Record<string, { description: string; entries: unknown[] }> {
+function readJson(filePath: string): Record<string, { description: string; entries: unknown[]; commands: string[] }> {
   return JSON.parse(readFileSync(filePath, 'utf8'));
 }
 
-const A_ROLE: Role = { name: 'review', description: 'Second pair of eyes.', entries: [] };
+const A_ROLE: Role = { name: 'review', description: 'Second pair of eyes.', entries: [], commands: [] };
 
 describe('reading the roles in effect', () => {
   it('creates the home file with the default roles when neither file exists', () => {
@@ -49,12 +49,14 @@ describe('reading the roles in effect', () => {
     expect(Object.keys(readJson(homeFile(home)))).toEqual(DEFAULT_ROLES.map((role) => role.name));
   });
 
-  it('creates the default ask role last, with its description and ordered entries', () => {
+  it('creates seven default roles with the exact ask and tell entries and grants', () => {
     const { home, root } = directories();
     readRolesFile(home, root);
 
     const file = readJson(homeFile(home));
-    expect(Object.keys(file).at(-1)).toBe('ask');
+    expect(Object.keys(file)).toEqual([
+      'planning', 'research', 'code review', 'implementation', 'documentation', 'ask', 'tell',
+    ]);
     expect(file['ask']).toEqual({
       description: 'When you ask a question via ACP.',
       entries: [
@@ -62,7 +64,20 @@ describe('reading the roles in effect', () => {
         { harness: 'claude', model: 'claude-haiku-4-5', effort: 'high' },
         { harness: 'codex', model: 'gpt-6-luna', effort: 'high' },
       ],
+      commands: [
+        'db sqlite list', 'db sqlite query', 'browser goto', 'browser content',
+        'question ask', 'question approve',
+      ],
     });
+    expect(file['tell']).toEqual({
+      description: 'When you tell a model to carry out a task via ACP.',
+      entries: file['ask'].entries,
+      commands: [
+        'db sqlite create', 'db sqlite delete', 'db sqlite query', 'db sqlite list',
+        'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve',
+      ],
+    });
+    expect(DEFAULT_ROLES.slice(0, 5).every((role) => role.commands.length === 0)).toBe(true);
   });
 
   it('answers the default roles without writing a file when asked not to create one', () => {
@@ -106,13 +121,15 @@ describe('reading the roles in effect', () => {
     writeJson(homeFile(home), {
       review: { description: 'Second pair of eyes.', entries: [{ harness: 'codex', model: 'gpt-6-sol' }, { effort: 'xhigh' }] },
       broken: { description: 'No entries list.' },
+      'bad-command-list': { description: 'Invalid command list.', entries: [], commands: 'browser goto' },
+      'bad-command-item': { description: 'Invalid command item.', entries: [], commands: ['browser goto', 7] },
     });
 
     const read = readRolesFile(home, root);
 
     expect(read.roles).toEqual([{ ...A_ROLE, entries: [{ harness: 'codex', model: 'gpt-6-sol' }] }]);
     expect(read.problem).toBe(
-      `roles.json dropped 2 malformed roles or entries at ${homeFile(home)} — showing the rest of this file.`,
+      `roles.json dropped 4 malformed roles or entries at ${homeFile(home)} — showing the rest of this file.`,
     );
     expect(read.unusablePath).toBe(homeFile(home));
   });
@@ -200,7 +217,7 @@ describe('writing the roles in effect', () => {
     const { home, root } = directories();
     const file = projectFile(root);
     const roles = ['10', 'review', '__proto__', '2', 'a"b', String.raw`c\d`, '1'].map((name) => ({
-      name, description: `Description for ${name}.`,
+      name, description: `Description for ${name}.`, commands: ['future command', 'browser goto', 'future command'],
       entries: [{ harness: 'codex', model: 'same', effort: 'xhigh' }, { harness: 'codex', model: 'same' }],
     }));
 
@@ -281,6 +298,7 @@ describe('writing the roles in effect', () => {
           { harness: 'codex', model: 'gpt-6-sol', effort: 'xhigh' },
           { harness: 'claude', model: 'claude-opus-5-5' },
         ],
+        commands: ['future command', 'browser goto', 'future command'],
       },
       A_ROLE,
     ];
@@ -291,9 +309,11 @@ describe('writing the roles in effect', () => {
       planning: {
         description: 'Plans.',
         entries: [{ harness: 'codex', model: 'gpt-6-sol', effort: 'xhigh' }, { harness: 'claude', model: 'claude-opus-5-5' }],
+        commands: ['future command', 'browser goto', 'future command'],
       },
-      review: { description: 'Second pair of eyes.', entries: [] },
+      review: { description: 'Second pair of eyes.', entries: [], commands: [] },
     });
+    expect(Object.keys(readJson(file).planning)).toEqual(['description', 'entries', 'commands']);
     expect(Object.keys(readJson(file))).toEqual(['planning', 'review']);
     expect(readRolesFile(home, root).roles).toEqual(roles);
   });

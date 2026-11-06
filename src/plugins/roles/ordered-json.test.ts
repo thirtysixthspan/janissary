@@ -22,13 +22,15 @@ describe('ordered role JSON', () => {
     const roles = ['10', '__proto__', 'a"b', String.raw`c\d`, '2'].map((name) => ({
       name, description: 'Quotes " and braces }, [ with newlines\n☃',
       entries: [{ harness: 'codex', model: 'a"b' }, { harness: 'codex', model: 'a"b' }],
+      commands: ['future command', 'future command'],
     }));
     const text = serializeRoles(roles);
     expect(orderedJsonKeys(text)).toEqual(roles.map((role) => role.name));
     const parsed = JSON.parse(text) as Record<string, unknown>;
-    for (const { name, description, entries } of roles) {
+    for (const { name, description, entries, commands } of roles) {
       expect(Object.hasOwn(parsed, name)).toBe(true);
-      expect(parsed[name]).toEqual({ description, entries });
+      expect(parsed[name]).toEqual({ description, entries, commands });
+      expect(Object.keys(parsed[name] as object)).toEqual(['description', 'entries', 'commands']);
     }
   });
 });

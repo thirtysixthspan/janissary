@@ -66,7 +66,7 @@ describe('client plugin registry', () => {
   it('refuses a roles payload whose model catalog is not lists of strings', async () => {
     const { isPayload } = await clientPluginLoaders.roles();
     const payload = (catalog: unknown) => ({
-      roles: [], source: 'home', path: '/home/me/.janissary/roles.json', catalog,
+      roles: [], nativeCommands: [], source: 'home', path: '/home/me/.janissary/roles.json', catalog,
     });
 
     expect(isPayload(payload({ models: { codex: ['gpt-6-sol'] }, efforts: ['low'] }))).toBe(true);
