@@ -103,10 +103,37 @@ ordinary image file that can be opened in the app like any other.
 The name that was written is shown briefly in the header as confirmation. Nothing else is reported,
 and the capture is not opened automatically.
 
-The user never chooses the destination. Capture is a tab-bound plugin intent, and the server derives the authoritative video path from its own tab record rather than from client input. The file always lands in the directory the video was opened
+The capture control never lets the user choose the destination. Capture is a tab-bound plugin intent, and the server derives the authoritative video path from its own tab record rather than from client input. The file always lands in the directory the video was opened
 from, under the name described above — there is no prompt, no format choice, and no setting. The
 control is offered only while the player is showing; there is nothing to capture from a video that
 could not be decoded, and none at all for a container that only ever opens in an external player.
+
+### Snapshot from the command line
+
+`video snapshot <video path> at <time> <destination path>` writes the frame at a chosen time to a
+chosen file, without opening a video tab. It is the one `video` argument that opens nothing: a first
+word of `snapshot` selects it, and every other argument is opened as before.
+
+- **Time** is plain seconds (`12`, `12.5`), `m:ss`, or `h:mm:ss`, each with an optional fraction on
+  the seconds. In `m:ss` and `h:mm:ss`, the minutes and seconds after the first field must be below 60.
+- **Paths** resolve against the working directory of the tab the command was typed in, and a leading
+  `~` stands for the home directory. Either path may contain spaces: the first `at` that is followed
+  by a valid time and something more divides the two.
+- **Destination** must end in `.png`, `.jpg`, or `.jpeg`, which picks the image format. Its directory
+  must already exist, and the file must not: the command never overwrites anything.
+
+Frames are decoded by `ffmpeg`, which must be installed and on the `PATH`; the snapshot works for
+every container the plugin claims, including the ones that only play in an external player.
+
+A missing part of the command prints
+`Usage: video snapshot <video path> at <time> <destination path>`. A missing video, a destination
+with the wrong extension, a destination directory that does not exist, a destination that already
+exists, and a tab whose session runs on another machine are each refused with a line naming the
+problem, and nothing is written. Otherwise the decode runs in the background and its outcome arrives
+as a line in the same tab: the file written on success, a note that there is no frame at that time
+when the time is past the end of the video, a note that `ffmpeg` is not installed when it cannot be
+found, or `ffmpeg`'s own first line of complaint for any other failure. A failed snapshot never
+disables the video plugin.
 
 ### When the video cannot be played
 

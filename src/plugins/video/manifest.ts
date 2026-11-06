@@ -34,6 +34,7 @@ export const videoManifest = {
     'openOrFocusTab',
     'openClaimedFiles',
     'configuredViewer',
+    'originTab',
     'openExternally',
     'rejectRequest',
     'reportFailure',

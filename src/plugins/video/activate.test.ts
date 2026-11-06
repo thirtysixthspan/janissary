@@ -205,6 +205,22 @@ describe('video plugin command', () => {
     expect(fixture.opened).toEqual([]);
   });
 
+  it('routes the snapshot subcommand away from the open pipeline', () => {
+    const fixture = fakeCapabilities();
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-video-snapshot-'));
+    fixture.capabilities.originTab = () => ({ label: 'shell', cwd: dir, root: dir });
+    expect(() => activate().command?.('snapshot missing.mp4 at 3 out.png', fixture.capabilities))
+      .toThrow(new TabPluginRejection('Cannot snapshot missing.mp4: no such file.'));
+    expect(fixture.claimedOpens).toEqual([]);
+  });
+
+  it('rejects an incomplete snapshot with its own usage', () => {
+    const fixture = fakeCapabilities();
+    expect(() => activate().command?.('snapshot clip.mp4', fixture.capabilities))
+      .toThrow(new TabPluginRejection('Usage: video snapshot <video path> at <time> <destination path>'));
+    expect(fixture.claimedOpens).toEqual([]);
+  });
+
   it('rejects a bare command with usage instead of disabling the plugin', () => {
     const fixture = fakeCapabilities();
     expect(() => activate().command?.('', fixture.capabilities))
