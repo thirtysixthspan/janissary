@@ -22,9 +22,11 @@ export const imageManifest = {
     '.ico': 'image/x-icon',
   },
   editsOwnFiles: true,
+  command: 'image',
   capabilities: [
     'note',
     'openOrFocusTab',
+    'openClaimedFiles',
     'updateTab',
     'openExternally',
     'rejectRequest',

@@ -210,9 +210,9 @@ A disabled plugin owns no tabs. Failure before mount leaves no tab or served-fil
 
 ### Bundled image plugin
 
-Image is a bundled plugin like any other: it contributes the common raster and vector image extensions and their content types, and both presentations of `open`. `open <image>` and `open external <image>` behave exactly as they always have.
+Image is a bundled plugin like any other: it contributes the common raster and vector image extensions and their content types, both presentations of `open`, and `image <path>`. `open <image>` and `open external <image>` behave exactly as they always have. `image <path>` follows the same path parsing, wildcard expansion, existence checks, transcript provenance, deduplication, and focus-existing behavior as `open <image>`.
 
-It is the first plugin to claim the `edit` command for its own file types, so `edit <image>` — and Shift-activation of an image row in the file navigator, which sends that same command — reaches its editing presentation instead of the plain-text editor. It declares no command of its own and no file-navigator edit gesture. The edit presentation opens the tab under the same identity the viewer uses, the file's path, so an image already open as a viewer is focused and flipped rather than opened a second time.
+It is the first plugin to claim the `edit` command for its own file types, so `edit <image>` — and Shift-activation of an image row in the file navigator, which sends that same command — reaches its editing presentation instead of the plain-text editor. It declares no file-navigator edit gesture. The edit presentation opens the tab under the same identity the viewer uses, the file's path, so an image already open as a viewer is focused and flipped rather than opened a second time.
 
 It answers one intent: writing an edited image as a PNG over the original file. The client ships only pixels; the server takes the destination from the tab's authoritative original path. The viewer's zoom, pan, and orientation, and the editor's operation list, undo cursor, and canvas, remain entirely client-side. Its tab registers unsaved edits with the host, so the application's save-changes dialog guards every close path over it. See [[image-tab]] and [[open]].
 

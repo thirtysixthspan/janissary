@@ -21,6 +21,7 @@
 | `harness` | Open an AI coding harness with a disposable workspace and browser. Use `--no-workspace`, `--no-browser`, `--no-auto-approve`, or `--no-auto-resume` to opt out; `capture <name>` saves a screen |
 | `help` | `help` lists the commands; `help <command>` shows one command's usage, use cases, and examples; `help keys` lists the key bindings |
 | `hist` | Open command history picker |
+| `image` | `image <path>` opens an image through the bundled image tab plugin; accepts the same paths and wildcards as `open` |
 | `launcher` | Open or focus the launcher (`launcher left` or `launcher right` to choose a sidebar). Select a command row and click again to run it, or select a tab row to focus it |
 | `layout` | `layout window <width> <height>`, `layout sidebar left\|right <width>`, `layout split <percent>`, or `layout reporting <percent>` sets a size; `layout show` prints the current ones |
 | `models` | Open the model catalog; use `models left` or `models right` to dock it |

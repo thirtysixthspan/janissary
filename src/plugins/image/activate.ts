@@ -37,6 +37,10 @@ function openImageTab(
 export function activate(): TabPluginActivation {
   return {
     isPayload: isImagePayload,
+    command: (argument, capabilities) => {
+      if (!argument) return capabilities.rejectRequest('Usage: image <path>');
+      capabilities.openClaimedFiles(argument);
+    },
     opener: {
       external: openExternal,
       inline: (file, capabilities) => { openImageTab(file, capabilities); },

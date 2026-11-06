@@ -8,7 +8,7 @@
 open diagram.png
 ```
 
-If that image is already open, `open <image>` focuses the existing image tab instead of creating a duplicate.
+`image <path>` does the same thing, and takes the same paths and wildcards `open` does. If that image is already open, either command focuses the existing image tab instead of creating a duplicate.
 
 The tab shows a compact header with the file's name, size, and location, and the image fills the space below, fit to the tab: a landscape image spans the full width, a portrait one the full height. Its proportions stay the same, and the fit adjusts when the image loads or you resize the tab. An image tab has no transcript or command bar. In the strip the tab is named after the file, with a × close button right after the name that closes that tab without selecting it first; `image` is only the label behind `close image`, so a second image tab is `image-2`. An image tab can be reordered inside its [group](/user-documentation/getting-started/groups) like any other, and the header's **Split** control moves it into the other pane — see [Working in two panes](/user-documentation/getting-started/tabs#working-in-two-panes).
 
