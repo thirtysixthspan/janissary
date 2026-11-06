@@ -10,6 +10,8 @@
 
 * the `video snapshot <video path> at <time> <destination path>` command should create a snapshot of the video at the given timestamp.
 
+* update the auto-approve algorithm for claude to be sure the prompt in $root/captures/issues-2026-11-06T17-08-48-534Z.txt is automatically approved.
+
 ## development
 
 ## deferred
