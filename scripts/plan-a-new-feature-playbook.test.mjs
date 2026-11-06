@@ -6,7 +6,8 @@ import { describe, expect, it } from 'vitest';
 // tasks that each open by preparing it again. Its Step 2g tells the agent to skip that step by name,
 // so a renamed or renumbered step in either task would leave the override pointing at nothing and
 // still read fine. The same goes for the playbook's own step letters and the files it sends the agent
-// to read: a phase inserted or a guideline moved leaves a reference that names nothing. These
+// to read: a phase inserted or a guideline moved leaves a reference that names nothing. The move of
+// the finished plan into the ready folder is pinned too, since its place in the order matters. These
 // assertions pin that wording and those cross-references and nothing else: not prose, not structure.
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
@@ -42,6 +43,15 @@ describe('the plan-a-new-feature playbook', () => {
     const step = improvement.indexOf(`## ${PREPARE_STEP}`);
     expect(step).toBeGreaterThan(-1);
     expect(improvement.indexOf(PREPARE)).toBeGreaterThan(step);
+  });
+
+  // The improvement passes pick their plan out of the draft folder, so the move to ready has to come
+  // after them and the final question phase, and before the merge ships it.
+  it('promotes the completed plan to ready after the final question phase and before merging', () => {
+    const promote = playbook.indexOf('mv ./product/plans/draft/<slug>.md ./product/plans/ready/<slug>.md');
+    expect(promote).toBeGreaterThan(playbook.indexOf('### 2h.'));
+    expect(playbook.indexOf('ai/tasks/workspace/merge-change-to-master.md` in full')).toBeGreaterThan(promote);
+    expect(playbook).toContain('Planned:  ./product/plans/ready/<file>');
   });
 
   it('points every step reference at a step heading that exists', () => {

@@ -1,6 +1,6 @@
 # Plan a New Feature
 
-Your job: pick one feature — the first entry under the `## ready` section of `./product/backlog/features.md`, or a specific feature named in the task invocation, which need not be listed there at all — write an initial draft plan for it into `./product/plans/draft/`, resolve its product decisions with the user, and leave a complete plan. You produce plan documents only — you never write source code.
+Your job: pick one feature — the first entry under the `## ready` section of `./product/backlog/features.md`, or a specific feature named in the task invocation, which need not be listed there at all — write an initial draft plan for it into `./product/plans/draft/`, resolve its product decisions with the user, and leave a complete plan in `./product/plans/ready/`. You produce plan documents only — you never write source code.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
@@ -16,14 +16,14 @@ This is an **interactive** task. Unlike the autonomous `ai/tasks/*.md` playbooks
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo to ground a plan in real code. Create new plan files under `./product/plans/draft/`. Edit `./product/backlog/features.md` to remove a `### ` entry from the `## ready` section once its plan has been drafted and confirmed. Ask the user clarifying questions — this is expected, not an interruption to avoid.
+Read any file in the repo to ground a plan in real code. Create new plan files under `./product/plans/draft/`. Move the completed plan to `./product/plans/ready/` in Step 2i. Edit `./product/backlog/features.md` to remove a `### ` entry from the `## ready` section once its plan has been drafted and confirmed. Ask the user clarifying questions — this is expected, not an interruption to avoid.
 
 ### Forbidden — no exceptions
 
 1. **Writing implementation code into a plan.** No function bodies, no JSX/CSS blocks, no "here's the code." Name the module/type/contract in prose, per `ai/tasks/planning/improve-plan.md`'s rule — the same rule applies here since you are authoring, not implementing.
-2. **Editing any source, test, or config file.** This task only touches `./product/backlog/features.md` and files under `./product/plans/draft/`.
+2. **Editing any source, test, or config file.** This task only touches `./product/backlog/features.md` and its own plan file, under `./product/plans/draft/` and then `./product/plans/ready/`.
 3. **Skipping question resolution.** Never invent a plan's scope, edge-case behavior, or UI wording without asking, when the answer is a product decision rather than something the codebase already settles. Keep asking targeted rounds until every such decision is resolved.
-4. **Moving a plan to `./product/plans/ready/`.** That promotion is a separate human/`ai/tasks/planning/improve-plan.md` step. Everything this task produces lands in `./product/plans/draft/`.
+4. **Promoting a plan before it is complete.** The plan stays in `./product/plans/draft/` while it is drafted, questioned, and improved, because the improvement passes in 2g look for it there. It moves to `./product/plans/ready/` only in 2i, after every box in both 2h checklists is checked.
 5. **Removing a feature's entry from `./product/backlog/features.md` before its plan is complete.** Don't clear the backlog ahead of a complete plan actually existing. Never add a feature named at invocation to the file either — an unlisted feature is planned without ever passing through the backlog.
 
 ---
@@ -165,13 +165,21 @@ Before moving on, check the completed plan against this list:
 - [ ] Every product decision traces back to either the feature text, established behavior, or a user answer.
 - [ ] Every question identified by the final review is resolved in the plan.
 
-### 2i. Remove the entry from the backlog
+### 2i. Promote the completed plan
+
+Once every box in both 2h checklists is checked, move the plan from `./product/plans/draft/` to `./product/plans/ready/`. It is complete and ready to implement. Use plain `mv` (not `git mv`) — the new plan file is not tracked by git yet, and `git mv` fails on an untracked file:
+
+```bash
+mv ./product/plans/draft/<slug>.md ./product/plans/ready/<slug>.md
+```
+
+### 2j. Remove the entry from the backlog
 
 Edit `./product/backlog/features.md` to remove that feature's `### ` entry (title and body) from the `## ready` section. Leave every other section, heading, and entry byte-for-byte untouched — do not reformat or reflow surrounding text. If the feature came from the task invocation and was never listed in the file, there is nothing to remove: leave the file untouched.
 
-### 2j. Merge the completed plan
+### 2k. Merge the completed plan
 
-Once the completed draft plan and backlog update are complete, execute `ai/tasks/workspace/merge-change-to-master.md` in full.
+Once the promoted plan and backlog update are complete, execute `ai/tasks/workspace/merge-change-to-master.md` in full.
 
 Do not stop for approval between these tasks. The merge task packages and merges the completed plan.
 
@@ -183,7 +191,7 @@ After the feature is processed (planned, or explicitly abandoned during its ques
 
 ```
 Feature:  <feature title>
-Planned:  ./product/plans/draft/<file> — <one-line goal>
+Planned:  ./product/plans/ready/<file> — <one-line goal>
 Skipped:  <why, if abandoned instead of planned>
 Backlog:  ./product/backlog/features.md updated, entry removed from ## ready — or "not listed; nothing to remove" for a feature named at invocation
 Merged:   <status and PR reported by ai/tasks/workspace/merge-change-to-master.md>

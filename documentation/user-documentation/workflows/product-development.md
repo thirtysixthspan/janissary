@@ -62,8 +62,8 @@ Together, the two answer different questions, from different sources: "what are 
 
 Each stage above is small enough to hand to an agent as a self-contained instruction file under `ai/tasks/`, opened without typing its path by hand through the [task picker](/user-documentation/command-bar/tasks) (`Ctrl+A`). A typical loop is four task files, each doing one stage and handing off to the next by moving a file between folders:
 
-1. **Plan the next item.** Take the first entry off a backlog's `ready` list, write an initial draft, ask you the questions needed to pin down scope and behavior, improve it, and resolve any remaining questions in the `plans/draft/` file.
-2. **Harden the plan.** Re-check a draft plan's claims against the current state of the project, resolve anything ambiguous, and move it to `plans/ready/` once nothing is left unresolved.
+1. **Plan the next item.** Take the first entry off a backlog's `ready` list, write an initial draft, ask you the questions needed to pin down scope and behavior, improve it, resolve any remaining questions in the `plans/draft/` file, and move the finished plan to `plans/ready/`.
+2. **Harden the plan.** For a plan drafted some other way, re-check its claims against the current state of the project, resolve anything ambiguous, and move it to `plans/ready/` once nothing is left unresolved.
 3. **Build it.** Pick the simplest plan out of `plans/ready/`, carry out its steps, update the matching spec, and move the plan to `plans/complete/`.
 4. **Fix a small thing.** For work too small to need a drafted-then-hardened plan, take the next entry from a `fixes`-style backlog, resolve it directly, and record what changed in the spec.
 
