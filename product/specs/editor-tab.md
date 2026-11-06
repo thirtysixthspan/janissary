@@ -470,17 +470,19 @@ on first open. Subsequent cursor movement in that tab follows the normal into-vi
 ### Finding a line
 
 Cmd+F opens a find overlay at the bottom of the editor tab, with its own focused text input
-labelled "Search buffer". It searches the tab's own buffer — the lines as they are right now,
-including unsaved edits — and nothing else: not the transcript, not other tabs, and not files on
-disk. Reaching another file is still Quick Open's job (see [[quick-open]]). The browser's own find
-bar never appears. Ctrl+F is unaffected and keeps moving the cursor one character to the right.
+whose placeholder, also its accessible name, is "Search buffer". It searches the tab's own buffer —
+the lines as they are right now, including unsaved edits — and nothing else: not the transcript, not
+other tabs, and not files on disk. Reaching another file is still Quick Open's job (see
+[[quick-open]]). The browser's own find bar never appears. Pressing Cmd+F again while the overlay is
+open selects the whole query, so typing replaces it. Ctrl+F is unaffected and keeps moving the
+cursor one character to the right.
 
 Typing matches lines that contain the query as a contiguous, case-insensitive sequence and lists up
 to ten results, best-scoring first. Each row is the line's 1-based number, dimmed, beside the line's
 text with the matched characters emphasized. A
 line too long for the overlay is clipped with an ellipsis rather than wrapped; its number and the
-jump still identify it. Matching is case-insensitive subsequence matching, with no regex, case, or
-whole-word options. Two identical lines appear as two rows with their own line numbers, in
+jump still identify it. Matching is contiguous, case-insensitive substring matching, with no regex,
+case, or whole-word options. Two identical lines appear as two rows with their own line numbers, in
 first-in-file order.
 
 ↑/↓ move the highlighted row and immediately move the editor cursor to that line, scrolling the
