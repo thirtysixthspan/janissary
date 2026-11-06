@@ -10,11 +10,13 @@ where clicking on the thinking or spinner will open the relevant connection tab 
 
 * Quitting with unsaved work gives one button. When any tab holds unsaved work, `quit` opens "You have unsaved changes. Close anyway?" and confirming "discards whatever was unsaved; there is no per-file save prompt here" (`product/specs/quit-confirmation.md`). A single editor tab gets a Save, Don't Save, Cancel dialog on close (`product/specs/editor-tab.md`), so the per-file choice exists right up until the app itself is closing. VS Code's close-window prompt names each dirty file and asks about each one. Closing the gap would walk the dirty tabs through that same three-button dialog one after another before the quit proceeds, using the registry of unsaved work the app already keeps. This is lower traffic than the rest, but a wrong click loses work. Complexity: medium.
 
+* The PDF tab (`product/specs/pdf-tab.md`) is a clean, read-only viewer, but it can't find text. add the search functionality from the editor tab to the pdf viewer. bind to cmd+f.
+
 ## development
 
 * add an ACP skill to allow an agent to spin up other agents with different models, pass them ai tasks (form the repository) to execute and access to monitor the transcript as the agent works, and to recieve the response.
 
-* The PDF tab (`product/specs/pdf-tab.md`) is a clean, read-only viewer, but it can't find text and can't jump by section. The spec says so on both counts: "There is no in-document search," and "there is no document outline, bookmark list, or attachments panel." macOS Preview, the viewer most people will compare it with, has a Table of Contents view and a Find command. For a forty-page paper, the only routes now are scrolling and the thumbnail strip. Closing the gap would add a find bar over the text layer and a sidebar built from the document's outline, falling back to the page strip for PDFs that have none. Complexity: medium, since the usual PDF renderers expose both search and the outline tree.
+
 
 ## deferred
 
