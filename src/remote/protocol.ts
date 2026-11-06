@@ -195,7 +195,10 @@
 // unknown, and a version-35 remote never sends it, so either way the withdrawal would silently not
 // happen while both ends looked healthy.
 // Version 37 adds addressed ACP cancellation; the original end/error remains the provider drain barrier.
-export const REMOTE_PROTOCOL_VERSION = 37;
+// Version 38 adds a required `source` to `change-set`, so a remote diff tab can read the staged changes
+// or the most recent commit. A version-37 remote would ignore the field and answer with every change
+// while the tab claimed to show only the staged ones.
+export const REMOTE_PROTOCOL_VERSION = 38;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.

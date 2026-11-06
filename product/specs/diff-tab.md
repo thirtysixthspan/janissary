@@ -1,8 +1,9 @@
 # Diff Tab
 
 The diff tab answers the question a shell cannot: not *what does `git diff` print*, but *what changed in
-this workspace, and where*. It shows every change the working tree holds against `HEAD` — staged and
-unstaged together, untracked files included — the way GitHub renders the files-changed view of a pull
+this workspace, and where*. By default it shows every change the working tree holds against `HEAD` — staged and
+unstaged together, untracked files included — and a header button switches it to only the staged changes or only the
+most recent commit's. It renders them the way GitHub renders the files-changed view of a pull
 request: one entry per changed file, its add and delete counts on the entry's header, and beneath it the
 changed hunks with added lines green and removed lines red. Clicking a file's name opens that file in an
 editor tab; double-clicking an added or context line opens the file at that line. Removed lines are
@@ -121,8 +122,29 @@ read without letting its result replace the current view. Re-running the command
 A whitespace-only edit appears as a change, including when it is the repository's only change.
 A recompute leaves the tab showing what it already shows until its result lands, so the refresh never
 blanks the body: on an empty change set **No changes** stays put rather than vanishing with each
-redraw. Re-scoping the tab to another directory is the one case that clears the body first, because
-what it held belongs to the directory it left.
+redraw. Re-scoping the tab to another directory and switching its change source are the cases that
+clear the body first, because what it held belongs to the directory or source it left.
+
+### Change source
+
+The header's action group carries a **change source** button beside the layout control. Each click moves the tab to
+the next of three sources, in this order, and back to the first:
+
+- **All changes** — the working tree against `HEAD`: staged and unstaged changes and untracked files. Every tab opens
+  here.
+- **Staged changes** — what the index holds against `HEAD`, leaving unstaged edits and untracked files out. Before
+  the first commit, every staged file reads as added.
+- **Last commit** — the most recent commit against its first parent. The first commit reads as every file it added;
+  a repository with no commits shows **No changes**.
+
+The button's icon names the source shown now — a layer stack for all changes, a checklist for staged changes, and a
+commit for the last commit — and its tooltip names both the current source and the one a click switches to, for example
+`Showing all changes. Switch to staged changes`. Switching clears the body until the new source's change set lands,
+and forgets expanded files, comments, and drafts, because they belong to the source the tab left. The chosen source
+holds through every once-a-second recompute, through re-running `diff`, and through re-scoping to another directory,
+and full-file views read from the same source. It belongs to one tab: other diff tabs keep their own, and closing the
+tab forgets it. A remote workspace diff reads the chosen source on the far side, the same way a local one does.
+Opening a file from any source opens the working-tree file at the line the diff names.
 
 ### Syntax highlighting
 
@@ -175,7 +197,7 @@ In unified layout, each source line has a **+** comment control. It opens a plai
 
 Comments retain the source text they were written against. If an annotated line changes, the note identifies that change and shows the earlier text. Original-side notes remain available when their line becomes unchanged context. Comment editing preserves source selection, syntax colors, and line targeting, and typing a note does not rerender unchanged source code.
 
-Saved comments and drafts are temporary, remain local to this tab, and are not sent to an external service or written to source files. While the same file entry remains present, they survive refresh, file collapse, full-file expansion, and layout changes. Split layout temporarily hides the comment interface; returning to unified layout restores it. Closing the tab, changing its directory, or removing the file entry forgets its comments and drafts.
+Saved comments and drafts are temporary, remain local to this tab, and are not sent to an external service or written to source files. While the same file entry remains present, they survive refresh, file collapse, full-file expansion, and layout changes. Split layout temporarily hides the comment interface; returning to unified layout restores it. Closing the tab, changing its directory or change source, or removing the file entry forgets its comments and drafts.
 
 ### File views
 
@@ -200,6 +222,6 @@ A repository with no commits yet reads as every file added, rather than as an er
 ### Lifetime
 
 The diff tab is a live, in-memory view tab like every other plugin tab. It is not persisted and is not
-restored. Closing the tab forgets what it held — the hunks it showed, temporary comments and drafts, the expansions
-and the keyboard walk. The layout is the one thing kept: it outlives the tab that chose it. A workspace
+restored. Closing the tab forgets what it held — the hunks it showed, the change source, temporary comments and drafts,
+the expansions and the keyboard walk. The layout is the one thing kept: it outlives the tab that chose it. A workspace
 diff also releases the channel it joined when it closes.

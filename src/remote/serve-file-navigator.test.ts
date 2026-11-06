@@ -252,13 +252,13 @@ describe('RemoteFileNavigators', () => {
 
     holder.request({
       type: 'filesystem-request', session: 'files2', request: 'q1',
-      operation: 'change-set', args: { fullFiles: ['src/a.txt'] },
+      operation: 'change-set', args: { fullFiles: ['src/a.txt'], source: 'commit' },
     });
     await vi.waitFor(() => expect(changeSet).toHaveBeenCalled());
 
     // The one workspace the peer provisioned, so the port is asked for the session's own root and
     // nothing else — there is no path to contain.
-    expect(changeSet).toHaveBeenCalledWith(root, ['src/a.txt']);
+    expect(changeSet).toHaveBeenCalledWith(root, ['src/a.txt'], 'commit');
     expect(frames.find((frame) => frame.type === 'filesystem-reply' && frame.request === 'q1'))
       .toMatchObject({ result: { kind: 'files', files: [{ path: 'src/a.txt' }] } });
     holder.dispose();

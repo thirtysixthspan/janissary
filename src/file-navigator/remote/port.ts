@@ -14,6 +14,7 @@ import type { FileNavigatorEntry } from '../index.js';
 import type { PasteManyResult } from '../paste.js';
 import type { RowStat } from '../stats.js';
 import type { HistoryStep } from '../moves.js';
+import type { DiffSource } from '../../plugins/diff/shared.js';
 import { remoteGitCommit, remoteGitMetadata, remoteGitPull, type RemoteRequest } from './port-git.js';
 import { remoteMove, remoteMoveMany } from './port-moves.js';
 import { remoteDeleteMany, remoteReplay, remoteSearch, remoteStatRows } from './port-mapped.js';
@@ -98,8 +99,8 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
   // The far side reads the change set in its own workspace and answers with the same result a local
   // read produces, so the answer is handed back as it arrived: the tab that asked validates it,
   // because a value that crossed a channel is not one this process produced.
-  changeSet(root: string, fullFiles: readonly string[]): Promise<unknown> {
-    return this.request('change-set', { fullFiles: [...fullFiles] });
+  changeSet(root: string, fullFiles: readonly string[], source: DiffSource): Promise<unknown> {
+    return this.request('change-set', { fullFiles: [...fullFiles], source });
   }
 
   async search(root: string): Promise<string[]> {

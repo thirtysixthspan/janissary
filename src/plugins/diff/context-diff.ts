@@ -3,10 +3,12 @@ import { git } from './git.js';
 import { parseDiff } from './parse-diff.js';
 import type { DiffFile } from './shared.js';
 
-async function fullFile(root: string, file: DiffFile, prefix: string, signal?: AbortSignal): Promise<DiffFile | undefined> {
+async function fullFile(
+  root: string, file: DiffFile, prefix: string, range: readonly string[], signal?: AbortSignal,
+): Promise<DiffFile | undefined> {
   const paths = file.oldPath === undefined ? [file.path] : [file.path, file.oldPath];
   const output = await git(root, [
-    '--literal-pathspecs', 'diff', 'HEAD', '-M', '--no-ext-diff', '--no-color', '--unified=1000000', '--', ...paths,
+    '--literal-pathspecs', 'diff', ...range, '-M', '--no-ext-diff', '--no-color', '--unified=1000000', '--', ...paths,
   ], signal);
   return parseDiff(output, { prefix }).find((candidate) => candidate.path === file.path);
 }
@@ -22,6 +24,8 @@ export async function expandFullFileContext(
   prefix: string,
   expanded: ReadonlySet<string>,
   signal?: AbortSignal,
+  // The revisions the compact diff compared, so a whole file is read from the same two sides.
+  range: readonly string[] = ['HEAD'],
 ): Promise<DiffFile[]> {
   const result: DiffFile[] = [];
   for (const file of files) {
@@ -31,7 +35,7 @@ export async function expandFullFileContext(
       continue;
     }
     try {
-      result.push({ ...(await fullFile(root, file, prefix, signal) ?? file), contextLines: 1_000_000 });
+      result.push({ ...(await fullFile(root, file, prefix, range, signal) ?? file), contextLines: 1_000_000 });
     } catch (error) {
       if (signal?.aborted) throw error;
       result.push({ ...file, contextLines: 1_000_000, contextError: reasonOf(error) });

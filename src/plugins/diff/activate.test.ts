@@ -54,7 +54,7 @@ function shellRecord(overrides: Record<string, unknown> = {}) {
 }
 
 const settledTab: DiffPayload = {
-  instanceKey: 'diff', root: '$root/', state: 'done', message: '', split: false, files: [],
+  instanceKey: 'diff', root: '$root/', state: 'done', message: '', split: false, source: 'all', files: [],
 };
 
 function lastPayload(updateTab: ReturnType<typeof vi.fn>): DiffPayload {
@@ -730,6 +730,33 @@ describe('diff plugin activation', () => {
     activation.command?.('', capabilities);
     activation.intent(intent(settledTab, 'layout', { split: true }), capabilities);
     expect(saveSettings).not.toHaveBeenCalled();
+  });
+
+  it('switches the tab to the change source the source intent names', async () => {
+    // The fixture holds one unstaged edit on top of one commit, so each source answers differently:
+    // all changes show the edit, staged shows nothing, and the last commit shows the file it added.
+    const { capabilities, updateTab } = makeCapabilities({
+      originTab: vi.fn(() => ({ label: 'shell', cwd: repo, root: repo, workspace: undefined })),
+    });
+    const activation = activate();
+    activation.command?.('', capabilities);
+    const opened = await settled(updateTab);
+    expect(opened).toMatchObject({ source: 'all', files: [{ path: 'a.txt' }] });
+
+    expect(activation.intent(intent(settledTab, 'source', { source: 'staged' }), capabilities)).toBeNull();
+    expect(lastPayload(updateTab)).toMatchObject({ source: 'staged', state: 'loading', files: [] });
+    expect(await settled(updateTab)).toMatchObject({ source: 'staged', state: 'done', files: [] });
+
+    activation.intent(intent(settledTab, 'source', { source: 'commit' }), capabilities);
+    expect(await settled(updateTab)).toMatchObject({
+      source: 'commit', state: 'done', files: [{ path: 'a.txt', added: true }],
+    });
+  });
+
+  it('rejects a source intent that names no change source', () => {
+    const { capabilities } = makeCapabilities();
+    expect(() => activate().intent(intent(settledTab, 'source', { source: 'HEAD~2' }), capabilities))
+      .toThrow('invalid source payload');
   });
 
   it('rejects a layout intent whose payload is malformed', () => {

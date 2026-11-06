@@ -31,7 +31,7 @@ describe('readRemoteChangeSet', () => {
     const { capabilities, readWorkspaceChangeSet } = capabilitiesAnswering(Promise.resolve(answer));
 
     expect(await readRemoteChangeSet(capabilities, new Set())).toEqual(answer);
-    expect(readWorkspaceChangeSet).toHaveBeenCalledWith([]);
+    expect(readWorkspaceChangeSet).toHaveBeenCalledWith([], 'all');
   });
 
   it('asks the far side for the whole-file contexts this read is expanding', async () => {
@@ -40,7 +40,17 @@ describe('readRemoteChangeSet', () => {
     );
 
     await readRemoteChangeSet(capabilities, new Set(['b.txt', 'c.txt']));
-    expect(readWorkspaceChangeSet).toHaveBeenCalledWith(['b.txt', 'c.txt']);
+    expect(readWorkspaceChangeSet).toHaveBeenCalledWith(['b.txt', 'c.txt'], 'all');
+  });
+
+  it('asks the far side for the change source the tab reads', async () => {
+    const { capabilities, readWorkspaceChangeSet } = capabilitiesAnswering(
+      Promise.resolve({ kind: 'files', files: [] }),
+    );
+
+    await readRemoteChangeSet(capabilities, new Set(), 'staged');
+    await readRemoteChangeSet(capabilities, new Set(['a.txt']), 'commit');
+    expect(readWorkspaceChangeSet.mock.calls).toEqual([[[], 'staged'], [['a.txt'], 'commit']]);
   });
 
   it('passes a not-repository answer through, rather than reporting a failure', async () => {
@@ -77,7 +87,7 @@ describe('readRemoteChangeSet', () => {
     const { capabilities, readWorkspaceChangeSet } = capabilitiesAnswering(null);
 
     expect(await readRemoteChangeSet(capabilities, new Set())).toEqual({ kind: 'error', reason: UNUSABLE });
-    expect(readWorkspaceChangeSet).toHaveBeenCalledWith([]);
+    expect(readWorkspaceChangeSet).toHaveBeenCalledWith([], 'all');
   });
 
   it('answers the unusable reason rather than a rejection when the capability rejects', async () => {

@@ -89,7 +89,7 @@ export const clientPluginRegistry = createClientPluginRegistry({
   audio: clientPlugin(1, clientPluginLoaders.audio),
   connections: clientPlugin(1, clientPluginLoaders.connections),
   conversations: clientPlugin(1, clientPluginLoaders.conversations),
-  diff: clientPlugin(9, clientPluginLoaders.diff),
+  diff: clientPlugin(10, clientPluginLoaders.diff),
   image: clientPlugin(1, clientPluginLoaders.image),
   launcher: clientPlugin(1, clientPluginLoaders.launcher),
   markdown: clientPlugin(1, clientPluginLoaders.markdown),

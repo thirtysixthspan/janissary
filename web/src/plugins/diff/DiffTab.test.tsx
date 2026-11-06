@@ -51,7 +51,7 @@ function oversized(overrides: Partial<DiffFile> = {}): DiffFile {
 
 function payload(overrides: Partial<DiffPayload> = {}): DiffPayload {
   return {
-    instanceKey: 'diff', root: '$root/', state: 'done', message: '', split: false, files: [file()],
+    instanceKey: 'diff', root: '$root/', state: 'done', message: '', split: false, source: 'all', files: [file()],
     ...overrides,
   };
 }
@@ -313,6 +313,28 @@ describe('DiffTab', () => {
     expect(container.querySelector('svg[data-icon="plus-minus"]')).not.toBeNull();
     fireEvent.click(toggle);
     expect(intent).toHaveBeenCalledWith('layout', { split: !split });
+  });
+
+  it.each([
+    { source: 'all' as const, next: 'staged', icon: 'layer-group', title: 'Showing all changes. Switch to staged changes' },
+    { source: 'staged' as const, next: 'commit', icon: 'list-check', title: 'Showing staged changes. Switch to last commit' },
+    { source: 'commit' as const, next: 'all', icon: 'code-commit', title: 'Showing last commit. Switch to all changes' },
+  ])('cycles the change source from $source to $next with the source button', ({ source, next, icon, title }) => {
+    const { intent } = renderTab(payload({ source }));
+    const control = screen.getByRole('button', { name: 'Change source' });
+    expect(control.getAttribute('title')).toBe(title);
+    expect(control.querySelector('svg')?.dataset.icon).toBe(icon);
+    expect(control.closest('.plugin-actions')).not.toBeNull();
+    fireEvent.click(control);
+    expect(intent).toHaveBeenCalledWith('source', { source: next });
+  });
+
+  it('starts every file entry over when the change source changes', () => {
+    const { container, update } = renderTab(payload({ files: [wholeFile()] }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cycle file view' }));
+    expect(container.querySelector('.diff-line')).not.toBeNull();
+    update(payload({ source: 'staged', files: [wholeFile()] }));
+    expect(container.querySelector('.diff-line')).toBeNull();
   });
 
   it('walks the changed hunks with the arrows and opens at the walked hunk on Return', () => {

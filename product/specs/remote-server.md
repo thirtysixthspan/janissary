@@ -235,8 +235,8 @@ operation and no new field: the diff tab asks the host that already provisioned 
 against `HEAD` there and answer with the same records a local read produces, so a remote workspace shows the same
 change set a local one does. A version-28 remote refuses the operation as unknown, so a remote diff against one
 would report a failure rather than a half-working change set — which is what the handshake refuses instead. The
-request carries the set of files to expand to their whole contents and nothing else, because a peer has one workspace
-and there is no path to contain.
+request carries the set of files to expand to their whole contents and, since version 38, the change source — no path,
+because a peer has one workspace and there is no path to contain.
 
 Remote autonomous agent runs move the protocol to 30. `agent-resolve` asks the execution host to
 resolve the task and selected skills, and `agent-resolve-result` returns their captured snapshot or a
@@ -273,6 +273,11 @@ refuses the mismatch.
 Protocol version 37 adds addressed ACP cancellation. Both hosts must speak 37; version 36 is refused during handshake. A cancellation names one existing ACP transport id. Missing, closing, and settled holders ignore it, and it never closes another session sharing the channel. The id must be a nonempty string and undeclared fields are discarded before dispatch.
 
 Cancellation retains the viable ACP session. The original end or error response terminates the old provider turn; there is no separate cancellation acknowledgment or record data on the wire. The end response is sent only after the native notification write and original prompt have both settled. Cancellation before handshake still produces the original cancelled end response without sending the cancelled prompt. Cancelling while the host loop is between provider turns needs no end acknowledgment. A failed cancellation send is a fatal session-scoped error, not a channel failure or a session-close acknowledgment.
+
+Protocol version 38 adds the change source to the workspace change-set request, so a remote diff tab can show all
+changes, only the staged changes, or only the most recent commit, read on the far side. The source is required, and a
+request naming any other source is malformed. A version-37 remote would ignore it and answer with every change while
+the tab claimed to show only the staged ones, so the handshake refuses the mismatch.
 
 Unavailable sends, explicit disconnect, transport loss, protocol failure, and channel finish settle and detach ACP listeners, including before readiness. Late frames for detached ids are ignored. A lost core ACP session is closed locally and replaced by a later request once its channel is ready; autonomous runs retain their transport-loss termination. Durable activity capture belongs only to the initiating project's recorder. The sessions tab's existing shell/harness restoration policy is unchanged.
 

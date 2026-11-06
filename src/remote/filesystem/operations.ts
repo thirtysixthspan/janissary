@@ -13,6 +13,7 @@ import type { HistoryStep } from '../../file-navigator/moves.js';
 import { resultDecoders } from './result-decoders.js';
 import { writeFileOperation } from './write-file-operation.js';
 import { searchTextOperation } from './search-text-operation.js';
+import { changeSetOperation } from './change-set-operation.js';
 
 // What an operation's `run` reaches, handed over as one value so the table stays a plain data
 // module: `root` and `filesystem` are the far side's own, and the rest are bound closures over the
@@ -55,13 +56,7 @@ const READ_OPERATIONS = {
   // Pulls the far side's own workspace root — no path arguments, so nothing to contain. The
   // rejection (git's own error) travels back as the request's error reply.
   'git-pull': descriptorFor<'git-pull'>()({ ...noArguments, decodeResult: resultDecoders['git-pull'], run: (context: OperationContext) => context.filesystem.pull(context.root) }),
-  'change-set': descriptorFor<'change-set'>()({
-    valid: (args) => stringArray(args.fullFiles),
-    decode: (args) => ({ fullFiles: requireStringArray(args.fullFiles) }),
-    paths: () => [],
-    decodeResult: resultDecoders['change-set'],
-    run: (context, args) => context.filesystem.changeSet(context.root, args.fullFiles),
-  }),
+  'change-set': changeSetOperation,
   search: descriptorFor<'search'>()({ ...noArguments, decodeResult: resultDecoders.search, run: (context: OperationContext) => context.filesystem.search(context.root) }),
   'search-text': searchTextOperation,
   'read-file': descriptorFor<'read-file'>()({

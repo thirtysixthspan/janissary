@@ -6,6 +6,7 @@ import type { HistoryStep } from '../file-navigator/moves.js';
 import type { AgentSnapshot } from '../agent/types.js';
 import type { AcpActivityKind } from '../acp/activity.js';
 import type { SearchRequest } from '../protocol.js';
+import type { DiffSource } from '../plugins/diff/shared.js';
 
 // The frame shapes of the remote protocol, split out of `protocol.ts` so the wire *codec* and the
 // wire *grammar* are two files: this one says what a frame may carry, `protocol.ts` says how one is
@@ -40,7 +41,7 @@ export type RemoteFilesystemArgumentsByOperation = {
   'create-file': { destination: string };
   'create-directory': { destination: string };
   'git-commit': { message: string; paths: string[]; root?: string };
-  'change-set': { fullFiles: string[] };
+  'change-set': { fullFiles: string[]; source: DiffSource };
   replay: {
     undoStack: HistoryStep[]; redoStack: HistoryStep[]; direction: 'undo' | 'redo';
     overwrite: boolean; skipConflicts: boolean;

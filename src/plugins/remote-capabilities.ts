@@ -116,9 +116,9 @@ export function remoteCapabilities(input: {
     },
     // A tab riding no channel is answered with nothing rather than an error: the question is about a
     // directory that is not on another machine, and the caller decides what that means.
-    readWorkspaceChangeSet: (fullFiles) => {
+    readWorkspaceChangeSet: (fullFiles, source = 'all') => {
       const channel = ride();
-      return channel ? channel.port.changeSet(channel.root, fullFiles) : null;
+      return channel ? channel.port.changeSet(channel.root, fullFiles, source) : null;
     },
     materializeRemoteFile: async (relPath) => {
       const channel = ride();

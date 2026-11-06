@@ -6,8 +6,10 @@ export type TabPluginRemoteWorkspaceCapabilities = {
   // The change set of the remote workspace this plugin's own answering tab rides, as the far side
   // computed it — the same records a local read produces, validated by the plugin's own guard before
   // it publishes anything. Null when the answering tab rides no remote workspace, because a
-  // directory that is not on another machine has no far side to ask.
-  readWorkspaceChangeSet(fullFiles: readonly string[]): Promise<unknown> | null;
+  // directory that is not on another machine has no far side to ask. `source` names which changes:
+  // the working tree against `HEAD` (`all`, the default), the index against `HEAD` (`staged`), or the
+  // most recent commit against its first parent (`commit`).
+  readWorkspaceChangeSet(fullFiles: readonly string[], source?: 'all' | 'staged' | 'commit'): Promise<unknown> | null;
   // The local path one file of that remote workspace has been materialized to, answered by the same
   // cache a remote file navigator's row opens through, or null when the asking tab rides no remote
   // workspace or the file could not be read. The plugin opens that path through the routes it
