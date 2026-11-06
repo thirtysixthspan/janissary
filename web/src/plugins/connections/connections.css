@@ -32,6 +32,10 @@
 }
 .connections-row:hover { background: var(--border); }
 .connections-row.selected { background: var(--bg-soft); }
+.connections-row:is([data-status='Open'], [data-status='Running'], [data-status='Idle']) +
+.connections-row:is([data-status='Closed'], [data-status='Completed'], [data-status='Failed'], [data-status='Terminated']) {
+  margin-top: 24px;
+}
 .connections-row-host, .connections-row-owner, .connections-row-id, .connections-row-title {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
