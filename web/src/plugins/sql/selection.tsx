@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import type { SqlRow } from '@shared/plugins/sql/shared';
 import { GRID_NAVIGATION_KEYS, nextRowSelection } from './sql-keys';
@@ -72,7 +72,12 @@ export function useGridSelection({
   // A new page or a new query has nothing to do with the old run, and keeping it would highlight rows
   // that now hold other values. The first row is what the new page highlights, so a grid that has
   // just been read is ready for the keyboard without a keypress.
-  useEffect(() => { setRange(rows === 0 ? null : { from: 0, to: 0 }); }, [grid, rows]);
+  //
+  // The page is told apart by what it holds rather than by the object it arrives in. Every state
+  // broadcast parses the payload afresh, so activity in any other tab delivers this same page again
+  // as a new object — and resetting on that snapped the highlight back to the first row constantly.
+  const page = useMemo(() => JSON.stringify(grid), [grid]);
+  useEffect(() => { setRange(rows === 0 ? null : { from: 0, to: 0 }); }, [page, rows]);
 
   // The highlighted row follows the keys that move it, and only when it would otherwise be out of
   // sight — the file navigator's `nearest` rule, measured below the sticky header rather than
