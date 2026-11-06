@@ -52,7 +52,7 @@ Task files can chain together into a larger loop — one that plans work, harden
 
 ## Choosing a feature or issue task
 
-Expand **feature** to find `plan-a-new-feature`, `build-a-feature`, `remove-an-existing-feature`, and the pull request review, testing, updating, and issue-repair tasks. Use `plan-a-new-feature` to work through decisions and draft a plan. Use `build-a-feature` when you have a ready plan to implement; it implements the plan, opens a pull request, resolves review findings, and updates the pull request to match the final code. Choose `remove-an-existing-feature` to settle the scope of removing a feature and prepare a pull request for review.
+Expand **feature** to find `plan-a-new-feature`, `build-a-feature`, `remove-an-existing-feature`, and the pull request review, testing, updating, and issue-repair tasks. Use `plan-a-new-feature` to work through decisions and write a plan that's ready to build. Use `build-a-feature` when you have a ready plan to implement; it implements the plan, opens a pull request, resolves review findings, and updates the pull request to match the final code. Choose `remove-an-existing-feature` to settle the scope of removing a feature and prepare a pull request for review.
 
 Choose `work-an-issue` for an ordinary issue on `master`. Every argument to it is issue text, including a number or PR URL. To repair a pull request, choose `feature/work-pull-request-issue`, then append the PR number, `#number`, or GitHub PR URL. You can follow it with a recorded finding's summary or a description of something new to fix, such as `1916 Lookup doesn't match the visible name`. Without one, it takes the first recorded finding. It repairs one work item on that PR's branch and leaves the PR open. A description that matches no recorded finding is fixed as given and isn't added to the PR's backlog. It needs an explicit target and does not accept a branch name or guess a PR from context.
 
@@ -69,5 +69,6 @@ Picking a task only inserts the command; the agent then reads that file and foll
 - Then it decides whether the feature needs implementation questions at all, and if so asks about those: where code lives, what it extends or replaces.
 - It runs two improvement passes over the answered draft.
 - A final phase settles whatever is still open, including anything the two passes raised.
+- It moves the finished plan from `product/plans/draft/` to `product/plans/ready/`, where `build-a-feature` picks it up.
 
 Each phase is a round of numbered questions, every one with a recommended answer, and the draft is rewritten as you answer. A phase is finished when no question is left hanging, so the questioning is the longest part of the task rather than something you can skip past.
