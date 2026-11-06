@@ -30,7 +30,7 @@ vi.mock('../sandbox/index.js', async (importOriginal) => {
     sandboxSpawn: (options: SandboxOptions, command: string, args: string[], env: NodeJS.ProcessEnv) => {
       sandboxCalls.options.push(options);
       sandboxCalls.envs.push(env);
-      return actual.sandboxSpawn(sandboxCalls.bypassWorkspace ? { ...options, workspaceDir: undefined } : options, command, args, env);
+      return actual.sandboxSpawn({ ...options, workspaceDir: undefined }, command, args, env);
     },
   };
 });
@@ -639,6 +639,8 @@ describe('connectAcp — credentials', () => {
     });
     expect(sandboxCalls.envs.at(-1)?.GH_TOKEN).not.toBe('gh-file');
     expect(sandboxCalls.options.at(-1)?.tokens).toBeUndefined();
+    expect(sandboxCalls.options.at(-1)?.workspaceDir).toBe(os.tmpdir());
+    expect(sandboxCalls.options.at(-1)?.tmpDir).toContain(path.join(os.tmpdir(), '.janissary', 'acp-'));
   });
 
   it('lets the launch\'s own environment override a credential variable', () => {

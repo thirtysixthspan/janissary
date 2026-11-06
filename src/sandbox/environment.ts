@@ -13,7 +13,7 @@ import { opencodeDataHome, workspaceOpencodeDataHome } from './opencode-data.js'
 
 // The slice of `SandboxOptions` these read, named here so this module does not have to import the
 // options type back out of the module that calls it.
-type WorkspacedSpawn = { workspaceDir?: string; tokens?: ProjectTokens };
+type WorkspacedSpawn = { workspaceDir?: string; tmpDir?: string; tokens?: ProjectTokens };
 
 // Drop credential-shaped vars and agent-socket escape vectors (see `ENV_SCRUB_PATTERNS` in paths.ts).
 export function scrubEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
@@ -88,8 +88,8 @@ export function workspaceEnv(tmpDir: string, tokens: ProjectTokens, workspaceDir
 // environment object is returned untouched.
 export function withWorkspaceCredentials(env: NodeJS.ProcessEnv, options: WorkspacedSpawn): NodeJS.ProcessEnv {
   if (!options.workspaceDir) return env;
-  const tmpDir = resolvePath(`${options.workspaceDir}.tmp`);
-  const added = workspaceEnv(tmpDir, options.tokens ?? {}, options.workspaceDir);
+  const tmpDir = resolvePath(options.tmpDir ?? `${options.workspaceDir}.tmp`);
+  const added = workspaceEnv(tmpDir, options.tokens ?? {});
   return Object.keys(added).length === 0 ? env : { ...env, ...added };
 }
 

@@ -37,8 +37,7 @@ export type AcpOptions = {
   onActivity?: (update: unknown) => void;
   // Extra environment variables to pass to the subprocess.
   env?: Record<string, string>;
-  // When the session belongs to a workspaced tab, confines the ACP subprocess to that workspace
-  // via a Seatbelt sandbox (see src/sandbox/index.ts). Monitor sessions never set this.
+  // The confinement root for a workspace session; other sessions default to cwd.
   workspaceDir?: string;
   installedSkillDirs?: string[];
   offline?: boolean;

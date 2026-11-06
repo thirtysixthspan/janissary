@@ -22,6 +22,7 @@ import type { ProjectTokens } from '../project/tokens.js';
 // The slice of `SandboxOptions` the builder reads, named here so this module does not have to import
 // the options type back out of the module that calls it.
 export type HarnessSpawnOptions = {
+  tmpDir?: string;
   installedSkillDirs?: string[];
   offline?: boolean;
   selfBinaryHint?: string;
@@ -134,7 +135,7 @@ export function confinedHarnessSpawn(
   env: NodeJS.ProcessEnv,
 ): { command: string; args: string[]; env: NodeJS.ProcessEnv } {
   const workspaceDir = resolvePath(dir);
-  const tmpDir = resolvePath(`${dir}.tmp`);
+  const tmpDir = resolvePath(options.tmpDir ?? `${dir}.tmp`);
   const home = resolvePath(homedir());
   const darwinCacheDir = darwinUserCacheDir();
   const scrubbed = scrubEnv(env);
@@ -155,7 +156,7 @@ export function confinedHarnessSpawn(
 
   scrubbed.JANISSARY_NODE = process.execPath;
   scrubbed[JANISSARY_HOME_ENV] = janissaryRoot();
-  Object.assign(scrubbed, workspaceEnv(tmpDir, options.tokens ?? {}, dir));
+  Object.assign(scrubbed, workspaceEnv(tmpDir, options.tokens ?? {}));
 
   const profile = skillDirs.length > 0
     ? sandboxProfile(Boolean(options.offline), skillDirs.length)

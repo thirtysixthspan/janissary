@@ -293,6 +293,14 @@ describe('confinedHarnessSpawn', () => {
     expect(build().env.TMPDIR).toContain(`${path.basename(workspaceDir)}.tmp`);
   });
 
+  it('uses an explicit in-project scratch directory for ACP', () => {
+    const tmpDir = path.join(workspaceDir, '.janissary', 'acp-private');
+    mkdirSync(tmpDir, { recursive: true });
+    const result = build({ tmpDir });
+    expect(result.env.TMPDIR).toBe(realpathSync(tmpDir));
+    expect(result.args).toContain(`TMPDIR=${realpathSync(tmpDir)}`);
+  });
+
   it('uses the offline profile variant when offline is set', () => {
     expect(build({ offline: true }).args[1]).toBe(SANDBOX_PROFILE_OFFLINE);
   });

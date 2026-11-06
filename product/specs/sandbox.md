@@ -474,3 +474,7 @@ sandboxWorkspaces disabled in config` / `workspace isolation off: sandbox-exec u
 workspaced tab is created and isolation isn't actually active; the caller appends it to that tab's
 transcript. `--offline` (independent of the config toggle) swaps in `SANDBOX_PROFILE_OFFLINE`, which
 denies `network*` instead of allowing it.
+
+### ACP without a workspace clone
+
+ACP sessions always supply a confinement directory: the workspace clone when present, otherwise the session working directory. Ordinary sessions allocate private scratch inside the project runtime directory instead of a sibling of the project; temporary files and private OAuth copies share that scratch directory. It is removed when the ACP subprocess exits or fails to start. The existing platform, configuration, network, and harness carve-out rules apply.
