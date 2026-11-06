@@ -13,8 +13,6 @@ are automatically approved.
 `> <command and params> Thinking <spinner>`
 where clicking on the thinking or spinner will open the relevant connection tab to show the thinking of the agent in teh acp connection. once an answer is generated, the thinking and spinner should be removed and replaced with `[see thought process]` similarly linked to the connection.
 
-* in the shell tab, implement transcript search using the editor seach dialog and user interactions. trigger it with the command `search transcript <pattern>` or cmd+f.
-
 * in the connections tab, connections should first be sorted by connection status so that closed connections are always shown in a separate grouping below other questions.
 
 

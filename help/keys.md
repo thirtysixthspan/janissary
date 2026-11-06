@@ -25,7 +25,7 @@
 | `Tab` | Complete file paths; tab targets for `send` / `queue` / `close` / `schedule`; `tab` subcommands, targets, and pane/dock sides; connection strings; `browser` subcommands / window IDs; `monitor` personas, names, and targets; the `schedule system` grammar; `files` clauses and paths; runscript names; system schedule names; and help pages including `commands` and `keys` |
 | `Enter` | Execute the current command |
 | `Ctrl+E` | Open the queue picker for a shell or another tab with a queue and command bar (no-op on tabs without queues) |
-| `Cmd+F` | Search for a line in an editor buffer |
+| `Cmd+F` | Search for a line in an editor buffer or a shell tab's transcript |
 | `Cmd+N` / `Ctrl+N` (conversation list) | Create and open a new conversation |
 | `Backspace` / `Delete` | Delete the character before / after the cursor |
 | Printable characters | Insert at the command cursor |
@@ -52,7 +52,7 @@ View clauses restore only the named parts of a local tree; remote view clauses a
 | `Ctrl+E` / `queue` | Open the queue popup: the selected queued line appears in the command line, typing edits it, Backspace or Delete on an empty line removes it, Escape closes it and clears the line |
 | `Ctrl+Shift+C` / `Cmd+C` on macOS | Copy the terminal's selection to the clipboard and clipboard history, from the terminal or the command line. Dragging over output leaves the keyboard in the command line, and the chord copies the selection from there; a selection in the command line itself keeps the chord. Text dragged over in a rendered reply, such as `help`'s, stays highlighted and copies the same way |
 | `Cmd+T` | Open another shell in the same directory, workspace, and offline mode |
-| `Cmd+F` | Does nothing — the terminal has no in-tab transcript to search. **Open transcript** in the metadata row opens the session's text transcript in an editor tab, where `Cmd+F` searches it |
+| `Cmd+F` / `search transcript <pattern>` | Open the find overlay over the terminal's transcript, the same one an editor tab opens; the typed form starts with the pattern entered. `↑` / `↓` move between matching lines and scroll the terminal to the highlighted one, `Escape` closes it |
 
 **Image tab controls** (active only while an image tab is focused):
 

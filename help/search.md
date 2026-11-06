@@ -21,3 +21,7 @@ Open project search or search for a phrase. Use the transcript form to search tr
 - `search` opens project search.
 - `search TODO` searches for the phrase `TODO`.
 - `search transcript error` searches the transcript for `error`.
+
+**Notes**
+
+- In a shell tab, `search transcript <pattern>` opens the find overlay over the terminal's transcript with the pattern entered, the same overlay `Cmd+F` opens there.

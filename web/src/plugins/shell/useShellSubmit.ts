@@ -1,7 +1,7 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import type { TabPluginClientCapabilities } from '../api';
 import type { ShellDispatchResult } from '@shared/plugins/shell/shared';
-import { opensShellHistory, routeFor, shellLine } from './command-line-rules';
+import { opensShellHistory, routeFor, shellLine, transcriptSearchQuery } from './command-line-rules';
 import { appendShellHistory } from './shell-history';
 import { shellCommandInput } from './shell-command-input';
 import { stripTerminalControls } from './strip-terminal-controls';
@@ -20,8 +20,9 @@ export function useShellSubmit(input: {
   write: (data: string) => void;
   expectCommand: (line: string) => void;
   openHistory: () => void;
+  openFind: (query: string) => void;
 }) {
-  const { appBar, capabilities, displayReply, echoCommand, expectCommand, openHistory, setMatches, setSent, write } = input;
+  const { appBar, capabilities, displayReply, echoCommand, expectCommand, openFind, openHistory, setMatches, setSent, write } = input;
   return useCallback(async (text: string, record = true, receipt?: string): Promise<boolean> => {
     setMatches([]);
     // A line the bar records in its own history enters the application's global history too, which
@@ -57,6 +58,13 @@ export function useShellSubmit(input: {
       openHistory();
       return false;
     }
+    const findQuery = transcriptSearchQuery(text);
+    if (findQuery !== undefined) {
+      await discard();
+      remember(text);
+      openFind(findQuery);
+      return false;
+    }
     if (appBar.intercept(text)) {
       await discard();
       remember(text);
@@ -80,5 +88,5 @@ export function useShellSubmit(input: {
       reportShellIntentFailure(capabilities, 'shell dispatch intent refused', error);
       return false;
     }
-  }, [appBar, capabilities, displayReply, echoCommand, expectCommand, openHistory, setMatches, setSent, write]);
+  }, [appBar, capabilities, displayReply, echoCommand, expectCommand, openFind, openHistory, setMatches, setSent, write]);
 }

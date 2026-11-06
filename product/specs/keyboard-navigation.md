@@ -23,7 +23,7 @@
 | Ctrl+G | Open the fuzzy tab navigator (also closes it if already open) |
 | Ctrl+E | Open the command queue popup for a tab with a queue and an application command bar (see [[command-queue]]; otherwise no-op) |
 | Cmd+P | Open the Quick Open file finder from any focused tab |
-| Cmd+Shift+F | Open the project-wide search tab from any focused tab (see [[search-tab]]). Distinct from Cmd+F, which searches an editor buffer |
+| Cmd+Shift+F | Open the project-wide search tab from any focused tab (see [[search-tab]]). Distinct from Cmd+F, which searches an editor buffer or a shell tab's transcript |
 | Cmd+T | Open a new workspaced shell tab (same as typing `shell`) |
 | PageUp | Scroll transcript up by half terminal height |
 | PageDown | Scroll transcript down by half terminal height |

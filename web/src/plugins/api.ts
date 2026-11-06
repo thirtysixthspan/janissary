@@ -136,6 +136,11 @@ export { nextListSelection } from '../shared/list-selection';
 // The relative last-activity wording, published so the sessions and connections tables read the same
 // age the same way. Additive, so `TAB_PLUGIN_API_VERSION` does not move.
 export { relativeActivity } from '../shared/relative-activity';
+// The editor's Cmd+F find overlay and its state, published so a plugin tab searching its own lines —
+// the shell's terminal transcript — offers the same dialog and keys rather than a second one. Additive,
+// so `TAB_PLUGIN_API_VERSION` does not move.
+export { LineFind } from '../shared/line-find/LineFind';
+export { useLineFind } from '../shared/line-find/useLineFind';
 export { HistoryPicker } from '../shared/command-bar/HistoryPicker';
 export { handlePickerKey } from '../shared/picker-keyboard';
 

@@ -9,7 +9,7 @@ import { useSyntaxHighlight } from './useSyntaxHighlight';
 import { useEditorSync } from './useEditorSync';
 import { useEditorSuggest } from './useEditorSuggest';
 import { useEditorConnections } from './useEditorConnections';
-import { useEditorFind } from './useEditorFind';
+import { useLineFind } from '../shared/line-find/useLineFind';
 import { useEditorPlugins, type PluginReport } from './plugins/useEditorPlugins';
 import { createEditorPluginHost, type EditorPluginHost } from './plugins/host';
 import { useEditorInteractions } from './useEditorInteractions';
@@ -17,7 +17,7 @@ import { useEditorScrollRetention } from './useEditorScrollRetention';
 import { selectionsText } from './model';
 import { keepCaretRowVisible, positionCaretAtQuarter } from './scroll';
 import { EditorConnectionsPanel } from './EditorConnectionsPanel';
-import { EditorFind } from './EditorFind';
+import { LineFind } from '../shared/line-find/LineFind';
 import { handleSuggestPillClick } from './handleSuggestPillClick';
 import { EditorLines } from './EditorLines';
 import { PendingSuggestPanel } from './PendingSuggestPanel';
@@ -75,7 +75,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   const file = useEditorFile(client, editor, api);
   saveRef.current = file.save;
   useEditorLineJump(editor, api, caretRef);
-  const find = useEditorFind(state?.lines ?? null, active);
+  const find = useLineFind(state?.lines ?? null, active);
   useEffect(() => {
     const result = find.results[find.selected];
     if (!find.findOpen || !result || state?.cursor.line !== result.index || !bodyRef.current || !caretRef.current) return;
@@ -197,7 +197,8 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
         />
       )}
       {find.findOpen && (
-        <EditorFind
+        <LineFind
+          placeholder="Search buffer"
           query={find.query} onChangeQuery={find.setQuery}
           results={find.results} selected={find.selected}
           onChangeSelected={interactions.selectFindResult}

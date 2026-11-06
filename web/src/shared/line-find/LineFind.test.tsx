@@ -1,26 +1,27 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import type { FuzzyMatchResult } from '../shared/fuzzy-match';
-import { EditorFind } from './EditorFind';
+import type { FuzzyMatchResult } from '../fuzzy-match';
+import { LineFind } from './LineFind';
 
 const results: FuzzyMatchResult[] = [
   { path: 'function beta() {', index: 4, score: 10, ranges: [[9, 13]] },
   { path: '  const b = 2;', index: 9, score: 5, ranges: [[8, 9]] },
 ];
 
-function renderFind(overrides: Partial<React.ComponentProps<typeof EditorFind>> = {}) {
+function renderFind(overrides: Partial<React.ComponentProps<typeof LineFind>> = {}) {
   const onChangeQuery = vi.fn();
   const onChangeSelected = vi.fn();
   const onClose = vi.fn();
   const utils = render(
-    <EditorFind
+    <LineFind
       query="beta"
       onChangeQuery={onChangeQuery}
       results={results}
       selected={0}
       onChangeSelected={onChangeSelected}
       onClose={onClose}
+      placeholder="Search buffer"
       {...overrides}
     />,
   );
@@ -29,11 +30,16 @@ function renderFind(overrides: Partial<React.ComponentProps<typeof EditorFind>> 
 
 const input = () => screen.getByPlaceholderText('Search buffer');
 
-describe('EditorFind', () => {
+describe('LineFind', () => {
   it('renders an autofocused input naming the buffer', () => {
     renderFind();
     expect(input()).toBeInTheDocument();
     expect(document.activeElement).toBe(input());
+  });
+
+  it('names what it searches with the placeholder it is given', () => {
+    renderFind({ placeholder: 'Search transcript' });
+    expect(screen.getByPlaceholderText('Search transcript')).toBeInTheDocument();
   });
 
   it('hints at typing while the query is empty', () => {
