@@ -103,3 +103,7 @@ Monitors, conversations, and editor persona queries remain separate ACP consumer
 ### Authentication outside workspaces
 
 ACP sessions in ordinary shells receive the configured harness API tokens and a private copy of the saved ChatGPT login for OpenCode. The private login lasts for that ACP subprocess and is removed when it exits or fails to start. An explicit launch data-location setting takes precedence. Workspace sessions continue to share their workspace-owned login.
+
+### Confinement
+
+Every ACP subprocess requests the existing workspace sandbox. Workspace sessions use their clone as the boundary; ordinary shell and monitor sessions use their working directory. Ordinary sessions keep private temporary files and OAuth data inside project runtime storage and remove them when the subprocess exits. Offline settings remain in force. Confinement requires macOS Seatbelt and the enabled sandbox setting, with the existing harness runtime and credential exceptions.

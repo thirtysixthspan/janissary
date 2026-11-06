@@ -31,25 +31,25 @@ import { acpCredentials } from './credentials.js';
  * `options.allowedTools` opts a classified web tool in (see acp-tools.ts) — undefined/empty (every
  * non-monitor caller and every tool-less persona) denies every request, as before.
  *
- * `workspaceDir`/`offline` confine the subprocess to that workspace via a Seatbelt sandbox (see
- * src/sandbox/index.ts); omitted (monitor sessions never set them), the command runs unconfined but
- * still gets the token files' harness credentials (see `agentCredentialEnv`), since an agent such as
- * opencode may have no other way to authenticate.
+ * Every subprocess requests Seatbelt confinement to its workspace or working directory. Ordinary
+ * sessions own private scratch and OAuth credentials; workspace sessions use workspace-owned data.
  */
 export function connectAcp(options: AcpOptions): AcpSession {
   const tokens = options.tokens ?? getProjectTokens();
-  const credentials = acpCredentials(options.workspaceDir);
+  const credentials = acpCredentials(options.cwd, options.workspaceDir);
   const requested = { ...(!options.workspaceDir && agentCredentialEnv(tokens)), ...credentials.env, ...options.env };
   const located = locateAcpCommand(options.command, { ...process.env, ...requested });
   const { command, args, env } = sandboxSpawn(
     {
-      workspaceDir: options.workspaceDir,
+      workspaceDir: options.workspaceDir ?? options.cwd,
+      tmpDir: credentials.tmpDir,
       installedSkillDirs: options.installedSkillDirs,
       offline: options.offline,
       tokens: options.workspaceDir ? tokens : undefined,
     },
     located.command, options.args, located.env,
   );
+  if (options.env?.XDG_DATA_HOME !== undefined) env.XDG_DATA_HOME = options.env.XDG_DATA_HOME;
   const proc = spawn(command, args, {
     cwd: options.cwd,
     stdio: ['pipe', 'pipe', 'pipe'],

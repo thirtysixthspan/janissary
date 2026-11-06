@@ -96,7 +96,7 @@ A link in a shell answer acts for the shell that owns the answer, not for the ta
 
 <img class="agent-float" src="/agents/hamza-south-east.png" alt="" />
 
-A sandboxed shell's ACP process uses the same workspace confinement and offline setting. A remote
+Every ACP process requests confinement to its workspace, or to its working directory for an ordinary shell or monitor. Confinement requires macOS with workspace isolation enabled and retains the usual harness runtime exceptions. A shell's offline setting also applies to ACP. A remote
 shell starts its ACP process on that host in the remote workspace. Model selection and command grants
 still come from your local `ask` or `tell` role.
 

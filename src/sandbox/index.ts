@@ -9,6 +9,7 @@ export type SandboxOptions = {
   // Undefined for a non-workspaced tab — callers pass it through unconditionally and
   // `sandboxSpawn` returns the input unchanged rather than requiring a branch at every call site.
   workspaceDir?: string;
+  tmpDir?: string;
   installedSkillDirs?: string[];
   offline?: boolean;
   // The actual program that ends up running, when `command` is a shell wrapping it (e.g. PTY
