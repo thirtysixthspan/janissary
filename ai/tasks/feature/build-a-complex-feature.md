@@ -47,7 +47,7 @@ The orchestrator checks that the source plan's full scope is represented exactly
 
 After decomposition and before improving or implementing any subplan:
 
-1. Create one descriptive feature branch, commit all initial subplan plan files using a Conventional Commit subject, and push them to the remote. Stage only the subplan plans; do not include unrelated changes.
+1. Create one descriptive feature branch. In one commit with a Conventional Commit subject, add all initial subplan plan files and move the original source plan from `./product/plans/ready/` to `./product/plans/complete/` with `git mv`, then push it to the remote. Stage only the subplan plans and the source plan move; do not include unrelated changes. This first commit then adds exactly one plan under `./product/plans/complete/`, so `update-pull-request.md` identifies the source plan as the pull request's own plan.
 2. Delegate `ai/tasks/workspace/open-feature-pull-request.md` to a fresh subagent to open the PR against `master`. Override its branch/commit steps because the plan commit is already pushed; it must not create a second branch or duplicate the commit. Preserve its check gate, complete PR description requirements, and no-merge rule.
 3. Record the PR number, URL, and head branch. Confirm it is `OPEN`, points to that branch, and its remote head matches the published commit. If publication fails, preserve local work and stop with the concrete blocker.
 
@@ -94,7 +94,7 @@ Repeat Steps 3 through 6 in order for every remaining subplan. Before starting e
 
 After the final subplan's focused review cycle is complete, verify the requirement-to-subplan coverage map against the delivered code, specs, tests, and plan files. If a source-plan requirement is missing, add the necessary subplan plan to the existing PR, improve it as in Step 3 immediately before implementation, with the same Step 0 skip, and carry it through the same implementation and focused-review cycle.
 
-Once every requirement is delivered and all focused review backlogs are empty, move the original source plan from `ready/` to `complete/` and commit and push that plan move to the existing PR branch. This original plan is the canonical record of the full feature; keep its original complexity rating and incorporate the completed subplans' final outcomes during the update step.
+Once every requirement is delivered and all focused review backlogs are empty, confirm the original source plan is still in `./product/plans/complete/`, where Step 2 moved it. This original plan is the canonical record of the full feature; keep its original complexity rating and incorporate the completed subplans' final outcomes during the update step.
 
 ## Step 8 — Review and resolve the full pull request
 
@@ -109,7 +109,7 @@ If a review or repair is blocked, preserve the PR and outstanding backlog, repor
 
 ## Step 9 — Update the pull request
 
-Delegate `ai/tasks/feature/update-pull-request.md` to a fresh subagent with the recorded PR number before the full-PR review. Override its Step 3 plan discovery and Step 4 selection: do not identify the canonical plan from the first commit. Use the original source plan recorded in Step 0, now moved from `ready/` to `complete/`, as the canonical plan; fold every completed subplan plan into it and remove those subplan files from `product/plans/complete/`. The source plan's original complexity rating remains unchanged. The subagent updates the PR description, canonical plan, specs, and applicable help pages under `help/` to match the final code, then commits and pushes on the same branch. Preserve the update task's prohibition on source changes, its clean-tree and target checks, and its no-merge rule. If this update surfaces work requiring a code repair, resolve it before beginning the full-PR review.
+Delegate `ai/tasks/feature/update-pull-request.md` to a fresh subagent with the recorded PR number before the full-PR review. Its Step 3 plan discovery finds the canonical plan from the branch's first commit, which moved the original source plan into `complete/` in Step 2. Confirm the plan it identifies is the source plan recorded in Step 0; if it identifies another plan or none, stop and report the blocker. Its Step 4 treats every completed subplan plan the way it treats a fix plan: it folds the subplan into the canonical plan and removes the subplan file from `product/plans/complete/`. The source plan's original complexity rating remains unchanged. The subagent updates the PR description, canonical plan, specs, and applicable help pages under `help/` to match the final code, then commits and pushes on the same branch. Preserve the update task's prohibition on source changes, its clean-tree and target checks, and its no-merge rule. If this update surfaces work requiring a code repair, resolve it before beginning the full-PR review.
 
 If the update cannot publish its changes or the PR description edit fails, preserve the work, report the blocker, and do not claim completion.
 
