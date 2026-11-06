@@ -94,6 +94,9 @@ vi.stubGlobal('ResizeObserver', class {
   disconnect() {}
 });
 
+// jsdom does not lay anything out, so the completion picker's scroll to its selected row is a stub.
+Element.prototype.scrollIntoView = vi.fn();
+
 const PAYLOAD: ShellPayload = {
   instanceKey: 'shell-1', ptyId: 'pty7', cwd: '/repo', root: '/repo', workspace: false, cols: 80, rows: 24,
   connections: [], schedule: [], hookNonce: NONCE,
@@ -121,6 +124,7 @@ function makeCapabilities(overrides: {
   output?: string;
   coreResponse?: boolean;
   completions?: { matches: string[]; newInput: string; newCursor: number };
+  complete?: (request: { line: string; cursor: number }) => { matches: string[]; newInput: string; newCursor: number } | undefined;
   status?: { ptyId: string; running: boolean };
   claimedChords?: readonly string[];
   label?: string;
@@ -154,7 +158,8 @@ function makeCapabilities(overrides: {
         return { dispatched: overrides.dispatched ?? false, output: overrides.output ?? '', coreResponse: overrides.coreResponse };
       }
       if (name === 'complete') {
-        return overrides.completions ?? { matches: [], newInput: '', newCursor: 0 };
+        return overrides.complete?.(_payload as { line: string; cursor: number })
+          ?? overrides.completions ?? { matches: [], newInput: '', newCursor: 0 };
       }
       return {};
     }) as TabPluginClientCapabilities['intent'],
@@ -303,6 +308,18 @@ function shellOutput(capabilities: TabPluginClientCapabilities): (data: string) 
 
 function bar(): HTMLTextAreaElement {
   return screen.getByLabelText('Shell command') as HTMLTextAreaElement;
+}
+
+function completionPicker(): HTMLElement | null {
+  return document.querySelector<HTMLElement>('.picker.shell-completions');
+}
+
+function completionRows(): string[] {
+  return [...document.querySelectorAll('.shell-completions .picker-row')].map((row) => row.textContent);
+}
+
+function selectedCompletion(): string | null | undefined {
+  return completionPicker()?.querySelector('.picker-row.selected')?.textContent;
 }
 
 function dragOverReply(text: string): HTMLElement {
@@ -1224,25 +1241,27 @@ describe('ShellTab', () => {
     expect(written).toEqual([]);
   });
 
-  it('completes from the application and shows a strip when there is a choice', async () => {
+  it('completes from the application and shows a picker when there is a choice', async () => {
     renderTab({ completions: { matches: ['ls', 'lsof'], newInput: 'ls', newCursor: 2 } });
 
     fireEvent.change(bar(), { target: { value: 'l' } });
     fireEvent.keyDown(bar(), { key: 'Tab' });
 
-    await waitFor(() => { expect(screen.getByText('lsof')).toBeInTheDocument(); });
-    expect(document.querySelector('.completions')?.textContent).toBe('ls  lsof');
+    await waitFor(() => { expect(completionRows()).toEqual(['ls', 'lsof']); });
+    expect(completionPicker()?.querySelector('.picker-title')?.textContent).toBe('completions');
+    expect(selectedCompletion()).toBe('ls');
     expect(bar().value).toBe('ls');
+    expect(document.activeElement).toBe(bar());
   });
 
-  it('fills in the common prefix of several matches and still shows the strip', async () => {
+  it('fills in the common prefix of several matches and still shows the picker', async () => {
     renderTab({ completions: { matches: ['docs/', 'dotfiles/'], newInput: 'ls do', newCursor: 5 } });
 
     fireEvent.change(bar(), { target: { value: 'ls d' } });
     fireEvent.keyDown(bar(), { key: 'Tab' });
 
     await waitFor(() => { expect(bar().value).toBe('ls do'); });
-    expect(document.querySelector('.completions')?.textContent).toBe('docs/  dotfiles/');
+    expect(completionRows()).toEqual(['docs/', 'dotfiles/']);
   });
 
   it('keeps the typed line when several matches diverge right away', async () => {
@@ -1251,7 +1270,7 @@ describe('ShellTab', () => {
     fireEvent.change(bar(), { target: { value: 'ls ' } });
     fireEvent.keyDown(bar(), { key: 'Tab' });
 
-    await waitFor(() => { expect(document.querySelector('.completions')).not.toBeNull(); });
+    await waitFor(() => { expect(completionPicker()).not.toBeNull(); });
     expect(bar().value).toBe('ls ');
   });
 
@@ -1260,23 +1279,118 @@ describe('ShellTab', () => {
 
     fireEvent.change(bar(), { target: { value: 'l' } });
     fireEvent.keyDown(bar(), { key: 'Tab' });
-    await waitFor(() => { expect(document.querySelector('.completions')).not.toBeNull(); });
+    await waitFor(() => { expect(completionPicker()).not.toBeNull(); });
     expect(bar().value).toBe('ls');
 
     fireEvent.keyDown(bar(), { key: 'Escape' });
 
-    expect(document.querySelector('.completions')).toBeNull();
+    expect(completionPicker()).toBeNull();
     expect(bar().value).toBe('ls');
   });
 
-  it('accepts a single completion without showing a strip', async () => {
+  it('accepts a single completion without showing a picker', async () => {
     renderTab({ completions: { matches: ['ls'], newInput: 'ls', newCursor: 2 } });
 
     fireEvent.change(bar(), { target: { value: 'l' } });
     fireEvent.keyDown(bar(), { key: 'Tab' });
 
     await waitFor(() => { expect(bar().value).toBe('ls'); });
-    expect(document.querySelector('.completions')).toBeNull();
+    expect(completionPicker()).toBeNull();
+  });
+
+  it('moves through the completion picker with the arrows and accepts on Return without running', async () => {
+    const { capabilities } = renderTab({ completions: { matches: ['docs/', 'dotfiles/', 'downloads/'], newInput: 'ls do', newCursor: 5 } });
+
+    fireEvent.change(bar(), { target: { value: 'ls d' } });
+    fireEvent.keyDown(bar(), { key: 'Tab' });
+    await waitFor(() => { expect(completionPicker()).not.toBeNull(); });
+
+    fireEvent.keyDown(bar(), { key: 'ArrowUp' });
+    expect(selectedCompletion()).toBe('docs/');
+    fireEvent.keyDown(bar(), { key: 'ArrowDown' });
+    fireEvent.keyDown(bar(), { key: 'ArrowDown' });
+    fireEvent.keyDown(bar(), { key: 'ArrowDown' });
+    expect(selectedCompletion()).toBe('downloads/');
+    expect(bar().value).toBe('ls do');
+    fireEvent.keyDown(bar(), { key: 'ArrowUp' });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+
+    expect(bar().value).toBe('ls dotfiles/');
+    expect(completionPicker()).toBeNull();
+    const intents = vi.mocked(capabilities.intent).mock.calls.map(([name]) => name);
+    expect(intents).not.toContain('dispatch');
+    expect(intents).not.toContain('dispatch-command');
+  });
+
+  it('accepts a clicked completion and keeps the keyboard on the command bar', async () => {
+    renderTab({ completions: { matches: ['docs/', 'dotfiles/'], newInput: 'ls do', newCursor: 5 } });
+
+    fireEvent.change(bar(), { target: { value: 'ls d' } });
+    fireEvent.keyDown(bar(), { key: 'Tab' });
+    await waitFor(() => { expect(completionPicker()).not.toBeNull(); });
+
+    const row = screen.getByText('dotfiles/');
+    expect(fireEvent.mouseDown(row)).toBe(false);
+    fireEvent.click(row);
+
+    expect(bar().value).toBe('ls dotfiles/');
+    expect(completionPicker()).toBeNull();
+    expect(document.activeElement).toBe(bar());
+  });
+
+  it('completes an accepted candidate the way a sole match completes', async () => {
+    const { capabilities } = renderTab({
+      complete: ({ line }) => (line === 'cat src/foo.test.ts'
+        ? { matches: ['foo.test.ts'], newInput: 'cat src/foo.test.ts ', newCursor: 20 }
+        : { matches: ['foo.test.ts', 'foo.ts'], newInput: 'cat src/foo.', newCursor: 12 }),
+    });
+
+    fireEvent.change(bar(), { target: { value: 'cat src/f' } });
+    fireEvent.keyDown(bar(), { key: 'Tab' });
+    await waitFor(() => { expect(completionPicker()).not.toBeNull(); });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+
+    await waitFor(() => { expect(bar().value).toBe('cat src/foo.test.ts '); });
+    expect(capabilities.intent).toHaveBeenCalledWith('complete', { line: 'cat src/foo.test.ts', cursor: 19 });
+  });
+
+  it('keeps an accepted candidate as it is when completing it again still offers a choice', async () => {
+    const { capabilities } = renderTab({ completions: { matches: ['foo', 'foo.ts'], newInput: 'cat foo', newCursor: 7 } });
+
+    fireEvent.change(bar(), { target: { value: 'cat f' } });
+    fireEvent.keyDown(bar(), { key: 'Tab' });
+    await waitFor(() => { expect(completionPicker()).not.toBeNull(); });
+    await act(async () => { fireEvent.keyDown(bar(), { key: 'Enter' }); });
+
+    expect(capabilities.intent).toHaveBeenLastCalledWith('complete', { line: 'cat foo', cursor: 7 });
+    expect(bar().value).toBe('cat foo');
+    expect(completionPicker()).toBeNull();
+  });
+
+  it('does not complete an accepted directory candidate again', async () => {
+    const { capabilities } = renderTab({ completions: { matches: ['docs/', 'dotfiles/'], newInput: 'ls do', newCursor: 5 } });
+
+    fireEvent.change(bar(), { target: { value: 'ls d' } });
+    fireEvent.keyDown(bar(), { key: 'Tab' });
+    await waitFor(() => { expect(completionPicker()).not.toBeNull(); });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+
+    expect(bar().value).toBe('ls docs/');
+    const completeCalls = vi.mocked(capabilities.intent).mock.calls.filter(([name]) => name === 'complete');
+    expect(completeCalls).toHaveLength(1);
+  });
+
+  it('closes the completion picker when the line is edited', async () => {
+    renderTab({ completions: { matches: ['ls', 'lsof'], newInput: 'ls', newCursor: 2 } });
+
+    fireEvent.change(bar(), { target: { value: 'l' } });
+    fireEvent.keyDown(bar(), { key: 'Tab' });
+    await waitFor(() => { expect(completionPicker()).not.toBeNull(); });
+
+    fireEvent.change(bar(), { target: { value: 'lso' } });
+
+    expect(completionPicker()).toBeNull();
+    expect(bar().value).toBe('lso');
   });
 
   it('recalls the lines it has sent on Up, newest first', async () => {

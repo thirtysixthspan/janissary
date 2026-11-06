@@ -7,7 +7,7 @@ Janissary provides context-aware tab completion in the command line input, trigg
 When the `Tab` key is pressed, the shell attempts to complete the token immediately preceding the cursor.
 - If no match is found, no action is taken.
 - If a single match is found, the token is replaced with the full match (appending a trailing space for files, or a `/` for directories).
-- If multiple matches are found, the token is replaced with the longest common prefix of all matches, and the user is presented with the list of possible completions.
+- If multiple matches are found, the token is replaced with the longest common prefix of all matches, and the user is presented with the list of possible completions. In a shell tab the list is a picker over the command bar: `↑`/`↓` move the selection, Return or a click accepts a candidate in place of the partial token, and `Escape` closes the picker without changing the line.
 
 The completion logic determines the context based on the command and the argument position of the cursor within the command line.
 

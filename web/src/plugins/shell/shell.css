@@ -62,9 +62,12 @@
 }
 
 .shell-tab .picker.shell-history { bottom: var(--command-bar-height, 0); max-height: 50%; }
+.shell-tab .picker.shell-completions { bottom: var(--command-bar-height, 0); max-height: 50%; }
 .shell-tab .picker.clipboard-history { bottom: var(--command-bar-height, 0); max-height: 50%; }
 
-/* Docked into a sidebar the terminal has little room and the popup less; the history list stays
-   readable by scrolling rather than by giving up rows. */
+/* Docked into a sidebar the terminal has little room and the popup less; the history and completion
+   lists stay readable by scrolling rather than by giving up rows. */
 .shell-tab[data-dock='left'] .picker.shell-history,
-.shell-tab[data-dock='right'] .picker.shell-history { left: 0; right: 0; }
+.shell-tab[data-dock='right'] .picker.shell-history,
+.shell-tab[data-dock='left'] .picker.shell-completions,
+.shell-tab[data-dock='right'] .picker.shell-completions { left: 0; right: 0; }
