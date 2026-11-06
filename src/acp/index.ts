@@ -11,6 +11,7 @@ import {
 import type { AcpSession, AcpOptions } from './types.js';
 import { AcpPromptControl } from './prompt-control.js';
 import { sandboxSpawn } from '../sandbox/index.js';
+import { agentCredentialEnv } from '../sandbox/environment.js';
 import { getProjectTokens } from '../project/tokens.js';
 import { decidePermission } from './tools.js';
 import { errorText } from '../error-text.js';
@@ -30,16 +31,20 @@ import { locateAcpCommand } from './command-path.js';
  * non-monitor caller and every tool-less persona) denies every request, as before.
  *
  * `workspaceDir`/`offline` confine the subprocess to that workspace via a Seatbelt sandbox (see
- * src/sandbox/index.ts); omitted (monitor sessions never set them), the command runs exactly as before.
+ * src/sandbox/index.ts); omitted (monitor sessions never set them), the command runs unconfined but
+ * still gets the token files' harness credentials (see `agentCredentialEnv`), since an agent such as
+ * opencode may have no other way to authenticate.
  */
 export function connectAcp(options: AcpOptions): AcpSession {
-  const located = locateAcpCommand(options.command, options.env ? { ...process.env, ...options.env } : process.env);
+  const tokens = options.tokens ?? getProjectTokens();
+  const requested = { ...(!options.workspaceDir && agentCredentialEnv(tokens)), ...options.env };
+  const located = locateAcpCommand(options.command, { ...process.env, ...requested });
   const { command, args, env } = sandboxSpawn(
     {
       workspaceDir: options.workspaceDir,
       installedSkillDirs: options.installedSkillDirs,
       offline: options.offline,
-      tokens: options.workspaceDir ? (options.tokens ?? getProjectTokens()) : undefined,
+      tokens: options.workspaceDir ? tokens : undefined,
     },
     located.command, options.args, located.env,
   );

@@ -100,6 +100,8 @@ Janissary reads your token files once when it starts, project first and home sec
 
 A token reaches the tab whether or not isolation is actually active on that machine. Isolation needs macOS, so a Linux host runs without it, and the credential arrives the same way either way.
 
+ACP agents that run outside a workspace get the four harness tokens too. That covers monitors and `ask` from a tab with no workspace. They get `claude-token`, `opencode-token`, `kilo-token`, and `gemini-token`, under the same variables, so an `opencode` you never ran `opencode auth login` for still signs in. They don't get `github-token`, which stays workspace-only.
+
 ## How tokens reach a remote
 
 <img class="agent-float" src="/agents/hakim-south.png" alt="" />

@@ -19,13 +19,16 @@ import { decodeFrame, encodeFrame, encodeHandshake } from '../remote/protocol.js
 
 // The sandbox is left real — these tests drive actual subprocesses — but every call's options are
 // recorded, so what `connectAcp` decides to inject can be asserted without mocking the spawn itself.
-const sandboxCalls = vi.hoisted(() => ({ options: [] as SandboxOptions[], bypassWorkspace: false }));
+const sandboxCalls = vi.hoisted(() => ({
+  options: [] as SandboxOptions[], envs: [] as NodeJS.ProcessEnv[], bypassWorkspace: false,
+}));
 vi.mock('../sandbox/index.js', async (importOriginal) => {
   const actual = await importOriginal<typeof SandboxModule>();
   return {
     ...actual,
     sandboxSpawn: (options: SandboxOptions, command: string, args: string[], env: NodeJS.ProcessEnv) => {
       sandboxCalls.options.push(options);
+      sandboxCalls.envs.push(env);
       return actual.sandboxSpawn(sandboxCalls.bypassWorkspace ? { ...options, workspaceDir: undefined } : options, command, args, env);
     },
   };
@@ -602,6 +605,53 @@ describe('connectAcp — credentials', () => {
     connectWorkspaced();
 
     expect(sandboxCalls.options.at(-1)?.tokens).toEqual(getProjectTokens());
+  });
+
+  function connectUnworkspaced(tokens: Record<string, string>, env?: Record<string, string>): void {
+    const session = connectAcp({
+      command: process.execPath,
+      args: [agentScript(), 'basic'],
+      cwd: os.tmpdir(),
+      onError: () => {},
+      tokens,
+      ...(env && { env }),
+    });
+    sessions.push(session);
+  }
+
+  it('hands an agent outside a workspace the harness credentials, not the GitHub token', () => {
+    sandboxCalls.options.length = 0;
+    sandboxCalls.envs.length = 0;
+
+    connectUnworkspaced({ github: 'gh-file', claude: 'c', opencode: 'o', kilo: 'k', gemini: 'g' });
+
+    expect(sandboxCalls.envs.at(-1)).toMatchObject({
+      CLAUDE_CODE_OAUTH_TOKEN: 'c',
+      OPENCODE_API_KEY: 'o',
+      KILO_API_KEY: 'k',
+      GEMINI_API_KEY: 'g',
+      GOOGLE_GENERATIVE_AI_API_KEY: 'g',
+    });
+    expect(sandboxCalls.envs.at(-1)?.GH_TOKEN).not.toBe('gh-file');
+    expect(sandboxCalls.options.at(-1)?.tokens).toBeUndefined();
+  });
+
+  it('lets the launch\'s own environment override a credential variable', () => {
+    sandboxCalls.envs.length = 0;
+
+    connectUnworkspaced({ opencode: 'from-file' }, { OPENCODE_API_KEY: 'from-launch', OPENCODE_CONFIG_CONTENT: '{}' });
+
+    expect(sandboxCalls.envs.at(-1)).toMatchObject({ OPENCODE_API_KEY: 'from-launch', OPENCODE_CONFIG_CONTENT: '{}' });
+  });
+
+  it('leaves a workspaced session\'s credentials to the sandbox', () => {
+    sandboxCalls.options.length = 0;
+    sandboxCalls.envs.length = 0;
+
+    connectWorkspaced({ opencode: 'workspace-key' });
+
+    expect(sandboxCalls.options.at(-1)?.tokens).toEqual({ opencode: 'workspace-key' });
+    expect(sandboxCalls.envs.at(-1)?.OPENCODE_API_KEY).not.toBe('workspace-key');
   });
 
   it('forwards selected installed skill directories to sandboxSpawn', () => {
