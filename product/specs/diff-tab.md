@@ -144,7 +144,11 @@ and forgets expanded files, comments, and drafts, because they belong to the sou
 holds through every once-a-second recompute, through re-running `diff`, and through re-scoping to another directory,
 and full-file views read from the same source. It belongs to one tab: other diff tabs keep their own, and closing the
 tab forgets it. A remote workspace diff reads the chosen source on the far side, the same way a local one does.
-Opening a file from any source opens the working-tree file at the line the diff names.
+
+Only the all-changes view opens files. In the staged and last-commit views nothing opens one: file names are
+disabled, including a binary file's, a double-click on a line does nothing, and **Return** on the walked hunk does
+nothing. Lines show no pointer cursor and no hover highlight there, because the working-tree file may no longer hold
+what those views show. Comments, the view-cycle button, and the keyboard walk keep working.
 
 ### Syntax highlighting
 

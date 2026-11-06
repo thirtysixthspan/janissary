@@ -20,7 +20,7 @@ The project diff is always one tab, titled **diff**. Opening it for another proj
 
 The tab opens on staged, unstaged, and untracked changes against `HEAD`, grouped by file in path order. Files your `.gitignore` excludes don't appear. Each heading shows the file path, a status word, and the added (`+`) and removed (`−`) line counts.
 
-The change source button in the header, beside the plus-minus control, cycles the tab through three views of the repository: **all changes** (the default), **staged changes** only, and the **last commit**'s changes only. Its icon shows which one you're looking at, and its tooltip names the next one, for example `Showing all changes. Switch to staged changes`. Switching clears expanded files and comments. Each diff tab keeps its own choice until it closes. Opening a file from the staged or last-commit view still opens your working copy.
+The change source button in the header, beside the plus-minus control, cycles the tab through three views of the repository: **all changes** (the default), **staged changes** only, and the **last commit**'s changes only. Its icon shows which one you're looking at, and its tooltip names the next one, for example `Showing all changes. Switch to staged changes`. Switching clears expanded files and comments. Each diff tab keeps its own choice until it closes. Only the all-changes view opens files: in the staged and last-commit views, file names are disabled, and double-clicking a line or pressing `Return` does nothing.
 
 The status is one of **added**, **modified**, **deleted**, **renamed**, **binary**, or **mode**. **added** means the file did not exist before, so a file you only appended to reads **modified**. **mode** is a change to the file's permissions alone and has no code lines. A rename shows the old path, an arrow, and the new path. A binary file appears without a text diff.
 
@@ -28,7 +28,7 @@ Added lines are green and removed lines are red. Each line has its old and new l
 
 ## Open a changed file
 
-Click a file name to open it. Double-click an added or unchanged line to open the file at that line. A binary file opens in the viewer for its file type. Removed lines and deleted files cannot open a location that no longer exists.
+Click a file name to open it. Double-click an added or unchanged line to open the file at that line. A binary file opens in the viewer for its file type. Removed lines and deleted files cannot open a location that no longer exists. Files open only from the all-changes view, not from the staged or last-commit view.
 
 <img class="agent-float left" src="/agents/dogan-south-east.png" alt="" />
 

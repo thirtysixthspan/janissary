@@ -26,7 +26,7 @@ The name is matched the way every other tab name in the app is: case doesn't mat
 
 <img class="agent-float" src="/agents/yusuf-south.png" alt="" />
 
-Click a file's name to open it in an editor tab. Double-click an added or unchanged line to open the file at that line; removed lines open nothing, because the line they name is no longer in the file. A binary file opens in the media tab its kind already opens.
+Click a file's name to open it in an editor tab. Double-click an added or unchanged line to open the file at that line; removed lines open nothing, because the line they name is no longer in the file. A binary file opens in the media tab its kind already opens. None of this works in the staged or last-commit view, which open nothing.
 
 Each file's header carries a status word: **added**, **modified**, **deleted**, **renamed**, **binary**, or **mode** for a permissions-only change. A file you only appended to reads **modified**, because **added** means it didn't exist before. Files your `.gitignore` excludes are not listed.
 

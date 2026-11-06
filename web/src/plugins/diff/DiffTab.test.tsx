@@ -329,6 +329,34 @@ describe('DiffTab', () => {
     expect(intent).toHaveBeenCalledWith('source', { source: next });
   });
 
+  it.each(['staged', 'commit'] as const)('opens nothing from the %s view', (source) => {
+    const { intent, container } = renderTab(payload({
+      source, files: [file({ path: 'a.txt' }), file({ path: 'pic.png', binary: true, hunks: [] })],
+    }));
+    const name = screen.getByTitle('a.txt');
+    expect(name).toBeDisabled();
+    expect(screen.getByTitle('pic.png')).toBeDisabled();
+    fireEvent.click(name);
+    fireEvent.click(screen.getByTitle('pic.png'));
+    fireEvent.doubleClick(container.querySelector('.diff-line.diff-added') as HTMLElement);
+    fireEvent.keyDown(body(), { key: 'ArrowDown' });
+    fireEvent.keyDown(body(), { key: 'Enter' });
+    expect(intent.mock.calls.filter(([name_]) => name_ === 'open' || name_ === 'open-media')).toEqual([]);
+    expect(body()).toHaveClass('diff-inert');
+  });
+
+  it('opens files from the all-changes view', () => {
+    const { intent, container } = renderTab(payload({ source: 'all' }));
+    expect(body()).not.toHaveClass('diff-inert');
+    fireEvent.click(screen.getByTitle('a.txt'));
+    fireEvent.doubleClick(container.querySelector('.diff-line.diff-added') as HTMLElement);
+    fireEvent.keyDown(body(), { key: 'ArrowDown' });
+    fireEvent.keyDown(body(), { key: 'Enter' });
+    expect(intent.mock.calls.filter(([name]) => name === 'open')).toEqual([
+      ['open', { path: 'a.txt', line: 1 }], ['open', { path: 'a.txt', line: 3 }], ['open', { path: 'a.txt', line: 3 }],
+    ]);
+  });
+
   it('starts every file entry over when the change source changes', () => {
     const { container, update } = renderTab(payload({ files: [wholeFile()] }));
     fireEvent.click(screen.getByRole('button', { name: 'Cycle file view' }));

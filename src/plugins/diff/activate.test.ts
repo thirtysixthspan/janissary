@@ -753,6 +753,28 @@ describe('diff plugin activation', () => {
     });
   });
 
+  it('opens nothing from the staged or last-commit view, and opens again from all changes', async () => {
+    const { capabilities, updateTab, openInEditor, dispatchLineWithOutput } = makeCapabilities({
+      originTab: vi.fn(() => ({ label: 'shell', cwd: repo, root: repo, workspace: undefined })),
+    });
+    const activation = activate();
+    activation.command?.('', capabilities);
+    await settled(updateTab);
+    for (const source of ['staged', 'commit']) {
+      activation.intent(intent(settledTab, 'source', { source }), capabilities);
+      await settled(updateTab);
+      expect(activation.intent(intent(settledTab, 'open', { path: 'a.txt', line: 1 }), capabilities)).toBeNull();
+      expect(activation.intent(intent(settledTab, 'open-media', { path: 'pic.png' }), capabilities)).toBeNull();
+    }
+    expect(openInEditor).not.toHaveBeenCalled();
+    expect(dispatchLineWithOutput).not.toHaveBeenCalled();
+
+    activation.intent(intent(settledTab, 'source', { source: 'all' }), capabilities);
+    await settled(updateTab);
+    activation.intent(intent(settledTab, 'open', { path: 'a.txt', line: 1 }), capabilities);
+    expect(openInEditor).toHaveBeenCalledWith(path.join(repo, 'a.txt'), 1);
+  });
+
   it('rejects a source intent that names no change source', () => {
     const { capabilities } = makeCapabilities();
     expect(() => activate().intent(intent(settledTab, 'source', { source: 'HEAD~2' }), capabilities))

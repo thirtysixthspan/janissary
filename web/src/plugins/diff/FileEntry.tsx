@@ -11,13 +11,15 @@ import { FileViewControl, isFullFileContext } from './FileViewControl';
 
 // One changed file: its header — the path, the rename it came from, its status, its add and delete
 // counts — and every hunk it holds. A deleted file's header is inert, because there is no file to
-// open; a binary file's header opens the media tab its extension already opens instead.
+// open; a binary file's header opens the media tab its extension already opens instead. An entry that
+// is not `openable` — the staged and last-commit views — opens nothing at all, the same way.
 //
 // `offset` is how many hunks the files above this one contribute to the walk's flat list, and a hunk
 // with no lines contributes none, which is what keeps a walked index pointing at a real hunk.
-export function FileEntry({ file, split, offset, walked, hasWalkedHunk, onSelectHunk, onOpenFile, onOpenLine, onOpenMedia, onToggleFullFile }: {
+export function FileEntry({ file, split, openable = true, offset, walked, hasWalkedHunk, onSelectHunk, onOpenFile, onOpenLine, onOpenMedia, onToggleFullFile }: {
   file: DiffFile;
   split: boolean;
+  openable?: boolean;
   offset: number;
   walked: number | null;
   hasWalkedHunk: boolean;
@@ -64,7 +66,7 @@ export function FileEntry({ file, split, offset, walked, hasWalkedHunk, onSelect
           <button
             type="button"
             className="diff-file-name"
-            disabled={file.deleted}
+            disabled={file.deleted === true || !openable}
             title={file.path}
             onClick={file.binary ? onOpenMedia : openName}
           >
@@ -87,7 +89,7 @@ export function FileEntry({ file, split, offset, walked, hasWalkedHunk, onSelect
             onSelect: () => { if (spot >= 0) onSelectHunk(spot); },
             // A deleted file's hunks are inert: there is no file to take the user to, and the line
             // numbers they carry are the old file's.
-            onOpenLine: file.deleted ? () => {} : (line: { number: number; jump: number }) => { onOpenLine(line); },
+            onOpenLine: file.deleted || !openable ? () => {} : (line: { number: number; jump: number }) => { onOpenLine(line); },
           };
           return (
             <React.Fragment key={index}>

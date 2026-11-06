@@ -25,6 +25,9 @@ export function DiffTab({
   const setLayout = (next: boolean) => { void capabilities.intent('layout', { split: next }); };
   const setSource = (next: DiffSource) => { void capabilities.intent('source', { source: next }); };
   const files = payload.files;
+  // Only the all-changes view opens files: the staged and last-commit views show content the
+  // working-tree file may no longer hold.
+  const openable = payload.source === 'all';
   const fullFileScroll = useRef<number | null>(null);
 
   useDiffRefresh(useCallback(() => capabilities.intent('refresh', {}), [capabilities]));
@@ -67,9 +70,9 @@ export function DiffTab({
     }
     if (event.key === 'Enter' && walk.spot) {
       event.preventDefault();
-      openLine(files[walk.spot.file].path, walk.spot.line);
+      if (openable) openLine(files[walk.spot.file].path, walk.spot.line);
     }
-  }, [walk, files, openLine]);
+  }, [walk, files, openLine, openable]);
 
   return (
     <div className="plugin-tab diff-tab" data-doc-shot="diff-tab">
@@ -101,7 +104,7 @@ export function DiffTab({
         </span>
       </div>
       <div
-        className="diff-body"
+        className={openable ? 'diff-body' : 'diff-body diff-inert'}
         ref={walk.listRef}
         tabIndex={0}
         onKeyDown={onKeyDown}
@@ -114,6 +117,7 @@ export function DiffTab({
             key={JSON.stringify([payload.root, payload.source, file.path])}
             file={file}
             split={split}
+            openable={openable}
             offset={hunkOffset(files, index)}
             walked={walk.selected}
             hasWalkedHunk={walk.spot?.file === index}
