@@ -10,10 +10,10 @@ import { runCorePrompt } from './run-prompt.js';
 import type { Managers } from '../managers.js';
 import type { RoleEntry } from '../plugins/roles/shared.js';
 import {
-  attemptOrder, exhaustedError, fallbackNotice, NO_ASK_MODEL, readRoleSettings,
+  attemptOrder, exhaustedError, fallbackNotice, noRoleModels, readRoleSettings,
   type AcpRoleSettings, type AttemptFailure,
 } from './ask-role.js';
-import { acpRoleRuntime, hasAcpPrompt } from './role-state.js';
+import { acpRoleRuntime, existingAcpRoleRuntime } from './role-state.js';
 import { DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
 
 const STILL_CONNECTING = 'ACP: the remote session is still connecting.';
@@ -44,7 +44,7 @@ export class AcpManager extends AcpSessionManager {
     if (this.stillConnecting(label)) return { error: STILL_CONNECTING };
     const settings = this.roleSettings(this.managers.tab.launchDir, role);
     const entries = this.queueFor(label, settings, role);
-    if (entries.length === 0) return { error: NO_ASK_MODEL };
+    if (entries.length === 0) return { error: noRoleModels(role) };
     if (request?.withoutTools === true) tabRuntime(tab).acpWithoutTools = true;
     const failures: AttemptFailure[] = [];
     for (const entry of entries) {
@@ -61,7 +61,7 @@ export class AcpManager extends AcpSessionManager {
         failures.push({ entry, error: output });
       }
     }
-    return { error: failures.length > 1 ? exhaustedError(failures) : failures[0].error };
+    return { error: failures.length > 1 ? exhaustedError(failures, role) : failures[0].error };
   }
 
   async prompt(label: string, command: string, role: AcpRole = DEFAULT_ACP_ROLE): Promise<string> {
@@ -84,13 +84,13 @@ export class AcpManager extends AcpSessionManager {
     const runtime = tabRuntime(tab);
     const prefix = role === 'ask' ? /^ask\b\s*/i : /^tell\b\s*/i;
     const prompt = command.replace(prefix, '').trim();
-    const refusal = hasAcpPrompt(runtime) ? 'ACP: a prompt is already running.'
+    const refusal = existingAcpRoleRuntime(runtime, role)?.prompt ? 'ACP: a prompt is already running.'
       : prompt ? this.stillConnecting(label) ? STILL_CONNECTING : undefined
-        : 'Usage: ask <prompt>.';
+        : `Usage: ${role} <prompt>.`;
     const settings = refusal ? undefined : this.roleSettings(this.managers.tab.launchDir, role);
     const queue = settings ? this.queueFor(label, settings, role) : [];
     if (refusal || !settings || queue.length === 0) {
-      const error = refusal ?? NO_ASK_MODEL;
+      const error = refusal ?? noRoleModels(role);
       appendAcp(this.managers, label, { input: command, output: error });
       onDone({ answered: false, error });
       return;
@@ -105,7 +105,7 @@ export class AcpManager extends AcpSessionManager {
     const tab = this.managers.tab.byLabel(label);
     const [entry] = attempt.queue;
     if (!tab) { attempt.onDone({ answered: false, error: 'Tab not found' }); return; }
-    if (!entry) { attempt.onDone({ answered: false, error: NO_ASK_MODEL }); return; }
+    if (!entry) { attempt.onDone({ answered: false, error: noRoleModels(attempt.role) }); return; }
     const runtime = tabRuntime(tab);
     const request: AcpPendingPrompt = {
       finish: (result) => { this.settleAttempt(label, attempt, request, result); },
@@ -114,6 +114,7 @@ export class AcpManager extends AcpSessionManager {
       role: attempt.role,
       roleName: attempt.settings.name,
       commands: [...attempt.settings.commands],
+      runningEntries: new Set(),
     };
     acpRoleRuntime(runtime, attempt.role).prompt = request;
     try {
@@ -142,7 +143,8 @@ export class AcpManager extends AcpSessionManager {
       this.attempt(label, { ...attempt, queue: rest, failures });
       return;
     }
-    attempt.onDone(failed && failures.length > 1 ? { answered: false, error: exhaustedError(failures) } : result);
+    attempt.onDone(failed && failures.length > 1
+      ? { answered: false, error: exhaustedError(failures, attempt.role) } : result);
   }
 
   private queueFor(label: string, settings: AcpRoleSettings, role: AcpRole): RoleEntry[] {

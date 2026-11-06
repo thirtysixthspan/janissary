@@ -3,6 +3,7 @@ import type { AcpLoopHandlers, AcpOptions, AcpSession } from './types.js';
 import type { RoleEntry } from '../plugins/roles/shared.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import type { AcpRole } from './role.js';
+import type { AcpRoleSettings } from './ask-role.js';
 import { makeTab } from '../tab/index.js';
 
 const mocks = vi.hoisted(() => ({
@@ -23,7 +24,10 @@ const CODEX: RoleEntry = { harness: 'codex', model: 'gpt-6-luna', effort: 'high'
 
 const sessions: AcpSession[] = [];
 
-function setup(entries: RoleEntry[] = [OPENCODE, CLAUDE, CODEX]) {
+function setup(
+  entries: RoleEntry[] = [OPENCODE, CLAUDE, CODEX],
+  roleSettings?: (root: string, role: AcpRole) => AcpRoleSettings,
+) {
   mocks.connectAcp.mockImplementation(() => {
     const session: AcpSession = { prompt: vi.fn(), kill: vi.fn(), cancel: vi.fn(async () => {}), shutdown: vi.fn(async () => {}) };
     sessions.push(session);
@@ -52,7 +56,7 @@ function setup(entries: RoleEntry[] = [OPENCODE, CLAUDE, CODEX]) {
   const askModels = vi.fn((_root: string, role: AcpRole) => ({
     name: role, entries: entries.map((entry) => ({ ...entry })), commands: [...NATIVE_ACP_COMMANDS],
   }));
-  return { acp: new AcpManager(managers, askModels), append, askModels, enabledModels };
+  return { acp: new AcpManager(managers, roleSettings ?? askModels), append, askModels, enabledModels };
 }
 
 const launched = (call: number) => mocks.connectAcp.mock.calls[call][0] as AcpOptions;
@@ -238,6 +242,48 @@ describe('AcpManager — ask role fallback', () => {
     expect(append).toHaveBeenCalledWith('tab1', { input: 'ask hello', output: 'ACP: the ask role lists no models.' });
     expect(acp.start('tab1')).toEqual({ error: 'ACP: the ask role lists no models.' });
     expect(mocks.connectAcp).not.toHaveBeenCalled();
+  });
+
+  it('uses tell-specific empty-model and usage messages', () => {
+    const settings = (_root: string, role: AcpRole) => ({ name: role, entries: [], commands: [] });
+    const { acp, append } = setup([], settings);
+    const onDone = vi.fn();
+
+    acp.run('tab1', 'tell hello', onDone, 'tell');
+    expect(onDone).toHaveBeenCalledWith({ answered: false, error: 'ACP: the tell role lists no models.' });
+    expect(append).toHaveBeenCalledWith('tab1', { input: 'tell hello', output: 'ACP: the tell role lists no models.' });
+    expect(acp.start('tab1', undefined, 'tell')).toEqual({ error: 'ACP: the tell role lists no models.' });
+    expect(mocks.connectAcp).not.toHaveBeenCalled();
+
+    const usage = vi.fn();
+    acp.run('tab1', 'tell', usage, 'tell');
+    expect(usage).toHaveBeenCalledWith({ answered: false, error: 'Usage: tell <prompt>.' });
+  });
+
+  it('names tell in prompt and startup exhaustion while keeping tell fallback order', () => {
+    const settings = (_root: string, role: AcpRole) => ({
+      name: role, entries: [CLAUDE, OPENCODE], commands: [],
+    });
+    const { acp } = setup([OPENCODE, CLAUDE], settings);
+    const onDone = vi.fn();
+
+    acp.run('tab1', 'tell hello', onDone, 'tell');
+    expect(launched(0).env).toMatchObject({ ANTHROPIC_MODEL: CLAUDE.model });
+    loop(0).error('first failed');
+    expect(launched(1).command).toBe('opencode');
+    loop(1).error('second failed');
+    expect(onDone).toHaveBeenCalledWith({
+      answered: false,
+      error: [
+        'ACP: every model in the tell role failed.',
+        `- claude ${CLAUDE.model}: ACP error: first failed`,
+        `- opencode ${OPENCODE.model}: ACP error: second failed`,
+      ].join('\n'),
+    });
+
+    const startup = setup([OPENCODE, CLAUDE], settings);
+    mocks.connectAcp.mockImplementation(() => { throw new Error('unavailable'); });
+    expect(startup.acp.start('tab1', undefined, 'tell').error).toContain('ACP: every model in the tell role failed.');
   });
 
   it('refuses when every ask-role model is disabled', () => {

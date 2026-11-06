@@ -1,11 +1,16 @@
 import { homedir } from 'node:os';
 import { DEFAULT_ROLES, readRolesFile } from '../plugins/roles/roles-file.js';
 import type { Role, RoleEntry } from '../plugins/roles/shared.js';
+import type { AcpRole } from './role.js';
 
 // The role whose entries the core ACP session launches, in order of preference.
 export const ASK_ROLE = 'ask';
 
 export const NO_ASK_MODEL = 'ACP: the ask role lists no models.';
+
+export function noRoleModels(role: AcpRole): string {
+  return `ACP: the ${role} role lists no models.`;
+}
 
 export type AskModels = (root: string) => RoleEntry[];
 
@@ -77,9 +82,9 @@ export function fallbackNotice(failed: RoleEntry, next: RoleEntry): string {
 
 export type AttemptFailure = { entry: RoleEntry; error: string };
 
-export function exhaustedError(failures: readonly AttemptFailure[]): string {
+export function exhaustedError(failures: readonly AttemptFailure[], role: AcpRole = 'ask'): string {
   return [
-    'ACP: every model in the ask role failed.',
+    `ACP: every model in the ${role} role failed.`,
     ...failures.map(({ entry, error }) => `- ${describeEntry(entry)}: ${error}`),
   ].join('\n');
 }

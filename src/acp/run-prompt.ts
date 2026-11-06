@@ -1,7 +1,7 @@
 import type { Managers } from '../managers.js';
 import type { AcpSession } from './types.js';
 import type { AcpPendingPrompt } from './prompt-state.js';
-import type { TabRuntime } from '../tab/types.js';
+import type { LogEntry, TabRuntime } from '../tab/types.js';
 import { runAcpToolLoop } from './loop.js';
 import { guardAcpHandlers } from './guard-handlers.js';
 import { appendAcp, settleAcpPrompt } from './response.js';
@@ -20,7 +20,7 @@ export function runCorePrompt(
   const roleState = acpRoleRuntime(runtime, request.role);
   const active = () => current() && roleState.prompt === request && !request.abort.signal.aborted;
   const updateRunning = (output: string, running: boolean) => {
-    managers.tab.updateRunning(label, { markdown: true }, output, running, { trailing: true });
+    managers.tab.updateRunning(label, { markdown: true, entries: request.runningEntries }, output, running, { trailing: true });
   };
   const tools = runtime.acpWithoutTools === true ? [] : createAcpToolTable(
     managers, request.roleName, request.commands, request.abort.signal,
@@ -60,7 +60,9 @@ export function runCorePrompt(
     startTurn: (isFirst) => {
       managers.tab.addBusy(label);
       if (isFirst) notify(managers, 'agent-start', label);
-      appendAcp(managers, label, { input: isFirst ? request.prompt : '', output: '', running: true, markdown: true });
+      const entry: LogEntry = { input: isFirst ? request.prompt : '', output: '', running: true, markdown: true };
+      request.runningEntries.add(entry);
+      appendAcp(managers, label, entry);
     },
     chunk: (buffer) => updateRunning(buffer, true),
     endTurn: (final) => { updateRunning(final, false); lastAnswer = final; request.replied = true; },

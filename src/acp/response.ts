@@ -4,7 +4,7 @@ import type { LogEntry } from '../tab/types.js';
 import type { AcpPromptResult } from './types.js';
 import { messageBus } from '../bus.js';
 import { answerCoreRecord } from './record-feed.js';
-import { acpRoleRuntime } from './role-state.js';
+import { acpRoleRuntime, hasAcpPrompt } from './role-state.js';
 import { DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
 
 export function appendAcp(managers: Managers, label: string, entry: LogEntry): void {
@@ -36,13 +36,13 @@ export function settleAcpPrompt(
   const runtime = tab?.runtime;
   const state = runtime ? acpRoleRuntime(runtime, role) : undefined;
   const pending = state?.prompt;
-  if (!pending || !tab?.runtime) { afterSettlement?.(); return; }
+  if (!tab || !runtime || !state || !pending) { afterSettlement?.(); return; }
   answerCoreRecord(managers.acpRecords, pending, result);
   delete state.prompt;
   pending.abort.abort();
-  const running = tab.log?.findLast((entry) => entry.running && tab.runtime?.acpEntries?.has(entry));
-  if (running) managers.tab.updateRunning(label, { markdown: true }, running.output, false);
-  managers.tab.deleteBusy(label);
+  const running = tab.log?.findLast((entry) => entry.running && pending.runningEntries.has(entry));
+  if (running) managers.tab.updateRunning(label, { markdown: true, entries: pending.runningEntries }, running.output, false);
+  if (!hasAcpPrompt(runtime)) managers.tab.deleteBusy(label);
   afterSettlement?.();
   pending.finish(result);
   messageBus.emit('state', { type: 'dirty' });

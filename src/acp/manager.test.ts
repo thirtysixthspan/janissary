@@ -230,7 +230,10 @@ describe('AcpManager.run', () => {
     acp.run('tab1', 'ask hello', onDone);
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.error('something failed');
-    expect(updateRunning).toHaveBeenCalledWith('tab1', { markdown: true }, 'ACP error: something failed', false, expect.objectContaining({ trailing: true }));
+    expect(updateRunning).toHaveBeenCalledWith(
+      'tab1', expect.objectContaining({ markdown: true, entries: expect.any(Set) }),
+      'ACP error: something failed', false, expect.objectContaining({ trailing: true }),
+    );
     expect(deleteBusy).toHaveBeenCalledOnce();
     expect(onDone).toHaveBeenCalledWith({ answered: false, error: 'ACP error: something failed' });
   });
@@ -339,7 +342,10 @@ describe('AcpManager.run', () => {
     acp.run('tab1', 'ask hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.chunk('response so far');
-    expect(updateRunning).toHaveBeenCalledWith('tab1', { markdown: true }, 'response so far', true, expect.anything());
+    expect(updateRunning).toHaveBeenCalledWith(
+      'tab1', expect.objectContaining({ markdown: true, entries: expect.any(Set) }),
+      'response so far', true, expect.anything(),
+    );
   });
 
   it('chunk handler leaves an empty buffer unwrapped', () => {
@@ -347,7 +353,9 @@ describe('AcpManager.run', () => {
     acp.run('tab1', 'ask hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.chunk('');
-    expect(updateRunning).toHaveBeenCalledWith('tab1', { markdown: true }, '', true, expect.anything());
+    expect(updateRunning).toHaveBeenCalledWith(
+      'tab1', expect.objectContaining({ markdown: true, entries: expect.any(Set) }), '', true, expect.anything(),
+    );
   });
 
   it('endTurn handler calls updateRunning with the final text verbatim', () => {
@@ -355,7 +363,10 @@ describe('AcpManager.run', () => {
     acp.run('tab1', 'ask hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.endTurn('the final answer');
-    expect(updateRunning).toHaveBeenCalledWith('tab1', { markdown: true }, 'the final answer', false, expect.anything());
+    expect(updateRunning).toHaveBeenCalledWith(
+      'tab1', expect.objectContaining({ markdown: true, entries: expect.any(Set) }),
+      'the final answer', false, expect.anything(),
+    );
   });
 
   it('endTurn handler leaves an empty final string unwrapped', () => {
@@ -363,7 +374,9 @@ describe('AcpManager.run', () => {
     acp.run('tab1', 'ask hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.endTurn('');
-    expect(updateRunning).toHaveBeenCalledWith('tab1', { markdown: true }, '', false, expect.anything());
+    expect(updateRunning).toHaveBeenCalledWith(
+      'tab1', expect.objectContaining({ markdown: true, entries: expect.any(Set) }), '', false, expect.anything(),
+    );
   });
 
   it('ranCommand handler appends the command result to the tab', () => {
@@ -479,7 +492,7 @@ describe('AcpManager.close', () => {
 });
 
 describe('AcpManager role sessions', () => {
-  it('keeps role sessions independent while preserving ask defaults and tab-wide prompt isolation', () => {
+  it('keeps role sessions and prompts independent while preserving ask defaults', () => {
     const roleSettings = vi.fn((_root: string, role: AcpRole) => ({
       name: role,
       entries: [role === 'ask' ? GEMINI : CLAUDE],
@@ -505,16 +518,79 @@ describe('AcpManager role sessions', () => {
     acp.run('tab1', 'ask current', askDone);
     const tellDone = vi.fn();
     acp.run('tab1', 'tell concurrent', tellDone, 'tell');
-    expect(tellDone).toHaveBeenCalledWith({ answered: false, error: 'ACP: a prompt is already running.' });
+    expect(tellDone).not.toHaveBeenCalled();
+    expect(mocks.runAcpToolLoop).toHaveBeenCalledTimes(2);
+    const duplicateAsk = vi.fn();
+    acp.run('tab1', 'ask again', duplicateAsk);
+    expect(duplicateAsk).toHaveBeenCalledWith({ answered: false, error: 'ACP: a prompt is already running.' });
 
     expect(acp.close('tab1', undefined, 'tell')).toBe(true);
     expect(acp.has('tab1')).toBe(true);
     expect(acp.has('tab1', 'tell')).toBe(false);
     expect(acp.sessionIdentity('tab1')).toBe(ask.session);
+    expect(tellDone).toHaveBeenCalledWith({ answered: false, error: 'ACP session closed.' });
     expect(askDone).not.toHaveBeenCalled();
     acp.close('tab1');
     expect(askDone).toHaveBeenCalledWith({ answered: false, error: 'ACP session closed.' });
     expect(acp.has('tab1')).toBe(false);
+  });
+
+  it('cancels only the selected role and keeps the tab busy until the other role settles', async () => {
+    const roleSettings = (_root: string, role: AcpRole) => ({
+      name: role, entries: [role === 'ask' ? GEMINI : CLAUDE], commands: [],
+    });
+    const { acp, deleteBusy } = setup([], roleSettings);
+    const askSession = makeSession();
+    const tellSession = makeSession();
+    mocks.connectAcp.mockReturnValueOnce(askSession).mockReturnValueOnce(tellSession);
+    acp.start('tab1');
+    acp.start('tab1', undefined, 'tell');
+    const askDone = vi.fn();
+    const tellDone = vi.fn();
+
+    acp.run('tab1', 'ask current', askDone);
+    acp.run('tab1', 'tell concurrent', tellDone, 'tell');
+    const askHandlers = mocks.runAcpToolLoop.mock.calls.at(-2)![3] as AcpLoopHandlers;
+    const tellHandlers = mocks.runAcpToolLoop.mock.calls.at(-1)![3] as AcpLoopHandlers;
+    askHandlers.startTurn(true);
+    tellHandlers.startTurn(true);
+
+    await expect(acp.cancel('tab1')).resolves.toBe(true);
+
+    expect(askSession.cancel).toHaveBeenCalledOnce();
+    expect(tellSession.cancel).not.toHaveBeenCalled();
+    expect(askDone).toHaveBeenCalledWith({ answered: false, error: 'ACP: prompt cancelled.' });
+    expect(tellDone).not.toHaveBeenCalled();
+    expect(deleteBusy).not.toHaveBeenCalled();
+
+    acp.close('tab1', undefined, 'tell');
+    expect(tellDone).toHaveBeenCalledWith({ answered: false, error: 'ACP session closed.' });
+    expect(deleteBusy).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the no-tools override in force for both role prompts', () => {
+    const roleSettings = (_root: string, role: AcpRole) => ({
+      name: role, entries: [role === 'ask' ? GEMINI : CLAUDE], commands: [...NATIVE_ACP_COMMANDS],
+    });
+    const { acp } = setup([], roleSettings);
+    acp.start('tab1', { withoutTools: true });
+    acp.start('tab1', undefined, 'tell');
+
+    acp.run('tab1', 'ask current');
+    acp.run('tab1', 'tell concurrent', () => {}, 'tell');
+
+    const calls = mocks.runAcpToolLoop.mock.calls.slice(-2);
+    const primers = calls.map((call) => (call[2] as AcpLoopDeps).primer);
+    expect(primers).toHaveLength(2);
+    for (const primer of primers) {
+      expect(primer).not.toContain('db primer');
+      expect(primer).not.toContain('browser primer text');
+    }
+    for (const call of calls) {
+      const deps = call[2] as AcpLoopDeps;
+      expect(deps.extractCommand('db sqlite list')).toBeNull();
+      expect(deps.extractCommand('browser goto https://example.test')).toBeNull();
+    }
   });
 
   it('closes every role session with closeAll', () => {
@@ -608,6 +684,40 @@ describe('AcpManager — remote tabs', () => {
     }));
     expect(mocks.runAcpToolLoop).toHaveBeenCalledOnce();
     expect(acp.has('tab1')).toBe(true);
+  });
+
+  it('keeps ask and tell remote sessions on separate ids over one channel', () => {
+    const { acp, channel } = remoteSetup();
+    const ask = acp.start('tab1');
+    const tell = acp.start('tab1', undefined, 'tell');
+    const askHandlers = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
+    const tellHandlers = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
+    const askSession = acp.session('tab1', '/cwd', GEMINI, { onError: vi.fn(), onConnect: vi.fn() }, 'ask');
+    const tellSession = acp.session('tab1', '/cwd', CLAUDE, { onError: vi.fn(), onConnect: vi.fn() }, 'tell');
+    const listeners = channel.attachAcp.mock.calls.map(([, listener]) => listener as {
+      onChunk: (text: string) => void;
+      onEnd: (reason: string) => void;
+    });
+
+    askSession.prompt('ask text', askHandlers);
+    tellSession.prompt('tell text', tellHandlers);
+    listeners[0]!.onChunk('ask partial');
+    listeners[1]!.onChunk('tell partial');
+    listeners[0]!.onEnd('end_turn');
+    listeners[1]!.onEnd('end_turn');
+
+    expect(ask.session).toBeDefined();
+    expect(tell.session).toBeDefined();
+    expect(tell.session).not.toBe(ask.session);
+    expect(channel.attachAcp.mock.calls.map(([id]) => id)).toEqual(['racp1', 'racp2']);
+    expect(channel.send.mock.calls.filter(([frame]) => (frame as { type: string }).type === 'acp-open')
+      .map(([frame]) => (frame as { id: string }).id)).toEqual(['racp1', 'racp2']);
+    expect(channel.send).toHaveBeenCalledWith({ type: 'acp-prompt', id: 'racp1', text: 'ask text' });
+    expect(channel.send).toHaveBeenCalledWith({ type: 'acp-prompt', id: 'racp2', text: 'tell text' });
+    expect(askHandlers.onChunk).toHaveBeenCalledWith('ask partial');
+    expect(tellHandlers.onChunk).toHaveBeenCalledWith('tell partial');
+    expect(askHandlers.onEnd).toHaveBeenCalledWith('end_turn');
+    expect(tellHandlers.onEnd).toHaveBeenCalledWith('end_turn');
   });
 
   // The model is chosen here and sent across, so a remote session cannot silently disagree with a

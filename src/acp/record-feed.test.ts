@@ -52,18 +52,18 @@ function setup(remote = false) {
     commands: [...NATIVE_ACP_COMMANDS],
   }));
   if (remote) managers.tab.tabs[0].remote = { host: 'host', address: 'host' };
-  const handshake = () => {
-    if (remote) listeners.at(-1)!.onReady(true);
-    else sessions.at(-1)!.options.onConnect?.({ provider: 'reported', model: 'mode' });
+  const handshake = (index = (remote ? listeners : sessions).length - 1) => {
+    if (remote) listeners[index]!.onReady(true);
+    else sessions[index]!.options.onConnect?.({ provider: 'reported', model: 'mode' });
   };
-  const chunk = (text: string) => {
-    if (remote) listeners.at(-1)!.onChunk(text);
-    else sessions.at(-1)!.control.current!.handlers.onChunk(text);
+  const chunk = (text: string, index = (remote ? listeners : sessions).length - 1) => {
+    if (remote) listeners[index]!.onChunk(text);
+    else sessions[index]!.control.current!.handlers.onChunk(text);
   };
-  const end = () => {
-    if (remote) listeners.at(-1)!.onEnd('end_turn');
+  const end = (index = (remote ? listeners : sessions).length - 1) => {
+    if (remote) listeners[index]!.onEnd('end_turn');
     else {
-      const control = sessions.at(-1)!.control;
+      const control = sessions[index]!.control;
       control.end(control.current!, 'end_turn');
     }
   };
@@ -83,6 +83,38 @@ afterEach(() => {
 });
 
 describe('core record feeds', () => {
+  it('isolates concurrent role streams and keeps the tab busy until both settle', async () => {
+    const f = setup();
+    const ask = f.managers.acp.prompt('owner', 'ask first');
+    const tell = f.managers.acp.prompt('owner', 'tell second', 'tell');
+
+    expect(f.sessions).toHaveLength(2);
+    f.handshake(0);
+    f.handshake(1);
+    const askId = f.managers.tab.byLabel('owner')!.runtime!.acpRoles!.ask!.recordId!;
+    const tellId = f.managers.tab.byLabel('owner')!.runtime!.acpRoles!.tell!.recordId!;
+    expect(askId).not.toBe(tellId);
+    expect(f.records.window(askId)?.source).toMatchObject({ role: 'ask' });
+    expect(f.records.window(tellId)?.source).toMatchObject({ role: 'tell' });
+
+    f.chunk('ask partial', 0);
+    f.chunk('tell partial', 1);
+    f.end(0);
+    await expect(ask).resolves.toBe('ask partial');
+    expect(f.managers.tab.byLabel('owner')!.runtime?.busy).toBe(true);
+
+    f.chunk(' + tell final', 1);
+    f.end(1);
+    await expect(tell).resolves.toBe('tell partial + tell final');
+    expect(f.managers.tab.byLabel('owner')!.runtime?.busy).toBe(false);
+    expect(f.records.window(askId)?.blocks).toMatchObject([{ prompt: 'first', answer: 'ask partial' }]);
+    expect(f.records.window(tellId)?.blocks).toMatchObject([{ prompt: 'second', answer: 'tell partial + tell final' }]);
+    expect(f.managers.tab.byLabel('owner')?.log.map(({ input, output }) => ({ input, output }))).toEqual([
+      { input: 'first', output: 'ask partial' },
+      { input: 'second', output: 'tell partial + tell final' },
+    ]);
+  });
+
   it('allows a close settlement callback to synchronously start a fresh session and record', async () => {
     const f = setup();
     let next: Promise<string> | undefined;
