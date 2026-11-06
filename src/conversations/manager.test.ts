@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { AcpSession, PromptHandlers } from '../acp/types.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
+import { BUNDLED_MODEL_CATALOG, type ModelCatalog } from '../models/catalog-file.js';
 import type { Tab } from '../tab/types.js';
 import { ConversationsManager } from './manager.js';
 import { ConversationSessions } from './sessions.js';
@@ -32,14 +33,18 @@ function fakeSession(): FakeSession {
   };
 }
 
-function fixture() {
+function fixture(modelCatalog: ModelCatalog = BUNDLED_MODEL_CATALOG) {
   const store = new ConversationStore({ home, projectDir: home });
   const reportStorageError = vi.fn();
   const tabs: Tab[] = [];
   const setCwd = vi.fn();
   const openOrRetarget = vi.fn();
   const openSibling = vi.fn();
+  const modelsFor = (harness: string) => (modelCatalog[harness] ?? [])
+    .filter((record) => record.disabled !== true)
+    .map((record) => record.id);
   const managers = {
+    models: { modelsFor },
     tab: { tabs, setCwd, byLabel: (label: string) => tabs.find((tab) => tab.label === label) },
     fileNavigator: { openOrRetarget },
     plugins: { openSibling },
@@ -51,7 +56,7 @@ function fixture() {
     now: () => ++time,
     reportStorageError,
   });
-  return { manager, managers, openSibling, openOrRetarget, reportStorageError, setCwd, store };
+  return { manager, managers, modelCatalog, modelsFor, openSibling, openOrRetarget, reportStorageError, setCwd, store };
 }
 
 beforeEach(() => {
@@ -706,6 +711,30 @@ describe('ConversationsManager', () => {
     } finally {
       manager.dispose();
     }
+  });
+
+  it('falls back from a saved model that becomes disabled before the next query', () => {
+    const modelCatalog: ModelCatalog = {
+      claude: [{ id: 'enabled-claude' }],
+      opencode: [{ id: 'selected-opencode' }],
+    };
+    const { manager, modelCatalog: liveCatalog, store } = fixture(modelCatalog);
+    const session = fakeSession();
+    mocks.connectAcp.mockReturnValue(session);
+    store.write({
+      schemaVersion: CONVERSATION_SCHEMA_VERSION,
+      id: 'first', title: 'Saved', createdAt: 1, updatedAt: 1,
+      pair: { harness: 'opencode', model: 'selected-opencode' }, turns: [],
+    });
+    manager.load('first');
+    const opencode = liveCatalog.opencode?.[0];
+    if (!opencode) throw new Error('Missing OpenCode model fixture.');
+    opencode.disabled = true;
+
+    expect(manager.view().models).toEqual([{ harness: 'claude', model: 'enabled-claude' }]);
+    expect(manager.send('first', 'hello')).toBe(true);
+    expect(manager.view().windows[0].pair).toEqual({ harness: 'claude', model: 'enabled-claude' });
+    manager.dispose();
   });
 
   it('persists every successful selection and leaves the remembered pair unchanged on rejection', () => {

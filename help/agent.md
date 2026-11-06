@@ -17,6 +17,8 @@ Run a task autonomously in a new agent session, with optional host, tab, group, 
 - `agent with skill review execute inspect the patch` starts a task using the named skill.
 - `agent with skill ask-user with skill perplexity-search execute build-a-feature.md` starts a task using both named skills.
 
+Without `using model`, the agent prefers `google/gemini-3.1-flash-lite` when enabled, then uses the first enabled OpenCode model. A disabled model cannot be selected; an explicit unknown or disabled model fails with `Agent: unknown model "<value>".`
+
 **Notes**
 
 - Every headed or headless run has a retained row in the connections tab, named `agent:<tab name>` after the tab that started it. The row's tooltip carries the run's title, `Agent: <task filename>`. Open that row for the run's connection tab, which takes the same `agent:<tab name>` title.

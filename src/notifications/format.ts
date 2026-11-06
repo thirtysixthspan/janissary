@@ -51,6 +51,7 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'rate-limited': { return `Agent '${tabLabel}' is being rate limited`; }
     case 'schedule-fire': { return `Scheduled: ${detail} in ${tabLabel}`; }
     case 'system-schedule-fire': { return detail ?? ''; }
+    case 'models-refresh': { return detail ?? ''; }
     case 'manual':
     case 'layout':
     case 'connection-closed':

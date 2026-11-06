@@ -10,7 +10,6 @@ import { runRemoteServer } from './remote/serve-start.js';
 import { parseE2EBrowserArgs, runE2EBrowser } from './browser/e2e-child.js';
 import { loadConfig } from './config.js';
 import { loadAgentNames } from './agent/names.js';
-import { loadHarnessModels } from './harness/models.js';
 import { loadProjectTokens } from './project/tokens.js';
 import { loadGitIdentity } from './git/identity.js';
 import { parseCliArgs, CliUsageError } from './cli-args.js';
@@ -73,7 +72,6 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   initStateDirectories({ projectDir: cwd, packageRoot: path.join(import.meta.dirname, '..') });
   loadConfig(cwd);
   loadAgentNames(cwd);
-  loadHarnessModels(cwd);
   loadProjectTokens(cwd);
   loadGitIdentity(cwd);
   clearStateDirectories();

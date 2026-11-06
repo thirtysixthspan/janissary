@@ -59,7 +59,7 @@ export async function executeAgentRun(
   if (run.outcome || run.abortController.signal.aborted) return { status: 'terminated', response: 'Agent terminated.', cleanupWarnings: [] };
   const prompt = taskPrompt(agentPrimer(run.snapshot), parameters);
   run.record?.prompt(prompt);
-  const selected = selectedModel(model);
+  const selected = selectedModel(model, managers.models.modelsFor('opencode'));
   const launch = acpLaunchFor({ harness: 'opencode', model: selected, variant: effort ?? 'medium' });
   const env = {
     ...launch.env,

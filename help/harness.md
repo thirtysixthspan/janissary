@@ -25,3 +25,5 @@ Launch `claude`, `opencode`, or `codex` with optional settings. Workspace, brows
 - `harness codex as reviewer on devbox in group Review --offline --no-browser -y --model gpt-5 --effort high with inspect the failing tests` starts Codex on `devbox` with the named settings and prompt.
 - `harness capture reviewer` opens a screen capture from the harness tab labeled `reviewer`.
 - `harness transcript reviewer` opens the session transcript from the harness tab labeled `reviewer`.
+
+The `--model` value must be enabled in the current catalog. Use `models` to review or refresh that catalog; a disabled or unknown model is refused with `Unknown model "<model>" for harness "<name>" — add it to known-models.json.`

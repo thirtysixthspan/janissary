@@ -21,10 +21,8 @@ type Properties = {
 
 type EntryDrop = { intent: string; payload: Record<string, unknown> } | null;
 
-// One role card: the name and description edit in place, the entries below carry their effort and a
-// remove control, and the card itself is both a drag source (the grip moves the role) and a drop
-// target (a catalog model lands here as a new entry). Every edit is one intent; the card owns no
-// rule of its own.
+// One role card: the name and description edit in place, entries carry their effort and a remove
+// control, and the grip moves the role while the card accepts a role reorder.
 export function RoleCard({ role, index, efforts, models, capabilities, onRefusal }: Properties) {
   const nameDraft = useRoleDraft(role.name);
   const descriptionDraft = useRoleDraft(role.description);
@@ -82,7 +80,7 @@ export function RoleCard({ role, index, efforts, models, capabilities, onRefusal
     <div
       className={drop ? 'roles-card roles-drop' : 'roles-card'}
       onDragOver={(event) => {
-        allowDrop(event, (drag) => drag.kind === 'catalog' || drag.kind === 'role');
+        allowDrop(event, (drag) => drag.kind === 'role');
         if (event.defaultPrevented) setDrop(true);
       }}
       onDragLeave={() => setDrop(false)}
@@ -139,7 +137,8 @@ export function RoleCard({ role, index, efforts, models, capabilities, onRefusal
           return (
           <li
             key={`${entry.harness}:${entry.model}:${position}`}
-            className="roles-entry"
+            className={entry.missing === true ? 'roles-entry roles-entry-missing' : 'roles-entry'}
+            title={entry.missing === true ? 'Not in the model catalog' : undefined}
             draggable
             onDragStart={(event) => dragEntry(event, role.name, position, role.entries)}
             onDragEnd={dragEnd}

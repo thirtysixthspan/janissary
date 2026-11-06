@@ -13,11 +13,17 @@ import { messageBus } from '../bus.js';
 import { NOTIFICATION_ALERT_DEFAULTS } from './alert-defaults.js';
 
 const allOn: NotificationConfig = {
-  events: { stateChange: true, scheduleFire: true, agentStart: true, rateLimited: true, systemScheduleFire: true },
+  events: {
+    stateChange: true, scheduleFire: true, agentStart: true, rateLimited: true,
+    systemScheduleFire: true, modelsRefresh: true,
+  },
   alerts: NOTIFICATION_ALERT_DEFAULTS,
 };
 const allOff: NotificationConfig = {
-  events: { stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false, systemScheduleFire: false },
+  events: {
+    stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false,
+    systemScheduleFire: false, modelsRefresh: false,
+  },
   alerts: NOTIFICATION_ALERT_DEFAULTS,
 };
 
@@ -30,7 +36,9 @@ describe('shouldNotify covers every notification event', () => {
     [AmbientNotificationEvent, keyof NotificationConfig['events']]
   >;
   const explicitEvents = Object.keys(EXPLICIT_EVENTS) as ExplicitNotificationEvent[];
-  const untoggledExplicitEvents = explicitEvents.filter((event) => event !== 'system-schedule-fire');
+  const untoggledExplicitEvents = explicitEvents.filter((event) => (
+    event !== 'system-schedule-fire' && event !== 'models-refresh'
+  ));
 
   it.each(untoggledExplicitEvents)('fires for the explicit event %s whatever the config and focus say', (event) => {
     expect(shouldNotify(allOff, event, 'janus', 'janus')).toBe(true);
@@ -79,6 +87,30 @@ describe('shouldNotify — system-schedule-fire event', () => {
   it('renders its supplied message verbatim', () => {
     expect(notificationText('system-schedule-fire', 'system', 'System schedule nightly ran: script deploy'))
       .toBe('System schedule nightly ran: script deploy');
+  });
+});
+
+describe('shouldNotify — models-refresh event', () => {
+  it('is explicit but not ambient and uses its default-on toggle', () => {
+    expect(EXPLICIT_EVENTS['models-refresh']).toBe(true);
+    expect(Object.keys(AMBIENT_EVENTS)).not.toContain('models-refresh');
+    expect(shouldNotify(undefined, 'models-refresh', 'models', 'models')).toBe(true);
+    expect(shouldNotify(allOn, 'models-refresh', 'models', 'models')).toBe(true);
+  });
+
+  it('honors its toggle while bypassing focus suppression', () => {
+    expect(shouldNotify(allOff, 'models-refresh', 'models', 'models')).toBe(false);
+    expect(shouldNotify(allOn, 'models-refresh', 'models', 'models')).toBe(true);
+  });
+
+  it('never notifies from the notifications feed and uses the success alert', () => {
+    expect(shouldNotify(allOn, 'models-refresh', NOTIFICATIONS_LABEL, 'models')).toBe(false);
+    expect(NOTIFICATION_ALERT_DEFAULTS['models-refresh']).toEqual({ desktop: true, sound: 'success' });
+  });
+
+  it('renders its supplied message verbatim', () => {
+    expect(notificationText('models-refresh', 'models', 'Models refreshed: codex 2.'))
+      .toBe('Models refreshed: codex 2.');
   });
 });
 

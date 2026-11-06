@@ -16,7 +16,7 @@ import {
 } from './api.js';
 import { createPluginContext } from './context.js';
 import { HARNESS_NAMES } from '../harness/index.js';
-import { modelsFor } from '../harness/models.js';
+import { BUNDLED_MODEL_CATALOG, type ModelCatalog } from '../models/catalog-file.js';
 import { EFFORT_LEVELS } from '../harness/effort-levels.js';
 import { messageBus } from '../bus.js';
 import { TabPluginHost } from './host.js';
@@ -45,10 +45,14 @@ function declaration(
   };
 }
 
-function makeManagers() {
+function makeManagers(modelCatalog: ModelCatalog = BUNDLED_MODEL_CATALOG) {
   const append = vi.fn();
   const tabs = [{ label: 'janus', dotColor: '#fff', log: [] }];
+  const modelsFor = (harness: string) => (modelCatalog[harness] ?? [])
+    .filter((record) => record.disabled !== true)
+    .map((record) => record.id);
   const managers = {
+    models: { modelsFor },
     tab: {
       tabs, append, closeTab: vi.fn(), openPluginTab: vi.fn(), cur: () => tabs[0],
       launchDir: '/repo',
@@ -448,15 +452,30 @@ describe('capability revocation', () => {
   });
 
   it('serves the harness launch catalog the launcher dialog reads', () => {
+    const { managers } = makeManagers();
     const capabilities = createPluginContext(
-      makeManagers().managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => true,
+      managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => true,
     );
 
     const catalog = capabilities.harnessLaunchCatalog();
 
     expect(Object.keys(catalog.models)).toEqual(HARNESS_NAMES);
-    expect(catalog.models.claude).toEqual(modelsFor('claude'));
+    expect(catalog.models.claude).toEqual(managers.models.modelsFor('claude'));
     expect(catalog.efforts).toEqual([...EFFORT_LEVELS]);
+  });
+
+  it('returns enabled models from the latest manager catalog', () => {
+    const modelCatalog: ModelCatalog = {
+      claude: [{ id: 'enabled' }, { id: 'disabled', disabled: true }],
+    };
+    const { managers } = makeManagers(modelCatalog);
+    const capabilities = createPluginContext(
+      managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => true,
+    );
+
+    expect(capabilities.harnessLaunchCatalog().models.claude).toEqual(['enabled']);
+    modelCatalog.claude = [{ id: 'after-refresh' }];
+    expect(capabilities.harnessLaunchCatalog().models.claude).toEqual(['after-refresh']);
   });
 
   it('answers an empty catalog to a revoked plugin', () => {

@@ -155,6 +155,7 @@ type ScheduleEvent =
   // Raised on every scheduler tick, changed or not.
   | { type: 'tick' };
 type ConversationsEvent = { type: 'changed' };
+type ModelsEvent = { type: 'changed' };
 // The remote-session set changed: one was launched, joined, detached, attached, ended, forgotten,
 // or lost its transport — or a plain `ssh <destination>` tab, which the list carries a row for and
 // which belongs to no channel at all, was opened or closed. Its own channel for the same reason `schedules` has one — a named,
@@ -191,7 +192,7 @@ type NotificationsEvent =
 export type BusChannels = {
   system: { type: 'resumed'; sleptMs: number };
   transcript: BusEvent; state: StateEvent; app: AppEvent; pty: PtyEvent; layout: LayoutEvent;
-  fileNavigator: FileNavigatorEvent; schedules: ScheduleEvent; conversations: ConversationsEvent;
+  fileNavigator: FileNavigatorEvent; schedules: ScheduleEvent; conversations: ConversationsEvent; models: ModelsEvent;
   sessions: SessionsEvent; notifications: NotificationsEvent; databases: DatabasesEvent;
   tabs: TabsEvent;
   agent: AgentEvent;

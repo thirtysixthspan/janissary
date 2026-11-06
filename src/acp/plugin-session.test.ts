@@ -38,6 +38,7 @@ function setup() {
   };
   mock.connect.mockImplementation((options: { onConnect(): void }) => { options.onConnect(); return session; });
   Object.assign(managers, {
+    models: { isKnownModel: () => true },
     plugins: { declarations: [{ id: 'any-plugin', capabilities: ['startAcp', 'promptAcp', 'resetAcp'] }] },
     database: { primer: 'db', isCommandLine: () => false, openDbs: () => [] },
     browser: { run: vi.fn() },

@@ -34,5 +34,6 @@ export function complete(managers: Managers, text: string, cursor: number, label
     { personas: listPersonas('monitor'), names: managers.monitor.namesFor(tab.label), targets },
     { names, scripts },
     files,
+    (harness) => managers.models.modelsFor(harness),
   );
 }

@@ -43,6 +43,7 @@ export function completeCommandLine(
   monitor?: MonitorCompletions,
   systemSchedule?: SystemScheduleCompletions,
   files?: FilesCompletions,
+  modelsFor?: (harness: string) => string[],
 ): CompletionResult {
   const cursor = readCompletionCursor(input, cursorOffset);
   const result = completeFilesCommand(cursor, files, cwd) ??
@@ -61,6 +62,6 @@ export function completeCommandLine(
     completeSearchCommand(cursor) ??
     completeSyntaxTheme(cursor, SYNTAX_THEMES) ??
     completeLayoutCommand(cursor) ??
-    completeHarnessModel(cursor);
+    (modelsFor ? completeHarnessModel(cursor, modelsFor) : null);
   return result ?? completeFilePath(cursor, cwd);
 }

@@ -245,6 +245,7 @@ describe('connectAcp', () => {
     const root = path.dirname(script);
     const records = new AcpSessionRecords({ projectDir: root });
     const managers = { acpRecords: records } as Managers;
+    managers.models = { isKnownModel: () => true } as Managers['models'];
     managers.tab = new TabManager(managers, root);
     managers.tab.tabs.push(makeTab('owner', '#fff'), makeTab('other', '#abc'));
     for (const tab of managers.tab.tabs) tab.remote = { address: 'stub-host', host: 'stub-host' };

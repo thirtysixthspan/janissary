@@ -9,6 +9,7 @@ import { autoApproveWithoutWorkspaceWarning } from './auto-approve.js';
 import { hasLeftoverWorkspace, isWorkspaceRunning, removeLeftoverWorkspace } from '../launch-name/leftover.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
+import { BUNDLED_MODEL_CATALOG, type ModelCatalog } from '../models/catalog-file.js';
 import type { Tab } from '../tab/types.js';
 import type { RemoteSessionView } from '../protocol.js';
 import { byLabel, harnessTab } from '../tab/lookup.js';
@@ -67,14 +68,23 @@ afterEach(() => {
   terminalRuntimeManagers.length = 0;
 });
 
-function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typeof vi.fn>; scheduleSet: ReturnType<typeof vi.fn> } {
+function makeManagers(
+  modelCatalog: ModelCatalog = BUNDLED_MODEL_CATALOG,
+): { managers: Managers; tabs: Tab[]; edit: ReturnType<typeof vi.fn>; scheduleSet: ReturnType<typeof vi.fn> } {
   const tabs: Tab[] = [];
   const creator = { label: 'janus', log: [] } as unknown as Tab;
   tabs.push(creator);
   const edit = vi.fn();
   const scheduleSet = vi.fn();
   const busy = new Set<string>();
+  const modelsFor = (harness: string) => (modelCatalog[harness] ?? [])
+    .filter((record) => record.disabled !== true)
+    .map((record) => record.id);
   const managers = {
+    models: {
+      modelsFor,
+      isKnownModel: (harness: string, model: string) => modelsFor(harness).includes(model),
+    },
     tab: {
       tabs,
       cur: () => creator,
@@ -756,6 +766,14 @@ describe('HarnessManager launch dialog view', () => {
     for (const name of view!.names) expect(Array.isArray(view!.models[name])).toBe(true);
   });
 
+  it('omits disabled models from launch choices', () => {
+    const { managers } = makeManagers({ claude: [{ id: 'enabled' }, { id: 'disabled', disabled: true }] });
+    const manager = new HarnessManager(managers);
+    manager.openLaunchDialog();
+
+    expect(manager.harnessLaunchView()!.models.claude).toEqual(['enabled']);
+  });
+
   it('delivers the harnesses that accept auto-approve while open', () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
@@ -796,6 +814,16 @@ describe('HarnessManager model/effort', () => {
     const manager = new HarnessManager(managers);
     expect(manager.run('harness opencode --model not-a-real-model')).toBe(
       'Unknown model "not-a-real-model" for harness "opencode" — add it to known-models.json.',
+    );
+    expect(managers.pty.spawn).not.toHaveBeenCalled();
+  });
+
+  it('refuses a disabled --model with the established unknown-model message', () => {
+    const { managers } = makeManagers({ opencode: [{ id: 'disabled', disabled: true }] });
+    const manager = new HarnessManager(managers);
+
+    expect(manager.run('harness opencode --model disabled')).toBe(
+      'Unknown model "disabled" for harness "opencode" — add it to known-models.json.',
     );
     expect(managers.pty.spawn).not.toHaveBeenCalled();
   });

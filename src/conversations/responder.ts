@@ -10,6 +10,7 @@ import {
   conversationPrompt,
   conversationTitle,
   DEFAULT_CONVERSATION_TITLE,
+  type ConversationModelsFor,
   hasConversationModel,
 } from './view.js';
 
@@ -36,6 +37,7 @@ export class ConversationResponder {
     private now: () => number,
     private changed: () => void,
     private reportStorageError: (id: string, message: string) => void,
+    private modelsFor: ConversationModelsFor,
   ) {}
 
   ids(): IterableIterator<string> {
@@ -47,9 +49,9 @@ export class ConversationResponder {
     if (this.inFlight.has(id) || !query.trim()) return false;
     const storedTurns = [...conversation.turns];
     const hadSession = this.sessions.has(id);
-    const pair = hasConversationModel(conversation.pair)
+    const pair = hasConversationModel(conversation.pair, this.modelsFor)
       ? conversation.pair
-      : availableConversationModels()[0] ?? conversation.pair;
+      : availableConversationModels(this.modelsFor)[0] ?? conversation.pair;
     conversation.pair = pair;
     const turn: ConversationTurnView = { query, response: '', pair, streaming: true };
     // The first query names a conversation nobody has named. One the user renamed keeps that name —

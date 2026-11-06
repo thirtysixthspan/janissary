@@ -29,7 +29,9 @@ function setup(entries: RoleEntry[] = [OPENCODE, CLAUDE, CODEX]) {
   });
   const tabs = [makeTab('tab1', '#fff')];
   const append = vi.fn();
+  const enabledModels = new Set(entries.map(({ harness, model }) => `${harness} ${model}`));
   const managers = {
+    models: { isKnownModel: (harness: string, model: string) => enabledModels.has(`${harness} ${model}`) },
     acpRecords: { begin: vi.fn(() => 'record-id'), prompt: vi.fn(() => true), activity: vi.fn(), answer: vi.fn(), close: vi.fn() },
     tab: {
       tabs,
@@ -46,7 +48,7 @@ function setup(entries: RoleEntry[] = [OPENCODE, CLAUDE, CODEX]) {
     questions: { register: vi.fn() },
   } as never;
   const askModels = vi.fn((_root: string) => entries);
-  return { acp: new AcpManager(managers, askModels), append, askModels };
+  return { acp: new AcpManager(managers, askModels), append, askModels, enabledModels };
 }
 
 const launched = (call: number) => mocks.connectAcp.mock.calls[call][0] as AcpOptions;
@@ -113,6 +115,19 @@ describe('AcpManager — ask role fallback', () => {
     expect(mocks.connectAcp).toHaveBeenCalledOnce();
     expect(launched(0).command).toBe('opencode');
     expect(append).toHaveBeenCalledWith('tab1', { input: 'ask hello', output: 'ACP error: no ACP adapter for harness "gemini".' });
+  });
+
+  it('skips a disabled noncurrent entry while preserving the other entries in order', () => {
+    const { acp, enabledModels } = setup([OPENCODE, CLAUDE, CODEX]);
+    enabledModels.delete(`${CLAUDE.harness} ${CLAUDE.model}`);
+
+    acp.run('tab1', 'ask hello');
+    loop(0).error('out of credits');
+
+    expect(mocks.connectAcp).toHaveBeenCalledTimes(2);
+    expect(launched(1).args).toEqual([
+      '@zed-industries/codex-acp', '-c', `model="${CODEX.model}"`, '-c', 'model_reasoning_effort="high"',
+    ]);
   });
 
   it('fails the request only once every model in the role has failed, naming each attempt', () => {
@@ -183,6 +198,18 @@ describe('AcpManager — ask role fallback', () => {
     expect(launched(2).command).toBe('opencode');
   });
 
+  it('filters a disabled current session and falls through to the next enabled entry', () => {
+    const { acp, enabledModels } = setup([OPENCODE, CLAUDE]);
+    acp.run('tab1', 'ask first');
+    answer(loop(0), 'from opencode');
+    enabledModels.delete(`${OPENCODE.harness} ${OPENCODE.model}`);
+
+    acp.run('tab1', 'ask again');
+
+    expect(mocks.connectAcp).toHaveBeenCalledTimes(2);
+    expect(launched(1).env).toMatchObject({ ANTHROPIC_MODEL: CLAUDE.model });
+  });
+
   it('starts the role’s first entry and reports its model', () => {
     const { acp } = setup([CLAUDE, OPENCODE]);
 
@@ -207,5 +234,18 @@ describe('AcpManager — ask role fallback', () => {
     expect(append).toHaveBeenCalledWith('tab1', { input: 'ask hello', output: 'ACP: the ask role lists no models.' });
     expect(acp.start('tab1')).toEqual({ error: 'ACP: the ask role lists no models.' });
     expect(mocks.connectAcp).not.toHaveBeenCalled();
+  });
+
+  it('refuses when every ask-role model is disabled', () => {
+    const { acp, append, enabledModels } = setup([OPENCODE, CLAUDE]);
+    enabledModels.clear();
+    const onDone = vi.fn();
+
+    acp.run('tab1', 'ask hello', onDone);
+
+    expect(onDone).toHaveBeenCalledWith({ answered: false, error: 'ACP: the ask role lists no models.' });
+    expect(append).toHaveBeenCalledWith('tab1', { input: 'ask hello', output: 'ACP: the ask role lists no models.' });
+    expect(mocks.connectAcp).not.toHaveBeenCalled();
+    expect(acp.start('tab1')).toEqual({ error: 'ACP: the ask role lists no models.' });
   });
 });

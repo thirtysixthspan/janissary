@@ -15,7 +15,8 @@ import {
   type TabPluginNotificationTopic,
 } from './api.js';
 import { createPluginContext } from './context.js';
-import { readTopicData, runTopicAction, subscribeTopic } from './topics.js';
+import { fileCapabilities } from './file-capabilities.js';
+import { emptyTopicData, readTopicData, runTopicAction, subscribeTopic } from './topics.js';
 import { emitSessionsChanged } from '../remote/attach.js';
 import { messageBus } from '../bus.js';
 
@@ -84,6 +85,12 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
       openFiles: vi.fn(), launchShell: vi.fn(), selectModel: vi.fn(), rename: vi.fn(),
       delete: vi.fn(),
     },
+    models: {
+      view: vi.fn(() => ({ groups: [], refreshing: false })),
+      reload: vi.fn(),
+      refresh: vi.fn(() => Promise.resolve()),
+      delete: vi.fn(() => Promise.resolve<string | undefined>(undefined)),
+    },
     sessions: {
       view: vi.fn(() => SESSION_ROWS),
       // The real predicate's shape: a row has to name the target *and* offer the verb.
@@ -101,6 +108,7 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
       browseUpdateCell: vi.fn(), browseInsertRow: vi.fn(), browseDeleteRow: vi.fn(),
       browseExport: vi.fn(),
     },
+    acpRecords: { rows: vi.fn(() => []) },
   } as unknown as Managers;
   return { cancel, cancelByKey, clearAll, clearSystem, managers, setActiveTab, systemRows };
 }
@@ -109,13 +117,14 @@ function contextFor(
   managers: Managers,
   capabilities: readonly TabPluginCapabilityName[] = ['topicData', 'topicAction'],
   notifications: readonly TabPluginNotificationTopic[] = ['schedules'],
+  enabled: () => boolean = () => true,
 ) {
   return createPluginContext(
     managers,
     declaration(capabilities, notifications),
     { isPayload: () => true, intent: () => null, opener: { inline: () => {}, external: () => {} } },
     origin,
-    () => true,
+    enabled,
   );
 }
 
@@ -551,6 +560,89 @@ describe('the topicData and topicAction capabilities', () => {
       .toBe('could not save system schedules');
   });
 
+  it('keeps existing schedule and connection action results synchronous', () => {
+    const { clearSystem, managers } = makeManagers();
+    clearSystem.mockReturnValue({ ok: false, error: 'could not save system schedules' } as never);
+
+    const scheduleResult = contextFor(managers).topicAction({
+      topic: 'schedules', action: 'clear', owner: 'system',
+    });
+    const connectionResult = runTopicAction(managers, {
+      topic: 'connections', action: 'load', id: 'missing',
+    });
+
+    expect(scheduleResult).toBe('could not save system schedules');
+    expect(connectionResult).toBeUndefined();
+    expect(scheduleResult).not.toBeInstanceOf(Promise);
+    expect(connectionResult).not.toBeInstanceOf(Promise);
+  });
+
+  it('reads, subscribes to, and acts on the models topic', async () => {
+    const { managers } = makeManagers();
+    const view = {
+      groups: [{ key: 'claude', heading: 'Anthropic', records: [{ id: 'sonnet', name: 'Sonnet' }] }],
+      refreshing: true,
+    };
+    vi.mocked(managers.models.view).mockReturnValue(view);
+    const fire = vi.fn();
+    const subscription = subscribeTopic('models', fire);
+    try {
+      expect(readTopicData(managers, 'models')).toEqual(view);
+      expect(emptyTopicData('models')).toEqual({ groups: [], refreshing: false });
+      messageBus.emit('models', { type: 'changed' });
+      expect(fire).toHaveBeenCalledOnce();
+    } finally {
+      subscription.unsubscribe();
+    }
+    messageBus.emit('models', { type: 'changed' });
+    expect(fire).toHaveBeenCalledOnce();
+
+    const refresh = runTopicAction(managers, { topic: 'models', action: 'refresh' });
+    expect(refresh).toBeUndefined();
+    expect(managers.models.refresh).toHaveBeenCalledOnce();
+    runTopicAction(managers, { topic: 'models', action: 'reload' });
+    expect(managers.models.reload).toHaveBeenCalledOnce();
+
+    const successfulDeletion = runTopicAction(managers, {
+      topic: 'models', action: 'delete', harness: 'claude', id: 'sonnet',
+    });
+    await expect(successfulDeletion).resolves.toBeUndefined();
+
+    vi.mocked(managers.models.delete).mockResolvedValueOnce('no model "claude gone"');
+    const deletion = runTopicAction(managers, {
+      topic: 'models', action: 'delete', harness: 'claude', id: 'gone',
+    });
+    expect(deletion).toBeInstanceOf(Promise);
+    await expect(deletion).resolves.toBe('no model "claude gone"');
+  });
+
+  it('returns and awaits the Models Delete refusal through the declared topic capability', async () => {
+    const { managers } = makeManagers();
+    vi.mocked(managers.models.delete).mockResolvedValueOnce('no model "claude gone"');
+    const capabilities = contextFor(managers, ['topicData', 'topicAction'], ['models']);
+
+    await expect(capabilities.topicAction({
+      topic: 'models', action: 'delete', harness: 'claude', id: 'gone',
+    })).resolves.toBe('no model "claude gone"');
+  });
+
+  it('resolves a disabled plugin Models Delete without calling the manager', async () => {
+    const { managers } = makeManagers();
+    const action = { topic: 'models', action: 'delete', harness: 'claude', id: 'gone' } as const;
+    const context = contextFor(managers, ['topicData', 'topicAction'], ['models'], () => false);
+    const fileContext = fileCapabilities({
+      managers,
+      declaration: declaration(['topicData', 'topicAction'], ['models']),
+      origin,
+      isEnabled: () => false,
+      openRequests: [],
+    });
+
+    await expect(context.topicAction(action)).resolves.toBeUndefined();
+    await expect(fileContext.topicAction(action)).resolves.toBeUndefined();
+    expect(managers.models.delete).not.toHaveBeenCalled();
+  });
+
   // Reaching for a topic the manifest never named is a plugin-authoring mistake, exactly like using
   // an undeclared capability, so it fails the same way rather than answering the caller.
   it('throw for a topic the declaration never named', () => {
@@ -562,6 +654,11 @@ describe('the topicData and topicAction capabilities', () => {
       .toThrow('used topic "schedules" without declaring it');
     expect(() => { capabilities.topicAction(action); })
       .toThrow('used topic "schedules" without declaring it');
+    expect(() => capabilities.topicData('models'))
+      .toThrow('used topic "models" without declaring it');
+    expect(() => capabilities.topicAction({
+      topic: 'models', action: 'delete', harness: 'claude', id: 'gone',
+    })).toThrow('used topic "models" without declaring it');
     expect(clearAll).not.toHaveBeenCalled();
   });
 

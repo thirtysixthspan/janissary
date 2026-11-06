@@ -56,7 +56,7 @@ Double-click the title in the header to rename it. Press `Enter` or click away t
 
 ## Choose a model
 
-The **Model** selector in the header groups available models under `claude` and `opencode`. Choose a pair for your next query. Changing it starts a fresh session; earlier turns keep the pair that answered them. The selector is disabled while a reply streams. If a saved model is no longer available, the next query uses the first available pair.
+The **Model** selector in the header groups enabled models under `claude` and `opencode`. Choose a pair for your next query. Changing it starts a fresh session; earlier turns keep the pair that answered them. The selector is disabled while a reply streams. It uses the same catalog as the [Models tab](/user-documentation/tab-types/models), so a catalog change updates the choices without restarting Janissary. If a saved model is disabled or removed, the next query uses the first available pair.
 
 The last pair you chose is remembered for this project: it crosses between conversations and survives a restart, and every new conversation starts on it. Another project has its own remembered pair. A conversation you reopen keeps the pair it was saved with. Sending a query does not change that memory — only picking a different pair does. So a conversation started from the list and one started from **Chat about this** begin identically.
 

@@ -40,6 +40,7 @@ export type NotificationEventType =
   | 'connection-closed'
   | 'connection-close-failed'
   | 'workspace-ready'
+  | 'models-refresh'
 
 // Background activity requires its own opt-in toggle and is suppressed for the active tab.
 export type AmbientNotificationEvent =
@@ -128,8 +129,10 @@ export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
   'connection-close-failed': true,
   // A workspace clone the user launched finished provisioning; the line reports how long it took.
   'workspace-ready': true,
-  // Project-owned schedule outcomes use their own default-on toggle below.
+  // Schedule and model refresh outcomes use their own default-on toggles below.
   'system-schedule-fire': true,
+  // Provider refreshes are deliberate actions whose outcomes remain visible while their tab is active.
+  'models-refresh': true,
 };
 
 function isAmbient(event: NotificationEventType): event is AmbientNotificationEvent {
@@ -138,7 +141,7 @@ function isAmbient(event: NotificationEventType): event is AmbientNotificationEv
 
 // Whether an event should be recorded, given the config and the active tab. Defensive against the
 // tab feeding itself. An explicit trigger always fires, subject only to the tab being open (enforced
-// in `notify`), except project-owned system schedule notices, which have their own default-on toggle.
+// in `notify`), except system schedule and model refresh notices, which have default-on toggles.
 // Ambient events use their own toggle and are subject to focus suppression.
 export function shouldNotify(
   config: NotificationConfig | undefined,
@@ -148,6 +151,7 @@ export function shouldNotify(
 ): boolean {
   if (tabLabel === NOTIFICATIONS_LABEL) return false;
   if (event === 'system-schedule-fire') return config?.events.systemScheduleFire ?? true;
+  if (event === 'models-refresh') return config?.events.modelsRefresh ?? true;
   if (!isAmbient(event)) return EXPLICIT_EVENTS[event];
   if (tabLabel === activeLabel) return false;
   if (!config) return false;

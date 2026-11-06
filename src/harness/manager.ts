@@ -4,7 +4,6 @@ import { suffixCandidates } from '../launch-name/check.js';
 import { HARNESS_NAMES } from './index.js';
 import { parseHarnessCommand, type HarnessLaunch } from './command-parse.js';
 import { resolveLaunchDir } from './launch-dir.js';
-import { isKnownModel, modelsFor } from './models.js';
 import type { HarnessLaunchView } from '../protocol.js';
 import type { ScreenCapture } from './screen.js';
 import { autoApproveHarnessNames } from './auto-approve.js';
@@ -71,7 +70,7 @@ export class HarnessManager extends HarnessTabSpawn {
     if ('error' in parsed) return parsed.error;
     if ('capture' in parsed) return captureSubcommand(this.managers, (l) => this.latestScreenText(l), input, parsed.label);
     if ('transcript' in parsed) return transcriptSubcommand(this.managers, (l) => this.transcriptTailer(l), input, parsed.label);
-    if (parsed.model && !isKnownModel(parsed.name, parsed.model)) {
+    if (parsed.model && !this.managers.models.isKnownModel(parsed.name, parsed.model)) {
       return `Unknown model "${parsed.model}" for harness "${parsed.name}" — add it to known-models.json.`;
     }
     return this.open(parsed, invocation);
@@ -91,11 +90,11 @@ export class HarnessManager extends HarnessTabSpawn {
   }
 
   // The launch dialog's catalog while open, or null when closed: the harness names and each
-  // harness's known models, built fresh from `HARNESS_NAMES`/`modelsFor` so a project override of
+  // harness's known models, built fresh from `HARNESS_NAMES`/the catalog manager so an override of
   // `known-models.json` is reflected.
   harnessLaunchView(): HarnessLaunchView | null {
     if (!this.launchDialogOpen) return null;
-    const models = Object.fromEntries(HARNESS_NAMES.map((name) => [name, modelsFor(name)]));
+    const models = Object.fromEntries(HARNESS_NAMES.map((name) => [name, this.managers.models.modelsFor(name)]));
     return { names: HARNESS_NAMES, models, autoApprove: autoApproveHarnessNames(), autoResume: autoResumeHarnessNames() };
   }
 

@@ -1,0 +1,42 @@
+.models-tab { padding: 0; gap: 0; overflow-y: auto; }
+.models-header { min-height: 28px; padding: 6px 12px; font-size: 12px; border-bottom: 1px solid var(--border); }
+.models-header .plugin-actions button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 0 4px; line-height: 1;
+}
+.models-header .plugin-actions button:hover { color: var(--fg); }
+.models-header .plugin-actions button:disabled { color: var(--faint); cursor: default; }
+.models-error { border: 1px solid var(--danger); color: var(--danger); border-radius: 4px; padding: 4px 8px; font-size: 12px; }
+.models-error button { margin-left: 8px; }
+.models-empty { padding: 8px 12px; color: var(--muted); }
+.models-columns, .models-row {
+  display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr) 7em 3.5em;
+  gap: 12px; align-items: baseline; padding: 0 12px; color: var(--muted); font-size: 12px; text-align: left;
+}
+.models-columns { border-bottom: 1px solid var(--border); }
+.models-row {
+  padding-top: 4px; padding-bottom: 4px; white-space: nowrap; color: var(--fg);
+}
+.models-row:hover { background: var(--border); }
+.models-row-disabled { color: var(--muted); opacity: 0.65; }
+.models-row-id, .models-row-name, .models-row-harness { overflow: hidden; text-overflow: ellipsis; }
+.models-row-harness { color: var(--muted); }
+.models-row-actions { display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; }
+.models-row-actions button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
+  padding: 0 4px; line-height: 1;
+}
+.models-row-actions button:hover { color: var(--fg); }
+.models-groups { display: flex; flex-direction: column; }
+.models-group { display: flex; flex-direction: column; }
+.models-group-heading { margin: 12px 12px 4px; color: var(--muted); font-size: 12px; font-weight: 600; }
+.models-tab-narrow .models-columns { display: none; }
+.models-tab-narrow .models-row { display: block; white-space: normal; border-bottom: 1px solid var(--border); }
+.models-tab-narrow .models-row-primary { display: flex; align-items: center; gap: 8px; }
+.models-tab-narrow .models-row-id { flex: 1; min-width: 0; white-space: nowrap; }
+.models-tab-narrow .models-row-secondary {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; color: var(--muted); font-size: 11px;
+}
+.models-tab-narrow .models-row-secondary > * {
+  max-width: 100%; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}

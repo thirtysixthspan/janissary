@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { AcpOptions } from '../acp/types.js';
 import type { CommandInvocationContext } from '../commands/types.js';
-import { modelsFor } from '../harness/models.js';
+import { BUNDLED_MODEL_CATALOG } from '../models/catalog-file.js';
 import { janissaryRoot } from '../janissary-root.js';
 import { AgentRun } from './run.js';
 import type { AgentSnapshot } from './types.js';
@@ -19,6 +19,8 @@ import * as commandTools from './command-tools.js';
 const { connectAcp, runAcpToolLoop, sandboxWillConfine } = vi.hoisted(() => ({
   connectAcp: vi.fn(), runAcpToolLoop: vi.fn(), sandboxWillConfine: vi.fn(() => true),
 }));
+const OPENCODE_MODELS = BUNDLED_MODEL_CATALOG.opencode?.map(({ id }) => id) ?? [];
+const modelManagers = () => ({ models: { modelsFor: (harness: string) => harness === 'opencode' ? OPENCODE_MODELS : [] } });
 vi.mock('../acp/index.js', () => ({ connectAcp }));
 vi.mock('../acp/loop.js', () => ({ runAcpToolLoop }));
 vi.mock('../sandbox/confinement.js', () => ({ sandboxWillConfine }));
@@ -37,7 +39,7 @@ describe('agent execution record capture', () => {
   afterEach(() => { records.dispose(); rmSync(root, { recursive: true, force: true }); vi.restoreAllMocks(); });
 
   it.each([false, true])('captures exact task/skills/parameters, native and host activity (remote: %s)', async (remote) => {
-    const model = modelsFor('opencode')[0];
+    const model = OPENCODE_MODELS[0];
     const caller = { label: 'janus', incarnation: 'one', cwd: root, context: [] };
     const run = new AgentRun(caller, {
       taskPath: 'task.md', taskText: 'Task\nverbatim ',
@@ -63,7 +65,7 @@ describe('agent execution record capture', () => {
       handlers = h;
       session.prompt(prompt, { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() });
     });
-    const execution = executeAgentRun(run, invocation, model, undefined, 'Parameters\nverbatim ', {} as never, remote ? { channel } : undefined);
+    const execution = executeAgentRun(run, invocation, model, undefined, 'Parameters\nverbatim ', modelManagers() as never, remote ? { channel } : undefined);
     expect(records.window(run.recordId!)?.blocks[0].prompt).toBe(`${commandTools.agentPrimer(run.snapshot)}\nParameters\nverbatim `);
     if (remote) {
       expect(runAcpToolLoop).not.toHaveBeenCalled();
@@ -97,6 +99,7 @@ function notificationManagers() {
   const callerTab = { label: 'janus', view: 'harness', log: [] as { output: string }[] };
   const feed = { label: 'notifications', view: 'notifications', log: [] as { output: string }[] };
   const managers = {
+    models: { modelsFor: (harness: string) => harness === 'opencode' ? OPENCODE_MODELS : [] },
     tab: {
       tabs: [callerTab, feed],
       cur: () => feed,
@@ -119,7 +122,7 @@ describe('executeAgentRun', () => {
       handlers.endTurn('Finished.');
       handlers.finished('answered', Infinity);
     });
-    const model = modelsFor('opencode')[0];
+    const model = OPENCODE_MODELS[0];
     if (!model) throw new Error('No OpenCode model is available for this test.');
     const caller = { label: 'janus', incarnation: 'caller-1', cwd: '/source', context: [] };
     const run = new AgentRun(caller, { taskPath: '/clone/task.md', taskText: 'Task', skills: [], grants: [] }, undefined, undefined, '/clone');
@@ -156,7 +159,7 @@ describe('executeAgentRun', () => {
       handlers.endTurn('Finished.');
       handlers.finished('answered', Infinity);
     });
-    const model = modelsFor('opencode')[0];
+    const model = OPENCODE_MODELS[0];
     if (!model) throw new Error('No OpenCode model is available for this test.');
     const caller = { label: 'janus', incarnation: 'caller-1', cwd: '/source', context: [] };
     const run = new AgentRun(caller, { taskPath: '/remote/task.md', taskText: 'Task', skills: [], grants: [] });
@@ -187,7 +190,7 @@ describe('executeAgentRun', () => {
       handlers.endTurn('Finished.');
       handlers.finished('answered', Infinity);
     });
-    const model = modelsFor('opencode')[0];
+    const model = OPENCODE_MODELS[0];
     if (!model) throw new Error('No OpenCode model is available for this test.');
     const snapshot: AgentSnapshot = { taskPath: '/clone/ai/tasks/task.md', taskText: 'Task', skills: [], grants: [] };
     const caller = { label: 'janus', incarnation: 'caller-1', cwd: '/source', context: [] };
@@ -196,7 +199,7 @@ describe('executeAgentRun', () => {
       runId: run.id, invocationId: 'invocation-1', caller, signal: run.abortController.signal,
     };
 
-    await expect(executeAgentRun(run, invocation, model, undefined, '', {} as never)).resolves.toMatchObject({
+    await expect(executeAgentRun(run, invocation, model, undefined, '', modelManagers() as never)).resolves.toMatchObject({
       status: 'completed', response: 'Finished.',
     });
     expect(connectAcp).toHaveBeenCalledWith(expect.objectContaining({
@@ -215,7 +218,7 @@ describe('executeAgentRun', () => {
       handlers.endTurn('Finished.');
       handlers.finished('answered', Infinity);
     });
-    const model = modelsFor('opencode')[0];
+    const model = OPENCODE_MODELS[0];
     if (!model) throw new Error('No OpenCode model is available for this test.');
     const snapshot: AgentSnapshot = {
       taskPath: '/clone/ai/tasks/task.md',
@@ -233,7 +236,7 @@ describe('executeAgentRun', () => {
       runId: run.id, invocationId: 'invocation-1', caller, signal: run.abortController.signal,
     };
 
-    await executeAgentRun(run, invocation, model, undefined, '', {} as never);
+    await executeAgentRun(run, invocation, model, undefined, '', modelManagers() as never);
 
     expect(connectAcp).toHaveBeenCalledWith(expect.objectContaining({
       installedSkillDirs: [path.dirname(skillFile)],
@@ -257,7 +260,7 @@ describe('executeAgentRun', () => {
       handlers.endTurn('Finished.');
       handlers.finished('answered', Infinity);
     });
-    const model = modelsFor('opencode')[0];
+    const model = OPENCODE_MODELS[0];
     if (!model) throw new Error('No OpenCode model is available for this test.');
     const caller = { label: 'janus', incarnation: 'caller-1', cwd: '/source', context: [] };
     const run = new AgentRun(caller, { taskPath: '/clone/task.md', taskText: 'Task', skills: [], grants: [] },
@@ -265,7 +268,7 @@ describe('executeAgentRun', () => {
     const invocation: CommandInvocationContext = {
       runId: run.id, invocationId: 'invocation-1', caller, signal: run.abortController.signal,
     };
-    await executeAgentRun(run, invocation, model, undefined, '', {} as never);
+    await executeAgentRun(run, invocation, model, undefined, '', modelManagers() as never);
 
     const finishing = run.finish('completed');
     await shutdownStarted.promise;
@@ -288,7 +291,7 @@ describe('executeAgentRun failure paths', () => {
   });
 
   function openCodeModel(): string {
-    const model = modelsFor('opencode')[0];
+    const model = OPENCODE_MODELS[0];
     if (!model) throw new Error('No OpenCode model is available for this test.');
     return model;
   }
@@ -327,7 +330,7 @@ describe('executeAgentRun failure paths', () => {
     vi.useFakeTimers();
     try {
       const { run, invocation } = newRun();
-      const execution = executeAgentRun(run, invocation, openCodeModel(), undefined, '', {} as never, { channel: silentChannel() });
+      const execution = executeAgentRun(run, invocation, openCodeModel(), undefined, '', modelManagers() as never, { channel: silentChannel() });
       const outcome = expect(execution).rejects.toThrow('Agent: remote agent readiness timed out.');
       await vi.advanceTimersByTimeAsync(15_000);
       await outcome;
@@ -339,7 +342,7 @@ describe('executeAgentRun failure paths', () => {
 
   it('ends a remote run terminated while its agent is still getting ready', async () => {
     const { run, invocation } = newRun();
-    const execution = executeAgentRun(run, invocation, openCodeModel(), undefined, '', {} as never, { channel: silentChannel() });
+    const execution = executeAgentRun(run, invocation, openCodeModel(), undefined, '', modelManagers() as never, { channel: silentChannel() });
     run.abortController.abort();
     await expect(execution).rejects.toThrow('Agent terminated.');
     expect(runAcpToolLoop).not.toHaveBeenCalled();
@@ -351,7 +354,7 @@ describe('executeAgentRun failure paths', () => {
       return { prompt: vi.fn(), kill: vi.fn(), shutdown: vi.fn(async () => {}) };
     });
     const { run, invocation } = newRun();
-    await expect(executeAgentRun(run, invocation, openCodeModel(), undefined, '', {} as never))
+    await expect(executeAgentRun(run, invocation, openCodeModel(), undefined, '', modelManagers() as never))
       .rejects.toThrow('Agent: agent failed to start');
     expect(runAcpToolLoop).not.toHaveBeenCalled();
   });
@@ -360,7 +363,7 @@ describe('executeAgentRun failure paths', () => {
     const session = capturedSession();
     runAcpToolLoop.mockImplementation(() => { session.options().onError('agent exited'); });
     const { run, invocation } = newRun();
-    await expect(executeAgentRun(run, invocation, openCodeModel(), undefined, '', {} as never))
+    await expect(executeAgentRun(run, invocation, openCodeModel(), undefined, '', modelManagers() as never))
       .rejects.toThrow('Agent: agent exited');
   });
 
@@ -371,7 +374,7 @@ describe('executeAgentRun failure paths', () => {
       handlers.finished('answered', Infinity);
     });
     const { run, invocation } = newRun();
-    await expect(executeAgentRun(run, invocation, openCodeModel(), undefined, '', {} as never))
+    await expect(executeAgentRun(run, invocation, openCodeModel(), undefined, '', modelManagers() as never))
       .rejects.toThrow('Agent: task returned an empty response.');
   });
 
@@ -386,7 +389,7 @@ describe('executeAgentRun failure paths', () => {
       handlers.finished('answered', Infinity);
     });
     const { run, invocation } = newRun();
-    await executeAgentRun(run, invocation, openCodeModel(), undefined, '', {} as never);
+    await executeAgentRun(run, invocation, openCodeModel(), undefined, '', modelManagers() as never);
     expect(run.view().activity).toEqual([{ id: 1, kind: 'thought', text: 'Planning.' }]);
     await run.finish('completed');
   });

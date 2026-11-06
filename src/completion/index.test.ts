@@ -3,7 +3,11 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { completeCommandLine } from './index.js';
-import { modelsFor } from '../harness/models.js';
+import { BUNDLED_MODEL_CATALOG } from '../models/catalog-file.js';
+
+const modelsFor = (harness: string) => (BUNDLED_MODEL_CATALOG[harness] ?? [])
+  .filter(({ disabled }) => disabled !== true)
+  .map(({ id }) => id);
 
 let dir: string;
 
@@ -239,8 +243,23 @@ describe('completeCommandLine — harness model', () => {
     const claude = modelsFor('claude');
     const model = claude.find((id) => claude.filter((other) => other.startsWith(id.slice(0, -1))).length === 1)!;
     const line = `harness claude --model ${model.slice(0, -1)}`;
-    const r = completeCommandLine(line, line.length, noFiles);
+    const r = completeCommandLine(line, line.length, noFiles, [], [], undefined, undefined, undefined, modelsFor);
     expect(r.newInput).toBe(`harness claude --model ${model} `);
+  });
+
+  it('does not offer models without a catalog lookup', () => {
+    const line = 'harness claude --model claude-sonnet';
+
+    expect(completeCommandLine(line, line.length, noFiles).newInput).toBe(line);
+    expect(completeCommandLine(line, line.length, noFiles).matches).toEqual([]);
+  });
+
+  it('does not suggest a disabled model from the supplied catalog lookup', () => {
+    const line = 'harness claude --model disabled';
+    const enabledModels = (harness: string) => harness === 'claude' ? ['enabled-model'] : [];
+
+    expect(completeCommandLine(line, line.length, noFiles, [], [], undefined, undefined, undefined, enabledModels).matches)
+      .toEqual([]);
   });
 });
 

@@ -1,7 +1,10 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { isMoveEntryIntent, isRemoveEntryIntent, isRolesPayload, isSetEntryEffortIntent, type RolesPayload } from './shared.js';
+import {
+  isAddEntryIntent, isMoveEntryIntent, isRemoveEntryIntent, isRolesPayload, isSetEntryEffortIntent,
+  type RolesPayload,
+} from './shared.js';
 
 const CATALOG = { models: { codex: ['gpt-6-sol'], claude: ['claude-opus-5-5'] }, efforts: ['low', 'xhigh'] };
 
@@ -24,6 +27,18 @@ describe('positional entry intent guards', () => {
     for (const expected of [null, {}, 'snapshot', [null], [{ model: 'same' }], [{ harness: 'codex', model: 'same', effort: 1 }]]) {
       expect(guard({ ...intent, expected })).toBe(false);
     }
+  });
+});
+
+describe('new entry intent guard', () => {
+  it('rejects the payload-only missing marker so it cannot be written to roles.json', () => {
+    expect(isAddEntryIntent({ role: 'review', entry: { harness: 'codex', model: 'gpt-6-sol' } })).toBe(true);
+    expect(isAddEntryIntent({
+      role: 'review', entry: { harness: 'codex', model: 'gpt-6-sol', missing: true },
+    })).toBe(false);
+    expect(isAddEntryIntent({
+      role: 'review', entry: { harness: 'codex', model: 'gpt-6-sol', missing: false },
+    })).toBe(false);
   });
 });
 
@@ -60,6 +75,22 @@ describe('the roles payload guard', () => {
     }];
 
     expect(isRolesPayload(payload(CATALOG, roles))).toBe(true);
+  });
+
+  it('accepts an optional boolean missing marker and refuses malformed markers', () => {
+    const roles = [{
+      name: 'review', description: 'Second pair of eyes.', entries: [
+        { harness: 'retired-harness', model: 'retired-model', missing: true },
+      ],
+    }];
+
+    expect(isRolesPayload(payload(CATALOG, roles))).toBe(true);
+    expect(isRolesPayload(payload(CATALOG, [{
+      ...roles[0], entries: [{ ...roles[0].entries[0], missing: false }],
+    }]))).toBe(true);
+    expect(isRolesPayload(payload(CATALOG, [{
+      ...roles[0], entries: [{ ...roles[0].entries[0], missing: 'true' }],
+    }]))).toBe(false);
   });
 
   // The client reaches this module through `@shared/plugins/roles/shared`, so an import here is a

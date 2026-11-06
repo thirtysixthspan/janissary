@@ -5,7 +5,9 @@ import {
   type TabPluginDeclaration,
   type TabPluginServerCapabilities,
   type TabPluginNotificationTopic,
+  type TabPluginTopicAction,
 } from './api.js';
+import type { ModelsTopicDeleteAction } from './api-topics-models.js';
 import type { PluginFailureOrigin } from './failure.js';
 import { projectFilesFor } from '../project/files.js';
 import { isInsideRoot } from './files.js';
@@ -44,10 +46,7 @@ export function fileCapabilities(input: {
     // speaks for. The transcript tails are opt-in per call, so a plugin that only lists tabs reads no
     // other tab's output at all.
     tabActivity: (tailLines) => (isEnabled() ? tabActivityRows(managers, tailLines) : []),
-    topicAction: (action) => {
-      requireDeclaredTopic(declaration, action.topic);
-      if (isEnabled()) runTopicAction(managers, action);
-    },
+    topicAction: topicActionCapability(managers, declaration, isEnabled),
     // The plugin's own claimed extensions, expanded by the host's own glob rules and dispatched
     // after the guarded call returns, so a plugin never waits on a large wildcard open. The target is
     // collected here rather than expanded here for the same reason: the host owns the dispatch, and
@@ -100,6 +99,25 @@ function requireDeclaredTopic(
   if (!(declaration.notifications ?? []).includes(topic)) {
     throw new Error(`used topic "${topic}" without declaring it`);
   }
+}
+
+function topicActionCapability(
+  managers: Managers,
+  declaration: TabPluginDeclaration,
+  isEnabled: () => boolean,
+): TabPluginServerCapabilities['topicAction'] {
+  function topicAction(action: ModelsTopicDeleteAction): Promise<string | undefined>;
+  function topicAction(action: Exclude<TabPluginTopicAction, ModelsTopicDeleteAction>): string | undefined;
+  function topicAction(action: TabPluginTopicAction): string | undefined | Promise<string | undefined>;
+  function topicAction(action: TabPluginTopicAction): string | undefined | Promise<string | undefined> {
+    requireDeclaredTopic(declaration, action.topic);
+    if (!isEnabled()) {
+      return action.topic === 'models' && action.action === 'delete'
+        ? Promise.resolve(undefined) : undefined;
+    }
+    return runTopicAction(managers, action);
+  }
+  return topicAction;
 }
 
 // A saved-settings value has to be a plain JSON object, because it is written straight into

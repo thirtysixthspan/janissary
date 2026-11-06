@@ -1,6 +1,5 @@
 import type { CompletionCursor, CompletionResult } from './types.js';
 import { completeWord } from './helpers.js';
-import { modelsFor } from '../harness/models.js';
 import { LAYOUT_SUBCOMMANDS } from '../commands/parse-layout.js';
 
 export type MonitorCompletions = { personas: string[]; names: string[]; targets: string[] };
@@ -64,7 +63,10 @@ export function completeLayoutCommand(cursor: CompletionCursor): CompletionResul
 // Complete `harness <name> ... --model <partial>` against the harness's known model catalog.
 // The flag can appear anywhere after the harness name, so match on the token immediately
 // preceding the cursor rather than a fixed argument index (mirrors completeScheduleTarget).
-export function completeHarnessModel(cursor: CompletionCursor): CompletionResult | null {
+export function completeHarnessModel(
+  cursor: CompletionCursor,
+  modelsFor: (harness: string) => string[],
+): CompletionResult | null {
   const { command, preceding } = cursor;
   if (command !== 'harness' || preceding.at(-1)?.toLowerCase() !== '--model') return null;
   const harnessName = preceding[1]?.toLowerCase();

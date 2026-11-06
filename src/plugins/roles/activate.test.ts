@@ -12,14 +12,21 @@ import {
 } from '../api.js';
 import { activate } from './activate.js';
 import { DEFAULT_ROLES, readRolesFile, writeRolesFile } from './roles-file.js';
-import { isRolesPayload, type RoleEntry, type RolesPayload } from './shared.js';
+import { isRolesPayload, type LaunchCatalog, type RoleEntry, type RolesPayload } from './shared.js';
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof FileSystem>();
   return { ...actual, renameSync: vi.fn(actual.renameSync) };
 });
 
-const CATALOG = { models: { codex: ['gpt-6-sol'] }, efforts: ['low', 'xhigh'] };
+const CATALOG: LaunchCatalog = {
+  models: {
+    codex: ['gpt-6-sol', 'gpt-6-luna', 'first', 'second', 'same', 'hidden-model'],
+    claude: ['claude-opus-5-5', 'claude-haiku-4-5', 'third'],
+    opencode: ['opencode-go/deepseek-v4.1-flash'],
+  },
+  efforts: ['low', 'xhigh'],
+};
 
 type WrittenFile = Record<string, { description: string; entries: Array<{ model: string }> }>;
 
@@ -28,23 +35,32 @@ function fixture(): {
   capabilities: TabPluginServerCapabilities;
   opened: Array<{ key: string; value: TabPluginPayload }>;
   updated: Array<{ key: string; value: TabPluginTabUpdate }>;
+  root: string;
+  setRoot(root: string): void;
+  setCatalog(catalog: LaunchCatalog): void;
 } {
   const base = mkdtempSync(path.join(tmpdir(), 'janus-roles-activate-'));
   const home = path.join(base, 'home');
   const root = path.join(base, 'project');
+  let activeRoot = root;
+  let catalog = CATALOG;
   mkdirSync(home, { recursive: true });
   mkdirSync(root, { recursive: true });
   const opened: Array<{ key: string; value: TabPluginPayload }> = [];
   const updated: Array<{ key: string; value: TabPluginTabUpdate }> = [];
   const capabilities = {
-    originTab: () => ({ label: 'x', cwd: root, root }),
+    originTab: () => ({ label: 'x', cwd: activeRoot, root: activeRoot }),
     openOrFocusTab: (key: string, make: () => TabPluginPayload) => { opened.push({ key, value: make() }); },
     updateTab: (key: string, make: () => TabPluginTabUpdate) => { updated.push({ key, value: make() }); },
-    harnessLaunchCatalog: () => CATALOG,
+    harnessLaunchCatalog: () => catalog,
     rejectRequest: (reason: string): never => { throw new TabPluginRejection(reason); },
     reportFailure: (reason: unknown): never => { throw new Error(String(reason)); },
   } as unknown as TabPluginServerCapabilities;
-  return { home, capabilities, opened, updated };
+  return {
+    home, root, capabilities, opened, updated,
+    setRoot: (value) => { activeRoot = value; },
+    setCatalog: (value) => { catalog = value; },
+  };
 }
 
 const rolesPath = (home: string) => path.join(home, '.janissary', 'roles.json');
@@ -113,6 +129,97 @@ describe('the roles command', () => {
 
     expect(() => activation.command?.('left', capabilities)).toThrow('Usage: roles');
     expect(opened).toEqual([]);
+  });
+
+  it('marks unavailable entries in a copied payload without changing the roles file', () => {
+    const { home, root, capabilities, opened, setCatalog } = fixture();
+    const filePath = path.join(root, '.janissary', 'roles.json');
+    mkdirSync(path.dirname(filePath), { recursive: true });
+    const roles = [{
+      name: 'research', description: 'Research.', entries: [
+        { harness: 'codex', model: 'gpt-6-sol' },
+        { harness: 'codex', model: 'hidden-model' },
+        { harness: 'codex', model: 'disabled-model' },
+        { harness: 'constructor', model: 'prototype-model' },
+      ],
+    }];
+    writeRolesFile(filePath, roles);
+    const before = readFileSync(filePath, 'utf8');
+    setCatalog({
+      models: { codex: ['gpt-6-sol', 'hidden-model'] }, efforts: ['low'],
+    });
+
+    activate(home).command?.('', capabilities);
+
+    const payload = opened[0].value.payload as RolesPayload;
+    expect(payload.roles[0].entries).toEqual([
+      { harness: 'codex', model: 'gpt-6-sol' },
+      { harness: 'codex', model: 'hidden-model' },
+      { harness: 'codex', model: 'disabled-model', missing: true },
+      { harness: 'constructor', model: 'prototype-model', missing: true },
+    ]);
+    expect(readFileSync(filePath, 'utf8')).toBe(before);
+  });
+});
+
+describe('models topic deliveries', () => {
+  const notification = {
+    topic: 'models',
+    data: { groups: [], refreshing: false },
+    tabs: ['roles'],
+  } as const;
+
+  it('captures roots before queued edits and republishes each delivery from the latest command or intent root', async () => {
+    const { home, root: firstRoot, capabilities, updated, setRoot, setCatalog } = fixture();
+    const secondRoot = path.join(home, 'second-project');
+    mkdirSync(secondRoot, { recursive: true });
+    const firstPath = path.join(firstRoot, '.janissary', 'roles.json');
+    const secondPath = path.join(secondRoot, '.janissary', 'roles.json');
+    const startingRoles = (name: string) => [{ name, description: `${name}.`, entries: [] }];
+    writeRolesFile(firstPath, startingRoles('first-root'));
+    writeRolesFile(secondPath, startingRoles('second-root'));
+    const activation = activate(home);
+
+    setRoot(firstRoot);
+    activation.command?.('', capabilities);
+    setRoot(firstRoot);
+    const firstEdit = send(activation, 'add-role', { name: 'first-intent' }, capabilities, payloadFor(home));
+    setRoot(secondRoot);
+    const secondEdit = send(activation, 'add-role', { name: 'second-intent' }, capabilities, payloadFor(home));
+    await Promise.all([firstEdit, secondEdit]);
+
+    expect(readRolesFile(home, firstRoot).roles.map(({ name }) => name)).toContain('first-intent');
+    expect(readRolesFile(home, firstRoot).roles.map(({ name }) => name)).not.toContain('second-intent');
+    expect(readRolesFile(home, secondRoot).roles.map(({ name }) => name)).toContain('second-intent');
+    expect(readRolesFile(home, secondRoot).roles.map(({ name }) => name)).not.toContain('first-intent');
+
+    const firstBefore = readFileSync(firstPath, 'utf8');
+    const secondBefore = readFileSync(secondPath, 'utf8');
+    const refreshedCatalog: LaunchCatalog = { models: { claude: ['claude-opus-5-5'] }, efforts: ['max'] };
+    setCatalog(refreshedCatalog);
+    setRoot(firstRoot);
+    activation.notify?.(notification, capabilities);
+
+    const fromIntent = updated.at(-1)!.value.payload as RolesPayload;
+    expect(fromIntent.path).toBe(secondPath);
+    expect(fromIntent.roles.map(({ name }) => name)).toContain('second-intent');
+    expect(fromIntent.catalog).toEqual(refreshedCatalog);
+    expect(readFileSync(firstPath, 'utf8')).toBe(firstBefore);
+    expect(readFileSync(secondPath, 'utf8')).toBe(secondBefore);
+
+    setRoot(firstRoot);
+    activation.command?.('', capabilities);
+    const nextCatalog: LaunchCatalog = { models: { codex: ['gpt-6-sol'] }, efforts: ['low'] };
+    setCatalog(nextCatalog);
+    setRoot(secondRoot);
+    activation.notify?.(notification, capabilities);
+
+    const fromCommand = updated.at(-1)!.value.payload as RolesPayload;
+    expect(fromCommand.path).toBe(firstPath);
+    expect(fromCommand.roles.map(({ name }) => name)).toContain('first-intent');
+    expect(fromCommand.catalog).toEqual(nextCatalog);
+    expect(readFileSync(firstPath, 'utf8')).toBe(firstBefore);
+    expect(readFileSync(secondPath, 'utf8')).toBe(secondBefore);
   });
 });
 

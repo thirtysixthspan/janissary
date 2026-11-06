@@ -35,6 +35,7 @@ function harness(options: {
     if (index !== -1) tabs.splice(index, 1);
   });
   const managers = {
+    models: { modelsFor: (name: string) => name === 'opencode' ? ['google/gemini-3.1-flash-lite'] : [] },
     acpRecords: { begin: vi.fn(() => 'record-id'), prompt: vi.fn(), activity: vi.fn(), answer: vi.fn(), close: vi.fn() },
     tab: {
       launchDir: '/repo', tabs, allLabels: () => tabs.map((tab) => tab.label),

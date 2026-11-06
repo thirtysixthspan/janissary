@@ -1,8 +1,8 @@
-export const ROLES_PAYLOAD_SCHEMA_VERSION = 1;
+export const ROLES_PAYLOAD_SCHEMA_VERSION = 2;
 
 // One harness/model/effort choice inside a role. `effort` is absent for the default (no effort
 // stored); any other value is passed through verbatim, the way `harness --effort` is.
-export type RoleEntry = { harness: string; model: string; effort?: string };
+export type RoleEntry = { harness: string; model: string; effort?: string; missing?: boolean };
 
 // A role as the tab shows it: the name is the file's key, the description is the guidance a human
 // or an AI task reads, and the entries are the ordered choices the role maps to.
@@ -59,7 +59,8 @@ function isEntry(value: unknown): value is RoleEntry {
   return isRecord(value)
     && typeof value.harness === 'string' && value.harness.length > 0
     && typeof value.model === 'string' && value.model.length > 0
-    && (value.effort === undefined || typeof value.effort === 'string');
+    && (value.effort === undefined || typeof value.effort === 'string')
+    && (value.missing === undefined || typeof value.missing === 'boolean');
 }
 
 function isEntryPrecondition(value: Record<string, unknown>): boolean {
@@ -101,7 +102,10 @@ export function isMoveRoleIntent(value: unknown): value is MoveRoleIntent {
 }
 
 export function isAddEntryIntent(value: unknown): value is AddEntryIntent {
-  return isRecord(value) && isName(value.role) && isEntry(value.entry);
+  return isRecord(value)
+    && isName(value.role)
+    && isEntry(value.entry)
+    && value.entry.missing === undefined;
 }
 
 export function isSetEntryEffortIntent(value: unknown): value is SetEntryEffortIntent {

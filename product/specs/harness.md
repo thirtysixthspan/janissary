@@ -1039,18 +1039,32 @@ interactive command (`harness <name> --model <name> --effort <level>`).
 `--model <name>` is passed to the harness binary's `--model` flag verbatim, but is validated first
 against that harness's known model catalog; an unknown model is rejected with `Unknown model
 "<model>" for harness "<name>" — add it to known-models.json.` and no tab is opened.
+Disabled models are unavailable to launches and launch choices, and a `--model` naming one receives
+the same unknown-model refusal. Catalog changes take effect without a restart when the model
+manager next reloads the file through the Models command, Delete, or Refresh. Consumers then use
+the updated catalog for subsequent launches and model choices.
 
-A project can supply its own `.janissary/known-models.json` (a JSON object mapping harness name to
-a list of model ids) to replace the bundled catalog entirely for that project. If the file is
-missing, the bundled catalog is used; if it exists but isn't valid JSON, a warning is printed and
-the bundled catalog is used. A file that parses but isn't an object whose every value is a list of
-strings is treated the same way, with the warning `.janissary/known-models.json is not an object of
-model-id lists — using the bundled catalog`.
+A project can supply its own `.janissary/known-models.json` to replace the bundled catalog entirely
+for that project. It is a JSON object mapping each harness name to an ordered list of model records.
+Each record has a required nonempty string `id` and may have a string `name` and boolean `disabled`
+and `hidden` flags. The `disabled` flag excludes a model from launch choices. The `hidden` flag only
+controls whether the models list shows it; a hidden model remains available for launch and selection. When a flag
+is false, it is omitted when the catalog is written.
+
+If the file is missing, the bundled catalog is used. If it exists but isn't valid JSON, a warning is
+printed and the bundled catalog is used. A file that parses but isn't an object of model-record
+lists is treated the same way, with the warning `.janissary/known-models.json is not an object of
+model-record lists — using the bundled catalog`. A record with an empty or missing `id`, a `name`
+that isn't a string, or a flag that isn't a boolean invalidates the whole override. The change from
+id lists to records is breaking for hand-written project overrides; those files now use the bundled
+catalog until they are converted to records.
 
 ### What the bundled catalog holds
 
 The bundled catalog, `known-models.json`, names models for the `claude`, `codex`, and `opencode`
-harnesses: Anthropic's Claude models, OpenAI's GPT models, and the opencode providers' models. It
+harnesses: Anthropic's Claude models, OpenAI's GPT models, and the opencode providers' models. Its
+records initially contain only the model `id`; display names and flags are added by a project refresh
+or by hand. It
 holds every model a default role names, so a fresh roles file never offers a model a launch would
 refuse. A project override left under the catalog's former name, `.janissary/harness-models.json`,
 is not read. The `opencode`
@@ -1073,6 +1087,16 @@ are mostly other providers' models re-exposed, and reachable more directly throu
 already listed. A model a provider offers only for a limited time is listed like any other while the
 provider lists it, and removed under the same rule once it is gone; the same model offered by both
 OpenCode Zen and OpenCode Go appears once under each prefix.
+
+On the Models tab, OpenCode rows group by the id prefix before the first `/` and retain the order
+in which each prefix first appears. The `opencode`, `opencode-go`, `google`, and `openai` prefixes
+use the headings `OpenCode Zen`, `OpenCode Go`, `Google`, and `OpenAI`. Any other prefix appears
+unchanged as its heading; a bare id uses the fallback `opencode` prefix and therefore the
+`OpenCode Zen` heading.
+
+Refreshing the catalog reports provider outcomes to the notifications feed. If `opencode models` or
+`codex debug models` reaches its 30-second deadline, the provider is reported as failed with the
+reason `timed out after 30 s`. A refresh canceled by its owner is discarded without reporting.
 
 `--effort <level>` selects an effort level with no validation against any fixed set of levels — the
 level is forwarded verbatim, translated to whichever flag the target harness actually understands so

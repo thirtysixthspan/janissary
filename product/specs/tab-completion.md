@@ -74,7 +74,7 @@ The shell uses the following rules, in order of precedence:
 ### 4. Harness Model (`harness ... --model`)
 
 - **Context:** The value following a `--model` flag on a `harness` command.
-- **Candidates:** The known model names for the harness named earlier on the same command line.
+- **Candidates:** The enabled model ids in the current catalog for the harness named earlier on the same command line. Disabled models are not offered.
 - **Behavior:** The `--model` flag may appear anywhere after the harness name, alongside the command's other flags and options.
 
 ### 5. Filesystem Path Completion

@@ -10,11 +10,12 @@ import {
   type TabPluginDeclaration,
   type TabPluginNotificationTopic,
   type TabPluginServerCapabilities,
+  type TabPluginTopicAction,
+  type ModelsTopicDeleteAction,
 } from './api.js';
 import type { PluginFailureOrigin } from './failure.js';
 import type { HandlerDeadline } from './guard.js';
 import { HARNESS_NAMES } from '../harness/index.js';
-import { modelsFor } from '../harness/models.js';
 import { EFFORT_LEVELS } from '../harness/effort-levels.js';
 import { readPluginSettings, savePluginSettings } from './settings.js';
 import { liveRecordingPaths } from './live-recordings.js';
@@ -63,6 +64,25 @@ function requireDeclaredTopic(
   if (!(declaration.notifications ?? []).includes(topic)) {
     throw new Error(`used topic "${topic}" without declaring it`);
   }
+}
+
+function topicActionCapability(
+  managers: Managers,
+  declaration: TabPluginDeclaration,
+  isEnabled: () => boolean,
+): TabPluginServerCapabilities['topicAction'] {
+  function topicAction(action: ModelsTopicDeleteAction): Promise<string | undefined>;
+  function topicAction(action: Exclude<TabPluginTopicAction, ModelsTopicDeleteAction>): string | undefined;
+  function topicAction(action: TabPluginTopicAction): string | undefined | Promise<string | undefined>;
+  function topicAction(action: TabPluginTopicAction): string | undefined | Promise<string | undefined> {
+    requireDeclaredTopic(declaration, action.topic);
+    if (!isEnabled()) {
+      return action.topic === 'models' && action.action === 'delete'
+        ? Promise.resolve(undefined) : undefined;
+    }
+    return runTopicAction(managers, action);
+  }
+  return topicAction;
 }
 
 export function createPluginContext(
@@ -151,12 +171,11 @@ export function createPluginContext(
       openRequests.push(target);
     },
     // The harness launch vocabulary: the model catalog the launcher dialog reads, plus the effort
-    // levels. Built fresh per call from the already-loaded catalog (a project's
-    // `.janissary/known-models.json` override is reflected), and empty while the plugin is
+    // levels. Built fresh per call from the authoritative model manager and empty while the plugin is
     // disabled, the way `projectFileList` answers its empty values.
     harnessLaunchCatalog: () => ({
       models: isEnabled()
-        ? Object.fromEntries(HARNESS_NAMES.map((name) => [name, modelsFor(name)]))
+        ? Object.fromEntries(HARNESS_NAMES.map((name) => [name, managers.models.modelsFor(name)]))
         : {},
       efforts: [...EFFORT_LEVELS],
     }),
@@ -164,10 +183,7 @@ export function createPluginContext(
       requireDeclaredTopic(declaration, topic);
       return isEnabled() ? readTopicData(managers, topic) : emptyTopicData(topic);
     },
-    topicAction: (action) => {
-      requireDeclaredTopic(declaration, action.topic);
-      return isEnabled() ? runTopicAction(managers, action) : undefined;
-    },
+    topicAction: topicActionCapability(managers, declaration, isEnabled),
     configuredViewer: () => isEnabled() ? getConfig().externalViewers?.[declaration.id] ?? '' : '',
     openExternally: (absPath, application) => isEnabled() && didOsOpen(absPath, application),
     readSettings: () => isEnabled() ? readPluginSettings(declaration.id) : {},

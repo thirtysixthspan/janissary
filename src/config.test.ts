@@ -216,16 +216,18 @@ describe('loadConfig', () => {
     expect(getConfig().transcriptMaxLines).toBe(DEFAULT_TRANSCRIPT_MAX_LINES);
   });
 
-  it('writes a default notifications block with system schedule notices on', () => {
+  it('writes default-on toggles for system schedule and model refresh notices', () => {
     const config = loadConfig(tmpDir);
     expect(config.notifications?.events).toEqual({
-      stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false, systemScheduleFire: true,
+      stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false,
+      systemScheduleFire: true, modelsRefresh: true,
     });
     expect(config.notifications?.alerts).toEqual(NOTIFICATION_ALERT_DEFAULTS);
 
     const configPath = path.join(tmpDir, '.janissary', 'config.json');
     expect(JSON.parse(readFileSync(configPath, 'utf8')).notifications.events.stateChange).toBe(false);
     expect(JSON.parse(readFileSync(configPath, 'utf8')).notifications.events.systemScheduleFire).toBe(true);
+    expect(JSON.parse(readFileSync(configPath, 'utf8')).notifications.events.modelsRefresh).toBe(true);
   });
 
   it('reads custom notification event toggles from an existing config.json', () => {
@@ -254,6 +256,7 @@ describe('loadConfig', () => {
         agentStart: false,
         rateLimited: false,
         systemScheduleFire: true,
+        modelsRefresh: true,
     });
     const written = JSON.parse(readFileSync(configPath, 'utf8'));
     expect(written.notifications.events).toEqual({ stateChange: true, scheduleFire: false, systemScheduleFire: 'yes' });
@@ -278,7 +281,8 @@ describe('loadConfig', () => {
       expect(written.notifications.events).toEqual(rawConfig.notifications.events);
     } else {
       expect(written.notifications.events).toEqual({
-        stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false, systemScheduleFire: true,
+        stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false,
+        systemScheduleFire: true, modelsRefresh: true,
       });
     }
     expect(written.notifications.alerts).toEqual(NOTIFICATION_ALERT_DEFAULTS);
@@ -292,6 +296,16 @@ describe('loadConfig', () => {
     }));
 
     expect(loadConfig(tmpDir).notifications?.events.systemScheduleFire).toBe(false);
+  });
+
+  it('preserves an explicit false model refresh toggle', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({
+      notifications: { events: { modelsRefresh: false } },
+    }));
+
+    expect(loadConfig(tmpDir).notifications?.events.modelsRefresh).toBe(false);
   });
 
   it('writes notification alert defaults alphabetically in a fresh config', () => {

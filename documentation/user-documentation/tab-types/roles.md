@@ -10,7 +10,7 @@ roles
 
 <img class="agent-float" src="/agents/dogan-south-west.png" alt="" />
 
-The tab opens in the center strip with two columns. **Models** on the left lists every harness you can launch and the models each one knows. Your roles sit on the right, and the line above them names the file you are editing — `~/.janissary/roles.json`, or your project's own file when it has one.
+The tab opens with your role cards and the line above them names the file you are editing — `~/.janissary/roles.json`, or your project's own file when it has one. Add entries from the enabled harness and model choices in each card. To refresh or manage those choices, open the [Models tab](/user-documentation/tab-types/models).
 
 A role has a name, a description, and an ordered list of choices. The description is plain text: write what the role is for, so you or an agent can tell `planning` from `research` at a glance. The tab is an editor for that list. It doesn't launch anything; see [what roles don't do yet](#what-roles-dont-do-yet).
 
@@ -18,15 +18,15 @@ If neither your project nor your home folder has a `roles.json` file, opening th
 
 ## Add a model to a role
 
-Drag a model from the **Models** column onto a role card and it becomes that role's next choice. Drop it anywhere on the card — on one of its existing model rows, or on the controls there, as much as on the empty space around them. Every drop adds, so if you drop the wrong one, remove it and drag the right one in.
-
-Without a mouse, click **Add entry** on the card, pick the harness, the model, and an effort, and press **Add**. The effort picker starts on `default` and returns to it when you change the harness or reopen the picker, so a choice never carries over to an entry you did not make it for.
+Click **Add entry** on a card, pick the harness, model, and effort, and press **Add**. The picker offers enabled models only. The effort picker starts on `default` and returns to it when you change the harness or reopen the picker, so a choice never carries over to an entry you did not make it for.
 
 Each choice row carries an effort dropdown: `default`, `low`, `medium`, `high`, `xhigh`, or `max`. `default` stores no effort at all for that choice; the other levels are the same ones the **New harness** dialog offers. If a hand-written role has another effort value, that value stays visible as an option in its dropdown. Change it whenever you like: the tab saves as you go. If saving fails, it shows `Could not write roles.json at <path>.` and preserves your previous file and the choices on screen.
 
 ## Reorder and remove
 
-Drag an entry row onto another row in the same card to move it. Drag a role's handle onto another card — its model rows included — to move the role itself. To remove an entry, click the trash can icon on its row, or drag the entry back onto the **Models** column. To remove a role, click the trash can icon in the top right of its card. Removing your last role is allowed; the tab then reads `No roles yet.` and keeps an **Add role** button.
+Drag an entry row onto another row in the same card to move it. Drag a role's handle onto another card — its model rows included — to move the role itself. To remove an entry, click the trash can icon on its row. To remove a role, click the trash can icon in the top right of its card. Removing your last role is allowed; the tab then reads `No roles yet.` and keeps an **Add role** button.
+
+If an entry names a model that is disabled or no longer in the catalog, it stays in your roles file and appears dimmed with the tooltip `Not in the model catalog`. Enable or restore the model through the [Models tab](/user-documentation/tab-types/models), or edit the entry by hand.
 
 When adding a role, pressing `Enter` and then clicking away while the same name is still pending sends it only once. You can enter and submit a different name while that request is pending; it may be added independently. If the earlier request succeeds after you have typed a newer name, your newer draft and the **Add role** control stay in place.
 

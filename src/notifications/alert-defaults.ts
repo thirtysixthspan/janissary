@@ -21,6 +21,7 @@ export const NOTIFICATION_ALERT_DEFAULTS: Record<NotificationEventType, Notifica
   'launch-workspace-cleaned': { desktop: true, sound: 'warning' },
   layout: { desktop: true, sound: 'warning' },
   manual: { desktop: true, sound: 'success' },
+  'models-refresh': { desktop: true, sound: 'success' },
   'open-unsupported': { desktop: true, sound: 'error' },
   'plugin-failure': { desktop: true, sound: 'error' },
   'plugin-note': { desktop: true, sound: 'success' },

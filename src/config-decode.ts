@@ -63,6 +63,7 @@ function notifications(value: unknown, fallback: NotificationConfig): Notificati
       agentStart: booleanValue(events.agentStart, fallback.events.agentStart),
       rateLimited: booleanValue(events.rateLimited, fallback.events.rateLimited),
       systemScheduleFire: booleanValue(events.systemScheduleFire, fallback.events.systemScheduleFire),
+      modelsRefresh: booleanValue(events.modelsRefresh, fallback.events.modelsRefresh),
     },
     alerts: Object.fromEntries(Object.entries(fallback.alerts).map(([event, defaultAlert]) => {
       const entry = isRecord(record.alerts) && isRecord(record.alerts[event]) ? record.alerts[event] : {};

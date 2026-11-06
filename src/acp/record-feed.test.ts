@@ -22,6 +22,7 @@ function setup(remote = false) {
   const root = mkdtempSync(path.join(tmpdir(), 'core-record-feed-'));
   const records = new AcpSessionRecords({ projectDir: root });
   const managers = { acpRecords: records } as Managers;
+  managers.models = { isKnownModel: () => true } as Managers['models'];
   managers.tab = new TabManager(managers);
   managers.tab.tabs.push(makeTab('owner', '#fff'));
   managers.tab.tabs[0].title = 'Original owner';

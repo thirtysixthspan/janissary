@@ -11,6 +11,7 @@ export const tabPluginLoaders = {
   image: () => import('./image/activate.js'),
   launcher: () => import('./launcher/activate.js'),
   markdown: () => import('./markdown/activate.js'),
+  models: () => import('./models/activate.js'),
   page: () => import('./page/activate.js'),
   pdf: () => import('./pdf/activate.js'),
   roles: () => import('./roles/activate.js'),
