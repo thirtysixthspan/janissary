@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's promised role-aware `closeAll` test.
-
-Existing Issue: Role-aware `closeTab` and transport-loss cleanup are tested with both roles, but no test calls `closeAll` while ask and tell sessions are both active, despite the manager test promise. Severity: 3/10
-
-Existing Risk: 3/10 - A future change could close only the default ask session during shutdown and leave a tell process or record open, which would be visible only when both roles are active.
-
-Proposal Risk: 1/10 - A role-aware shutdown test would directly cover this path, though unrelated teardown failures could still leave resources open.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1943 "test closeAll for role-keyed ACP sessions". In `src/acp/manager.test.ts`, add a case using the existing role settings seam to start ask and tell sessions on one tab, call `closeAll()`, and assert both role identities are gone and both sessions were killed. Keep the existing role-specific close and ask-default tests, and retain the record closure coverage in `src/acp/record-feed.test.ts`.
-
-
 * Reduce introduced technical debt by sharing the canonical ACP role list with record validation.
 
 Existing Issue: `src/acp/role.ts` defines `ACP_ROLES`, while `src/acp-records/validation.ts` and `src/acp-records/store.test.ts` separately hard-code the same role names. Severity: 3/10

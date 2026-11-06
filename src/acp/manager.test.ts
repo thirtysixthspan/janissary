@@ -517,6 +517,30 @@ describe('AcpManager role sessions', () => {
     expect(acp.has('tab1')).toBe(false);
   });
 
+  it('closes every role session with closeAll', () => {
+    const roleSettings = (_root: string, role: AcpRole) => ({
+      name: role, entries: [role === 'ask' ? GEMINI : CLAUDE], commands: [],
+    });
+    const { acp } = setup([], roleSettings);
+    const askSession = makeSession();
+    const tellSession = makeSession();
+    mocks.connectAcp.mockReturnValueOnce(askSession).mockReturnValueOnce(tellSession);
+
+    const ask = acp.start('tab1');
+    const tell = acp.start('tab1', undefined, 'tell');
+    expect(acp.sessionIdentity('tab1')).toBe(ask.session);
+    expect(acp.sessionIdentity('tab1', 'tell')).toBe(tell.session);
+
+    acp.closeAll();
+
+    expect(acp.sessionIdentity('tab1')).toBeUndefined();
+    expect(acp.sessionIdentity('tab1', 'tell')).toBeUndefined();
+    expect(acp.has('tab1')).toBe(false);
+    expect(acp.has('tab1', 'tell')).toBe(false);
+    expect(askSession.kill).toHaveBeenCalledOnce();
+    expect(tellSession.kill).toHaveBeenCalledOnce();
+  });
+
   it('closes only the session whose model failed', () => {
     const roleSettings = (_root: string, role: AcpRole) => ({
       name: role, entries: [role === 'ask' ? GEMINI : CLAUDE], commands: [],
