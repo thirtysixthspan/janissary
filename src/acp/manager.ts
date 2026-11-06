@@ -17,6 +17,7 @@ import { acpRoleRuntime, existingAcpRoleRuntime } from './role-state.js';
 import { DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
 
 const STILL_CONNECTING = 'ACP: the remote session is still connecting.';
+type PromptResultOptions = { appendRefusalToTranscript?: boolean };
 
 type Attempt = {
   command: string;
@@ -71,13 +72,16 @@ export class AcpManager extends AcpSessionManager {
     return result.answered ? result.reply : result.error;
   }
 
-  promptResult(label: string, command: string, role: AcpRole = DEFAULT_ACP_ROLE): Promise<AcpPromptResult> {
-    return new Promise((finish) => { this.run(label, command, finish, role); });
+  promptResult(
+    label: string, command: string, role: AcpRole = DEFAULT_ACP_ROLE,
+    options: PromptResultOptions = {},
+  ): Promise<AcpPromptResult> {
+    return new Promise((finish) => { this.run(label, command, finish, role, options); });
   }
 
   run(
     label: string, command: string, onDone: (result: AcpPromptResult) => void = () => {},
-    role: AcpRole = DEFAULT_ACP_ROLE,
+    role: AcpRole = DEFAULT_ACP_ROLE, options: PromptResultOptions = {},
   ): void {
     const tab = this.managers.tab.byLabel(label);
     if (!tab) { onDone({ answered: false, error: 'Tab not found' }); return; }
@@ -91,7 +95,9 @@ export class AcpManager extends AcpSessionManager {
     const queue = settings ? this.queueFor(label, settings, role) : [];
     if (refusal || !settings || queue.length === 0) {
       const error = refusal ?? noRoleModels(role);
-      appendAcp(this.managers, label, { input: command, output: error });
+      if (options.appendRefusalToTranscript ?? true) {
+        appendAcp(this.managers, label, { input: command, output: error });
+      }
       onDone({ answered: false, error });
       return;
     }

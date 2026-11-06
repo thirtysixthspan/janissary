@@ -46,7 +46,9 @@ describe('tell command', () => {
     const promptResult = vi.fn(() => pending.promise);
     const { append } = run(promptResult, '  /TeLl   release notes  ', 'tell release notes');
 
-    expect(promptResult).toHaveBeenCalledExactlyOnceWith('main', 'tell release notes', 'tell');
+    expect(promptResult).toHaveBeenCalledExactlyOnceWith('main', 'tell release notes', 'tell', {
+      appendRefusalToTranscript: false,
+    });
     expect(append).not.toHaveBeenCalled();
     pending.resolve({ answered: true, reply: '## Done', session: 'tell-session' });
     await settle();

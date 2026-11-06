@@ -5,6 +5,8 @@ import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import type { AcpRole } from './role.js';
 import type { AcpRoleSettings } from './ask-role.js';
 import { makeTab } from '../tab/index.js';
+import { command as askCommand } from '../commands/ask.js';
+import { command as tellCommand } from '../commands/tell.js';
 
 const mocks = vi.hoisted(() => ({
   connectAcp: vi.fn(),
@@ -49,6 +51,7 @@ function setup(
       deleteBusy: vi.fn(),
       updateRunning: vi.fn(),
     },
+    remote: { get: vi.fn() },
     database: { primer: 'db primer', runInTab: vi.fn(), isCommandLine: vi.fn() },
     browser: { run: vi.fn() },
     questions: { register: vi.fn() },
@@ -56,7 +59,9 @@ function setup(
   const askModels = vi.fn((_root: string, role: AcpRole) => ({
     name: role, entries: entries.map((entry) => ({ ...entry })), commands: [...NATIVE_ACP_COMMANDS],
   }));
-  return { acp: new AcpManager(managers, roleSettings ?? askModels), append, askModels, enabledModels };
+  const acp = new AcpManager(managers, roleSettings ?? askModels);
+  Object.assign(managers, { acp });
+  return { acp, append, askModels, enabledModels, managers, tabs };
 }
 
 const launched = (call: number) => mocks.connectAcp.mock.calls[call][0] as AcpOptions;
@@ -65,6 +70,7 @@ const answer = (handlers: AcpLoopHandlers, text: string) => {
   handlers.endTurn(text);
   handlers.finished('answered', 8);
 };
+const settleCommand = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe('AcpManager — ask role fallback', () => {
   beforeEach(() => {
@@ -297,5 +303,87 @@ describe('AcpManager — ask role fallback', () => {
     expect(append).toHaveBeenCalledWith('tab1', { input: 'ask hello', output: 'ACP: the ask role lists no models.' });
     expect(mocks.connectAcp).not.toHaveBeenCalled();
     expect(acp.start('tab1')).toEqual({ error: 'ACP: the ask role lists no models.' });
+  });
+});
+
+describe('AcpManager — shell refusal output', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sessions.length = 0;
+  });
+
+  it('keeps a direct promptResult refusal in the ACP transcript by default', async () => {
+    const settings = (_root: string, role: AcpRole) => ({ name: role, entries: [], commands: [] });
+    const { acp, append } = setup([], settings);
+
+    await expect(acp.promptResult('tab1', 'tell hello', 'tell')).resolves.toEqual({
+      answered: false,
+      error: 'ACP: the tell role lists no models.',
+    });
+    expect(append).toHaveBeenCalledExactlyOnceWith('tab1', {
+      input: 'tell hello', output: 'ACP: the tell role lists no models.',
+    });
+  });
+
+  it('publishes tell usage as one background reply', async () => {
+    const { append, managers } = setup();
+
+    tellCommand.run('tell', { label: 'tab1', index: 0 }, managers);
+    await settleCommand();
+
+    expect(append).toHaveBeenCalledExactlyOnceWith('tab1', {
+      input: 'tell', output: 'Usage: tell <prompt>.', background: expect.any(String),
+    });
+  });
+
+  it('publishes an unavailable tell role as one background reply', async () => {
+    const { append, enabledModels, managers } = setup([OPENCODE]);
+    enabledModels.clear();
+
+    tellCommand.run('tell hello', { label: 'tab1', index: 0 }, managers);
+    await settleCommand();
+
+    expect(append).toHaveBeenCalledExactlyOnceWith('tab1', {
+      input: 'tell hello', output: 'ACP: the tell role lists no models.', background: expect.any(String),
+    });
+  });
+
+  it('publishes a same-role tell refusal as one background reply', async () => {
+    const { acp, append, managers } = setup();
+
+    tellCommand.run('tell first', { label: 'tab1', index: 0 }, managers);
+    tellCommand.run('tell second', { label: 'tab1', index: 0 }, managers);
+    await settleCommand();
+
+    expect(append).toHaveBeenCalledExactlyOnceWith('tab1', {
+      input: 'tell second', output: 'ACP: a prompt is already running.', background: expect.any(String),
+    });
+    acp.close('tab1', undefined, 'tell');
+    await settleCommand();
+  });
+
+  it('publishes a still-connecting remote tell refusal as one background reply', async () => {
+    const { append, managers, tabs } = setup();
+    tabs[0]!.remote = { address: 'devbox', host: 'devbox' };
+    const remote = managers as unknown as { remote: { get: ReturnType<typeof vi.fn> } };
+    remote.remote.get.mockReturnValue({ attached: false });
+
+    tellCommand.run('tell hello', { label: 'tab1', index: 0 }, managers);
+    await settleCommand();
+
+    expect(append).toHaveBeenCalledExactlyOnceWith('tab1', {
+      input: 'tell hello', output: 'ACP: the remote session is still connecting.', background: expect.any(String),
+    });
+  });
+
+  it('keeps ask command refusals on the single background reply path', async () => {
+    const { append, managers } = setup();
+
+    askCommand.run('ask', { label: 'tab1', index: 0 }, managers);
+    await settleCommand();
+
+    expect(append).toHaveBeenCalledExactlyOnceWith('tab1', {
+      input: 'ask', output: 'Usage: ask <prompt>.', background: expect.any(String),
+    });
   });
 });
