@@ -146,11 +146,16 @@ link in the block never navigates the application window, so a link the applicat
 does nothing.
 
 **Tab completion is the application's.** `Tab` in the command line asks the application's own
-completion, and shows the same strip when there is a choice to make. The shell tab keeps no list
-of its own. One match completes the line. Several matches fill in the command line as far as they
-agree, up to their longest common prefix, and show the choice strip with two spaces between
-choices. No matches leave the line unchanged. When several choices are visible, `Escape` closes the
-strip and leaves the command line as it is. Otherwise, `Escape` with text in the focused command line clears that text
+completion. The shell tab keeps no list of its own. One match completes the line. Several matches
+fill in the command line as far as they agree, up to their longest common prefix, and open a
+**completions** picker docked on the command bar, one candidate per row with the first selected.
+The keyboard stays in the command line while the picker is open. `↑` and `↓` move the selection,
+Return accepts the selected candidate instead of running the line, and clicking a row accepts that
+candidate. Accepting puts the candidate in place of the partial word and closes the picker. Then the
+line completes again: when the accepted candidate is now the only match, it gains the same trailing
+space or `/` a sole match gets. A candidate ending in `/` is a directory already and stays as it is.
+Typing or otherwise editing the line closes the picker. No matches leave the line unchanged. When
+the picker is open, `Escape` closes it and leaves the command line as it is. Otherwise, `Escape` with text in the focused command line clears that text
 without submitting it. With an empty command line, `Escape` returns the terminal to the bottom of
 its scrollback.
 

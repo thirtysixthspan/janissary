@@ -39,12 +39,12 @@ View clauses restore only the named parts of a local tree; remote view clauses a
 | Key | Action |
 | --- | ------ |
 | `Shift+Tab` / double-click the terminal | Move between the command line and the terminal; typing in the terminal goes straight to zsh. Double-clicking clears any terminal selection made by the gesture. A single click on the terminal returns focus to the command line |
-| `Enter` | Run what is in the command line: an application command when it names one, otherwise sent to zsh. A multi-line command sent to zsh is pasted and submitted as one command. While zsh is running a command the line reads `queue >` and a submitted line waits in the tab's queue |
+| `Enter` | Run what is in the command line: an application command when it names one, otherwise sent to zsh. A multi-line command sent to zsh is pasted and submitted as one command. While zsh is running a command the line reads `queue >` and a submitted line waits in the tab's queue. While the completions picker is open it accepts the selected choice instead |
 | `!` prefix | Send the line straight to zsh, even when it names an application command |
-| `↑` / `↓` | Walk this tab's command history — lines the command bar sent and commands typed into the terminal |
+| `↑` / `↓` | Walk this tab's command history — lines the command bar sent and commands typed into the terminal. While the completions picker is open they move its selection instead |
 | `→` / `End` (at the end of input) | Accept the ghost suggestion from the global history |
-| `Tab` | Complete the line the way any application command bar does; several choices show a strip |
-| `Escape` | Close a visible completion strip; otherwise clear text in the focused command line, or return the terminal to the bottom when the line is empty or the terminal has focus |
+| `Tab` | Complete the line the way any application command bar does; several choices open a completions picker: `↑` / `↓` move, Return or a click puts the choice in the line without running it, typing closes it |
+| `Escape` | Close an open completions picker; otherwise clear text in the focused command line, or return the terminal to the bottom when the line is empty or the terminal has focus |
 | `Shift+↑` / `Shift+↓` / `Ctrl+↑` / `Ctrl+↓` | Scroll the terminal up / down (accelerated) |
 | `Page Up` / `Page Down` | Scroll the terminal up / down by half a screen |
 | `Ctrl+C` / `Ctrl+D` / `Ctrl+Z` | Send interrupt, end-of-input, or suspend to the shell — the characters a terminal would send. `Ctrl+C` copies the command line's own selection instead when it holds one. These apply while the command line has the focus |

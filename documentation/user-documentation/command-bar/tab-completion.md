@@ -1,6 +1,8 @@
 # Tab completion
 
-Press `Tab` to complete the token just before the cursor. One match replaces the token, adding `/` for a directory or a space for a file. Several matches fill in their longest common prefix and show the candidates above the command bar. No match leaves the line alone. You can read the candidate strip, but you can't move through it or accept an entry; keep typing to narrow the list, then press `Tab` again.
+Press `Tab` to complete the token just before the cursor. One match replaces the token, adding `/` for a directory or a space for a file. Several matches fill in their longest common prefix and open a **completions** picker above the command bar. No match leaves the line alone.
+
+In the picker, press `↑` or `↓` to move the selection and `Return` to accept it, or click a row. The candidate replaces the partial word. If it's now the only match, it gets the trailing space or `/` a sole match gets. Press `Escape` to close the picker and keep the line as it is. Typing closes it too, so you can keep narrowing the line and press `Tab` again.
 
 In a shell tab, a failed completion request reports a shell plugin failure and can close the tab. The typed line isn't guaranteed to survive that failure.
 

@@ -2,10 +2,12 @@ import { useBackgroundReplies } from './useBackgroundReplies';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CommandBarShell, useAppCommandBar, useCommandBarKeys, usePluginChordClaims } from '../api';
 import type { TabPluginClientCapabilities } from '../api';
-import type { ShellCompletion, ShellPayload } from '@shared/plugins/shell/shared';
+import type { ShellPayload } from '@shared/plugins/shell/shared';
 import { useShellTabTerminal } from './useShellTabTerminal';
-import { handleCompletionDismissKey, handleQueueKey, handleShellControlKey, handleTerminalCopyKey } from './command-bar-keys';
+import { handleQueueKey, handleShellControlKey, handleTerminalCopyKey } from './command-bar-keys';
 import { ShellHistoryPopup } from './ShellHistoryPopup';
+import { ShellCompletionPicker } from './ShellCompletionPicker';
+import { useShellCompletion } from './useShellCompletion';
 import { ShellTabMeta } from './ShellTabMeta';
 import { useShellSubmit } from './useShellSubmit';
 import { useShellCommandQueue } from './useShellCommandQueue';
@@ -17,7 +19,6 @@ import { useTerminalCommandHistory } from './useTerminalCommandHistory';
 import { appendShellHistory } from './shell-history';
 import { NEW_SHELL_CHORD, NO_CHORDS, SHELL_DOT_COLOR } from './shell-tab-constants';
 import { openSiblingShell } from './open-sibling';
-import { reportShellIntentFailure } from './report-shell-intent-failure';
 import './shell.css';
 
 type Properties = {
@@ -38,7 +39,6 @@ export function ShellTab({ payload, capabilities }: Properties) {
   const [draft, setDraft] = useState('');
   // Lines the bar has sent, oldest first. Direct terminal input belongs to zsh's own history.
   const [sent, setSent] = useState<string[]>([]);
-  const [matches, setMatches] = useState<string[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   // A shell still waiting for its workspace has no zsh yet, so its bar queues exactly as it does behind
   // a busy zsh, and the queue drains from zsh's first prompt.
@@ -47,6 +47,8 @@ export function ShellTab({ payload, capabilities }: Properties) {
   const queueReference = useRef<CommandQueue | null>(null);
   const queueOpen = appBar.queueOpen;
   useApplicationBarEdits(appBar, inputReference, draft, setDraft);
+  const completion = useShellCompletion({ capabilities, draft, setDraft, inputRef: inputReference });
+  const { matches, setMatches } = completion;
 
   const terminalHistory = useTerminalCommandHistory(setSent);
   const {
@@ -117,7 +119,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
     // mean one ArrowUp both moved its selection and rewrote the bar, since the bar's recall walks the
     // very lines the popup lists.
     if (historyOpen) return;
-    if (handleCompletionDismissKey(event, matches.length > 1, () => { setMatches([]); })) return;
+    if (completion.onPickerKey(event)) return;
     if (event.key === 'Escape' && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && draft) {
       event.preventDefault();
       event.stopPropagation();
@@ -131,21 +133,13 @@ export function ShellTab({ payload, capabilities }: Properties) {
     if (handleShellControlKey(event, inputReference.current, capabilities.copyText, write)) return;
     if (event.key === 'Tab') {
       event.preventDefault();
-      void capabilities.intent<ShellCompletion>('complete', {
-        line: draft,
-        cursor: inputReference.current?.selectionStart ?? draft.length,
-      }).then((result) => {
-        setMatches(result.matches);
-        if (result.matches.length > 0) setDraft(result.newInput);
-      }).catch((error: unknown) => {
-        reportShellIntentFailure(capabilities, 'shell completion intent failed', error);
-      });
+      completion.request(draft, inputReference.current?.selectionStart ?? draft.length);
       return;
     }
     bar.onKeyDown(event);
   }, [
     appBar.blockingOverlayOpen, appBar.onDeleteQueued, appBar.overlayOwnsCommandBar,
-    bar, capabilities, draft, focusTerminal, historyOpen, matches.length, queueOpen, terminalSelection, write,
+    bar, capabilities, completion, draft, focusTerminal, historyOpen, queueOpen, setMatches, terminalSelection, write,
   ]);
 
   // `Ctrl+R` and `Cmd+T` are claimed by this plugin's declaration, so they reach this tab while it is
@@ -204,16 +198,10 @@ export function ShellTab({ payload, capabilities }: Properties) {
         autoFocus={capabilities.active}
         acceptsFileDrops
         ariaLabel="Shell command"
-        above={matches.length > 1 ? (
-          <div className="completions">
-            {matches.map((match, index) => (
-              <span key={match} className="completion">
-                {index > 0 && '  '}{match}
-              </span>
-            ))}
-          </div>
-        ) : undefined}
       />
+      {matches.length > 1 && (
+        <ShellCompletionPicker items={matches} selected={completion.selected} onPick={completion.pick} />
+      )}
       {historyOpen && (
         <ShellHistoryPopup
           lines={sent}
