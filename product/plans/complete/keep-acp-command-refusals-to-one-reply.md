@@ -44,7 +44,7 @@ Ensure shell `ask` and `tell` refusals settle as one background reply while dire
 
 ## Verification
 
-- `./scripts/run.mjs check-diff` passed lint and typecheck. Its server-test phase returned `test:server ✗` without diagnostics on the final runs. The directly related manager and command tests passed: 51 tests across three files; `npm run test:diff:server` passed all 853 tests across 40 files.
+- Earlier `./scripts/run.mjs check-diff` runs returned `test:server ✗` without diagnostics while lint and typecheck passed. The final run passed all phases. The directly related manager and command tests passed: 51 tests across three files; `npm run test:diff:server` passed all 853 tests across 40 files.
 - The integration tests prove the settled result content and the single `tab.append` output path for each covered refusal; the direct API test proves its transcript behavior remains intact. `git diff --check` passed.
 - Confirm the working tree contains only the files named by this plan plus its promotion and the selected backlog entry removal.
 
