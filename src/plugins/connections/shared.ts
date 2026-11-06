@@ -1,4 +1,4 @@
-export const CONNECTIONS_PAYLOAD_SCHEMA_VERSION = 1;
+export const CONNECTIONS_PAYLOAD_SCHEMA_VERSION = 2;
 
 export type AcpRole = 'ask' | 'tell';
 

@@ -30,6 +30,7 @@ describe('client plugin registry', () => {
     expect(clientPluginRegistry.get('conversations')?.schemaVersion)
       .toBe(CONVERSATIONS_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('connections')?.schemaVersion).toBe(CONNECTIONS_PAYLOAD_SCHEMA_VERSION);
+    expect(clientPluginRegistry.get('connections')?.schemaVersion).toBe(2);
     expect(clientPluginRegistry.get('diff')?.schemaVersion).toBe(DIFF_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('markdown')?.schemaVersion).toBe(MARKDOWN_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('models')?.schemaVersion).toBe(MODELS_PAYLOAD_SCHEMA_VERSION);

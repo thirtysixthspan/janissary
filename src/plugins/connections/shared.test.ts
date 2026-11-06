@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { connectionsManifest } from './manifest.js';
 import {
   CONNECTIONS_PAYLOAD_SCHEMA_VERSION, isConnectionsPayload, isEmptyIntent, isIdIntent, isKindIdOwnerIntent,
   recordConnectionName,
@@ -20,10 +21,18 @@ const record = {
 
 describe('connections shared contract', () => {
   it('pins schema version and validates list and record payloads', () => {
-    expect(CONNECTIONS_PAYLOAD_SCHEMA_VERSION).toBe(1);
+    expect(CONNECTIONS_PAYLOAD_SCHEMA_VERSION).toBe(2);
+    expect(connectionsManifest.payloadSchemaVersion).toBe(CONNECTIONS_PAYLOAD_SCHEMA_VERSION);
     expect(isConnectionsPayload({ kind: 'list', rows: [live, record] })).toBe(true);
     expect(isConnectionsPayload({ kind: 'connection', record })).toBe(true);
     expect(isConnectionsPayload({ kind: 'connection', record: live })).toBe(false);
+  });
+
+  it('requires a role on live ACP refs while accepting legacy retained records', () => {
+    const oldLiveRef = { ...live, acpRef: { scope: 'tab', label: 'Owner' } };
+
+    expect(isConnectionsPayload({ kind: 'list', rows: [oldLiveRef] })).toBe(false);
+    expect(isConnectionsPayload({ kind: 'list', rows: [record] })).toBe(true);
   });
 
   it('accepts ask and tell roles while preserving legacy role-less rows and sources', () => {
