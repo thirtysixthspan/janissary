@@ -2,6 +2,8 @@
 
 ## ready
 
+* the keyboard focus in the sql tab keeps returning to the first row making it impossible to move the focus with the keyboard or the mouse.
+
 ## development
 
 ## deferred
