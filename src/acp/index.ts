@@ -19,6 +19,7 @@ import { childOutputTail, withChildOutput } from '../child-output.js';
 import { selectAcpEffort } from './effort.js';
 import { shutdownProcessTree } from './process-tree.js';
 import { locateAcpCommand } from './command-path.js';
+import { acpCredentials } from './credentials.js';
 
 /**
  * Connect to an arbitrary ACP agent launched as a subprocess and drive it as an ACP
@@ -37,7 +38,8 @@ import { locateAcpCommand } from './command-path.js';
  */
 export function connectAcp(options: AcpOptions): AcpSession {
   const tokens = options.tokens ?? getProjectTokens();
-  const requested = { ...(!options.workspaceDir && agentCredentialEnv(tokens)), ...options.env };
+  const credentials = acpCredentials(options.workspaceDir);
+  const requested = { ...(!options.workspaceDir && agentCredentialEnv(tokens)), ...credentials.env, ...options.env };
   const located = locateAcpCommand(options.command, { ...process.env, ...requested });
   const { command, args, env } = sandboxSpawn(
     {
@@ -58,6 +60,8 @@ export function connectAcp(options: AcpOptions): AcpSession {
     proc.once('exit', resolve);
     proc.once('error', resolve);
   });
+  proc.once('exit', credentials.dispose);
+  proc.once('error', credentials.dispose);
   let spawnError: Error | undefined;
   const control = new AcpPromptControl();
   // Set by `kill()` before the subprocess is signalled, so a deliberate close reports nothing.
