@@ -49,11 +49,17 @@ describe('the update-pull-request playbook', () => {
   });
 });
 
-describe('the build-a-complex-feature override of the update task', () => {
-  // The override names the update task's steps by number, so a renumbering must carry it along.
-  it('points at the plan discovery and plan selection steps', () => {
+describe('the build-a-complex-feature delegation of the update task', () => {
+  // The delegation names the update task's steps by number, so a renumbering must carry it along.
+  it('points at the plan discovery and plan update steps', () => {
     const discovery = stepNumber('Read the pull request as it stands');
-    const selection = stepNumber('Update the plan');
-    expect(complex).toContain(`Override its Step ${discovery} plan discovery and Step ${selection} selection`);
+    const update = stepNumber('Update the plan');
+    expect(complex).toContain(`Its Step ${discovery} plan discovery finds the canonical plan from the branch's first commit`);
+    expect(complex).toContain(`Its Step ${update} treats every completed subplan plan the way it treats a fix plan`);
+  });
+
+  // The complex task moves its source plan in the first commit precisely so this lookup finds it.
+  it('relies on the update task finding the own plan from the first commit', () => {
+    expect(playbook).toContain('git show --name-status --format= <sha> -- product/plans/complete/');
   });
 });
