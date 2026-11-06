@@ -20,8 +20,10 @@ export function runCorePrompt(
   const updateRunning = (output: string, running: boolean) => {
     managers.tab.updateRunning(label, { markdown: true }, output, running, { trailing: true });
   };
-  const tools = runtime.acpWithoutTools === true ? [] : createAcpToolTable(managers, request.abort.signal);
-  const runCommand = toolRunner(tools, label);
+  const tools = runtime.acpWithoutTools === true ? [] : createAcpToolTable(
+    managers, request.roleName, request.commands, request.abort.signal,
+  );
+  const runCommand = toolRunner(tools, request.roleName, request.commands, label);
   const recordTool = (text: string) => coreActivity(managers.acpRecords, runtime, 'tool', text);
   const recordAsyncResult = async (result: Promise<string>) => {
     const text = await result;
@@ -40,7 +42,7 @@ export function runCorePrompt(
     },
   }, request.prompt, {
     signal: request.abort.signal,
-    primer: [toolPrimer(tools), MARKDOWN_INSTRUCTION].filter(Boolean).join('\n\n'),
+    primer: [toolPrimer(tools, request.commands), MARKDOWN_INSTRUCTION].filter(Boolean).join('\n\n'),
     runCommand: (command) => {
       if (!active()) throw new Error('ACP: prompt cancelled.');
       recordTool(command);

@@ -189,10 +189,13 @@ trims to are dropped as well. An empty object is a valid file holding zero roles
 
 ## Not in this version
 
-The only reader besides the tab is the core ACP session behind `ask`, which launches the `ask`
-role's entries in order and falls back to the default `ask` entries when the file in effect has no
-`ask` role or that role lists none; it never creates the file (see [[acp]]). No launch dialog, no
-command flag, and no agent consults a role description. Other consumers read `roles.json` itself.
-Entries carry harness, model, and effort only.
+The only reader besides the tab is the core ACP session behind `ask`. It reads the `ask` role's
+model entries and command grants fresh for each prompt, never creating a file (see [[acp]]). When no
+`ask` role exists in the file in effect, its built-in entries and grants apply. When an existing
+role has no entries, its model entries fall back to the built-in defaults while its own grants stay
+in effect; an empty or missing `commands` list grants no tools. A nonempty model list whose entries
+are all disabled does not fall back to the built-in models. No launch dialog, command flag, or agent
+consults a role description. Other consumers read `roles.json` itself. Entries carry harness,
+model, and effort; `commands` contains native ACP grants.
 Keyboard reordering is not provided — adding and removing entries and roles are pointer-free, but
 order rides the drag.

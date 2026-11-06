@@ -4,6 +4,8 @@ export type AcpPendingPrompt = {
   finish: (result: AcpPromptResult) => void;
   abort: AbortController;
   prompt: string;
+  roleName: string;
+  commands: string[];
   recordId?: string;
   cancellation?: Promise<boolean>;
   // Set once the model has completed a reply turn for this request: from then on it has answered, and

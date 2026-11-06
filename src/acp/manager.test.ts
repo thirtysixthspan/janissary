@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AcpSession, AcpLoopDeps, AcpLoopHandlers } from './types.js';
 import type { Tab } from '../tab/types.js';
 import type { RoleEntry } from '../plugins/roles/shared.js';
+import type { AcpRoleSettings } from './ask-role.js';
 import { makeTab } from '../tab/index.js';
 
 const mocks = vi.hoisted(() => ({
@@ -33,8 +34,11 @@ import { AcpManager } from './manager.js';
 const makeSession = (): AcpSession => ({ prompt: vi.fn(), kill: vi.fn(), cancel: vi.fn(async () => {}), shutdown: vi.fn(async () => {}) });
 
 const GEMINI: RoleEntry = { harness: 'opencode', model: 'google/gemini-3.1-flash-lite' };
+const CLAUDE: RoleEntry = { harness: 'claude', model: 'claude-haiku-4-5' };
 
-const setup = (entries: RoleEntry[] = [GEMINI]) => {
+const setup = (
+  entries: RoleEntry[] = [GEMINI], roleSettings?: (root: string) => AcpRoleSettings,
+) => {
   mocks.connectAcp.mockReturnValue(makeSession());
   const append = vi.fn();
   const addBusy = vi.fn();
@@ -58,16 +62,18 @@ const setup = (entries: RoleEntry[] = [GEMINI]) => {
     },
     database: {
       primer: 'db primer',
-      runInTab: vi.fn(),
-      isCommandLine: vi.fn(),
+      runInTab: vi.fn(() => 'db ran'),
+      isCommandLine: vi.fn((line: string) => line.startsWith('db ')),
     },
     browser: { run: vi.fn() },
     questions: { register: registerQuestion },
   } as never;
   const askModels = vi.fn((_root: string) => entries);
-  const acp = new AcpManager(managers, askModels);
+  const acp = new AcpManager(managers, roleSettings ?? askModels);
   return {
-    askModels, acp, append, addBusy, deleteBusy, managers, registerQuestion, updateRunning: (managers as { tab: { updateRunning: ReturnType<typeof vi.fn> } }).tab.updateRunning };
+    askModels, acp, append, addBusy, deleteBusy, managers, registerQuestion,
+    updateRunning: (managers as { tab: { updateRunning: ReturnType<typeof vi.fn> } }).tab.updateRunning,
+  };
 };
 
 // `promptResult` looks the tab up first, which `run` on its own does not, and the tool restriction is
@@ -100,6 +106,44 @@ describe('AcpManager.run', () => {
     expect(typeof handlers.startTurn).toBe('function');
     expect(typeof handlers.finished).toBe('function');
     expect(typeof handlers.error).toBe('function');
+  });
+
+  it('keeps one role grant snapshot through retries and reads the next prompt afresh', async () => {
+    let commands = ['question ask'];
+    const roleSettings = vi.fn(() => ({
+      name: 'ask', entries: [GEMINI, CLAUDE], commands: [...commands],
+    }));
+    const { acp, managers } = setup([GEMINI, CLAUDE], roleSettings);
+    acp.run('tab1', 'ask first');
+    const first = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
+    expect(first.primer).toContain('question ask');
+    expect(first.primer).not.toContain('db primer');
+    expect(first.extractCommand('question ask "Who?"')).toBe('question ask "Who?"');
+    expect(first.extractCommand('db sqlite list')).toBeNull();
+
+    commands = ['db sqlite query'];
+    (mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers).error('retry');
+    const retry = mocks.runAcpToolLoop.mock.calls[1][2] as AcpLoopDeps;
+    expect(roleSettings).toHaveBeenCalledOnce();
+    expect(retry.primer).toContain('question ask');
+    expect(retry.primer).not.toContain('db primer');
+    expect(retry.extractCommand('question ask "Who?"')).toBe('question ask "Who?"');
+
+    const retryHandlers = mocks.runAcpToolLoop.mock.calls[1][3] as AcpLoopHandlers;
+    retryHandlers.endTurn('done');
+    retryHandlers.finished('answered', 8);
+    acp.run('tab1', 'ask next');
+
+    const next = mocks.runAcpToolLoop.mock.calls[2][2] as AcpLoopDeps;
+    expect(roleSettings).toHaveBeenCalledTimes(2);
+    expect(next.primer).toContain('db primer');
+    expect(next.primer).not.toContain('question ask');
+    expect(next.extractCommand('db sqlite query store SELECT 1'))
+      .toBe('db sqlite query store SELECT 1');
+    expect(next.extractCommand('question ask "Who?"')).toBeNull();
+    expect(next.runCommand('db sqlite query store SELECT 1')).toBe('db ran');
+    expect((managers as { database: { runInTab: ReturnType<typeof vi.fn> } }).database.runInTab)
+      .toHaveBeenCalledWith('tab1', 'db sqlite query store SELECT 1');
   });
 
   it('runs an agent-issued question command and returns the human answer', async () => {

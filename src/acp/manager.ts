@@ -8,10 +8,10 @@ import type { AcpPendingPrompt } from './prompt-state.js';
 import { promptCoreRecord } from './record-feed.js';
 import { runCorePrompt } from './run-prompt.js';
 import type { Managers } from '../managers.js';
-import type { RoleEntry } from '../plugins/roles/shared.js';
+import { NATIVE_ACP_COMMANDS, type RoleEntry } from '../plugins/roles/shared.js';
 import {
-  askRoleEntries, attemptOrder, exhaustedError, fallbackNotice, NO_ASK_MODEL,
-  type AskModels, type AttemptFailure,
+  askRoleSettings, attemptOrder, exhaustedError, fallbackNotice, NO_ASK_MODEL,
+  type AcpRoleSettings, type AskModels, type AskRoleSettingsReader, type AttemptFailure,
 } from './ask-role.js';
 
 const STILL_CONNECTING = 'ACP: the remote session is still connecting.';
@@ -19,14 +19,18 @@ const STILL_CONNECTING = 'ACP: the remote session is still connecting.';
 type Attempt = {
   command: string;
   prompt: string;
+  settings: AcpRoleSettings;
   queue: RoleEntry[];
   failures: AttemptFailure[];
   onDone: (result: AcpPromptResult) => void;
 };
 
 export class AcpManager extends AcpSessionManager {
-  // `askModels` is a test seam: production reads the `ask` role from the roles file in effect.
-  constructor(managers: Managers, private readonly askModels: AskModels = askRoleEntries) {
+  // The array form keeps existing model-queue tests focused; production reads the full role snapshot.
+  constructor(
+    managers: Managers,
+    private readonly roleSettings: AskRoleSettingsReader | AskModels = askRoleSettings,
+  ) {
     super(managers);
   }
 
@@ -34,7 +38,8 @@ export class AcpManager extends AcpSessionManager {
     const tab = this.managers.tab.byLabel(label);
     if (!tab) return { error: 'Tab not found' };
     if (this.stillConnecting(label)) return { error: STILL_CONNECTING };
-    const entries = this.queueFor(label);
+    const settings = this.readRoleSettings();
+    const entries = this.queueFor(label, settings);
     if (entries.length === 0) return { error: NO_ASK_MODEL };
     if (request?.withoutTools === true) tabRuntime(tab).acpWithoutTools = true;
     const failures: AttemptFailure[] = [];
@@ -70,14 +75,15 @@ export class AcpManager extends AcpSessionManager {
     const refusal = runtime.acpPrompt ? 'ACP: a prompt is already running.'
       : prompt ? this.stillConnecting(label) ? STILL_CONNECTING : undefined
         : 'Usage: ask <prompt>.';
-    const queue = refusal ? [] : this.queueFor(label);
-    if (refusal || queue.length === 0) {
+    const settings = refusal ? undefined : this.readRoleSettings();
+    const queue = settings ? this.queueFor(label, settings) : [];
+    if (refusal || !settings || queue.length === 0) {
       const error = refusal ?? NO_ASK_MODEL;
       appendAcp(this.managers, label, { input: command, output: error });
       onDone({ answered: false, error });
       return;
     }
-    this.attempt(label, { command, prompt, queue, failures: [], onDone });
+    this.attempt(label, { command, prompt, settings, queue, failures: [], onDone });
   }
 
   // One model's try at the request. A request that settles because this model failed before it
@@ -93,6 +99,8 @@ export class AcpManager extends AcpSessionManager {
       finish: (result) => { this.settleAttempt(label, attempt, request, result); },
       abort: new AbortController(),
       prompt: attempt.prompt,
+      roleName: attempt.settings.name,
+      commands: [...attempt.settings.commands],
     };
     runtime.acpPrompt = request;
     try {
@@ -123,12 +131,24 @@ export class AcpManager extends AcpSessionManager {
     attempt.onDone(failed && failures.length > 1 ? { answered: false, error: exhaustedError(failures) } : result);
   }
 
-  private queueFor(label: string): RoleEntry[] {
+  private queueFor(label: string, settings: AcpRoleSettings): RoleEntry[] {
     const current = this.entryOf(label);
-    const queue = attemptOrder(this.askModels(this.managers.tab.launchDir), current)
+    const queue = attemptOrder(settings.entries, current)
       .filter(({ harness, model }) => this.managers.models.isKnownModel(harness, model));
     if (current && !this.managers.models.isKnownModel(current.harness, current.model)) this.close(label);
     return queue;
+  }
+
+  private readRoleSettings(): AcpRoleSettings {
+    const settings = this.roleSettings(this.managers.tab.launchDir);
+    if (!Array.isArray(settings)) {
+      return {
+        name: settings.name,
+        entries: settings.entries.map((entry) => ({ ...entry })),
+        commands: [...settings.commands],
+      };
+    }
+    return { name: 'ask', entries: settings.map((entry) => ({ ...entry })), commands: [...NATIVE_ACP_COMMANDS] };
   }
 
   cancel(label: string): Promise<boolean> {

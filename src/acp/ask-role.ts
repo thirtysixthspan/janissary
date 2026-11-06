@@ -9,12 +9,43 @@ export const NO_ASK_MODEL = 'ACP: the ask role lists no models.';
 
 export type AskModels = (root: string) => RoleEntry[];
 
-function askRole(roles: readonly Role[]): Role | undefined {
-  return roles.find((role) => role.name.trim().toLowerCase() === ASK_ROLE);
+export type AcpRoleSettings = { name: string; entries: RoleEntry[]; commands: string[] };
+export type AskRoleSettingsReader = (root: string) => AcpRoleSettings;
+
+function findRole(roles: readonly Role[], name: string): Role | undefined {
+  const target = name.trim().toLowerCase();
+  return roles.find((role) => role.name.trim().toLowerCase() === target);
+}
+
+function copyEntries(entries: readonly RoleEntry[]): RoleEntry[] {
+  return entries.map((entry) => ({ ...entry }));
 }
 
 export function defaultAskEntries(): RoleEntry[] {
-  return (askRole(DEFAULT_ROLES)?.entries ?? []).map((entry) => ({ ...entry }));
+  return copyEntries(findRole(DEFAULT_ROLES, ASK_ROLE)?.entries ?? []);
+}
+
+export function readRoleSettings(
+  root: string, name: string, home: string = homedir(),
+): AcpRoleSettings {
+  const configured = findRole(readRolesFile(home, root, { create: false }).roles, name);
+  const defaults = findRole(DEFAULT_ROLES, name);
+  if (!configured) {
+    return {
+      name: defaults?.name ?? name,
+      entries: copyEntries(defaults?.entries ?? []),
+      commands: [...(defaults?.commands ?? [])],
+    };
+  }
+  return {
+    name: configured.name,
+    entries: copyEntries(configured.entries.length === 0 ? defaults?.entries ?? [] : configured.entries),
+    commands: [...configured.commands],
+  };
+}
+
+export function askRoleSettings(root: string, home: string = homedir()): AcpRoleSettings {
+  return readRoleSettings(root, ASK_ROLE, home);
 }
 
 // The `ask` role in the roles file in effect — the project's over the home one — read fresh and never
@@ -22,10 +53,7 @@ export function defaultAskEntries(): RoleEntry[] {
 // entries: the defaults are written only when the roles tab creates a new file, so most existing files
 // predate the role, and an ACP request with zero models could only ever fail.
 export function askRoleEntries(root: string, home: string = homedir()): RoleEntry[] {
-  const configured = askRole(readRolesFile(home, root, { create: false }).roles);
-  return configured && configured.entries.length > 0
-    ? configured.entries.map((entry) => ({ ...entry }))
-    : defaultAskEntries();
+  return askRoleSettings(root, home).entries;
 }
 
 export function sameEntry(left: RoleEntry, right: RoleEntry): boolean {

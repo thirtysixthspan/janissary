@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { AcpSessionRecords } from '../acp-records/manager.js';
 import type { Managers } from '../managers.js';
+import type { AcpRoleSettings } from './ask-role.js';
 import { TabManager } from '../tab/manager.js';
 import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
@@ -20,7 +21,7 @@ import { AcpManager } from './manager.js';
 
 const projects: { root: string; managers: Managers }[] = [];
 
-function setup() {
+function setup(roleSettings?: (root: string) => AcpRoleSettings) {
   const managers = {} as Managers;
   const root = mkdtempSync(path.join(tmpdir(), 'plugin-acp-records-'));
   managers.acpRecords = new AcpSessionRecords({ projectDir: root });
@@ -44,7 +45,8 @@ function setup() {
     browser: { run: vi.fn() },
     shell: { run: vi.fn((_label: string, _text: string, options: { onComplete(text: string): void }) => options.onComplete('ran')) },
   });
-  managers.acp = new AcpManager(managers, () => [{ harness: 'opencode', model: 'google/gemini-3.1-flash-lite' }]);
+  managers.acp = new AcpManager(managers, roleSettings
+    ?? (() => [{ harness: 'opencode', model: 'google/gemini-3.1-flash-lite' }]));
   managers.command = new CommandManager(managers);
   return { managers, session, handlers: () => handlers! };
 }
@@ -66,7 +68,7 @@ describe('core ACP for plugin tabs', () => {
     const browser = Promise.withResolvers<string>();
     vi.mocked(managers.browser.run).mockReturnValue(browser.promise);
     const pending = managers.acp.prompt('consumer', 'open a page');
-    handlers().onChunk('browser open https://example.com');
+    handlers().onChunk('browser goto https://example.com');
     handlers().onEnd('end_turn');
     const cancel = managers.acp.cancel('consumer');
     await expect(cancel).resolves.toBe(true);
@@ -76,7 +78,7 @@ describe('core ACP for plugin tabs', () => {
     await Promise.resolve();
     expect(session.prompt).toHaveBeenCalledOnce();
     const record = managers.acpRecords.window(managers.acpRecords.rows()[0].id)!;
-    expect(record.blocks[0].entries.map((entry) => entry.text)).toEqual(['browser open https://example.com']);
+    expect(record.blocks[0].entries.map((entry) => entry.text)).toEqual(['browser goto https://example.com']);
   });
 
   it('closes and settles on cancellation-send failure instead of reporting a safely idle session', async () => {
@@ -231,11 +233,11 @@ describe('core ACP for plugin tabs', () => {
     await managers.command.dispatchLineWithOutput('consumer', 'ask hello', 1);
 
     for (let step = 0; step < 8; step += 1) {
-      handlers().onChunk('browser open https://example.com');
+      handlers().onChunk('browser goto https://example.com');
       handlers().onEnd('end_turn');
       await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalledTimes(step + 2); });
     }
-    handlers().onChunk('Partial answer\nbrowser open https://example.com');
+    handlers().onChunk('Partial answer\nbrowser goto https://example.com');
     handlers().onEnd('end_turn');
 
     const tab = managers.tab.byLabel('consumer')!;
@@ -249,6 +251,40 @@ describe('core ACP for plugin tabs', () => {
     });
     expect(managers.acpRecords.window(managers.acpRecords.rows()[0].id)?.blocks)
       .toMatchObject([{ answer: 'Partial answer\n\n(stopped after 8 tool steps)' }]);
+    managers.acp.closeAll();
+  });
+
+  it('records refusals from a restricted role as tool results and counts them toward the cap', async () => {
+    const { managers, handlers, session } = setup(() => ({
+      name: 'ask',
+      entries: [{ harness: 'opencode', model: 'google/gemini-3.1-flash-lite' }],
+      commands: ['browser goto'],
+    }));
+    const command = 'browser eval document.title';
+    const refusal = 'Command not allowed for role "ask": browser eval.';
+    await managers.command.dispatchLineWithOutput('consumer', 'ask restricted', 1);
+
+    for (let step = 0; step < 8; step += 1) {
+      handlers().onChunk(command);
+      await handlers().onEnd('end_turn');
+      if (step < 7) {
+        await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalledTimes(step + 2); });
+      }
+    }
+    handlers().onChunk(`Partial answer\n${command}`);
+    await handlers().onEnd('end_turn');
+
+    const tab = managers.tab.byLabel('consumer')!;
+    await vi.waitFor(() => {
+      expect(tab.log.filter((entry) => entry.input === command && entry.output === refusal)).toHaveLength(8);
+      expect(tab.log.find((entry) => entry.background)).toMatchObject({
+        input: 'ask restricted', output: 'Partial answer\n\n(stopped after 8 tool steps)',
+      });
+    });
+    const record = managers.acpRecords.window(managers.acpRecords.rows()[0].id)!;
+    expect(record.blocks[0].entries.filter((entry) => entry.text === refusal)).toHaveLength(8);
+    expect(managers.browser.run).not.toHaveBeenCalled();
+    expect(session.prompt).toHaveBeenCalledTimes(9);
     managers.acp.closeAll();
   });
 
@@ -448,10 +484,10 @@ describe('core ACP for plugin tabs', () => {
 
     expect(capabilities.startAcp({ withoutTools: true }).model).toBeDefined();
     const answer = capabilities.promptAcp('summarize the open tabs');
-    handlers().onChunk('Reading the output now.\nbrowser open https://example.com');
+    handlers().onChunk('Reading the output now.\nbrowser goto https://example.com');
     handlers().onEnd('end_turn');
 
-    await expect(answer).resolves.toBe('Reading the output now.\nbrowser open https://example.com');
+    await expect(answer).resolves.toBe('Reading the output now.\nbrowser goto https://example.com');
     expect(managers.browser.run).not.toHaveBeenCalled();
     expect(managers.questions.pendingFor('consumer')).toBeUndefined();
   });
@@ -467,14 +503,14 @@ describe('core ACP for plugin tabs', () => {
 
     capabilities.startAcp();
     const answer = capabilities.promptAcp('open the release page');
-    handlers().onChunk('Opening it now.\nbrowser open https://example.com');
+    handlers().onChunk('Opening it now.\nbrowser goto https://example.com');
     handlers().onEnd('end_turn');
     // The browser command ran, so the loop is on its follow-up turn rather than finished.
     handlers().onChunk('Done.');
     handlers().onEnd('end_turn');
 
     await expect(answer).resolves.toBe('Done.');
-    expect(managers.browser.run).toHaveBeenCalledWith('consumer', 'browser open https://example.com');
+    expect(managers.browser.run).toHaveBeenCalledWith('consumer', 'browser goto https://example.com');
   });
 
   // A refusal resolves with a line of prose, so the caller is told which kind of line arrived rather
