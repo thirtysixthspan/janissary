@@ -43,9 +43,10 @@ Finish the cross-feature documentation and manual integration pass for role comm
 
 ## Verification
 
-- Run `$janissary/scripts/run.mjs check-diff` for the final aggregate working tree.
-- Execute every part of the isolated manual flow above, including the controlled ask/tell overlap and both tell reset and tell-specific connection close.
-- Confirm every user-visible command, default, accessible control name, connection name, and message in help, specs, and user docs matches the implementation.
+- `./scripts/run.mjs check-diff` passed after the documentation changes; the existing help command ordering and source-page link test passed.
+- The isolated browser flow confirmed all seven default role cards show **Models** and **Commands**, ask displays its six grants in native-command order, tell displays all nine grants without **Add command**, and removing `db sqlite query` from ask updates both the card and the scratch `roles.json`. The browser console had no errors. With no active session, `tell reset` returned `No active ACP tell session to reset.`.
+- Provider-dependent steps were not run: the scratch home was new, all three provider binaries were on `PATH`, and no supported provider key or OAuth environment variables were set. Therefore ask/tell tool execution, ask/tell overlap, live role-qualified names, active tell reset, and tell-specific connection close remain unverified manually.
+- The documentation sidebar still links to both user pages. Help, specs, and user docs were reconciled against the implementation's command syntax, defaults, accessible labels, names, and messages.
 
 ## Out of scope
 

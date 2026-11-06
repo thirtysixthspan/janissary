@@ -1,6 +1,6 @@
 # Roles
 
-Name what kind of work you are about to do once, and keep the model choices that suit it beside the name.
+Name what kind of work you are about to do once, and keep the model choices and commands for `ask` and `tell` beside the name.
 
 ```
 roles
@@ -10,17 +10,23 @@ roles
 
 <img class="agent-float" src="/agents/dogan-south-west.png" alt="" />
 
-The tab opens with your role cards and the line above them names the file you are editing — `~/.janissary/roles.json`, or your project's own file when it has one. Add entries from the enabled harness and model choices in each card. To refresh or manage those choices, open the [Models tab](/user-documentation/tab-types/models).
+The tab opens with your role cards and the line above them names the file you are editing — `~/.janissary/roles.json`, or your project's own file when it has one. Add enabled harness/model choices and native commands for `ask` and `tell` from each card. To refresh or manage model choices, open the [Models tab](/user-documentation/tab-types/models).
 
-A role has a name, a description, and an ordered list of choices. The description is plain text: write what the role is for, so you or an agent can tell `planning` from `research` at a glance. The tab is an editor for that list. It doesn't launch anything; see [what roles don't do yet](#what-roles-dont-do-yet).
+A role has a name, a description, an ordered list of model choices, and native commands it makes available to `ask` or `tell` prompts. The description is plain text: write what the role is for, so you or an agent can tell `planning` from `research` at a glance. The `ask` and `tell` commands use their matching role; other roles remain saved choices for you, a script, or an agent to read.
 
-If neither your project nor your home folder has a `roles.json` file, opening the tab creates six roles for you: **planning**, **research**, **code review**, **implementation**, **documentation**, and **ask**. Each one starts with a description and no model choices, except **planning**, which comes with two, and **ask**, which comes with three. If either file already exists, the tab uses it instead and does not add the defaults. A file holding just `{}` counts as a file: it means you chose zero roles, so the tab shows none.
+If neither your project nor your home folder has a `roles.json` file, opening the tab creates seven roles for you: **planning**, **research**, **code review**, **implementation**, **documentation**, **ask**, and **tell**. Ask and tell start with the same three model choices. Ask can list and query databases, browse to a page and read its content, and ask or approve a question. Tell starts with those commands plus database create/delete and browser eval. The other five roles start without command grants; planning comes with two model choices, and the rest start without any. If either file already exists, the tab uses it instead and does not add the defaults. A file holding just `{}` counts as a file: it means you chose zero roles, so the tab shows none.
 
 ## Add a model to a role
 
-Click **Add entry** on a card, pick the harness, model, and effort, and press **Add**. The picker offers enabled models only. The effort picker starts on `default` and returns to it when you change the harness or reopen the picker, so a choice never carries over to an entry you did not make it for.
+Each card has **Models** and **Commands** sections. Click **Add model** in the Models section, pick the harness, model, and effort, and press **Add**. The picker offers enabled models only. The effort picker starts on `default` and returns to it when you change the harness or reopen the picker, so a choice never carries over to an entry you did not make it for.
 
 Each choice row carries an effort dropdown: `default`, `low`, `medium`, `high`, `xhigh`, or `max`. `default` stores no effort at all for that choice; the other levels are the same ones the **New harness** dialog offers. If a hand-written role has another effort value, that value stays visible as an option in its dropdown. Change it whenever you like: the tab saves as you go. If saving fails, it shows `Could not write roles.json at <path>.` and preserves your previous file and the choices on screen.
+
+## Grant commands to a role
+
+In the **Commands** section, choose **Add command**, select a native command, and press **Add**. The picker only offers commands the role does not already have. Remove a command with its **Remove <command>** control; removing a command removes every duplicate copy from the file. When all nine native commands are granted, **Add command** is hidden.
+
+The built-in **ask** role can read and query databases, browse to a page and read its content, and ask or approve a question. **Tell** can also create or delete databases and evaluate browser pages. You can adjust either list for your workflow. A role with an empty command list gives its prompts no native tools.
 
 ## Reorder and remove
 
@@ -42,7 +48,7 @@ Roles you write yourself live in `~/.janissary/roles.json` and are yours everywh
 
 ## Edit the file by hand
 
-`roles.json` is a plain JSON object. Each key is a role name, and the keys keep the order you see in the tab. A role holds a `description` string and an `entries` list. Each entry names a `harness` and a `model`, and carries an `effort` only when you picked one:
+`roles.json` is a plain JSON object. Each key is a role name, and the keys keep the order you see in the tab. A role holds a `description` string, an `entries` list, and a `commands` list. Each entry names a `harness` and a `model`, and carries an `effort` only when you picked one. The command list contains the native commands that role can run through ACP:
 
 ```json
 {
@@ -51,7 +57,8 @@ Roles you write yourself live in `~/.janissary/roles.json` and are yours everywh
     "entries": [
       { "harness": "codex", "model": "gpt-6-sol", "effort": "xhigh" },
       { "harness": "claude", "model": "claude-opus-5-5", "effort": "xhigh" }
-    ]
+    ],
+    "commands": []
   }
 }
 ```
@@ -60,6 +67,7 @@ An effort outside the dropdown's levels is kept as written. The tab drops three 
 
 * A role that isn't an object with a `description` string and an `entries` list.
 * An entry with no `harness` or no `model`, or with an `effort` that isn't a string.
+* A role whose `commands` field is not a list of strings.
 * A role whose name is empty once trimmed, or matches an earlier role ignoring case.
 
 Whenever the tab saves, it keeps the file's existing permissions. If a save fails, your previous file is left as it was.
@@ -80,6 +88,8 @@ You can always open the file itself in an editor if you would rather fix it by h
 
 If you add an argument to `roles`, such as `roles left`, the command reports `Usage: roles`. Run `roles` without an argument to open the tab.
 
-## What roles don't do yet
+## Use ask and tell with roles
 
-A role is mostly a saved list. The one exception is **ask**: the `ask` command runs its models in order, moving to the next when one fails, and uses the default **ask** models when your file has no such role. See [Query ACP from a shell](/user-documentation/advanced-agents/acp-agent). No launch dialog, command flag, or agent looks up any other role's description or choices, so picking a role doesn't start a harness. The file is there for you, or for a script or agent you point at it, to read. A choice stores a harness, a model, and an effort, and nothing else. Reordering also needs the mouse: adding and removing work without one, but order changes ride the drag.
+`ask <prompt>` asks the ask role's models to answer a question. `tell <prompt>` asks the tell role's models to carry out a task and report what they did. Each role's model order and command grants are read for every prompt. They keep separate conversations, so one ask and one tell prompt can run at the same time. Use `ask reset` or `tell reset` to start a fresh conversation for only that role. See [Query ACP from a shell](/user-documentation/advanced-agents/acp-agent) for prompt behavior and connection controls.
+
+Roles other than **ask** and **tell** remain saved lists; choosing one does not launch a harness. Reordering roles or model choices uses drag and drop. Adding and removing roles, models, and commands can be done without a pointer.

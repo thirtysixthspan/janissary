@@ -1,9 +1,8 @@
 # Roles tab
 
 `roles` opens a tab that maps named roles — planning, research, code review, implementation,
-documentation, or any the user adds — onto an ordered list of harness/model/effort choices, so a
-human or an AI task deciding which model to launch for a task reads one role's list instead of
-remembering which harness runs which model. The file is the durable output; the tab is its editor.
+documentation, or any the user adds — onto an ordered list of harness/model/effort choices and
+native ACP command grants. The file is the durable output; the tab is its editor.
 The tab is reached only through its own command: it claims no file extensions, opens on no file, and
 takes no argument. It lives in the center strip like the search tab (see [[tab-plugins]]).
 
@@ -187,9 +186,9 @@ list is dropped, as is a role whose `commands` value is not a list of strings. A
 `harness` or `model`, a key whose name trims to empty, and a key whose name another key already
 trims to are dropped as well. An empty object is a valid file holding zero roles.
 
-## Not in this version
+## ACP role behavior
 
-The core ACP sessions behind `ask` and `tell` also read roles. Each command reads its matching role's
+The core ACP sessions behind `ask` and `tell` read roles. Each command reads its matching role's
 model entries and command grants fresh for each prompt, never creating a file (see [[acp]]). When
 the matching role does not exist in the file in effect, its built-in entries and grants apply. When
 an existing role has no entries, its model entries fall back to the built-in defaults while its own

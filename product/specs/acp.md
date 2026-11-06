@@ -66,13 +66,13 @@ The shell shows only the settled answer as sanitized GitHub-flavored Markdown in
 
 The connections panel's ACP rows open or focus the corresponding connection tab when they carry a durable record or the tab's own live ACP reference. Rows that offer a transcript snapshot keep that separate button, and clicking it never opens the record tab. See [[connection]].
 
-Role resets are available through `ask reset` and `tell reset`, each closing only its matching role. The connection tab's **Close session** action and `connections close acp:<name>` continue to close only the ask role until role-aware connection routing is added. Transcript snapshot actions remain available without a response panel. File and web links in Markdown replies retain their existing targets.
+Role resets are available through `ask reset` and `tell reset`, each closing only its matching role. The connection tab's **Close session** action closes the role shown by that record, and `connections close acp:ask:<model>` or `connections close acp:tell:<model>` closes the named role. A legacy `connections close acp:<model>` target still selects ask. Transcript snapshot actions remain available without a response panel. File and web links in Markdown replies retain their existing targets.
 
 Questions use the existing core question panel and answer protocol. A centre tab's question is shown once when that tab is current. Any selected active docked plugin tab shows its pending question, even before any ACP response exists and without a plugin hook, terminal, or command bar. A hidden docked body does not raise one; returning to it restores a still-pending question. The question's tab/id determine where the answer goes. See [[agent-questions]].
 
 Reset or close aborts the current ACP request's question, whether active or queued, and preserves unrelated questions. An aborted loop does not issue another provider prompt after a tool returns. Calls without an abort signal retain the existing question lifecycle.
 
-The connections panel retains the `acp:<provider/model>` row, its close action, and the transcript snapshot button on surfaces that offer one. The snapshot uses the existing tab transcript; monitor and editor transcript scopes retain their own recorded exchanges. See [[connection]].
+The connections panel lists core sessions as `acp:<role>:<provider/model>`, with separate ask and tell rows, and its close action targets the row's role. The transcript snapshot button remains available on surfaces that offer one and uses the existing shared tab transcript; monitor and editor transcript scopes retain their own recorded exchanges. See [[connection]].
 
 ## Autonomous tool loop
 
