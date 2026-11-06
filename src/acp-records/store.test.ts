@@ -5,6 +5,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AcpRecordStore } from './store.js';
 import type { AcpRecord } from './types.js';
+import type { AcpRole } from '../acp/role.js';
 
 let projectDir: string;
 let root: string;
@@ -16,6 +17,15 @@ const fixture = (): AcpRecord => ({
     { prompt: 'first\nline', startedAt: 2, entries: [{ kind: 'thought', text: 'think', timestamp: 3 }], answer: '', endedAt: 4 },
     { prompt: 'second', startedAt: 5, entries: [{ kind: 'message', text: 'partial', timestamp: 6 }] },
   ],
+});
+const coreFixture = (role?: AcpRole): AcpRecord => ({
+  ...fixture(),
+  title: 'ACP: task',
+  outcome: 'Closed',
+  source: {
+    kind: 'acp', model: 'provider/model', ownerLabel: 'bob', ownerName: 'Bob',
+    ...(role !== undefined && { role }),
+  },
 });
 beforeEach(() => {
   projectDir = mkdtempSync(path.join(tmpdir(), 'acp-record-store-'));
@@ -43,6 +53,28 @@ describe('AcpRecordStore', () => {
     expect(other.scan(vi.fn())).toEqual([]);
     other.write({ ...value, title: 'Other' });
     expect(store.read(value.id)?.title).toBe(value.title);
+  });
+
+  it.each(['ask', 'tell'] as const)('round-trips a core record tagged with the %s role', (role) => {
+    const store = new AcpRecordStore({ projectDir });
+    const value = coreFixture(role);
+
+    store.write(value);
+
+    expect(store.read(value.id)).toEqual(value);
+  });
+
+  it('accepts a legacy core record without role metadata and preserves its name', () => {
+    const store = new AcpRecordStore({ projectDir });
+    const value = coreFixture();
+    value.title = 'Existing ACP name';
+
+    store.write(value);
+
+    const stored = store.read(value.id);
+    expect(stored).toEqual(value);
+    expect(stored?.source).not.toHaveProperty('role');
+    expect(stored?.title).toBe('Existing ACP name');
   });
 
   it('omits the running block until a close but retains its header and completed history', () => {
@@ -74,6 +106,10 @@ describe('AcpRecordStore', () => {
     ['identity', (v: AcpRecord) => ({ ...v, id: randomUUID() })],
     ['source', (v: AcpRecord) => ({ ...v, source: { ...v.source, kind: 'other' } })],
     ['model', (v: AcpRecord) => ({ ...v, source: { ...v.source, model: ' ' } })],
+    ['ACP role', (v: AcpRecord) => ({
+      ...v,
+      source: { kind: 'acp', model: 'provider/model', ownerLabel: 'bob', ownerName: 'Bob', role: 'reader' },
+    })],
     ['run linkage', (v: AcpRecord) => ({ ...v, source: { ...v.source, runId: '' } })],
     ['core outcome', (v: AcpRecord) => ({ ...v, source: { ...v.source, kind: 'acp' } })],
     ['outcome', (v: AcpRecord) => ({ ...v, outcome: 'Idle' })],

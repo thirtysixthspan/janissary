@@ -65,7 +65,7 @@ function liveTabRows(managers: Managers, recordIds: Set<string>): ConnectionsTop
   for (const tab of managers.tab.tabs) {
     for (const connection of connectionCatalog(managers, tab.label)) {
       if (connection.scope !== 'tab' || connection.kind === 'sqlite') continue;
-      if (isTrackedCoreAcp(connection.acpRef, tab.runtime?.acpRecordId, tab.label, recordIds)) continue;
+      if (isTrackedCoreAcp(connection.acpRef, tab.runtime?.acpRoles?.ask?.recordId, tab.label, recordIds)) continue;
       rows.push({
         type: 'live', id: connection.id, kind: connection.kind, display: connection.display, host: tabHost(tab),
         ownerLabel: tab.label, ownerName: tab.title ?? tab.label, status: 'Open',

@@ -4,6 +4,8 @@ import type { AcpRecordSource } from '../acp-records/types.js';
 import type { TabRuntime } from '../tab/types.js';
 import type { AcpPendingPrompt } from './prompt-state.js';
 import type { AcpPromptResult } from './types.js';
+import { acpRoleRuntime } from './role-state.js';
+import { DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
 
 export function ownRecord(runtime: TabRuntime, id: string): void {
   runtime.acpRecordIds ??= new Set();
@@ -11,27 +13,37 @@ export function ownRecord(runtime: TabRuntime, id: string): void {
 }
 
 export function beginCoreRecord(records: AcpSessionRecords, runtime: TabRuntime, source: AcpRecordSource): void {
-  runtime.acpRecordId ??= records.begin(source);
-  ownRecord(runtime, runtime.acpRecordId);
-  if (runtime.acpPrompt) promptCoreRecord(records, runtime, runtime.acpPrompt);
+  const role = source.kind === 'acp' ? source.role ?? DEFAULT_ACP_ROLE : DEFAULT_ACP_ROLE;
+  const state = acpRoleRuntime(runtime, role);
+  state.recordId ??= records.begin(source);
+  ownRecord(runtime, state.recordId);
+  if (state.prompt) promptCoreRecord(records, runtime, state.prompt);
 }
 
 export function promptCoreRecord(records: AcpSessionRecords, runtime: TabRuntime, pending: AcpPendingPrompt): void {
-  if (!runtime.acpRecordId || pending.recordId) return;
-  if (records.prompt(runtime.acpRecordId, pending.prompt)) pending.recordId = runtime.acpRecordId;
+  const recordId = acpRoleRuntime(runtime, pending.role).recordId;
+  if (!recordId || pending.recordId) return;
+  if (records.prompt(recordId, pending.prompt)) pending.recordId = recordId;
 }
 
-export function coreActivity(records: AcpSessionRecords, runtime: TabRuntime, kind: AcpActivityKind, text: string): void {
-  const id = runtime.acpPrompt?.recordId;
-  if (id && id === runtime.acpRecordId) records.activity(id, kind, text);
+export function coreActivity(
+  records: AcpSessionRecords, runtime: TabRuntime, kind: AcpActivityKind, text: string,
+  role: AcpRole = DEFAULT_ACP_ROLE,
+): void {
+  const state = acpRoleRuntime(runtime, role);
+  const id = state.prompt?.recordId;
+  if (id && id === state.recordId) records.activity(id, kind, text);
 }
 
 export function answerCoreRecord(records: AcpSessionRecords, pending: AcpPendingPrompt, result: AcpPromptResult): void {
   if (pending.recordId) records.answer(pending.recordId, result.answered ? result.reply : result.error);
 }
 
-export function closeCoreRecord(records: AcpSessionRecords, runtime: TabRuntime): void {
-  const id = runtime.acpRecordId;
-  delete runtime.acpRecordId;
+export function closeCoreRecord(
+  records: AcpSessionRecords, runtime: TabRuntime, role: AcpRole = DEFAULT_ACP_ROLE,
+): void {
+  const state = acpRoleRuntime(runtime, role);
+  const id = state.recordId;
+  delete state.recordId;
   if (id) records.close(id, 'Closed');
 }

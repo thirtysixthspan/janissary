@@ -3,6 +3,8 @@ import { isRecord } from '../value-guards.js';
 import { ACP_RECORD_SCHEMA_VERSION } from './model.js';
 import type { AcpRecord, AcpRecordBlock, AcpRecordEntry, AcpRecordOutcome, AcpRecordSource } from './types.js';
 
+const ACP_ROLE_NAMES = new Set(['ask', 'tell']);
+
 export function isRecordId(value: unknown): value is string {
   return typeof value === 'string'
     && /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu.test(value);
@@ -16,8 +18,10 @@ export function isRecordSource(value: unknown): value is AcpRecordSource {
   if (!isRecord(value) || !nonempty(value.model)
     || !nonempty(value.ownerLabel) || !nonempty(value.ownerName)
     || (value.host !== undefined && !nonempty(value.host))) return false;
-  return value.kind === 'acp'
-    || (value.kind === 'agent' && nonempty(value.runId) && nonempty(value.taskPath));
+  if (value.kind === 'acp') {
+    return value.role === undefined || (typeof value.role === 'string' && ACP_ROLE_NAMES.has(value.role));
+  }
+  return value.kind === 'agent' && nonempty(value.runId) && nonempty(value.taskPath);
 }
 
 export function isRecordOutcome(source: AcpRecordSource, value: unknown): value is AcpRecordOutcome {

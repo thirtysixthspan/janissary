@@ -12,7 +12,7 @@ function fixture() {
       plugin: { id: 'connections', instanceKey: 'core-record', schemaVersion: 1, payload: {}, fileRefs: [], sourceLabel: 'first' },
     },
   ];
-  tabs[0]!.runtime!.acpRecordId = 'core-record';
+  tabs[0]!.runtime!.acpRoles = { ask: { recordId: 'core-record' } };
   const recordRows = [
     { id: 'core-record', kind: 'acp', title: 'ACP: current', model: 'model-a', ownerLabel: 'first', ownerName: 'First tab', startedAt: 1, updatedAt: 400, status: 'Running' },
     { id: 'agent-record', kind: 'agent', title: 'Agent: task', model: 'model-b', ownerLabel: 'closed-owner', ownerName: 'Captured name', runId: 'run-1', startedAt: 2, updatedAt: 200, status: 'Completed' },
@@ -265,7 +265,7 @@ describe('connections topic rows', () => {
 
     expect(focusOf()).toBe('first');
     recordRows[0]!.status = 'Closed';
-    delete tabs[0]!.runtime!.acpRecordId;
+    delete tabs[0]!.runtime!.acpRoles!.ask;
     expect(focusOf()).toBe('first');
 
     tabs[0] = { label: 'first', dotColor: '', number: 1, log: [], runtime: { busy: false, context: [], queue: [] } };

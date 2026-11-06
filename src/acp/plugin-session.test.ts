@@ -6,6 +6,8 @@ import path from 'node:path';
 import { AcpSessionRecords } from '../acp-records/manager.js';
 import type { Managers } from '../managers.js';
 import type { AcpRoleSettings } from './ask-role.js';
+import type { AcpRole } from './role.js';
+import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { TabManager } from '../tab/manager.js';
 import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
@@ -21,7 +23,7 @@ import { AcpManager } from './manager.js';
 
 const projects: { root: string; managers: Managers }[] = [];
 
-function setup(roleSettings?: (root: string) => AcpRoleSettings) {
+function setup(roleSettings?: (root: string, role: AcpRole) => AcpRoleSettings) {
   const managers = {} as Managers;
   const root = mkdtempSync(path.join(tmpdir(), 'plugin-acp-records-'));
   managers.acpRecords = new AcpSessionRecords({ projectDir: root });
@@ -46,7 +48,10 @@ function setup(roleSettings?: (root: string) => AcpRoleSettings) {
     shell: { run: vi.fn((_label: string, _text: string, options: { onComplete(text: string): void }) => options.onComplete('ran')) },
   });
   managers.acp = new AcpManager(managers, roleSettings
-    ?? (() => [{ harness: 'opencode', model: 'google/gemini-3.1-flash-lite' }]));
+    ?? ((_root, role) => ({
+      name: role, entries: [{ harness: 'opencode', model: 'google/gemini-3.1-flash-lite' }],
+      commands: [...NATIVE_ACP_COMMANDS],
+    })));
   managers.command = new CommandManager(managers);
   return { managers, session, handlers: () => handlers! };
 }
@@ -95,7 +100,7 @@ describe('core ACP for plugin tabs', () => {
     const askOther = () => managers.questions.register({ tab: 'consumer', kind: 'ask', question: 'Other request' });
     let other = queued ? askOther() : undefined;
     const pending = managers.acp.prompt('consumer', 'ask ask me');
-    const id = managers.tab.byLabel('consumer')!.runtime!.acpRecordId!;
+    const id = managers.tab.byLabel('consumer')!.runtime!.acpRoles!.ask!.recordId!;
     const identity = managers.acp.sessionIdentity('consumer');
     handlers().onChunk('question ask "ACP request"');
     handlers().onEnd('end_turn');
@@ -105,7 +110,7 @@ describe('core ACP for plugin tabs', () => {
     await expect(cancel).resolves.toBe(true);
     await expect(pending).resolves.toBe('ACP: prompt cancelled.');
     expect(managers.acp.sessionIdentity('consumer')).toBe(identity);
-    expect(managers.tab.byLabel('consumer')!.runtime!.acpRecordId).toBe(id);
+    expect(managers.tab.byLabel('consumer')!.runtime!.acpRoles!.ask!.recordId).toBe(id);
     expect(managers.acpRecords.window(id)).toMatchObject({ status: 'Idle', blocks: [{ answer: 'ACP: prompt cancelled.' }] });
     const questionId = managers.questions.pendingFor('consumer')!.id;
     managers.questions.answer('consumer', questionId, 'Answer');
@@ -126,7 +131,7 @@ describe('core ACP for plugin tabs', () => {
     old.onEnd('end_turn');
     expect(managers.questions.pendingFor('consumer')).toBeUndefined();
     await expect(managers.acp.prompt('consumer', 'next')).resolves.toBe('ACP: a prompt is already running.');
-    const id = managers.tab.byLabel('consumer')!.runtime!.acpRecordId!;
+    const id = managers.tab.byLabel('consumer')!.runtime!.acpRoles!.ask!.recordId!;
     const options = mock.connect.mock.calls[0][0] as AcpOptions;
     options.onActivity?.({ sessionUpdate: 'agent_thought_chunk', content: { type: 'text', text: 'final thought' } });
     expect(managers.acpRecords.window(id)?.status).toBe('Running');
@@ -164,15 +169,15 @@ describe('core ACP for plugin tabs', () => {
     expect(replacement).not.toBe(original);
     expect(tab.runtime?.acpEntries?.has(replacement)).toBe(true);
     managers.tab.append('consumer', { input: 'help', output: 'unrelated' });
-    expect(tab.runtime?.acpPrompt).toBeDefined();
+    expect(tab.runtime?.acpRoles?.ask?.prompt).toBeDefined();
     expect(replacement.output).toBe('# Partial');
     expect(tab.runtime?.acpEntries?.has(tab.log.at(-1)!)).toBe(false);
     handlers().onEnd('end_turn');
     await expect(answer).resolves.toBe('# Partial');
     expect(mock.connect).toHaveBeenCalledTimes(1);
-    expect(tab.runtime?.acpPrompt).toBeUndefined();
+    expect(tab.runtime?.acpRoles?.ask?.prompt).toBeUndefined();
     expect(tab.log.find((entry) => entry.markdown)).toMatchObject({ output: '# Partial', running: false });
-    expect(managers.acpRecords.window(tab.runtime!.acpRecordId!)?.blocks).toMatchObject([{ answer: '# Partial' }]);
+    expect(managers.acpRecords.window(tab.runtime!.acpRoles!.ask!.recordId!)?.blocks).toMatchObject([{ answer: '# Partial' }]);
     const next = managers.acp.prompt('consumer', 'again');
     handlers().onChunk('Reused');
     handlers().onEnd('end_turn');
@@ -223,7 +228,7 @@ describe('core ACP for plugin tabs', () => {
     });
     const tab = managers.tab.byLabel('consumer')!;
     expect(tab.log.find((entry) => tab.runtime?.acpEntries?.has(entry) && entry.markdown)).toMatchObject({ output: 'Answer', running: false });
-    expect(tab.runtime?.acpPrompt).toBeUndefined();
+    expect(tab.runtime?.acpRoles?.ask?.prompt).toBeUndefined();
     managers.acp.closeAll();
   });
 
@@ -366,7 +371,7 @@ describe('core ACP for plugin tabs', () => {
     expect(tab.log.filter((entry) => entry.output === 'ACP session reset — next ask prompt will start fresh.')).toHaveLength(1);
     expect(tab.log).toContain(shell);
     expect(shell.running).toBe(true);
-    expect(tab.runtime?.acpPrompt).toBeUndefined();
+    expect(tab.runtime?.acpRoles?.ask?.prompt).toBeUndefined();
     expect(managers.acpRecords.rows()[0].status).toBe('Closed');
     expect(managers.acpRecords.window(managers.acpRecords.rows()[0].id)?.blocks).toMatchObject([{ answer: 'ACP session closed.' }]);
   });

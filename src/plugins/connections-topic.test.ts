@@ -9,7 +9,7 @@ import { readConnectionsTopic, runConnectionsTopicAction, subscribeConnectionsTo
 
 function fixture() {
   const tabs: Tab[] = [
-    { label: 'owner', title: 'Owner', dotColor: '', number: 1, log: [], runtime: { busy: false, context: [], queue: [], acpRecordId: 'core-id' } },
+    { label: 'owner', title: 'Owner', dotColor: '', number: 1, log: [], runtime: { busy: false, context: [], queue: [], acpRoles: { ask: { recordId: 'core-id' } } } },
     { label: 'second', dotColor: '', number: 2, log: [], runtime: { busy: false, context: [], queue: [] } },
     {
       label: 'core-tab', title: 'Core record', dotColor: '', number: 3, log: [], view: 'plugin',
@@ -383,17 +383,17 @@ describe('connections topic actions', () => {
     const { managers, recordRows, cancel, close, finish } = fixture();
     expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'cancel', id: 'core-id' }))
       .toBeUndefined();
-    expect(cancel).toHaveBeenCalledWith('owner');
+    expect(cancel).toHaveBeenCalledWith('owner', 'ask');
     expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'closeSession', id: 'core-id' }))
       .toBeUndefined();
-    expect(close).toHaveBeenCalledWith('owner');
+    expect(close).toHaveBeenCalledWith('owner', undefined, 'ask');
 
     recordRows[0]!.status = 'Idle';
     expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'cancel', id: 'core-id' }))
       .toBe('Only a running record can be cancelled.');
     expect(cancel).toHaveBeenCalledTimes(1);
     recordRows[0]!.status = 'Running';
-    managers.tab.byLabel = vi.fn(() => ({ label: 'owner', runtime: { acpRecordId: 'different-id' } })) as never;
+    managers.tab.byLabel = vi.fn(() => ({ label: 'owner', runtime: { acpRoles: { ask: { recordId: 'different-id' } } } })) as never;
     expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'cancel', id: 'core-id' }))
       .toBe('The owning tab no longer holds this record.');
     expect(cancel).toHaveBeenCalledTimes(1);
@@ -443,7 +443,7 @@ describe('connections topic actions', () => {
     expect(close).not.toHaveBeenCalled();
 
     core.status = 'Running';
-    managers.tab.byLabel = vi.fn(() => ({ label: 'owner', runtime: { acpRecordId: 'different-id' } })) as never;
+    managers.tab.byLabel = vi.fn(() => ({ label: 'owner', runtime: { acpRoles: { ask: { recordId: 'different-id' } } } })) as never;
     expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'cancel', id: 'core-id' }))
       .toBe('The owning tab no longer holds this record.');
     expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'closeSession', id: 'core-id' }))

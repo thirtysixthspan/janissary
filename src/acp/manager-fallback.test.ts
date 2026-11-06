@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AcpLoopHandlers, AcpOptions, AcpSession } from './types.js';
 import type { RoleEntry } from '../plugins/roles/shared.js';
+import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
+import type { AcpRole } from './role.js';
 import { makeTab } from '../tab/index.js';
 
 const mocks = vi.hoisted(() => ({
@@ -47,7 +49,9 @@ function setup(entries: RoleEntry[] = [OPENCODE, CLAUDE, CODEX]) {
     browser: { run: vi.fn() },
     questions: { register: vi.fn() },
   } as never;
-  const askModels = vi.fn((_root: string) => entries);
+  const askModels = vi.fn((_root: string, role: AcpRole) => ({
+    name: role, entries: entries.map((entry) => ({ ...entry })), commands: [...NATIVE_ACP_COMMANDS],
+  }));
   return { acp: new AcpManager(managers, askModels), append, askModels, enabledModels };
 }
 
@@ -69,7 +73,7 @@ describe('AcpManager — ask role fallback', () => {
 
     acp.run('tab1', 'ask hello');
 
-    expect(askModels).toHaveBeenCalledWith('/project');
+    expect(askModels).toHaveBeenCalledWith('/project', 'ask');
     expect(mocks.connectAcp).toHaveBeenCalledOnce();
     expect(launched(0)).toMatchObject({ command: 'opencode', args: ['acp'] });
     expect(JSON.parse(launched(0).env!.OPENCODE_CONFIG_CONTENT)).toEqual({ model: OPENCODE.model });

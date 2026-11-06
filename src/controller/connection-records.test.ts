@@ -38,7 +38,7 @@ describe('openConnectionRecord', () => {
   it('resolves a tab-scoped ACP reference through that tab\'s live record', () => {
     const { managers, dispatchTo } = setup({
       records: { 'record-1': {} },
-      tabs: { main: { label: 'main', runtime: { acpRecordId: 'record-1' } } },
+      tabs: { main: { label: 'main', runtime: { acpRoles: { ask: { recordId: 'record-1' } } } } },
     });
 
     openConnectionRecord(managers, { tab: 'main', acpRef: { scope: 'tab', label: 'main' } });
@@ -49,7 +49,7 @@ describe('openConnectionRecord', () => {
   it('no-ops when a tab-scoped ACP reference names another tab', () => {
     const { managers, dispatchTo } = setup({
       records: { 'record-1': {} },
-      tabs: { main: { label: 'main', runtime: { acpRecordId: 'record-1' } } },
+      tabs: { main: { label: 'main', runtime: { acpRoles: { ask: { recordId: 'record-1' } } } } },
     });
 
     openConnectionRecord(managers, { tab: 'main', acpRef: { scope: 'tab', label: 'other' } });
@@ -69,7 +69,7 @@ describe('openConnectionRecord', () => {
 
   it('no-ops when the tab binding points at a record that has since expired', () => {
     const { managers, dispatchTo } = setup({
-      tabs: { main: { label: 'main', runtime: { acpRecordId: 'expired' } } },
+      tabs: { main: { label: 'main', runtime: { acpRoles: { ask: { recordId: 'expired' } } } } },
     });
 
     openConnectionRecord(managers, { tab: 'main', acpRef: { scope: 'tab', label: 'main' } });

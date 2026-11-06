@@ -109,7 +109,7 @@ describe('createManagers durable ACP records', () => {
       return { prompt: vi.fn(), cancel: async () => {}, kill: vi.fn(), shutdown: async () => {} };
     });
     const coreAnswer = first.managers.acp.prompt(caller.label, 'core task');
-    const coreId = caller.runtime!.acpRecordId!;
+    const coreId = caller.runtime!.acpRoles!.ask!.recordId!;
     const run = first.managers.agent.create({
       caller: first.managers.agent.captureCaller(caller),
       snapshot: { taskPath: 'task.md', taskText: 'Agent task', skills: [], grants: [] }, executionDir: projectDir,

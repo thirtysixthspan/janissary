@@ -1,6 +1,7 @@
 // The tab's own shapes. A leaf module on purpose: it imports nothing but this one type, which the
 // tab's in-flight ACP prompt settles with.
 import type { AcpPendingPrompt } from '../acp/prompt-state.js';
+import type { AcpRole } from '../acp/role.js';
 import type { AgentRunView } from '../agent/types.js';
 import type { QueueEntry } from '../command-queue/entry.js';
 import type { ReceiptRecord } from '../command-queue/receipts.js';
@@ -283,8 +284,7 @@ export type TabRuntime = {
   serverPtyExitId?: string;
   editorSyncGeneration?: number;
   acpEntries?: WeakSet<LogEntry>;
-  acpPrompt?: AcpPendingPrompt;
-  acpRecordId?: string;
+  acpRoles?: Partial<Record<AcpRole, { prompt?: AcpPendingPrompt; recordId?: string }>>;
   // Every ACP and agent record that began in this tab incarnation, kept after each one ends. A record's
   // owner label alone cannot tell this tab from a later one that reused the label, so the connections
   // topic reads this to decide whether a record still has its own tab to focus. In-memory only.

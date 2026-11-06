@@ -12,6 +12,8 @@ import { makeTab } from '../tab/index.js';
 import { AcpPromptControl } from './prompt-control.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
 import type { AcpSessionListener } from '../remote/channel/acp.js';
+import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
+import { closeTabResources } from '../tab/cleanup.js';
 
 const mock = vi.hoisted(() => ({ connect: vi.fn() }));
 vi.mock('./index.js', () => ({ connectAcp: mock.connect }));
@@ -37,32 +39,35 @@ function setup(remote = false) {
     sessions.push({ session, options, control });
     return session;
   });
-  let listener: AcpSessionListener | undefined;
+  const listeners: AcpSessionListener[] = [];
   const channel = {
     attached: true, send: vi.fn(),
-    attachAcp: (_id: string, value: AcpSessionListener) => { listener = value; },
+    attachAcp: (_id: string, value: AcpSessionListener) => { listeners.push(value); },
     detachAcp: vi.fn(),
   } as unknown as RemoteChannel;
   managers.remote = { get: () => channel } as Managers['remote'];
   managers.database = { primer: '', isCommandLine: () => false } as unknown as Managers['database'];
-  managers.acp = new AcpManager(managers, () => [{ harness: 'opencode', model: 'google/gemini-3.1-flash-lite' }]);
+  managers.acp = new AcpManager(managers, (_root, role) => ({
+    name: role, entries: [{ harness: 'opencode', model: 'google/gemini-3.1-flash-lite' }],
+    commands: [...NATIVE_ACP_COMMANDS],
+  }));
   if (remote) managers.tab.tabs[0].remote = { host: 'host', address: 'host' };
   const handshake = () => {
-    if (remote) listener!.onReady(true);
+    if (remote) listeners.at(-1)!.onReady(true);
     else sessions.at(-1)!.options.onConnect?.({ provider: 'reported', model: 'mode' });
   };
   const chunk = (text: string) => {
-    if (remote) listener!.onChunk(text);
+    if (remote) listeners.at(-1)!.onChunk(text);
     else sessions.at(-1)!.control.current!.handlers.onChunk(text);
   };
   const end = () => {
-    if (remote) listener!.onEnd('end_turn');
+    if (remote) listeners.at(-1)!.onEnd('end_turn');
     else {
       const control = sessions.at(-1)!.control;
       control.end(control.current!, 'end_turn');
     }
   };
-  const fixture = { root, records, managers, sessions, handshake, chunk, end, listener: () => listener! };
+  const fixture = { root, records, managers, sessions, handshake, chunk, end, listener: () => listeners.at(-1)! };
   fixtures.push(fixture);
   return fixture;
 }
@@ -86,7 +91,7 @@ describe('core record feeds', () => {
     const oldId = f.records.rows()[0].id;
     f.managers.acp.close('owner');
     f.handshake();
-    const newId = f.managers.tab.byLabel('owner')!.runtime!.acpRecordId!;
+    const newId = f.managers.tab.byLabel('owner')!.runtime!.acpRoles!.ask!.recordId!;
     expect(newId).not.toBe(oldId);
     f.chunk('new answer');
     f.end();
@@ -122,7 +127,7 @@ describe('core record feeds', () => {
     const f = setup();
     mock.connect.mockImplementation(() => { throw new Error('start failed'); });
     await expect(f.managers.acp.prompt('owner', 'first')).resolves.toBe('ACP error: start failed');
-    expect(f.managers.tab.byLabel('owner')!.runtime?.acpPrompt).toBeUndefined();
+    expect(f.managers.tab.byLabel('owner')!.runtime?.acpRoles?.ask?.prompt).toBeUndefined();
     expect(f.records.rows()).toEqual([]);
   });
   it.each([false, true])('captures the first reserved prompt and five activity kinds (remote: %s)', async (remote) => {
@@ -131,7 +136,7 @@ describe('core record feeds', () => {
     expect(f.records.rows()).toEqual([]);
     const answer = f.managers.acp.prompt('owner', 'ask first\nsecond line');
     f.handshake();
-    const id = f.managers.tab.byLabel('owner')!.runtime!.acpRecordId!;
+    const id = f.managers.tab.byLabel('owner')!.runtime!.acpRoles!.ask!.recordId!;
     expect(id).not.toBe(f.managers.acp.sessionIdentity('owner'));
     const kinds = ['message', 'thought', 'tool', 'plan', 'permission'] as const;
     const updates = ['agent_message_chunk', 'agent_thought_chunk', 'tool_call', 'plan', 'permission_decision'];
@@ -208,15 +213,82 @@ describe('core record feeds', () => {
     const f = setup();
     f.managers.acp.start('owner');
     f.handshake();
-    const first = f.managers.tab.byLabel('owner')!.runtime!.acpRecordId!;
+    const first = f.managers.tab.byLabel('owner')!.runtime!.acpRoles!.ask!.recordId!;
     f.managers.acp.close('owner');
     f.managers.acp.start('owner');
     f.handshake();
-    const second = f.managers.tab.byLabel('owner')!.runtime!.acpRecordId!;
+    const second = f.managers.tab.byLabel('owner')!.runtime!.acpRoles!.ask!.recordId!;
     expect(second).not.toBe(first);
     expect([...f.managers.tab.byLabel('owner')!.runtime!.acpRecordIds!]).toEqual([first, second]);
     f.managers.tab.tabs = [makeTab('owner', '#abc')];
     expect(f.managers.tab.byLabel('owner')!.runtime?.acpRecordIds).toBeUndefined();
+  });
+
+  it('keeps role records and prompt state separate while retaining ask defaults', async () => {
+    const f = setup();
+    f.managers.acp.start('owner');
+    f.handshake();
+    const askId = f.managers.tab.byLabel('owner')!.runtime!.acpRoles!.ask!.recordId!;
+    f.managers.acp.start('owner', undefined, 'tell');
+    f.handshake();
+    const tellId = f.managers.tab.byLabel('owner')!.runtime!.acpRoles!.tell!.recordId!;
+    expect(askId).not.toBe(tellId);
+    expect(f.records.window(askId)).toMatchObject({ role: 'ask', source: { role: 'ask' } });
+    expect(f.records.window(tellId)).toMatchObject({ role: 'tell', source: { role: 'tell' } });
+
+    const tellAnswer = f.managers.acp.prompt('owner', 'a separate prompt', 'tell');
+    f.chunk('tell answer');
+    f.end();
+    await expect(tellAnswer).resolves.toBe('tell answer');
+    expect(f.records.window(askId)?.blocks).toEqual([]);
+    expect(f.records.window(tellId)?.blocks).toMatchObject([{ prompt: 'a separate prompt', answer: 'tell answer' }]);
+
+    expect(f.managers.acp.close('owner', undefined, 'ask')).toBe(true);
+    expect(f.managers.acp.has('owner')).toBe(false);
+    expect(f.managers.acp.has('owner', 'tell')).toBe(true);
+    expect(f.records.window(askId)?.status).toBe('Closed');
+    expect(f.records.window(tellId)?.status).toBe('Idle');
+    f.managers.acp.closeTab('owner');
+    expect(f.records.window(tellId)?.status).toBe('Closed');
+  });
+
+  it('closes every role session and record when their shared remote transport is lost', () => {
+    const f = setup(true);
+    f.managers.acp.start('owner');
+    f.handshake();
+    f.managers.acp.start('owner', undefined, 'tell');
+    f.handshake();
+    const ids = f.records.rows().map(({ id }) => id);
+    expect(ids).toHaveLength(2);
+
+    f.listener().onTransportLost?.();
+
+    expect(f.managers.acp.has('owner')).toBe(false);
+    expect(f.managers.acp.has('owner', 'tell')).toBe(false);
+    expect(ids.map((id) => f.records.window(id)?.status)).toEqual(['Closed', 'Closed']);
+  });
+
+  it('closes every role session and record through tab resource cleanup', async () => {
+    const f = setup();
+    f.managers.acp.start('owner');
+    f.handshake();
+    f.managers.acp.start('owner', undefined, 'tell');
+    f.handshake();
+    const ids = f.records.rows().map(({ id }) => id);
+    const noOpManager = { closeTab: () => {} };
+    Object.assign(f.managers, {
+      shell: noOpManager, schedule: noOpManager, pty: noOpManager, terminalRuntime: noOpManager,
+      harness: noOpManager, shellTranscript: noOpManager, editorAcp: noOpManager, editorWatch: noOpManager,
+      fileNavigator: noOpManager, browser: noOpManager, questions: noOpManager,
+      remote: { ...f.managers.remote, closeTab: () => {} },
+      database: { ...f.managers.database, closeTab: () => {} },
+    });
+
+    await closeTabResources(f.managers.tab.byLabel('owner')!, f.managers, new Map());
+
+    expect(f.managers.acp.has('owner')).toBe(false);
+    expect(f.managers.acp.has('owner', 'tell')).toBe(false);
+    expect(ids.map((id) => f.records.window(id)?.status)).toEqual(['Closed', 'Closed']);
   });
 
   it('never publishes a late handshake after close and creates no record for refusals', async () => {

@@ -11,12 +11,14 @@ import { isRateLimitError } from './rate-limit.js';
 import { createAcpToolTable, toolPrimer, toolRunner, toolExtractor } from './tool-table.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { coreActivity } from './record-feed.js';
+import { acpRoleRuntime } from './role-state.js';
 
 export function runCorePrompt(
   managers: Managers, label: string, runtime: TabRuntime, request: AcpPendingPrompt,
   session: AcpSession, identity: string, current: () => boolean,
 ): void {
-  const active = () => current() && runtime.acpPrompt === request && !request.abort.signal.aborted;
+  const roleState = acpRoleRuntime(runtime, request.role);
+  const active = () => current() && roleState.prompt === request && !request.abort.signal.aborted;
   const updateRunning = (output: string, running: boolean) => {
     managers.tab.updateRunning(label, { markdown: true }, output, running, { trailing: true });
   };
@@ -24,7 +26,7 @@ export function runCorePrompt(
     managers, request.roleName, request.commands, request.abort.signal,
   );
   const runCommand = toolRunner(tools, request.roleName, request.commands, label);
-  const recordTool = (text: string) => coreActivity(managers.acpRecords, runtime, 'tool', text);
+  const recordTool = (text: string) => coreActivity(managers.acpRecords, runtime, 'tool', text, request.role);
   const recordAsyncResult = async (result: Promise<string>) => {
     const text = await result;
     if (active()) recordTool(text);
@@ -70,7 +72,7 @@ export function runCorePrompt(
         ? `${lastAnswer}${lastAnswer ? '\n\n' : ''}(stopped after ${maxSteps} tool steps)`
         : lastAnswer;
       messageBus.emit('state', { type: 'dirty' });
-      settleAcpPrompt(managers, label, { answered: true, reply, session: identity });
+      settleAcpPrompt(managers, label, { answered: true, reply, session: identity }, undefined, request.role);
     },
     error: (message) => {
       const error = `ACP error: ${message}`;
@@ -78,7 +80,7 @@ export function runCorePrompt(
       notify(managers, 'state-change', label);
       if (isRateLimitError(message)) notify(managers, 'rate-limited', label);
       request.modelFailed = true;
-      settleAcpPrompt(managers, label, { answered: false, error });
+      settleAcpPrompt(managers, label, { answered: false, error }, undefined, request.role);
     },
   }, active));
 }

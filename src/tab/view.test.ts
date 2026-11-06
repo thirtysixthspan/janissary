@@ -14,7 +14,12 @@ describe('buildTabView', () => {
     tab.log = [settled, running, { input: '/ask previous ', output: '# Answer', background: 'reply' }];
     tab.runtime = {
       busy: true, context: [], queue: [], acpEntries: new WeakSet([settled, running]),
-      acpPrompt: { prompt: 'working', abort: new AbortController(), finish: () => {} },
+      acpRoles: { ask: {
+        prompt: {
+          prompt: 'working', role: 'ask', roleName: 'ask', commands: [],
+          abort: new AbortController(), finish: () => {},
+        },
+      } },
     };
     const question = { id: 'q-shell', tab: 'shell', kind: 'ask' as const, question: 'Which?' };
     const view = buildTabView(tab, true, '/repo', 'provider/model', [], [], [], (p) => p, question);
@@ -28,7 +33,7 @@ describe('buildTabView', () => {
       expect.objectContaining({ type: 'markdown', text: '# Partial' }),
       expect.objectContaining({ type: 'markdown', text: '# Answer' }),
     ]));
-    delete tab.runtime.acpPrompt;
+    delete tab.runtime.acpRoles?.ask;
     running.running = false;
     expect(buildTabView(tab, false, '/repo', 'provider/model', [], [], [], (p) => p)).not.toHaveProperty('acpResponse');
   });

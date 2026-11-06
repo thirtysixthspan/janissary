@@ -46,7 +46,7 @@ describe('plugin-owned core record teardown', () => {
     pending[1].onChunk('answered');
     pending[1].onEnd('end_turn');
     await idle;
-    const ids = tabs.map((tab) => tab.runtime!.acpRecordId!);
+    const ids = tabs.map((tab) => tab.runtime!.acpRoles!.ask!.recordId!);
     if (reason === 'failure') await expect(managers.plugins.intent(tabs[0].label, 'fail', null)).rejects.toThrow();
     else await controller.shutdown();
     await expect(active).resolves.toBe('ACP session closed.');

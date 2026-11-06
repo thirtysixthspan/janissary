@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AcpSession, AcpLoopDeps, AcpLoopHandlers } from './types.js';
 import type { Tab } from '../tab/types.js';
 import type { RoleEntry } from '../plugins/roles/shared.js';
+import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import type { AcpRoleSettings } from './ask-role.js';
+import type { AcpRole } from './role.js';
 import { makeTab } from '../tab/index.js';
 
 const mocks = vi.hoisted(() => ({
@@ -37,7 +39,7 @@ const GEMINI: RoleEntry = { harness: 'opencode', model: 'google/gemini-3.1-flash
 const CLAUDE: RoleEntry = { harness: 'claude', model: 'claude-haiku-4-5' };
 
 const setup = (
-  entries: RoleEntry[] = [GEMINI], roleSettings?: (root: string) => AcpRoleSettings,
+  entries: RoleEntry[] = [GEMINI], roleSettings?: (root: string, role: AcpRole) => AcpRoleSettings,
 ) => {
   mocks.connectAcp.mockReturnValue(makeSession());
   const append = vi.fn();
@@ -51,6 +53,7 @@ const setup = (
     acpRecords: records,
     tab: {
       tabs,
+      launchDir: '/project',
       byLabel: (label: string) => tabs.find((t) => t.label === label),
       append,
       cwdOf: vi.fn().mockReturnValue('/cwd'),
@@ -68,7 +71,9 @@ const setup = (
     browser: { run: vi.fn() },
     questions: { register: registerQuestion },
   } as never;
-  const askModels = vi.fn((_root: string) => entries);
+  const askModels = vi.fn((_root: string, role: AcpRole) => ({
+    name: role, entries: entries.map((entry) => ({ ...entry })), commands: [...NATIVE_ACP_COMMANDS],
+  }));
   const acp = new AcpManager(managers, roleSettings ?? askModels);
   return {
     askModels, acp, append, addBusy, deleteBusy, managers, registerQuestion,
@@ -470,6 +475,65 @@ describe('AcpManager.close', () => {
     acp.run('tab1', 'ask hello');
     expect(acp.close('tab1')).toBe(true);
     expect(acp.has('tab1')).toBe(false);
+  });
+});
+
+describe('AcpManager role sessions', () => {
+  it('keeps role sessions independent while preserving ask defaults and tab-wide prompt isolation', () => {
+    const roleSettings = vi.fn((_root: string, role: AcpRole) => ({
+      name: role,
+      entries: [role === 'ask' ? GEMINI : CLAUDE],
+      commands: [],
+    }));
+    const { acp } = setup([], roleSettings);
+    mocks.connectAcp.mockImplementation(() => makeSession());
+
+    const ask = acp.start('tab1');
+    const tell = acp.start('tab1', undefined, 'tell');
+
+    expect(ask.model).toBe(GEMINI.model);
+    expect(tell.model).toBe(CLAUDE.model);
+    expect(ask.session).toBeDefined();
+    expect(tell.session).toBeDefined();
+    expect(tell.session).not.toBe(ask.session);
+    expect(acp.has('tab1')).toBe(true);
+    expect(acp.has('tab1', 'tell')).toBe(true);
+    expect(roleSettings).toHaveBeenNthCalledWith(1, '/project', 'ask');
+    expect(roleSettings).toHaveBeenNthCalledWith(2, '/project', 'tell');
+
+    const askDone = vi.fn();
+    acp.run('tab1', 'ask current', askDone);
+    const tellDone = vi.fn();
+    acp.run('tab1', 'tell concurrent', tellDone, 'tell');
+    expect(tellDone).toHaveBeenCalledWith({ answered: false, error: 'ACP: a prompt is already running.' });
+
+    expect(acp.close('tab1', undefined, 'tell')).toBe(true);
+    expect(acp.has('tab1')).toBe(true);
+    expect(acp.has('tab1', 'tell')).toBe(false);
+    expect(acp.sessionIdentity('tab1')).toBe(ask.session);
+    expect(askDone).not.toHaveBeenCalled();
+    acp.close('tab1');
+    expect(askDone).toHaveBeenCalledWith({ answered: false, error: 'ACP session closed.' });
+    expect(acp.has('tab1')).toBe(false);
+  });
+
+  it('closes only the session whose model failed', () => {
+    const roleSettings = (_root: string, role: AcpRole) => ({
+      name: role, entries: [role === 'ask' ? GEMINI : CLAUDE], commands: [],
+    });
+    const { acp } = setup([], roleSettings);
+    mocks.connectAcp.mockImplementation(() => makeSession());
+    const ask = acp.start('tab1');
+    const tell = acp.start('tab1', undefined, 'tell');
+    const askOptions = mocks.connectAcp.mock.calls[0][0] as { onError: (message: string) => void };
+
+    askOptions.onError('ask agent exited');
+
+    expect(acp.has('tab1')).toBe(false);
+    expect(acp.has('tab1', 'tell')).toBe(true);
+    expect(acp.sessionIdentity('tab1')).toBeUndefined();
+    expect(acp.sessionIdentity('tab1', 'tell')).toBe(tell.session);
+    expect(ask.session).not.toBe(tell.session);
   });
 });
 

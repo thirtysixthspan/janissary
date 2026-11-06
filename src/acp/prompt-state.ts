@@ -1,9 +1,11 @@
 import type { AcpPromptResult } from './types.js';
+import type { AcpRole } from './role.js';
 
 export type AcpPendingPrompt = {
   finish: (result: AcpPromptResult) => void;
   abort: AbortController;
   prompt: string;
+  role: AcpRole;
   roleName: string;
   commands: string[];
   recordId?: string;

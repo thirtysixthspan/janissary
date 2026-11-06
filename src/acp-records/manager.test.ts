@@ -56,8 +56,19 @@ describe('AcpSessionRecords transitions', () => {
     expect(next.rows().find((row) => row.id === nextId)?.status).toBe('Idle');
   });
 
+  it('projects role tags on core record rows while keeping legacy rows untagged', () => {
+    const records = create();
+    const tellId = records.begin({ ...core, role: 'tell' });
+    const legacyId = records.begin(core);
+
+    expect(records.rows().find((row) => row.id === tellId)).toHaveProperty('role', 'tell');
+    expect(records.window(tellId)).toMatchObject({ role: 'tell', source: { role: 'tell' } });
+    expect(records.rows().find((row) => row.id === legacyId)).not.toHaveProperty('role');
+    expect(records.window(legacyId)?.source).not.toHaveProperty('role');
+  });
+
   it.each([null, [], {}, { ...core, model: '' }, { ...core, ownerLabel: ' ' }, { ...core, ownerName: '' },
-    { ...agent, runId: '' }, { ...agent, taskPath: '' }, { ...core, kind: 'unknown' }])('rejects invalid source %j without side effects', (source) => {
+    { ...core, role: 'reader' }, { ...agent, runId: '' }, { ...agent, taskPath: '' }, { ...core, kind: 'unknown' }])('rejects invalid source %j without side effects', (source) => {
     const records = create();
     expect(() => records.begin(source as AcpRecordSource)).toThrow('Invalid ACP record source.');
     expect(records.rows()).toEqual([]);
