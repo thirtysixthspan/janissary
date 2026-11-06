@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { ModelRow, ModelsPayload } from '@shared/plugins/models/shared';
 import type { TabPluginClientCapabilities } from '../api';
@@ -115,5 +115,21 @@ describe('ModelsTab controls', () => {
       harness: 'opencode', id: 'google/gemini',
     });
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('shows and dismisses a Delete refusal after the confirmation closes', async () => {
+    const fixture = capabilities();
+    fixture.intent.mockRejectedValue(new Error('no model "opencode google/gemini"'));
+    renderTab(payload(), fixture.value);
+
+    fireEvent.click(screen.getByLabelText('Delete google/gemini'));
+    fireEvent.click(screen.getByText('Delete', { selector: '.modal-button' }));
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('Delete failed: no model "opencode google/gemini"');
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

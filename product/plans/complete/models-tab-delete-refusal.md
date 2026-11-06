@@ -23,3 +23,8 @@ Make a refused Models Delete visible to the user after the confirmation dialog c
 
 - Changing host rejection semantics, delete authorization, catalog persistence, or notifications.
 - Changing other plugin tabs' request-error handling.
+
+## Completion
+
+- The Models tab catches Delete intent refusals and shows a dismissible `Delete failed:` alert.
+- The Models tab web test covers a stale-model refusal and dismiss behavior; `./scripts/run.mjs check-diff` passed lint, typecheck, web tests, and help tests.

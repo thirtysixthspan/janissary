@@ -6,6 +6,8 @@
 }
 .models-header .plugin-actions button:hover { color: var(--fg); }
 .models-header .plugin-actions button:disabled { color: var(--faint); cursor: default; }
+.models-error { border: 1px solid var(--danger); color: var(--danger); border-radius: 4px; padding: 4px 8px; font-size: 12px; }
+.models-error button { margin-left: 8px; }
 .models-empty { padding: 8px 12px; color: var(--muted); }
 .models-columns, .models-row {
   display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr) 7em 3.5em;

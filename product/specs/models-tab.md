@@ -22,7 +22,7 @@ The catalog is re-read when `models` runs and at the start of Delete and Refresh
 
 Deleting asks first through `ConfirmDialog`, with title `Delete <model id>?` and button `Delete`. Confirming sets both `disabled` and `hidden` to `true` on the record and writes the complete effective catalog to the project override. The record is never removed. A deleted model cannot be restored in the tab; clear its flags in `.janissary/known-models.json` by hand.
 
-Delete is available only for a visible, enabled record. If the record became unknown, hidden, or disabled while its confirmation dialog was open, the manager refuses the action with `no model "<harness> <id>"`. The Models intent awaits this asynchronous topic action and forwards the refusal through `rejectRequest`. A write failure is reported through the refresh notification instead of as a refusal.
+Delete is available only for a visible, enabled record. If the record became unknown, hidden, or disabled while its confirmation dialog was open, the manager refuses the action with `no model "<harness> <id>"`. The Models tab shows the refusal in a dismissible `Delete failed:` alert after the confirmation closes. A write failure is reported through the refresh notification instead of as a refusal.
 
 ### Refresh
 

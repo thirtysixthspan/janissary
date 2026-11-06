@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faRotate } from '@fortawesome/free-solid-svg-icons';
+import { errorText } from '@shared/error-text';
 import type { ModelRow, ModelsPayload } from '@shared/plugins/models/shared';
 import { ConfirmDialog, PluginActionsHeader, type TabPluginClientCapabilities } from '../api';
 import { ModelRowView } from './ModelRow';
@@ -13,8 +14,19 @@ export function ModelsTab({
   capabilities: TabPluginClientCapabilities;
 }) {
   const [pending, setPending] = useState<ModelRow | null>(null);
+  const [requestError, setRequestError] = useState<string | null>(null);
   const narrow = capabilities.dock !== null;
   const modelCount = payload.groups.reduce((count, group) => count + group.rows.length, 0);
+
+  const deletePending = () => {
+    if (!pending) return;
+    const { harness, id } = pending;
+    setPending(null);
+    setRequestError(null);
+    void capabilities.intent('delete', { harness, id }).catch((error: unknown) => {
+      setRequestError(errorText(error));
+    });
+  };
 
   return (
     <div className={`models-tab plugin-tab${narrow ? ' models-tab-narrow' : ''}`} data-doc-shot="models-tab">
@@ -32,6 +44,12 @@ export function ModelsTab({
           {capabilities.splitAction}
         </span>
       </PluginActionsHeader>
+      {requestError && (
+        <div className="models-error" role="alert">
+          Delete failed: {requestError}
+          <button type="button" onClick={() => setRequestError(null)}>Dismiss</button>
+        </div>
+      )}
       {modelCount === 0 && <div className="models-empty">No models</div>}
       {modelCount > 0 && !narrow && (
         <div className="models-columns" aria-hidden="true">
@@ -61,10 +79,7 @@ export function ModelsTab({
           title={`Delete ${pending.id}?`}
           confirmLabel="Delete"
           onCancel={() => { setPending(null); }}
-          onConfirm={() => {
-            void capabilities.intent('delete', { harness: pending.harness, id: pending.id });
-            setPending(null);
-          }}
+          onConfirm={deletePending}
         />
       )}
     </div>
