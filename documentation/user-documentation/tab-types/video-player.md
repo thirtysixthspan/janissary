@@ -65,6 +65,14 @@ You can't choose where it goes or what it's called — the file always lands bes
 
 The button only appears while the video is playable. There's nothing to capture from a file that wouldn't decode, or from a format that opens in an external player.
 
+To pick the moment and the file yourself, use `video snapshot` from any tab's command line. It doesn't open the video:
+
+```
+video snapshot clip.mp4 at 1:05 frames/title.png
+```
+
+The time can be seconds (`12.5`), `m:ss`, or `h:mm:ss`. The destination has to end in `.png`, `.jpg`, or `.jpeg`, its folder has to exist already, and the file itself must not, because a snapshot never overwrites anything. Relative paths start from the tab you typed it in. This one needs [ffmpeg](https://ffmpeg.org) on your `PATH`, and in return it works for every video format the app recognizes, including the ones that only play externally. When it's done, a line in the tab tells you where the frame went, or why it couldn't be written.
+
 ## Opening in an external player
 
 `open external <video>` hands any video to a player outside the app:

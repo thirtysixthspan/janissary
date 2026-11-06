@@ -183,7 +183,7 @@ For an **external-only** container, no tab opens: the file is handed to the conf
 
 ### `video <path>`
 
-The plugin also contributes `video <path>`. It is a second route into the same opener and has the same relative-path resolution, wildcard expansion, sorted processing, ten-file limit, missing-file errors, transcript attribution, external-only routing, and focus-existing behavior as `open <path>`. Bare `video` prints `Usage: video <path>`.
+The plugin also contributes `video <path>`. It is a second route into the same opener and has the same relative-path resolution, wildcard expansion, sorted processing, ten-file limit, missing-file errors, transcript attribution, external-only routing, and focus-existing behavior as `open <path>`. Bare `video` prints `Usage: video <path>`. An argument whose first word is `snapshot` is not a path: it is the snapshot subcommand, which writes one frame to an image file and opens nothing (see [[video-tab]]).
 
 Because it is a route into one opener rather than into the registry, `video` only opens videos: a file that exists but belongs to another opener is reported as not a video file rather than opened. `video notes.txt` therefore says so instead of opening the plain-text editor, which is what plain `open notes.txt` does. See [[tab-plugins]] for plugin activation and failure behavior.
 
