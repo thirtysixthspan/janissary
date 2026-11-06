@@ -2,9 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent, act } from '@testing-library/react';
 import React, { useRef } from 'react';
 import type { TabView } from '@shared/protocol';
-import type { DirtyTabHandle } from './shared/tab/handles';
+import type { DirtyTabHandle } from '../shared/tab/handles';
 import { CloseSaveGuard } from './CloseSaveGuard';
-import { useAppCommandLine } from './shared/command-bar/AppCommandBar';
+import { useAppCommandLine } from '../shared/command-bar/AppCommandBar';
 
 // The command bar and the save guard are wired together here the way App wires them, so a typed
 // `close <name>` is checked end to end against the guard rather than each half on its own.

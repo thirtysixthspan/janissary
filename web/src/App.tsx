@@ -6,7 +6,7 @@ import { AppMain } from './AppMain';
 import type { CommandInputDropHandle } from './shared/drop-handles';
 import type { DirtyTabHandle } from './shared/tab/handles';
 import { useTabHandles } from './useTabHandles';
-import { useUnsavedQuitGuard } from './useUnsavedQuitGuard';
+import { useUnsavedQuitGuard } from './unsaved-work/useUnsavedQuitGuard';
 import { useFocusOnTabSwitch, focusCenterVisibleTab } from './useFocusOnTabSwitch';
 import { useSectionNav } from './useSectionNav';
 import { useTabEntries } from './useTabEntries';

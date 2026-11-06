@@ -8,7 +8,7 @@ import { HarnessLaunchDialog } from './harness/HarnessLaunchDialog';
 import { ScheduleDialog } from './ScheduleLaunchDialog/ScheduleDialog';
 import { QuitDialog } from './QuitDialog/QuitDialog';
 import { UnsavedQuitDialog } from './UnsavedQuitDialog';
-import { CloseSaveGuard } from './CloseSaveGuard';
+import { CloseSaveGuard } from './unsaved-work/CloseSaveGuard';
 import { PickerOverlays } from './pickers/PickerOverlays';
 import { firstOpenOverlay } from './pickers/overlay-registry';
 import type { PickerOverlayView } from './pickers/picker/overlay-view';

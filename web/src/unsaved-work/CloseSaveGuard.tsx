@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from './shared/ws/ws';
-import type { DirtyTabHandle } from './shared/tab/handles';
-import { useSaveConfirm } from './SaveChangesDialog/useSaveConfirm';
-import { SaveChangesDialog } from './SaveChangesDialog/SaveChangesDialog';
+import type { JanusClient } from '../shared/ws/ws';
+import type { DirtyTabHandle } from '../shared/tab/handles';
+import { useSaveConfirm } from './useSaveConfirm';
+import { SaveChangesDialog } from './SaveChangesDialog';
 
 type Properties = {
   tabs: TabView[];
