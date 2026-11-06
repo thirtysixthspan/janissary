@@ -1,4 +1,5 @@
 import React from 'react';
+import { readFileSync } from 'node:fs';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ConnectionRow, ConnectionStatus, ConnectionKind } from '@shared/plugins/connections/shared';
@@ -42,6 +43,32 @@ beforeEach(() => {
 });
 
 describe('ConnectionList', () => {
+  it.each(['Closed', 'Completed', 'Failed', 'Terminated'] as const)(
+    'separates the %s group in wide and docked lists without adding selectable rows', (status) => {
+      const styles = readFileSync('web/src/plugins/connections/connections.css', 'utf8');
+      for (const dock of [null, 'left'] as const) {
+        const caps = capabilities().value;
+        caps.dock = dock;
+        const view = render(<><style>{styles}</style><ConnectionList rows={[
+          live('open', 'shell', 'shell'), record('first', 'acp', status), record('second', 'acp', 'Closed'),
+        ]} capabilities={caps} /></>);
+        const rows = view.container.querySelectorAll('.connections-row');
+        expect(rows).toHaveLength(3);
+        expect(getComputedStyle(rows[1]).marginTop).toBe('24px');
+        expect(getComputedStyle(rows[2]).marginTop).not.toBe('24px');
+        view.unmount();
+      }
+    },
+  );
+
+  it('adds no leading gap when every connection is closed', () => {
+    const styles = readFileSync('web/src/plugins/connections/connections.css', 'utf8');
+    const { container } = render(<><style>{styles}</style><ConnectionList
+      rows={[record('only', 'acp', 'Closed')]} capabilities={capabilities().value}
+    /></>);
+    expect(getComputedStyle(container.querySelector('.connections-row')!).marginTop).not.toBe('24px');
+  });
+
   it('shows the exact empty message and no column headings', () => {
     const { container } = render(<ConnectionList rows={[]} capabilities={capabilities().value} />);
     expect(screen.getByText('No connections yet')).toBeInTheDocument();
