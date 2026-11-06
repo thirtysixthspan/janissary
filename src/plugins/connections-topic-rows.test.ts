@@ -23,7 +23,9 @@ function fixture() {
       shorten: vi.fn((value: string) => value), cwdOf: vi.fn(() => '/repo'),
     },
     shell: { has: vi.fn(() => false) },
-    acp: { label: vi.fn((label: string) => label === 'first' ? 'same-session-name' : null) },
+    acp: { label: vi.fn((label: string, role = 'ask') => label === 'first'
+      ? role === 'tell' ? 'tell-model' : 'same-session-name'
+      : null) },
     monitor: { connectionsFor: vi.fn((label: string) => label === 'first' ? [{ text: 'monitor session', kind: 'acp', acpRef: { scope: 'monitor', name: 'monitor-1' } }] : []) },
     editorAcp: { connectionsFor: vi.fn((label: string) => label === 'second' ? [{ text: 'persona session', kind: 'acp', acpRef: { scope: 'editor', label: 'second', persona: 'reviewer' } }] : []) },
     browser: { info: vi.fn(() => null) },
@@ -50,6 +52,7 @@ describe('connections topic rows', () => {
       ['live', 'reviewer', 300],
       ['live', 'shared-db', 300],
       ['live', 'monitor-1', 100],
+      ['live', 'tell:tell-model', 100],
       ['live', 'term-a', 100],
       ['live', 'orphan-db', 0],
       ['record', 'agent-record', 200],
@@ -57,7 +60,10 @@ describe('connections topic rows', () => {
 
     const core = data.rows.find((row) => row.type === 'record' && row.id === 'core-record');
     expect(data.rows.filter((row) => row.type === 'live' && row.kind === 'acp' && row.ownerLabel === 'first'))
-      .toEqual(expect.arrayContaining([expect.objectContaining({ id: 'monitor-1' })]));
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: 'monitor-1' }),
+        expect.objectContaining({ id: 'tell:tell-model', acpRef: { scope: 'tab', label: 'first', role: 'tell' } }),
+      ]));
     expect(core).toMatchObject({ ownerName: 'First tab', orderingTimestamp: 400 });
     expect(data.rows.filter((row) => row.type === 'live' && row.kind === 'sqlite')).toEqual([
       expect.objectContaining({
@@ -72,7 +78,7 @@ describe('connections topic rows', () => {
     expect(data.rows.find((row) => row.type === 'live' && row.id === 'orphan-db')).not.toHaveProperty('focusTarget');
     expect(data.rows.find((row) => row.type === 'record' && row.id === 'agent-record'))
       .toMatchObject({ ownerName: 'Captured name', orderingTimestamp: 200 });
-    expect(data.rows.filter((row) => row.type === 'live' && row.id === 'same-session-name')).toHaveLength(0);
+    expect(data.rows.filter((row) => row.type === 'live' && row.id === 'ask:same-session-name')).toHaveLength(0);
     expect(managers.database.listOpen).toHaveBeenCalledTimes(4);
   });
 
@@ -82,7 +88,24 @@ describe('connections topic rows', () => {
     tabs[1]!.runtime!.lastActivity = 1000;
     const result = composeConnectionsTopicData(managers, new Map()).rows;
     expect(result.filter((row) => row.orderingTimestamp === 1000).map((row) => `${row.kind}:${row.id}`))
-      .toEqual(['acp:monitor-1', 'acp:reviewer', 'sqlite:shared-db', 'terminal:term-a']);
+      .toEqual(['acp:monitor-1', 'acp:reviewer', 'acp:tell:tell-model', 'sqlite:shared-db', 'terminal:term-a']);
+  });
+
+  it('suppresses a live row only with its own role slot record id', () => {
+    const { managers, tabs, recordRows } = fixture();
+    Object.assign(recordRows[0]!, { role: 'tell' });
+    tabs[0]!.runtime!.acpRoles = {
+      ask: { recordId: 'missing-ask-record' }, tell: { recordId: 'core-record' },
+    };
+
+    const rows = composeConnectionsTopicData(managers, new Map()).rows;
+    const liveAcp = rows.filter((row) => row.type === 'live' && row.kind === 'acp' && row.ownerLabel === 'first');
+
+    expect(liveAcp).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'ask:same-session-name', acpRef: { scope: 'tab', label: 'first', role: 'ask' } }),
+      expect.objectContaining({ id: 'monitor-1' }),
+    ]));
+    expect(liveAcp).not.toEqual(expect.arrayContaining([expect.objectContaining({ id: 'tell:tell-model' })]));
   });
 
   it('projects windows only for requested ids and prunes absent requests', () => {
@@ -203,6 +226,7 @@ describe('connections topic rows', () => {
       ['reviewer', 'Open', 300],
       ['shared-db', 'Open', 300],
       ['monitor-1', 'Open', 100],
+      ['tell:tell-model', 'Open', 100],
       ['term-a', 'Open', 100],
       ['idle-record', 'Idle', 50],
       ['orphan-db', 'Open', 0],

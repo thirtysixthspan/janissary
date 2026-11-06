@@ -79,7 +79,7 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
     label: 'janus', number: 1, dotColor: '#fff', group: 0, groupColor: '#000',
     busy: false, hasUnread: false, cwd: '/tmp', connections: [], schedule: [],
     bufferLines: [], cmdHistory: [], commandQueue: [],
-    view: 'plugin', plugin: { id: 'shell', schemaVersion: 4, hostsCommandBar: true, payload: {} },
+  view: 'plugin', plugin: { id: 'shell', schemaVersion: 5, hostsCommandBar: true, payload: {} },
     ...overrides,
   };
 }

@@ -41,9 +41,22 @@ describe('openConnectionRecord', () => {
       tabs: { main: { label: 'main', runtime: { acpRoles: { ask: { recordId: 'record-1' } } } } },
     });
 
-    openConnectionRecord(managers, { tab: 'main', acpRef: { scope: 'tab', label: 'main' } });
+    openConnectionRecord(managers, { tab: 'main', acpRef: { scope: 'tab', label: 'main', role: 'ask' } });
 
     expect(dispatchTo).toHaveBeenCalledWith('main', 'connection record-1');
+  });
+
+  it('resolves a tell reference through the tell role record', () => {
+    const { managers, dispatchTo } = setup({
+      records: { 'ask-record': {}, 'tell-record': {} },
+      tabs: { main: { label: 'main', runtime: { acpRoles: {
+        ask: { recordId: 'ask-record' }, tell: { recordId: 'tell-record' },
+      } } } },
+    });
+
+    openConnectionRecord(managers, { tab: 'main', acpRef: { scope: 'tab', label: 'main', role: 'tell' } });
+
+    expect(dispatchTo).toHaveBeenCalledExactlyOnceWith('main', 'connection tell-record');
   });
 
   it('no-ops when a tab-scoped ACP reference names another tab', () => {
@@ -52,18 +65,18 @@ describe('openConnectionRecord', () => {
       tabs: { main: { label: 'main', runtime: { acpRoles: { ask: { recordId: 'record-1' } } } } },
     });
 
-    openConnectionRecord(managers, { tab: 'main', acpRef: { scope: 'tab', label: 'other' } });
+    openConnectionRecord(managers, { tab: 'main', acpRef: { scope: 'tab', label: 'other', role: 'ask' } });
 
     expect(dispatchTo).not.toHaveBeenCalled();
   });
 
   it('no-ops when the tab or its live record binding has disappeared', () => {
     const missingTab = setup();
-    openConnectionRecord(missingTab.managers, { tab: 'main', acpRef: { scope: 'tab', label: 'main' } });
+    openConnectionRecord(missingTab.managers, { tab: 'main', acpRef: { scope: 'tab', label: 'main', role: 'ask' } });
     expect(missingTab.dispatchTo).not.toHaveBeenCalled();
 
     const missingRecord = setup({ tabs: { main: { label: 'main' } } });
-    openConnectionRecord(missingRecord.managers, { tab: 'main', acpRef: { scope: 'tab', label: 'main' } });
+    openConnectionRecord(missingRecord.managers, { tab: 'main', acpRef: { scope: 'tab', label: 'main', role: 'ask' } });
     expect(missingRecord.dispatchTo).not.toHaveBeenCalled();
   });
 
@@ -72,7 +85,7 @@ describe('openConnectionRecord', () => {
       tabs: { main: { label: 'main', runtime: { acpRoles: { ask: { recordId: 'expired' } } } } },
     });
 
-    openConnectionRecord(managers, { tab: 'main', acpRef: { scope: 'tab', label: 'main' } });
+    openConnectionRecord(managers, { tab: 'main', acpRef: { scope: 'tab', label: 'main', role: 'ask' } });
 
     expect(dispatchTo).not.toHaveBeenCalled();
   });

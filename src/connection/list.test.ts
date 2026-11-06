@@ -75,17 +75,22 @@ describe('connections list for a remote tab', () => {
 describe('connections list and completion names', () => {
   function populated(): Managers {
     const managers = makeManagers([makeTab('main', 'red')], ['vim']);
-    Object.assign(managers.acp, { has: vi.fn(() => true), label: vi.fn(() => 'anthropic/claude-sonnet') });
+    Object.assign(managers.acp, {
+      has: vi.fn(() => true),
+      label: vi.fn((_label: string, role = 'ask') => role === 'tell' ? 'opencode/tell' : 'anthropic/claude-sonnet'),
+    });
     Object.assign(managers.monitor, { connectionsFor: vi.fn(() => [{ text: 'monitor:security (opencode/x)', kind: 'acp', acpRef: { scope: 'monitor', name: 'security' } }]) });
     Object.assign(managers.editorAcp, { connectionsFor: vi.fn(() => [{ text: 'reviewer (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'main', persona: 'reviewer' } }]) });
     return managers;
   }
 
-  it('names the tab\'s agent by its real session name, not a fixed one', () => {
+  it('names both role sessions by their actual models', () => {
     const managers = populated();
-    expect(listLines(managers, 'main')).toContain('acp:anthropic/claude-sonnet');
+    expect(listLines(managers, 'main')).toContain('acp:ask:anthropic/claude-sonnet');
+    expect(listLines(managers, 'main')).toContain('acp:tell:opencode/tell');
     expect(listLines(managers, 'main')).not.toContain('acp:opencode');
-    expect(listCompletionConnections(managers, 'main')).toContain('acp:anthropic/claude-sonnet');
+    expect(listCompletionConnections(managers, 'main')).toContain('acp:ask:anthropic/claude-sonnet');
+    expect(listCompletionConnections(managers, 'main')).toContain('acp:tell:opencode/tell');
   });
 
   it('lists and completes the monitor and persona connections the panel shows', () => {

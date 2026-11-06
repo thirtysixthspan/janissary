@@ -410,6 +410,24 @@ describe('connections topic actions', () => {
     expect(managers.acpRecords.delete).toHaveBeenCalledWith('done-id');
   });
 
+  it('validates and closes a tell record through only the tell role binding', () => {
+    const { managers, tabs, recordRows, cancel, close } = fixture();
+    Object.assign(recordRows[0]!, { id: 'tell-id', role: 'tell' });
+    tabs[0]!.runtime!.acpRoles!.tell = { recordId: 'tell-id' };
+
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'cancel', id: 'tell-id' }))
+      .toBeUndefined();
+    expect(cancel).toHaveBeenCalledExactlyOnceWith('owner', 'tell');
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'closeSession', id: 'tell-id' }))
+      .toBeUndefined();
+    expect(close).toHaveBeenCalledExactlyOnceWith('owner', undefined, 'tell');
+
+    tabs[0]!.runtime!.acpRoles = { ask: { recordId: 'tell-id' } };
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'cancel', id: 'tell-id' }))
+      .toBe('The owning tab no longer holds this record.');
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
   it('focuses a record\'s owning tab and refuses a record with no open owner', () => {
     const { managers, tabs, setActiveTab } = fixture();
     tabs[0]!.runtime!.acpRecordIds = new Set(['core-id']);

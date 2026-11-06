@@ -2,6 +2,7 @@ import { messageBus } from '../bus.js';
 import { SHELL_NAME } from '../shell/manager.js';
 import type { Managers } from '../managers.js';
 import type { ConnectionKind } from './types.js';
+import type { AcpRole } from '../acp/role.js';
 
 // Match `<id>` against a remote tab's label first, then against the address it was launched with —
 // the same label-before-identity order `ssh:` rows on real ssh tabs use.
@@ -11,17 +12,31 @@ function closeRemoteChannel(managers: Managers, id: string): boolean {
   return tab !== undefined && managers.remote.close(tab.label);
 }
 
-// `acp:<id>` names, in order, one of an editor tab's personas, one of the tab's monitors, or the
-// tab's own session. The session fallback accepts any id, so a session still connecting (and so not
-// yet named) can be closed; its reply names the session that actually closed.
+function coreAcpTarget(id: string): { role: AcpRole; suffix?: string } {
+  if (id === 'tell') return { role: 'tell' };
+  if (id.startsWith('tell:')) return { role: 'tell', suffix: id.slice('tell:'.length) };
+  if (id === 'ask') return { role: 'ask' };
+  if (id.startsWith('ask:')) return { role: 'ask', suffix: id.slice('ask:'.length) };
+  return { role: 'ask', suffix: id };
+}
+
+// Editor personas and monitors keep priority over the role-qualified core-session aliases. The core
+// fallback accepts any ask id, so a session still connecting can still be closed.
 function closeAcp(managers: Managers, label: string, id: string, out: (text: string) => void): void {
   if (managers.editorAcp.close(label, id) || managers.monitor.stop(label, id)) {
     messageBus.emit('state', { type: 'dirty' });
     out(`Closed connection acp:${id}.`);
     return;
   }
-  const name = managers.acp.label(label) ?? id;
-  if (managers.acp.close(label)) { messageBus.emit('state', { type: 'dirty' }); out(`Closed connection acp:${name}.`); }
+  const target = coreAcpTarget(id);
+  const model = managers.acp.label(label, target.role);
+  const name = model === undefined
+    ? (target.suffix === undefined ? target.role : `${target.role}:${target.suffix}`)
+    : `${target.role}:${model}`;
+  if (managers.acp.close(label, undefined, target.role)) {
+    messageBus.emit('state', { type: 'dirty' });
+    out(`Closed connection acp:${name}.`);
+  }
   else out(`No open connection acp:${id}.`);
 }
 

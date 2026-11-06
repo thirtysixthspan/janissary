@@ -1,5 +1,5 @@
 import type { TabPluginServerCapabilities } from '../api.js';
-import { recordConnectionName, type ConnectionRow, type LiveConnectionRow, type RecordConnectionRow } from './shared.js';
+import { recordConnectionName, type AcpRole, type ConnectionRow, type LiveConnectionRow, type RecordConnectionRow } from './shared.js';
 import { connectionsData, type ConnectionTabs } from './tabs.js';
 
 function parsedTarget(text: string): { kind: string; id: string } | undefined {
@@ -12,9 +12,19 @@ function recordById(rows: ConnectionRow[], id: string): ConnectionRow | undefine
   return rows.find((row) => row.type === 'record' && row.id === id);
 }
 
-function acpRecordForOwner(rows: ConnectionRow[], ownerLabel: string, model: string): ConnectionRow | undefined {
+function acpRecordForOwner(rows: ConnectionRow[], ownerLabel: string, role: AcpRole, model: string): ConnectionRow | undefined {
   return rows.find((row) => row.type === 'record' && row.kind === 'acp'
-    && ['Idle', 'Running'].includes(row.status) && row.ownerLabel === ownerLabel && row.model === model);
+    && ['Idle', 'Running'].includes(row.status) && row.ownerLabel === ownerLabel
+    && (row.role ?? 'ask') === role && row.model === model);
+}
+
+function acpTarget(id: string): { role: AcpRole; model: string } {
+  const separator = id.indexOf(':');
+  const role = id.slice(0, separator);
+  if (separator !== -1 && (role === 'ask' || role === 'tell')) {
+    return { role, model: id.slice(separator + 1) };
+  }
+  return { role: 'ask', model: id };
 }
 
 function liveTarget(
@@ -60,7 +70,8 @@ export function openConnectionLookup(
 
   const target = parsedTarget(text);
   if (target?.kind === 'acp' && origin) {
-    const record = acpRecordForOwner(rows, origin.label, target.id);
+    const { role, model } = acpTarget(target.id);
+    const record = acpRecordForOwner(rows, origin.label, role, model);
     if (record) {
       openRow(record, tabs, capabilities);
       return true;

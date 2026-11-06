@@ -99,11 +99,11 @@ describe('openTranscriptFileFor', () => {
 });
 
 describe('openAcpTranscript', () => {
-  it('routes a tab-scoped ref to the tab\'s transcript', () => {
+  it('routes a tell-scoped ref to the tab\'s complete shared transcript', () => {
     const edit = vi.fn();
     const managers = makeAcpManagers({ tabs: [{ label: 'agent', log: [{ input: 'npm test', output: '1 failing' }] }], edit });
 
-    openAcpTranscript(managers, { scope: 'tab', label: 'agent' });
+    openAcpTranscript(managers, { scope: 'tab', label: 'agent', role: 'tell' });
 
     expect(writeCaptureFile).toHaveBeenCalledWith('acp:agent', expect.any(Number), '> npm test\n1 failing');
     expect(edit).toHaveBeenCalledWith('transcript acp:agent', '/project/.janissary/captures/agent-now.txt', 'active');
@@ -137,7 +137,7 @@ describe('openAcpTranscript', () => {
     const edit = vi.fn();
     const managers = makeAcpManagers({ tabs: [], edit });
 
-    openAcpTranscript(managers, { scope: 'tab', label: 'missing' });
+    openAcpTranscript(managers, { scope: 'tab', label: 'missing', role: 'ask' });
 
     expect(writeCaptureFile).toHaveBeenCalledWith('acp:missing', expect.any(Number), 'No transcript yet.');
   });

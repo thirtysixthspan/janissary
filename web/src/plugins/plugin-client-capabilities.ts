@@ -34,7 +34,7 @@ export function createPluginClientCapabilities(
     ...remoteCapabilities,
     close: onClose,
     openAcpTranscript: () => {
-      const acpRef: AcpRef = { scope: 'tab', label };
+      const acpRef: AcpRef = { scope: 'tab', label, role: 'ask' };
       client.send({ method: 'openAcpTranscript', params: { acpRef } });
     },
     openConnection: (row) => {

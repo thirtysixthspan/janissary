@@ -4,11 +4,12 @@ import type { PluginTabView } from './plugin.js';
 import type { ScheduleView } from './schedule.js';
 import type { SuggestionView } from './monitor.js';
 import type { AgentRunView } from '../agent/types.js';
+import type { AcpRole } from '../acp/role.js';
 
 // Identifies the ACP session behind a connections-panel row, for the `openAcpTranscript` RPC to
 // route on: the tab's own agent, a monitor session, or an editor-persona session.
 export type AcpRef =
-  | { scope: 'tab'; label: string }
+  | { scope: 'tab'; label: string; role: AcpRole }
   | { scope: 'monitor'; name: string }
   | { scope: 'editor'; label: string; persona: string };
 

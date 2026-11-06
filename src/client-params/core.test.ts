@@ -31,22 +31,26 @@ const CASES: Array<[keyof typeof CORE_PARAMS, Record<string, unknown>, Array<Rec
   ['launchShellFor', { label: 'one' }, [{ label: [] }]],
   ['openDiffFor', { label: 'one' }, [{ label: [] }]],
   ['openTranscriptFileFor', { label: 'one' }, [{ label: 0 }]],
-  ['openAcpTranscript', { acpRef: { scope: 'tab', label: 'one' } }, [
+  ['openAcpTranscript', { acpRef: { scope: 'tab', label: 'one', role: 'ask' } }, [
     {},
     { acpRef: { scope: 'tab' } },
     { acpRef: { scope: 'window', label: 'one' } },
     { acpRef: { scope: 'editor', label: 'one' } },
     { acpRef: 'one' },
+    { acpRef: { scope: 'tab', label: 'one' } },
+    { acpRef: { scope: 'tab', label: 'one', role: 'other' } },
   ]],
   ['openConnectionRecord', { tab: 'one', recordId: 'record-1' }, [
     {},
     { tab: 'one' },
     { tab: 1, recordId: 'record-1' },
     { tab: 'one', recordId: 1 },
-    { tab: 'one', recordId: 'record-1', acpRef: { scope: 'tab', label: 'one' } },
+    { tab: 'one', recordId: 'record-1', acpRef: { scope: 'tab', label: 'one', role: 'ask' } },
     { tab: 'one', acpRef: { scope: 'monitor', name: 'watch' } },
     { tab: 'one', acpRef: { scope: 'editor', label: 'one', persona: 'critic' } },
-    { tab: 'one', acpRef: { scope: 'tab', label: 'other' } },
+    { tab: 'one', acpRef: { scope: 'tab', label: 'other', role: 'ask' } },
+    { tab: 'one', acpRef: { scope: 'tab', label: 'one' } },
+    { tab: 'one', acpRef: { scope: 'tab', label: 'one', role: 'other' } },
   ]],
 ];
 
@@ -74,6 +78,7 @@ describe('core RPC params decoders', () => {
   });
 
   it('accepts a tab-scoped ACP target that names the popup-owning tab', () => {
-    expect(CORE_PARAMS.openConnectionRecord({ tab: 'one', acpRef: { scope: 'tab', label: 'one' } })).toBe(true);
+    expect(CORE_PARAMS.openConnectionRecord({ tab: 'one', acpRef: { scope: 'tab', label: 'one', role: 'ask' } })).toBe(true);
+    expect(CORE_PARAMS.openConnectionRecord({ tab: 'one', acpRef: { scope: 'tab', label: 'one', role: 'tell' } })).toBe(true);
   });
 });

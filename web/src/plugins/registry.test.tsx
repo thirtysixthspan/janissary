@@ -39,6 +39,7 @@ describe('client plugin registry', () => {
     expect(clientPluginRegistry.get('scripts')?.schemaVersion).toBe(SCRIPTS_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('search')?.schemaVersion).toBe(SEARCH_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('shell')?.schemaVersion).toBe(SHELL_PAYLOAD_SCHEMA_VERSION);
+    expect(clientPluginRegistry.get('shell')?.schemaVersion).toBe(5);
     expect(clientPluginRegistry.get('sql')?.schemaVersion).toBe(SQL_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('video')?.schemaVersion).toBe(VIDEO_PAYLOAD_SCHEMA_VERSION);
   });

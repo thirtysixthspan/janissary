@@ -3,6 +3,7 @@ import type { AcpRef, ConnectionView } from '../protocol.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 import type { ConnectionKind } from './types.js';
+import { ACP_ROLES } from '../acp/role.js';
 
 // One open connection as every connection surface sees it. `id` is exactly what
 // `connections close <kind>:<id>` accepts; `display` is the connections-panel text; `scope` is
@@ -21,14 +22,19 @@ export type ConnectionEntry = {
 function acpId(ref: AcpRef): string {
   if (ref.scope === 'monitor') return ref.name;
   if (ref.scope === 'editor') return ref.persona;
-  return ref.label;
+  return `${ref.role}:${ref.label}`;
 }
 
 function acpEntries(managers: Managers, label: string): ConnectionEntry[] {
   const entries: ConnectionEntry[] = [];
-  // Only a session whose handshake has named it is listed — the panel has always waited for that.
-  const name = managers.acp.label(label);
-  if (name) entries.push({ kind: 'acp', id: name, display: `acp:${name}`, scope: 'tab', acpRef: { scope: 'tab', label } });
+  for (const role of ACP_ROLES) {
+    // Only a session whose handshake has named it is listed — the panel has always waited for that.
+    const model = managers.acp.label(label, role);
+    if (model) entries.push({
+      kind: 'acp', id: `${role}:${model}`, display: `acp:${role}:${model}`, scope: 'tab',
+      acpRef: { scope: 'tab', label, role },
+    });
+  }
   const rows: ConnectionView[] = [...managers.monitor.connectionsFor(label), ...managers.editorAcp.connectionsFor(label)];
   for (const row of rows) {
     if (row.acpRef) entries.push({ kind: 'acp', id: acpId(row.acpRef), display: row.text, scope: 'tab', acpRef: row.acpRef });

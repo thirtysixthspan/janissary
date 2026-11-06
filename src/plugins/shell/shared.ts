@@ -1,4 +1,4 @@
-export const SHELL_PAYLOAD_SCHEMA_VERSION = 4;
+export const SHELL_PAYLOAD_SCHEMA_VERSION = 5;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -22,7 +22,7 @@ export type ShellConnectionKind =
 // editor-scoped one names a persona too. Flattening that into one optional field would make a row that
 // claims an editor scope without a persona expressible, which the protocol deliberately is not.
 export type ShellAcpRef =
-  | { scope: 'tab'; label: string }
+  | { scope: 'tab'; label: string; role: 'ask' | 'tell' }
   | { scope: 'editor'; label: string; persona: string };
 
 export type ShellConnectionRow = {
@@ -129,7 +129,7 @@ const CONNECTION_KINDS: ReadonlySet<string> = new Set([
 
 function isAcpRef(value: unknown): value is ShellAcpRef {
   if (!isRecord(value) || typeof value.label !== 'string') return false;
-  if (value.scope === 'tab') return true;
+  if (value.scope === 'tab') return value.role === 'ask' || value.role === 'tell';
   return value.scope === 'editor' && typeof value.persona === 'string';
 }
 

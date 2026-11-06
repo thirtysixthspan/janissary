@@ -28,7 +28,11 @@ function populated(): Managers {
   const tabs = [remoteTab('main'), sshTab('bastion', 'host.example.com', 'pty-9')];
   return {
     shell: { has: vi.fn(() => true), close: vi.fn((label: string) => label === 'main') },
-    acp: { has: vi.fn(() => true), label: vi.fn(() => 'anthropic/claude-sonnet'), close: vi.fn((label: string) => label === 'main') },
+    acp: {
+      has: vi.fn(() => true),
+      label: vi.fn((_label: string, role = 'ask') => role === 'tell' ? 'opencode/tell' : 'anthropic/claude-sonnet'),
+      close: vi.fn((label: string) => label === 'main'),
+    },
     monitor: {
       connectionsFor: vi.fn(() => [{ text: 'monitor:security (opencode/x)', kind: 'acp', acpRef: { scope: 'monitor', name: 'security' } }]),
       stop: vi.fn((owner: string, name: string) => owner === 'main' && name === 'security'),
@@ -63,7 +67,8 @@ describe('connectionCatalog', () => {
 
     expect(entries.map((e) => [`${e.kind}:${e.id}`, e.scope])).toEqual([
       [`shell:${SHELL_NAME}`, 'tab'],
-      ['acp:anthropic/claude-sonnet', 'tab'],
+      ['acp:ask:anthropic/claude-sonnet', 'tab'],
+      ['acp:tell:opencode/tell', 'tab'],
       ['acp:security', 'tab'],
       ['acp:reviewer', 'tab'],
       ['browser:w1', 'tab'],
@@ -79,6 +84,12 @@ describe('connectionCatalog', () => {
     const entries = connectionCatalog(populated(), 'main');
 
     expect(entries.find((e) => e.kind === 'shell')?.display).toBe(`${SHELL_NAME}:/repo`);
+    expect(entries.find((e) => e.id === 'ask:anthropic/claude-sonnet')).toMatchObject({
+      display: 'acp:ask:anthropic/claude-sonnet', acpRef: { scope: 'tab', label: 'main', role: 'ask' },
+    });
+    expect(entries.find((e) => e.id === 'tell:opencode/tell')).toMatchObject({
+      display: 'acp:tell:opencode/tell', acpRef: { scope: 'tab', label: 'main', role: 'tell' },
+    });
     expect(entries.find((e) => e.kind === 'browser')?.display).toBe('browser:w1 (headless)');
     expect(entries.find((e) => e.id === 'bastion')).toMatchObject({ display: 'ssh:host.example.com', detail: 'host.example.com' });
     expect(entries.find((e) => e.id === 'reviewer')).toMatchObject({ display: 'reviewer (acp)', acpRef: { scope: 'editor', label: 'main', persona: 'reviewer' } });

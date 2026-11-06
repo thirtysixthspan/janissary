@@ -24,7 +24,7 @@ describe('harnessTabIntents', () => {
   it('sends the ACP connection intent', () => {
     const { client, send } = fakeClient();
     const intents = harnessTabIntents(client, 'agent2', 'openTranscriptFileFor');
-    const acpRef = { scope: 'tab' as const, label: 'agent2' };
+    const acpRef = { scope: 'tab' as const, label: 'agent2', role: 'tell' as const };
 
     intents.onOpenAcpTranscript(acpRef);
 
@@ -35,20 +35,20 @@ describe('harnessTabIntents', () => {
     const { client, send } = fakeClient();
 
     openConnectionRow(client, 'agent2', { text: 'Agent: task.md', kind: 'acp', recordId: 'record-1' });
-    openConnectionRow(client, 'agent2', { text: 'acp:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'agent2' } });
+    openConnectionRow(client, 'agent2', { text: 'acp:tell:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'agent2', role: 'tell' } });
 
     expect(send).toHaveBeenNthCalledWith(1, {
       method: 'openConnectionRecord', params: { tab: 'agent2', recordId: 'record-1' },
     });
     expect(send).toHaveBeenNthCalledWith(2, {
-      method: 'openConnectionRecord', params: { tab: 'agent2', acpRef: { scope: 'tab', label: 'agent2' } },
+      method: 'openConnectionRecord', params: { tab: 'agent2', acpRef: { scope: 'tab', label: 'agent2', role: 'tell' } },
     });
   });
 
   it.each([
     ['monitor', { scope: 'monitor' as const, name: 'watch' }],
     ['editor', { scope: 'editor' as const, label: 'agent2', persona: 'reviewer' }],
-    ['another tab', { scope: 'tab' as const, label: 'other' }],
+    ['another tab', { scope: 'tab' as const, label: 'other', role: 'ask' as const }],
   ])('leaves a %s row snapshot-only', (_case, acpRef) => {
     const { client, send } = fakeClient();
 

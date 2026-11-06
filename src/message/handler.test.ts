@@ -502,8 +502,8 @@ describe('handle', () => {
 
   it('routes openAcpTranscript through the controller façade', () => {
     const controller = makeController();
-    dispatchCall(controller, 29, { method: 'openAcpTranscript', params: { acpRef: { scope: 'tab', label: 'janus' } } });
-    expect(controller.openAcpTranscript).toHaveBeenCalledWith({ scope: 'tab', label: 'janus' });
+    dispatchCall(controller, 29, { method: 'openAcpTranscript', params: { acpRef: { scope: 'tab', label: 'janus', role: 'ask' } } });
+    expect(controller.openAcpTranscript).toHaveBeenCalledWith({ scope: 'tab', label: 'janus', role: 'ask' });
   });
 
   it('routes openConnectionRecord through the controller façade', () => {

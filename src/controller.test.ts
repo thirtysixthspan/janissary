@@ -1686,14 +1686,14 @@ describe('Controller transcript buttons', () => {
   it('openAcpTranscript opens an editor tab even for an empty tab-scoped exchange', () => {
     const { c } = makeCapturing();
     const before = editorTabs(c);
-    c.openAcpTranscript({ scope: 'tab', label: 'janus' });
+    c.openAcpTranscript({ scope: 'tab', label: 'janus', role: 'ask' });
     expect(editorTabs(c)).toBe(before + 1);
   });
 
   // Unlike the tab transcript, an empty exchange still opens, reading the literal placeholder. That
   // is the point: a click on the transcript button always gives something visible back.
   it.each([
-    ['tab', { scope: 'tab', label: 'janus' } as const],
+    ['tab', { scope: 'tab', label: 'janus', role: 'ask' } as const],
     ['monitor', { scope: 'monitor', name: 'security' } as const],
     ['persona', { scope: 'persona', persona: 'critic' } as const],
   ])('openAcpTranscript opens an editor tab for an empty %s-scoped exchange', (_scope, ref) => {

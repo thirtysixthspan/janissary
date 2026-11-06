@@ -16,7 +16,7 @@ export function openConnectionRecord(managers: Managers, params: OpenConnectionR
   }
   if (params.acpRef.label !== params.tab) return;
   const tab = managers.tab.byLabel(params.tab);
-  const recordId = tab?.runtime?.acpRoles?.ask?.recordId;
+  const recordId = tab?.runtime?.acpRoles?.[params.acpRef.role]?.recordId;
   if (!tab || recordId === undefined) return;
   dispatchRecord(managers, tab.label, recordId);
 }

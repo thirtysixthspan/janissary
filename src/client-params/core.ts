@@ -1,4 +1,5 @@
 import type { CoreRpcCall } from '../protocol/core-rpc.js';
+import { ACP_ROLES } from '../acp/role.js';
 import {
   isFiniteNumber, isInteger, isOneOf, isRecord, isString, noParams, type ParamsDecoder,
 } from './guards.js';
@@ -9,7 +10,7 @@ const DOCKS = ['left', 'right', null];
 // `AcpRef` is a discriminated union of three arms, so the scope decides which fields are read.
 function isAcpRef(value: unknown): boolean {
   if (!isRecord(value)) return false;
-  if (value.scope === 'tab') return isString(value.label);
+  if (value.scope === 'tab') return isString(value.label) && isOneOf(value.role, ACP_ROLES);
   if (value.scope === 'monitor') return isString(value.name);
   if (value.scope === 'editor') return isString(value.label) && isString(value.persona);
   return false;
@@ -58,7 +59,7 @@ export const CORE_PARAMS: Record<CoreRpcCall['method'], ParamsDecoder> = {
   openConnectionRecord: (p) => isString(p.tab) && (
     (isString(p.recordId) && p.acpRef === undefined)
     || (p.recordId === undefined && isRecord(p.acpRef) && p.acpRef.scope === 'tab'
-      && isString(p.acpRef.label) && p.acpRef.label === p.tab)
+      && isString(p.acpRef.label) && isOneOf(p.acpRef.role, ACP_ROLES) && p.acpRef.label === p.tab)
   ),
   projectFiles: noParams,
   revealNotifications: noParams,

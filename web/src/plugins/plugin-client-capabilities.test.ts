@@ -19,6 +19,16 @@ function setup() {
 }
 
 describe('openConnection capability', () => {
+  it('explicitly uses ask for the legacy tab transcript capability', () => {
+    const { capabilities, send } = setup();
+
+    capabilities.openAcpTranscript?.();
+
+    expect(send).toHaveBeenCalledWith({
+      method: 'openAcpTranscript', params: { acpRef: { scope: 'tab', label: 'shell-1', role: 'ask' } },
+    });
+  });
+
   it('sends a durable record id bound to the plugin tab label', () => {
     const { capabilities, send } = setup();
 
@@ -32,7 +42,7 @@ describe('openConnection capability', () => {
 
   it('sends only a tab-scoped ACP reference that names this plugin tab', () => {
     const { capabilities, send } = setup();
-    const acpRef = { scope: 'tab' as const, label: 'shell-1' };
+    const acpRef = { scope: 'tab' as const, label: 'shell-1', role: 'ask' as const };
 
     capabilities.openConnection?.({ text: 'acp:opencode', kind: 'acp', acpRef });
 
@@ -47,7 +57,7 @@ describe('openConnection capability', () => {
 
     capabilities.openConnection?.({ text: 'monitor', kind: 'acp', acpRef: { scope: 'monitor', name: 'watch' } });
     capabilities.openConnection?.({ text: 'reviewer', kind: 'acp', acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' } });
-    capabilities.openConnection?.({ text: 'acp:other', kind: 'acp', acpRef: { scope: 'tab', label: 'other' } });
+    capabilities.openConnection?.({ text: 'acp:other', kind: 'acp', acpRef: { scope: 'tab', label: 'other', role: 'ask' } });
 
     expect(send).not.toHaveBeenCalled();
   });
