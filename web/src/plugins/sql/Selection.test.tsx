@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { makeCapabilities, payload, TestDataGrid } from './fixture';
+import { grid, makeCapabilities, payload, ROWS, TestDataGrid } from './fixture';
 import { selectionTo, selectionToTsv } from './grid-view';
 import { subscribeClipboardCopies } from '../../shared/clipboard-captures';
 
@@ -127,7 +127,35 @@ describe('the highlighted row', () => {
     const { capabilities, rerender } = shown();
     press('ArrowDown');
     expect(highlighted()).toEqual([['2', 'NULL']]);
-    rerender(<TestDataGrid payload={payload({ offset: 100 })} capabilities={capabilities} />);
+    const next = payload({ offset: 100, grid: grid({ offset: 100, parameters: [100, 100] }) });
+    rerender(<TestDataGrid payload={next} capabilities={capabilities} />);
+    expect(highlighted()).toEqual([['1', 'paid']]);
+  });
+
+  // Every state broadcast parses the payload afresh, so activity in any tab hands the grid the same
+  // page again as a new object. That is not a new query, and the highlight must stay where it was.
+  it('stays where the keys left it when the same page arrives again as a new object', () => {
+    const { capabilities, rerender } = shown();
+    press('ArrowDown');
+    const frame = screen.getByLabelText('Results');
+    frame.scrollTop = 40;
+    rerender(<TestDataGrid payload={structuredClone(payload())} capabilities={capabilities} />);
+    expect(highlighted()).toEqual([['2', 'NULL']]);
+    expect(frame.scrollTop).toBe(40);
+  });
+
+  it('stays on the row a press highlighted when the same page arrives again', () => {
+    const { capabilities, rerender } = shown();
+    fireEvent.mouseDown(headers()[1] as HTMLElement);
+    rerender(<TestDataGrid payload={structuredClone(payload())} capabilities={capabilities} />);
+    expect(highlighted()).toEqual([['2', 'NULL']]);
+  });
+
+  it('is the first row again when a re-read brings back other values', () => {
+    const { capabilities, rerender } = shown();
+    press('ArrowDown');
+    const rows = [ROWS[0]!, { key: 'r2', cells: [{ text: '2', isNull: false }, { text: 'void', isNull: false }] }];
+    rerender(<TestDataGrid payload={payload({ grid: grid({ rows }) })} capabilities={capabilities} />);
     expect(highlighted()).toEqual([['1', 'paid']]);
   });
 

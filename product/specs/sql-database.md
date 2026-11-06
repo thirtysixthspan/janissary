@@ -167,7 +167,9 @@ brought out from under the header rather than left behind it. Reaching the first
 frame all the way back to the top of the table. The left and
 right arrows are not the grid's — a run of rows has no column to move along — so they are left to the
 application, which scrolls the frame the way it otherwise would. The highlight is back on the first
-row after a new query, so it never sits on a row that now holds other values.
+row after a new query, so it never sits on a row that now holds other values. The same page arriving
+again unchanged, as it does whenever anything else in the application changes, leaves the highlight
+and the scroll position where they were.
 
 The table is not outlined or highlighted when the rows have the focus: a ring around the whole table
 would read as the whole of it being selected, and the highlighted row is what shows where the keys
