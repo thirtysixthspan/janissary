@@ -4,11 +4,12 @@ import {
   faChevronLeft, faChevronRight, faFile, faImages, faLayerGroup, faMinus, faPlus,
 } from '@fortawesome/free-solid-svg-icons';
 import type { PdfPayload } from '@shared/plugins/pdf/shared';
-import type { TabPluginClientCapabilities } from '../api';
+import { LineFind, usePluginChordClaims, type TabPluginClientCapabilities } from '../api';
 import { stepZoom, type PdfLayout } from './pdf-view-model';
 import { PdfStage, type PdfJump } from './PdfStage';
 import { PdfThumbnails } from './PdfThumbnails';
 import { usePdfDocument } from './usePdfDocument';
+import { usePdfFind } from './usePdfFind';
 import { usePdfKeys } from './usePdfKeys';
 
 // A PDF tab body: the shared metadata header with the file's name, size, and location, the layout
@@ -32,10 +33,18 @@ export function PdfTab({
   const loaded = state.status === 'ready' ? state.document : null;
   const pageCount = loaded?.pageSizes.length ?? 0;
 
-  const goToPage = useCallback((next: number) => {
+  const goToPage = useCallback((next: number, offset?: number) => {
     setPage(next);
-    setJump((current) => ({ page: next, token: current.token + 1 }));
+    setJump((current) => (offset === undefined
+      ? { page: next, token: current.token + 1 }
+      : { page: next, offset, token: current.token + 1 }));
   }, []);
+
+  const revealLine = useCallback((next: number, top: number) => { goToPage(next, top); }, [goToPage]);
+  const findInputRef = useRef<HTMLInputElement>(null);
+  const find = usePdfFind({
+    active: capabilities.active, pdf: loaded, revealLine, inputRef: findInputRef,
+  });
 
   const handlers = useMemo(() => ({
     pageBy: (delta: number) => {
@@ -45,7 +54,18 @@ export function PdfTab({
     resetZoom: () => { setZoom(1); },
   }), [goToPage, page, pageCount]);
 
-  usePdfKeys(capabilities.active && loaded !== null, layout, stageRef, handlers);
+  usePdfKeys(
+    capabilities.active && loaded !== null,
+    layout,
+    stageRef,
+    handlers,
+    find.findOpen,
+    find.close,
+  );
+
+  usePluginChordClaims('pdf', capabilities.label ?? 'pdf', capabilities.claimedChords ?? [], capabilities.active, () => {
+    if (loaded) find.open();
+  });
 
   const toggleLayout = () => {
     setLayout((current) => (current === 'single' ? 'continuous' : 'single'));
@@ -146,6 +166,23 @@ export function PdfTab({
             />
           )}
       </div>
+      {find.findOpen && (
+        <LineFind
+          placeholder="Search document"
+          query={find.query}
+          onChangeQuery={find.setQuery}
+          results={find.results}
+          selected={find.selected}
+          onChangeSelected={find.select}
+          onClose={find.close}
+          rowLabel={(result) => {
+            const line = find.lines?.[result.index];
+            return line ? line.page + 1 : null;
+          }}
+          status={find.reading ? 'Reading pages…' : undefined}
+          inputRef={findInputRef}
+        />
+      )}
     </div>
   );
 }

@@ -26,11 +26,18 @@ export function usePdfKeys(
   layout: PdfLayout,
   stageRef: RefObject<HTMLDivElement | null>,
   handlers: PdfKeyHandlers,
+  overlayOpen: boolean,
+  closeOverlay: () => void,
 ): void {
   useEffect(() => {
     if (!enabled) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') { event.preventDefault(); handlers.resetZoom(); return; }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        if (overlayOpen) { closeOverlay(); return; }
+        handlers.resetZoom();
+        return;
+      }
       const direction = PAGE_KEYS[event.key];
       if (direction === undefined) return;
       event.preventDefault();
@@ -42,7 +49,7 @@ export function usePdfKeys(
     };
     globalThis.addEventListener('keydown', onKey);
     return () => { globalThis.removeEventListener('keydown', onKey); };
-  }, [enabled, handlers, layout, stageRef]);
+  }, [closeOverlay, enabled, handlers, layout, overlayOpen, stageRef]);
 
   useEffect(() => {
     const stage = stageRef.current;

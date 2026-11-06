@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { shellManifest } from './shell/manifest.js';
 import { launcherManifest } from './launcher/manifest.js';
+import { pdfManifest } from './pdf/manifest.js';
 import type { Managers } from '../managers.js';
 import { TabManager } from '../tab/manager.js';
 import {
@@ -157,6 +158,13 @@ describe('chord claim validation', () => {
     const host = await activateWith(manifest({ chords: shellManifest.chords }), activation());
 
     expect(shellManifest.chords).toEqual(['ctrl+r', 'meta+t', 'meta+f']);
+    expect(host.statusFor('fixture')?.state).toBe('active');
+  });
+
+  it('accepts the chord the bundled PDF manifest claims', async () => {
+    const host = await activateWith(manifest({ chords: pdfManifest.chords }), activation());
+
+    expect(pdfManifest.chords).toEqual(['meta+f']);
     expect(host.statusFor('fixture')?.state).toBe('active');
   });
 

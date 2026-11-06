@@ -4,7 +4,9 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import type { PdfPayload } from '@shared/plugins/pdf/shared';
 import type { TabPluginClientCapabilities } from '../api';
+import { createPluginChordRegistry, PluginChordProvider, type PluginChordRegistry } from '../PluginChords';
 import { loadPdf, type LoadedPdf } from './pdf-document';
+import type { PdfTextItem } from './pdf-find-lines';
 import { PdfTab } from './PdfTab';
 
 // Two stubs make this run. `pdf-document.ts` is mocked, which is exactly what that module exists to
@@ -27,21 +29,36 @@ const payload: PdfPayload = {
   name: 'paper.pdf', path: '/docs/paper.pdf', size: '1.2 MB', url: '/open/ref-1',
 };
 
-function makeDocument(pages = 3): LoadedPdf {
+function makeDocument(pages = 3, pageTexts: string[][] = []): LoadedPdf {
   return {
     pageSizes: Array.from({ length: pages }, () => ({ width: 600, height: 800 })),
     renderPage: vi.fn(async () => {}),
-    readPageText: vi.fn(async () => []),
+    readPageText: vi.fn(async (index: number) =>
+      (pageTexts[index] ?? []).map((text) => ({ text, hasEOL: true, top: 0.5 }))),
     destroy: vi.fn(),
   };
 }
 
-function capabilities(): TabPluginClientCapabilities {
+type Deferred<Value> = {
+  promise: Promise<Value>;
+  resolve(value: Value): void;
+};
+
+function deferred<Value>(): Deferred<Value> {
+  let resolve!: (value: Value) => void;
+  // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the web target excludes ES2024.
+  const promise = new Promise<Value>((res) => { resolve = res; });
+  return { promise, resolve };
+}
+
+function capabilities(active = true): TabPluginClientCapabilities {
   return {
     resourceUrl: (reference: string) => reference,
     intent: vi.fn(async () => null),
     splitAction: <button type="button" aria-label="Split" />,
-    active: true,
+    active,
+    label: 'pdf1',
+    claimedChords: ['meta+f'],
     dock: null,
     close: vi.fn(),
     reportFailure: vi.fn(),
@@ -65,19 +82,51 @@ function onScreen(ratios: Record<number, number>, root = '.pdf-stage'): void {
   });
 }
 
+function renderTab(chords: PluginChordRegistry, client = capabilities()) {
+  return render(
+    <PluginChordProvider registry={chords}>
+      <PdfTab payload={payload} capabilities={client} />
+    </PluginChordProvider>,
+  );
+}
+
 async function mount(document_: LoadedPdf | null = makeDocument(), client = capabilities()) {
   load.mockResolvedValue(
     document_ ? { ok: true, document: document_ } : { ok: false, reason: 'password-protected' },
   );
-  const view = render(<PdfTab payload={payload} capabilities={client} />);
-  if (!document_) return view;
+  const chords = createPluginChordRegistry();
+  const view = renderTab(chords, client);
+  if (!document_) return { ...view, chords };
   await screen.findByLabelText('Show pages');
   // A page observes itself in an effect that can run after the header appears, and a notification
   // sent before then is lost, so wait until the stage's page is being watched.
   await waitFor(() => {
     expect(watchers.some((watcher) => watcher.elements.some((element) => element.matches('.pdf-stage .pdf-page')))).toBe(true);
   });
-  return view;
+  return { ...view, chords };
+}
+
+function findInput(): HTMLInputElement {
+  return screen.getByLabelText('Search document') as HTMLInputElement;
+}
+
+function findRows(): HTMLElement[] {
+  return [...document.querySelectorAll<HTMLElement>('.editor-find-row')];
+}
+
+function runFindChord(chords: PluginChordRegistry): boolean {
+  let claimed = false;
+  act(() => { claimed = chords.run('meta+f', 'pdf1'); });
+  return claimed;
+}
+
+function openFind(chords: PluginChordRegistry): HTMLInputElement {
+  expect(runFindChord(chords)).toBe(true);
+  return findInput();
+}
+
+async function finishReading(): Promise<void> {
+  await waitFor(() => { expect(screen.queryByText('Reading pages…')).not.toBeInTheDocument(); });
 }
 
 beforeEach(() => {
@@ -227,6 +276,239 @@ describe('PdfTab selectable text', () => {
   });
 });
 
+describe('PdfTab find', () => {
+  it('opens over the document with the claimed chord', async () => {
+    const { chords } = await mount(makeDocument(2, [['alpha'], ['beta']]));
+
+    const input = openFind(chords);
+
+    expect(input).toHaveAttribute('placeholder', 'Search document');
+    expect(input).toHaveAttribute('aria-label', 'Search document');
+  });
+
+  it('focuses and selects the query on a second claimed chord', async () => {
+    const document_ = makeDocument(2, [['alpha'], ['beta']]);
+    const { chords } = await mount(document_);
+    const input = openFind(chords);
+    await userEvent.type(input, 'alpha');
+    await finishReading();
+    input.blur();
+
+    act(() => { chords.run('meta+f', 'pdf1'); });
+
+    expect(document.activeElement).toBe(input);
+    expect(input.value).toBe('alpha');
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe('alpha'.length);
+    expect(vi.mocked(document_.readPageText)).toHaveBeenCalledTimes(2);
+  });
+
+  it('claims the chord without opening while the document is loading', async () => {
+    load.mockReturnValue(new Promise<never>(() => {}));
+    const chords = createPluginChordRegistry();
+    renderTab(chords);
+    await screen.findByText('paper.pdf');
+
+    expect(runFindChord(chords)).toBe(true);
+    expect(screen.queryByLabelText('Search document')).not.toBeInTheDocument();
+  });
+
+  it('claims the chord without opening after a failed load', async () => {
+    load.mockResolvedValue({ ok: false, reason: 'password-protected' });
+    const chords = createPluginChordRegistry();
+    renderTab(chords);
+    await screen.findByText('Failed to load paper.pdf');
+
+    expect(runFindChord(chords)).toBe(true);
+    expect(screen.queryByLabelText('Search document')).not.toBeInTheDocument();
+  });
+
+  it('lists page-numbered rows', async () => {
+    const { chords } = await mount(makeDocument(2, [['needle first'], ['needle second']]));
+    const input = openFind(chords);
+
+    await userEvent.type(input, 'needle');
+    await finishReading();
+
+    const labels = findRows().map((row) => row.querySelector('.editor-find-line')?.textContent);
+    expect(findRows()).toHaveLength(2);
+    expect(new Set(labels)).toEqual(new Set(['1', '2']));
+  });
+
+  it('shows the reading status until the last page is read', async () => {
+    const first = deferred<PdfTextItem[]>();
+    const second = deferred<PdfTextItem[]>();
+    const document_ = makeDocument(2);
+    vi.mocked(document_.readPageText)
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise);
+    const { chords } = await mount(document_);
+    const input = openFind(chords);
+
+    await userEvent.type(input, 'needle');
+    expect(screen.getByText('Reading pages…')).toBeInTheDocument();
+    expect(screen.queryByText('No matching lines')).not.toBeInTheDocument();
+
+    await act(async () => { first.resolve([{ text: 'needle here', hasEOL: true, top: 0.5 }]); });
+    expect(findRows()).toHaveLength(1);
+    expect(screen.getByText('Reading pages…')).toBeInTheDocument();
+
+    await act(async () => { second.resolve([{ text: 'needle there', hasEOL: true, top: 0.5 }]); });
+    expect(findRows()).toHaveLength(2);
+    expect(screen.queryByText('Reading pages…')).not.toBeInTheDocument();
+  });
+
+  it('shows the page of a highlighted match and updates the readout', async () => {
+    const { chords } = await mount(makeDocument(3, [['alpha'], ['beta target'], ['gamma']]));
+    const input = openFind(chords);
+    await userEvent.type(input, 'target');
+    await finishReading();
+
+    await userEvent.click(findRows()[0]);
+
+    expect(screen.getByText('2 / 3')).toBeInTheDocument();
+    expect(document.querySelector('.pdf-page[data-page="1"]')).not.toBeNull();
+  });
+
+  it('moves to the first ranked match on Return and keeps the overlay open', async () => {
+    const { chords } = await mount(makeDocument(2, [['needle first'], ['needle second']]));
+    const input = openFind(chords);
+    await userEvent.type(input, 'needle');
+    await finishReading();
+
+    await userEvent.keyboard('{ArrowDown}');
+    expect(findRows()[1]).toHaveClass('selected');
+
+    await userEvent.keyboard('{Enter}');
+
+    expect(screen.getByLabelText('Search document')).toBeInTheDocument();
+    expect(findRows()[0]).toHaveClass('selected');
+    expect(screen.getByText('1 / 2')).toBeInTheDocument();
+  });
+
+  it('closes the overlay on Escape without resetting zoom', async () => {
+    const { chords } = await mount(makeDocument(1, [['alpha']]));
+    await userEvent.click(screen.getByLabelText('Zoom in'));
+    expect(screen.getByText('110%')).toBeInTheDocument();
+    openFind(chords);
+
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByLabelText('Search document')).not.toBeInTheDocument();
+    expect(screen.getByText('110%')).toBeInTheDocument();
+
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByText('110%')).not.toBeInTheDocument();
+  });
+
+  it('closes from outside the overlay without resetting zoom', async () => {
+    const { chords } = await mount(makeDocument(1, [['alpha']]));
+    await userEvent.click(screen.getByLabelText('Zoom in'));
+    const input = openFind(chords);
+    input.blur();
+    screen.getByLabelText('Zoom out').focus();
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(screen.queryByLabelText('Search document')).not.toBeInTheDocument();
+    expect(screen.getByText('110%')).toBeInTheDocument();
+  });
+
+  it('does not answer the chord while the tab is not visible', async () => {
+    const { chords } = await mount(makeDocument(1), capabilities(false));
+
+    expect(runFindChord(chords)).toBe(false);
+    expect(screen.queryByLabelText('Search document')).not.toBeInTheDocument();
+  });
+
+  it('closes on a tab switch and reopens empty', async () => {
+    const client = capabilities();
+    const { chords, rerender } = await mount(makeDocument(2, [['needle'], ['needle two']]), client);
+    const input = openFind(chords);
+    await userEvent.type(input, 'needle');
+    await finishReading();
+    expect(input.value).toBe('needle');
+
+    rerender(
+      <PluginChordProvider registry={chords}>
+        <PdfTab payload={payload} capabilities={{ ...client, active: false }} />
+      </PluginChordProvider>,
+    );
+    expect(screen.queryByLabelText('Search document')).not.toBeInTheDocument();
+
+    rerender(
+      <PluginChordProvider registry={chords}>
+        <PdfTab payload={payload} capabilities={client} />
+      </PluginChordProvider>,
+    );
+    openFind(chords);
+
+    expect(findInput().value).toBe('');
+  });
+});
+
+describe('PdfTab find reveals', () => {
+  function stubViewportRects() {
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(1000);
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      // eslint-disable-next-line unicorn/no-this-outside-of-class -- a DOM method measures its own receiver.
+      if (this.matches('.pdf-stage')) return rect(100, 1000);
+      // eslint-disable-next-line unicorn/no-this-outside-of-class -- a DOM method measures its own receiver.
+      if (this.matches('.pdf-page[data-page="1"]')) return rect(500, 800);
+      return rect(0, 0);
+    });
+  }
+
+  function rect(top: number, height: number): DOMRect {
+    return {
+      top, height, bottom: top + height, left: 0, right: 0, width: 0, x: 0, y: top,
+      toJSON: () => ({}),
+    } as DOMRect;
+  }
+
+  it('puts a revealed line a quarter down a continuous stage', async () => {
+    const { chords, container } = await mount(makeDocument(2, [['alpha'], ['needle']]));
+    stubViewportRects();
+    await userEvent.click(screen.getByLabelText('Continuous scroll'));
+    const input = openFind(chords);
+    await userEvent.type(input, 'needle');
+    await finishReading();
+    const stage = container.querySelector('.pdf-stage') as HTMLElement;
+    stage.scrollTop = 0;
+
+    await userEvent.keyboard('{Enter}');
+
+    await waitFor(() => { expect(stage.scrollTop).toBe(550); });
+  });
+
+  it('lists the page and scrolls a revealed line in single-page layout', async () => {
+    const { chords, container } = await mount(makeDocument(2, [['alpha'], ['needle']]));
+    stubViewportRects();
+    const input = openFind(chords);
+    await userEvent.type(input, 'needle');
+    await finishReading();
+    const stage = container.querySelector('.pdf-stage') as HTMLElement;
+    stage.scrollTop = 0;
+
+    await userEvent.keyboard('{Enter}');
+
+    await waitFor(() => { expect(container.querySelector('.pdf-page[data-page="1"]')).not.toBeNull(); });
+    await waitFor(() => { expect(stage.scrollTop).toBe(550); });
+  });
+
+  it('scrolls to a thumbnail without an offset', async () => {
+    const { container } = await mount(makeDocument(2));
+    await userEvent.click(screen.getByLabelText('Continuous scroll'));
+    await userEvent.click(screen.getByLabelText('Show pages'));
+    const strip = container.querySelector('.pdf-thumbnails') as HTMLElement;
+    const scrollIntoView = vi.mocked(Element.prototype.scrollIntoView);
+    scrollIntoView.mockClear();
+
+    await userEvent.click(within(strip).getByLabelText('Page 2'));
+
+    await waitFor(() => { expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' }); });
+  });
+});
+
 describe('PdfTab while scrolling', () => {
   it('fits changed stage dimensions and ignores duplicate size notifications', async () => {
     let width = 632;
@@ -266,7 +548,7 @@ describe('PdfTab while scrolling', () => {
   it('draws only the pages the observer says are on screen', async () => {
     const document_ = makeDocument();
     load.mockResolvedValue({ ok: true, document: document_ });
-    render(<PdfTab payload={payload} capabilities={capabilities()} />);
+    renderTab(createPluginChordRegistry());
     await screen.findByLabelText('Continuous scroll');
     await userEvent.click(screen.getByLabelText('Continuous scroll'));
 

@@ -5,6 +5,8 @@
    Every selector in this file is rooted in a `pdf-` class, so opening a PDF tab changes nothing
    outside it. */
 
+.pdf-tab { position: relative; }
+
 /* The header controls, styled like the host's split control they sit beside. */
 .pdf-action { border: none; background: none; color: var(--muted); cursor: pointer; padding: 2px 4px; }
 .pdf-action:hover { color: var(--fg); }

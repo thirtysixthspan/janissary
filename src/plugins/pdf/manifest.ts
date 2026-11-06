@@ -18,6 +18,11 @@ export const pdfManifest = {
   },
   editsOwnFiles: true,
   command: 'pdf',
+  // Claimed rather than refused, and honoured only while a PDF tab is the visible one: the
+  // application leaves Cmd+F to the editor everywhere else, and takes it back the moment focus
+  // moves. The mounted body answers it with the find overlay; a claim it does not answer falls
+  // through to the application unchanged.
+  chords: ['meta+f'],
   capabilities: [
     'note',
     'notifyUser',

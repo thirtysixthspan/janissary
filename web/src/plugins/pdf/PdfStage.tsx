@@ -8,7 +8,7 @@ import { usePdfStageViewport } from './usePdfStageViewport';
 // against so a fitted page is not flush with the frame.
 const STAGE_PADDING = 16;
 
-export type PdfJump = { page: number; token: number };
+export type PdfJump = { page: number; token: number; offset?: number };
 
 export type PdfStageProperties = {
   document: LoadedPdf;
