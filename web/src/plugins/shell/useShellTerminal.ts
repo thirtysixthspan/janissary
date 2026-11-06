@@ -12,6 +12,8 @@ import { holdFocusOffSinglePress } from './press-focus';
 import { holdReplySelection, shellSelectionText, type ReplySelection } from './reply-selection';
 import { ReplyPlacement } from './reply-placement';
 import { writeShellEcho, writeShellReply } from './write-shell-reply';
+import type { TranscriptLines } from './transcript-lines';
+import { useShellTerminalView } from './useShellTerminalView';
 
 export type AttachTerminal = (
   ptyId: string, onData: (data: string) => void,
@@ -59,6 +61,9 @@ export type ShellTerminalHandle = {
   scrollLines(amount: number): void;
   scrollToBottom(): void;
   rows(): number;
+  // What the terminal shows, as logical lines, and the way to bring one of them into view.
+  transcript(): TranscriptLines;
+  revealRow(row: number): void;
 };
 
 export function useShellTerminal({
@@ -229,17 +234,9 @@ export function useShellTerminal({
     const terminal = terminalRef.current;
     if (terminal) writeShellEcho(terminal, placementRef.current, rawLine);
   }, []);
-  const focus = useCallback(() => { terminalRef.current?.focus(); }, []);
-  const selection = useCallback(() => shellSelectionText(replyRef.current, terminalRef.current), []);
-  const clearSelection = useCallback(() => {
-    replyRef.current?.clear();
-    terminalRef.current?.clearSelection();
-  }, []);
-  const scrollLines = useCallback((amount: number) => { terminalRef.current?.scrollLines(amount); }, []);
-  const scrollToBottom = useCallback(() => { terminalRef.current?.scrollToBottom(); }, []);
-  const rows = useCallback(() => terminalRef.current?.rows ?? 0, []);
+  const view = useShellTerminalView(terminalRef, replyRef);
   return {
-    write, display, displayReply, echoCommand, focus, selection, clearSelection, scrollLines, scrollToBottom, rows,
+    write, display, displayReply, echoCommand, ...view,
     terminalReady: ptyId !== undefined && attachedPtyId === ptyId,
   };
 }

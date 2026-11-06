@@ -1,6 +1,6 @@
 import { useBackgroundReplies } from './useBackgroundReplies';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CommandBarShell, useAppCommandBar, useCommandBarKeys, usePluginChordClaims } from '../api';
+import { CommandBarShell, LineFind, useAppCommandBar, useCommandBarKeys, usePluginChordClaims } from '../api';
 import type { TabPluginClientCapabilities } from '../api';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
 import { useShellTabTerminal } from './useShellTabTerminal';
@@ -17,7 +17,8 @@ import { useShellScrollKeys } from './useShellScrollKeys';
 import { useShellTerminalStatus } from './useShellTerminalStatus';
 import { useTerminalCommandHistory } from './useTerminalCommandHistory';
 import { appendShellHistory } from './shell-history';
-import { NEW_SHELL_CHORD, NO_CHORDS, SHELL_DOT_COLOR } from './shell-tab-constants';
+import { FIND_CHORD, NEW_SHELL_CHORD, NO_CHORDS, SHELL_DOT_COLOR } from './shell-tab-constants';
+import { useShellTranscriptFind } from './useShellTranscriptFind';
 import { openSiblingShell } from './open-sibling';
 import './shell.css';
 
@@ -53,7 +54,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   const terminalHistory = useTerminalCommandHistory(setSent);
   const {
     write, displayReply, echoCommand, focus: focusTerminal, selection: terminalSelection, clearSelection, scrollLines, scrollToBottom,
-    rows: terminalRows, terminalReady,
+    rows: terminalRows, terminalReady, transcript, revealRow,
   } = useShellTabTerminal({
     payload,
     capabilities,
@@ -83,8 +84,15 @@ export function ShellTab({ payload, capabilities }: Properties) {
   }, [capabilities.active]);
 
   const openHistory = useCallback(() => { setHistoryOpen(true); }, []);
+  const find = useShellTranscriptFind({ active: capabilities.active, transcript, revealRow });
+  const { open: openFindOverlay } = find;
+  const openFind = useCallback((query: string) => {
+    setHistoryOpen(false);
+    setMatches([]);
+    openFindOverlay(query);
+  }, [openFindOverlay, setMatches]);
   const run = useShellSubmit({
-    appBar, capabilities, displayReply, echoCommand, expectCommand: terminalHistory.expect, openHistory, setMatches, setSent, write,
+    appBar, capabilities, displayReply, echoCommand, expectCommand: terminalHistory.expect, openFind, openHistory, setMatches, setSent, write,
   });
   const { queue, submit } = useShellCommandQueue(capabilities, run, commandRunning, (line) => {
     setMatches([]);
@@ -148,12 +156,16 @@ export function ShellTab({ payload, capabilities }: Properties) {
   // chord rather than a bar key is what lets `Cmd+T` open a sibling shell with the terminal focused.
   const provisioning = payload.provisioning === true;
   usePluginChordClaims('shell', capabilities.label ?? 'shell', capabilities.claimedChords ?? NO_CHORDS, capabilities.active, useCallback((chordId: string) => {
+    if (chordId === FIND_CHORD) {
+      openFind('');
+      return;
+    }
     if (chordId !== NEW_SHELL_CHORD) {
       setHistoryOpen((open) => !open);
       return;
     }
     if (!provisioning) openSiblingShell(capabilities);
-  }, [capabilities, provisioning]));
+  }, [capabilities, openFind, provisioning]));
 
   const dotColor = capabilities.dotColor ?? SHELL_DOT_COLOR;
 
@@ -207,6 +219,15 @@ export function ShellTab({ payload, capabilities }: Properties) {
           lines={sent}
           onPick={(line) => { setDraft(line); }}
           onClose={() => { setHistoryOpen(false); inputReference.current?.focus(); }}
+        />
+      )}
+      {find.findOpen && (
+        <LineFind
+          placeholder="Search transcript"
+          query={find.query} onChangeQuery={find.setQuery}
+          results={find.results} selected={find.selected}
+          onChangeSelected={find.select}
+          onClose={() => { find.close(); inputReference.current?.focus(); }}
         />
       )}
     </div>

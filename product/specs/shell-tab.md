@@ -228,9 +228,30 @@ another tab delivers with `send` or `queue`, do not.
 Every other chord belongs to the application, unchanged: `Ctrl+A` opens the task picker, `Ctrl+G` the
 tab navigator, `Cmd+P` quick open and `Cmd+Shift+F` the project search, all with the cursor in the
 command bar. `Ctrl+E` opens the queue popup over the shell tab, as
-described above. `Cmd+F` does nothing here — the terminal is not a searchable in-tab transcript — which
-is the same in every plugin tab. The session's text transcript, once opened with **Open transcript**
-(see § Text transcript), is searched with `Cmd+F` in its editor tab.
+described above.
+
+### Transcript search
+
+`Cmd+F` opens a find overlay over what the terminal shows, while the shell tab is the visible one. It
+is the editor tab's find overlay (see [[editor-tab]]): the same focused input, here labelled `Search
+transcript`, the same ranked rows of up to ten matching lines, each with its line number and the
+matched text highlighted, and the same keys — `↑` / `↓` move the highlight, Return highlights the top
+match, a click highlights a row, and `Escape` closes the overlay and returns the keyboard to the
+command bar. Matching is the editor's: one uninterrupted, case-insensitive occurrence of the typed
+text. A line that wrapped across several screen rows is one line, and the terminal's scrollback is
+searched along with the screen.
+
+Typing `search transcript <pattern>` in the command bar opens the same overlay with the pattern already
+entered and its matches listed, rather than running the application's transcript search command; it
+does not reach zsh. The line is recorded in the tab's history. A bare `search transcript` opens the
+overlay empty.
+
+Highlighting a match scrolls the terminal so that line sits a quarter of the way down the screen and
+selects it, so it can be copied. The overlay lists the transcript as it stood when the overlay opened;
+output the shell prints while it is open is not added until it is opened again. Text drawn as a
+rendered reply block is not part of the terminal's text and is not searched. Switching tabs closes the
+overlay. The session's text transcript, once opened with **Open transcript** (see § Text transcript),
+is searched with `Cmd+F` in its editor tab as before.
 
 `Ctrl+R` opens this tab's own history while it is the visible one, and a bare `hist` submitted from the
 command bar opens the same list rather than the application's history picker, which a shell tab's

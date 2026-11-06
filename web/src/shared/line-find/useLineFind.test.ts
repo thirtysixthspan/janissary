@@ -1,11 +1,11 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { useEditorFind } from './useEditorFind';
+import { useLineFind } from './useLineFind';
 
 const LINES = ['const alpha = 1;', '  }', 'function beta() {', '  }'];
 
 function openWith(lines: string[], query: string) {
-  const view = renderHook(({ l, a }: { l: string[]; a: boolean }) => useEditorFind(l, a), {
+  const view = renderHook(({ l, a }: { l: string[]; a: boolean }) => useLineFind(l, a), {
     initialProps: { l: lines, a: true },
   });
   act(() => { view.result.current.open(); });
@@ -13,9 +13,9 @@ function openWith(lines: string[], query: string) {
   return view;
 }
 
-describe('useEditorFind', () => {
+describe('useLineFind', () => {
   it('starts closed and yields no results for an empty query', () => {
-    const { result } = renderHook(() => useEditorFind(LINES, true));
+    const { result } = renderHook(() => useLineFind(LINES, true));
     expect(result.current.findOpen).toBe(false);
     expect(result.current.results).toEqual([]);
 
@@ -24,6 +24,14 @@ describe('useEditorFind', () => {
     expect(result.current.findOpen).toBe(true);
     expect(result.current.query).toBe('');
     expect(result.current.results).toEqual([]);
+  });
+
+  it('opens with an initial query already applied', () => {
+    const { result } = renderHook(() => useLineFind(LINES, true));
+    act(() => { result.current.open('beta'); });
+
+    expect(result.current.query).toBe('beta');
+    expect(result.current.results.map((r) => r.path)).toEqual(['function beta() {']);
   });
 
   it('returns matching lines ranked best-first', () => {
@@ -53,7 +61,7 @@ describe('useEditorFind', () => {
   });
 
   it('clamps the selection when the buffer shrinks under it', () => {
-    const { result, rerender } = renderHook(({ l, a }: { l: string[]; a: boolean }) => useEditorFind(l, a), {
+    const { result, rerender } = renderHook(({ l, a }: { l: string[]; a: boolean }) => useLineFind(l, a), {
       initialProps: { l: LINES, a: true },
     });
     act(() => { result.current.open(); });
@@ -68,7 +76,7 @@ describe('useEditorFind', () => {
   });
 
   it('re-filters against new buffer content while open', () => {
-    const { result, rerender } = renderHook(({ l, a }: { l: string[]; a: boolean }) => useEditorFind(l, a), {
+    const { result, rerender } = renderHook(({ l, a }: { l: string[]; a: boolean }) => useLineFind(l, a), {
       initialProps: { l: LINES, a: true },
     });
     act(() => { result.current.open(); });
@@ -81,7 +89,7 @@ describe('useEditorFind', () => {
   });
 
   it('closes when the tab goes inactive', () => {
-    const { result, rerender } = renderHook(({ l, a }: { l: string[]; a: boolean }) => useEditorFind(l, a), {
+    const { result, rerender } = renderHook(({ l, a }: { l: string[]; a: boolean }) => useLineFind(l, a), {
       initialProps: { l: LINES, a: true },
     });
     act(() => { result.current.open(); });
@@ -93,7 +101,7 @@ describe('useEditorFind', () => {
   });
 
   it('yields no results while the file is still loading', () => {
-    const { result } = renderHook(() => useEditorFind(null, true));
+    const { result } = renderHook(() => useLineFind(null, true));
     act(() => { result.current.open(); });
     act(() => { result.current.setQuery('alpha'); });
 

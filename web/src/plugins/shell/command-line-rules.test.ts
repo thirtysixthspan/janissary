@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  controlCharacterFor, opensShellHistory, routeFor, shellLine,
+  controlCharacterFor, opensShellHistory, routeFor, shellLine, transcriptSearchQuery,
 } from './command-line-rules';
 
 describe('shell command line rules', () => {
@@ -21,6 +21,16 @@ describe('shell command line rules', () => {
     expect(opensShellHistory('hist foo')).toBe(false);
     expect(opensShellHistory('!hist')).toBe(false);
     expect(opensShellHistory('history')).toBe(false);
+  });
+
+  it('reads search transcript, in any case, as the transcript find with its pattern', () => {
+    expect(transcriptSearchQuery('search transcript error')).toBe('error');
+    expect(transcriptSearchQuery('  SEARCH  Transcript  two words  ')).toBe('two words');
+    expect(transcriptSearchQuery('search transcript')).toBe('');
+    expect(transcriptSearchQuery('search error')).toBeUndefined();
+    expect(transcriptSearchQuery('searching transcript')).toBeUndefined();
+    expect(transcriptSearchQuery('search transcripts')).toBeUndefined();
+    expect(transcriptSearchQuery('!search transcript x')).toBeUndefined();
   });
 
   it('strips the marker before the shell sees the line', () => {

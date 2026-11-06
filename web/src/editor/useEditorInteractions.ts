@@ -5,7 +5,7 @@ import { collapseSelection, hasMultipleSelections, insertText } from './model';
 import { visualVerticalHit } from './mouse';
 import { revealVerticalProbe } from './scroll';
 import type { EditorApi, ResolveVertical } from './useEditor';
-import type { EditorFindApi } from './useEditorFind';
+import type { LineFindApi } from '../shared/line-find/useLineFind';
 import type { EditorSuggestApi } from './useEditorSuggest';
 import { handleSuggestKeyDown } from './handleSuggestKeyDown';
 
@@ -17,7 +17,7 @@ type InteractionRefs = {
 
 type InteractionApis = {
   api: EditorApi;
-  find: EditorFindApi;
+  find: LineFindApi;
   suggest: EditorSuggestApi;
   pluginKey: (event: KeyLike) => boolean;
   overlayOpen: boolean;

@@ -156,7 +156,7 @@ describe('chord claim validation', () => {
   it('accepts every chord the bundled shell manifest claims', async () => {
     const host = await activateWith(manifest({ chords: shellManifest.chords }), activation());
 
-    expect(shellManifest.chords).toEqual(['ctrl+r', 'meta+t']);
+    expect(shellManifest.chords).toEqual(['ctrl+r', 'meta+t', 'meta+f']);
     expect(host.statusFor('fixture')?.state).toBe('active');
   });
 

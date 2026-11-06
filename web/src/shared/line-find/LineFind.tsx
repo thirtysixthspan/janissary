@@ -1,6 +1,6 @@
 import React from 'react';
-import { rankedOverlayKeys } from '../shared/ranked-overlay-keys';
-import type { FuzzyMatchResult } from '../shared/fuzzy-match';
+import { rankedOverlayKeys } from '../ranked-overlay-keys';
+import type { FuzzyMatchResult } from '../fuzzy-match';
 
 type Properties = {
   query: string;
@@ -9,6 +9,7 @@ type Properties = {
   selected: number;
   onChangeSelected: (index: number) => void;
   onClose: () => void;
+  placeholder: string;
 };
 
 // Split `text` into alternating plain and `<mark>`ed segments from the matcher's ranges — the
@@ -26,7 +27,7 @@ function highlightRanges(text: string, ranges: [number, number][]): React.ReactN
   return segments;
 }
 
-function EditorFindRow({ result, selected, onSelect }: { result: FuzzyMatchResult; selected: boolean; onSelect: () => void }) {
+function LineFindRow({ result, selected, onSelect }: { result: FuzzyMatchResult; selected: boolean; onSelect: () => void }) {
   return (
     <div
       className={`picker-row editor-find-row${selected ? ' selected' : ''}`}
@@ -43,15 +44,15 @@ function editorFindBody(query: string, results: FuzzyMatchResult[], selected: nu
   if (!query.trim()) return <div className="picker-row picker-empty">type to search</div>;
   if (results.length === 0) return <div className="picker-row picker-empty">No matching lines</div>;
   return results.map((result, row) => (
-    <EditorFindRow key={result.index} result={result} selected={row === selected} onSelect={() => onChangeSelected(row)} />
+    <LineFindRow key={result.index} result={result} selected={row === selected} onSelect={() => onChangeSelected(row)} />
   ));
 }
 
-// The Cmd+F find overlay for an editor tab: an autofocused input over the ranked buffer lines,
-// modeled on `QuickOpen`. Purely presentational — the caret jump that previews the highlighted row
-// belongs to `EditorTab`, which owns the buffer. Owns its own key handling so Up/Down/Enter/Escape
-// never reach the buffer behind it.
-export function EditorFind({ query, onChangeQuery, results, selected, onChangeSelected, onClose }: Properties) {
+// The Cmd+F find overlay over a tab's lines (an editor buffer, a shell transcript): an autofocused
+// input over the ranked lines, modeled on `QuickOpen`. Purely presentational — revealing the
+// highlighted row belongs to the tab that owns the lines. Owns its own key handling so
+// Up/Down/Enter/Escape never reach the surface behind it.
+export function LineFind({ query, onChangeQuery, results, selected, onChangeSelected, onClose, placeholder }: Properties) {
   const onKeyDown = rankedOverlayKeys(selected, results.length, onChangeSelected, () => {
     if (results.length > 0) onChangeSelected(0);
   }, onClose);
@@ -64,7 +65,7 @@ export function EditorFind({ query, onChangeQuery, results, selected, onChangeSe
             value={query}
             autoFocus
             spellCheck={false}
-            placeholder="Search buffer"
+            placeholder={placeholder}
             onChange={(e) => onChangeQuery(e.target.value)}
             onKeyDown={onKeyDown}
           />

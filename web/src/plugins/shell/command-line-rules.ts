@@ -20,6 +20,18 @@ export function opensShellHistory(text: string): boolean {
   return text.trim().toLowerCase() === 'hist';
 }
 
+// The pattern of a `search transcript <pattern>` line, matched the way the application's own
+// `search` command matches it, or undefined for any other line. In a shell tab it opens the find
+// overlay over the terminal's transcript, prefilled with the pattern, rather than reaching the
+// server's command, which knows only the replies the application keeps and not what zsh printed.
+const TRANSCRIPT_SEARCH = /^search\s+transcript\b/i;
+
+export function transcriptSearchQuery(text: string): string | undefined {
+  const line = text.trim();
+  if (!TRANSCRIPT_SEARCH.test(line)) return undefined;
+  return line.replace(TRANSCRIPT_SEARCH, '').trim();
+}
+
 // The line as the shell receives it: the `!` is a routing marker and is not part of it. `!` alone
 // sends nothing, so a stray marker does not submit a blank command.
 export function shellLine(text: string): string {

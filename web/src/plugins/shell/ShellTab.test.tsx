@@ -31,6 +31,23 @@ interface FakeTerminal {
   selectionClearCalls: number;
   scrollCalls: number[];
   bottomCalls: number;
+  // What the screen holds, one entry per buffer row, for the transcript find to read.
+  lines: string[];
+  scrolledTo: number[];
+  selectedLines: [number, number][];
+}
+
+// The active buffer the stub reports: the prompt rows the tab reads, and the screen's rows as the
+// transcript find reads them.
+function fakeActiveBuffer(lines: () => string[]) {
+  return {
+    baseY: 0, cursorY: 0, type: 'normal',
+    get length() { return lines().length; },
+    getLine: (row: number) => {
+      const text = lines()[row];
+      return text === undefined ? undefined : { isWrapped: false, translateToString: () => text };
+    },
+  };
 }
 
 vi.mock('@xterm/xterm', () => ({
@@ -43,6 +60,9 @@ vi.mock('@xterm/xterm', () => ({
     selectionClearCalls = 0;
     scrollCalls: number[] = [];
     bottomCalls = 0;
+    lines: string[] = [];
+    scrolledTo: number[] = [];
+    selectedLines: [number, number][] = [];
     options: Record<string, unknown>;
 
     constructor(options: Record<string, unknown>) {
@@ -59,7 +79,7 @@ vi.mock('@xterm/xterm', () => ({
     clearSelection() { this.selectionClearCalls += 1; }
     attachCustomKeyEventHandler() {}
     textarea = undefined;
-    buffer = { active: { baseY: 0, cursorY: 0, type: 'normal' } };
+    buffer = { active: fakeActiveBuffer(() => this.lines) };
     onCursorMove() { return { dispose: () => {} }; }
     registerMarker() { return { line: 0, dispose: () => {} }; }
     registerDecoration() {}
@@ -73,6 +93,8 @@ vi.mock('@xterm/xterm', () => ({
     focus() { this.focusCalls += 1; }
     scrollLines(amount: number) { this.scrollCalls.push(amount); }
     scrollToBottom() { this.bottomCalls += 1; }
+    scrollToLine(line: number) { this.scrolledTo.push(line); }
+    selectLines(start: number, end: number) { this.selectedLines.push([start, end]); }
     get cols() { return 100; }
     get rows() { return 30; }
   },
@@ -173,8 +195,8 @@ function makeCapabilities(overrides: {
     launchAgentHere: vi.fn(),
     reportFailure: vi.fn(),
     // What the host accepted at activation and put on this tab's view — the shell manifest claims
-    // `ctrl+r` and `meta+t`, so that is the default here too.
-    claimedChords: overrides.claimedChords ?? ['ctrl+r', 'meta+t'],
+    // `ctrl+r`, `meta+t`, and `meta+f`, so that is the default here too.
+    claimedChords: overrides.claimedChords ?? ['ctrl+r', 'meta+t', 'meta+f'],
     dotColor: overrides.dotColor,
     label: overrides.label ?? 'shell1',
     // Present only once the recorder has opened a file, and the flag's pressability is read from it.
@@ -1672,6 +1694,58 @@ describe('ShellTab', () => {
     chords.run('ctrl+t', 'shell1');
 
     await waitFor(() => { expect(document.querySelector('.shell-history')).not.toBeNull(); });
+  });
+
+  it('opens an empty transcript find on the claimed Cmd+F', async () => {
+    const { chords } = renderTab();
+
+    expect(chords.run('meta+f', 'shell1')).toBe(true);
+
+    const input = await screen.findByPlaceholderText('Search transcript');
+    expect((input as HTMLInputElement).value).toBe('');
+    expect(document.activeElement).toBe(input);
+    expect(document.querySelector('.shell-history')).toBeNull();
+  });
+
+  it('opens the transcript find on search transcript, with the pattern, without dispatching it', async () => {
+    const { capabilities, terminal, written } = renderTab();
+    terminal.lines = ['> ls', 'alpha.txt  beta.txt', '> echo beta', 'beta'];
+
+    fireEvent.change(bar(), { target: { value: 'search transcript beta' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+
+    const input = await screen.findByPlaceholderText('Search transcript');
+    expect((input as HTMLInputElement).value).toBe('beta');
+    const rows = [...document.querySelectorAll('.editor-find-row')].map((row) => row.querySelector('.editor-find-line')?.textContent);
+    expect(rows.toSorted((a, b) => Number(a) - Number(b))).toEqual(['2', '3', '4']);
+    expect(capabilities.intent).not.toHaveBeenCalledWith('dispatch', 'search transcript beta');
+    expect(written).toEqual([]);
+  });
+
+  it('scrolls the terminal to the highlighted line and selects it', async () => {
+    const { terminal } = renderTab();
+    terminal.lines = Array.from({ length: 40 }, (_, row) => (row === 20 ? 'needle here' : `line ${row}`));
+
+    fireEvent.change(bar(), { target: { value: 'search transcript needle' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    const input = await screen.findByPlaceholderText('Search transcript');
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    // A quarter of the way down the 30-row screen, as the editor's find places its caret.
+    expect(terminal.scrolledTo).toEqual([13]);
+    expect(terminal.selectedLines).toEqual([[20, 20]]);
+  });
+
+  it('closes the transcript find on Escape and hands the keyboard back to the bar', async () => {
+    renderTab();
+    fireEvent.change(bar(), { target: { value: 'search transcript x' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    const input = await screen.findByPlaceholderText('Search transcript');
+
+    fireEvent.keyDown(input, { key: 'Escape' });
+
+    expect(screen.queryByPlaceholderText('Search transcript')).toBeNull();
+    expect(document.activeElement).toBe(bar());
   });
 
   it('gives each shell tab its own status-window identity', () => {

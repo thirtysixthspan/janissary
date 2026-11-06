@@ -40,7 +40,7 @@ function metaAction(e: KeyLike): KeyAction | null {
     case 'a': { return { kind: 'selectAll' }; }
     case 'c': { return { kind: 'copy' }; }
     case 'x': { return { kind: 'cut' }; }
-    // Opens the find overlay (EditorFind.tsx); handled here rather than at the window level so the
+    // Opens the find overlay (shared/line-find/LineFind.tsx); handled here rather than at the window level so the
     // preventDefault() also suppresses the browser's own find bar. Ctrl+F stays "move right".
     case 'f': { return { kind: 'find' }; }
     // Cmd+Left/Right = line edges (many Mac keyboards have no Home/End); Cmd+Up/Down = document edges.

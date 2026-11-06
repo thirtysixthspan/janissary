@@ -17,8 +17,9 @@ export const shellManifest = {
   // application's own history picker owns Ctrl+R, and its new-agent-tab action owns Cmd+T, everywhere
   // else, and each takes its chord back the moment focus moves. Cmd+T is claimed here rather than in
   // the command bar's own key handler so it opens a sibling shell with the terminal focused too. A
-  // claim the mounted body does not answer falls through to the application unchanged.
-  chords: ['ctrl+r', 'meta+t'],
+  // claim the mounted body does not answer falls through to the application unchanged. Cmd+F, which
+  // the application leaves to the editor, opens the find overlay over the terminal's transcript.
+  chords: ['ctrl+r', 'meta+t', 'meta+f'],
   // The two rows the metadata row's status windows render. The host pushes them when they differ
   // from what it last pushed, so a shell tab sitting idle costs nothing.
   hostState: ['connections', 'schedule'],
