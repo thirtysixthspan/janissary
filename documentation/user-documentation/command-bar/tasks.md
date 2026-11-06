@@ -58,7 +58,7 @@ Choose `work-an-issue` for an ordinary issue on `master`. Every argument to it i
 
 For an open pull request, choose `review-pull-request` to record review findings, `test-pull-request` to run its testing steps in a browser and record failures, or `update-pull-request` to bring its description, plan, specs, and help in line with the settled code. Read [Review a pull request](/user-documentation/workflows/pull-request-review), [Test a pull request](/user-documentation/workflows/testing-a-pull-request), and [Update a pull request](/user-documentation/workflows/updating-a-pull-request) for those workflows.
 
-Expand **workspace** and choose `fix-build` to diagnose and repair a failing pull request build. It accepts a PR number, URL, or head branch; without one, it uses the current branch's open pull request, or the only open pull request if there is one. Expand **research** and choose `find-bugs` to check an app against its functional specs and record bugs it reproduces. This task does not fix the bugs and needs a harness tab with an attached browser.
+Expand **workspace** and choose `fix-build` to diagnose and repair a failing build. On its own it works on `master`, and the repair merges through a new pull request once its checks pass. Append a PR number, `#number`, or GitHub PR URL to repair that pull request's build instead; the repair is pushed to its branch and the pull request stays open. Expand **research** and choose `find-bugs` to check an app against its functional specs and record bugs it reproduces. This task does not fix the bugs and needs a harness tab with an attached browser.
 
 ## What a shipped task does when you pick it
 
