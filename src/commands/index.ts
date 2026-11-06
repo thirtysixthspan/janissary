@@ -3,6 +3,8 @@ import { command as shell } from './shell.js';
 import { command as next } from './next.js';
 import { command as ask } from './ask.js';
 import { command as askReset } from './ask-reset.js';
+import { command as tell } from './tell.js';
+import { command as tellReset } from './tell-reset.js';
 import { command as agent } from './agent.js';
 import { command as database } from './db.js';
 import { command as browser } from './browser.js';
@@ -44,8 +46,10 @@ const coreCommands: Command[] = [
   shell,
   next,
   askReset,
+  tellReset,
   agent,
   ask,
+  tell,
   database,
   browser,
   clear,
@@ -54,10 +58,8 @@ const coreCommands: Command[] = [
   close,
   quit,
   schedule,
-  // Order here is priority: an entry whose `match` also accepts another's input must come first,
-  // which is why `askReset` precedes `ask`. Which inputs each command claims is declared by its own
-  // `samples`, and `../commands.test.ts` walks this list through `./priority.ts` to fail any entry
-  // that shadows — or is shadowed by — another, so the constraint no longer rests on this comment.
+  // Order here is priority: reset matches must come before their prompt command. Each command's
+  // `samples` declares the inputs it claims, and `../commands.test.ts` checks this order for shadowing.
   harness,
   ssh,
   profile,

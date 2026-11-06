@@ -13,6 +13,8 @@ import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { coreActivity } from './record-feed.js';
 import { acpRoleRuntime } from './role-state.js';
 
+const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
+
 export function runCorePrompt(
   managers: Managers, label: string, runtime: TabRuntime, request: AcpPendingPrompt,
   session: AcpSession, identity: string, current: () => boolean,
@@ -44,7 +46,8 @@ export function runCorePrompt(
     },
   }, request.prompt, {
     signal: request.abort.signal,
-    primer: [toolPrimer(tools, request.commands), MARKDOWN_INSTRUCTION].filter(Boolean).join('\n\n'),
+    primer: [toolPrimer(tools, request.commands), request.role === 'tell' ? TELL_INSTRUCTION : '', MARKDOWN_INSTRUCTION]
+      .filter(Boolean).join('\n\n'),
     runCommand: (command) => {
       if (!active()) throw new Error('ACP: prompt cancelled.');
       recordTool(command);
