@@ -31,7 +31,7 @@ Run `$janissary/scripts/run.mjs check-diff` after each implementation step and a
 
 ## Verification
 
-`./scripts/run.mjs check-diff` passes lint, incremental typecheck, and diff-scoped server tests. The existing help pages do not describe the changed busy behavior. The user-facing tab-strip description was updated alongside the specs.
+`./scripts/run.mjs check-diff` passed lint and incremental typecheck. Its final runs reported a `test:server` failure without exposing the underlying output; running `npm run test:diff:server` directly passed all 139 files and 2,617 tests. The existing help pages do not describe the changed busy behavior. The user-facing tab-strip description was updated alongside the specs.
 
 ## Specs and documentation
 
