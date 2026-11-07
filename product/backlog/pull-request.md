@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Add executable PDF find steps to the pull request's verification section
-
-Existing Issue: The PR description's `How to verify` section lists CI coverage and expected behaviors but no actions a reviewer can perform. Severity: 4/10
-
-Existing Risk: 4/10 - Reviewers may approve the feature without seeing a real PDF search, highlight, or reveal.
-
-Proposal Risk: 1/10 - A short reproducible manual flow leaves little risk that a basic PDF find regression goes unnoticed.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1958 "Add executable PDF find steps to the pull request verification section". Step 4 found zero runnable steps in the PR description and the completed plan's Verification section; it only says the PR description records passing CI and expected results without executable steps. The generated core check opened a three-page PDF, searched `needle` from page 1 while only page 1 was drawn, confirmed ranked rows with page labels 1–3, revealed the page 3 match, and selected a page 2 line in continuous scroll at 22% of the stage height. Add this action sequence and its expected result to the PR's How to verify section.
-
-
 * Focus the PDF tab before reopening find with Cmd+F after a tab switch
 
 Existing Issue: Generated Step G3 did not reopen PDF find when Cmd+F was pressed immediately after returning through the tab strip, because the tab-strip focus did not route the plugin chord to the PDF tab. Severity: 3/10
