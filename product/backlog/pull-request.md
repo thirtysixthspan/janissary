@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Describe the render-failure close and the early-Down selection guard in the pull request body and add verification steps for both.
-
-Existing Issue: The pull request body never mentions that a render failure closes an open find overlay and clears its marks, nor that pressing Down before any result keeps the first row selected; both behaviors are promised by the branch's fix plans and pinned by `PdfTab.test.tsx` and `usePdfFind.test.ts`, but a reader of the description cannot learn or verify either. Severity: 3/10
-
-Existing Risk: 3/10 - A reviewer or future maintainer sees an undescribed error-path and edge-case behavior change, and a regression in either can ship without the description or manual verification catching it.
-
-Proposal Risk: 1/10 - The description then covers the two repairs and their checks; the behaviors and tests already exist, so no code risk is added.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1958 "describe the find render-failure close and early-Down guard in the pull request body". Add a sentence to the description's What section near the text-read failure paragraph saying that a render failure closes an open overlay and clears its marks, and a sentence or arrow note saying Down before results keeps the first row selected once results arrive. Add two How-to-verify cases: with a query and marks on a drawn page, force a page render failure (the rejected-`renderPage` pattern the component test uses) and confirm `Failed to load` appears, the `Search document` input is gone, and both highlight sets are empty; on a long document, type a query while reading is still unfinished, press Down before any row exists, then finish reading and confirm the first row is selected and its occurrence is the current mark. The existing pins are `PdfTab failure` "closes the find overlay and clears its marks when a render fails" in `web/src/plugins/pdf/PdfTab.test.tsx` and `usePdfFind revealing` "keeps the first result selected when Down arrives before any result" in `web/src/plugins/pdf/usePdfFind.test.ts`; do not record the behavior as a code change.
-
-
 * Qualify the description's no-text and mark claims to non-whitespace queries, so they match the whitespace-only state the overlay actually shows.
 
 Existing Issue: The description's no-text paragraph says a document with no text answers every query with `No matching lines`, and its marks paragraph says every occurrence is marked while the query is non-empty, but `LineFind` and `usePdfFindMarks` trim the query, so an empty or whitespace-only query shows `type to search` and paints no marks on every document, including a no-text one. Severity: 2/10
