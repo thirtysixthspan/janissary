@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { PDF_FIND_CURRENT, PDF_FIND_MATCH } from './pdf-find-marks';
 import entry from './index?raw';
 import styles from './pdf.css?raw';
 import textLayerStyles from './pdf-text-layer.css?raw';
@@ -73,7 +74,7 @@ describe('the PDF plugin stays inside its own tab', () => {
   it('styles both find highlights on the text layer', () => {
     const selectors = selectorsOf(styles);
 
-    expect(selectors).toContain('.pdf-text-layer ::highlight(pdf-find-match)');
-    expect(selectors).toContain('.pdf-text-layer ::highlight(pdf-find-current)');
+    expect(selectors).toContain(`.pdf-text-layer ::highlight(${PDF_FIND_MATCH})`);
+    expect(selectors).toContain(`.pdf-text-layer ::highlight(${PDF_FIND_CURRENT})`);
   });
 });

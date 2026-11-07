@@ -96,6 +96,39 @@ describe('occurrencesInLayer', () => {
     expect(occurrence?.range.endOffset).toBe(1);
   });
 
+  it('ends the last line without a trailing break', () => {
+    const layer = document.createElement('div');
+    const first = document.createElement('span');
+    first.textContent = 'alpha';
+    const second = document.createElement('span');
+    second.textContent = 'beta';
+    layer.append(first, document.createElement('br'), second);
+
+    const [occurrence] = occurrencesInLayer(layer, 'beta');
+
+    expect(occurrence?.line).toBe(1);
+    expect(occurrence?.start).toBe(0);
+    expect(occurrence?.range.toString()).toBe('beta');
+  });
+
+  it('treats a text node boundary as the next node at the start and the same node at the end', () => {
+    const layer = layerWith(['ab', 'cd']);
+    const spans = layer.querySelectorAll('span');
+    const firstNode = spans[0]?.firstChild;
+    const secondNode = spans[1]?.firstChild;
+    const [ab] = occurrencesInLayer(layer, 'ab');
+    const [cd] = occurrencesInLayer(layer, 'cd');
+
+    expect(ab?.range.startContainer).toBe(firstNode);
+    expect(ab?.range.startOffset).toBe(0);
+    expect(ab?.range.endContainer).toBe(firstNode);
+    expect(ab?.range.endOffset).toBe(2);
+    expect(cd?.range.startContainer).toBe(secondNode);
+    expect(cd?.range.startOffset).toBe(0);
+    expect(cd?.range.endContainer).toBe(secondNode);
+    expect(cd?.range.endOffset).toBe(2);
+  });
+
   it('returns every occurrence, including overlapping ones', () => {
     const layer = layerWith('aaa');
 

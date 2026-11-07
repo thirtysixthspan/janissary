@@ -235,4 +235,20 @@ describe('usePdfFindMarks', () => {
 
     expect(marks(PDF_FIND_CURRENT)[0]?.startContainer).toBe(textNode(layer));
   });
+
+  it('selects the occurrence at the current start when one line contains several', () => {
+    const stage = makeStage();
+    const layer = addPage(stage, '0', 'xneedle needle');
+
+    mount(propsFor(stage, { current: { page: 0, line: 0, start: 8 } }));
+
+    const [current] = marks(PDF_FIND_CURRENT);
+    const [match] = marks(PDF_FIND_MATCH);
+    expect(marks(PDF_FIND_CURRENT)).toHaveLength(1);
+    expect(marks(PDF_FIND_MATCH)).toHaveLength(1);
+    expect(current?.startContainer).toBe(textNode(layer));
+    expect(current?.startOffset).toBe(8);
+    expect(match?.startContainer).toBe(textNode(layer));
+    expect(match?.startOffset).toBe(1);
+  });
 });
