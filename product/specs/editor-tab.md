@@ -482,8 +482,9 @@ to ten results, best-scoring first. Each row is the line's 1-based number, dimme
 text with the matched characters emphasized. A
 line too long for the overlay is clipped with an ellipsis rather than wrapped; its number and the
 jump still identify it. Matching is contiguous, case-insensitive substring matching, with no regex,
-case, or whole-word options. Two identical lines appear as two rows with their own line numbers, in
-first-in-file order.
+case, or whole-word options. Case-insensitive matches emphasize their original text even when
+lowercasing changes a character's length. Two identical lines appear as two rows with their own line
+numbers, in first-in-file order.
 
 ↑/↓ move the highlighted row and immediately move the editor cursor to that line, scrolling the
 buffer behind the overlay so the match sits about one quarter of the editor body's height below its

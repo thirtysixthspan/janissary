@@ -62,6 +62,8 @@ While a PDF tab is open and its document has loaded, press `Cmd+F` to search it.
 
 Type a word or phrase. Search ignores case. The list shows the matching lines with their page numbers, and every match on the pages in view is marked, with the match behind the highlighted row marked more strongly. The whole document is searched, not only the pages you have looked at. The first search reads the document's text, so a long document shows `Reading pages…` while it works and fills in the results as it reads. A screen reader hears when reading starts, when matching lines first appear, and the final count or `No matching lines`; it doesn't announce each page. When the ten-row list is full, it says `10 or more matching lines`.
 
+Case-insensitive matches stay aligned with the original text even when lowercasing changes a character's length.
+
 Use `↑` / `↓` or click a row to jump to a match. When you are showing one page at a time, the match's page comes into view; in continuous scroll the page scrolls so the match sits about a quarter of the way down. If you are zoomed in, the page also scrolls to bring the match into view. `Return` jumps to the best match.
 
 Matches stay within one line. A phrase that wraps to the next line, or a word hyphenated across a line break, is not found.

@@ -9,6 +9,34 @@ export type PdfFindOccurrence = {
 
 type LineNode = { node: Text; start: number };
 type LayerLine = { text: string; nodes: LineNode[] };
+type LoweredLayerText = {
+  text: string;
+  toSourceRange(start: number, end: number): [number, number] | null;
+};
+
+function lowercaseLayerText(value: string): LoweredLayerText {
+  const sourceStarts: number[] = [];
+  const sourceEnds: number[] = [];
+  let sourceStart = 0;
+  for (const character of value) {
+    const sourceEnd = sourceStart + character.length;
+    const transformedLength = character.toLowerCase().length;
+    for (let offset = 0; offset < transformedLength; offset++) {
+      sourceStarts.push(sourceStart);
+      sourceEnds.push(sourceEnd);
+    }
+    sourceStart = sourceEnd;
+  }
+
+  return {
+    text: value.toLowerCase(),
+    toSourceRange(start, end) {
+      const sourceStart = sourceStarts[start];
+      const sourceEnd = sourceEnds[end - 1];
+      return sourceStart !== undefined && sourceEnd !== undefined ? [sourceStart, sourceEnd] : null;
+    },
+  };
+}
 
 function layerLines(layer: Element): LayerLine[] {
   const lines: LayerLine[] = [];
@@ -57,16 +85,20 @@ export function occurrencesInLayer(layer: Element, query: string): PdfFindOccurr
   if (!needle) return [];
   const occurrences: PdfFindOccurrence[] = [];
   for (const [line, content] of layerLines(layer).entries()) {
-    const haystack = content.text.toLowerCase();
-    let start = haystack.indexOf(needle);
+    const lowered = lowercaseLayerText(content.text);
+    let start = lowered.text.indexOf(needle);
     while (start !== -1) {
-      const range = document.createRange();
-      const [startNode, startOffset] = startPoint(content, start);
-      const [endNode, endOffset] = endPoint(content, start + needle.length);
-      range.setStart(startNode, startOffset);
-      range.setEnd(endNode, endOffset);
-      occurrences.push({ range, line, start });
-      start = haystack.indexOf(needle, start + 1);
+      const sourceRange = lowered.toSourceRange(start, start + needle.length);
+      if (sourceRange) {
+        const [sourceStart, sourceEnd] = sourceRange;
+        const range = document.createRange();
+        const [startNode, startOffset] = startPoint(content, sourceStart);
+        const [endNode, endOffset] = endPoint(content, sourceEnd);
+        range.setStart(startNode, startOffset);
+        range.setEnd(endNode, endOffset);
+        occurrences.push({ range, line, start: sourceStart });
+      }
+      start = lowered.text.indexOf(needle, start + 1);
     }
   }
   return occurrences;

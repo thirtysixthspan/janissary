@@ -41,6 +41,19 @@ describe('occurrencesInLayer', () => {
     expect(texts(occurrencesInLayer(layer, 'ALPHA'))).toEqual(['Alpha']);
   });
 
+  it('maps matches after lowercase expansions to the original text range', () => {
+    const layer = layerWith('İneedle');
+    const [occurrence] = occurrencesInLayer(layer, 'needle');
+    const text = layer.querySelector('span')?.firstChild;
+
+    expect(occurrence?.start).toBe(1);
+    expect(occurrence?.range.toString()).toBe('needle');
+    expect(occurrence?.range.startContainer).toBe(text);
+    expect(occurrence?.range.startOffset).toBe(1);
+    expect(occurrence?.range.endContainer).toBe(text);
+    expect(occurrence?.range.endOffset).toBe(7);
+  });
+
   it('returns one range across two spans on the same line', () => {
     const layer = layerWith(['Al', 'pha']);
     const [occurrence] = occurrencesInLayer(layer, 'alph');
