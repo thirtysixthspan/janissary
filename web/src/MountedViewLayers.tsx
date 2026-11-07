@@ -15,6 +15,7 @@ import { hostsCommandBar } from './shared/command-bar/hosts-command-bar';
 import { indexedTabs, isHarnessTabView, isEditorTabView, isPluginTabView } from './shared/tab/view-guards';
 import { useEditorPluginHost } from './useEditorPluginHost';
 import { visibleTabs } from './shared/tab/visible-tabs';
+import type { TabPluginState } from './plugins/api';
 
 type Properties = {
   tabs: TabView[];
@@ -30,6 +31,7 @@ type Properties = {
   // goes into `tabHandles` beside the editor tabs'; this is only the signal that it moved.
   onPluginDirtyHandle?: (label: string, handle: DirtyTabHandle | null) => void;
   onPluginDirty?: (label: string, dirty: boolean) => void;
+  getPluginTabState?: (label: string) => TabPluginState;
   // The full overlay stack, rendered over the current editor tab: a key the buffer does not bind
   // reaches the window handler, so any overlay can open there. `overlayOpen` says one is on screen.
   pickerOverlays?: React.ReactNode;
@@ -68,7 +70,7 @@ function TabBodyDiv({
 // position survive tab switches. Split out of App.tsx to keep it under the file-size limit.
 export function MountedViewLayers({
   tabs, current: candidate, client, closeTab, harnessHandles, tabHandles, questionPanelRef,
-  visibleLabels: requestedLabels, onSplit, onPluginDirtyHandle, onPluginDirty, pickerOverlays, pickerSourceTab, overlayOpen,
+  visibleLabels: requestedLabels, onSplit, onPluginDirtyHandle, onPluginDirty, getPluginTabState, pickerOverlays, pickerSourceTab, overlayOpen,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   navOpen, navQuery, navIndex, onPickTab, contributedOverlay,
 }: Properties) {
@@ -144,6 +146,7 @@ export function MountedViewLayers({
               else tabHandles.current.delete(t.label);
               onPluginDirty?.(t.label, handle?.isDirty() ?? false);
             }}
+            getPluginTabState={getPluginTabState}
             overlay={t.label === current?.label ? pluginOverlay(t) : undefined}
           />
         ))}

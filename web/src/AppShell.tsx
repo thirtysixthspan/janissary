@@ -9,6 +9,7 @@ import { useConnectionStatus } from './useConnectionStatus';
 import { ConnectionStatusLabel } from './ConnectionStatusLabel';
 import { ToastStack } from './toasts/ToastStack';
 import { useToastPosition } from './toasts/useToastPosition';
+import type { TabPluginState } from './plugins/api';
 
 // The root layout: left sidebar / center column (everything App renders today) / right sidebar.
 // Split out of App.tsx to keep it under the file-size limit.
@@ -19,6 +20,7 @@ export function AppShell({
   sidebarLeftWidth, onSidebarLeftWidthChange, sidebarRightWidth, onSidebarRightWidthChange,
   focusLeft, focusRight,
   onPluginDirtyHandle,
+  getPluginTabState,
   dirtyPluginTabs,
   pickerOverlays, pickerSourceTab,
 }: {
@@ -36,6 +38,7 @@ export function AppShell({
   focusLeft?: 'files' | 'notifications';
   focusRight?: 'files' | 'notifications';
   onPluginDirtyHandle?: (label: string, handle: DirtyTabHandle | null) => void;
+  getPluginTabState?: (label: string) => TabPluginState;
   dirtyPluginTabs?: ReadonlySet<string>;
   pickerOverlays?: React.ReactNode;
   pickerSourceTab?: string;
@@ -54,6 +57,7 @@ export function AppShell({
         width={sidebarLeftWidth} onWidthChange={onSidebarLeftWidthChange} focusView={focusLeft}
         onNotificationsVisibilityChange={setLeftNotificationsVisible}
         onPluginDirtyHandle={onPluginDirtyHandle}
+        getPluginTabState={getPluginTabState}
         dirtyPluginTabs={dirtyPluginTabs}
         pickerOverlays={pickerOverlays} pickerSourceTab={pickerSourceTab}
       />
@@ -65,6 +69,7 @@ export function AppShell({
         width={sidebarRightWidth} onWidthChange={onSidebarRightWidthChange} focusView={focusRight}
         onNotificationsVisibilityChange={setRightNotificationsVisible}
         onPluginDirtyHandle={onPluginDirtyHandle}
+        getPluginTabState={getPluginTabState}
         dirtyPluginTabs={dirtyPluginTabs}
         pickerOverlays={pickerOverlays} pickerSourceTab={pickerSourceTab}
       />

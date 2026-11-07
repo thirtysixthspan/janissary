@@ -194,7 +194,9 @@ own in the strip. **Save** there replaces the original file before the walk move
 exits after the last answer. Closing or reloading the browser page shows the browser's own prompt
 (see [[quit-confirmation]]).
 
-An in-progress edit is a live, in-memory view like zoom and pan: it is not persisted and not restored.
+An in-progress edit is a live, in-memory view like zoom and pan: it is not persisted and not restored
+after the app closes. Docking the image into a sidebar, or selecting another entry beside it, keeps
+its operation list, saved baseline, and dirty state with the open tab until it is saved or closed.
 
 ### Tab strip: name and close button
 

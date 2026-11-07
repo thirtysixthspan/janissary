@@ -70,7 +70,7 @@ Unsaved edits aren't dropped quietly the way zoom and pan are. Closing a tab tha
 
 ## Lifecycle
 
-An image tab is a live view, not saved state: zoom and pan reset when you switch away to another image tab, and image tabs are not restored. An edit in progress isn't saved either — it belongs to the open tab. Closing an unchanged image tab with its × button or `close` removes the view and leaves the file alone. If the image has unsaved edits, the save-changes dialog lets you save, discard the edits, or cancel and keep the tab open. Only files you've explicitly opened are ever served to the viewer.
+An image tab is a live view, not saved state: zoom and pan reset when you switch away to another image tab, and image tabs are not restored. An edit in progress isn't saved either — it belongs to the open tab and stays with it if you dock the image in a sidebar or select another sidebar entry. Closing an unchanged image tab with its × button or `close` removes the view and leaves the file alone. If the image has unsaved edits, the save-changes dialog lets you save, discard the edits, or cancel and keep the tab open. Only files you've explicitly opened are ever served to the viewer.
 
 A profile can open an image tab by its file. Launching that profile opens the image; if it was already open, Janissary reuses its tab. A profile carries nothing of the image's zoom, pan, or unfinished edits. See [Profiles](/user-documentation/automation/profiles) for how profiles open tabs.
 

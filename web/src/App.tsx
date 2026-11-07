@@ -28,6 +28,9 @@ import { useCmdWRefs } from './useCmdWRefs';
 import { collectNavigatorSelections } from './file-navigator/file/navigator-selection-registry';
 import { useOverlayPlugins } from './useOverlayPlugins';
 import { visibleTabs } from './shared/tab/visible-tabs';
+import { PluginTabStateStore } from './plugins/tab-state-store';
+import { disposeClosedPluginTabs, retainOpenDirtyPluginLabels } from './plugins/prune-closed-plugin-tabs';
+import type { TabPluginState } from './plugins/api';
 
 
 export function App({ client }: { client: JanusClient }) {
@@ -36,8 +39,19 @@ export function App({ client }: { client: JanusClient }) {
   // one. Built once per mount; claims are re-established by each body's effect.
   const [pluginChords] = useState(createPluginChordRegistry);
   const [tabs, setTabs] = useState<TabView[]>([]);
+  const [dirtyPluginTabs, setDirtyPluginTabs] = useState<ReadonlySet<string>>(new Set());
+  const tabHandles = useRef<Map<string, DirtyTabHandle>>(new Map());
+  const openTabLabels = useRef<ReadonlySet<string>>(new Set());
+  const [pluginTabStateStore] = useState(() => new PluginTabStateStore());
   const [hasState, setHasState] = useState(false);
-  const receiveTabs = useCallback((next: TabView[]) => { setTabs(next); setHasState(true); }, []);
+  const receiveTabs = useCallback((next: TabView[]) => {
+    const labels = new Set(next.map((tab) => tab.label));
+    openTabLabels.current = labels;
+    disposeClosedPluginTabs(labels, tabHandles.current, pluginTabStateStore);
+    setDirtyPluginTabs((previous) => retainOpenDirtyPluginLabels(labels, previous));
+    setTabs(next);
+    setHasState(true);
+  }, [pluginTabStateStore]);
   const [activeTab, setActiveTab] = useState(0);
   const [secondaryTab, setSecondaryTab] = useState<number>();
   const { tabNameMaxLength, setTabNameMaxLength, activeTabNameMaxLength, setActiveTabNameMaxLength } = useTabNameLimits();
@@ -110,10 +124,8 @@ export function App({ client }: { client: JanusClient }) {
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
   // Every dirty-capable tab handle, editor and plugin alike, keyed by tab label. The close guard,
   // the quit guard, and the editor focus path all reach a tab through this one map.
-  const tabHandles = useRef<Map<string, DirtyTabHandle>>(new Map());
   // The labels of plugin tabs holding unsaved work. A ref cannot drive a render, so the strip's
   // marker reads this instead — a plugin re-registers its handle whenever its answer changes.
-  const [dirtyPluginTabs, setDirtyPluginTabs] = useState<ReadonlySet<string>>(new Set());
   const onPluginDirty = useCallback((label: string, dirty: boolean) => {
     setDirtyPluginTabs((previous) => {
       if (previous.has(label) === dirty) return previous;
@@ -124,9 +136,13 @@ export function App({ client }: { client: JanusClient }) {
   }, []);
   const registerPluginDirtyHandle = useCallback((label: string, handle: DirtyTabHandle | null) => {
     if (handle) tabHandles.current.set(label, handle);
-    else tabHandles.current.delete(label);
-    onPluginDirty(label, handle?.isDirty() ?? false);
+    else if (!openTabLabels.current.has(label)) tabHandles.current.delete(label);
+    onPluginDirty(label, tabHandles.current.get(label)?.isDirty() ?? false);
   }, [onPluginDirty]);
+  const getPluginTabState = useCallback(
+    (label: string): TabPluginState => pluginTabStateStore.forTab(label),
+    [pluginTabStateStore],
+  );
   const onQuit = useCallback(() => runCommand('quit'), [runCommand]);
   const revealDocked = useCallback((label: string) => sidebarSelectionFor(client).select(label), [client]);
   const quitWalkRef = useRef<(() => boolean) | null>(null);
@@ -222,6 +238,7 @@ export function App({ client }: { client: JanusClient }) {
       harnessHandles={harnessHandles} questionPanelRef={questionPanelRef}
       tabHandles={tabHandles}
       dirtyPluginTabs={dirtyPluginTabs} registerPluginDirtyHandle={registerPluginDirtyHandle}
+      getPluginTabState={getPluginTabState}
       harnessLaunch={harnessLaunch} scheduleLaunch={scheduleLaunch}
       confirmQuit={confirmQuit} cancelQuit={cancelQuit}
       quitWalkRef={quitWalkRef} saveWalkOpenRef={saveWalkOpenRef}

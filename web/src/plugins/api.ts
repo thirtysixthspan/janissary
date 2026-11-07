@@ -182,6 +182,14 @@ export type TabDirtyHandle = {
   focus(): void;
 };
 
+// Small in-memory state scoped to one open plugin tab. The host owns its lifetime and clears it when
+// the tab closes; a plugin may use it for view state that must survive a placement remount.
+export type TabPluginState = {
+  get<Value>(key: string): Value | undefined;
+  set<Value>(key: string, value: Value): void;
+  delete(key: string): void;
+};
+
 // One live terminal, attached for as long as the caller holds the handle. The bytes already travel
 // the application's own `pty` channel — this is the fourth consumer of it rather than a fifth
 // definition of one — so the plugin gains a terminal and no new transport.
@@ -213,6 +221,9 @@ export type TabPluginClientCapabilities = {
   // always knows the label, but fourteen plugin fixtures build this object and none of them keys
   // anything by it. Absent means "no per-tab identity is available to you".
   label?: string;
+  // Ephemeral state owned by this tab and cleared when it closes. Optional for older capability
+  // fixtures; plugins that use it can preserve local view state across host placement remounts.
+  tabState?: TabPluginState;
   dotColor?: string;
   // The remote target and its session control, present together only for a remote tab. The host
   // resolves the target from this tab's view and scopes each action to this tab's label.
@@ -310,6 +321,7 @@ export type PluginClientCapabilityOptions = {
   onClose: (reason?: { terminalExited: string }) => void;
   splitAction?: ReactNode;
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void;
+  tabState?: TabPluginState;
   claimedChords?: readonly string[];
   dotColor?: string;
   recording?: string;

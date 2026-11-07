@@ -513,7 +513,53 @@ describe('App docked image quit walk', () => {
 
     expect(container.querySelector('.app')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Undo' })).toBeEnabled();
+    expect(within(container.querySelector('.sidebar-left')!).getByRole('img', { name: 'unsaved changes' })).toBeInTheDocument();
     expect(sendMock).not.toHaveBeenCalledWith({ method: 'command', params: { text: 'quit' } });
+  }, 15_000);
+
+  it('preserves a center image edit when it docks beside Notifications', async () => {
+    const { App } = await import('./App');
+    const { container } = render(
+      <PluginHostProvider host={createPluginHost()}><App client={client} /></PluginHostProvider>,
+    );
+    const image = makeTab({
+      label: 'image', title: 'photo.png',
+      plugin: {
+        id: 'image', schemaVersion: 1,
+        payload: { name: 'photo.png', path: '/tmp/photo.png', size: '400 × 300', url: '/open/image', mode: 'edit' },
+      },
+    });
+    const notifications = makeTab({
+      label: 'notifications', title: 'notifications', view: 'notifications', dock: 'left',
+    });
+    act(() => { stateListener!([makeTab(), image, notifications], 1, 16, [], 'github-dark', 'dark', []); });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Rotate right' }));
+    act(() => {
+      stateListener!([
+        makeTab(), { ...image, dock: 'left' }, notifications,
+      ], 0, 16, [], 'github-dark', 'dark', []);
+    });
+    fireEvent.mouseDown(within(container.querySelector('.sidebar-left')!).getByText('notifications'));
+    expect(within(container.querySelector('.sidebar-left')!).getByRole('img', { name: 'unsaved changes' })).toBeInTheDocument();
+
+    const command = screen.getByRole('textbox');
+    fireEvent.change(command, { target: { value: 'quit' } });
+    fireEvent.keyDown(command, { key: 'Enter' });
+
+    expect(await screen.findByText('Do you want to save changes to photo.png?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save (y)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: "Don't Save (n)" })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel (Esc)' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel (Esc)' }));
+
+    expect(container.querySelector('.app')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeEnabled();
+    expect(within(container.querySelector('.sidebar-left')!).getByRole('img', { name: 'unsaved changes' })).toBeInTheDocument();
+    expect(sendMock).not.toHaveBeenCalledWith({ method: 'command', params: { text: 'quit' } });
+
+    act(() => { stateListener!([makeTab(), notifications], 0, 16, [], 'github-dark', 'dark', []); });
+    expect(within(container.querySelector('.sidebar-left')!).queryByRole('img', { name: 'unsaved changes' })).not.toBeInTheDocument();
   }, 15_000);
 });
 

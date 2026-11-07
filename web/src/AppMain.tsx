@@ -16,6 +16,7 @@ import type { TabEntry } from './tab-entries';
 import type { CommandInputDropHandle } from './shared/drop-handles';
 import type { LayoutState } from './useLayoutState';
 import type { DirtyTabHandle, HarnessTabHandle, QuestionPanelHandle } from './shared/tab/handles';
+import type { TabPluginState } from './plugins/api';
 
 type AppMainProps = LayoutState & {
   current?: TabView;
@@ -40,6 +41,7 @@ type AppMainProps = LayoutState & {
   tabHandles: React.RefObject<Map<string, DirtyTabHandle>>;
   dirtyPluginTabs: ReadonlySet<string>;
   registerPluginDirtyHandle: (label: string, handle: DirtyTabHandle | null) => void;
+  getPluginTabState: (label: string) => TabPluginState;
   harnessLaunch: HarnessLaunchView | null;
   scheduleLaunch: ScheduleLaunchView | null;
   confirmQuit: () => void;
@@ -64,7 +66,7 @@ export function AppMain({
   reportingHeightPct, setReportingHeightPct, focusLeft, focusRight,
   splitPct, setSplitPct,
   harnessHandles, questionPanelRef, tabHandles,
-  dirtyPluginTabs, registerPluginDirtyHandle,
+  dirtyPluginTabs, registerPluginDirtyHandle, getPluginTabState,
   harnessLaunch, scheduleLaunch, confirmQuit, cancelQuit,
   quitWalkRef, saveWalkOpenRef, onQuit, revealDocked, guardRef,
 }: AppMainProps) {
@@ -79,6 +81,7 @@ export function AppMain({
       sidebarRightWidth={sidebarRightWidth} onSidebarRightWidthChange={setSidebarRightWidth}
       focusLeft={focusLeft} focusRight={focusRight}
       onPluginDirtyHandle={registerPluginDirtyHandle}
+      getPluginTabState={getPluginTabState}
       dirtyPluginTabs={dirtyPluginTabs}
       pickerOverlays={pickerOverlays} pickerSourceTab={pickerSourceTab}
     >
@@ -94,6 +97,7 @@ export function AppMain({
         mountedProps={{
           harnessHandles, tabHandles, questionPanelRef,
           onPluginDirtyHandle: registerPluginDirtyHandle,
+          getPluginTabState,
           pickerOverlays,
           pickerSourceTab,
           overlayOpen: firstOpenOverlay(pickers.overlays) !== undefined,

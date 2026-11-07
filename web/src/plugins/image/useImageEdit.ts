@@ -3,12 +3,25 @@ import { isSaveEditResult } from '@shared/plugins/image/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import {
   activeOperations, applyOperation, emptyEditModel, outputSize,
-  redoOperation, sameOperations, undoOperation, type ImageOperation, type Size,
+  redoOperation, sameOperations, undoOperation, type EditModel, type ImageOperation, type Size,
 } from './edit-model';
 import { flattenToPng, renderOperations } from './edit-render';
 
 // How long the saved-file name stays in the image tab's header after a save.
 const CONFIRMATION_MS = 4000;
+const EDIT_STATE_KEY = 'image-edit';
+
+type ImageEditSnapshot = {
+  model: EditModel;
+  sourceSize: Size | null;
+  savedOperations: readonly ImageOperation[];
+};
+
+const EMPTY_SNAPSHOT: ImageEditSnapshot = {
+  model: emptyEditModel,
+  sourceSize: null,
+  savedOperations: [],
+};
 
 // The editor's whole state: the operation list with its undo cursor, the decoded source dimensions,
 // the save intent, and the dirty handle the host's close guard reads. The canvas is re-rendered from
@@ -16,8 +29,11 @@ const CONFIRMATION_MS = 4000;
 export function useImageEdit(capabilities: TabPluginClientCapabilities) {
   const sourceRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [model, setModel] = useState(emptyEditModel);
-  const [sourceSize, setSourceSize] = useState<Size | null>(null);
+  const [initialSnapshot] = useState(
+    () => capabilities.tabState?.get<ImageEditSnapshot>(EDIT_STATE_KEY) ?? EMPTY_SNAPSHOT,
+  );
+  const [model, setModel] = useState(initialSnapshot.model);
+  const [sourceSize, setSourceSize] = useState<Size | null>(initialSnapshot.sourceSize);
   const [saved, setSaved] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // The operations this tab last wrote, not the cursor position they stood at. Dirty is the distance
@@ -25,11 +41,15 @@ export function useImageEdit(capabilities: TabPluginClientCapabilities) {
   // unsaved question, and undoing back to the saved sequence makes the tab clean again. A cursor
   // number cannot stand in for the sequence — editing after an undo rewrites the list beneath the
   // same position, which is how a flip applied over an undone save used to read as saved.
-  const [savedOperations, setSavedOperations] = useState<readonly ImageOperation[]>([]);
+  const [savedOperations, setSavedOperations] = useState<readonly ImageOperation[]>(initialSnapshot.savedOperations);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const active = activeOperations(model);
   const dirty = !sameOperations(active, savedOperations);
   const dimensions = sourceSize ? outputSize(sourceSize, active) : null;
+
+  useEffect(() => {
+    capabilities.tabState?.set(EDIT_STATE_KEY, { model, sourceSize, savedOperations });
+  }, [capabilities.tabState, model, sourceSize, savedOperations]);
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 

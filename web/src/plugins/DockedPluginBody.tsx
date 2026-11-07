@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../shared/ws/ws';
-import type { TabDirtyHandle } from './api';
+import type { TabDirtyHandle, TabPluginState } from './api';
 import { DockCycleHeader } from '../shared/DockCycleHeader';
 import { PluginBody } from './PluginBody';
 import { DockedActionsContext } from './PluginActionsHeader';
@@ -19,6 +19,7 @@ export function DockedPluginBody({
   onClose,
   overlay,
   onDirtyHandle,
+  getPluginTabState,
 }: {
   tab: TabView;
   index: number;
@@ -27,6 +28,7 @@ export function DockedPluginBody({
   onClose: (reason?: { terminalExited: string }) => void;
   overlay?: ReactNode;
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void;
+  getPluginTabState?: (label: string) => TabPluginState;
 }) {
   const [actionsTarget, setActionsTarget] = useState<HTMLSpanElement | null>(null);
   if (!tab.plugin) return null;
@@ -41,6 +43,7 @@ export function DockedPluginBody({
           plugin={tab.plugin} label={tab.label} client={client} active={isVisible} dock={tab.dock ?? null}
           onClose={onClose} remote={tab.remote}
           onDirtyHandle={onDirtyHandle}
+          getPluginTabState={getPluginTabState}
           agentRun={tab.agentRun}
           pendingQuestion={tab.pendingQuestion}
         />
