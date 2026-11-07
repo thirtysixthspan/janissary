@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import type { StateEvent, TabView } from '@shared/protocol';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
@@ -97,6 +97,30 @@ describe('App launched with the janus shell tab', () => {
     const bar = await screen.findByLabelText('Shell command', undefined, { timeout: 10_000 });
     await waitFor(() => { expect(document.activeElement).toBe(bar); });
     expect(terminalFocusCalls).toEqual([]);
+    client.dispose();
+  }, 15_000);
+
+  it('returns focus to the janus command bar after cancelling a clean quit', async () => {
+    const { client, socket } = connectedClient();
+    socket.open();
+    socket.message(snapshot);
+
+    render(
+      <React.StrictMode>
+        <PluginHostProvider host={createPluginHost()}>
+          <App client={client} />
+        </PluginHostProvider>
+      </React.StrictMode>,
+    );
+
+    const bar = await screen.findByLabelText('Shell command', undefined, { timeout: 10_000 });
+    await waitFor(() => { expect(document.activeElement).toBe(bar); });
+    fireEvent.change(bar, { target: { value: 'quit' } });
+    fireEvent.keyDown(bar, { key: 'Enter', code: 'Enter', charCode: 13 });
+    await screen.findByText('Are you sure you want to quit?');
+    fireEvent.keyDown(document, { key: 'Escape', code: 'Escape' });
+
+    await waitFor(() => { expect(document.activeElement).toBe(bar); });
     client.dispose();
   }, 15_000);
 });

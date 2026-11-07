@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Restore command-bar focus after cancelling a clean quit.
-
-Existing Issue: D11's clean quit dialog closes on Escape, but the command line does not regain focus. Severity: 4/10
-
-Existing Risk: 3/10 - A cancelled quit leaves users unable to continue typing until they refocus the command bar, a recoverable interruption.
-
-Proposal Risk: 2/10 - If focus restoration remains untested, a later command-bar change could reintroduce the interruption.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1957 "Restore command-bar focus after cancelling a clean quit". D11 (description), verbatim: “No dirty tab shows the plain quit dialog. Do: From a fresh instance, with no edits made, type `quit` in the shell tab's command bar. Expect: The dialog reads \"Are you sure you want to quit?\" with Quit (y) and Cancel (n), Cancel selected, and no Save (y) button. Press `Escape`; the dialog closes, the app remains open, and focus returns to the command line.” At a 1280×800 browser viewport, run `quit` on a clean scratch instance and press Escape; the dialog closes but `document.activeElement` is `BODY` and neither Shell command textarea is focused, reproduced twice. `web/src/App.tsx` passes `inputReference` to `useQuitConfirm`, but the rendered command field belongs to `web/src/plugins/shell/ShellTab.tsx`, which creates a separate ref for `CommandBarShell`; `useQuitConfirm.cancelQuit` therefore focuses a null ref on its animation frame. Wire quit cancellation to the active shell's actual command input or a host focus handle, and add an App-level regression assertion that Escape restores command-line focus.
-
-
 * Keep the cancelled dirty editor current after a named close.
 
 Existing Issue: After cancelling a named close for an inactive dirty editor, the shell remains active instead of the editor whose dialog was cancelled. Severity: 5/10

@@ -21,7 +21,7 @@ A tab marked as the managed system shell is excluded from last-tab quit counting
 **Cancel** is selected by default (visually highlighted) — quitting is the one-way, destructive option, so an unmodified `Enter` is safe. `←`/`→` move the selection between the two buttons; `Enter` runs whichever is currently selected.
 
 - **Confirm:** pressing `y` (regardless of the current selection), pressing `Enter` while **Quit** is selected, or clicking **Quit (y)**. The dialog closes and the application performs its normal exit sequence (tears down every tab's shell/ACP/browser/terminal connections, closes the server, closes the app window).
-- **Cancel:** pressing `n` (regardless of selection) or `Escape`, pressing `Enter` while **Cancel** is selected (the default), or clicking **Cancel (n)**. The dialog closes, nothing else happens, and focus returns to the command line. Clicking outside the dialog (e.g. the backdrop) does *not* cancel it — see Modal behavior below.
+- **Cancel:** pressing `n` (regardless of selection) or `Escape`, pressing `Enter` while **Cancel** is selected (the default), or clicking **Cancel (n)**. The dialog closes, nothing else happens, and focus returns to the command line that submitted `quit`. Clicking outside the dialog (e.g. the backdrop) does *not* cancel it — see Modal behavior below.
 
 ### Unsaved changes
 
