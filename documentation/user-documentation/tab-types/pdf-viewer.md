@@ -60,7 +60,7 @@ The text of a PDF is selectable: drag across a passage and copy it with `Cmd+C` 
 
 While a PDF tab is open and its document has loaded, press `Cmd+F` to search it. A search field labeled `Search document` opens over the bottom of the tab. Use `Cmd+F`, not `Ctrl+F`.
 
-Type a word or phrase. Search ignores case. The list shows the matching lines with their page numbers, and every match on the pages in view is marked, with the match behind the highlighted row marked more strongly. The whole document is searched, not only the pages you have looked at. The first search reads the document's text, so a long document shows `Reading pages…` while it works and fills in the results as it reads. A screen reader hears when reading starts, when matching lines first appear, and the final count or `No matching lines`; it doesn't announce each page. When the ten-row list is full, it says `10 or more matching lines`.
+Type a word or phrase. Search ignores case. The list shows the matching lines with their page numbers, and every match on the pages in view is marked, with the match behind the highlighted row marked more strongly. The whole document is searched, not only the pages you have looked at. The first search reads the document's text, so a long document shows `Reading pages…` while it works and fills in the results as it reads. A screen reader hears when reading starts, when matching lines first appear, and the final count or `No matching lines`; it doesn't announce each page. When the ten-row list is full, it says `10 or more matching lines found.`
 
 Case-insensitive matches stay aligned with the original text even when lowercasing changes a character's length.
 
