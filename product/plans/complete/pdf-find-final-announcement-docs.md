@@ -13,7 +13,7 @@ Document the exact announcement readers hear when a PDF search reaches the ten-r
 
 ## Tests
 
-The existing capped-results assertion in `web/src/plugins/pdf/PdfTab.test.tsx` already checks `10 or more matching lines found.` No test or implementation change is needed for this documentation correction. Run `./scripts/run.mjs check-diff` after the plan and documentation changes.
+The existing capped-results assertion in `web/src/plugins/pdf/PdfTab.test.tsx` checks `10 or more matching lines found.` No test or implementation change was needed for this documentation correction. The diff-scoped check completed successfully after the plan and documentation changes.
 
 ## Out of scope
 

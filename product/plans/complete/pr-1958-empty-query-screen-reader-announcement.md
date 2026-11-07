@@ -32,7 +32,7 @@ Add `Document text is ready to search.` to the existing screen-reader paragraph,
 
 ## Tests
 
-No tests are added or changed. This work documents existing behavior only; the announcement sequence and assertions in `web/src/plugins/pdf/PdfTab.test.tsx` remain unchanged. Run `./scripts/run.mjs check-diff` for the repository's diff-scoped checks.
+No tests were added or changed. This work documented existing behavior only; the announcement sequence and assertions in `web/src/plugins/pdf/PdfTab.test.tsx` remain unchanged. The diff-scoped check completed successfully for the documentation change.
 
 ## Spec
 

@@ -23,7 +23,7 @@ Use the existing deferred page helpers in `PdfTab.test.tsx` to hold text extract
 - With the query empty until the final deferred page resolves, the status announcement is `Document text is ready to search.`.
 - When deferred extraction completes with one matching line, the status announcement is `1 matching line found.`.
 - Existing assertions for reading, first results, zero matches, and capped results remain in place.
-- Run `./scripts/run.mjs check-diff` after each change.
+- The diff-scoped checks completed successfully after each change.
 
 ## Out of scope
 
