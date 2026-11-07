@@ -52,9 +52,23 @@ Pages stay fitted as you show or hide the page strip, split the pane, or dock th
 
 <img class="agent-float left" src="/agents/bilal-south-east.png" alt="" />
 
-The text of a PDF is selectable: drag across a passage and copy it with `Cmd+C` / `Ctrl+C`, and you get the document's own text, not a picture of it. A selection is highlighted in blue over the page, so you can see it in any theme. There is no in-app copy button, and no find field — searching inside a document isn't supported yet.
+The text of a PDF is selectable: drag across a passage and copy it with `Cmd+C` / `Ctrl+C`, and you get the document's own text, not a picture of it. A selection is highlighted in blue over the page, so you can see it in any theme. There is no in-app copy button.
 
 `edit <file>.pdf` opens this same viewer, as does `Shift`+double-clicking a PDF in the [file navigator](/user-documentation/tab-types/file-navigator). Nothing in the tab writes to the file: there is no annotating, form filling, or signing.
+
+## Finding text
+
+While a PDF tab is open and its document has loaded, press `Cmd+F` to search it. A search field labeled `Search document` opens over the bottom of the tab. Use `Cmd+F`, not `Ctrl+F`.
+
+Type a word or phrase. Search ignores case. The list shows the matching lines with their page numbers, and every match on the pages in view is marked, with the match behind the highlighted row marked more strongly. The whole document is searched, not only the pages you have looked at. The first search reads the document's text, so a long document shows `Reading pages…` while it works and fills in the results as it reads.
+
+Use `↑` / `↓` or click a row to jump to a match. When you are showing one page at a time, the match's page comes into view; in continuous scroll the page scrolls so the match sits about a quarter of the way down. If you are zoomed in, the page also scrolls to bring the match into view. `Return` jumps to the best match.
+
+Matches stay within one line. A phrase that wraps to the next line, or a word hyphenated across a line break, is not found.
+
+An empty field shows `type to search`; a query with no matches shows `No matching lines`. Closing the search clears the marks and leaves you on the match you were looking at. `Escape` closes it without changing the zoom; with the search closed, `Escape` still returns the zoom to 100%. Closing the search returns the keyboard to where it was, usually the page, so the page and zoom keys work again. Switching to another tab closes the search, and opening it again starts with an empty field.
+
+Search works only once the document has loaded. While it is loading or after it fails to open, `Cmd+F` does nothing, and the browser's own find bar does not open.
 
 ## When a PDF won't open
 

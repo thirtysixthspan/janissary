@@ -33,7 +33,7 @@ The command bar accepts the shortcuts below while a shell tab is active. Window 
 | `Ctrl+G` | Open the fuzzy tab navigator, or close it if it is open |
 | `Ctrl+E` | Open the [queue popup](/user-documentation/command-bar/queue#edit-queued-commands) for a shell tab; does nothing on a tab that lacks a command queue or a command bar, such as a harness |
 | `Cmd+W` / `Ctrl+W` | Close the current tab |
-| `Cmd+F` | Open the find bar in an editor tab, or over a shell tab's terminal [transcript](/user-documentation/command-bar/transcript-search); does nothing in other tabs |
+| `Cmd+F` | Open the find bar in an editor tab, over a shell tab's terminal [transcript](/user-documentation/command-bar/transcript-search), or in a [PDF tab](/user-documentation/tab-types/pdf-viewer#finding-text); does nothing in other tabs |
 | `Cmd+Shift+F` | Open or focus the [project search tab](/user-documentation/command-bar/project-search) when the key reaches Janissary; a focused harness or SSH terminal sends it to its program |
 | `Cmd+P` | Open Quick Open when the key reaches Janissary; a focused harness or SSH terminal sends it to its program |
 | `Cmd+T` | Open a new [workspaced shell tab](/user-documentation/advanced-agents/workspaced-agent) |
