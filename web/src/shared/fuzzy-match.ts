@@ -104,6 +104,33 @@ export function fuzzyMatch(paths: string[], query: string, limit: number): Fuzzy
   });
 }
 
+export function lowercaseWithSourceOffsets(value: string): {
+  text: string;
+  toSourceRange(start: number, end: number): [number, number] | null;
+} {
+  const sourceStarts: number[] = [];
+  const sourceEnds: number[] = [];
+  let sourceStart = 0;
+  for (const character of value) {
+    const sourceEnd = sourceStart + character.length;
+    const transformedLength = character.toLowerCase().length;
+    for (let offset = 0; offset < transformedLength; offset++) {
+      sourceStarts.push(sourceStart);
+      sourceEnds.push(sourceEnd);
+    }
+    sourceStart = sourceEnd;
+  }
+
+  return {
+    text: value.toLowerCase(),
+    toSourceRange(start, end) {
+      const sourceStart = sourceStarts[start];
+      const sourceEnd = sourceEnds[end - 1];
+      return sourceStart !== undefined && sourceEnd !== undefined ? [sourceStart, sourceEnd] : null;
+    },
+  };
+}
+
 // The score for the uninterrupted occurrence of `length` characters at `start`: its first character
 // is never treated as consecutive, and every later one is.
 function scoreOccurrence(path: string, start: number, length: number, basenameStart: number): number {
@@ -123,16 +150,20 @@ export function contiguousMatch(paths: string[], query: string, limit: number): 
 
   const scored: FuzzyMatchResult[] = [];
   for (const [index, path] of paths.entries()) {
-    const lowerPath = path.toLowerCase();
+    const lowerPath = lowercaseWithSourceOffsets(path);
     const basenameStart = path.length - basename(path).length;
     let best: FuzzyMatchResult | null = null;
-    let start = lowerPath.indexOf(lowerQuery);
+    let start = lowerPath.text.indexOf(lowerQuery);
     while (start !== -1) {
-      const score = scoreOccurrence(path, start, lowerQuery.length, basenameStart);
-      if (!best || score > best.score) {
-        best = { path, index, score, ranges: [[start, start + lowerQuery.length]] };
+      const sourceRange = lowerPath.toSourceRange(start, start + lowerQuery.length);
+      if (sourceRange) {
+        const [sourceStart, sourceEnd] = sourceRange;
+        const score = scoreOccurrence(path, sourceStart, sourceEnd - sourceStart, basenameStart);
+        if (!best || score > best.score) {
+          best = { path, index, score, ranges: [[sourceStart, sourceEnd]] };
+        }
       }
-      start = lowerPath.indexOf(lowerQuery, start + 1);
+      start = lowerPath.text.indexOf(lowerQuery, start + 1);
     }
     if (best) scored.push(best);
   }

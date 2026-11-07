@@ -124,15 +124,19 @@ inside the stage, and in continuous scroll the page's width fits so scrolling is
 matters. Beyond 100% the page overflows and the stage scrolls in both directions; there is no
 click-drag panning. The current percentage is shown on the view only while it differs from 100%.
 
-**Zoom controls**, active only while the PDF tab is the one on screen:
+The keys belong to one PDF tab at a time, so a centre PDF and a docked PDF never both answer the same key. A centre PDF tab owns them while it is the current tab among the centre panes and focus is not inside another tab, including when focus rests on its own page. A PDF tab shown in a sidebar owns them only while focus is inside it (clicking its page puts focus there).
+
+**Zoom controls**, active only in the tab that owns the keys:
 
 - **The header's `+` and `−`** — zoom in / out in 10% steps, clamped to 10%–800% and saturating at
   either end rather than overshooting.
 - **Ctrl / Cmd + mouse wheel** — the same steps.
 - **Escape** — return to 100%, which is the fit.
 
-**Navigation controls**, likewise active only while the PDF tab is on screen — a PDF tab hidden
-behind another tab, or in the other split pane, ignores all of them:
+**Navigation controls**, likewise active only in that tab — a PDF tab hidden behind another tab, in
+the other split pane, or shown in a sidebar without focus inside it, ignores all of them, and so
+does the current centre PDF tab while focus is inside another tab, such as a docked shell, harness,
+or files sidebar:
 
 - **↑ / ↓ arrows** — in single page, move to the previous / next page, stopping at the first and last;
   in continuous scroll, scroll up / down by a small step.
@@ -153,7 +157,29 @@ exactly as rendered Markdown can. There is no in-app copy button and no "copy al
 selection is highlighted in a color clearly distinct from the page, so it stays visible whatever the
 active theme.
 
-There is no in-document search: no find field, no match navigation, and no match highlighting.
+### Find
+
+`Cmd+F` opens the editor tab's find overlay over the PDF tab while that tab is active: the current tab among the centre panes, or a PDF tab shown in a sidebar while focus is inside it. It is the same overlay the editor (see [[editor-tab]]) and shell (see [[shell-tab]]) tabs use: the same focused input, the same ranked rows, the same appearance and keys, and the same `type to search` and `No matching lines` states. When another tab is focused, the chord means what it means there: the editor's find, the shell's transcript find, or whatever else that tab does with it. Find changes only what is in view and never writes to the document. `Ctrl+F` does not open the overlay; the PDF tab adds no `Ctrl+F` binding.
+
+While the PDF tab is active and the chord reaches it — the current tab among the centre panes, or a PDF tab shown in a sidebar while focus is inside it — `Cmd+F` is answered even before the document has loaded and after a load failure. In those states it does nothing visible, and the browser's own find bar does not open. If the document fails while the overlay is open, the overlay closes and every mark clears.
+
+The overlay sits against the bottom edge of the tab, spans the tab's full width, covers the page strip when it is showing, takes at most 70% of the tab's height, and scrolls its rows when they overflow. It is available in both page layouts. The input opens focused, and its placeholder and accessible name are `Search document`. While focus is in the overlay's input, it takes the keyboard, so the PDF view's arrows, page keys, and Escape do not also act on the document behind it. While focus is outside the overlay, the arrow and page keys work on the document as usual in the PDF tab that owns the keys (see § Zoom and keys).
+
+Matching is the editor's: one uninterrupted, case-insensitive occurrence of the typed text, with no regex, case, or whole-word options. Up to ten rows are listed. The whole document is searched, every page, not only the pages that have been drawn. Each searchable line is one visual line of text on a page; two lines with the same text are two rows. A match must sit within one line. A phrase that wraps onto the next line, or a word hyphenated across a line break, is not found. This is a documented limitation, not a bug.
+
+Case-insensitive matches emphasize the complete original text even when lowercasing changes a character's length.
+
+The text is read once per tab, the first time the overlay opens, and kept until the tab closes or a render failure invalidates the document. The document shown never changes after it is opened. Results fill in page by page while the read is in progress and re-rank as each page arrives. When the first search starts reading text, a polite screen-reader announcement says that reading has started; once matching results first appear, it announces their availability without announcing each page. A page whose text cannot be read contributes no lines and sends no notification; reading for Find is best-effort, which is separate from a page whose drawn text layer fails to render, and that still follows § When a document cannot be rendered. If a render failure invalidates the document during extraction, an in-flight page request may settle, but its result is discarded, no later page is read, and previously extracted lines are cleared. Merely switching away closes the overlay but leaves extraction and its retained lines alone, so returning to the tab can search them without starting over. A document with no text, such as a scanned PDF of page images, is searched like any other; once reading finishes, every query with non-whitespace text answers `No matching lines`, with no separate no-text message.
+
+An empty or whitespace-only query shows `type to search` with no rows and no marks. Each row is one matching line: the line's 1-based page number, dimmed, where the editor shows a line number, then the line's text with the matched characters emphasized. A line too long for the overlay is clipped with an ellipsis rather than wrapped. Rows are ranked as the editor ranks them, best-scoring first, and capped at ten; an occurrence outside the ten is reached by refining the query. While the document's text is still being read and the query has non-whitespace text, a muted `Reading pages…` row shows below the results, or in place of `No matching lines` when there are none, and disappears when reading finishes. When reading finishes, a polite screen-reader announcement says `No matching lines.` for no results, `1 matching line found.` for one result, or `<count> matching lines found.` for multiple results. If ten rows are shown, it says `10 or more matching lines found.` because the list is capped. If the query is still empty, it announces `Document text is ready to search.`
+
+`↑` / `↓` and a click highlight a row and move the view to that match immediately. A click keeps focus in the overlay's input. In single page, the match's page becomes the shown page. In continuous scroll, the stage scrolls so the matched line sits about a quarter of the stage's height below the stage's top edge, clamped by the stage's scroll limits; that places the line above the overlay. Past 100% in single page, the stage also scrolls to that quarter position. The header's position readout and the page strip's highlighted thumbnail follow, as for any other page change. No text selection is made. Pressing `↓` before any result has arrived leaves the first row selected rather than clearing it, so the first match is highlighted as soon as it appears. Return moves to the first ranked match even when another row is highlighted, and the overlay stays open.
+
+Escape closes the overlay and leaves the view at the last previewed match. It does not reset zoom. With the overlay closed, Escape resets zoom to 100% as today. Escape closes the overlay the same way when focus has left its input and is on the page. Closing the overlay returns focus to the element that had it before `Cmd+F` was pressed, if that element is still in the document and another text field has not taken focus. Closing because the tab stopped being active restores nothing, since focus has already moved. Switching away from the PDF tab closes the overlay; returning and pressing `Cmd+F` opens a fresh, empty one. Closing by any route discards the query and the highlighted row, so reopening starts empty.
+
+While the overlay is open, `Cmd+F` keeps it open. With focus in the input, it selects the whole query so typing replaces it. With focus outside the input, it focuses the input and selects the query. The browser's find bar never appears.
+
+While the overlay is open with a query that has non-whitespace text, every occurrence on the drawn pages is marked, not only the ten listed. The occurrence behind the highlighted row is marked more strongly than the rest. Pages drawn later while the overlay is open get their marks too. Reading another page's text leaves the marks already painted in place, unless that page's lines change which occurrence the highlighted row points at; then the stronger mark moves to it. Closing the overlay clears every mark. A split's non-active PDF pane does not answer `Cmd+F`, and its marks clear when it stops being active. A PDF tab docked into a sidebar answers `Cmd+F` whenever its sidebar shows it and focus is inside it, so it and a centre PDF tab can each hold an open overlay; each marks only its own document, and closing one leaves the other's marks in place. The marks use the theme accent at a low and a higher translucency, both translucent enough for the page's own text to show through. They stay distinct from the text layer's blue selection and stay inside the PDF tab.
 
 ### Confined to its own tab
 

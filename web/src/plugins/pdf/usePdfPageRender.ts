@@ -12,14 +12,15 @@ export type PdfPageProperties = {
   text: boolean;
   root: React.RefObject<HTMLDivElement | null>;
   onFailure?(): void;
+  onTextLayer?(index: number): void;
   renderPage(
     index: number, canvas: HTMLCanvasElement, scale: number, textLayer: HTMLElement | null,
   ): Promise<void>;
 };
 
-type Params = Pick<PdfPageProperties, 'index' | 'scale' | 'text' | 'root' | 'onFailure' | 'renderPage'>;
+type Params = Pick<PdfPageProperties, 'index' | 'scale' | 'text' | 'root' | 'onFailure' | 'onTextLayer' | 'renderPage'>;
 
-export function usePdfPageRender({ index, scale, text, root, renderPage, onFailure }: Params) {
+export function usePdfPageRender({ index, scale, text, root, renderPage, onFailure, onTextLayer }: Params) {
   const holderRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const layerRef = useRef<HTMLDivElement>(null);
@@ -39,11 +40,16 @@ export function usePdfPageRender({ index, scale, text, root, renderPage, onFailu
     const canvas = canvasRef.current;
     if (!near || !canvas) return;
     let live = true;
-    void renderPage(index, canvas, scale, text ? layerRef.current : null).catch((error: unknown) => {
-      if (live && !isRenderCancellation(error)) onFailure?.();
-    });
+    void renderPage(index, canvas, scale, text ? layerRef.current : null).then(
+      () => {
+        if (live && text) onTextLayer?.(index);
+      },
+      (error: unknown) => {
+        if (live && !isRenderCancellation(error)) onFailure?.();
+      },
+    );
     return () => { live = false; };
-  }, [index, near, onFailure, renderPage, scale, text]);
+  }, [index, near, onFailure, onTextLayer, renderPage, scale, text]);
 
   return { holderRef, canvasRef, layerRef };
 }

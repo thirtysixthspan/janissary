@@ -3,13 +3,14 @@ import { describe, expect, it, vi } from 'vitest';
 import type { PdfLayout } from './pdf-view-model';
 import { SCROLL_STEP, usePdfKeys } from './usePdfKeys';
 
-function setup(layout: PdfLayout, enabled = true) {
+function setup(layout: PdfLayout, enabled = true, overlayOpen = false) {
   const stage = document.createElement('div');
   Object.defineProperty(stage, 'clientHeight', { value: 500, configurable: true });
   document.body.append(stage);
   const handlers = { pageBy: vi.fn(), zoomBy: vi.fn(), resetZoom: vi.fn() };
-  renderHook(() => { usePdfKeys(enabled, layout, { current: stage }, handlers); });
-  return { handlers, stage };
+  const closeOverlay = vi.fn();
+  renderHook(() => { usePdfKeys(enabled, layout, { current: stage }, handlers, overlayOpen, closeOverlay); });
+  return { closeOverlay, handlers, stage };
 }
 
 function press(key: string) {
@@ -35,6 +36,16 @@ describe('usePdfKeys in single-page layout', () => {
     press('PageDown');
     expect(stage.scrollTop).toBe(0);
   });
+
+  it('moves between pages while the overlay is open', () => {
+    const { closeOverlay, handlers } = setup('single', true, true);
+
+    press('ArrowDown');
+    expect(handlers.pageBy).toHaveBeenLastCalledWith(1);
+    press('ArrowUp');
+    expect(handlers.pageBy).toHaveBeenLastCalledWith(-1);
+    expect(closeOverlay).not.toHaveBeenCalled();
+  });
 });
 
 describe('usePdfKeys in continuous layout', () => {
@@ -59,6 +70,26 @@ describe('usePdfKeys zoom', () => {
       press('Escape');
       expect(handlers.resetZoom).toHaveBeenCalledTimes(1);
     }
+  });
+
+  it('closes the overlay on Escape without resetting zoom', () => {
+    const { closeOverlay, handlers } = setup('single', true, true);
+
+    press('Escape');
+
+    expect(closeOverlay).toHaveBeenCalledTimes(1);
+    expect(handlers.resetZoom).not.toHaveBeenCalled();
+  });
+
+  it('keeps the arrow and page keys while the overlay is open', () => {
+    const { closeOverlay, handlers, stage } = setup('continuous', true, true);
+
+    press('ArrowDown');
+    expect(stage.scrollTop).toBe(SCROLL_STEP);
+    press('PageDown');
+    expect(stage.scrollTop).toBe(SCROLL_STEP + 500);
+    expect(handlers.pageBy).not.toHaveBeenCalled();
+    expect(closeOverlay).not.toHaveBeenCalled();
   });
 
   it('zooms on the wheel only with the platform chord', () => {
