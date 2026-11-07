@@ -39,7 +39,7 @@ type AppMainProps = LayoutState & {
   questionPanelRef: React.RefObject<QuestionPanelHandle | null>;
   tabHandles: React.RefObject<Map<string, DirtyTabHandle>>;
   dirtyPluginTabs: ReadonlySet<string>;
-  onPluginDirty: (label: string, dirty: boolean) => void;
+  registerPluginDirtyHandle: (label: string, handle: DirtyTabHandle | null) => void;
   harnessLaunch: HarnessLaunchView | null;
   scheduleLaunch: ScheduleLaunchView | null;
   confirmQuit: () => void;
@@ -64,7 +64,7 @@ export function AppMain({
   reportingHeightPct, setReportingHeightPct, focusLeft, focusRight,
   splitPct, setSplitPct,
   harnessHandles, questionPanelRef, tabHandles,
-  dirtyPluginTabs, onPluginDirty,
+  dirtyPluginTabs, registerPluginDirtyHandle,
   harnessLaunch, scheduleLaunch, confirmQuit, cancelQuit,
   quitWalkRef, saveWalkOpenRef, onQuit, revealDocked, guardRef,
 }: AppMainProps) {
@@ -78,6 +78,8 @@ export function AppMain({
       sidebarLeftWidth={sidebarLeftWidth} onSidebarLeftWidthChange={setSidebarLeftWidth}
       sidebarRightWidth={sidebarRightWidth} onSidebarRightWidthChange={setSidebarRightWidth}
       focusLeft={focusLeft} focusRight={focusRight}
+      onPluginDirtyHandle={registerPluginDirtyHandle}
+      dirtyPluginTabs={dirtyPluginTabs}
       pickerOverlays={pickerOverlays} pickerSourceTab={pickerSourceTab}
     >
       <AppCenterActionArea
@@ -91,7 +93,7 @@ export function AppMain({
         dirtyTabs={dirtyPluginTabs}
         mountedProps={{
           harnessHandles, tabHandles, questionPanelRef,
-          onPluginDirty,
+          onPluginDirtyHandle: registerPluginDirtyHandle,
           pickerOverlays,
           pickerSourceTab,
           overlayOpen: firstOpenOverlay(pickers.overlays) !== undefined,

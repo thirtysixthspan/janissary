@@ -1,17 +1,26 @@
 import React from 'react';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StateEvent, TabView, TaskRow } from '@shared/protocol';
+import type * as PluginBodyModule from './plugins/PluginBody';
 import userEvent from '@testing-library/user-event';
 import type { JanusClient, LayoutListener, StateListener } from './shared/ws/ws';
 import { collectNavigatorSelections } from './file-navigator/file/navigator-selection-registry';
 import { AppShell } from './AppShell';
+import { createPluginHost, PluginHostProvider } from './plugins/host';
 import { StatusPanels } from './shared/status-windows/StatusPanels';
 import type { StatusWindowHandlers } from './shared/status-windows/useStatusWindows';
 
 vi.mock('./plugins/PluginBody', async () => {
   const { AppPluginFixture } = await import('./test/AppPluginFixture');
-  return { PluginBody: AppPluginFixture };
+  const actual = await vi.importActual<typeof PluginBodyModule>('./plugins/PluginBody');
+  return {
+    PluginBody: (props: Parameters<typeof actual.PluginBody>[0]) => props.plugin.id === 'image'
+      ? <actual.PluginBody {...props} />
+      : <AppPluginFixture
+        label={props.label} active={props.active} client={props.client} onSplit={props.onSplit}
+      />,
+  };
 });
 
 const sendMock = vi.fn();
@@ -462,6 +471,49 @@ describe('App sidebar docking', () => {
     });
     fireEvent.click(container.querySelector(':scope .sidebar-left .tab-close')!);
     expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'files' } });
+  }, 15_000);
+});
+
+describe('App docked image quit walk', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('keeps an edited image in the quit walk after Notifications is selected', async () => {
+    const { App } = await import('./App');
+    const { container } = render(
+      <PluginHostProvider host={createPluginHost()}><App client={client} /></PluginHostProvider>,
+    );
+    const image = makeTab({
+      label: 'image', title: 'photo.png', dock: 'left',
+      plugin: {
+        id: 'image', schemaVersion: 1,
+        payload: { name: 'photo.png', path: '/tmp/photo.png', size: '400 × 300', url: '/open/image', mode: 'edit' },
+      },
+    });
+    const notifications = makeTab({
+      label: 'notifications', title: 'notifications', view: 'notifications', dock: 'left',
+    });
+    act(() => { stateListener!([makeTab(), image, notifications], 0, 16, [], 'github-dark', 'dark', []); });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Rotate right' }));
+    fireEvent.mouseDown(within(container.querySelector('.sidebar-left')!).getByText('notifications'));
+    expect(container.querySelector<HTMLElement>('.sidebar-plugin')?.style.display).toBe('none');
+    expect(within(container.querySelector('.sidebar-left')!).getByRole('img', { name: 'unsaved changes' })).toBeInTheDocument();
+
+    const command = screen.getByRole('textbox');
+    fireEvent.change(command, { target: { value: 'quit' } });
+    fireEvent.keyDown(command, { key: 'Enter' });
+
+    expect(await screen.findByText('Do you want to save changes to photo.png?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save (y)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: "Don't Save (n)" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel (Esc)' }));
+
+    expect(container.querySelector('.app')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeEnabled();
+    expect(sendMock).not.toHaveBeenCalledWith({ method: 'command', params: { text: 'quit' } });
   }, 15_000);
 });
 

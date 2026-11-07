@@ -28,6 +28,7 @@ type Properties = {
   onSplit?: (index: number) => void;
   // Told when a plugin tab's unsaved state changes, so the tab strip can mark it. The handle itself
   // goes into `tabHandles` beside the editor tabs'; this is only the signal that it moved.
+  onPluginDirtyHandle?: (label: string, handle: DirtyTabHandle | null) => void;
   onPluginDirty?: (label: string, dirty: boolean) => void;
   // The full overlay stack, rendered over the current editor tab: a key the buffer does not bind
   // reaches the window handler, so any overlay can open there. `overlayOpen` says one is on screen.
@@ -67,7 +68,7 @@ function TabBodyDiv({
 // position survive tab switches. Split out of App.tsx to keep it under the file-size limit.
 export function MountedViewLayers({
   tabs, current: candidate, client, closeTab, harnessHandles, tabHandles, questionPanelRef,
-  visibleLabels: requestedLabels, onSplit, onPluginDirty, pickerOverlays, pickerSourceTab, overlayOpen,
+  visibleLabels: requestedLabels, onSplit, onPluginDirtyHandle, onPluginDirty, pickerOverlays, pickerSourceTab, overlayOpen,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   navOpen, navQuery, navIndex, onPickTab, contributedOverlay,
 }: Properties) {
@@ -135,6 +136,10 @@ export function MountedViewLayers({
              onClose={(reason) => closeTab(index, reason)}
             onSplit={onSplit ? () => onSplit(index) : undefined}
             onDirtyHandle={(handle) => {
+              if (onPluginDirtyHandle) {
+                onPluginDirtyHandle(t.label, handle);
+                return;
+              }
               if (handle) tabHandles.current.set(t.label, handle);
               else tabHandles.current.delete(t.label);
               onPluginDirty?.(t.label, handle?.isDirty() ?? false);

@@ -122,6 +122,11 @@ export function App({ client }: { client: JanusClient }) {
       return next;
     });
   }, []);
+  const registerPluginDirtyHandle = useCallback((label: string, handle: DirtyTabHandle | null) => {
+    if (handle) tabHandles.current.set(label, handle);
+    else tabHandles.current.delete(label);
+    onPluginDirty(label, handle?.isDirty() ?? false);
+  }, [onPluginDirty]);
   const onQuit = useCallback(() => runCommand('quit'), [runCommand]);
   const revealDocked = useCallback((label: string) => sidebarSelectionFor(client).select(label), [client]);
   const quitWalkRef = useRef<(() => boolean) | null>(null);
@@ -216,7 +221,7 @@ export function App({ client }: { client: JanusClient }) {
       focusLeft={focusLeft} focusRight={focusRight}
       harnessHandles={harnessHandles} questionPanelRef={questionPanelRef}
       tabHandles={tabHandles}
-      dirtyPluginTabs={dirtyPluginTabs} onPluginDirty={onPluginDirty}
+      dirtyPluginTabs={dirtyPluginTabs} registerPluginDirtyHandle={registerPluginDirtyHandle}
       harnessLaunch={harnessLaunch} scheduleLaunch={scheduleLaunch}
       confirmQuit={confirmQuit} cancelQuit={cancelQuit}
       quitWalkRef={quitWalkRef} saveWalkOpenRef={saveWalkOpenRef}

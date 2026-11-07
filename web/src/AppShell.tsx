@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './shared/ws/ws';
+import type { DirtyTabHandle } from './shared/tab/handles';
 import { Sidebar } from './Sidebar';
 import { DefaultContextMenu } from './context-menu/DefaultContextMenu';
 import type { CommandInputDropHandle } from './shared/drop-handles';
@@ -17,6 +18,8 @@ export function AppShell({
   tabNameMaxLength = 16, activeTabNameMaxLength = 50,
   sidebarLeftWidth, onSidebarLeftWidthChange, sidebarRightWidth, onSidebarRightWidthChange,
   focusLeft, focusRight,
+  onPluginDirtyHandle,
+  dirtyPluginTabs,
   pickerOverlays, pickerSourceTab,
 }: {
   tabs: TabView[];
@@ -32,6 +35,8 @@ export function AppShell({
   onSidebarRightWidthChange?: (width: number) => void;
   focusLeft?: 'files' | 'notifications';
   focusRight?: 'files' | 'notifications';
+  onPluginDirtyHandle?: (label: string, handle: DirtyTabHandle | null) => void;
+  dirtyPluginTabs?: ReadonlySet<string>;
   pickerOverlays?: React.ReactNode;
   pickerSourceTab?: string;
 }) {
@@ -48,6 +53,8 @@ export function AppShell({
         activeTabNameMaxLength={activeTabNameMaxLength}
         width={sidebarLeftWidth} onWidthChange={onSidebarLeftWidthChange} focusView={focusLeft}
         onNotificationsVisibilityChange={setLeftNotificationsVisible}
+        onPluginDirtyHandle={onPluginDirtyHandle}
+        dirtyPluginTabs={dirtyPluginTabs}
         pickerOverlays={pickerOverlays} pickerSourceTab={pickerSourceTab}
       />
       <div className="app-center"><ConnectionStatusLabel status={connectionStatus} />{children}</div>
@@ -57,6 +64,8 @@ export function AppShell({
         activeTabNameMaxLength={activeTabNameMaxLength}
         width={sidebarRightWidth} onWidthChange={onSidebarRightWidthChange} focusView={focusRight}
         onNotificationsVisibilityChange={setRightNotificationsVisible}
+        onPluginDirtyHandle={onPluginDirtyHandle}
+        dirtyPluginTabs={dirtyPluginTabs}
         pickerOverlays={pickerOverlays} pickerSourceTab={pickerSourceTab}
       />
       <DefaultContextMenu client={client} />
