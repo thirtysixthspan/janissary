@@ -19,14 +19,17 @@ export function focusCenterVisibleTab(
 
 // Switching tabs: a tab with a pending question focuses its dialog's Cancel button; harness/shell
 // PTY tabs focus the terminal; everything else focuses the command line.
+// While `suppressRef` is true (the quit walk's dialog is open), a tab switch focuses nothing.
 export function useFocusOnTabSwitch(
   activeTab: number,
   currentRef: React.RefObject<TabView | undefined>,
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>,
   inputReference: React.RefObject<HTMLTextAreaElement | null>,
   questionPanelRef: React.RefObject<QuestionPanelHandle | null>,
+  suppressRef?: React.RefObject<boolean>,
 ) {
   useEffect(() => {
+    if (suppressRef?.current) return;
     if (currentRef.current?.hidden || currentRef.current?.dock) return;
     if (currentRef.current?.pendingQuestion) { questionPanelRef.current?.focusCancel(); return; }
     focusCenterVisibleTab(currentRef.current, harnessHandles, inputReference);

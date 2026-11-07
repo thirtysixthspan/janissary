@@ -166,7 +166,7 @@ export function App({ client }: { client: JanusClient }) {
     [client],
   );
 
-  useFocusOnTabSwitch(activeTab, currentRef, harnessHandles, inputReference, questionPanelRef);
+  useFocusOnTabSwitch(activeTab, currentRef, harnessHandles, inputReference, questionPanelRef, saveWalkOpenRef);
 
   useSectionNav(tabs, () => focusCenterVisibleTab(currentRef.current, harnessHandles, inputReference), keyboardCapturedRef);
 
