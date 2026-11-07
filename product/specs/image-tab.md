@@ -187,8 +187,11 @@ image tab that holds them raises the same save-changes dialog an editor tab rais
 in this feature: replace the original file, then close. The close follows the write, not the attempt
 — if the file is not written the tab stays open with its edits intact, still marked unsaved. This
 covers every close path — the tab's × button, `Cmd+W`, and typing `close` or `exit`, including
-`close <name>` / `exit <name>` typed at another tab's command line — and unsaved
-image edits also hold up `quit`, closing the last tab, and closing or reloading the browser page
+`close <name>` / `exit <name>` typed at another tab's command line. `quit` and closing the last tab
+ask about the image tab's unsaved edits through the same dialog, one
+tab at a time. Its title uses the tab's title or label, because an image tab has no file name of its
+own in the strip. **Save** there replaces the original file before the walk moves on, and the app
+exits after the last answer. Closing or reloading the browser page shows the browser's own prompt
 (see [[quit-confirmation]]).
 
 An in-progress edit is a live, in-memory view like zoom and pan: it is not persisted and not restored.
