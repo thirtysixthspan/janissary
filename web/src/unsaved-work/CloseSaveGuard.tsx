@@ -14,7 +14,7 @@ type Properties = {
 
 export function CloseSaveGuard({ tabs, tabHandles, client, guardRef }: Properties) {
   const {
-    saveConfirmOpen, openSaveConfirm, closeSaveConfirm, labelRef, saving, startSave, isCurrentAttempt,
+    request, saveConfirmOpen, openClose, dismiss, labelRef, saving, startSave, isCurrentAttempt,
   } = useSaveConfirm();
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
@@ -24,13 +24,13 @@ export function CloseSaveGuard({ tabs, tabHandles, client, guardRef }: Propertie
       const tab = tabsRef.current[index];
       if (!tab) return false;
       const handle = tabHandles.current.get(tab.label);
-      if (handle?.isDirty()) { openSaveConfirm(tab.label); return true; }
+      if (handle?.isDirty()) { openClose(tab.label); return true; }
       return false;
     };
     return () => { guardRef.current = null; };
-  }, [tabHandles, openSaveConfirm, guardRef]);
+  }, [tabHandles, openClose, guardRef]);
 
-  if (!saveConfirmOpen) return null;
+  if (!saveConfirmOpen || request?.kind !== 'close') return null;
 
   // The dialog was raised for one tab; everything below names that tab by label and resolves it
   // against the list as it stands at that moment, rather than reusing the position it held when the
@@ -59,23 +59,23 @@ export function CloseSaveGuard({ tabs, tabHandles, client, guardRef }: Propertie
             // The work is still unsaved (see `DirtyTabHandle`), so the tab stays. This dialog is
             // dismissed rather than held open because it is modal: whatever the surface raised in
             // its place — a save error, an overwrite prompt — is only reachable once it is gone.
-            closeSaveConfirm();
+            dismiss();
             handle.focus();
             return;
           }
         }
         if (!isCurrentAttempt(attempt)) return;
-        closeSaveConfirm();
+        dismiss();
         closeTarget(attempt.label);
       }}
       onDiscard={() => {
         const label = labelRef.current;
-        closeSaveConfirm();
+        dismiss();
         closeTarget(label);
       }}
       onCancel={() => {
         const handle = targetHandle();
-        closeSaveConfirm();
+        dismiss();
         handle?.focus();
       }}
     />
