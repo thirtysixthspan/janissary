@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's two-tab key check in verification Step 12, which expects typing a query to move each tab's page when only a row selection reveals a match.
-
-Existing Issue: Step 12's third paragraph says typing `delta` in the centre makes its readout read `2 / 3` and typing `page 5` in the docked tab makes its readout read `5 / 40`, but typing only resets the highlighted row in `useLineFind` and never calls `usePdfFind.select`, so neither page moves, the freshly mounted docked tab stays on `1 / 40`, and its later `7 / 40` expectation fails too. Severity: 3/10
-
-Existing Risk: 3/10 - A reviewer checking the focused-tab key routing sees readouts that never match the step and reports a routing or reveal regression, or misreads correct routing as broken.
-
-Proposal Risk: 1/10 - The readouts still depend on the docked tab opening fresh in single page, which a reviewer would see immediately if docking ever stopped remounting the tab body.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1958 "press Return after each query in verification Step 12's two-tab key check". After the push, read the live body with `gh pr view 1958 --json body` and change only Step 12's third paragraph: after "type `delta`" add "and press `Return`" before the clause about the centre readout reading `2 / 3`, and after "type `page 5`" add "and press `Return`" before the clause about the docked readout reading `5 / 40`. Optionally add that the docked tab opens in single page after docking, which is why `Down` and `Page Down` take it from `5 / 40` to `7 / 40`. Leave the rest of Step 12, including its first two paragraphs and the sentence naming the `a centre and a docked PdfTab` cases, and every other paragraph byte-for-byte unchanged. Confirm against the code before editing: `setQuery` in `web/src/shared/line-find/useLineFind.ts` sets the row to 0 without notifying the tab; `LineFind`'s Enter handler in `web/src/shared/line-find/LineFind.tsx` calls `onChangeSelected(0)`, which is `usePdfFind.select` and reveals the line through `PdfTab`'s `goToPage`; `MountedViewLayers.tsx` filters docked tabs out of `PluginTabLayer`, so `Sidebar.tsx`'s `DockedPluginBody` mounts a fresh `PdfTab` in single page on page 1; and `PdfTab.test.tsx`'s "shows the page of a highlighted match and updates the readout" clicks a row before asserting the readout. No code, spec, or test changes; `$janissary/scripts/run.mjs check-diff` must stay clean.
-
-
 * Correct the pull request description's verification Step 25, whose closing `Down` press starts from the last page and so cannot show the page changing.
 
 Existing Issue: Step 25 runs on `pdf-find-multi-page.pdf`, which Step 12 leaves on `3 / 3` in single page and which no later step reveals elsewhere, and it expects `Down` after the overlay closes to change the page, but `pageBy` clamps at the last page, so the readout stays `3 / 3` and the expected result is never seen. Severity: 2/10
