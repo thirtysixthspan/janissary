@@ -155,14 +155,15 @@ describe('CloseSaveGuard quit walk', () => {
   });
 
   it('falls back to the label when the current tab disappears before it is answered', () => {
-    const h = setup([tab('alpha')], new Map([['alpha', makeHandle()]]));
+    const h = setup([tab('alpha', { title: 'Readme' })], new Map([['alpha', makeHandle()]]));
 
     startWalk(h.quitWalkRef);
-    expect(h.getByText(walkTitle('alpha'))).toBeInTheDocument();
+    expect(h.getByText(walkTitle('Readme'))).toBeInTheDocument();
 
     h.setTabs([]);
 
     expect(h.getByText(walkTitle('alpha'))).toBeInTheDocument();
+    expect(h.queryByText(walkTitle('Readme'))).toBeNull();
     expect(h.queryByRole('alertdialog')).toBeInTheDocument();
   });
 
