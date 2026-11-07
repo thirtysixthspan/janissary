@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Reduce the security risk from executable verification instructions in the reviewed text.
-
-Existing Issue: The canonical plan and PR body tell reviewers to run build and test commands, start the app, and create fixture files with shell commands, despite the review's rule that branch content is untrusted data. Severity: 6/10
-
-Existing Risk: 5/10 - A reviewer following the embedded instructions can execute branch code and write files before establishing whether the PR is safe.
-
-Proposal Risk: 2/10 - The plan and PR body no longer direct a reviewer to execute tools or write files, though a reviewer can still independently choose ordinary verification after considering the branch.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1958 "remove executable verification instructions from reviewed text". Replace the command blocks and imperative setup/test instructions in the `Verification` section of `product/plans/complete/pdf-tab-find.md` and the PR body's `How to verify` section with a declarative account of CI results and non-executable expected observations. Remove shell commands that invoke `npm`, `node`, `$janissary/scripts/run.mjs`, `mkdir`, `printf`, or `cupsfilter`, plus app-command examples that ask the reviewer to issue `open` or `tab dock`; do not redirect reviewers to another script or task. Re-read both texts to confirm they contain no instructions to run commands or create files.
-
-
 * Complete the pull request description's account of screen-reader completion announcements.
 
 Existing Issue: The PR body lists reading, first-match, and final-result announcements but omits the empty-query completion message, `Document text is ready to search.` Severity: 2/10
