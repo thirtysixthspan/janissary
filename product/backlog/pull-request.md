@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plugin spec's account of chord claims by naming the PDF plugin's new `Cmd+F` claim, which the spec still says no plugin but the shell makes.
-
-Existing Issue: The PDF manifest now claims `meta+f`, but `product/specs/tab-plugins.md` § Bundled shell plugin still calls the shell plugin "the only one that claims a chord", and § Bundled PDF plugin lists the plugin's extension, `open` presentations, `pdf <path>` command, and intent without mentioning the chord claim. Severity: 3/10
-
-Existing Risk: 3/10 - A contributor who trusts the authoritative plugin spec assumes the shell is the only chord claimant and changes the chord registry, claim validation, or `meta+f` routing for that one plugin, breaking PDF find without any spec line warning them.
-
-Proposal Risk: 1/10 - Only spec prose changes; if the wording drifted from the manifest again, a reader comparing `src/plugins/pdf/manifest.ts` and `src/plugins/shell/manifest.ts` with the spec would see it.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1958 "name the PDF plugin's Cmd+F chord claim in the tab-plugins spec". In `product/specs/tab-plugins.md` § Bundled shell plugin, replace the clause "and the only one that claims a chord" with wording that stays true now that two plugins claim chords, for example "and the first one to claim a chord", keeping the rest of that sentence and the later `Ctrl+R` paragraph unchanged. In § Bundled PDF plugin, add one sentence after the paragraph listing its contributions saying it also claims `Cmd+F` (`meta+f` in the declaration) for find in the document, held while a PDF tab is active and answered only for the focused tab label, so the application keeps the chord everywhere else, and link [[pdf-tab]] § Find rather than restating the find behavior. Verify the wording against `src/plugins/pdf/manifest.ts` (its `chords` field and comment) and `src/plugins/shell/manifest.ts`, which claims `ctrl+r`, `meta+t`, and `meta+f`. No code or test changes; `src/plugins/declaration-validation.test.ts` already pins the PDF manifest's `['meta+f']` and must stay green under `$janissary/scripts/run.mjs check-diff`.
-
-
 * Correct the pull request description's verification Step 3, whose `Down` press can never reach the row labelled `3` from where Step 2 leaves the selection.
 
 Existing Issue: Step 2's expectation ends by clicking the row labelled `1`, the last of the three ranked rows (page 2, page 3, page 1), and Step 3 then says to press `Down` until the row labelled `3` is highlighted, but `rankedOverlayKeys` clamps `Down` at the last row, so the selection stays on page 1 and Step 3 cannot be performed as written. Severity: 3/10
