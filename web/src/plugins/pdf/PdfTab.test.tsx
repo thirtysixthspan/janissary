@@ -762,6 +762,25 @@ describe('PdfTab failure', () => {
     expect(container.querySelector('.pdf-stage')).toBeNull();
     expect(screen.getByText('/docs/paper.pdf')).toBeInTheDocument();
   });
+
+  it('closes the find overlay and clears its marks when a render fails', async () => {
+    const document_ = markedDocument([['needle here'], ['another page']]);
+    const highlights = stubHighlights();
+    const { chords } = await mount(document_);
+    await userEvent.click(screen.getByLabelText('Continuous scroll'));
+    const input = openFind(chords);
+    await userEvent.type(input, 'needle');
+    await finishReading();
+    await act(async () => { onScreen({ 0: 1 }); });
+    await waitFor(() => { expect(allRanges(highlights)).toHaveLength(1); });
+
+    vi.mocked(document_.renderPage).mockRejectedValue(new Error('cannot render'));
+    await act(async () => { onScreen({ 1: 1 }); });
+
+    expect(await screen.findByText('Failed to load paper.pdf')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Search document')).not.toBeInTheDocument();
+    await waitFor(() => { expect(allRanges(highlights)).toEqual([]); });
+  });
 });
 
 describe('a second PdfTab', () => {

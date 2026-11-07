@@ -90,6 +90,10 @@ export function usePdfFind({ active, pdf, revealLine, inputRef }: PdfFindOptions
     origin.focus({ preventScroll: true });
   }, [closeFind, inputRef]);
 
+  useEffect(() => {
+    if (pdf === null && findOpen) closeFind();
+  }, [closeFind, findOpen, pdf]);
+
   const current = useMemo(() => {
     const result = results[selected];
     if (result === undefined) return null;

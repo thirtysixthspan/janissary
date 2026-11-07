@@ -179,7 +179,7 @@ export function PdfTab({
             />
           )}
       </div>
-      {find.findOpen && (
+      {state.status === 'ready' && find.findOpen && (
         <LineFind
           placeholder="Search document"
           query={find.query}
