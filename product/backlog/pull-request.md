@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the active-tab repair's promise by stating the focus condition for the chord in the spec's loading paragraph, the plan's design decisions, and the manifest comment.
-
-Existing Issue: The active-tab fix plan says the plan and spec should state the rule the code implements — a current centre tab or a sidebar tab with focus inside it — but `product/specs/pdf-tab.md`'s loading paragraph still says Cmd+F is answered while the tab is active, `product/plans/complete/pdf-tab-find.md`'s first design decision and claim bullet treat active or visible as sufficient, and `src/plugins/pdf/manifest.ts`'s comment says the chord is honoured only while visible and taken back the moment focus moves; chord routing actually matches the focused tab label, so a docked visible tab with focus elsewhere does not answer and stays claimed while its sidebar shows it. Severity: 4/10
-
-Existing Risk: 4/10 - The exact visible-versus-active confusion the repair exists to remove survives in the loading paragraph, the plan, and the server comment, so a later test or doc can assert that an unfocused docked tab answers Cmd+F and route a user's chord to the wrong find.
-
-Proposal Risk: 1/10 - The prose and comment then match the opening and last paragraphs of § Find and the existing `chordTabLabel` and `usePluginChordClaims` behavior; no code or test changes and the spec's correct lines are the source of truth.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1958 "state the focus condition for the PDF find chord in the spec, plan, manifest comment, and description". In `product/specs/pdf-tab.md` § Find, qualify the loading paragraph the same way the opening paragraph does: Cmd+F is answered while the tab is active and the chord reaches it — the current centre tab, or a sidebar tab with focus inside it; keep the loading, failure, and overlay-clear sentences. In `product/plans/complete/pdf-tab-find.md`, amend the first design decision and the "claim is registered whenever the tab is active" bullet so that active describes overlay availability while chord answering follows focus, and say the docked tab stays claimed while visible but only the focused label runs it. In `src/plugins/pdf/manifest.ts`, replace "visible one" with "active one" and replace "takes it back the moment focus moves" with the actual release rule (a centre claim moves with the current tab; a docked claim lasts while its sidebar shows it), and correct the last sentence so a handler that no-ops while loading or failed still consumes the chord. Update the pull request body's "chord belongs ... only while that tab is visible" sentence to the same active and focus wording. Do not change code or tests; `web/src/useWindowKeys.ts` `chordTabLabel` and `web/src/plugins/PluginChords.tsx` are the behavior, and the existing `PdfTab.test.tsx` active-false case and `PluginChords` tests must keep passing.
-
-
 * Correct the description's verification step that tells the reader to press Up to reach the row labelled 3, which the ranked row order can never do.
 
 Existing Issue: How to verify Step 3 says to press Up until the row labelled 3 is highlighted, but the three rows rank 2, 3, 1 by line length, selection starts on row 2, and the shared ranked-key handler clamps ArrowUp at zero rather than wrapping, so Up leaves the selection on row 2 and page 3 never becomes shown. Severity: 4/10
