@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the plan's promise that two PDF tabs in a split both keep their find marks, which only the active tab can do.
-
-Existing Issue: The plan's match-highlighting section promises that two PDF tabs in a split each keep their marks and that closing one leaves the other's marks in place, but the host marks only the current tab active, so a split's other pane cannot open find while the first is active and making it active closes the first tab's overlay and clears its marks. Severity: 3/10
-
-Existing Risk: 2/10 - A reader follows the plan's verification step, watches the first tab's marks disappear when the second is focused, and cannot tell whether the isolation code is broken or the promise is wrong, while the plan keeps asserting a split behavior the host cannot produce.
-
-Proposal Risk: 1/10 - The plan, spec, and verification step will state the active-tab rule the code already implements; the only residual risk is wording that still lets a reader expect a split pane to answer Cmd+F, which the revised text should say explicitly.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1958 "correct the plan's and verification step's two-tab split claim for PDF find marks". Update product/plans/complete/pdf-tab-find.md § Match highlighting (the bullet beginning "Two PDF tabs in a split share the highlight names...") and the pull request body's Step 12 plus its closing note so they state the actual rule: the find overlay is available only in the host's active PDF tab; a split's other pane is visible but not active, so it cannot open find while the first is active, and making it active closes the first tab's overlay and clears its marks. If a two-tab isolation check is still wanted, verify it with one PDF tab docked into a sidebar and one in the centre, because DockedPluginBody passes active={isVisible} and both bodies can hold an open overlay; otherwise rely on the existing paintMarks case in web/src/plugins/pdf/pdf-find-marks.test.ts that proves another painter's ranges survive cleanup. Also update product/specs/pdf-tab.md § Find's last paragraph to say a split's non-active PDF pane does not answer Cmd+F and that its marks clear when it stops being active, so the spec no longer says "visible" where the host means active. Do not change PluginTabLayer.tsx, DockedPluginBody.tsx, or PdfTab.tsx; the active-tab rule is the plan's design decision. Confirm no remaining sentence in the plan or verification steps says both split tabs keep marks. No production code or test changes; $janissary/scripts/run.mjs check-diff should stay clean.
-
-
 * Close the PDF find overlay when a page render failure turns the tab into its failed body, which otherwise leaves stale results and a search that Escape cannot dismiss from the page.
 
 Existing Issue: When a page render failure flips the PDF tab to its failed body while the find overlay is open, PdfTab.tsx still renders LineFind from find.findOpen, so the overlay sits over the failure with its old rows and no stage, and with focus outside the input Escape no longer closes it because usePdfKeys is disabled once the document is gone. Severity: 4/10
