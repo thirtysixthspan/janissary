@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's verification Step 25, whose closing `Down` press starts from the last page and so cannot show the page changing.
-
-Existing Issue: Step 25 runs on `pdf-find-multi-page.pdf`, which Step 12 leaves on `3 / 3` in single page and which no later step reveals elsewhere, and it expects `Down` after the overlay closes to change the page, but `pageBy` clamps at the last page, so the readout stays `3 / 3` and the expected result is never seen. Severity: 2/10
-
-Existing Risk: 3/10 - A reviewer concludes the page keys stop working after find closes from outside its input, which is the exact behavior the step exists to confirm, and files a false regression or loses trust in the check.
-
-Proposal Risk: 1/10 - Pressing `Return` first makes the starting page come from the query's first ranked row rather than from earlier steps, so the only remaining dependence is the fixture's ranking, which Step 2 already relies on.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1958 "start verification Step 25 from a page Down can leave". After the push, read the live body with `gh pr view 1958 --json body` and change only Step 25: in its `Do:` text, after "type `quick brown fox`" add "press `Return` so page 2 is shown" before the click on the page, and in its `Expect:` text replace "`Down` changes the page as usual" with "`Down` moves to page 3 as usual, and the readout reads `3 / 3`". Leave the rest of Step 25 and every other paragraph byte-for-byte unchanged. Confirm against the code before editing: `contiguousMatch` in `web/src/shared/fuzzy-match.ts` ranks page 2's `The quick brown fox appears again.` first; `LineFind`'s Enter handler calls `usePdfFind.select(0)`, which reveals page 2 through `goToPage` in `web/src/plugins/pdf/PdfTab.tsx`; and `pageBy` in the same file clamps to the last page, so `Down` from `2 / 3` reaches `3 / 3`. Clicking a centre page leaves focus on the document body, so `usePdfKeyOwnership` still gives the centre tab the keys. No code, spec, or test changes; `$janissary/scripts/run.mjs check-diff` must stay clean.
-
-
 * Deliver the plan's repaint rule for PDF find marks, which also repaints every drawn page each time another page's text is read.
 
 Existing Issue: The plan says the marks repaint when the query, the highlighted row, or the text-layer counter changes, but `usePdfFind` builds `current` as a new object whenever `lines` or `results` change, so while the overlay is open with matches and reading is unfinished, every page read reruns `usePdfFindMarks`' effect, which deletes and repaints the ranges of every drawn text layer even when the highlighted occurrence is unchanged. Severity: 3/10
