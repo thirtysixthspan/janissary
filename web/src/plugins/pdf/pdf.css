@@ -32,5 +32,10 @@
 .pdf-page { position: relative; flex-shrink: 0; background: #fff; box-shadow: 0 1px 4px rgb(0 0 0 / 35%); }
 .pdf-page-canvas { display: block; }
 
+/* Find marks sit on the text layer's transparent glyphs, so only the background changes and the
+   canvas text shows through. */
+.pdf-text-layer ::highlight(pdf-find-match) { background-color: color-mix(in srgb, var(--accent) 20%, transparent); }
+.pdf-text-layer ::highlight(pdf-find-current) { background-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+
 .pdf-zoom-badge { position: absolute; top: 8px; right: 8px; padding: 2px 6px; border-radius: 4px; background: rgb(0 0 0 / 45%); color: var(--fg); font-size: 12px; pointer-events: none; z-index: 1; }
 .pdf-failed { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--muted); }

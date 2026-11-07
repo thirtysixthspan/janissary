@@ -10,6 +10,7 @@ import { PdfStage, type PdfJump } from './PdfStage';
 import { PdfThumbnails } from './PdfThumbnails';
 import { usePdfDocument } from './usePdfDocument';
 import { usePdfFind } from './usePdfFind';
+import { usePdfFindMarks } from './usePdfFindMarks';
 import { usePdfKeys } from './usePdfKeys';
 
 // A PDF tab body: the shared metadata header with the file's name, size, and location, the layout
@@ -28,6 +29,7 @@ export function PdfTab({
   const [zoom, setZoom] = useState(1);
   const [page, setPage] = useState(0);
   const [jump, setJump] = useState<PdfJump>({ page: 0, token: 0 });
+  const [textLayerVersion, setTextLayerVersion] = useState(0);
   const stageRef = useRef<HTMLDivElement>(null);
 
   const loaded = state.status === 'ready' ? state.document : null;
@@ -41,9 +43,19 @@ export function PdfTab({
   }, []);
 
   const revealLine = useCallback((next: number, top: number) => { goToPage(next, top); }, [goToPage]);
+  const onTextLayer = useCallback(() => {
+    setTextLayerVersion((current) => current + 1);
+  }, []);
   const findInputRef = useRef<HTMLInputElement>(null);
   const find = usePdfFind({
     active: capabilities.active, pdf: loaded, revealLine, inputRef: findInputRef,
+  });
+  usePdfFindMarks({
+    open: find.findOpen,
+    query: find.query,
+    current: find.current,
+    stageRef,
+    textLayerVersion,
   });
 
   const handlers = useMemo(() => ({
@@ -162,6 +174,7 @@ export function PdfTab({
               jump={jump}
               onVisiblePage={setPage}
               onRenderFailure={state.onRenderFailure}
+              onTextLayer={onTextLayer}
               stageRef={stageRef}
             />
           )}

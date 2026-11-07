@@ -60,7 +60,7 @@ describe('the PDF plugin stays inside its own tab', () => {
 
     for (const [, css] of sheets) {
       for (const selector of selectorsOf(css)) {
-        const matchable = selector.replace(/::[\w-]+$/, '');
+        const matchable = selector.replace(/::[\w-]+\([^)]*\)$/, '').replace(/::[\w-]+$/, '');
         for (const element of elements) expect(element.matches(matchable)).toBe(false);
       }
     }
@@ -68,5 +68,12 @@ describe('the PDF plugin stays inside its own tab', () => {
 
   it('loads no stylesheet from the renderer package', () => {
     expect(entry).not.toMatch(/pdfjs-dist[^'"]*\.css/);
+  });
+
+  it('styles both find highlights on the text layer', () => {
+    const selectors = selectorsOf(styles);
+
+    expect(selectors).toContain('.pdf-text-layer ::highlight(pdf-find-match)');
+    expect(selectors).toContain('.pdf-text-layer ::highlight(pdf-find-current)');
   });
 });

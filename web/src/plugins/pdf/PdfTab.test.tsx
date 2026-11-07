@@ -6,6 +6,7 @@ import type { PdfPayload } from '@shared/plugins/pdf/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { createPluginChordRegistry, PluginChordProvider, type PluginChordRegistry } from '../PluginChords';
 import { loadPdf, type LoadedPdf } from './pdf-document';
+import { PDF_FIND_CURRENT, PDF_FIND_MATCH } from './pdf-find-marks';
 import type { PdfTextItem } from './pdf-find-lines';
 import { PdfTab } from './PdfTab';
 
@@ -127,6 +128,36 @@ function openFind(chords: PluginChordRegistry): HTMLInputElement {
 
 async function finishReading(): Promise<void> {
   await waitFor(() => { expect(screen.queryByText('Reading pages…')).not.toBeInTheDocument(); });
+}
+
+function stubHighlights(): Map<string, Set<Range>> {
+  const highlights = new Map<string, Set<Range>>();
+  vi.stubGlobal('CSS', { escape: CSS.escape, highlights });
+  vi.stubGlobal('Highlight', class extends Set<Range> {});
+  return highlights;
+}
+
+function markRanges(highlights: Map<string, Set<Range>>, name: string): Range[] {
+  return [...highlights.get(name) ?? []];
+}
+
+function allRanges(highlights: Map<string, Set<Range>>): Range[] {
+  return [...markRanges(highlights, PDF_FIND_MATCH), ...markRanges(highlights, PDF_FIND_CURRENT)];
+}
+
+function markedDocument(pageTexts: string[][]): LoadedPdf {
+  const document_ = makeDocument(pageTexts.length, pageTexts);
+  vi.mocked(document_.renderPage).mockImplementation(async (index, _canvas, _scale, textLayer) => {
+    if (textLayer === null) return;
+    textLayer.replaceChildren();
+    const lines = pageTexts[index] ?? [];
+    for (const line of lines) {
+      const span = document.createElement('span');
+      span.textContent = line;
+      textLayer.append(span, document.createElement('br'));
+    }
+  });
+  return document_;
 }
 
 beforeEach(() => {
@@ -506,6 +537,110 @@ describe('PdfTab find reveals', () => {
     await userEvent.click(within(strip).getByLabelText('Page 2'));
 
     await waitFor(() => { expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' }); });
+  });
+});
+
+describe('PdfTab find marks', () => {
+  async function showPage(page: number): Promise<void> {
+    await act(async () => { onScreen({ [page]: 1 }); });
+  }
+
+  it('marks the drawn page and moves the current mark to the clicked row', async () => {
+    const document_ = markedDocument([['needle first', 'needle second']]);
+    const highlights = stubHighlights();
+    const { chords } = await mount(document_);
+    const input = openFind(chords);
+    await userEvent.type(input, 'needle');
+    await finishReading();
+
+    await showPage(0);
+    await waitFor(() => {
+      expect(markRanges(highlights, PDF_FIND_MATCH)).toHaveLength(1);
+      expect(markRanges(highlights, PDF_FIND_CURRENT)).toHaveLength(1);
+    });
+    const layer = document.querySelector('.pdf-page[data-page="0"] .pdf-text-layer') as HTMLElement;
+    expect(markRanges(highlights, PDF_FIND_CURRENT)[0]?.startContainer).toBe(layer.querySelector('span')?.firstChild);
+
+    const second = findRows().find((row) => row.textContent?.includes('needle second'));
+    if (!second) throw new Error('missing second row');
+    await userEvent.click(second);
+
+    await waitFor(() => { expect(markRanges(highlights, PDF_FIND_CURRENT)).toHaveLength(1); });
+    const [current] = markRanges(highlights, PDF_FIND_CURRENT);
+    expect(current?.startContainer).toBe(layer.querySelectorAll('span')[1]?.firstChild);
+    expect(current?.startOffset).toBe(0);
+    expect(markRanges(highlights, PDF_FIND_MATCH)).toHaveLength(1);
+    expect(markRanges(highlights, PDF_FIND_MATCH)[0]?.startContainer).toBe(layer.querySelector('span')?.firstChild);
+  });
+
+  it('marks a page drawn after the query is typed', async () => {
+    const document_ = markedDocument([['needle here']]);
+    const highlights = stubHighlights();
+    const { chords } = await mount(document_);
+    const input = openFind(chords);
+    await userEvent.type(input, 'needle');
+    await finishReading();
+    expect(allRanges(highlights)).toEqual([]);
+
+    await showPage(0);
+
+    await waitFor(() => { expect(allRanges(highlights)).toHaveLength(1); });
+  });
+
+  it('does not redraw a drawn page when the query changes', async () => {
+    const document_ = markedDocument([['needle here']]);
+    const highlights = stubHighlights();
+    const { chords } = await mount(document_);
+    const input = openFind(chords);
+    await userEvent.type(input, 'need');
+    await finishReading();
+    await showPage(0);
+    await waitFor(() => { expect(allRanges(highlights)).toHaveLength(1); });
+    const calls = vi.mocked(document_.renderPage).mock.calls.length;
+
+    await userEvent.type(input, 'l');
+
+    await waitFor(() => { expect(allRanges(highlights).map((range) => range.toString())).toEqual(['needl']); });
+    expect(document_.renderPage).toHaveBeenCalledTimes(calls);
+  });
+
+  it('repaints a zoomed page and drops the old ranges', async () => {
+    const document_ = markedDocument([['needle here']]);
+    const highlights = stubHighlights();
+    const { chords } = await mount(document_);
+    const input = openFind(chords);
+    await userEvent.type(input, 'needle');
+    await finishReading();
+    await showPage(0);
+    await waitFor(() => { expect(allRanges(highlights)).toHaveLength(1); });
+    const previous = allRanges(highlights);
+    const calls = vi.mocked(document_.renderPage).mock.calls.length;
+
+    await userEvent.click(screen.getByLabelText('Zoom in'));
+
+    await waitFor(() => {
+      expect(vi.mocked(document_.renderPage).mock.calls.length).toBeGreaterThan(calls);
+    });
+    await waitFor(() => {
+      const next = allRanges(highlights);
+      expect(next).toHaveLength(1);
+      expect(next.some((range) => previous.includes(range))).toBe(false);
+    });
+  });
+
+  it('clears the marks when the overlay closes', async () => {
+    const document_ = markedDocument([['needle here']]);
+    const highlights = stubHighlights();
+    const { chords } = await mount(document_);
+    const input = openFind(chords);
+    await userEvent.type(input, 'needle');
+    await finishReading();
+    await showPage(0);
+    await waitFor(() => { expect(allRanges(highlights)).toHaveLength(1); });
+
+    await userEvent.keyboard('{Escape}');
+
+    await waitFor(() => { expect(allRanges(highlights)).toEqual([]); });
   });
 });
 
