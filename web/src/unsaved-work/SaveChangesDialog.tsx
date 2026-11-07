@@ -2,38 +2,61 @@ import React, { useRef, useState } from 'react';
 import { useDialogKeyboard } from '../shared/useDialogKeyboard';
 import { ModalDialog } from '../shared/ModalDialog';
 
-type Action = 'save' | 'discard' | 'cancel';
+export type SaveChoice = 'save' | 'discard' | 'cancel';
 
-type Properties = { onSave: () => void; onDiscard: () => void; onCancel: () => void; saving?: boolean };
+type Properties = {
+  onSave: () => void;
+  onDiscard: () => void;
+  onCancel: () => void;
+  saving?: boolean;
+  title?: string;
+  className?: string;
+} & (
+  | { selected: SaveChoice; onSelect: (choice: SaveChoice) => void }
+  | { selected?: undefined; onSelect?: undefined }
+);
 
-export function SaveChangesDialog({ onSave, onDiscard, onCancel, saving = false }: Properties) {
+function nextChoice(current: SaveChoice, direction: 'left' | 'right'): SaveChoice {
+  if (direction === 'left') return current === 'save' ? 'cancel' : current === 'discard' ? 'save' : 'discard';
+  return current === 'save' ? 'discard' : current === 'discard' ? 'cancel' : 'save';
+}
+
+export function SaveChangesDialog({
+  onSave, onDiscard, onCancel, saving = false, title = 'Do you want to save changes to this file?', className, selected, onSelect,
+}: Properties) {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const [selected, setSelected] = useState<Action>('save');
+  const [localSelection, setLocalSelection] = useState<SaveChoice>('save');
+  const isControlled = selected !== undefined && onSelect !== undefined;
+  const currentChoice = isControlled ? selected : localSelection;
   const save = () => { if (!saving) onSave(); };
+  const choose = (choice: SaveChoice) => {
+    if (selected !== undefined && onSelect !== undefined) onSelect(choice);
+    else setLocalSelection(choice);
+  };
 
   useDialogKeyboard(dialogRef, {
     y: save,
     n: onDiscard,
     enter: () => {
-      if (selected === 'save') save();
-      else if (selected === 'discard') onDiscard();
+      if (currentChoice === 'save') save();
+      else if (currentChoice === 'discard') onDiscard();
       else onCancel();
     },
     escape: onCancel,
-    arrowleft: () => setSelected((s) => (s === 'save' ? 'cancel' : s === 'discard' ? 'save' : 'discard')),
-    arrowright: () => setSelected((s) => (s === 'save' ? 'discard' : s === 'discard' ? 'cancel' : 'save')),
+    arrowleft: () => choose(nextChoice(currentChoice, 'left')),
+    arrowright: () => choose(nextChoice(currentChoice, 'right')),
   });
 
   return (
-    <ModalDialog dialogRef={dialogRef} title="Do you want to save changes to this file?">
+    <ModalDialog dialogRef={dialogRef} title={title} className={className}>
       <div className="modal-actions">
-        <button className={`modal-button${selected === 'save' ? ' selected' : ''}`} onClick={save} disabled={saving}>
+        <button className={`modal-button${currentChoice === 'save' ? ' selected' : ''}`} onClick={save} disabled={saving}>
           Save (y)
         </button>
-        <button className={`modal-button${selected === 'discard' ? ' selected' : ''}`} onClick={onDiscard}>
+        <button className={`modal-button${currentChoice === 'discard' ? ' selected' : ''}`} onClick={onDiscard}>
           Don&#39;t Save (n)
         </button>
-        <button className={`modal-button${selected === 'cancel' ? ' selected' : ''}`} onClick={onCancel}>
+        <button className={`modal-button${currentChoice === 'cancel' ? ' selected' : ''}`} onClick={onCancel}>
           Cancel (Esc)
         </button>
       </div>
