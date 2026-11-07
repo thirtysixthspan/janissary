@@ -193,6 +193,24 @@ describe('usePdfFind revealing', () => {
     act(() => { result.current.setQuery('nothing'); });
     expect(result.current.current).toBeNull();
   });
+
+  it('keeps current while a page read leaves the highlighted occurrence in place', async () => {
+    const { pdf, reads } = deferredPdf(3);
+    const { result } = setup(pdf);
+    act(() => { result.current.open(); });
+    act(() => { result.current.setQuery('needle'); });
+
+    await act(async () => { reads[0].resolve([line('needle haystack')]); });
+    const first = result.current.current;
+    expect(first).toEqual({ page: 0, line: 0, start: 0 });
+
+    await act(async () => { reads[1].resolve([line('hay')]); });
+    expect(result.current.current).toBe(first);
+
+    await act(async () => { reads[2].resolve([line('needle')]); });
+    expect(result.current.current).not.toBe(first);
+    expect(result.current.current).toEqual({ page: 2, line: 0, start: 0 });
+  });
 });
 
 describe('usePdfFind focus', () => {

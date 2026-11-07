@@ -637,6 +637,32 @@ describe('PdfTab find marks', () => {
     await waitFor(() => { expect(allRanges(highlights)).toHaveLength(1); });
   });
 
+  it("keeps the painted marks while another page's text is read", async () => {
+    const second = deferred<PdfTextItem[]>();
+    const third = deferred<PdfTextItem[]>();
+    const document_ = markedDocument([['needle here'], ['hay'], ['hay']]);
+    vi.mocked(document_.readPageText)
+      .mockImplementationOnce(async () => [{ text: 'needle here', hasEOL: true, top: 0.5 }])
+      .mockImplementationOnce(() => second.promise)
+      .mockImplementationOnce(() => third.promise);
+    const highlights = stubHighlights();
+    const { chords } = await mount(document_);
+    const input = openFind(chords);
+    await userEvent.type(input, 'needle');
+    await showPage(0);
+    await waitFor(() => { expect(markRanges(highlights, PDF_FIND_CURRENT)).toHaveLength(1); });
+    const [painted] = allRanges(highlights);
+
+    await act(async () => { second.resolve([{ text: 'hay', hasEOL: true, top: 0.5 }]); });
+    expect(allRanges(highlights)).toHaveLength(1);
+    expect(markRanges(highlights, PDF_FIND_CURRENT)[0]).toBe(painted);
+
+    await act(async () => { third.resolve([{ text: 'hay', hasEOL: true, top: 0.5 }]); });
+    await finishReading();
+    expect(allRanges(highlights)).toHaveLength(1);
+    expect(markRanges(highlights, PDF_FIND_CURRENT)[0]).toBe(painted);
+  });
+
   it('does not redraw a drawn page when the query changes', async () => {
     const document_ = markedDocument([['needle here']]);
     const highlights = stubHighlights();

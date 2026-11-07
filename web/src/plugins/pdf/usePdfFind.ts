@@ -95,14 +95,17 @@ export function usePdfFind({ active, pdf, revealLine, inputRef }: PdfFindOptions
     if (pdf === null && findOpen) closeFind();
   }, [closeFind, findOpen, pdf]);
 
-  const current = useMemo(() => {
-    const result = results[selected];
-    if (result === undefined) return null;
-    const line = lines?.[result.index];
-    const range = result.ranges[0];
-    if (line === undefined || range === undefined) return null;
-    return { page: line.page, line: line.index, start: range[0] };
-  }, [lines, results, selected]);
+  const result = results[selected];
+  const line = result === undefined ? undefined : lines?.[result.index];
+  const page = line?.page;
+  const lineIndex = line?.index;
+  const start = result?.ranges[0]?.[0];
+  const current = useMemo(
+    () => (page === undefined || lineIndex === undefined || start === undefined
+      ? null
+      : { page, line: lineIndex, start }),
+    [page, lineIndex, start],
+  );
 
   return { ...find, open, select, close, lines, reading, current };
 }
