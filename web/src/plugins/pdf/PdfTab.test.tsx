@@ -463,6 +463,45 @@ describe('PdfTab find', () => {
     expect(screen.queryByText('Reading pages…')).not.toBeInTheDocument();
   });
 
+  it('announces when PDF text is ready while the query remains empty', async () => {
+    const first = deferred<PdfTextItem[]>();
+    const second = deferred<PdfTextItem[]>();
+    const document_ = makeDocument(2);
+    vi.mocked(document_.readPageText)
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise);
+    const { chords } = await mount(document_);
+    openFind(chords);
+    const status = screen.getByRole('status');
+
+    expect(status).toHaveTextContent('Reading document text.');
+    await act(async () => { first.resolve([{ text: 'first page', hasEOL: true, top: 0.5 }]); });
+    expect(status).toHaveTextContent('Reading document text.');
+
+    await act(async () => { second.resolve([{ text: 'last page', hasEOL: true, top: 0.5 }]); });
+
+    expect(status).toHaveTextContent('Document text is ready to search.');
+  });
+
+  it('announces one matching line when PDF text reading finishes', async () => {
+    const first = deferred<PdfTextItem[]>();
+    const second = deferred<PdfTextItem[]>();
+    const document_ = makeDocument(2);
+    vi.mocked(document_.readPageText)
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise);
+    const { chords } = await mount(document_);
+    const input = openFind(chords);
+    const status = screen.getByRole('status');
+
+    await userEvent.type(input, 'needle');
+    await act(async () => { first.resolve([{ text: 'needle here', hasEOL: true, top: 0.5 }]); });
+    await act(async () => { second.resolve([{ text: 'other text', hasEOL: true, top: 0.5 }]); });
+
+    expect(findRows()).toHaveLength(1);
+    expect(status).toHaveTextContent('1 matching line found.');
+  });
+
   it('announces when a completed PDF search has no matches', async () => {
     const page = deferred<PdfTextItem[]>();
     const document_ = makeDocument(1);
