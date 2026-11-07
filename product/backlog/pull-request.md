@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Fill the functionality gap in announcing PDF search progress and results to assistive technology.
-
-Existing Issue: The PDF find status and asynchronously changing result rows in `LineFind` are plain elements without live-region semantics, so they are not announced while the input keeps focus. Severity: 4/10
-
-Existing Risk: 3/10 - Screen-reader users may hear the query but not that the document is still being read or that matching rows have appeared, making a valid search seem empty or stalled.
-
-Proposal Risk: 1/10 - Polite announcements of reading progress and result availability make the asynchronous search perceivable, with a small remaining risk of overly frequent updates on long documents.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1958 "announce asynchronous PDF find progress and results". In `web/src/shared/line-find/LineFind.tsx`, add an optional polite announcement path for asynchronous callers while preserving the existing visible `Reading pages…` row and leaving editor and shell behavior unchanged. Have the PDF caller announce that reading has started, when results first become available, and the final result count or no-match state without announcing every page as it arrives. Update `web/src/plugins/pdf/PdfTab.tsx` to provide that state, add accessible-role and deferred-page assertions to `web/src/shared/line-find/LineFind.test.tsx` and `web/src/plugins/pdf/PdfTab.test.tsx`, and describe the announcement behavior in `product/specs/pdf-tab.md`.
-
-
 * Stop PDF find's background text extraction when a render failure invalidates the document.
 
 Existing Issue: When `PdfTab` enters its failed state after a render error, `usePdfFind` closes the overlay but its in-flight `read` loop continues extracting and retaining every remaining page's text until the loop finishes. Severity: 4/10

@@ -116,6 +116,19 @@ describe('LineFind', () => {
     expect(screen.getByText('No matching lines')).toBeInTheDocument();
   });
 
+  it('exposes an optional polite announcement as an atomic status', () => {
+    renderFind({ announcement: 'Reading document text.' });
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent('Reading document text.');
+    expect(status).toHaveAttribute('aria-live', 'polite');
+    expect(status).toHaveAttribute('aria-atomic', 'true');
+  });
+
+  it('adds no announcement status when the caller does not provide one', () => {
+    renderFind();
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
   it('renders one row per match with a 1-based line number and the line text', () => {
     const { container } = renderFind();
     const numbers = [...container.querySelectorAll('.editor-find-line')].map((n) => n.textContent);

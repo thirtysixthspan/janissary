@@ -23,21 +23,55 @@ export type PdfFindApi = Omit<ReturnType<typeof useLineFind>, 'open' | 'close'> 
   select(index: number): void;
   lines: PdfLine[] | null;
   reading: boolean;
+  announcement: string;
   current: PdfFindCurrent | null;
 };
+
+function finalAnnouncement(query: string, count: number): string {
+  if (!query.trim()) return 'Document text is ready to search.';
+  if (count === 0) return 'No matching lines.';
+  if (count === 10) return '10 or more matching lines found.';
+  return `${count} matching ${count === 1 ? 'line' : 'lines'} found.`;
+}
 
 export function usePdfFind({ active, pdf, revealLine, inputRef }: PdfFindOptions): PdfFindApi {
   const [lines, setLines] = useState<PdfLine[] | null>(null);
   const [reading, setReading] = useState(false);
+  const [announcement, setAnnouncement] = useState('');
   const started = useRef(false);
   const mounted = useRef(true);
   const returnTo = useRef<HTMLElement | null>(null);
+  const announcedReading = useRef(false);
+  const announcedResults = useRef(false);
 
   const lineTexts = useMemo(() => lines?.map((line) => line.text) ?? null, [lines]);
   const find = useLineFind(lineTexts, active);
   const {
-    findOpen, results, selected, open: openFind, close: closeFind, setSelected,
+    findOpen, query, results, selected, open: openFind, close: closeFind, setSelected,
   } = find;
+
+  useEffect(() => {
+    if (!findOpen) {
+      announcedReading.current = false;
+      announcedResults.current = false;
+      setAnnouncement('');
+      return;
+    }
+    if (reading && !announcedReading.current) {
+      announcedReading.current = true;
+      setAnnouncement('Reading document text.');
+    }
+    if (reading && query.trim() && results.length > 0 && !announcedResults.current) {
+      announcedResults.current = true;
+      setAnnouncement('Matching results are available.');
+    }
+    if (!reading && announcedReading.current) {
+      announcedReading.current = false;
+      setAnnouncement(finalAnnouncement(query, results.length));
+    } else if (!reading && query.trim()) {
+      setAnnouncement(finalAnnouncement(query, results.length));
+    }
+  }, [findOpen, query, reading, results.length]);
 
   useEffect(() => {
     mounted.current = true;
@@ -107,5 +141,5 @@ export function usePdfFind({ active, pdf, revealLine, inputRef }: PdfFindOptions
     [page, lineIndex, start],
   );
 
-  return { ...find, open, select, close, lines, reading, current };
+  return { ...find, open, select, close, lines, reading, announcement, current };
 }

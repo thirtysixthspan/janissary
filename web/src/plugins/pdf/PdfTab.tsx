@@ -197,6 +197,7 @@ export function PdfTab({
             return line ? line.page + 1 : null;
           }}
           status={find.reading ? 'Reading pages…' : undefined}
+          announcement={find.announcement}
           inputRef={findInputRef}
         />
       )}

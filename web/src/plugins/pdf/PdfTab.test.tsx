@@ -439,6 +439,57 @@ describe('PdfTab find', () => {
     expect(screen.queryByText('Reading pages…')).not.toBeInTheDocument();
   });
 
+  it('announces reading, the first results, and the final result count', async () => {
+    const first = deferred<PdfTextItem[]>();
+    const second = deferred<PdfTextItem[]>();
+    const document_ = makeDocument(2);
+    vi.mocked(document_.readPageText)
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise);
+    const { chords } = await mount(document_);
+    const input = openFind(chords);
+    const status = screen.getByRole('status');
+
+    expect(status).toHaveTextContent('Reading document text.');
+    await userEvent.type(input, 'needle');
+    await act(async () => { first.resolve([{ text: 'needle here', hasEOL: true, top: 0.5 }]); });
+    expect(status).toHaveTextContent('Matching results are available.');
+    expect(findRows()).toHaveLength(1);
+    expect(screen.getByText('Reading pages…')).toBeInTheDocument();
+
+    await act(async () => { second.resolve([{ text: 'needle there', hasEOL: true, top: 0.5 }]); });
+    expect(status).toHaveTextContent('2 matching lines found.');
+    expect(findRows()).toHaveLength(2);
+    expect(screen.queryByText('Reading pages…')).not.toBeInTheDocument();
+  });
+
+  it('announces when a completed PDF search has no matches', async () => {
+    const page = deferred<PdfTextItem[]>();
+    const document_ = makeDocument(1);
+    vi.mocked(document_.readPageText).mockImplementationOnce(() => page.promise);
+    const { chords } = await mount(document_);
+    const input = openFind(chords);
+    const status = screen.getByRole('status');
+
+    expect(status).toHaveTextContent('Reading document text.');
+    await userEvent.type(input, 'missing');
+    await act(async () => { page.resolve([{ text: 'present text', hasEOL: true, top: 0.5 }]); });
+
+    expect(status).toHaveTextContent('No matching lines.');
+    expect(screen.getByText('No matching lines')).toBeInTheDocument();
+  });
+
+  it('announces that ten matching lines may be only part of the results', async () => {
+    const pageLines = Array.from({ length: 11 }, (_, index) => `needle ${index}`);
+    const { chords } = await mount(makeDocument(1, [pageLines]));
+    const input = openFind(chords);
+    await userEvent.type(input, 'needle');
+    await finishReading();
+
+    expect(findRows()).toHaveLength(10);
+    expect(screen.getByRole('status')).toHaveTextContent('10 or more matching lines found.');
+  });
+
   it('shows the page of a highlighted match and updates the readout', async () => {
     const { chords } = await mount(makeDocument(3, [['alpha'], ['beta target'], ['gamma']]));
     const input = openFind(chords);

@@ -13,6 +13,7 @@ type Properties = {
   inputRef?: React.RefObject<HTMLInputElement | null>;
   rowLabel?: (result: FuzzyMatchResult) => React.ReactNode;
   status?: string;
+  announcement?: string;
 };
 
 // Split `text` into alternating plain and `<mark>`ed segments from the matcher's ranges — the
@@ -75,7 +76,7 @@ function editorFindBody(
 // input over the ranked lines, modeled on `QuickOpen`. Purely presentational — revealing the
 // highlighted row belongs to the tab that owns the lines. Owns its own key handling so
 // Up/Down/Enter/Escape never reach the surface behind it.
-export function LineFind({ query, onChangeQuery, results, selected, onChangeSelected, onClose, placeholder, inputRef, rowLabel, status }: Properties) {
+export function LineFind({ query, onChangeQuery, results, selected, onChangeSelected, onClose, placeholder, inputRef, rowLabel, status, announcement }: Properties) {
   const rankedKeys = rankedOverlayKeys(selected, results.length, onChangeSelected, () => {
     if (results.length > 0) onChangeSelected(0);
   }, onClose);
@@ -105,6 +106,11 @@ export function LineFind({ query, onChangeQuery, results, selected, onChangeSele
           />
         </div>
       </div>
+      {announcement !== undefined && (
+        <div className="editor-find-announcement" role="status" aria-live="polite" aria-atomic="true">
+          {announcement}
+        </div>
+      )}
       {editorFindBody(query, results, selected, onChangeSelected, rowLabel, status)}
     </div>
   );
