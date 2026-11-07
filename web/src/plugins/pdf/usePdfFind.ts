@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { isTextEntryElement, useLineFind } from '../api';
 import type { LoadedPdf } from './pdf-document';
@@ -40,6 +40,7 @@ export function usePdfFind({ active, pdf, revealLine, inputRef }: PdfFindOptions
   const [announcement, setAnnouncement] = useState('');
   const started = useRef(false);
   const mounted = useRef(true);
+  const readGeneration = useRef(0);
   const returnTo = useRef<HTMLElement | null>(null);
   const announcedReading = useRef(false);
   const announcedResults = useRef(false);
@@ -78,17 +79,25 @@ export function usePdfFind({ active, pdf, revealLine, inputRef }: PdfFindOptions
     return () => { mounted.current = false; };
   }, []);
 
-  const read = useCallback(async (source: LoadedPdf) => {
+  useLayoutEffect(() => {
+    if (pdf !== null) return;
+    readGeneration.current++;
+    setLines(null);
+    setReading(false);
+  }, [pdf]);
+
+  const read = useCallback(async (source: LoadedPdf, generation: number) => {
     for (let index = 0; index < source.pageSizes.length; index++) {
+      if (!mounted.current || generation !== readGeneration.current) return;
       try {
         const items = await source.readPageText(index);
-        if (!mounted.current) return;
+        if (!mounted.current || generation !== readGeneration.current) return;
         setLines((current) => [...(current ?? []), ...pageLines(index, items)]);
       } catch {
-        if (!mounted.current) return;
+        if (!mounted.current || generation !== readGeneration.current) return;
       }
     }
-    if (mounted.current) setReading(false);
+    if (mounted.current && generation === readGeneration.current) setReading(false);
   }, []);
 
   const open = useCallback(() => {
@@ -103,9 +112,10 @@ export function usePdfFind({ active, pdf, revealLine, inputRef }: PdfFindOptions
     openFind('');
     if (started.current) return;
     started.current = true;
+    const generation = ++readGeneration.current;
     setLines([]);
     setReading(pdf.pageSizes.length > 0);
-    void read(pdf);
+    void read(pdf, generation);
   }, [findOpen, inputRef, openFind, pdf, read]);
 
   const select = useCallback((index: number) => {

@@ -908,6 +908,30 @@ describe('PdfTab failure', () => {
     expect(screen.queryByLabelText('Search document')).not.toBeInTheDocument();
     await waitFor(() => { expect(allRanges(highlights)).toEqual([]); });
   });
+
+  it('stops find text extraction after a render failure', async () => {
+    const pending = deferred<PdfTextItem[]>();
+    const document_ = makeDocument(3);
+    vi.mocked(document_.readPageText)
+      .mockImplementationOnce(async () => [{ text: 'needle first', hasEOL: true, top: 0.5 }])
+      .mockImplementationOnce(() => pending.promise);
+    const { chords } = await mount(document_);
+    await userEvent.click(screen.getByLabelText('Continuous scroll'));
+    const input = openFind(chords);
+    await userEvent.type(input, 'needle');
+    await waitFor(() => { expect(document_.readPageText).toHaveBeenCalledTimes(2); });
+    expect(findRows()).toHaveLength(1);
+
+    vi.mocked(document_.renderPage).mockRejectedValue(new Error('cannot render'));
+    await act(async () => { onScreen({ 1: 1 }); });
+
+    expect(await screen.findByText('Failed to load paper.pdf')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Search document')).not.toBeInTheDocument();
+    await act(async () => {
+      pending.resolve([{ text: 'needle stale', hasEOL: true, top: 0.5 }]);
+    });
+    expect(document_.readPageText).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('a second PdfTab', () => {

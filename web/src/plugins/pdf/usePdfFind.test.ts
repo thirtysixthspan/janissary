@@ -50,7 +50,11 @@ function setup(pdf: LoadedPdf | null) {
   document.body.append(input);
   const inputRef: RefObject<HTMLInputElement | null> = { current: input };
   const revealLine = vi.fn();
-  const view = renderHook(() => usePdfFind({ active: true, pdf, revealLine, inputRef }));
+  const view = renderHook(
+    ({ currentPdf }: { currentPdf: LoadedPdf | null }) =>
+      usePdfFind({ active: true, pdf: currentPdf, revealLine, inputRef }),
+    { initialProps: { currentPdf: pdf } },
+  );
   return { ...view, input, revealLine };
 }
 
@@ -139,6 +143,26 @@ describe('usePdfFind reading', () => {
     await act(async () => { reads[1].resolve([line('second')]); });
     expect(result.current.reading).toBe(false);
     expect(result.current.lines?.map((item) => item.text)).toEqual(['first', 'second']);
+  });
+
+  it('discards pending page text when the document becomes unavailable', async () => {
+    const { pdf, readPageText, reads } = deferredPdf(3);
+    const { result, rerender } = setup(pdf);
+    act(() => { result.current.open(); });
+
+    await act(async () => { reads[0].resolve([line('first')]); });
+    expect(result.current.lines?.map((item) => item.text)).toEqual(['first']);
+    expect(readPageText).toHaveBeenCalledTimes(2);
+
+    act(() => { rerender({ currentPdf: null }); });
+    expect(result.current.lines).toBeNull();
+    expect(result.current.reading).toBe(false);
+
+    await act(async () => { reads[1].resolve([line('stale')]); });
+
+    expect(result.current.lines).toBeNull();
+    expect(result.current.reading).toBe(false);
+    expect(readPageText).toHaveBeenCalledTimes(2);
   });
 
   it('stops reading when the tab unmounts', async () => {
