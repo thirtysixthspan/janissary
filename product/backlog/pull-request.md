@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's verification Step 3, whose `Down` press can never reach the row labelled `3` from where Step 2 leaves the selection.
-
-Existing Issue: Step 2's expectation ends by clicking the row labelled `1`, the last of the three ranked rows (page 2, page 3, page 1), and Step 3 then says to press `Down` until the row labelled `3` is highlighted, but `rankedOverlayKeys` clamps `Down` at the last row, so the selection stays on page 1 and Step 3 cannot be performed as written. Severity: 3/10
-
-Existing Risk: 3/10 - A reviewer working the happy path sees page 3 never appear and reports a reveal regression that does not exist, or stops trusting the remaining steps.
-
-Proposal Risk: 1/10 - The step stays coupled to the selection Step 2 leaves, so a later edit to Step 2 could break it again, which a reviewer following the steps in order would notice at once.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1958 "make verification Step 3 reachable from the row Step 2 leaves selected". After the push, read the live body with `gh pr view 1958 --json body` and change only Step 3's `Do:` sentence, "press `Down` until the row labelled `3` is highlighted.", to say that Step 2's click left the row labelled `1` highlighted, the last row, so press `Up` once to highlight the row labelled `3`. Leave Step 3's `Expect:` text, Step 2, and every other paragraph byte-for-byte unchanged. Confirm the order before editing: `contiguousMatch` in `web/src/shared/fuzzy-match.ts` ranks the three `quick brown fox` lines page 2 (34 characters), page 3 (35), page 1 (52) on equal scores; a click on a row calls `usePdfFind.select` in `web/src/plugins/pdf/usePdfFind.ts` with that row's index; and `web/src/shared/ranked-overlay-keys.ts` moves `ArrowUp` to `Math.max(0, selected - 1)` and `ArrowDown` to `Math.min(count - 1, selected + 1)`. The completed fix plan `product/plans/complete/correct-the-up-direction-in-verification-step-3.md` assumed the selection was on the first row when Step 3 began; note in the new fix plan that Step 2's click invalidates that premise. No code, spec, or test changes; `$janissary/scripts/run.mjs check-diff` must stay clean.
-
-
 * Correct the pull request description's two-tab key check in verification Step 12, which expects typing a query to move each tab's page when only a row selection reveals a match.
 
 Existing Issue: Step 12's third paragraph says typing `delta` in the centre makes its readout read `2 / 3` and typing `page 5` in the docked tab makes its readout read `5 / 40`, but typing only resets the highlighted row in `useLineFind` and never calls `usePdfFind.select`, so neither page moves, the freshly mounted docked tab stays on `1 / 40`, and its later `7 / 40` expectation fails too. Severity: 3/10
