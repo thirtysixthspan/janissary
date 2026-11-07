@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { disposeClosedPluginTabs, retainOpenDirtyPluginLabels } from './prune-closed-plugin-tabs';
 import { PluginTabStateStore } from './tab-state-store';
 
@@ -29,6 +29,25 @@ describe('PluginTabStateStore', () => {
 
     expect(store.forTab('image')).toBe(imageState);
     expect(store.forTab('image').get<{ dirty: boolean }>('image-edit')).toEqual({ dirty: true });
+  });
+
+  it('notifies active subscribers when values change and stops after disposal', () => {
+    const store = new PluginTabStateStore();
+    const imageState = store.forTab('image');
+    const listener = vi.fn();
+    const unsubscribe = imageState.subscribe?.(listener);
+
+    imageState.set('image-edit', { dirty: true });
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe?.();
+    imageState.set('image-edit', { dirty: false });
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    const closedListener = vi.fn();
+    imageState.subscribe?.(closedListener);
+    store.disposeClosedTabs(new Set());
+    imageState.set('image-edit', { dirty: false });
+    expect(closedListener).not.toHaveBeenCalled();
   });
 
   it('removes the dirty handle and marker when a tab label closes', () => {

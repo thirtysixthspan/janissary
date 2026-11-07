@@ -188,6 +188,8 @@ export type TabPluginState = {
   get<Value>(key: string): Value | undefined;
   set<Value>(key: string, value: Value): void;
   delete(key: string): void;
+  // Optional change notification for a mounted body observing updates from another placement.
+  subscribe?(listener: () => void): () => void;
 };
 
 // One live terminal, attached for as long as the caller holds the handle. The bytes already travel

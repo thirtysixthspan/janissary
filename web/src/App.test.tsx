@@ -561,6 +561,67 @@ describe('App docked image quit walk', () => {
     act(() => { stateListener!([makeTab(), notifications], 0, 16, [], 'github-dark', 'dark', []); });
     expect(within(container.querySelector('.sidebar-left')!).queryByRole('img', { name: 'unsaved changes' })).not.toBeInTheDocument();
   }, 15_000);
+
+  it('clears an in-flight image save after docking and quits without a save dialog', async () => {
+    let resolveSave!: (response: { ok: true; value: unknown }) => void;
+    // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the web project's ES2023 library excludes Promise.withResolvers
+    const saveResponse = new Promise<{ ok: true; value: unknown }>((resolve) => { resolveSave = resolve; });
+    requestMock.mockReset().mockImplementation((request: { method?: string }) => (
+      request.method === 'pluginIntent'
+        ? saveResponse
+        : Promise.resolve({ newInput: '', newCursor: 0, matches: [] })
+    ));
+
+    const { App } = await import('./App');
+    const { container } = render(
+      <PluginHostProvider host={createPluginHost()}><App client={client} /></PluginHostProvider>,
+    );
+    const image = makeTab({
+      label: 'image', title: 'photo.png',
+      plugin: {
+        id: 'image', schemaVersion: 1,
+        payload: { name: 'photo.png', path: '/tmp/photo.png', size: '400 × 300', url: '/open/image', mode: 'edit' },
+      },
+    });
+    const notifications = makeTab({
+      label: 'notifications', title: 'notifications', view: 'notifications', dock: 'left',
+    });
+    act(() => { stateListener!([makeTab(), image, notifications], 1, 16, [], 'github-dark', 'dark', []); });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Rotate right' }));
+    const source = container.querySelector<HTMLImageElement>('.image-edit-source')!;
+    Object.defineProperties(source, {
+      naturalWidth: { value: 400, configurable: true },
+      naturalHeight: { value: 300, configurable: true },
+    });
+    act(() => { fireEvent.load(source); });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => { expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
+      method: 'pluginIntent', params: expect.objectContaining({ intent: 'save-edit', tab: 'image' }),
+    })); });
+
+    act(() => {
+      stateListener!([makeTab(), { ...image, dock: 'left' }, notifications], 0, 16, [], 'github-dark', 'dark', []);
+    });
+    const sidebar = container.querySelector<HTMLElement>('.sidebar-left')!;
+    fireEvent.mouseDown(within(sidebar).getByText('notifications'));
+    expect(within(sidebar).getByRole('img', { name: 'unsaved changes' })).toBeInTheDocument();
+
+    await act(async () => { resolveSave({ ok: true, value: { name: 'photo.png' } }); });
+
+    await waitFor(() => {
+      expect(within(sidebar).queryByRole('img', { name: 'unsaved changes' })).not.toBeInTheDocument();
+    });
+    const command = screen.getByRole('textbox');
+    fireEvent.change(command, { target: { value: 'quit' } });
+    fireEvent.keyDown(command, { key: 'Enter' });
+
+    expect(screen.getByText('Are you sure you want to quit?')).toBeInTheDocument();
+    expect(screen.queryByText('Do you want to save changes to photo.png?')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Quit (y)' }));
+    expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'quit' } });
+    requestMock.mockReset().mockResolvedValue({ newInput: '', newCursor: 0, matches: [] });
+  }, 15_000);
 });
 
 describe('App layout WS event', () => {

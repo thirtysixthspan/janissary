@@ -3,6 +3,7 @@ import type { TabPluginState } from './api';
 type TabStateEntry = {
   lifecycle: { active: boolean };
   values: Map<string, unknown>;
+  listeners: Set<() => void>;
   access: TabPluginState;
 };
 
@@ -17,18 +18,30 @@ export class PluginTabStateStore {
 
     const values = new Map<string, unknown>();
     const lifecycle = { active: true };
+    const listeners = new Set<() => void>();
+    const notify = () => {
+      if (lifecycle.active) for (const listener of listeners) listener();
+    };
     const access: TabPluginState = {
       get<Value>(key: string): Value | undefined {
         return lifecycle.active ? values.get(key) as Value | undefined : undefined;
       },
       set<Value>(key: string, value: Value): void {
-        if (lifecycle.active) values.set(key, value);
+        if (!lifecycle.active) return;
+        values.set(key, value);
+        notify();
       },
       delete(key: string): void {
-        if (lifecycle.active) values.delete(key);
+        if (!lifecycle.active || !values.delete(key)) return;
+        notify();
+      },
+      subscribe(listener: () => void): () => void {
+        if (!lifecycle.active) return () => {};
+        listeners.add(listener);
+        return () => { listeners.delete(listener); };
       },
     };
-    const entry: TabStateEntry = { lifecycle, values, access };
+    const entry: TabStateEntry = { lifecycle, values, listeners, access };
     this.entries.set(label, entry);
     return entry.access;
   }
@@ -38,6 +51,7 @@ export class PluginTabStateStore {
       if (openLabels.has(label)) continue;
       entry.lifecycle.active = false;
       entry.values.clear();
+      entry.listeners.clear();
       this.entries.delete(label);
     }
   }

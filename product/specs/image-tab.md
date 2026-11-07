@@ -174,7 +174,9 @@ taken. Undoing back to exactly what was written reads as saved again, and redoin
 too; any list that differs from what was written — including a different operation applied in place
 of an undone one, which lands at the same step number — reads as unsaved. Two different routes to
 the same picture are not recognised as equal, so the tab errs toward calling that work unsaved. An
-edit made while a save is still in flight is not covered by that save.
+edit made while a save is still in flight is not covered by that save. A successful save updates the
+open tab's saved baseline even if it finishes after docking remounts the image body in a sidebar. A
+failed save leaves the baseline unchanged, and edits made after the request starts remain unsaved.
 
 ### Unsaved edits
 

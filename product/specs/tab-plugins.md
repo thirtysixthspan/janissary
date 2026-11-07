@@ -89,6 +89,7 @@ A plugin tab can be docked into either sidebar and undocked back to the centre, 
 Docking into a side already holding a docked tab displaces that tab back to the centre only when the two are the same kind — for plugin tabs, that means the same plugin. Two tabs from different plugins share a sidebar the way the file navigator and the notifications feed already do.
 
 Moving a plugin tab between the centre and a sidebar can remount its body. A plugin that needs local view state to survive that move can keep it in the optional `tabState` accessor; the host clears its values when the tab closes.
+An accessor may also expose `subscribe(listener)`: a `set`, or a `delete` of an existing key, notifies its current subscribers. Closing the tab releases all its subscriptions.
 
 Every docked plugin tab stays loaded while another entry in the same sidebar is showing, so switching between them preserves what each was displaying; only the one on screen is told it is visible. The sidebar frame, including the dock control, belongs to the application rather than to the plugin. A plugin is told which side it is docked to, so a view can lay itself out for a narrow sidebar without measuring the frame around it.
 
@@ -216,7 +217,7 @@ Image is a bundled plugin like any other: it contributes the common raster and v
 
 It is the first plugin to claim the `edit` command for its own file types, so `edit <image>` — and Shift-activation of an image row in the file navigator, which sends that same command — reaches its editing presentation instead of the plain-text editor. It declares no file-navigator edit gesture. The edit presentation opens the tab under the same identity the viewer uses, the file's path, so an image already open as a viewer is focused and flipped rather than opened a second time.
 
-It answers one intent: writing an edited image as a PNG over the original file. The client ships only pixels; the server takes the destination from the tab's authoritative original path. The viewer's zoom, pan, and orientation, and the editor's operation list, undo cursor, and canvas, remain entirely client-side. The host's per-tab state accessor keeps the editor model and saved baseline through a centre-to-sidebar remount and clears them when the tab closes. Its tab registers unsaved edits with the host, so the application's save-changes dialog guards every close path over it. See [[image-tab]] and [[open]].
+It answers one intent: writing an edited image as a PNG over the original file. The client ships only pixels; the server takes the destination from the tab's authoritative original path. The viewer's zoom, pan, and orientation, and the editor's operation list, undo cursor, and canvas, remain entirely client-side. The host's per-tab state accessor keeps the editor model and saved baseline through a centre-to-sidebar remount and clears them when the tab closes. A successful save that finishes after such a remount updates the open tab's saved baseline and dirty marker; a failed save does not, and edits made after the save starts remain unsaved. Its tab registers unsaved edits with the host, so the application's save-changes dialog guards every close path over it. See [[image-tab]] and [[open]].
 
 ### Bundled markdown plugin
 
