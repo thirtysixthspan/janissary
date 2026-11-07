@@ -44,6 +44,6 @@ export function settleAcpPrompt(
   if (running) managers.tab.updateRunning(label, { markdown: true, entries: pending.runningEntries }, running.output, false);
   managers.tab.deleteBusy(label, pending);
   afterSettlement?.();
-  pending.finish(result);
+  pending.finish(pending.recordId ? { ...result, recordId: pending.recordId } : result);
   messageBus.emit('state', { type: 'dirty' });
 }

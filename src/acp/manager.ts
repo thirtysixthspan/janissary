@@ -10,7 +10,7 @@ import { runCorePrompt } from './run-prompt.js';
 import type { Managers } from '../managers.js';
 import type { RoleEntry } from '../plugins/roles/shared.js';
 import {
-  attemptOrder, exhaustedError, fallbackNotice, noRoleModels, readRoleSettings,
+  attemptOrder, exhaustedError, fallbackNotice, finalAttemptResult, noRoleModels, readRoleSettings,
   type AcpRoleSettings, type AttemptFailure,
 } from './ask-role.js';
 import { acpRoleRuntime, existingAcpRoleRuntime } from './role-state.js';
@@ -150,8 +150,7 @@ export class AcpManager extends AcpSessionManager {
       this.attempt(label, { ...attempt, queue: rest, failures });
       return;
     }
-    attempt.onDone(failed && failures.length > 1
-      ? { answered: false, error: exhaustedError(failures, attempt.role) } : result);
+    attempt.onDone(finalAttemptResult(result, failed, failures, attempt.role));
   }
 
   private queueFor(label: string, settings: AcpRoleSettings, role: AcpRole): RoleEntry[] {

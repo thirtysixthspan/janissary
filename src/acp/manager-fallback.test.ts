@@ -38,9 +38,10 @@ function setup(
   const tabs = [makeTab('tab1', '#fff')];
   const append = vi.fn();
   const enabledModels = new Set(entries.map(({ harness, model }) => `${harness} ${model}`));
+  const acpRecords = { begin: vi.fn(() => 'record-id'), prompt: vi.fn(() => true), activity: vi.fn(), answer: vi.fn(), close: vi.fn() };
   const managers = {
     models: { isKnownModel: (harness: string, model: string) => enabledModels.has(`${harness} ${model}`) },
-    acpRecords: { begin: vi.fn(() => 'record-id'), prompt: vi.fn(() => true), activity: vi.fn(), answer: vi.fn(), close: vi.fn() },
+    acpRecords,
     tab: {
       tabs,
       launchDir: '/project',
@@ -61,10 +62,11 @@ function setup(
   }));
   const acp = new AcpManager(managers, roleSettings ?? askModels);
   Object.assign(managers, { acp });
-  return { acp, append, askModels, enabledModels, managers, tabs };
+  return { acp, acpRecords, append, askModels, enabledModels, managers, tabs };
 }
 
 const launched = (call: number) => mocks.connectAcp.mock.calls[call][0] as AcpOptions;
+const connect = (call: number) => launched(call).onConnect!({});
 const loop = (call: number) => mocks.runAcpToolLoop.mock.calls[call][3] as AcpLoopHandlers;
 const answer = (handlers: AcpLoopHandlers, text: string) => {
   handlers.endTurn(text);
@@ -303,6 +305,90 @@ describe('AcpManager — ask role fallback', () => {
     expect(append).toHaveBeenCalledWith('tab1', { input: 'ask hello', output: 'ACP: the ask role lists no models.' });
     expect(mocks.connectAcp).not.toHaveBeenCalled();
     expect(acp.start('tab1')).toEqual({ error: 'ACP: the ask role lists no models.' });
+  });
+});
+
+describe('AcpManager — answering record id', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sessions.length = 0;
+  });
+
+  it('settles with the answering model’s record after a fallback, not the failed one’s', () => {
+    const { acp, acpRecords } = setup();
+    acpRecords.begin.mockReturnValueOnce('record-1').mockReturnValueOnce('record-2');
+    const onDone = vi.fn();
+    acp.run('tab1', 'ask hello', onDone);
+    connect(0);
+
+    loop(0).error('out of credits');
+    connect(1);
+    answer(loop(1), 'the answer');
+
+    expect(onDone).toHaveBeenCalledExactlyOnceWith({
+      answered: true, reply: 'the answer', session: expect.any(String), recordId: 'record-2',
+    });
+  });
+
+  const exhausted = [
+    'ACP: every model in the ask role failed.',
+    '- opencode opencode-go/deepseek-v4.1-flash: ACP error: out of credits',
+    '- claude claude-haiku-4-5: ACP error: not authenticated',
+  ].join('\n');
+
+  it('settles the exhausted error with the last model’s record when every model failed', () => {
+    const { acp, acpRecords } = setup([OPENCODE, CLAUDE]);
+    acpRecords.begin.mockReturnValueOnce('record-1').mockReturnValueOnce('record-2');
+    const onDone = vi.fn();
+    acp.run('tab1', 'ask hello', onDone);
+    connect(0);
+
+    loop(0).error('out of credits');
+    connect(1);
+    loop(1).error('not authenticated');
+
+    expect(onDone).toHaveBeenCalledExactlyOnceWith({ answered: false, error: exhausted, recordId: 'record-2' });
+  });
+
+  it('settles the exhausted error with no record when the last model failed before its handshake', () => {
+    const { acp, acpRecords } = setup([OPENCODE, CLAUDE]);
+    acpRecords.begin.mockReturnValueOnce('record-1');
+    const onDone = vi.fn();
+    acp.run('tab1', 'ask hello', onDone);
+    connect(0);
+
+    loop(0).error('out of credits');
+    loop(1).error('not authenticated');
+
+    expect(onDone).toHaveBeenCalledOnce();
+    expect(onDone.mock.calls[0][0]).toEqual({ answered: false, error: exhausted });
+    expect(onDone.mock.calls[0][0]).not.toHaveProperty('recordId');
+    expect(acpRecords.begin).toHaveBeenCalledOnce();
+  });
+
+  it('carries the record on a cancelled prompt', async () => {
+    const { acp } = setup();
+    const pending = acp.promptResult('tab1', 'ask hello');
+    connect(0);
+
+    await acp.cancel('tab1');
+
+    await expect(pending).resolves.toEqual({
+      answered: false, error: 'ACP: prompt cancelled.', recordId: 'record-id',
+    });
+  });
+
+  it('carries the record on a reset prompt even though closing the record drops the role state’s id', async () => {
+    const { acp, acpRecords } = setup();
+    const pending = acp.promptResult('tab1', 'ask hello');
+    connect(0);
+
+    acp.close('tab1');
+
+    expect(acpRecords.close).toHaveBeenCalledWith('record-id', 'Closed');
+    await expect(pending).resolves.toEqual({
+      answered: false, error: 'ACP session closed.', recordId: 'record-id',
+    });
   });
 });
 

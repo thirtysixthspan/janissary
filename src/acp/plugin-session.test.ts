@@ -532,7 +532,9 @@ describe('core ACP for plugin tabs', () => {
     handlers().onChunk('partial');
     handlers().onError('rate limited');
 
-    await expect(answer).resolves.toEqual({ answered: false, error: 'ACP error: rate limited' });
+    await expect(answer).resolves.toEqual({
+      answered: false, error: 'ACP error: rate limited', recordId: managers.acpRecords.rows()[0].id,
+    });
   });
 
   // A tab's session is replaced whenever the old one dies, and the successor arrives with nothing the
