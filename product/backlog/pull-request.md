@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the description's reading-status verification step, which reopens a tab whose text was already read and so can never show the Reading pages status.
-
-Existing Issue: Step 16 opens `pdf-find-long.pdf` and expects `Reading pages…` before the forty-page read finishes, but Step 11 already opened that same tab, typed `filler`, and started the one-per-tab read, so reopening the document focuses the existing tab and `usePdfFind`'s started ref skips the read entirely. Severity: 4/10
-
-Existing Risk: 4/10 - A reviewer following the sequence waits for a status that cannot appear and may conclude the reading indicator is broken or untested, while the actual issue is the step's starting state.
-
-Proposal Risk: 1/10 - The recipe then exercises the first-open read path the code and `PdfTab.test.tsx` already cover, with no product behavior changed and no new flakiness beyond the read timing the step is about.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1958 "fix the reading-status verification step to use a fresh tab". In the pull request body's Step 16, make the tab fresh before checking: close the `pdf-find-long.pdf` tab and reopen it (or use a long document not yet searched) so the one-per-tab read starts on the Cmd+F that the step observes. Then type `filler` before the forty-page read finishes and keep the existing expected states. This matches `usePdfFind`'s `started` ref and the first-open read; `web/src/plugins/pdf/PdfTab.test.tsx`'s "shows the reading status until the last page is read" is the existing pin. No code or test change.
-
-
 * Describe the render-failure close and the early-Down selection guard in the pull request body and add verification steps for both.
 
 Existing Issue: The pull request body never mentions that a render failure closes an open find overlay and clears its marks, nor that pressing Down before any result keeps the first row selected; both behaviors are promised by the branch's fix plans and pinned by `PdfTab.test.tsx` and `usePdfFind.test.ts`, but a reader of the description cannot learn or verify either. Severity: 3/10
