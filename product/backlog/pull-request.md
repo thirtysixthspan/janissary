@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the description's verification step that tells the reader to press Up to reach the row labelled 3, which the ranked row order can never do.
-
-Existing Issue: How to verify Step 3 says to press Up until the row labelled 3 is highlighted, but the three rows rank 2, 3, 1 by line length, selection starts on row 2, and the shared ranked-key handler clamps ArrowUp at zero rather than wrapping, so Up leaves the selection on row 2 and page 3 never becomes shown. Severity: 4/10
-
-Existing Risk: 4/10 - A reviewer following the step sees no page change and may report the reveal or the shared key handler as broken, while the actual defect is a verification recipe that cannot be performed.
-
-Proposal Risk: 1/10 - The recipe then matches the documented Down behavior and the code's row order; the feature behavior itself is untouched, and the ranking is already pinned by the results tests.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1958 "correct the Up direction in verification Step 3". In the pull request body's Step 3, change "press `Up` until the row labelled `3` is highlighted" to "press `Down` until the row labelled `3` is highlighted" (or "press Down once from the first row"). The rows for `quick brown fox` rank page 2, page 3, page 1 because `contiguousMatch` tie-breaks equal scores by line length, selection starts at the first row, and `rankedOverlayKeys` clamps ArrowUp at zero rather than wrapping; Step 9 already uses Down for the same third row. No code or test change: `web/src/plugins/pdf/PdfTab.test.tsx` covers arrow movement and the ranking is fixed by `web/src/shared/fuzzy-match.ts`. Keep the expected page 3, readout 3/3, and thumbnail wording.
-
-
 * Correct the description's reading-status verification step, which reopens a tab whose text was already read and so can never show the Reading pages status.
 
 Existing Issue: Step 16 opens `pdf-find-long.pdf` and expects `Reading pages…` before the forty-page read finishes, but Step 11 already opened that same tab, typed `filler`, and started the one-per-tab read, so reopening the document focuses the existing tab and `usePdfFind`'s started ref skips the read entirely. Severity: 4/10
