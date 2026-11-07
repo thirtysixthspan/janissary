@@ -7,7 +7,6 @@ import { AppReportingSection } from './AppReportingSection';
 import { HarnessLaunchDialog } from './harness/HarnessLaunchDialog';
 import { ScheduleDialog } from './ScheduleLaunchDialog/ScheduleDialog';
 import { QuitDialog } from './QuitDialog/QuitDialog';
-import { UnsavedQuitDialog } from './UnsavedQuitDialog';
 import { CloseSaveGuard } from './unsaved-work/CloseSaveGuard';
 import { PickerOverlays } from './pickers/PickerOverlays';
 import { firstOpenOverlay } from './pickers/overlay-registry';
@@ -23,7 +22,6 @@ type AppMainProps = LayoutState & {
   inputReference: React.RefObject<HTMLTextAreaElement | null>;
   dropRef: React.RefObject<CommandInputDropHandle | null>;
   quitConfirmOpen: boolean;
-  unsavedQuitOpen: boolean;
   // Every overlay's state, built once by `usePickerOverlays`. `PickerOverlays` takes exactly this
   // bag, and the two overlays a mounted harness tab renders are projected out of it below.
   pickers: PickerOverlayView;
@@ -46,8 +44,6 @@ type AppMainProps = LayoutState & {
   scheduleLaunch: ScheduleLaunchView | null;
   confirmQuit: () => void;
   cancelQuit: () => void;
-  confirmUnsavedQuit: () => void;
-  cancelUnsavedQuit: () => void;
   quitWalkRef: React.RefObject<(() => boolean) | null>;
   saveWalkOpenRef: React.RefObject<boolean>;
   onQuit: () => void;
@@ -61,7 +57,7 @@ type AppMainProps = LayoutState & {
 export function AppMain({
   current, client, inputReference,
   pickers, pickerSourceTab, tabs,
-  quitConfirmOpen, unsavedQuitOpen, dropRef,
+  quitConfirmOpen, dropRef,
   activeTab, secondaryTab, windowFocused, actionEntries, reportingEntries, closeTab,
   tabNameMaxLength, activeTabNameMaxLength,
   sidebarLeftWidth, setSidebarLeftWidth, sidebarRightWidth, setSidebarRightWidth,
@@ -69,7 +65,7 @@ export function AppMain({
   splitPct, setSplitPct,
   harnessHandles, questionPanelRef, tabHandles,
   dirtyPluginTabs, onPluginDirty,
-  harnessLaunch, scheduleLaunch, confirmQuit, cancelQuit, confirmUnsavedQuit, cancelUnsavedQuit,
+  harnessLaunch, scheduleLaunch, confirmQuit, cancelQuit,
   quitWalkRef, saveWalkOpenRef, onQuit, revealDocked, guardRef,
 }: AppMainProps) {
   const pickerOverlays = <PickerOverlays {...pickers} />;
@@ -107,7 +103,6 @@ export function AppMain({
       {harnessLaunch && <HarnessLaunchDialog view={harnessLaunch} client={client} />}
       {scheduleLaunch && <ScheduleDialog view={scheduleLaunch} client={client} />}
       {quitConfirmOpen && <QuitDialog onConfirm={confirmQuit} onCancel={cancelQuit} />}
-      {unsavedQuitOpen && <UnsavedQuitDialog onConfirm={confirmUnsavedQuit} onCancel={cancelUnsavedQuit} />}
       <CloseSaveGuard
         tabs={tabs} tabHandles={tabHandles} client={client} guardRef={guardRef}
         quitWalkRef={quitWalkRef} saveWalkOpenRef={saveWalkOpenRef}

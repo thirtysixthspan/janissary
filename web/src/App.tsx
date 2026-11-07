@@ -127,10 +127,9 @@ export function App({ client }: { client: JanusClient }) {
   const quitWalkRef = useRef<(() => boolean) | null>(null);
   const saveWalkOpenRef = useRef(false);
   const guardRef = useRef<((index: number) => boolean) | null>(null);
-  const { unsavedQuitOpen, guardedOpenQuitConfirm, confirmUnsavedQuit, cancelUnsavedQuit } =
-    useUnsavedQuitGuard(tabs, tabHandles, openQuitConfirm, runCommand);
+  const { guardedOpenQuitConfirm } = useUnsavedQuitGuard(tabs, tabHandles, openQuitConfirm, quitWalkRef);
   const { activeTabRef, quitConfirmOpenRef, keyboardCapturedRef } = useCmdWRefs(
-    activeTab, quitConfirmOpen, unsavedQuitOpen, pickers.overlays,
+    activeTab, quitConfirmOpen, saveWalkOpenRef, pickers.overlays,
   );
   const focusedPluginTabIndexRef = useRef<number | undefined>(undefined);
   const focusedPluginTabIndex = focusedPluginTab === undefined
@@ -205,7 +204,7 @@ export function App({ client }: { client: JanusClient }) {
       current={current} client={client}
       inputReference={inputReference}
       pickers={pickers.view} pickerSourceTab={pickerSourceTab} tabs={tabs}
-      quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}
+      quitConfirmOpen={quitConfirmOpen}
       dropRef={dropReference}
       activeTab={activeTab} secondaryTab={secondaryTab} windowFocused={windowFocused}
       actionEntries={actionEntries} reportingEntries={reportingEntries} closeTab={closeTab}
@@ -220,7 +219,6 @@ export function App({ client }: { client: JanusClient }) {
       dirtyPluginTabs={dirtyPluginTabs} onPluginDirty={onPluginDirty}
       harnessLaunch={harnessLaunch} scheduleLaunch={scheduleLaunch}
       confirmQuit={confirmQuit} cancelQuit={cancelQuit}
-      confirmUnsavedQuit={confirmUnsavedQuit} cancelUnsavedQuit={cancelUnsavedQuit}
       quitWalkRef={quitWalkRef} saveWalkOpenRef={saveWalkOpenRef}
       onQuit={onQuit} revealDocked={revealDocked}
       guardRef={guardRef}

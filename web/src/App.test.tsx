@@ -198,7 +198,7 @@ describe('App closing a tab from its button', () => {
 
     expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'system' } });
     expect(screen.queryByText('Are you sure you want to quit?')).not.toBeInTheDocument();
-    expect(screen.queryByText('You have unsaved changes. Close anyway?')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save (y)' })).not.toBeInTheDocument();
   }, 15_000);
 
   it.each([{ metaKey: true }, { ctrlKey: true }])('sends a system tab close from its keyboard chord without a dialog', async (modifiers) => {
@@ -308,7 +308,7 @@ describe('App closing the last tab', () => {
 
     expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'close review notes' } });
     expect(screen.queryByText('Are you sure you want to quit?')).not.toBeInTheDocument();
-    expect(screen.queryByText('You have unsaved changes. Close anyway?')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save (y)' })).not.toBeInTheDocument();
   }, 15_000);
 });
 
