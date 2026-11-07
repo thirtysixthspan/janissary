@@ -75,6 +75,7 @@ export function usePdfFind({ active, pdf, revealLine, inputRef }: PdfFindOptions
   }, [findOpen, inputRef, openFind, pdf, read]);
 
   const select = useCallback((index: number) => {
+    if (index < 0) return;
     setSelected(index);
     const result = results[index];
     const line = result === undefined ? undefined : lines?.[result.index];

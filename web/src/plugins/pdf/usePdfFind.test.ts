@@ -155,6 +155,19 @@ describe('usePdfFind reading', () => {
 });
 
 describe('usePdfFind revealing', () => {
+  it('keeps the first result selected when Down arrives before any result', async () => {
+    const { pdf, reads } = deferredPdf(1);
+    const { result } = setup(pdf);
+    act(() => { result.current.open(); });
+    act(() => { result.current.setQuery('needle'); });
+    act(() => { result.current.select(-1); });
+
+    await act(async () => { reads[0].resolve([line('needle')]); });
+
+    expect(result.current.selected).toBe(0);
+    expect(result.current.current).toEqual({ page: 0, line: 0, start: 0 });
+  });
+
   it('asks for the matching line page and top fraction', async () => {
     const pdf = makePdf([[line('alpha', 0.4)], [line('beta', 0)]]);
     const { result, revealLine } = setup(pdf);
