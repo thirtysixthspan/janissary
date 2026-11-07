@@ -48,6 +48,10 @@ type AppMainProps = LayoutState & {
   cancelQuit: () => void;
   confirmUnsavedQuit: () => void;
   cancelUnsavedQuit: () => void;
+  quitWalkRef: React.RefObject<(() => boolean) | null>;
+  saveWalkOpenRef: React.RefObject<boolean>;
+  onQuit: () => void;
+  revealDocked: (label: string) => boolean;
   guardRef: React.RefObject<((index: number) => boolean) | null>;
   client: JanusClient;
 };
@@ -66,7 +70,7 @@ export function AppMain({
   harnessHandles, questionPanelRef, tabHandles,
   dirtyPluginTabs, onPluginDirty,
   harnessLaunch, scheduleLaunch, confirmQuit, cancelQuit, confirmUnsavedQuit, cancelUnsavedQuit,
-  guardRef,
+  quitWalkRef, saveWalkOpenRef, onQuit, revealDocked, guardRef,
 }: AppMainProps) {
   const pickerOverlays = <PickerOverlays {...pickers} />;
 
@@ -104,7 +108,11 @@ export function AppMain({
       {scheduleLaunch && <ScheduleDialog view={scheduleLaunch} client={client} />}
       {quitConfirmOpen && <QuitDialog onConfirm={confirmQuit} onCancel={cancelQuit} />}
       {unsavedQuitOpen && <UnsavedQuitDialog onConfirm={confirmUnsavedQuit} onCancel={cancelUnsavedQuit} />}
-      <CloseSaveGuard tabs={tabs} tabHandles={tabHandles} client={client} guardRef={guardRef} />
+      <CloseSaveGuard
+        tabs={tabs} tabHandles={tabHandles} client={client} guardRef={guardRef}
+        quitWalkRef={quitWalkRef} saveWalkOpenRef={saveWalkOpenRef}
+        onQuit={onQuit} revealDocked={revealDocked}
+      />
     </AppShell>
   );
 }

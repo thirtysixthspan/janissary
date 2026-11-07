@@ -122,9 +122,13 @@ export function App({ client }: { client: JanusClient }) {
       return next;
     });
   }, []);
+  const onQuit = useCallback(() => runCommand('quit'), [runCommand]);
+  const revealDocked = useCallback((label: string) => sidebarSelectionFor(client).select(label), [client]);
+  const quitWalkRef = useRef<(() => boolean) | null>(null);
+  const saveWalkOpenRef = useRef(false);
+  const guardRef = useRef<((index: number) => boolean) | null>(null);
   const { unsavedQuitOpen, guardedOpenQuitConfirm, confirmUnsavedQuit, cancelUnsavedQuit } =
     useUnsavedQuitGuard(tabs, tabHandles, openQuitConfirm, runCommand);
-  const guardRef = useRef<((index: number) => boolean) | null>(null);
   const { activeTabRef, quitConfirmOpenRef, keyboardCapturedRef } = useCmdWRefs(
     activeTab, quitConfirmOpen, unsavedQuitOpen, pickers.overlays,
   );
@@ -217,6 +221,8 @@ export function App({ client }: { client: JanusClient }) {
       harnessLaunch={harnessLaunch} scheduleLaunch={scheduleLaunch}
       confirmQuit={confirmQuit} cancelQuit={cancelQuit}
       confirmUnsavedQuit={confirmUnsavedQuit} cancelUnsavedQuit={cancelUnsavedQuit}
+      quitWalkRef={quitWalkRef} saveWalkOpenRef={saveWalkOpenRef}
+      onQuit={onQuit} revealDocked={revealDocked}
       guardRef={guardRef}
       />
       </AppCommandBarProvider>
