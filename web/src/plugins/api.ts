@@ -248,10 +248,12 @@ export type TabPluginClientCapabilities = {
   // because a plugin may need to close on something other than a click of its own button — an
   // embedded cross-origin page swallows the host's Cmd+W and has to answer for it itself.
   close(reason?: { terminalExited: string }): void;
-  // Register this tab's unsaved work with the host, or `null` to drop it. Optional so a plugin that
-  // has nothing to save behaves exactly as it did before this existed. Call it again whenever the
-  // answer to `isDirty` changes: re-registering is how the host learns, and it is what puts the
-  // unsaved marker in the tab strip beside this tab's name.
+  // Register this tab's unsaved work with the host, or pass `null` to drop the registration, even
+  // while the tab remains open. Optional so a plugin that has nothing to save behaves exactly as it
+  // did before this existed. Call it again whenever the answer to `isDirty` changes: re-registering
+  // is how the host learns, and it is what puts the unsaved marker in the tab strip beside this tab's
+  // name. A placement change can unmount the view without closing the tab, so keep the registration
+  // when work should survive that move; the host removes it when the tab closes.
   registerDirtyHandle?(handle: TabDirtyHandle | null): void;
   // Write text to the system clipboard through the same helper every other surface in the
   // application copies with, so a plugin does not carry a second implementation of it — a plugin

@@ -136,7 +136,7 @@ export function App({ client }: { client: JanusClient }) {
   }, []);
   const registerPluginDirtyHandle = useCallback((label: string, handle: DirtyTabHandle | null) => {
     if (handle) tabHandles.current.set(label, handle);
-    else if (!openTabLabels.current.has(label)) tabHandles.current.delete(label);
+    else tabHandles.current.delete(label);
     onPluginDirty(label, tabHandles.current.get(label)?.isDirty() ?? false);
   }, [onPluginDirty]);
   const getPluginTabState = useCallback(

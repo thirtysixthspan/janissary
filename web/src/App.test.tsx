@@ -8,6 +8,7 @@ import type { JanusClient, LayoutListener, StateListener } from './shared/ws/ws'
 import { collectNavigatorSelections } from './file-navigator/file/navigator-selection-registry';
 import { AppShell } from './AppShell';
 import { createPluginHost, PluginHostProvider } from './plugins/host';
+import { clientPlugin, createClientPluginRegistry, type ClientPluginProperties } from './plugins/registry';
 import { StatusPanels } from './shared/status-windows/StatusPanels';
 import type { StatusWindowHandlers } from './shared/status-windows/useStatusWindows';
 
@@ -15,7 +16,9 @@ vi.mock('./plugins/PluginBody', async () => {
   const { AppPluginFixture } = await import('./test/AppPluginFixture');
   const actual = await vi.importActual<typeof PluginBodyModule>('./plugins/PluginBody');
   return {
-    PluginBody: (props: Parameters<typeof actual.PluginBody>[0]) => props.plugin.id === 'image'
+    PluginBody: (props: Parameters<typeof actual.PluginBody>[0]) => (
+      props.plugin.id === 'image' || props.plugin.id === 'dirty-fixture'
+    )
       ? <actual.PluginBody {...props} />
       : <AppPluginFixture
         label={props.label} active={props.active} client={props.client} onSplit={props.onSplit}
@@ -29,6 +32,26 @@ const unregisterStateCollectorMock = vi.fn();
 const registerStateCollectorMock = vi.fn(() => unregisterStateCollectorMock);
 const requestMock = vi.fn().mockResolvedValue({ newInput: '', newCursor: 0, matches: [] });
 const reportLayoutMock = vi.fn();
+const dirtyHandleSaveMock = vi.fn(async () => {});
+const dirtyHandleFixture = {
+  isDirty: () => true,
+  save: dirtyHandleSaveMock,
+  focus: vi.fn(),
+};
+
+function DirtyHandleFixture({ capabilities }: ClientPluginProperties<Record<string, never>>) {
+  return <>
+    <button onClick={() => capabilities.registerDirtyHandle?.(dirtyHandleFixture)}>Register dirty work</button>
+    <button onClick={() => capabilities.registerDirtyHandle?.(null)}>Drop dirty work</button>
+  </>;
+}
+
+const dirtyHandlePlugin = clientPlugin<Record<string, never>>(1, async () => ({
+  default: DirtyHandleFixture,
+  isPayload: (value: unknown): value is Record<string, never> => (
+    typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value).length === 0
+  ),
+}));
 
 // The fields these cases actually vary. `onState` below widens an emitted snapshot to the real
 // `StateListener` signature, so a change to that signature is a type error here rather than the
@@ -621,6 +644,33 @@ describe('App docked image quit walk', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Quit (y)' }));
     expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'quit' } });
     requestMock.mockReset().mockResolvedValue({ newInput: '', newCursor: 0, matches: [] });
+  }, 15_000);
+
+  it('drops an explicitly unregistered dirty handle while its tab remains open', async () => {
+    dirtyHandleSaveMock.mockClear();
+    const { App } = await import('./App');
+    const host = createPluginHost(createClientPluginRegistry({ 'dirty-fixture': dirtyHandlePlugin }));
+    render(<PluginHostProvider host={host}><App client={client} /></PluginHostProvider>);
+    const dirtyTab = makeTab({
+      label: 'dirty-fixture',
+      title: 'draft.png',
+      plugin: { id: 'dirty-fixture', schemaVersion: 1, payload: {} },
+    });
+    act(() => { stateListener!([makeTab(), dirtyTab], 1, 16, [], 'github-dark', 'dark', []); });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Register dirty work' }));
+    expect(screen.getByRole('img', { name: 'unsaved changes' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Drop dirty work' }));
+
+    expect(screen.queryByRole('img', { name: 'unsaved changes' })).not.toBeInTheDocument();
+    act(() => { stateListener!([makeTab(), dirtyTab], 0, 16, [], 'github-dark', 'dark', []); });
+    const command = screen.getByRole('textbox');
+    fireEvent.change(command, { target: { value: 'quit' } });
+    fireEvent.keyDown(command, { key: 'Enter' });
+
+    expect(await screen.findByText('Are you sure you want to quit?')).toBeInTheDocument();
+    expect(screen.queryByText('Do you want to save changes to draft.png?')).not.toBeInTheDocument();
+    expect(dirtyHandleSaveMock).not.toHaveBeenCalled();
   }, 15_000);
 });
 

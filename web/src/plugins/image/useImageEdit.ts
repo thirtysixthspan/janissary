@@ -162,7 +162,6 @@ export function useImageEdit(capabilities: TabPluginClientCapabilities) {
       save: () => saveRef.current(),
       focus: () => canvasRef.current?.focus(),
     });
-    return () => { register(null); };
   }, [canvasRef, capabilities, dirty]);
 
   const onSourceLoad = useCallback((element: HTMLImageElement) => {

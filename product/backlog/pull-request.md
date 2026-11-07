@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Make `registerDirtyHandle(null)` remove the registration while keeping placement remounts safe.
-
-Existing Issue: The public capability and developer documentation say `registerDirtyHandle(null)` drops unsaved work, but `App.registerPluginDirtyHandle` keeps the previous handle whenever its tab label is still open, so a live plugin cannot explicitly remove a stale registration. Severity: 6/10
-
-Existing Risk: 5/10 - A plugin that drops its handle can keep a stale dirty marker and be asked to save work that it no longer owns when the user closes or quits.
-
-Proposal Risk: 2/10 - Explicit drops remove the handle while closed-label pruning still owns final cleanup, leaving placement remount behavior dependent on the plugin not clearing its registration during view teardown.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1957 "honor explicit null dirty-handle registrations". In `web/src/App.tsx`, make an explicit `registerPluginDirtyHandle(label, null)` remove that label's handle and update its dirty marker. In `web/src/plugins/image/useImageEdit.ts`, stop using a `register(null)` effect cleanup to represent placement unmount; the host already prunes registrations when the tab label closes, and re-registration when the dirty answer changes replaces the current handle. Keep the API contract in `web/src/plugins/api.ts` and `documentation/developer-documentation/tab-plugins.md` explicit that `null` drops a registration and that placement teardown does not need to unregister it. Update the image editor lifecycle test that currently expects a null registration on unmount, and add coverage that an explicit null while the tab remains open clears the dirty marker and no longer invokes the old handle; retain the App docking test proving the handle survives a placement remount and the closed-label pruning tests proving teardown. Verify an unmount during a placement move does not lose dirty state, while explicit null stops a quit walk from asking about the removed handle.
-
-
 * Fold the completed implementation subplans into the canonical feature plan and remove the stale subplan reference.
 
 Existing Issue: Nine completed implementation subplans remain beside the canonical plan despite the one-plan-per-pull-request rule, the pull request description says they remain, and subplan 09 refers to the deleted `quit-walk-gone-tab-title-test.md` plan. Severity: 4/10
