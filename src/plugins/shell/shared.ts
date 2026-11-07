@@ -95,7 +95,10 @@ export type ShellQueuedCommandRequest = { receipt: string; discard?: true };
 // What the host decided about one line: `dispatched` is true when the application claimed it as a
 // command, false when it resolved to nothing and the shell should have it. The client writes a
 // `false` line to the terminal itself — the decision is the host's, because the command table is.
+// A core-response reply may carry a `ShellAcpReceipt` as `result`.
 export type ShellDispatchResult = { dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown };
+
+export type ShellAcpReceipt = { replyId: string; role: 'ask' | 'tell'; name: string };
 
 // The completion the application's command bar would show. Carried by the same intent rather than a
 // second one, so a plugin holding a ptyId and a command line needs exactly one wire route.
@@ -217,6 +220,13 @@ export function isShellCompleteRequest(value: unknown): value is ShellCompleteRe
 
 export function isShellCommandState(value: unknown): value is ShellCommandState {
   return isRecord(value) && typeof value.running === 'boolean';
+}
+
+export function isShellAcpReceipt(value: unknown): value is ShellAcpReceipt {
+  return isRecord(value)
+    && typeof value.replyId === 'string'
+    && typeof value.name === 'string'
+    && (value.role === 'ask' || value.role === 'tell');
 }
 
 export function isRestartTerminalRequest(value: unknown): value is RestartTerminalRequest {

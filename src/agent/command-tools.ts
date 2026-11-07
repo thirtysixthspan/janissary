@@ -66,6 +66,7 @@ export async function runGrantedAgentCommand(
     return `Agent: command not permitted: ${command}.`;
   }
   const result = await managers.command.dispatchLineInInvocation(invocation.caller.label, input, { ...invocation, awaitResult: true });
+  if (result.coreResponse) return result.output;
   if (result.result === undefined) return result.output;
   return typeof result.result === 'string' ? result.result : JSON.stringify(result.result) ?? String(result.result);
 }

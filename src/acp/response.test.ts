@@ -6,7 +6,7 @@ import { makeTab } from '../tab/index.js';
 
 vi.mock('../bus.js', () => ({ messageBus: { emit: vi.fn() } }));
 
-import { settleAcpPrompt } from './response.js';
+import { appendAcpBackgroundReply, settleAcpPrompt } from './response.js';
 
 function setup(recordId?: string) {
   const tab = makeTab('tab1', '#fff');
@@ -34,6 +34,20 @@ function setup(recordId?: string) {
 }
 
 const ANSWER: AcpPromptResult = { answered: true, reply: 'the answer', session: 'acp-1' };
+
+describe('appendAcpBackgroundReply', () => {
+  it.each<[string, AcpPromptResult, string]>([
+    ['an answered result as its reply text', ANSWER, 'the answer'],
+    ['an unanswered result as its error text', { answered: false, error: 'ACP error: rate limited' }, 'ACP error: rate limited'],
+  ])('appends %s under exactly the id it is given', (_name, result, output) => {
+    const append = vi.fn();
+    const managers = { tab: { append } } as unknown as Managers;
+
+    appendAcpBackgroundReply(managers, 'tab1', '/ask hello', result, 'reply-1');
+
+    expect(append).toHaveBeenCalledExactlyOnceWith('tab1', { input: '/ask hello', output, background: 'reply-1' });
+  });
+});
 
 describe('settleAcpPrompt', () => {
   it.each<[string, AcpPromptResult]>([

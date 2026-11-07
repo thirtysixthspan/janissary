@@ -8,6 +8,7 @@ import type { Managers } from '../managers.js';
 import type { AcpRoleSettings } from './ask-role.js';
 import type { AcpRole } from './role.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
+import { isShellAcpReceipt, type ShellAcpReceipt } from '../plugins/shell/shared.js';
 import { TabManager } from '../tab/manager.js';
 import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
@@ -214,8 +215,15 @@ describe('core ACP for plugin tabs', () => {
 
   it('returns core streaming dispatch immediately and appends one background reply when it settles', async () => {
     const { managers, handlers } = setup();
-    const result = managers.command.dispatchLineWithOutput('consumer', 'ask hello', 1);
-    await expect(result).resolves.toEqual({ dispatched: true, output: '', coreResponse: true });
+    const reply = await managers.command.dispatchLineWithOutput('consumer', 'ask hello', 1);
+    expect(reply).toEqual({
+      dispatched: true,
+      output: '',
+      coreResponse: true,
+      result: { replyId: expect.any(String), role: 'ask', name: 'acp:ask:consumer' },
+    });
+    expect(isShellAcpReceipt(reply.result)).toBe(true);
+    const { replyId } = reply.result as ShellAcpReceipt;
     expect(managers.tab.byLabel('consumer')!.log.some((entry) => entry.background)).toBe(false);
 
     handlers().onChunk('Answer');
@@ -224,7 +232,7 @@ describe('core ACP for plugin tabs', () => {
     await vi.waitFor(() => {
       const replies = managers.tab.byLabel('consumer')!.log.filter((entry) => entry.background);
       expect(replies).toHaveLength(1);
-      expect(replies[0]).toMatchObject({ input: 'ask hello', output: 'Answer' });
+      expect(replies[0]).toMatchObject({ input: 'ask hello', output: 'Answer', background: replyId });
     });
     const tab = managers.tab.byLabel('consumer')!;
     expect(tab.log.find((entry) => tab.runtime?.acpEntries?.has(entry) && entry.markdown)).toMatchObject({ output: 'Answer', running: false });
