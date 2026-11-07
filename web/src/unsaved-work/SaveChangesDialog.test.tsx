@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { SaveChangesDialog } from './SaveChangesDialog';
+import type { SaveChoice } from './SaveChangesDialog';
 
 describe('SaveChangesDialog', () => {
   it('disables Save through its button and keyboard while pending', () => {
@@ -194,5 +195,179 @@ describe('SaveChangesDialog', () => {
     unmount();
     fireEvent.keyDown(document, { key: 'y' });
     expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('renders a supplied title instead of the default', () => {
+    render(
+      <SaveChangesDialog
+        title="Do you want to save changes to tab one?"
+        onSave={vi.fn()}
+        onDiscard={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Do you want to save changes to tab one?')).toBeInTheDocument();
+    expect(screen.queryByText('Do you want to save changes to this file?')).not.toBeInTheDocument();
+  });
+
+  it('renders an empty title rather than falling back to the default', () => {
+    const { container } = render(<SaveChangesDialog title="" onSave={vi.fn()} onDiscard={vi.fn()} onCancel={vi.fn()} />);
+    expect(container.querySelector('.modal-title')).toBeEmptyDOMElement();
+    expect(screen.queryByText('Do you want to save changes to this file?')).not.toBeInTheDocument();
+  });
+
+  it('starts a controlled selection on the supplied choice', () => {
+    render(
+      <SaveChangesDialog selected="discard" onSelect={vi.fn()} onSave={vi.fn()} onDiscard={vi.fn()} onCancel={vi.fn()} />,
+    );
+    expect(screen.getByRole('button', { name: "Don't Save (n)" })).toHaveClass('selected');
+    expect(screen.getByRole('button', { name: 'Save (y)' })).not.toHaveClass('selected');
+    expect(screen.getByRole('button', { name: 'Cancel (Esc)' })).not.toHaveClass('selected');
+  });
+
+  const arrowCases: Array<{ selected: SaveChoice; key: string; expected: SaveChoice }> = [
+    { selected: 'save', key: 'ArrowRight', expected: 'discard' },
+    { selected: 'save', key: 'ArrowLeft', expected: 'cancel' },
+    { selected: 'discard', key: 'ArrowRight', expected: 'cancel' },
+    { selected: 'discard', key: 'ArrowLeft', expected: 'save' },
+    { selected: 'cancel', key: 'ArrowRight', expected: 'save' },
+    { selected: 'cancel', key: 'ArrowLeft', expected: 'discard' },
+  ];
+
+  it.each(arrowCases)('reports $expected from $selected on $key', ({ selected, key, expected }) => {
+    const onSave = vi.fn();
+    const onDiscard = vi.fn();
+    const onCancel = vi.fn();
+    const onSelect = vi.fn();
+    render(
+      <SaveChangesDialog
+        selected={selected}
+        onSelect={onSelect}
+        onSave={onSave}
+        onDiscard={onDiscard}
+        onCancel={onCancel}
+      />,
+    );
+    fireEvent.keyDown(document, { key });
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith(expected);
+    expect(onSave).not.toHaveBeenCalled();
+    expect(onDiscard).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+    const selectedName = selected === 'save' ? 'Save (y)' : selected === 'discard' ? "Don't Save (n)" : 'Cancel (Esc)';
+    expect(screen.getByRole('button', { name: selectedName })).toHaveClass('selected');
+  });
+
+  it('moves a controlled highlight when the parent feeds back a new selection', () => {
+    const properties = { onSelect: vi.fn(), onSave: vi.fn(), onDiscard: vi.fn(), onCancel: vi.fn() };
+    const view = render(<SaveChangesDialog selected="save" {...properties} />);
+    expect(screen.getByRole('button', { name: 'Save (y)' })).toHaveClass('selected');
+    view.rerender(<SaveChangesDialog selected="cancel" {...properties} />);
+    expect(screen.getByRole('button', { name: 'Cancel (Esc)' })).toHaveClass('selected');
+    expect(screen.getByRole('button', { name: 'Save (y)' })).not.toHaveClass('selected');
+  });
+
+  it.each(['save', 'discard', 'cancel'] as const)('runs the controlled "%s" choice on Enter', (selected) => {
+    const onSave = vi.fn();
+    const onDiscard = vi.fn();
+    const onCancel = vi.fn();
+    const onSelect = vi.fn();
+    render(
+      <SaveChangesDialog
+        selected={selected}
+        onSelect={onSelect}
+        onSave={onSave}
+        onDiscard={onDiscard}
+        onCancel={onCancel}
+      />,
+    );
+    fireEvent.keyDown(document, { key: 'Enter' });
+    expect(onSave).toHaveBeenCalledTimes(selected === 'save' ? 1 : 0);
+    expect(onDiscard).toHaveBeenCalledTimes(selected === 'discard' ? 1 : 0);
+    expect(onCancel).toHaveBeenCalledTimes(selected === 'cancel' ? 1 : 0);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('never reports a selection from the keys or the buttons', async () => {
+    const onSave = vi.fn();
+    const onDiscard = vi.fn();
+    const onCancel = vi.fn();
+    const onSelect = vi.fn();
+    render(
+      <SaveChangesDialog
+        selected="save"
+        onSelect={onSelect}
+        onSave={onSave}
+        onDiscard={onDiscard}
+        onCancel={onCancel}
+      />,
+    );
+    fireEvent.keyDown(document, { key: 'y' });
+    fireEvent.keyDown(document, { key: 'n' });
+    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.keyDown(document, { key: 'Enter' });
+    await userEvent.click(screen.getByRole('button', { name: 'Save (y)' }));
+    await userEvent.click(screen.getByRole('button', { name: "Don't Save (n)" }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel (Esc)' }));
+    expect(onSave).toHaveBeenCalledTimes(3);
+    expect(onDiscard).toHaveBeenCalledTimes(2);
+    expect(onCancel).toHaveBeenCalledTimes(2);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('keeps the controlled selection when a different button is clicked', async () => {
+    const onSelect = vi.fn();
+    const onDiscard = vi.fn();
+    render(
+      <SaveChangesDialog selected="save" onSelect={onSelect} onSave={vi.fn()} onDiscard={onDiscard} onCancel={vi.fn()} />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: "Don't Save (n)" }));
+    expect(onDiscard).toHaveBeenCalledTimes(1);
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Save (y)' })).toHaveClass('selected');
+    expect(screen.getByRole('button', { name: "Don't Save (n)" })).not.toHaveClass('selected');
+  });
+
+  it('keeps the buttons in Save, Don\'t Save, Cancel order', () => {
+    render(<SaveChangesDialog onSave={vi.fn()} onDiscard={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getAllByRole('button').map((button) => button.textContent?.trim())).toEqual([
+      'Save (y)',
+      "Don't Save (n)",
+      'Cancel (Esc)',
+    ]);
+  });
+
+  it('passes a supplied className through and adds none by default', () => {
+    const properties = { onSave: vi.fn(), onDiscard: vi.fn(), onCancel: vi.fn() };
+    const view = render(<SaveChangesDialog {...properties} />);
+    expect(screen.getByRole('alertdialog')).not.toHaveClass('save-walk-dialog');
+    view.rerender(<SaveChangesDialog {...properties} className="save-walk-dialog" />);
+    expect(screen.getByRole('alertdialog')).toHaveClass('modal', 'save-walk-dialog');
+  });
+
+  it('keeps a controlled selection interactive while a save is pending', async () => {
+    const onSave = vi.fn();
+    const onDiscard = vi.fn();
+    const onCancel = vi.fn();
+    const onSelect = vi.fn();
+    const properties = { selected: 'save' as const, onSelect, onSave, onDiscard, onCancel };
+    const view = render(<SaveChangesDialog {...properties} saving />);
+    expect(screen.getByRole('button', { name: 'Save (y)' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Save (y)' }));
+    fireEvent.keyDown(document, { key: 'y' });
+    fireEvent.keyDown(document, { key: 'Enter' });
+    expect(onSave).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: "Don't Save (n)" }));
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onDiscard).toHaveBeenCalledTimes(1);
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith('discard');
+    view.rerender(<SaveChangesDialog {...properties} saving={false} />);
+    fireEvent.keyDown(document, { key: 'y' });
+    fireEvent.keyDown(document, { key: 'Enter' });
+    await userEvent.click(screen.getByRole('button', { name: 'Save (y)' }));
+    expect(onSave).toHaveBeenCalledTimes(3);
   });
 });

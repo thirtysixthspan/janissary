@@ -19,6 +19,7 @@ type PluginCapabilitiesOptions = Pick<
   | 'dock'
   | 'onClose'
   | 'onDirtyHandle'
+  | 'tabState'
   | 'claimedChords'
   | 'dotColor'
   | 'recording'
@@ -37,6 +38,7 @@ export function usePluginCapabilities({
   dock,
   onClose,
   onDirtyHandle,
+  tabState,
   claimedChords: requestedChords,
   dotColor,
   recording,
@@ -86,6 +88,7 @@ export function usePluginCapabilities({
       onClose: close,
       splitAction,
       onDirtyHandle: registerDirty,
+      tabState,
       claimedChords: chords,
       dotColor,
       recording,
@@ -93,7 +96,7 @@ export function usePluginCapabilities({
       remoteCapabilities,
     }),
     [active, client, close, dock, host, label, pluginId, registerDirty, splitAction, chords, dotColor,
-      recording, transcript, remoteCapabilities],
+      recording, transcript, remoteCapabilities, tabState],
   );
   const capabilitiesRef = useRef(capabilities);
   capabilitiesRef.current = capabilities;

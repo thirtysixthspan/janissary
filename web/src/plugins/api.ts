@@ -182,6 +182,16 @@ export type TabDirtyHandle = {
   focus(): void;
 };
 
+// Small in-memory state scoped to one open plugin tab. The host owns its lifetime and clears it when
+// the tab closes; a plugin may use it for view state that must survive a placement remount.
+export type TabPluginState = {
+  get<Value>(key: string): Value | undefined;
+  set<Value>(key: string, value: Value): void;
+  delete(key: string): void;
+  // Optional change notification for a mounted body observing updates from another placement.
+  subscribe?(listener: () => void): () => void;
+};
+
 // One live terminal, attached for as long as the caller holds the handle. The bytes already travel
 // the application's own `pty` channel — this is the fourth consumer of it rather than a fifth
 // definition of one — so the plugin gains a terminal and no new transport.
@@ -213,6 +223,9 @@ export type TabPluginClientCapabilities = {
   // always knows the label, but fourteen plugin fixtures build this object and none of them keys
   // anything by it. Absent means "no per-tab identity is available to you".
   label?: string;
+  // Ephemeral state owned by this tab and cleared when it closes. Optional for older capability
+  // fixtures; plugins that use it can preserve local view state across host placement remounts.
+  tabState?: TabPluginState;
   dotColor?: string;
   // The remote target and its session control, present together only for a remote tab. The host
   // resolves the target from this tab's view and scopes each action to this tab's label.
@@ -235,10 +248,12 @@ export type TabPluginClientCapabilities = {
   // because a plugin may need to close on something other than a click of its own button — an
   // embedded cross-origin page swallows the host's Cmd+W and has to answer for it itself.
   close(reason?: { terminalExited: string }): void;
-  // Register this tab's unsaved work with the host, or `null` to drop it. Optional so a plugin that
-  // has nothing to save behaves exactly as it did before this existed. Call it again whenever the
-  // answer to `isDirty` changes: re-registering is how the host learns, and it is what puts the
-  // unsaved marker in the tab strip beside this tab's name.
+  // Register this tab's unsaved work with the host, or pass `null` to drop the registration, even
+  // while the tab remains open. Optional so a plugin that has nothing to save behaves exactly as it
+  // did before this existed. Call it again whenever the answer to `isDirty` changes: re-registering
+  // is how the host learns, and it is what puts the unsaved marker in the tab strip beside this tab's
+  // name. A placement change can unmount the view without closing the tab, so keep the registration
+  // when work should survive that move; the host removes it when the tab closes.
   registerDirtyHandle?(handle: TabDirtyHandle | null): void;
   // Write text to the system clipboard through the same helper every other surface in the
   // application copies with, so a plugin does not carry a second implementation of it — a plugin
@@ -310,6 +325,7 @@ export type PluginClientCapabilityOptions = {
   onClose: (reason?: { terminalExited: string }) => void;
   splitAction?: ReactNode;
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void;
+  tabState?: TabPluginState;
   claimedChords?: readonly string[];
   dotColor?: string;
   recording?: string;

@@ -8,7 +8,7 @@ import React, {
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../shared/ws/ws';
 import { AppCommandBarTabScope } from '../shared/command-bar/AppCommandBar';
-import type { createPluginClientCapabilities, TabDirtyHandle } from './api';
+import type { createPluginClientCapabilities, TabDirtyHandle, TabPluginState } from './api';
 import { usePluginHost } from './host';
 import { type ClientPluginRegistration } from './registry';
 import { usePluginRemote } from './usePluginRemote';
@@ -126,6 +126,7 @@ export function PluginBody({
   onClose,
   onSplit,
   onDirtyHandle,
+  getPluginTabState,
 }: {
   plugin: NonNullable<TabView['plugin']>;
   label: string;
@@ -139,6 +140,7 @@ export function PluginBody({
   onClose: (reason?: { terminalExited: string }) => void;
   onSplit?: () => void;
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void;
+  getPluginTabState?: (label: string) => TabPluginState;
 }) {
   const host = usePluginHost();
   const remoteCapabilities = usePluginRemote(remote, client, label);
@@ -153,6 +155,7 @@ export function PluginBody({
       onClose,
       onSplit,
       onDirtyHandle,
+      tabState: getPluginTabState?.(label),
       claimedChords: plugin.chords,
       dotColor,
       recording: plugin.recording,

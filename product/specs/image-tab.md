@@ -174,7 +174,9 @@ taken. Undoing back to exactly what was written reads as saved again, and redoin
 too; any list that differs from what was written — including a different operation applied in place
 of an undone one, which lands at the same step number — reads as unsaved. Two different routes to
 the same picture are not recognised as equal, so the tab errs toward calling that work unsaved. An
-edit made while a save is still in flight is not covered by that save.
+edit made while a save is still in flight is not covered by that save. A successful save updates the
+open tab's saved baseline even if it finishes after docking remounts the image body in a sidebar. A
+failed save leaves the baseline unchanged, and edits made after the request starts remain unsaved.
 
 ### Unsaved edits
 
@@ -187,11 +189,16 @@ image tab that holds them raises the same save-changes dialog an editor tab rais
 in this feature: replace the original file, then close. The close follows the write, not the attempt
 — if the file is not written the tab stays open with its edits intact, still marked unsaved. This
 covers every close path — the tab's × button, `Cmd+W`, and typing `close` or `exit`, including
-`close <name>` / `exit <name>` typed at another tab's command line — and unsaved
-image edits also hold up `quit`, closing the last tab, and closing or reloading the browser page
+`close <name>` / `exit <name>` typed at another tab's command line. `quit` and closing the last tab
+ask about the image tab's unsaved edits through the same dialog, one
+tab at a time. Its title uses the tab's title or label, because an image tab has no file name of its
+own in the strip. **Save** there replaces the original file before the walk moves on, and the app
+exits after the last answer. Closing or reloading the browser page shows the browser's own prompt
 (see [[quit-confirmation]]).
 
-An in-progress edit is a live, in-memory view like zoom and pan: it is not persisted and not restored.
+An in-progress edit is a live, in-memory view like zoom and pan: it is not persisted and not restored
+after the app closes. Docking the image into a sidebar, or selecting another entry beside it, keeps
+its operation list, saved baseline, and dirty state with the open tab until it is saved or closed.
 
 ### Tab strip: name and close button
 

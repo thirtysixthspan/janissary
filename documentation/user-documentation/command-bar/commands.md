@@ -163,7 +163,7 @@ A picker needs a screen, so a command that arrives from somewhere without one an
 
 <img class="agent-float" src="/agents/selim-south.png" alt="" />
 
-Typed by you, `quit` (or `/quit`) is the only command that exits the whole app, and it always asks first: a dialog reading "Are you sure you want to quit?" with **Quit (y)** and **Cancel (n)** buttons. That holds in the command bar of every tab type, so `quit` in a shell tab, a harness tab, or any other tab asks the same question. **Cancel** is selected by default, so a stray `Enter` is safe. Press `y` to confirm or `n` / `Escape` to cancel; `←`/`→` move the selection. While the dialog is open it traps all other input — clicks outside it and other keys do nothing.
+Typed by you, `quit` (or `/quit`) is the only command that exits the whole app, and it always asks first: a dialog reading "Are you sure you want to quit?" with **Quit (y)** and **Cancel (n)** buttons. That holds in the command bar of every tab type, so `quit` in a shell tab, a harness tab, or any other tab asks the same question. **Cancel** is selected by default, so a stray `Enter` is safe. Press `y` to confirm or `n` / `Escape` to cancel; `←`/`→` move the selection. While the dialog is open it traps all other input — clicks outside it and other keys do nothing. When a tab holds unsaved work, `quit` asks about that work instead (see [Quitting with unsaved work](#quitting-with-unsaved-work)).
 
 Cancelling closes the dialog, changes nothing, and puts the cursor back in the command line.
 
@@ -173,11 +173,11 @@ Don't reach for `exit` to leave the app: `exit` is an alias of `close` and close
 
 ### Quitting with unsaved work
 
-If any tab has unsaved changes when you quit, you get a different dialog instead: "You have unsaved changes. Close anyway?" with **Close anyway (y)** and **Cancel (n)**. It answers to the same keys as the ordinary quit dialog, with **Cancel** selected by default.
+When any tab has unsaved changes, the app asks about each such tab one at a time, in tab-strip order, with the same **Save (y)**, **Don't Save (n)**, and **Cancel (Esc)** dialog used when closing one tab. The title names the tab, and the tab is brought on screen behind the dialog; a docked tab is shown in its sidebar. **Save** writes the file before the walk moves on, while **Don't Save** moves on and leaves the edits in place until the app exits. **Save** is selected first and that selection carries to the next tab.
 
-Confirming quits straight away and throws those edits away. There's no per-file save prompt on this path, so save what you want to keep before you confirm. Cancelling leaves every tab open with its edits intact.
+Cancel or a failed save stops the quit and leaves the app open with the tab being asked about focused; files saved earlier stay saved. There is no **Save All**. After the last tab is answered, the app exits. If you quit again after cancelling or a failed save, the app starts over with every tab that still has unsaved work.
 
-Unsaved work means an [editor tab](/user-documentation/tab-types/editor) holding a buffer you haven't written, or an [image tab](/user-documentation/tab-types/image-viewer) holding edits you haven't saved. Both raise this dialog. This is a different thing from the save prompt you get when closing one tab while others remain — that one offers to save the file first.
+Unsaved work means an [editor tab](/user-documentation/tab-types/editor) holding a buffer you haven't written, or an [image tab](/user-documentation/tab-types/image-viewer) holding edits you haven't saved. Both kinds of tab are asked about. Closing one tab while others remain shows the same dialog for that tab alone and closes it after the answer.
 
 Closing the browser window or reloading the page while work is unsaved gets you the browser's own "leave site?" prompt, which is the one close path the app can't put a dialog in front of.
 

@@ -7,7 +7,7 @@ const clientFeatureDirectories = [
   'pickers',
   'plugins',
   'QuitDialog',
-  'SaveChangesDialog',
+  'unsaved-work',
   'ScheduleLaunchDialog',
   'toasts',
 ];

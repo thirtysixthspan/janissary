@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './shared/ws/ws';
+import type { DirtyTabHandle } from './shared/tab/handles';
 import { FileNavigatorTab } from './file-navigator/FileNavigatorTab';
 import { NotificationsTab } from './notifications/NotificationsTab';
 import { DockedPluginBody } from './plugins/DockedPluginBody';
@@ -12,6 +13,7 @@ import { useSidebarSelection } from './useSidebarSelection';
 import { multiOpenablePaths } from './multi-open';
 import { isFilesTabView } from './shared/tab/view-guards';
 import { DEFAULT_SIDEBAR_WIDTH_PX } from './layout-defaults';
+import type { TabPluginState } from './plugins/api';
 
 const MIN_WIDTH_PX = 180;
 const MAX_WIDTH_PCT = 50;
@@ -27,6 +29,9 @@ export function Sidebar({
   pickerOverlays, pickerSourceTab,
   tabNameMaxLength = 16, activeTabNameMaxLength = 50,
   width = DEFAULT_SIDEBAR_WIDTH_PX, onWidthChange, focusView, onNotificationsVisibilityChange,
+  onPluginDirtyHandle,
+  getPluginTabState,
+  dirtyPluginTabs,
 }: {
   side: 'left' | 'right';
   tabs: TabView[];
@@ -42,6 +47,9 @@ export function Sidebar({
   // event. Overrides the "most recently docked tab wins" default below — see `useLayoutState.ts`.
   focusView?: 'files' | 'notifications';
   onNotificationsVisibilityChange?: (visible: boolean) => void;
+  onPluginDirtyHandle?: (label: string, handle: DirtyTabHandle | null) => void;
+  getPluginTabState?: (label: string) => TabPluginState;
+  dirtyPluginTabs?: ReadonlySet<string>;
   pickerOverlays?: React.ReactNode;
   pickerSourceTab?: string;
 }) {
@@ -82,6 +90,7 @@ export function Sidebar({
         <TabStrip
           tabs={entries.map((e) => e.tab)}
           activeTab={activeIndex}
+          dirtyTabs={dirtyPluginTabs}
           onSelect={(i) => setSelectedLabel(entries[i].tab.label)}
           onClose={(i) => client.send({ method: 'closeTab', params: { label: entries[i].tab.label } })}
           onRename={(i, title) => client.renameTab(entries[i].index, title)}
@@ -112,6 +121,8 @@ export function Sidebar({
             client={client}
             overlay={!e.tab.hidden && pickerSourceTab === e.tab.label ? pickerOverlays : undefined}
             onClose={() => client.send({ method: 'closeTab', params: { label: e.tab.label } })}
+            onDirtyHandle={(handle) => onPluginDirtyHandle?.(e.tab.label, handle)}
+            getPluginTabState={getPluginTabState}
           />
         ))}
       </div>

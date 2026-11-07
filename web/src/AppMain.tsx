@@ -7,8 +7,7 @@ import { AppReportingSection } from './AppReportingSection';
 import { HarnessLaunchDialog } from './harness/HarnessLaunchDialog';
 import { ScheduleDialog } from './ScheduleLaunchDialog/ScheduleDialog';
 import { QuitDialog } from './QuitDialog/QuitDialog';
-import { UnsavedQuitDialog } from './UnsavedQuitDialog';
-import { CloseSaveGuard } from './CloseSaveGuard';
+import { CloseSaveGuard } from './unsaved-work/CloseSaveGuard';
 import { PickerOverlays } from './pickers/PickerOverlays';
 import { firstOpenOverlay } from './pickers/overlay-registry';
 import type { PickerOverlayView } from './pickers/picker/overlay-view';
@@ -17,13 +16,13 @@ import type { TabEntry } from './tab-entries';
 import type { CommandInputDropHandle } from './shared/drop-handles';
 import type { LayoutState } from './useLayoutState';
 import type { DirtyTabHandle, HarnessTabHandle, QuestionPanelHandle } from './shared/tab/handles';
+import type { TabPluginState } from './plugins/api';
 
 type AppMainProps = LayoutState & {
   current?: TabView;
   inputReference: React.RefObject<HTMLTextAreaElement | null>;
   dropRef: React.RefObject<CommandInputDropHandle | null>;
   quitConfirmOpen: boolean;
-  unsavedQuitOpen: boolean;
   // Every overlay's state, built once by `usePickerOverlays`. `PickerOverlays` takes exactly this
   // bag, and the two overlays a mounted harness tab renders are projected out of it below.
   pickers: PickerOverlayView;
@@ -41,13 +40,16 @@ type AppMainProps = LayoutState & {
   questionPanelRef: React.RefObject<QuestionPanelHandle | null>;
   tabHandles: React.RefObject<Map<string, DirtyTabHandle>>;
   dirtyPluginTabs: ReadonlySet<string>;
-  onPluginDirty: (label: string, dirty: boolean) => void;
+  registerPluginDirtyHandle: (label: string, handle: DirtyTabHandle | null) => void;
+  getPluginTabState: (label: string) => TabPluginState;
   harnessLaunch: HarnessLaunchView | null;
   scheduleLaunch: ScheduleLaunchView | null;
   confirmQuit: () => void;
   cancelQuit: () => void;
-  confirmUnsavedQuit: () => void;
-  cancelUnsavedQuit: () => void;
+  quitWalkRef: React.RefObject<(() => boolean) | null>;
+  saveWalkOpenRef: React.RefObject<boolean>;
+  onQuit: () => void;
+  revealDocked: (label: string) => boolean;
   guardRef: React.RefObject<((index: number) => boolean) | null>;
   client: JanusClient;
 };
@@ -57,16 +59,16 @@ type AppMainProps = LayoutState & {
 export function AppMain({
   current, client, inputReference,
   pickers, pickerSourceTab, tabs,
-  quitConfirmOpen, unsavedQuitOpen, dropRef,
+  quitConfirmOpen, dropRef,
   activeTab, secondaryTab, windowFocused, actionEntries, reportingEntries, closeTab,
   tabNameMaxLength, activeTabNameMaxLength,
   sidebarLeftWidth, setSidebarLeftWidth, sidebarRightWidth, setSidebarRightWidth,
   reportingHeightPct, setReportingHeightPct, focusLeft, focusRight,
   splitPct, setSplitPct,
   harnessHandles, questionPanelRef, tabHandles,
-  dirtyPluginTabs, onPluginDirty,
-  harnessLaunch, scheduleLaunch, confirmQuit, cancelQuit, confirmUnsavedQuit, cancelUnsavedQuit,
-  guardRef,
+  dirtyPluginTabs, registerPluginDirtyHandle, getPluginTabState,
+  harnessLaunch, scheduleLaunch, confirmQuit, cancelQuit,
+  quitWalkRef, saveWalkOpenRef, onQuit, revealDocked, guardRef,
 }: AppMainProps) {
   const pickerOverlays = <PickerOverlays {...pickers} />;
 
@@ -78,6 +80,9 @@ export function AppMain({
       sidebarLeftWidth={sidebarLeftWidth} onSidebarLeftWidthChange={setSidebarLeftWidth}
       sidebarRightWidth={sidebarRightWidth} onSidebarRightWidthChange={setSidebarRightWidth}
       focusLeft={focusLeft} focusRight={focusRight}
+      onPluginDirtyHandle={registerPluginDirtyHandle}
+      getPluginTabState={getPluginTabState}
+      dirtyPluginTabs={dirtyPluginTabs}
       pickerOverlays={pickerOverlays} pickerSourceTab={pickerSourceTab}
     >
       <AppCenterActionArea
@@ -91,7 +96,8 @@ export function AppMain({
         dirtyTabs={dirtyPluginTabs}
         mountedProps={{
           harnessHandles, tabHandles, questionPanelRef,
-          onPluginDirty,
+          onPluginDirtyHandle: registerPluginDirtyHandle,
+          getPluginTabState,
           pickerOverlays,
           pickerSourceTab,
           overlayOpen: firstOpenOverlay(pickers.overlays) !== undefined,
@@ -103,8 +109,11 @@ export function AppMain({
       {harnessLaunch && <HarnessLaunchDialog view={harnessLaunch} client={client} />}
       {scheduleLaunch && <ScheduleDialog view={scheduleLaunch} client={client} />}
       {quitConfirmOpen && <QuitDialog onConfirm={confirmQuit} onCancel={cancelQuit} />}
-      {unsavedQuitOpen && <UnsavedQuitDialog onConfirm={confirmUnsavedQuit} onCancel={cancelUnsavedQuit} />}
-      <CloseSaveGuard tabs={tabs} tabHandles={tabHandles} client={client} guardRef={guardRef} />
+      <CloseSaveGuard
+        tabs={tabs} tabHandles={tabHandles} client={client} guardRef={guardRef}
+        quitWalkRef={quitWalkRef} saveWalkOpenRef={saveWalkOpenRef}
+        onQuit={onQuit} revealDocked={revealDocked}
+      />
     </AppShell>
   );
 }

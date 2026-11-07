@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
-import type { DirtyTabHandle } from './shared/tab/handles';
+import type { DirtyTabHandle } from '../shared/tab/handles';
 import { useUnsavedQuitGuard } from './useUnsavedQuitGuard';
 
 function makeTab(label: string): TabView {
@@ -25,52 +25,70 @@ function tabHandles(dirty: boolean): React.RefObject<Map<string, DirtyTabHandle>
   return { current: new Map([['a', { isDirty: () => dirty, save: async () => {}, focus: () => {} }]]) };
 }
 
+function walkRef(started: boolean | null): React.RefObject<(() => boolean) | null> {
+  return { current: started === null ? null : vi.fn(() => started) };
+}
+
 describe('useUnsavedQuitGuard', () => {
   it('calls the raw openQuitConfirm straight through when nothing is dirty', () => {
     const openQuitConfirm = vi.fn();
-    const { result } = renderHook(() => useUnsavedQuitGuard([makeTab('a')], tabHandles(false), openQuitConfirm, vi.fn()));
+    const quitWalkRef = walkRef(true);
+    const { result } = renderHook(() => useUnsavedQuitGuard([makeTab('a')], tabHandles(false), openQuitConfirm, quitWalkRef));
     act(() => result.current.guardedOpenQuitConfirm());
     expect(openQuitConfirm).toHaveBeenCalledTimes(1);
-    expect(result.current.unsavedQuitOpen).toBe(false);
+    expect(quitWalkRef.current).not.toHaveBeenCalled();
   });
 
-  it('opens the unsaved-quit dialog instead of the raw confirm when a tab is dirty', () => {
+  it('starts the quit walk instead of the raw confirm when an editor tab is dirty', () => {
     const openQuitConfirm = vi.fn();
-    const { result, rerender } = renderHook(
-      ({ dirty }) => useUnsavedQuitGuard([makeTab('a')], tabHandles(dirty), openQuitConfirm, vi.fn()),
-      { initialProps: { dirty: true } },
-    );
+    const quitWalkRef = walkRef(true);
+    const { result } = renderHook(() => useUnsavedQuitGuard([makeTab('a')], tabHandles(true), openQuitConfirm, quitWalkRef));
     act(() => result.current.guardedOpenQuitConfirm());
-    rerender({ dirty: true });
+    expect(quitWalkRef.current).toHaveBeenCalledTimes(1);
     expect(openQuitConfirm).not.toHaveBeenCalled();
-    expect(result.current.unsavedQuitOpen).toBe(true);
   });
 
-  it('confirmUnsavedQuit closes the dialog and runs the quit command', () => {
-    const runCommand = vi.fn();
-    const { result, rerender } = renderHook(() => useUnsavedQuitGuard([makeTab('a')], tabHandles(true), vi.fn(), runCommand));
+  // `quit` and closing the last tab bypass the per-tab close guard entirely, so an image tab with an
+  // unsaved crop has to be visible here or the feature ships a hole on the two easiest paths to miss.
+  it('starts the quit walk for a dirty plugin tab rather than the plain quit dialog', () => {
+    const openQuitConfirm = vi.fn();
+    const quitWalkRef = walkRef(true);
+    const { result } = renderHook(() => useUnsavedQuitGuard([makePluginTab('a')], tabHandles(true), openQuitConfirm, quitWalkRef));
     act(() => result.current.guardedOpenQuitConfirm());
-    rerender();
-    act(() => result.current.confirmUnsavedQuit());
-    rerender();
-    expect(runCommand).toHaveBeenCalledWith('quit');
-    expect(result.current.unsavedQuitOpen).toBe(false);
+    expect(quitWalkRef.current).toHaveBeenCalledTimes(1);
+    expect(openQuitConfirm).not.toHaveBeenCalled();
   });
 
-  it('cancelUnsavedQuit closes the dialog without running the quit command', () => {
-    const runCommand = vi.fn();
-    const { result, rerender } = renderHook(() => useUnsavedQuitGuard([makeTab('a')], tabHandles(true), vi.fn(), runCommand));
+  it('falls back to the raw confirm when the quit walk does not start', () => {
+    const openQuitConfirm = vi.fn();
+    const quitWalkRef = walkRef(false);
+    const { result } = renderHook(() => useUnsavedQuitGuard([makeTab('a')], tabHandles(true), openQuitConfirm, quitWalkRef));
     act(() => result.current.guardedOpenQuitConfirm());
-    rerender();
-    act(() => result.current.cancelUnsavedQuit());
-    rerender();
-    expect(runCommand).not.toHaveBeenCalled();
-    expect(result.current.unsavedQuitOpen).toBe(false);
+    expect(quitWalkRef.current).toHaveBeenCalledTimes(1);
+    expect(openQuitConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to the raw confirm when no quit walk is mounted', () => {
+    const openQuitConfirm = vi.fn();
+    const { result } = renderHook(() => useUnsavedQuitGuard([makeTab('a')], tabHandles(true), openQuitConfirm, walkRef(null)));
+    act(() => result.current.guardedOpenQuitConfirm());
+    expect(openQuitConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads the quit walk at call time rather than during render', () => {
+    const openQuitConfirm = vi.fn();
+    const quitWalkRef = walkRef(null);
+    const { result } = renderHook(() => useUnsavedQuitGuard([makeTab('a')], tabHandles(true), openQuitConfirm, quitWalkRef));
+    const start = vi.fn(() => true);
+    quitWalkRef.current = start;
+    act(() => result.current.guardedOpenQuitConfirm());
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(openQuitConfirm).not.toHaveBeenCalled();
   });
 
   it('arms a beforeunload guard that prevents the default only when a tab is dirty', () => {
     const { rerender } = renderHook(
-      ({ dirty }) => useUnsavedQuitGuard([makeTab('a')], tabHandles(dirty), vi.fn(), vi.fn()),
+      ({ dirty }) => useUnsavedQuitGuard([makeTab('a')], tabHandles(dirty), vi.fn(), walkRef(null)),
       { initialProps: { dirty: false } },
     );
     const cleanEvent = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent;
@@ -83,22 +101,9 @@ describe('useUnsavedQuitGuard', () => {
     expect(dirtyEvent.defaultPrevented).toBe(true);
   });
 
-  // `quit` and closing the last tab bypass the per-tab close guard entirely, so an image tab with an
-  // unsaved crop has to be visible here or the feature ships a hole on the two easiest paths to miss.
-  it('raises the unsaved prompt for a dirty plugin tab rather than the plain quit dialog', () => {
-    const openQuitConfirm = vi.fn();
-    const { result, rerender } = renderHook(
-      () => useUnsavedQuitGuard([makePluginTab('a')], tabHandles(true), openQuitConfirm, vi.fn()),
-    );
-    act(() => result.current.guardedOpenQuitConfirm());
-    rerender();
-    expect(openQuitConfirm).not.toHaveBeenCalled();
-    expect(result.current.unsavedQuitOpen).toBe(true);
-  });
-
   it('arms beforeunload for a dirty plugin tab and leaves a clean one alone', () => {
     const { rerender } = renderHook(
-      ({ dirty }) => useUnsavedQuitGuard([makePluginTab('a')], tabHandles(dirty), vi.fn(), vi.fn()),
+      ({ dirty }) => useUnsavedQuitGuard([makePluginTab('a')], tabHandles(dirty), vi.fn(), walkRef(null)),
       { initialProps: { dirty: false } },
     );
     const cleanEvent = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent;

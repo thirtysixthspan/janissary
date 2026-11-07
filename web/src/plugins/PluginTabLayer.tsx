@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../shared/ws/ws';
 import { tabBodyBorder } from '../shared/tab/body-border';
-import type { TabDirtyHandle } from './api';
+import type { TabDirtyHandle, TabPluginState } from './api';
 import { PluginBody } from './PluginBody';
 
 // The host-owned frame around one plugin tab: the `.tab-body` element, its focus border, its split
@@ -17,6 +17,7 @@ export function PluginTabLayer({
   onClose,
   onSplit,
   onDirtyHandle,
+  getPluginTabState,
   overlay,
 }: {
   tab: TabView;
@@ -27,6 +28,7 @@ export function PluginTabLayer({
   onClose: (reason?: { terminalExited: string }) => void;
   onSplit?: () => void;
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void;
+  getPluginTabState?: (label: string) => TabPluginState;
   overlay?: ReactNode;
 }) {
   const isVisible = visible && !tab.hidden && !tab.dock;
@@ -52,6 +54,7 @@ export function PluginTabLayer({
           pendingQuestion={tab.pendingQuestion}
           active={isActive} onClose={onClose} onSplit={isVisible ? onSplit : undefined}
           onDirtyHandle={onDirtyHandle}
+          getPluginTabState={getPluginTabState}
         />
       )}
       {isActive && overlay}
