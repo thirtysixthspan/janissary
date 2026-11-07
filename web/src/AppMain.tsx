@@ -110,7 +110,7 @@ export function AppMain({
       {scheduleLaunch && <ScheduleDialog view={scheduleLaunch} client={client} />}
       {quitConfirmOpen && <QuitDialog onConfirm={confirmQuit} onCancel={cancelQuit} />}
       <CloseSaveGuard
-        tabs={tabs} tabHandles={tabHandles} client={client} guardRef={guardRef}
+        tabs={tabs} activeTab={activeTab} tabHandles={tabHandles} client={client} guardRef={guardRef}
         quitWalkRef={quitWalkRef} saveWalkOpenRef={saveWalkOpenRef}
         onQuit={onQuit} revealDocked={revealDocked}
       />

@@ -234,7 +234,7 @@ Closing an editor tab that has unsaved changes triggers a confirmation dialog: "
 
 - **Save (y):** saves the file to disk, then closes the tab. The close happens only once the file is actually written. If the save does not succeed — the server reports an error, or the file changed on disk and the overwrite prompt goes up instead — the dialog is dismissed, the tab stays open with its changes intact, and focus returns to the editor so the error or the prompt is visible. Closing again after the save succeeds closes the tab as usual.
 - **Don't Save (n):** closes the tab without saving.
-- **Cancel (Esc):** dismisses the dialog and leaves the tab open with changes intact. Focus returns to the editor at the current cursor position.
+- **Cancel (Esc):** dismisses the dialog and leaves the tab open with changes intact. If a named close raised it from another tab, the target becomes current. Focus returns to the editor at the current cursor position.
 
 While Save is pending, repeated Save clicks and keyboard shortcuts do nothing. Cancel and Don't
 Save remain available. Cancelling, discarding, replacing the prompt, or closing the application

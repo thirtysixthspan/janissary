@@ -8,6 +8,7 @@ import { SaveChangesDialog } from './SaveChangesDialog';
 
 type Properties = {
   tabs: TabView[];
+  activeTab?: number;
   tabHandles: React.RefObject<Map<string, DirtyTabHandle>>;
   client: JanusClient;
   guardRef: React.RefObject<((index: number) => boolean) | null>;
@@ -21,7 +22,7 @@ const noQuit = () => {};
 const nothingDocked = () => false;
 
 export function CloseSaveGuard({
-  tabs, tabHandles, client, guardRef,
+  tabs, activeTab = 0, tabHandles, client, guardRef,
   quitWalkRef, saveWalkOpenRef, onQuit = noQuit, revealDocked = nothingDocked,
 }: Properties) {
   const {
@@ -32,6 +33,20 @@ export function CloseSaveGuard({
   const effectiveWalkOpenRef = saveWalkOpenRef ?? localWalkOpenRef;
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
+  const pendingFocusLabelRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    const label = pendingFocusLabelRef.current;
+    if (!label) return;
+    if (tabs.every((tab) => tab.label !== label)) {
+      pendingFocusLabelRef.current = undefined;
+      return;
+    }
+    if (tabs[activeTab]?.label !== label) return;
+    pendingFocusLabelRef.current = undefined;
+    const frame = requestAnimationFrame(() => tabHandles.current.get(label)?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [activeTab, tabs, tabHandles]);
 
   const { start: startQuitWalk, save, discard, cancel, title } = useQuitWalk({
     tabs, tabHandles, client, onQuit, revealDocked, saveWalkOpenRef: effectiveWalkOpenRef,
@@ -89,6 +104,23 @@ export function CloseSaveGuard({
     client.send({ method: 'closeTab', params: { label } });
   };
 
+  const revealAndFocusCloseTarget = () => {
+    const label = labelRef.current;
+    const targetExists = tabsRef.current.some((tab) => tab.label === label);
+    const handle = targetHandle();
+    if (!targetExists || !handle) return;
+    if (revealDocked(label)) {
+      handle.focus();
+      return;
+    }
+    if (tabsRef.current[activeTab]?.label === label) {
+      handle.focus();
+      return;
+    }
+    pendingFocusLabelRef.current = label;
+    client.send({ method: 'focusTab', params: { label } });
+  };
+
   return (
     <SaveChangesDialog
       saving={saving}
@@ -119,9 +151,8 @@ export function CloseSaveGuard({
         closeTarget(label);
       }}
       onCancel={() => {
-        const handle = targetHandle();
         dismiss();
-        handle?.focus();
+        revealAndFocusCloseTarget();
       }}
     />
   );

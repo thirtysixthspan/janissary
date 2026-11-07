@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Keep the cancelled dirty editor current after a named close.
-
-Existing Issue: After cancelling a named close for an inactive dirty editor, the shell remains active instead of the editor whose dialog was cancelled. Severity: 5/10
-
-Existing Risk: 4/10 - Users can resume typing in the wrong tab after cancelling, which makes subsequent commands or edits confusing.
-
-Proposal Risk: 2/10 - A host-level focus regression could leave the editor inactive again if the named-close cancel path is not covered.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1957 "Keep the cancelled dirty tab current after a named close". D12 (description), verbatim: “Closing one dirty tab while others remain still uses the single-tab dialog. Do: From a fresh instance, open `alpha.txt`, `beta.txt`, and the shell tab. Append ` alpha-edited` to alpha and make alpha current. Click alpha's ×. Press `Escape`. Click the shell tab's command bar, run `close alpha`, and press `Escape` again. Expect: Both closes show \"Do you want to save changes to this file?\" with Save (y), Don't Save (n), and Cancel (Esc), not the walk title \"Do you want to save changes to alpha.txt?\". After each Escape, alpha remains open, current, and dirty, and no walk dialog or app exit occurs.” The literal `close alpha` is invalid for a tab labeled `alpha.txt`; using `close alpha.txt` opens the single-file dialog, and Escape leaves the `alpha alpha-edited` buffer intact but leaves `janus` active, while Escape from the preceding tab-strip dialog leaves alpha active. In `web/src/unsaved-work/CloseSaveGuard.tsx`, the close-mode `onCancel` handler dismisses the dialog and calls `handle?.focus()` without activating the requested tab; focusing a handle in an inactive tab cannot make its tab current. Activate the target tab before focusing its handle on cancel, and add a regression test that a cancelled named close returns the current tab to the dirty editor.
-
-
 * Correct the named-close examples to target the full filename and match the second-window state.
 
 Existing Issue: D12 and D15 name the nonexistent tab `alpha` instead of `alpha.txt`, and D15 expects a close prompt in a second browser window whose editor buffer has no unsaved changes. Severity: 3/10
