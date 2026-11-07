@@ -71,6 +71,11 @@ describe('the PDF plugin stays inside its own tab', () => {
     expect(entry).not.toMatch(/pdfjs-dist[^'"]*\.css/);
   });
 
+  it('pins each find highlight constant to its own selector', () => {
+    expect(PDF_FIND_MATCH).toBe('pdf-find-match');
+    expect(PDF_FIND_CURRENT).toBe('pdf-find-current');
+  });
+
   it('styles both find highlights on the text layer', () => {
     const selectors = selectorsOf(styles);
 
