@@ -124,7 +124,9 @@ inside the stage, and in continuous scroll the page's width fits so scrolling is
 matters. Beyond 100% the page overflows and the stage scrolls in both directions; there is no
 click-drag panning. The current percentage is shown on the view only while it differs from 100%.
 
-**Zoom controls**, active only in the tab that owns the keys: the current tab among the centre panes, or a PDF tab shown in a sidebar while focus is inside it (clicking its page puts focus there):
+The keys belong to one PDF tab at a time, so a centre PDF and a docked PDF never both answer the same key. A centre PDF tab owns them while it is the current tab among the centre panes and focus is not inside another tab, including when focus rests on its own page. A PDF tab shown in a sidebar owns them only while focus is inside it (clicking its page puts focus there).
+
+**Zoom controls**, active only in the tab that owns the keys:
 
 - **The header's `+` and `−`** — zoom in / out in 10% steps, clamped to 10%–800% and saturating at
   either end rather than overshooting.
@@ -132,7 +134,9 @@ click-drag panning. The current percentage is shown on the view only while it di
 - **Escape** — return to 100%, which is the fit.
 
 **Navigation controls**, likewise active only in that tab — a PDF tab hidden behind another tab, in
-the other split pane, or shown in a sidebar without focus inside it, ignores all of them:
+the other split pane, or shown in a sidebar without focus inside it, ignores all of them, and so
+does the current centre PDF tab while focus is inside another tab, such as a docked shell, harness,
+or files sidebar:
 
 - **↑ / ↓ arrows** — in single page, move to the previous / next page, stopping at the first and last;
   in continuous scroll, scroll up / down by a small step.
@@ -159,7 +163,7 @@ active theme.
 
 While the PDF tab is active and the chord reaches it — the current tab among the centre panes, or a PDF tab shown in a sidebar while focus is inside it — `Cmd+F` is answered even before the document has loaded and after a load failure. In those states it does nothing visible, and the browser's own find bar does not open. If the document fails while the overlay is open, the overlay closes and every mark clears.
 
-The overlay sits against the bottom edge of the tab, spans the tab's full width, covers the page strip when it is showing, takes at most 70% of the tab's height, and scrolls its rows when they overflow. It is available in both page layouts. The input opens focused, and its placeholder and accessible name are `Search document`. While focus is in the overlay's input, it takes the keyboard, so the PDF view's arrows, page keys, and Escape do not also act on the document behind it. The arrow and page keys work on the document as usual while focus is outside the overlay.
+The overlay sits against the bottom edge of the tab, spans the tab's full width, covers the page strip when it is showing, takes at most 70% of the tab's height, and scrolls its rows when they overflow. It is available in both page layouts. The input opens focused, and its placeholder and accessible name are `Search document`. While focus is in the overlay's input, it takes the keyboard, so the PDF view's arrows, page keys, and Escape do not also act on the document behind it. While focus is outside the overlay, the arrow and page keys work on the document as usual in the PDF tab that owns the keys (see § Zoom and keys).
 
 Matching is the editor's: one uninterrupted, case-insensitive occurrence of the typed text, with no regex, case, or whole-word options. Up to ten rows are listed. The whole document is searched, every page, not only the pages that have been drawn. Each searchable line is one visual line of text on a page; two lines with the same text are two rows. A match must sit within one line. A phrase that wraps onto the next line, or a word hyphenated across a line break, is not found. This is a documented limitation, not a bug.
 
