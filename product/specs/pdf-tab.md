@@ -155,7 +155,7 @@ active theme.
 
 ### Find
 
-`Cmd+F` opens the editor tab's find overlay over the PDF tab while the PDF tab is the visible one. It is the same overlay the editor and shell tabs use: the same focused input, the same ranked rows, the same appearance and keys, and the same `type to search` and `No matching lines` states. When another tab is focused, the chord means what it means there: the editor's find, the shell's transcript find, or whatever else that tab does with it. Find changes only what is in view and never writes to the document. `Ctrl+F` does not open the overlay; the PDF tab adds no `Ctrl+F` binding.
+`Cmd+F` opens the editor tab's find overlay over the PDF tab while the PDF tab is the visible one. It is the same overlay the editor (see [[editor-tab]]) and shell (see [[shell-tab]]) tabs use: the same focused input, the same ranked rows, the same appearance and keys, and the same `type to search` and `No matching lines` states. When another tab is focused, the chord means what it means there: the editor's find, the shell's transcript find, or whatever else that tab does with it. Find changes only what is in view and never writes to the document. `Ctrl+F` does not open the overlay; the PDF tab adds no `Ctrl+F` binding.
 
 While the PDF tab is visible, `Cmd+F` is answered even before the document has loaded and after a load failure. In those states it does nothing visible, and the browser's own find bar does not open.
 

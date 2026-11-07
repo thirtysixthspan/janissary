@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's cross-links from the PDF Find spec to the editor and shell specs.
-
-Existing Issue: The new PDF Find section says the overlay is the same one the editor and shell tabs use but carries no `[[editor-tab]]` or `[[shell-tab]]` link, although the subplan's design decisions require both. Severity: 3/10
-
-Existing Risk: 3/10 - A reader of the PDF spec cannot follow the shared-overlay contract to the specs that own it, so a later change to the editor or shell find can land without the PDF section being checked or updated.
-
-Proposal Risk: 1/10 - The change is text-only and both target specs exist, so the only residual risk is a mistyped wiki link, which a reader or a spec-link check would surface.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1958 "add the editor and shell spec cross-links to the PDF Find section". In product/specs/pdf-tab.md § Find, first paragraph, change "It is the same overlay the editor and shell tabs use" to name the owning specs with wiki links, for example "It is the same overlay the editor (see [[editor-tab]]) and shell (see [[shell-tab]]) tabs use". Keep the rest of the section byte-for-byte and change no code. The targets are product/specs/editor-tab.md § Finding a line and product/specs/shell-tab.md § Transcript search, and the PDF spec already uses [[tab-plugins]], [[profiles]], and [[notifications]], so the syntax is established. No prose test covers this and no source changes are needed; $janissary/scripts/run.mjs check-diff should stay clean, and any spec-link check should resolve both names.
-
-
 * Correct the PDF Find spec's focus-restore claim to match the code's another-text-field exception.
 
 Existing Issue: The PDF Find spec says closing the overlay returns focus to the element that had it before `Cmd+F` was pressed whenever that element is still in the document, while usePdfFind.close deliberately skips the restore when another text-entry element holds focus, as its own test pins. Severity: 2/10
