@@ -19,8 +19,10 @@ export type PdfKeyHandlers = {
 // Page Up/Page Down move through a document, and a plain wheel scrolls it. Zoom is added beside them
 // — the header's controls and Ctrl/Cmd+wheel — rather than on top of them.
 //
-// A plugin tab stays mounted while hidden, so every binding is gated on the host's own `enabled`
-// answer rather than on anything read off the DOM: a hidden PDF tab must swallow no key.
+// A plugin tab stays mounted while hidden, so every binding is gated on the caller's `enabled`
+// answer rather than on anything this hook reads from the DOM: a hidden PDF tab, or one whose keys
+// belong to another tab, must swallow no key. `PdfTab` derives that answer from the host's active
+// flag and the focused tab through `usePdfKeyOwnership`.
 export function usePdfKeys(
   enabled: boolean,
   layout: PdfLayout,

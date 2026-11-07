@@ -124,15 +124,15 @@ inside the stage, and in continuous scroll the page's width fits so scrolling is
 matters. Beyond 100% the page overflows and the stage scrolls in both directions; there is no
 click-drag panning. The current percentage is shown on the view only while it differs from 100%.
 
-**Zoom controls**, active only while the PDF tab is the one on screen:
+**Zoom controls**, active only in the tab that owns the keys: the current tab among the centre panes, or a PDF tab shown in a sidebar while focus is inside it (clicking its page puts focus there):
 
 - **The header's `+` and `−`** — zoom in / out in 10% steps, clamped to 10%–800% and saturating at
   either end rather than overshooting.
 - **Ctrl / Cmd + mouse wheel** — the same steps.
 - **Escape** — return to 100%, which is the fit.
 
-**Navigation controls**, likewise active only while the PDF tab is on screen — a PDF tab hidden
-behind another tab, or in the other split pane, ignores all of them:
+**Navigation controls**, likewise active only in that tab — a PDF tab hidden behind another tab, in
+the other split pane, or shown in a sidebar without focus inside it, ignores all of them:
 
 - **↑ / ↓ arrows** — in single page, move to the previous / next page, stopping at the first and last;
   in continuous scroll, scroll up / down by a small step.

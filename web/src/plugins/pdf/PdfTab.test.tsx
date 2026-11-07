@@ -66,12 +66,17 @@ function capabilities(active = true): TabPluginClientCapabilities {
   } as unknown as TabPluginClientCapabilities;
 }
 
+function dockedCapabilities(): TabPluginClientCapabilities {
+  return { ...capabilities(), label: 'pdf2', dock: 'left' };
+}
+
 // Say which pages are on screen, and how much of each. Every watcher that observed one of the named
 // elements hears about it, exactly as a real browser reports to both the page's own observer and the
 // stage's.
-function onScreen(ratios: Record<number, number>, root = '.pdf-stage'): void {
+function onScreen(ratios: Record<number, number>, root: string | Element = '.pdf-stage'): void {
+  const scope = typeof root === 'string' ? document.querySelector(root) : root;
   const entries = Object.entries(ratios).flatMap(([page, ratio]) => {
-    const target = document.querySelector(`${root} .pdf-page[data-page="${CSS.escape(page)}"]`);
+    const target = scope?.querySelector(`.pdf-page[data-page="${CSS.escape(page)}"]`);
     return target ? [{ target, intersectionRatio: ratio, isIntersecting: ratio > 0 }] : [];
   });
   act(() => {
@@ -107,23 +112,68 @@ async function mount(document_: LoadedPdf | null = makeDocument(), client = capa
   return { ...view, chords };
 }
 
+// The supported two-PDF arrangement: a centre tab and one docked into a sidebar. Each body sits in
+// the host's labelled frame, which is what separates the focused tab's keys from the other's.
+async function mountPair(document_: LoadedPdf = markedDocument([['needle here'], ['needle there']])) {
+  load.mockResolvedValue({ ok: true, document: document_ });
+  const chords = createPluginChordRegistry();
+  const view = render(
+    <PluginChordProvider registry={chords}>
+      <div className="tab-body" data-tab-label="pdf1">
+        <PdfTab payload={payload} capabilities={capabilities()} />
+      </div>
+      <div className="sidebar-plugin" data-tab-label="pdf2">
+        <PdfTab payload={payload} capabilities={dockedCapabilities()} />
+      </div>
+    </PluginChordProvider>,
+  );
+  await waitFor(() => { expect(screen.getAllByLabelText('Show pages')).toHaveLength(2); });
+  const [centre, docked] = [...view.container.querySelectorAll<HTMLElement>('.pdf-tab')];
+  const centreStage = centre.querySelector('.pdf-stage') as HTMLElement;
+  const dockedStage = docked.querySelector('.pdf-stage') as HTMLElement;
+  await waitFor(() => {
+    for (const stage of [centreStage, dockedStage]) {
+      const page = stage.querySelector('.pdf-page');
+      expect(page !== null && watchers.some((watcher) => watcher.elements.includes(page))).toBe(true);
+    }
+  });
+  return { ...view, chords, centre, docked, centreStage, dockedStage };
+}
+
 function findInput(): HTMLInputElement {
   return screen.getByLabelText('Search document') as HTMLInputElement;
+}
+
+function findInputIn(tab: HTMLElement): HTMLInputElement {
+  return within(tab).getByLabelText('Search document') as HTMLInputElement;
+}
+
+function rangesIn(highlights: Map<string, Set<Range>>, root: Element): Range[] {
+  return allRanges(highlights).filter((range) => root.contains(range.startContainer));
 }
 
 function findRows(): HTMLElement[] {
   return [...document.querySelectorAll<HTMLElement>('.editor-find-row')];
 }
 
-function runFindChord(chords: PluginChordRegistry): boolean {
+function runChord(chords: PluginChordRegistry, label: string): boolean {
   let claimed = false;
-  act(() => { claimed = chords.run('meta+f', 'pdf1'); });
+  act(() => { claimed = chords.run('meta+f', label); });
   return claimed;
+}
+
+function runFindChord(chords: PluginChordRegistry): boolean {
+  return runChord(chords, 'pdf1');
 }
 
 function openFind(chords: PluginChordRegistry): HTMLInputElement {
   expect(runFindChord(chords)).toBe(true);
   return findInput();
+}
+
+function openFindIn(chords: PluginChordRegistry, label: string, tab: HTMLElement): HTMLInputElement {
+  expect(runChord(chords, label)).toBe(true);
+  return findInputIn(tab);
 }
 
 async function finishReading(): Promise<void> {
@@ -796,5 +846,66 @@ describe('a second PdfTab', () => {
     expect(container.querySelector('.pdf-thumbnails')).toBeNull();
     expect(screen.getByLabelText('Continuous scroll')).toBeInTheDocument();
     expect(screen.getByLabelText('Show pages')).toBeInTheDocument();
+  });
+});
+
+describe('a centre and a docked PdfTab', () => {
+  async function openBoth() {
+    const highlights = stubHighlights();
+    const view = await mountPair();
+    const centreInput = openFindIn(view.chords, 'pdf1', view.centre);
+    await userEvent.type(centreInput, 'needle');
+    await finishReading();
+    const dockedInput = openFindIn(view.chords, 'pdf2', view.docked);
+    await userEvent.type(dockedInput, 'needle');
+    await finishReading();
+    onScreen({ 0: 1 }, view.centreStage);
+    onScreen({ 0: 1 }, view.dockedStage);
+    await waitFor(() => {
+      expect(rangesIn(highlights, view.centreStage)).toHaveLength(1);
+      expect(rangesIn(highlights, view.dockedStage)).toHaveLength(1);
+    });
+    return { ...view, highlights };
+  }
+
+  it('closes only the centre overlay on Escape and leaves the docked marks', async () => {
+    const { highlights, centre, docked, centreStage, dockedStage } = await openBoth();
+    findInputIn(docked).blur();
+    expect(document.activeElement).toBe(document.body);
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(within(centre).queryByLabelText('Search document')).not.toBeInTheDocument();
+    expect(findInputIn(docked)).toBeInTheDocument();
+    await waitFor(() => { expect(rangesIn(highlights, centreStage)).toEqual([]); });
+    expect(rangesIn(highlights, dockedStage)).toHaveLength(1);
+  });
+
+  it('closes only the docked overlay on Escape once focus is inside it and leaves the centre marks', async () => {
+    const { highlights, centre, docked, centreStage, dockedStage } = await openBoth();
+
+    await userEvent.click(dockedStage);
+    expect(document.activeElement).toBe(dockedStage);
+    await userEvent.keyboard('{Escape}');
+
+    expect(within(docked).queryByLabelText('Search document')).not.toBeInTheDocument();
+    expect(findInputIn(centre)).toBeInTheDocument();
+    await waitFor(() => { expect(rangesIn(highlights, dockedStage)).toEqual([]); });
+    expect(rangesIn(highlights, centreStage)).toHaveLength(1);
+  });
+
+  it('pages only the focused tab with the arrow and page keys', async () => {
+    const { centre, docked, dockedStage } = await mountPair(makeDocument(3));
+
+    await userEvent.keyboard('{ArrowDown}');
+    expect(within(centre).getByText('2 / 3')).toBeInTheDocument();
+    expect(within(docked).getByText('1 / 3')).toBeInTheDocument();
+
+    await userEvent.click(dockedStage);
+    expect(document.activeElement).toBe(dockedStage);
+    await userEvent.keyboard('{PageDown}');
+
+    expect(within(docked).getByText('2 / 3')).toBeInTheDocument();
+    expect(within(centre).getByText('2 / 3')).toBeInTheDocument();
   });
 });

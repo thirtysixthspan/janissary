@@ -25,7 +25,7 @@ A PDF tab opens showing **one page at a time**, fitted to the tab. The stacked-p
 | `PageUp` / `PageDown` | Previous / next page | Scroll a screenful |
 | Scroll wheel | Scroll | Scroll |
 
-The keys only reach the PDF tab you are looking at — one hidden behind another tab, or in the other split pane, ignores them.
+The keys only reach the PDF tab you are working in — one hidden behind another tab, or in the other split pane, ignores them. A PDF tab docked into a sidebar takes them once you click into it.
 
 When the document overflows the stage, you can also drag its scrollbars to move through it.
 

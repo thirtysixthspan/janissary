@@ -11,6 +11,7 @@ import { PdfThumbnails } from './PdfThumbnails';
 import { usePdfDocument } from './usePdfDocument';
 import { usePdfFind } from './usePdfFind';
 import { usePdfFindMarks } from './usePdfFindMarks';
+import { usePdfKeyOwnership } from './usePdfKeyOwnership';
 import { usePdfKeys } from './usePdfKeys';
 
 // A PDF tab body: the shared metadata header with the file's name, size, and location, the layout
@@ -31,6 +32,8 @@ export function PdfTab({
   const [jump, setJump] = useState<PdfJump>({ page: 0, token: 0 });
   const [textLayerVersion, setTextLayerVersion] = useState(0);
   const stageRef = useRef<HTMLDivElement>(null);
+  const tabRef = useRef<HTMLDivElement>(null);
+  const ownsKeys = usePdfKeyOwnership(tabRef, capabilities.active, capabilities.dock !== null);
 
   const loaded = state.status === 'ready' ? state.document : null;
   const pageCount = loaded?.pageSizes.length ?? 0;
@@ -67,7 +70,7 @@ export function PdfTab({
   }), [goToPage, page, pageCount]);
 
   usePdfKeys(
-    capabilities.active && loaded !== null,
+    ownsKeys && loaded !== null,
     layout,
     stageRef,
     handlers,
@@ -85,7 +88,7 @@ export function PdfTab({
   };
 
   return (
-    <div className="plugin-tab pdf-tab" data-doc-shot="pdf-view">
+    <div className="plugin-tab pdf-tab" data-doc-shot="pdf-view" ref={tabRef}>
       <div className="plugin-meta">
         <span className="plugin-name">{pdf.name}</span>
         <span className="plugin-size">{pdf.size}</span>
@@ -176,6 +179,7 @@ export function PdfTab({
               onRenderFailure={state.onRenderFailure}
               onTextLayer={onTextLayer}
               stageRef={stageRef}
+              focusable={capabilities.dock !== null}
             />
           )}
       </div>
