@@ -1,9 +1,10 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import { CommandManager } from './manager.js';
+import { resolveInTab } from './resolve-in-tab.js';
 import { TabManager } from '../tab/manager.js';
 import type { Managers } from '../managers.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
-import { makeTab } from '../tab/index.js';
+import { makePluginTab, makeTab } from '../tab/index.js';
 import { commands } from '../commands/index.js';
 import type { CommandInvocationContext } from '../commands/types.js';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
@@ -61,6 +62,17 @@ function makeManagers(
   managers.nativeCommandSettings = nativeCommandSettings;
   managers.command = new CommandManager(managers);
   return { managers, recorder };
+}
+
+function seedPromptPluginTab(managers: Managers, label = 'janus'): void {
+  const tab = makePluginTab(label, '#fff', 1, 1, '#fff', 'Shell', {
+    id: 'shell', instanceKey: 'shell-instance', schemaVersion: 2, payload: {}, fileRefs: [], sourceLabel: label,
+  });
+  managers.tab.tabs = [tab, ...managers.tab.tabs.filter((entry) => entry.label !== label)];
+  managers.tab.activeTab = 0;
+  managers.plugins = {
+    declarations: [{ id: 'shell', capabilities: ['promptAcp'] }],
+  } as unknown as Managers['plugins'];
 }
 
 describe('CommandManager async commands', () => {
@@ -627,14 +639,31 @@ describe('CommandManager disabled command policy', () => {
   });
 
   it('returns the refusal for every capture contract before capture can time out', async () => {
-    const { managers } = makeManagers(settingsWith({ ask: { enabled: false }, agent: { enabled: false } }));
+    const { managers } = makeManagers(settingsWith({
+      ask: { enabled: false }, agent: { enabled: false }, clear: { enabled: false },
+    }));
+    seedPromptPluginTab(managers);
+    expect(resolveInTab('ask hello', 'janus', managers)).toMatchObject({ kind: 'app', name: 'ask' });
 
     await expect(managers.command.dispatchLineWithOutput('janus', 'ask hello', 0)).resolves.toEqual({
       dispatched: true, output: 'Command is disabled: ask.',
     });
-    await expect(managers.command.dispatchLineWithOutput('janus', 'agent execute task.md', 0)).resolves.toEqual({
-      dispatched: true, output: 'Command is disabled: agent.',
-    });
+
+    const structured = await managers.command.dispatchLineWithOutput('janus', 'agent execute task.md', 0);
+    expect(structured).toEqual({ dispatched: true, output: 'Command is disabled: agent.' });
+    expect(structured).not.toHaveProperty('result');
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const captured = managers.command.dispatchLineWithOutput('janus', 'clear', 0);
+      let settled = false;
+      void captured.then(() => { settled = true; });
+      await new Promise((resolve) => { setImmediate(resolve); });
+      expect(settled).toBe(true);
+      await expect(captured).resolves.toEqual({ dispatched: true, output: 'Command is disabled: clear.' });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('refuses direct executeCommand callers before their effects', async () => {
