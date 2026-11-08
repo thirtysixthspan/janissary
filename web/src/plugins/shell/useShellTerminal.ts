@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
+import type { ShellAcpReceipt, ShellConnectionRow } from '@shared/plugins/shell/shared';
 import {
   copySelectionChord, createAppTerminal, isMacPlatform, registerTerminalSelection, terminalColors,
   unregisterTerminalSelection, type PluginTerminal, type TerminalColors,
@@ -11,8 +12,8 @@ import { attachPromptMask } from './prompt-mask';
 import { holdFocusOffSinglePress } from './press-focus';
 import { holdReplySelection, shellSelectionText, type ReplySelection } from './reply-selection';
 import { ReplyPlacement } from './reply-placement';
-import { writeShellEcho, writeShellReply } from './write-shell-reply';
 import type { TranscriptLines } from './transcript-lines';
+import { createReplyMarkers, useShellReplyWriters, type ShellReplyOutcome } from './useShellReplyWriters';
 import { useShellTerminalView } from './useShellTerminalView';
 
 export type AttachTerminal = (
@@ -23,6 +24,7 @@ type Options = {
   // Absent while the shell's workspace clone is still landing: there is no terminal to attach yet,
   // and the attachment is made when the ready payload supplies one.
   ptyId: string | undefined;
+  replyIds: Set<string>;
   // The SSH PTY rendered while the remote workspace is provisioning; replaced by `ptyId` on ready.
   connectPtyId?: string;
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -35,6 +37,12 @@ type Options = {
   reportColors?: (id: string, colors: TerminalColors) => void;
   // Opens a link clicked in a rendered reply. Absent, a click on one still never navigates the window.
   openLink?: (href: string) => void;
+  // Opens the connection tab behind a click on a marker beside an ACP command line. Absent, a click on
+  // one does nothing.
+  openConnection?: (row: ShellConnectionRow) => void;
+  // This tab's own label. A running marker names its role rather than a record, and the host accepts a
+  // tab reference only when its label is the tab's own, so the running click does nothing without it.
+  label?: string;
   onCommandRunning: (running: boolean) => void;
   onCwd: (cwd: string) => void;
   onCommand?: (command: string) => void;
@@ -52,9 +60,12 @@ type Options = {
 export type ShellTerminalHandle = {
   write(data: string): void;
   display(data: string): void;
-  displayReply(line: string, markdown: string): void;
-  // Writes the line of a command whose reply arrives later through `displayReply`.
-  echoCommand(line: string): void;
+  // Writes a reply beneath its command line. With the `reply` the tab received for an ACP command, it
+  // also settles the marker that command's echo carries: a link to the reply's record, or nothing.
+  displayReply(line: string, markdown: string, reply?: ShellReplyOutcome): void;
+  // Writes the line of a command whose reply arrives later through `displayReply`. With the `receipt`
+  // the command's dispatch returned, the line carries a running marker until that reply settles.
+  echoCommand(line: string, receipt?: ShellAcpReceipt): void;
   focus(): void;
   selection(): string;
   clearSelection(): void;
@@ -67,12 +78,14 @@ export type ShellTerminalHandle = {
 };
 
 export function useShellTerminal({
-  ptyId, connectPtyId, containerRef, attachTerminal, copyText, reportColors, openLink, onExit, onCommandRunning, onCwd, onCommand, hookNonce,
+  ptyId, replyIds, connectPtyId, containerRef, attachTerminal, copyText, reportColors, openLink, openConnection, label,
+  onExit, onCommandRunning, onCwd, onCommand, hookNonce,
 }: Options): ShellTerminalHandle & { terminalReady: boolean } {
   const handleRef = useRef<PluginTerminal | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const replyRef = useRef<ReplySelection | null>(null);
   const placementRef = useRef(new ReplyPlacement());
+  const markersRef = useRef(createReplyMarkers());
   const [attachedPtyId, setAttachedPtyId] = useState<string | null>(null);
   const exitRef = useRef(onExit);
   exitRef.current = onExit;
@@ -91,8 +104,6 @@ export function useShellTerminal({
   attachRef.current = attachTerminal;
   const copyTextRef = useRef(copyText);
   copyTextRef.current = copyText;
-  const openLinkRef = useRef(openLink);
-  openLinkRef.current = openLink;
   const hookNonceRef = useRef(hookNonce);
   hookNonceRef.current = hookNonce;
 
@@ -185,6 +196,7 @@ export function useShellTerminal({
     terminalRef.current = terminal;
     const placement = new ReplyPlacement();
     placementRef.current = placement;
+    markersRef.current = createReplyMarkers();
     let disposed = false;
     const onAttached = (handle: PluginTerminal) => {
       if (disposed) { handle.detach(); return; }
@@ -225,15 +237,9 @@ export function useShellTerminal({
     placementRef.current.wrote();
     terminalRef.current?.write(data);
   }, []);
-  const displayReply = useCallback((rawLine: string, rawMarkdown: string) => {
-    const terminal = terminalRef.current;
-    if (!terminal) return;
-    writeShellReply(terminal, placementRef.current, rawLine, rawMarkdown, (href) => { openLinkRef.current?.(href); });
-  }, []);
-  const echoCommand = useCallback((rawLine: string) => {
-    const terminal = terminalRef.current;
-    if (terminal) writeShellEcho(terminal, placementRef.current, rawLine);
-  }, []);
+  const { displayReply, echoCommand } = useShellReplyWriters({
+    terminalRef, placementRef, markersRef, replyIds, openLink, openConnection, label,
+  });
   const view = useShellTerminalView(terminalRef, replyRef);
   return {
     write, display, displayReply, echoCommand, ...view,

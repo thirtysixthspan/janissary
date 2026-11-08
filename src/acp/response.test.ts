@@ -1,0 +1,181 @@
+import { describe, expect, it, vi } from 'vitest';
+import type { Managers } from '../managers.js';
+import type { AcpPendingPrompt } from './prompt-state.js';
+import type { AcpRole } from './role.js';
+import type { AcpPromptResult } from './types.js';
+import { makeTab } from '../tab/index.js';
+
+vi.mock('../bus.js', () => ({ messageBus: { emit: vi.fn() } }));
+
+import { appendAcpBackgroundReply, settleAcpPrompt } from './response.js';
+
+function setup(recordId?: string) {
+  const tab = makeTab('tab1', '#fff');
+  const finish = vi.fn();
+  const pending: AcpPendingPrompt = {
+    finish, abort: new AbortController(), prompt: 'hello', role: 'ask', roleName: 'ask',
+    commands: [], runningEntries: new Set(),
+  };
+  const ask: { prompt?: AcpPendingPrompt; recordId?: string } = { prompt: pending };
+  if (recordId) {
+    pending.recordId = recordId;
+    ask.recordId = recordId;
+  }
+  tab.runtime = { busy: false, context: [], queue: [], acpRoles: { ask } };
+  const answer = vi.fn();
+  const managers = {
+    tab: {
+      byLabel: (label: string) => (label === 'tab1' ? tab : undefined),
+      updateRunning: vi.fn(),
+      deleteBusy: vi.fn(),
+    },
+    acpRecords: { answer },
+  } as unknown as Managers;
+  return { answer, ask, finish, managers };
+}
+
+const ANSWER: AcpPromptResult = { answered: true, reply: 'the answer', session: 'acp-1' };
+
+describe('appendAcpBackgroundReply', () => {
+  it.each<[string, AcpPromptResult, string]>([
+    ['an answered result as its reply text', ANSWER, 'the answer'],
+    ['an unanswered result as its error text', { answered: false, error: 'ACP error: rate limited' }, 'ACP error: rate limited'],
+  ])('appends %s under exactly the id it is given', (_name, result, output) => {
+    const append = vi.fn();
+    const managers = { tab: { append } } as unknown as Managers;
+
+    appendAcpBackgroundReply(managers, 'tab1', '/ask hello', result, 'reply-1');
+
+    expect(append).toHaveBeenCalledExactlyOnceWith('tab1', { input: '/ask hello', output, background: 'reply-1' });
+  });
+
+  function recordedManagers(rowIds: string[], role: AcpRole = 'ask', tabTitle?: string) {
+    const append = vi.fn();
+    const rows = vi.fn(() => rowIds.map((id) => ({ id, kind: 'acp', ownerName: 'Build tab', role })));
+    const managers = {
+      tab: { append, byLabel: () => ({ title: tabTitle }) },
+      acpRecords: { rows },
+    } as unknown as Managers;
+    return { append, managers, rows };
+  }
+
+  it.each<[string, AcpPromptResult]>([
+    ['an answer', ANSWER],
+    ['an ACP error line', { answered: false, error: 'ACP error: rate limited' }],
+    ['a cancellation', { answered: false, error: 'ACP: prompt cancelled.' }],
+    ['a closed session', { answered: false, error: 'ACP session closed.' }],
+  ])('stores the answering record, named after its connection tab, on %s', (_name, base) => {
+    const { append, managers } = recordedManagers(['record-0', 'record-1']);
+
+    appendAcpBackgroundReply(managers, 'tab1', 'ask hello', { ...base, recordId: 'record-1' }, 'reply-1');
+
+    expect(append).toHaveBeenCalledExactlyOnceWith('tab1', {
+      input: 'ask hello',
+      output: base.answered ? base.reply : base.error,
+      background: 'reply-1',
+      backgroundRecord: { id: 'record-1', name: 'acp:ask:Build tab' },
+    });
+  });
+
+  it.each<AcpRole>(['ask', 'tell'])('names a %s record after its role', (role) => {
+    const { append, managers } = recordedManagers(['record-1'], role);
+
+    appendAcpBackgroundReply(managers, 'tab1', `${role} hello`, { ...ANSWER, recordId: 'record-1' }, 'reply-1');
+
+    expect(append.mock.calls[0][1]).toHaveProperty('backgroundRecord', { id: 'record-1', name: `acp:${role}:Build tab` });
+  });
+
+  it('takes the name from the record and not from the tab title it has since been given', () => {
+    const { append, managers } = recordedManagers(['record-1'], 'ask', 'Renamed tab');
+
+    appendAcpBackgroundReply(managers, 'tab1', 'ask hello', { ...ANSWER, recordId: 'record-1' }, 'reply-1');
+
+    expect(append.mock.calls[0][1]).toHaveProperty('backgroundRecord', { id: 'record-1', name: 'acp:ask:Build tab' });
+  });
+
+  it('stores no record when the id is missing from the retained records', () => {
+    const { append, managers, rows } = recordedManagers(['record-0']);
+
+    appendAcpBackgroundReply(managers, 'tab1', 'ask hello', { ...ANSWER, recordId: 'record-1' }, 'reply-1');
+
+    expect(rows).toHaveBeenCalledOnce();
+    expect(append).toHaveBeenCalledExactlyOnceWith('tab1', { input: 'ask hello', output: 'the answer', background: 'reply-1' });
+    expect(append.mock.calls[0][1]).not.toHaveProperty('backgroundRecord');
+  });
+
+  it('stores no record and reads none when the result carries no record id', () => {
+    const { append, managers, rows } = recordedManagers(['record-1']);
+
+    appendAcpBackgroundReply(managers, 'tab1', 'ask hello', ANSWER, 'reply-1');
+
+    expect(rows).not.toHaveBeenCalled();
+    expect(append.mock.calls[0][1]).not.toHaveProperty('backgroundRecord');
+  });
+});
+
+describe('settleAcpPrompt', () => {
+  it.each<[string, AcpPromptResult]>([
+    ['an answer', ANSWER],
+    ['an ACP error line', { answered: false, error: 'ACP error: rate limited' }],
+    ['a cancellation', { answered: false, error: 'ACP: prompt cancelled.' }],
+    ['a closed session', { answered: false, error: 'ACP session closed.' }],
+  ])('hands finish %s with the pending prompt’s record id added', (_name, result) => {
+    const { finish, managers } = setup('record-1');
+
+    settleAcpPrompt(managers, 'tab1', result);
+
+    expect(finish).toHaveBeenCalledExactlyOnceWith({ ...result, recordId: 'record-1' });
+  });
+
+  it('records the original answer text on the record', () => {
+    const { answer, managers } = setup('record-1');
+
+    settleAcpPrompt(managers, 'tab1', ANSWER);
+
+    expect(answer).toHaveBeenCalledExactlyOnceWith('record-1', 'the answer');
+  });
+
+  it('keeps the id on the result when the settlement callback has already dropped the role state’s id', () => {
+    const { ask, finish, managers } = setup('record-1');
+
+    settleAcpPrompt(managers, 'tab1', ANSWER, () => { delete ask.recordId; });
+
+    expect(ask.recordId).toBeUndefined();
+    expect(finish).toHaveBeenCalledExactlyOnceWith({ ...ANSWER, recordId: 'record-1' });
+  });
+
+  it('passes the identical result through when the pending prompt reached no record', () => {
+    const { answer, finish, managers } = setup();
+    const result: AcpPromptResult = { answered: false, error: 'ACP session closed.' };
+
+    settleAcpPrompt(managers, 'tab1', result);
+
+    expect(finish.mock.calls[0][0]).toBe(result);
+    expect(finish.mock.calls[0][0]).not.toHaveProperty('recordId');
+    expect(answer).not.toHaveBeenCalled();
+  });
+
+  it('does not write the id onto the incoming result, which a tab close shares between roles', () => {
+    const { finish, managers } = setup('record-1');
+    const result: AcpPromptResult = { answered: false, error: 'ACP session closed.' };
+
+    settleAcpPrompt(managers, 'tab1', result);
+
+    expect(result).not.toHaveProperty('recordId');
+    expect(finish.mock.calls[0][0]).not.toBe(result);
+  });
+
+  it.each([
+    ['the tab is gone', 'missing', false],
+    ['the pending prompt is gone', 'tab1', true],
+  ])('only runs the settlement callback when %s', (_name, label, dropPrompt) => {
+    const { ask, finish, managers } = setup('record-1');
+    if (dropPrompt) delete ask.prompt;
+    const afterSettlement = vi.fn();
+
+    settleAcpPrompt(managers, label, ANSWER, afterSettlement);
+
+    expect(finish).not.toHaveBeenCalled();
+    expect(afterSettlement).toHaveBeenCalledOnce();
+  });
+});

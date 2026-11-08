@@ -1,8 +1,6 @@
 import type { Command } from './types.js';
 import { acpAvailable } from '../acp/availability.js';
-import { appendAcpBackgroundReply } from '../acp/response.js';
-import type { AcpPromptResult } from '../acp/types.js';
-import { errorText } from '../error-text.js';
+import { runAcpCommand } from '../acp/response.js';
 
 export const command: Command = {
   name: 'tell',
@@ -10,17 +8,5 @@ export const command: Command = {
   coreResponse: true,
   match: (command_) => /^tell\b/i.test(command_),
   samples: ['tell', 'tell hello'],
-  run: (command, tab, managers, invocation) => {
-    const line = invocation?.line ?? command;
-    let settled = false;
-    const settle = (result: AcpPromptResult) => {
-      if (settled) return;
-      settled = true;
-      appendAcpBackgroundReply(managers, tab.label, line, result);
-    };
-    void managers.acp.promptResult(tab.label, command, 'tell', { appendRefusalToTranscript: false }).then(
-      settle,
-      (error: unknown) => settle({ answered: false, error: `ACP error: ${errorText(error)}` }),
-    );
-  },
+  run: (command, tab, managers, invocation) => runAcpCommand(command, tab, managers, invocation, 'tell'),
 };

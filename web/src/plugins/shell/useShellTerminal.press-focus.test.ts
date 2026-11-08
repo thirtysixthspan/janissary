@@ -71,7 +71,7 @@ function mountTerminal() {
   document.body.append(container, bar);
   const containerRef = { current: container };
   const view = renderHook(() => useShellTerminal({
-    ptyId: 'pty7', containerRef, attachTerminal: () => handle, onExit: vi.fn(), onCommandRunning: vi.fn(),
+    ptyId: 'pty7', replyIds: new Set<string>(), containerRef, attachTerminal: () => handle, onExit: vi.fn(), onCommandRunning: vi.fn(),
     onCwd: vi.fn(), copyText: vi.fn(), hookNonce: 'b'.repeat(32),
   }));
   const textarea = container.querySelector<HTMLTextAreaElement>('.xterm-helper-textarea')!;

@@ -21,10 +21,12 @@ export type AcpInfo = { provider?: string; model?: string };
 // model the catalog no longer lists — resolves with a line of prose, so a caller handed one string
 // cannot tell an answer from a refusal and has to guess at its text. `session` names the session that
 // answered: a tab's session is replaced whenever the old one dies, and a caller that primed the old one
-// has to be able to see that it is no longer the one being talked to.
+// has to be able to see that it is no longer the one being talked to. `recordId` names the connection
+// record holding the prompt's final block — the answering model's, or the last model tried when every
+// one failed — and is present only when the prompt reached a record, so a refusal carries none.
 export type AcpPromptResult =
-  | { answered: true; reply: string; session: string }
-  | { answered: false; error: string };
+  | { answered: true; reply: string; session: string; recordId?: string }
+  | { answered: false; error: string; recordId?: string };
 
 export type AcpOptions = {
   command: string;

@@ -25,8 +25,12 @@ export type ConnectionView = {
 };
 
 // One completed background reply, replayed on every snapshot and deduplicated by its stable id.
-// `line` is the exact command an ACP reply settles under; monitor replies leave it absent.
-export type BackgroundReplyView = { id: string; output: string; line?: string };
+// `line` is the exact command an ACP reply settles under; monitor replies leave it absent. `record` names
+// the connection record holding the prompt's final block and the title of its connection tab; it is
+// absent for a refusal, a reset confirmation, and a monitor reply.
+export type BackgroundReplyView = { id: string; output: string; line?: string; record?: { id: string; name: string } };
+
+export type PendingAcpReplyNameView = { id: string; name: string };
 
 /**
  * A remote tab's target as the client sees it: everything stored on the tab, plus the facts only
@@ -72,6 +76,7 @@ export type TabView = {
   systemShell?: true;
   label: string;
   backgroundReplies?: BackgroundReplyView[];
+  pendingAcpReplyNames?: PendingAcpReplyNameView[];
   number: number;
   dotColor: string;
   group: number;

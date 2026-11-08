@@ -61,6 +61,28 @@ describe('agent command tools', () => {
     expect(dispatch.mock.calls.every((call) => call[2].awaitResult === true)).toBe(true);
   });
 
+  it('returns only the output of a core-response command, never the JSON of its result', async () => {
+    const receipt = { replyId: 'reply-1', role: 'ask', name: 'acp:ask:janus' };
+    const dispatch = vi.fn(async () => ({ dispatched: true, output: '', coreResponse: true, result: receipt }));
+    const managers = { command: { dispatchLineInInvocation: dispatch } } as unknown as Managers;
+
+    await expect(runGrantedAgentCommand('ask hello', { ...snapshot, grants: ['ask'] }, managers, invocation('core')))
+      .resolves.toBe('');
+    expect(dispatch).toHaveBeenCalledOnce();
+  });
+
+  it('keeps returning a string result as is and an object result as JSON for a non-core reply', async () => {
+    const dispatch = vi.fn()
+      .mockResolvedValueOnce({ dispatched: true, output: 'ignored', result: 'plain text' })
+      .mockResolvedValueOnce({ dispatched: true, output: 'ignored', result: { id: 'one', count: 2 } });
+    const managers = { command: { dispatchLineInInvocation: dispatch } } as unknown as Managers;
+
+    await expect(runGrantedAgentCommand('question ask "first"', snapshot, managers, invocation('string')))
+      .resolves.toBe('plain text');
+    await expect(runGrantedAgentCommand('question ask "second"', snapshot, managers, invocation('object')))
+      .resolves.toBe('{"id":"one","count":2}');
+  });
+
   it('requires the selected ask-user skill as well as the question grant', async () => {
     const dispatch = vi.fn();
     const noSkill = { ...snapshot, skills: [] };

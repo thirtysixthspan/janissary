@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { act, cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
-import type { TabView } from '@shared/protocol';
+import type { BackgroundReplyView, TabView } from '@shared/protocol';
 import type { PluginTerminal, TabPluginClientCapabilities } from '../api';
 import { PluginChordProvider, createPluginChordRegistry, type PluginChordRegistry } from '../PluginChords';
 import { AppCommandBarProvider, AppCommandBarTabScope, useAppCommandLine } from '../../shared/command-bar/AppCommandBar';
@@ -63,6 +63,7 @@ vi.mock('@xterm/xterm', () => ({
     lines: string[] = [];
     scrolledTo: number[] = [];
     selectedLines: [number, number][] = [];
+    private readonly decorationDisposers: (() => void)[] = [];
     options: Record<string, unknown>;
 
     constructor(options: Record<string, unknown>) {
@@ -72,8 +73,11 @@ vi.mock('@xterm/xterm', () => ({
 
     loadAddon() {}
     open() {}
-    dispose() { this.disposed = true; }
-    write(data: string) { this.written.push(data); }
+    dispose() {
+      this.disposed = true;
+      for (const disposeDecoration of this.decorationDisposers) disposeDecoration();
+    }
+    write(data: string, callback?: () => void) { this.written.push(data); callback?.(); }
     hasSelection() { return this.selection !== ''; }
     getSelection() { return this.selection; }
     clearSelection() { this.selectionClearCalls += 1; }
@@ -82,7 +86,19 @@ vi.mock('@xterm/xterm', () => ({
     buffer = { active: fakeActiveBuffer(() => this.lines) };
     onCursorMove() { return { dispose: () => {} }; }
     registerMarker() { return { line: 0, dispose: () => {} }; }
-    registerDecoration() {}
+    registerDecoration() {
+      const element = document.createElement('div');
+      const dispose = () => { element.remove(); };
+      this.decorationDisposers.push(dispose);
+      return {
+        onRender: (render: (element: HTMLElement) => void) => {
+          document.body.append(element);
+          render(element);
+          return { dispose: () => {} };
+        },
+        dispose,
+      };
+    }
     onData() { return { dispose: () => {} }; }
     parser = {
       registerOscHandler: (id: number, handler: (data: string) => boolean) => {
@@ -145,6 +161,8 @@ function makeCapabilities(overrides: {
   dispatched?: boolean;
   output?: string;
   coreResponse?: boolean;
+  result?: unknown;
+  resultFactory?: () => unknown;
   completions?: { matches: string[]; newInput: string; newCursor: number };
   complete?: (request: { line: string; cursor: number }) => { matches: string[]; newInput: string; newCursor: number } | undefined;
   status?: { ptyId: string; running: boolean };
@@ -170,6 +188,7 @@ function makeCapabilities(overrides: {
   // line has been dealt with rather than in the same tick the request was made — asserting an array
   // that starts empty inside `waitFor` passes whether or not the code ever writes to it.
   const { promise: answered, resolve: answerDispatch } = withResolvers<void>();
+  const openConnection = vi.fn();
   const capabilities = {
     resourceUrl: (reference: string) => reference,
     intent: vi.fn(async (name: string, _payload?: unknown) => {
@@ -177,7 +196,13 @@ function makeCapabilities(overrides: {
       if (name === 'dispatch-command' && typeof _payload === 'object' && _payload !== null && 'discard' in _payload) return null;
       if (name === 'dispatch' || name === 'dispatch-command') {
         await answered;
-        return { dispatched: overrides.dispatched ?? false, output: overrides.output ?? '', coreResponse: overrides.coreResponse };
+        const result = overrides.resultFactory ? overrides.resultFactory() : overrides.result;
+        return {
+          dispatched: overrides.dispatched ?? false,
+          output: overrides.output ?? '',
+          coreResponse: overrides.coreResponse,
+          ...(result !== undefined && { result }),
+        };
       }
       if (name === 'complete') {
         return overrides.complete?.(_payload as { line: string; cursor: number })
@@ -191,6 +216,7 @@ function makeCapabilities(overrides: {
     dock: null,
     close: vi.fn(() => { closed.push(1); }),
     attachTerminal,
+    openConnection,
     openFileNavigator: vi.fn(),
     launchAgentHere: vi.fn(),
     reportFailure: vi.fn(),
@@ -207,9 +233,22 @@ function makeCapabilities(overrides: {
     ...(overrides.onBackgroundReply !== undefined && { onBackgroundReply: overrides.onBackgroundReply }),
   } as unknown as TabPluginClientCapabilities;
   return {
-    capabilities, closed, handle, resized, written,
+    capabilities, closed, handle, openConnection, resized, written,
     releaseDispatch: () => { answerDispatch(); },
   };
+}
+
+function shellReceipt(replyId: string, role: 'ask' | 'tell' = 'ask') {
+  return { replyId, role, name: `acp:${role}:shell1` };
+}
+
+function backgroundReplies() {
+  let receive: (reply: BackgroundReplyView) => void = () => {};
+  const subscribe = vi.fn((callback: (reply: BackgroundReplyView) => void) => {
+    receive = callback;
+    return () => {};
+  });
+  return { subscribe, send: (reply: BackgroundReplyView) => { receive(reply); } };
 }
 
 // The application state a plugin tab's bar reaches in the running application: the interception every
@@ -1107,6 +1146,192 @@ describe('ShellTab', () => {
 
     expect(terminal.written.at(-1)).toContain('No active ACP session to reset.');
     expect(terminal.written.filter((text) => text.includes('> acp reset'))).toHaveLength(1);
+  });
+
+  it('marks an accepted ask, opens the live connection, then links the answering record', async () => {
+    const replies = backgroundReplies();
+    const { openConnection, releaseDispatch } = renderTab({
+      onBackgroundReply: replies.subscribe, dispatched: true, coreResponse: true, result: shellReceipt('ask-1'),
+    });
+    fireEvent.change(bar(), { target: { value: 'ask summarize this' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+
+    const marker = screen.getByRole('link', { name: 'Open acp:ask:shell1' });
+    expect(marker).toHaveTextContent('Thinking');
+    fireEvent.change(bar(), { target: { value: 'keep this draft' } });
+    fireEvent.click(marker);
+    expect(openConnection).toHaveBeenLastCalledWith({
+      text: 'acp:ask:shell1', kind: 'acp', acpRef: { scope: 'tab', label: 'shell1', role: 'ask' },
+    });
+    expect(bar()).toHaveValue('keep this draft');
+
+    act(() => replies.send({
+      id: 'ask-1', line: 'ask summarize this', output: '## Answer',
+      record: { id: 'record-ask-1', name: 'acp:ask:shell1' },
+    }));
+    expect(marker).toHaveTextContent('see thought process');
+    expect(marker.textContent).not.toContain('[');
+    fireEvent.click(marker);
+    expect(openConnection).toHaveBeenLastCalledWith({ text: 'acp:ask:shell1', kind: 'acp', recordId: 'record-ask-1' });
+  });
+
+  it('settles a refusal on the repeated line without removing the running marker', async () => {
+    const replies = backgroundReplies();
+    let dispatch = 0;
+    const { releaseDispatch } = renderTab({
+      onBackgroundReply: replies.subscribe, dispatched: true, coreResponse: true,
+      resultFactory: () => shellReceipt(dispatch++ === 0 ? 'running-ask' : 'refused-ask'),
+    });
+    fireEvent.change(bar(), { target: { value: 'ask repeat this' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+    fireEvent.change(bar(), { target: { value: 'ask repeat this' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => {});
+
+    act(() => replies.send({ id: 'refused-ask', line: 'ask repeat this', output: 'ACP: a prompt is already running.' }));
+    let markers = screen.getAllByRole('link', { name: 'Open acp:ask:shell1' });
+    expect(markers).toHaveLength(1);
+    expect(markers[0]).toHaveTextContent('Thinking');
+
+    act(() => replies.send({
+      id: 'running-ask', line: 'ask repeat this', output: 'Answer',
+      record: { id: 'record-running', name: 'acp:ask:shell1' },
+    }));
+    markers = screen.getAllByRole('link', { name: 'Open acp:ask:shell1' });
+    expect(markers).toHaveLength(2);
+    expect(markers[0]).toHaveTextContent('see thought process');
+    expect(markers[1]).toHaveTextContent('see thought process');
+  });
+
+  it('settles concurrent ask and tell markers independently', async () => {
+    const replies = backgroundReplies();
+    let dispatch = 0;
+    const { releaseDispatch } = renderTab({
+      onBackgroundReply: replies.subscribe, dispatched: true, coreResponse: true,
+      resultFactory: () => {
+        const role = dispatch++ === 0 ? 'ask' : 'tell';
+        return shellReceipt(`${role}-1`, role);
+      },
+    });
+    fireEvent.change(bar(), { target: { value: 'ask first prompt' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+    fireEvent.change(bar(), { target: { value: 'tell second prompt' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => {});
+
+    const askMarker = screen.getByRole('link', { name: 'Open acp:ask:shell1' });
+    const tellMarker = screen.getByRole('link', { name: 'Open acp:tell:shell1' });
+    act(() => replies.send({
+      id: 'tell-1', line: 'tell second prompt', output: 'Tell answer',
+      record: { id: 'record-tell', name: 'acp:tell:shell1' },
+    }));
+    expect(tellMarker).toHaveTextContent('see thought process');
+    expect(askMarker).toHaveTextContent('Thinking');
+
+    act(() => replies.send({
+      id: 'ask-1', line: 'ask first prompt', output: 'Ask answer',
+      record: { id: 'record-ask', name: 'acp:ask:shell1' },
+    }));
+    expect(askMarker).toHaveTextContent('see thought process');
+  });
+
+  it('links both tell echoes when its reply follows other terminal output', async () => {
+    const replies = backgroundReplies();
+    const { capabilities, releaseDispatch } = renderTab({
+      onBackgroundReply: replies.subscribe, dispatched: true, coreResponse: true, result: shellReceipt('tell-1', 'tell'),
+    });
+    fireEvent.change(bar(), { target: { value: 'tell list the files' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+    act(() => { shellOutput(capabilities)('ordinary output\r\n'); });
+    act(() => replies.send({
+      id: 'tell-1', line: 'tell list the files', output: 'There is one file.',
+      record: { id: 'record-tell', name: 'acp:tell:shell1' },
+    }));
+
+    expect(screen.getAllByRole('link', { name: 'Open acp:tell:shell1' })).toHaveLength(2);
+    expect(screen.getAllByText('see thought process')).toHaveLength(2);
+  });
+
+  it('leaves ask and tell reset echoes unmarked and places each reply beneath its line', async () => {
+    const replies = backgroundReplies();
+    const { releaseDispatch, terminal } = renderTab({ onBackgroundReply: replies.subscribe, dispatched: true, coreResponse: true });
+    fireEvent.change(bar(), { target: { value: 'ask reset' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+    act(() => replies.send({ id: 'ask-reset', line: 'ask reset', output: 'Ask reset complete.' }));
+    fireEvent.change(bar(), { target: { value: 'tell reset' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => {});
+    act(() => replies.send({ id: 'tell-reset', line: 'tell reset', output: 'Tell reset complete.' }));
+
+    expect(screen.queryAllByRole('link')).toHaveLength(0);
+    const askEcho = terminal.written.findIndex((text) => text.includes('> ask reset'));
+    const askReply = terminal.written.findIndex((text) => text.includes('Ask reset complete.'));
+    const tellEcho = terminal.written.findIndex((text) => text.includes('> tell reset'));
+    const tellReply = terminal.written.findIndex((text) => text.includes('Tell reset complete.'));
+    expect(askReply).toBeGreaterThan(askEcho);
+    expect(tellReply).toBeGreaterThan(tellEcho);
+  });
+
+  it('does not create a marker when the reply reaches the shell before its receipt', async () => {
+    const replies = backgroundReplies();
+    const { releaseDispatch, terminal } = renderTab({
+      onBackgroundReply: replies.subscribe, dispatched: true, coreResponse: true, result: shellReceipt('early-1'),
+    });
+    fireEvent.change(bar(), { target: { value: 'ask early reply' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    act(() => replies.send({
+      id: 'early-1', line: 'ask early reply', output: 'Answer',
+      record: { id: 'record-early', name: 'acp:ask:shell1' },
+    }));
+    await act(async () => { releaseDispatch(); });
+
+    expect(screen.queryAllByRole('link')).toHaveLength(0);
+    expect(terminal.written.filter((text) => text.includes('> ask early reply'))).toHaveLength(1);
+  });
+
+  it.each([
+    { label: 'missing', result: undefined },
+    { label: 'malformed', result: { replyId: 'bad', role: 'unknown', name: 'acp:ask:shell1' } },
+  ])('does not mark a core response with a $label receipt', async ({ result }) => {
+    const { releaseDispatch } = renderTab({ dispatched: true, coreResponse: true, result });
+    fireEvent.change(bar(), { target: { value: 'ask no marker' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+
+    expect(screen.queryAllByRole('link')).toHaveLength(0);
+  });
+
+  it('marks a queued ACP line drained through dispatch-command', async () => {
+    const { capabilities, releaseDispatch, rerenderShell } = renderTab({
+      dispatched: true, coreResponse: true, result: shellReceipt('queued-ask'),
+    });
+    const intent = capabilities.intent as unknown as {
+      getMockImplementation: () => (name: string, payload: unknown) => unknown;
+      mockImplementation: (fn: (name: string, payload: unknown) => unknown) => void;
+    };
+    const answer = intent.getMockImplementation();
+    let available = true;
+    intent.mockImplementation(async (name, payload) => {
+      if (name === 'dequeue-command') {
+        if (!available) return null;
+        available = false;
+        return { line: 'ask queued prompt', receipt: 'queued-command' };
+      }
+      return answer(name, payload);
+    });
+
+    rerenderShell(PAYLOAD, capabilities, { queuedLines: { shell1: ['ask queued prompt'] } });
+    await waitFor(() => {
+      expect(capabilities.intent).toHaveBeenCalledWith('dispatch-command', { receipt: 'queued-command' });
+    });
+    await act(async () => { releaseDispatch(); });
+
+    expect(screen.getByRole('link', { name: 'Open acp:ask:shell1' })).toHaveTextContent('Thinking');
   });
 
   it.each([

@@ -1,11 +1,16 @@
 import { randomUUID } from 'node:crypto';
+import type { CommandInvocationContext } from '../commands/types.js';
 import type { Managers } from '../managers.js';
 import type { LogEntry } from '../tab/types.js';
 import type { AcpPromptResult } from './types.js';
 import { messageBus } from '../bus.js';
+import { errorText } from '../error-text.js';
+import { recordConnectionName } from '../plugins/connections/shared.js';
 import { answerCoreRecord } from './record-feed.js';
 import { acpRoleRuntime } from './role-state.js';
 import { DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
+
+export type AcpDispatchReceipt = { replyId: string; role: AcpRole; name: string };
 
 export function appendAcp(managers: Managers, label: string, entry: LogEntry): void {
   const tab = managers.tab.byLabel(label);
@@ -17,12 +22,55 @@ export function appendAcp(managers: Managers, label: string, entry: LogEntry): v
   managers.tab.append(label, entry);
 }
 
-export function appendAcpBackgroundReply(managers: Managers, label: string, input: string, result: AcpPromptResult): void {
+function answeringRecord(managers: Managers, recordId?: string): LogEntry['backgroundRecord'] {
+  const row = recordId ? managers.acpRecords.rows().find((candidate) => candidate.id === recordId) : undefined;
+  return row && { id: row.id, name: recordConnectionName(row) };
+}
+
+function dispatchConnectionName(managers: Managers, label: string, role: AcpRole): string {
+  const tab = managers.tab.byLabel(label);
+  const recordId = tab?.runtime?.acpRoles?.[role]?.recordId;
+  const row = recordId ? managers.acpRecords.rows().find((candidate) => candidate.id === recordId) : undefined;
+  return recordConnectionName(row ?? { kind: 'acp', role, ownerName: tab?.title ?? label });
+}
+
+export function appendAcpBackgroundReply(
+  managers: Managers, label: string, input: string, result: AcpPromptResult, id: string,
+): void {
+  const backgroundRecord = answeringRecord(managers, result.recordId);
   managers.tab.append(label, {
     input,
     output: result.answered ? result.reply : result.error,
-    background: randomUUID(),
+    background: id,
+    ...(backgroundRecord && { backgroundRecord }),
   });
+}
+
+export function runAcpCommand(
+  command: string,
+  tab: { label: string; index: number },
+  managers: Managers,
+  invocation: CommandInvocationContext | undefined,
+  role: AcpRole,
+): AcpDispatchReceipt {
+  const line = invocation?.line ?? command;
+  const replyId = randomUUID();
+  const receipt: AcpDispatchReceipt = {
+    replyId,
+    role,
+    name: dispatchConnectionName(managers, tab.label, role),
+  };
+  let settled = false;
+  const settle = (result: AcpPromptResult) => {
+    if (settled) return;
+    settled = true;
+    appendAcpBackgroundReply(managers, tab.label, line, result, replyId);
+  };
+  void managers.acp.promptResult(tab.label, command, role, { appendRefusalToTranscript: false, replyId }).then(
+    settle,
+    (error: unknown) => settle({ answered: false, error: `ACP error: ${errorText(error)}` }),
+  );
+  return receipt;
 }
 
 // Settle the prompt a tab is running with the result it produced, whether the tool loop finished, the
@@ -44,6 +92,6 @@ export function settleAcpPrompt(
   if (running) managers.tab.updateRunning(label, { markdown: true, entries: pending.runningEntries }, running.output, false);
   managers.tab.deleteBusy(label, pending);
   afterSettlement?.();
-  pending.finish(result);
+  pending.finish(pending.recordId ? { ...result, recordId: pending.recordId } : result);
   messageBus.emit('state', { type: 'dirty' });
 }

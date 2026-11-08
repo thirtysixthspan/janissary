@@ -3,8 +3,10 @@ import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
-  askRoleEntries, attemptOrder, defaultAskEntries, exhaustedError, fallbackNotice, readRoleSettings,
+  askRoleEntries, attemptOrder, defaultAskEntries, exhaustedError, fallbackNotice, finalAttemptResult,
+  readRoleSettings, type AttemptFailure,
 } from './ask-role.js';
+import type { AcpPromptResult } from './types.js';
 
 function directories(): { home: string; root: string } {
   const base = mkdtempSync(path.join(tmpdir(), 'janus-ask-role-'));
@@ -147,5 +149,45 @@ describe('fallback messages', () => {
       '- opencode opencode-go/deepseek-v4.1-flash: ACP error: out of credits',
       '- claude claude-haiku-4-5: ACP: ACP agent exited.',
     ].join('\n'));
+  });
+});
+
+describe('finalAttemptResult', () => {
+  const failures: AttemptFailure[] = [
+    { entry: OPENCODE, error: 'ACP error: out of credits' },
+    { entry: CLAUDE, error: 'ACP error: not authenticated' },
+  ];
+
+  it.each(['ask', 'tell'] as const)('keeps the record id on the %s exhausted error', (role) => {
+    const result = finalAttemptResult(
+      { answered: false, error: 'ACP error: not authenticated', recordId: 'record-2' }, true, failures, role,
+    );
+
+    expect(result).toEqual({ answered: false, error: exhaustedError(failures, role), recordId: 'record-2' });
+  });
+
+  it('leaves no record id key on an exhausted error rebuilt from a result with none', () => {
+    const result = finalAttemptResult({ answered: false, error: 'ACP error: not authenticated' }, true, failures, 'ask');
+
+    expect(result).toEqual({ answered: false, error: exhaustedError(failures, 'ask') });
+    expect(result).not.toHaveProperty('recordId');
+  });
+
+  it('returns the same object for a single failure', () => {
+    const result: AcpPromptResult = { answered: false, error: 'ACP error: boom', recordId: 'record-1' };
+
+    expect(finalAttemptResult(result, true, failures.slice(0, 1), 'ask')).toBe(result);
+  });
+
+  it('returns the same object for an answered result', () => {
+    const result: AcpPromptResult = { answered: true, reply: 'the answer', session: 'acp-1', recordId: 'record-1' };
+
+    expect(finalAttemptResult(result, false, failures, 'ask')).toBe(result);
+  });
+
+  it('returns the same object for an unanswered result the model did not fail, even with two failures listed', () => {
+    const result: AcpPromptResult = { answered: false, error: 'ACP: a prompt is already running.' };
+
+    expect(finalAttemptResult(result, false, failures, 'ask')).toBe(result);
   });
 });

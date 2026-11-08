@@ -1,4 +1,4 @@
-import { useBackgroundReplies } from './useBackgroundReplies';
+import { ShellBackgroundReplies } from './ShellBackgroundReplies';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CommandBarShell, LineFind, useAppCommandBar, useCommandBarKeys, usePluginChordClaims } from '../api';
 import type { TabPluginClientCapabilities } from '../api';
@@ -36,6 +36,7 @@ type Properties = {
 export function ShellTab({ payload, capabilities }: Properties) {
   const inputReference = useRef<HTMLTextAreaElement>(null);
   const terminalReference = useRef<HTMLDivElement>(null);
+  const replyIds = useRef(new Set<string>()).current;
   const appBar = useAppCommandBar();
   const [draft, setDraft] = useState('');
   // Lines the bar has sent, oldest first. Direct terminal input belongs to zsh's own history.
@@ -58,6 +59,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   } = useShellTabTerminal({
     payload,
     capabilities,
+    replyIds,
     containerRef: terminalReference,
     onCommand: terminalHistory.onCommand,
     onCommandRunning: (running) => {
@@ -75,8 +77,6 @@ export function ShellTab({ payload, capabilities }: Properties) {
   });
 
   useShellTerminalStatus(capabilities, payload.ptyId);
-  useBackgroundReplies(capabilities.onBackgroundReply, displayReply);
-
   // Focus belongs to the command line at all times, and a tab that has just become the visible one is
   // exactly when it would otherwise be sitting on the body after a click elsewhere.
   useEffect(() => {
@@ -173,6 +173,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   // which it otherwise takes in the capture phase before either surface's own Shift+Tab can run.
   return (
     <div className="tab-body shell-tab" data-claims-shift-tab>
+      <ShellBackgroundReplies capabilities={capabilities} displayReply={displayReply} replyIds={replyIds} />
       <ShellTabMeta payload={payload} capabilities={capabilities} />
       {/* A single click on the terminal keeps the keyboard on the command bar; a double-click gives it
           to the terminal so xterm sends keystrokes to the attached shell. The stylesheet lights its

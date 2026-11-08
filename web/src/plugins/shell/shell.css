@@ -50,6 +50,29 @@
   user-select: text;
 }
 
+/* The marker a shell agent leaves beside an echoed command: "Thinking" with a spinner while it works,
+   then a link to its thought process once the prompt settles. It is a decoration like the reply block,
+   so it takes the terminal's font, size and background by variable, since xterm's element passes none
+   down, and turns pointer events back on. It sets no line-height because xterm writes the cell height
+   inline, and the spinner's keyframes come from Font Awesome's own stylesheet. */
+.shell-thinking-marker {
+  color: var(--muted);
+  font-weight: normal;
+  font-family: var(--mono);
+  font-size: var(--terminal-font-size);
+  cursor: pointer;
+  white-space: nowrap;
+  background: var(--bg);
+  pointer-events: auto;
+}
+
+.shell-thinking-marker svg { margin-left: 0.4em; }
+
+.shell-thinking-marker[data-kind='link'] {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
 ::highlight(shell-reply-selection) { background-color: var(--editor-selection); }
 
 .shell-tab-header { position: relative; flex: 0 0 auto; }

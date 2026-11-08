@@ -4,21 +4,19 @@ import { messageBus } from '../bus.js';
 import { errorText } from '../error-text.js';
 import { tabRuntime } from '../tab/runtime.js';
 import type { AcpPromptResult } from './types.js';
-import type { AcpPendingPrompt } from './prompt-state.js';
+import type { AcpPendingPrompt, PromptResultOptions } from './prompt-state.js';
 import { promptCoreRecord } from './record-feed.js';
 import { runCorePrompt } from './run-prompt.js';
 import type { Managers } from '../managers.js';
 import type { RoleEntry } from '../plugins/roles/shared.js';
 import {
-  attemptOrder, exhaustedError, fallbackNotice, noRoleModels, readRoleSettings,
+  attemptOrder, exhaustedError, fallbackNotice, finalAttemptResult, noRoleModels, readRoleSettings,
   type AcpRoleSettings, type AttemptFailure,
 } from './ask-role.js';
 import { acpRoleRuntime, existingAcpRoleRuntime } from './role-state.js';
 import { DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
 
 const STILL_CONNECTING = 'ACP: the remote session is still connecting.';
-type PromptResultOptions = { appendRefusalToTranscript?: boolean };
-
 type Attempt = {
   command: string;
   prompt: string;
@@ -26,6 +24,7 @@ type Attempt = {
   settings: AcpRoleSettings;
   queue: RoleEntry[];
   failures: AttemptFailure[];
+  replyId?: string;
   onDone: (result: AcpPromptResult) => void;
 };
 
@@ -101,7 +100,9 @@ export class AcpManager extends AcpSessionManager {
       onDone({ answered: false, error });
       return;
     }
-    this.attempt(label, { command, prompt, role, settings, queue, failures: [], onDone });
+    this.attempt(label, {
+      command, prompt, role, settings, queue, failures: [], ...options.replyId && { replyId: options.replyId }, onDone,
+    });
   }
 
   // One model's try at the request. A request that settles because this model failed before it
@@ -121,6 +122,7 @@ export class AcpManager extends AcpSessionManager {
       roleName: attempt.settings.name,
       commands: [...attempt.settings.commands],
       runningEntries: new Set(),
+      ...(attempt.replyId && { replyId: attempt.replyId }),
     };
     acpRoleRuntime(runtime, attempt.role).prompt = request;
     this.managers.tab.addBusy(label, request);
@@ -150,8 +152,7 @@ export class AcpManager extends AcpSessionManager {
       this.attempt(label, { ...attempt, queue: rest, failures });
       return;
     }
-    attempt.onDone(failed && failures.length > 1
-      ? { answered: false, error: exhaustedError(failures, attempt.role) } : result);
+    attempt.onDone(finalAttemptResult(result, failed, failures, attempt.role));
   }
 
   private queueFor(label: string, settings: AcpRoleSettings, role: AcpRole): RoleEntry[] {

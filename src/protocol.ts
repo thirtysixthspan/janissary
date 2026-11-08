@@ -128,6 +128,7 @@ export type {
   AcpRef,
   BackgroundReplyView,
   ConnectionView,
+  PendingAcpReplyNameView,
   HarnessLaunchView,
   QuestionKind,
   PendingQuestionView,

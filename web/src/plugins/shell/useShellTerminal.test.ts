@@ -111,8 +111,9 @@ function harness(overrides: {
   const reportColors = overrides.reportColors ?? vi.fn();
   const container = document.createElement('div');
   const containerRef = { current: container };
+  const replyIds = new Set<string>();
   const view = renderHook(() => useShellTerminal({
-    ptyId: 'pty7', containerRef, attachTerminal, onExit, onCommandRunning, onCwd,
+    ptyId: 'pty7', replyIds, containerRef, attachTerminal, onExit, onCommandRunning, onCwd,
     copyText, reportColors, hookNonce: NONCE,
   }));
   return {
@@ -163,9 +164,10 @@ describe('useShellTerminal', () => {
       hookNonce: NONCE, host: 'devbox', prompted: false,
     };
     const containerRef = { current: document.createElement('div') };
+    const replyIds = new Set<string>();
     const initialProps: { payload: ShellPayload } = { payload: provisioning };
     const view = renderHook(({ payload }: { payload: ShellPayload }) => useShellTabTerminal({
-      payload, capabilities, containerRef, onCommand: vi.fn(), onCommandRunning: vi.fn(),
+      payload, capabilities, replyIds, containerRef, onCommand: vi.fn(), onCommandRunning: vi.fn(),
     }), { initialProps });
 
     await waitFor(() => expect(exitHandlers[0]).toHaveLength(1));
@@ -255,6 +257,56 @@ describe('useShellTerminal', () => {
     expect(terminals[0].written.at(-1)).toBe('\r\u{1B}[2K\u{1B}[1m> help\u{1B}[22m\r\nmoved here\r\n\u{1B}[1m>\u{1B}[22m ');
   });
 
+  it('writes a reply with its line to the terminal it is attached to now, not beneath an echo the old one held', () => {
+    const containerRef = { current: document.createElement('div') };
+    const replyIds = new Set<string>();
+    const { result, rerender } = renderHook(
+      ({ ptyId }) => useShellTerminal({
+        ptyId, replyIds, containerRef, attachTerminal: () => makeHandle(), onExit: vi.fn(), onCommandRunning: vi.fn(), onCwd: vi.fn(),
+        copyText: vi.fn(), hookNonce: NONCE,
+      }),
+      { initialProps: { ptyId: 'pty7' } },
+    );
+
+    act(() => { result.current.echoCommand('help'); });
+    rerender({ ptyId: 'pty8' });
+    act(() => { result.current.displayReply('help', '**bold** reply'); });
+
+    expect(terminals).toHaveLength(2);
+    expect(terminals[0].written).toEqual(['\r\u{1B}[2K\u{1B}[1m> help\u{1B}[22m\r\n\u{1B}[1m>\u{1B}[22m ']);
+    expect(terminals[1].written).toEqual(['\r\u{1B}[2K\u{1B}[1m> help\u{1B}[22m\r\n\u{1B}[1mbold\u{1B}[22m reply\r\n\u{1B}[1m>\u{1B}[22m ']);
+  });
+
+  it('starts its reply markers over when the terminal re-attaches, so the new screen writes a reply whole', () => {
+    const containerRef = { current: document.createElement('div') };
+    const replyIds = new Set<string>();
+    const { result, rerender } = renderHook(
+      ({ ptyId }) => useShellTerminal({
+        ptyId, replyIds, containerRef, attachTerminal: () => makeHandle(), onExit: vi.fn(), onCommandRunning: vi.fn(), onCwd: vi.fn(),
+        copyText: vi.fn(), hookNonce: NONCE,
+      }),
+      { initialProps: { ptyId: 'pty7' } },
+    );
+
+    act(() => { result.current.echoCommand('help', { replyId: 'r1', role: 'ask', name: 'ask-model' }); });
+    rerender({ ptyId: 'pty8' });
+    act(() => { result.current.displayReply('help', '**bold** reply', { id: 'r1', record: { id: 'rec-1', name: 'ask-model' } }); });
+
+    expect(terminals).toHaveLength(2);
+    expect(terminals[0].written).toEqual(['\r\u{1B}[2K\u{1B}[1m> help\u{1B}[22m\r\n\u{1B}[1m>\u{1B}[22m ']);
+    expect(terminals[1].written).toEqual(['\r\u{1B}[2K\u{1B}[1m> help\u{1B}[22m\r\n\u{1B}[1mbold\u{1B}[22m reply\r\n\u{1B}[1m>\u{1B}[22m ']);
+  });
+
+  it('keeps one identity for its reply writers across a re-render', () => {
+    const { result, rerender } = harness();
+    const { displayReply, echoCommand } = result.current;
+
+    rerender();
+
+    expect(result.current.displayReply).toBe(displayReply);
+    expect(result.current.echoCommand).toBe(echoCommand);
+  });
+
   it('focuses the terminal on request', () => {
     const { result } = harness();
 
@@ -277,7 +329,7 @@ describe('useShellTerminal', () => {
     const onCommandRunning = vi.fn();
     const onCwd = vi.fn();
     renderHook(() => useShellTerminal({
-      ptyId: 'pty7', containerRef: { current: document.createElement('div') },
+      ptyId: 'pty7', replyIds: new Set<string>(), containerRef: { current: document.createElement('div') },
       attachTerminal: () => makeHandle(),
       onExit: vi.fn(), onCommandRunning, onCwd, onCommand, copyText: vi.fn(),
       hookNonce: NONCE,
@@ -330,7 +382,7 @@ describe('useShellTerminal', () => {
     const onCommand = vi.fn();
     const onCommandRunning = vi.fn();
     renderHook(() => useShellTerminal({
-      ptyId: 'pty7', containerRef: { current: document.createElement('div') },
+      ptyId: 'pty7', replyIds: new Set<string>(), containerRef: { current: document.createElement('div') },
       attachTerminal: () => makeHandle(),
       onExit: vi.fn(), onCommandRunning, onCwd: vi.fn(), onCommand, copyText: vi.fn(),
       hookNonce: NONCE,
@@ -370,6 +422,7 @@ describe('useShellTerminal', () => {
     const container = document.createElement('div');
     const { result } = renderHook(() => useShellTerminal({
       ptyId: 'pty7',
+      replyIds: new Set<string>(),
       containerRef: { current: container },
       attachTerminal: undefined,
       onExit: vi.fn(), onCommandRunning: vi.fn(), copyText: vi.fn(), hookNonce: NONCE,
@@ -430,10 +483,11 @@ describe('useShellTerminal', () => {
   it('survives a tab switch, which hands it a fresh capability object', () => {
     const container = document.createElement('div');
     const containerRef = { current: container };
+    const replyIds = new Set<string>();
     const first = vi.fn((_id: string, _onData: (data: string) => void) => makeHandle());
     const { rerender, unmount } = renderHook(
       ({ attachTerminal }) => useShellTerminal({
-        ptyId: 'pty7', containerRef, attachTerminal, onExit: vi.fn(), onCommandRunning: vi.fn(), onCwd: vi.fn(), copyText: vi.fn(),
+        ptyId: 'pty7', replyIds, containerRef, attachTerminal, onExit: vi.fn(), onCommandRunning: vi.fn(), onCwd: vi.fn(), copyText: vi.fn(),
         hookNonce: NONCE,
       }),
       { initialProps: { attachTerminal: first } },

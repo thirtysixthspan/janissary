@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import type { AcpDispatchReceipt } from '../../acp/response.js';
 import type { AcpRef, ConnectionView, ScheduleView } from '../../protocol.js';
 import type { CompletionResult } from '../../completion/types.js';
 import {
-  isEmptyShellIntent, isShellCompleteRequest, isShellCwd, isShellDispatch, isShellMarkerNonce, isShellPayload,
-  SHELL_PAYLOAD_SCHEMA_VERSION, type ShellCompletion,
+  isEmptyShellIntent, isShellAcpReceipt, isShellCompleteRequest, isShellCwd, isShellDispatch, isShellMarkerNonce,
+  isShellPayload, SHELL_PAYLOAD_SCHEMA_VERSION, type ShellAcpReceipt, type ShellCompletion,
 } from './shared.js';
 
 const PAYLOAD = {
@@ -183,6 +184,45 @@ describe('shell shared contract', () => {
     expect(isShellCompleteRequest({ line: 'l' })).toBe(false);
     expect(isShellCompleteRequest({ cursor: 1 })).toBe(false);
     expect(isShellCompleteRequest({ line: 'l', cursor: '1' })).toBe(false);
+  });
+
+  it.each(['ask', 'tell'] as const)('accepts a well-formed %s receipt, with or without an extra field', (role) => {
+    const receipt = { replyId: 'reply-1', role, name: `acp:${role}:janus` };
+
+    expect(isShellAcpReceipt(receipt)).toBe(true);
+    expect(isShellAcpReceipt({ ...receipt, extra: 1 })).toBe(true);
+    expect(isShellAcpReceipt({ replyId: '', role, name: '' })).toBe(true);
+  });
+
+  it('rejects a receipt that is null, an array, or missing or mistyping a field', () => {
+    const receipt = { replyId: 'reply-1', role: 'ask', name: 'acp:ask:janus' };
+
+    expect(isShellAcpReceipt(null)).toBe(false);
+    expect(isShellAcpReceipt(undefined)).toBe(false);
+    expect(isShellAcpReceipt([receipt])).toBe(false);
+    expect(isShellAcpReceipt('reply-1')).toBe(false);
+    expect(isShellAcpReceipt({ role: 'ask', name: 'acp:ask:janus' })).toBe(false);
+    expect(isShellAcpReceipt({ ...receipt, replyId: 7 })).toBe(false);
+    expect(isShellAcpReceipt({ replyId: 'reply-1', role: 'ask' })).toBe(false);
+    expect(isShellAcpReceipt({ ...receipt, name: null })).toBe(false);
+    expect(isShellAcpReceipt({ replyId: 'reply-1', name: 'acp:ask:janus' })).toBe(false);
+  });
+
+  it('rejects a receipt whose role is neither ask nor tell', () => {
+    const receipt = { replyId: 'reply-1', name: 'acp:monitor:janus' };
+
+    expect(isShellAcpReceipt({ ...receipt, role: 'monitor' })).toBe(false);
+    expect(isShellAcpReceipt({ ...receipt, role: 'ASK' })).toBe(false);
+    expect(isShellAcpReceipt({ ...receipt, role: undefined })).toBe(false);
+  });
+
+  it.each(['ask', 'tell'] as const)('keeps its %s receipt assignable to and from the server receipt', (role) => {
+    const serverReceipt: AcpDispatchReceipt = { replyId: 'reply-1', role, name: `acp:${role}:janus` };
+    const shellReceipt: ShellAcpReceipt = serverReceipt;
+    const roundTrip: AcpDispatchReceipt = shellReceipt;
+
+    expect(isShellAcpReceipt(serverReceipt)).toBe(true);
+    expect(roundTrip).toEqual(serverReceipt);
   });
 
   it('accepts a reported cwd only as an absolute path already in normal form', () => {

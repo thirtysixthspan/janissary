@@ -1,6 +1,7 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import type { TabPluginClientCapabilities } from '../api';
-import type { ShellDispatchResult } from '@shared/plugins/shell/shared';
+import { isShellAcpReceipt } from '@shared/plugins/shell/shared';
+import type { ShellAcpReceipt, ShellDispatchResult } from '@shared/plugins/shell/shared';
 import { opensShellHistory, routeFor, shellLine, transcriptSearchQuery } from './command-line-rules';
 import { appendShellHistory } from './shell-history';
 import { shellCommandInput } from './shell-command-input';
@@ -14,7 +15,7 @@ export function useShellSubmit(input: {
   appBar: { intercept: (line: string) => boolean };
   capabilities: TabPluginClientCapabilities;
   displayReply: (line: string, markdown: string) => void;
-  echoCommand: (line: string) => void;
+  echoCommand: (line: string, receipt?: ShellAcpReceipt) => void;
   setMatches: Dispatch<SetStateAction<string[]>>;
   setSent: Dispatch<SetStateAction<string[]>>;
   write: (data: string) => void;
@@ -77,7 +78,10 @@ export function useShellSubmit(input: {
       remember(text);
       if (result.dispatched) {
         // A core-response command answers later, beneath this echo of its line.
-        if (result.coreResponse) echoCommand(text);
+        if (result.coreResponse) {
+          const acpReceipt = isShellAcpReceipt(result.result) ? result.result : undefined;
+          echoCommand(text, acpReceipt);
+        }
         else displayReply(text, result.output);
         return false;
       }

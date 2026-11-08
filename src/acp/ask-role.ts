@@ -2,6 +2,7 @@ import { homedir } from 'node:os';
 import { DEFAULT_ROLES, readRolesFile } from '../plugins/roles/roles-file.js';
 import type { Role, RoleEntry } from '../plugins/roles/shared.js';
 import type { AcpRole } from './role.js';
+import type { AcpPromptResult } from './types.js';
 
 // The role whose entries the core ACP session launches, in order of preference.
 export const ASK_ROLE = 'ask';
@@ -87,4 +88,15 @@ export function exhaustedError(failures: readonly AttemptFailure[], role: AcpRol
     `ACP: every model in the ${role} role failed.`,
     ...failures.map(({ entry, error }) => `- ${describeEntry(entry)}: ${error}`),
   ].join('\n');
+}
+
+// What an attempt settles its caller with. When every model failed the result is rebuilt as the
+// exhausted error, and the rebuild must carry the record id the last attempt's result held: that
+// record is where the prompt's final block lives.
+export function finalAttemptResult(
+  result: AcpPromptResult, failed: boolean, failures: readonly AttemptFailure[], role: AcpRole,
+): AcpPromptResult {
+  if (!failed || failures.length < 2) return result;
+  const exhausted = { answered: false as const, error: exhaustedError(failures, role) };
+  return result.recordId ? { ...exhausted, recordId: result.recordId } : exhausted;
 }

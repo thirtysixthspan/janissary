@@ -3,7 +3,7 @@ export { isProgrammaticScroll, isWithinBottomFollowThreshold } from '../shared/s
 import type { TerminalColors } from '../shared/terminal/colors';
 import type { JanusClient } from '../shared/ws/ws';
 import type { PluginHost } from './host';
-import type { BackgroundReplyView, ConnectionView, RemoteTargetView } from '@shared/protocol';
+import type { BackgroundReplyView, ConnectionView, PendingAcpReplyNameView, RemoteTargetView } from '@shared/protocol';
 import type { RemoteSessionState } from '../shared/RemoteSessionButton';
 
 export { renderMarkdown } from '../shared/transcript/markdown';
@@ -287,6 +287,7 @@ export type TabPluginClientCapabilities = {
   // stay snapshot-only. Additive, so the plugin API version does not move.
   openConnection?(row: ConnectionView): void;
   onBackgroundReply?(receive: (reply: BackgroundReplyView) => void): () => void;
+  onPendingAcpReplyName?(receive: (update: PendingAcpReplyNameView) => void): () => void;
   // This tab's asciicast recording, or absent before the tab's terminal has produced any output. Its
   // presence is also what makes the recording flag pressable, so a plugin drawing that flag reads
   // this field rather than keeping its own state — the host is the only thing that knows when the

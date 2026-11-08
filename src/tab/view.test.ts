@@ -84,6 +84,23 @@ describe('buildTabView', () => {
     expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).backgroundReplies).toEqual([{ id: 'finished', output: 'suggestion', line: 'ask hello' }]);
   });
 
+  it('projects pending ACP record names separately from completed replies', () => {
+    const tab = makeTab('shell', '#fff');
+    tab.runtime = {
+      busy: false, context: [], queue: [], acpRoles: { ask: {
+        prompt: {
+          replyId: 'reply-1', recordName: 'acp:ask:Renamed shell', prompt: 'hello', role: 'ask',
+          roleName: 'ask', commands: [], runningEntries: new Set(), abort: new AbortController(), finish: () => {},
+        },
+      } },
+    };
+
+    const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p);
+
+    expect(view.pendingAcpReplyNames).toEqual([{ id: 'reply-1', name: 'acp:ask:Renamed shell' }]);
+    expect(view.backgroundReplies).toEqual([]);
+  });
+
   it('leaves monitor and other background inputs without a line', () => {
     const tab = makeTab('shell', '#fff');
     tab.log = [
