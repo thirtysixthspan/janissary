@@ -18,6 +18,13 @@ export const pdfManifest = {
   },
   editsOwnFiles: true,
   command: 'pdf',
+  // Claimed rather than refused, and honoured only while a PDF tab is the active one: the
+  // application leaves Cmd+F to the editor everywhere else. A centre tab's claim moves with the
+  // current tab; a docked tab's claim lasts while its sidebar shows it. The chord runs for the
+  // focused tab label, so the mounted body answers it with the find overlay and any other focus
+  // falls through to the application. A handler that has nothing to open while the document loads
+  // or has failed still consumes the chord, keeping the browser's own find bar shut.
+  chords: ['meta+f'],
   capabilities: [
     'note',
     'notifyUser',

@@ -25,7 +25,7 @@ A PDF tab opens showing **one page at a time**, fitted to the tab. The stacked-p
 | `PageUp` / `PageDown` | Previous / next page | Scroll a screenful |
 | Scroll wheel | Scroll | Scroll |
 
-The keys only reach the PDF tab you are looking at — one hidden behind another tab, or in the other split pane, ignores them.
+The keys only reach the PDF tab you are working in — one hidden behind another tab, or in the other split pane, ignores them. A PDF tab docked into a sidebar takes them once you click into it.
 
 When the document overflows the stage, you can also drag its scrollbars to move through it.
 
@@ -52,13 +52,29 @@ Pages stay fitted as you show or hide the page strip, split the pane, or dock th
 
 <img class="agent-float left" src="/agents/bilal-south-east.png" alt="" />
 
-The text of a PDF is selectable: drag across a passage and copy it with `Cmd+C` / `Ctrl+C`, and you get the document's own text, not a picture of it. A selection is highlighted in blue over the page, so you can see it in any theme. There is no in-app copy button, and no find field — searching inside a document isn't supported yet.
+The text of a PDF is selectable: drag across a passage and copy it with `Cmd+C` / `Ctrl+C`, and you get the document's own text, not a picture of it. A selection is highlighted in blue over the page, so you can see it in any theme. There is no in-app copy button.
 
 `edit <file>.pdf` opens this same viewer, as does `Shift`+double-clicking a PDF in the [file navigator](/user-documentation/tab-types/file-navigator). Nothing in the tab writes to the file: there is no annotating, form filling, or signing.
 
+## Finding text
+
+While a PDF tab is open and its document has loaded, press `Cmd+F` to search it. A search field labeled `Search document` opens over the bottom of the tab. Use `Cmd+F`, not `Ctrl+F`.
+
+Type a word or phrase. Search ignores case. The list shows the matching lines with their page numbers, and every match on the pages in view is marked, with the match behind the highlighted row marked more strongly. The whole document is searched, not only the pages you have looked at. The first search reads the document's text, so a long document shows `Reading pages…` while it works and fills in the results as it reads. If Find cannot read one page's text, it skips that page and continues searching the rest of the document without a notification. A screen reader hears when reading starts, when matching lines first appear, and the final count or `No matching lines`; it doesn't announce each page. When the ten-row list is full, it says `10 or more matching lines found.`
+
+Case-insensitive matches stay aligned with the original text even when lowercasing changes a character's length.
+
+Use `↑` / `↓` or click a row to jump to a match. When you are showing one page at a time, the match's page comes into view; in continuous scroll the page scrolls so the match sits about a quarter of the way down. If you are zoomed in, the page also scrolls to bring the match into view. `Return` jumps to the best match.
+
+Matches stay within one line. A phrase that wraps to the next line, or a word hyphenated across a line break, is not found.
+
+An empty field shows `type to search`; a query with no matches shows `No matching lines`. Closing the search clears the marks and leaves you on the match you were looking at. `Escape` closes it without changing the zoom; with the search closed, `Escape` still returns the zoom to 100%. Closing the search returns the keyboard to where it was, usually the page, so the page and zoom keys work again. Switching to another tab closes the search, and opening it again starts with an empty field.
+
+Search works only once the document has loaded. While it is loading or after it fails to open, `Cmd+F` does nothing, and the browser's own find bar does not open.
+
 ## When a PDF won't open
 
-If the document can't be rendered, the tab stays open and the body reads `Failed to load <name>`, and a line goes to your [notifications](/user-documentation/tab-types/notifications) saying why: `<name> is password-protected`, `<name> could not be read`, or `Could not display <name>` for anything else. Password-protected documents are reported rather than opened; there is no prompt to type a password. A single page that won't draw, or whose text won't come through, lands on the same failed body with the same `Could not display <name>` line, and each tab reports it at most once so a long document with a handful of bad pages does not fill your feed. A render you cancel or replace, a page that is simply not drawn yet, and a thumbnail that will not draw are none of them a failure and report nothing.
+If the document can't be rendered, the tab stays open and the body reads `Failed to load <name>`, and a line goes to your [notifications](/user-documentation/tab-types/notifications) saying why: `<name> is password-protected`, `<name> could not be read`, or `Could not display <name>` for anything else. Password-protected documents are reported rather than opened; there is no prompt to type a password. A single page that won't draw, or whose selectable text layer fails to render, lands on the same failed body with the same `Could not display <name>` line, and each tab reports it at most once so a long document with a handful of bad pages does not fill your feed. A render you cancel or replace, a page that is simply not drawn yet, and a thumbnail that will not draw are none of them a failure and report nothing.
 
 ## Lifecycle
 

@@ -133,6 +133,8 @@ Search buffer
 
 Type a fragment of the line you're after — the characters must appear together in the same order, and case doesn't matter, so `synt` finds `### Syntax highlighting`. There is no regex, case-sensitivity switch, or whole-word option. Up to ten matching lines are listed with their line numbers, and the matched text is highlighted. A line too long for the overlay is cut short with an ellipsis rather than wrapped — its number and the jump still identify it — and two identical lines show up as two rows with their own numbers, in the order they appear in the file.
 
+The highlight follows the matching text in the original line even when lowercasing changes a character's length.
+
 `↑`/`↓` move down the list and the buffer jumps to each line as you go, placing the match about one quarter of the editor's height from the top so you can read below it. Press `Return` to jump to the first match, even if another row is highlighted; the search stays open. `Escape` closes it and leaves the cursor on the last line you looked at, ready to type. Clicking a row does the same jump. `Escape` still closes the overlay if you've clicked back into the file while it's open.
 
 A query that matches nothing shows `No matching lines`. Clearing it brings back the `type to search` hint.

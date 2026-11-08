@@ -90,6 +90,15 @@ describe('contiguousMatch', () => {
     expect(results.map(({ path, ranges }) => [path, ranges])).toEqual([['prefix/Target line', [[7, 13]]]]);
   });
 
+  it('maps matches after lowercase expansions to their original source offsets', () => {
+    const results = contiguousMatch(['İneedle'], 'needle', 10);
+    const result = results[0];
+
+    expect(result?.path).toBe('İneedle');
+    expect(result?.ranges).toEqual([[1, 7]]);
+    expect(result?.path.slice(1, 7)).toBe('needle');
+  });
+
   it('rejects a query whose characters only appear as a subsequence', () => {
     expect(contiguousMatch(['line one'], 'lne', 10)).toEqual([]);
   });

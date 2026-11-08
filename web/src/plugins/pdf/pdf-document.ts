@@ -11,6 +11,7 @@ import {
 } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import type { PdfLoadFailure } from '@shared/plugins/pdf/shared';
+import type { PdfTextItem } from './pdf-find-lines';
 import type { PageSize } from './pdf-view-model';
 
 // The only module that touches PDF.js. Everything else in this plugin is reachable with this one
@@ -33,6 +34,7 @@ export type LoadedPdf = {
   renderPage(
     index: number, canvas: HTMLCanvasElement, scale: number, textLayer: HTMLElement | null,
   ): Promise<void>;
+  readPageText(index: number): Promise<PdfTextItem[]>;
   destroy(): void;
 };
 
@@ -113,6 +115,23 @@ export async function loadPdf(url: string, signal?: AbortSignal): Promise<PdfLoa
         pageSizes,
         renderPage: (index, canvas, scale, textLayer) =>
           drawPage(pages[index], canvas, scale, textLayer),
+        readPageText: async (index) => {
+          const page = pages[index];
+          const viewport = page.getViewport({ scale: 1 });
+          const content = await page.getTextContent();
+          return content.items
+            .filter((item) => 'str' in item)
+            .map((item) => {
+              const converted = viewport.convertToViewportPoint(
+                item.transform[4], item.transform[5],
+              );
+              return {
+                text: item.str,
+                hasEOL: item.hasEOL,
+                top: Number(converted[1]) / viewport.height,
+              };
+            });
+        },
         // Tearing down the loading task is what aborts the outstanding network requests and
         // releases the worker; the proxy itself has no teardown of its own.
         destroy,

@@ -8,7 +8,7 @@ import { usePdfStageViewport } from './usePdfStageViewport';
 // against so a fitted page is not flush with the frame.
 const STAGE_PADDING = 16;
 
-export type PdfJump = { page: number; token: number };
+export type PdfJump = { page: number; token: number; offset?: number };
 
 export type PdfStageProperties = {
   document: LoadedPdf;
@@ -18,14 +18,21 @@ export type PdfStageProperties = {
   jump: PdfJump;
   onVisiblePage(index: number): void;
   onRenderFailure(): void;
+  onTextLayer?(index: number): void;
   stageRef: React.RefObject<HTMLDivElement | null>;
+  focusable?: boolean;
 };
+
+function focusStage(event: React.PointerEvent<HTMLDivElement>): void {
+  event.currentTarget.focus();
+}
 
 // One stage and one page component, not a path per layout: continuous scroll and single page differ
 // only in which pages the stage lists and which fit rule it applies, so the layout toggle changes
 // two inputs rather than swapping renderers.
 export function PdfStage({
-  document: pdf, layout, zoom, page, jump, onVisiblePage, onRenderFailure, stageRef,
+  document: pdf, layout, zoom, page, jump, onVisiblePage, onRenderFailure, onTextLayer, stageRef,
+  focusable = false,
 }: PdfStageProperties) {
   const size = usePdfStageViewport({
     stageRef, layout, pageCount: pdf.pageSizes.length, jump, onVisiblePage,
@@ -41,7 +48,12 @@ export function PdfStage({
     : pdf.pageSizes.map((_size, index) => index);
 
   return (
-    <div className={`plugin-stage pdf-stage pdf-${layout}`} ref={stageRef}>
+    <div
+      className={`plugin-stage pdf-stage pdf-${layout}`}
+      ref={stageRef}
+      tabIndex={focusable ? 0 : undefined}
+      onPointerDown={focusable ? focusStage : undefined}
+    >
       {zoom !== 1 && <div className="pdf-zoom-badge">{Math.round(zoom * 100)}%</div>}
       <div className="pdf-pages">
         {indices.map((index) => (
@@ -54,6 +66,7 @@ export function PdfStage({
             root={stageRef}
             renderPage={pdf.renderPage}
             onFailure={onRenderFailure}
+            onTextLayer={onTextLayer}
           />
         ))}
       </div>

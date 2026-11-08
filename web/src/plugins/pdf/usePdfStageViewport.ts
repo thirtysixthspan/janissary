@@ -3,7 +3,7 @@ import type { PdfLayout, StageSize } from './pdf-view-model';
 
 // The jump input the scroll-sync effect needs, declared structurally so this module never imports
 // the component that owns the public `PdfJump` type.
-type StageJump = { page: number; token: number };
+type StageJump = { page: number; token: number; offset?: number };
 
 // Stage measurement and visible-page tracking for the PDF stage: the resize subscription with its
 // duplicate-size suppression, the intersection-ratio ranking of the most-visible page while
@@ -59,12 +59,25 @@ export function usePdfStageViewport({
   }, [layout, onVisiblePage, pageCount, stageRef]);
 
   // A jump carries a token rather than only a page number, so clicking the thumbnail of the page you
-  // are already on still scrolls to it. Single-page layout needs no scroll: it re-lists one page.
+  // are already on still scrolls to it. Single-page layout needs no scroll without an offset: it
+  // re-lists one page. An offset is a point within the page, so it applies to either layout.
   useEffect(() => {
     const stage = stageRef.current;
-    if (layout !== 'continuous' || !stage) return;
-    stage.querySelector(`.pdf-page[data-page="${CSS.escape(String(jump.page))}"]`)
-      ?.scrollIntoView({ block: 'start' });
+    if (!stage) return;
+    const target = stage.querySelector<HTMLElement>(
+      `.pdf-page[data-page="${CSS.escape(String(jump.page))}"]`,
+    );
+    if (jump.offset !== undefined) {
+      if (!target) return;
+      const stageRect = stage.getBoundingClientRect();
+      const pageRect = target.getBoundingClientRect();
+      stage.scrollTop += pageRect.top - stageRect.top
+        + jump.offset * pageRect.height
+        - stage.clientHeight / 4;
+      return;
+    }
+    if (layout !== 'continuous' || !target) return;
+    target.scrollIntoView({ block: 'start' });
   }, [jump, layout, stageRef]);
 
   return size;
