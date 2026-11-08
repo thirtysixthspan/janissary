@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Use the editor's supported document-end shortcut in the quit-walk verification steps.
-
-Existing Issue: Description steps D1 and D8 rely on Cmd+End to append edits, but the editor does not map that chord to document end, so D8 inserts `Z` before the existing gamma text instead of producing the expected `gamma gamma-editedZ`. Severity: 2/10
-
-Existing Risk: 2/10 - Reviewers following the steps can mistake a bad test input for a broken quit walk and fail to verify the intended save behavior.
-
-Proposal Risk: 1/10 - The corrected manual step could become stale if editor keyboard mappings change later.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1957 "Correct the quit-walk document-end shortcut in How to verify". D8 (description) currently says: “From a fresh instance arranged as in Setup, type `quit` from the shell tab, press `y` on alpha's dialog, then press `Escape` on gamma's dialog. Press Cmd+End (Ctrl+End on Linux) and type `Z`.” In the tested app this left gamma's buffer as `gamma-editedZgamma`, though the dialog Cancel correctly left gamma current and focused; a fresh diagnostic confirmed the focus behavior. The shared Setup also says to press Cmd+End before typing ` alpha-edited`, which affected D1 and D8. In `web/src/editor/keys.ts`, `metaAction` maps Meta+ArrowDown to document end, `ctrlAction` handles Ctrl+End, and `actionForKey` resolves those bindings; Meta+End has no document-end mapping. Correct the Setup instruction to “press Cmd+Down on macOS (Ctrl+End on Linux)” before appending, and correct D8 to use the same shortcut before typing `Z`; retain its expected buffer suffix ` gamma-editedZ`. Re-run D1 and D8 by hand and confirm the inserted text is at the end of each initial buffer.
-
-
 * Reset the fixture files between independent quit-walk verification cases.
 
 Existing Issue: Description steps D1, D2, D3, D5, D6, D8, D9, and D10 expect Setup's original file contents while Setup explicitly carries fixture files forward between numbered cases, so their exact disk assertions fail after earlier steps have saved edits or appended `external` lines. Severity: 3/10
