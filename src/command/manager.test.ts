@@ -514,6 +514,20 @@ describe('CommandManager disabled command policy', () => {
     ]);
   });
 
+  it.each([
+    ['quit', 'quit now'],
+    ['clear', 'clear all'],
+    ['hist', 'hist 5'],
+  ])('keeps malformed %s input unknown rather than refusing it', (name, input) => {
+    const { managers } = makeManagers(settingsWith({ [name]: { enabled: false } }));
+
+    managers.command.dispatch(input);
+
+    expect(managers.tab.cur().log.at(-1)).toEqual({
+      input, output: `Unknown command: "${input}". Type "help" for available commands.`, markdown: false,
+    });
+  });
+
   it('refuses an alias under its canonical command name', async () => {
     const { managers } = makeManagers(settingsWith({ close: { enabled: false } }));
 
@@ -521,6 +535,23 @@ describe('CommandManager disabled command policy', () => {
       dispatched: true, output: 'Command is disabled: close.',
     });
     expect(managers.tab.cur().log.at(-1)).toEqual({ input: 'exit', output: 'Command is disabled: close.' });
+  });
+
+  it('refuses a disabled command that is unavailable on the current tab', async () => {
+    const { managers } = makeManagers(settingsWith({ ask: { enabled: false } }));
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'ask hello')).resolves.toEqual({
+      dispatched: true, output: 'Command is disabled: ask.',
+    });
+    expect(managers.tab.cur().log.at(-1)).toEqual({ input: 'ask hello', output: 'Command is disabled: ask.' });
+  });
+
+  it('refuses a disabled plugin alias under its canonical command name', async () => {
+    const { managers } = makeManagers(settingsWith({ connections: { enabled: false } }));
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'connection')).resolves.toEqual({
+      dispatched: true, output: 'Command is disabled: connections.',
+    });
   });
 
   it('refuses a disabled fixed form while its parent and sibling forms still run', async () => {

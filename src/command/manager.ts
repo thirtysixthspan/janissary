@@ -29,7 +29,7 @@ export class CommandManager {
 
   private run(input: string, label: string, index: number): void {
     const res = resolveInTab(input, label, this.managers);
-    const refusal = res.kind === 'empty' ? undefined : refuseDisabledCommand(this.managers, res.cmd, label);
+    const refusal = res.kind === 'empty' ? undefined : refuseDisabledCommand(this.managers, input, res.cmd, label);
     if (refusal !== undefined) {
       this.managers.tab.append(label, { input, output: refusal });
       return;
@@ -97,7 +97,7 @@ export class CommandManager {
     const resolution = resolveInTab(input, label, this.managers);
     const refusal = resolution.kind === 'empty'
       ? undefined
-      : refuseDisabledCommand(this.managers, resolution.cmd, label);
+      : refuseDisabledCommand(this.managers, input, resolution.cmd, label);
     if (refusal !== undefined) {
       this.managers.tab.append(label, { input, output: refusal });
       return { dispatched: true, output: refusal };
@@ -151,7 +151,7 @@ export class CommandManager {
     index: number,
     invocation: CommandInvocationContext,
   ): Promise<unknown> {
-    const refusal = refuseDisabledCommand(this.managers, command, label);
+    const refusal = refuseDisabledCommand(this.managers, name, command, label);
     if (refusal !== undefined) {
       this.managers.tab.appendForInvocation(label, { input: command, output: refusal }, invocation.invocationId);
       return refusal;

@@ -1,10 +1,19 @@
 import { resolveApplicationCommand } from '../application-commands.js';
+import { getOutput } from '../commands.js';
+import { commands } from '../commands/index.js';
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
 
-export function disabledCommandMessage(managers: Managers, command: string): string | undefined {
-  if (command.startsWith('!')) return undefined;
-  const row = resolveApplicationCommand(command);
+export function disabledCommandMessage(
+  managers: Managers,
+  input: string,
+  commandText: string,
+): string | undefined {
+  if (input.startsWith('!') || commandText.startsWith('!')) return undefined;
+  if (commands.every((command) => !command.match(commandText)) && getOutput(commandText).kind !== 'output') {
+    return undefined;
+  }
+  const row = resolveApplicationCommand(commandText);
   if (!row) return undefined;
   const snapshot = managers.nativeCommandSettings?.current();
   const setting = snapshot?.commands.find((entry) => entry.name === row.name);
@@ -14,10 +23,11 @@ export function disabledCommandMessage(managers: Managers, command: string): str
 
 export function refuseDisabledCommand(
   managers: Managers,
-  command: string,
+  input: string,
+  commandText: string,
   label: string,
 ): string | undefined {
-  const message = disabledCommandMessage(managers, command);
+  const message = disabledCommandMessage(managers, input, commandText);
   if (message === undefined) return undefined;
   notify(managers, 'command-disabled', label, message);
   return message;

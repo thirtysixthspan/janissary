@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Stop refusing malformed input as a disabled command by resolving policy from the command the registry actually matched.
-
-Existing Issue: The dispatch policy resolves the raw line's longest inventory prefix independently of `resolveInTab`, so when an exact-match command such as `quit` is disabled, an unsupported line such as `quit now` is answered `Command is disabled: quit.` instead of the unknown-command reply; the plan requires resolving with the existing ordered registry/plugin rules first. Severity: 4/10
-
-Existing Risk: 4/10 - Users receive a misleading refusal for input the application never accepted as a command, and a future command whose fixed form overlaps another owner's could apply the wrong command's setting.
-
-Proposal Risk: 2/10 - Gating the refusal on a registry match fixes the concrete misclassification while preserving valid disabled-command refusals, but the inventory row is still selected independently, so a future different-owner overlap remains a smaller design risk.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "resolve disabled-command policy from the command the registry actually matched". In `src/native-commands/dispatch-policy.ts`, require a registry match before resolving the inventory row: for input that is not the explicit `!` shell escape, find the command with `commands.find((command) => command.match(commandText))` from `src/commands/index.ts` while ignoring `Command.available`, and return `undefined` when none matches. Keep the existing `resolveApplicationCommand` row for the canonical name and parent/child settings, and keep the `help` row path when `getOutput` in `src/commands.ts` recognizes help. In `src/command/manager.ts`, pass the input from `run` and `dispatchLine` and the supplied `name` plus command text from `executeCommandWithContext` so direct callers use the same gate. This preserves refusals for unavailable commands such as `ask` on a shell tab while leaving `quit now`, `clear all`, and `hist 5` unknown. Add tests in `src/command/manager.test.ts` for those malformed exact-command inputs with the command disabled (unknown reply, no refusal), for `ask hello` on the seeded shell tab with `ask` disabled (refusal still returned), and for the plugin alias `connection` with `connections` disabled (refusal reports the canonical name). Keep the existing alias, shared-owner, parent/child, help, queue, schedule, and notification tests passing. Update `product/specs/application-commands.md` only if the final behavior needs the sentence that malformed input keeps the unknown-command reply.
-
-
 * Cover the core-response and capture-timeout contracts in the disabled-command tests so the plan's named capture coverage is real.
 
 Existing Issue: The test named "returns the refusal for every capture contract before capture can time out" runs `ask` on the seeded shell tab, where `acpAvailable` makes `ask` unavailable, so it takes the unknown-input branch rather than the core-response branch; its zero capture limit is ignored by the core-response path and by the structured-result path, and the normal-capture `dispatchLine` cases use the default 30-second limit, leaving the plan's "each capture/result contract" and "refusal preservation when output capture times out" unverified. Severity: 3/10
