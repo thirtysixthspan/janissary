@@ -62,7 +62,7 @@ Pending requests and current records are kept separately for each role on the ta
 
 ## Answers, activity, and questions
 
-The shell shows only the settled answer as sanitized GitHub-flavored Markdown in its output. It has no ACP response panel, responding status, or Reset ACP button. Thinking, tool steps, live activity, and prompt history appear in the connection tab. The shell's tab dot still blinks during the operation. See [[connections-tab]].
+The shell shows the settled answer as sanitized GitHub-flavored Markdown and adds a pointer-operated marker to accepted `ask` and `tell` echoes. The marker opens the role's live connection tab while the prompt runs and becomes a link to the answering record after settlement; [[shell-tab]] describes its placement and edge cases. The shell has no ACP response panel, streaming activity, or Reset ACP button. Thinking, tool steps, live activity, and prompt history appear in the connection tab. The shell's tab dot still blinks during the operation. See [[connections-tab]].
 
 The connections panel's ACP rows open or focus the corresponding connection tab when they carry a durable record or the tab's own live ACP reference. Rows that offer a transcript snapshot keep that separate button, and clicking it never opens the record tab. See [[connection]].
 

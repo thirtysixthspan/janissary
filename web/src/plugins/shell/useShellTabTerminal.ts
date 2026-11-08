@@ -26,6 +26,8 @@ export function useShellTabTerminal({
     copyText: capabilities.copyText,
     reportColors: capabilities.reportTerminalColors,
     openLink: (href) => { capabilities.openLink?.(href); },
+    openConnection: (row) => { capabilities.openConnection?.(row); },
+    label: capabilities.label,
     hookNonce: payload.hookNonce,
     onCommand,
     onCommandRunning: (running) => {

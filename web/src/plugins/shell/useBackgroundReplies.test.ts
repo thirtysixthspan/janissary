@@ -12,9 +12,10 @@ it('renders background replies once across snapshots, hiding, and reconnect subs
   const { rerender, unmount } = renderHook(({ subscription }) => useBackgroundReplies(subscription, display), { initialProps: { subscription: subscribe } });
   act(() => { receive(reply); });
   rerender({ subscription: vi.fn((callback: typeof receive) => { receive = callback; callback(reply); return stop; }) });
-  expect(display).toHaveBeenCalledExactlyOnceWith('monitor', reply.output);
+  expect(display).toHaveBeenCalledExactlyOnceWith('monitor', reply.output, reply);
   act(() => { receive({ id: 'reply-2', output: 'Another suggestion' }); });
   expect(display).toHaveBeenCalledTimes(2);
+  expect(display).toHaveBeenLastCalledWith('monitor', 'Another suggestion', { id: 'reply-2', output: 'Another suggestion' });
   unmount();
   expect(stop).toHaveBeenCalledTimes(2);
 });
@@ -28,7 +29,7 @@ it('renders an ACP reply under its exact line', () => {
     return () => {};
   }, display));
 
-  expect(display).toHaveBeenCalledExactlyOnceWith('acp summarize this', '## Answer');
+  expect(display).toHaveBeenCalledExactlyOnceWith('acp summarize this', '## Answer', reply);
 });
 
 it('keeps the monitor fallback for a reply without a line', () => {
@@ -39,5 +40,19 @@ it('keeps the monitor fallback for a reply without a line', () => {
     return () => {};
   }, display));
 
-  expect(display).toHaveBeenCalledExactlyOnceWith('monitor', 'Review the change');
+  expect(display).toHaveBeenCalledExactlyOnceWith('monitor', 'Review the change', { id: 'monitor-1', output: 'Review the change' });
+});
+
+it('passes a settled connection record through to the reply writer', () => {
+  const display = vi.fn();
+  const reply: BackgroundReplyView = {
+    id: 'acp-2', output: 'Answer', line: 'ask summarize this', record: { id: 'record-2', name: 'acp:ask:shell1' },
+  };
+
+  renderHook(() => useBackgroundReplies((receive) => {
+    receive(reply);
+    return () => {};
+  }, display));
+
+  expect(display).toHaveBeenCalledExactlyOnceWith('ask summarize this', 'Answer', reply);
 });
