@@ -84,9 +84,9 @@ describe('ask command', () => {
 
     run(promptResult, '/ask hello');
 
-    expect(promptResult).toHaveBeenCalledExactlyOnceWith('main', 'ask hello', 'ask', {
-      appendRefusalToTranscript: false,
-    });
+    expect(promptResult).toHaveBeenCalledExactlyOnceWith('main', 'ask hello', 'ask', expect.objectContaining({
+      appendRefusalToTranscript: false, replyId: expect.any(String),
+    }));
   });
 
   it('gives each dispatch its own reply id, including two refused dispatches of the same line', async () => {

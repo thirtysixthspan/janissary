@@ -289,7 +289,7 @@ export type TabRuntime = {
   serverPtyExitId?: string;
   editorSyncGeneration?: number;
   acpEntries?: WeakSet<LogEntry>;
-  acpRoles?: Partial<Record<AcpRole, { prompt?: AcpPendingPrompt; recordId?: string }>>;
+  acpRoles?: Partial<Record<AcpRole, { prompt?: AcpPendingPrompt; recordId?: string; recordName?: string }>>;
   // Every ACP and agent record that began in this tab incarnation, kept after each one ends. A record's
   // owner label alone cannot tell this tab from a later one that reused the label, so the connections
   // topic reads this to decide whether a record still has its own tab to focus. In-memory only.

@@ -1,4 +1,5 @@
 import { subscribeBackgroundReplies } from './background-replies';
+import { subscribePendingAcpReplyNames } from './pending-acp-reply-names';
 import { resourceUrl } from '../shared/ws/session-url';
 import { copyText as systemCopyText } from '../shared/system-clipboard';
 import { openTranscriptLink } from '../shared/transcript/open-link';
@@ -80,6 +81,7 @@ export function createPluginClientCapabilities(
       };
     },
     onBackgroundReply: (receive) => subscribeBackgroundReplies(client, label, receive),
+    onPendingAcpReplyName: (receive) => subscribePendingAcpReplyNames(client, label, receive),
     openFileNavigator: () => { client.send({ method: 'openFileNavigatorFor', params: { label } }); },
     openDiffHere: () => { client.send({ method: 'openDiffFor', params: { label } }); },
     openScheduleLaunch: () => { client.send({ method: 'command', params: { text: 'schedule' } }); },

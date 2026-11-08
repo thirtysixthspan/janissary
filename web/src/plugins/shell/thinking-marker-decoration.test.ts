@@ -433,6 +433,18 @@ describe('addThinkingMarker', () => {
       expect(element.querySelector('svg')).toBeNull();
     });
 
+    it('updates a running marker tooltip and accessible name when its record name changes', () => {
+      const { fake, handle } = mount();
+      const element = render(fake);
+
+      handle.show({ ...view(), name: 'acp:ask:Renamed shell' });
+
+      expect(element.dataset.kind).toBe('running');
+      expect(element.title).toBe('Open acp:ask:Renamed shell');
+      expect(element.getAttribute('aria-label')).toBe('Open acp:ask:Renamed shell');
+      expect(element.textContent).toBe('Thinking');
+    });
+
     it('places the element again at once when the view changes width', () => {
       const { fake, handle } = mount({ rows: [{ text: LONG_ROW }] });
       const element = render(fake);

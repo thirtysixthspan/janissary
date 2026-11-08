@@ -66,7 +66,7 @@ export function runAcpCommand(
     settled = true;
     appendAcpBackgroundReply(managers, tab.label, line, result, replyId);
   };
-  void managers.acp.promptResult(tab.label, command, role, { appendRefusalToTranscript: false }).then(
+  void managers.acp.promptResult(tab.label, command, role, { appendRefusalToTranscript: false, replyId }).then(
     settle,
     (error: unknown) => settle({ answered: false, error: `ACP error: ${errorText(error)}` }),
   );

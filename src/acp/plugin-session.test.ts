@@ -10,7 +10,7 @@ import type { AcpRole } from './role.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { isShellAcpReceipt, type ShellAcpReceipt } from '../plugins/shell/shared.js';
 import { TabManager } from '../tab/manager.js';
-import { backgroundRepliesFor } from '../tab/background-replies.js';
+import { backgroundRepliesFor, pendingAcpReplyNamesFor } from '../tab/background-replies.js';
 import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
 import { acpCapabilities } from '../plugins/acp-capabilities.js';
@@ -285,6 +285,49 @@ describe('core ACP for plugin tabs', () => {
     expect(dispatch).toHaveBeenCalledWith('consumer', `connection ${recordId}`);
   });
 
+  it('updates a shell dispatch name when fallback opens a record under the renamed shell title', async () => {
+    const { managers, handlers } = setup(() => ({
+      name: 'ask',
+      entries: [
+        { harness: 'opencode', model: 'first/model' },
+        { harness: 'opencode', model: 'fallback/model' },
+      ],
+      commands: [...NATIVE_ACP_COMMANDS],
+    }));
+    await managers.command.dispatchLineWithOutput('consumer', 'ask first', 1);
+    handlers().onChunk('First answer');
+    handlers().onEnd('end_turn');
+    const tab = managers.tab.byLabel('consumer')!;
+    await vi.waitFor(() => { expect(managers.acpRecords.rows()[0]?.status).toBe('Idle'); });
+    const firstRecordId = tab.runtime?.acpRoles?.ask?.recordId;
+    tab.title = 'Renamed shell';
+
+    const dispatch = await managers.command.dispatchLineWithOutput('consumer', 'ask second', 1);
+    const receipt = dispatch.result as ShellAcpReceipt;
+    expect(receipt).toMatchObject({ role: 'ask', name: 'acp:ask:consumer' });
+    expect(tab.runtime?.acpRoles?.ask?.prompt?.replyId).toBe(receipt.replyId);
+
+    handlers().onError('first model failed');
+
+    await vi.waitFor(() => {
+      expect(tab.runtime?.acpRoles?.ask?.recordId).not.toBe(firstRecordId);
+      expect(pendingAcpReplyNamesFor(tab)).toContainEqual({
+        id: receipt.replyId, name: 'acp:ask:Renamed shell',
+      });
+    });
+    const fallbackHandlers = handlers();
+    fallbackHandlers.onChunk('Fallback answer');
+    fallbackHandlers.onEnd('end_turn');
+
+    await vi.waitFor(() => {
+      expect(backgroundRepliesFor(tab)).toContainEqual(expect.objectContaining({
+        id: receipt.replyId, output: 'Fallback answer',
+        record: expect.objectContaining({ name: 'acp:ask:Renamed shell' }),
+      }));
+    });
+    managers.acp.closeAll();
+  });
+
   it('names the tell record on the settled tell reply and places it under the tell line', async () => {
     const { managers, handlers } = setup();
     const reply = await managers.command.dispatchLineWithOutput('consumer', 'tell hello', 1);
@@ -396,7 +439,10 @@ describe('core ACP for plugin tabs', () => {
     const refusal = tab.log.find((entry) => entry.background)!;
     expect(refusal.background).toBe(secondId);
     expect(refusal).not.toHaveProperty('backgroundRecord');
-    expect(backgroundRepliesFor(tab)).toEqual([{ id: secondId, output: 'ACP: a prompt is already running.', line: 'ask second' }]);
+    expect(backgroundRepliesFor(tab)).toEqual([
+      { id: secondId, output: 'ACP: a prompt is already running.', line: 'ask second' },
+    ]);
+    expect(pendingAcpReplyNamesFor(tab)).toEqual([{ id: firstId, name: 'acp:ask:consumer' }]);
     expect(backgroundRepliesFor(tab)[0]).not.toHaveProperty('record');
 
     handlers().onChunk('first answer');

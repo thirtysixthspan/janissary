@@ -2,6 +2,8 @@ import type { AcpPromptResult } from './types.js';
 import type { AcpRole } from './role.js';
 import type { LogEntry } from '../tab/types.js';
 
+export type PromptResultOptions = { appendRefusalToTranscript?: boolean; replyId?: string };
+
 export type AcpPendingPrompt = {
   finish: (result: AcpPromptResult) => void;
   abort: AbortController;
@@ -10,7 +12,9 @@ export type AcpPendingPrompt = {
   roleName: string;
   commands: string[];
   runningEntries: Set<LogEntry>;
+  replyId?: string;
   recordId?: string;
+  recordName?: string;
   cancellation?: Promise<boolean>;
   // Set once the model has completed a reply turn for this request: from then on it has answered, and
   // a later failure is reported rather than retried on another model.

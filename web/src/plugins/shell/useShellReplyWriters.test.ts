@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type { Terminal } from '@xterm/xterm';
-import type { BackgroundReplyView } from '@shared/protocol';
+import type { BackgroundReplyView, PendingAcpReplyNameView } from '@shared/protocol';
 import type { ShellAcpReceipt, ShellConnectionRow } from '@shared/plugins/shell/shared';
 import { formatDispatchedCommand, formatEchoedCommand } from './format-dispatched-command';
 import { insertMarkdownBlock } from './markdown-block';
@@ -248,6 +248,52 @@ describe('useShellReplyWriters settling', () => {
     expect(shown.name).toBe('new-name');
     shown.onOpen();
     expect(openConnection).toHaveBeenCalledWith({ text: 'new-name', kind: 'acp', recordId: 'rec-9' });
+  });
+});
+
+describe('useShellReplyWriters pending name updates', () => {
+  it('refreshes the running marker name and keeps its role-based connection reference', () => {
+    const { openConnection, replyIds, result } = setup();
+    result.current.echoCommand(LINE, receipt('r1', 'ask', 'acp:ask:original shell'));
+    let receive: (update: PendingAcpReplyNameView) => void = () => {};
+    const subscribe = (callback: typeof receive) => {
+      receive = callback;
+      return () => {};
+    };
+    renderHook(() => useBackgroundReplies(undefined, result.current.displayReply, replyIds, subscribe));
+
+    act(() => { receive({ id: 'r1', name: 'acp:ask:Renamed shell' }); });
+
+    expect(replyIds).toEqual(new Set());
+    expect(handles[0]?.show).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      kind: 'running', name: 'acp:ask:Renamed shell',
+    }));
+    const shown = handles[0]?.show.mock.calls[0]?.[0] as { onOpen: () => void };
+    shown.onOpen();
+    expect(openConnection).toHaveBeenCalledWith({
+      text: 'acp:ask:Renamed shell', kind: 'acp',
+      acpRef: { scope: 'tab', label: 'shell-1', role: 'ask' },
+    });
+  });
+
+  it('applies a fallback name update that arrives before the dispatch receipt', () => {
+    const { markersRef, openConnection, result } = setup();
+    result.current.displayReply('', '', { id: 'r1', pending: true, name: 'acp:tell:Renamed shell' });
+
+    result.current.echoCommand(LINE, receipt('r1', 'tell', 'acp:tell:original shell'));
+
+    expect(markersRef.current.pendingNames).toBeUndefined();
+    expect(markersRef.current.entries.get('r1')).toMatchObject({
+      name: 'acp:tell:Renamed shell', role: 'tell',
+    });
+    expect(addMarker).toHaveBeenCalledExactlyOnceWith(
+      expect.anything(), expect.anything(), expect.objectContaining({ kind: 'running', name: 'acp:tell:Renamed shell' }),
+    );
+    viewOf(0).onOpen();
+    expect(openConnection).toHaveBeenCalledWith({
+      text: 'acp:tell:Renamed shell', kind: 'acp',
+      acpRef: { scope: 'tab', label: 'shell-1', role: 'tell' },
+    });
   });
 });
 

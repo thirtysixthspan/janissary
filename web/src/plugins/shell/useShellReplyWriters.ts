@@ -7,10 +7,12 @@ import { addThinkingMarker, type ThinkingMarkerHandle, type ThinkingMarkerView }
 import { writeShellEcho, writeShellReply } from './write-shell-reply';
 
 type Receiver = Parameters<NonNullable<TabPluginClientCapabilities['onBackgroundReply']>>[0];
+type BackgroundReply = Parameters<Receiver>[0];
+type PendingNameUpdate = { id: string; pending: true; name: string };
 
-export type ShellReplyOutcome = Pick<Parameters<Receiver>[0], 'id' | 'record'>;
+export type ShellReplyOutcome = Pick<BackgroundReply, 'id' | 'record'> | PendingNameUpdate;
 
-type ReplyRecord = NonNullable<ShellReplyOutcome['record']>;
+type ReplyRecord = NonNullable<BackgroundReply['record']>;
 
 type Settlement =
   | { kind: 'pending' }
@@ -24,7 +26,7 @@ type Entry = {
   settlement: Settlement;
 };
 
-export type ReplyMarkers = { entries: Map<string, Entry> };
+export type ReplyMarkers = { entries: Map<string, Entry>; pendingNames?: Map<string, string> };
 
 export function createReplyMarkers(): ReplyMarkers {
   return { entries: new Map() };
@@ -74,20 +76,45 @@ function drawLink(terminal: Terminal, record: ReplyRecord, opening: Opening): Dr
 function begin(state: ReplyMarkers, replyIds: Set<string>, receipt: ShellAcpReceipt): Entry | undefined {
   const { replyId } = receipt;
   if (state.entries.has(replyId) || replyIds.has(replyId)) return undefined;
-  const entry: Entry = { role: receipt.role, name: receipt.name, handle: undefined, settlement: { kind: 'pending' } };
+  const name = state.pendingNames?.get(replyId) ?? receipt.name;
+  clearPendingName(state, replyId);
+  const entry: Entry = { role: receipt.role, name, handle: undefined, settlement: { kind: 'pending' } };
   state.entries.set(replyId, entry);
   return entry;
+}
+
+function clearPendingName(state: ReplyMarkers, replyId: string): void {
+  const names = state.pendingNames;
+  if (!names) return;
+  names.delete(replyId);
+  if (names.size === 0) delete state.pendingNames;
+}
+
+function refreshPendingName(
+  state: ReplyMarkers, replyIds: Set<string>, update: PendingNameUpdate, opening: Opening,
+): void {
+  if (replyIds.has(update.id)) return;
+  const entry = state.entries.get(update.id);
+  if (entry) {
+    if (entry.name === update.name) return;
+    entry.name = update.name;
+    entry.handle?.show(runningView(entry, opening));
+    return;
+  }
+  state.pendingNames ??= new Map();
+  state.pendingNames.set(update.id, update.name);
 }
 
 function settle(
   state: ReplyMarkers,
   replyIds: Set<string>,
-  reply: ShellReplyOutcome | undefined,
+  reply: Pick<BackgroundReply, 'id' | 'record'> | undefined,
   terminal: Terminal,
   opening: Opening,
 ): Draw | undefined {
   if (!reply) return undefined;
   replyIds.add(reply.id);
+  clearPendingName(state, reply.id);
   const entry = state.entries.get(reply.id);
   if (!entry) return undefined;
   state.entries.delete(reply.id);
@@ -121,6 +148,11 @@ export function useShellReplyWriters({ terminalRef, placementRef, markersRef, re
   labelRef.current = label;
   const opening = useMemo<Opening>(() => ({ openConnection: openConnectionRef, label: labelRef }), []);
   const displayReply = useCallback((rawLine: string, rawMarkdown: string, reply?: ShellReplyOutcome) => {
+    if (reply && 'pending' in reply) {
+      refreshPendingName(markersRef.current, replyIds, reply, opening);
+      return;
+    }
+    if (reply) clearPendingName(markersRef.current, reply.id);
     const terminal = terminalRef.current;
     if (!terminal) return;
     const onHeadMarker = settle(markersRef.current, replyIds, reply, terminal, opening);

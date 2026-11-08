@@ -9,7 +9,7 @@ import { remoteFileNavigatorRoot } from './remote-file-navigator-root.js';
 import { remoteFileNavigatorTarget } from './remote-file-navigator-view.js';
 import { tabGroupName } from './groups.js';
 import { queueEntryLine } from '../command-queue/entry.js';
-import { backgroundRepliesFor } from './background-replies.js';
+import { backgroundRepliesFor, pendingAcpReplyNamesFor } from './background-replies.js';
 
 export function buildTabViews(
   tabs: Tab[],
@@ -55,6 +55,11 @@ function declaredFields(
   };
 }
 
+function pendingReplyNameFields(tab: Tab): Pick<TabView, 'pendingAcpReplyNames'> {
+  const names = pendingAcpReplyNamesFor(tab);
+  return names.length > 0 ? { pendingAcpReplyNames: names } : {};
+}
+
 // Converts one internal Tab into the wire-format TabView sent to the client — the shape the
 // client actually renders, as opposed to Tab's server-side bookkeeping fields.
 
@@ -97,6 +102,7 @@ export function buildTabView(
     ...(tab.hidden && { hidden: true }),
     ...(tab.systemShell && { systemShell: true }),
     backgroundReplies: backgroundRepliesFor(tab),
+    ...pendingReplyNameFields(tab),
     number: tab.number,
     dotColor: tab.dotColor,
     group: tab.group,

@@ -1,4 +1,4 @@
-import type { BackgroundReplyView } from '../protocol.js';
+import type { BackgroundReplyView, PendingAcpReplyNameView } from '../protocol.js';
 import type { Tab } from './types.js';
 
 // The same `ask` and `tell` tokens `src/commands/ask.ts` and `src/commands/tell.ts` match, with the
@@ -15,5 +15,13 @@ export function backgroundRepliesFor(tab: Tab): BackgroundReplyView[] {
       ...(ACP_INPUT.test(entry.input) && { line: entry.input }),
       ...(entry.backgroundRecord && { record: entry.backgroundRecord }),
     }];
+  });
+}
+
+export function pendingAcpReplyNamesFor(tab: Tab): PendingAcpReplyNameView[] {
+  return Object.values(tab.runtime?.acpRoles ?? {}).flatMap((state) => {
+    const prompt = state?.prompt;
+    if (!prompt?.replyId || !prompt.recordName) return [];
+    return [{ id: prompt.replyId, name: prompt.recordName }];
   });
 }
