@@ -28,4 +28,16 @@ describe('application command inventory', () => {
     expect(resolveApplicationCommand('search query')).toMatchObject({ kind: 'plugin', name: 'search' });
     expect(resolveApplicationCommand('search transcript fox')).toMatchObject({ kind: 'builtin', name: 'search' });
   });
+
+  it('selects the fixed form that carries the canonical policy key', () => {
+    expect(resolveApplicationCommand('ask reset')).toMatchObject({ name: 'ask', forms: ['ask reset'] });
+    expect(resolveApplicationCommand('browser goto https://example.com'))
+      .toMatchObject({ name: 'browser goto', forms: ['browser goto'] });
+    expect(resolveApplicationCommand('db sqlite query inventory select *'))
+      .toMatchObject({ name: 'db sqlite query', forms: ['db sqlite query'] });
+    expect(resolveApplicationCommand('question ask hello'))
+      .toMatchObject({ name: 'question ask', forms: ['question ask'] });
+    expect(resolveApplicationCommand('question approve 1'))
+      .toMatchObject({ name: 'question approve', forms: ['question approve'] });
+  });
 });

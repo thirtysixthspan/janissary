@@ -205,6 +205,16 @@ describe('dispatchLineWithOutput', () => {
     expect(Object.keys(capabilities)).not.toContain('runId');
   });
 
+  it('forwards a disabled-command refusal as a claimed line', async () => {
+    const dispatchLineWithOutput = vi.fn(async () => ({
+      dispatched: true, output: 'Command is disabled: clear.',
+    }));
+    const { managers } = makeManagers({ command: { dispatchLineWithOutput } as never });
+
+    await expect(contextFor(['dispatchLineWithOutput'], managers).dispatchLineWithOutput('clear'))
+      .resolves.toEqual({ dispatched: true, output: 'Command is disabled: clear.' });
+  });
+
   it('returns no output after the plugin has been disabled', async () => {
     const { managers, dispatchLineWithOutput } = withDispatcher();
     const capabilities = createPluginContext(

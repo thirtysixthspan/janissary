@@ -64,15 +64,27 @@ export function listApplicationCommands(): ApplicationCommandRow[] {
     .toSorted(compare);
 }
 
+function longestForm(row: ApplicationCommandRow, normalized: string): number {
+  return Math.max(0, ...row.forms
+    .filter((form) => normalized === form || normalized.startsWith(`${form} `))
+    .map((form) => form.length));
+}
+
+function canonicalFormMatch(row: ApplicationCommandRow, normalized: string): number {
+  return row.forms.some((form) => form === row.name
+    && (normalized === form || normalized.startsWith(`${form} `))) ? 1 : 0;
+}
+
 export function resolveApplicationCommand(input: string): ApplicationCommandRow | undefined {
   const normalized = normalize(input);
   const rows = listApplicationCommands();
   const candidates = rows.filter((row) => [row.name, ...row.aliases, ...row.forms]
     .some((form) => normalized === form || normalized.startsWith(`${form} `)))
     .toSorted((left, right) => {
-      const leftLength = Math.max(0, ...left.forms.filter((form) => normalized.startsWith(form)).map((form) => form.length));
-      const rightLength = Math.max(0, ...right.forms.filter((form) => normalized.startsWith(form)).map((form) => form.length));
-      return rightLength - leftLength;
+      const length = longestForm(right, normalized) - longestForm(left, normalized);
+      return length === 0
+        ? canonicalFormMatch(right, normalized) - canonicalFormMatch(left, normalized)
+        : length;
     });
   const owner = candidates.find((row) => row.kind === 'builtin' && row.name === 'search' && normalized.startsWith('search transcript'))
     ?? candidates.find((row) => row.kind === 'plugin' && row.name === 'search')

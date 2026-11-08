@@ -8,6 +8,16 @@ Malformed entries default both values to `true` and remain visible with other va
 
 Reading defaults does not create a file. The first edit writes the home file; edits to a valid project override update that project file. Settings are re-read at initialization, when the Commands tab opens, and before every edit. Writes replace the file atomically; settings become effective and are published only after a successful write. A failure reports `Could not write commands.json at <path>.` and leaves the current settings unchanged. A child command's effective availability also requires its declared parents to be enabled. Its saved values remain unchanged when a parent is disabled. Agent access applies only to native ACP commands; other commands have no agent-access restriction.
 
+### Disabled command dispatch
+
+A command whose effective setting is disabled is refused wherever the server dispatches it: from a tab's command bar, a plugin line or queue dispatch, a scheduled command, or a skill-granted agent command. The refusal is exactly `Command is disabled: <command>.`, where `<command>` is the canonical command name or fixed form that matched; aliases report their canonical command. The application claims the refusal, so a disabled command never falls through to another command owner or to the shell. Explicit `!` shell execution is not an application command and is not affected.
+
+The command is refused before it has any effect. Settings are checked when a line is dispatched, not when it was queued or scheduled, so a line queued while enabled is refused if the command is disabled before it runs. A running invocation is not interrupted. The refusal is returned even when the originating tab is active or notification delivery is suppressed.
+
+A disabled command produces a `command-disabled` notification attributed to the tab where it was dispatched. The notification follows the usual ambient toggle and focus rules; it never changes the refusal.
+
+`help` is subject to the same policy. While enabled it continues to list disabled commands. While disabled, both bare and named help return the canonical refusal instead of help text or an unknown-command reply.
+
 ### Structured command replies
 
 When a command is dispatched from a plugin tab, the reply preserves `dispatched`, `output`, and `coreResponse` and may also include the command's structured `result`. A structured command's reply carries the output it appended during its invocation together with its `result`, and the reply is complete once the command finishes, however long that takes. Commands that return no result keep the existing printed-output reply; only output produced by that invocation is included, and capture stops after 30 seconds while later output remains in the transcript.

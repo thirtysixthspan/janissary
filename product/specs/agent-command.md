@@ -36,6 +36,8 @@ An optional `janissary.json` beside the selected skill declares command grants. 
 
 Task text, skill instructions, and effective grants are captured as an immutable launch snapshot. Later edits to any task, skill, or sidecar cannot widen an existing snapshot.
 
+A granted command is still subject to global command availability. If the command is disabled when the agent requests it, the tool result is exactly `Command is disabled: <command>.`; the grant does not override the setting, and the refusal does not authorize a different command.
+
 When an agent launches a nested agent through its granted `agent` command, every child-selected skill must match a skill in the parent's captured snapshot by source category, name, and instruction contents. A missing or changed skill fails with `Agent: nested skill "<name>" is outside the parent policy.` Child command grants are the intersection of the child's resolved grants and the parent's effective grants, so nested runs cannot expand the authority inherited from their parent.
 
 ### Resolution errors in this stage

@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { resolveInTab } from './resolve-in-tab.js';
 import { findCommand } from '../commands/index.js';
 import { recordGlobalHistory } from '../global-history.js';
@@ -6,7 +5,8 @@ import type { Managers } from '../managers.js';
 import { errorText } from '../error-text.js';
 import { executeAndCapture } from '../capture/execute-and-capture.js';
 import type { CommandInvocationContext } from '../commands/types.js';
-import { tabRuntime } from '../tab/runtime.js';
+import { childInvocationContext, createInvocationContext } from './invocation.js';
+import { refuseDisabledCommand } from '../native-commands/dispatch-policy.js';
 
 const DISPATCH_CAPTURE_LIMIT_MS = 30_000;
 
@@ -29,6 +29,11 @@ export class CommandManager {
 
   private run(input: string, label: string, index: number): void {
     const res = resolveInTab(input, label, this.managers);
+    const refusal = res.kind === 'empty' ? undefined : refuseDisabledCommand(this.managers, res.cmd, label);
+    if (refusal !== undefined) {
+      this.managers.tab.append(label, { input, output: refusal });
+      return;
+    }
     switch (res.kind) {
       case 'empty': { return;
       }
@@ -37,7 +42,7 @@ export class CommandManager {
       }
       case 'app': {
         void this.executeCommandWithContext(
-          res.name, res.cmd, label, index, this.createInvocationContext(label, input),
+          res.name, res.cmd, label, index, createInvocationContext(this.managers, label, input),
         );
         return;
       }
@@ -59,7 +64,7 @@ export class CommandManager {
     input: string,
     captureLimitMs = DISPATCH_CAPTURE_LIMIT_MS,
   ): Promise<{ dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown }> {
-    return this.dispatchLine(label, input, captureLimitMs, this.createInvocationContext(label, input));
+    return this.dispatchLine(label, input, captureLimitMs, createInvocationContext(this.managers, label, input));
   }
 
   async dispatchQueuedLine(
@@ -67,7 +72,7 @@ export class CommandManager {
     input: string,
     systemSchedule?: CommandInvocationContext['systemSchedule'],
   ): Promise<{ dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown }> {
-    const invocation = this.createInvocationContext(label, input);
+    const invocation = createInvocationContext(this.managers, label, input);
     const withProvenance = systemSchedule
       ? Object.freeze({ ...invocation, systemSchedule: Object.freeze({ ...systemSchedule }) })
       : invocation;
@@ -80,7 +85,7 @@ export class CommandManager {
     parent: CommandInvocationContext,
     captureLimitMs = DISPATCH_CAPTURE_LIMIT_MS,
   ): Promise<{ dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown }> {
-    return this.dispatchLine(label, input, captureLimitMs, this.childInvocationContext(parent, input));
+    return this.dispatchLine(label, input, captureLimitMs, childInvocationContext(parent, input));
   }
 
   private async dispatchLine(
@@ -90,6 +95,13 @@ export class CommandManager {
     invocation: CommandInvocationContext,
   ): Promise<{ dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown }> {
     const resolution = resolveInTab(input, label, this.managers);
+    const refusal = resolution.kind === 'empty'
+      ? undefined
+      : refuseDisabledCommand(this.managers, resolution.cmd, label);
+    if (refusal !== undefined) {
+      this.managers.tab.append(label, { input, output: refusal });
+      return { dispatched: true, output: refusal };
+    }
     if (resolution.kind === 'output') {
       this.managers.tab.append(label, { input, output: resolution.output, markdown: true });
       return { dispatched: true, output: resolution.output };
@@ -129,7 +141,7 @@ export class CommandManager {
   }
 
   async executeCommand(name: string, command: string, label: string, index: number): Promise<unknown> {
-    return this.executeCommandWithContext(name, command, label, index, this.createInvocationContext(label));
+    return this.executeCommandWithContext(name, command, label, index, createInvocationContext(this.managers, label));
   }
 
   private async executeCommandWithContext(
@@ -139,6 +151,11 @@ export class CommandManager {
     index: number,
     invocation: CommandInvocationContext,
   ): Promise<unknown> {
+    const refusal = refuseDisabledCommand(this.managers, command, label);
+    if (refusal !== undefined) {
+      this.managers.tab.appendForInvocation(label, { input: command, output: refusal }, invocation.invocationId);
+      return refusal;
+    }
     const cmd = findCommand(name, command);
     if (!cmd) return undefined;
     if (cmd.available?.(label, this.managers) === false) {
@@ -163,34 +180,5 @@ export class CommandManager {
     for (const tab of this.managers.tab.tabs) {
       if (!existingTabs.has(tab.label)) this.managers.agent.trackCreatedTab(runId, tab.label);
     }
-  }
-
-  private createInvocationContext(label: string, line?: string): CommandInvocationContext {
-    const tab = this.managers.tab.byLabel(label);
-    const runtime = tab ? tabRuntime(tab) : undefined;
-    return Object.freeze({
-      runId: randomUUID(),
-      invocationId: randomUUID(),
-      caller: Object.freeze({
-        label,
-        ...(runtime?.incarnation && { incarnation: runtime.incarnation }),
-        cwd: this.managers.tab.workingDirOf(label),
-        context: Object.freeze([...(runtime?.context ?? [])]),
-      }),
-      signal: new AbortController().signal,
-      ...(line !== undefined && { line }),
-    });
-  }
-
-  private childInvocationContext(parent: CommandInvocationContext, line?: string): CommandInvocationContext {
-    return Object.freeze({
-      runId: parent.runId,
-      invocationId: randomUUID(),
-      caller: parent.caller,
-      signal: parent.signal,
-      ...(line !== undefined && { line }),
-      ...(parent.awaitResult && { awaitResult: true }),
-      ...(parent.systemSchedule && { systemSchedule: parent.systemSchedule }),
-    });
   }
 }
