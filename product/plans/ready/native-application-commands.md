@@ -53,24 +53,27 @@ Maintain native application commands in a registry and expose their availability
 
 | Existing surface | Relevant behavior |
 | --- | --- |
-| `src/commands/index.ts` | Registry of application command definitions. |
-| `src/acp/native-commands.ts` and `src/acp/tool-table.ts` | Native ACP command vocabulary and tool dispatch. |
+| `src/commands/index.ts:45` `coreCommands` and `:92` `commands` | Ordered application command definitions and accepted plugin adapters. |
+| `src/plugins/roles/shared.ts:3` `NATIVE_ACP_COMMANDS`, `src/acp/native-commands.ts:5` `nativeCommandName`, and `src/acp/tool-table.ts:30` `createAcpToolTable` | Existing native vocabulary, recognition, and ACP tool dispatch. |
 | `src/plugins/models/` and `web/src/plugins/models/` | Models tab declaration, activation, and table implementation. |
 | `src/plugins/roles/` and `product/specs/roles.md` | Role command grants, persistence, and editing. |
 | `src/plugins/roles/roles-file.ts:179` `readRolesFile` and `:218` `writeRolesFile` | Home/project fallback and safe file-writing precedent. |
-| `src/atomic-write.ts` `atomicWriteFile` | Atomic replacement, permission preservation, and cleanup on write failure. |
-| `src/plugins/topics.ts:18` `TOPIC_SOURCES` and `src/plugins/models/activate.ts` `defineDockableList` | Host topic and plugin update pattern; the Commands tab is center-only. |
-| `src/command/manager.ts` `dispatchLineWithOutput` and `dispatchQueuedLine` | Shared application dispatch and captured replies for plugins and queues. |
+| `src/atomic-write.ts:8` `atomicWriteFile` | Atomic replacement, permission preservation, and cleanup on write failure. |
+| `src/plugins/topics.ts:154` `TOPIC_SOURCES` and `src/plugins/models/activate.ts:69` `activate` | Host topic and plugin update pattern; the Commands tab is center-only. |
+| `src/command/manager.ts:57` `dispatchLineWithOutput` and `:65` `dispatchQueuedLine` | Shared application dispatch and captured replies for plugins and queues. |
 | `src/controller/completion.ts:9` `complete` | Host completion path used by plugin capabilities. |
-| `web/src/shared/command-bar/AppCommandBar.test.tsx` `intercept` and `web/src/shared/app-chords.ts` | Client command intercepts and global shortcuts needing the same availability state. |
+| `web/src/shared/command-bar/AppCommandBar.test.tsx:84` `intercept` and `web/src/shared/app-chords.ts:34` `ctrl+a` | Client command intercepts and global shortcuts needing the same availability state. |
+| `src/agent/command-tools.ts:54` `runGrantedAgentCommand` | Skill-granted agent path also enters the shared dispatcher. |
+| `src/notifications/index.ts:59` `AMBIENT_EVENTS` and `src/config-decode.ts:61` `stateChange` | Ambient event classification, focus suppression, and independent settings. |
+| `web/src/plugins/roles/RoleCommands.tsx:27` `availableRoleCommands` and `:69` `ordered.map` | Existing role grant picker, ordering, and dimmed unknown-row presentation. |
 
 ## Proposed changes
 
-Extend the existing application command registry with canonical command and subcommand metadata, including `help` and accepted bundled plugin commands. A host-owned service holds effective settings and serves dispatch, ACP, and both tabs. Register its lifecycle with `Managers`; avoid creating an independent registry or a per-tab settings map. Supply an import-free shared contract where browser code needs the data, and keep the wire contract in `src/protocol.ts`. Update the relevant application command, ACP, roles, tab, completion, and keyboard specifications and user-facing help.
+Extend the existing application command registry with canonical command and subcommand metadata, including `help` and accepted bundled plugin commands. Preserve the existing ordered `match`-based owner resolution in `src/resolve.ts:24` `resolveCommand` and `src/commands/index.ts:103` `findCommand`; for example, the built-in transcript search and plugin search share a name. Apply the longest fixed-form match only within the resolved owner's metadata, so policy does not reroute a command or change existing aliases. A host-owned service holds effective settings and serves dispatch, ACP, and both tabs. Register its lifecycle with `Managers`; avoid creating an independent registry or a per-tab settings map. Supply an import-free shared contract where browser code needs the data, and keep the wire contract in `src/protocol.ts`. Update the relevant application command, ACP, roles, tab, completion, notification, and keyboard specifications and user-facing help.
 
-Publish the inventory and effective availability through a narrow host topic. Use plugin intents and topic actions for edits, following the Models topic pattern, so both tabs observe the same server-owned settings.
+Publish the inventory and effective availability through a narrow host topic. Use plugin intents and topic actions for edits, following the Models topic pattern, so both tabs observe the same server-owned settings. Extend `src/plugins/api-topics.ts` and the topic registry, provide an awaited edit result as `src/plugins/models/activate.ts:93` does for Delete, and update guards and payload schema versions when their shapes change. Only open, activated plugins receive topic notifications; initial payloads must read the current snapshot rather than wait for a notification.
 
-Keep the existing group descriptions in ACP primers and filter the final allow-list to the intersection of role grants and enabled native commands. The group descriptions can therefore mention commands excluded from the allow-list.
+Keep the existing group descriptions in ACP primers and filter the final allow-list to the intersection of role grants and enabled native commands. The group descriptions can therefore mention commands excluded from the allow-list. `src/acp/run-prompt.ts` constructs the tool table and primer for each prompt, so filter at that boundary as well as at session launch and check current settings at execution time.
 
 Route ACP native calls through the ordinary command dispatcher in place of the existing direct-service tool runner. Preserve role-grant checks, current disabled-setting enforcement, and the textual tool responses the ACP loop requires.
 
@@ -80,9 +83,11 @@ Concurrent edits may each read the same effective file; the last full-file write
 
 Move or wrap application commands answered during resolution, such as `help`, so they pass through the same availability check while preserving their existing replies.
 
-Cover `src/resolve.ts` and `src/commands.ts` `getOutput`, command-manager direct and captured dispatch, queues, schedule dispatch, plugin capabilities, and client intercepts. A disabled application command must remain claimed and refused rather than falling through to a shell. Exclude explicitly requested shell execution from command policy. Propagate effective availability to client-side intercepts and shortcut handlers through the shared server state, without duplicating authority in the browser. Filter `src/controller/completion.ts` and relevant subcommand completers using the same canonical metadata.
+Cover `src/resolve.ts:24` `resolveCommand` and `src/commands.ts:59` `getOutput`, command-manager direct and captured dispatch, `src/agent/command-tools.ts:54` `runGrantedAgentCommand`, queues, schedule dispatch, plugin capabilities, and client intercepts. A disabled application command must remain claimed and refused rather than falling through to a shell; the skill-granted agent path must receive the refusal as its result while retaining its separate skill-grant check. Exclude explicitly requested shell execution from command policy. Propagate effective availability to client-side intercepts and shortcut handlers through the shared server state, without duplicating authority in the browser. Filter `src/controller/completion.ts:9` `complete` and relevant subcommand completers using the same canonical metadata.
 
-Resolve an invocation to the longest applicable declared fixed command form, respecting existing parsers and aliases, before checking its settings and those of its parents.
+Resolve an invocation to the longest applicable declared fixed form of the selected command, respecting existing parsers and aliases, before checking its settings and those of its parents. Canonicalize aliases to the same policy key; do not derive fixed forms from `samples`, which serve the separate priority test and include arguments.
+
+Add `command-disabled` to the notification event union, ambient-event map, formatting, alert defaults, config type/default/decode, and related protocol where necessary. Its camel-case event setting is `notifications.events.commandDisabled`, defaulting to false; its alert defaults match the other ambient events. Suppression affects delivery only, never the enforcement check or the ACP return value.
 
 Implement the center-only Commands plugin under `src/plugins/commands/` and `web/src/plugins/commands/`, declaring it in the catalog and literal loader maps. Its command handler routes bare `commands` to the tab and enable/disable forms to the host service. Extend `src/plugins/roles/activate.ts` and the Roles payload to consume the new host topic and show effective restrictions while preserving role grants and picker choices. Keep the plugin API additive and capability-narrow; validate topic actions and plugin intents at their ingress.
 
@@ -95,9 +100,9 @@ Keep the alphabetically sorted command table horizontal at all pane widths, with
 Above the table, show `Editing <path>` for the effective file or `No commands file in effect` when using defaults, like Roles.
 Show file problems and refused edits beneath the source line, like Roles. A failed save leaves the last successfully saved toggle state visible.
 Disable the affected toggle while its save is pending; leave other controls usable.
-Provide standard keyboard-accessible toggles and arrow-key navigation between command rows. Up and Down move focus to the same toggle in the previous or next row, falling back to that row's Enabled toggle if the corresponding toggle is absent; stop at the first and last row.
+Use native checkbox controls for toggles, with browser-provided checked state and Space activation. Add only the requested arrow-key navigation between command rows: Up and Down move focus to the same toggle in the previous or next row, falling back to that row's Enabled toggle if the corresponding toggle is absent; stop at the first and last row.
 Skip unavailable toggles during arrow navigation and continue to the next focusable matching toggle, using Enabled as a fallback.
-The toggle accessible names are `Enabled: <command>` and `Agent access: <command>`; expose the checked state and support Space to toggle.
+The toggle accessible names are `Enabled: <command>` and `Agent access: <command>`.
 Use the host's normal tab focus and close behavior; Escape has no Commands-specific action.
 Show `No commands` for an empty inventory and `Loading commands…` while loading.
 Dim a subcommand disabled by its parent and disable both of its toggles until the parent is enabled, retaining their saved values. Provide the visible or accessible explanation `Disabled by parent command: <parent>.`
@@ -109,6 +114,7 @@ Client code belongs in a feature directory with decisions in pure modules and ho
 
 - Colocated service tests cover defaults, overrides, normalization, duplicates, invalid entries, fallback, file writes and failures, and competing edits.
 - Command and resolver tests cover every dispatch route, parent and subcommand settings, aliases, help, explicit shell escape, completion, and scheduled or queued execution.
+- `src/agent/command-tools.test.ts` covers disabled skill-granted commands, retained skill-grant enforcement, and a refusal returned through `dispatchLineInInvocation`.
 - ACP tests cover filtered allow-lists, retained primer descriptions, role grants, immediate revocation in a running session, disabled command extraction and refusal, and browser, database, and question output and cancellation through the dispatcher.
 - Notification tests cover attribution, ambient-event defaults and suppression, and ACP refusals returned to the agent independently of notification visibility.
 - Plugin host and client tests cover topic publication and validation, singleton tab and command forms, keyboard navigation and narrow scrolling, save failures and pending states, and live role-grant dimming and tooltip reasons.
