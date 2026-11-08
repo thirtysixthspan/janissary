@@ -28,7 +28,7 @@ describe('tell-reset command', () => {
     expect(tab.log).toHaveLength(1);
     expect(tab.log[0].running).not.toBe(true);
     expect(tab.runtime?.acpEntries?.has(tab.log[0])).toBe(true);
-    expect(backgroundRepliesFor(tab)).toEqual([{ id: tab.log[0].background, output }]);
+    expect(backgroundRepliesFor(tab)).toEqual([{ id: tab.log[0].background, output, line }]);
   });
 
   it('falls back to the command argument and gives each invocation a fresh id', () => {

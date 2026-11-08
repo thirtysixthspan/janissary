@@ -22,13 +22,20 @@ export function appendAcp(managers: Managers, label: string, entry: LogEntry): v
   managers.tab.append(label, entry);
 }
 
+function answeringRecord(managers: Managers, recordId?: string): LogEntry['backgroundRecord'] {
+  const row = recordId ? managers.acpRecords.rows().find((candidate) => candidate.id === recordId) : undefined;
+  return row && { id: row.id, name: recordConnectionName(row) };
+}
+
 export function appendAcpBackgroundReply(
   managers: Managers, label: string, input: string, result: AcpPromptResult, id: string,
 ): void {
+  const backgroundRecord = answeringRecord(managers, result.recordId);
   managers.tab.append(label, {
     input,
     output: result.answered ? result.reply : result.error,
     background: id,
+    ...(backgroundRecord && { backgroundRecord }),
   });
 }
 

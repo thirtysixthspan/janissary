@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
 import type { AcpPendingPrompt } from './prompt-state.js';
+import type { AcpRole } from './role.js';
 import type { AcpPromptResult } from './types.js';
 import { makeTab } from '../tab/index.js';
 
@@ -46,6 +47,69 @@ describe('appendAcpBackgroundReply', () => {
     appendAcpBackgroundReply(managers, 'tab1', '/ask hello', result, 'reply-1');
 
     expect(append).toHaveBeenCalledExactlyOnceWith('tab1', { input: '/ask hello', output, background: 'reply-1' });
+  });
+
+  function recordedManagers(rowIds: string[], role: AcpRole = 'ask', tabTitle?: string) {
+    const append = vi.fn();
+    const rows = vi.fn(() => rowIds.map((id) => ({ id, kind: 'acp', ownerName: 'Build tab', role })));
+    const managers = {
+      tab: { append, byLabel: () => ({ title: tabTitle }) },
+      acpRecords: { rows },
+    } as unknown as Managers;
+    return { append, managers, rows };
+  }
+
+  it.each<[string, AcpPromptResult]>([
+    ['an answer', ANSWER],
+    ['an ACP error line', { answered: false, error: 'ACP error: rate limited' }],
+    ['a cancellation', { answered: false, error: 'ACP: prompt cancelled.' }],
+    ['a closed session', { answered: false, error: 'ACP session closed.' }],
+  ])('stores the answering record, named after its connection tab, on %s', (_name, base) => {
+    const { append, managers } = recordedManagers(['record-0', 'record-1']);
+
+    appendAcpBackgroundReply(managers, 'tab1', 'ask hello', { ...base, recordId: 'record-1' }, 'reply-1');
+
+    expect(append).toHaveBeenCalledExactlyOnceWith('tab1', {
+      input: 'ask hello',
+      output: base.answered ? base.reply : base.error,
+      background: 'reply-1',
+      backgroundRecord: { id: 'record-1', name: 'acp:ask:Build tab' },
+    });
+  });
+
+  it.each<AcpRole>(['ask', 'tell'])('names a %s record after its role', (role) => {
+    const { append, managers } = recordedManagers(['record-1'], role);
+
+    appendAcpBackgroundReply(managers, 'tab1', `${role} hello`, { ...ANSWER, recordId: 'record-1' }, 'reply-1');
+
+    expect(append.mock.calls[0][1]).toHaveProperty('backgroundRecord', { id: 'record-1', name: `acp:${role}:Build tab` });
+  });
+
+  it('takes the name from the record and not from the tab title it has since been given', () => {
+    const { append, managers } = recordedManagers(['record-1'], 'ask', 'Renamed tab');
+
+    appendAcpBackgroundReply(managers, 'tab1', 'ask hello', { ...ANSWER, recordId: 'record-1' }, 'reply-1');
+
+    expect(append.mock.calls[0][1]).toHaveProperty('backgroundRecord', { id: 'record-1', name: 'acp:ask:Build tab' });
+  });
+
+  it('stores no record when the id is missing from the retained records', () => {
+    const { append, managers, rows } = recordedManagers(['record-0']);
+
+    appendAcpBackgroundReply(managers, 'tab1', 'ask hello', { ...ANSWER, recordId: 'record-1' }, 'reply-1');
+
+    expect(rows).toHaveBeenCalledOnce();
+    expect(append).toHaveBeenCalledExactlyOnceWith('tab1', { input: 'ask hello', output: 'the answer', background: 'reply-1' });
+    expect(append.mock.calls[0][1]).not.toHaveProperty('backgroundRecord');
+  });
+
+  it('stores no record and reads none when the result carries no record id', () => {
+    const { append, managers, rows } = recordedManagers(['record-1']);
+
+    appendAcpBackgroundReply(managers, 'tab1', 'ask hello', ANSWER, 'reply-1');
+
+    expect(rows).not.toHaveBeenCalled();
+    expect(append.mock.calls[0][1]).not.toHaveProperty('backgroundRecord');
   });
 });
 

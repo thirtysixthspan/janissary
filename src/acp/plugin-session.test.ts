@@ -10,6 +10,7 @@ import type { AcpRole } from './role.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { isShellAcpReceipt, type ShellAcpReceipt } from '../plugins/shell/shared.js';
 import { TabManager } from '../tab/manager.js';
+import { backgroundRepliesFor } from '../tab/background-replies.js';
 import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
 import { acpCapabilities } from '../plugins/acp-capabilities.js';
@@ -237,6 +238,27 @@ describe('core ACP for plugin tabs', () => {
     const tab = managers.tab.byLabel('consumer')!;
     expect(tab.log.find((entry) => tab.runtime?.acpEntries?.has(entry) && entry.markdown)).toMatchObject({ output: 'Answer', running: false });
     expect(tab.runtime?.acpRoles?.ask?.prompt).toBeUndefined();
+    const record = { id: managers.acpRecords.rows()[0].id, name: 'acp:ask:consumer' };
+    const settled = tab.log.find((entry) => entry.background)!;
+    expect(settled.background).toBe(replyId);
+    expect(settled.backgroundRecord).toEqual(record);
+    expect(backgroundRepliesFor(tab)).toEqual([{ id: replyId, output: 'Answer', line: 'ask hello', record }]);
+    managers.acp.closeAll();
+  });
+
+  it('names the tell record on the settled tell reply and places it under the tell line', async () => {
+    const { managers, handlers } = setup();
+    const reply = await managers.command.dispatchLineWithOutput('consumer', 'tell hello', 1);
+    const { replyId } = reply.result as ShellAcpReceipt;
+
+    handlers().onChunk('Told');
+    handlers().onEnd('end_turn');
+
+    const tab = managers.tab.byLabel('consumer')!;
+    await vi.waitFor(() => { expect(tab.log.filter((entry) => entry.background)).toHaveLength(1); });
+    const record = { id: managers.acpRecords.rows()[0].id, name: 'acp:tell:consumer' };
+    expect(tab.log.find((entry) => entry.background)).toMatchObject({ background: replyId, backgroundRecord: record });
+    expect(backgroundRepliesFor(tab)).toEqual([{ id: replyId, output: 'Told', line: 'tell hello', record }]);
     managers.acp.closeAll();
   });
 
@@ -320,6 +342,32 @@ describe('core ACP for plugin tabs', () => {
       expect(replies).toHaveLength(2);
       expect(replies[1]).toMatchObject({ input: 'ask first', output: 'first answer' });
     });
+    managers.acp.closeAll();
+  });
+
+  it('gives a refused second prompt no record while the first prompt keeps its own', async () => {
+    const { managers, handlers } = setup();
+    const first = await managers.command.dispatchLineWithOutput('consumer', 'ask first', 1);
+    const second = await managers.command.dispatchLineWithOutput('consumer', 'ask second', 1);
+    const firstId = (first.result as ShellAcpReceipt).replyId;
+    const secondId = (second.result as ShellAcpReceipt).replyId;
+    const tab = managers.tab.byLabel('consumer')!;
+
+    await vi.waitFor(() => { expect(tab.log.filter((entry) => entry.background)).toHaveLength(1); });
+    const refusal = tab.log.find((entry) => entry.background)!;
+    expect(refusal.background).toBe(secondId);
+    expect(refusal).not.toHaveProperty('backgroundRecord');
+    expect(backgroundRepliesFor(tab)).toEqual([{ id: secondId, output: 'ACP: a prompt is already running.', line: 'ask second' }]);
+    expect(backgroundRepliesFor(tab)[0]).not.toHaveProperty('record');
+
+    handlers().onChunk('first answer');
+    handlers().onEnd('end_turn');
+
+    await vi.waitFor(() => { expect(tab.log.filter((entry) => entry.background)).toHaveLength(2); });
+    const answered = tab.log.filter((entry) => entry.background)[1];
+    expect(answered.background).toBe(firstId);
+    expect(answered.backgroundRecord).toEqual({ id: managers.acpRecords.rows()[0].id, name: 'acp:ask:consumer' });
+    expect(firstId).not.toBe(secondId);
     managers.acp.closeAll();
   });
 

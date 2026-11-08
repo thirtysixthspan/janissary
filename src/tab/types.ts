@@ -11,6 +11,9 @@ export type LogEntry = {
   input: string;
   output: string;
   background?: string;
+  // Set on a settled ACP reply whose prompt reached a record: the record holding the prompt's final
+  // block and the title of its connection tab.
+  backgroundRecord?: { id: string; name: string };
   running?: boolean;
   cwd?: string;
   // Set when this entry is a cross-agent message from another agent.
