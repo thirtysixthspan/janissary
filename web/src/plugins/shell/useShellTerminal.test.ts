@@ -274,6 +274,25 @@ describe('useShellTerminal', () => {
     expect(terminals[1].written).toEqual(['\r\u{1B}[2K\u{1B}[1m> help\u{1B}[22m\r\n\u{1B}[1mbold\u{1B}[22m reply\r\n\u{1B}[1m>\u{1B}[22m ']);
   });
 
+  it('starts its reply markers over when the terminal re-attaches, so the new screen writes a reply whole', () => {
+    const containerRef = { current: document.createElement('div') };
+    const { result, rerender } = renderHook(
+      ({ ptyId }) => useShellTerminal({
+        ptyId, containerRef, attachTerminal: () => makeHandle(), onExit: vi.fn(), onCommandRunning: vi.fn(), onCwd: vi.fn(),
+        copyText: vi.fn(), hookNonce: NONCE,
+      }),
+      { initialProps: { ptyId: 'pty7' } },
+    );
+
+    act(() => { result.current.echoCommand('help', { replyId: 'r1', role: 'ask', name: 'ask-model' }); });
+    rerender({ ptyId: 'pty8' });
+    act(() => { result.current.displayReply('help', '**bold** reply', { id: 'r1', record: { id: 'rec-1', name: 'ask-model' } }); });
+
+    expect(terminals).toHaveLength(2);
+    expect(terminals[0].written).toEqual(['\r\u{1B}[2K\u{1B}[1m> help\u{1B}[22m\r\n\u{1B}[1m>\u{1B}[22m ']);
+    expect(terminals[1].written).toEqual(['\r\u{1B}[2K\u{1B}[1m> help\u{1B}[22m\r\n\u{1B}[1mbold\u{1B}[22m reply\r\n\u{1B}[1m>\u{1B}[22m ']);
+  });
+
   it('keeps one identity for its reply writers across a re-render', () => {
     const { result, rerender } = harness();
     const { displayReply, echoCommand } = result.current;
