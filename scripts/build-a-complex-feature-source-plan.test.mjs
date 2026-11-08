@@ -14,6 +14,35 @@ const playbook = readFileSync(path.join(repoRoot, 'ai/tasks/feature/build-a-comp
 const section = (from, to) => playbook.slice(playbook.indexOf(from), playbook.indexOf(to));
 
 describe('the build-a-complex-feature source plan', () => {
+  it('accepts the full source complexity range and selects a route', () => {
+    const validate = section('## Step 0', '## Step 1');
+    expect(validate).toContain('an honest complexity rating from 1–10');
+    expect(validate).toContain('single-plan route (1–3) or decomposition (4–10)');
+    expect(validate).not.toContain('6/10 or higher');
+  });
+
+  it('keeps low-complexity plans intact while retaining every delivery stage', () => {
+    const routing = section('## Orchestration rules', '## Step 0');
+    expect(routing).toContain('Plans rated 1–3 are not decomposed');
+    expect(routing).toContain('Run publication, improvement, implementation, focused review and repairs, full review, and PR updates');
+    expect(routing).toContain('Never create a duplicate plan or fold the canonical plan into itself');
+    expect(section('## Step 1', '## Step 2')).toContain('no subplan files. Continue to Step 2 and all subsequent stages');
+    expect(routing).toContain('For plans rated 4–10, decompose');
+    expect(routing).toContain('each with an honest `**Complexity: N/10**` rating where `N` is 1–5');
+  });
+
+  it('publishes, improves and implements the same canonical low-complexity plan', () => {
+    expect(section('## Step 2', '## Step 3')).toContain('publish only the source plan move in this first commit');
+    const improve = section('## Step 3', '## Step 4');
+    expect(improve).toContain("Explicitly override improve-plan's draft-only location restriction");
+    expect(improve).toContain('Keep the plan in `complete/`; do not promote or duplicate it');
+    expect(improve).toContain('honest rating remain 1–3');
+    const implement = section('## Step 4', '## Step 5');
+    expect(implement).toContain("override the build task's ready-plan selection and promotion steps");
+    expect(implement).toContain('Apply overrides 2 and 3 above unchanged');
+    expect(implement).toContain('Do not create a second completed plan');
+  });
+
   it('moves to complete in the same commit that publishes the subplans', () => {
     const publish = section('## Step 2', '## Step 3');
     expect(publish).toContain(
