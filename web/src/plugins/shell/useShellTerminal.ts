@@ -11,8 +11,8 @@ import { attachPromptMask } from './prompt-mask';
 import { holdFocusOffSinglePress } from './press-focus';
 import { holdReplySelection, shellSelectionText, type ReplySelection } from './reply-selection';
 import { ReplyPlacement } from './reply-placement';
-import { writeShellEcho, writeShellReply } from './write-shell-reply';
 import type { TranscriptLines } from './transcript-lines';
+import { useShellReplyWriters } from './useShellReplyWriters';
 import { useShellTerminalView } from './useShellTerminalView';
 
 export type AttachTerminal = (
@@ -225,15 +225,7 @@ export function useShellTerminal({
     placementRef.current.wrote();
     terminalRef.current?.write(data);
   }, []);
-  const displayReply = useCallback((rawLine: string, rawMarkdown: string) => {
-    const terminal = terminalRef.current;
-    if (!terminal) return;
-    writeShellReply(terminal, placementRef.current, rawLine, rawMarkdown, (href) => { openLinkRef.current?.(href); });
-  }, []);
-  const echoCommand = useCallback((rawLine: string) => {
-    const terminal = terminalRef.current;
-    if (terminal) writeShellEcho(terminal, placementRef.current, rawLine);
-  }, []);
+  const { displayReply, echoCommand } = useShellReplyWriters(terminalRef, placementRef, openLinkRef);
   const view = useShellTerminalView(terminalRef, replyRef);
   return {
     write, display, displayReply, echoCommand, ...view,
