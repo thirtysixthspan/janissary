@@ -357,6 +357,33 @@ describe('Controller', () => {
     expect(res.newInput).toBe('shell README.md ');
   });
 
+  it('hides disabled commands and native children from completion', async () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'janus-command-completion-'));
+    mkdirSync(path.join(root, '.janissary'), { recursive: true });
+    writeFileSync(
+      path.join(root, '.janissary', 'commands.json'),
+      JSON.stringify({ send: { enabled: false }, 'browser content': { enabled: false } }),
+    );
+    writeFileSync(path.join(root, 'report.txt'), '');
+    const c = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} }, root);
+    seedRootTab(c.managers.tab);
+    liveControllers.push(c);
+
+    try {
+      expect(c.complete('bro', 3).newInput).toBe('browser ');
+      expect(c.complete('send jan', 8)).toEqual({ newInput: 'send jan', newCursor: 8, matches: [] });
+      expect(c.complete('browser c', 9).newInput).toBe('browser close ');
+      const guarded = 'browser content rep';
+      expect(c.complete(guarded, guarded.length))
+        .toEqual({ newInput: guarded, newCursor: guarded.length, matches: [] });
+      expect(c.complete('tab mo', 6).newInput).toBe('tab move ');
+    } finally {
+      await c.shutdown();
+      liveControllers.splice(liveControllers.indexOf(c), 1);
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('completes a tab target using the displayed title of an open editor', async () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-tab-target-completion-'));
     writeFileSync(path.join(root, 'space name.txt'), 'sample text\n');

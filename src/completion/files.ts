@@ -1,8 +1,7 @@
-import path from 'node:path';
 import { isFullyQuoted, readToken, skipSpaces } from '../command/quoted-token.js';
 import { VIEW_KEYWORDS } from '../file-navigator/view-args.js';
-import { completeFilePath } from './fs.js';
-import { completeWord, isDir, longestCommonPrefix, replaceToken, splitToken } from './helpers.js';
+import { combineCandidates, pathCandidates, quotedName, unchanged, type Candidate } from './candidates.js';
+import { completeWord } from './helpers.js';
 import type { CompletionCursor, CompletionResult } from './types.js';
 
 export type FilesCompletions = {
@@ -24,12 +23,6 @@ type Slot =
   | { kind: 'viewPath'; label?: string }
   | { kind: 'trailingPath' }
   | { kind: 'none' };
-type Candidate = { completion: string; suffix: string; display: string };
-
-function unchanged(cursor: CompletionCursor): CompletionResult {
-  return { newInput: cursor.before + cursor.after, newCursor: cursor.before.length, matches: [] };
-}
-
 function words(input: string): Word[] | undefined {
   const result: Word[] = [];
   let index = skipSpaces(input, 0);
@@ -134,10 +127,6 @@ function completionSlot(wordsBeforeToken: Word[], context: FilesCompletions): Sl
   };
 }
 
-function quotedName(value: string): string {
-  return /[\s'"]/u.test(value) ? `"${value.replaceAll('"', String.raw`\"`)}"` : value;
-}
-
 function valueCandidates(cursor: CompletionCursor, values: string[], quote: boolean): Candidate[] {
   return values
     .toSorted((left, right) => left.localeCompare(right))
@@ -164,31 +153,6 @@ function keywordCandidates(
   return options
     .filter((word) => word.startsWith(cursor.token))
     .map((completion) => ({ completion, suffix: ' ', display: completion }));
-}
-
-function pathCandidates(cursor: CompletionCursor, cwd: string): Candidate[] {
-  const result = completeFilePath(cursor, cwd);
-  const { dir, prefix } = splitToken(cursor.token, cwd);
-  return result.matches.map((name) => {
-    const completion = quotedName(prefix + name);
-    const directory = isDir(path.join(dir, name));
-    return {
-      completion,
-      suffix: directory ? '/' : ' ',
-      display: completion + (directory ? '/' : ''),
-    };
-  });
-}
-
-function combineCandidates(cursor: CompletionCursor, candidates: Candidate[]): CompletionResult {
-  const unique = candidates.filter((candidate, index) =>
-    candidates.findIndex((other) => other.display === candidate.display) === index);
-  if (unique.length === 0) return unchanged(cursor);
-  const matches = unique.map((candidate) => candidate.display);
-  const completed = unique.length === 1
-    ? unique[0].completion + unique[0].suffix
-    : longestCommonPrefix(unique.map((candidate) => candidate.completion));
-  return replaceToken(cursor, completed, matches);
 }
 
 export function completeFilesCommand(

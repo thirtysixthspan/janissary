@@ -1,8 +1,8 @@
-import { resolveApplicationCommand } from '../application-commands.js';
 import { getOutput } from '../commands.js';
 import { commands } from '../commands/index.js';
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
+import { disabledApplicationCommand } from './policy.js';
 
 export function disabledCommandMessage(
   managers: Managers,
@@ -13,11 +13,8 @@ export function disabledCommandMessage(
   if (commands.every((command) => !command.match(commandText)) && getOutput(commandText).kind !== 'output') {
     return undefined;
   }
-  const row = resolveApplicationCommand(commandText);
+  const row = disabledApplicationCommand(commandText, managers.nativeCommandSettings?.current());
   if (!row) return undefined;
-  const snapshot = managers.nativeCommandSettings?.current();
-  const setting = snapshot?.commands.find((entry) => entry.name === row.name);
-  if (setting?.effectiveEnabled !== false) return undefined;
   return `Command is disabled: ${row.name}.`;
 }
 

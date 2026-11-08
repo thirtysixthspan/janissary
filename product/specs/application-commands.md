@@ -18,6 +18,10 @@ A disabled command produces a `command-disabled` notification attributed to the 
 
 `help` is subject to the same policy. While enabled it continues to list disabled commands. While disabled, both bare and named help return the canonical refusal instead of help text or an unknown-command reply.
 
+### Disabled command completion
+
+Tab completion omits a disabled command or fixed form from the first-word command candidates, including its aliases, and offers no argument or path completion under it. A disabled native child is omitted from its command's subcommand candidates while enabled siblings remain. Disabling a shared canonical name hides every owner and form of that name. A disabled name stays hidden even when a filesystem path with the same prefix remains. While `help` is enabled, its output and help-page completion still include disabled commands; when `help` is disabled, its command word and pages are suppressed like any other disabled command. Explicit `!` shell lines are not application commands and keep ordinary completion.
+
 ### Structured command replies
 
 When a command is dispatched from a plugin tab, the reply preserves `dispatched`, `output`, and `coreResponse` and may also include the command's structured `result`. A structured command's reply carries the output it appended during its invocation together with its `result`, and the reply is complete once the command finishes, however long that takes. Commands that return no result keep the existing printed-output reply; only output produced by that invocation is included, and capture stops after 30 seconds while later output remains in the transcript.

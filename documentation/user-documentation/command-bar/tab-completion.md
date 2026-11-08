@@ -18,6 +18,7 @@ Type `help s`, then press `Tab` to see matching help pages.
 
 | Context | Candidates |
 |---|---|
+| The first word of a command | Names and aliases of enabled application commands, then matching paths |
 | The target of [`send`](/user-documentation/command-bar/send), [`queue`](/user-documentation/command-bar/queue), `close` / `exit`, or [`schedule … in <tab>`](/user-documentation/automation/scheduling#scheduling-into-another-tab) | Labels and display titles of open tabs, including hidden tabs |
 | After `tab`, or at the target of a `tab` subcommand | The eight subcommands, then open tab labels and display titles; names with spaces are quoted |
 | After a target in `tab pane` or `tab dock` | `left` and `right` |
@@ -35,6 +36,8 @@ Type `help s`, then press `Tab` to see matching help pages.
 
 Target completion offers both labels and display titles, including hidden tabs. Names that differ only by case appear once, keeping the first spelling in tab order. A `tab` target with spaces is quoted. The other target suggestions are not, so a spaced alias works with `close`, which reads the full target remainder, but not with `send`, `queue`, or `schedule … in <tab>`, which read one whitespace-delimited target token. Use the tab's label with those commands. Monitor target suggestions include hidden action tabs, exclude the current tab and display titles, and list group selectors in ascending order. You can still type a display title as a monitor target.
 
+At the first word, Tab offers enabled command names and aliases before matching paths, so `bro` can become `browser`. A disabled command or subcommand is left out, and Tab offers no argument or path suggestions under a disabled command. A line starting with `!` runs in the shell and keeps ordinary path completion. While `help` is enabled, its pages still list and complete disabled commands.
+
 ## Complete paths and clauses
 
 <img class="agent-float left" src="/agents/orhan-south.png" alt="" />
@@ -43,7 +46,7 @@ In a `files` command, matching clause words appear before matching paths. The on
 
 After a view clause, paths complete relative to the local working directory named by an earlier `in <label>`, or to the current tab's directory when there is no `in` clause. An unknown or remote `in` target gives no path suggestions and does not fall back to the current directory. A quoted `in` label is decoded for this lookup. Paths and names with spaces or quotes are wrapped in double quotes, with embedded double quotes escaped. An open quote at the cursor leaves the line unchanged; whitespace inside a quoted directory stays in the path token, so `files expand "my dir"/ne` can complete a child there. After a completed quoted path and a space, clause suggestions return.
 
-`help` completes page names only as its first argument. An unmatched prefix or a leading `/` gives no help-page candidates and does not fall through to filesystem completion. Later arguments use the ordinary completion chain.
+`help` completes page names only as its first argument. An unmatched prefix or a leading `/` gives no help-page candidates and does not fall through to filesystem completion. Later arguments use the ordinary completion chain. While `help` is enabled, disabled commands keep their pages and complete normally.
 
 Run `execute <name>` to execute a project runscript. It offers runscript names only in its first name slot. A bare `edit <name>` combines runscript names with matching paths; a path, file extension, or `:line` target uses filesystem completion, and an exact file target takes precedence over a runscript name.
 

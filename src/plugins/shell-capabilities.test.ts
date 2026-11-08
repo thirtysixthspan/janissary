@@ -290,6 +290,7 @@ describe('completeLine', () => {
       'l', 1, '/repo/clone/subdir', ['janus', 'shell'], [], expect.any(Object), { names: [], scripts: [] },
       expect.objectContaining({ labels: ['janus', 'shell'], navigators: [], workingDirOf: expect.any(Function) }),
       expect.any(Function),
+      expect.objectContaining({ allows: expect.any(Function), names: expect.any(Array) }),
     );
     expect(managers.connection.completionConnections).toHaveBeenCalledWith('shell');
     expect(capabilities.originTab()).toEqual({ label: 'shell', cwd: '/repo/clone/subdir', root: '/repo' });

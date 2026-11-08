@@ -3,11 +3,24 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { completeCommandLine } from './index.js';
+import { completionPolicy, type CompletionPolicy } from './command-policy.js';
+import { listApplicationCommands } from '../application-commands.js';
 import { BUNDLED_MODEL_CATALOG } from '../models/catalog-file.js';
 
 const modelsFor = (harness: string) => (BUNDLED_MODEL_CATALOG[harness] ?? [])
   .filter(({ disabled }) => disabled !== true)
   .map(({ id }) => id);
+
+function policyWith(disabled: readonly string[]): CompletionPolicy {
+  const commands = listApplicationCommands().map((row) => ({
+    ...row,
+    enabled: true,
+    agentAccess: true,
+    effectiveEnabled: !disabled.includes(row.name),
+    effectiveAgentAccess: !disabled.includes(row.name),
+  }));
+  return completionPolicy({ commands, source: 'default', path: '' });
+}
 
 let dir: string;
 
@@ -283,5 +296,89 @@ describe('completeCommandLine — runscript commands', () => {
       .toEqual([]);
     expect(completeCommandLine('edit deploy.ts', 14, noFiles, [], [], undefined, { names: [], scripts }).matches)
       .toEqual([]);
+  });
+});
+
+describe('completeCommandLine — application command names', () => {
+  it('completes an enabled command name and alias from the first token', () => {
+    expect(completeCommandLine('bro', 3, dir).newInput).toBe('browser ');
+    expect(completeCommandLine('exi', 3, dir).newInput).toBe('exit ');
+  });
+
+  it('merges command names with file candidates, commands first', () => {
+    const r = completeCommandLine('re', 2, dir);
+
+    expect(r.newInput).toBe('re');
+    expect(r.matches).toEqual(['rename', 'report.txt']);
+  });
+
+  it('hides a disabled command while a same-prefix file remains', () => {
+    const policy = policyWith(['rename']);
+
+    expect(completeCommandLine('re', 2, dir, [], [], undefined, undefined, undefined, undefined, policy).newInput)
+      .toBe('report.txt ');
+    expect(completeCommandLine('bro', 3, dir, [], [], undefined, undefined, undefined, undefined, policy).newInput)
+      .toBe('browser ');
+  });
+
+  it('leaves the existing filesystem completion for an empty token, a leading slash, and path separators', () => {
+    const empty = completeCommandLine('', 0, dir);
+    expect(empty.matches).toContain('report.txt');
+    expect(empty.matches).not.toContain('browser');
+
+    const absolute = completeCommandLine('/re', 3, dir);
+    expect(absolute.matches).not.toContain('rename');
+
+    expect(completeCommandLine('./re', 4, dir).newInput).toBe('./report.txt ');
+    expect(completeCommandLine(String.raw`src\re`, 6, dir).matches).toEqual([]);
+    expect(completeCommandLine('"re', 3, dir).matches).toEqual([]);
+  });
+
+  it('keeps ! lines on the existing fallback completion', () => {
+    const policy = policyWith(['shell']);
+
+    expect(completeCommandLine('!ls', 3, dir, [], [], undefined, undefined, undefined, undefined, policy).newInput)
+      .toBe('!ls');
+    expect(completeCommandLine('!ls', 3, dir).matches).toEqual([]);
+  });
+
+  it('keeps disabled command pages completable while help is enabled', () => {
+    const policy = policyWith(['browser', 'browser content', 'browser goto', 'browser eval']);
+
+    expect(completeCommandLine('help bro', 8, dir, [], [], undefined, undefined, undefined, undefined, policy).newInput)
+      .toBe('help browser ');
+  });
+});
+
+describe('completeCommandLine — disabled command guard', () => {
+  const noFiles = '/no/such/dir/xyz';
+
+  it('suppresses argument and path completion under a disabled command', () => {
+    const policy = policyWith(['browser', 'browser content', 'browser goto', 'browser eval']);
+    const line = 'browser co';
+
+    expect(completeCommandLine(line, line.length, dir, [], [], undefined, undefined, undefined, undefined, policy))
+      .toEqual({ newInput: line, newCursor: line.length, matches: [] });
+  });
+
+  it('guards every command-specific completer', () => {
+    const labels = ['janus'];
+    const scripts = { names: [], scripts: ['deploy'] };
+    const cases: [string, string][] = [
+      ['send jan', 'send'],
+      ['tab mo', 'tab'],
+      ['files on l', 'files'],
+      ['edit dep', 'edit'],
+      ['schedule system ca', 'schedule'],
+      ['help bro', 'help'],
+    ];
+
+    for (const [line, name] of cases) {
+      const result = completeCommandLine(
+        line, line.length, noFiles, labels, [], undefined, scripts, undefined, undefined, policyWith([name]),
+      );
+      expect(result.newInput, name).toBe(line);
+      expect(result.matches, name).toEqual([]);
+    }
   });
 });
