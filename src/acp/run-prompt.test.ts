@@ -3,7 +3,9 @@ import type { Managers } from '../managers.js';
 import type { TabRuntime } from '../tab/types.js';
 import type { AcpPendingPrompt } from './prompt-state.js';
 import type { AcpLoopDeps, AcpSession } from './types.js';
+import type { NativeCommandSettingsManager } from '../native-commands/manager.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
+import { BROWSER_PRIMER } from '../browser/command.js';
 
 const mocks = vi.hoisted(() => ({ runAcpToolLoop: vi.fn() }));
 
@@ -13,11 +15,35 @@ import { runCorePrompt } from './run-prompt.js';
 
 const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
 
-function primer(role: 'ask' | 'tell', withoutTools = false): string {
+function settingsWith(
+  rows: Record<string, { effectiveEnabled?: boolean; effectiveAgentAccess?: boolean }>,
+): NativeCommandSettingsManager {
+  return {
+    current: () => ({
+      commands: Object.entries(rows).map(([name, values]) => ({
+        name,
+        effectiveEnabled: values.effectiveEnabled ?? true,
+        effectiveAgentAccess: values.effectiveAgentAccess ?? true,
+      })),
+      source: 'default',
+      path: '',
+    }),
+  } as unknown as NativeCommandSettingsManager;
+}
+
+function primer(
+  role: 'ask' | 'tell',
+  options: {
+    withoutTools?: boolean;
+    commands?: string[];
+    settings?: NativeCommandSettingsManager;
+  } = {},
+): string {
+  const { withoutTools = false, commands = ['db sqlite query'], settings } = options;
   mocks.runAcpToolLoop.mockClear();
   const request: AcpPendingPrompt = {
     finish: vi.fn(), abort: new AbortController(), prompt: 'instructions', role,
-    roleName: role, commands: ['db sqlite query'], runningEntries: new Set(),
+    roleName: role, commands, runningEntries: new Set(),
   };
   const runtime = {
     acpWithoutTools: withoutTools,
@@ -29,6 +55,7 @@ function primer(role: 'ask' | 'tell', withoutTools = false): string {
     database: { primer: 'database primer', runInTab: vi.fn(), isCommandLine: vi.fn() },
     browser: { run: vi.fn() },
     questions: { register: vi.fn() },
+    ...(settings && { nativeCommandSettings: settings }),
   } as unknown as Managers;
   const session = { prompt: vi.fn() } as unknown as AcpSession;
 
@@ -58,12 +85,46 @@ describe('runCorePrompt role primer', () => {
   });
 
   it('keeps the tell instruction when the tab-wide no-tools override removes tool text', () => {
-    expect(primer('tell', true)).toBe([TELL_INSTRUCTION, MARKDOWN_INSTRUCTION].join('\n\n'));
+    expect(primer('tell', { withoutTools: true })).toBe([TELL_INSTRUCTION, MARKDOWN_INSTRUCTION].join('\n\n'));
   });
 
   it('omits the tell instruction from ask when the tab-wide no-tools override is set', () => {
-    const result = primer('ask', true);
+    const result = primer('ask', { withoutTools: true });
     expect(result).toBe(MARKDOWN_INSTRUCTION);
     expect(result).not.toContain(TELL_INSTRUCTION);
+  });
+
+  it('excludes an agent-off command from the allow-list but keeps its owner primer', () => {
+    const result = primer('ask', {
+      commands: ['browser goto', 'db sqlite query'],
+      settings: settingsWith({ 'browser goto': { effectiveAgentAccess: false } }),
+    });
+    expect(result).toContain(BROWSER_PRIMER);
+    expect(result).toContain('database primer');
+    expect(result).toContain('Only these commands are allowed: db sqlite query.');
+    expect(result).not.toContain('browser goto,');
+  });
+
+  it.each([
+    ['disabled', { effectiveEnabled: false, effectiveAgentAccess: false }],
+    ['agent-off', { effectiveEnabled: true, effectiveAgentAccess: false }],
+  ])('keeps the group primer alone when the %s intersection is empty', (_state, setting) => {
+    const result = primer('ask', {
+      commands: ['browser goto'],
+      settings: settingsWith({ 'browser goto': setting }),
+    });
+    expect(result).toBe([BROWSER_PRIMER, MARKDOWN_INSTRUCTION].join('\n\n'));
+    expect(result).not.toContain('Only these commands are allowed');
+  });
+
+  it('keeps the tell instruction after a filtered allow-list', () => {
+    const result = primer('tell', {
+      commands: ['browser goto', 'db sqlite query'],
+      settings: settingsWith({ 'browser goto': { effectiveAgentAccess: false } }),
+    });
+    const allowList = result.indexOf('Only these commands are allowed: db sqlite query.');
+    expect(result.indexOf(BROWSER_PRIMER)).toBeLessThan(allowList);
+    expect(allowList).toBeLessThan(result.indexOf(TELL_INSTRUCTION));
+    expect(result.indexOf(TELL_INSTRUCTION)).toBeLessThan(result.indexOf(MARKDOWN_INSTRUCTION));
   });
 });

@@ -88,10 +88,18 @@ export class CommandManager {
     return this.dispatchLine(label, input, captureLimitMs, childInvocationContext(parent, input));
   }
 
+  async dispatchNativeLine(
+    label: string,
+    input: string,
+    invocation: CommandInvocationContext,
+  ): Promise<{ dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown }> {
+    return this.dispatchLine(label, input, undefined, invocation);
+  }
+
   private async dispatchLine(
     label: string,
     input: string,
-    captureLimitMs: number,
+    captureLimitMs: number | undefined,
     invocation: CommandInvocationContext,
   ): Promise<{ dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown }> {
     const resolution = resolveInTab(input, label, this.managers);

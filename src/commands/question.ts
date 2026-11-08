@@ -4,6 +4,7 @@ import { appendCommandOutput } from '../command/append.js';
 
 // Posts the question and keeps its entry running until the human answers.
 function ask(command_: string, label: string, managers: CommandManagers, invocation?: CommandInvocationContext): string | void | Promise<string> {
+  if (invocation?.acpTool) return runQuestionCommand(command_, label, managers.questions, invocation.signal);
   const result = runQuestionCommand(command_, label, managers.questions, invocation?.signal);
   if (typeof result === 'string') {
     appendCommandOutput(managers, label, { input: command_, output: result }, invocation);

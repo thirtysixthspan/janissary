@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TabManager } from '../tab/manager.js';
 import { Questions } from '../questions.js';
 import type { Managers } from '../managers.js';
+import type { CommandInvocationContext } from './types.js';
 import { command } from './question.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 
@@ -16,6 +17,14 @@ function makeManagers(): Managers {
 
 const log = (managers: Managers, label: string) =>
   managers.tab.tabs.find((t) => t.label === label)!.log;
+
+function acpInvocation(signal: AbortSignal): CommandInvocationContext {
+  return {
+    runId: 'run', invocationId: 'invocation',
+    caller: { label: 'janus', cwd: process.cwd(), context: [] },
+    signal, awaitResult: true, acpTool: true,
+  };
+}
 
 describe('question command', () => {
   let managers: Managers;
@@ -77,6 +86,35 @@ describe('question command', () => {
     });
     controller.abort();
     await expect(cancelled).resolves.toBe('Question cancelled.');
+  });
+
+  it('returns the answer for an ACP invocation without marking the tab running', async () => {
+    const startRunning = vi.spyOn(managers.tab, 'startRunning');
+    const finishRunning = vi.spyOn(managers.tab, 'finishRunning');
+    const answer = command.run(
+      'question ask "What port?"', { label: 'janus', index: 0 }, managers, acpInvocation(new AbortController().signal),
+    );
+    const pending = managers.questions.pendingFor('janus')!;
+    expect(managers.questions.answer('janus', pending.id, '8080')).toBe(true);
+
+    await expect(answer).resolves.toBe('8080');
+    expect(startRunning).not.toHaveBeenCalled();
+    expect(finishRunning).not.toHaveBeenCalled();
+    expect(log(managers, 'janus').some((e) => e.output === '8080')).toBe(false);
+  });
+
+  it('resolves a cancelled ACP question without marking the tab running', async () => {
+    const startRunning = vi.spyOn(managers.tab, 'startRunning');
+    const finishRunning = vi.spyOn(managers.tab, 'finishRunning');
+    const controller = new AbortController();
+    const cancelled = command.run(
+      'question ask "Stop?"', { label: 'janus', index: 0 }, managers, acpInvocation(controller.signal),
+    );
+    controller.abort();
+
+    await expect(cancelled).resolves.toBe('Question cancelled.');
+    expect(startRunning).not.toHaveBeenCalled();
+    expect(finishRunning).not.toHaveBeenCalled();
   });
 
   it('appends usage text for a malformed command without registering a question or running', () => {

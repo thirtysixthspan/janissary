@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AcpOptions, PromptHandlers } from './types.js';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { AcpSessionRecords } from '../acp-records/manager.js';
@@ -17,6 +17,8 @@ import { acpCapabilities } from '../plugins/acp-capabilities.js';
 import { guardPluginCall } from '../plugins/guard.js';
 import { Questions, QUESTION_CANCELLED } from '../questions.js';
 import { CommandManager } from '../command/manager.js';
+import { NativeCommandSettingsManager } from '../native-commands/manager.js';
+import { notify } from '../notifications/index.js';
 import { openConnectionRecord } from '../controller/connection-records.js';
 import { recordConnectionName } from '../plugins/connections/shared.js';
 
@@ -26,14 +28,30 @@ vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 import { AcpManager } from './manager.js';
 
 const projects: { root: string; managers: Managers }[] = [];
+const settingsRoots: string[] = [];
 
-function setup(roleSettings?: (root: string, role: AcpRole) => AcpRoleSettings) {
+function settingsWith(
+  values: Record<string, { enabled?: boolean; agentAccess?: boolean }>,
+): NativeCommandSettingsManager {
+  const root = mkdtempSync(path.join(tmpdir(), 'plugin-acp-settings-'));
+  settingsRoots.push(root);
+  const home = path.join(root, 'home');
+  mkdirSync(path.join(home, '.janissary'), { recursive: true });
+  writeFileSync(path.join(home, '.janissary', 'commands.json'), JSON.stringify(values));
+  return new NativeCommandSettingsManager(path.join(root, 'project'), home);
+}
+
+function setup(
+  roleSettings?: (root: string, role: AcpRole) => AcpRoleSettings,
+  settingsValues: Record<string, { enabled?: boolean; agentAccess?: boolean }> = {},
+) {
   const managers = {} as Managers;
   const root = mkdtempSync(path.join(tmpdir(), 'plugin-acp-records-'));
   managers.acpRecords = new AcpSessionRecords({ projectDir: root });
   projects.push({ root, managers });
   managers.tab = new TabManager(managers);
   managers.questions = new Questions();
+  managers.nativeCommandSettings = settingsWith(settingsValues);
   managers.tab.tabs.push(makeTab('agent', '#fff'), {
     ...makeTab('consumer', '#abc'), view: 'plugin',
     plugin: { id: 'any-plugin', instanceKey: 'one', schemaVersion: 1, payload: {} },
@@ -47,7 +65,10 @@ function setup(roleSettings?: (root: string, role: AcpRole) => AcpRoleSettings) 
   Object.assign(managers, {
     models: { isKnownModel: () => true },
     plugins: { declarations: [{ id: 'any-plugin', capabilities: ['startAcp', 'promptAcp', 'resetAcp'] }] },
-    database: { primer: 'db', isCommandLine: () => false, openDbs: () => [] },
+    database: {
+      primer: 'db', isCommandLine: (line: string) => line.startsWith('db '),
+      runInTab: vi.fn(() => 'db output'), openDbs: () => [],
+    },
     browser: { run: vi.fn() },
     shell: { run: vi.fn((_label: string, _text: string, options: { onComplete(text: string): void }) => options.onComplete('ran')) },
   });
@@ -67,6 +88,8 @@ afterEach(() => {
     rmSync(root, { recursive: true, force: true });
   }
   projects.length = 0;
+  for (const root of settingsRoots) rmSync(root, { recursive: true, force: true });
+  settingsRoots.length = 0;
   vi.clearAllMocks();
   messageBus.clear();
 });
@@ -74,11 +97,13 @@ afterEach(() => {
 describe('core ACP for plugin tabs', () => {
   it('suppresses a browser result and every follow-up after cancellation', async () => {
     const { managers, handlers, session } = setup();
+    const dispatch = vi.spyOn(managers.command, 'dispatchNativeLine');
     const browser = Promise.withResolvers<string>();
     vi.mocked(managers.browser.run).mockReturnValue(browser.promise);
     const pending = managers.acp.prompt('consumer', 'open a page');
     handlers().onChunk('browser goto https://example.com');
     handlers().onEnd('end_turn');
+    await vi.waitFor(() => { expect(dispatch).toHaveBeenCalledOnce(); });
     const cancel = managers.acp.cancel('consumer');
     await expect(cancel).resolves.toBe(true);
     await expect(pending).resolves.toBe('ACP: prompt cancelled.');
@@ -86,6 +111,12 @@ describe('core ACP for plugin tabs', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(session.prompt).toHaveBeenCalledOnce();
+    expect(dispatch).toHaveBeenCalledWith(
+      'consumer',
+      'browser goto https://example.com',
+      expect.objectContaining({ acpTool: true, awaitResult: true }),
+    );
+    expect(managers.tab.byLabel('consumer')!.log.filter((entry) => entry.acp === true)).toHaveLength(0);
     const record = managers.acpRecords.window(managers.acpRecords.rows()[0].id)!;
     expect(record.blocks[0].entries.map((entry) => entry.text)).toEqual(['browser goto https://example.com']);
   });
@@ -101,6 +132,7 @@ describe('core ACP for plugin tabs', () => {
   });
   it.each([true, false])('cancel aborts only its own active or queued question (queued: %s)', async (queued) => {
     const { managers, handlers, session } = setup();
+    const dispatch = vi.spyOn(managers.command, 'dispatchNativeLine');
     const askOther = () => managers.questions.register({ tab: 'consumer', kind: 'ask', question: 'Other request' });
     let other = queued ? askOther() : undefined;
     const pending = managers.acp.prompt('consumer', 'ask ask me');
@@ -113,6 +145,11 @@ describe('core ACP for plugin tabs', () => {
     expect(managers.questions.pendingFor('consumer')?.question).toBe('Other request');
     await expect(cancel).resolves.toBe(true);
     await expect(pending).resolves.toBe('ACP: prompt cancelled.');
+    expect(dispatch).toHaveBeenCalledWith(
+      'consumer',
+      'question ask "ACP request"',
+      expect.objectContaining({ acpTool: true, awaitResult: true }),
+    );
     expect(managers.acp.sessionIdentity('consumer')).toBe(identity);
     expect(managers.tab.byLabel('consumer')!.runtime!.acpRoles!.ask!.recordId).toBe(id);
     expect(managers.acpRecords.window(id)).toMatchObject({ status: 'Idle', blocks: [{ answer: 'ACP: prompt cancelled.' }] });
@@ -121,6 +158,92 @@ describe('core ACP for plugin tabs', () => {
     await expect(other).resolves.toBe('Answer');
     expect(session.prompt).toHaveBeenCalledOnce();
     expect(session.kill).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['disabled', { enabled: false }],
+    ['agent-off', { enabled: true, agentAccess: false }],
+  ])('returns the %s refusal to the loop even when notifications are suppressed', async (_state, setting) => {
+    const { managers, handlers, session } = setup(undefined, { 'browser goto': setting });
+    const pending = managers.acp.prompt('consumer', 'open a page');
+    handlers().onChunk('browser goto https://example.com');
+    handlers().onEnd('end_turn');
+
+    await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalledTimes(2); });
+    expect(session.prompt.mock.calls[1][0]).toContain(
+      'Output of `browser goto https://example.com`:\nCommand is disabled: browser goto.',
+    );
+    handlers().onChunk('done');
+    handlers().onEnd('end_turn');
+
+    await expect(pending).resolves.toBe('done');
+    expect(managers.browser.run).not.toHaveBeenCalled();
+    expect(notify).toHaveBeenCalledWith(
+      managers, 'command-disabled', 'consumer', 'Command is disabled: browser goto.',
+    );
+    const entries = managers.tab.byLabel('consumer')!.log.filter((entry) => entry.acp === true);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      input: 'browser goto https://example.com', output: 'Command is disabled: browser goto.',
+    });
+  });
+
+  it('runs a browser command through the dispatcher and records one tool entry', async () => {
+    const { managers, handlers, session } = setup();
+    vi.mocked(managers.browser.run).mockResolvedValue('page title');
+    const pending = managers.acp.prompt('consumer', 'open a page');
+    handlers().onChunk('browser goto https://example.com');
+    handlers().onEnd('end_turn');
+
+    await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalledTimes(2); });
+    expect(session.prompt.mock.calls[1][0]).toContain('page title');
+    handlers().onChunk('done');
+    handlers().onEnd('end_turn');
+
+    await expect(pending).resolves.toBe('done');
+    expect(managers.browser.run).toHaveBeenCalledWith('consumer', 'browser goto https://example.com');
+    const entries = managers.tab.byLabel('consumer')!.log.filter((entry) => entry.acp === true);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ input: 'browser goto https://example.com', output: 'page title' });
+  });
+
+  it('runs a database command through the dispatcher without appending duplicate output', async () => {
+    const { managers, handlers, session } = setup();
+    vi.mocked(managers.database.runInTab).mockReturnValue('sqlite tables');
+    const pending = managers.acp.prompt('consumer', 'inspect the database');
+    handlers().onChunk('db sqlite list');
+    handlers().onEnd('end_turn');
+
+    await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalledTimes(2); });
+    expect(session.prompt.mock.calls[1][0]).toContain('sqlite tables');
+    handlers().onChunk('done');
+    handlers().onEnd('end_turn');
+
+    await expect(pending).resolves.toBe('done');
+    expect(managers.database.runInTab).toHaveBeenCalledWith('consumer', 'db sqlite list');
+    const entries = managers.tab.byLabel('consumer')!.log.filter((entry) => entry.acp === true);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ input: 'db sqlite list', output: 'sqlite tables' });
+  });
+
+  it('runs a question command through the dispatcher and returns the human answer', async () => {
+    const { managers, handlers, session } = setup();
+    const pending = managers.acp.prompt('consumer', 'ask a question');
+    handlers().onChunk('question ask "What port?"');
+    handlers().onEnd('end_turn');
+
+    await vi.waitFor(() => { expect(managers.questions.pendingFor('consumer')).toBeDefined(); });
+    const question = managers.questions.pendingFor('consumer')!;
+    expect(managers.questions.answer('consumer', question.id, '8080')).toBe(true);
+    await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalledTimes(2); });
+    expect(session.prompt.mock.calls[1][0]).toContain('8080');
+    handlers().onChunk('done');
+    handlers().onEnd('end_turn');
+
+    await expect(pending).resolves.toBe('done');
+    const entries = managers.tab.byLabel('consumer')!.log.filter((entry) => entry.acp === true);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ input: 'question ask "What port?"', output: '8080' });
   });
 
   it('keeps its logical reservation while native cancellation drains and suppresses late loop callbacks', async () => {
@@ -641,7 +764,7 @@ describe('core ACP for plugin tabs', () => {
   // The contrast that makes the case above a regression test rather than a tautology: the same reply
   // on an ordinary session does reach the browser, so what stopped it was the session.
   it('still runs the tools for an ordinary plugin session', async () => {
-    const { managers, handlers } = setup();
+    const { managers, handlers, session } = setup();
     const declaration = managers.plugins.declarations[0];
     const capabilities = acpCapabilities({
       managers, declaration, origin: { label: 'agent' }, answeringLabel: 'consumer', isEnabled: () => true,
@@ -652,6 +775,7 @@ describe('core ACP for plugin tabs', () => {
     handlers().onChunk('Opening it now.\nbrowser goto https://example.com');
     handlers().onEnd('end_turn');
     // The browser command ran, so the loop is on its follow-up turn rather than finished.
+    await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalledTimes(2); });
     handlers().onChunk('Done.');
     handlers().onEnd('end_turn');
 

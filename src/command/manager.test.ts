@@ -16,6 +16,8 @@ import { NativeCommandSettingsManager } from '../native-commands/manager.js';
 import { NotificationQueue } from '../notifications/queue.js';
 import { messageBus } from '../bus.js';
 import * as config from '../config.js';
+import { Questions } from '../questions.js';
+import { childInvocationContext, createInvocationContext } from './invocation.js';
 
 const settingsRoots: string[] = [];
 
@@ -55,6 +57,8 @@ function makeManagers(
   managers.database = {
     openDbs: vi.fn(() => []), runInTab: vi.fn(() => 'query result'),
   } as unknown as Managers['database'];
+  managers.browser = { run: vi.fn(async () => 'browser result') } as unknown as Managers['browser'];
+  managers.questions = new Questions();
   managers.schedule = {
     openScheduleLaunch: vi.fn(), get: vi.fn(() => []), set: vi.fn(),
   } as unknown as Managers['schedule'];
@@ -236,6 +240,128 @@ describe('CommandManager dispatchLineWithOutput', () => {
     });
     late.resolve();
     await vi.waitFor(() => { expect(managers.tab.cur().log.at(-1)?.output).toBe('finished'); });
+  });
+});
+
+describe('CommandManager dispatchNativeLine', () => {
+  it('waits past the plugin capture deadline for a native command', async () => {
+    vi.useFakeTimers();
+    const { managers } = makeManagers();
+    const late = Promise.withResolvers<string>();
+    const command = {
+      name: 'fixture-native-slow', match: (input: string) => input === 'fixture-native-slow',
+      samples: ['fixture-native-slow'], run: () => late.promise,
+    };
+    commands.push(command);
+    try {
+      const invocation = createInvocationContext(managers, 'janus', 'fixture-native-slow', {
+        acpTool: true, awaitResult: true,
+      });
+      let settled = false;
+      const pending = (async () => {
+        const result = await managers.command.dispatchNativeLine('janus', 'fixture-native-slow', invocation);
+        settled = true;
+        return result;
+      })();
+      await vi.advanceTimersByTimeAsync(30_001);
+      expect(settled).toBe(false);
+      late.resolve('slow result');
+      await expect(pending).resolves.toEqual({ dispatched: true, output: '', result: 'slow result' });
+    } finally {
+      commands.splice(commands.indexOf(command), 1);
+      vi.useRealTimers();
+    }
+  });
+
+  it('returns the browser service text without an interactive entry', async () => {
+    const { managers } = makeManagers();
+    const invocation = createInvocationContext(managers, 'janus', 'browser goto https://example.com', {
+      acpTool: true, awaitResult: true,
+    });
+
+    await expect(managers.command.dispatchNativeLine('janus', 'browser goto https://example.com', invocation))
+      .resolves.toEqual({ dispatched: true, output: '', result: 'browser result' });
+    expect(managers.browser.run).toHaveBeenCalledWith('janus', 'browser goto https://example.com');
+    expect(managers.tab.cur().log).toEqual([]);
+  });
+
+  it('returns the database text without appending it', async () => {
+    const { managers } = makeManagers();
+    const invocation = createInvocationContext(managers, 'janus', 'db sqlite list', {
+      acpTool: true, awaitResult: true,
+    });
+
+    await expect(managers.command.dispatchNativeLine('janus', 'db sqlite list', invocation))
+      .resolves.toEqual({ dispatched: true, output: '', result: 'query result' });
+    expect(managers.database.runInTab).toHaveBeenCalledWith('janus', 'db sqlite list');
+    expect(managers.tab.cur().log).toEqual([]);
+  });
+
+  it('waits for a native question answer without marking the tab running', async () => {
+    const { managers } = makeManagers();
+    const startRunning = vi.spyOn(managers.tab, 'startRunning');
+    const invocation = createInvocationContext(managers, 'janus', 'question ask "What port?"', {
+      acpTool: true, awaitResult: true,
+    });
+
+    const pending = managers.command.dispatchNativeLine('janus', 'question ask "What port?"', invocation);
+    const question = managers.questions.pendingFor('janus')!;
+    expect(question).toMatchObject({ kind: 'ask', question: 'What port?' });
+    expect(managers.questions.answer('janus', question.id, '8080')).toBe(true);
+
+    await expect(pending).resolves.toEqual({ dispatched: true, output: '', result: '8080' });
+    expect(startRunning).not.toHaveBeenCalled();
+    expect(managers.tab.cur().log).toEqual([]);
+  });
+
+  it('preserves the ordinary output and structured-result contracts', async () => {
+    const { managers } = makeManagers();
+    const outputCommand = {
+      name: 'fixture-native-output', match: (input: string) => input === 'fixture-native-output',
+      samples: ['fixture-native-output'],
+      run: (_input: string, tab: { label: string }, services: Managers, invocation: CommandInvocationContext) => {
+        services.tab.appendForInvocation(tab.label, { input: 'fixture-native-output', output: 'appended' }, invocation.invocationId);
+      },
+    };
+    const resultCommand = {
+      name: 'fixture-native-result', match: (input: string) => input === 'fixture-native-result',
+      samples: ['fixture-native-result'], structuredResult: true as const,
+      run: () => ({ status: 'completed' }),
+    };
+    const coreCommand = {
+      name: 'fixture-native-core', match: (input: string) => input === 'fixture-native-core',
+      samples: ['fixture-native-core'], coreResponse: true as const,
+      run: () => ({ response: 'core result' }),
+    };
+    commands.push(outputCommand, resultCommand, coreCommand);
+    try {
+      const outputInvocation = createInvocationContext(managers, 'janus', 'fixture-native-output', { acpTool: true });
+      await expect(managers.command.dispatchNativeLine('janus', 'fixture-native-output', outputInvocation))
+        .resolves.toEqual({ dispatched: true, output: 'appended' });
+      const resultInvocation = createInvocationContext(managers, 'janus', 'fixture-native-result', { acpTool: true });
+      await expect(managers.command.dispatchNativeLine('janus', 'fixture-native-result', resultInvocation))
+        .resolves.toEqual({ dispatched: true, output: '', result: { status: 'completed' } });
+      const coreInvocation = createInvocationContext(managers, 'janus', 'fixture-native-core', { acpTool: true });
+      await expect(managers.command.dispatchNativeLine('janus', 'fixture-native-core', coreInvocation))
+        .resolves.toEqual({ dispatched: true, output: '', coreResponse: true, result: { response: 'core result' } });
+      const unknownInvocation = createInvocationContext(managers, 'janus', 'not-a-command', { acpTool: true });
+      await expect(managers.command.dispatchNativeLine('janus', 'not-a-command', unknownInvocation))
+        .resolves.toEqual({ dispatched: false, output: '' });
+    } finally {
+      commands.splice(commands.indexOf(outputCommand), 1);
+      commands.splice(commands.indexOf(resultCommand), 1);
+      commands.splice(commands.indexOf(coreCommand), 1);
+    }
+  });
+
+  it('copies the ACP tool marker into child invocation contexts', () => {
+    const { managers } = makeManagers();
+    const parent = createInvocationContext(managers, 'janus', 'line', { acpTool: true, awaitResult: true });
+    const child = childInvocationContext(parent, 'child');
+
+    expect(child.acpTool).toBe(true);
+    expect(child.awaitResult).toBe(true);
+    expect(child.signal).toBe(parent.signal);
   });
 });
 
@@ -743,5 +869,14 @@ describe('CommandManager disabled command policy', () => {
     } finally {
       subscription.unsubscribe();
     }
+  });
+
+  it('still runs an agent-off command from the human command bar', async () => {
+    const { managers } = makeManagers(settingsWith({ 'db sqlite list': { enabled: true, agentAccess: false } }));
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'db sqlite list')).resolves.toEqual({
+      dispatched: true, output: 'query result',
+    });
+    expect(managers.database.runInTab).toHaveBeenCalledWith('janus', 'db sqlite list');
   });
 });

@@ -3,10 +3,17 @@ import type { CommandInvocationContext } from '../commands/types.js';
 import type { Managers } from '../managers.js';
 import { tabRuntime } from '../tab/runtime.js';
 
+export type InvocationOptions = Readonly<{
+  signal?: AbortSignal;
+  awaitResult?: true;
+  acpTool?: true;
+}>;
+
 export function createInvocationContext(
   managers: Managers,
   label: string,
   line?: string,
+  options: InvocationOptions = {},
 ): CommandInvocationContext {
   const tab = managers.tab.byLabel(label);
   const runtime = tab ? tabRuntime(tab) : undefined;
@@ -19,8 +26,10 @@ export function createInvocationContext(
       cwd: managers.tab.workingDirOf(label),
       context: Object.freeze([...(runtime?.context ?? [])]),
     }),
-    signal: new AbortController().signal,
+    signal: options.signal ?? new AbortController().signal,
     ...(line !== undefined && { line }),
+    ...(options.awaitResult && { awaitResult: true }),
+    ...(options.acpTool && { acpTool: true }),
   });
 }
 
@@ -35,6 +44,7 @@ export function childInvocationContext(
     signal: parent.signal,
     ...(line !== undefined && { line }),
     ...(parent.awaitResult && { awaitResult: true }),
+    ...(parent.acpTool && { acpTool: true }),
     ...(parent.systemSchedule && { systemSchedule: parent.systemSchedule }),
   });
 }
