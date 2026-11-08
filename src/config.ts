@@ -17,6 +17,7 @@ export type NotificationConfig = {
     scheduleFire: boolean;
     agentStart: boolean;
     rateLimited: boolean;
+    commandDisabled: boolean;
     systemScheduleFire: boolean;
     modelsRefresh: boolean;
   };
@@ -98,6 +99,7 @@ const DEFAULT_CONFIG: Config = {
       scheduleFire: false,
       agentStart: false,
       rateLimited: false,
+      commandDisabled: false,
       systemScheduleFire: true,
       modelsRefresh: true,
     },

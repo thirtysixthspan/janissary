@@ -14,14 +14,14 @@ import { NOTIFICATION_ALERT_DEFAULTS } from './alert-defaults.js';
 
 const allOn: NotificationConfig = {
   events: {
-    stateChange: true, scheduleFire: true, agentStart: true, rateLimited: true,
+    stateChange: true, scheduleFire: true, agentStart: true, rateLimited: true, commandDisabled: true,
     systemScheduleFire: true, modelsRefresh: true,
   },
   alerts: NOTIFICATION_ALERT_DEFAULTS,
 };
 const allOff: NotificationConfig = {
   events: {
-    stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false,
+    stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false, commandDisabled: false,
     systemScheduleFire: false, modelsRefresh: false,
   },
   alerts: NOTIFICATION_ALERT_DEFAULTS,
@@ -115,6 +115,10 @@ describe('shouldNotify — models-refresh event', () => {
 });
 
 describe('shouldNotify — ambient events', () => {
+  it('renders the exact supplied disabled-command refusal', () => {
+    expect(notificationText('command-disabled', 'build', 'Command is disabled: db.'))
+      .toBe('Command is disabled: db.');
+  });
   it('fires for a background tab when its event toggle is on', () => {
     expect(shouldNotify(allOn, 'state-change', 'build', 'janus')).toBe(true);
   });

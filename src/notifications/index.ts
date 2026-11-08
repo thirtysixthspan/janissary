@@ -14,6 +14,7 @@ export type NotificationEventType =
   | 'system-schedule-fire'
   | 'agent-start'
   | 'rate-limited'
+  | 'command-disabled'
   | 'harness-idle'
   | 'manual'
   | 'auto-approve'
@@ -47,7 +48,8 @@ export type AmbientNotificationEvent =
   | 'state-change'
   | 'schedule-fire'
   | 'agent-start'
-  | 'rate-limited';
+  | 'rate-limited'
+  | 'command-disabled';
 
 // Everything else, derived rather than restated: a new member of `NotificationEventType` lands here
 // automatically and then fails `EXPLICIT_EVENTS` below until it is classified.
@@ -65,6 +67,7 @@ export const AMBIENT_EVENTS: Record<AmbientNotificationEvent, keyof Notification
   'agent-start': 'agentStart',
   // An ACP query being rate limited by its provider.
   'rate-limited': 'rateLimited',
+  'command-disabled': 'commandDisabled',
 };
 
 // Explicit reports bypass focus suppression so an action or failure on the active tab is not lost.

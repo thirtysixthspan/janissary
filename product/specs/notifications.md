@@ -282,14 +282,16 @@ Every system schedule notice uses the `system-schedule-fire` event, originates f
 
 The explicit-event toggles are `notifications.events.systemScheduleFire` and `notifications.events.modelsRefresh`; both default to `true`. Turning either off suppresses its event before it reaches the queue, record, feed, toast, desktop alert, or bell. Both bypass focus suppression. System schedule notices default to the warning cue; model refresh notices default to the success cue.
 
-The four ambient events (`state-change`, `schedule-fire`, `agent-start`,
-`rate-limited`) are each **independently togglable and default off** — opt in by editing
+The five ambient events (`state-change`, `schedule-fire`, `agent-start`,
+`rate-limited`, `command-disabled`) are each **independently togglable and default off** — opt in by editing
 `.janissary/config.json` (see `application-config.md`). The `harness-idle`, `manual`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`,
 `editor-suggest`, `question`, `transcript-unavailable`, `e2e-browser-gone`, `file-operation`,
 `open-unsupported`, `layout`, `connection-closed`, `connection-close-failed`, `workspace-ready`, `tab`, `plugin-failure`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`,
 `launch-refused`, `launch-workspace-cleaned`, `launch-root-cloned`, and `remote-refused` events have no toggle, and like the other explicit
 events they are shown even when the tab they are attributed to is the active one. `system-schedule-fire` and `models-refresh` are the explicit events with toggles. A `question` event fires only for a
 background tab.
+
+`command-disabled` carries the exact refusal `Command is disabled: <command>.` from the originating tab. It is default-off, suppressed while that tab is active, and uses the default-muted alert (`desktop: false`, `sound: "none"`).
 
 ### Focus suppression
 
