@@ -5,6 +5,7 @@ import type {
   TabActivityEntry,
 } from './api.js';
 import type { DatabaseGridQuery, RemoteSessionView, RunscriptsView } from '../protocol.js';
+import type { CommandsTopicAction, CommandsTopicNotification } from './api-topics-commands.js';
 import type { ConnectionsTopicAction, ConnectionsTopicNotification } from './api-topics-connections.js';
 import type { ModelsTopicAction, ModelsTopicNotification } from './api-topics-models.js';
 
@@ -23,7 +24,8 @@ import type { ModelsTopicAction, ModelsTopicNotification } from './api-topics-mo
 // latest rows at delivery time. Last activity is minute-rounded, and the launcher drops unchanged
 // rows as a second guard against repeated payloads.
 export type TabPluginNotificationTopic =
-  | 'schedules' | 'conversations' | 'sessions' | 'databases' | 'tabs' | 'runscripts' | 'connections' | 'models';
+  | 'schedules' | 'conversations' | 'sessions' | 'databases' | 'tabs' | 'runscripts' | 'connections' | 'models'
+  | 'commands';
 
 // Keyed by the union for the same reason `CAPABILITIES` is: a topic added to the type without a
 // source here is a compile error rather than a name the host would silently never deliver.
@@ -36,6 +38,7 @@ const NOTIFICATION_TOPICS: Record<TabPluginNotificationTopic, true> = {
   runscripts: true,
   connections: true,
   models: true,
+  commands: true,
 };
 
 export const TAB_PLUGIN_NOTIFICATION_TOPICS =
@@ -49,6 +52,7 @@ export function isTabPluginNotificationTopic(name: string): name is TabPluginNot
 // `tabs` are the instance keys of this plugin's own open tabs — the host works that set out to
 // decide whether to deliver at all, so passing it leaves the plugin with no bookkeeping of its own.
 export type TabPluginNotification =
+  | CommandsTopicNotification
   | ConnectionsTopicNotification
   | ModelsTopicNotification
   | {
@@ -95,6 +99,7 @@ export type TabPluginNotification =
 // already agreed to show it, which keeps the grant as narrow as the view that motivates it. Each
 // topic names its own actions, so adding a topic never widens what an existing one can do.
 export type TabPluginTopicAction =
+  | CommandsTopicAction
   | ConnectionsTopicAction
   | ModelsTopicAction
   | { topic: 'schedules'; action: 'cancel'; tab: string; id: string; owner?: 'tab' }

@@ -32,11 +32,10 @@ export type { TabPluginOwnTabCapabilities } from './api-own-tab.js';
 export type { AcpPromptResult } from '../acp/types.js';
 
 export {
-   isTabPluginNotificationTopic,
+  isTabPluginNotificationTopic,
+  type TabPluginNotification, type TabPluginNotificationTopic, type TabPluginTopicAction,
 } from './api-topics.js';
-export type {
-  TabPluginNotification, TabPluginNotificationTopic, TabPluginTopicAction,
-} from './api-topics.js';
+export type { CommandsTopicAction, CommandsTopicNotification, CommandsTopicSetAction } from './api-topics-commands.js';
 export type { ConnectionsTopicAction, ConnectionsTopicNotification } from './api-topics-connections.js';
 export type { ModelsTopicAction, ModelsTopicDeleteAction, ModelsTopicNotification } from './api-topics-models.js';
 export type {
@@ -287,8 +286,8 @@ export type TabPluginServerCapabilities =QueueCapabilityTypes & TabPluginRemoteW
   // plugin building a tab for the first time learns what the topic currently holds. Asking for a
   // topic this plugin did not declare is a plugin-authoring mistake and disables it.
   topicData(topic: TabPluginNotificationTopic): TabPluginNotification['data'];
-  // Ask the host to perform one of the actions a declared topic defines. Models delete is queued and
-  // returns its refusal asynchronously; every existing action keeps its synchronous result.
+  // Ask the host to perform one of the actions a declared topic defines. Models delete and commands
+  // set are queued and return their refusal asynchronously; other actions keep their synchronous result.
   topicAction: TabPluginTopicActionCapability;
   // Ask the host to run its ordinary `open` pipeline for `target`, restricted to this plugin's own
   // claimed extensions. The host queues the request and runs it after the guarded call returns, so

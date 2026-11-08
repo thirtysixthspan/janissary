@@ -10,8 +10,9 @@ import { scheduleTopicAction } from './schedule-topic-actions.js';
 import { runscriptTopicAction } from './runscript-topic-actions.js';
 import { readRunscriptRows } from '../schedule/system/runscript-rows.js';
 import { readConnectionsTopic, runConnectionsTopicAction, subscribeConnectionsTopic } from './connections-topic.js';
+import { readCommandsTopic, runCommandsTopicAction, subscribeCommandsTopic } from './commands-topic.js';
 import { readModelsTopic, runModelsTopicAction, subscribeModelsTopic } from './models-topic.js';
-import type { ModelsTopicDeleteAction } from './api-topics-models.js';
+import type { RunTopicAction } from './api-topic-action-capability.js';
 
 const TABS_NOTIFICATION_WINDOW_MS = 100;
 
@@ -20,7 +21,7 @@ const TABS_NOTIFICATION_WINDOW_MS = 100;
 // else — the notification dispatcher, the `topicData` capability, and the `topicAction` capability
 // all read this table.
 type TopicSource = {
-  subscribe(fire: () => void): Subscription;
+  subscribe(managers: Managers, fire: () => void): Subscription;
   read(managers: Managers): TabPluginNotification['data'];
   act(managers: Managers, action: TabPluginTopicAction): string | undefined | Promise<string | undefined>;
   empty: TabPluginNotification['data'];
@@ -153,25 +154,25 @@ function subscribeTabs(fire: () => void): Subscription {
 
 const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
   schedules: {
-    subscribe: (fire) => messageBus.on('schedules', 'changed', fire),
+    subscribe: (_managers, fire) => messageBus.on('schedules', 'changed', fire),
     read: (managers) => managers.schedule.aggregatedView(),
     act: scheduleTopicAction,
     empty: [],
   },
   conversations: {
-    subscribe: (fire) => messageBus.on('conversations', 'changed', fire),
+    subscribe: (_managers, fire) => messageBus.on('conversations', 'changed', fire),
     read: (managers) => managers.conversations.view(),
     act: (managers, action) => { actOnConversations(managers, action); },
     empty: { summaries: [], windows: [], models: [] },
   },
   sessions: {
-    subscribe: (fire) => messageBus.on('sessions', 'changed', fire),
+    subscribe: (_managers, fire) => messageBus.on('sessions', 'changed', fire),
     read: (managers) => managers.sessions.view(),
     act: (managers, action) => { actOnSessions(managers, action); },
     empty: [],
   },
   databases: {
-    subscribe: (fire) => messageBus.on('databases', 'changed', fire),
+    subscribe: (_managers, fire) => messageBus.on('databases', 'changed', fire),
     read: (managers) => managers.database.readView(),
     act: (managers, action) => { actOnDatabases(managers, action); },
     empty: { databases: [], results: [], lastOpened: null },
@@ -181,35 +182,44 @@ const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
     // focus, a badge, a dock, a title, an open, a close — ends there and nowhere else. The rows it
     // hands over are minute-rounded, so a republish is forced by a real change and not by every
     // transcript append.
-    subscribe: subscribeTabs,
+    subscribe: (_managers, fire) => subscribeTabs(fire),
     read: (managers) => tabActivityRows(managers),
     act: (managers, action) => { actOnTabs(managers, action); },
     empty: [],
   },
   runscripts: {
-    subscribe: (fire) => messageBus.on('runscripts', 'changed', fire),
+    subscribe: (_managers, fire) => messageBus.on('runscripts', 'changed', fire),
     read: (managers) => readRunscriptRows(managers),
     act: (managers, action) => { runscriptTopicAction(managers, action); },
     empty: { rows: [] },
   },
   connections: {
-    subscribe: subscribeConnectionsTopic,
+    subscribe: (_managers, fire) => subscribeConnectionsTopic(fire),
     read: readConnectionsTopic,
     act: (managers, action) => action.topic === 'connections'
       ? runConnectionsTopicAction(managers, action) : undefined,
     empty: { rows: [] },
   },
   models: {
-    subscribe: subscribeModelsTopic,
+    subscribe: (_managers, fire) => subscribeModelsTopic(fire),
     read: readModelsTopic,
     act: (managers, action) => action.topic === 'models'
       ? runModelsTopicAction(managers, action) : undefined,
     empty: { groups: [], refreshing: false },
   },
+  commands: {
+    subscribe: subscribeCommandsTopic,
+    read: readCommandsTopic,
+    act: (managers, action) => action.topic === 'commands'
+      ? runCommandsTopicAction(managers, action) : undefined,
+    empty: { commands: [], source: 'default', path: '' },
+  },
 };
 
-export function subscribeTopic(topic: TabPluginNotificationTopic, fire: () => void): Subscription {
-  return TOPIC_SOURCES[topic].subscribe(fire);
+export function subscribeTopic(
+  managers: Managers, topic: TabPluginNotificationTopic, fire: () => void,
+): Subscription {
+  return TOPIC_SOURCES[topic].subscribe(managers, fire);
 }
 
 export function readTopicData(
@@ -224,17 +234,10 @@ export function emptyTopicData(
   return TOPIC_SOURCES[topic].empty;
 }
 
-export function runTopicAction(
-  managers: Managers, action: ModelsTopicDeleteAction,
-): Promise<string | undefined>;
-export function runTopicAction(
-  managers: Managers, action: Exclude<TabPluginTopicAction, ModelsTopicDeleteAction>,
-): string | undefined;
-export function runTopicAction(
-  managers: Managers, action: TabPluginTopicAction,
-): string | undefined | Promise<string | undefined>;
-export function runTopicAction(
+function runTopicSourceAction(
   managers: Managers, action: TabPluginTopicAction,
 ): string | undefined | Promise<string | undefined> {
   return TOPIC_SOURCES[action.topic].act(managers, action);
 }
+
+export const runTopicAction = runTopicSourceAction as RunTopicAction;

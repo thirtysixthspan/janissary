@@ -59,5 +59,5 @@ export function subscribeTabPluginNotifications(
   topics: Iterable<TabPluginNotificationTopic>,
 ): Subscription[] {
   return [...new Set(topics)].map((topic) =>
-    subscribeTopic(topic, () => { dispatch(port, topic); }));
+    subscribeTopic(port.managers, topic, () => { dispatch(port, topic); }));
 }

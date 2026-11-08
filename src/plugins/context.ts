@@ -11,6 +11,7 @@ import {
   type TabPluginNotificationTopic,
   type TabPluginServerCapabilities,
   type TabPluginTopicAction,
+  type CommandsTopicSetAction,
   type ModelsTopicDeleteAction,
 } from './api.js';
 import type { PluginFailureOrigin } from './failure.js';
@@ -71,14 +72,17 @@ function topicActionCapability(
   declaration: TabPluginDeclaration,
   isEnabled: () => boolean,
 ): TabPluginServerCapabilities['topicAction'] {
-  function topicAction(action: ModelsTopicDeleteAction): Promise<string | undefined>;
-  function topicAction(action: Exclude<TabPluginTopicAction, ModelsTopicDeleteAction>): string | undefined;
+  function topicAction(action: ModelsTopicDeleteAction | CommandsTopicSetAction): Promise<string | undefined>;
+  function topicAction(
+    action: Exclude<TabPluginTopicAction, ModelsTopicDeleteAction | CommandsTopicSetAction>,
+  ): string | undefined;
   function topicAction(action: TabPluginTopicAction): string | undefined | Promise<string | undefined>;
   function topicAction(action: TabPluginTopicAction): string | undefined | Promise<string | undefined> {
     requireDeclaredTopic(declaration, action.topic);
     if (!isEnabled()) {
-      return action.topic === 'models' && action.action === 'delete'
-        ? Promise.resolve(undefined) : undefined;
+      if (action.topic === 'models' && action.action === 'delete') return Promise.resolve(undefined);
+      if (action.topic === 'commands' && action.action === 'set') return Promise.resolve(undefined);
+      return undefined;
     }
     return runTopicAction(managers, action);
   }
