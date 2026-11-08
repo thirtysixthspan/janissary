@@ -33,3 +33,9 @@ Findings from each focused review are added to the pull-request backlog and reso
 After the initial pull-request update and full review, the complex-feature workflow runs behavioral testing on the same open pull request. Every recorded finding is repaired separately in backlog order before testing runs again. Repairs to the description also require another test pass. The cycle ends only when a completed test pass adds no findings and the backlog is empty; an unavailable browser, incomplete test run, blocked repair, or failed publication prevents completion.
 
 The pull request is updated again after the test cycle so its description and canonical plan reflect the repairs. Code repairs identified by this final update go through testing again before another final update. Testing, repairs, and updates preserve their normal safeguards and leave the pull request open.
+
+### Final complex-feature recovery
+
+Before completion, the feature's published head is checked for conflicts with its primary branch, local validation failures, and failing GitHub checks. Conflicts go through the conflict-resolution workflow on that same open pull request; local or current-head CI failures go through the build-repair workflow in pull request mode. Both preserve their normal repair scope and verification safeguards. An unsupported primary branch or blocked repair prevents completion.
+
+Any recovery that changes the branch requires another behavioral test/repair cycle and final update, followed by fresh validation of the new published head. Successful local validation and configured GitHub jobs for that head or its current merge commit are required; missing, stale, skipped, cancelled, inaccessible, or unfinished checks cannot establish success. Recovery is bounded to three final verification sequences; unresolved failures or conflicts leave the pull request open with a blocked report. The workflow never merges, closes, or replaces the feature pull request.
