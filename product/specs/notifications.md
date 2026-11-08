@@ -389,7 +389,7 @@ play a short sound, according to its per-type `notifications.alerts` entry. This
 `editor-suggest`, `transcript-unavailable`, the three recording-failed events, `shell-transcript-failed`,
 `e2e-browser-gone`, `file-operation`, `open-unsupported`, `layout`, `tab`, `plugin-note`, `plugin-failure`,
 `schedule-late`, `system-schedule-fire`, `models-refresh`, the two remote-session events, the three launch events, and `remote-refused`.
-Every event type is configured independently in `.janissary/config.json` under `notifications.alerts`, using the event's hyphenated name. Each entry selects whether to show a desktop banner and one of the `success`, `warning`, or `error` cues, or `none`. The four ambient events (`state-change`, `schedule-fire`, `agent-start`, `rate-limited`) default to no banner and no sound; `command-disabled` also defaults to no banner and no sound. An opted-in ambient event still must pass its `notifications.events` toggle and focus suppression before it can alert.
+Every event type is configured independently in `.janissary/config.json` under `notifications.alerts`, using the event's hyphenated name. Each entry selects whether to show a desktop banner and one of the `success`, `warning`, or `error` cues, or `none`. The five ambient events (`state-change`, `schedule-fire`, `agent-start`, `rate-limited`, `command-disabled`) default to no banner and no sound. An opted-in ambient event still must pass its `notifications.events` toggle and focus suppression before it can alert.
 A report detected earlier and replayed later does not raise either: its detection time belongs in
 the feed, not in an alert implying it happened just now. A visible notifications feed does not
 suppress a desktop alert.
