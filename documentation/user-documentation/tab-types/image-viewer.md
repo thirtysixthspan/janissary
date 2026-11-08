@@ -56,7 +56,7 @@ Your edits are a list of steps replayed from the original, so nothing is baked i
 
 **Save**, or `Cmd+S` / `Ctrl+S`, writes the edited image over the original file. There's no Save As: the destination is always the file you opened. The button stays dim until you have something to save, and the header confirms with `Saved <name>` for a few seconds afterwards. The size in the header follows the save too, which matters when the picture changes shape on disk: an SVG or an animated GIF becomes a single PNG, and the header then shows the size of the file that is actually there. Your edits stay live, so you can keep working and save again.
 
-If a save fails, the original file stays unchanged and the edits remain unsaved in the tab.
+If a save fails, the original file stays unchanged and the edits remain unsaved in the tab. If you dock the image while a save is in flight, its successful completion still clears the unsaved marker; edits you make after starting that save stay unsaved until you save again.
 
 Whether the tab counts as saved is a question about your edits, not about how many steps you have taken. Undoing back to exactly what was written reads as saved again, and redoing forward to it does too. A different edit applied on top of an undone one lands at the same step but is not what was written, so the tab still reads as unsaved. Two routes to the same picture are never recognised as equal, so the tab leans toward calling the work unsaved. While a dot beside the tab name marks the tab unsaved, it clears the moment the save lands. An edit you make while a save is still in flight is not covered by that save, so the dot stays until you save again.
 
@@ -66,11 +66,11 @@ Every save is a **PNG**, whatever the file started as. Two consequences are wort
 
 **Done**, or `Escape`, returns to the viewer without discarding anything. The edit list stays live, the tab stays marked unsaved, and the pen button brings you back to exactly where you left off.
 
-Unsaved edits aren't dropped quietly the way zoom and pan are. Closing a tab that holds them asks first, with **Save**, **Don't Save**, and **Cancel** — the same dialog an [editor tab](/user-documentation/tab-types/editor) raises, on every close path, and they hold up `quit` and a browser reload too. **Save** closes the tab only once the file is written; if the write fails the tab stays open with your edits intact, still marked unsaved. **Cancel** keeps the tab open.
+Unsaved edits aren't dropped quietly the way zoom and pan are. Closing a tab that holds them asks first, with **Save**, **Don't Save**, and **Cancel** — the same dialog an [editor tab](/user-documentation/tab-types/editor) raises, on every close path. Quitting asks about those edits the same way, one tab at a time, with **Save** replacing the original file before the app exits ([Quitting with unsaved work](/user-documentation/command-bar/commands#quitting-with-unsaved-work)). A browser reload shows the browser's own prompt. **Save** closes the tab only once the file is written; if the write fails the tab stays open with your edits intact, still marked unsaved. **Cancel** keeps the tab open.
 
 ## Lifecycle
 
-An image tab is a live view, not saved state: zoom and pan reset when you switch away to another image tab, and image tabs are not restored. An edit in progress isn't saved either — it belongs to the open tab. Closing an unchanged image tab with its × button or `close` removes the view and leaves the file alone. If the image has unsaved edits, the save-changes dialog lets you save, discard the edits, or cancel and keep the tab open. Only files you've explicitly opened are ever served to the viewer.
+An image tab is a live view, not saved state: zoom and pan reset when you switch away to another image tab, and image tabs are not restored. An edit in progress isn't saved either — it belongs to the open tab and stays with it if you dock the image in a sidebar or select another sidebar entry. Closing an unchanged image tab with its × button or `close` removes the view and leaves the file alone. If the image has unsaved edits, the save-changes dialog lets you save, discard the edits, or cancel and keep the tab open. Only files you've explicitly opened are ever served to the viewer.
 
 A profile can open an image tab by its file. Launching that profile opens the image; if it was already open, Janissary reuses its tab. A profile carries nothing of the image's zoom, pan, or unfinished edits. See [Profiles](/user-documentation/automation/profiles) for how profiles open tabs.
 

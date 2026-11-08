@@ -664,6 +664,8 @@ button.tab-recording { cursor: pointer; }
   box-shadow: 0 6px 24px rgb(0 0 0 / 40%);
 }
 .modal-title { margin-bottom: 14px; }
+.save-walk-dialog { max-width: min(560px, calc(100vw - 32px)); }
+.save-walk-dialog .modal-title { overflow-wrap: anywhere; }
 .modal-note { color: var(--muted); }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 .modal-button {

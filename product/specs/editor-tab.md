@@ -234,7 +234,7 @@ Closing an editor tab that has unsaved changes triggers a confirmation dialog: "
 
 - **Save (y):** saves the file to disk, then closes the tab. The close happens only once the file is actually written. If the save does not succeed — the server reports an error, or the file changed on disk and the overwrite prompt goes up instead — the dialog is dismissed, the tab stays open with its changes intact, and focus returns to the editor so the error or the prompt is visible. Closing again after the save succeeds closes the tab as usual.
 - **Don't Save (n):** closes the tab without saving.
-- **Cancel (Esc):** dismisses the dialog and leaves the tab open with changes intact. Focus returns to the editor at the current cursor position.
+- **Cancel (Esc):** dismisses the dialog and leaves the tab open with changes intact. If a named close raised it from another tab, the target becomes current. Focus returns to the editor at the current cursor position.
 
 While Save is pending, repeated Save clicks and keyboard shortcuts do nothing. Cancel and Don't
 Save remain available. Cancelling, discarding, replacing the prompt, or closing the application
@@ -246,7 +246,7 @@ Like the quit dialog, the save dialog is modal — all keyboard and click input 
 
 The dialog stays attached to the tab it was raised for. Tabs can still appear, disappear, and reorder while it is open or while a save is running — an agent opening one, a schedule firing, a monitor's reporting tab arriving — and every button acts on the tab that was asked about rather than on whatever occupies its former position. If that tab is gone by the time a button is pressed, the dialog dismisses and no tab is closed in its place.
 
-Typing `quit`, or closing the last remaining tab, does not go through this per-tab dialog — see `quit-confirmation.md` for the whole-app unsaved-changes prompt shown in that case. Closing the actual browser tab or window (not through the app itself) shows the browser's own native "leave site?" confirmation instead, if any tab has unsaved changes.
+Typing `quit`, or closing the last remaining tab, asks about every tab with unsaved changes through this same three-button dialog, one tab at a time. Each prompt is titled `Do you want to save changes to <name>?` using the tab's name, and **Save** writes the file without closing the tab. See `quit-confirmation.md` for the walk's order, which tabs are shown, and what happens on Cancel or a failed save. Closing the actual browser tab or window (not through the app itself) shows the browser's own native "leave site?" confirmation instead, if any tab has unsaved changes.
 
 This dialog is not the editor tab's alone. Any tab that registers unsaved work with the application reaches it on the same three close paths, with the same three buttons and the same wording; an image tab with unsaved edits is the first such tab, and there **Save** replaces the original image file (see [[image-tab]]). Nothing about the editor tab's own behavior changes because of that: it gains no tab-strip marker, and its dialog, its guard, and everything described above stay exactly as they are.
 

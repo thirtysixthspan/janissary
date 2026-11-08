@@ -327,14 +327,15 @@ describe('ImageEditor unsaved work', () => {
     expect(screen.getByText('300 × 400')).toBeInTheDocument();
   });
 
-  it('drops the handle when the tab unmounts', async () => {
+  it('keeps the host registration when the view unmounts', async () => {
     const registerDirtyHandle = vi.fn();
     const { unmount } = renderEditor(makeCapabilities({ registerDirtyHandle }));
     await waitFor(() => { expect(registerDirtyHandle).toHaveBeenCalled(); });
 
     unmount();
 
-    expect(registerDirtyHandle).toHaveBeenLastCalledWith(null);
+    expect(registerDirtyHandle).toHaveBeenCalledTimes(1);
+    expect(registerDirtyHandle).toHaveBeenLastCalledWith(expect.objectContaining({ isDirty: expect.any(Function) }));
   });
 
   // The host closes the tab on a resolved handle save, so a failed write has to reject through it

@@ -8,7 +8,7 @@
 | `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |
 | `clear` | Clear the tab's output log; in a shell tab, bare `clear` is sent to zsh so it clears the terminal instead (use `/clear` to clear the output log) |
 | `clipboard` | Show session clipboard history with `clip`, Ctrl+Shift+V, or Cmd+Shift+V. Selecting an entry pastes it at the cursor; typing `clipboard` opens this help page |
-| `close` | Close the current tab (exits if last); `close <tabname>` closes a tab by its label (`page`, `page-2`, `image`, …) or display alias. `/close` and `/exit` are equivalent |
+| `close` | Close the current tab (exits if last); `close <tabname>` closes a tab by label or display alias, and Cancel on its dirty prompt activates that tab. `/close` and `/exit` are equivalent |
 | `connection` | Open the connections tab; `connection <text>` opens a live connection or retained session by UUID or full title, and `connection list`/`connection close <connection>` manage live connections |
 | `connections` | Open the connections tab; `connections left`/`right` docks it, `connections <text>` looks up a session, and `connections list`/`connections close <connection>` manage live connections |
 | `conversation` | Bare `conversation` opens the conversation list; `conversation <title>` opens a saved conversation by title, ignoring case, or creates one and sends `<title>` as its first query |
@@ -40,7 +40,7 @@
 | `profile` | Use `profile launch <name>` to launch a profile, or bare `profile launch` to pick one. `profile list` lists the available profiles |
 | `question` | `question ask "<question>"` opens a free-text answer panel; `question approve "<question>" <option> …` opens an option-button panel |
 | `queue` | Queue a command for a shell or another tab supporting queues (`queue <tab> <command>`); bare `queue` opens the interactive queue picker (Ctrl+E) |
-| `quit` | Exit the application (asks for confirmation); `/quit` is equivalent |
+| `quit` | Exit the application (asks for confirmation); Cancel returns focus to the command bar that submitted it. `/quit` is equivalent |
 | `rename` | Rename the current tab's display name (`rename <name>`); bare `rename` clears the alias; in an editor tab, renames the file |
 | `roles` | Open the roles tab, where named roles map to harness/model/effort choices and native ACP command grants in `roles.json`; bare `roles` only |
 | `schedule` | Run a tab command later with `schedule <name> <form> <command>`, or manage project schedules that run persistent runscripts with `schedule system <name> <form> script <name>` |

@@ -58,9 +58,39 @@ describe('useQuitConfirm', () => {
       inputRef,
       onHook: (h) => { hook = h; },
     }));
+    act(() => hook!.openQuitConfirm());
     act(() => hook!.cancelQuit());
     expect(hook!.quitConfirmOpen).toBe(false);
     expect(focusFn).toHaveBeenCalled();
+    raf.mockRestore();
+  });
+
+  it('cancellation focuses the command textarea that opened the dialog', () => {
+    let hook: ReturnType<typeof useQuitConfirm> | undefined;
+    const raf = vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => { cb(0); return 0; });
+    const fallbackFocus = vi.fn();
+    const inputRef = { current: { focus: fallbackFocus } } as unknown as React.RefObject<HTMLTextAreaElement | null>;
+    const commandArea = document.createElement('div');
+    commandArea.className = 'command';
+    const commandInput = document.createElement('textarea');
+    const otherButton = document.createElement('button');
+    commandArea.append(commandInput);
+    document.body.append(commandArea, otherButton);
+    render(React.createElement(TestComponent, {
+      runCommand: vi.fn(),
+      inputRef,
+      onHook: (h) => { hook = h; },
+    }));
+
+    commandInput.focus();
+    act(() => hook!.openQuitConfirm());
+    otherButton.focus();
+    act(() => hook!.cancelQuit());
+
+    expect(document.activeElement).toBe(commandInput);
+    expect(fallbackFocus).not.toHaveBeenCalled();
+    commandArea.remove();
+    otherButton.remove();
     raf.mockRestore();
   });
 });

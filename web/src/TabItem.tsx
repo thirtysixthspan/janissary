@@ -4,6 +4,7 @@ import type { TabView } from '@shared/protocol';
 import { TAB_RENAME_MAX_LENGTH } from '@shared/tab/rename-limits';
 import { statusDotIcon, unreadIcon } from './shared/icons';
 import { InlineEditInput } from './shared/InlineEditInput';
+import { tabFullName } from './shared/tab/tab-name';
 import { truncateTabLabel } from './tab-label';
 import type { TabDragTransform } from './useTabReorder';
 
@@ -44,7 +45,7 @@ export function TabItem({
   // even though `active` flips true (via onSelect) before the browser's dblclick event fires.
   const gestureStartedInactiveRef = useRef(false);
 
-  const fullName = tab.editor?.name ?? tab.title ?? tab.label;
+  const fullName = tabFullName(tab);
   const displayName = truncateTabLabel(fullName, active ? activeTabNameMaxLength : tabNameMaxLength);
   const startEdit = () => { cancelledRef.current = false; setDraft(fullName); setEditing(true); };
 

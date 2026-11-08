@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, fireEvent, act } from '@testing-library/react';
-import React, { useRef } from 'react';
+import { render, fireEvent, act, waitFor } from '@testing-library/react';
+import React, { useRef, useState } from 'react';
 import type { TabView } from '@shared/protocol';
-import type { DirtyTabHandle } from './shared/tab/handles';
+import type { DirtyTabHandle } from '../shared/tab/handles';
 import { CloseSaveGuard } from './CloseSaveGuard';
-import { useAppCommandLine } from './shared/command-bar/AppCommandBar';
+import { useAppCommandLine } from '../shared/command-bar/AppCommandBar';
 
 // The command bar and the save guard are wired together here the way App wires them, so a typed
 // `close <name>` is checked end to end against the guard rather than each half on its own.
@@ -27,6 +27,16 @@ function Harness({ handles, client, runCommand, onSubmit }: {
   runCommand: (text: string) => void;
   onSubmit: (submit: (text: string) => void) => void;
 }) {
+  const [activeTab, setActiveTab] = useState(0);
+  const activeClient = {
+    send: (message: unknown) => {
+      client.send(message);
+      const request = message as { method?: string; params?: { label?: string } };
+      if (request.method !== 'focusTab') return;
+      const next = tabs.findIndex((tab) => tab.label === request.params?.label);
+      if (next !== -1) setActiveTab(next);
+    },
+  };
   const tabHandles = useRef(handles);
   const guardRef = useRef<((index: number) => boolean) | null>(null);
   const noop = () => {};
@@ -36,7 +46,12 @@ function Harness({ handles, client, runCommand, onSubmit }: {
     tabs, openQuitConfirm: noop, guardRef, activeTab: 0,
   });
   onSubmit((text) => { if (!intercept(text)) runCommand(text); });
-  return <CloseSaveGuard tabs={tabs} tabHandles={tabHandles} client={client as never} guardRef={guardRef} />;
+  return (
+    <>
+      <output data-testid="active-tab">{tabs[activeTab]?.label}</output>
+      <CloseSaveGuard tabs={tabs} activeTab={activeTab} tabHandles={tabHandles} client={activeClient as never} guardRef={guardRef} />
+    </>
+  );
 }
 
 function setup(dirty: boolean) {
@@ -71,12 +86,13 @@ describe('typing close <name> for a tab with unsaved work', () => {
     expect(h.runCommand).not.toHaveBeenCalled();
   });
 
-  it('leaves the tab open after Cancel', () => {
+  it('activates the named tab and leaves it open after Cancel', async () => {
     const h = setup(true);
     h.submit('close alpha.png');
     fireEvent.click(h.getByText('Cancel (Esc)'));
-    expect(h.client.send).not.toHaveBeenCalled();
-    expect(h.handle.focus).toHaveBeenCalledOnce();
+    expect(h.client.send).toHaveBeenCalledExactlyOnceWith({ method: 'focusTab', params: { label: 'image' } });
+    expect(h.getByTestId('active-tab').textContent).toBe('image');
+    await waitFor(() => expect(h.handle.focus).toHaveBeenCalledOnce());
   });
 
   it('sends close <name> to the server as before when the named tab has nothing unsaved', () => {

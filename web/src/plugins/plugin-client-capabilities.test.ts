@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { TAB_PLUGIN_API_VERSION } from '@shared/plugins/api';
+import type { TabPluginState } from './api';
 import type { JanusClient } from '../shared/ws/ws';
 import { createPluginHost } from './host';
 import { createPluginClientCapabilities } from './plugin-client-capabilities';
 
-function setup() {
+function setup(tabState?: TabPluginState) {
   const send = vi.fn();
   const capabilities = createPluginClientCapabilities({
     host: createPluginHost(),
@@ -14,6 +15,7 @@ function setup() {
     active: true,
     dock: null,
     onClose: vi.fn(),
+    tabState,
   });
   return { capabilities, send };
 }
@@ -71,6 +73,13 @@ describe('openConnection capability', () => {
   });
 
   it('provides openConnection under plugin API v3', () => {
+    expect(TAB_PLUGIN_API_VERSION).toBe(3);
+  });
+
+  it('exposes the app-owned state accessor without changing the additive API version', () => {
+    const tabState: TabPluginState = { get: vi.fn(), set: vi.fn(), delete: vi.fn() };
+
+    expect(setup(tabState).capabilities.tabState).toBe(tabState);
     expect(TAB_PLUGIN_API_VERSION).toBe(3);
   });
 });

@@ -12,16 +12,19 @@ const NO_OVERLAYS: OverlayOpenState = {
   history: false, queue: false, task: false, profile: false,
 };
 
-function TestComponent({ closeTab, active, quitOpen, pickerOpen, focusedIndex }: {
+function TestComponent({ closeTab, active, quitOpen, pickerOpen, focusedIndex, walkOpen = false }: {
   closeTab: (n: number) => void;
   active: number;
   quitOpen: boolean;
   pickerOpen: boolean;
   focusedIndex?: number;
+  walkOpen?: boolean;
 }) {
   const overlays = { ...NO_OVERLAYS, history: pickerOpen };
+  const saveWalkOpenRef = useRef(walkOpen);
+  saveWalkOpenRef.current = walkOpen;
   const { activeTabRef, quitConfirmOpenRef, keyboardCapturedRef } = useCmdWRefs(
-    active, quitOpen, false, overlays,
+    active, quitOpen, saveWalkOpenRef, overlays,
   );
   const focusedIndexRef = useRef(focusedIndex);
   focusedIndexRef.current = focusedIndex;
@@ -38,7 +41,7 @@ function Dialog() {
 }
 
 function ContributedOverlayShortcut({ closeTab }: { closeTab: (n: number) => void }) {
-  const { activeTabRef, quitConfirmOpenRef, keyboardCapturedRef } = useCmdWRefs(2, false, false, NO_OVERLAYS);
+  const { activeTabRef, quitConfirmOpenRef, keyboardCapturedRef } = useCmdWRefs(2, false, { current: false }, NO_OVERLAYS);
   useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, keyboardCapturedRef);
   return null;
 }
@@ -121,6 +124,13 @@ describe('useCmdW', () => {
   it('does nothing while quit dialog is open', () => {
     const closeTab = vi.fn();
     render(<TestComponent closeTab={closeTab} active={2} quitOpen pickerOpen={false} />);
+    dispatchKey('w', { metaKey: true });
+    expect(closeTab).not.toHaveBeenCalled();
+  });
+
+  it('does nothing while the quit walk is running', () => {
+    const closeTab = vi.fn();
+    render(<TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen={false} walkOpen />);
     dispatchKey('w', { metaKey: true });
     expect(closeTab).not.toHaveBeenCalled();
   });

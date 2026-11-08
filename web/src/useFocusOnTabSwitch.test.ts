@@ -89,4 +89,43 @@ describe('useFocusOnTabSwitch', () => {
     expect(focusCancel).toHaveBeenCalledTimes(1);
     expect(focus).not.toHaveBeenCalled();
   });
+
+  it('focuses nothing while suppressed and resumes on the next activeTab change after it clears', () => {
+    const terminalFocus = vi.fn();
+    const inputFocus = vi.fn();
+    const focusCancel = vi.fn();
+    const harnessHandles = refOf(new Map([
+      ['pty-1', { focus: terminalFocus } as unknown as HarnessTabHandle],
+      ['pty-2', { focus: terminalFocus } as unknown as HarnessTabHandle],
+    ]));
+    const inputReference = refOf<HTMLTextAreaElement | null>({ focus: inputFocus } as unknown as HTMLTextAreaElement);
+    const questionPanelRef = refOf<QuestionPanelHandle | null>({ focusCancel });
+    const suppressRef = refOf(true);
+    const currentRef = refOf<TabView | undefined>({
+      view: 'harness', harness: { ptyId: 'pty-1' }, pendingQuestion: { id: 'q1', tab: 't', kind: 'approve', question: 'Continue?' },
+    } as unknown as TabView);
+    const expectFocusCalls = (terminal: number) => {
+      expect(terminalFocus).toHaveBeenCalledTimes(terminal);
+      expect(inputFocus).not.toHaveBeenCalled();
+      expect(focusCancel).not.toHaveBeenCalled();
+    };
+
+    const { rerender } = renderHook(
+      ({ activeTab }) => useFocusOnTabSwitch(activeTab, currentRef, harnessHandles, inputReference, questionPanelRef, suppressRef),
+      { initialProps: { activeTab: 0 } },
+    );
+    expectFocusCalls(0);
+
+    currentRef.current = { view: undefined } as unknown as TabView;
+    rerender({ activeTab: 1 });
+    expectFocusCalls(0);
+
+    suppressRef.current = false;
+    rerender({ activeTab: 1 });
+    expectFocusCalls(0);
+
+    currentRef.current = { view: 'harness', harness: { ptyId: 'pty-2' } } as unknown as TabView;
+    rerender({ activeTab: 2 });
+    expectFocusCalls(1);
+  });
 });

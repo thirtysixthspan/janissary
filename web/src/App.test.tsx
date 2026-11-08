@@ -1,17 +1,29 @@
 import React from 'react';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StateEvent, TabView, TaskRow } from '@shared/protocol';
+import type * as PluginBodyModule from './plugins/PluginBody';
 import userEvent from '@testing-library/user-event';
 import type { JanusClient, LayoutListener, StateListener } from './shared/ws/ws';
 import { collectNavigatorSelections } from './file-navigator/file/navigator-selection-registry';
 import { AppShell } from './AppShell';
+import { createPluginHost, PluginHostProvider } from './plugins/host';
+import { clientPlugin, createClientPluginRegistry, type ClientPluginProperties } from './plugins/registry';
 import { StatusPanels } from './shared/status-windows/StatusPanels';
 import type { StatusWindowHandlers } from './shared/status-windows/useStatusWindows';
 
 vi.mock('./plugins/PluginBody', async () => {
   const { AppPluginFixture } = await import('./test/AppPluginFixture');
-  return { PluginBody: AppPluginFixture };
+  const actual = await vi.importActual<typeof PluginBodyModule>('./plugins/PluginBody');
+  return {
+    PluginBody: (props: Parameters<typeof actual.PluginBody>[0]) => (
+      props.plugin.id === 'image' || props.plugin.id === 'dirty-fixture'
+    )
+      ? <actual.PluginBody {...props} />
+      : <AppPluginFixture
+        label={props.label} active={props.active} client={props.client} onSplit={props.onSplit}
+      />,
+  };
 });
 
 const sendMock = vi.fn();
@@ -20,6 +32,26 @@ const unregisterStateCollectorMock = vi.fn();
 const registerStateCollectorMock = vi.fn(() => unregisterStateCollectorMock);
 const requestMock = vi.fn().mockResolvedValue({ newInput: '', newCursor: 0, matches: [] });
 const reportLayoutMock = vi.fn();
+const dirtyHandleSaveMock = vi.fn(async () => {});
+const dirtyHandleFixture = {
+  isDirty: () => true,
+  save: dirtyHandleSaveMock,
+  focus: vi.fn(),
+};
+
+function DirtyHandleFixture({ capabilities }: ClientPluginProperties<Record<string, never>>) {
+  return <>
+    <button onClick={() => capabilities.registerDirtyHandle?.(dirtyHandleFixture)}>Register dirty work</button>
+    <button onClick={() => capabilities.registerDirtyHandle?.(null)}>Drop dirty work</button>
+  </>;
+}
+
+const dirtyHandlePlugin = clientPlugin<Record<string, never>>(1, async () => ({
+  default: DirtyHandleFixture,
+  isPayload: (value: unknown): value is Record<string, never> => (
+    typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value).length === 0
+  ),
+}));
 
 // The fields these cases actually vary. `onState` below widens an emitted snapshot to the real
 // `StateListener` signature, so a change to that signature is a type error here rather than the
@@ -198,7 +230,7 @@ describe('App closing a tab from its button', () => {
 
     expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'system' } });
     expect(screen.queryByText('Are you sure you want to quit?')).not.toBeInTheDocument();
-    expect(screen.queryByText('You have unsaved changes. Close anyway?')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save (y)' })).not.toBeInTheDocument();
   }, 15_000);
 
   it.each([{ metaKey: true }, { ctrlKey: true }])('sends a system tab close from its keyboard chord without a dialog', async (modifiers) => {
@@ -308,7 +340,7 @@ describe('App closing the last tab', () => {
 
     expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'close review notes' } });
     expect(screen.queryByText('Are you sure you want to quit?')).not.toBeInTheDocument();
-    expect(screen.queryByText('You have unsaved changes. Close anyway?')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save (y)' })).not.toBeInTheDocument();
   }, 15_000);
 });
 
@@ -462,6 +494,183 @@ describe('App sidebar docking', () => {
     });
     fireEvent.click(container.querySelector(':scope .sidebar-left .tab-close')!);
     expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'files' } });
+  }, 15_000);
+});
+
+describe('App docked image quit walk', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('keeps an edited image in the quit walk after Notifications is selected', async () => {
+    const { App } = await import('./App');
+    const { container } = render(
+      <PluginHostProvider host={createPluginHost()}><App client={client} /></PluginHostProvider>,
+    );
+    const image = makeTab({
+      label: 'image', title: 'photo.png', dock: 'left',
+      plugin: {
+        id: 'image', schemaVersion: 1,
+        payload: { name: 'photo.png', path: '/tmp/photo.png', size: '400 × 300', url: '/open/image', mode: 'edit' },
+      },
+    });
+    const notifications = makeTab({
+      label: 'notifications', title: 'notifications', view: 'notifications', dock: 'left',
+    });
+    act(() => { stateListener!([makeTab(), image, notifications], 0, 16, [], 'github-dark', 'dark', []); });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Rotate right' }));
+    fireEvent.mouseDown(within(container.querySelector('.sidebar-left')!).getByText('notifications'));
+    expect(container.querySelector<HTMLElement>('.sidebar-plugin')?.style.display).toBe('none');
+    expect(within(container.querySelector('.sidebar-left')!).getByRole('img', { name: 'unsaved changes' })).toBeInTheDocument();
+
+    const command = screen.getByRole('textbox');
+    fireEvent.change(command, { target: { value: 'quit' } });
+    fireEvent.keyDown(command, { key: 'Enter' });
+
+    expect(await screen.findByText('Do you want to save changes to photo.png?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save (y)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: "Don't Save (n)" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel (Esc)' }));
+
+    expect(container.querySelector('.app')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeEnabled();
+    expect(within(container.querySelector('.sidebar-left')!).getByRole('img', { name: 'unsaved changes' })).toBeInTheDocument();
+    expect(sendMock).not.toHaveBeenCalledWith({ method: 'command', params: { text: 'quit' } });
+  }, 15_000);
+
+  it('preserves a center image edit when it docks beside Notifications', async () => {
+    const { App } = await import('./App');
+    const { container } = render(
+      <PluginHostProvider host={createPluginHost()}><App client={client} /></PluginHostProvider>,
+    );
+    const image = makeTab({
+      label: 'image', title: 'photo.png',
+      plugin: {
+        id: 'image', schemaVersion: 1,
+        payload: { name: 'photo.png', path: '/tmp/photo.png', size: '400 × 300', url: '/open/image', mode: 'edit' },
+      },
+    });
+    const notifications = makeTab({
+      label: 'notifications', title: 'notifications', view: 'notifications', dock: 'left',
+    });
+    act(() => { stateListener!([makeTab(), image, notifications], 1, 16, [], 'github-dark', 'dark', []); });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Rotate right' }));
+    act(() => {
+      stateListener!([
+        makeTab(), { ...image, dock: 'left' }, notifications,
+      ], 0, 16, [], 'github-dark', 'dark', []);
+    });
+    fireEvent.mouseDown(within(container.querySelector('.sidebar-left')!).getByText('notifications'));
+    expect(within(container.querySelector('.sidebar-left')!).getByRole('img', { name: 'unsaved changes' })).toBeInTheDocument();
+
+    const command = screen.getByRole('textbox');
+    fireEvent.change(command, { target: { value: 'quit' } });
+    fireEvent.keyDown(command, { key: 'Enter' });
+
+    expect(await screen.findByText('Do you want to save changes to photo.png?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save (y)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: "Don't Save (n)" })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel (Esc)' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel (Esc)' }));
+
+    expect(container.querySelector('.app')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeEnabled();
+    expect(within(container.querySelector('.sidebar-left')!).getByRole('img', { name: 'unsaved changes' })).toBeInTheDocument();
+    expect(sendMock).not.toHaveBeenCalledWith({ method: 'command', params: { text: 'quit' } });
+
+    act(() => { stateListener!([makeTab(), notifications], 0, 16, [], 'github-dark', 'dark', []); });
+    expect(within(container.querySelector('.sidebar-left')!).queryByRole('img', { name: 'unsaved changes' })).not.toBeInTheDocument();
+  }, 15_000);
+
+  it('clears an in-flight image save after docking and quits without a save dialog', async () => {
+    let resolveSave!: (response: { ok: true; value: unknown }) => void;
+    // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the web project's ES2023 library excludes Promise.withResolvers
+    const saveResponse = new Promise<{ ok: true; value: unknown }>((resolve) => { resolveSave = resolve; });
+    requestMock.mockReset().mockImplementation((request: { method?: string }) => (
+      request.method === 'pluginIntent'
+        ? saveResponse
+        : Promise.resolve({ newInput: '', newCursor: 0, matches: [] })
+    ));
+
+    const { App } = await import('./App');
+    const { container } = render(
+      <PluginHostProvider host={createPluginHost()}><App client={client} /></PluginHostProvider>,
+    );
+    const image = makeTab({
+      label: 'image', title: 'photo.png',
+      plugin: {
+        id: 'image', schemaVersion: 1,
+        payload: { name: 'photo.png', path: '/tmp/photo.png', size: '400 × 300', url: '/open/image', mode: 'edit' },
+      },
+    });
+    const notifications = makeTab({
+      label: 'notifications', title: 'notifications', view: 'notifications', dock: 'left',
+    });
+    act(() => { stateListener!([makeTab(), image, notifications], 1, 16, [], 'github-dark', 'dark', []); });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Rotate right' }));
+    const source = container.querySelector<HTMLImageElement>('.image-edit-source')!;
+    Object.defineProperties(source, {
+      naturalWidth: { value: 400, configurable: true },
+      naturalHeight: { value: 300, configurable: true },
+    });
+    act(() => { fireEvent.load(source); });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => { expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
+      method: 'pluginIntent', params: expect.objectContaining({ intent: 'save-edit', tab: 'image' }),
+    })); });
+
+    act(() => {
+      stateListener!([makeTab(), { ...image, dock: 'left' }, notifications], 0, 16, [], 'github-dark', 'dark', []);
+    });
+    const sidebar = container.querySelector<HTMLElement>('.sidebar-left')!;
+    fireEvent.mouseDown(within(sidebar).getByText('notifications'));
+    expect(within(sidebar).getByRole('img', { name: 'unsaved changes' })).toBeInTheDocument();
+
+    await act(async () => { resolveSave({ ok: true, value: { name: 'photo.png' } }); });
+
+    await waitFor(() => {
+      expect(within(sidebar).queryByRole('img', { name: 'unsaved changes' })).not.toBeInTheDocument();
+    });
+    const command = screen.getByRole('textbox');
+    fireEvent.change(command, { target: { value: 'quit' } });
+    fireEvent.keyDown(command, { key: 'Enter' });
+
+    expect(screen.getByText('Are you sure you want to quit?')).toBeInTheDocument();
+    expect(screen.queryByText('Do you want to save changes to photo.png?')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Quit (y)' }));
+    expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'quit' } });
+    requestMock.mockReset().mockResolvedValue({ newInput: '', newCursor: 0, matches: [] });
+  }, 15_000);
+
+  it('drops an explicitly unregistered dirty handle while its tab remains open', async () => {
+    dirtyHandleSaveMock.mockClear();
+    const { App } = await import('./App');
+    const host = createPluginHost(createClientPluginRegistry({ 'dirty-fixture': dirtyHandlePlugin }));
+    render(<PluginHostProvider host={host}><App client={client} /></PluginHostProvider>);
+    const dirtyTab = makeTab({
+      label: 'dirty-fixture',
+      title: 'draft.png',
+      plugin: { id: 'dirty-fixture', schemaVersion: 1, payload: {} },
+    });
+    act(() => { stateListener!([makeTab(), dirtyTab], 1, 16, [], 'github-dark', 'dark', []); });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Register dirty work' }));
+    expect(screen.getByRole('img', { name: 'unsaved changes' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Drop dirty work' }));
+
+    expect(screen.queryByRole('img', { name: 'unsaved changes' })).not.toBeInTheDocument();
+    act(() => { stateListener!([makeTab(), dirtyTab], 0, 16, [], 'github-dark', 'dark', []); });
+    const command = screen.getByRole('textbox');
+    fireEvent.change(command, { target: { value: 'quit' } });
+    fireEvent.keyDown(command, { key: 'Enter' });
+
+    expect(await screen.findByText('Are you sure you want to quit?')).toBeInTheDocument();
+    expect(screen.queryByText('Do you want to save changes to draft.png?')).not.toBeInTheDocument();
+    expect(dirtyHandleSaveMock).not.toHaveBeenCalled();
   }, 15_000);
 });
 
