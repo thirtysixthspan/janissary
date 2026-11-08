@@ -1,5 +1,7 @@
 ### Application config
 
+Native application command settings are stored separately from `config.json` in `~/.janissary/commands.json`, with `.janissary/commands.json` as a whole-file project override. See [[application-commands]] for the file format, fallback behavior, and edit rules.
+
 Application settings are stored in `.janissary/config.json`. On first launch a default config is created if the file does not exist. The config is loaded after the `.janissary/` subdirectories are initialized and before the `App` component renders.
 
 | Setting | Type | Default | Description |

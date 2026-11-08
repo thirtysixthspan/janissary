@@ -1,5 +1,13 @@
 ## Application Commands
 
+### Native command settings
+
+Application commands use `~/.janissary/commands.json`, with a project-level `.janissary/commands.json` replacing the home file when it is valid. Each file is an object keyed by command name; each value may contain boolean `enabled` and `agentAccess` fields. Missing commands and missing fields default to `true`. Names are trimmed, case-insensitive, and have repeated whitespace collapsed. If keys normalize to the same name, the last key in the file supplies both values. Unknown names do not affect command settings and are removed when the file is next saved.
+
+Malformed entries default both values to `true`, remain visible with other valid settings from the same file, and make that file read-only until repaired. Invalid JSON or a top-level value that is not an object falls back from the project file to the home file, then to enabled defaults. Damaged files are left untouched. A fallback reports `commands.json <problem> at <path> — showing the <home|project> commands file.`; defaults after a damaged file report `commands.json <problem> at <path> — showing default commands.` An edit to a malformed effective file is refused with `commands.json at <path> is unusable — fix the file before editing commands.`
+
+Reading defaults does not create a file. The first edit writes the home file; edits to a valid project override update that project file. Settings are re-read at initialization, when the Commands tab opens, and before every edit. Writes replace the file atomically; settings become effective and are published only after a successful write. A failure reports `Could not write commands.json at <path>.` and leaves the current settings unchanged. A child command's effective availability also requires its declared parents to be enabled. Its saved values remain unchanged when a parent is disabled. Agent access applies only to native ACP commands; other commands have no agent-access restriction.
+
 ### Structured command replies
 
 When a command is dispatched from a plugin tab, the reply preserves `dispatched`, `output`, and `coreResponse` and may also include the command's structured `result`. A structured command's reply carries the output it appended during its invocation together with its `result`, and the reply is complete once the command finishes, however long that takes. Commands that return no result keep the existing printed-output reply; only output produced by that invocation is included, and capture stops after 30 seconds while later output remains in the transcript.

@@ -35,6 +35,7 @@ import { AgentRunManager } from '../agent/manager.js';
 import { SystemShellManager } from '../system-shell.js';
 import { SystemScheduleManager } from '../schedule/system/manager.js';
 import { TerminalRuntimeManager } from '../terminal-runtime/manager.js';
+import { NativeCommandSettingsManager } from '../native-commands/manager.js';
 
 // Populates every manager onto an already-allocated (empty) `Managers` object, in construction
 // order (later managers may reference earlier ones via `this.managers` at call time, not
@@ -47,6 +48,7 @@ import { TerminalRuntimeManager } from '../terminal-runtime/manager.js';
 // reordering two lines here silently reordered dispose. Teardown is stated by
 // `MANAGER_DISPOSE_ORDER` in `../managers.ts`; change that when a teardown dependency changes.
 export function createManagers(managers: Managers, projectDir?: string): void {
+  managers.nativeCommandSettings = new NativeCommandSettingsManager(projectDir);
   managers.acpRecords = new AcpSessionRecords({ projectDir });
   managers.agent = new AgentRunManager(managers);
   // First: it takes no other manager, and `TabManager` below can already reach it when a feed is

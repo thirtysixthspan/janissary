@@ -30,6 +30,7 @@ import type { AgentRunManager } from './agent/manager.js';
 import type { SystemShellManager } from './system-shell.js';
 import type { SystemScheduleManager } from './schedule/system/manager.js';
 import type { TerminalRuntimeManager } from './terminal-runtime/manager.js';
+import type { NativeCommandSettingsManager } from './native-commands/manager.js';
 
 export type ManagerLifecycle = {
   dispose?(): void | Promise<void>;
@@ -68,6 +69,7 @@ type ManagerRegistry = {
   models: ModelCatalogManager;
   sessions: SessionsManager;
   notifications: NotificationQueue;
+  nativeCommandSettings: NativeCommandSettingsManager;
 };
 
 export type Managers = {
@@ -126,6 +128,7 @@ export const MANAGER_DISPOSE_ORDER = [
   // With the last group, for the same reason: the feed, the toast path, and `notifications clear`
   // all read the queue while tearing down, and it owns no process or handle of its own to release.
   'notifications',
+  'nativeCommandSettings',
   'questions',
   'tab',
   'database',
