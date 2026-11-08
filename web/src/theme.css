@@ -528,7 +528,7 @@ button.tab-recording { cursor: pointer; }
 .line.message .message-tab-link { cursor: pointer; }
 .line.message .message-tab-link:hover { filter: brightness(1.2); }
 .line.message .message-text { color: var(--fg); }
-.line.message .message-files { display: inline-flex; align-items: baseline; }
+.line.message .message-files { display: inline-flex; align-items: baseline; flex-wrap: wrap; min-width: 0; max-width: 100%; }
 .line.message .file-link {
   color: var(--accent); cursor: pointer; text-decoration: none;
 }
