@@ -2,7 +2,7 @@
 
 **Complexity: 5/10** — client-only, no protocol change, but generalizes the single-tab close guard into a two-mode request state machine with stale-save protection across steps. It moves five files into a new feature directory with a lint-zone update, and has to catch two focus/keyboard interactions (Cmd+W and tab-switch focus) that only show up because the walk switches tabs under a modal.
 
-When a user-triggered quit finds unsaved work, the app asks about each dirty tab with the same three-button Save / Don't Save / Cancel dialog used when closing one tab, then exits after the last answer. The walk follows tab-strip order, names each tab, and reveals a docked tab in its sidebar without switching the center pane. Image edits and their saved baseline remain with an open image tab across a center-to-sidebar remount; a save that completes after that remount updates the still-open tab, while later edits and failed saves remain unsaved. A plugin can explicitly drop its dirty handle while its tab remains open, which clears the unsaved marker and removes its save prompt; image view unmounts preserve the handle across placement changes. The optional client `tabState` capability carries that transient per-tab state under API v3 and is cleared when the tab closes (`product/specs/quit-confirmation.md`, `product/specs/image-tab.md`, and `product/specs/tab-plugins.md`).
+When a user-triggered quit finds unsaved work, the app asks about each dirty tab with the same three-button Save / Don't Save / Cancel dialog used when closing one tab, then exits after the last answer. The walk follows tab-strip order, names each tab, and reveals a docked tab in its sidebar without switching the center pane. Image edits and their saved baseline remain with an open image tab across a center-to-sidebar remount; a save that completes after that remount updates the still-open tab, while later edits and failed saves remain unsaved. A plugin can explicitly drop its dirty handle while its tab remains open, which clears the unsaved marker and removes its save prompt; image view unmounts preserve the handle across placement changes. Cancelling a named close activates its target before returning focus to its editor, and cancelling the plain quit confirmation restores focus to the command bar that submitted `quit`. The optional client `tabState` capability carries that transient per-tab state under API v3 and is cleared when the tab closes (`product/specs/quit-confirmation.md`, `product/specs/image-tab.md`, and `product/specs/tab-plugins.md`).
 
 ## Design decisions
 
@@ -13,6 +13,7 @@ When a user-triggered quit finds unsaved work, the app asks about each dirty tab
 - **A successful image save updates the still-open tab even if the request outlives the center body.** The save merges the operations it wrote into the latest shared snapshot, so edits made after the request began remain unsaved. Failed saves do not change the baseline.
 - **The per-file dialog** is the existing `SaveChangesDialog` with its three buttons, Save (y), Don't Save (n), Cancel (Esc), Save selected by default, and the same modal trapping.
 - **Save semantics** follow the existing `DirtyTabHandle.save()` contract: it resolves only once the work is on disk and rejects on a failed write, a missing buffer, or a save that became an overwrite-conflict question.
+- **Cancelling a named close activates its target.** When `close <name>` opens the dialog from another tab, Cancel makes the named tab current before returning focus to its editor. A close started from the target tab's own strip button leaves that already-current tab in place.
 - **The walk starts directly.** When a trigger path finds at least one dirty tab, the first dirty tab's three-button dialog opens at once. The one-button "You have unsaved changes. Close anyway?" dialog is retired; no summary step comes first.
 - **The app quits right after the last answer.** Once every dirty tab has been answered with Save (and the save succeeded) or Don't Save, the app runs its normal exit sequence with no further "Are you sure you want to quit?" step.
 - **Cancel stops the whole quit.** Cancel (Esc) on any tab's dialog ends the walk and the app stays open. Files already saved earlier in the walk stay saved. Tabs answered Don't Save keep their edits and stay dirty, since nothing is discarded until the app actually exits.
@@ -26,7 +27,7 @@ When a user-triggered quit finds unsaved work, the app asks about each dirty tab
 - **One tab at a time.** The walk offers exactly the existing three buttons per tab; there is no Save All or Don't Save All.
 - **One guard for close and quit.** `CloseSaveGuard` is generalized to drive both the single-tab close (one tab, then close it) and the quit walk (every dirty tab, then quit), rather than adding a second guard beside it.
 - **One feature directory.** The guard, the quit guard hook, the save dialog, the dirty-tab check, and the new walk module live together in `web/src/unsaved-work/`. Nothing goes to `shared/` except the tab-name helper, which gains a second consumer.
-- **When no tab is dirty**, `quit` and last-tab close behave exactly as today: the plain "Are you sure you want to quit?" dialog.
+- **When no tab is dirty**, `quit` and last-tab close show the plain "Are you sure you want to quit?" dialog. Cancelling a typed `quit` returns focus to the command bar that submitted it.
 - **Closing the browser window** itself keeps the native `beforeunload` prompt; no in-app dialog can intercept that path.
 - **The per-tab close dialog** shown when closing one tab while others remain is unchanged.
 
@@ -40,7 +41,7 @@ When a user-triggered quit finds unsaved work, the app asks about each dirty tab
 | Three-button dialog | `web/src/unsaved-work/SaveChangesDialog.tsx` and `useSaveConfirm.ts` (label-keyed target, save generation, pending guard) | The per-tab prompt and its stale-attempt protection |
 | Per-tab close guard | `web/src/unsaved-work/CloseSaveGuard.tsx` | Shared close and quit-walk dialog handling |
 | Retired one-button dialog | `web/src/UnsavedQuitDialog.tsx` | Deleted by this feature |
-| Quit execution | `web/src/QuitDialog/useQuitConfirm.ts` → `runCommand('quit')`; `src/commands/quit.ts` | Final step once every dirty tab is answered |
+| Quit execution | `web/src/QuitDialog/useQuitConfirm.ts` → `runCommand('quit')`; `src/commands/quit.ts` | Final step once every dirty tab is answered; the plain quit dialog restores its originating command bar on Cancel |
 | Tab focus RPC | `focusTab` with a label (`src/protocol/core-rpc.ts`) | Bringing a tab on screen by label |
 | Tab full name | `web/src/shared/tab/tab-name.ts` (`tabFullName`) | The strip name and the walk's title |
 | Docked-tab reveal | `web/src/sidebar-selection-coordinator.ts` (`sidebarSelectionFor(client).select`), used the same way by `web/src/notifications/native-notifications.ts` | Showing a docked dirty tab in its sidebar |
@@ -75,7 +76,7 @@ Land the moves as their own first step, with no behaviour change, and run `check
 **`useSaveConfirm` becomes the guard's request state.** Today it holds one label, a generation, and a pending flag. It now holds a request that is either a close of one label or a quit walk (the set of labels answered so far, the label being asked about, and the carried selection). It keeps the one generation counter and pending flag for both kinds. Opening a request, moving the walk to its next label, and dismissing each bump the generation, so a save that settles after Cancel, after the walk moved on, or after unmount can't act. That is the same protection the single-tab dialog has today. `labelRef` keeps meaning "the label being asked about" for both kinds, so the close handlers read it unchanged.
 
 **`CloseSaveGuard` serves both requests.** It keeps publishing the single-tab check through `guardRef` (unchanged contract: `(index) => boolean`), and also publishes `startQuitWalk(): boolean` through a second ref, `quitWalkRef`. `startQuitWalk` asks `nextWalkLabel` with an empty answered set, returns false when it gives nothing, and otherwise opens the walk on that label. The guard also keeps a `saveWalkOpenRef` boolean up to date, true while a walk is running, for the Cmd+W check below. Per button, for the label being asked about:
-- **Close request.** Exactly today's behaviour: Save closes after a resolved save, Don't Save closes, Cancel and a rejected save dismiss and focus the tab. No tab switch.
+- **Close request.** Save closes after a resolved save and Don't Save closes. Cancel and a rejected save dismiss and focus the tab. A named close from another tab activates its target on Cancel before restoring focus; a close started from the target tab's own strip button needs no tab switch.
 - **Walk, Save.** Await the handle's save. On resolve, if the attempt is still current, advance. On reject, if still current, dismiss the walk and call the tab's `focus()`.
 - **Walk, Don't Save.** Advance without saving or closing anything. If a save for this tab is still running (Don't Save stays available while Save is pending), its later result is ignored because the generation moved on; a write already started may still finish, as in the single-tab dialog.
 - **Walk, Cancel.** Dismiss the walk and call the tab's `focus()`.
@@ -104,6 +105,8 @@ The selection starts at Save when a walk opens and carries over between its tabs
 
 **`AppMain`** stops rendering `UnsavedQuitDialog`, drops the `unsavedQuitOpen` prop, and passes the new props to `CloseSaveGuard`.
 
+**The plain quit dialog restores its originating command bar.** `useQuitConfirm` captures the active command textarea when the dialog opens and restores it on Cancel, falling back to the app input ref when no command textarea was active. Confirming clears the captured element before running the normal `quit` command.
+
 **Specs.**
 - `product/specs/quit-confirmation.md`, "Unsaved changes": replace the one-dialog paragraph with the walk. Name every rule from Design decisions: order, title wording, reveal, selection carry-over, Cancel and failure stop the quit with earlier saves kept and Don't Save tabs still dirty, skipped tabs, and quitting right after the last answer. Keep the paragraph on what counts as unsaved work and the paragraph on per-tab close.
 - `product/specs/editor-tab.md`, "Closing with unsaved changes": the paragraph on `quit` now says quitting walks every dirty tab through this same dialog, titled with the tab's name, and points to `quit-confirmation.md`.
@@ -126,7 +129,7 @@ The feature extends the whole-app quit path (`useUnsavedQuitGuard` and the dialo
 - **Interaction and keys.** The same keys as the single-tab dialog: `y` saves, `n` discards, `Escape` cancels, `←` / `→` move the selection, `Enter` runs the selected button. No new key binding is added, so nothing in the key reference collides. Clicks outside the dialog do nothing, and the window-level capture trap applies throughout the walk, including between one tab's answer and the next tab's dialog.
 - **Selection carries over.** The first tab's dialog opens with Save selected. Each later tab's dialog opens with whichever button was selected when the previous tab was answered, so `Enter` repeats the last choice. `y` and `n` still act regardless of the selection.
 - **States.** While a save is running, Save is disabled and repeated `y` / `Enter` / clicks on it do nothing, while Don't Save and Cancel stay available, as in the single-tab dialog today. There is no empty state: the walk only starts when at least one tab is dirty.
-- **Focus.** Focus moves onto the dialog each time it opens. On Cancel, the walk ends and focus goes into the tab that was being asked about, at its cursor, through that tab's `DirtyTabHandle.focus()`, the same as Cancel on the single-tab close dialog. A failed save lands the same way. When the walk completes, the app exits, so there is no landing focus.
+- **Focus.** Focus moves onto the dialog each time it opens. On Cancel, the walk ends and the asked-about tab's `DirtyTabHandle.focus()` is called; a failed save calls the same handle. If a center-tab activation is still pending when Cancel or a failed save closes the walk, the later tab-switch focus effect can return focus to the command line. When the walk completes, the app exits, so there is no landing focus. Cancelling the plain quit dialog restores the command bar that submitted `quit`.
 - **Accessibility.** The dialog keeps `role="alertdialog"` with the title as its visible heading, and the buttons keep their accessible names `Save (y)`, `Don't Save (n)`, and `Cancel (Esc)`.
 - **Code organization.** Client-only. The walk's decisions — which tabs to visit, in what order, what to do after each answer — live in a pure module with no React, a hook owns the walk's state and effects, and the component that renders the dialog stays thin, per `ai/guidelines/react-code-organization.md`. Tab order, tab names, and the current tab come from server state (`TabView[]` and `focusTab`); the client holds only which tab is being asked about and the carried selection, per `ai/guidelines/architecture-principles.md` §1.
 
@@ -147,6 +150,8 @@ The feature extends the whole-app quit path (`useUnsavedQuitGuard` and the dialo
   - a tab removed from `tabs` while its dialog is open is skipped on the next button press;
   - the selection carries from one tab to the next;
   - `saveWalkOpenRef` is true during the walk and false after Cancel.
+- `web/src/unsaved-work/CloseSaveGuard.named-close.test.tsx`: typed named close accepts the tab's full name or label; Cancel activates an inactive dirty target and then focuses its handle, while a clean target still goes to the server.
+- `web/src/QuitDialog/useQuitConfirm.test.ts` and `web/src/App.launch-focus.test.tsx`: cancelling the plain quit dialog restores the command textarea that submitted `quit`, with the supplied input ref as fallback when no command textarea was active.
 - `web/src/unsaved-work/useUnsavedQuitGuard.test.ts`, moved. "opens the unsaved-quit dialog instead of the raw confirm when a tab is dirty" and the dirty-plugin-tab case become "calls `quitWalkRef` and not `openQuitConfirm`". Add: a walk that returns false, or no `quitWalkRef` set, falls back to `openQuitConfirm`. Delete the `confirmUnsavedQuit` and `cancelUnsavedQuit` cases; the guard's walk test covers quitting. The `beforeunload` cases stay unchanged.
 - `web/src/useCmdWRefs.test.ts`: "ORs quitConfirmOpen with unsavedQuitOpen" becomes the same check against `saveWalkOpenRef`, including that the ref is read live (flipping it after render changes `quitConfirmOpenRef.current` without a rerender).
 - `web/src/useFocusOnTabSwitch.test.ts`: an `activeTab` change while `suppressRef` is true focuses nothing; with it false, the existing cases pass unchanged.
@@ -155,11 +160,11 @@ The feature extends the whole-app quit path (`useUnsavedQuitGuard` and the dialo
 - `web/src/plugins/image/ImageEditor.test.tsx`: verify the image editor keeps its host registration when the view unmounts during a placement change. The existing `web/src/plugins/PluginTabLayer.test.tsx` coverage continues to pin explicit-null forwarding, while `web/src/plugins/tab-state-store.test.ts` covers closed-label cleanup.
 - `web/src/App.test.tsx` and `web/src/plugins/tab-state-store.test.ts`: hold an image save pending while docking the image, resolve it after the remount, and verify the saved marker clears and a later quit uses the ordinary confirmation without a save-walk dialog; verify store subscriptions notify on changes and stop after disposal.
 - `src/plugins/documentation.test.ts`: pin the v3 client-capability count at twenty-eight, including the additive `tabState` capability.
-- Existing `CloseSaveGuard` close tests and the `QuitDialog` tests pass unchanged apart from import paths. `UnsavedQuitDialog.test.tsx` is deleted with its component.
+- Existing close and quit-dialog coverage remains, with named-close and clean-quit focus regressions added. `UnsavedQuitDialog.test.tsx` is deleted with its component.
 
 ## Out of scope
 
-- Any change to the per-tab close dialog when other tabs remain open.
+- Changes to the per-tab close dialog's title, buttons, or Save / Don't Save results when other tabs remain open. Cancel after a named close activates the target before returning focus.
 - The browser's own `beforeunload` prompt.
 - Which tabs register unsaved work.
 - Save All and Don't Save All shortcuts.
@@ -174,9 +179,12 @@ The feature extends the whole-app quit path (`useUnsavedQuitGuard` and the dialo
 ## Verification
 
 - `./scripts/run.mjs check-diff` passed lint, typecheck, and web tests after the dirty-handle behavior, contract, spec, and documentation changes. The App integration test verifies that explicit unregistration clears the marker and removes the old save prompt; the image lifecycle test verifies that view unmount keeps its registration, and the existing docking and closed-label cleanup cases pass.
+- The named-close Cancel regression verifies that cancelling `close alpha.png` from the shell activates the image tab before its handle is focused. The clean-quit regressions verify that Escape returns focus to the command bar that submitted `quit`.
+- The manual cases use Cmd+Down on macOS or Ctrl+End on Linux when appending at the end of an editor buffer. Each numbered case starts with its own copy of the baseline fixtures and keeps that case's work directory only through restarts within the case.
 - Manual, in the running app:
   - Open three editor tabs and edit the first and third without saving. Type `quit` in the second. The first tab comes on screen behind "Do you want to save changes to <its file name>?". Press `y`; the third tab comes on screen with its own title; press `n`. The app exits, the first file holds its edits on disk, and the third does not.
   - Repeat, then press `Escape` at the third tab's dialog. The app stays open on the third tab with the cursor in its buffer and its edits intact.
   - With one dirty editor tab and nothing else open, press Cmd+W. The walk asks about that one tab. Press Cmd+W again while the dialog is up; nothing changes.
   - With no unsaved work, type `quit`: the plain "Are you sure you want to quit?" dialog appears as before.
+  - From the shell command bar, type `close alpha.txt` while alpha is dirty and inactive. Press Escape; alpha becomes current, remains open and dirty, and focus returns to its buffer. In a second clean browser window, closing alpha does not prompt and the first window skips it on the next walk step.
   - Open and edit a scratch image. From a center shell, run `notifications left`, then `tab dock image left`. Select Notifications and type `quit` from the center shell. The sidebar selects the image before its titled dialog opens, the center tab stays selected, and Escape leaves the image dirty. Automated App coverage also holds an image save in flight across the center-to-sidebar remount and verifies that its successful completion clears the saved baseline without erasing later edits.

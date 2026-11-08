@@ -191,8 +191,8 @@ in this feature: replace the original file, then close. The close follows the wr
 covers every close path — the tab's × button, `Cmd+W`, and typing `close` or `exit`, including
 `close <name>` / `exit <name>` typed at another tab's command line. `quit` and closing the last tab
 ask about the image tab's unsaved edits through the same dialog, one
-tab at a time. Its title uses the tab's title or label, because an image tab has no file name of its
-own in the strip. **Save** there replaces the original file before the walk moves on, and the app
+tab at a time. The dialog names the image tab with the file name shown in the tab strip, not its
+internal `image` label. **Save** there replaces the original file before the walk moves on, and the app
 exits after the last answer. Closing or reloading the browser page shows the browser's own prompt
 (see [[quit-confirmation]]).
 
