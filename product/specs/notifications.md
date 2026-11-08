@@ -43,7 +43,7 @@ example `● 8:34pm janus: Could not pull: network unreachable (3 times)`. The l
 and tab link of the latest repeat. File links are not replaced but gathered: the line carries one
 file link for every repeat that had one, oldest first, so a run of seven auto-approved permission
 prompts shows seven capture icons and each opens its own capture. The icons sit side by side as one
-group, with no space between them; the group keeps its usual spacing from the tab link before it
+group, with no space between them, wrapping onto multiple rows when needed to fit the pane; the group keeps its usual spacing from the tab link before it
 and the message after it. A different notification in
 between starts a new line, so only sequential repeats fold.
 

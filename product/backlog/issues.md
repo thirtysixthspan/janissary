@@ -2,7 +2,6 @@
 
 ## ready
 
-* in the notifications tab, wrap the line with capture icons onto multiple lines.
 
 * update ./ai/tasks/feature/build-a-complex-feature.md remove restrictions on source plan complexity. Plans of 3 complexity or lower should not be decomposed but still run though the task. 
 
