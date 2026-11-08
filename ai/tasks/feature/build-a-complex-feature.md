@@ -1,12 +1,12 @@
 # Build a Complex Feature
 
-Take one supplied plan at any complexity from 1–10 and deliver the complete feature on one open pull request. Keep plans rated 1–3 intact; decompose plans rated 4–10 into ordered subplans each rated at or below 5/10. Publish the plans before implementation. Immediately before each work unit is implemented, improve it and publish the improved plan; then publish its implementation as a separate commit, review that commit against the plan, work every finding that review records, and then run a resolution review that confirms those findings were resolved before proceeding. After all work units are complete, update the canonical plan and pull request, then review the full pull request and resolve findings until a full review adds none. A review whose findings are all pull request description corrections needs no follow-up review once those corrections are made. Finish with a pull request update.
+Take one supplied plan at any complexity from 1–10 and deliver the complete feature on one open pull request. Keep plans rated 1–3 intact; decompose plans rated 4–10 into ordered subplans each rated at or below 5/10. Publish the plans before implementation. Immediately before each work unit is implemented, improve it and publish the improved plan; then publish its implementation as a separate commit, review that commit against the plan, work every finding that review records, and then run a resolution review that confirms those findings were resolved before proceeding. After all work units are complete, update the canonical plan and pull request, then review the full pull request and resolve findings until a full review adds none. A review whose findings are all pull request description corrections needs no follow-up review once those corrections are made. Then test the pull request, resolve every test finding, and retest until a test pass adds no findings and the backlog is empty. Finish with another pull request update.
 
 Invocation: `execute ./ai/tasks/feature/build-a-complex-feature.md <plan name or path>`.
 
 **Run autonomously.** Do not ask the user questions or wait for feedback. Resolve decisions from the supplied plan, repository instructions, specs, and existing behavior. Stop only for an explicit blocked condition in this task or a child task.
 
-**Use fresh subagents for each work step.** Delegate plan decomposition, each plan-improvement pass, each subplan implementation, each PR review, each review-work item, and the final PR update to fresh subagents. Give each subagent only the files, decisions, constraints, and recorded identifiers it needs for its step. The orchestrator retains the overall plan, subplan order, branch and PR identity, and completion state; pass those facts explicitly instead of relying on earlier subagent context. Do not run dependent steps concurrently.
+**Use fresh subagents for each work step.** Delegate plan decomposition, each plan-improvement pass, each subplan implementation, each PR review, each behavioral test pass, each review or test repair, and each PR update to fresh subagents. Give each subagent only the files, decisions, constraints, and recorded identifiers it needs for its step. The orchestrator retains the overall plan, subplan order, branch and PR identity, and completion state; pass those facts explicitly instead of relying on earlier subagent context. Do not run dependent steps concurrently.
 
 **Project paths and task resolution.** `./product/` refers to the project in the current working directory. Resolve child tasks from this project's `ai/tasks/` first, then `$janissary/ai/tasks/` if absent. Read the resolved task before delegating it. If a required task or runner is unavailable, stop and report the blocker rather than inventing a replacement.
 
@@ -30,7 +30,7 @@ Invocation: `execute ./ai/tasks/feature/build-a-complex-feature.md <plan name or
 
 1. Require a plan name or path that resolves to a plan in `./product/plans/ready/`. If none is supplied or no plan matches, report the reason and stop. Do not choose an unrelated plan.
 2. Read the selected plan in full and confirm it states the feature goal, implementation scope, tests, verification, and an honest complexity rating from 1–10. If any are missing, report the issue and stop; do not invent or improve the source plan here. Record whether its rating selects the single-plan route (1–3) or decomposition (4–10).
-3. Read `AGENTS.md`, every file under `ai/guidelines/`, and the relevant project specs and implementation references. Read the task files used below, including `build-a-feature.md`, `improve-plan.md`, `review-pull-request.md`, `work-pull-request-issue.md`, `update-pull-request.md`, and `open-feature-pull-request.md`.
+3. Read `AGENTS.md`, every file under `ai/guidelines/`, and the relevant project specs and implementation references. Read the task files used below, including `build-a-feature.md`, `improve-plan.md`, `review-pull-request.md`, `work-pull-request-issue.md`, `update-pull-request.md`, `test-pull-request.md`, and `open-feature-pull-request.md`.
 4. Confirm the working tree is clean before workspace preparation. Preserve unrelated work and stop if the tree is not clean.
 5. Delegate `ai/tasks/workspace/prepare-workspace.md` to a fresh subagent and require it to complete the task in full. Stop if its required audit or preparation fails. Confirm the tree is clean afterward.
 
@@ -121,9 +121,19 @@ Delegate `ai/tasks/feature/update-pull-request.md` to a fresh subagent with the 
 
 If the update cannot publish its changes or the PR description edit fails, preserve the work, report the blocker, and do not claim completion.
 
+### Test, repair, and update again
+
+After the initial update above and the full-PR review in Step 8 complete, run this cycle before final verification:
+
+1. Delegate `ai/tasks/feature/test-pull-request.md` to a fresh subagent with the recorded PR number. Preserve all of its attached-browser, base-branch instruction, dependency, scratch-instance, teardown, backlog-only publication, and no-merge safeguards. Do not substitute reading the testing steps for executing them.
+2. Require the test task to complete and publish its findings. If testing is blocked, including a missing attached browser, failed startup, browser loss, incomplete teardown, or failed publication, preserve the PR and outstanding backlog, report the blocker, and stop. Do not treat an incomplete run as a clean test pass.
+3. Read the PR backlog after testing. If entries remain, drain every entry in file order before another test pass: delegate `ai/tasks/feature/work-pull-request-issue.md` to a fresh subagent for each entry with the recorded PR number and an explicit selector. Preserve its tests, scope, and branch safeguards and apply Step 6's complexity-cutoff override. Verify each repair is published to the same branch and PR before selecting the next entry. Stop and report any blocked repair.
+4. After any repairs, repeat items 1 through 3. Retest even when every repaired finding was description-only; the review exception does not waive behavioral testing. Exit this cycle only when a completed test pass adds no new backlog entries and the backlog is empty (or contains only its required empty-file skeleton).
+5. Delegate `ai/tasks/feature/update-pull-request.md` again to a fresh subagent with the recorded PR number. Apply the same canonical-plan discovery and update safeguards described above, then confirm the final update is published and the PR remains open. If this update surfaces a code repair, resolve it and repeat the test/repair cycle and final update before proceeding. A blocked update stops completion.
+
 ## Step 10 — Final verification and report
 
-Confirm the PR is still `OPEN`, its remote head matches local `HEAD`, the working tree is clean, every source-plan requirement is covered, all subplans have completed and improved plans, all required checks passed, and no PR backlog work remains. Do not merge the PR.
+Confirm the PR is still `OPEN`, its remote head matches local `HEAD`, the working tree is clean, every source-plan requirement is covered, all subplans have completed and improved plans, all required checks passed, the behavioral test cycle completed without new findings, the final PR update is published, and no PR backlog work remains. Do not merge the PR.
 
 Report in this shape:
 
@@ -132,6 +142,7 @@ Plan:       <source plan path and original complexity>
 Work units: <count> completed; source plan intact at 1–3/10 | decomposed subplans all rated 1–5/10
 Commits:    <count> implementation commits pushed to <branch>
 Reviews:    <count> focused subplan reviews, <count> resolution reviews, and <count> full PR reviews; <count> work items resolved
+Tests:      <behavioral test passes and findings resolved; blockers if any>
 Checks:     <diff-scoped verification results>
 PR:         <url> (#<number>), open
 Updated:    <what update-pull-request changed> | already in sync
