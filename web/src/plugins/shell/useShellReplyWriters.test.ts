@@ -1,6 +1,7 @@
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type { Terminal } from '@xterm/xterm';
+import type { BackgroundReplyView } from '@shared/protocol';
 import type { ShellAcpReceipt, ShellConnectionRow } from '@shared/plugins/shell/shared';
 import { formatDispatchedCommand, formatEchoedCommand } from './format-dispatched-command';
 import { insertMarkdownBlock } from './markdown-block';
@@ -8,6 +9,7 @@ import { markdownToAnsi } from './markdown-to-ansi';
 import { ReplyPlacement } from './reply-placement';
 import { commandHead } from './shell-prompt';
 import { addThinkingMarker } from './thinking-marker-decoration';
+import { useBackgroundReplies } from './useBackgroundReplies';
 import { createReplyMarkers, useShellReplyWriters } from './useShellReplyWriters';
 
 vi.mock('./markdown-block', () => ({ insertMarkdownBlock: vi.fn() }));
@@ -55,15 +57,17 @@ function fakeTerminal() {
 function setup(overrides: Partial<Props> = {}) {
   const fake = fakeTerminal();
   const placement = new ReplyPlacement();
+  const placementRef = { current: placement };
   const markersRef = { current: createReplyMarkers() };
+  const replyIds = overrides.replyIds ?? new Set<string>();
   const terminalRef = { current: fake.terminal as Terminal | null };
   const openLink = vi.fn<(href: string) => void>();
   const openConnection = vi.fn<(row: ShellConnectionRow) => void>();
   const props: Props = {
-    terminalRef, placementRef: { current: placement }, markersRef, openLink, openConnection, label: 'shell-1', ...overrides,
+    terminalRef, placementRef, markersRef, replyIds, openLink, openConnection, label: 'shell-1', ...overrides,
   };
   const view = renderHook((current: Props) => useShellReplyWriters(current), { initialProps: props });
-  return { fake, placement, markersRef, terminalRef, props, openLink, openConnection, ...view };
+  return { fake, placement, placementRef, markersRef, replyIds, terminalRef, props, openLink, openConnection, ...view };
 }
 
 function receipt(replyId: string, role: ShellAcpReceipt['role'] = 'ask', name = 'ask-model'): ShellAcpReceipt {
@@ -248,6 +252,61 @@ describe('useShellReplyWriters settling', () => {
 });
 
 describe('useShellReplyWriters ids', () => {
+  it('shares early reply ids with late receipts across terminal reattachment', () => {
+    const attached = setup();
+    const reply: BackgroundReplyView = { id: 'r1', line: LINE, output: 'Done', record: RECORD };
+    const initialSubscription = (receive: (reply: BackgroundReplyView) => void) => {
+      receive(reply);
+      return () => {};
+    };
+    const replaySubscription = (receive: (reply: BackgroundReplyView) => void) => {
+      receive(reply);
+      return () => {};
+    };
+    const { rerender } = renderHook(({ subscription }) => useBackgroundReplies(
+      subscription, attached.result.current.displayReply, attached.replyIds,
+    ), { initialProps: { subscription: initialSubscription } });
+
+    const later = fakeTerminal();
+    attached.markersRef.current = createReplyMarkers();
+    attached.placementRef.current = new ReplyPlacement();
+    attached.terminalRef.current = later.terminal;
+    attached.result.current.echoCommand(LINE, receipt('r1'));
+
+    expect(attached.replyIds).toEqual(new Set(['r1']));
+    expect(later.writes).toEqual([{ data: formatEchoedCommand(LINE), args: 1 }]);
+    expect(later.markers).toHaveLength(0);
+    expect(addMarker).not.toHaveBeenCalled();
+
+    rerender({ subscription: replaySubscription });
+
+    expect(later.writes).toHaveLength(1);
+    expect(attached.markersRef.current).toEqual({ entries: new Map() });
+  });
+
+  it('keeps unrelated monitor reply ids in the shared tracker only', () => {
+    const { fake, markersRef, replyIds, result } = setup();
+    const monitorReplies: BackgroundReplyView[] = [
+      { id: 'monitor-1', output: 'First suggestion' },
+      { id: 'monitor-2', output: 'Second suggestion' },
+    ];
+    let receive: (reply: BackgroundReplyView) => void = () => {};
+    const subscribe = (callback: typeof receive) => {
+      receive = callback;
+      return () => {};
+    };
+    renderHook(() => useBackgroundReplies(subscribe, result.current.displayReply, replyIds));
+
+    act(() => {
+      for (const reply of monitorReplies) receive(reply);
+    });
+
+    expect(replyIds).toEqual(new Set(['monitor-1', 'monitor-2']));
+    expect(markersRef.current).toEqual({ entries: new Map() });
+    expect(markersRef.current).not.toHaveProperty('written');
+    expect(fake.writes).toHaveLength(2);
+  });
+
   it('writes a reply for an unknown id exactly as a plain reply, and writes a late receipt for it with no marker', () => {
     const plain = setup();
     plain.result.current.displayReply(LINE, 'Done');
@@ -339,7 +398,8 @@ describe('useShellReplyWriters row markers that arrive late', () => {
     expect(addMarker).toHaveBeenCalledWith(fake.terminal, fake.markers[0], expect.objectContaining({ kind: 'running' }));
     expect(later.markers).toHaveLength(0);
     expect(markersRef.current.entries.size).toBe(0);
-    expect(markersRef.current.written.size).toBe(0);
+    expect(markersRef.current).not.toHaveProperty('written');
+    expect(markersRef.current).toEqual({ entries: new Map() });
   });
 });
 
@@ -410,6 +470,6 @@ describe('useShellReplyWriters clicks and options', () => {
 
     expect(addMarker).not.toHaveBeenCalled();
     expect(markersRef.current.entries.size).toBe(0);
-    expect(markersRef.current.written.size).toBe(0);
+    expect(markersRef.current).not.toHaveProperty('written');
   });
 });

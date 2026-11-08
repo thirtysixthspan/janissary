@@ -36,6 +36,7 @@ type Properties = {
 export function ShellTab({ payload, capabilities }: Properties) {
   const inputReference = useRef<HTMLTextAreaElement>(null);
   const terminalReference = useRef<HTMLDivElement>(null);
+  const replyIds = useRef(new Set<string>()).current;
   const appBar = useAppCommandBar();
   const [draft, setDraft] = useState('');
   // Lines the bar has sent, oldest first. Direct terminal input belongs to zsh's own history.
@@ -58,6 +59,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   } = useShellTabTerminal({
     payload,
     capabilities,
+    replyIds,
     containerRef: terminalReference,
     onCommand: terminalHistory.onCommand,
     onCommandRunning: (running) => {
@@ -75,7 +77,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   });
 
   useShellTerminalStatus(capabilities, payload.ptyId);
-  useBackgroundReplies(capabilities.onBackgroundReply, displayReply);
+  useBackgroundReplies(capabilities.onBackgroundReply, displayReply, replyIds);
 
   // Focus belongs to the command line at all times, and a tab that has just become the visible one is
   // exactly when it would otherwise be sitting on the body after a click elsewhere.

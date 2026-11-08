@@ -24,10 +24,10 @@ type Entry = {
   settlement: Settlement;
 };
 
-export type ReplyMarkers = { entries: Map<string, Entry>; written: Set<string> };
+export type ReplyMarkers = { entries: Map<string, Entry> };
 
 export function createReplyMarkers(): ReplyMarkers {
-  return { entries: new Map(), written: new Set() };
+  return { entries: new Map() };
 }
 
 type Opening = {
@@ -71,17 +71,23 @@ function drawLink(terminal: Terminal, record: ReplyRecord, opening: Opening): Dr
   return (marker) => { addThinkingMarker(terminal, marker, linkView(record, opening)); };
 }
 
-function begin(state: ReplyMarkers, receipt: ShellAcpReceipt): Entry | undefined {
+function begin(state: ReplyMarkers, replyIds: Set<string>, receipt: ShellAcpReceipt): Entry | undefined {
   const { replyId } = receipt;
-  if (state.entries.has(replyId) || state.written.has(replyId)) return undefined;
+  if (state.entries.has(replyId) || replyIds.has(replyId)) return undefined;
   const entry: Entry = { role: receipt.role, name: receipt.name, handle: undefined, settlement: { kind: 'pending' } };
   state.entries.set(replyId, entry);
   return entry;
 }
 
-function settle(state: ReplyMarkers, reply: ShellReplyOutcome | undefined, terminal: Terminal, opening: Opening): Draw | undefined {
+function settle(
+  state: ReplyMarkers,
+  replyIds: Set<string>,
+  reply: ShellReplyOutcome | undefined,
+  terminal: Terminal,
+  opening: Opening,
+): Draw | undefined {
   if (!reply) return undefined;
-  state.written.add(reply.id);
+  replyIds.add(reply.id);
   const entry = state.entries.get(reply.id);
   if (!entry) return undefined;
   state.entries.delete(reply.id);
@@ -100,12 +106,13 @@ type Inputs = {
   terminalRef: React.RefObject<Terminal | null>;
   placementRef: React.RefObject<ReplyPlacement>;
   markersRef: React.RefObject<ReplyMarkers>;
+  replyIds: Set<string>;
   openLink?: (href: string) => void;
   openConnection?: (row: ShellConnectionRow) => void;
   label?: string;
 };
 
-export function useShellReplyWriters({ terminalRef, placementRef, markersRef, openLink, openConnection, label }: Inputs) {
+export function useShellReplyWriters({ terminalRef, placementRef, markersRef, replyIds, openLink, openConnection, label }: Inputs) {
   const openLinkRef = useRef(openLink);
   openLinkRef.current = openLink;
   const openConnectionRef = useRef(openConnection);
@@ -116,17 +123,17 @@ export function useShellReplyWriters({ terminalRef, placementRef, markersRef, op
   const displayReply = useCallback((rawLine: string, rawMarkdown: string, reply?: ShellReplyOutcome) => {
     const terminal = terminalRef.current;
     if (!terminal) return;
-    const onHeadMarker = settle(markersRef.current, reply, terminal, opening);
+    const onHeadMarker = settle(markersRef.current, replyIds, reply, terminal, opening);
     writeShellReply(terminal, placementRef.current, rawLine, rawMarkdown, (href) => { openLinkRef.current?.(href); }, onHeadMarker);
-  }, [terminalRef, placementRef, markersRef, opening]);
+  }, [terminalRef, placementRef, markersRef, opening, replyIds]);
   const echoCommand = useCallback((rawLine: string, receipt?: ShellAcpReceipt) => {
     const terminal = terminalRef.current;
     if (!terminal) return;
     const state = markersRef.current;
-    const entry = receipt ? begin(state, receipt) : undefined;
+    const entry = receipt ? begin(state, replyIds, receipt) : undefined;
     const onMarker = entry ? drawEcho(terminal, entry, opening) : undefined;
     const wrote = writeShellEcho(terminal, placementRef.current, rawLine, onMarker);
     if (!wrote && receipt && entry) state.entries.delete(receipt.replyId);
-  }, [terminalRef, placementRef, markersRef, opening]);
+  }, [terminalRef, placementRef, markersRef, opening, replyIds]);
   return { displayReply, echoCommand };
 }

@@ -7,6 +7,7 @@ import { reportShellIntentFailure } from './report-shell-intent-failure';
 type Options = {
   payload: ShellPayload;
   capabilities: TabPluginClientCapabilities;
+  replyIds: Set<string>;
   containerRef: React.RefObject<HTMLDivElement | null>;
   onCommand: (command: string) => void;
   onCommandRunning: (running: boolean) => void;
@@ -16,10 +17,11 @@ type Options = {
 // directory zsh reports. `useShellTerminal` reads every callback through a
 // ref, so none of these needs a stable identity.
 export function useShellTabTerminal({
-  payload, capabilities, containerRef, onCommand, onCommandRunning,
+  payload, capabilities, replyIds, containerRef, onCommand, onCommandRunning,
 }: Options) {
   return useShellTerminal({
     ptyId: payload.ptyId,
+    replyIds,
     ...(payload.provisioning && { connectPtyId: payload.connectPtyId }),
     containerRef,
     attachTerminal: capabilities.attachTerminal,

@@ -24,6 +24,7 @@ type Options = {
   // Absent while the shell's workspace clone is still landing: there is no terminal to attach yet,
   // and the attachment is made when the ready payload supplies one.
   ptyId: string | undefined;
+  replyIds: Set<string>;
   // The SSH PTY rendered while the remote workspace is provisioning; replaced by `ptyId` on ready.
   connectPtyId?: string;
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -77,7 +78,7 @@ export type ShellTerminalHandle = {
 };
 
 export function useShellTerminal({
-  ptyId, connectPtyId, containerRef, attachTerminal, copyText, reportColors, openLink, openConnection, label,
+  ptyId, replyIds, connectPtyId, containerRef, attachTerminal, copyText, reportColors, openLink, openConnection, label,
   onExit, onCommandRunning, onCwd, onCommand, hookNonce,
 }: Options): ShellTerminalHandle & { terminalReady: boolean } {
   const handleRef = useRef<PluginTerminal | null>(null);
@@ -236,7 +237,9 @@ export function useShellTerminal({
     placementRef.current.wrote();
     terminalRef.current?.write(data);
   }, []);
-  const { displayReply, echoCommand } = useShellReplyWriters({ terminalRef, placementRef, markersRef, openLink, openConnection, label });
+  const { displayReply, echoCommand } = useShellReplyWriters({
+    terminalRef, placementRef, markersRef, replyIds, openLink, openConnection, label,
+  });
   const view = useShellTerminalView(terminalRef, replyRef);
   return {
     write, display, displayReply, echoCommand, ...view,
