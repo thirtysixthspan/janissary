@@ -19,4 +19,22 @@ describe('shell stylesheet', () => {
 
     expect(reply).toContain('user-select: text');
   });
+
+  it('draws the thinking marker muted, plain, and clickable over the terminal', () => {
+    const marker = shell.match(/\.shell-thinking-marker \{([^}]*)\}/u)?.[1] ?? '';
+
+    expect(marker).toContain('color: var(--muted)');
+    expect(marker).toContain('font-weight: normal');
+    expect(marker).toContain('cursor: pointer');
+    expect(marker).toContain('white-space: nowrap');
+    expect(marker).toContain('pointer-events: auto');
+    expect(marker).not.toContain('line-height');
+  });
+
+  it('draws the settled thinking marker as an accent-coloured underlined link', () => {
+    const link = shell.match(/\.shell-thinking-marker\[data-kind='link'\] \{([^}]*)\}/u)?.[1] ?? '';
+
+    expect(link).toContain('color: var(--accent)');
+    expect(link).toContain('text-decoration: underline');
+  });
 });
