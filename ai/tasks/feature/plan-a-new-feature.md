@@ -137,14 +137,21 @@ Keep asking rounds until the phase's frontier is empty. After each round, write 
 
 ### 2g. Improve the answered draft
 
-Execute these tasks in order, each in full except for its `Step 0 — Prepare the workspace`:
+Run the following tasks **separately and in order**, targeting the exact draft created in 2c. Finish and report the first before starting the second:
 
-1. `ai/tasks/planning/improve-plan.md`
-2. `ai/tasks/planning/improve-plan-with-minimalism.md`
+1. Open `ai/tasks/planning/improve-plan.md` and execute every step in order, except `Step 0 — Prepare the workspace`. Verify every plan claim and referenced code path as that task requires. Complete its verification and give its `Plan / Complexity / Fixed / Open` report before proceeding.
+2. Open `ai/tasks/planning/improve-plan-with-minimalism.md` and execute every step in order, except `Step 0 — Prepare the workspace`. Apply its full ladder to the plan produced by the first task. Complete its verification and give its `Plan / Complexity / Trimmed / Open` report before proceeding.
 
-Skip that Step 0 in both. They reuse the workspace this task already prepared in its own Step 0. An improvement task prepares the workspace only when it is run directly. Every other step of each task runs as written.
+Both tasks reuse the workspace this task prepared in its own Step 0. Pass the specific draft path to each task's plan-selection step; do not let other drafts change the target. The improvement tasks edit only this plan, which remains in `draft/` throughout both passes. Note any pre-existing unrelated changes when verifying each pass and leave them untouched.
 
-The improvement passes may uncover product or implementation decisions the draft has not settled. Continue to the next step after both passes complete.
+These are two task executions, not a combined review: reading the task files, adding a complexity rating, or making a general improvement pass does not complete either task. For each task, follow its own checklist, reread the resulting plan, and report its actual findings, including `Open` items. Preserve any product decisions from the feature text or the user's answers; carry new product or implementation questions into 2h rather than silently deciding them.
+
+Before starting 2h, verify both gates:
+
+- [ ] `improve-plan.md` was run through all applicable steps and its verification and report were completed.
+- [ ] `improve-plan-with-minimalism.md` was then run through all applicable steps and its verification and report were completed.
+
+If either gate is unchecked, finish that task before continuing. If a task cannot be completed, leave the plan in `draft/`, report the incomplete task and why, and stop without promoting the plan, removing the backlog entry, or merging. Never claim a task was completed when any required step was skipped.
 
 ### 2h. Final question phase — resolve remaining and new questions
 
@@ -164,6 +171,7 @@ Before moving on, check the completed plan against this list:
 - [ ] All 9 sections above are present, in order. The UI design section is present only when the feature has a UI.
 - [ ] Every product decision traces back to either the feature text, established behavior, or a user answer.
 - [ ] Every question identified by the final review is resolved in the plan.
+- [ ] Both improvement tasks passed their separate 2g gates before this review.
 
 ### 2i. Promote the completed plan
 
