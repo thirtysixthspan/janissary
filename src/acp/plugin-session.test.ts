@@ -17,6 +17,8 @@ import { acpCapabilities } from '../plugins/acp-capabilities.js';
 import { guardPluginCall } from '../plugins/guard.js';
 import { Questions, QUESTION_CANCELLED } from '../questions.js';
 import { CommandManager } from '../command/manager.js';
+import { openConnectionRecord } from '../controller/connection-records.js';
+import { recordConnectionName } from '../plugins/connections/shared.js';
 
 const mock = vi.hoisted(() => ({ connect: vi.fn() }));
 vi.mock('./index.js', () => ({ connectAcp: mock.connect }));
@@ -216,6 +218,7 @@ describe('core ACP for plugin tabs', () => {
 
   it('returns core streaming dispatch immediately and appends one background reply when it settles', async () => {
     const { managers, handlers } = setup();
+    expect(managers.tab.byLabel('consumer')!.runtime?.acpRoles?.ask?.recordId).toBeUndefined();
     const reply = await managers.command.dispatchLineWithOutput('consumer', 'ask hello', 1);
     expect(reply).toEqual({
       dispatched: true,
@@ -244,6 +247,42 @@ describe('core ACP for plugin tabs', () => {
     expect(settled.backgroundRecord).toEqual(record);
     expect(backgroundRepliesFor(tab)).toEqual([{ id: replyId, output: 'Answer', line: 'ask hello', record }]);
     managers.acp.closeAll();
+  });
+
+  it('uses the current shell title for the first dispatch before its record exists', async () => {
+    const { managers } = setup();
+    managers.tab.byLabel('consumer')!.title = 'Renamed shell';
+
+    const reply = await managers.command.dispatchLineWithOutput('consumer', 'ask hello', 1);
+
+    expect(reply.result).toMatchObject({ role: 'ask', name: 'acp:ask:Renamed shell' });
+    expect(managers.acpRecords.rows()[0]).toMatchObject({ role: 'ask', ownerName: 'Renamed shell' });
+  });
+
+  it('keeps a reused role record name after the shell is renamed', async () => {
+    const { managers, handlers } = setup();
+    await managers.command.dispatchLineWithOutput('consumer', 'ask first', 1);
+    const tab = managers.tab.byLabel('consumer')!;
+    const recordId = tab.runtime?.acpRoles?.ask?.recordId;
+    expect(recordId).toBeDefined();
+
+    handlers().onChunk('First answer');
+    handlers().onEnd('end_turn');
+    await vi.waitFor(() => { expect(managers.acpRecords.rows()[0]?.status).toBe('Idle'); });
+    expect(managers.tab.renameTab(1, 'Renamed shell')).toBeUndefined();
+
+    const reply = await managers.command.dispatchLineWithOutput('consumer', 'ask second', 1);
+    const receipt = reply.result as ShellAcpReceipt;
+    const record = managers.acpRecords.rows().find((row) => row.id === recordId)!;
+    expect(receipt.name).toBe(recordConnectionName(record));
+    expect(receipt.name).toBe('acp:ask:consumer');
+    expect(tab.runtime?.acpRoles?.ask?.recordId).toBe(recordId);
+
+    const dispatch = vi.spyOn(managers.command, 'dispatchTo');
+    openConnectionRecord(managers, {
+      tab: 'consumer', acpRef: { scope: 'tab', label: 'consumer', role: receipt.role },
+    });
+    expect(dispatch).toHaveBeenCalledWith('consumer', `connection ${recordId}`);
   });
 
   it('names the tell record on the settled tell reply and places it under the tell line', async () => {

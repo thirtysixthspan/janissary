@@ -27,6 +27,13 @@ function answeringRecord(managers: Managers, recordId?: string): LogEntry['backg
   return row && { id: row.id, name: recordConnectionName(row) };
 }
 
+function dispatchConnectionName(managers: Managers, label: string, role: AcpRole): string {
+  const tab = managers.tab.byLabel(label);
+  const recordId = tab?.runtime?.acpRoles?.[role]?.recordId;
+  const row = recordId ? managers.acpRecords.rows().find((candidate) => candidate.id === recordId) : undefined;
+  return recordConnectionName(row ?? { kind: 'acp', role, ownerName: tab?.title ?? label });
+}
+
 export function appendAcpBackgroundReply(
   managers: Managers, label: string, input: string, result: AcpPromptResult, id: string,
 ): void {
@@ -51,9 +58,7 @@ export function runAcpCommand(
   const receipt: AcpDispatchReceipt = {
     replyId,
     role,
-    name: recordConnectionName({
-      kind: 'acp', role, ownerName: managers.tab.byLabel(tab.label)?.title ?? tab.label,
-    }),
+    name: dispatchConnectionName(managers, tab.label, role),
   };
   let settled = false;
   const settle = (result: AcpPromptResult) => {
