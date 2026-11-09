@@ -74,8 +74,9 @@ A recognized method that reaches the dispatcher with no handler behind it is rep
 
 ### Blocked-command reports
 
-`reportBlockedCommand` reports a keyboard shortcut the client blocked because its command appeared
-disabled in the client's last state snapshot:
+`reportBlockedCommand` reports a keyboard shortcut, or a command-bar `quit` or `close` line, that the
+client blocked because its command appeared disabled in the client's last state snapshot. The
+disabled quit/close handling is described in [[application-commands]]:
 
 ```json
 {"t":"rpc","id":43,"method":"reportBlockedCommand","params":{"text":"hist","tab":"shell1"}}
