@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Add colocated coverage for the commands payload mapping and topic-data validation.
-
-Existing Issue: `src/plugins/commands/payload.ts` is the only new server module without a colocated test, and its mapping edge cases — parent canonicalization, dropping a parent equal to the name, keeping an unmatched parent, label selection, and optional fields — are only partially exercised through `activate.test.ts`. Severity: 3/10
-
-Existing Risk: 3/10 - A regression in the mapping or validation can ship a wrong parent, label, or malformed payload; the host payload guard catches some shapes but not a wrong parent or label, and the activate tests do not cover the drop/keep rules.
-
-Proposal Risk: 1/10 - A focused test file pins the current transformation without changing production behavior.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "add colocated coverage for the commands payload mapping and validation". Add `src/plugins/commands/payload.test.ts` covering `isCommandsData` accepting a complete snapshot and an empty command list and rejecting null, arrays, missing or mistyped `commands`, `name`, `kind`, `aliases`, `forms`, `parent`, `nativeTool`, the four flags, `source`, `path`, and `problem`; cover `toPayload` mapping rows in order with `label` equal to `name` when `forms` contains `name` and to the first form otherwise, parent canonicalized through a name, alias, and form, an unmatched parent kept, a parent equal to the row's name dropped, and optional `nativeTool`, `problem`, `source`, and `path` preserved. Use a fixture that includes the ask/tell/search form rows and a native child row; the existing `src/plugins/commands/activate.test.ts` mapping assertions must keep passing.
-
-
 * Correct the spec's claim that `commands disable agent agent` changes agent access for `agent`.
 
 Existing Issue: `product/specs/application-commands.md` says `commands disable agent agent` changes agent access for `agent`, but the topic refuses that edit with `Not a native ACP command: agent.` because `agent` is not native; the plan's test and the implementation both expect the refusal. Severity: 2/10
