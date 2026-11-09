@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Add the missing disabledApplicationCommands field to the two full state-event fixtures in the web socket tests.
-
-Existing Issue: web/src/shared/ws/ws.test.ts still sends full state events without disabledApplicationCommands in the dialog-normalization it.each case and the toast test, although the plan says to update every StateEvent fixture unless the case varies the field. Severity: 2/10
-
-Existing Risk: 2/10 - The tests keep exercising a legacy state shape and would not notice a client change that starts requiring the new field; the suite no longer mirrors current server output.
-
-Proposal Risk: 1/10 - Adding the empty list makes the fixtures representative; it does not change the behavior under test.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "add disabledApplicationCommands to the remaining web socket state fixtures". In web/src/shared/ws/ws.test.ts, add disabledApplicationCommands: [] to the state event built inside the "normalizes %s dialog fields to null" it.each case and to the state event used by the toast test. Leave the minimal { t: 'state', tabs: [] } events in the reconnection tests as they are, since they are not full StateEvent fixtures. Run the focused web socket test file; no production code changes.
-
-
 * Cover the new server-side blocked-command report and settings re-broadcast with tests instead of leaving both seams mocked or unexercised.
 
 Existing Issue: ControllerCore.reportBlockedCommand has no test beyond the handler mock, and the createManagers subscription that re-broadcasts state on every settings publication is not exercised, so the unknown-tab guard, the command-disabled notification, and the live client update can regress silently. Severity: 4/10

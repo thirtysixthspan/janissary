@@ -182,6 +182,7 @@ describe('JanusClient', () => {
       t: 'state', tabs: [], activeTab: 0, harnessLaunch: missing, scheduleLaunch: missing,
       tabNameMaxLength: 16, activeTabNameMaxLength: 50, globalHistory: [], syntaxTheme: 'monokai',
       theme: 'dark', tasks: [], profiles: [], projectDir: '/project', version: '1.2.3',
+      disabledApplicationCommands: [],
     }) });
     expect(listener).toHaveBeenCalledWith(expect.objectContaining({ harnessLaunch: null, scheduleLaunch: null, activeTabNameMaxLength: 50,
     }));
@@ -423,7 +424,7 @@ describe('JanusClient', () => {
       data: JSON.stringify({
         t: 'state', tabs: [], activeTab: 0, tabNameMaxLength: 20,
         globalHistory: [], syntaxTheme: 'monokai', theme: 'dark', tasks: [],
-        profiles: [], projectDir: '/tmp', version: '1.2.3',
+        profiles: [], projectDir: '/tmp', version: '1.2.3', disabledApplicationCommands: [],
       }),
     });
 
