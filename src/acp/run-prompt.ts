@@ -13,6 +13,7 @@ import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { coreActivity } from './record-feed.js';
 import { acpRoleRuntime } from './role-state.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
+import { effectiveCommandSetting } from '../native-commands/policy.js';
 
 const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
 
@@ -30,7 +31,7 @@ export function runCorePrompt(
   );
   const settings = managers.nativeCommandSettings?.current();
   const allowedCommands = NATIVE_ACP_COMMANDS.filter((command) => request.commands.includes(command)
-    && (settings?.commands.find((entry) => entry.name === command)?.effectiveAgentAccess ?? true));
+    && effectiveCommandSetting(settings, command).effectiveAgentAccess);
   const runCommand = toolRunner(managers, tools, request.roleName, request.commands, label);
   const recordTool = (text: string) => coreActivity(managers.acpRecords, runtime, 'tool', text, request.role);
   const recordAsyncResult = async (result: Promise<string>) => {

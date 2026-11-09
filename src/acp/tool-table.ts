@@ -6,6 +6,7 @@ import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { nativeCommandName, nativeCommandTool, type NativeCommandTool } from './native-commands.js';
 import { resolveApplicationCommand } from '../application-commands.js';
 import { refuseDisabledCommand } from '../native-commands/dispatch-policy.js';
+import { effectiveCommandSetting } from '../native-commands/policy.js';
 import { notify } from '../notifications/index.js';
 import { createInvocationContext } from '../command/invocation.js';
 
@@ -117,7 +118,7 @@ export function toolRunner(
     const row = resolveApplicationCommand(native);
     const setting = row === undefined
       ? undefined
-      : managers.nativeCommandSettings?.current().commands.find((entry) => entry.name === row.name);
+      : effectiveCommandSetting(managers.nativeCommandSettings?.current(), row.name);
     if (setting?.effectiveEnabled === false) {
       const refusal = refuseDisabledCommand(managers, command, native, label);
       if (refusal !== undefined) return refusal;
