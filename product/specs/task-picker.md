@@ -41,7 +41,7 @@ The task prepares the workspace once, before it drafts anything. Both improvemen
 
 ### Rating a plan's complexity
 
-`rate-plan-complexity.md` rates one plan from 1 to 10 and records the rating as a single line under the plan's title, updating the line when the plan already has one. The plan is the one named in the invocation, in any status folder, or otherwise the only plan among the drafts; several drafts or none stop the task without a rating. It reads the plan and the code the plan touches before rating, and changes nothing in the plan except that line. Run on its own it prepares the workspace first.
+`planning/rate-plan-complexity.md` rates one plan from 1 to 10 and records the rating as a single line under the plan's title, updating the line when the plan already has one. The plan is the one named in the invocation, in any status folder, or otherwise the only plan among the drafts; several drafts or none stop the task without a rating. It reads the plan and the code the plan touches before rating, and changes nothing in the plan except that line. Run on its own it prepares the workspace first.
 
 This task is the single definition of the scale. Both plan improvement tasks end by running it on the plan they just improved, without preparing the workspace or picking a plan again. The minimalism pass keeps its expectation that trimming only lowers a rating.
 
