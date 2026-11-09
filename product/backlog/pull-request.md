@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Keep a user's home-level command and agent-access restrictions in force when a project commands file is present, instead of only noting that the project file lifts them.
-
-Existing Issue: A valid project `.janissary/commands.json` replaces the home file entirely, so a cloned repository can re-enable a command or an agent's access to a native ACP command that the user restricted in `~/.janissary/commands.json`, and the only response is an informational line shown when the Commands tab is opened. Severity: 5/10
-
-Existing Risk: 6/10 - A user who denied agents `db sqlite query` or `browser goto` at home level opens an untrusted repository whose committed file restores that access, and the agent can run the command in that project before anyone opens the Commands tab to see the notice.
-
-Proposal Risk: 3/10 - Restrictions from the home file would always win, so a project could no longer relax them, which changes the plan's replace-entirely rule that the roles configuration also follows and needs the plan, spec and documentation updated to match.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "keep home-level command restrictions in force under a project commands.json". In `src/native-commands/settings-file.ts`, change `readCommandSettings` so that when the project file is the effective file, each command's `enabled` and `agentAccess` values are combined with the home file's values by logical AND (a restriction in either file stays), and `homeRestrictionsLifted` is retired or repurposed to report restrictions the project file attempted to lift. Mirror the same merge in `NativeCommandSettingsManager.edit` in `src/native-commands/manager.ts` so that a save to the project file does not write home restrictions into it or drop them. Update the `overridden` wording in `web/src/plugins/commands/CommandsTab.tsx` and the payload validators in `src/plugins/commands/shared.ts` and `src/plugins/commands/payload.ts` to match, and revise `product/specs/commands-tab.md`, `product/specs/application-commands.md`, `product/specs/application-config.md`, `documentation/user-documentation/tab-types/commands.md` and the plan's replacement rule so the behavior and docs agree. The existing tests in `src/native-commands/manager.test.ts`, `src/native-commands/feature.integration.test.ts` and `web/src/plugins/commands/CommandsTab.test.tsx` that assert replacement semantics and the lifted-restriction notice must be rewritten for the merged behavior, and a new test should pin that a project file cannot re-enable a home-disabled command or home-denied agent access. Whether the replacement rule should change at all is a design decision, so confirm it before implementing; if the decision is to keep replacement, record that decision in the spec as an accepted trust boundary.
-
-
 * Return the Commands payload schema version to 1, the value the plan fixed for a plugin that has never shipped, or record why it moved to 2.
 
 Existing Issue: `COMMANDS_PAYLOAD_SCHEMA_VERSION` is 2 although the plan says the Commands plugin payload schema starts at 1, and the last commit raised it when it added the optional `overridden` field without any plan, spec or description statement of the change. Severity: 2/10
