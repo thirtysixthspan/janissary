@@ -10,7 +10,7 @@ import { messageBus } from './bus.js';
 import { TranscriptLogger } from './transcript/logger.js';
 import { abbreviatePath } from './paths.js';
 import { initDbDir, isConnectionOpen, closeAllConnections } from './connections.js';
-import { loadConfig } from './config.js';
+import * as config from './config.js';
 import { openNotificationsTab } from './notifications/tab.js';
 import { spawnPty } from './pty.js';
 import type { PtyHandlers } from './pty.js';
@@ -40,6 +40,7 @@ vi.mock('./acp-records/store.js', () => ({
 // under the next one's emissions (see the unshrunken-teardown blowup plan), and each started
 // scheduler interval is stopped instead of piling one more onto the file's run.
 const liveControllers: Controller[] = [];
+const liveRoots: string[] = [];
 const makeController = () => {
   let states = 0;
   const c = createController({ emitState: () => { states++; }, sendPty: () => {}, sendPtyExit: () => {} });
@@ -51,6 +52,8 @@ const makeController = () => {
 afterEach(async () => {
   await Promise.all(liveControllers.map((c) => c.shutdown()));
   liveControllers.length = 0;
+  for (const root of liveRoots) rmSync(root, { recursive: true, force: true });
+  liveRoots.length = 0;
 });
 
 const allText = (c: Controller) => c.view().flatMap((t) => t.bufferLines).map((l) => l.text).join('\n');
@@ -126,7 +129,7 @@ describe('Controller', () => {
     mkdirSync(path.join(root, '.janissary'), { recursive: true });
     writeFileSync(path.join(root, '.janissary', 'config.json'), JSON.stringify({ transcriptMaxLines: 3 }));
     try {
-      loadConfig(root);
+      config.loadConfig(root);
       const { c } = makeController();
       // Each unclaimed command is dispatched from janus so the transcript entry goes to janus.
       for (let index = 0; index < 6; index++) { c.dispatch(`unknown-app-command foo${index}`); c.setActiveTab(0); }
@@ -137,7 +140,7 @@ describe('Controller', () => {
       expect(buffer).toContain('foo3');
       expect(buffer).toContain('foo5');
     } finally {
-      loadConfig(mkdtempSync(path.join(tmpdir(), 'janus-cap-reset-'))); // restore the default cap for later tests
+      config.loadConfig(mkdtempSync(path.join(tmpdir(), 'janus-cap-reset-'))); // restore the default cap for later tests
     }
   });
 
@@ -1246,7 +1249,7 @@ describe('Controller messageBus', () => {
     mkdirSync(path.join(root, '.janissary'), { recursive: true });
     writeFileSync(path.join(root, '.janissary', 'config.json'), JSON.stringify({ transcriptMaxLines: 3 }));
     try {
-      loadConfig(root);
+      config.loadConfig(root);
       const { c } = makeController();
       // `agent fooN` appended to the creator tab (janus) each time
       c.managers.tab.append('janus', { input: 'foo1', output: 'ready' });
@@ -1264,7 +1267,7 @@ describe('Controller messageBus', () => {
       expect(trimIdx).toBeGreaterThanOrEqual(0);
       expect(appendIdx).toBeGreaterThan(trimIdx);
     } finally {
-      loadConfig(mkdtempSync(path.join(tmpdir(), 'janus-bus-cap-reset-')));
+      config.loadConfig(mkdtempSync(path.join(tmpdir(), 'janus-bus-cap-reset-')));
     }
   });
 
@@ -1738,5 +1741,79 @@ describe('Controller reportLayout', () => {
     const { c } = makeController();
     expect(() => { c.reportLayout({ sidebarLeft: 0, sidebarRight: 0, tabAreaPct: 0, splitPct: 15 }); }).not.toThrow();
     expect(() => { c.reportLayout({ sidebarLeft: 100, sidebarRight: 100, tabAreaPct: 100, splitPct: 85 }); }).not.toThrow();
+  });
+});
+
+describe('Controller reportBlockedCommand', () => {
+  const makeSettingsController = (commands: Record<string, { enabled: boolean }>) => {
+    const root = mkdtempSync(path.join(tmpdir(), 'janus-blocked-command-'));
+    mkdirSync(path.join(root, '.janissary'), { recursive: true });
+    writeFileSync(path.join(root, '.janissary', 'commands.json'), JSON.stringify(commands));
+    const c = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} }, root);
+    seedRootTab(c.managers.tab);
+    liveControllers.push(c);
+    liveRoots.push(root);
+    return c;
+  };
+
+  // `command-disabled` is an ambient event: it needs its own toggle and a background tab.
+  const withCommandDisabledNotifications = () => {
+    const defaults = config.getConfig();
+    return vi.spyOn(config, 'getConfig').mockReturnValue({
+      ...defaults,
+      osNotifications: false,
+      terminalBell: false,
+      notifications: {
+        events: { ...defaults.notifications!.events, commandDisabled: true },
+        alerts: defaults.notifications!.alerts,
+      },
+    });
+  };
+
+  it('does nothing for a tab that is not open', () => {
+    const c = makeSettingsController({ hist: { enabled: false } });
+    const notifications = withCommandDisabledNotifications();
+    try {
+      expect(() => { c.reportBlockedCommand('hist', 'ghost'); }).not.toThrow();
+      expect(c.managers.notifications.all).toEqual([]);
+    } finally {
+      notifications.mockRestore();
+    }
+  });
+
+  it('records the command-disabled notification for a disabled command on a background tab', () => {
+    const c = makeSettingsController({ hist: { enabled: false } });
+    const notifications = withCommandDisabledNotifications();
+    seedTestTab(c.managers.tab, 'worker');
+    c.setActiveTab(0);
+    const toasts: Array<{ from: string; message: string }> = [];
+    const subscription = messageBus.on('notifications', 'toast', (event) => {
+      if (event.type === 'toast') toasts.push({ from: event.from, message: event.message });
+    });
+    try {
+      c.reportBlockedCommand('hist', 'worker');
+    } finally {
+      subscription.unsubscribe();
+      notifications.mockRestore();
+    }
+    expect(toasts).toEqual([{ from: 'worker', message: 'Command is disabled: hist.' }]);
+    expect(c.managers.notifications.all).toEqual([
+      expect.objectContaining({
+        event: 'command-disabled', tabLabel: 'worker', message: 'Command is disabled: hist.',
+      }),
+    ]);
+  });
+
+  it('records nothing for an enabled command', () => {
+    const c = makeSettingsController({ hist: { enabled: true } });
+    const notifications = withCommandDisabledNotifications();
+    try {
+      seedTestTab(c.managers.tab, 'worker');
+      c.setActiveTab(0);
+      c.reportBlockedCommand('hist', 'worker');
+      expect(c.managers.notifications.all).toEqual([]);
+    } finally {
+      notifications.mockRestore();
+    }
   });
 });

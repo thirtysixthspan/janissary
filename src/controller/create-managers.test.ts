@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
-import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createController, type Controller } from '../controller.js';
@@ -24,7 +24,13 @@ vi.mock('../openers/os-open.js', () => ({ didOsOpen: () => true }));
 vi.mock('../pty.js');
 
 const project = createControllerTestProject();
-afterEach(async () => { await project.dispose(); });
+const nativeSettingsRoots: string[] = [];
+afterEach(async () => {
+  await project.dispose();
+  for (const root of nativeSettingsRoots) rmSync(root, { recursive: true, force: true });
+  nativeSettingsRoots.length = 0;
+  vi.unstubAllEnvs();
+});
 
 const makeController = () => {
   const c = project.create();
@@ -206,5 +212,29 @@ describe('createManagers durable ACP records', () => {
     expect(next.managers.acpRecords.delete(agentId)).toBe(true);
     await next.shutdown();
     expect(make().managers.acpRecords.rows()).toEqual([]);
+  });
+});
+
+describe('createManagers native command settings wiring', () => {
+  it('re-broadcasts state and projects disabled commands when a settings edit publishes', async () => {
+    const base = mkdtempSync(path.join(tmpdir(), 'controller-native-settings-'));
+    nativeSettingsRoots.push(base);
+    const home = path.join(base, 'home');
+    mkdirSync(path.join(home, '.janissary'), { recursive: true });
+    writeFileSync(path.join(home, '.janissary', 'commands.json'), JSON.stringify({ hist: { enabled: true } }));
+    vi.stubEnv('HOME', home);
+
+    const emitState = vi.fn();
+    const c = project.create({ emitState, sendPty: () => {}, sendPtyExit: () => {} });
+    seedRootTab(c.managers.tab);
+    emitState.mockClear();
+
+    await expect(c.managers.nativeCommandSettings.edit({ name: 'hist', setting: { enabled: false } }))
+      .resolves.toEqual({ ok: true });
+
+    expect(emitState).toHaveBeenCalledOnce();
+    const state = c.stateEvent();
+    if (state.t !== 'state') throw new Error('expected a state event');
+    expect(state.disabledApplicationCommands).toContainEqual(expect.objectContaining({ name: 'hist' }));
   });
 });
