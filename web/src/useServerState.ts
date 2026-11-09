@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { JanusClient } from './shared/ws/ws';
-import type { TabView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow } from '@shared/protocol';
+import type { TabView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow, DisabledApplicationCommand } from '@shared/protocol';
 import { useProjectTitle } from './useProjectTitle';
 
 type Setters = {
@@ -17,6 +17,7 @@ type Setters = {
   setTheme: (theme: string) => void;
   setTasks: (tasks: TaskRow[]) => void;
   setProfiles: (profiles: ProfileRow[]) => void;
+  setDisabledApplicationCommands: (commands: DisabledApplicationCommand[]) => void;
 };
 
 export function useTabNameLimits() {
@@ -40,7 +41,7 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     setTabs, setActiveTab, setSecondaryTab, setHarnessLaunch, setScheduleLaunch,
     setTabNameMaxLength, setActiveTabNameMaxLength, setClipboardHistoryMaxEntries,
     setGlobalHistory, setSyntaxTheme, setTheme,
-    setTasks, setProfiles,
+    setTasks, setProfiles, setDisabledApplicationCommands,
   } = setters;
   const [projectDir, setProjectDir] = useState('');
   const [version, setVersion] = useState('');
@@ -51,6 +52,7 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     clipboardHistoryMaxEntries: nextClipboardHistoryMaxEntries,
     globalHistory: nextGlobalHistory, syntaxTheme: nextSyntaxTheme, theme: nextTheme,
     tasks: nextTasks, profiles: nextProfiles,
+    disabledApplicationCommands: nextDisabledApplicationCommands,
     projectDir: nextProjectDir, version: nextVersion,
     harnessLaunch: nextHarnessLaunch, scheduleLaunch: nextScheduleLaunch,
   }) => {
@@ -67,12 +69,13 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     setTheme(nextTheme);
     setTasks(nextTasks);
     setProfiles(nextProfiles);
+    setDisabledApplicationCommands(nextDisabledApplicationCommands);
     setProjectDir(nextProjectDir);
     setVersion(nextVersion);
   }), [
     client, setTabs, setActiveTab, setSecondaryTab, setHarnessLaunch, setScheduleLaunch,
     setTabNameMaxLength, setActiveTabNameMaxLength, setClipboardHistoryMaxEntries,
     setGlobalHistory, setSyntaxTheme, setTheme,
-    setTasks, setProfiles,
+    setTasks, setProfiles, setDisabledApplicationCommands,
   ]);
 }

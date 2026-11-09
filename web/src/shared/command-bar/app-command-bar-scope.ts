@@ -22,6 +22,9 @@ export type AppCommandBarState = {
   queuedLinesOf?: (label: string) => readonly string[] | undefined;
   registerCommandLineInsertion?: (label: string, handler: CommandLineInsertion) => () => void;
   registerCommandLineReplacement?: (label: string, handler: CommandLineReplacement) => () => void;
+  // Whether the application's published command settings disable this line. Optional so a caller
+  // that has no policy treats every line as enabled.
+  disabledApplicationCommand?: (line: string) => boolean;
 };
 
 // The one question a plugin tab's command bar asks the application before it offers a line onward:
@@ -48,9 +51,12 @@ export type AppCommandBar = {
   // Registers where a picked line lands in this tab's bar. Returns the matching unregister.
   registerCommandLineInsertion(handler: CommandLineInsertion): () => void;
   registerCommandLineReplacement(handler: CommandLineReplacement): () => void;
+  // Whether this line names an application command the settings disable.
+  disabledApplicationCommand(line: string): boolean;
 };
 
 const NO_LINES: readonly string[] = [];
+const ALWAYS_ENABLED = () => false;
 
 // The application's command-bar state as one tab sees it. Every label is bound here rather than taken
 // from the caller, so a plugin body cannot run a line as another tab, report another tab as focused,
@@ -80,6 +86,7 @@ export function scopeAppCommandBar(
     queuedLines: state.queuedLinesOf?.(label) ?? NO_LINES,
     registerCommandLineInsertion,
     registerCommandLineReplacement,
+    disabledApplicationCommand: state.disabledApplicationCommand ?? ALWAYS_ENABLED,
   };
 }
 

@@ -17,3 +17,9 @@ export type ApplicationCommandDeclaration = Readonly<{
 }>;
 
 export type ApplicationCommandKind = 'builtin' | 'plugin' | 'help' | 'native';
+
+export type DisabledApplicationCommand = Readonly<{
+  name: string;
+  aliases: readonly string[];
+  forms: readonly string[];
+}>;

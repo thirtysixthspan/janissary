@@ -43,6 +43,8 @@ The command bar accepts the shortcuts below while a shell tab is active. Window 
 | `Delete` | Delete the character after the cursor |
 | Printable characters | Insert at the focused text cursor; in a focused shell, harness, or SSH terminal, send to its program |
 
+The command-backed shortcuts `Ctrl+R`, `Ctrl+A`, `Ctrl+E`, `Cmd+Shift+F`, and `Cmd+T` also honor the Commands tab: when `hist`, `tasks`, `queue`, `search`, or `shell` is disabled, the shortcut does nothing.
+
 `Shift+↑`, `Shift+↓`, `Ctrl+↑`, and `Ctrl+↓` start with a one-line step (22 px), double the distance every second you hold an arrow key, and stop at 10 lines (220 px). Releasing the key or changing direction resets the step. Use `Ctrl+P` or `Ctrl+N` for a steady one-line scroll.
 
 ## Move focus between application sections

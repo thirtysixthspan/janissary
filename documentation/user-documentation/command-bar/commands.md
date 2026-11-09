@@ -71,6 +71,8 @@ Every command's page is also on this site, under **Command Reference** in the si
 
 `commands` opens the [Commands tab](/user-documentation/tab-types/commands), where every application command has an **Enabled** checkbox and every native ACP command also has an **Agent access** checkbox. The tab re-reads the effective `commands.json` file each time it opens. Changes save as you make them, and a failed save shows the refusal above the table while the previous value stays checked.
 
+A disabled command is refused wherever it is dispatched. Its picker, theme dialog, quit confirmation, or save guard does not open from a command bar, and a command-backed shortcut for it does nothing; the line or shortcut reaches the server and is refused there.
+
 `commands enable [agent|global] <command>` and `commands disable [agent|global] <command>` change one setting without opening the tab. Leave out the selector to change whether the command is enabled; use `agent` to change whether agents may use a native command. Names match canonical names, aliases, and fixed forms exactly, ignoring case and repeated spaces, so trailing words are not ignored. A malformed form prints `Usage: commands [enable|disable [agent|global] <command>].`; an unknown name prints `Unknown application command: <command>.`; and agent access on a command that is not native prints `Not a native ACP command: <canonical>.`
 
 The tab never docks itself, but `tab dock` can dock it like any bundled plugin tab. `commands` is an ordinary setting, so it can disable itself and be re-enabled from its open tab. Once that tab is closed, a disabled `commands` is refused like any other command until you edit the effective `commands.json` by hand.

@@ -48,6 +48,10 @@ export type CoreRpcCall =
   // always holds the latest values for bare `layout` to read synchronously. Client-only, no reply —
   // the reverse of the server->client `layout` event.
   | { method: 'reportLayout'; params: { sidebarLeft: number; sidebarRight: number; tabAreaPct: number; splitPct: number } }
+  // Report a shortcut blocked by the client's disabled-command projection, so the server can re-check
+  // against its own snapshot and emit the existing command-disabled notification. `tab` is ignored
+  // when it names no open tab.
+  | { method: 'reportBlockedCommand'; params: { text: string; tab: string } }
   // Dock a dockable tab (file navigator or notifications) into a sidebar (`'left'` | `'right'`), or
   // undock it back to the center tab strip (`null`). Explicit set, not "cycle" — the cycle order
   // lives client-side. The handler is generic, so both dockable tab kinds share this one RPC.

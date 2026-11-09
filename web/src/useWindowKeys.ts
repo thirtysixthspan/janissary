@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import type { JanusClient } from './shared/ws/ws';
+import type { DisabledApplicationCommand } from '@shared/protocol';
 import { SYNTAX_THEMES } from '@shared/syntax-themes';
 import { APP_THEMES } from '@shared/app-themes';
 import { handlePickerKey } from './shared/picker-keyboard';
@@ -11,7 +12,8 @@ import { buildOverlayOpenState, firstOpenOverlay } from './pickers/overlay-regis
 import { eventChordId } from './overlay-plugins/chords';
 import { openOverlayForChord, contributedOverlayOnScreen } from './shared/contributed-overlays';
 import { isTabSwitchChord } from './shared/terminal/window-chords';
-import { appChordAction, type AppChordAction } from './shared/app-chords';
+import { appChordAction, appChordCommand, type AppChordAction } from './shared/app-chords';
+import { disabledApplicationCommand } from './shared/command-availability';
 import type { PluginChordRegistry } from './plugins/PluginChords';
 import { enclosingTabLabel } from './shared/tab-label-lookup';
 import type { PickerKeySnapshot, PickerKeyCallbacks } from './pickers/picker/key-bindings';
@@ -23,6 +25,10 @@ export type StateSnapshot = PickerKeySnapshot & {
   // The current tab's label when it is a plugin tab. A chord pressed with focus on nothing at all is
   // that tab's to claim, so a click on its metadata row does not hand its `Ctrl+R` to the application.
   currentPluginTab?: string;
+  // The application commands the server currently disables, and the active tab's label to attribute
+  // a blocked shortcut to when the key event is not inside a tab.
+  disabledApplicationCommands?: readonly DisabledApplicationCommand[];
+  currentTabLabel?: string;
 };
 
 export type Callbacks = PickerKeyCallbacks;
@@ -168,10 +174,20 @@ function chordTabLabel(target: EventTarget | null, snap: StateSnapshot): string 
 }
 
 function handleChordKeys(
-  e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks, chords: PluginChordRegistry,
+  e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks, chords: PluginChordRegistry, client: JanusClient,
 ): boolean {
   const chordId = eventChordId(e);
   if (chordId === undefined) return false;
+  const command = appChordCommand(chordId);
+  if (!e.isComposing && command !== undefined
+    && disabledApplicationCommand(command, snap.disabledApplicationCommands) !== undefined) {
+    e.preventDefault();
+    const tab = chordTabLabel(e.target, snap) ?? snap.currentTabLabel;
+    if (tab !== undefined) {
+      client.send({ method: 'reportBlockedCommand', params: { text: command, tab } });
+    }
+    return true;
+  }
   if (chords.run(chordId, chordTabLabel(e.target, snap))) { e.preventDefault(); return true; }
   if (e.metaKey && metaChordOpener(e, snap, cb)) return true;
   if (e.ctrlKey) {
@@ -194,7 +210,7 @@ export function useWindowKeys(
       const cb = callbacksRef.current;
       if (!snap || !cb) return;
       if (dispatchModalKey(e, snap, cb)) return;
-      if (handleChordKeys(e, snap, cb, chords)) return;
+      if (handleChordKeys(e, snap, cb, chords, client)) return;
       handleTabShortcuts(e, client);
     };
     globalThis.addEventListener('keydown', onKey);

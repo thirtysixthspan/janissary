@@ -27,6 +27,13 @@ const CASES: Array<[keyof typeof CORE_PARAMS, Record<string, unknown>, Array<Rec
     { sidebarLeft: NaN, sidebarRight: 300, tabAreaPct: 62.5 },
     { sidebarLeft: 240, sidebarRight: 300, tabAreaPct: 62.5, splitPct: Infinity },
   ]],
+  ['reportBlockedCommand', { text: 'theme', tab: 'shell1' }, [
+    {},
+    { text: 'theme' },
+    { tab: 'shell1' },
+    { text: 7, tab: 'shell1' },
+    { text: 'theme', tab: null },
+  ]],
   ['setDock', { index: 0, dock: null }, [{ index: 0 }, { index: 0, dock: 'centre' }]],
   ['launchShellFor', { label: 'one' }, [{ label: [] }]],
   ['openDiffFor', { label: 'one' }, [{ label: [] }]],

@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@testing-library/react';
 import React, { useRef } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { DisabledApplicationCommand } from '@shared/protocol';
 import { useWindowKeys } from './useWindowKeys';
 import { createPluginChordRegistry, type PluginChordRegistry } from './plugins/PluginChords';
 import { declareOverlayClaims, installOverlayOpener, openContributedOverlay, registerContributedOverlay } from './shared/contributed-overlays';
@@ -24,9 +25,10 @@ function publishClaiming(chords: string[]) {
   return opened;
 }
 
-function dispatchKey(key: string, opts: { metaKey?: boolean; ctrlKey?: boolean; shiftKey?: boolean } = {}) {
+function dispatchKey(key: string, opts: { metaKey?: boolean; ctrlKey?: boolean; shiftKey?: boolean; cancelable?: boolean } = {}) {
   const event = new KeyboardEvent('keydown', {
-    key, metaKey: opts.metaKey ?? false, ctrlKey: opts.ctrlKey ?? false, shiftKey: opts.shiftKey ?? false, bubbles: true,
+    key, metaKey: opts.metaKey ?? false, ctrlKey: opts.ctrlKey ?? false, shiftKey: opts.shiftKey ?? false,
+    bubbles: true, cancelable: opts.cancelable ?? false,
   });
   globalThis.dispatchEvent(event);
   return event;
@@ -36,6 +38,7 @@ function TestComponent({
   themePickerOpen, pickerOpen, navOpen, queueOpen, taskPickerOpen, profilePickerOpen,
   quickOpenOpen, callbacks, client,
   chords = createPluginChordRegistry(), currentPluginTab,
+  disabledApplicationCommands, currentTabLabel,
 }: {
   themePickerOpen?: boolean;
   pickerOpen?: boolean;
@@ -47,6 +50,8 @@ function TestComponent({
   client?: { send: ReturnType<typeof vi.fn> };
   chords?: PluginChordRegistry;
   currentPluginTab?: string;
+  disabledApplicationCommands?: DisabledApplicationCommand[];
+  currentTabLabel?: string;
   callbacks?: Partial<{
     runCommand: (t: string) => void;
     setPickerIndex: (s: (p: number) => number) => void;
@@ -102,6 +107,8 @@ function TestComponent({
     ],
     quickOpenOpen: quickOpenOpen ?? false,
     currentPluginTab,
+    disabledApplicationCommands,
+    currentTabLabel,
   });
   const cb = {
     runCommand: vi.fn(),
@@ -647,6 +654,119 @@ describe('useWindowKeys', () => {
       dispatchKey('g', { ctrlKey: true });
 
       expect(openTabNav).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('a disabled application command', () => {
+    const row = (name: string): DisabledApplicationCommand => ({ name, aliases: [], forms: [name] });
+
+    it.each([
+      ['r', { ctrlKey: true }, 'hist'],
+      ['e', { ctrlKey: true }, 'queue'],
+      ['a', { ctrlKey: true }, 'tasks'],
+      ['f', { metaKey: true, shiftKey: true }, 'search'],
+      ['t', { metaKey: true }, 'shell'],
+    ] as const)('blocks the %s chord for %s and reports the active tab', (key, modifiers, command) => {
+      const client = { send: vi.fn() };
+      render(React.createElement(TestComponent, {
+        client, currentTabLabel: 'agent', disabledApplicationCommands: [row(command)],
+      }));
+
+      const event = dispatchKey(key, { ...modifiers, cancelable: true });
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(client.send).toHaveBeenCalledExactlyOnceWith({
+        method: 'reportBlockedCommand', params: { text: command, tab: 'agent' },
+      });
+    });
+
+    it('blocks a plugin claim on Ctrl+R before the plugin runs', () => {
+      const chords = createPluginChordRegistry();
+      const handler = vi.fn();
+      chords.register('shell', 'shell', 'ctrl+r', handler);
+      const client = { send: vi.fn() };
+      render(React.createElement(TestComponent, {
+        client, chords, currentPluginTab: 'shell', disabledApplicationCommands: [row('hist')],
+      }));
+
+      const event = dispatchKey('r', { ctrlKey: true, cancelable: true });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
+      expect(client.send).toHaveBeenCalledWith({
+        method: 'reportBlockedCommand', params: { text: 'hist', tab: 'shell' },
+      });
+    });
+
+    it('blocks a plugin claim on Cmd+T before the plugin runs', () => {
+      const chords = createPluginChordRegistry();
+      const handler = vi.fn();
+      chords.register('shell', 'shell', 'meta+t', handler);
+      const client = { send: vi.fn() };
+      render(React.createElement(TestComponent, {
+        client, chords, currentPluginTab: 'shell', disabledApplicationCommands: [row('shell')],
+      }));
+
+      dispatchKey('t', { metaKey: true, cancelable: true });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(client.send).toHaveBeenCalledWith({
+        method: 'reportBlockedCommand', params: { text: 'shell', tab: 'shell' },
+      });
+    });
+
+    it('attributes a blocked chord to the tab that holds focus', () => {
+      const client = { send: vi.fn() };
+      render(React.createElement(TestComponent, {
+        client, currentTabLabel: 'agent', disabledApplicationCommands: [row('queue')],
+      }));
+      const tabBody = document.createElement('div');
+      tabBody.dataset.tabLabel = 'worker';
+      const bar = document.createElement('textarea');
+      tabBody.append(bar);
+      document.body.append(tabBody);
+      bar.focus();
+
+      fireEvent.keyDown(bar, { key: 'e', ctrlKey: true, cancelable: true });
+
+      expect(client.send).toHaveBeenCalledWith({
+        method: 'reportBlockedCommand', params: { text: 'queue', tab: 'worker' },
+      });
+      tabBody.remove();
+    });
+
+    it('leaves chords that name no command unchanged', () => {
+      const client = { send: vi.fn() };
+      const openTabNav = vi.fn();
+      const openQuickOpen = vi.fn();
+      render(React.createElement(TestComponent, {
+        client, currentTabLabel: 'agent', callbacks: { openTabNav, openQuickOpen },
+        disabledApplicationCommands: [row('hist'), row('queue'), row('tasks'), row('search'), row('shell')],
+      }));
+
+      dispatchKey('g', { ctrlKey: true });
+      dispatchKey('p', { metaKey: true });
+      const editorFind = dispatchKey('f', { metaKey: true, cancelable: true });
+
+      expect(openTabNav).toHaveBeenCalledTimes(1);
+      expect(openQuickOpen).toHaveBeenCalledTimes(1);
+      expect(editorFind.defaultPrevented).toBe(false);
+      expect(client.send).not.toHaveBeenCalled();
+    });
+
+    it('never reports a blocked command while a key is being composed', () => {
+      const client = { send: vi.fn() };
+      render(React.createElement(TestComponent, {
+        client, currentTabLabel: 'agent', disabledApplicationCommands: [row('hist')],
+      }));
+
+      const composing = new KeyboardEvent('keydown', {
+        key: 'r', ctrlKey: true, bubbles: true, cancelable: true,
+      });
+      Object.defineProperty(composing, 'isComposing', { value: true });
+      globalThis.dispatchEvent(composing);
+
+      expect(client.send).not.toHaveBeenCalled();
     });
   });
 });

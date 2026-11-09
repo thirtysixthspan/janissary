@@ -23,8 +23,9 @@ export function useAppCommandBarState(input: {
   onFocusTab: (label: string | undefined) => void;
   insertions: PluginCommandLineInsertions;
   replacements: PluginCommandLineReplacements;
+  disabledApplicationCommand?: (line: string) => boolean;
 }): AppCommandBarState {
-  const { intercept, ghostHistory, pickers, queueTab, tabs, onFocusTab, insertions, replacements } = input;
+  const { intercept, ghostHistory, pickers, queueTab, tabs, onFocusTab, insertions, replacements, disabledApplicationCommand } = input;
   const queuedLinesOf = useCallback(
     (label: string) => tabs.find((tab) => tab.label === label)?.commandQueue,
     [tabs],
@@ -54,5 +55,6 @@ export function useAppCommandBarState(input: {
     queuedLinesOf,
     registerCommandLineInsertion: register,
     registerCommandLineReplacement: registerReplacement,
+    disabledApplicationCommand,
   };
 }

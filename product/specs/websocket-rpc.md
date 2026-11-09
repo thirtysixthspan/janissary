@@ -3,9 +3,15 @@
 ### State snapshots
 
 Each state update supplies the displayed tabs and selections, tab-name limits, command history,
-themes, task and profile lists, launch dialogs, and project title information together. The active
-tab's name limit is applied independently of the inactive-tab limit. An absent secondary selection
-clears the secondary tab. Missing or null launch dialogs are treated as closed.
+themes, task and profile lists, launch dialogs, project title information, and the application
+commands whose effective setting is disabled. The active tab's name limit is applied independently
+of the inactive-tab limit. An absent secondary selection clears the secondary tab. Missing or null
+launch dialogs are treated as closed.
+
+The disabled-command list holds only the normalized name, aliases, and fixed forms of each command
+whose effective setting is off, with parent effects already folded in; agent-only restrictions are
+not part of this list. It is replaced with every snapshot, so a settings edit or a Commands-tab
+refresh reaches every connected client through the existing state broadcast.
 
 The most recent snapshot is kept by the client, so the app shows the session's current state as
 soon as it is ready to display it, even when the snapshot answering `init` arrived first. A launch
@@ -65,6 +71,20 @@ leaves the remote content, local cached copy, and editor draft unchanged while t
 overwrite confirmation. Confirming overwrite allows the save to replace the changed content.
 
 A recognized method that reaches the dispatcher with no handler behind it is reported the same way — an error naming the method — rather than being answered with a successful acknowledgement for an action that never ran. A client is never told a request succeeded unless it did.
+
+### Blocked-command reports
+
+`reportBlockedCommand` reports a keyboard shortcut the client blocked because its command appeared
+disabled in the client's last state snapshot:
+
+```json
+{"t":"rpc","id":43,"method":"reportBlockedCommand","params":{"text":"hist","tab":"shell1"}}
+```
+
+Both fields must be strings. The server ignores a `tab` that names no open tab. Otherwise it
+re-resolves `text` against its current settings and, when the command is disabled, emits the ordinary
+`command-disabled` notification for that tab. The request is acknowledged and never dispatches the
+command, so a stale client cannot use it to run anything.
 
 ### Tab-plugin methods
 

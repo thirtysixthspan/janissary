@@ -293,6 +293,8 @@ background tab.
 
 `command-disabled` carries the exact refusal `Command is disabled: <command>.` from the originating tab. It is default-off, suppressed while that tab is active, and uses the default-muted alert (`desktop: false`, `sound: "none"`).
 
+A keyboard shortcut the client blocks because its command appears disabled is reported to the server, which re-checks its current settings and records the same `command-disabled` event against the focused tab or the active tab. The report adds no event type, notification path, or config field: the event's default-off toggle and active-tab focus suppression still apply, so a blocked shortcut from the active tab is silent.
+
 ### Focus suppression
 
 An ambient event on the **currently active** tab never produces a notification — only background

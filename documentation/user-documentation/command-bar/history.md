@@ -24,6 +24,8 @@ Press `→` or `End` at the end of your typed text to accept the whole suggestio
 
 `Ctrl+R` (or the `hist` command) opens a window listing the tab's recent commands, most recent at the bottom. The picker spans the tab's width and sits against the bottom, just above the command bar:
 
+When `hist` is disabled in the Commands tab, `Ctrl+R` and `hist` do nothing; the line is refused by the server.
+
 ![The history picker overlay listing recent commands above the command bar, with one row selected.](/screenshots/history-picker.png)
 
 `↑`/`↓` move the selection, `Return` runs the selected command, `Escape` closes without running anything. A row can also be clicked. With no history yet, the window shows `(no history)`.

@@ -42,6 +42,7 @@ export const CORE_PARAMS: Record<CoreRpcCall['method'], ParamsDecoder> = {
   ptyKill: (p) => isString(p.id),
   reportLayout: (p) => isFiniteNumber(p.sidebarLeft) && isFiniteNumber(p.sidebarRight)
     && isFiniteNumber(p.tabAreaPct) && isFiniteNumber(p.splitPct),
+  reportBlockedCommand: (p) => isString(p.text) && isString(p.tab),
   // Checked as plain strings here and as hex colors at the point of use: this decoder's job is
   // shape, and refusing to admit a color would answer a formatting mistake the same way it answers a
   // malformed frame. `palette` is shape-checked as an optional array of 16 strings here and refused

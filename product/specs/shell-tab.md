@@ -76,6 +76,9 @@ collides with a command name is swallowed by the command. A shell waiting at a `
 asking for a password, cannot be given `theme` or `files` without the `!` prefix. The command bar
 warns about none of this; `!` is the override, and it is documented in `help keys`. The bare `clear`
 command is sent directly to zsh so it clears the terminal, while `/clear` still clears the app transcript.
+When `hist` or `search` is disabled in the Commands tab, the bar skips its local history and
+transcript-find routes and offers those lines to the server, which refuses them; `!hist`,
+`!search transcript`, and bare `clear` still take their shell routes.
 
 The shell launcher is also an application command in this bar: `shell <name> -w` opens a sibling shell
 with that name and a fresh workspace. To run a zsh command whose text starts with `shell`, prefix it

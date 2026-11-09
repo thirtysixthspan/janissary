@@ -49,6 +49,7 @@ import { NativeCommandSettingsManager } from '../native-commands/manager.js';
 // `MANAGER_DISPOSE_ORDER` in `../managers.ts`; change that when a teardown dependency changes.
 export function createManagers(managers: Managers, projectDir?: string): void {
   managers.nativeCommandSettings = new NativeCommandSettingsManager(projectDir);
+  managers.nativeCommandSettings.subscribe(() => { messageBus.emit('state', { type: 'dirty' }); });
   managers.acpRecords = new AcpSessionRecords({ projectDir });
   managers.agent = new AgentRunManager(managers);
   // First: it takes no other manager, and `TabManager` below can already reach it when a feed is

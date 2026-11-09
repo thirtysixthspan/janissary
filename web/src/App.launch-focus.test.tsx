@@ -79,6 +79,7 @@ describe('App launched with the janus shell tab', () => {
     t: 'state', tabs: [tab], activeTab: 0, tabNameMaxLength: 16, activeTabNameMaxLength: 50,
     clipboardHistoryMaxEntries: 15, globalHistory: [], syntaxTheme: 'github-dark', theme: 'dark', tasks: [], profiles: [],
     projectDir: '/tmp', version: '1.2.3', harnessLaunch: null, scheduleLaunch: null,
+    disabledApplicationCommands: [],
   };
 
   it('puts the keyboard in the janus command bar, not its terminal', async () => {

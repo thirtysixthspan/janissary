@@ -10,6 +10,8 @@ search parseConfig
 
 Or press `Cmd+Shift+F` while the app has keyboard focus, which does the same as a bare `search`. A focused full-screen harness or SSH terminal sends that chord to its program, and an embedded web page keeps it for its browser; switch to another app tab to start project search. Use [Quick open](/user-documentation/command-bar/quick-open) when you know a file's name and want to jump to it. Use the search tab when you want to know where something is used.
 
+When `search` is disabled in the Commands tab, `Cmd+Shift+F` and bare `search` do nothing; the line is refused by the server.
+
 ## Open the search tab
 
 There is only ever one search tab, titled `search`. Bare `search` opens it, or focuses it if it's already open. `search <phrase>` opens or focuses it and searches for that phrase straight away. If the tab is already open, the phrase replaces whatever was in its search bar and becomes the most recent entry in its term history.

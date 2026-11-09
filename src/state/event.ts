@@ -4,6 +4,7 @@ import { getConfig } from '../config.js';
 import { globalCommands } from '../global-history.js';
 import { cachedTasks, cachedProfileRows } from './listings.js';
 import { appVersionNumber } from '../cli-info.js';
+import { projectDisabledApplicationCommands } from '../native-commands/state.js';
 
 // Full state snapshot sent on `init` and whenever anything changes — shared by index.ts's
 // broadcast-driving emitState and message-handler.ts's `init` reply.
@@ -22,5 +23,8 @@ export function buildStateEvent(controller: ControllerCore): ServerEvent {
     globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme, theme: getConfig().theme,
     tasks: cachedTasks(controller.rootDir),
     profiles: cachedProfileRows(), projectDir: controller.rootDir, version: appVersionNumber(),
+    disabledApplicationCommands: projectDisabledApplicationCommands(
+      controller.managers.nativeCommandSettings?.current(),
+    ),
   };
 }

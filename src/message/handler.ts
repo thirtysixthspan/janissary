@@ -105,6 +105,9 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     }
     case 'reportLayout': { controller.reportLayout(message.params); break;
     }
+    case 'reportBlockedCommand': {
+      controller.reportBlockedCommand(message.params.text, message.params.tab); break;
+    }
     case 'fileNavigatorToggle':
     case 'fileNavigatorCollapseAll':
     case 'fileNavigatorPull':

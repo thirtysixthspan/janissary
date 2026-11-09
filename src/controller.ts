@@ -14,6 +14,7 @@ import { openConnectionRecord } from './controller/connection-records.js';
 import { openRecordingFor } from './controller/recording.js';
 import { setClientLayout } from './client-layout.js';
 import { createControllerAdapters, type ControllerMembers } from './controller/create-adapters.js';
+import { refuseDisabledCommand } from './native-commands/dispatch-policy.js';
 
 // The controller's own surface. The five adapter surfaces are attached by `createController` below
 // rather than declared here, and `Controller` is the composition of the two.
@@ -80,6 +81,11 @@ export class ControllerCore {
   openRecordingFor(label: string): void { openRecordingFor(this.managers, label); }
   reportLayout(layout: { sidebarLeft: number; sidebarRight: number; tabAreaPct: number; splitPct: number }): void {
     setClientLayout(layout);
+  }
+
+  reportBlockedCommand(text: string, tab: string): void {
+    if (!this.managers.tab.byLabel(tab)) return;
+    refuseDisabledCommand(this.managers, text, text, tab);
   }
 
   // Tab-completion for the command line (reuses the shared `completeCommandLine`): filesystem

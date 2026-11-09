@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode, RefObject } from 'react';
-import type { TabView } from '@shared/protocol';
+import type { TabView, DisabledApplicationCommand } from '@shared/protocol';
 import { AppCommandBarProvider, AppCommandBarTabScope, useAppCommandBar, useAppCommandLine } from './AppCommandBar';
 import { registerCommandLineInsertion, type AppCommandBarState } from './app-command-bar-scope';
+import { disabledApplicationCommand } from '../command-availability';
 import type { PickerCommands } from './picker-commands';
 
 const tab = (label: string, overrides: Partial<TabView> = {}) => ({ label, ...overrides }) as TabView;
@@ -15,7 +16,16 @@ type Options = {
   openers?: Partial<PickerCommands>;
   onPickerOpen?: (sourceTab: string | undefined) => void;
   navOpen?: boolean;
+  disabledApplicationCommand?: (line: string) => boolean;
 };
+
+const disabledBy = (rows: DisabledApplicationCommand[]) => (
+  (line: string) => disabledApplicationCommand(line, rows) !== undefined
+);
+
+const disabledRow = (name: string, forms: readonly string[], aliases: readonly string[] = []): DisabledApplicationCommand => ({
+  name, aliases, forms,
+});
 
 function build(options: Options = {}) {
   const openers = {
@@ -26,17 +36,17 @@ function build(options: Options = {}) {
   const openQuitConfirm = vi.fn();
   const setNavOpen = vi.fn();
   const openTabNavWithQuery = vi.fn();
-  const guardRef = { current: options.guard ?? null } as RefObject<((index: number) => boolean) | null>;
-  const { result } = renderHook(() => useAppCommandLine({
+  const { result, rerender } = renderHook((current: Options) => useAppCommandLine({
     ...openers,
-    navOpen: options.navOpen ?? false, setNavOpen, openTabNavWithQuery,
-    tabs: options.tabs ?? [tab('shell1')],
-    activeTab: options.activeTab ?? 0,
+    navOpen: current.navOpen ?? false, setNavOpen, openTabNavWithQuery,
+    tabs: current.tabs ?? [tab('shell1')],
+    activeTab: current.activeTab ?? 0,
     openQuitConfirm,
-    guardRef,
-    onPickerOpen: options.onPickerOpen,
-  }));
-  return { intercept: result.current, openers, openQuitConfirm, setNavOpen, openTabNavWithQuery };
+    guardRef: { current: current.guard ?? null } as RefObject<((index: number) => boolean) | null>,
+    onPickerOpen: current.onPickerOpen,
+    disabledApplicationCommand: current.disabledApplicationCommand,
+  }), { initialProps: options });
+  return { intercept: result.current, result, openers, openQuitConfirm, setNavOpen, openTabNavWithQuery, rerender };
 }
 
 describe('useAppCommandLine', () => {
@@ -164,6 +174,61 @@ describe('useAppCommandLine', () => {
     expect(intercept('!quit')).toBe(false);
     expect(openQuitConfirm).not.toHaveBeenCalled();
     expect(openers.openAppThemePicker).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['quit', ['quit']],
+    ['theme', ['theme']],
+    ['hist', ['hist']],
+    ['queue', ['queue']],
+    ['tasks', ['tasks']],
+    ['syntax theme', ['syntax theme']],
+    ['profile launch', ['profile launch']],
+  ] as const)('returns false and opens nothing when %s is disabled', (line, _forms) => {
+    const rows = [disabledRow(line, [line])];
+    const { intercept, openers, openQuitConfirm } = build({ disabledApplicationCommand: disabledBy(rows) });
+
+    expect(intercept(line)).toBe(false);
+    for (const opener of Object.values(openers)) expect(opener).not.toHaveBeenCalled();
+    expect(openQuitConfirm).not.toHaveBeenCalled();
+  });
+
+  it('returns false for bare and named close when close is disabled', () => {
+    const guard = vi.fn(() => true);
+    const { intercept, openQuitConfirm } = build({
+      tabs: [tab('shell1'), tab('other')], guard,
+      disabledApplicationCommand: disabledBy([disabledRow('close', ['close'], ['exit'])]),
+    });
+
+    for (const line of ['close', 'exit', 'close other', '/close']) {
+      expect(intercept(line), line).toBe(false);
+    }
+    expect(guard).not.toHaveBeenCalled();
+    expect(openQuitConfirm).not.toHaveBeenCalled();
+  });
+
+  it('leaves nav, clip, `!quit`, and an ordinary line ungated', () => {
+    const rows = [
+      disabledRow('quit', ['quit']), disabledRow('theme', ['theme']),
+      disabledRow('hist', ['hist']), disabledRow('close', ['close']),
+    ];
+    const { intercept, openTabNavWithQuery, openQuitConfirm } = build({ disabledApplicationCommand: disabledBy(rows) });
+
+    expect(intercept('nav')).toBe(true);
+    expect(openTabNavWithQuery).toHaveBeenCalledWith('');
+    expect(intercept('clip')).toBe(false);
+    expect(intercept('!quit')).toBe(false);
+    expect(intercept('ls -la')).toBe(false);
+    expect(openQuitConfirm).not.toHaveBeenCalled();
+  });
+
+  it('applies a later row update to the next intercept', () => {
+    const { intercept, rerender, result, openers } = build();
+
+    expect(intercept('theme')).toBe(true);
+    rerender({ disabledApplicationCommand: disabledBy([disabledRow('theme', ['theme'])]) });
+    expect(result.current('theme')).toBe(false);
+    expect(openers.openAppThemePicker).toHaveBeenCalledTimes(1);
   });
 });
 

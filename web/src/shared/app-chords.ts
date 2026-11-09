@@ -27,15 +27,22 @@ export type AppChordAction =
 
 export type AppChordOwner = 'window' | 'sectionNav' | 'editor';
 
-export const APP_CHORDS: Readonly<Record<string, { action: AppChordAction; owner: AppChordOwner }>> = {
-  'ctrl+r': { action: 'history', owner: 'window' },
+export type AppChord = {
+  action: AppChordAction;
+  owner: AppChordOwner;
+  // The application command this chord runs, when it runs one. A disabled command blocks the chord.
+  command?: string;
+};
+
+export const APP_CHORDS: Readonly<Record<string, AppChord>> = {
+  'ctrl+r': { action: 'history', owner: 'window', command: 'hist' },
   'ctrl+g': { action: 'tabNav', owner: 'window' },
-  'ctrl+e': { action: 'queue', owner: 'window' },
-  'ctrl+a': { action: 'tasks', owner: 'window' },
+  'ctrl+e': { action: 'queue', owner: 'window', command: 'queue' },
+  'ctrl+a': { action: 'tasks', owner: 'window', command: 'tasks' },
   'meta+f': { action: 'editorSearch', owner: 'editor' },
-  'meta+shift+f': { action: 'projectSearch', owner: 'window' },
+  'meta+shift+f': { action: 'projectSearch', owner: 'window', command: 'search' },
   'meta+p': { action: 'quickOpen', owner: 'window' },
-  'meta+t': { action: 'newShellTab', owner: 'window' },
+  'meta+t': { action: 'newShellTab', owner: 'window', command: 'shell' },
   // Claimed only when the key lands inside an element marked `data-claims-shift-tab`, which is how
   // `useSectionNav` wraps focus in a dialog. Reserving it is still right: a plugin binding it would work
   // sometimes and do nothing the rest of the time.
@@ -46,4 +53,8 @@ export const APP_CHORDS: Readonly<Record<string, { action: AppChordAction; owner
 // `constructor`, `toString` — cannot resolve to a function through the prototype chain.
 export function appChordAction(chordId: string): AppChordAction | undefined {
   return Object.hasOwn(APP_CHORDS, chordId) ? APP_CHORDS[chordId]?.action : undefined;
+}
+
+export function appChordCommand(chordId: string): string | undefined {
+  return Object.hasOwn(APP_CHORDS, chordId) ? APP_CHORDS[chordId]?.command : undefined;
 }

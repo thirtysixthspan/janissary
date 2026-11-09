@@ -18,6 +18,7 @@ const AppCommandBarContext = createContext<AppCommandBarState | null>(null);
 // The tab a plugin body renders in, and whether that body is on screen.
 type TabScope = { label: string; active: boolean };
 const AppCommandBarTabContext = createContext<TabScope | undefined>(undefined);
+const NO_DISABLED_COMMAND = () => false;
 
 // Provided once, by the app shell. Not published to plugins: a plugin body reads the state through
 // `useAppCommandBar`, already narrowed to its own tab.
@@ -85,14 +86,17 @@ export function useAppCommandLine(params: PickerCommands & {
   openQuitConfirm: () => void;
   guardRef: RefObject<((index: number) => boolean) | null>;
   onPickerOpen?: (sourceTab: string | undefined) => void;
+  disabledApplicationCommand?: (line: string) => boolean;
 }): (line: string, sourceTab?: string, sourceVisible?: boolean) => boolean {
   const {
     tabs, activeTab, openQuitConfirm, guardRef,
     openPicker, openThemePicker, openAppThemePicker, openQueue, openTaskPicker, openProfilePicker,
     onPickerOpen, navOpen, setNavOpen, openTabNavWithQuery,
+    disabledApplicationCommand = NO_DISABLED_COMMAND,
   } = params;
 
   return useCallback((line: string, sourceTab?: string, sourceVisible = true): boolean => {
+    if (disabledApplicationCommand(line)) return false;
     const verdict = classifyCommandBarSubmit(line, tabs, activeTab, sourceTab);
     if (verdict.kind === 'overlay') {
       if (!sourceVisible) return true;
@@ -119,6 +123,6 @@ export function useAppCommandLine(params: PickerCommands & {
   }, [
     tabs, activeTab, openQuitConfirm, guardRef,
     openPicker, openThemePicker, openAppThemePicker, openQueue, openTaskPicker, openProfilePicker, onPickerOpen,
-    navOpen, setNavOpen, openTabNavWithQuery,
+    navOpen, setNavOpen, openTabNavWithQuery, disabledApplicationCommand,
   ]);
 }
