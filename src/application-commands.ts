@@ -4,6 +4,7 @@ import { tabPluginCatalog } from './plugins/catalog.js';
 import { NATIVE_ACP_COMMANDS } from './plugins/roles/shared.js';
 import { nativeCommandTool } from './acp/native-commands.js';
 import type { TabPluginDeclaration } from './plugins/api.js';
+import { atFormBoundary, normalizeCommandName, rankCommandRows } from './shared/command-matching.js';
 
 const BUILTIN_FORMS: Readonly<Record<string, ApplicationCommandDeclaration>> = {
   agent: { name: 'agent', forms: ['agent'] }, ask: { name: 'ask', forms: ['ask'] },
@@ -32,10 +33,6 @@ const BUILTIN_FORMS: Readonly<Record<string, ApplicationCommandDeclaration>> = {
   unmonitor: { name: 'unmonitor', forms: ['unmonitor', 'unmonitor --all'] },
   monitors: { name: 'monitors', forms: ['monitors'] },
 };
-
-function normalize(value: string): string {
-  return value.trim().replaceAll(/\s+/gu, ' ').toLowerCase();
-}
 
 function builtinRows(declaration: ApplicationCommandDeclaration): ApplicationCommandRow[] {
   const aliases = declaration.aliases ?? [];
@@ -75,7 +72,7 @@ function buildApplicationCommands(): ApplicationCommandRow[] {
     const parent = name.split(' ').slice(0, -1).join(' ');
     rows.push({ name, kind: 'native', aliases: [], forms: [name], parent, nativeTool: nativeCommandTool(name) });
   }
-  return rows.map((row) => ({ ...row, name: normalize(row.name), aliases: row.aliases.map((alias) => normalize(alias)), forms: row.forms.map((form) => normalize(form)), ...(row.parent && { parent: normalize(row.parent) }) }))
+  return rows.map((row) => ({ ...row, name: normalizeCommandName(row.name), aliases: row.aliases.map((alias) => normalizeCommandName(alias)), forms: row.forms.map((form) => normalizeCommandName(form)), ...(row.parent && { parent: normalizeCommandName(row.parent) }) }))
     .toSorted(compare);
 }
 
@@ -86,37 +83,19 @@ export function listApplicationCommands(): ApplicationCommandRow[] {
   return inventory;
 }
 
-function longestForm(row: ApplicationCommandRow, normalized: string): number {
-  return Math.max(0, ...row.forms
-    .filter((form) => normalized === form || normalized.startsWith(`${form} `))
-    .map((form) => form.length));
-}
-
-function canonicalFormMatch(row: ApplicationCommandRow, normalized: string): number {
-  return row.forms.some((form) => form === row.name
-    && (normalized === form || normalized.startsWith(`${form} `))) ? 1 : 0;
-}
-
 export function resolveExactApplicationCommand(input: string): ApplicationCommandRow | undefined {
   const row = resolveApplicationCommand(input);
-  const normalized = normalize(input);
+  const normalized = normalizeCommandName(input);
   return row && [row.name, ...row.aliases, ...row.forms].includes(normalized) ? row : undefined;
 }
 
 export function resolveApplicationCommand(input: string): ApplicationCommandRow | undefined {
-  const normalized = normalize(input);
+  const normalized = normalizeCommandName(input);
   const rows = listApplicationCommands();
-  const candidates = rows.filter((row) => [row.name, ...row.aliases, ...row.forms]
-    .some((form) => normalized === form || normalized.startsWith(`${form} `)))
-    .toSorted((left, right) => {
-      const length = longestForm(right, normalized) - longestForm(left, normalized);
-      return length === 0
-        ? canonicalFormMatch(right, normalized) - canonicalFormMatch(left, normalized)
-        : length;
-    });
+  const candidates = rankCommandRows(rows, normalized);
   const owner = candidates.find((row) => row.kind === 'builtin' && row.name === 'search' && normalized.startsWith('search transcript'))
     ?? candidates.find((row) => row.kind === 'plugin' && row.name === 'search')
     ?? candidates[0];
   if (!owner) return undefined;
-  return { ...owner, forms: owner.forms.filter((form) => normalized === form || normalized.startsWith(`${form} `)) };
+  return { ...owner, forms: owner.forms.filter((form) => atFormBoundary(normalized, form)) };
 }

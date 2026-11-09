@@ -4,7 +4,8 @@ import path from 'node:path';
 import { atomicWriteFile } from '../atomic-write.js';
 import { readJsonConfigFile } from '../plugins/files.js';
 import { listApplicationCommands } from '../application-commands.js';
-import { decodeCommandSettings, normalizeCommandName } from './decode.js';
+import { normalizeCommandName } from '../shared/command-matching.js';
+import { decodeCommandSettings } from './decode.js';
 import type { CommandSetting, CommandSettingsRead } from './settings-types.js';
 
 const FILE_NAME = 'commands.json';

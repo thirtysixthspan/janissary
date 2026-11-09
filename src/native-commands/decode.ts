@@ -1,8 +1,6 @@
+import { normalizeCommandName } from '../shared/command-matching.js';
 import type { CommandSetting } from './settings-types.js';
 
-export function normalizeCommandName(name: string): string {
-  return name.trim().replaceAll(/\s+/gu, ' ').toLowerCase();
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
