@@ -1,5 +1,5 @@
 import type { ApplicationCommandDeclaration, ApplicationCommandRow } from './shared/application-commands.js';
-import { commands, coreCommands } from './commands/index.js';
+import { coreCommands, pluginCommandClaims } from './commands/index.js';
 import { getOutput } from './commands.js';
 import { tabPluginCatalog } from './plugins/catalog.js';
 import { NATIVE_ACP_COMMANDS } from './plugins/roles/shared.js';
@@ -49,11 +49,13 @@ export function listApplicationCommands(): ApplicationCommandRow[] {
     if (declaration) rows.push({ ...declaration, kind: 'builtin', aliases: declaration.aliases ?? [] });
   }
   rows.push({ name: 'help', kind: 'help', aliases: [], forms: ['help', 'help commands', 'help keys', 'help <command>'], parent: 'help' });
-  const registeredNames = new Set(commands.map((command) => command.name.toLowerCase()));
   const declarations: readonly TabPluginDeclaration[] = tabPluginCatalog;
   for (const plugin of declarations) {
-    if (!plugin.command || !registeredNames.has(plugin.command.toLowerCase())) continue;
-    const aliases = (plugin.commandAliases ?? []).filter((alias) => registeredNames.has(alias.toLowerCase()));
+    const accepted = new Set(pluginCommandClaims
+      .filter((claim) => claim.declarationId === plugin.id)
+      .map((claim) => claim.name));
+    if (!plugin.command || !accepted.has(plugin.command.toLowerCase())) continue;
+    const aliases = (plugin.commandAliases ?? []).filter((alias) => accepted.has(alias.toLowerCase()));
     rows.push({ name: plugin.command.toLowerCase(), kind: 'plugin', aliases, forms: [plugin.command, ...aliases] });
   }
   for (const name of NATIVE_ACP_COMMANDS) {

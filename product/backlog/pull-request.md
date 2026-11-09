@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Derive plugin inventory rows from the plugin commands the adapter accepted, not from every registered command name, and pin the rejected-claim case with a test.
-
-Existing Issue: `listApplicationCommands` in `src/application-commands.ts` decides a bundled plugin declaration was accepted by checking `registeredNames`, which is the union of core and plugin command names, so a declaration whose command or alias claims a reserved core name such as `open` is rejected by `createPluginCommands` yet still adds a plugin row or alias because the core command keeps that name in the set; no bundled plugin claims a reserved name today and no test covers the case. Severity: 4/10
-
-Existing Risk: 4/10 - A future bundled plugin that claims a reserved name would show a phantom plugin row whose toggle actually changes the core command's setting, contradicting the plan's promise that rejected plugin claims never enter the inventory.
-
-Proposal Risk: 1/10 - The inventory shows only accepted claims and the core commands are untouched; a rejected declaration contributes nothing.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "derive plugin inventory rows from accepted plugin claims". In `src/application-commands.ts`, stop using the union of all command names as the acceptance test. Expose the per-declaration accepted command and alias names from `createPluginCommands` in `src/plugins/command-adapter.ts` (for example a map keyed by declaration id, or a small result object that the inventory reads) and have `listApplicationCommands` build plugin rows from those accepted names only; a rejected command or alias must contribute nothing even when its text matches a core command. Keep the existing row shape, aliases, and alphabetical ordering. Add a colocated test, in a separate file if needed so `vi.mock('./plugins/catalog.js')` does not disturb the existing module-level rows, that mocks `tabPluginCatalog` with a declaration claiming a reserved core name such as `open`, asserts no `kind: 'plugin'` row or alias appears for it, and asserts an accepted declaration still contributes its row and aliases; clear the contribution-rejection registry in `afterEach` as `src/plugins/adapters.test.ts` does. Also assert every `coreCommands` entry has exactly one inventory row (the builtin `shell` represented by the plugin row), and that `help` and all nine `NATIVE_ACP_COMMANDS` rows are present, so the plan's completeness guarantee is pinned.
-
-
 * Disable the Agent access checkbox and show the parent note when a parent denies agent access even if the child's own saved agent access is already off.
 
 Existing Issue: `isAgentAccessDisabled` in `web/src/plugins/commands/commands-keys.ts` treats a parent denial as present only when `row.agentAccess && !row.effectiveAgentAccess`, and `CommandRow.tsx` computes its note the same way, so a native child whose own saved `agentAccess` is false and whose parent denies agent access keeps an interactive checkbox and no `Disabled by parent command` note instead of the disabled checkbox and note the plan describes. Severity: 2/10
