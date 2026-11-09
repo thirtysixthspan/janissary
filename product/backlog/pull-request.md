@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Make the Roles tab handle invalid commands topic data the same way on every path instead of failing on open and silently dropping restrictions on repaint.
-
-Existing Issue: In `src/plugins/roles/activate.ts`, opening the tab reports `invalid commands topic data` when `commandRestrictionsFrom` returns undefined, while `publish` replaces the same undefined result with an empty restriction map, so a malformed topic snapshot yields an open failure in one path and a silently unrestricted display in the other. Severity: 3/10
-
-Existing Risk: 3/10 - After a malformed commands notification, Roles repaints with no dimming, so a disabled or agent-denied grant looks fully available while the tab shows no sign that the data was refused.
-
-Proposal Risk: 2/10 - Reporting a failure on repaint could disable the Roles plugin for a transient bad snapshot, so the choice between failure and keeping the previous restrictions must be made deliberately and covered by a test.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "treat invalid commands topic data consistently in the Roles plugin". In `src/plugins/roles/activate.ts`, change `publish` to follow the same rule as `command`: when `commandRestrictionsFrom(capabilities.topicData('commands'))` is undefined, call `capabilities.reportFailure` with the existing `invalid commands topic data` text and skip the update instead of publishing an empty map, or keep the last published restrictions if the plugin must stay usable; pick one and state it in `product/specs/roles.md`. Add cases to `src/plugins/roles/activate.test.ts` for malformed data on notify and on open, and keep the existing restriction-mapping, picker, and grant tests in `src/plugins/roles/command-policy.test.ts` and `RolesTab.test.tsx` passing unchanged.
-
-
 * Share one effective-setting lookup for a resolved command so dispatch policy, the ACP runner, and the ACP allow-list stop each re-finding the row in the settings snapshot.
 
 Existing Issue: `src/native-commands/policy.ts`, `src/acp/tool-table.ts`, and `src/acp/run-prompt.ts` each independently search `snapshot.commands` by row name to read `effectiveEnabled` or `effectiveAgentAccess`, with their own missing-row defaults, so the rule that a missing manager or row means enabled is restated three times instead of living in one helper. Severity: 3/10

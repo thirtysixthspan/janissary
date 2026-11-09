@@ -89,7 +89,7 @@ command is off everywhere, or `Disabled for agents` when only its agent access i
 Application-wide wins when both are off, and a disabled parent command counts as application-wide for
 every command beneath it. The grant remains on the card and in `roles.json`, the marker is recomputed
 from the live Commands topic and is not stored in the roles file, and a restricted command can still
-be added or removed like any other. A muted `No commands` row appears when a role has none. **Add
+be added or removed like any other. Opening the tab with an unreadable Commands snapshot reports `invalid commands topic data` and opens nothing; a later unreadable snapshot is ignored and the tab keeps the restrictions it last showed. A muted `No commands` row appears when a role has none. **Add
 command** opens a dropdown of native commands the role does not already have, followed by Add and
 Cancel; Add stays disabled until a choice is made. The button is
 hidden when all nine native commands are present. Add sends `add-command`; removing any duplicate

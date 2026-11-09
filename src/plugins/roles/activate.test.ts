@@ -302,6 +302,29 @@ describe('commands topic deliveries', () => {
     expect(opened).toEqual([]);
   });
 
+  it('keeps the last restrictions when a commands notification carries invalid data', () => {
+    const { home, capabilities, updated, setCommands } = fixture();
+    const activation = activate(home);
+    setCommands(RESTRICTED_COMMANDS);
+    activation.command?.('', capabilities);
+    const afterOpen = updated.length;
+    setCommands({ commands: 'not a list' });
+
+    expect(() => activation.notify?.(commandsNotification, capabilities)).not.toThrow();
+
+    expect(updated).toHaveLength(afterOpen + 1);
+    expect((updated.at(-1)!.value.payload as RolesPayload).commandRestrictions).toEqual(RESTRICTIONS);
+  });
+
+  it('publishes nothing for invalid commands data before any restrictions were accepted', () => {
+    const { home, capabilities, updated, setCommands } = fixture();
+    setCommands({ commands: 'not a list' });
+
+    activate(home).notify?.(commandsNotification, capabilities);
+
+    expect(updated).toEqual([]);
+  });
+
   it('repaints from the current snapshot on a commands notification without a title or a write', () => {
     const { home, capabilities, updated, setCommands } = fixture();
     const activation = activate(home);

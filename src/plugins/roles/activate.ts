@@ -50,6 +50,7 @@ export function activate(home: string = homedir()): TabPluginActivation {
   // went.
   let queue: Promise<unknown> = Promise.resolve();
   let rememberedRoot: string | undefined;
+  let lastRestrictions: Record<string, CommandRestriction> | undefined;
 
   const settle = async (previous: Promise<unknown>): Promise<void> => {
     try {
@@ -89,7 +90,9 @@ export function activate(home: string = homedir()): TabPluginActivation {
     capabilities: TabPluginServerCapabilities, root: string, create = true,
   ): void => {
     const read = readRolesFile(home, root, { create });
-    const commandRestrictions = commandRestrictionsFrom(capabilities.topicData('commands')) ?? {};
+    lastRestrictions = commandRestrictionsFrom(capabilities.topicData('commands')) ?? lastRestrictions;
+    const commandRestrictions = lastRestrictions;
+    if (commandRestrictions === undefined) return;
     capabilities.updateTab(INSTANCE_KEY, () => ({
       payload: payloadFrom(read, capabilities.harnessLaunchCatalog(), commandRestrictions),
     }));
@@ -143,6 +146,7 @@ export function activate(home: string = homedir()): TabPluginActivation {
       if (argument.trim().length > 0) return capabilities.rejectRequest('Usage: roles');
       const commandRestrictions = commandRestrictionsFrom(capabilities.topicData('commands'));
       if (commandRestrictions === undefined) return capabilities.reportFailure(INVALID_COMMANDS_DATA);
+      lastRestrictions = commandRestrictions;
       capabilities.openOrFocusTab(INSTANCE_KEY, () => ({
         title: TAB_TITLE,
         payload: payloadFrom(
