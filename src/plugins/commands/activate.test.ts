@@ -269,6 +269,21 @@ describe('commands activation intents', () => {
     expect(test.updated).toEqual([]);
   });
 
+  it('asks the topic to refresh and returns null', () => {
+    const test = fixture(DATA);
+
+    expect(setIntent('refresh', {}, test)).toBeNull();
+    expect(test.actions).toEqual([{ topic: 'commands', action: 'refresh' }]);
+  });
+
+  it('rejects a refresh payload that carries fields', () => {
+    const test = fixture(DATA);
+
+    expect(() => setIntent('refresh', { name: 'quit' }, test))
+      .toThrow(new TabPluginRejection('invalid refresh payload'));
+    expect(test.actions).toEqual([]);
+  });
+
   it('rejects an unknown intent and an invalid payload', () => {
     const test = fixture();
 

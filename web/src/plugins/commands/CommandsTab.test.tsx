@@ -98,6 +98,17 @@ describe('CommandsTab rendering', () => {
     expect(screen.queryByLabelText('Agent access: agent')).not.toBeInTheDocument();
   });
 
+  it('shows the source in the metadata bar beside Refresh and refreshes on click', () => {
+    const { container, intent } = renderTab();
+    const bar = container.querySelector('.commands-header');
+
+    expect(bar).not.toBeNull();
+    expect(within(bar as HTMLElement).getByText('Editing /home/me/.janissary/commands.json')).toBeInTheDocument();
+    expect(intent).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByLabelText('Refresh'));
+    expect(intent).toHaveBeenCalledWith('refresh', {});
+  });
+
   it('names the file in effect, shows its problem, and shows the empty message', () => {
     const { unmount } = renderTab(makePayload({ problem: 'commands.json is damaged.' }));
     expect(screen.getByText('Editing /home/me/.janissary/commands.json')).toBeInTheDocument();

@@ -1,5 +1,13 @@
 .commands-tab { padding: 0; gap: 0; }
-.commands-source, .commands-problem, .commands-empty { padding: 8px 12px; color: var(--muted); font-size: 12px; }
+.commands-header { min-height: 28px; padding: 6px 12px; font-size: 12px; border-bottom: 1px solid var(--border); }
+.commands-header .commands-source { margin-right: auto; word-break: break-all; }
+.commands-source-row { padding: 6px 12px; color: var(--muted); font-size: 12px; word-break: break-all; }
+.commands-header .plugin-actions button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 0 4px; line-height: 1;
+}
+.commands-header .plugin-actions button:hover { color: var(--fg); }
+.commands-problem, .commands-empty { padding: 8px 12px; color: var(--muted); font-size: 12px; }
 .commands-problem { padding-top: 0; }
 .commands-refusal {
   border: 1px solid var(--danger); color: var(--danger); border-radius: 4px;

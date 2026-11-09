@@ -82,6 +82,10 @@ function isStringList(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
+export function isRefreshIntent(value: unknown): value is Record<string, never> {
+  return isRecord(value) && Object.keys(value).length === 0;
+}
+
 export function isSetIntent(value: unknown): value is SetIntent {
   return isRecord(value)
     && isNonemptyString(value.name)

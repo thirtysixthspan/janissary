@@ -4,7 +4,7 @@ import {
   type TabPluginActivation,
   type TabPluginServerCapabilities,
 } from '../api.js';
-import { isCommandsPayload, isSetIntent, type SetIntent } from './shared.js';
+import { isCommandsPayload, isRefreshIntent, isSetIntent, type SetIntent } from './shared.js';
 import { isCommandsData, toPayload } from './payload.js';
 import { parseCommand, type CommandParse } from './parse-command.js';
 
@@ -52,6 +52,13 @@ export function activate(): TabPluginActivation {
       capabilities.updateTab(INSTANCE_KEY, () => ({ payload: toPayload(data) }));
     },
     intent: defineIntents('commands', isCommandsPayload, {
+      refresh: {
+        payload: isRefreshIntent,
+        run: (_tab, _payload: Record<string, never>, capabilities) => {
+          capabilities.topicAction({ topic: TOPIC, action: 'refresh' });
+          return null;
+        },
+      },
       set: {
         payload: isSetIntent,
         run: async (_tab, payload: SetIntent, capabilities) => {

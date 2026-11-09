@@ -1,6 +1,7 @@
 import { useRef, type KeyboardEvent } from 'react';
 import type { CommandsPayload } from '@shared/plugins/commands/shared';
 import type { TabPluginClientCapabilities } from '../api';
+import { CommandsHeader } from './CommandsHeader';
 import { CommandRowView } from './CommandRow';
 import { moveCommandFocus } from './commands-keys';
 import { useCommands } from './useCommands';
@@ -32,9 +33,7 @@ export function CommandsTab({
 
   return (
     <div className="commands-tab plugin-tab" data-doc-shot="commands-tab" ref={container} onKeyDown={onKeyDown}>
-      <div className="commands-source">
-        {payload.source === 'default' ? 'No commands file in effect' : `Editing ${payload.path}`}
-      </div>
+      <CommandsHeader payload={payload} capabilities={capabilities} />
       {payload.overridden && payload.overridden.length > 0 ? (
         <div className="commands-problem commands-overridden">
           {`This project file lifts ${payload.overridden.length} home restriction${payload.overridden.length === 1 ? '' : 's'}: ${payload.overridden.join(', ')}.`}
