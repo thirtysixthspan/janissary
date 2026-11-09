@@ -1,3 +1,57 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
+
+* Give each named fixed subcommand form of the built-in commands its own row, as the plan specifies, so disabling one form no longer disables its whole parent command.
+
+Existing Issue: The plan says named fixed application subcommand forms get their own rows, but the inventory folds forms such as `tab dock`, `files expand`, `layout window`, `notifications clear`, `schedule cancel`, `open external`, and `db sqlite` into the parent row's `forms`, so `commands disable tab dock` resolves to the `tab` row and disables every `tab` form while the Commands tab offers no per-form control. Severity: 6/10
+
+Existing Risk: 6/10 - A user or script disabling one subcommand silently disables the whole parent command, and no row exists to disable a single form such as `files expand` or `tab undock`.
+
+Proposal Risk: 3/10 - Child rows add many inventory entries and settings keys, so completion filtering, parent folding, and the Commands table must handle the larger set, but each uses the existing parent-link mechanism already proven for the native ACP children.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "give built-in fixed subcommand forms their own inventory rows". In `src/application-commands.ts`, change `BUILTIN_FORMS` so every fixed form beyond a command's first form (for example `tab dock`, `tab undock`, `tab focus`, `files expand`, `files collapse`, `layout window`, `notifications clear`, `schedule cancel`, `open external`, `plugins list`, `queue list`, `profile list`, `syntax theme`, `theme sync`, `db sqlite`, `unmonitor --all`) becomes its own `builtin` row whose `name` is the full form and whose `parent` is the command, mirroring how native ACP children such as `browser goto` are declared; keep the intentional shared-name rows `ask reset`, `tell reset`, and `search transcript` as they are. Move the declaration table into its own module under `src/` if `application-commands.ts` approaches the 200-line limit in `ai/guidelines/code-guidelines.md`. `resolveApplicationCommand` already selects the longest matching form, `NativeCommandSettingsManager.createSnapshot` in `src/native-commands/manager.ts` already folds parent effects through `parent`, and `labelFor` and `canonicalParent` in `src/plugins/commands/payload.ts` already label and parent rows, so those need no change beyond tests. Update `src/application-commands.test.ts` to assert the new rows, their parent links, and that `resolveApplicationCommand('tab dock x')` returns the `tab dock` row. Add a `src/native-commands/manager.test.ts` case showing that disabling `tab dock` leaves `tab focus` enabled, and extend `src/completion/command-policy.test.ts` and `web/src/plugins/commands/CommandsTab.test.tsx` for the larger row set. Update `product/specs/commands-tab.md` and `documentation/user-documentation/tab-types/commands.md` only if row examples change. The existing completion, dispatch, and `feature.integration.test.ts` tests must keep passing, and the client `web/src/shared/command-availability.ts` matcher needs no change because it matches by name and forms from the published list.
+
+
+* Reject trailing text in the settings manager and the `commands` topic `set` action so a name must match a canonical name, alias, or fixed form exactly rather than by prefix.
+
+Existing Issue: `NativeCommandSettingsManager.edit` and the topic's `set` action resolve the supplied name with `resolveApplicationCommand`, which matches any input that merely starts with a form, so a name such as `browser content extra` edits the `browser content` setting even though the plan requires exact matching with trailing words never ignored. Severity: 3/10
+
+Existing Risk: 3/10 - Only the `commands` command parser enforces exact matching today, so any other caller of the topic action or the `set` intent that passes a loosely built name changes a setting it did not name.
+
+Proposal Risk: 2/10 - A stricter match could refuse a name a caller currently relies on, which the existing manager, topic, and Commands tab tests would expose because the tab always sends the canonical row name.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "require exact name matching in the command settings edit path". In `src/native-commands/manager.ts` `edit`, after `resolveApplicationCommand(name)`, require that the normalized input equals the resolved row's name, one of its aliases, or one of its forms exactly, and otherwise return `Unknown application command: <name>.` without writing. Reuse the normalization already in `src/native-commands/decode.ts` `normalizeCommandName`. Apply the same check in `runCommandsTopicAction` in `src/plugins/commands-topic.ts` before the `Not a native ACP command` test so both refusals describe an exact name. Add cases to `src/native-commands/manager.test.ts` and `src/plugins/topics.test.ts` for a trailing-word name, and keep the existing alias, fixed-form, and `question ask` canonical-over-fixed-form tests passing unchanged.
+
+
+* Keep the fallback problem line visible after a successful commands edit instead of dropping it from the published snapshot.
+
+Existing Issue: When the project `commands.json` is unusable and the home file is in effect, `refresh` publishes a snapshot with the `showing the home commands file` problem, but a later successful `edit` publishes a snapshot built without any `problem`, so the Commands tab stops reporting a damaged project file that still exists and is still being ignored. Severity: 3/10
+
+Existing Risk: 3/10 - A user who sees the warning, toggles a setting, and no longer sees it can assume the project override is healthy and be confused when the damaged file keeps being ignored.
+
+Proposal Risk: 2/10 - The edit path would carry the problem text from its fresh read, so the only new risk is a stale warning if the project file is repaired between the read and the publish, which the next refresh corrects.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "preserve the fallback problem in the snapshot published after a commands edit". In `src/native-commands/manager.ts` `edit`, pass `read.problem` through to the `createSnapshot` call when the read came from a fallback (source `home` or `project` with a defined problem) so the published snapshot matches what `refresh` would publish. Add a case in `src/native-commands/manager.test.ts` with a malformed project file and a valid home file, performing an edit, and asserting the published snapshot still carries the problem and names the home path as the edit destination. Keep the existing first-write, failed-write, and unusable-file tests passing unchanged.
+
+
+* Make the Roles tab handle invalid commands topic data the same way on every path instead of failing on open and silently dropping restrictions on repaint.
+
+Existing Issue: In `src/plugins/roles/activate.ts`, opening the tab reports `invalid commands topic data` when `commandRestrictionsFrom` returns undefined, while `publish` replaces the same undefined result with an empty restriction map, so a malformed topic snapshot yields an open failure in one path and a silently unrestricted display in the other. Severity: 3/10
+
+Existing Risk: 3/10 - After a malformed commands notification, Roles repaints with no dimming, so a disabled or agent-denied grant looks fully available while the tab shows no sign that the data was refused.
+
+Proposal Risk: 2/10 - Reporting a failure on repaint could disable the Roles plugin for a transient bad snapshot, so the choice between failure and keeping the previous restrictions must be made deliberately and covered by a test.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "treat invalid commands topic data consistently in the Roles plugin". In `src/plugins/roles/activate.ts`, change `publish` to follow the same rule as `command`: when `commandRestrictionsFrom(capabilities.topicData('commands'))` is undefined, call `capabilities.reportFailure` with the existing `invalid commands topic data` text and skip the update instead of publishing an empty map, or keep the last published restrictions if the plugin must stay usable; pick one and state it in `product/specs/roles.md`. Add cases to `src/plugins/roles/activate.test.ts` for malformed data on notify and on open, and keep the existing restriction-mapping, picker, and grant tests in `src/plugins/roles/command-policy.test.ts` and `RolesTab.test.tsx` passing unchanged.
+
+
+* Share one effective-setting lookup for a resolved command so dispatch policy, the ACP runner, and the ACP allow-list stop each re-finding the row in the settings snapshot.
+
+Existing Issue: `src/native-commands/policy.ts`, `src/acp/tool-table.ts`, and `src/acp/run-prompt.ts` each independently search `snapshot.commands` by row name to read `effectiveEnabled` or `effectiveAgentAccess`, with their own missing-row defaults, so the rule that a missing manager or row means enabled is restated three times instead of living in one helper. Severity: 3/10
+
+Existing Risk: 3/10 - A future change to the missing-row or shared-name rule must be repeated in three places, and a miss would make human dispatch, ACP execution, and the ACP primer disagree about whether a command is available.
+
+Proposal Risk: 2/10 - Centralizing the lookup could change a default if the three current fallbacks differ subtly, which the existing policy, tool-table, and run-prompt tests would catch.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "extract a shared effective command setting lookup". Add a small helper in `src/native-commands/policy.ts` that takes the optional snapshot and a canonical row name and returns the effective enabled and agent-access values with the enabled defaults for a missing snapshot or row. Use it in `disabledApplicationCommand` in the same file, in `toolRunner` in `src/acp/tool-table.ts`, and in the `allowedCommands` filter in `src/acp/run-prompt.ts`. Behavior must not change: `src/acp/tool-table.test.ts`, `src/acp/run-prompt.test.ts`, `src/native-commands/manager.test.ts`, and `src/native-commands/feature.integration.test.ts` already cover refusal, agent-access denial, and the allow-list and must pass untouched; add a unit test for the helper's missing-snapshot and missing-row defaults.
