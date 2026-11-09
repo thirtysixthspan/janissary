@@ -46,7 +46,7 @@ toast of its own; the feed is the only place you will see it.
 
 Each notification type can show a desktop banner and play a selected sound. This is
 separate from the in-app toast: the toast stays silent even when a banner or sound is enabled.
-The four ambient types default to no banner and no sound, but you can opt them in. They still need to pass their feed toggle and focus suppression. `scheduleFire` covers tab-owned schedules. System schedule notices default to a banner and warning sound; Models refresh notices default to a banner and success sound. Both have their own default-on feed toggle and bypass focus suppression.
+The five ambient types default to no banner and no sound, but you can opt them in. They still need to pass their feed toggle and focus suppression. `scheduleFire` covers tab-owned schedules. System schedule notices default to a banner and warning sound; Models refresh notices default to a banner and success sound. Both have their own default-on feed toggle and bypass focus suppression.
 
 Each browser window handles its own banner and sound. It suppresses both only when Janissary's
 window has focus and the notification's tab is visible there, including the selected tab in either
@@ -120,7 +120,7 @@ Click or move keyboard focus into the feed. While it has focus, `↑` and `↓` 
 
 ## What it reports
 
-The four ambient event toggles default to `false`. The separate `systemScheduleFire` and `modelsRefresh` toggles both default to `true`. Edit `.janissary/config.json` to choose which background events you want and whether to silence system schedule or Models refresh notices; see [app configuration](/user-documentation/getting-started/configuration) for desktop banners and sound settings too:
+The five ambient event toggles default to `false`. The separate `systemScheduleFire` and `modelsRefresh` toggles both default to `true`. Edit `.janissary/config.json` to choose which background events you want and whether to silence system schedule or Models refresh notices; see [app configuration](/user-documentation/getting-started/configuration) for desktop banners and sound settings too:
 
 ```json
 {
@@ -130,6 +130,7 @@ The four ambient event toggles default to `false`. The separate `systemScheduleF
       "scheduleFire": true,
       "agentStart": true,
       "rateLimited": true,
+      "commandDisabled": true,
       "systemScheduleFire": true,
       "modelsRefresh": true
     }
@@ -145,12 +146,13 @@ Each toggle controls one kind of event:
 | `scheduleFire` | A tab-owned scheduled command fires in its tab |
 | `agentStart` | An agent begins a turn |
 | `rateLimited` | A model query is identified as rate limited |
+| `commandDisabled` | A disabled command is refused, including a command-backed shortcut that is blocked |
 | `systemScheduleFire` | A system schedule fires, is missed, names a missing runscript, or the system shell cannot start |
 | `modelsRefresh` | A Models refresh finishes and reports provider results |
 
-The four ambient events notify only for a **background** tab. Activity in the currently active tab is suppressed. System schedule and Models refresh notices are explicit, use their own toggles, and are not suppressed when their tabs are active.
+The five ambient events notify only for a **background** tab. Activity in the currently active tab is suppressed, so a refusal of a disabled command from the active tab is silent. A `commandDisabled` notice is attributed to the tab the command or shortcut came from. System schedule and Models refresh notices are explicit, use their own toggles, and are not suppressed when their tabs are active.
 
-The four ambient events read like this in the feed:
+The five ambient events read like this in the feed:
 
 | Toggle | Message |
 |---|---|
@@ -158,6 +160,7 @@ The four ambient events read like this in the feed:
 | `agentStart` | `Agent '<tab>' started` |
 | `rateLimited` | `Agent '<tab>' is being rate limited` |
 | `scheduleFire` | `Scheduled: <command> in <tab>` |
+| `commandDisabled` | `Command is disabled: <command>.` |
 
 `notifications.events.rateLimited` covers interactive `ask` queries, periodic monitor queries, and `monitor ask` queries. It recognizes rate limits from error text, and also from an interactive query's ordinary reply text. The feed says `Agent '<tab>' is being rate limited`; the original in-tab output stays available. Other failures don't produce this event.
 

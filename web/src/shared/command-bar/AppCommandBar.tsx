@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, type ReactNode, type RefObject } from 'react';
 import type { TabView } from '@shared/protocol';
-import { classifyCommandBarSubmit, navCommandQuery } from './classify-submit';
+import { isCloseCommand } from '@shared/commands/parse-close';
+import { classifyCommandBarSubmit, navCommandQuery, type CommandBarVerdict } from './classify-submit';
 import { openCommandBarOverlay } from './bare-openers';
 import type { PickerCommands } from './picker-commands';
 import {
@@ -18,6 +19,22 @@ const AppCommandBarContext = createContext<AppCommandBarState | null>(null);
 // The tab a plugin body renders in, and whether that body is on screen.
 type TabScope = { label: string; active: boolean };
 const AppCommandBarTabContext = createContext<TabScope | undefined>(undefined);
+const NO_DISABLED_COMMAND = () => false;
+
+function blockedCommandWord(line: string, closeVerdict: boolean): 'quit' | 'close' {
+  return closeVerdict || isCloseCommand(line.trim().replace(/^\//u, '')) ? 'close' : 'quit';
+}
+
+function consumeBlockedCommand(
+  line: string,
+  verdict: CommandBarVerdict,
+  tab: string | undefined,
+  report: ((text: string, tab: string) => void) | undefined,
+): boolean {
+  if (verdict.kind !== 'confirm-quit' && verdict.kind !== 'confirm-close') return false;
+  if (tab !== undefined) report?.(blockedCommandWord(line, verdict.kind === 'confirm-close'), tab);
+  return true;
+}
 
 // Provided once, by the app shell. Not published to plugins: a plugin body reads the state through
 // `useAppCommandBar`, already narrowed to its own tab.
@@ -85,15 +102,21 @@ export function useAppCommandLine(params: PickerCommands & {
   openQuitConfirm: () => void;
   guardRef: RefObject<((index: number) => boolean) | null>;
   onPickerOpen?: (sourceTab: string | undefined) => void;
+  disabledApplicationCommand?: (line: string) => boolean;
+  reportBlockedCommand?: (text: string, tab: string) => void;
 }): (line: string, sourceTab?: string, sourceVisible?: boolean) => boolean {
   const {
     tabs, activeTab, openQuitConfirm, guardRef,
     openPicker, openThemePicker, openAppThemePicker, openQueue, openTaskPicker, openProfilePicker,
     onPickerOpen, navOpen, setNavOpen, openTabNavWithQuery,
+    disabledApplicationCommand = NO_DISABLED_COMMAND, reportBlockedCommand,
   } = params;
 
   return useCallback((line: string, sourceTab?: string, sourceVisible = true): boolean => {
     const verdict = classifyCommandBarSubmit(line, tabs, activeTab, sourceTab);
+    if (disabledApplicationCommand(line)) {
+      return consumeBlockedCommand(line, verdict, sourceTab ?? tabs[activeTab]?.label, reportBlockedCommand);
+    }
     if (verdict.kind === 'overlay') {
       if (!sourceVisible) return true;
       const opened = openCommandBarOverlay(verdict.command, {
@@ -119,6 +142,6 @@ export function useAppCommandLine(params: PickerCommands & {
   }, [
     tabs, activeTab, openQuitConfirm, guardRef,
     openPicker, openThemePicker, openAppThemePicker, openQueue, openTaskPicker, openProfilePicker, onPickerOpen,
-    navOpen, setNavOpen, openTabNavWithQuery,
+    navOpen, setNavOpen, openTabNavWithQuery, disabledApplicationCommand, reportBlockedCommand,
   ]);
 }

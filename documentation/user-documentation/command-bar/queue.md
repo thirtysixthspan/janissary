@@ -46,6 +46,8 @@ The queue isn't saved. If Janissary quits with lines still waiting, they don't r
 
 Press `Ctrl+E`, or enter bare `queue`, to open a queue popup. It opens only over a tab that has both a queue and a command bar, which today means a shell tab. On a harness tab or any other tab without both, those inputs do nothing.
 
+When `queue` is disabled in the Commands tab, `Ctrl+E` and bare `queue` do nothing; the line is refused by the server.
+
 The next command to run appears at the top. An empty queue shows `(no commands queued)`. A popup opened from a docked shell belongs to that shell even while another tab is current.
 
 Opening the popup replaces whatever you had typed in the owner's command bar with the selected row, or with nothing when the queue is empty. That bar is the only place you edit. Closing the popup clears the bar, and your earlier draft doesn't come back.

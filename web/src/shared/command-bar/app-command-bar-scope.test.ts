@@ -78,6 +78,15 @@ describe('scopeAppCommandBar', () => {
     expect(bar.ghostHistory).toEqual(['ls']);
   });
 
+  it('passes the application\'s disabled-command query through, defaulting to all enabled', () => {
+    const disabled = vi.fn(() => true);
+    const bar = scopeAppCommandBar(state({ disabledApplicationCommand: disabled }), 'shell1', register, replace);
+
+    expect(bar.disabledApplicationCommand('theme')).toBe(true);
+    expect(disabled).toHaveBeenCalledWith('theme');
+    expect(scopeAppCommandBar(state(), 'shell1', register, replace).disabledApplicationCommand('theme')).toBe(false);
+  });
+
   it('registers a whole-line replacement and protects a newer registration from stale cleanup', () => {
     const replacements = new Map();
     const original = vi.fn();

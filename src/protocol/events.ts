@@ -4,6 +4,7 @@ import type { ProfileRow } from '../profile/types.js';
 import type { TabView, HarnessLaunchView } from './tab.js';
 import type { ScheduleLaunchView } from './schedule.js';
 import type { AgentRunView } from '../agent/types.js';
+import type { DisabledApplicationCommand } from '../shared/application-commands.js';
 
 export type StateEvent = {
   t: 'state'; tabs: TabView[]; activeTab: number; secondaryTab?: number;
@@ -20,6 +21,9 @@ export type StateEvent = {
   theme: string;
   tasks: TaskRow[];
   profiles: ProfileRow[];
+  // Application commands whose effective setting is disabled, projected from the server's settings
+  // snapshot so client pickers and command-backed shortcuts can honor the same availability.
+  disabledApplicationCommands: DisabledApplicationCommand[];
   // Absolute path of the project directory the server was started against. Drives the titlebar.
   projectDir: string;
   // App version (semver only, e.g. "0.5.4"). Drives the titlebar.

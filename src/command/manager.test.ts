@@ -1,9 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { CommandManager } from './manager.js';
+import { resolveInTab } from './resolve-in-tab.js';
 import { TabManager } from '../tab/manager.js';
 import type { Managers } from '../managers.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
-import { makeTab } from '../tab/index.js';
+import { makePluginTab, makeTab } from '../tab/index.js';
 import { commands } from '../commands/index.js';
 import type { CommandInvocationContext } from '../commands/types.js';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
@@ -11,8 +12,35 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { initProfileDir } from '../profiles.js';
 import { ProfileManager } from '../profile/manager.js';
+import { NativeCommandSettingsManager } from '../native-commands/manager.js';
+import { NotificationQueue } from '../notifications/queue.js';
+import { messageBus } from '../bus.js';
+import * as config from '../config.js';
+import { Questions } from '../questions.js';
+import { childInvocationContext, createInvocationContext } from './invocation.js';
 
-function makeManagers(): { managers: Managers; recorder: string[] } {
+const settingsRoots: string[] = [];
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  for (const root of settingsRoots) rmSync(root, { recursive: true, force: true });
+  settingsRoots.length = 0;
+});
+
+function settingsWith(
+  values: Record<string, { enabled?: boolean; agentAccess?: boolean }>,
+): NativeCommandSettingsManager {
+  const root = mkdtempSync(path.join(tmpdir(), 'command-dispatch-'));
+  settingsRoots.push(root);
+  const home = path.join(root, 'home');
+  mkdirSync(path.join(home, '.janissary'), { recursive: true });
+  writeFileSync(path.join(home, '.janissary', 'commands.json'), JSON.stringify(values));
+  return new NativeCommandSettingsManager(path.join(root, 'project'), home);
+}
+
+function makeManagers(
+  nativeCommandSettings = new NativeCommandSettingsManager('/nonexistent-command-root', '/nonexistent-command-home'),
+): { managers: Managers; recorder: string[] } {
   const recorder: string[] = [];
   const managers = {} as Managers;
   managers.tab = new TabManager(managers);
@@ -26,12 +54,29 @@ function makeManagers(): { managers: Managers; recorder: string[] } {
   managers.harness = { run: vi.fn(() => null), openLaunchDialog: vi.fn() } as unknown as Managers['harness'];
   managers.ssh = { run: vi.fn(() => null) } as unknown as Managers['ssh'];
   managers.pty = { openInlinePty: vi.fn() } as unknown as Managers['pty'];
-  managers.database = { openDbs: vi.fn(() => []) } as unknown as Managers['database'];
+  managers.database = {
+    openDbs: vi.fn(() => []), runInTab: vi.fn(() => 'query result'),
+  } as unknown as Managers['database'];
+  managers.browser = { run: vi.fn(async () => 'browser result') } as unknown as Managers['browser'];
+  managers.questions = new Questions();
   managers.schedule = {
     openScheduleLaunch: vi.fn(), get: vi.fn(() => []), set: vi.fn(),
   } as unknown as Managers['schedule'];
+  managers.notifications = new NotificationQueue();
+  managers.nativeCommandSettings = nativeCommandSettings;
   managers.command = new CommandManager(managers);
   return { managers, recorder };
+}
+
+function seedPromptPluginTab(managers: Managers, label = 'janus'): void {
+  const tab = makePluginTab(label, '#fff', 1, 1, '#fff', 'Shell', {
+    id: 'shell', instanceKey: 'shell-instance', schemaVersion: 2, payload: {}, fileRefs: [], sourceLabel: label,
+  });
+  managers.tab.tabs = [tab, ...managers.tab.tabs.filter((entry) => entry.label !== label)];
+  managers.tab.activeTab = 0;
+  managers.plugins = {
+    declarations: [{ id: 'shell', capabilities: ['promptAcp'] }],
+  } as unknown as Managers['plugins'];
 }
 
 describe('CommandManager async commands', () => {
@@ -195,6 +240,128 @@ describe('CommandManager dispatchLineWithOutput', () => {
     });
     late.resolve();
     await vi.waitFor(() => { expect(managers.tab.cur().log.at(-1)?.output).toBe('finished'); });
+  });
+});
+
+describe('CommandManager dispatchNativeLine', () => {
+  it('waits past the plugin capture deadline for a native command', async () => {
+    vi.useFakeTimers();
+    const { managers } = makeManagers();
+    const late = Promise.withResolvers<string>();
+    const command = {
+      name: 'fixture-native-slow', match: (input: string) => input === 'fixture-native-slow',
+      samples: ['fixture-native-slow'], run: () => late.promise,
+    };
+    commands.push(command);
+    try {
+      const invocation = createInvocationContext(managers, 'janus', 'fixture-native-slow', {
+        acpTool: true, awaitResult: true,
+      });
+      let settled = false;
+      const pending = (async () => {
+        const result = await managers.command.dispatchNativeLine('janus', 'fixture-native-slow', invocation);
+        settled = true;
+        return result;
+      })();
+      await vi.advanceTimersByTimeAsync(30_001);
+      expect(settled).toBe(false);
+      late.resolve('slow result');
+      await expect(pending).resolves.toEqual({ dispatched: true, output: '', result: 'slow result' });
+    } finally {
+      commands.splice(commands.indexOf(command), 1);
+      vi.useRealTimers();
+    }
+  });
+
+  it('returns the browser service text without an interactive entry', async () => {
+    const { managers } = makeManagers();
+    const invocation = createInvocationContext(managers, 'janus', 'browser goto https://example.com', {
+      acpTool: true, awaitResult: true,
+    });
+
+    await expect(managers.command.dispatchNativeLine('janus', 'browser goto https://example.com', invocation))
+      .resolves.toEqual({ dispatched: true, output: '', result: 'browser result' });
+    expect(managers.browser.run).toHaveBeenCalledWith('janus', 'browser goto https://example.com');
+    expect(managers.tab.cur().log).toEqual([]);
+  });
+
+  it('returns the database text without appending it', async () => {
+    const { managers } = makeManagers();
+    const invocation = createInvocationContext(managers, 'janus', 'db sqlite list', {
+      acpTool: true, awaitResult: true,
+    });
+
+    await expect(managers.command.dispatchNativeLine('janus', 'db sqlite list', invocation))
+      .resolves.toEqual({ dispatched: true, output: '', result: 'query result' });
+    expect(managers.database.runInTab).toHaveBeenCalledWith('janus', 'db sqlite list');
+    expect(managers.tab.cur().log).toEqual([]);
+  });
+
+  it('waits for a native question answer without marking the tab running', async () => {
+    const { managers } = makeManagers();
+    const startRunning = vi.spyOn(managers.tab, 'startRunning');
+    const invocation = createInvocationContext(managers, 'janus', 'question ask "What port?"', {
+      acpTool: true, awaitResult: true,
+    });
+
+    const pending = managers.command.dispatchNativeLine('janus', 'question ask "What port?"', invocation);
+    const question = managers.questions.pendingFor('janus')!;
+    expect(question).toMatchObject({ kind: 'ask', question: 'What port?' });
+    expect(managers.questions.answer('janus', question.id, '8080')).toBe(true);
+
+    await expect(pending).resolves.toEqual({ dispatched: true, output: '', result: '8080' });
+    expect(startRunning).not.toHaveBeenCalled();
+    expect(managers.tab.cur().log).toEqual([]);
+  });
+
+  it('preserves the ordinary output and structured-result contracts', async () => {
+    const { managers } = makeManagers();
+    const outputCommand = {
+      name: 'fixture-native-output', match: (input: string) => input === 'fixture-native-output',
+      samples: ['fixture-native-output'],
+      run: (_input: string, tab: { label: string }, services: Managers, invocation: CommandInvocationContext) => {
+        services.tab.appendForInvocation(tab.label, { input: 'fixture-native-output', output: 'appended' }, invocation.invocationId);
+      },
+    };
+    const resultCommand = {
+      name: 'fixture-native-result', match: (input: string) => input === 'fixture-native-result',
+      samples: ['fixture-native-result'], structuredResult: true as const,
+      run: () => ({ status: 'completed' }),
+    };
+    const coreCommand = {
+      name: 'fixture-native-core', match: (input: string) => input === 'fixture-native-core',
+      samples: ['fixture-native-core'], coreResponse: true as const,
+      run: () => ({ response: 'core result' }),
+    };
+    commands.push(outputCommand, resultCommand, coreCommand);
+    try {
+      const outputInvocation = createInvocationContext(managers, 'janus', 'fixture-native-output', { acpTool: true });
+      await expect(managers.command.dispatchNativeLine('janus', 'fixture-native-output', outputInvocation))
+        .resolves.toEqual({ dispatched: true, output: 'appended' });
+      const resultInvocation = createInvocationContext(managers, 'janus', 'fixture-native-result', { acpTool: true });
+      await expect(managers.command.dispatchNativeLine('janus', 'fixture-native-result', resultInvocation))
+        .resolves.toEqual({ dispatched: true, output: '', result: { status: 'completed' } });
+      const coreInvocation = createInvocationContext(managers, 'janus', 'fixture-native-core', { acpTool: true });
+      await expect(managers.command.dispatchNativeLine('janus', 'fixture-native-core', coreInvocation))
+        .resolves.toEqual({ dispatched: true, output: '', coreResponse: true, result: { response: 'core result' } });
+      const unknownInvocation = createInvocationContext(managers, 'janus', 'not-a-command', { acpTool: true });
+      await expect(managers.command.dispatchNativeLine('janus', 'not-a-command', unknownInvocation))
+        .resolves.toEqual({ dispatched: false, output: '' });
+    } finally {
+      commands.splice(commands.indexOf(outputCommand), 1);
+      commands.splice(commands.indexOf(resultCommand), 1);
+      commands.splice(commands.indexOf(coreCommand), 1);
+    }
+  });
+
+  it('copies the ACP tool marker into child invocation contexts', () => {
+    const { managers } = makeManagers();
+    const parent = createInvocationContext(managers, 'janus', 'line', { acpTool: true, awaitResult: true });
+    const child = childInvocationContext(parent, 'child');
+
+    expect(child.acpTool).toBe(true);
+    expect(child.awaitResult).toBe(true);
+    expect(child.signal).toBe(parent.signal);
   });
 });
 
@@ -469,5 +636,273 @@ describe('CommandManager bare-schedule launch dialog', () => {
     managers.command.dispatch('schedule fetch every 5m echo hi');
     expect(managers.schedule.openScheduleLaunch).not.toHaveBeenCalled();
     expect(managers.schedule.set).toHaveBeenCalled();
+  });
+});
+
+describe('CommandManager disabled command policy', () => {
+  it('refuses a disabled command before its effects and records the refusal', () => {
+    const { managers } = makeManagers(settingsWith({ clear: { enabled: false } }));
+    managers.tab.append('janus', { input: '', output: 'kept' });
+
+    managers.command.dispatch('clear');
+
+    expect(managers.tab.cur().log).toEqual([
+      { input: '', output: 'kept' },
+      { input: 'clear', output: 'Command is disabled: clear.' },
+    ]);
+  });
+
+  it.each([
+    ['quit', 'quit now'],
+    ['clear', 'clear all'],
+    ['hist', 'hist 5'],
+  ])('keeps malformed %s input unknown rather than refusing it', (name, input) => {
+    const { managers } = makeManagers(settingsWith({ [name]: { enabled: false } }));
+
+    managers.command.dispatch(input);
+
+    expect(managers.tab.cur().log.at(-1)).toEqual({
+      input, output: `Unknown command: "${input}". Type "help" for available commands.`, markdown: false,
+    });
+  });
+
+  it('refuses an alias under its canonical command name', async () => {
+    const { managers } = makeManagers(settingsWith({ close: { enabled: false } }));
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'exit')).resolves.toEqual({
+      dispatched: true, output: 'Command is disabled: close.',
+    });
+    expect(managers.tab.cur().log.at(-1)).toEqual({ input: 'exit', output: 'Command is disabled: close.' });
+  });
+
+  it('refuses a disabled command that is unavailable on the current tab', async () => {
+    const { managers } = makeManagers(settingsWith({ ask: { enabled: false } }));
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'ask hello')).resolves.toEqual({
+      dispatched: true, output: 'Command is disabled: ask.',
+    });
+    expect(managers.tab.cur().log.at(-1)).toEqual({ input: 'ask hello', output: 'Command is disabled: ask.' });
+  });
+
+  it('refuses a disabled plugin alias under its canonical command name', async () => {
+    const { managers } = makeManagers(settingsWith({ connections: { enabled: false } }));
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'connection')).resolves.toEqual({
+      dispatched: true, output: 'Command is disabled: connections.',
+    });
+  });
+
+  it('refuses a disabled fixed form while its parent and sibling forms still run', async () => {
+    const { managers } = makeManagers(settingsWith({ 'db sqlite query': { enabled: false } }));
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'db sqlite query notes SELECT 1')).resolves.toEqual({
+      dispatched: true, output: 'Command is disabled: db sqlite query.',
+    });
+    expect(managers.database.runInTab).not.toHaveBeenCalled();
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'db sqlite list')).resolves.toEqual({
+      dispatched: true, output: 'query result',
+    });
+    expect(managers.database.runInTab).toHaveBeenCalledWith('janus', 'db sqlite list');
+  });
+
+  it('refuses a child when its parent is disabled', async () => {
+    const { managers } = makeManagers(settingsWith({ db: { enabled: false } }));
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'db sqlite query notes SELECT 1')).resolves.toEqual({
+      dispatched: true, output: 'Command is disabled: db sqlite query.',
+    });
+    expect(managers.database.runInTab).not.toHaveBeenCalled();
+  });
+
+  it('keeps a disabled shared owner claimed rather than rerouting it', async () => {
+    const { managers } = makeManagers(settingsWith({ search: { enabled: false } }));
+    const runCommand = vi.fn(async () => {});
+    managers.plugins = { runCommand } as unknown as Managers['plugins'];
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'search')).resolves.toEqual({
+      dispatched: true, output: 'Command is disabled: search.',
+    });
+    await expect(managers.command.dispatchLineWithOutput('janus', 'search transcript fox')).resolves.toEqual({
+      dispatched: true, output: 'Command is disabled: search.',
+    });
+    expect(runCommand).not.toHaveBeenCalled();
+    expect(managers.shell.run).not.toHaveBeenCalled();
+  });
+
+  it('leaves explicit shell execution outside command policy', async () => {
+    const { managers, recorder } = makeManagers(settingsWith({ shell: { enabled: false } }));
+
+    managers.command.dispatch('!printf probe');
+    await expect(managers.command.dispatchLineWithOutput('janus', '!printf probe')).resolves.toEqual({
+      dispatched: false, output: '',
+    });
+
+    expect(recorder).toContain('shell:printf probe');
+  });
+
+  it('keeps help available and still lists disabled commands when help is enabled', async () => {
+    const { managers } = makeManagers(settingsWith({ clear: { enabled: false } }));
+
+    const result = await managers.command.dispatchLineWithOutput('janus', 'help');
+
+    expect(result.dispatched).toBe(true);
+    expect(result.output).toContain('clear');
+    expect(result.output).not.toBe('Command is disabled: help.');
+  });
+
+  it('refuses bare and named help through the canonical help policy key', async () => {
+    const { managers } = makeManagers(settingsWith({ help: { enabled: false } }));
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'help')).resolves.toEqual({
+      dispatched: true, output: 'Command is disabled: help.',
+    });
+    await expect(managers.command.dispatchLineWithOutput('janus', 'help tab')).resolves.toEqual({
+      dispatched: true, output: 'Command is disabled: help.',
+    });
+    managers.command.dispatch('help');
+    expect(managers.tab.cur().log.at(-1)).toEqual({ input: 'help', output: 'Command is disabled: help.' });
+  });
+
+  it('returns the refusal for every capture contract before capture can time out', async () => {
+    const { managers } = makeManagers(settingsWith({
+      ask: { enabled: false }, agent: { enabled: false }, clear: { enabled: false },
+    }));
+    seedPromptPluginTab(managers);
+    expect(resolveInTab('ask hello', 'janus', managers)).toMatchObject({ kind: 'app', name: 'ask' });
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'ask hello', 0)).resolves.toEqual({
+      dispatched: true, output: 'Command is disabled: ask.',
+    });
+
+    const structured = await managers.command.dispatchLineWithOutput('janus', 'agent execute task.md', 0);
+    expect(structured).toEqual({ dispatched: true, output: 'Command is disabled: agent.' });
+    expect(structured).not.toHaveProperty('result');
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const captured = managers.command.dispatchLineWithOutput('janus', 'clear', 0);
+      let settled = false;
+      void captured.then(() => { settled = true; });
+      await new Promise((resolve) => { setImmediate(resolve); });
+      expect(settled).toBe(true);
+      await expect(captured).resolves.toEqual({ dispatched: true, output: 'Command is disabled: clear.' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([
+    ['ask', 'ask:hello'],
+    ['ask', 'ask-hello'],
+    ['db', 'db.sqlite'],
+  ])('refuses %s for the registry-accepted spelling %s on every dispatch path', async (name, input) => {
+    const { managers } = makeManagers(settingsWith({ [name]: { enabled: false } }));
+    const message = `Command is disabled: ${name}.`;
+
+    managers.command.dispatchTo('janus', input);
+    expect(managers.tab.cur().log.at(-1)).toEqual({ input, output: message });
+
+    await expect(managers.command.dispatchLineWithOutput('janus', input)).resolves.toEqual({
+      dispatched: true, output: message,
+    });
+    await expect(managers.command.executeCommand(name, input, 'janus', 0)).resolves.toBe(message);
+  });
+
+  it('keeps a line matching no registry entry unknown when a neighbouring command is disabled', () => {
+    const { managers } = makeManagers(settingsWith({ quit: { enabled: false } }));
+
+    managers.command.dispatchTo('janus', 'quit now');
+
+    expect(managers.tab.cur().log.at(-1)).toMatchObject({ input: 'quit now' });
+    expect(managers.tab.cur().log.at(-1)).not.toEqual({ input: 'quit now', output: 'Command is disabled: quit.' });
+  });
+
+  it('refuses direct executeCommand callers before their effects', async () => {
+    const { managers } = makeManagers(settingsWith({ ask: { enabled: false } }));
+    const close = vi.fn();
+    managers.acp = { close } as unknown as Managers['acp'];
+
+    await expect(managers.command.executeCommand('ask-reset', 'ask reset', 'janus', 0))
+      .resolves.toBe('Command is disabled: ask.');
+    expect(close).not.toHaveBeenCalled();
+    expect(managers.tab.cur().log.at(-1)).toEqual({ input: 'ask reset', output: 'Command is disabled: ask.' });
+  });
+
+  it('returns the refusal through dispatchLineInInvocation for granted commands', async () => {
+    const { managers } = makeManagers(settingsWith({ 'question ask': { enabled: false } }));
+    const parent: CommandInvocationContext = {
+      runId: 'run', invocationId: 'invocation',
+      caller: { label: 'janus', cwd: '/repo', context: [] },
+      signal: new AbortController().signal,
+    };
+
+    await expect(managers.command.dispatchLineInInvocation('janus', 'question ask hello', parent))
+      .resolves.toEqual({ dispatched: true, output: 'Command is disabled: question ask.' });
+  });
+
+  it('checks settings when a queued line is dispatched, not when it was queued', async () => {
+    const settings = settingsWith({});
+    const { managers } = makeManagers(settings);
+    managers.tab.tabs.push(makeTab('worker', '#fff'));
+    managers.tab.enqueue('worker', 'clear');
+    await settings.edit({ name: 'clear', setting: { enabled: false } });
+
+    const line = managers.tab.dequeue('worker');
+
+    await expect(managers.command.dispatchQueuedLine('worker', line!)).resolves.toEqual({
+      dispatched: true, output: 'Command is disabled: clear.',
+    });
+  });
+
+  it('attributes the disabled notification to the originating tab', async () => {
+    const { managers } = makeManagers(settingsWith({ clear: { enabled: false } }));
+    managers.tab.tabs.push(makeTab('worker', '#fff'));
+    const defaults = config.getConfig();
+    vi.spyOn(config, 'getConfig').mockReturnValue({
+      ...defaults,
+      osNotifications: false,
+      terminalBell: false,
+      notifications: {
+        events: { ...defaults.notifications!.events, commandDisabled: true },
+        alerts: defaults.notifications!.alerts,
+      },
+    });
+    const toasts: Array<{ from: string; message: string }> = [];
+    const subscription = messageBus.on('notifications', 'toast', (event) => {
+      if (event.type === 'toast') toasts.push({ from: event.from, message: event.message });
+    });
+    try {
+      await expect(managers.command.dispatchLineWithOutput('worker', 'clear')).resolves.toEqual({
+        dispatched: true, output: 'Command is disabled: clear.',
+      });
+      expect(toasts).toEqual([{ from: 'worker', message: 'Command is disabled: clear.' }]);
+    } finally {
+      subscription.unsubscribe();
+    }
+  });
+
+  it('keeps the refusal when notification delivery is suppressed', async () => {
+    const { managers } = makeManagers(settingsWith({ clear: { enabled: false } }));
+    managers.tab.tabs.push(makeTab('worker', '#fff'));
+    const toasts = vi.fn();
+    const subscription = messageBus.on('notifications', 'toast', toasts);
+    try {
+      await expect(managers.command.dispatchLineWithOutput('worker', 'clear')).resolves.toEqual({
+        dispatched: true, output: 'Command is disabled: clear.',
+      });
+      expect(toasts).not.toHaveBeenCalled();
+    } finally {
+      subscription.unsubscribe();
+    }
+  });
+
+  it('still runs an agent-off command from the human command bar', async () => {
+    const { managers } = makeManagers(settingsWith({ 'db sqlite list': { enabled: true, agentAccess: false } }));
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'db sqlite list')).resolves.toEqual({
+      dispatched: true, output: 'query result',
+    });
+    expect(managers.database.runInTab).toHaveBeenCalledWith('janus', 'db sqlite list');
   });
 });

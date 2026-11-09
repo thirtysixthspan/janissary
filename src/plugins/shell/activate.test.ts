@@ -611,6 +611,17 @@ describe('shell plugin activation', () => {
     await expect(ask(capabilities, 'dispatch', 'ls -la')).resolves.toEqual({ dispatched: false, output: '' });
   });
 
+  it('returns a disabled-command refusal as the claimed host answer', async () => {
+    const { capabilities } = fakeCapabilities({ dispatched: true });
+    vi.mocked(capabilities.dispatchLineWithOutput).mockResolvedValueOnce({
+      dispatched: true, output: 'Command is disabled: clear.',
+    });
+
+    await expect(ask(capabilities, 'dispatch', 'clear')).resolves.toEqual({
+      dispatched: true, output: 'Command is disabled: clear.',
+    });
+  });
+
   it('returns the host\'s own completion for a line', () => {
     const completions = { matches: ['ls', 'lsof'], newInput: 'ls', newCursor: 2 };
     const { capabilities } = fakeCapabilities({ completions });

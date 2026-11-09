@@ -92,4 +92,13 @@ describe('agent command tools', () => {
       .resolves.toContain('command not permitted');
     expect(dispatch).not.toHaveBeenCalled();
   });
+
+  it('returns the dispatch refusal for a granted command disabled by settings', async () => {
+    const dispatch = vi.fn(async () => ({ dispatched: true, output: 'Command is disabled: question.' }));
+    const managers = { command: { dispatchLineInInvocation: dispatch } } as unknown as Managers;
+
+    await expect(runGrantedAgentCommand('question ask "first"', snapshot, managers, invocation('disabled')))
+      .resolves.toBe('Command is disabled: question.');
+    expect(dispatch).toHaveBeenCalledOnce();
+  });
 });

@@ -38,6 +38,10 @@ function fixture(): {
   opened: Array<{ key: string; value: TabPluginPayload }>;
   updated: Array<{ key: string; value: TabPluginTabUpdate }>;
   root: string;
+  events: string[];
+  topicDataCalls: string[];
+  topicAction: ReturnType<typeof vi.fn>;
+  setCommands(value: unknown): void;
   setRoot(root: string): void;
   setCatalog(catalog: LaunchCatalog): void;
 } {
@@ -46,20 +50,37 @@ function fixture(): {
   const root = path.join(base, 'project');
   let activeRoot = root;
   let catalog = CATALOG;
+  let commandsData: unknown = { commands: [], source: 'default', path: '' };
   mkdirSync(home, { recursive: true });
   mkdirSync(root, { recursive: true });
   const opened: Array<{ key: string; value: TabPluginPayload }> = [];
   const updated: Array<{ key: string; value: TabPluginTabUpdate }> = [];
+  const events: string[] = [];
+  const topicDataCalls: string[] = [];
+  const topicAction = vi.fn();
   const capabilities = {
     originTab: () => ({ label: 'x', cwd: activeRoot, root: activeRoot }),
-    openOrFocusTab: (key: string, make: () => TabPluginPayload) => { opened.push({ key, value: make() }); },
-    updateTab: (key: string, make: () => TabPluginTabUpdate) => { updated.push({ key, value: make() }); },
+    openOrFocusTab: (key: string, make: () => TabPluginPayload) => {
+      events.push(`open:${key}`);
+      opened.push({ key, value: make() });
+    },
+    updateTab: (key: string, make: () => TabPluginTabUpdate) => {
+      events.push(`update:${key}`);
+      updated.push({ key, value: make() });
+    },
     harnessLaunchCatalog: () => catalog,
+    topicData: (topic: string) => {
+      topicDataCalls.push(topic);
+      events.push(`topicData:${topic}`);
+      return commandsData;
+    },
+    topicAction,
     rejectRequest: (reason: string): never => { throw new TabPluginRejection(reason); },
     reportFailure: (reason: unknown): never => { throw new Error(String(reason)); },
   } as unknown as TabPluginServerCapabilities;
   return {
-    home, root, capabilities, opened, updated,
+    home, root, capabilities, opened, updated, events, topicDataCalls, topicAction,
+    setCommands: (value) => { commandsData = value; },
     setRoot: (value) => { activeRoot = value; },
     setCatalog: (value) => { catalog = value; },
   };
@@ -75,6 +96,7 @@ const roleNames = (home: string): string[] =>
 const payloadFor = (home: string, source: RolesPayload['source'] = 'home'): RolesPayload => ({
   roles: [],
   nativeCommands: [...NATIVE_ACP_COMMANDS],
+  commandRestrictions: {},
   source,
   path: rolesPath(home),
   catalog: CATALOG,
@@ -107,6 +129,28 @@ const CHOICES: RoleEntry[] = [
 ];
 
 const staleMessage = 'The entries of role "research" changed elsewhere — retry the edit on the current list. Nothing was written.';
+
+const RESTRICTED_COMMANDS = {
+  commands: [
+    { name: 'db sqlite query', effectiveEnabled: false, effectiveAgentAccess: false },
+    { name: 'browser goto', effectiveEnabled: true, effectiveAgentAccess: false },
+    { name: 'browser content', effectiveEnabled: true, effectiveAgentAccess: true },
+    { name: 'clear', effectiveEnabled: false, effectiveAgentAccess: false },
+  ],
+  source: 'project',
+  path: '/project/.janissary/commands.json',
+};
+
+const RESTRICTIONS = {
+  'db sqlite query': 'application-wide',
+  'browser goto': 'agents',
+} as const;
+
+const commandsNotification = {
+  topic: 'commands',
+  data: { commands: [], source: 'default', path: '' },
+  tabs: ['roles'],
+} as const;
 
 describe('the roles command', () => {
   it('opens the singleton tab with the roles, the file in effect, and the catalog', () => {
@@ -224,6 +268,112 @@ describe('models topic deliveries', () => {
     expect(fromCommand.catalog).toEqual(nextCatalog);
     expect(readFileSync(firstPath, 'utf8')).toBe(firstBefore);
     expect(readFileSync(secondPath, 'utf8')).toBe(secondBefore);
+  });
+});
+
+describe('commands topic deliveries', () => {
+  it('reads the commands snapshot before opening and maps its restrictions', () => {
+    const { home, capabilities, opened, events, topicDataCalls, setCommands } = fixture();
+    const activation = activate(home);
+    setCommands(RESTRICTED_COMMANDS);
+
+    activation.command?.('', capabilities);
+
+    expect(events.slice(0, 2)).toEqual(['topicData:commands', 'open:roles']);
+    expect(topicDataCalls).toEqual(['commands']);
+    const payload = opened[0].value.payload as RolesPayload;
+    expect(payload.nativeCommands).toEqual(NATIVE_ACP_COMMANDS);
+    expect(payload.commandRestrictions).toEqual(RESTRICTIONS);
+  });
+
+  it('opens the empty slice with no restrictions', () => {
+    const { home, capabilities, opened } = fixture();
+
+    activate(home).command?.('', capabilities);
+
+    expect((opened[0].value.payload as RolesPayload).commandRestrictions).toEqual({});
+  });
+
+  it('reports invalid commands topic data and opens nothing', () => {
+    const { home, capabilities, opened, setCommands } = fixture();
+    setCommands({ commands: 'not a list' });
+
+    expect(() => activate(home).command?.('', capabilities)).toThrow('invalid commands topic data');
+    expect(opened).toEqual([]);
+  });
+
+  it('keeps the last restrictions when a commands notification carries invalid data', () => {
+    const { home, capabilities, updated, setCommands } = fixture();
+    const activation = activate(home);
+    setCommands(RESTRICTED_COMMANDS);
+    activation.command?.('', capabilities);
+    const afterOpen = updated.length;
+    setCommands({ commands: 'not a list' });
+
+    expect(() => activation.notify?.(commandsNotification, capabilities)).not.toThrow();
+
+    expect(updated).toHaveLength(afterOpen + 1);
+    expect((updated.at(-1)!.value.payload as RolesPayload).commandRestrictions).toEqual(RESTRICTIONS);
+  });
+
+  it('publishes nothing for invalid commands data before any restrictions were accepted', () => {
+    const { home, capabilities, updated, setCommands } = fixture();
+    setCommands({ commands: 'not a list' });
+
+    activate(home).notify?.(commandsNotification, capabilities);
+
+    expect(updated).toEqual([]);
+  });
+
+  it('repaints from the current snapshot on a commands notification without a title or a write', () => {
+    const { home, capabilities, updated, setCommands } = fixture();
+    const activation = activate(home);
+    activation.command?.('', capabilities);
+    const before = readFileSync(rolesPath(home), 'utf8');
+    const afterOpen = updated.length;
+    setCommands(RESTRICTED_COMMANDS);
+
+    activation.notify?.(commandsNotification, capabilities);
+
+    expect(updated).toHaveLength(afterOpen + 1);
+    const update = updated.at(-1)!;
+    expect(update.key).toBe('roles');
+    expect(update.value.title).toBeUndefined();
+    expect((update.value.payload as RolesPayload).commandRestrictions).toEqual(RESTRICTIONS);
+    expect(readFileSync(rolesPath(home), 'utf8')).toBe(before);
+
+    const afterCommands = updated.length;
+    activation.notify?.({ topic: 'schedules', data: [], tabs: ['roles'] }, capabilities);
+    expect(updated).toHaveLength(afterCommands);
+  });
+
+  it('stores and republishes a command that is currently restricted', async () => {
+    const { home, capabilities, updated, setCommands } = fixture();
+    const activation = activate(home);
+    setCommands(RESTRICTED_COMMANDS);
+    activation.command?.('', capabilities);
+
+    await send(activation, 'add-command', { role: 'research', command: 'browser goto' }, capabilities, payloadFor(home));
+
+    const stored = readRolesFile(home, capabilities.originTab()!.root).roles
+      .find(({ name }) => name === 'research')!;
+    expect(stored.commands).toContain('browser goto');
+    const payload = updated.at(-1)!.value.payload as RolesPayload;
+    expect(payload.nativeCommands).toContain('browser goto');
+    expect(payload.roles.find(({ name }) => name === 'research')?.commands).toContain('browser goto');
+    expect(payload.commandRestrictions).toEqual(RESTRICTIONS);
+  });
+
+  it('never asks the commands topic for an action or a refresh', async () => {
+    const { home, capabilities, topicAction, setCommands } = fixture();
+    const activation = activate(home);
+    setCommands(RESTRICTED_COMMANDS);
+    activation.command?.('', capabilities);
+    activation.notify?.(commandsNotification, capabilities);
+
+    await send(activation, 'add-command', { role: 'research', command: 'browser goto' }, capabilities, payloadFor(home));
+
+    expect(topicAction).not.toHaveBeenCalled();
   });
 });
 

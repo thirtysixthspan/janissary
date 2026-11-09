@@ -1,6 +1,6 @@
 ### syntax
 
-Set the syntax-highlighting theme used by every open editor and diff tab. Bare `syntax theme` opens a theme picker.
+Set the syntax-highlighting theme used by every open editor and diff tab. Bare `syntax theme` opens a theme picker. When `syntax` is disabled in the Commands tab, the command is refused and its picker does not open.
 
 **Usage**
 

@@ -46,6 +46,9 @@ const setup = (
   const addBusy = vi.fn();
   const deleteBusy = vi.fn();
   const registerQuestion = vi.fn(async () => 'Production');
+  const settingsRows: Array<{ name: string; effectiveEnabled: boolean; effectiveAgentAccess: boolean }> = [];
+  const settingsCurrent = vi.fn(() => ({ commands: settingsRows, source: 'default' as const, path: '' }));
+  const dispatchNativeLine = vi.fn(async () => ({ dispatched: true, output: 'db ran' }));
   const tabs: Tab[] = [makeTab('tab1', '#fff')];
   const records = { begin: vi.fn(() => 'record-id'), prompt: vi.fn(() => true), activity: vi.fn(), answer: vi.fn(), close: vi.fn() };
   const managers = {
@@ -57,6 +60,7 @@ const setup = (
       byLabel: (label: string) => tabs.find((t) => t.label === label),
       append,
       cwdOf: vi.fn().mockReturnValue('/cwd'),
+      workingDirOf: vi.fn().mockReturnValue('/cwd'),
       addBusy,
       deleteBusy,
       persist: vi.fn(),
@@ -70,6 +74,8 @@ const setup = (
     },
     browser: { run: vi.fn() },
     questions: { register: registerQuestion },
+    command: { dispatchNativeLine },
+    nativeCommandSettings: { current: settingsCurrent },
   } as never;
   const askModels = vi.fn((_root: string, role: AcpRole) => ({
     name: role, entries: entries.map((entry) => ({ ...entry })), commands: [...NATIVE_ACP_COMMANDS],
@@ -77,6 +83,7 @@ const setup = (
   const acp = new AcpManager(managers, roleSettings ?? askModels);
   return {
     askModels, acp, append, addBusy, deleteBusy, managers, registerQuestion,
+    dispatchNativeLine, settingsRows, settingsCurrent,
     updateRunning: (managers as { tab: { updateRunning: ReturnType<typeof vi.fn> } }).tab.updateRunning,
   };
 };
@@ -118,20 +125,25 @@ describe('AcpManager.run', () => {
     const roleSettings = vi.fn(() => ({
       name: 'ask', entries: [GEMINI, CLAUDE], commands: [...commands],
     }));
-    const { acp, managers } = setup([GEMINI, CLAUDE], roleSettings);
+    const { acp, managers, dispatchNativeLine, settingsRows, settingsCurrent } = setup([GEMINI, CLAUDE], roleSettings);
+    settingsRows.push({ name: 'question ask', effectiveEnabled: true, effectiveAgentAccess: false });
     acp.run('tab1', 'ask first');
     const first = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
     expect(first.primer).toContain('question ask');
+    expect(first.primer).not.toContain('Only these commands are allowed');
     expect(first.primer).not.toContain('db primer');
     expect(first.extractCommand('question ask "Who?"')).toBe('question ask "Who?"');
     expect(first.extractCommand('db sqlite list')).toBeNull();
 
     commands = ['db sqlite query'];
+    settingsRows.splice(0, settingsRows.length,
+      { name: 'question ask', effectiveEnabled: true, effectiveAgentAccess: false },
+      { name: 'db sqlite query', effectiveEnabled: true, effectiveAgentAccess: true });
     (mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers).error('retry');
     const retry = mocks.runAcpToolLoop.mock.calls[1][2] as AcpLoopDeps;
     expect(roleSettings).toHaveBeenCalledOnce();
     expect(retry.primer).toContain('question ask');
-    expect(retry.primer).not.toContain('db primer');
+    expect(retry.primer).not.toContain('Only these commands are allowed');
     expect(retry.extractCommand('question ask "Who?"')).toBe('question ask "Who?"');
 
     const retryHandlers = mocks.runAcpToolLoop.mock.calls[1][3] as AcpLoopHandlers;
@@ -141,32 +153,48 @@ describe('AcpManager.run', () => {
 
     const next = mocks.runAcpToolLoop.mock.calls[2][2] as AcpLoopDeps;
     expect(roleSettings).toHaveBeenCalledTimes(2);
+    expect(settingsCurrent).toHaveBeenCalledTimes(3);
     expect(next.primer).toContain('db primer');
     expect(next.primer).not.toContain('question ask');
+    expect(next.primer).toContain('Only these commands are allowed: db sqlite query.');
     expect(next.extractCommand('db sqlite query store SELECT 1'))
       .toBe('db sqlite query store SELECT 1');
     expect(next.extractCommand('question ask "Who?"')).toBeNull();
-    expect(next.runCommand('db sqlite query store SELECT 1')).toBe('db ran');
+    await expect(next.runCommand('db sqlite query store SELECT 1')).resolves.toBe('db ran');
+    expect(dispatchNativeLine).toHaveBeenCalledWith(
+      'tab1',
+      'db sqlite query store SELECT 1',
+      expect.objectContaining({ acpTool: true, awaitResult: true }),
+    );
     expect((managers as { database: { runInTab: ReturnType<typeof vi.fn> } }).database.runInTab)
-      .toHaveBeenCalledWith('tab1', 'db sqlite query store SELECT 1');
+      .not.toHaveBeenCalled();
+
+    settingsRows.splice(0, settingsRows.length,
+      { name: 'db sqlite query', effectiveEnabled: true, effectiveAgentAccess: false });
+    expect(next.runCommand('db sqlite query store SELECT 1'))
+      .toBe('Command is disabled: db sqlite query.');
+    expect(dispatchNativeLine).toHaveBeenCalledOnce();
+    expect(mocks.notify).toHaveBeenCalledWith(
+      managers, 'command-disabled', 'tab1', 'Command is disabled: db sqlite query.',
+    );
   });
 
-  it('runs an agent-issued question command and returns the human answer', async () => {
-    const { acp, registerQuestion } = setup();
+  it('runs an agent-issued question command through the dispatcher with the prompt signal', async () => {
+    const { acp, dispatchNativeLine } = setup();
     acp.run('tab1', 'ask plan the release');
     const dependencies = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
 
     expect(dependencies.primer).toContain('question ask "<question>"');
     expect(dependencies.extractCommand('question ask "What port?"')).toBe('question ask "What port?"');
+    dispatchNativeLine.mockResolvedValue({ dispatched: true, output: 'Production' });
     await expect(dependencies.runCommand(
       'question approve "Deploy?" Staging Production',
     )).resolves.toBe('Production');
-    expect(registerQuestion).toHaveBeenCalledWith({
-      tab: 'tab1',
-      kind: 'approve',
-      question: 'Deploy?',
-      options: ['Staging', 'Production'],
-    }, expect.any(AbortSignal));
+    expect(dispatchNativeLine).toHaveBeenCalledWith(
+      'tab1',
+      'question approve "Deploy?" Staging Production',
+      expect.objectContaining({ acpTool: true, awaitResult: true, signal: dependencies.signal }),
+    );
   });
 
   // A session started without tools must not be able to reach them, and the proof has to be in what

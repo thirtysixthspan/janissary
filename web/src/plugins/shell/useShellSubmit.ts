@@ -8,11 +8,28 @@ import { shellCommandInput } from './shell-command-input';
 import { stripTerminalControls } from './strip-terminal-controls';
 import { reportShellIntentFailure } from './report-shell-intent-failure';
 
+// A line's local shell route, when the application's published settings still allow it. A disabled
+// `hist` or `search` falls through to the server, which refuses it.
+type ShellLocalRoute = 'history' | { find: string };
+
+function localRoute(
+  text: string,
+  appBar: { disabledApplicationCommand: (line: string) => boolean },
+): ShellLocalRoute | undefined {
+  if (appBar.disabledApplicationCommand(text)) return undefined;
+  if (opensShellHistory(text)) return 'history';
+  const query = transcriptSearchQuery(text);
+  return query === undefined ? undefined : { find: query };
+}
+
 // Runs one command-bar line and answers whether it was written to zsh, which is what tells a
 // draining queue to wait for zsh's next prompt before running the line after it. `record` is false
 // for a line drained from the queue: it was recorded in the bar's history when it was queued.
 export function useShellSubmit(input: {
-  appBar: { intercept: (line: string) => boolean };
+  appBar: {
+    intercept: (line: string) => boolean;
+    disabledApplicationCommand: (line: string) => boolean;
+  };
   capabilities: TabPluginClientCapabilities;
   displayReply: (line: string, markdown: string) => void;
   echoCommand: (line: string, receipt?: ShellAcpReceipt) => void;
@@ -54,16 +71,16 @@ export function useShellSubmit(input: {
     }
     // Not recorded, so the list it opens is the same one `Ctrl+R` opens rather than one with `hist`
     // newly at the bottom.
-    if (opensShellHistory(text)) {
+    const local = localRoute(text, appBar);
+    if (local === 'history') {
       await discard();
       openHistory();
       return false;
     }
-    const findQuery = transcriptSearchQuery(text);
-    if (findQuery !== undefined) {
+    if (local !== undefined) {
       await discard();
       remember(text);
-      openFind(findQuery);
+      openFind(local.find);
       return false;
     }
     if (appBar.intercept(text)) {

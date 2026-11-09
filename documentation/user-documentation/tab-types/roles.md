@@ -24,7 +24,7 @@ Each choice row carries an effort dropdown: `default`, `low`, `medium`, `high`, 
 
 ## Grant commands to a role
 
-In the **Commands** section, choose **Add command**, select a native command, and press **Add**. The picker only offers commands the role does not already have. Remove a command with its **Remove <command>** control; removing a command removes every duplicate copy from the file. When all nine native commands are granted, **Add command** is hidden.
+In the **Commands** section, choose **Add command**, select a native command, and press **Add**. The picker only offers commands the role does not already have. Remove a command with its **Remove <command>** control; removing a command removes every duplicate copy from the file. When all nine native commands are granted, **Add command** is hidden. A granted command that is currently disabled is dimmed and carries the tooltip `Disabled application-wide` when it is off everywhere or `Disabled for agents` when only its agent access is off; the grant stays in your roles file and the picker still offers the command.
 
 The built-in **ask** role can read and query databases, browse to a page and read its content, and ask or approve a question. **Tell** can also create or delete databases and evaluate browser pages. You can adjust either list for your workflow. A role with an empty command list gives its prompts no native tools.
 

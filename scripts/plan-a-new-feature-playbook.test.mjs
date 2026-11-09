@@ -32,9 +32,15 @@ describe('the plan-a-new-feature playbook', () => {
   });
 
   it.each(IMPROVEMENT_TASKS)('runs %s without preparing the workspace again', (task) => {
-    expect(improveSection).toContain(`\`ai/tasks/planning/${task}\``);
-    expect(improveSection).toContain(`each in full except for its \`${PREPARE_STEP}\``);
-    expect(improveSection).toContain('Skip that Step 0 in both.');
+    expect(improveSection).toContain(
+      `Open \`ai/tasks/planning/${task}\` and execute every step in order, except \`${PREPARE_STEP}\``,
+    );
+  });
+
+  it('finishes and reports the first improvement before starting the second', () => {
+    expect(improveSection).toContain('Finish and report the first before starting the second');
+    expect(improveSection.indexOf('`ai/tasks/planning/improve-plan-with-minimalism.md`'))
+      .toBeGreaterThan(improveSection.indexOf('`ai/tasks/planning/improve-plan.md`'));
   });
 
   // The improvement tasks keep their own preparation step, because a direct run still needs it.

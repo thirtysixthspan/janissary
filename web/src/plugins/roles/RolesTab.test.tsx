@@ -17,6 +17,7 @@ function makePayload(overrides: Partial<RolesPayload> = {}): RolesPayload {
       { name: 'research', description: 'Research.', entries: [], commands: [] },
     ],
     nativeCommands: [...NATIVE_ACP_COMMANDS],
+    commandRestrictions: {},
     source: 'home',
     path: '/home/me/.janissary/roles.json',
     catalog: CATALOG,
@@ -93,8 +94,9 @@ describe('RolesTab', () => {
         name: 'research', description: 'Research.', entries: [],
         commands: ['future command', 'browser content', 'db sqlite list', 'browser content'],
       }],
+      commandRestrictions: { 'browser goto': 'agents' },
     });
-    const { intent } = renderTab(payload);
+    const { intent, publish } = renderTab(payload);
     const list = screen.getByRole('list', { name: 'Commands of role research' });
     const rows = [...list.querySelectorAll('.roles-command-entry')];
 
@@ -113,12 +115,50 @@ describe('RolesTab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     expect(intent).toHaveBeenCalledWith('add-command', { role: 'research', command: 'browser goto' });
 
+    publish({
+      ...payload,
+      roles: [{ ...payload.roles[0], commands: [...payload.roles[0].commands, 'browser goto'] }],
+    });
+    const added = [...screen.getByRole('list', { name: 'Commands of role research' })
+      .querySelectorAll('.roles-command-entry')]
+      .find((row) => row.textContent?.trim() === 'browser goto');
+    expect(added).toHaveClass('roles-entry-restricted');
+    expect(added).toHaveAttribute('title', 'Disabled for agents');
+
     const removeButtons = screen.getAllByRole('button', { name: 'Remove browser content' });
     expect(removeButtons[0]).toHaveAttribute('title', 'Remove browser content');
     fireEvent.click(removeButtons[0]);
     expect(intent).toHaveBeenLastCalledWith('remove-command', { role: 'research', command: 'browser content' });
     fireEvent.click(screen.getByRole('button', { name: 'Remove future command' }));
     expect(intent).toHaveBeenLastCalledWith('remove-command', { role: 'research', command: 'future command' });
+  });
+
+  it('dims restricted grants with their reason and leaves unrestricted and unknown rows alone', () => {
+    const payload = makePayload({
+      roles: [{
+        name: 'research', description: 'Research.', entries: [],
+        commands: ['db sqlite list', 'browser goto', 'browser content', 'future command'],
+      }],
+      commandRestrictions: {
+        'db sqlite list': 'application-wide',
+        'browser goto': 'agents',
+      },
+    });
+    const { container } = renderTab(payload);
+    const list = screen.getByRole('list', { name: 'Commands of role research' });
+    const row = (command: string) => [...list.querySelectorAll('.roles-command-entry')]
+      .find((candidate) => candidate.textContent?.trim() === command) as HTMLElement;
+
+    expect(row('db sqlite list')).toHaveClass('roles-entry-restricted');
+    expect(row('db sqlite list')).toHaveAttribute('title', 'Disabled application-wide');
+    expect(row('browser goto')).toHaveClass('roles-entry-restricted');
+    expect(row('browser goto')).toHaveAttribute('title', 'Disabled for agents');
+    expect(row('browser content')).not.toHaveClass('roles-entry-restricted');
+    expect(row('browser content')).not.toHaveAttribute('title');
+    expect(row('future command')).toHaveClass('roles-entry-missing');
+    expect(row('future command')).toHaveAttribute('title', 'Not a native command');
+    expect(container).not.toHaveTextContent('Disabled application-wide');
+    expect(container).not.toHaveTextContent('Disabled for agents');
   });
 
   it('hides Add command when all native commands are present, including duplicate and unknown grants', () => {

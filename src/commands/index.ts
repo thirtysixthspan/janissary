@@ -40,9 +40,9 @@ import { command as question } from './question.js';
 import { monitor, unmonitor, monitors } from './monitor.js';
 import { command as plugins } from './plugins.js';
 import { tabPluginCatalog } from '../plugins/catalog.js';
-import { createPluginCommands } from '../plugins/command-adapter.js';
+import { claimPluginCommands } from '../plugins/command-adapter.js';
 
-const coreCommands: Command[] = [
+export const coreCommands: Command[] = [
   shell,
   next,
   askReset,
@@ -89,9 +89,11 @@ const coreCommands: Command[] = [
   unmonitor,
 ];
 
+export const pluginCommandClaims = claimPluginCommands(tabPluginCatalog, coreCommands);
+
 export const commands: Command[] = [
   ...coreCommands,
-  ...createPluginCommands(tabPluginCatalog, coreCommands),
+  ...pluginCommandClaims.map((claim) => claim.command),
 ];
 
 // The entry to run for a command `resolveCommand` named. It picked the name by walking `match` in

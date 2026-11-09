@@ -1,15 +1,23 @@
 import React, { type RefObject } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import type { CommandRestriction } from '@shared/plugins/roles/shared';
 import { CommandPicker } from './CommandPicker';
 import { canAddRoleCommand, orderedRoleCommands, availableRoleCommands } from './role-commands';
 
+function restrictionTitle(restriction: CommandRestriction | undefined): string | undefined {
+  if (restriction === 'application-wide') return 'Disabled application-wide';
+  if (restriction === 'agents') return 'Disabled for agents';
+  return undefined;
+}
+
 export function RoleCommands({
-  roleName, commands, vocabulary, headingId, headingRef, picker, onAdd, onRemove,
+  roleName, commands, vocabulary, commandRestrictions, headingId, headingRef, picker, onAdd, onRemove,
 }: {
   roleName: string;
   commands: readonly string[];
   vocabulary: readonly string[];
+  commandRestrictions: Readonly<Record<string, CommandRestriction>>;
   headingId: string;
   headingRef: RefObject<HTMLHeadingElement | null>;
   picker: {
@@ -68,11 +76,19 @@ export function RoleCommands({
         {ordered.length === 0 ? <li className="roles-empty-row">No commands</li> : null}
         {ordered.map((command, index) => {
           const unknown = !vocabulary.includes(command);
+          const restriction = !unknown && Object.hasOwn(commandRestrictions, command)
+            ? commandRestrictions[command]
+            : undefined;
+          const className = [
+            'roles-entry', 'roles-command-entry',
+            ...(unknown ? ['roles-entry-missing'] : []),
+            ...(restriction === undefined ? [] : ['roles-entry-restricted']),
+          ].join(' ');
           return (
             <li
               key={`${command}:${index}`}
-              className={unknown ? 'roles-entry roles-entry-missing roles-command-entry' : 'roles-entry roles-command-entry'}
-              title={unknown ? 'Not a native command' : undefined}
+              className={className}
+              title={unknown ? 'Not a native command' : restrictionTitle(restriction)}
             >
               <span className="roles-command-text">{command}</span>
               <button

@@ -1,4 +1,4 @@
-export const ROLES_PAYLOAD_SCHEMA_VERSION = 3;
+export const ROLES_PAYLOAD_SCHEMA_VERSION = 4;
 
 export const NATIVE_ACP_COMMANDS = [
   'db sqlite create',
@@ -28,9 +28,12 @@ export type RolesSource = 'home' | 'project' | 'default';
 // surface may offer.
 export type LaunchCatalog = { models: Record<string, string[]>; efforts: string[] };
 
+export type CommandRestriction = 'application-wide' | 'agents';
+
 export type RolesPayload = {
   roles: Role[];
   nativeCommands: string[];
+  commandRestrictions: Record<string, CommandRestriction>;
   source: RolesSource;
   path: string;
   problem?: string;
@@ -97,6 +100,18 @@ function isStringList(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
+function isCommandRestriction(value: unknown): value is CommandRestriction {
+  return value === 'application-wide' || value === 'agents';
+}
+
+function isCommandRestrictions(
+  value: unknown, vocabulary: readonly string[],
+): value is Record<string, CommandRestriction> {
+  return isRecord(value)
+    && Object.entries(value).every(([command, restriction]) =>
+      vocabulary.includes(command) && isCommandRestriction(restriction));
+}
+
 export function isAddRoleIntent(value: unknown): value is AddRoleIntent {
   return isRecord(value) && isName(value.name);
 }
@@ -151,7 +166,7 @@ export function isRemoveCommandIntent(value: unknown): value is RemoveCommandInt
 
 export function isRolesPayload(value: unknown): value is RolesPayload {
   if (!isRecord(value)) return false;
-  const { roles, source, path: filePath, catalog, problem } = value;
+  const { roles, source, path: filePath, catalog, problem, nativeCommands } = value;
   return Array.isArray(roles)
     && roles.every((role) => isRecord(role)
       && isName(role.name)
@@ -161,7 +176,8 @@ export function isRolesPayload(value: unknown): value is RolesPayload {
       && isStringList(role.commands))
     && isRolesSource(source)
     && typeof filePath === 'string'
-    && isStringList(value.nativeCommands)
+    && isStringList(nativeCommands)
+    && isCommandRestrictions(value.commandRestrictions, nativeCommands)
     && (problem === undefined || typeof problem === 'string')
     && isRecord(catalog)
     && isModelCatalog(catalog.models)

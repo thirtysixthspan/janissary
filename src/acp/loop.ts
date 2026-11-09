@@ -49,9 +49,8 @@ export function runAcpToolLoop(
         const display = filterCommandFromDisplay(buffer, command);
         h.endTurn(display);
         if (command && step < maxSteps) {
-          // Only await when the command is actually async (e.g. browser); a sync command
-          // (db) must complete in the same tick so callers/tests observing synchronously
-          // see the full loop.
+          // Native commands may answer synchronously or through the dispatcher; await a promise
+          // result so the loop always feeds back the completed output.
           let result: string;
           try {
             const returnValue = dependencies.runCommand(command);

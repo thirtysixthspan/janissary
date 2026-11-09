@@ -1,6 +1,6 @@
 ### hist
 
-Open the command history picker.
+Open the command history picker. When `hist` is disabled in the Commands tab, the command and `Ctrl+R` are refused.
 
 **Usage**
 

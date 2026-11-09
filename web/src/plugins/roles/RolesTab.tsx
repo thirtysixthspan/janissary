@@ -9,7 +9,7 @@ type Properties = { payload: RolesPayload; capabilities: TabPluginClientCapabili
 // The roles tab edits names, descriptions, efforts, and order in place; every edit is one intent,
 // so nothing shown here is local state the file does not hold.
 export function RolesTab({ payload, capabilities }: Properties) {
-  const { roles, source, path, problem, catalog, nativeCommands } = payload;
+  const { roles, source, path, problem, catalog, nativeCommands, commandRestrictions } = payload;
   const [refusal, setRefusal] = useState<string | null>(null);
   const { adding, newName, openNewRole, typeName, closeNewRole, commitNewRole } = useRoleCreation(
     capabilities.intent,
@@ -33,6 +33,7 @@ export function RolesTab({ payload, capabilities }: Properties) {
             efforts={catalog.efforts}
             models={catalog.models}
             nativeCommands={nativeCommands}
+            commandRestrictions={commandRestrictions}
             capabilities={capabilities}
             onRefusal={setRefusal}
           />

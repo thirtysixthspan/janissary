@@ -1,0 +1,28 @@
+.commands-tab { padding: 0; gap: 0; }
+.commands-header { min-height: 28px; padding: 6px 12px; font-size: 12px; border-bottom: 1px solid var(--border); }
+.commands-header .commands-source { margin-right: auto; word-break: break-all; }
+.commands-source-row { padding: 6px 12px; color: var(--muted); font-size: 12px; word-break: break-all; }
+.commands-header .plugin-actions button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 0 4px; line-height: 1;
+}
+.commands-header .plugin-actions button:hover { color: var(--fg); }
+.commands-problem, .commands-empty { padding: 8px 12px; color: var(--muted); font-size: 12px; }
+.commands-problem { padding-top: 0; }
+.commands-refusal {
+  border: 1px solid var(--danger); color: var(--danger); border-radius: 4px;
+  margin: 0 12px 8px; padding: 4px 8px; font-size: 12px;
+}
+.commands-scroll { overflow-x: auto; }
+.commands-grid { display: flex; flex-direction: column; min-width: 32em; }
+.commands-columns, .commands-row {
+  display: grid; grid-template-columns: minmax(0, 1.6fr) 6em 8em;
+  gap: 12px; align-items: baseline; padding: 0 12px; color: var(--muted); font-size: 12px; text-align: left;
+}
+.commands-columns { border-bottom: 1px solid var(--border); }
+.commands-row { padding-top: 4px; padding-bottom: 4px; white-space: nowrap; color: var(--fg); }
+.commands-row:hover { background: var(--border); }
+.commands-row-disabled { color: var(--muted); opacity: 0.65; }
+.commands-label { overflow: hidden; text-overflow: ellipsis; }
+.commands-note { display: block; color: var(--muted); font-size: 11px; white-space: normal; }
+.commands-check { display: flex; align-items: center; }

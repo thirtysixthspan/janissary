@@ -17,6 +17,12 @@ A command typed over several lines with `Shift+Enter` completes the same way on 
 
 `execute` completes valid project runscript names in its single name slot. Bare `edit` targets combine runscript names with filesystem matches; paths, names containing extensions, and `:line` targets use filesystem completion. Both use the current project runscript catalog for each request. A missing or unsafe catalog contributes no runscript suggestions. Additional `execute` arguments receive no runscript suggestions.
 
+### Application command names
+
+At the first word of a command, completion offers the names and aliases of enabled application commands before matching filesystem paths. A command name is offered only for a non-empty bare word that contains no `/`, `\`, or quote; an empty word, a token beginning with `!` or `/`, and a token containing a path separator keep the existing filesystem completion. Candidate matching is case-sensitive.
+
+Disabled commands and their fixed forms are not offered, and completion offers no arguments or paths under a disabled command or native child. A disabled name stays hidden even when a filesystem path with the same prefix remains available. Commands sharing a canonical name share one setting, so disabling the name hides every owner and form. A line beginning with `!` is explicit shell execution and is never filtered.
+
 ### File navigator command (`files`)
 
 At a `files` clause position, completion offers matching bare keywords before filesystem paths in a
@@ -45,7 +51,7 @@ The shell uses the following rules, in order of precedence:
 
 - **Context:** The first argument after `help`.
 - **Candidates:** The names of markdown pages in the help directory, including `commands` and `keys`.
-- **Behavior:** A matching name completes normally. A prefix with no match returns no candidates and does not fall through to filesystem path completion. A leading slash in the argument is not completed. Arguments after the first use the ordinary completion chain.
+- **Behavior:** A matching name completes normally. A prefix with no match returns no candidates and does not fall through to filesystem path completion. A leading slash in the argument is not completed. Arguments after the first use the ordinary completion chain. While `help` is enabled, disabled commands keep their help pages and complete normally; when `help` itself is disabled, its command word and page completion are suppressed like any other disabled command.
 
 ### Tab target arguments
 

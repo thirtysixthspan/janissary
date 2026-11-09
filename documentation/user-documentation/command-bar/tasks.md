@@ -8,6 +8,8 @@ Use the task picker to find a workflow and add it to the command line without lo
 
 `Ctrl+A` (or the `tasks` command) opens a window listing the task files, with the task files in a directory listed first and its subdirectories last, each group sorted alphabetically. So the runnable tasks sit at the top and any subdirectory collects beneath them — expand one (`→` or `Return`) to see the task files inside it:
 
+When `tasks` is disabled in the Commands tab, `Ctrl+A` and `tasks` do nothing; the line is refused by the server.
+
 `↑`/`↓` move the selection, `Return` on a file row inserts the task's command into the command line at the cursor, and `Escape` closes without changing anything. A row can also be clicked, which does the same as `Return`. If neither source has any rows, the window shows `(no tasks)`. A folder under the project's `ai/tasks/` can still appear as a row when it contains no task files.
 
 | Key | What it does |

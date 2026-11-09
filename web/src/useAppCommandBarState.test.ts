@@ -15,7 +15,7 @@ function view(queueOpen: boolean): PickerOverlayView {
   return { overlays, queueIndex: 1, queueItems: ['first', 'second'] } as unknown as PickerOverlayView;
 }
 
-function build(queueTab: string | undefined) {
+function build(queueTab: string | undefined, disabledApplicationCommand?: (line: string) => boolean) {
   const insertions = { current: new Map<string, (text: string) => void>() };
   const replacements = { current: new Map<string, (text: string) => void>() };
   const pickers = { view: view(true), onEditQueued: vi.fn(), onDeleteQueued: vi.fn() };
@@ -28,6 +28,7 @@ function build(queueTab: string | undefined) {
     onFocusTab: vi.fn(),
     insertions,
     replacements,
+    disabledApplicationCommand,
   }));
   return { state: result.current, insertions, replacements, pickers };
 }
@@ -69,5 +70,14 @@ describe('useAppCommandBarState', () => {
     expect(replacements.current.get('shell1')).toBe(handler);
     unregister?.();
     expect(replacements.current.has('shell1')).toBe(false);
+  });
+
+  it('carries the application\'s disabled-command query into the state bag', () => {
+    const disabled = vi.fn(() => true);
+    const { state } = build('agent', disabled);
+
+    expect(state.disabledApplicationCommand?.('theme')).toBe(true);
+    expect(disabled).toHaveBeenCalledWith('theme');
+    expect(build('agent').state.disabledApplicationCommand).toBeUndefined();
   });
 });

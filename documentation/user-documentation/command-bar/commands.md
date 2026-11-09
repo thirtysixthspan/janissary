@@ -30,6 +30,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `conversation [<title>]` | Open the [conversation list](/user-documentation/tab-types/conversations), or open a saved conversation by title, or start a new conversation and send `<title>` as the first query |
 | `conversations [left\|right\|<title>]` | Open or dock the [conversation list](/user-documentation/tab-types/conversations), or reopen a saved conversation by its title |
 | `models [left\|right]` | Open the [Models tab](/user-documentation/tab-types/models), or dock it in a sidebar |
+| `commands` | Open the [Commands tab](/user-documentation/tab-types/commands) to enable or disable application commands and control native agent access; `commands enable\|disable [agent\|global] <command>` changes one setting |
 | `shell [name] [-w\|--workspace\|--no-workspace] [--offline]` | Open a separate [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab), in a fresh sandboxed workspace clone unless `--no-workspace` is given |
 | `quit` / `/quit` | Exit the application, after confirmation |
 
@@ -65,6 +66,16 @@ Names are lowercased, and extra spaces around and between words are ignored. One
 If the help files can't be read, `help` falls back to a single summary line naming the built-in commands and reminding you that `!` runs something in the shell, `/` runs a built-in, and `Ctrl+R` or `hist` opens command history.
 
 Every command's page is also on this site, under **Command Reference** in the sidebar.
+
+## `commands`
+
+`commands` opens the [Commands tab](/user-documentation/tab-types/commands), where every application command has an **Enabled** checkbox and every native ACP command also has an **Agent access** checkbox. The tab re-reads the effective `commands.json` file each time it opens. Changes save as you make them, and a failed save shows the refusal above the table while the previous value stays checked.
+
+A disabled command is refused wherever it is dispatched. Its picker, theme dialog, quit confirmation, or save guard does not open from a command bar, and a command-backed shortcut for it does nothing. An ordinary command-bar line is offered to the server and refused there with `Command is disabled: <command>.`; a disabled `quit` or `close` line is consumed instead and reported to the server, whose existing `command-disabled` notification is its only feedback when the ambient toggle and focus rules allow it. Closing the last tab from `Cmd+W`/`Ctrl+W` or the tab strip still opens the quit confirmation first; confirming dispatches `quit`, which the server refuses when `quit` is disabled.
+
+`commands enable [agent|global] <command>` and `commands disable [agent|global] <command>` change one setting without opening the tab. Leave out the selector to change whether the command is enabled; use `agent` to change whether agents may use a native command. Names match canonical names, aliases, and fixed forms exactly, ignoring case and repeated spaces, so trailing words are not ignored. A malformed form prints `Usage: commands [enable|disable [agent|global] <command>].`; an unknown name prints `Unknown application command: <command>.`; and agent access on a command that is not native prints `Not a native ACP command: <canonical>.`
+
+The tab never docks itself, but `tab dock` can dock it like any bundled plugin tab. `commands` is an ordinary setting, so it can disable itself and be re-enabled from its open tab. Once that tab is closed, a disabled `commands` is refused like any other command until you edit the effective `commands.json` by hand.
 
 ## `tab`
 
@@ -184,7 +195,7 @@ Closing the browser window or reloading the page while work is unsaved gets you 
 ## `notifications` and `notify`
 
 
-`notifications` opens a single feed tab for background activity: an agent finishing, a message arriving, a scheduled command firing, an agent starting a turn, or a model query being rate limited. It also reports explicit results from Models refreshes and system schedules. The four ambient event toggles in `.janissary/config.json` default off; the system-schedule and Models-refresh toggles default on. Rate-limit reports use `notifications.events.rateLimited`. `notifications left` or `notifications right` docks the feed into a sidebar, and `notifications clear` empties the queue, the record file, and any toasts on screen. `notify <message>` and diagnostic messages bypass event toggles and focus suppression. A notification with no feed on screen appears as a toast instead. When three arrive within ten seconds, the feed is made visible (docked on the right if it didn't exist yet) and the toasts clear. See [Notifications](/user-documentation/tab-types/notifications) for delivery details and [app configuration](/user-documentation/getting-started/configuration) for the settings.
+`notifications` opens a single feed tab for background activity: an agent finishing, a message arriving, a scheduled command firing, an agent starting a turn, a model query being rate limited, or a disabled command being refused. It also reports explicit results from Models refreshes and system schedules. The five ambient event toggles in `.janissary/config.json` default off; the system-schedule and Models-refresh toggles default on. Rate-limit reports use `notifications.events.rateLimited`. `notifications left` or `notifications right` docks the feed into a sidebar, and `notifications clear` empties the queue, the record file, and any toasts on screen. `notify <message>` and diagnostic messages bypass event toggles and focus suppression. A notification with no feed on screen appears as a toast instead. When three arrive within ten seconds, the feed is made visible (docked on the right if it didn't exist yet) and the toasts clear. See [Notifications](/user-documentation/tab-types/notifications) for delivery details and [app configuration](/user-documentation/getting-started/configuration) for the settings.
 
 ## Command comments
 

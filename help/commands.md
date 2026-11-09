@@ -9,6 +9,7 @@
 | `clear` | Clear the tab's output log; in a shell tab, bare `clear` is sent to zsh so it clears the terminal instead (use `/clear` to clear the output log) |
 | `clipboard` | Show session clipboard history with `clip`, Ctrl+Shift+V, or Cmd+Shift+V. Selecting an entry pastes it at the cursor; typing `clipboard` opens this help page |
 | `close` | Close the current tab (exits if last); `close <tabname>` closes a tab by label or display alias, and Cancel on its dirty prompt activates that tab. `/close` and `/exit` are equivalent |
+| `commands` | Open the Commands tab to enable or disable application commands and control native agent access; `commands enable\|disable [agent\|global] <command>` changes one setting |
 | `connection` | Open the connections tab; `connection <text>` opens a live connection or retained session by UUID or full title, and `connection list`/`connection close <connection>` manage live connections |
 | `connections` | Open the connections tab; `connections left`/`right` docks it, `connections <text>` looks up a session, and `connections list`/`connections close <connection>` manage live connections |
 | `conversation` | Bare `conversation` opens the conversation list; `conversation <title>` opens a saved conversation by title, ignoring case, or creates one and sends `<title>` as its first query |
@@ -61,3 +62,13 @@
 | `video` | `video <path>` opens a video tab, with the same paths and wildcards as `open`; `video snapshot <video> at <time> <file>` saves one frame as an image |
 
 Both `shell` and `harness` launches accept `in group <name\|id>` to join an existing group by its case-insensitive name or numeric ID. An unknown name creates a group; an unknown positive ID creates that numbered group. Without the clause, the new tab joins the issuing tab's group.
+
+A command disabled in the Commands tab is refused wherever it runs. Its picker, command-backed shortcut, or command-bar confirmation does not open or run. An ordinary command-bar line is offered to the server and refused there with `Command is disabled: <command>.`; a disabled `quit` or `close` line is consumed instead and reported to the server, whose existing `command-disabled` notification is its only feedback when the ambient toggle and focus rules allow it. Closing the last tab from `Cmd+W`/`Ctrl+W` or the tab strip still opens the quit confirmation first; confirming dispatches `quit`, which the server refuses when `quit` is disabled.
+
+### commands
+
+Bare `commands` opens the Commands tab, or focuses it when already open, and re-reads the settings file first. The tab lists every application command with an Enabled checkbox and, for native ACP commands, an Agent access checkbox. Changes save immediately; a failed save shows its refusal in the tab and leaves the previous value checked. A command whose parent is disabled shows `Disabled by parent command: <parent>.` and cannot be changed until the parent is enabled; a native command whose parent denies agent access can still be enabled but cannot grant agent access. A row is labeled by its canonical name when that name is one of its forms, or when its first fixed form is another row's name; otherwise it shows its first fixed form, so the builtin `question` row reads `question` while the native `question ask` row reads `question ask`.
+
+`commands enable [agent|global] <command>` and `commands disable [agent|global] <command>` change one setting without opening the tab. The selector defaults to `global`; `agent` changes agent access. Names match canonical names, aliases, and fixed forms exactly, ignoring case and repeated whitespace; trailing words are not ignored. Malformed forms reply `Usage: commands [enable|disable [agent|global] <command>].`, an unknown name replies `Unknown application command: <command>.`, and agent access on a non-native command replies `Not a native ACP command: <canonical>.`
+
+The tab never docks itself; `tab dock` can dock it. The `commands` command can disable itself, and can be re-enabled from its open tab. Once the tab is closed, a disabled `commands` is refused like any other command until the effective `commands.json` file is edited by hand.

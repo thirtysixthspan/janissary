@@ -18,6 +18,8 @@ Up to ten matching lines are listed with their line numbers. The characters you 
 
 The list shows the terminal as it was when the search opened. Output that arrives while it is open shows up the next time you open it. Replies drawn as formatted blocks, such as `help`'s, aren't searched. `search transcript` here never reaches zsh, and it is saved in the tab's command history like any other line.
 
+When `search` is disabled in the Commands tab, `search transcript` does not open this search; the line is refused by the server. `Cmd+F` is not a command-backed shortcut and still opens the empty search.
+
 Sent from somewhere other than a shell command bar, such as a `send` or a script, the command searches the application replies and core ACP entries that Janissary keeps for the tab and prints the most recent matching line. Patterns are regular expressions matched without regard to case. No match prints `No matches found in the transcript.`. A missing or invalid pattern prints `Usage: search transcript <pattern>`.
 
 To search a file, use `Cmd+F` in the [editor](/user-documentation/tab-types/editor#find-a-line). Use `Cmd+Shift+F` for [project search](/user-documentation/command-bar/project-search).

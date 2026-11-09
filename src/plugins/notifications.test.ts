@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
 import { TabManager } from '../tab/manager.js';
 import { messageBus } from '../bus.js';
@@ -27,6 +27,12 @@ const CONVERSATIONS = {
   windows: [],
   models: [{ harness: 'opencode' as const, model: 'model' }],
 };
+const COMMANDS = { commands: [], source: 'default' as const, path: '' };
+const commandSubscribers = new Set<() => void>();
+
+beforeEach(() => {
+  commandSubscribers.clear();
+});
 
 function manifest(id: string, notifications?: readonly TabPluginNotificationTopic[]): TabPluginDeclaration {
   return {
@@ -61,6 +67,13 @@ function makeManagers(): Managers {
     command: { closeTab: vi.fn() },
     database: { forgetTab: vi.fn(), closeTab: vi.fn(), closeAll: vi.fn() },
     remote: { closeTab: vi.fn() },
+    nativeCommandSettings: {
+      current: () => COMMANDS,
+      subscribe: (listener: () => void) => {
+        commandSubscribers.add(listener);
+        return () => { commandSubscribers.delete(listener); };
+      },
+    },
   } as unknown as Managers);
   return managers;
 }
@@ -88,6 +101,11 @@ function fireSchedules(): Promise<void> {
 
 function fireConversations(): Promise<void> {
   messageBus.emit('conversations', { type: 'changed' });
+  return new Promise((resolve) => { setTimeout(resolve, 0); });
+}
+
+function fireCommands(): Promise<void> {
+  for (const listener of commandSubscribers) listener();
   return new Promise((resolve) => { setTimeout(resolve, 0); });
 }
 
@@ -256,6 +274,33 @@ describe('tab plugin notifications', () => {
     await fireSchedules();
 
     expect(seen).toEqual([{ topic: 'schedules', data: ROWS, tabs: ['/tmp/a.fixture'] }]);
+  });
+
+  it('delivers commands only to an active plugin with an open tab, and never activates one', async () => {
+    const managers = makeManagers();
+    const notify = vi.fn();
+    const loader = vi.fn(async () => ({ activate: () => activationFor(notify) }));
+    const host = new TabPluginHost(managers, [manifest('fixture', ['commands'])], { fixture: loader });
+
+    await fireCommands();
+
+    expect(notify).not.toHaveBeenCalled();
+    expect(loader).not.toHaveBeenCalled();
+    expect(host.statusFor('fixture')?.state).toBe('declared');
+
+    const tab = await openTab(host, managers);
+    await fireCommands();
+
+    expect(notify).toHaveBeenCalledOnce();
+    expect(notify.mock.calls[0]?.[0]).toEqual({
+      topic: 'commands', data: COMMANDS, tabs: ['/tmp/a.fixture'],
+    });
+
+    host.clientFailed(tab.label, 'client gave up');
+    await fireCommands();
+
+    expect(host.statusFor('fixture')?.state).toBe('disabled');
+    expect(notify).toHaveBeenCalledOnce();
   });
 
   it('never reaches a subscriber with no open tab, and never activates one', async () => {

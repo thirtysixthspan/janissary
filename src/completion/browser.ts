@@ -1,14 +1,19 @@
 import type { CompletionCursor, CompletionResult } from './types.js';
+import type { CompletionPolicy } from './command-policy.js';
 import { completeWord } from './helpers.js';
 import { BROWSER_SUBCOMMANDS } from '../browser/command.js';
 
-export function completeBrowserCommand(cursor: CompletionCursor, connections: string[]): CompletionResult | null {
+export function completeBrowserCommand(
+  cursor: CompletionCursor,
+  connections: string[],
+  policy: CompletionPolicy,
+): CompletionResult | null {
   const { command, argumentIndex, preceding } = cursor;
   if (command !== 'browser') {
     return null;
   }
   if (argumentIndex === 1) {
-    return completeWord(cursor, BROWSER_SUBCOMMANDS);
+    return completeWord(cursor, BROWSER_SUBCOMMANDS.filter((word) => policy.allows(`browser ${word}`)));
   }
   const sub = preceding[1]?.toLowerCase();
   const windowIds = connections

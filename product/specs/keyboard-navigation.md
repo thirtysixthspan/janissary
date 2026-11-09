@@ -17,14 +17,14 @@
 | Shift+↓ / Ctrl+↓ | Scroll transcript down (accelerated — distance doubles each second held) |
 | Ctrl+P | Scroll transcript up (fixed — one line per press) |
 | Ctrl+N | Scroll transcript down (fixed — one line per press) |
-| Ctrl+R | Open command history picker |
+| Ctrl+R | Open command history picker; blocked when `hist` is disabled |
 | Ctrl+Shift+V / Cmd+Shift+V | Open the clipboard-history popup (see [[clipboard-history]]). `Ctrl+V` and `Cmd+V` are untouched — in an editor tab they are the browser's own paste |
-| Ctrl+A | Open the task picker |
+| Ctrl+A | Open the task picker; blocked when `tasks` is disabled |
 | Ctrl+G | Open the fuzzy tab navigator (also closes it if already open) |
-| Ctrl+E | Open the command queue popup for a tab with a queue and an application command bar (see [[command-queue]]; otherwise no-op) |
+| Ctrl+E | Open the command queue popup for a tab with a queue and an application command bar (see [[command-queue]]; otherwise no-op); blocked when `queue` is disabled |
 | Cmd+P | Open the Quick Open file finder from any focused tab |
-| Cmd+Shift+F | Open the project-wide search tab from any focused tab (see [[search-tab]]). Distinct from Cmd+F, which searches an editor buffer, a shell tab's transcript, or a PDF tab's document |
-| Cmd+T | Open a new workspaced shell tab (same as typing `shell`) |
+| Cmd+Shift+F | Open the project-wide search tab from any focused tab (see [[search-tab]]). Distinct from Cmd+F, which searches an editor buffer, a shell tab's transcript, or a PDF tab's document; blocked when `search` is disabled |
+| Cmd+T | Open a new workspaced shell tab (same as typing `shell`); blocked when `shell` is disabled |
 | PageUp | Scroll transcript up by half terminal height |
 | PageDown | Scroll transcript down by half terminal height |
 | Escape | Reset scroll to bottom |
@@ -32,6 +32,8 @@
 | (printable) | Insert character at cursor |
 | Tab | Complete the token at the cursor: a file path, a `connections close` connection string, or a `browser` subcommand / window id |
 | Shift+Tab | Move keyboard focus to the next application section (left sidebar → center → right sidebar → reporting, wrapping back to left, skipping any section that is not currently present). The section's currently-visible tab receives focus. Does nothing while a modal dialog or keyboard-capturing overlay is open, so focus stays with that surface. Left to an editor tab's text buffer, where it outdents (see [[editor-tab]]), to a pending question panel's controls, where it moves backward between the panel's buttons (see [[agent-questions]]), and to a shell tab, where it moves between the terminal and the command bar (see [[shell-tab]]). |
+
+`Ctrl+R`, `Ctrl+A`, `Ctrl+E`, `Cmd+Shift+F`, and `Cmd+T` are command-backed: each runs `hist`, `tasks`, `queue`, `search`, or `shell` respectively. When that command is disabled in the Commands tab, the shortcut is blocked instead of opening its picker or running, and the client reports it to the server so the ordinary `command-disabled` notification can be recorded. A blocked shortcut is attributed to the tab that holds focus, or to the active tab when the key was not pressed inside a tab. Holding a blocked shortcut reports it once per key press: auto-repeated keydowns are still blocked but are not reported again.
 
 The UI is composed of up to four **application sections**: the left sidebar, the center action
 area, the right sidebar, and the reporting section below it. A section exists only when it holds

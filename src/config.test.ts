@@ -220,6 +220,7 @@ describe('loadConfig', () => {
     const config = loadConfig(tmpDir);
     expect(config.notifications?.events).toEqual({
       stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false,
+      commandDisabled: false,
       systemScheduleFire: true, modelsRefresh: true,
     });
     expect(config.notifications?.alerts).toEqual(NOTIFICATION_ALERT_DEFAULTS);
@@ -255,6 +256,7 @@ describe('loadConfig', () => {
         scheduleFire: false,
         agentStart: false,
         rateLimited: false,
+        commandDisabled: false,
         systemScheduleFire: true,
         modelsRefresh: true,
     });
@@ -282,6 +284,7 @@ describe('loadConfig', () => {
     } else {
       expect(written.notifications.events).toEqual({
         stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false,
+        commandDisabled: false,
         systemScheduleFire: true, modelsRefresh: true,
       });
     }
@@ -296,6 +299,20 @@ describe('loadConfig', () => {
     }));
 
     expect(loadConfig(tmpDir).notifications?.events.systemScheduleFire).toBe(false);
+  });
+
+  it('decodes the command-disabled toggle and defaults missing or malformed values off', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({
+      notifications: { events: { commandDisabled: true } },
+    }));
+    expect(loadConfig(tmpDir).notifications?.events.commandDisabled).toBe(true);
+
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({
+      notifications: { events: { commandDisabled: 'yes' } },
+    }));
+    expect(loadConfig(tmpDir).notifications?.events.commandDisabled).toBe(false);
   });
 
   it('preserves an explicit false model refresh toggle', () => {

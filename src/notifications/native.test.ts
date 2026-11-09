@@ -164,4 +164,24 @@ describe('native notification delivery', () => {
     expect(NOTIFICATION_ALERT_DEFAULTS['system-schedule-fire'].sound).toBe('warning');
     expect(NOTIFICATION_ALERT_DEFAULTS.manual.sound).toBe('success');
   });
+
+  it('keeps command-disabled alerts muted by default and permits explicit opt-in', () => {
+    const fixture = setup();
+    try {
+      const defaults = config.getConfig();
+      const getConfig = vi.spyOn(config, 'getConfig').mockReturnValue(defaults);
+      expect(NOTIFICATION_ALERT_DEFAULTS['command-disabled']).toEqual({ desktop: false, sound: 'none' });
+      notify(fixture.managers, 'command-disabled', 'build', 'Command is disabled: db.');
+      expect(fixture.events).toHaveLength(0);
+
+      getConfig.mockReturnValue({ ...defaults, notifications: {
+        ...defaults.notifications!, events: { ...defaults.notifications!.events, commandDisabled: true },
+        alerts: { ...defaults.notifications!.alerts, 'command-disabled': { desktop: true, sound: 'warning' } },
+      } });
+      notify(fixture.managers, 'command-disabled', 'build', 'Command is disabled: db.');
+      expect(fixture.events).toEqual([expect.objectContaining({
+        tab: 'build', message: 'Command is disabled: db.', category: 'warning', desktop: true,
+      })]);
+    } finally { fixture.dispose(); }
+  });
 });

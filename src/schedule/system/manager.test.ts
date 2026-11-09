@@ -372,4 +372,33 @@ describe('SystemScheduleManager mutations', () => {
     expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 1, entries: [due] } });
     await controller.shutdown();
   });
+
+  it('refuses a scheduled line disabled after it was queued', async () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-disabled-'));
+    mkdirSync(path.join(root, '.janissary', 'scripts'), { recursive: true });
+    writeFileSync(path.join(root, '.janissary', 'scripts', 'clear.rs'), 'clear\n');
+    const controller = createController(sinks, root);
+    const system = { ...makeTab('system'), systemShell: true, runtime: { busy: false, context: [], queue: [] } };
+    controller.managers.tab.tabs.push(system);
+    vi.spyOn(controller.managers.systemShell, 'ensure').mockResolvedValue({ status: 'ok', tab: system });
+    const added = controller.managers.systemSchedule.add({
+      ...schedule('clear', 'ignored'), command: 'script clear', script: 'clear', nextRun: 0,
+    });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+
+    await controller.managers.systemSchedule.tick(1);
+    expect(system.runtime?.queue).toHaveLength(1);
+    writeFileSync(path.join(root, '.janissary', 'commands.json'), '{"clear":{"enabled":false}}');
+    controller.managers.nativeCommandSettings.refresh();
+    controller.managers.tab.append('system', { input: '', output: 'kept' });
+
+    await expect(controller.managers.command.dispatchQueuedLine('system', 'clear')).resolves.toEqual({
+      dispatched: true, output: 'Command is disabled: clear.',
+    });
+    expect(system.log).toEqual([
+      { input: '', output: 'kept' },
+      { input: 'clear', output: 'Command is disabled: clear.' },
+    ]);
+    await controller.shutdown();
+  });
 });

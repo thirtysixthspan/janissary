@@ -1,9 +1,14 @@
 import { isBrowserCommandLine, BROWSER_PRIMER } from '../browser/command.js';
-import { isQuestionCommandLine, QUESTION_PRIMER, runQuestionCommand } from '../question-command.js';
+import { isQuestionCommandLine, QUESTION_PRIMER } from '../question-command.js';
 import { findLastCommandLine } from './command-line.js';
 import type { Managers } from '../managers.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { nativeCommandName, nativeCommandTool, type NativeCommandTool } from './native-commands.js';
+import { resolveApplicationCommand } from '../application-commands.js';
+import { refuseDisabledCommand } from '../native-commands/dispatch-policy.js';
+import { effectiveCommandSetting } from '../native-commands/policy.js';
+import { notify } from '../notifications/index.js';
+import { createInvocationContext } from '../command/invocation.js';
 
 // One tool on the ACP run path. The three loop options the agent sees — what it is told the tools
 // are, what runs a command it emitted, and what pulls a command out of its reply — are all derived
@@ -30,13 +35,14 @@ export type AcpTool = {
 export function createAcpToolTable(
   managers: Managers, _role: string, grants: readonly string[], signal?: AbortSignal,
 ): AcpTool[] {
+  const run = (label: string, command: string) => dispatchNative(managers, label, command, signal);
   const ownedTools: Array<{ owner: NativeCommandTool; tool: AcpTool }> = [
     {
       owner: 'browser',
       tool: {
         primer: BROWSER_PRIMER,
         match: (command) => /^browser\b/i.test(command),
-        run: (label, command) => managers.browser.run(label, command),
+        run,
         isCommandLine: (line) => isBrowserCommandLine(line),
       },
     },
@@ -45,7 +51,7 @@ export function createAcpToolTable(
       tool: {
         primer: QUESTION_PRIMER,
         match: (command) => /^question\b/i.test(command),
-        run: (label, command) => runQuestionCommand(command, label, managers.questions, signal),
+        run,
         isCommandLine: (line) => isQuestionCommandLine(line),
       },
     },
@@ -54,7 +60,7 @@ export function createAcpToolTable(
       tool: {
         primer: managers.database.primer,
         match: () => true,
-        run: (label, command) => managers.database.runInTab(label, command),
+        run,
         isCommandLine: (line) => managers.database.isCommandLine(line),
       },
     },
@@ -65,27 +71,64 @@ export function createAcpToolTable(
     .map(({ tool }) => tool);
 }
 
+async function dispatchNative(
+  managers: Managers,
+  label: string,
+  command: string,
+  signal?: AbortSignal,
+): Promise<string> {
+  const invocation = createInvocationContext(managers, label, command, {
+    ...(signal !== undefined && { signal }),
+    awaitResult: true,
+    acpTool: true,
+  });
+  const result = await managers.command.dispatchNativeLine(label, command, invocation);
+  if (!result.dispatched) throw new Error(`No ACP tool matched command: ${command}`);
+  if (result.coreResponse) return result.output;
+  if (result.result === undefined) return result.output;
+  return typeof result.result === 'string'
+    ? result.result
+    : JSON.stringify(result.result) ?? String(result.result);
+}
+
 // The joined primer and canonical allow-list, in table and vocabulary order.
-export function toolPrimer(tools: AcpTool[], grants: readonly string[]): string {
+export function toolPrimer(tools: AcpTool[], allowList: readonly string[]): string {
   if (tools.length === 0) return '';
-  const allowed = NATIVE_ACP_COMMANDS.filter((command) => grants.includes(command));
+  const allowed = NATIVE_ACP_COMMANDS.filter((command) => allowList.includes(command));
   return [
     ...tools.map((tool) => tool.primer),
-    `Only these commands are allowed: ${allowed.join(', ')}.`,
+    ...(allowed.length > 0 ? [`Only these commands are allowed: ${allowed.join(', ')}.`] : []),
   ].join('\n\n');
 }
 
 // Refuse ungranted commands before the database catch-all can claim them.
 export function toolRunner(
-  tools: AcpTool[], role: string, grants: readonly string[], label: string,
+  managers: Managers,
+  tools: AcpTool[],
+  role: string,
+  grants: readonly string[],
+  label: string,
 ): (command: string) => string | Promise<string> {
   const allowed = new Set(grants);
   return (command) => {
     const native = nativeCommandName(command);
     if (native === undefined) throw new Error(`No ACP tool matched command: ${command}`);
-    if (!allowed.has(native)) return `Command not allowed for role "${role}": ${native}.`;
     const tool = tools.find((candidate) => candidate.match(command));
     if (!tool) throw new Error(`No ACP tool matched command: ${command}`);
+    const row = resolveApplicationCommand(native);
+    const setting = row === undefined
+      ? undefined
+      : effectiveCommandSetting(managers.nativeCommandSettings?.current(), row.name);
+    if (setting?.effectiveEnabled === false) {
+      const refusal = refuseDisabledCommand(managers, command, native, label);
+      if (refusal !== undefined) return refusal;
+    }
+    if (row !== undefined && setting?.effectiveAgentAccess === false) {
+      const message = `Command is disabled: ${row.name}.`;
+      notify(managers, 'command-disabled', label, message);
+      return message;
+    }
+    if (!allowed.has(native)) return `Command not allowed for role "${role}": ${native}.`;
     return tool.run(label, command);
   };
 }

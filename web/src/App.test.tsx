@@ -61,6 +61,7 @@ type EmitState = (
   syntaxTheme: string, theme: string, tasks: TaskRow[],
   scheduleLaunch?: StateEvent['scheduleLaunch'],
   secondaryTab?: number,
+  disabledApplicationCommands?: StateEvent['disabledApplicationCommands'],
 ) => void;
 let stateListener: EmitState | null = null;
 let layoutListener: LayoutListener | null = null;
@@ -75,14 +76,14 @@ const client = {
   registerStateCollector: registerStateCollectorMock,
   saveFile: () => Promise.resolve(undefined),
   onState(listener: StateListener) {
-    stateListener = (tabs, active, maxLength, history, syntax, theme, tasks, scheduleLaunch = null, secondaryTab) => {
+    stateListener = (tabs, active, maxLength, history, syntax, theme, tasks, scheduleLaunch = null, secondaryTab, disabledApplicationCommands = []) => {
       listener({
         t: 'state', tabs, activeTab: active, tabNameMaxLength: maxLength,
         ...(secondaryTab !== undefined && { secondaryTab }),
         activeTabNameMaxLength: 50, clipboardHistoryMaxEntries: 15, globalHistory: history,
         syntaxTheme: syntax, theme, tasks,
         profiles: [], projectDir: '/tmp', version: '1.2.3',
-        harnessLaunch: null, scheduleLaunch,
+        harnessLaunch: null, scheduleLaunch, disabledApplicationCommands,
       });
     };
     return () => {};
@@ -133,6 +134,37 @@ describe('App app theme picker', () => {
     expect(screen.getByText('theme', { selector: '.picker-title' })).toBeInTheDocument();
     fireEvent.keyDown(globalThis as unknown as Window, { key: 'Enter' });
     expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'theme dark' } });
+  }, 15_000);
+
+  it('sends a disabled theme line to the server instead of opening the picker', async () => {
+    const { App } = await import('./App');
+    render(<App client={client} />);
+    act(() => {
+      stateListener!([makeTab()], 0, 16, [], 'github-dark', 'dark', [], undefined, undefined, [
+        { name: 'theme', aliases: [], forms: ['theme', 'theme sync'] },
+      ]);
+    });
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'theme' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'theme' } });
+    expect(screen.queryByText('theme', { selector: '.picker-title' })).toBeNull();
+  }, 15_000);
+
+  it('reports and consumes a disabled quit line instead of dispatching it or opening the confirmation', async () => {
+    const { App } = await import('./App');
+    render(<App client={client} />);
+    act(() => {
+      stateListener!([makeTab()], 0, 16, [], 'github-dark', 'dark', [], undefined, undefined, [
+        { name: 'quit', aliases: [], forms: ['quit'] },
+      ]);
+    });
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'quit' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(sendMock).toHaveBeenCalledWith({ method: 'reportBlockedCommand', params: { text: 'quit', tab: 'janus' } });
+    expect(sendMock).not.toHaveBeenCalledWith({ method: 'command', params: { text: 'quit' } });
+    expect(screen.queryByText('Are you sure you want to quit?')).not.toBeInTheDocument();
   }, 15_000);
 });
 

@@ -52,6 +52,7 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'schedule-fire': { return `Scheduled: ${detail} in ${tabLabel}`; }
     case 'system-schedule-fire': { return detail ?? ''; }
     case 'models-refresh': { return detail ?? ''; }
+    case 'command-disabled': { return detail ?? ''; }
     case 'manual':
     case 'layout':
     case 'connection-closed':

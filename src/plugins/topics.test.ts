@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 import type { AggregatedScheduleView, RemoteSessionView } from '../protocol.js';
+import type { CommandSettingsSnapshot } from '../native-commands/settings-types.js';
 import { initDbDir } from '../connections.js';
 import { DatabaseManager } from '../database/manager.js';
+import { NativeCommandSettingsManager } from '../native-commands/manager.js';
 import {
   TAB_PLUGIN_API_VERSION,
   type TabPluginCapabilityName,
@@ -230,8 +232,9 @@ describe('the databases topic source', () => {
   });
 
   it('subscribes to the databases change signal rather than the state broadcast', () => {
+    const { managers } = makeManagers();
     const fire = vi.fn();
-    const subscription = subscribeTopic('databases', fire);
+    const subscription = subscribeTopic(managers, 'databases', fire);
     messageBus.emit('databases', { type: 'changed' });
     expect(fire).toHaveBeenCalledTimes(1);
     subscription.unsubscribe();
@@ -242,7 +245,7 @@ describe('the databases topic source', () => {
   it('emits the change signal once per action, whatever the action was', () => {
     const { managers } = makeManagers();
     const fire = vi.fn();
-    const subscription = subscribeTopic('databases', fire);
+    const subscription = subscribeTopic(managers, 'databases', fire);
     runTopicAction(managers, { topic: 'databases', action: 'schema', database: 'shop', requestId: 'a' });
     runTopicAction(managers, {
       topic: 'databases', action: 'query', database: 'shop', requestId: 'b',
@@ -281,8 +284,9 @@ describe('the sessions topic source', () => {
   });
 
   it('subscribes to the sessions change signal rather than the state broadcast', () => {
+    const { managers } = makeManagers();
     const fire = vi.fn();
-    const subscription = subscribeTopic('sessions', fire);
+    const subscription = subscribeTopic(managers, 'sessions', fire);
     messageBus.emit('sessions', { type: 'changed' });
     expect(fire).toHaveBeenCalledTimes(1);
     subscription.unsubscribe();
@@ -292,8 +296,9 @@ describe('the sessions topic source', () => {
   // lifecycle raises the same signal the row actions do, so a launch, a join, or a lost transport
   // reaches the tab without anyone pressing Refresh.
   it('fires for a channel lifecycle signal, not only for a row action', () => {
+    const { managers } = makeManagers();
     const fire = vi.fn();
-    const subscription = subscribeTopic('sessions', fire);
+    const subscription = subscribeTopic(managers, 'sessions', fire);
     emitSessionsChanged();
     expect(fire).toHaveBeenCalledTimes(1);
     subscription.unsubscribe();
@@ -500,8 +505,9 @@ describe('the runscripts topic source', () => {
   });
 
   it('delivers each runscripts change signal to a subscriber', () => {
+    const { managers } = makeManagers();
     const fire = vi.fn();
-    const subscription = subscribeTopic('runscripts', fire);
+    const subscription = subscribeTopic(managers, 'runscripts', fire);
     messageBus.emit('runscripts', { type: 'changed' });
     expect(fire).toHaveBeenCalledTimes(1);
     subscription.unsubscribe();
@@ -531,6 +537,165 @@ describe('the runscripts topic source', () => {
     capabilities.topicAction({ topic: 'runscripts', action: 'ensureDirectory', origin: 'janus' });
 
     expect(existsSync(path.join(root, '.janissary', 'scripts'))).toBe(true);
+  });
+});
+
+describe('the commands topic source', () => {
+  const roots: string[] = [];
+
+  afterEach(() => {
+    for (const root of roots) rmSync(root, { recursive: true, force: true });
+    roots.length = 0;
+  });
+
+  function commandsFixture(): {
+    home: string; managers: Managers; root: string; settings: NativeCommandSettingsManager;
+  } {
+    const base = mkdtempSync(path.join(tmpdir(), 'topics-commands-'));
+    roots.push(base);
+    const root = path.join(base, 'project');
+    const home = path.join(base, 'home');
+    mkdirSync(root);
+    mkdirSync(home);
+    const settings = new NativeCommandSettingsManager(root, home);
+    const { managers } = makeManagers();
+    const scoped = { ...managers, nativeCommandSettings: settings } as unknown as Managers;
+    return { home, managers: scoped, root, settings };
+  }
+
+  function put(file: string, content: string): void {
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, content);
+  }
+
+  function snapshotOf(managers: Managers): CommandSettingsSnapshot {
+    return readTopicData(managers, 'commands') as CommandSettingsSnapshot;
+  }
+
+  it('reads the current snapshot and declares an empty slice with no rows', () => {
+    const { managers, settings } = commandsFixture();
+
+    expect(readTopicData(managers, 'commands')).toBe(settings.current());
+    expect(emptyTopicData('commands')).toEqual({ commands: [], source: 'default', path: '' });
+  });
+
+  it('re-reads the effective file on refresh, publishes once, and returns synchronously', () => {
+    const { managers, root } = commandsFixture();
+    put(path.join(root, '.janissary', 'commands.json'), '{"clear":{"enabled":false}}');
+    const fire = vi.fn();
+    const subscription = subscribeTopic(managers, 'commands', fire);
+    try {
+      const result = runTopicAction(managers, { topic: 'commands', action: 'refresh' });
+
+      expect(result).toBeUndefined();
+      expect(result).not.toBeInstanceOf(Promise);
+      expect(fire).toHaveBeenCalledOnce();
+      expect(snapshotOf(managers)).toMatchObject({ source: 'project' });
+      expect(snapshotOf(managers).commands.find(({ name }) => name === 'clear')?.enabled).toBe(false);
+    } finally {
+      subscription.unsubscribe();
+    }
+  });
+
+  it('fires once per publication and stops after unsubscribe', async () => {
+    const { managers, settings } = commandsFixture();
+    const fire = vi.fn();
+    const subscription = subscribeTopic(managers, 'commands', fire);
+
+    settings.refresh();
+    expect(fire).toHaveBeenCalledTimes(1);
+    await settings.edit({ name: 'clear', setting: { enabled: false } });
+    expect(fire).toHaveBeenCalledTimes(2);
+
+    subscription.unsubscribe();
+    settings.refresh();
+    expect(fire).toHaveBeenCalledTimes(2);
+  });
+
+  it('awaits one toggle, publishes the edited snapshot, and returns undefined', async () => {
+    const { home, managers } = commandsFixture();
+    const fire = vi.fn();
+    const subscription = subscribeTopic(managers, 'commands', fire);
+    try {
+      const result = runTopicAction(managers, {
+        topic: 'commands', action: 'set', name: 'clear', setting: 'enabled', value: false,
+      });
+
+      expect(result).toBeInstanceOf(Promise);
+      await expect(result).resolves.toBeUndefined();
+      expect(fire).toHaveBeenCalledOnce();
+      const clear = snapshotOf(managers).commands.find(({ name }) => name === 'clear');
+      expect(clear).toMatchObject({ enabled: false, effectiveEnabled: false });
+      const persisted: unknown = JSON.parse(readFileSync(path.join(home, '.janissary', 'commands.json'), 'utf8'));
+      expect(persisted).toHaveProperty('clear.enabled', false);
+    } finally {
+      subscription.unsubscribe();
+    }
+  });
+
+  it('resolves the service refusal for an unknown command, an unusable file, and a failed write', async () => {
+    const unknown = commandsFixture();
+    await expect(runTopicAction(unknown.managers, {
+      topic: 'commands', action: 'set', name: 'not-a-command', setting: 'enabled', value: false,
+    })).resolves.toBe('Unknown application command: not-a-command.');
+    await expect(runTopicAction(unknown.managers, {
+      topic: 'commands', action: 'set', name: 'browser content extra', setting: 'enabled', value: false,
+    })).resolves.toBe('Unknown application command: browser content extra.');
+    await expect(runTopicAction(unknown.managers, {
+      topic: 'commands', action: 'set', name: 'exit now', setting: 'agentAccess', value: false,
+    })).resolves.toBe('Unknown application command: exit now.');
+
+    const unusable = commandsFixture();
+    const unusablePath = path.join(unusable.root, '.janissary', 'commands.json');
+    put(unusablePath, '{ bad');
+    await expect(runTopicAction(unusable.managers, {
+      topic: 'commands', action: 'set', name: 'clear', setting: 'enabled', value: false,
+    })).resolves.toBe(`commands.json at ${unusablePath} is unusable — fix the file before editing commands.`);
+
+    const unwritable = commandsFixture();
+    writeFileSync(path.join(unwritable.home, '.janissary'), '');
+    await expect(runTopicAction(unwritable.managers, {
+      topic: 'commands', action: 'set', name: 'clear', setting: 'enabled', value: false,
+    })).resolves.toBe(`Could not write commands.json at ${path.join(unwritable.home, '.janissary', 'commands.json')}.`);
+  });
+
+  it('refuses agent access for a non-native command without calling edit', async () => {
+    const { managers, settings } = commandsFixture();
+    const edit = vi.spyOn(settings, 'edit');
+
+    const result = runTopicAction(managers, {
+      topic: 'commands', action: 'set', name: 'exit', setting: 'agentAccess', value: false,
+    });
+
+    expect(result).toBeInstanceOf(Promise);
+    await expect(result).resolves.toBe('Not a native ACP command: close.');
+    expect(edit).not.toHaveBeenCalled();
+  });
+
+  it('changes agent access on a native command', async () => {
+    const { managers } = commandsFixture();
+
+    await expect(runTopicAction(managers, {
+      topic: 'commands', action: 'set', name: 'db sqlite list', setting: 'agentAccess', value: false,
+    })).resolves.toBeUndefined();
+
+    expect(snapshotOf(managers).commands.find(({ name }) => name === 'db sqlite list'))
+      .toMatchObject({ agentAccess: false, effectiveAgentAccess: false });
+  });
+
+  it('gives a disabled plugin the empty slice and resolved no-ops without touching the manager', async () => {
+    const { managers, settings } = commandsFixture();
+    const refresh = vi.spyOn(settings, 'refresh');
+    const edit = vi.spyOn(settings, 'edit');
+    const capabilities = contextFor(managers, ['topicData', 'topicAction'], ['commands'], () => false);
+
+    expect(capabilities.topicData('commands')).toEqual({ commands: [], source: 'default', path: '' });
+    expect(capabilities.topicAction({ topic: 'commands', action: 'refresh' })).toBeUndefined();
+    await expect(capabilities.topicAction({
+      topic: 'commands', action: 'set', name: 'clear', setting: 'enabled', value: false,
+    })).resolves.toBeUndefined();
+    expect(refresh).not.toHaveBeenCalled();
+    expect(edit).not.toHaveBeenCalled();
   });
 });
 
@@ -585,7 +750,7 @@ describe('the topicData and topicAction capabilities', () => {
     };
     vi.mocked(managers.models.view).mockReturnValue(view);
     const fire = vi.fn();
-    const subscription = subscribeTopic('models', fire);
+    const subscription = subscribeTopic(managers, 'models', fire);
     try {
       expect(readTopicData(managers, 'models')).toEqual(view);
       expect(emptyTopicData('models')).toEqual({ groups: [], refreshing: false });
@@ -659,6 +824,11 @@ describe('the topicData and topicAction capabilities', () => {
     expect(() => capabilities.topicAction({
       topic: 'models', action: 'delete', harness: 'claude', id: 'gone',
     })).toThrow('used topic "models" without declaring it');
+    expect(() => capabilities.topicData('commands'))
+      .toThrow('used topic "commands" without declaring it');
+    expect(() => capabilities.topicAction({
+      topic: 'commands', action: 'set', name: 'clear', setting: 'enabled', value: false,
+    })).toThrow('used topic "commands" without declaring it');
     expect(clearAll).not.toHaveBeenCalled();
   });
 

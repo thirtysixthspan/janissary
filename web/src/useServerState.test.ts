@@ -16,6 +16,7 @@ const makeClient = () => {
         tabNameMaxLength: 16, activeTabNameMaxLength: 50, clipboardHistoryMaxEntries: 15, globalHistory: [],
         syntaxTheme: 'github-dark', theme: 'dark', tasks: [],
         profiles: [], projectDir: '', version: '', harnessLaunch: null, scheduleLaunch: null,
+        disabledApplicationCommands: [],
       });
     },
   };
@@ -35,6 +36,7 @@ const makeSetters = () => ({
   setTheme: vi.fn(),
   setTasks: vi.fn(),
   setProfiles: vi.fn(),
+  setDisabledApplicationCommands: vi.fn(),
 });
 
 describe('useServerState', () => {
@@ -51,6 +53,7 @@ describe('useServerState', () => {
       projectDir: '/projects/example', version: '4.5.6',
       harnessLaunch: { names: ['claude'], models: { claude: ['opus'] }, autoApprove: ['claude'], autoResume: [] },
       scheduleLaunch: { targets: ['agent'], active: 'agent', runscripts: [] },
+      disabledApplicationCommands: [{ name: 'theme', aliases: [], forms: ['theme', 'theme sync'] }],
     };
     act(() => { client.emitSnapshot(snapshot); });
     expect(setters.setTabs).toHaveBeenCalledWith(snapshot.tabs);
@@ -64,6 +67,7 @@ describe('useServerState', () => {
     expect(setters.setTheme).toHaveBeenCalledWith('light');
     expect(setters.setTasks).toHaveBeenCalledWith(snapshot.tasks);
     expect(setters.setProfiles).toHaveBeenCalledWith(snapshot.profiles);
+    expect(setters.setDisabledApplicationCommands).toHaveBeenCalledWith(snapshot.disabledApplicationCommands);
     expect(setters.setHarnessLaunch).toHaveBeenCalledWith(snapshot.harnessLaunch);
     expect(setters.setScheduleLaunch).toHaveBeenCalledWith(snapshot.scheduleLaunch);
     expect(document.title).toBe('Janissary (4.5.6): /projects/example');
@@ -72,6 +76,7 @@ describe('useServerState', () => {
     expect(setters.setSecondaryTab).toHaveBeenLastCalledWith(undefined);
     expect(setters.setHarnessLaunch).toHaveBeenLastCalledWith(null);
     expect(setters.setScheduleLaunch).toHaveBeenLastCalledWith(null);
+    expect(setters.setDisabledApplicationCommands).toHaveBeenLastCalledWith([]);
   });
 
   it('fans out the synchronized secondary selection', () => {

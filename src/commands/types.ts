@@ -17,6 +17,7 @@ export type CommandInvocationContext = Readonly<{
   // slash. A command that echoes its own invocation reads this rather than reconstructing one.
   line?: string;
   awaitResult?: true;
+  acpTool?: true;
   systemSchedule?: Readonly<SystemScheduleOrigin>;
 }>;
 

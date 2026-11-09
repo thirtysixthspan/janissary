@@ -73,6 +73,7 @@ const makeController = () =>
     openAcpTranscript: vi.fn(),
     openConnectionRecord: vi.fn(),
     reportLayout: vi.fn(),
+    reportBlockedCommand: vi.fn(),
     projectFiles: vi.fn(async () => ({ root: '/proj', paths: [] })),
     projectFilesFallback: vi.fn(() => ({ root: '/proj', paths: [] })),
     editorPersonas: vi.fn(() => []),
@@ -522,6 +523,15 @@ describe('handle', () => {
     expect(controller.reportLayout).toHaveBeenCalledWith({
       sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70, splitPct: 62.5,
     });
+  });
+
+  it('routes a blocked-command report through the controller façade and acknowledges it', () => {
+    const controller = makeController();
+    const replies = dispatchCall(controller, 31, {
+      method: 'reportBlockedCommand', params: { text: 'hist', tab: 'shell1' },
+    });
+    expect(controller.reportBlockedCommand).toHaveBeenCalledWith('hist', 'shell1');
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 31, result: 'ok' }]);
   });
 
   it('routes projectFiles to a deferred reply carrying the resolved root and paths', async () => {

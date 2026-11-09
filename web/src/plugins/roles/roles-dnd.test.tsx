@@ -24,6 +24,7 @@ function payload(): RolesPayload {
       },
     ],
     nativeCommands: [...NATIVE_ACP_COMMANDS],
+    commandRestrictions: {},
     source: 'home',
     path: '/home/me/.janissary/roles.json',
     catalog: CATALOG,

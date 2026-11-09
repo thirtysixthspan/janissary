@@ -33,7 +33,7 @@ export const pluginBoundaries = [
     rules: {
       'no-restricted-imports': ['error', {
         patterns: [{
-          regex: String.raw`^\.\./(?!(?:api\.js|files\.js|\.\./openers/(?:web-target|numbered-sibling)\.js|\.\./error-text\.js|\.\./search/(?:compile-matcher|filter-paths|matching-worker|matcher-worker-protocol|search-files|types)\.js)$)`,
+          regex: String.raw`^\.\./(?!(?:api\.js|files\.js|\.\./openers/(?:web-target|numbered-sibling)\.js|\.\./error-text\.js|\.\./shared/application-commands\.js|\.\./search/(?:compile-matcher|filter-paths|matching-worker|matcher-worker-protocol|search-files|types)\.js)$)`,
           message: 'Server tab plugins must use src/plugins/api.ts capabilities instead of host internals.',
         }],
       }],

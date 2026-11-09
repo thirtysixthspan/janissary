@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { JanusClient } from './shared/ws/ws';
-import type { TabView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow } from '@shared/protocol';
+import type { TabView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow, DisabledApplicationCommand } from '@shared/protocol';
 import { closeQuitsApp } from '@shared/tab/placement';
 import { AppMain } from './AppMain';
 import type { CommandInputDropHandle } from './shared/drop-handles';
@@ -12,6 +12,7 @@ import { useSectionNav } from './useSectionNav';
 import { useTabEntries } from './useTabEntries';
 import { useCmdW } from './useCmdW';
 import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
+import { useAppCommands } from './useAppCommands';
 import { useAppWindowKeys } from './useAppWindowKeys';
 import { createPluginChordRegistry, PluginChordProvider } from './plugins/PluginChords';
 import { AppCommandBarProvider, useAppCommandLine } from './shared/command-bar/AppCommandBar';
@@ -27,6 +28,7 @@ import { sidebarSelectionFor } from './sidebar-selection-coordinator';
 import { useCmdWRefs } from './useCmdWRefs';
 import { collectNavigatorSelections } from './file-navigator/file/navigator-selection-registry';
 import { useOverlayPlugins } from './useOverlayPlugins';
+import { disabledApplicationCommand } from './shared/command-availability';
 import { visibleTabs } from './shared/tab/visible-tabs';
 import { PluginTabStateStore } from './plugins/tab-state-store';
 import { disposeClosedPluginTabs, retainOpenDirtyPluginLabels } from './plugins/prune-closed-plugin-tabs';
@@ -60,6 +62,7 @@ export function App({ client }: { client: JanusClient }) {
   const [syntaxTheme, setSyntaxTheme] = useState('github-dark');
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
+  const [disabledApplicationCommands, setDisabledApplicationCommands] = useState<DisabledApplicationCommand[]>([]);
   const [pickerSourceTab, setPickerSourceTab] = useState<string>();
   const [focusedPluginTab, setFocusedPluginTab] = useState<string>();
   // Server-driven "New harness" launch dialog (null when closed).
@@ -105,7 +108,7 @@ export function App({ client }: { client: JanusClient }) {
   });
 
 
-  const runCommand = useCallback((text: string, tab?: string) => client.send({ method: 'command', params: { text, ...(tab && { tab }) } }), [client]);
+  const { runCommand, reportBlockedCommand, onQuit } = useAppCommands(client);
   // Every modal overlay's state, under one owner. It hands out a bag per consumer — the render tree,
   // the window key handler, the command bar's interception chain, the server state stream — so none
   // of them restates the others' fields (see `pickers/usePickerOverlays`).
@@ -143,7 +146,6 @@ export function App({ client }: { client: JanusClient }) {
     (label: string): TabPluginState => pluginTabStateStore.forTab(label),
     [pluginTabStateStore],
   );
-  const onQuit = useCallback(() => runCommand('quit'), [runCommand]);
   const revealDocked = useCallback((label: string) => sidebarSelectionFor(client).select(label), [client]);
   const quitWalkRef = useRef<(() => boolean) | null>(null);
   const saveWalkOpenRef = useRef(false);
@@ -173,7 +175,7 @@ export function App({ client }: { client: JanusClient }) {
     setTabs: receiveTabs, setActiveTab, setSecondaryTab, setHarnessLaunch, setScheduleLaunch,
     setTabNameMaxLength, setActiveTabNameMaxLength, setClipboardHistoryMaxEntries, setGlobalHistory,
     setSyntaxTheme,
-    setTasks, setProfiles,
+    setTasks, setProfiles, setDisabledApplicationCommands,
     ...pickers.serverState,
   });
 
@@ -192,11 +194,17 @@ export function App({ client }: { client: JanusClient }) {
 
   useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, keyboardCapturedRef, focusedPluginTabIndexRef);
 
+  // One client-side projection of the server's disabled-command list, shared by the window key
+  // handler, the application command bar, and every plugin bar. The server remains authoritative.
+  const isDisabledApplicationCommand = useCallback((line: string) => disabledApplicationCommand(line, disabledApplicationCommands) !== undefined, [disabledApplicationCommands]);
+
   // Live snapshot + callbacks read by the window key handler, so it never has to re-register. Every
   // overlay-owned field arrives in one bag; the current plugin label scopes plugin chords.
   useAppWindowKeys(client, {
     ...pickers.keys,
     currentPluginTab: current?.plugin ? current.label : undefined,
+    disabledApplicationCommands,
+    currentTabLabel: current?.label,
   }, pluginChords);
 
 
@@ -206,14 +214,14 @@ export function App({ client }: { client: JanusClient }) {
   // reach, and neither can be threaded down through the tab tree without changing a dozen signatures.
   const interceptCommandLine = useAppCommandLine({
     ...pickers.commands, tabs, activeTab, openQuitConfirm: guardedOpenQuitConfirm, guardRef,
-    onPickerOpen: setPickerSourceTab,
+    onPickerOpen: setPickerSourceTab, disabledApplicationCommand: isDisabledApplicationCommand, reportBlockedCommand,
   });
   // The queue popup belongs to the tab a picker recorded as its source, and otherwise to the current
   // tab, which is where it is drawn.
   const appCommandBar = useAppCommandBarState({
     intercept: interceptCommandLine, ghostHistory: globalHistory, pickers,
     queueTab: pickerSourceTab ?? current?.label, tabs, onFocusTab: setFocusedPluginTab,
-    insertions: pluginCommandLineInsertions, replacements: pluginCommandLineReplacements,
+    insertions: pluginCommandLineInsertions, replacements: pluginCommandLineReplacements, disabledApplicationCommand: isDisabledApplicationCommand,
   });
 
   if (!hasState) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;

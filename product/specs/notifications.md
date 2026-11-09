@@ -282,14 +282,18 @@ Every system schedule notice uses the `system-schedule-fire` event, originates f
 
 The explicit-event toggles are `notifications.events.systemScheduleFire` and `notifications.events.modelsRefresh`; both default to `true`. Turning either off suppresses its event before it reaches the queue, record, feed, toast, desktop alert, or bell. Both bypass focus suppression. System schedule notices default to the warning cue; model refresh notices default to the success cue.
 
-The four ambient events (`state-change`, `schedule-fire`, `agent-start`,
-`rate-limited`) are each **independently togglable and default off** — opt in by editing
+The five ambient events (`state-change`, `schedule-fire`, `agent-start`,
+`rate-limited`, `command-disabled`) are each **independently togglable and default off** — opt in by editing
 `.janissary/config.json` (see `application-config.md`). The `harness-idle`, `manual`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`,
 `editor-suggest`, `question`, `transcript-unavailable`, `e2e-browser-gone`, `file-operation`,
 `open-unsupported`, `layout`, `connection-closed`, `connection-close-failed`, `workspace-ready`, `tab`, `plugin-failure`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`,
 `launch-refused`, `launch-workspace-cleaned`, `launch-root-cloned`, and `remote-refused` events have no toggle, and like the other explicit
 events they are shown even when the tab they are attributed to is the active one. `system-schedule-fire` and `models-refresh` are the explicit events with toggles. A `question` event fires only for a
 background tab.
+
+`command-disabled` carries the exact refusal `Command is disabled: <command>.` from the originating tab. It is default-off, suppressed while that tab is active, and uses the default-muted alert (`desktop: false`, `sound: "none"`).
+
+A keyboard shortcut the client blocks because its command appears disabled is reported to the server, which re-checks its current settings and records the same `command-disabled` event against the focused tab or the active tab. The report adds no event type, notification path, or config field: the event's default-off toggle and active-tab focus suppression still apply, so a blocked shortcut from the active tab is silent. A held key is reported once per key press, not once per auto-repeat.
 
 ### Focus suppression
 
@@ -359,7 +363,7 @@ the only thing that empties it.
 ### `notify <message>`
 
 `notify <message>` pushes a custom line into the feed, attributed to the issuing tab (e.g.
-`build-agent: deploy finished`). It is the deliberate counterpart to the four ambient events: an
+`build-agent: deploy finished`). It is the deliberate counterpart to the five ambient events: an
 explicit signal that bypasses focus suppression and the per-event toggles, and — like every other
 recorded event — lands in the queue and, when no feed is on screen, appears as a toast.
 It is available from any tab with a command bar, including shell and harness tabs (each dispatches it like
@@ -387,7 +391,7 @@ play a short sound, according to its per-type `notifications.alerts` entry. This
 `editor-suggest`, `transcript-unavailable`, the three recording-failed events, `shell-transcript-failed`,
 `e2e-browser-gone`, `file-operation`, `open-unsupported`, `layout`, `tab`, `plugin-note`, `plugin-failure`,
 `schedule-late`, `system-schedule-fire`, `models-refresh`, the two remote-session events, the three launch events, and `remote-refused`.
-Every event type is configured independently in `.janissary/config.json` under `notifications.alerts`, using the event's hyphenated name. Each entry selects whether to show a desktop banner and one of the `success`, `warning`, or `error` cues, or `none`. The four ambient events (`state-change`, `schedule-fire`, `agent-start`, `rate-limited`) default to no banner and no sound; an opted-in ambient event still must pass its `notifications.events` toggle and focus suppression before it can alert.
+Every event type is configured independently in `.janissary/config.json` under `notifications.alerts`, using the event's hyphenated name. Each entry selects whether to show a desktop banner and one of the `success`, `warning`, or `error` cues, or `none`. The five ambient events (`state-change`, `schedule-fire`, `agent-start`, `rate-limited`, `command-disabled`) default to no banner and no sound. An opted-in ambient event still must pass its `notifications.events` toggle and focus suppression before it can alert.
 A report detected earlier and replayed later does not raise either: its detection time belongs in
 the feed, not in an alert implying it happened just now. A visible notifications feed does not
 suppress a desktop alert.

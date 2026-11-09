@@ -30,17 +30,32 @@ function reservedName(command: Command): string | undefined {
 // this command yields whenever a core command already matches the input, so `search transcript fox`
 // reaches the built-in and a bare `search` reaches the plugin. Without that second guard a claim
 // matched on its first token alone would swallow every longer form the built-in owns.
+export interface PluginCommandClaim {
+  declarationId: string;
+  name: string;
+  command: Command;
+}
+
 export function createPluginCommands(
   declarations: readonly TabPluginDeclaration[],
   coreCommands: readonly Command[],
 ): Command[] {
+  return claimPluginCommands(declarations, coreCommands).map((claim) => claim.command);
+}
+
+// The same claims `createPluginCommands` turns into commands, kept with the declaration and name
+// each one was accepted for so the application command inventory lists accepted claims only.
+export function claimPluginCommands(
+  declarations: readonly TabPluginDeclaration[],
+  coreCommands: readonly Command[],
+): PluginCommandClaim[] {
   const reserved = new Set([
     ...coreCommands.map((command) => reservedName(command))
       .filter((name): name is string => name !== undefined),
     ...RESERVED_NON_COMMAND_NAMES.map((command) => command.toLowerCase()),
   ]);
   const claims = new Set<string>();
-  const commands: Command[] = [];
+  const accepted: PluginCommandClaim[] = [];
   for (const declaration of declarations) {
     const names = [declaration.command, ...(declaration.commandAliases ?? [])]
       .filter((name): name is string => name !== undefined);
@@ -60,7 +75,7 @@ export function createPluginCommands(
     const shadowed = coreCommands.filter(
       (command) => command.name.toLowerCase() === name,
     );
-    commands.push({
+    const command: Command = {
       name,
       match: (command) => firstToken(command) === name
         && shadowed.every((core) => !core.match(command)),
@@ -77,8 +92,9 @@ export function createPluginCommands(
           }),
         },
       ),
-      });
+    };
+    accepted.push({ declarationId: declaration.id, name, command });
     }
   }
-  return commands;
+  return accepted;
 }

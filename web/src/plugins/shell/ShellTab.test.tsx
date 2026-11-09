@@ -5,6 +5,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
 import type { BackgroundReplyView, TabView } from '@shared/protocol';
 import type { PluginTerminal, TabPluginClientCapabilities } from '../api';
+import { disabledApplicationCommand } from '../../shared/command-availability';
 import { PluginChordProvider, createPluginChordRegistry, type PluginChordRegistry } from '../PluginChords';
 import { AppCommandBarProvider, AppCommandBarTabScope, useAppCommandLine } from '../../shared/command-bar/AppCommandBar';
 import {
@@ -272,6 +273,7 @@ type AppBarOptions = {
   insertions?: Map<string, CommandLineInsertion>;
   replacements?: Map<string, CommandLineReplacement>;
   onFocusTab?: (label: string | undefined) => void;
+  disabledApplicationCommand?: (line: string) => boolean;
 };
 
 type AppBarOpeners = Record<
@@ -282,6 +284,11 @@ type AppBarOpeners = Record<
 
 function tab(label: string): TabView {
   return { label, number: 1, group: 0, busy: false, hasUnread: false } as unknown as TabView;
+}
+
+function disabledBy(...names: string[]): (line: string) => boolean {
+  const rows = names.map((name) => ({ name, aliases: [], forms: [name] }));
+  return (line) => disabledApplicationCommand(line, rows) !== undefined;
 }
 
 function AppBar({ chords, label, options, openQuitConfirm, openers, children }: {
@@ -299,6 +306,7 @@ function AppBar({ chords, label, options, openQuitConfirm, openers, children }: 
     activeTab: options.activeTab ?? 0,
     openQuitConfirm,
     guardRef: { current: options.guard ?? null },
+    disabledApplicationCommand: options.disabledApplicationCommand,
   });
   return (
     <PluginChordProvider registry={chords}>
@@ -319,6 +327,7 @@ function AppBar({ chords, label, options, openQuitConfirm, openers, children }: 
           registerCommandLineInsertion(options.insertions ?? new Map(), tabLabel, handler),
         registerCommandLineReplacement: (tabLabel, handler) =>
           registerCommandLineReplacement(options.replacements ?? new Map(), tabLabel, handler),
+        disabledApplicationCommand: options.disabledApplicationCommand,
       }}>
         <AppCommandBarTabScope label={label}>{children}</AppCommandBarTabScope>
       </AppCommandBarProvider>
@@ -1972,6 +1981,49 @@ describe('ShellTab', () => {
     expect(screen.queryByPlaceholderText('Search transcript')).toBeNull();
     expect(document.activeElement).toBe(bar());
   });
+
+  it('sends a disabled hist to the server instead of opening the shell history', async () => {
+    const { capabilities, releaseDispatch } = renderTab({
+      dispatched: true, disabledApplicationCommand: disabledBy('hist'),
+    });
+
+    fireEvent.change(bar(), { target: { value: 'hist' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+
+    expect(capabilities.intent).toHaveBeenCalledWith('dispatch', 'hist');
+    expect(document.querySelector('.shell-history')).toBeNull();
+  });
+
+  it('sends a disabled search transcript line to the server instead of opening the find', async () => {
+    const { capabilities, releaseDispatch } = renderTab({
+      dispatched: true, disabledApplicationCommand: disabledBy('search'),
+    });
+
+    fireEvent.change(bar(), { target: { value: 'search transcript beta' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+
+    expect(capabilities.intent).toHaveBeenCalledWith('dispatch', 'search transcript beta');
+    expect(screen.queryByPlaceholderText('Search transcript')).toBeNull();
+  });
+
+  it.each(['!hist', '!search transcript', 'clear'])(
+    'keeps %s on its shell route when the command is disabled',
+    async (line) => {
+      const { capabilities, written } = renderTab({
+        dispatched: true, disabledApplicationCommand: disabledBy('hist', 'search', 'clear'),
+      });
+
+      fireEvent.change(bar(), { target: { value: line } });
+      fireEvent.keyDown(bar(), { key: 'Enter' });
+
+      await waitFor(() => {
+        expect(written).toEqual([`${line.startsWith('!') ? line.slice(1) : line}\n`]);
+      });
+      expect(capabilities.intent).not.toHaveBeenCalledWith('dispatch', line);
+    },
+  );
 
   it('gives each shell tab its own status-window identity', () => {
     // Two tabs, two labels: the hook re-arms its auto-show when this changes, so a constant would

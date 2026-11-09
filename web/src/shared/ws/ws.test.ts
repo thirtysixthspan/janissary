@@ -139,6 +139,7 @@ describe('JanusClient', () => {
         activeTabNameMaxLength: 40, clipboardHistoryMaxEntries: 15,
         globalHistory: [], syntaxTheme: 'monokai', theme: 'dark', tasks: [],
         profiles: [], projectDir: '/tmp', version: '1.2.3',
+        disabledApplicationCommands: [],
         harnessLaunch: { names: ['claude'], models: { claude: ['opus'] } },
       }),
     });
@@ -148,6 +149,7 @@ describe('JanusClient', () => {
       tabNameMaxLength: 20, activeTabNameMaxLength: 40, clipboardHistoryMaxEntries: 15, globalHistory: [],
       syntaxTheme: 'monokai', theme: 'dark', tasks: [],
       profiles: [], projectDir: '/tmp', version: '1.2.3',
+      disabledApplicationCommands: [],
       harnessLaunch: { names: ['claude'], models: { claude: ['opus'] } }, scheduleLaunch: null,
     });
   });
@@ -163,6 +165,7 @@ describe('JanusClient', () => {
       tabNameMaxLength: 23, activeTabNameMaxLength: 71, clipboardHistoryMaxEntries: 15, globalHistory: ['history'],
       syntaxTheme: 'monokai', theme: 'light', tasks: [],
       profiles: [], projectDir: '/project', version: '7.8.9',
+      disabledApplicationCommands: [{ name: 'theme', aliases: [], forms: ['theme'] }],
       harnessLaunch: { names: ['claude'], models: { claude: ['opus'] }, autoApprove: ['claude'], autoResume: [] },
       scheduleLaunch: { targets: ['agent'], active: 'agent', runscripts: [] },
     };
@@ -179,6 +182,7 @@ describe('JanusClient', () => {
       t: 'state', tabs: [], activeTab: 0, harnessLaunch: missing, scheduleLaunch: missing,
       tabNameMaxLength: 16, activeTabNameMaxLength: 50, globalHistory: [], syntaxTheme: 'monokai',
       theme: 'dark', tasks: [], profiles: [], projectDir: '/project', version: '1.2.3',
+      disabledApplicationCommands: [],
     }) });
     expect(listener).toHaveBeenCalledWith(expect.objectContaining({ harnessLaunch: null, scheduleLaunch: null, activeTabNameMaxLength: 50,
     }));
@@ -190,6 +194,7 @@ describe('JanusClient', () => {
       t: 'state', tabs: [], activeTab, tabNameMaxLength: 20, activeTabNameMaxLength: 40,
       globalHistory: [], syntaxTheme: 'monokai', theme: 'dark', tasks: [],
       profiles: [], projectDir: '/tmp', version: '1.2.3', harnessLaunch: null, scheduleLaunch: null,
+      disabledApplicationCommands: [],
     });
     messageHandler!({ data: JSON.stringify(snapshot(0)) });
     messageHandler!({ data: JSON.stringify(snapshot(1)) });
@@ -212,7 +217,7 @@ describe('JanusClient', () => {
       data: JSON.stringify({
         t: 'state', tabs: [], activeTab: 0, tabNameMaxLength: 20,
         globalHistory: [], syntaxTheme: 'monokai', theme: 'dark', tasks: [],
-        profiles: [], projectDir: '/tmp', version: '1.2.3',
+        profiles: [], projectDir: '/tmp', version: '1.2.3', disabledApplicationCommands: [],
       }),
     });
     expect(listener).not.toHaveBeenCalled();
@@ -419,7 +424,7 @@ describe('JanusClient', () => {
       data: JSON.stringify({
         t: 'state', tabs: [], activeTab: 0, tabNameMaxLength: 20,
         globalHistory: [], syntaxTheme: 'monokai', theme: 'dark', tasks: [],
-        profiles: [], projectDir: '/tmp', version: '1.2.3',
+        profiles: [], projectDir: '/tmp', version: '1.2.3', disabledApplicationCommands: [],
       }),
     });
 
@@ -446,6 +451,7 @@ describe('JanusClient', () => {
     messageHandler!({ data: JSON.stringify({
       t: 'state', tabs: [tab], activeTab: 0, tabNameMaxLength: 20, globalHistory: [],
       syntaxTheme: 'monokai', theme: 'dark', tasks: [], profiles: [], projectDir: '/tmp', version: '1.2.3',
+      disabledApplicationCommands: [],
     }) });
     const projection = { id: 'run-a', revision: 3, task: 'task.md', status: 'Running', activity: [] };
     messageHandler!({ data: JSON.stringify({ t: 'agent-run-updated', tab: 'monitor', view: projection }) });
@@ -470,7 +476,7 @@ describe('JanusClient', () => {
         label: 'monitor', plugin: { id: 'agent-monitor', schemaVersion: 1, payload: { runId: '' } },
       }],
       activeTab: 0, tabNameMaxLength: 20, globalHistory: [], syntaxTheme: 'monokai', theme: 'dark',
-      tasks: [], profiles: [], projectDir: '/tmp', version: '1.2.3',
+      tasks: [], profiles: [], projectDir: '/tmp', version: '1.2.3', disabledApplicationCommands: [],
     }) });
 
     messageHandler!({ data: JSON.stringify({

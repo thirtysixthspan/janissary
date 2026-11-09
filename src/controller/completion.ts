@@ -1,4 +1,5 @@
 import { completeCommandLine } from '../completion/index.js';
+import { completionPolicy } from '../completion/command-policy.js';
 import type { Managers } from '../managers.js';
 import type { CompletionResult } from '../completion/types.js';
 import { listPersonas } from '../personas.js';
@@ -35,5 +36,6 @@ export function complete(managers: Managers, text: string, cursor: number, label
     { names, scripts },
     files,
     (harness) => managers.models.modelsFor(harness),
+    completionPolicy(managers.nativeCommandSettings?.current()),
   );
 }

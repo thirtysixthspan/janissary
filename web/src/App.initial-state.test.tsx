@@ -41,6 +41,7 @@ describe('App mounted after the first state snapshot arrived', () => {
     t: 'state', tabs: [tab], activeTab: 0, tabNameMaxLength: 16, activeTabNameMaxLength: 50,
     clipboardHistoryMaxEntries: 15, globalHistory: [], syntaxTheme: 'github-dark', theme: 'dark', tasks: [], profiles: [],
     projectDir: '/tmp', version: '1.2.3', harnessLaunch: null, scheduleLaunch: null,
+    disabledApplicationCommands: [],
   };
 
   it('renders the tabs from the init reply instead of waiting on "Connecting…"', () => {
