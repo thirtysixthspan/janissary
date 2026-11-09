@@ -37,6 +37,20 @@ function normalize(value: string): string {
   return value.trim().replaceAll(/\s+/gu, ' ').toLowerCase();
 }
 
+function builtinRows(declaration: ApplicationCommandDeclaration): ApplicationCommandRow[] {
+  const aliases = declaration.aliases ?? [];
+  const [first, ...rest] = declaration.forms;
+  if (declaration.parent !== undefined || first !== declaration.name) {
+    return [{ ...declaration, kind: 'builtin', aliases }];
+  }
+  return [
+    { ...declaration, kind: 'builtin', aliases, forms: [first] },
+    ...rest.map((form): ApplicationCommandRow => ({
+      name: form, kind: 'builtin', aliases: [], forms: [form], parent: declaration.name,
+    })),
+  ];
+}
+
 function compare(left: ApplicationCommandRow, right: ApplicationCommandRow): number {
   return left.name.localeCompare(right.name);
 }
@@ -45,7 +59,7 @@ export function listApplicationCommands(): ApplicationCommandRow[] {
   const rows: ApplicationCommandRow[] = [];
   for (const command of coreCommands) {
     const declaration = BUILTIN_FORMS[command.name];
-    if (declaration) rows.push({ ...declaration, kind: 'builtin', aliases: declaration.aliases ?? [] });
+    if (declaration) rows.push(...builtinRows(declaration));
   }
   rows.push({ name: 'help', kind: 'help', aliases: [], forms: ['help', 'help commands', 'help keys', 'help <command>'], parent: 'help' });
   const declarations: readonly TabPluginDeclaration[] = tabPluginCatalog;

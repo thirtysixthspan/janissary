@@ -74,7 +74,8 @@ describe('NativeCommandSettingsManager hand edits', () => {
     manager.refresh();
 
     expect(projectDisabledApplicationCommands(manager.current())).toEqual([
-      { name: 'theme', aliases: [], forms: ['theme', 'theme sync'] },
+      { name: 'theme', aliases: [], forms: ['theme'] },
+      { name: 'theme sync', aliases: [], forms: ['theme sync'] },
     ]);
   });
 });

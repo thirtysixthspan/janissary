@@ -24,6 +24,17 @@ describe('application command inventory', () => {
     expect(rows.find((row) => row.name === 'question approve')?.nativeTool).toBe('question');
   });
 
+  it('gives each built-in fixed subcommand form its own row linked to its parent', () => {
+    expect(rows.find((row) => row.name === 'tab')?.forms).toEqual(['tab']);
+    for (const name of ['tab dock', 'tab undock', 'files expand', 'layout window', 'notifications clear', 'schedule cancel', 'open external', 'db sqlite', 'unmonitor --all']) {
+      const parent = name.split(' ', 1)[0];
+      expect(rows.find((row) => row.name === name)).toMatchObject({ kind: 'builtin', forms: [name], parent });
+    }
+    expect(rows.find((row) => row.name === 'db sqlite query')?.parent).toBe('db sqlite');
+    expect(resolveApplicationCommand('tab dock x')).toMatchObject({ name: 'tab dock', forms: ['tab dock'] });
+    expect(resolveApplicationCommand('tab')).toMatchObject({ name: 'tab' });
+  });
+
   it('resolves the search owner before selecting its longest fixed form', () => {
     expect(resolveApplicationCommand('search query')).toMatchObject({ kind: 'plugin', name: 'search' });
     expect(resolveApplicationCommand('search transcript fox')).toMatchObject({ kind: 'builtin', name: 'search' });

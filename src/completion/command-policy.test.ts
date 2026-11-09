@@ -50,6 +50,15 @@ describe('completionPolicy', () => {
     expect(policy.allows('browser content')).toBe(false);
   });
 
+  it('refuses only the disabled built-in fixed form', () => {
+    const policy = policyWith({ 'tab dock': { enabled: false } });
+
+    expect(policy.allows('tab')).toBe(true);
+    expect(policy.allows('tab focus')).toBe(true);
+    expect(policy.allows('tab dock now')).toBe(false);
+    expect(policy.names).toContain('tab');
+  });
+
   it('shares one setting across every owner of a canonical name', () => {
     const policy = policyWith({ search: { enabled: false } });
 

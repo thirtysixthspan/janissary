@@ -152,4 +152,20 @@ describe('native command settings', () => {
     expect(publications).toEqual([false, true]);
     expect(JSON.parse(readFileSync(homeFile(home), 'utf8'))).toHaveProperty('clear.enabled', true);
   });
+
+  it('disables one built-in fixed form without disabling its sibling forms or parent', async () => {
+    const { manager } = fixture();
+    expect(await manager.edit({ name: 'tab dock', setting: { enabled: false } })).toEqual({ ok: true });
+    const enabled = (name: string): boolean | undefined => manager.current().commands
+      .find((row) => row.name === name)?.effectiveEnabled;
+    expect(enabled('tab dock')).toBe(false);
+    expect(enabled('tab focus')).toBe(true);
+    expect(enabled('tab')).toBe(true);
+  });
+
+  it('disables every fixed form when the parent command is disabled', async () => {
+    const { manager } = fixture();
+    await manager.edit({ name: 'tab', setting: { enabled: false } });
+    expect(manager.current().commands.find((row) => row.name === 'tab undock')?.effectiveEnabled).toBe(false);
+  });
 });
