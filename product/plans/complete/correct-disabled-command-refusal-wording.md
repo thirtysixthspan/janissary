@@ -4,13 +4,13 @@
 
 ## Goal
 
-The help and user documentation say a disabled command's line reaches the server and is refused there, and that its confirmation never opens. That is true for ordinary command-bar lines, but not for `quit` and `close` lines typed into a command bar: those are consumed by the client and reported to the server, whose `command-disabled` notification is their only feedback. Closing the last tab from `Cmd+W`/`Ctrl+W` or the tab strip still opens the quit confirmation first, and the `quit` it dispatches is then refused. `help/search.md` also says bare `search` does nothing, when the server actually refuses it with `Command is disabled: search.`.
+The help and user documentation say a disabled command's line reaches the server and is refused there, and that its confirmation never opens. That is true for ordinary command-bar lines, but not for `quit` and `close` lines typed into a command bar: those are consumed by the client and reported to the server, whose `command-disabled` notification is their only feedback. Closing the last tab from `Cmd+W`/`Ctrl+W` or the tab strip still opens the quit confirmation first, and confirming dispatches `quit`, which the server refuses when `quit` is disabled. `help/search.md` also says bare `search` does nothing, when the server actually refuses it with `Command is disabled: search.`.
 
 Correct the three passages so they match the shipped behavior and the existing `product/specs/application-commands.md` description.
 
 ## Approach
 
-- In `help/commands.md`, rewrite the disabled-command note to separate ordinary command-bar lines (offered to the server and refused there with `Command is disabled: <command>.`) from disabled `quit`/`close` lines (consumed and reported, with the existing `command-disabled` notification as their only feedback when the ambient toggle and focus rules allow it). Add that the `Cmd+W`/tab-strip last-tab confirmation still opens before its dispatched `quit` is refused.
+- In `help/commands.md`, rewrite the disabled-command note to separate ordinary command-bar lines (offered to the server and refused there with `Command is disabled: <command>.`) from disabled `quit`/`close` lines (consumed and reported, with the existing `command-disabled` notification as their only feedback when the ambient toggle and focus rules allow it). Add that the `Cmd+W`/tab-strip last-tab confirmation still opens first, and confirming dispatches `quit`, which the server refuses when `quit` is disabled.
 - In `documentation/user-documentation/command-bar/commands.md`, make the same distinction in the existing disabled-command paragraph, keeping its command-bar qualifier.
 - In `help/search.md`, replace the claim that bare `search` does nothing: bare `search` is refused with the server's `Command is disabled: search.` output, `Cmd+Shift+F` is blocked, and `search transcript` is refused instead of opening the find overlay, while `Cmd+F` still opens the empty find.
 - Leave `help/close.md` and `help/quit.md` unchanged; both already state the last-tab confirmation path correctly.

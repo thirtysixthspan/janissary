@@ -63,7 +63,7 @@
 
 Both `shell` and `harness` launches accept `in group <name\|id>` to join an existing group by its case-insensitive name or numeric ID. An unknown name creates a group; an unknown positive ID creates that numbered group. Without the clause, the new tab joins the issuing tab's group.
 
-A command disabled in the Commands tab is refused wherever it runs. Its picker, command-backed shortcut, or command-bar confirmation does not open or run. An ordinary command-bar line is offered to the server and refused there with `Command is disabled: <command>.`; a disabled `quit` or `close` line is consumed instead and reported to the server, whose existing `command-disabled` notification is its only feedback when the ambient toggle and focus rules allow it. Closing the last tab from `Cmd+W`/`Ctrl+W` or the tab strip still opens the quit confirmation first; the `quit` it dispatches is then refused.
+A command disabled in the Commands tab is refused wherever it runs. Its picker, command-backed shortcut, or command-bar confirmation does not open or run. An ordinary command-bar line is offered to the server and refused there with `Command is disabled: <command>.`; a disabled `quit` or `close` line is consumed instead and reported to the server, whose existing `command-disabled` notification is its only feedback when the ambient toggle and focus rules allow it. Closing the last tab from `Cmd+W`/`Ctrl+W` or the tab strip still opens the quit confirmation first; confirming dispatches `quit`, which the server refuses when `quit` is disabled.
 
 ### commands
 
