@@ -13,10 +13,17 @@ export function isEnabledDisabled(rows: readonly CommandRow[], row: CommandRow):
   return isParentDisabled(rows, row);
 }
 
+export function isParentAgentDenied(rows: readonly CommandRow[], row: CommandRow): boolean {
+  return row.parent !== undefined
+    && rows.some((candidate) => candidate.name === row.parent
+      && candidate.effectiveEnabled
+      && !candidate.effectiveAgentAccess);
+}
+
 export function isAgentAccessDisabled(rows: readonly CommandRow[], row: CommandRow): boolean {
   return isEnabledDisabled(rows, row)
     || !row.effectiveEnabled
-    || (row.agentAccess && !row.effectiveAgentAccess);
+    || isParentAgentDenied(rows, row);
 }
 
 function targetColumn(

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CommandRow } from '@shared/plugins/commands/shared';
-import { moveCommandFocus, type CommandColumn, type CommandToggleDisabled } from './commands-keys';
+import { isAgentAccessDisabled, moveCommandFocus, type CommandColumn, type CommandToggleDisabled } from './commands-keys';
 
 const NOT_PENDING: CommandToggleDisabled = () => false;
 
@@ -49,7 +49,8 @@ describe('moveCommandFocus', () => {
   it('falls back to Enabled when the matching agent toggle is disabled', () => {
     const rows = [
       row({ label: 'a', ...NATIVE }),
-      row({ label: 'b', ...NATIVE, effectiveAgentAccess: false }),
+      row({ name: 'b', label: 'b', ...NATIVE, parent: 'c', effectiveAgentAccess: false }),
+      row({ name: 'c', label: 'c', agentAccess: false, effectiveAgentAccess: false }),
     ];
 
     expect(moveCommandFocus(rows, { row: 0, column: 'agentAccess' }, 'ArrowDown', NOT_PENDING))
@@ -120,5 +121,21 @@ describe('moveCommandFocus', () => {
 
     expect(moveCommandFocus(rows, { row: 0, column: 'agentAccess' }, 'ArrowDown', bothPending))
       .toEqual({ row: 2, column: 'agentAccess' });
+  });
+});
+
+describe('isAgentAccessDisabled', () => {
+  const ownOff = row({
+    name: 'b', label: 'b', ...NATIVE, parent: 'parent', agentAccess: false, effectiveAgentAccess: false,
+  });
+
+  it('disables a child whose own agent access is off while the parent denies agent access', () => {
+    const denying = row({ name: 'parent', label: 'parent', agentAccess: false, effectiveAgentAccess: false });
+
+    expect(isAgentAccessDisabled([denying, ownOff], ownOff)).toBe(true);
+  });
+
+  it('keeps a child whose own agent access is off interactive when the parent allows it', () => {
+    expect(isAgentAccessDisabled([row({ name: 'parent', label: 'parent' }), ownOff], ownOff)).toBe(false);
   });
 });

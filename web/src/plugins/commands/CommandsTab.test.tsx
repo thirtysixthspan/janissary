@@ -164,7 +164,15 @@ describe('CommandsTab rendering', () => {
   });
 
   it('disables Agent access without dimming when only a parent denies agent access', () => {
-    renderTab();
+    renderTab(makePayload({
+      commands: [
+        row({ name: 'browser', label: 'browser', agentAccess: false, effectiveAgentAccess: false }),
+        row({
+          name: 'browser content', label: 'browser content', nativeTool: 'browser', parent: 'browser',
+          effectiveAgentAccess: false,
+        }),
+      ],
+    }));
 
     const enabled = screen.getByLabelText('Enabled: browser content');
     const agent = screen.getByLabelText('Agent access: browser content');
@@ -173,6 +181,41 @@ describe('CommandsTab rendering', () => {
     const rowElement = enabled.closest('.commands-row');
     expect(rowElement).not.toHaveClass('commands-row-disabled');
     expect(within(rowElement as HTMLElement).getByText('Disabled by parent command: browser.')).toBeInTheDocument();
+  });
+
+  it('disables Agent access and shows the note when the child\'s own agent access is already off', () => {
+    renderTab(makePayload({
+      commands: [
+        row({ name: 'browser', label: 'browser', agentAccess: false, effectiveAgentAccess: false }),
+        row({
+          name: 'browser content', label: 'browser content', nativeTool: 'browser', parent: 'browser',
+          agentAccess: false, effectiveAgentAccess: false,
+        }),
+      ],
+    }));
+
+    const agent = screen.getByLabelText('Agent access: browser content');
+    expect(agent).not.toBeChecked();
+    expect(agent).toBeDisabled();
+    expect(within(agent.closest('.commands-row') as HTMLElement)
+      .getByText('Disabled by parent command: browser.')).toBeInTheDocument();
+  });
+
+  it('keeps Agent access interactive when only the child\'s own agent access is off', () => {
+    renderTab(makePayload({
+      commands: [
+        row({ name: 'browser', label: 'browser' }),
+        row({
+          name: 'browser content', label: 'browser content', nativeTool: 'browser', parent: 'browser',
+          agentAccess: false, effectiveAgentAccess: false,
+        }),
+      ],
+    }));
+
+    const agent = screen.getByLabelText('Agent access: browser content');
+    expect(agent).toBeEnabled();
+    expect(within(agent.closest('.commands-row') as HTMLElement)
+      .queryByText('Disabled by parent command: browser.')).not.toBeInTheDocument();
   });
 });
 

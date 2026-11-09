@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Disable the Agent access checkbox and show the parent note when a parent denies agent access even if the child's own saved agent access is already off.
-
-Existing Issue: `isAgentAccessDisabled` in `web/src/plugins/commands/commands-keys.ts` treats a parent denial as present only when `row.agentAccess && !row.effectiveAgentAccess`, and `CommandRow.tsx` computes its note the same way, so a native child whose own saved `agentAccess` is false and whose parent denies agent access keeps an interactive checkbox and no `Disabled by parent command` note instead of the disabled checkbox and note the plan describes. Severity: 2/10
-
-Existing Risk: 2/10 - The tab offers a toggle that cannot change the effective state and hides the reason, inviting repeated saves that appear to do nothing; the shape is not reachable with today's native vocabulary because no native command has a native parent, so the impact waits for a future inventory change.
-
-Proposal Risk: 1/10 - The checkbox and note follow the documented parent rule, the saved value is unchanged, and no server behavior moves.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "disable the Agent access checkbox when a parent denies agent access". In `web/src/plugins/commands/commands-keys.ts`, replace the own-value inference in `isAgentAccessDisabled` with a parent lookup: resolve `row.parent` in `rows` and treat the toggle as disabled when that parent row is effectively enabled but its `effectiveAgentAccess` is false, while leaving a child whose own `agentAccess` is false interactive when the parent allows it. In `web/src/plugins/commands/CommandRow.tsx`, compute the same parent-denial condition for the `Disabled by parent command: <parent>.` note so the note and the disabled checkbox agree; keep the row undimmed and keep the saved value unchanged. Add cases to `web/src/plugins/commands/commands-keys.test.ts` and `web/src/plugins/commands/CommandsTab.test.tsx` covering a native child with `agentAccess: false`, `effectiveAgentAccess: false`, and a parent whose `effectiveAgentAccess` is false, asserting the checkbox is disabled and the note appears, plus the existing own-off/parent-allows case staying interactive. Keep `isParentDisabled`, the native-only checkbox rendering, and the existing parent-disabled tests unchanged.
-
-
 * Remove the unused `hasHelpFallback` export, whose result no caller reads and whose meaning differs from the dispatch policy's help check.
 
 Existing Issue: `src/application-commands.ts` exports `hasHelpFallback`, but no production or test code calls it, and it returns true for any input except the empty string, including unknown commands, while the actual help gate in `src/native-commands/dispatch-policy.ts` checks `getOutput(commandText).kind === 'output'`; the dead export also keeps a `getOutput` import in the inventory module. Severity: 2/10

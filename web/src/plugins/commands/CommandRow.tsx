@@ -1,5 +1,5 @@
 import type { CommandRow } from '@shared/plugins/commands/shared';
-import { isAgentAccessDisabled, isParentDisabled, type CommandColumn } from './commands-keys';
+import { isAgentAccessDisabled, isParentAgentDenied, isParentDisabled, type CommandColumn } from './commands-keys';
 
 export function CommandRowView({
   row,
@@ -20,8 +20,7 @@ export function CommandRowView({
   const agentDisabled = isAgentAccessDisabled(rows, row);
   const agentDeniedByParent = row.effectiveEnabled
     && row.nativeTool !== undefined
-    && row.agentAccess
-    && !row.effectiveAgentAccess;
+    && isParentAgentDenied(rows, row);
   const note = row.parent !== undefined && (parentDisabled || agentDeniedByParent)
     ? `Disabled by parent command: ${row.parent}.`
     : null;
