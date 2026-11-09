@@ -325,6 +325,47 @@ describe('CommandsTab controls', () => {
     expect(document.activeElement).toBe(screen.getByLabelText('Enabled: commands'));
   });
 
+  it('skips rows whose Enabled toggle is pending while moving down and up', async () => {
+    const pending = deferred<unknown>();
+    renderTab(makePayload(), () => pending.promise);
+
+    fireEvent.click(screen.getByLabelText('Enabled: ask'));
+    expect(screen.getByLabelText('Enabled: ask')).toBeDisabled();
+    expect(screen.getByLabelText('Enabled: ask reset')).toBeDisabled();
+
+    const agent = screen.getByLabelText('Enabled: agent');
+    agent.focus();
+    fireEvent.keyDown(agent, { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(screen.getByLabelText('Enabled: browser content'));
+
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'ArrowUp' });
+    expect(document.activeElement).toBe(agent);
+
+    pending.resolve(null);
+    await waitFor(() => { expect(screen.getByLabelText('Enabled: ask')).toBeEnabled(); });
+  });
+
+  it('falls back to Enabled when the matching Agent access toggle is pending', async () => {
+    const pending = deferred<unknown>();
+    const rows = [
+      row({ name: 'browser content', label: 'browser content', nativeTool: 'browser' }),
+      row({ name: 'browser goto', label: 'browser goto', nativeTool: 'browser' }),
+    ];
+    renderTab(makePayload({ commands: rows }), () => pending.promise);
+
+    fireEvent.click(screen.getByLabelText('Agent access: browser goto'));
+    expect(screen.getByLabelText('Agent access: browser goto')).toBeDisabled();
+
+    const content = screen.getByLabelText('Agent access: browser content');
+    content.focus();
+    fireEvent.keyDown(content, { key: 'ArrowDown' });
+
+    expect(document.activeElement).toBe(screen.getByLabelText('Enabled: browser goto'));
+
+    pending.resolve(null);
+    await waitFor(() => { expect(screen.getByLabelText('Agent access: browser goto')).toBeEnabled(); });
+  });
+
   it('stops at the first and last rows without wrapping', () => {
     renderTab();
     const first = screen.getByLabelText('Enabled: agent');

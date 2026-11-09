@@ -22,7 +22,7 @@ export function CommandsTab({
     const row = Number(input.dataset.row);
     const column = input.dataset.column;
     if (!Number.isSafeInteger(row) || (column !== 'enabled' && column !== 'agentAccess')) return;
-    const next = moveCommandFocus(payload.commands, { row, column }, event.key);
+    const next = moveCommandFocus(payload.commands, { row, column }, event.key, isPending);
     event.preventDefault();
     event.stopPropagation();
     if (!next) return;

@@ -16,6 +16,6 @@ Changing a checkbox saves immediately. Every row that shares the same command se
 
 ### Keyboard and layout
 
-Space toggles the focused checkbox through the browser's native control. Up and Down move focus to the same checkbox in the previous or next row, falling back to that row's Enabled checkbox when the matching one is missing or disabled, and skipping rows where both are disabled. Focus stops at the first and last rows. Escape and every other key keep their usual meaning.
+Space toggles the focused checkbox through the browser's native control. Up and Down move focus to the same checkbox in the previous or next row, falling back to that row's Enabled checkbox when the matching one is missing or disabled, including while its save is pending, and skipping rows where both are disabled. Focus stops at the first and last rows. Escape and every other key keep their usual meaning.
 
 The table always stays horizontal and scrolls sideways when the tab is narrow, including when the tab has been docked with `tab dock`. See [[application-commands]] for the `commands` command and the settings file.

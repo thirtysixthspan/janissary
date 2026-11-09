@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Skip pending-disabled toggles during Commands tab keyboard navigation.
-
-Existing Issue: `moveCommandFocus` only knows the static parent and agent disabled states, not the pending set, so while a save is in flight an Up or Down can target a checkbox disabled by `enabledPending` or `agentPending`; `focus()` on a disabled input does nothing, leaving focus where it was instead of falling back or skipping. Severity: 3/10
-
-Existing Risk: 3/10 - A user navigating immediately after a toggle can get stuck on a row until the save completes; the window is short and recoverable, but the keyboard contract the plan promises is not honored.
-
-Proposal Risk: 1/10 - Threading the pending predicate into the helper is contained, and the existing static disabled tests continue to cover the other branches.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "skip pending-disabled toggles during Commands tab keyboard navigation". Change `moveCommandFocus` in `web/src/plugins/commands/commands-keys.ts` to accept an `isToggleDisabled(row, column)` predicate (or the pending set plus a helper) and have `targetColumn` treat a pending-disabled matching toggle as disabled: fall back to that row's Enabled toggle when the matching toggle is pending-disabled and Enabled is not, and skip the row when Enabled is also disabled. In `web/src/plugins/commands/CommandsTab.tsx`, pass `isPending` from `useCommands` into the helper. Add `web/src/plugins/commands/commands-keys.test.ts` cases for a pending-enabled row and a pending-agent row, and a `web/src/plugins/commands/CommandsTab.test.tsx` case that clicks a toggle, presses ArrowDown/ArrowUp while the deferred save is pending, and asserts focus lands on the fallback or skips the row; keep the existing static disabled navigation tests passing.
-
-
 * Add colocated coverage for the commands payload mapping and topic-data validation.
 
 Existing Issue: `src/plugins/commands/payload.ts` is the only new server module without a colocated test, and its mapping edge cases — parent canonicalization, dropping a parent equal to the name, keeping an unmatched parent, label selection, and optional fields — are only partially exercised through `activate.test.ts`. Severity: 3/10
