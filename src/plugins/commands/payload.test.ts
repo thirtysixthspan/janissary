@@ -28,6 +28,7 @@ const DATA: CommandsTopicNotification['data'] = {
     row({ name: 'search', forms: ['search transcript'], parent: 'search' }),
     row({ name: 'question', forms: ['question ask', 'question approve'] }),
     row({ name: 'question ask', kind: 'native', forms: ['question ask'], parent: 'question', nativeTool: 'question' }),
+    row({ name: 'question approve', kind: 'native', forms: ['question approve'], parent: 'question', nativeTool: 'question' }),
     row({ name: 'orphan', forms: ['orphan'], parent: 'missing parent' }),
   ],
   source: 'home',
@@ -104,6 +105,7 @@ describe('toPayload', () => {
       ['search', 'search transcript'],
       ['question', 'question'],
       ['question ask', 'question ask'],
+      ['question approve', 'question approve'],
       ['orphan', 'orphan'],
     ]);
   });
@@ -122,6 +124,7 @@ describe('toPayload', () => {
       ['search', undefined],
       ['question', undefined],
       ['question ask', 'question'],
+      ['question approve', 'question'],
       ['orphan', 'missing parent'],
     ]);
   });
