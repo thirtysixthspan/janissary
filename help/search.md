@@ -25,4 +25,4 @@ Open project search or search for a phrase. Use the transcript form to search tr
 **Notes**
 
 - In a shell tab, `search transcript <pattern>` opens the find overlay over the terminal's transcript with the pattern entered, the same overlay `Cmd+F` opens there.
-- When `search` is disabled in the Commands tab, `search` and `Cmd+Shift+F` do nothing, and `search transcript` is refused instead of opening the find overlay. `Cmd+F` still opens it.
+- When `search` is disabled in the Commands tab, bare `search` is refused with the server's `Command is disabled: search.` output, and `Cmd+Shift+F` is blocked. `search transcript` is refused instead of opening the find overlay, while `Cmd+F` still opens the empty find.
