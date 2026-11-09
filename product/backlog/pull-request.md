@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the plan's hand-edit verification step, which expects the server to refuse a settings-file change it has not re-read.
-
-Existing Issue: The plan's manual step 3 says a hand-edited theme disable is refused by the server without opening Commands, but NativeCommandSettingsManager only reads commands.json in its constructor, refresh, and edit, so a hand edit is invisible to the server and theme <name> still runs. Severity: 4/10
-
-Existing Risk: 4/10 - A reviewer following the step sees the theme apply and can wrongly conclude the server is authoritative over hand edits, or records a failed verification that is actually the documented read point.
-
-Proposal Risk: 1/10 - The plan states the real read points; no code changes, so the server behavior stays as unit 2 defined it.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "correct the hand-edit verification step in the client integration plan". Rewrite Verification step 3 in product/plans/complete/native-commands-10-client-integration.md: hand-edit commands.json, reopen Commands (which calls the commands topic refresh), and confirm the client list follows; state explicitly that without a refresh or edit both the client and the server keep the old snapshot, so a stale client may open the theme picker and the server still runs theme <name>. If the step needs to prove server authority, describe a stale client against a server that has refreshed, for example a test client that missed the state broadcast, not a hand edit alone. Add a src/native-commands/state.test.ts or feature.integration.test.ts case that manager.current() ignores a hand edit until refresh() is called and then reflects it, so the read point is pinned. Do not add a file watcher or refresh on dispatch.
-
-
 * Add the disabled-command condition to the in-app help pages, which the plan's documentation update left stale.
 
 Existing Issue: The plan updates the user documentation but not help/keys.md, help/commands.md, or the per-command help pages, which still say Ctrl+R, Ctrl+A, Ctrl+E, Cmd+Shift+F, Cmd+T, and the theme, syntax, history, queue, tasks, search, close, and quit pickers or confirmations run unconditionally. Severity: 4/10

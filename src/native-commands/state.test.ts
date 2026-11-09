@@ -12,15 +12,22 @@ afterEach(() => {
   roots.length = 0;
 });
 
-function managerWith(values: Record<string, { enabled?: boolean; agentAccess?: boolean }>): NativeCommandSettingsManager {
+type Settings = Record<string, { enabled?: boolean; agentAccess?: boolean }>;
+
+function fixture(values: Settings): { manager: NativeCommandSettingsManager; file: string } {
   const base = mkdtempSync(path.join(os.tmpdir(), 'native-command-state-'));
   roots.push(base);
   const root = path.join(base, 'project');
   const home = path.join(base, 'home');
   mkdirSync(root);
   mkdirSync(path.join(home, '.janissary'), { recursive: true });
-  writeFileSync(path.join(home, '.janissary', 'commands.json'), JSON.stringify(values));
-  return new NativeCommandSettingsManager(root, home);
+  const file = path.join(home, '.janissary', 'commands.json');
+  writeFileSync(file, JSON.stringify(values));
+  return { manager: new NativeCommandSettingsManager(root, home), file };
+}
+
+function managerWith(values: Settings): NativeCommandSettingsManager {
+  return fixture(values).manager;
 }
 
 describe('projectDisabledApplicationCommands', () => {
@@ -51,5 +58,23 @@ describe('projectDisabledApplicationCommands', () => {
   it('returns an empty list for a missing or empty snapshot', () => {
     expect(projectDisabledApplicationCommands(undefined)).toEqual([]);
     expect(projectDisabledApplicationCommands({ commands: [], source: 'default', path: '' })).toEqual([]);
+  });
+});
+
+describe('NativeCommandSettingsManager hand edits', () => {
+  it('ignores a hand edit until refresh, then reflects it', () => {
+    const { manager, file } = fixture({});
+
+    writeFileSync(file, JSON.stringify({ theme: { enabled: false } }));
+
+    expect(projectDisabledApplicationCommands(manager.current())).toEqual([]);
+    expect(manager.current().commands.find(({ name }) => name === 'theme'))
+      .toMatchObject({ effectiveEnabled: true });
+
+    manager.refresh();
+
+    expect(projectDisabledApplicationCommands(manager.current())).toEqual([
+      { name: 'theme', aliases: [], forms: ['theme', 'theme sync'] },
+    ]);
   });
 });
