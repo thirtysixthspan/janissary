@@ -106,21 +106,9 @@ Edit the plan file according to your Step 3 notes:
 
 ## Step 5 — Assess and record complexity
 
-Rate the (now trimmed) plan **1–10** for implementation complexity. Calibration, consistent with the ratings on the plans in `./product/plans/ready/`:
+Open `ai/tasks/rate-plan-complexity.md` and execute every step in order, except `Step 0 — Prepare the workspace` and `Step 1 — Pick the plan`. Your target is the (now trimmed) plan, and it records the `**Complexity: N/10** — <one-line rationale naming what drives the number>` line directly under the plan's `#` title.
 
-- **1–2** — one small module or pure wiring; no new protocol/persistence/UI surface. (`cli-help-version`, `prompt-click-prefill` are 2s.)
-- **3–4** — small feature, but correctness depends on catching several call sites or coordinating with other plans; or it spans server and web with a new RPC or persistence field. (`unread-badge` is a 3, `tab-name-alias` a 4.)
-- **5–7** — a new subsystem or protocol surface, many touched files, real state-machine or concurrency reasoning.
-- **8–9** — a major feature: multiple new modules on both sides, novel interaction logic, first-of-its-kind surface in the app. (`editor-tab` is a 9.)
-- **10** — architecture-level overhaul touching most of the system.
-
-Record it directly under the plan's `#` title as a single line:
-
-```
-**Complexity: N/10** — <one-line rationale naming what drives the number>
-```
-
-If the plan already has a complexity line, update it — trimming should usually only lower the number, never raise it.
+If the plan already has a complexity line, it is updated — trimming should usually only lower the number, never raise it.
 
 ---
 
