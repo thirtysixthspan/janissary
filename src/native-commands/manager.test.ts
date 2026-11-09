@@ -163,6 +163,18 @@ describe('native command settings', () => {
     expect(enabled('tab')).toBe(true);
   });
 
+  it('keeps the fallback problem in the snapshot published after an edit', async () => {
+    const { root, home, manager } = fixture();
+    put(projectFile(root), '{ bad');
+    put(homeFile(home), '{"clear":{"enabled":false}}');
+    const published: Array<string | undefined> = [];
+    manager.subscribe((snapshot) => { published.push(snapshot.problem); });
+    expect(await manager.edit({ name: 'clear', setting: { enabled: true } })).toEqual({ ok: true });
+    const problem = `commands.json is not valid JSON at ${projectFile(root)} — showing the home commands file.`;
+    expect(published).toEqual([problem]);
+    expect(manager.current()).toMatchObject({ source: 'home', path: homeFile(home), problem });
+  });
+
   it('refuses a name with trailing text without writing', async () => {
     const { home, manager } = fixture();
     expect(await manager.edit({ name: 'browser content extra', setting: { enabled: false } }))

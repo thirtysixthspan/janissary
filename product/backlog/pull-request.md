@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Keep the fallback problem line visible after a successful commands edit instead of dropping it from the published snapshot.
-
-Existing Issue: When the project `commands.json` is unusable and the home file is in effect, `refresh` publishes a snapshot with the `showing the home commands file` problem, but a later successful `edit` publishes a snapshot built without any `problem`, so the Commands tab stops reporting a damaged project file that still exists and is still being ignored. Severity: 3/10
-
-Existing Risk: 3/10 - A user who sees the warning, toggles a setting, and no longer sees it can assume the project override is healthy and be confused when the damaged file keeps being ignored.
-
-Proposal Risk: 2/10 - The edit path would carry the problem text from its fresh read, so the only new risk is a stale warning if the project file is repaired between the read and the publish, which the next refresh corrects.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "preserve the fallback problem in the snapshot published after a commands edit". In `src/native-commands/manager.ts` `edit`, pass `read.problem` through to the `createSnapshot` call when the read came from a fallback (source `home` or `project` with a defined problem) so the published snapshot matches what `refresh` would publish. Add a case in `src/native-commands/manager.test.ts` with a malformed project file and a valid home file, performing an edit, and asserting the published snapshot still carries the problem and names the home path as the edit destination. Keep the existing first-write, failed-write, and unusable-file tests passing unchanged.
-
-
 * Make the Roles tab handle invalid commands topic data the same way on every path instead of failing on open and silently dropping restrictions on repaint.
 
 Existing Issue: In `src/plugins/roles/activate.ts`, opening the tab reports `invalid commands topic data` when `commandRestrictionsFrom` returns undefined, while `publish` replaces the same undefined result with an empty restriction map, so a malformed topic snapshot yields an open failure in one path and a silently unrestricted display in the other. Severity: 3/10

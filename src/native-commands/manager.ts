@@ -56,7 +56,12 @@ export class NativeCommandSettingsManager {
     if (!writeCommandSettings(destination, values)) {
       return { ok: false, message: `Could not write commands.json at ${destination}.` };
     }
-    this.publish(this.createSnapshot({ values, source: read.source === 'project' ? 'project' : 'home', path: destination }));
+    this.publish(this.createSnapshot({
+      values,
+      source: read.source === 'project' ? 'project' : 'home',
+      path: destination,
+      ...(read.problem !== undefined && { problem: read.problem }),
+    }));
     return { ok: true };
   }
 
