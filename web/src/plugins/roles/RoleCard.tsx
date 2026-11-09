@@ -2,7 +2,7 @@ import React, { useEffect, useId, useRef } from 'react';
 import { errorText } from '@shared/error-text';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash } from '@fortawesome/free-solid-svg-icons';
-import type { Role } from '@shared/plugins/roles/shared';
+import type { CommandRestriction, Role } from '@shared/plugins/roles/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import {
   allowDrop, dragEnd, dragRole, dropOnRole,
@@ -18,13 +18,14 @@ type Properties = {
   efforts: readonly string[];
   models: Record<string, string[]>;
   nativeCommands: readonly string[];
+  commandRestrictions: Readonly<Record<string, CommandRestriction>>;
   capabilities: TabPluginClientCapabilities;
   onRefusal: (message: string | null) => void;
 };
 
 // One role card: role-level drafts and intents stay here while the model and command sections render
 // their own rows and pickers.
-export function RoleCard({ role, index, efforts, models, nativeCommands, capabilities, onRefusal }: Properties) {
+export function RoleCard({ role, index, efforts, models, nativeCommands, commandRestrictions, capabilities, onRefusal }: Properties) {
   const nameDraft = useRoleDraft(role.name);
   const descriptionDraft = useRoleDraft(role.description);
   const headingIds = useId();
@@ -146,6 +147,7 @@ export function RoleCard({ role, index, efforts, models, nativeCommands, capabil
         roleName={role.name}
         commands={role.commands}
         vocabulary={nativeCommands}
+        commandRestrictions={commandRestrictions}
         headingId={`${headingIds}-commands`}
         headingRef={commandsHeadingRef}
         picker={commandsPicker}

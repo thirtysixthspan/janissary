@@ -83,9 +83,15 @@ nobody chose for it.
 
 The `Commands` section shows native grants in the published vocabulary order, followed by unknown
 hand-written values in their stored order. Duplicate grants remain adjacent and visible. Unknown
-commands are dimmed, titled `Not a native command`, and can be removed. A muted `No commands` row
-appears when a role has none. **Add command** opens a dropdown of native commands the role does not
-already have, followed by Add and Cancel; Add stays disabled until a choice is made. The button is
+commands are dimmed, titled `Not a native command`, and can be removed. A native grant that the
+current Commands settings stop from running is dimmed and titled `Disabled application-wide` when the
+command is off everywhere, or `Disabled for agents` when only its agent access is off.
+Application-wide wins when both are off, and a disabled parent command counts as application-wide for
+every command beneath it. The grant remains on the card and in `roles.json`, the marker is recomputed
+from the live Commands topic and is not stored in the roles file, and a restricted command can still
+be added or removed like any other. A muted `No commands` row appears when a role has none. **Add
+command** opens a dropdown of native commands the role does not already have, followed by Add and
+Cancel; Add stays disabled until a choice is made. The button is
 hidden when all nine native commands are present. Add sends `add-command`; removing any duplicate
 row sends `remove-command`, which removes every copy. If another client changes a command while the
 picker is open, it clears a selection that is no longer available or closes when no commands remain

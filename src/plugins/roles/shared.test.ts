@@ -1,9 +1,11 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { rolesManifest } from './manifest.js';
 import {
   isAddCommandIntent, isAddEntryIntent, isMoveEntryIntent, isRemoveCommandIntent,
   isRemoveEntryIntent, isRolesPayload, isSetEntryEffortIntent, NATIVE_ACP_COMMANDS,
+  ROLES_PAYLOAD_SCHEMA_VERSION,
   type RolesPayload,
 } from './shared.js';
 
@@ -45,7 +47,7 @@ describe('new entry intent guard', () => {
 
 function payload(catalog: unknown, roles: RolesPayload['roles'] = []): unknown {
   return {
-    roles, nativeCommands: [...NATIVE_ACP_COMMANDS],
+    roles, nativeCommands: [...NATIVE_ACP_COMMANDS], commandRestrictions: {},
     source: 'home', path: '/home/me/.janissary/roles.json', catalog,
   };
 }
@@ -113,6 +115,29 @@ describe('the roles payload guard', () => {
     expect(isRolesPayload({ ...valid, nativeCommands: ['browser goto', 7] })).toBe(false);
   });
 
+  it('accepts an empty and a populated command restriction map', () => {
+    const valid = payload(CATALOG) as Record<string, unknown>;
+    expect(isRolesPayload(valid)).toBe(true);
+    expect(isRolesPayload({ ...valid, commandRestrictions: { 'browser goto': 'agents' } })).toBe(true);
+    expect(isRolesPayload({
+      ...valid, commandRestrictions: { 'db sqlite query': 'application-wide' },
+    })).toBe(true);
+  });
+
+  it('refuses a missing or malformed command restriction map', () => {
+    const valid = payload(CATALOG) as Record<string, unknown>;
+    const withoutRestrictions = { ...valid };
+    delete withoutRestrictions.commandRestrictions;
+    expect(isRolesPayload(withoutRestrictions)).toBe(false);
+    expect(isRolesPayload({ ...valid, commandRestrictions: null })).toBe(false);
+    expect(isRolesPayload({ ...valid, commandRestrictions: [] })).toBe(false);
+    expect(isRolesPayload({ ...valid, commandRestrictions: { 'browser goto': 'disabled' } })).toBe(false);
+    expect(isRolesPayload({ ...valid, commandRestrictions: { 'future command': 'agents' } })).toBe(false);
+    expect(isRolesPayload({
+      ...valid, nativeCommands: ['browser goto'], commandRestrictions: { 'db sqlite list': 'agents' },
+    })).toBe(false);
+  });
+
   // The client reaches this module through `@shared/plugins/roles/shared`, so an import here is a
   // runtime dependency from a browser chunk into a server module. No lint rule covers one file, and
   // the thirteen sibling contracts that do carry the import are out of this unit's scope, so the
@@ -140,5 +165,15 @@ describe('command edit intent guards', () => {
     expect(guard({ role: '', command: 'browser goto' })).toBe(false);
     expect(guard({ role: 'review', command: 7 })).toBe(false);
     expect(guard({ role: 'review' })).toBe(false);
+  });
+});
+
+describe('roles manifest', () => {
+  it('pins the payload schema and declares the models and commands topics', () => {
+    expect(rolesManifest.payloadSchemaVersion).toBe(ROLES_PAYLOAD_SCHEMA_VERSION);
+    expect(rolesManifest.payloadSchemaVersion).toBe(4);
+    expect(rolesManifest.notifications).toEqual(['models', 'commands']);
+    expect([...rolesManifest.capabilities]).toContain('topicData');
+    expect([...rolesManifest.capabilities]).not.toContain('topicAction');
   });
 });

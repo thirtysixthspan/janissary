@@ -21,6 +21,7 @@ import {
   NATIVE_ACP_COMMANDS,
   type AddEntryIntent,
   type AddCommandIntent,
+  type CommandRestriction,
   type EntryPrecondition,
   type LaunchCatalog,
   type Role,
@@ -31,6 +32,7 @@ import {
   type SetEntryEffortIntent,
 } from './shared.js';
 import { readRolesFile, writeRolesFile, type RolesRead } from './roles-file.js';
+import { commandRestrictionsFrom } from './command-policy.js';
 import {
   addEntry, addRole, addRoleCommand, deleteRole, describeRole, moveEntry, moveRole,
   removeEntry, removeRoleCommand, renameRole, matchesEntrySnapshot, setEntryEffort,
@@ -38,6 +40,7 @@ import {
 
 const INSTANCE_KEY = 'roles';
 const TAB_TITLE = 'roles';
+const INVALID_COMMANDS_DATA = 'invalid commands topic data';
 
 // `home` is a test seam, exactly as the search plugin's scan reader is: production passes nothing
 // and the user's home directory is read, while a test points the activation at a temporary one.
@@ -61,7 +64,11 @@ export function activate(home: string = homedir()): TabPluginActivation {
     return rememberedRoot;
   };
 
-  const payloadFrom = (read: RolesRead, catalog: LaunchCatalog): RolesPayload => ({
+  const payloadFrom = (
+    read: RolesRead,
+    catalog: LaunchCatalog,
+    commandRestrictions: Record<string, CommandRestriction>,
+  ): RolesPayload => ({
     roles: read.roles.map((role) => ({
       ...role,
       entries: role.entries.map(({ harness, model, effort }) => {
@@ -72,6 +79,7 @@ export function activate(home: string = homedir()): TabPluginActivation {
     })),
     source: read.source,
     nativeCommands: [...NATIVE_ACP_COMMANDS],
+    commandRestrictions,
     path: read.path,
     ...(read.problem !== undefined && { problem: read.problem }),
     catalog,
@@ -81,8 +89,9 @@ export function activate(home: string = homedir()): TabPluginActivation {
     capabilities: TabPluginServerCapabilities, root: string, create = true,
   ): void => {
     const read = readRolesFile(home, root, { create });
+    const commandRestrictions = commandRestrictionsFrom(capabilities.topicData('commands')) ?? {};
     capabilities.updateTab(INSTANCE_KEY, () => ({
-      payload: payloadFrom(read, capabilities.harnessLaunchCatalog()),
+      payload: payloadFrom(read, capabilities.harnessLaunchCatalog(), commandRestrictions),
     }));
   };
 
@@ -132,13 +141,17 @@ export function activate(home: string = homedir()): TabPluginActivation {
     command(argument, capabilities) {
       const root = rememberRoot(capabilities);
       if (argument.trim().length > 0) return capabilities.rejectRequest('Usage: roles');
+      const commandRestrictions = commandRestrictionsFrom(capabilities.topicData('commands'));
+      if (commandRestrictions === undefined) return capabilities.reportFailure(INVALID_COMMANDS_DATA);
       capabilities.openOrFocusTab(INSTANCE_KEY, () => ({
         title: TAB_TITLE,
-        payload: payloadFrom(readRolesFile(home, root), capabilities.harnessLaunchCatalog()),
+        payload: payloadFrom(
+          readRolesFile(home, root), capabilities.harnessLaunchCatalog(), commandRestrictions,
+        ),
       }));
     },
     notify(notification, capabilities) {
-      if (notification.topic !== 'models') return;
+      if (notification.topic !== 'models' && notification.topic !== 'commands') return;
       publish(capabilities, rememberedRoot ?? process.cwd(), false);
     },
     intent: defineIntents('roles', isRolesPayload, {

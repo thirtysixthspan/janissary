@@ -33,6 +33,7 @@
   border-top: 1px solid var(--border);
 }
 .roles-entry-missing { opacity: 0.65; }
+.roles-entry-restricted { opacity: 0.65; }
 .roles-entry-model { color: var(--fg); }
 .roles-entry-harness { color: var(--muted); }
 .roles-command-entry { min-width: 0; }
