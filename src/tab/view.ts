@@ -19,25 +19,36 @@ export function buildTabViews(
   scheduleView: (label: string) => ScheduleView[],
   shorten: (path: string) => string,
 ): TabView[] {
-  return tabs.map((tab) => {
-    const view = buildTabView(
-      tab,
-      tab.runtime?.busy ?? false,
-      managers.tab.workingDirOf(tab.label),
-      acpLabel(tab.label),
-      connectionsFor(tab.label),
-      scheduleView(tab.label),
-      tab.runtime?.queue.map((entry) => queueEntryLine(entry)) ?? [],
-      shorten,
-      managers.questions.pendingFor(tab.label),
-      (label) => managers.remote.workspaceOf(label),
-      (label) => managers.remote.reconnectingOf(label),
-      (dir) => managers.workspace.provisioning(dir),
-      (pluginId) => managers.plugins.declarations.find((declaration) => declaration.id === pluginId),
-    );
-    const run = tab.plugin?.agentRunId ? managers.agent.runs.get(tab.plugin.agentRunId) : undefined;
-    return { ...view, ...(run && { agentRun: run.view() }) };
-  });
+  return tabs.map((tab) => buildManagedTabView(tab, managers, connectionsFor, acpLabel, scheduleView, shorten));
+}
+
+// One tab's wire view with everything the managers contribute, shared by the full snapshot and the
+// single-tab update so the two can never disagree about what a tab looks like.
+export function buildManagedTabView(
+  tab: Tab,
+  managers: Managers,
+  connectionsFor: (label: string) => ConnectionView[],
+  acpLabel: (label: string) => string | undefined,
+  scheduleView: (label: string) => ScheduleView[],
+  shorten: (path: string) => string,
+): TabView {
+  const view = buildTabView(
+    tab,
+    tab.runtime?.busy ?? false,
+    managers.tab.workingDirOf(tab.label),
+    acpLabel(tab.label),
+    connectionsFor(tab.label),
+    scheduleView(tab.label),
+    tab.runtime?.queue.map((entry) => queueEntryLine(entry)) ?? [],
+    shorten,
+    managers.questions.pendingFor(tab.label),
+    (label) => managers.remote.workspaceOf(label),
+    (label) => managers.remote.reconnectingOf(label),
+    (dir) => managers.workspace.provisioning(dir),
+    (pluginId) => managers.plugins.declarations.find((declaration) => declaration.id === pluginId),
+  );
+  const run = tab.plugin?.agentRunId ? managers.agent.runs.get(tab.plugin.agentRunId) : undefined;
+  return { ...view, ...(run && { agentRun: run.view() }) };
 }
 
 type DeclaredViewFields = Partial<Pick<TabPluginDeclaration, 'chords' | 'hostsCommandBar' | 'capabilities'>>;

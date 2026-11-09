@@ -1,7 +1,7 @@
 import type { Managers } from '../managers.js';
 import type { Tab } from './types.js';
 import type { ConnectionView, ScheduleView, TabView } from '../protocol.js';
-import { buildTabViews } from './view.js';
+import { buildManagedTabView, buildTabViews } from './view.js';
 
 type Viewport = {
   tabs: Tab[];
@@ -18,6 +18,23 @@ export function managerView(
 ): TabView[] {
   return buildTabViews(
     port.tabs, port.managers,
+    connectionsFor, acpLabel, scheduleView,
+    (p: string) => port.shorten(p),
+  );
+}
+
+// One tab's view, or undefined when the label no longer names a tab.
+export function managerTabView(
+  port: Viewport,
+  label: string,
+  connectionsFor: (label: string) => ConnectionView[],
+  acpLabel: (label: string) => string | undefined,
+  scheduleView: (label: string) => ScheduleView[],
+): TabView | undefined {
+  const tab = port.tabs.find((t) => t.label === label);
+  if (!tab) return undefined;
+  return buildManagedTabView(
+    tab, port.managers,
     connectionsFor, acpLabel, scheduleView,
     (p: string) => port.shorten(p),
   );

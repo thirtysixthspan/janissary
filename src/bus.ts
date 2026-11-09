@@ -135,7 +135,9 @@ export type BusEvent =
   | { type: 'tab:cleared'; tabLabel: string }
   | { type: 'tab:removed'; tabLabel: string };
 
-type StateEvent = { type: 'dirty' };
+// `tab` names the one tab a transcript write changed, so the controller can send that tab's view
+// alone; every other subscriber still sees a plain `dirty`.
+type StateEvent = { type: 'dirty'; tab?: string };
 type AppEvent = { type: 'exit' };
 type PtyEvent =
   | { type: 'data'; id: string; data: string }

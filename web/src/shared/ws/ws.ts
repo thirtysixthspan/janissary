@@ -1,5 +1,5 @@
 import type { ServerEvent, RpcCall, StateEvent, LayoutEvent, LayoutUpdate, NativeNotificationEvent } from '@shared/protocol';
-import { mergeAgentRunRevision } from './agent-run-merge';
+import { mergePartialState } from './tab-view-merge';
 import type { ClientStateCollectors } from './client-state-collectors';
 import { PtyOutputBuffer, type PtyOutputBufferOptions } from './pty-output-buffer';
 import { resourceUrl } from './session-url';
@@ -80,6 +80,14 @@ export class JanusClient {
     return this.connection.subscribe(listener);
   }
 
+  // Retain and announce a snapshot a partial update produced; no snapshot to merge into means the
+  // update has nothing to apply to yet, and the full state that follows will carry it.
+  private publishMerged(merged: StateEvent | undefined): void {
+    if (!merged) return;
+    this.latestState = merged;
+    for (const listener of this.stateListeners) listener(merged);
+  }
+
   private onEvent(event: ServerEvent): void {
     switch (event.t) {
     case 'state': {
@@ -91,11 +99,9 @@ export class JanusClient {
       for (const listener of this.stateListeners) listener(snapshot);
       break;
     }
+    case 'tab-view-updated':
     case 'agent-run-updated': {
-      const current = this.latestState;
-      if (!current) break;
-      this.latestState = mergeAgentRunRevision(current, event);
-      for (const listener of this.stateListeners) listener(this.latestState);
+      this.publishMerged(this.latestState && mergePartialState(this.latestState, event));
       break;
     }
     case 'pty': {

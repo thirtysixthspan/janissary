@@ -1,7 +1,10 @@
-import type { AgentRunUpdatedEvent, LayoutUpdate, NativeNotificationEvent } from '../protocol/events.js';
+import type {
+  AgentRunUpdatedEvent, LayoutUpdate, NativeNotificationEvent, TabViewUpdatedEvent,
+} from '../protocol/events.js';
 
 export type Sinks = {
   emitState: () => void;
+  sendTabView?: (event: Omit<TabViewUpdatedEvent, 't'>) => void;
   sendPty: (id: string, data: string) => void;
   sendPtyExit: (id: string, exitCode: number) => void;
   exit?: () => void;

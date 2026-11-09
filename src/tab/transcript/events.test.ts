@@ -131,7 +131,7 @@ describe('appendTab', () => {
     expect(emit).toHaveBeenCalledWith('transcript', {
       type: 'entry:appended', tabLabel: 'bob', entry: { input: 'ls', output: 'x' }, tab,
     });
-    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
+    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty', tab: 'bob' });
     expect(markUnread).toHaveBeenCalledWith('bob');
   });
 
@@ -197,7 +197,7 @@ describe('updateRunningEntry', () => {
     expect(tab.log).toEqual([{ input: 'hi', output: 'partial', running: true, markdown: true }]);
     expect(finalize).not.toHaveBeenCalled();
     expect(emit).toHaveBeenCalledTimes(1);
-    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
+    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty', tab: 'bob' });
   });
 
   it('on finalize runs the hooks, emits the trailing entry, and emits dirty', () => {
@@ -214,7 +214,7 @@ describe('updateRunningEntry', () => {
     expect(emit).toHaveBeenCalledWith('transcript', {
       type: 'entry:appended', tabLabel: 'bob', entry: { input: '', output: 'final answer' }, tab,
     });
-    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
+    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty', tab: 'bob' });
   });
 
   it('emits no trailing entry with empty output or when trailing is unset', () => {
@@ -286,7 +286,7 @@ describe('updateRunningEntry', () => {
     expect(tab.log[0]).not.toBe(streamed);
     expect(tab.runtime!.acpEntries.has(tab.log[0])).toBe(true);
     expect(tab.log[1]).toMatchObject({ input: 'git status', running: true });
-    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
+    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty', tab: 'bob' });
   });
 
   it('the finalize path with a command match leaves an interleaved shell entry alone', () => {
@@ -343,7 +343,7 @@ describe('finishRunningTab', () => {
     expect(emit).toHaveBeenCalledWith('transcript', {
       type: 'entry:appended', tabLabel: 'bob', entry: { input: '', output: 'woke up' }, tab,
     });
-    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
+    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty', tab: 'bob' });
   });
 
   it('skips the trailing append but still reports the update when there is no output', () => {
@@ -354,7 +354,7 @@ describe('finishRunningTab', () => {
 
     expect(emit).not.toHaveBeenCalledWith('transcript', expect.objectContaining({ type: 'entry:appended' }));
     expect(emit).toHaveBeenCalledWith('transcript', { type: 'entry:updated', tabLabel: 'bob', tab });
-    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
+    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty', tab: 'bob' });
   });
 });
 
@@ -367,7 +367,7 @@ describe('clearTranscriptTab', () => {
 
     expect(tab.log).toEqual([]);
     expect(emit).toHaveBeenCalledWith('transcript', { type: 'tab:cleared', tabLabel: 'bob' });
-    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
+    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty', tab: 'bob' });
   });
 
   it('stamps activity when it clears the transcript', () => {
