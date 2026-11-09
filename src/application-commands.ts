@@ -90,6 +90,12 @@ function canonicalFormMatch(row: ApplicationCommandRow, normalized: string): num
     && (normalized === form || normalized.startsWith(`${form} `))) ? 1 : 0;
 }
 
+export function resolveExactApplicationCommand(input: string): ApplicationCommandRow | undefined {
+  const row = resolveApplicationCommand(input);
+  const normalized = normalize(input);
+  return row && [row.name, ...row.aliases, ...row.forms].includes(normalized) ? row : undefined;
+}
+
 export function resolveApplicationCommand(input: string): ApplicationCommandRow | undefined {
   const normalized = normalize(input);
   const rows = listApplicationCommands();

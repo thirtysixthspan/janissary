@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Reject trailing text in the settings manager and the `commands` topic `set` action so a name must match a canonical name, alias, or fixed form exactly rather than by prefix.
-
-Existing Issue: `NativeCommandSettingsManager.edit` and the topic's `set` action resolve the supplied name with `resolveApplicationCommand`, which matches any input that merely starts with a form, so a name such as `browser content extra` edits the `browser content` setting even though the plan requires exact matching with trailing words never ignored. Severity: 3/10
-
-Existing Risk: 3/10 - Only the `commands` command parser enforces exact matching today, so any other caller of the topic action or the `set` intent that passes a loosely built name changes a setting it did not name.
-
-Proposal Risk: 2/10 - A stricter match could refuse a name a caller currently relies on, which the existing manager, topic, and Commands tab tests would expose because the tab always sends the canonical row name.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "require exact name matching in the command settings edit path". In `src/native-commands/manager.ts` `edit`, after `resolveApplicationCommand(name)`, require that the normalized input equals the resolved row's name, one of its aliases, or one of its forms exactly, and otherwise return `Unknown application command: <name>.` without writing. Reuse the normalization already in `src/native-commands/decode.ts` `normalizeCommandName`. Apply the same check in `runCommandsTopicAction` in `src/plugins/commands-topic.ts` before the `Not a native ACP command` test so both refusals describe an exact name. Add cases to `src/native-commands/manager.test.ts` and `src/plugins/topics.test.ts` for a trailing-word name, and keep the existing alias, fixed-form, and `question ask` canonical-over-fixed-form tests passing unchanged.
-
-
 * Keep the fallback problem line visible after a successful commands edit instead of dropping it from the published snapshot.
 
 Existing Issue: When the project `commands.json` is unusable and the home file is in effect, `refresh` publishes a snapshot with the `showing the home commands file` problem, but a later successful `edit` publishes a snapshot built without any `problem`, so the Commands tab stops reporting a damaged project file that still exists and is still being ignored. Severity: 3/10

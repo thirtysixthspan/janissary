@@ -1,6 +1,6 @@
 import { homedir } from 'node:os';
 import path from 'node:path';
-import { resolveApplicationCommand, listApplicationCommands } from '../application-commands.js';
+import { resolveExactApplicationCommand, resolveApplicationCommand, listApplicationCommands } from '../application-commands.js';
 import { readCommandSettings, writeCommandSettings } from './settings-file.js';
 import type {
   CommandSetting, CommandSettingsEdit, CommandSettingsRead, CommandSettingsSnapshot,
@@ -40,7 +40,7 @@ export class NativeCommandSettingsManager {
   }
 
   async edit({ name, setting }: CommandSettingsEdit): Promise<EditResult> {
-    const resolved = resolveApplicationCommand(name);
+    const resolved = resolveExactApplicationCommand(name);
     if (!resolved) return { ok: false, message: `Unknown application command: ${name}.` };
     const read = readCommandSettings(this.root, this.home);
     if (read.unusablePath) {

@@ -1,6 +1,6 @@
 import type { Managers } from '../managers.js';
 import type { Subscription } from '../bus.js';
-import { resolveApplicationCommand } from '../application-commands.js';
+import { resolveExactApplicationCommand } from '../application-commands.js';
 import type { CommandsTopicAction, CommandsTopicNotification } from './api-topics-commands.js';
 
 export function readCommandsTopic(managers: Managers): CommandsTopicNotification['data'] {
@@ -23,7 +23,7 @@ export function runCommandsTopicAction(
   switch (action.action) {
     case 'refresh': { managers.nativeCommandSettings.refresh(); return; }
     case 'set': {
-      const resolved = resolveApplicationCommand(action.name);
+      const resolved = resolveExactApplicationCommand(action.name);
       if (resolved && action.setting === 'agentAccess' && resolved.nativeTool === undefined) {
         return Promise.resolve(`Not a native ACP command: ${resolved.name}.`);
       }

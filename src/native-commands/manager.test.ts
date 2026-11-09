@@ -163,6 +163,14 @@ describe('native command settings', () => {
     expect(enabled('tab')).toBe(true);
   });
 
+  it('refuses a name with trailing text without writing', async () => {
+    const { home, manager } = fixture();
+    expect(await manager.edit({ name: 'browser content extra', setting: { enabled: false } }))
+      .toEqual({ ok: false, message: 'Unknown application command: browser content extra.' });
+    expect(existsSync(homeFile(home))).toBe(false);
+    expect(await manager.edit({ name: '  EXIT ', setting: { enabled: false } })).toEqual({ ok: true });
+  });
+
   it('disables every fixed form when the parent command is disabled', async () => {
     const { manager } = fixture();
     await manager.edit({ name: 'tab', setting: { enabled: false } });

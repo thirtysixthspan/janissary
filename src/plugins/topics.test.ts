@@ -638,6 +638,12 @@ describe('the commands topic source', () => {
     await expect(runTopicAction(unknown.managers, {
       topic: 'commands', action: 'set', name: 'not-a-command', setting: 'enabled', value: false,
     })).resolves.toBe('Unknown application command: not-a-command.');
+    await expect(runTopicAction(unknown.managers, {
+      topic: 'commands', action: 'set', name: 'browser content extra', setting: 'enabled', value: false,
+    })).resolves.toBe('Unknown application command: browser content extra.');
+    await expect(runTopicAction(unknown.managers, {
+      topic: 'commands', action: 'set', name: 'exit now', setting: 'agentAccess', value: false,
+    })).resolves.toBe('Unknown application command: exit now.');
 
     const unusable = commandsFixture();
     const unusablePath = path.join(unusable.root, '.janissary', 'commands.json');
