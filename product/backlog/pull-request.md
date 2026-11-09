@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Define the native tool, settings source, and inventory kind domains once in the import-free shared contract so the server types and the plugin validators cannot drift, as the plan promised (plan fidelity and technical debt).
-
-Existing Issue: The plan says the payload validator's domain sets are shared with the import-free shared contract, yet the native-tool union is declared separately in `src/shared/application-commands.ts` (twice) and as `NativeTool`/`NATIVE_TOOLS` in `src/plugins/commands/shared.ts`, the source union in both `src/native-commands/settings-types.ts` and `src/plugins/commands/shared.ts`, and the kind set only as a local `KINDS` in `src/plugins/commands/payload.ts`. Severity: 3/10
-
-Existing Risk: 3/10 - Adding a native tool kind or a settings source updates the server type but not the runtime guards, so the guard rejects the new rows and the Commands tab or Roles tab fails to open with `invalid commands topic data`.
-
-Proposal Risk: 2/10 - Moving constants and re-deriving types is mechanical, and a wrong import direction would break the import-free rule that `web/src/plugins/commands/chunk-imports.test.ts` already guards.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "declare command inventory domains once in src/shared/application-commands.ts". In `src/shared/application-commands.ts`, export `as const` arrays for native tools, settings sources, and row kinds and derive `ApplicationCommandRow`, `ApplicationCommandDeclaration`, and `ApplicationCommandKind` from them; make `src/native-commands/settings-types.ts` and `src/plugins/commands/shared.ts` import or re-export those types and build `NATIVE_TOOLS`, `SOURCES`, and the kind set in `src/plugins/commands/payload.ts` from the same arrays, keeping the plugin contract import-free of server modules. Existing tests in `src/plugins/commands/payload.test.ts`, `src/plugins/commands/shared.test.ts`, and `web/src/plugins/commands/chunk-imports.test.ts` must pass unchanged.
-
-
 * Ignore auto-repeated key events when a disabled command-backed shortcut is blocked, so holding the key reports it once (functionality gap).
 
 Existing Issue: `handleChordKeys` in `web/src/useWindowKeys.ts` sends `reportBlockedCommand` on every keydown of a blocked chord with no check of `KeyboardEvent.repeat`, so holding `Ctrl+R` or `Cmd+T` while its command is disabled sends one RPC per repeat and the server records one `command-disabled` notification per repeat. Severity: 2/10

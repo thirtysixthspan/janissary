@@ -1,3 +1,10 @@
+export const APPLICATION_COMMAND_NATIVE_TOOLS = ['database', 'browser', 'question'] as const;
+export const APPLICATION_COMMAND_SOURCES = ['home', 'project', 'default'] as const;
+export const APPLICATION_COMMAND_KINDS = ['builtin', 'plugin', 'help', 'native'] as const;
+
+export type ApplicationCommandNativeTool = (typeof APPLICATION_COMMAND_NATIVE_TOOLS)[number];
+export type ApplicationCommandSource = (typeof APPLICATION_COMMAND_SOURCES)[number];
+export type ApplicationCommandKind = (typeof APPLICATION_COMMAND_KINDS)[number];
 
 export type ApplicationCommandRow = Readonly<{
   name: string;
@@ -5,7 +12,7 @@ export type ApplicationCommandRow = Readonly<{
   aliases: readonly string[];
   forms: readonly string[];
   parent?: string;
-  nativeTool?: 'database' | 'browser' | 'question';
+  nativeTool?: ApplicationCommandNativeTool;
 }>;
 
 export type ApplicationCommandDeclaration = Readonly<{
@@ -13,10 +20,8 @@ export type ApplicationCommandDeclaration = Readonly<{
   forms: readonly string[];
   aliases?: readonly string[];
   parent?: string;
-  nativeTool?: 'database' | 'browser' | 'question';
+  nativeTool?: ApplicationCommandNativeTool;
 }>;
-
-export type ApplicationCommandKind = 'builtin' | 'plugin' | 'help' | 'native';
 
 export type DisabledApplicationCommand = Readonly<{
   name: string;

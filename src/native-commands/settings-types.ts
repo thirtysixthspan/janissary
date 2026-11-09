@@ -1,7 +1,7 @@
-import type { ApplicationCommandRow } from '../shared/application-commands.js';
+import type { ApplicationCommandRow, ApplicationCommandSource } from '../shared/application-commands.js';
 
 export type CommandSetting = Readonly<{ enabled: boolean; agentAccess: boolean }>;
-export type CommandSettingsSource = 'home' | 'project' | 'default';
+export type CommandSettingsSource = ApplicationCommandSource;
 export type CommandSettingsSnapshot = Readonly<{
   commands: readonly (ApplicationCommandRow & CommandSetting & {
     effectiveEnabled: boolean;

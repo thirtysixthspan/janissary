@@ -1,8 +1,16 @@
+import {
+  APPLICATION_COMMAND_KINDS,
+  APPLICATION_COMMAND_NATIVE_TOOLS,
+  APPLICATION_COMMAND_SOURCES,
+  type ApplicationCommandNativeTool,
+  type ApplicationCommandSource,
+} from '../../shared/application-commands.js';
+
 export const COMMANDS_PAYLOAD_SCHEMA_VERSION = 1;
 
-export type CommandSettingsSource = 'home' | 'project' | 'default';
+export type CommandSettingsSource = ApplicationCommandSource;
 export type CommandSettingName = 'enabled' | 'agentAccess';
-export type NativeTool = 'database' | 'browser' | 'question';
+export type NativeTool = ApplicationCommandNativeTool;
 
 export type CommandRow = {
   name: string;
@@ -35,8 +43,9 @@ function isNonemptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
-export const SOURCES = new Set(['home', 'project', 'default']);
-export const NATIVE_TOOLS = new Set(['database', 'browser', 'question']);
+export const SOURCES: ReadonlySet<string> = new Set(APPLICATION_COMMAND_SOURCES);
+export const NATIVE_TOOLS: ReadonlySet<string> = new Set(APPLICATION_COMMAND_NATIVE_TOOLS);
+export const KINDS: ReadonlySet<string> = new Set(APPLICATION_COMMAND_KINDS);
 
 function isSource(value: unknown): value is CommandSettingsSource {
   return typeof value === 'string' && SOURCES.has(value);

@@ -1,6 +1,7 @@
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
+import type { ApplicationCommandNativeTool } from '../shared/application-commands.js';
 
-export type NativeCommandTool = 'database' | 'browser' | 'question';
+export type NativeCommandTool = ApplicationCommandNativeTool;
 
 export function nativeCommandName(command: string): string | undefined {
   const words = command.trim().split(/\s+/u).map((word) => word.toLowerCase());
