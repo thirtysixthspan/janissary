@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { effectiveCommandSetting } from './policy.js';
+import { disabledApplicationCommand, effectiveCommandSetting } from './policy.js';
 import type { CommandSettingsSnapshot } from './settings-types.js';
 
 const snapshot = {
@@ -10,6 +10,29 @@ const snapshot = {
   source: 'default',
   path: '',
 } as const satisfies CommandSettingsSnapshot;
+
+const disabledAsk = {
+  ...snapshot,
+  commands: [{
+    name: 'ask', kind: 'builtin', aliases: [], forms: ['ask'],
+    enabled: false, agentAccess: true, effectiveEnabled: false, effectiveAgentAccess: true,
+  }],
+} as const satisfies CommandSettingsSnapshot;
+
+describe('disabledApplicationCommand', () => {
+  it('resolves a space-separated line without a fallback', () => {
+    expect(disabledApplicationCommand('ask hello', disabledAsk)?.name).toBe('ask');
+  });
+
+  it('refuses a punctuation-joined line through the fallback name', () => {
+    expect(disabledApplicationCommand('ask:hello', disabledAsk)).toBeUndefined();
+    expect(disabledApplicationCommand('ask:hello', disabledAsk, 'ask')?.name).toBe('ask');
+  });
+
+  it('does not refuse when the fallback row is enabled', () => {
+    expect(disabledApplicationCommand('ask:hello', snapshot, 'ask')).toBeUndefined();
+  });
+});
 
 describe('effectiveCommandSetting', () => {
   it('reports both values enabled without a snapshot', () => {

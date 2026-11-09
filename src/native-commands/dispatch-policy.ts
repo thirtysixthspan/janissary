@@ -10,10 +10,9 @@ export function disabledCommandMessage(
   commandText: string,
 ): string | undefined {
   if (input.startsWith('!') || commandText.startsWith('!')) return undefined;
-  if (commands.every((command) => !command.match(commandText)) && getOutput(commandText).kind !== 'output') {
-    return undefined;
-  }
-  const row = disabledApplicationCommand(commandText, managers.nativeCommandSettings?.current());
+  const matched = commands.find((command) => command.match(commandText));
+  if (!matched && getOutput(commandText).kind !== 'output') return undefined;
+  const row = disabledApplicationCommand(commandText, managers.nativeCommandSettings?.current(), matched?.name);
   if (!row) return undefined;
   return `Command is disabled: ${row.name}.`;
 }

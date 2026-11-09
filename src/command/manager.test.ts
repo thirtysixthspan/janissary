@@ -792,6 +792,32 @@ describe('CommandManager disabled command policy', () => {
     }
   });
 
+  it.each([
+    ['ask', 'ask:hello'],
+    ['ask', 'ask-hello'],
+    ['db', 'db.sqlite'],
+  ])('refuses %s for the registry-accepted spelling %s on every dispatch path', async (name, input) => {
+    const { managers } = makeManagers(settingsWith({ [name]: { enabled: false } }));
+    const message = `Command is disabled: ${name}.`;
+
+    managers.command.dispatchTo('janus', input);
+    expect(managers.tab.cur().log.at(-1)).toEqual({ input, output: message });
+
+    await expect(managers.command.dispatchLineWithOutput('janus', input)).resolves.toEqual({
+      dispatched: true, output: message,
+    });
+    await expect(managers.command.executeCommand(name, input, 'janus', 0)).resolves.toBe(message);
+  });
+
+  it('keeps a line matching no registry entry unknown when a neighbouring command is disabled', () => {
+    const { managers } = makeManagers(settingsWith({ quit: { enabled: false } }));
+
+    managers.command.dispatchTo('janus', 'quit now');
+
+    expect(managers.tab.cur().log.at(-1)).toMatchObject({ input: 'quit now' });
+    expect(managers.tab.cur().log.at(-1)).not.toEqual({ input: 'quit now', output: 'Command is disabled: quit.' });
+  });
+
   it('refuses direct executeCommand callers before their effects', async () => {
     const { managers } = makeManagers(settingsWith({ ask: { enabled: false } }));
     const close = vi.fn();

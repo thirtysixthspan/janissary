@@ -21,8 +21,10 @@ export function effectiveCommandSetting(
 export function disabledApplicationCommand(
   input: string,
   snapshot: CommandSettingsSnapshot | undefined,
+  fallbackName?: string,
 ): ApplicationCommandRow | undefined {
-  const row = resolveApplicationCommand(input.replace(/^\//u, ''));
+  const row = resolveApplicationCommand(input.replace(/^\//u, ''))
+    ?? (fallbackName === undefined ? undefined : resolveApplicationCommand(fallbackName));
   if (!row) return undefined;
   return effectiveCommandSetting(snapshot, row.name).effectiveEnabled ? undefined : row;
 }

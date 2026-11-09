@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Refuse a disabled command for every input the command registry still routes to it, so a punctuation-joined line such as `ask:hello` can no longer slip past the availability gate (functionality gap and security).
-
-Existing Issue: The dispatch policy decides a line is an application command with the registry's `match` functions, many of which are `/^name\b/i` regexes that also accept `ask:hello`, `ask-hello`, or `db.sqlite`, but it then identifies the row to check with `resolveApplicationCommand`, which only accepts a form followed by a space or the end of the line, so such a line resolves to no row, is never refused, and runs the disabled command. Severity: 7/10
-
-Existing Risk: 7/10 - The plan's central promise that a disabled command is refused on every dispatch path fails open for any user, queued line, schedule, or plugin that types a registry-accepted spelling the inventory matcher does not recognise, so `ask`, `tell`, `send`, `edit`, `files`, `browser` and the other `\b` commands stay reachable while their Commands-tab checkbox shows them disabled.
-
-Proposal Risk: 3/10 - The registry command that matched is now the authority for which row to refuse, so a line can no longer execute without being checked, though a command whose registry name differs from its inventory row would still need a row alias or a test to prove the mapping.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "refuse disabled commands for registry-accepted spellings the inventory matcher misses". In `src/native-commands/dispatch-policy.ts`, `disabledCommandMessage` already computes whether any entry of `commands` from `src/commands/index.ts` matches `commandText`; keep the longest-fixed-form row from `resolveApplicationCommand` when it exists, and otherwise fall back to the row named by the matching command (for example `resolveApplicationCommand(matchedCommand.name)`), then feed that row to the same `effectiveCommandSetting` check in `src/native-commands/policy.ts` (extend `disabledApplicationCommand` with an optional fallback name rather than duplicating the lookup). Keep `quit now` and other lines that match no registry entry returning the ordinary unknown reply, keep `!` lines excluded, and leave `help`, which is parsed by word in `parseHelpCommand` in `src/commands.ts`, unchanged. Add cases to `src/native-commands/policy.test.ts` and `src/command/manager.test.ts` that disable `ask` and `db` and assert `ask:hello`, `ask-hello`, and `db.sqlite` are refused with `Command is disabled: ask.` and `Command is disabled: db.` through `dispatchTo`, `dispatchLineWithOutput`, and `executeCommand`, plus a case proving `quit now` is still not refused. The existing disabled-dispatch tests in `src/command/manager.test.ts` and `src/native-commands/feature.integration.test.ts` must keep passing untouched.
-
-
 * Update the user documentation to describe the fifth ambient notification event, `commandDisabled`, which the plan and specs add but the user pages still describe as four events (plan fidelity).
 
 Existing Issue: `documentation/user-documentation/tab-types/notifications.md`, `documentation/user-documentation/getting-started/configuration.md`, and the notifications paragraph of `documentation/user-documentation/command-bar/commands.md` still say there are four ambient events and list only `stateChange`, `scheduleFire`, `agentStart`, and `rateLimited`, while `src/config.ts` now defaults a fifth `notifications.events.commandDisabled` that the pull request's own help and specs refer to. Severity: 3/10
