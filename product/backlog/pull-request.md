@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Describe the Commands tab's home-restrictions notice in the pull request description and give it a verification step.
-
-Existing Issue: The description's What and How to verify sections never mention that the Commands tab shows `This project file lifts N home restriction(s): …` when a project file relaxes the home file, although the branch's last commit added it as visible behavior with a new `overridden` payload field. Severity: 3/10
-
-Existing Risk: 3/10 - A reviewer judging the project-override behavior from the description sees a silent replacement rule and misses the one user-visible warning and its limits, such as appearing only while the tab is open.
-
-Proposal Risk: 1/10 - Only prose changes, and the remaining risk is that the sentence drifts if the notice wording or the replacement rule later changes.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "describe the home-restrictions notice in the pull request description". In the description's What section, after the sentence about a project `.janissary/commands.json` replacing the home file, add a sentence stating that the Commands tab lists the commands whose home restriction a valid project file lifts. Extend edge case 9 of How to verify with a scratch home file that disables `browser content` and a project file that does not, and expect the notice line naming `browser content`. Take the wording from `web/src/plugins/commands/CommandsTab.tsx` and `product/specs/commands-tab.md`. Do not touch source or specs.
-
-
 * Share one command-name normalizer and longest-form matcher between the server inventory, the settings decoder and the browser instead of keeping separate copies.
 
 Existing Issue: The whitespace and case normalizer plus the longest-form and canonical-form tie-break matching are written out separately in `src/application-commands.ts`, `src/native-commands/decode.ts` and `web/src/shared/command-availability.ts`, so the rules for which row owns an input exist in three places. Severity: 4/10
