@@ -5,6 +5,7 @@ export const tabPluginLoaders = {
   'agent-monitor': () => import('./agent-monitor/activate.js'),
   asciicast: () => import('./asciicast/activate.js'),
   audio: () => import('./audio/activate.js'),
+  commands: () => import('./commands/activate.js'),
   connections: () => import('./connections/activate.js'),
   conversations: () => import('./conversations/activate.js'),
   diff: () => import('./diff/activate.js'),

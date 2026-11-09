@@ -211,6 +211,9 @@ describe('OpenFileManager.edit (dispatch by file type)', () => {
   // plugin owns the verb must never be what activates it. Running the presentation is what does.
   it('resolves the claim from the registry without activating the plugin', () => {
     const managers = { tab: {} } as unknown as Managers;
+    managers.nativeCommandSettings = {
+      subscribe: () => () => {},
+    } as unknown as Managers['nativeCommandSettings'];
     const host = new TabPluginHost(managers);
 
     expect(openerForExtension('.png')?.editsOwnFiles).toBe(true);
@@ -522,6 +525,9 @@ describe('OpenFileManager.run (video)', () => {
         },
       },
     } as unknown as Managers;
+    managers.nativeCommandSettings = {
+      subscribe: () => () => {},
+    } as unknown as Managers['nativeCommandSettings'];
     managers.plugins = new TabPluginHost(managers);
     return managers;
   };

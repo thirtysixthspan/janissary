@@ -115,6 +115,7 @@ export default defineConfig({
             { text: "Conversations", link: "/user-documentation/tab-types/conversations" },
             { text: "Models", link: "/user-documentation/tab-types/models" },
             { text: "Roles", link: "/user-documentation/tab-types/roles" },
+            { text: "Commands", link: "/user-documentation/tab-types/commands" },
             { text: "Launcher", link: "/user-documentation/tab-types/launcher" },
             { text: "Diff tab", link: "/user-documentation/tab-types/diff-tab" },
             { text: "Sessions", link: "/user-documentation/tab-types/sessions" },

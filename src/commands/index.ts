@@ -42,7 +42,7 @@ import { command as plugins } from './plugins.js';
 import { tabPluginCatalog } from '../plugins/catalog.js';
 import { createPluginCommands } from '../plugins/command-adapter.js';
 
-const coreCommands: Command[] = [
+export const coreCommands: Command[] = [
   shell,
   next,
   askReset,

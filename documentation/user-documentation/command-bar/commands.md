@@ -30,6 +30,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `conversation [<title>]` | Open the [conversation list](/user-documentation/tab-types/conversations), or open a saved conversation by title, or start a new conversation and send `<title>` as the first query |
 | `conversations [left\|right\|<title>]` | Open or dock the [conversation list](/user-documentation/tab-types/conversations), or reopen a saved conversation by its title |
 | `models [left\|right]` | Open the [Models tab](/user-documentation/tab-types/models), or dock it in a sidebar |
+| `commands` | Open the [Commands tab](/user-documentation/tab-types/commands) to enable or disable application commands and control native agent access; `commands enable\|disable [agent\|global] <command>` changes one setting |
 | `shell [name] [-w\|--workspace\|--no-workspace] [--offline]` | Open a separate [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab), in a fresh sandboxed workspace clone unless `--no-workspace` is given |
 | `quit` / `/quit` | Exit the application, after confirmation |
 
@@ -65,6 +66,14 @@ Names are lowercased, and extra spaces around and between words are ignored. One
 If the help files can't be read, `help` falls back to a single summary line naming the built-in commands and reminding you that `!` runs something in the shell, `/` runs a built-in, and `Ctrl+R` or `hist` opens command history.
 
 Every command's page is also on this site, under **Command Reference** in the sidebar.
+
+## `commands`
+
+`commands` opens the [Commands tab](/user-documentation/tab-types/commands), where every application command has an **Enabled** checkbox and every native ACP command also has an **Agent access** checkbox. The tab re-reads the effective `commands.json` file each time it opens. Changes save as you make them, and a failed save shows the refusal above the table while the previous value stays checked.
+
+`commands enable [agent|global] <command>` and `commands disable [agent|global] <command>` change one setting without opening the tab. Leave out the selector to change whether the command is enabled; use `agent` to change whether agents may use a native command. Names match canonical names, aliases, and fixed forms exactly, ignoring case and repeated spaces, so trailing words are not ignored. A malformed form prints `Usage: commands [enable|disable [agent|global] <command>].`; an unknown name prints `Unknown application command: <command>.`; and agent access on a command that is not native prints `Not a native ACP command: <canonical>.`
+
+The tab never docks itself, but `tab dock` can dock it like any bundled plugin tab. `commands` is an ordinary setting, so it can disable itself and be re-enabled from its open tab. Once that tab is closed, a disabled `commands` is refused like any other command until you edit the effective `commands.json` by hand.
 
 ## `tab`
 

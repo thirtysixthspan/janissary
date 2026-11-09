@@ -29,6 +29,29 @@ describe('application command inventory', () => {
     expect(resolveApplicationCommand('search transcript fox')).toMatchObject({ kind: 'builtin', name: 'search' });
   });
 
+  it('lists exactly one plugin row for the commands command', () => {
+    const matches = rows.filter((row) => row.kind === 'plugin' && row.name === 'commands');
+    expect(matches).toHaveLength(1);
+    expect(resolveApplicationCommand('commands enable browser goto'))
+      .toMatchObject({ kind: 'plugin', name: 'commands' });
+  });
+
+  it('builds builtin rows from core commands once, without the shell alias row', () => {
+    expect(rows.filter((row) => row.forms.includes('search transcript'))).toHaveLength(1);
+    expect(rows.some((row) => row.forms.includes('!'))).toBe(false);
+    expect(rows.some((row) => row.name === '!')).toBe(false);
+    expect(rows.find((row) => row.name === 'shell')?.kind).toBe('plugin');
+  });
+
+  it('keeps name and form pairs unique while retaining the intentional canonical duplicates', () => {
+    const pairs = rows.map((row) => JSON.stringify([row.name, row.forms]));
+    expect(new Set(pairs).size).toBe(pairs.length);
+    expect(rows.filter((row) => row.name === 'ask').map((row) => row.forms.join('|')).toSorted((left, right) => left.localeCompare(right)))
+      .toEqual(['ask', 'ask reset']);
+    expect(rows.filter((row) => row.name === 'tell').map((row) => row.forms.join('|')).toSorted((left, right) => left.localeCompare(right)))
+      .toEqual(['tell', 'tell reset']);
+  });
+
   it('selects the fixed form that carries the canonical policy key', () => {
     expect(resolveApplicationCommand('ask reset')).toMatchObject({ name: 'ask', forms: ['ask reset'] });
     expect(resolveApplicationCommand('browser goto https://example.com'))

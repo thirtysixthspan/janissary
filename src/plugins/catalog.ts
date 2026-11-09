@@ -2,6 +2,7 @@ import type { TabPluginDeclaration } from './api.js';
 import { asciicastManifest } from './asciicast/manifest.js';
 import { audioManifest } from './audio/manifest.js';
 import { agentMonitorManifest } from './agent-monitor/manifest.js';
+import { commandsManifest } from './commands/manifest.js';
 import { conversationsManifest } from './conversations/manifest.js';
 import { connectionsManifest } from './connections/manifest.js';
 import { diffManifest } from './diff/manifest.js';
@@ -21,7 +22,7 @@ import { sqlManifest } from './sql/manifest.js';
 import { videoManifest } from './video/manifest.js';
 
 export const tabPluginCatalog = [
-  agentMonitorManifest, asciicastManifest, audioManifest, connectionsManifest, conversationsManifest, diffManifest, imageManifest, launcherManifest,
+  agentMonitorManifest, asciicastManifest, audioManifest, commandsManifest, connectionsManifest, conversationsManifest, diffManifest, imageManifest, launcherManifest,
   markdownManifest, modelsManifest, pageManifest, pdfManifest, rolesManifest, schedulesManifest, scriptsManifest, searchManifest, sessionsManifest,
   shellManifest, sqlManifest, videoManifest,
 ] as const satisfies readonly TabPluginDeclaration[];

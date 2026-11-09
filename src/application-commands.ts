@@ -1,5 +1,5 @@
 import type { ApplicationCommandDeclaration, ApplicationCommandRow } from './shared/application-commands.js';
-import { commands } from './commands/index.js';
+import { commands, coreCommands } from './commands/index.js';
 import { getOutput } from './commands.js';
 import { tabPluginCatalog } from './plugins/catalog.js';
 import { NATIVE_ACP_COMMANDS } from './plugins/roles/shared.js';
@@ -24,7 +24,7 @@ const BUILTIN_FORMS: Readonly<Record<string, ApplicationCommandDeclaration>> = {
   quit: { name: 'quit', forms: ['quit'] }, rename: { name: 'rename', forms: ['rename'] },
   schedule: { name: 'schedule', forms: ['schedule', 'schedule list', 'schedule cancel', 'schedule clear'] },
   search: { name: 'search', forms: ['search transcript'], parent: 'search' }, send: { name: 'send', forms: ['send'] },
-  shell: { name: 'shell', forms: ['!'] }, ssh: { name: 'ssh', forms: ['ssh'] },
+  ssh: { name: 'ssh', forms: ['ssh'] },
   syntax: { name: 'syntax', forms: ['syntax', 'syntax theme'] }, tab: { name: 'tab', forms: ['tab', 'tab focus', 'tab move', 'tab pane', 'tab split', 'tab color', 'tab group', 'tab dock', 'tab undock'] },
   tasks: { name: 'tasks', forms: ['tasks'] }, tell: { name: 'tell', forms: ['tell'] },
   'tell-reset': { name: 'tell', forms: ['tell reset'], parent: 'tell' },
@@ -44,7 +44,7 @@ function compare(left: ApplicationCommandRow, right: ApplicationCommandRow): num
 
 export function listApplicationCommands(): ApplicationCommandRow[] {
   const rows: ApplicationCommandRow[] = [];
-  for (const command of commands) {
+  for (const command of coreCommands) {
     const declaration = BUILTIN_FORMS[command.name];
     if (declaration) rows.push({ ...declaration, kind: 'builtin', aliases: declaration.aliases ?? [] });
   }

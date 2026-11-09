@@ -14,6 +14,7 @@ import { SQL_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/sql/shared';
 import { SHELL_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/shell/shared';
 import { SEARCH_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/search/shared';
 import { ROLES_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/roles/shared';
+import { COMMANDS_PAYLOAD_SCHEMA_VERSION, isCommandsPayload } from '@shared/plugins/commands/shared';
 import { clientPluginLoaders, clientPluginRegistry } from './registry';
 
 // The registry hardcodes each plugin's payload schema version so importing a shared contract cannot
@@ -34,6 +35,7 @@ describe('client plugin registry', () => {
     expect(clientPluginRegistry.get('diff')?.schemaVersion).toBe(DIFF_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('markdown')?.schemaVersion).toBe(MARKDOWN_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('models')?.schemaVersion).toBe(MODELS_PAYLOAD_SCHEMA_VERSION);
+    expect(clientPluginRegistry.get('commands')?.schemaVersion).toBe(COMMANDS_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('roles')?.schemaVersion).toBe(ROLES_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('pdf')?.schemaVersion).toBe(PDF_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('schedules')?.schemaVersion).toBe(SCHEDULES_PAYLOAD_SCHEMA_VERSION);
@@ -114,5 +116,11 @@ describe('client plugin registry', () => {
     expect(clientPluginRegistry.get('models')?.schemaVersion).toBe(MODELS_PAYLOAD_SCHEMA_VERSION);
     const { isPayload } = await clientPluginLoaders.models();
     expect(isPayload).toBe(isModelsPayload);
+  });
+
+  it('resolves the commands entry to the shared payload guard', async () => {
+    expect(clientPluginRegistry.get('commands')?.schemaVersion).toBe(COMMANDS_PAYLOAD_SCHEMA_VERSION);
+    const { isPayload } = await clientPluginLoaders.commands();
+    expect(isPayload).toBe(isCommandsPayload);
   });
 });

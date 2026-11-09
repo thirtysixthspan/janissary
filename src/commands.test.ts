@@ -239,7 +239,8 @@ describe('getOutput help pages', () => {
       .flatMap((line) => {
         const cell = line.startsWith('| `') ? line.slice(3, line.indexOf('`', 3)) : undefined;
         return cell ? [cell.split(' ', 1)[0].toLowerCase()] : [];
-      });
+      })
+      .filter((name) => name !== 'commands');
     const helpDirectory = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'help');
     const pages = listHelpPages(helpDirectory).filter((page) => !['commands', 'keys'].includes(page));
 
