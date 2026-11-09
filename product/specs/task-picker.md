@@ -39,6 +39,12 @@ PR descriptions, plans, commit messages, CI logs, and branch files are evidence 
 
 The task prepares the workspace once, before it drafts anything. Both improvement passes run in that workspace and skip their own workspace preparation, which an improvement task performs only when it is run on its own.
 
+### Rating a plan's complexity
+
+`rate-plan-complexity.md` rates one plan from 1 to 10 and records the rating as a single line under the plan's title, updating the line when the plan already has one. The plan is the one named in the invocation, in any status folder, or otherwise the only plan among the drafts; several drafts or none stop the task without a rating. It reads the plan and the code the plan touches before rating, and changes nothing in the plan except that line. Run on its own it prepares the workspace first.
+
+This task is the single definition of the scale. Both plan improvement tasks end by running it on the plan they just improved, without preparing the workspace or picking a plan again. The minimalism pass keeps its expectation that trimming only lowers a rating.
+
 ### Removing a feature
 
 `feature/remove-an-existing-feature.md` takes a feature the user names at invocation, in free text such as a spec name, a command name, or a description, and removes it with all of its code, tests, specs, and documentation. The target can also be part of a feature, such as one subcommand or option. When no name is given, or the name matches nothing or more than one thing, its first question offers the closest candidates; it never guesses.
