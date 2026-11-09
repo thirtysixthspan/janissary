@@ -10,6 +10,9 @@ const ROWS: CommandNameRow[] = [
   { name: 'db', aliases: [], forms: ['db', 'db sqlite'] },
   { name: 'db sqlite query', aliases: [], forms: ['db sqlite query'] },
   { name: 'quit', aliases: [], forms: ['quit'] },
+  { name: 'question', aliases: [], forms: ['question ask', 'question approve'] },
+  { name: 'question ask', aliases: [], forms: ['question ask'] },
+  { name: 'question approve', aliases: [], forms: ['question approve'] },
   { name: 'search', aliases: [], forms: ['search transcript'] },
 ];
 
@@ -41,6 +44,15 @@ describe('parseCommand', () => {
     expect(parse('disable ask reset')).toEqual({ kind: 'edit', name: 'ask', setting: 'enabled', value: false });
     expect(parse('disable search transcript'))
       .toEqual({ kind: 'edit', name: 'search', setting: 'enabled', value: false });
+  });
+
+  it('prefers a canonical name over another row\'s fixed form', () => {
+    expect(parse('enable question ask'))
+      .toEqual({ kind: 'edit', name: 'question ask', setting: 'enabled', value: true });
+    expect(parse('disable agent question ask'))
+      .toEqual({ kind: 'edit', name: 'question ask', setting: 'agentAccess', value: false });
+    expect(parse('enable question approve'))
+      .toEqual({ kind: 'edit', name: 'question approve', setting: 'enabled', value: true });
   });
 
   it('treats a lone agent as the command name and agent plus a name as the agent selector', () => {

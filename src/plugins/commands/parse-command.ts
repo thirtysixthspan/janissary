@@ -17,6 +17,10 @@ function normalize(value: string): string {
   return value.trim().replaceAll(/\s+/gu, ' ').toLowerCase();
 }
 
+function isExact(value: string, normalized: string): boolean {
+  return normalize(value) === normalized;
+}
+
 function typedText(value: string): string {
   return value.trim().replaceAll(/\s+/gu, ' ');
 }
@@ -39,8 +43,9 @@ export function parseCommand(argument: string, rows: readonly CommandNameRow[]):
   const setting: CommandSettingName = selected && first === 'agent' ? 'agentAccess' : 'enabled';
   const nameText = (selected ? rest.slice(1) : rest).join(' ');
   const normalized = normalize(nameText);
-  const row = rows.find((candidate) => [candidate.name, ...candidate.aliases, ...candidate.forms]
-    .some((form) => normalize(form) === normalized));
+  const row = rows.find((candidate) => isExact(candidate.name, normalized))
+    ?? rows.find((candidate) => candidate.aliases.some((alias) => isExact(alias, normalized)))
+    ?? rows.find((candidate) => candidate.forms.some((form) => isExact(form, normalized)));
   if (!row) return error(`Unknown application command: ${nameText}.`);
   return { kind: 'edit', name: row.name, setting, value: verb === 'enable' };
 }

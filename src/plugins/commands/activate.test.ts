@@ -21,6 +21,9 @@ const DATA: CommandsTopicNotification['data'] = {
     { name: 'db', kind: 'builtin', aliases: [], forms: ['db', 'db sqlite'], enabled: false, agentAccess: true, effectiveEnabled: false, effectiveAgentAccess: true },
     { name: 'db sqlite query', kind: 'native', aliases: [], forms: ['db sqlite query'], parent: 'db', nativeTool: 'database', enabled: true, agentAccess: true, effectiveEnabled: false, effectiveAgentAccess: false },
     { name: 'quit', kind: 'builtin', aliases: [], forms: ['quit'], enabled: true, agentAccess: true, effectiveEnabled: true, effectiveAgentAccess: true },
+    { name: 'question', kind: 'builtin', aliases: [], forms: ['question ask', 'question approve'], enabled: true, agentAccess: true, effectiveEnabled: true, effectiveAgentAccess: true },
+    { name: 'question ask', kind: 'native', aliases: [], forms: ['question ask'], parent: 'question', nativeTool: 'question', enabled: true, agentAccess: true, effectiveEnabled: true, effectiveAgentAccess: true },
+    { name: 'question approve', kind: 'native', aliases: [], forms: ['question approve'], parent: 'question', nativeTool: 'question', enabled: true, agentAccess: true, effectiveEnabled: true, effectiveAgentAccess: true },
   ],
   source: 'home',
   path: '/home/me/.janissary/commands.json',
@@ -171,6 +174,18 @@ describe('commands activation command', () => {
     expect(test.actions).toEqual([
       { topic: 'commands', action: 'set', name: 'close', setting: 'enabled', value: false },
       { topic: 'commands', action: 'set', name: 'ask', setting: 'enabled', value: false },
+    ]);
+  });
+
+  it('sends the native question ask name instead of the builtin question form', async () => {
+    const test = fixture();
+
+    await activate().command?.('enable question ask', test.capabilities);
+    await activate().command?.('disable agent question ask', test.capabilities);
+
+    expect(test.actions).toEqual([
+      { topic: 'commands', action: 'set', name: 'question ask', setting: 'enabled', value: true },
+      { topic: 'commands', action: 'set', name: 'question ask', setting: 'agentAccess', value: false },
     ]);
   });
 

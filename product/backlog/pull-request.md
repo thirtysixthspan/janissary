@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Make the Commands command grammar prefer a row's canonical name over another row's fixed form so `question ask` and `question approve` target the native commands.
-
-Existing Issue: `parseCommand` scans rows in payload order and accepts the first row whose name, aliases, or forms match, so the builtin `question` row's fixed forms `question ask` and `question approve` win over the native rows' canonical names; `commands disable question ask` changes the builtin `question` setting and `commands disable agent question ask` is refused as non-native, while the settings manager's resolver targets the native row. Severity: 7/10
-
-Existing Risk: 6/10 - A user disabling the native question tool can instead disable the application's `question` command and, through the parent relationship, both native question tools, while agent access for `question ask` cannot be changed from the command bar at all; the mistake is recoverable from the tab or the file but is silent.
-
-Proposal Risk: 2/10 - The precedence becomes deterministic and matches the manager, but any overlapping form now resolves by name first, so the new tests must pin the intended winner for the question rows and keep the ask/tell/search/db cases unchanged.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "prefer canonical command names over fixed forms in the commands grammar". In `src/plugins/commands/parse-command.ts`, resolve the normalized remainder in three passes across all rows: an exact canonical `name` match, then an exact `aliases` match, then an exact `forms` match, returning the first match's `name`; do not let row order decide between a later row's name and an earlier row's form. Add `src/plugins/commands/parse-command.test.ts` cases with a builtin `question` row and native `question ask`/`question approve` rows, asserting `enable question ask` targets `question ask` and `disable agent question ask` produces the agent-access edit for `question ask`, and add an `src/plugins/commands/activate.test.ts` case asserting the sent name and setting. Keep the existing `ask reset`, `tell reset`, `search transcript`, `db sqlite`, `commands disable agent`, and `commands disable agent agent` cases passing, and update `product/specs/application-commands.md` if the precedence needs to be stated.
-
-
 * Cover the self-disabled native row's disabled Agent access toggle in the Commands tab test.
 
 Existing Issue: The test named for a self-disabled row uses the non-native `db` row, so it asserts that Enabled stays interactive but never asserts that a self-disabled native row's Agent access checkbox is disabled; the plan's named scenario is only half covered. Severity: 3/10
