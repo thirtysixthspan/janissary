@@ -1,4 +1,5 @@
 import { messageBus } from '../bus.js';
+import type { TabView } from '../protocol.js';
 import type { Sinks } from './types.js';
 import type { Managers } from '../managers.js';
 import { patchClientLayout } from '../client-layout.js';
@@ -7,8 +8,16 @@ import { patchClientLayout } from '../client-layout.js';
 // re-emitting state to clients, notifying on new transcript entries,
 // process exit, and PTY data/exit relaying. Split out of the Controller constructor purely to keep
 // controller.ts under the file-size guideline; this has no state of its own.
-export function wireControllerEvents(managers: Managers, sinks: Sinks): void {
-  messageBus.on('state', 'dirty', () => sinks.emitState());
+export function wireControllerEvents(
+  managers: Managers, sinks: Sinks, tabView?: (label: string) => TabView | undefined,
+): void {
+  // A transcript write names its tab, and only that tab's view goes out; a plain dirty, or a tab that
+  // can no longer be projected, falls back to the full snapshot.
+  messageBus.on('state', 'dirty', ({ tab }) => {
+    const view = tab === undefined ? undefined : tabView?.(tab);
+    if (view && sinks.sendTabView) sinks.sendTabView({ tab: view });
+    else sinks.emitState();
+  });
   messageBus.on('app', 'exit', () => sinks.exit?.());
   messageBus.on('layout', 'update', ({ type: _type, ...update }) => {
     patchClientLayout(update);

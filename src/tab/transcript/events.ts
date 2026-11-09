@@ -71,7 +71,7 @@ export function updateRunningEntry(
       messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry: { input: '', output }, tab });
     }
   }
-  messageBus.emit('state', { type: 'dirty' });
+  messageBus.emit('state', { type: 'dirty', tab: label });
 }
 
 // Whether a tab is one the unread badge may be raised on. The badge is the app's record that a tab
@@ -179,7 +179,7 @@ export function appendTab(
   // Every append writes, whether it grew the log or displaced its oldest entry at the cap.
   markRevised(tab);
   markUnread(label);
-  messageBus.emit('state', { type: 'dirty' });
+  messageBus.emit('state', { type: 'dirty', tab: label });
 }
 
 export function clearTranscriptTab(tabs: Tab[], label: string): void {
@@ -189,5 +189,5 @@ export function clearTranscriptTab(tabs: Tab[], label: string): void {
   markActive(tabs, label);
   markRevised(tab);
   messageBus.emit('transcript', { type: 'tab:cleared', tabLabel: label });
-  messageBus.emit('state', { type: 'dirty' });
+  messageBus.emit('state', { type: 'dirty', tab: label });
 }

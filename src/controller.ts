@@ -26,7 +26,7 @@ export class ControllerCore {
 
   constructor(private sinks: Sinks, private projectDir?: string) {
     createManagers(this.managers, projectDir);
-    wireControllerEvents(this.managers, this.sinks);
+    wireControllerEvents(this.managers, this.sinks, (label) => this.tabView(label));
   }
 
   // What every launch does once the launch shell is open, before any client connects: attach every
@@ -39,6 +39,15 @@ export class ControllerCore {
 
   view(): TabView[] {
     return this.managers.tab.view(
+      (l) => this.managers.connection.connectionsFor(l),
+      (l) => this.managers.acp.label(l),
+      (l) => this.managers.schedule.view(l),
+    );
+  }
+
+  tabView(label: string): TabView | undefined {
+    return this.managers.tab.tabView(
+      label,
       (l) => this.managers.connection.connectionsFor(l),
       (l) => this.managers.acp.label(l),
       (l) => this.managers.schedule.view(l),

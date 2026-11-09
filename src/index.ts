@@ -47,6 +47,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   let requestExit: () => void = () => process.exit(0);
   const controller = createController({
     emitState: () => broadcast(buildStateEvent(controller)),
+    sendTabView: (event) => broadcast({ t: 'tab-view-updated', ...event }),
     sendPty: (id, data) => broadcast({ t: 'pty', id, data }),
     sendPtyExit: (id, exitCode) => broadcast({ t: 'pty-exit', id, exitCode }),
     exit: () => requestExit(),

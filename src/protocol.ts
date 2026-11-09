@@ -146,6 +146,7 @@ export type {
   LayoutUpdate,
   NativeNotificationEvent,
   AgentRunUpdatedEvent,
+  TabViewUpdatedEvent,
   ServerEvent,
 } from './protocol/events.js';
 

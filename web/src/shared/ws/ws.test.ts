@@ -488,6 +488,27 @@ describe('JanusClient', () => {
     client.dispose();
   });
 
+  it('merges a tab-view update into the retained snapshot for current and late subscribers', () => {
+    const client = new JanusClient();
+    const listener = vi.fn();
+    client.onState(listener);
+    messageHandler!({ data: JSON.stringify({
+      t: 'state', tabs: [{ label: 'a', busy: false }, { label: 'b', busy: false }], activeTab: 1,
+      tabNameMaxLength: 20, globalHistory: [], syntaxTheme: 'monokai', theme: 'dark', tasks: [], profiles: [],
+      projectDir: '/tmp', version: '1.2.3', disabledApplicationCommands: [],
+    }) });
+
+    messageHandler!({ data: JSON.stringify({ t: 'tab-view-updated', tab: { label: 'b', busy: true } }) });
+    messageHandler!({ data: JSON.stringify({ t: 'tab-view-updated', tab: { label: 'zzz', busy: true } }) });
+
+    const late = vi.fn();
+    client.onState(late);
+    expect(listener.mock.calls.at(-1)?.[0].tabs).toEqual([{ label: 'a', busy: false }, { label: 'b', busy: true }]);
+    expect(late.mock.calls.at(-1)?.[0].tabs[1]).toEqual({ label: 'b', busy: true });
+    expect(late.mock.calls.at(-1)?.[0].activeTab).toBe(1);
+    client.dispose();
+  });
+
   it('delivers a toast-clear event to registered listeners', () => {
     const client = new JanusClient();
     const listener = vi.fn();

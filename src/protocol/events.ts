@@ -68,6 +68,8 @@ export type NativeNotificationEvent = {
   category?: 'success' | 'warning' | 'error'; desktop: boolean; volume: number;
 };
 export type AgentRunUpdatedEvent = { t: 'agent-run-updated'; tab: string; view: AgentRunView };
+// One tab's refreshed view, sent when only that tab's transcript changed.
+export type TabViewUpdatedEvent = { t: 'tab-view-updated'; tab: TabView };
 export type ServerEvent =
-  StateEvent | PtyDataEvent | PtyExitEvent | RpcReply | ByeEvent | LayoutEvent | CollectTreeStateEvent
+  StateEvent | TabViewUpdatedEvent | PtyDataEvent | PtyExitEvent | RpcReply | ByeEvent | LayoutEvent | CollectTreeStateEvent
   | ToastEvent | ToastClearEvent | NotificationsRevealEvent | NativeNotificationEvent | AgentRunUpdatedEvent;

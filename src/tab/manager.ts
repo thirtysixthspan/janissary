@@ -263,4 +263,8 @@ export class TabManager extends TabTranscriptState {
   view(connectionsFor: (label: string) => ConnectionView[], acpLabel: (label: string) => string | undefined, scheduleView: (label: string) => ScheduleView[]): TabView[] {
     return viewOperations.managerView({ tabs: this.tabs, managers: this.managers, shorten: (p: string) => this.shorten(p) }, connectionsFor, acpLabel, scheduleView);
   }
+
+  tabView(label: string, connectionsFor: (label: string) => ConnectionView[], acpLabel: (label: string) => string | undefined, scheduleView: (label: string) => ScheduleView[]): TabView | undefined {
+    return viewOperations.managerTabView({ tabs: this.tabs, managers: this.managers, shorten: (p: string) => this.shorten(p) }, label, connectionsFor, acpLabel, scheduleView);
+  }
 }
