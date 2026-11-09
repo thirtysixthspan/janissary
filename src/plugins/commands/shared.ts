@@ -27,7 +27,7 @@ export type SetIntent = { name: string; setting: CommandSettingName; value: bool
 // Hand-written rather than imported, per the plugin architecture's rule that a shared contract stays
 // import-free: the client reaches this module through `@shared/plugins/commands/shared`, so any import
 // here is a runtime dependency from a browser chunk into a server module.
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
@@ -35,8 +35,8 @@ function isNonemptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
-const SOURCES = new Set(['home', 'project', 'default']);
-const NATIVE_TOOLS = new Set(['database', 'browser', 'question']);
+export const SOURCES = new Set(['home', 'project', 'default']);
+export const NATIVE_TOOLS = new Set(['database', 'browser', 'question']);
 
 function isSource(value: unknown): value is CommandSettingsSource {
   return typeof value === 'string' && SOURCES.has(value);

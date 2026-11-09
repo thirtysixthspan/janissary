@@ -1,15 +1,9 @@
 import type { CommandsTopicNotification } from '../api.js';
-import type { CommandRow, CommandsPayload } from './shared.js';
+import { NATIVE_TOOLS, SOURCES, isRecord, type CommandRow, type CommandsPayload } from './shared.js';
 
 type SourceCommand = CommandsTopicNotification['data']['commands'][number];
 
 const KINDS = new Set(['builtin', 'plugin', 'help', 'native']);
-const NATIVE_TOOLS = new Set(['database', 'browser', 'question']);
-const SOURCES = new Set(['home', 'project', 'default']);
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function isStringList(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
