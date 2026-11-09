@@ -1,6 +1,6 @@
 ### close
 
-Close the current tab, or name a tab to close it. Closing the last tab exits the application, after confirmation. Docked tabs and the `system` shell tab don't count as tabs for this. `/exit` is an alias of `/close`.
+Close the current tab, or name a tab to close it. Closing the last tab exits the application, after confirmation. Docked tabs and the `system` shell tab don't count as tabs for this. `/exit` is an alias of `/close`. When `close` is disabled in the Commands tab, `close` lines are refused: no tab closes and no save prompt opens. Closing the last tab from `Cmd+W`/`Ctrl+W` or the tab strip still opens the quit confirmation first; confirming dispatches `quit`, which the server refuses when `quit` is disabled.
 
 **Usage**
 

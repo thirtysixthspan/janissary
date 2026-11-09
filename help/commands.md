@@ -63,6 +63,8 @@
 
 Both `shell` and `harness` launches accept `in group <name\|id>` to join an existing group by its case-insensitive name or numeric ID. An unknown name creates a group; an unknown positive ID creates that numbered group. Without the clause, the new tab joins the issuing tab's group.
 
+A command disabled in the Commands tab is refused wherever it runs. Its picker, confirmation, or shortcut does not open or run; the line or shortcut reaches the server and is refused there.
+
 ### commands
 
 Bare `commands` opens the Commands tab, or focuses it when already open, and re-reads the settings file first. The tab lists every application command with an Enabled checkbox and, for native ACP commands, an Agent access checkbox. Changes save immediately; a failed save shows its refusal in the tab and leaves the previous value checked. A command whose parent is disabled shows `Disabled by parent command: <parent>.` and cannot be changed until the parent is enabled; a native command whose parent denies agent access can still be enabled but cannot grant agent access. A row is labeled by its canonical name when that name is one of its forms, or when its first fixed form is another row's name; otherwise it shows its first fixed form, so the builtin `question` row reads `question` while the native `question ask` row reads `question ask`.

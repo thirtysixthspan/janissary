@@ -6,13 +6,13 @@
 | --- | ------ |
 | `Shift+←` / `Shift+→` / `Cmd+Shift+[` / `Cmd+Shift+]` | Switch to the previous / next tab; no-op with only one eligible center tab |
 | `Ctrl+←` / `Ctrl+→` | Move the current tab left / right |
-| `Ctrl+R` | Open the command history picker (a shell tab opens its own history instead — see **Shell tab controls**) |
+| `Ctrl+R` | Open the command history picker (a shell tab opens its own history instead — see **Shell tab controls**); blocked when `hist` is disabled in the Commands tab |
 | `Ctrl+Shift+V` / `Cmd+Shift+V` | Open the clipboard-history popup (type `clip` for the same thing); choosing an entry pastes it at the cursor in the command bar, an editor buffer, or a terminal prompt. `Ctrl+V` and `Cmd+V` are untouched |
 | `Ctrl+G` | Open the fuzzy tab navigator (also closes it if already open) |
-| `Ctrl+A` | Open the task picker (executable `ai/tasks/*.md` files, project and Janissary); Return inserts it into the command line at the cursor without running. Reaches the terminal instead while a shell tab's terminal holds the keyboard |
+| `Ctrl+A` | Open the task picker (executable `ai/tasks/*.md` files, project and Janissary); Return inserts it into the command line at the cursor without running. Reaches the terminal instead while a shell tab's terminal holds the keyboard; blocked when `tasks` is disabled in the Commands tab |
 | `Cmd+P` | Open the Quick Open file finder when the key reaches Janissary; a focused harness or SSH terminal sends it to its program |
-| `Cmd+Shift+F` | Open or focus the project-wide search tab when the key reaches Janissary; a focused harness or SSH terminal sends it to its program |
-| `Cmd+T` | Open a new shell tab (same as typing `shell`); a shell tab opens another shell instead |
+| `Cmd+Shift+F` | Open or focus the project-wide search tab when the key reaches Janissary; a focused harness or SSH terminal sends it to its program; blocked when `search` is disabled in the Commands tab |
+| `Cmd+T` | Open a new shell tab (same as typing `shell`); a shell tab opens another shell instead; blocked when `shell` is disabled in the Commands tab |
 | `Cmd+W` / `Ctrl+W` | Close the current tab (no-op while a picker or any modal dialog is open) |
 | `Shift+Tab` | Move keyboard focus to the next application section (left → center → right sidebar/panel → reporting), looping; the visible tab in that section gets focus. No-op while a picker, the clipboard-history popup, or a modal dialog is open. A shell tab keeps the key for its own two surfaces; in an editor tab's text it outdents instead; in a pending question panel it moves backward between its buttons |
 
@@ -24,7 +24,7 @@
 | `↑` / `↓` | Previous / next command in history |
 | `Tab` | Complete file paths; tab targets for `send` / `queue` / `close` / `schedule`; `tab` subcommands, targets, and pane/dock sides; connection strings; `browser` subcommands / window IDs; `monitor` personas, names, and targets; the `schedule system` grammar; `files` clauses and paths; runscript names; system schedule names; and help pages including `commands` and `keys` |
 | `Enter` | Execute the current command |
-| `Ctrl+E` | Open the queue picker for a shell or another tab with a queue and command bar (no-op on tabs without queues) |
+| `Ctrl+E` | Open the queue picker for a shell or another tab with a queue and command bar (no-op on tabs without queues); blocked when `queue` is disabled in the Commands tab |
 | `Cmd+F` | Search for a line in an editor buffer, a shell tab's transcript, or a PDF tab's document |
 | `Cmd+N` / `Ctrl+N` (conversation list) | Create and open a new conversation |
 | `Backspace` / `Delete` | Delete the character before / after the cursor |
@@ -48,11 +48,11 @@ View clauses restore only the named parts of a local tree; remote view clauses a
 | `Shift+↑` / `Shift+↓` / `Ctrl+↑` / `Ctrl+↓` | Scroll the terminal up / down (accelerated) |
 | `Page Up` / `Page Down` | Scroll the terminal up / down by half a screen |
 | `Ctrl+C` / `Ctrl+D` / `Ctrl+Z` | Send interrupt, end-of-input, or suspend to the shell — the characters a terminal would send. `Ctrl+C` copies the command line's own selection instead when it holds one. These apply while the command line has the focus |
-| `Ctrl+R` / `hist` | Open this tab's own history: `↑` / `↓` move, Return puts the line back in the command line without running it, Escape closes. Focus another tab and `Ctrl+R` is the application's again |
-| `Ctrl+E` / `queue` | Open the queue popup: the selected queued line appears in the command line, typing edits it, Backspace or Delete on an empty line removes it, Escape closes it and clears the line |
+| `Ctrl+R` / `hist` | Open this tab's own history: `↑` / `↓` move, Return puts the line back in the command line without running it, Escape closes. Focus another tab and `Ctrl+R` is the application's again. Blocked when `hist` is disabled in the Commands tab |
+| `Ctrl+E` / `queue` | Open the queue popup: the selected queued line appears in the command line, typing edits it, Backspace or Delete on an empty line removes it, Escape closes it and clears the line. Blocked when `queue` is disabled in the Commands tab |
 | `Ctrl+Shift+C` / `Cmd+C` on macOS | Copy the terminal's selection to the clipboard and clipboard history, from the terminal or the command line. Dragging over output leaves the keyboard in the command line, and the chord copies the selection from there; a selection in the command line itself keeps the chord. Text dragged over in a rendered reply, such as `help`'s, stays highlighted and copies the same way |
-| `Cmd+T` | Open another shell in the same directory, workspace, and offline mode |
-| `Cmd+F` / `search transcript <pattern>` | Open the find overlay over the terminal's transcript, the same one an editor tab opens; the typed form starts with the pattern entered. `↑` / `↓` move between matching lines and scroll the terminal to the highlighted one, `Escape` closes it |
+| `Cmd+T` | Open another shell in the same directory, workspace, and offline mode. Blocked when `shell` is disabled in the Commands tab |
+| `Cmd+F` / `search transcript <pattern>` | Open the find overlay over the terminal's transcript, the same one an editor tab opens; the typed form starts with the pattern entered. `↑` / `↓` move between matching lines and scroll the terminal to the highlighted one, `Escape` closes it. The typed form is blocked when `search` is disabled in the Commands tab, while `Cmd+F` still opens the empty find |
 
 **Image tab controls** (active only while an image tab is focused):
 

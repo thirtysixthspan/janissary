@@ -1,6 +1,6 @@
 ### theme
 
-Set the application's color theme. Bare `theme` opens a picker, and `theme sync` makes the syntax theme match the application theme when a matching syntax theme exists.
+Set the application's color theme. Bare `theme` opens a picker, and `theme sync` makes the syntax theme match the application theme when a matching syntax theme exists. When `theme` is disabled in the Commands tab, the command is refused and its picker does not open.
 
 **Usage**
 

@@ -1,6 +1,6 @@
 ### tasks
 
-Open the task picker with executable task files from the project and Janissary. In command-bar tabs, choosing a task inserts its command at the cursor without running it. Harness tabs have no command line, so choosing a task sends the command to the harness terminal as typed input without pressing Enter, then returns keyboard focus to that terminal.
+Open the task picker with executable task files from the project and Janissary. In command-bar tabs, choosing a task inserts its command at the cursor without running it. Harness tabs have no command line, so choosing a task sends the command to the harness terminal as typed input without pressing Enter, then returns keyboard focus to that terminal. When `tasks` is disabled in the Commands tab, the command and `Ctrl+A` are refused.
 
 **Usage**
 
