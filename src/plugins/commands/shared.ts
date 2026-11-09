@@ -6,7 +6,7 @@ import {
   type ApplicationCommandSource,
 } from '../../shared/application-commands.js';
 
-export const COMMANDS_PAYLOAD_SCHEMA_VERSION = 2;
+export const COMMANDS_PAYLOAD_SCHEMA_VERSION = 1;
 
 export type CommandSettingsSource = ApplicationCommandSource;
 export type CommandSettingName = 'enabled' | 'agentAccess';

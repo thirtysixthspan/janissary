@@ -27,6 +27,6 @@ describe('commands tab plugin manifest', () => {
   it('pins the API and payload versions to their constants', () => {
     expect(commandsManifest.apiVersion).toBe(TAB_PLUGIN_API_VERSION);
     expect(commandsManifest.payloadSchemaVersion).toBe(COMMANDS_PAYLOAD_SCHEMA_VERSION);
-    expect(commandsManifest.payloadSchemaVersion).toBe(2);
+    expect(commandsManifest.payloadSchemaVersion).toBe(1);
   });
 });

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Return the Commands payload schema version to 1, the value the plan fixed for a plugin that has never shipped, or record why it moved to 2.
-
-Existing Issue: `COMMANDS_PAYLOAD_SCHEMA_VERSION` is 2 although the plan says the Commands plugin payload schema starts at 1, and the last commit raised it when it added the optional `overridden` field without any plan, spec or description statement of the change. Severity: 2/10
-
-Existing Risk: 2/10 - A reader checking the plugin against the plan or the plugin specification finds a version the documents do not account for, and a later schema change is numbered from a wrong baseline.
-
-Proposal Risk: 1/10 - Nothing has been released at version 1, so the only exposure is a test pinned to the constant, which reads it by name and follows the change.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "set the Commands payload schema version back to 1". Set `COMMANDS_PAYLOAD_SCHEMA_VERSION` in `src/plugins/commands/shared.ts` to 1; `src/plugins/commands/manifest.ts` and `src/plugins/commands/manifest.test.ts` already read the constant, so they follow. Run a `grep` for any literal `2` fixtures for the Commands payload version in `web/src/plugins/commands/CommandsTab.test.tsx`, `web/src/plugins/registry.test.tsx` and `src/plugins/commands/activate.test.ts` and update them. If the decision is to keep 2, instead state the version and its reason in `product/specs/commands-tab.md`.
-
-
 * Describe the Commands tab's home-restrictions notice in the pull request description and give it a verification step.
 
 Existing Issue: The description's What and How to verify sections never mention that the Commands tab shows `This project file lifts N home restriction(s): …` when a project file relaxes the home file, although the branch's last commit added it as visible behavior with a new `overridden` payload field. Severity: 3/10
