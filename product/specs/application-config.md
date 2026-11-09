@@ -15,7 +15,7 @@ Application settings are stored in `.janissary/config.json`. On first launch a d
 | `syntaxTheme` | `string` | `"github-dark"` | The active syntax-highlighting theme for editor tabs, set via `syntax theme <name>`. Applies globally across every open editor tab. |
 | `theme` | `string` | `"dark"` | The active application color theme, set via `theme <name>`. Applies to the entire window chrome — see `application-themes.md`. Independent of `syntaxTheme`. |
 | `notifications.events.systemScheduleFire` | `boolean` | `true` | Enables explicit notices for system schedule firings, missed runs, missing runscripts, and system shell startup failures. This is the only explicit notification event with a toggle. |
-| `notifications.events.commandDisabled` | `boolean` | `false` | Enables notifications for disabled native commands on background tabs; active-tab refusals are suppressed. |
+| `notifications.events.commandDisabled` | `boolean` | `false` | Enables notifications for disabled application commands on background tabs; active-tab refusals are suppressed. |
 | `notifications.alerts` | `object` | Every notification type with today's banner and cue defaults; ambient types off | Each event-name key configures `desktop` (`boolean`) and `sound` (`"success"`, `"warning"`, `"error"`, or `"none"`). |
 | `osNotifications` | `boolean` | `true` | Master switch for every type's configured browser desktop banner. The browser must have been granted notification permission separately; Janissary never requests it. |
 | `terminalBell` | `boolean` | `true` | Master switch for every type's configured bundled MP3 cue, separately from banners. Browser autoplay restrictions may prevent playback before interaction. |
