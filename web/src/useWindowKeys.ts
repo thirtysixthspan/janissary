@@ -183,7 +183,7 @@ function handleChordKeys(
     && disabledApplicationCommand(command, snap.disabledApplicationCommands) !== undefined) {
     e.preventDefault();
     const tab = chordTabLabel(e.target, snap) ?? snap.currentTabLabel;
-    if (tab !== undefined) {
+    if (tab !== undefined && !e.repeat) {
       client.send({ method: 'reportBlockedCommand', params: { text: command, tab } });
     }
     return true;

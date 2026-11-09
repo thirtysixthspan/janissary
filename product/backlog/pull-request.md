@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Ignore auto-repeated key events when a disabled command-backed shortcut is blocked, so holding the key reports it once (functionality gap).
-
-Existing Issue: `handleChordKeys` in `web/src/useWindowKeys.ts` sends `reportBlockedCommand` on every keydown of a blocked chord with no check of `KeyboardEvent.repeat`, so holding `Ctrl+R` or `Cmd+T` while its command is disabled sends one RPC per repeat and the server records one `command-disabled` notification per repeat. Severity: 2/10
-
-Existing Risk: 3/10 - A held key floods the socket and, with the ambient toggle on for a background tab, fills the notification feed with identical refusals.
-
-Proposal Risk: 1/10 - The key is still consumed and prevented; only the repeated report is skipped.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "report a blocked shortcut once per key press". In `handleChordKeys` in `web/src/useWindowKeys.ts`, keep `preventDefault()` and the consume return for every keydown but send `reportBlockedCommand` only when `e.repeat` is false. Add a case to `web/src/useWindowKeys.test.ts` that dispatches a repeated keydown for a blocked chord and asserts the key is consumed with no extra `reportBlockedCommand`, beside the existing blocked-shortcut cases.
-
-
 * Build the application command inventory once instead of rebuilding and re-sorting it on every dispatch, completion, and edit (technical debt).
 
 Existing Issue: `listApplicationCommands` in `src/application-commands.ts` recreates, normalizes, and sorts roughly a hundred rows on each call, and `resolveApplicationCommand`, `resolveExactApplicationCommand`, `disabledApplicationCommand`, `completionPolicy.allows` (once per browser subcommand), `createSnapshot`, and `serializeCommandSettings` each call it again, although the inventory depends only on static registries. Severity: 2/10

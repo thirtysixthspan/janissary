@@ -754,6 +754,25 @@ describe('useWindowKeys', () => {
       expect(client.send).not.toHaveBeenCalled();
     });
 
+    it('reports a held blocked chord once while still consuming every repeat', () => {
+      const client = { send: vi.fn() };
+      render(React.createElement(TestComponent, {
+        client, currentTabLabel: 'agent', disabledApplicationCommands: [row('hist')],
+      }));
+
+      const first = dispatchKey('r', { ctrlKey: true, cancelable: true });
+      const repeated = new KeyboardEvent('keydown', {
+        key: 'r', ctrlKey: true, repeat: true, bubbles: true, cancelable: true,
+      });
+      globalThis.dispatchEvent(repeated);
+
+      expect(first.defaultPrevented).toBe(true);
+      expect(repeated.defaultPrevented).toBe(true);
+      expect(client.send).toHaveBeenCalledExactlyOnceWith({
+        method: 'reportBlockedCommand', params: { text: 'hist', tab: 'agent' },
+      });
+    });
+
     it('never reports a blocked command while a key is being composed', () => {
       const client = { send: vi.fn() };
       render(React.createElement(TestComponent, {
