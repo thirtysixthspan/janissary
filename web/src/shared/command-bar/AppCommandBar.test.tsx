@@ -36,6 +36,7 @@ function build(options: Options = {}) {
   const openQuitConfirm = vi.fn();
   const setNavOpen = vi.fn();
   const openTabNavWithQuery = vi.fn();
+  const reportBlockedCommand = vi.fn();
   const { result, rerender } = renderHook((current: Options) => useAppCommandLine({
     ...openers,
     navOpen: current.navOpen ?? false, setNavOpen, openTabNavWithQuery,
@@ -45,8 +46,12 @@ function build(options: Options = {}) {
     guardRef: { current: current.guard ?? null } as RefObject<((index: number) => boolean) | null>,
     onPickerOpen: current.onPickerOpen,
     disabledApplicationCommand: current.disabledApplicationCommand,
+    reportBlockedCommand,
   }), { initialProps: options });
-  return { intercept: result.current, result, openers, openQuitConfirm, setNavOpen, openTabNavWithQuery, rerender };
+  return {
+    intercept: result.current, result, openers, openQuitConfirm, setNavOpen, openTabNavWithQuery,
+    reportBlockedCommand, rerender,
+  };
 }
 
 describe('useAppCommandLine', () => {
@@ -177,7 +182,6 @@ describe('useAppCommandLine', () => {
   });
 
   it.each([
-    ['quit', ['quit']],
     ['theme', ['theme']],
     ['hist', ['hist']],
     ['queue', ['queue']],
@@ -186,24 +190,49 @@ describe('useAppCommandLine', () => {
     ['profile launch', ['profile launch']],
   ] as const)('returns false and opens nothing when %s is disabled', (line, _forms) => {
     const rows = [disabledRow(line, [line])];
-    const { intercept, openers, openQuitConfirm } = build({ disabledApplicationCommand: disabledBy(rows) });
+    const { intercept, openers, openQuitConfirm, reportBlockedCommand } = build({ disabledApplicationCommand: disabledBy(rows) });
 
     expect(intercept(line)).toBe(false);
     for (const opener of Object.values(openers)) expect(opener).not.toHaveBeenCalled();
     expect(openQuitConfirm).not.toHaveBeenCalled();
+    expect(reportBlockedCommand).not.toHaveBeenCalled();
   });
 
-  it('returns false for bare and named close when close is disabled', () => {
+  it('reports and consumes a disabled quit instead of opening the confirmation', () => {
+    const { intercept, openQuitConfirm, reportBlockedCommand } = build({
+      disabledApplicationCommand: disabledBy([disabledRow('quit', ['quit'])]),
+    });
+
+    expect(intercept('quit')).toBe(true);
+    expect(reportBlockedCommand).toHaveBeenCalledWith('quit', 'shell1');
+    expect(intercept('/quit', 'shell-left')).toBe(true);
+    expect(reportBlockedCommand).toHaveBeenLastCalledWith('quit', 'shell-left');
+    expect(openQuitConfirm).not.toHaveBeenCalled();
+  });
+
+  it('reports and consumes bare and named close when close is disabled', () => {
     const guard = vi.fn(() => true);
-    const { intercept, openQuitConfirm } = build({
+    const { intercept, openQuitConfirm, reportBlockedCommand } = build({
       tabs: [tab('shell1'), tab('other')], guard,
       disabledApplicationCommand: disabledBy([disabledRow('close', ['close'], ['exit'])]),
     });
 
     for (const line of ['close', 'exit', 'close other', '/close']) {
-      expect(intercept(line), line).toBe(false);
+      expect(intercept(line), line).toBe(true);
+      expect(reportBlockedCommand, line).toHaveBeenLastCalledWith('close', 'shell1');
     }
+    expect(reportBlockedCommand).toHaveBeenCalledTimes(4);
     expect(guard).not.toHaveBeenCalled();
+    expect(openQuitConfirm).not.toHaveBeenCalled();
+  });
+
+  it('reports a disabled close that would quit as close rather than quit', () => {
+    const { intercept, openQuitConfirm, reportBlockedCommand } = build({
+      disabledApplicationCommand: disabledBy([disabledRow('close', ['close'])]),
+    });
+
+    expect(intercept('close')).toBe(true);
+    expect(reportBlockedCommand).toHaveBeenCalledWith('close', 'shell1');
     expect(openQuitConfirm).not.toHaveBeenCalled();
   });
 
@@ -212,7 +241,7 @@ describe('useAppCommandLine', () => {
       disabledRow('quit', ['quit']), disabledRow('theme', ['theme']),
       disabledRow('hist', ['hist']), disabledRow('close', ['close']),
     ];
-    const { intercept, openTabNavWithQuery, openQuitConfirm } = build({ disabledApplicationCommand: disabledBy(rows) });
+    const { intercept, openTabNavWithQuery, openQuitConfirm, reportBlockedCommand } = build({ disabledApplicationCommand: disabledBy(rows) });
 
     expect(intercept('nav')).toBe(true);
     expect(openTabNavWithQuery).toHaveBeenCalledWith('');
@@ -220,6 +249,7 @@ describe('useAppCommandLine', () => {
     expect(intercept('!quit')).toBe(false);
     expect(intercept('ls -la')).toBe(false);
     expect(openQuitConfirm).not.toHaveBeenCalled();
+    expect(reportBlockedCommand).not.toHaveBeenCalled();
   });
 
   it('applies a later row update to the next intercept', () => {

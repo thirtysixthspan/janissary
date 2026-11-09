@@ -151,7 +151,7 @@ describe('App app theme picker', () => {
     expect(screen.queryByText('theme', { selector: '.picker-title' })).toBeNull();
   }, 15_000);
 
-  it('sends a disabled quit line to the server instead of opening the confirmation', async () => {
+  it('reports and consumes a disabled quit line instead of dispatching it or opening the confirmation', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
     act(() => {
@@ -162,7 +162,8 @@ describe('App app theme picker', () => {
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: 'quit' } });
     fireEvent.keyDown(input, { key: 'Enter' });
-    expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'quit' } });
+    expect(sendMock).toHaveBeenCalledWith({ method: 'reportBlockedCommand', params: { text: 'quit', tab: 'janus' } });
+    expect(sendMock).not.toHaveBeenCalledWith({ method: 'command', params: { text: 'quit' } });
     expect(screen.queryByText('Are you sure you want to quit?')).not.toBeInTheDocument();
   }, 15_000);
 });

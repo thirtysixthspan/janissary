@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Report and consume a disabled quit or close command-bar line instead of dispatching it raw, so a stale client cannot quit or close without the server's current snapshot.
-
-Existing Issue: The disabled-command early return in useAppCommandLine sends a quit or close line straight to the server before classifyCommandBarSubmit can open the quit confirmation or run the close save guard, so a client that still believes either command is disabled while the server has it enabled dispatches the destructive command without the guard. Severity: 7/10
-
-Existing Risk: 6/10 - A stale state snapshot during a re-enable race can quit the app or close a tab with unsaved work without the confirmation or save walk the client exists to provide, losing editor buffers or plugin state.
-
-Proposal Risk: 2/10 - The destructive line is consumed and reported rather than dispatched, so a genuinely disabled quit or close gives only the existing command-disabled notification, or silence on the active tab, instead of the tab's refusal output; a stale client blocks the action until the state updates.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "report and consume disabled quit and close command-bar lines". In web/src/shared/command-bar/AppCommandBar.tsx, when disabledApplicationCommand(line) is true, classify the line first; if the verdict is confirm-quit or confirm-close, do not return false and do not open the confirmation or save guard. Instead, call a new optional reportBlockedCommand callback on useAppCommandLine's params with the canonical word quit or close and sourceTab ?? tabs[activeTab]?.label, then return true so the caller consumes the line. In web/src/App.tsx pass reportBlockedCommand: (text, tab) => client.send({ method: 'reportBlockedCommand', params: { text, tab } }); the RPC already exists, and the server re-checks its current snapshot and emits the existing notification. Leave every non-destructive disabled line on the existing return-false path so it still shows the server refusal. Update web/src/shared/command-bar/AppCommandBar.test.tsx with disabled quit and close cases asserting the report callback is called, the confirmation and guard are not, and intercept returns true; adjust web/src/App.test.tsx's disabled quit case to expect the report rather than a command send. Update product/specs/application-commands.md and the plan's manual step 1 to state that disabled quit and close lines are reported and consumed, with the existing command-disabled notification as the only feedback. Keep the enabled close and quit tests green.
-
-
 * Correct the plan's hand-edit verification step, which expects the server to refuse a settings-file change it has not re-read.
 
 Existing Issue: The plan's manual step 3 says a hand-edited theme disable is refused by the server without opening Commands, but NativeCommandSettingsManager only reads commands.json in its constructor, refresh, and edit, so a hand edit is invisible to the server and theme <name> still runs. Severity: 4/10

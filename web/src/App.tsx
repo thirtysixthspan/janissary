@@ -12,6 +12,7 @@ import { useSectionNav } from './useSectionNav';
 import { useTabEntries } from './useTabEntries';
 import { useCmdW } from './useCmdW';
 import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
+import { useAppCommands } from './useAppCommands';
 import { useAppWindowKeys } from './useAppWindowKeys';
 import { createPluginChordRegistry, PluginChordProvider } from './plugins/PluginChords';
 import { AppCommandBarProvider, useAppCommandLine } from './shared/command-bar/AppCommandBar';
@@ -107,7 +108,7 @@ export function App({ client }: { client: JanusClient }) {
   });
 
 
-  const runCommand = useCallback((text: string, tab?: string) => client.send({ method: 'command', params: { text, ...(tab && { tab }) } }), [client]);
+  const { runCommand, reportBlockedCommand, onQuit } = useAppCommands(client);
   // Every modal overlay's state, under one owner. It hands out a bag per consumer — the render tree,
   // the window key handler, the command bar's interception chain, the server state stream — so none
   // of them restates the others' fields (see `pickers/usePickerOverlays`).
@@ -145,7 +146,6 @@ export function App({ client }: { client: JanusClient }) {
     (label: string): TabPluginState => pluginTabStateStore.forTab(label),
     [pluginTabStateStore],
   );
-  const onQuit = useCallback(() => runCommand('quit'), [runCommand]);
   const revealDocked = useCallback((label: string) => sidebarSelectionFor(client).select(label), [client]);
   const quitWalkRef = useRef<(() => boolean) | null>(null);
   const saveWalkOpenRef = useRef(false);
@@ -214,7 +214,7 @@ export function App({ client }: { client: JanusClient }) {
   // reach, and neither can be threaded down through the tab tree without changing a dozen signatures.
   const interceptCommandLine = useAppCommandLine({
     ...pickers.commands, tabs, activeTab, openQuitConfirm: guardedOpenQuitConfirm, guardRef,
-    onPickerOpen: setPickerSourceTab, disabledApplicationCommand: isDisabledApplicationCommand,
+    onPickerOpen: setPickerSourceTab, disabledApplicationCommand: isDisabledApplicationCommand, reportBlockedCommand,
   });
   // The queue popup belongs to the tab a picker recorded as its source, and otherwise to the current
   // tab, which is where it is drawn.
