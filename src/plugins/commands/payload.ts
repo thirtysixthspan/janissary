@@ -46,15 +46,18 @@ function canonicalParent(rows: readonly SourceCommand[], parent: string): string
   return match?.name ?? parent;
 }
 
-function labelFor(row: SourceCommand): string {
-  return row.forms.includes(row.name) ? row.name : row.forms[0] ?? row.name;
+function labelFor(rows: readonly SourceCommand[], row: SourceCommand): string {
+  if (row.forms.includes(row.name)) return row.name;
+  const first = row.forms[0];
+  if (first !== undefined && rows.some((candidate) => candidate.name === first)) return row.name;
+  return first ?? row.name;
 }
 
 function toRow(rows: readonly SourceCommand[], row: SourceCommand): CommandRow {
   const parent = row.parent === undefined ? undefined : canonicalParent(rows, row.parent);
   return {
     name: row.name,
-    label: labelFor(row),
+    label: labelFor(rows, row),
     enabled: row.enabled,
     agentAccess: row.agentAccess,
     effectiveEnabled: row.effectiveEnabled,

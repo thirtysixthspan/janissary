@@ -256,6 +256,38 @@ describe('CommandsTab controls', () => {
     expect(screen.getByLabelText('Enabled: ask reset')).not.toBeChecked();
   });
 
+  it('distinguishes the builtin question row from the native question ask row', async () => {
+    const questionRows: CommandRow[] = [
+      row({ name: 'question', label: 'question' }),
+      row({ name: 'question ask', label: 'question ask', nativeTool: 'question', parent: 'question' }),
+      row({ name: 'question approve', label: 'question approve', nativeTool: 'question', parent: 'question' }),
+    ];
+    const { intent, publish } = renderTab(makePayload({ commands: questionRows }));
+
+    const enabled = screen.getAllByRole('checkbox', { name: /^Enabled: / });
+    expect(enabled.map((checkbox) => checkbox.getAttribute('aria-label'))).toEqual([
+      'Enabled: question',
+      'Enabled: question ask',
+      'Enabled: question approve',
+    ]);
+    expect(screen.getByLabelText('Agent access: question ask')).toBeInTheDocument();
+    expect(screen.getByLabelText('Agent access: question approve')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Agent access: question')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Enabled: question'));
+    expect(intent).toHaveBeenCalledExactlyOnceWith('set', {
+      name: 'question', setting: 'enabled', value: false,
+    });
+    await waitFor(() => { expect(screen.getByLabelText('Enabled: question')).toBeEnabled(); });
+
+    publish(makePayload({
+      commands: questionRows.map((entry) => (entry.name === 'question' ? { ...entry, enabled: false } : entry)),
+    }));
+
+    expect(screen.getByLabelText('Enabled: question')).not.toBeChecked();
+    expect(screen.getByLabelText('Enabled: question ask')).toBeChecked();
+  });
+
   it('toggles a focused checkbox with Space through the native control', async () => {
     const user = userEvent.setup();
     const { intent } = renderTab();

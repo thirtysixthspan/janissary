@@ -49,7 +49,7 @@ export function CommandsTab({
             </div>
             {payload.commands.map((row, index) => (
               <CommandRowView
-                key={row.label}
+                key={`${row.name}:${row.label}`}
                 row={row}
                 rows={payload.commands}
                 index={index}

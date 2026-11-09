@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Fix the Commands tab's duplicate row keys and accessible names for the builtin `question` row and the native `question ask` row.
-
-Existing Issue: The tab keys each row by its display label and uses that label in the checkbox names, but the builtin `question` row's label is its first fixed form `question ask`, which is also the native `question ask` row's label, so two sibling rows share one React key and one accessible name. Severity: 5/10
-
-Existing Risk: 5/10 - A repaint can make React reuse or drop one of the duplicate-keyed rows, so a toggle's checked state or focus can land on the wrong row, and assistive technology cannot tell the two Enabled checkboxes apart.
-
-Proposal Risk: 2/10 - The fix removes the key and name collision, but it changes the displayed label for one builtin row, so the spec and user docs must be kept in step; the settings and dispatch behavior do not move.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "disambiguate the builtin question row from the native question ask row". In `src/plugins/commands/payload.ts`, make `labelFor` consider the full row list and use the row's canonical `name` when its first form equals another row's `name` (so the builtin `question` row displays `question` while the native `question ask` row keeps `question ask`); alternatively keep the display label and make the row identity unique. In `web/src/plugins/commands/CommandsTab.tsx`, key each row by a stable pair such as `${row.name}:${row.label}` instead of `label` alone, and keep `CommandRow`'s accessible names unique for the two rows (either through the disambiguated label or an explicit suffix). Add a `web/src/plugins/commands/CommandsTab.test.tsx` case and a `src/plugins/commands/payload.test.ts` case that include the builtin `question` row and the native `question ask` row, assert both render, both Enabled toggles are addressable, and a publication updates the intended row; update `product/specs/commands-tab.md`, `help/commands.md`, and `documentation/user-documentation/tab-types/commands.md` if the displayed label changes. The existing ask/tell/search form-row rendering and repaint tests must keep passing.
-
-
 * Make the Commands command grammar prefer a row's canonical name over another row's fixed form so `question ask` and `question approve` target the native commands.
 
 Existing Issue: `parseCommand` scans rows in payload order and accepts the first row whose name, aliases, or forms match, so the builtin `question` row's fixed forms `question ask` and `question approve` win over the native rows' canonical names; `commands disable question ask` changes the builtin `question` setting and `commands disable agent question ask` is refused as non-native, while the settings manager's resolver targets the native row. Severity: 7/10
