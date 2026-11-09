@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Cover the self-disabled native row's disabled Agent access toggle in the Commands tab test.
-
-Existing Issue: The test named for a self-disabled row uses the non-native `db` row, so it asserts that Enabled stays interactive but never asserts that a self-disabled native row's Agent access checkbox is disabled; the plan's named scenario is only half covered. Severity: 3/10
-
-Existing Risk: 3/10 - A regression in `isAgentAccessDisabled`'s `!effectiveEnabled` branch could let a self-disabled native row grant agent access without a failing test.
-
-Proposal Risk: 1/10 - Adding assertions pins behavior that already exists; the only risk is choosing a fixture row whose parent state accidentally changes the expectation.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "cover the self-disabled native row's disabled Agent access toggle". In `web/src/plugins/commands/CommandsTab.test.tsx`, extend the self-disabled test or add a sibling that uses a native row with `enabled: false`, `effectiveEnabled: false`, `agentAccess: true`, `effectiveAgentAccess: false`, and no disabled parent (the existing `browser eval` fixture row fits), asserting `Enabled: <label>` is enabled and unchecked while `Agent access: <label>` is disabled and checked; keep the existing non-native `db` assertion if it still adds value. This pins the `!effectiveEnabled` branch in `isAgentAccessDisabled` from `web/src/plugins/commands/commands-keys.ts`; the existing parent-disabled and agent-denied tests must keep passing.
-
-
 * Skip pending-disabled toggles during Commands tab keyboard navigation.
 
 Existing Issue: `moveCommandFocus` only knows the static parent and agent disabled states, not the pending set, so while a save is in flight an Up or Down can target a checkbox disabled by `enabledPending` or `agentPending`; `focus()` on a disabled input does nothing, leaving focus where it was instead of falling back or skipping. Severity: 3/10

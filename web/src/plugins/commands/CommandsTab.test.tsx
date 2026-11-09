@@ -124,14 +124,23 @@ describe('CommandsTab rendering', () => {
     expect(within(rowElement as HTMLElement).getByText('Disabled by parent command: db.')).toBeInTheDocument();
   });
 
-  it('keeps a self-disabled row\'s Enabled toggle interactive and disables Agent access', () => {
+  it('keeps a self-disabled row\'s Enabled toggle interactive and disables Agent access on a native row', () => {
     renderTab();
 
-    const enabled = screen.getByLabelText('Enabled: db');
+    const db = screen.getByLabelText('Enabled: db');
+    expect(db).not.toBeChecked();
+    expect(db).toBeEnabled();
+    expect(within(db.closest('.commands-row') as HTMLElement)
+      .queryByText('Disabled by parent command: db.')).not.toBeInTheDocument();
+
+    const enabled = screen.getByLabelText('Enabled: browser eval');
+    const agent = screen.getByLabelText('Agent access: browser eval');
     expect(enabled).not.toBeChecked();
     expect(enabled).toBeEnabled();
+    expect(agent).toBeChecked();
+    expect(agent).toBeDisabled();
     expect(within(enabled.closest('.commands-row') as HTMLElement)
-      .queryByText('Disabled by parent command: db.')).not.toBeInTheDocument();
+      .queryByText('Disabled by parent command: browser.')).not.toBeInTheDocument();
   });
 
   it('locks both toggles of a saved-disabled child while its parent is disabled', () => {
