@@ -1,6 +1,5 @@
 import type { ApplicationCommandDeclaration, ApplicationCommandRow } from './shared/application-commands.js';
 import { coreCommands, pluginCommandClaims } from './commands/index.js';
-import { getOutput } from './commands.js';
 import { tabPluginCatalog } from './plugins/catalog.js';
 import { NATIVE_ACP_COMMANDS } from './plugins/roles/shared.js';
 import { nativeCommandTool } from './acp/native-commands.js';
@@ -93,8 +92,4 @@ export function resolveApplicationCommand(input: string): ApplicationCommandRow 
     ?? candidates[0];
   if (!owner) return undefined;
   return { ...owner, forms: owner.forms.filter((form) => normalized === form || normalized.startsWith(`${form} `)) };
-}
-
-export function hasHelpFallback(input: string): boolean {
-  return getOutput(input).kind !== 'silent';
 }
