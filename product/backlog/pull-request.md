@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Build the application command inventory once instead of rebuilding and re-sorting it on every dispatch, completion, and edit (technical debt).
-
-Existing Issue: `listApplicationCommands` in `src/application-commands.ts` recreates, normalizes, and sorts roughly a hundred rows on each call, and `resolveApplicationCommand`, `resolveExactApplicationCommand`, `disabledApplicationCommand`, `completionPolicy.allows` (once per browser subcommand), `createSnapshot`, and `serializeCommandSettings` each call it again, although the inventory depends only on static registries. Severity: 2/10
-
-Existing Risk: 2/10 - Every command-bar line, completion keystroke, and ACP call pays the rebuild, which is unnoticeable now but compounds as rows or call sites grow.
-
-Proposal Risk: 3/10 - A cached inventory must still reflect a plugin catalog or claim set that tests replace with `vi.mock`, so a stale cache could hide a test or startup ordering mistake.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "memoise the application command inventory". In `src/application-commands.ts`, compute the sorted rows lazily once and return the cached array from `listApplicationCommands`, exporting a small reset used only by `src/application-commands.claims.test.ts` where `./plugins/catalog.js` is mocked. Behavior must not change; `src/application-commands.test.ts`, `src/application-commands.claims.test.ts`, and `src/native-commands/manager.test.ts` must pass untouched.
-
-
 * Make the Commands tab and docs say when a valid project `commands.json` replaces home restrictions the project file leaves enabled, so a cloned repository cannot silently lift a user's own denials (security).
 
 Existing Issue: A valid project `.janissary/commands.json`, including an empty `{}`, replaces the home file entirely and every omitted command or field defaults to enabled, so a repository's file silently re-enables commands and agent access the user disabled in `~/.janissary/commands.json`, and nothing in the snapshot or tab says a home restriction was discarded. Severity: 4/10

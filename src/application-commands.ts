@@ -55,7 +55,7 @@ function compare(left: ApplicationCommandRow, right: ApplicationCommandRow): num
   return left.name.localeCompare(right.name);
 }
 
-export function listApplicationCommands(): ApplicationCommandRow[] {
+function buildApplicationCommands(): ApplicationCommandRow[] {
   const rows: ApplicationCommandRow[] = [];
   for (const command of coreCommands) {
     const declaration = BUILTIN_FORMS[command.name];
@@ -77,6 +77,13 @@ export function listApplicationCommands(): ApplicationCommandRow[] {
   }
   return rows.map((row) => ({ ...row, name: normalize(row.name), aliases: row.aliases.map((alias) => normalize(alias)), forms: row.forms.map((form) => normalize(form)), ...(row.parent && { parent: normalize(row.parent) }) }))
     .toSorted(compare);
+}
+
+let inventory: ApplicationCommandRow[] | undefined;
+
+export function listApplicationCommands(): ApplicationCommandRow[] {
+  inventory ??= buildApplicationCommands();
+  return inventory;
 }
 
 function longestForm(row: ApplicationCommandRow, normalized: string): number {
