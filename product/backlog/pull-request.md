@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Update the client integration plan's remaining statements that disabled command-bar lines return false, which the repair's quit/close consume-and-report behavior now contradicts.
-
-Existing Issue: The completed client integration plan still says command-bar gating returns `false` before classification, lists `quit` and `close` among the words that return `false`, and expects the disabled `quit` test to reach the server as a command, while the repair classifies first and consumes/reports disabled `quit` and `close` lines. Severity: 4/10
-
-Existing Risk: 4/10 - A future implementer or verifier following the completed plan can reintroduce the stale-client quit/close bypass the repair removed, or record the shipped consume-and-report behavior as a failed verification.
-
-Proposal Risk: 1/10 - The plan matches the shipped code; no runtime behavior changes.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "update the client integration plan's stale disabled-line statements". In product/plans/complete/native-commands-10-client-integration.md, rewrite the command-bar gating design decision and Proposed changes item 3 so they say the line is classified first and only a disabled `confirm-quit` or `confirm-close` verdict is consumed and reported with the canonical word, while every other disabled verdict still returns `false` and reaches the server for its refusal. Update the Tests bullet that currently lists `quit` and `close` among the words returning `false` to match the split tests in web/src/shared/command-bar/AppCommandBar.test.tsx, and update the App.test.tsx bullet to expect `reportBlockedCommand` for a disabled `quit` instead of a command send. Keep the already-corrected Verification steps 1 and 3 and the help-page documentation list untouched. Run $janissary/scripts/run.mjs check-diff after the plan edit; no code changes are expected.
-
-
 * Update the blocked-command RPC spec so it covers the consumed command-bar `quit` and `close` lines, not only keyboard shortcuts.
 
 Existing Issue: product/specs/websocket-rpc.md defines `reportBlockedCommand` as reporting a keyboard shortcut the client blocked, while the repair now also uses it for a disabled command-bar `quit` or `close` line whose canonical word is consumed and reported. Severity: 2/10
