@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-// `ai/tasks/rate-plan-complexity.md` is the single home of the 1-10 complexity scale. The two
+// `ai/tasks/planning/rate-plan-complexity.md` is the single home of the 1-10 complexity scale. The two
 // improvement tasks delegate their Step 5 to it and skip its Step 0 and Step 1 by heading, so a
 // renamed heading, or a band copied back into a caller, would leave the delegation pointing at
 // nothing or the scale split across files and still read fine. These assertions pin the delegation
@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest';
 const repoRoot = path.resolve(import.meta.dirname, '..');
 const read = (relative) => readFileSync(path.join(repoRoot, relative), 'utf8');
 
-const RATING_TASK = 'ai/tasks/rate-plan-complexity.md';
+const RATING_TASK = 'ai/tasks/planning/rate-plan-complexity.md';
 const CALLERS = ['improve-plan.md', 'improve-plan-with-minimalism.md'];
 const PREPARE_STEP = 'Step 0 — Prepare the workspace';
 const PICK_STEP = 'Step 1 — Pick the plan';

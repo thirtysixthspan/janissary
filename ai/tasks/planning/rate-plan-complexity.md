@@ -22,7 +22,7 @@ Read the plan and anything in the repo you need to judge what it touches. Add or
 
 1. **Adding code to the plan.** Never add implementation code blocks.
 2. **Editing anything other than the plan's complexity line.** No other part of the plan, no source, no tests, no config, no other plans.
-3. **Moving the plan between folders.** Its status folder is the human's decision (see the plan-storage section in [`AGENTS.md`](../../AGENTS.md)).
+3. **Moving the plan between folders.** Its status folder is the human's decision (see the plan-storage section in [`AGENTS.md`](../../../AGENTS.md)).
 4. **Deciding product scope.** If the plan's *goal* seems wrong or not worth doing, say so in your report — do not rewrite the goal.
 
 ---

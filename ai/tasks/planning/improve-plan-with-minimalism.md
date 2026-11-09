@@ -106,7 +106,7 @@ Edit the plan file according to your Step 3 notes:
 
 ## Step 5 — Assess and record complexity
 
-Open `ai/tasks/rate-plan-complexity.md` and execute every step in order, except `Step 0 — Prepare the workspace` and `Step 1 — Pick the plan`. Your target is the (now trimmed) plan, and it records the `**Complexity: N/10** — <one-line rationale naming what drives the number>` line directly under the plan's `#` title.
+Open `ai/tasks/planning/rate-plan-complexity.md` and execute every step in order, except `Step 0 — Prepare the workspace` and `Step 1 — Pick the plan`. Your target is the (now trimmed) plan, and it records the `**Complexity: N/10** — <one-line rationale naming what drives the number>` line directly under the plan's `#` title.
 
 If the plan already has a complexity line, it is updated — trimming should usually only lower the number, never raise it.
 
