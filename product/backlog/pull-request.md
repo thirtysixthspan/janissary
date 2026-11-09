@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the spec's claim that `commands disable agent agent` changes agent access for `agent`.
-
-Existing Issue: `product/specs/application-commands.md` says `commands disable agent agent` changes agent access for `agent`, but the topic refuses that edit with `Not a native ACP command: agent.` because `agent` is not native; the plan's test and the implementation both expect the refusal. Severity: 2/10
-
-Existing Risk: 2/10 - A reader or future implementer may expect the change to succeed and treat the refusal as a bug, or document the wrong behavior onward.
-
-Proposal Risk: 1/10 - A one-sentence spec correction changes no code.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "correct the spec's claim that commands disable agent agent changes agent access". In `product/specs/application-commands.md`, rewrite the sentence to say `commands disable agent agent` is parsed as an agent-access change for `agent` and is then refused with `Not a native ACP command: agent.` because `agent` is not a native ACP command; keep the `commands disable agent` example and the exact-error paragraph. Check `help/commands.md`, `documentation/user-documentation/tab-types/commands.md`, and `documentation/user-documentation/command-bar/commands.md` for the same example; they do not state the false success, so leave them unchanged unless the wording implies it. No code or test change is needed.
-
-
 * Share the commands domain source and native-tool sets between the payload validator and the shared contract instead of duplicating them.
 
 Existing Issue: `src/plugins/commands/payload.ts` redefines the `SOURCES` and `NATIVE_TOOLS` sets and the `isRecord` guard that already exist in `src/plugins/commands/shared.ts`, so the two validators can drift when the domain changes. Severity: 2/10
