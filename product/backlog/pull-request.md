@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Add direct tests for the hand-written `commands.json` key scanner so escaped quotes, braces inside strings, nested values, and duplicate normalized keys are pinned (technical debt).
-
-Existing Issue: `orderedKeys` in `src/native-commands/decode.ts` is a character-level JSON scanner that decides which duplicate key wins and which entries are malformed, but its only test passes a pre-parsed object plus a trivial text, so the scanner's escape, depth, and comma handling has no colocated coverage. Severity: 3/10
-
-Existing Risk: 4/10 - A key containing an escaped quote, a backslash, or a bracket inside a string value can desynchronise the depth or key tracking, silently dropping or mis-assigning a user's command setting, and the next successful save rewrites the file without it.
-
-Proposal Risk: 2/10 - Only a test file is added, so the risk is a newly written test exposing a real scanner bug that then needs a small fix in the same unit.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "add direct tests for the commands.json key scanner in decode.ts". Create `src/native-commands/decode.test.ts` that calls `decodeCommandSettings(JSON.parse(text), text)` for real file texts covering keys with escaped quotes and backslashes, `{`, `}`, `[`, `]`, and `,` inside string values and keys, a malformed string value at depth one, nested objects and arrays, exact duplicate keys, keys that collide after normalization in both orders (so the textual-last entry supplies both values), an empty key, and non-object top-level values returning `undefined`. If any case fails, fix the scanner in `src/native-commands/decode.ts` minimally in the same change; the existing cases in `src/native-commands/manager.test.ts` must keep passing.
-
-
 * Replace the `as RunTopicAction` cast and the three hard-coded lists of awaited topic actions with one declared set so adding an awaited action is a single edit (technical debt).
 
 Existing Issue: `src/plugins/topics.ts` exports `runTopicAction = runTopicSourceAction as RunTopicAction`, which erases the overload relationship through a type assertion, and the knowledge that `models/delete` and `commands/set` are awaited is repeated in `src/plugins/api-topic-action-capability.ts`, `src/plugins/context.ts`, and `src/plugins/file-capabilities.ts`, each with its own `topic === ... && action === ...` branch for the disabled-plugin case. Severity: 3/10
