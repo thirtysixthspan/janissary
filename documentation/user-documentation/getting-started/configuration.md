@@ -31,6 +31,7 @@ Keep only the settings you want to change. Any setting you leave out uses its de
 | `notifications.events.scheduleFire` | `false` | Adds tab-owned scheduled-command events to the feed. |
 | `notifications.events.agentStart` | `false` | Adds background agent-start events to the feed. |
 | `notifications.events.rateLimited` | `false` | Adds background model rate-limit events to the feed. |
+| `notifications.events.commandDisabled` | `false` | Adds a notice when a disabled command is refused, including a blocked command-backed shortcut. It is attributed to the originating tab and suppressed while that tab is active. |
 | `notifications.events.systemScheduleFire` | `true` | Adds system schedule firing, missed-run, missing-runscript, and shell-start failure notices. |
 | `notifications.events.modelsRefresh` | `true` | Adds a notice when a Models refresh finishes. It bypasses focus suppression and defaults to a success banner and sound. |
 | `notifications.alerts` | Per-type defaults | Chooses a desktop banner and sound (`success`, `warning`, `error`, or `none`) for each notification type. See [Notifications](/user-documentation/tab-types/notifications#desktop-banners-and-bell-sounds). |

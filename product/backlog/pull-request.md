@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Update the user documentation to describe the fifth ambient notification event, `commandDisabled`, which the plan and specs add but the user pages still describe as four events (plan fidelity).
-
-Existing Issue: `documentation/user-documentation/tab-types/notifications.md`, `documentation/user-documentation/getting-started/configuration.md`, and the notifications paragraph of `documentation/user-documentation/command-bar/commands.md` still say there are four ambient events and list only `stateChange`, `scheduleFire`, `agentStart`, and `rateLimited`, while `src/config.ts` now defaults a fifth `notifications.events.commandDisabled` that the pull request's own help and specs refer to. Severity: 3/10
-
-Existing Risk: 3/10 - A user who wants refusals of disabled commands in the feed cannot discover the setting or its default-off, active-tab-suppressed behavior from the published docs, and the docs contradict the shipped config.
-
-Proposal Risk: 1/10 - Prose-only edits that mirror `product/specs/notifications.md` and `product/specs/application-config.md`; a missed sentence would again be a wording slip visible in review.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "document the commandDisabled ambient notification event in the user docs". Edit `documentation/user-documentation/tab-types/notifications.md` to change the "four ambient" wording to five in each place, add `commandDisabled` to the example config block, the event table, and the feed-message table with the text `Command is disabled: <command>.`, and note it is attributed to the originating tab and suppressed on the active tab; add a `notifications.events.commandDisabled` row (default `false`) to the table in `documentation/user-documentation/getting-started/configuration.md` and adjust its sentence about ambient defaults; and in `documentation/user-documentation/command-bar/commands.md` change "four ambient event toggles" and mention command-disabled reports. Copy wording from the `command-disabled` paragraphs of `product/specs/notifications.md` so the docs and specs agree. No code or tests change.
-
-
 * Add direct tests for the hand-written `commands.json` key scanner so escaped quotes, braces inside strings, nested values, and duplicate normalized keys are pinned (technical debt).
 
 Existing Issue: `orderedKeys` in `src/native-commands/decode.ts` is a character-level JSON scanner that decides which duplicate key wins and which entries are malformed, but its only test passes a pre-parsed object plus a trivial text, so the scanner's escape, depth, and comma handling has no colocated coverage. Severity: 3/10
