@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { resolveExactApplicationCommand, resolveApplicationCommand, listApplicationCommands } from '../application-commands.js';
-import { readCommandSettings, writeCommandSettings } from './settings-file.js';
+import { homeRestrictionsLifted, readCommandSettings, writeCommandSettings } from './settings-file.js';
 import type {
   CommandSetting, CommandSettingsEdit, CommandSettingsRead, CommandSettingsSnapshot,
 } from './settings-types.js';
@@ -56,10 +56,14 @@ export class NativeCommandSettingsManager {
     if (!writeCommandSettings(destination, values)) {
       return { ok: false, message: `Could not write commands.json at ${destination}.` };
     }
+    const overridden = read.source === 'project'
+      ? homeRestrictionsLifted(path.join(this.home, '.janissary', 'commands.json'), values)
+      : [];
     this.publish(this.createSnapshot({
       values,
       source: read.source === 'project' ? 'project' : 'home',
       path: destination,
+      ...(overridden.length > 0 && { overridden }),
       ...(read.problem !== undefined && { problem: read.problem }),
     }));
     return { ok: true };
@@ -101,6 +105,7 @@ export class NativeCommandSettingsManager {
       source: read.source,
       path: read.path,
       ...(read.problem !== undefined && { problem: read.problem }),
+      ...(read.overridden !== undefined && { overridden: read.overridden }),
     };
   }
 

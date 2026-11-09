@@ -35,6 +35,11 @@ export function CommandsTab({
       <div className="commands-source">
         {payload.source === 'default' ? 'No commands file in effect' : `Editing ${payload.path}`}
       </div>
+      {payload.overridden && payload.overridden.length > 0 ? (
+        <div className="commands-problem commands-overridden">
+          {`This project file lifts ${payload.overridden.length} home restriction${payload.overridden.length === 1 ? '' : 's'}: ${payload.overridden.join(', ')}.`}
+        </div>
+      ) : null}
       {payload.problem ? <div className="commands-problem">{payload.problem}</div> : null}
       {refusal ? <div className="commands-refusal" role="alert">{refusal}</div> : null}
       {payload.commands.length === 0 ? (

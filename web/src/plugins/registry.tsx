@@ -88,7 +88,7 @@ export const clientPluginRegistry = createClientPluginRegistry({
   'agent-monitor': clientPlugin(1, clientPluginLoaders['agent-monitor']),
   asciicast: clientPlugin(1, clientPluginLoaders.asciicast),
   audio: clientPlugin(1, clientPluginLoaders.audio),
-  commands: clientPlugin(1, clientPluginLoaders.commands),
+  commands: clientPlugin(2, clientPluginLoaders.commands),
   connections: clientPlugin(2, clientPluginLoaders.connections),
   conversations: clientPlugin(1, clientPluginLoaders.conversations),
   diff: clientPlugin(10, clientPluginLoaders.diff),

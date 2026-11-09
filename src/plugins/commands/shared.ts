@@ -6,7 +6,7 @@ import {
   type ApplicationCommandSource,
 } from '../../shared/application-commands.js';
 
-export const COMMANDS_PAYLOAD_SCHEMA_VERSION = 1;
+export const COMMANDS_PAYLOAD_SCHEMA_VERSION = 2;
 
 export type CommandSettingsSource = ApplicationCommandSource;
 export type CommandSettingName = 'enabled' | 'agentAccess';
@@ -28,6 +28,7 @@ export type CommandsPayload = {
   source: CommandSettingsSource;
   path: string;
   problem?: string;
+  overridden?: string[];
 };
 
 export type SetIntent = { name: string; setting: CommandSettingName; value: boolean };
@@ -73,7 +74,12 @@ export function isCommandsPayload(value: unknown): value is CommandsPayload {
     && value.commands.every(isCommandRow)
     && isSource(value.source)
     && typeof value.path === 'string'
-    && (value.problem === undefined || typeof value.problem === 'string');
+    && (value.problem === undefined || typeof value.problem === 'string')
+    && (value.overridden === undefined || isStringList(value.overridden));
+}
+
+function isStringList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
 export function isSetIntent(value: unknown): value is SetIntent {

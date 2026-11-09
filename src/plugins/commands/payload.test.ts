@@ -85,6 +85,8 @@ describe('isCommandsData', () => {
     ['a missing path', { ...DATA, path: undefined }],
     ['a mistyped path', { ...DATA, path: 4 }],
     ['a mistyped problem', { ...DATA, problem: 4 }],
+    ['a mistyped overridden list', { ...DATA, overridden: 'clear' }],
+    ['a mistyped overridden name', { ...DATA, overridden: [4] }],
   ])('rejects %s', (_label, value) => {
     expect(isCommandsData(value)).toBe(false);
   });
@@ -138,6 +140,14 @@ describe('toPayload', () => {
     expect(payload.commands.find((command) => command.name === 'question ask'))
       .toMatchObject({ nativeTool: 'question' });
     expect(payload.commands.find((command) => command.name === 'ask')).not.toHaveProperty('nativeTool');
+  });
+
+  it('accepts and preserves the overridden names, and omits them when absent', () => {
+    const data = { ...DATA, overridden: ['clear'] };
+
+    expect(isCommandsData(data)).toBe(true);
+    expect(toPayload(data).overridden).toEqual(['clear']);
+    expect(toPayload(DATA)).not.toHaveProperty('overridden');
   });
 
   it('omits problem and nativeTool when they are absent', () => {

@@ -110,6 +110,19 @@ describe('CommandsTab rendering', () => {
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
   });
 
+  it('notes the home restrictions a project file lifts, and shows nothing without them', () => {
+    const { unmount } = renderTab(makePayload({ source: 'project', overridden: ['browser eval', 'clear'] }));
+    expect(screen.getByText('This project file lifts 2 home restrictions: browser eval, clear.')).toBeInTheDocument();
+    unmount();
+
+    const single = renderTab(makePayload({ source: 'project', overridden: ['clear'] }));
+    expect(screen.getByText('This project file lifts 1 home restriction: clear.')).toBeInTheDocument();
+    single.unmount();
+
+    renderTab(makePayload({ source: 'project' }));
+    expect(screen.queryByText(/lifts/)).not.toBeInTheDocument();
+  });
+
   it('dims a parent-disabled row, disables both toggles, and names the parent', () => {
     renderTab();
 

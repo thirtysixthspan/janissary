@@ -10,12 +10,14 @@ export type CommandSettingsSnapshot = Readonly<{
   source: CommandSettingsSource;
   path: string;
   problem?: string;
+  overridden?: readonly string[];
 }>;
 export type CommandSettingsRead = Readonly<{
   values: Readonly<Record<string, CommandSetting>>;
   source: CommandSettingsSource;
   path: string;
   problem?: string;
+  overridden?: readonly string[];
   unusablePath?: string;
 }>;
 export type CommandSettingsEdit = Readonly<{ name: string; setting: Partial<CommandSetting> }>;

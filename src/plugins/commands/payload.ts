@@ -28,7 +28,8 @@ export function isCommandsData(data: unknown): data is CommandsTopicNotification
     && data.commands.every((row) => isSourceCommand(row))
     && typeof data.source === 'string' && SOURCES.has(data.source)
     && typeof data.path === 'string'
-    && (data.problem === undefined || typeof data.problem === 'string');
+    && (data.problem === undefined || typeof data.problem === 'string')
+    && (data.overridden === undefined || isStringList(data.overridden));
 }
 
 function canonicalParent(rows: readonly SourceCommand[], parent: string): string {
@@ -65,5 +66,6 @@ export function toPayload(data: CommandsTopicNotification['data']): CommandsPayl
     source: data.source,
     path: data.path,
     ...(data.problem !== undefined && { problem: data.problem }),
+    ...(data.overridden !== undefined && { overridden: [...data.overridden] }),
   };
 }

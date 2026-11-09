@@ -17,6 +17,22 @@ function readAt(filePath: string):
   return { ok: true, values: read.value.values, malformed: read.value.malformed };
 }
 
+export function homeRestrictionsLifted(
+  homePath: string,
+  projectValues: Readonly<Record<string, CommandSetting>>,
+): string[] {
+  if (!existsSync(homePath)) return [];
+  const home = readAt(homePath);
+  if (!home.ok) return [];
+  const lifted = (name: string): boolean => {
+    const homeSetting = home.values[name];
+    if (homeSetting === undefined) return false;
+    const project = projectValues[name] ?? { enabled: true, agentAccess: true };
+    return (!homeSetting.enabled && project.enabled) || (!homeSetting.agentAccess && project.agentAccess);
+  };
+  return listApplicationCommands().map(({ name }) => normalizeCommandName(name)).filter((name) => lifted(name));
+}
+
 export function readCommandSettings(
   root: string,
   home = os.homedir(),
@@ -35,8 +51,10 @@ export function readCommandSettings(
       brokenPath = candidate.path;
       continue;
     }
+    const overridden = candidate.source === 'project' ? homeRestrictionsLifted(homePath, read.values) : [];
     return {
       values: read.values, source: candidate.source, path: candidate.path,
+      ...(overridden.length > 0 && { overridden }),
       ...(problem !== undefined && { problem: `${problem} — showing the ${candidate.source} commands file.` }),
     };
   }
