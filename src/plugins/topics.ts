@@ -5,6 +5,7 @@ import type {
   TabPluginNotificationTopic,
   TabPluginTopicAction,
 } from './api.js';
+import { subscribeTabs } from './tabs-topic.js';
 import { tabActivityRows } from './activity.js';
 import { scheduleTopicAction } from './schedule-topic-actions.js';
 import { runscriptTopicAction } from './runscript-topic-actions.js';
@@ -12,9 +13,7 @@ import { readRunscriptRows } from '../schedule/system/runscript-rows.js';
 import { readConnectionsTopic, runConnectionsTopicAction, subscribeConnectionsTopic } from './connections-topic.js';
 import { readCommandsTopic, runCommandsTopicAction, subscribeCommandsTopic } from './commands-topic.js';
 import { readModelsTopic, runModelsTopicAction, subscribeModelsTopic } from './models-topic.js';
-import type { RunTopicAction } from './api-topic-action-capability.js';
-
-const TABS_NOTIFICATION_WINDOW_MS = 100;
+import type { AwaitedTabPluginTopicAction } from './api-topic-action-capability.js';
 
 // Where each host topic comes from, what it carries, and what a plugin may ask the host to do to it.
 // One entry per topic, so adding a topic is a data change here rather than a new branch anywhere
@@ -134,24 +133,6 @@ function actOnDatabases(managers: Managers, action: TabPluginTopicAction): void 
   messageBus.emit('databases', { type: 'changed' });
 }
 
-function subscribeTabs(fire: () => void): Subscription {
-  let delivery: ReturnType<typeof setTimeout> | undefined;
-  const listener = messageBus.on('state', 'dirty', () => {
-    if (delivery !== undefined) return;
-    delivery = setTimeout(() => {
-      delivery = undefined;
-      fire();
-    }, TABS_NOTIFICATION_WINDOW_MS);
-  });
-  return {
-    unsubscribe: () => {
-      listener.unsubscribe();
-      if (delivery !== undefined) clearTimeout(delivery);
-      delivery = undefined;
-    },
-  };
-}
-
 const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
   schedules: {
     subscribe: (_managers, fire) => messageBus.on('schedules', 'changed', fire),
@@ -234,10 +215,15 @@ export function emptyTopicData(
   return TOPIC_SOURCES[topic].empty;
 }
 
-function runTopicSourceAction(
+export function runTopicAction(managers: Managers, action: AwaitedTabPluginTopicAction): Promise<string | undefined>;
+export function runTopicAction(
+  managers: Managers, action: Exclude<TabPluginTopicAction, AwaitedTabPluginTopicAction>,
+): string | undefined;
+export function runTopicAction(
+  managers: Managers, action: TabPluginTopicAction,
+): string | undefined | Promise<string | undefined>;
+export function runTopicAction(
   managers: Managers, action: TabPluginTopicAction,
 ): string | undefined | Promise<string | undefined> {
   return TOPIC_SOURCES[action.topic].act(managers, action);
 }
-
-export const runTopicAction = runTopicSourceAction as RunTopicAction;

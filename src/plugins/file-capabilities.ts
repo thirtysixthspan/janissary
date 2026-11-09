@@ -7,13 +7,12 @@ import {
   type TabPluginNotificationTopic,
   type TabPluginTopicAction,
 } from './api.js';
-import type { ModelsTopicDeleteAction } from './api-topics-models.js';
-import type { CommandsTopicSetAction } from './api-topics-commands.js';
 import type { PluginFailureOrigin } from './failure.js';
 import { projectFilesFor } from '../project/files.js';
 import { isInsideRoot } from './files.js';
 import { readPluginSettings, savePluginSettings } from './settings.js';
 import { liveRecordingPaths } from './live-recordings.js';
+import { disabledTopicActionResult, type AwaitedTabPluginTopicAction } from './api-topic-action-capability.js';
 import { emptyTopicData, readTopicData, runTopicAction } from './topics.js';
 import { tabActivityRows } from './activity.js';
 import { isJsonCompatible } from './json-compatible.js';
@@ -107,18 +106,14 @@ function topicActionCapability(
   declaration: TabPluginDeclaration,
   isEnabled: () => boolean,
 ): TabPluginServerCapabilities['topicAction'] {
-  function topicAction(action: ModelsTopicDeleteAction | CommandsTopicSetAction): Promise<string | undefined>;
+  function topicAction(action: AwaitedTabPluginTopicAction): Promise<string | undefined>;
   function topicAction(
-    action: Exclude<TabPluginTopicAction, ModelsTopicDeleteAction | CommandsTopicSetAction>,
+    action: Exclude<TabPluginTopicAction, AwaitedTabPluginTopicAction>,
   ): string | undefined;
   function topicAction(action: TabPluginTopicAction): string | undefined | Promise<string | undefined>;
   function topicAction(action: TabPluginTopicAction): string | undefined | Promise<string | undefined> {
     requireDeclaredTopic(declaration, action.topic);
-    if (!isEnabled()) {
-      if (action.topic === 'models' && action.action === 'delete') return Promise.resolve(undefined);
-      if (action.topic === 'commands' && action.action === 'set') return Promise.resolve(undefined);
-      return undefined;
-    }
+    if (!isEnabled()) return disabledTopicActionResult(action);
     return runTopicAction(managers, action);
   }
   return topicAction;

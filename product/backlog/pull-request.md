@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Replace the `as RunTopicAction` cast and the three hard-coded lists of awaited topic actions with one declared set so adding an awaited action is a single edit (technical debt).
-
-Existing Issue: `src/plugins/topics.ts` exports `runTopicAction = runTopicSourceAction as RunTopicAction`, which erases the overload relationship through a type assertion, and the knowledge that `models/delete` and `commands/set` are awaited is repeated in `src/plugins/api-topic-action-capability.ts`, `src/plugins/context.ts`, and `src/plugins/file-capabilities.ts`, each with its own `topic === ... && action === ...` branch for the disabled-plugin case. Severity: 3/10
-
-Existing Risk: 4/10 - The next awaited topic action must be added in three files and the cast hides a mismatch between the declared overloads and the runtime value, so one missed place returns a synchronous value where callers `await` a promise and a refusal string is lost.
-
-Proposal Risk: 3/10 - The change touches the capability factory used by every plugin, so a regression would affect all plugins' topic actions, though the existing topic and capability tests cover each path.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1968 "centralise awaited topic action handling and remove the RunTopicAction cast". Add one helper beside `AwaitedTabPluginTopicAction` in `src/plugins/api-topic-action-capability.ts` that reports whether an action is awaited and returns the disabled-plugin result (`Promise.resolve(undefined)` or `undefined`), use it from `topicActionCapability` in both `src/plugins/context.ts` and `src/plugins/file-capabilities.ts`, and give `runTopicAction` in `src/plugins/topics.ts` real overloads instead of the assertion. Behavior must not change; `src/plugins/topics.test.ts`, `src/plugins/api-topics.test.ts`, and the plugin context tests must pass untouched.
-
-
 * Define the native tool, settings source, and inventory kind domains once in the import-free shared contract so the server types and the plugin validators cannot drift, as the plan promised (plan fidelity and technical debt).
 
 Existing Issue: The plan says the payload validator's domain sets are shared with the import-free shared contract, yet the native-tool union is declared separately in `src/shared/application-commands.ts` (twice) and as `NativeTool`/`NATIVE_TOOLS` in `src/plugins/commands/shared.ts`, the source union in both `src/native-commands/settings-types.ts` and `src/plugins/commands/shared.ts`, and the kind set only as a local `KINDS` in `src/plugins/commands/payload.ts`. Severity: 3/10
