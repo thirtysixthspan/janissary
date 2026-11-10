@@ -1,4 +1,5 @@
 import type { AcpSession } from '../acp/types.js';
+import { deferred } from '../deferred.js';
 import { AcpPromptControl } from '../acp/prompt-control.js';
 import type { RemoteChannel } from './channel/index.js';
 import type { ClientFrame, RemoteAcpActivityKind } from './protocol-frames.js';
@@ -52,11 +53,7 @@ export function createRemoteAcpSession(
   // The one in-flight prompt, matching the discipline `connectAcp` keeps with its own `current`.
   const control = new AcpPromptControl();
   let live = true;
-  let resolveReady = (_sandboxed: boolean) => {};
-  let rejectReady = (_error: Error) => {};
-  // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the project targets ES2023
-  const readiness = new Promise<boolean>((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
-  const ready = readiness;
+  const { promise: ready, resolve: resolveReady, reject: rejectReady } = deferred<boolean>();
   void ready.catch(() => {});
   let resolveRelease: (released: boolean) => void = () => {};
   let releasePromise: Promise<boolean> | undefined;
@@ -132,8 +129,9 @@ export function createRemoteAcpSession(
     live = false;
     rejectReady(new Error('ACP session closed.'));
     control.release();
-    // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the project targets ES2023
-    const pending = new Promise<boolean>((resolve) => { resolveRelease = resolve; });
+    const releasing = deferred<boolean>();
+    resolveRelease = releasing.resolve;
+    const pending = releasing.promise;
     releasePromise = pending;
     releaseTimer = setTimeout(() => {
       channel.detachAcp(id);

@@ -1,3 +1,5 @@
+import { deferred } from '../deferred.js';
+
 // The clock a guarded call runs against. `exempt` is for work the host does on the plugin's behalf
 // while the plugin waits on it — running a whole application command, say — which is the host's time
 // and must not be charged to the plugin. The clock stops while any exempted work is in flight and
@@ -19,9 +21,7 @@ export async function guardPluginCall<Result>(
   let holds = 0;
   let settled = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  let expire: (error: Error) => void = () => {};
-  // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the web hosts import this module, and the web project's ES2023 library excludes Promise.withResolvers
-  const timeout = new Promise<never>((_resolve, reject) => { expire = reject; });
+  const { promise: timeout, reject: expire } = deferred<never>();
 
   const arm = () => {
     startedAt = Date.now();
