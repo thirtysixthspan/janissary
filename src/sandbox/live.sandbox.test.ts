@@ -119,6 +119,32 @@ describe.skipIf(!sandboxAvailable())('sandboxSpawn — live sandbox-exec integra
     expect(runSandboxed(`cat "${blocklist}"`).status).toBe(0);
   });
 
+  const adapterExecutable = path.join(janissaryRoot(), 'node_modules', '.bin', 'claude-agent-acp');
+  const adapterEntry = realpathSync(adapterExecutable);
+  const siblingAdapterFile = path.join(janissaryRoot(), 'node_modules', '@agentclientprotocol', 'codex-acp', 'dist', 'index.js');
+  const installIsUnderHome = realpathSync(janissaryRoot()).startsWith(`${realpathSync(homedir())}${path.sep}`);
+
+  it.skipIf(!installIsUnderHome || !existsSync(adapterExecutable) || !existsSync(siblingAdapterFile))(
+    'loads a bundled role dependency while denying an unrelated sibling adapter',
+    () => {
+      const probePath = path.join(workspaceDir, 'adapter-read-probe.js');
+      writeFileSync(probePath, [
+        "const { createRequire } = require('node:module');",
+        "const { readFileSync } = require('node:fs');",
+        `const adapterRequire = createRequire(${JSON.stringify(adapterEntry)});`,
+        "adapterRequire('zod').z.string().parse('allowed runtime dependency');",
+        `try { readFileSync(${JSON.stringify(siblingAdapterFile)}); process.exit(3); } catch (error) {`,
+        "  if (error.code !== 'EPERM') process.exit(4);",
+        '}',
+      ].join('\n'));
+      const { command, args, env } = sandboxSpawn(
+        { workspaceDir, selfBinaryHint: adapterExecutable }, process.execPath, [probePath],
+      );
+      expect(() => execFileSync(command, args, { cwd: workspaceDir, env: env as NodeJS.ProcessEnv, stdio: 'pipe' }))
+        .not.toThrow();
+    },
+  );
+
   it('a non-secret $HOME read outside any carve-in reports EPERM, not ENOENT', () => {
     // Directory-listing-based resolvers (esbuild, notably) walk ancestor directories under $HOME
     // while resolving an entry point; those directories genuinely exist (metadata is allowed

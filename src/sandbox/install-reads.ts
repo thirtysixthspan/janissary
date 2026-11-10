@@ -12,8 +12,9 @@
 // no `deny` between them, so splitting it out changes nothing about what is permitted — the secret
 // denies still come after both. The params it names are bound in `index.ts` alongside the rest.
 
-export function installReadRule(skillCount: number): string {
+export function installReadRule(skillCount: number, adapterPackageCount: number): string {
   const skillReads = Array.from({ length: skillCount }, (_, index) => `  (subpath (param "JANISSARY_SKILL_${index}_L"))\n  (subpath (param "JANISSARY_SKILL_${index}_R"))`).join('\n');
+  const adapterReads = Array.from({ length: adapterPackageCount }, (_, index) => `  (subpath (param "ROLE_ADAPTER_PACKAGE_${index}_L"))\n  (subpath (param "ROLE_ADAPTER_PACKAGE_${index}_R"))`).join('\n');
   return `; A process reading its own executable (and the directory it lives in) is always safe to allow —
 ; frameworks the process links against may reopen its own binary for introspection (e.g. Keychain's
 ; SecItemCopyMatching calls CFBundleGetMainBundle, which does exactly this to determine code identity
@@ -55,14 +56,16 @@ export function installReadRule(skillCount: number): string {
 ; and every package-update task runs that gate before touching node_modules, so without it the gate
 ; fails before checking anything. Read-only so an agent cannot clear a blocked release that a later
 ; unsandboxed install would then accept. ai/, scripts/, and security/ are the three unconditional
-; installation-directory carve-ins. SELF_DIR_R separately widens to the nearest enclosing
-; node_modules tree when the resolved harness executable lives under one. This covers the bundled
-; Claude and Codex ACP role adapters, whose executables are in the installation's node_modules.
-; The install root, a checkout's .janissary/, and other paths remain denied unless another carve-in
-; covers them.
+; installation-directory carve-ins. Ordinary harness executables under node_modules still widen
+; SELF_DIR_R to the nearest enclosing tree. Bundled Claude and Codex ACP role adapters instead get
+; only their executable paths and the package roots in their declared runtime dependency closure.
+; Sibling packages, the install root, a checkout's .janissary/, and other paths remain denied unless
+; another carve-in covers them.
 (allow file-read-data file-read-xattr
   (subpath (param "SELF_DIR_L"))
   (subpath (param "SELF_DIR_R"))
+  (subpath (param "ROLE_ADAPTER_EXECUTABLE_L"))
+  (subpath (param "ROLE_ADAPTER_EXECUTABLE_R"))
   (subpath (param "SERVER_NODE_DIR_L"))
   (subpath (param "SERVER_NODE_DIR_R"))
   (subpath (param "PLAYWRIGHT_DIR"))
@@ -73,5 +76,6 @@ export function installReadRule(skillCount: number): string {
   (subpath (param "JANISSARY_SCRIPTS_R"))
   (subpath (param "JANISSARY_SECURITY_L"))
   (subpath (param "JANISSARY_SECURITY_R"))
+${adapterReads}${adapterReads ? '\n' : ''}
 ${skillReads})`;
 }

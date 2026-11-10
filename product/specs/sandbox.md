@@ -82,15 +82,14 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   API-key provider reads its own key from the environment, which the scrub deliberately exempts.
 - **`~/Library/Keychains`** is a read carve-in, not a secret deny, despite being far more sensitive
   in principle than the other carve-ins — see [Known OS quirks](#known-os-quirks-and-their-carve-ins).
-- A harness's own executable directory (`SELF_DIR_L`/`SELF_DIR_R`, resolved from `PATH` at spawn
-  time — both the literal and realpath-resolved form, same reasoning as dotfile symlinks above) is
-  always readable, even under `$HOME` (e.g. an nvm- or `~/.opencode/bin`-installed binary). When
-  the resolved executable is under `node_modules`, `SELF_DIR_R` widens to the nearest enclosing
-  `node_modules` tree via `packageRootDir` in `src/sandbox/harness-spawn.ts`, so package siblings
-  remain readable too. A bundled Claude or Codex ACP role session resolves its adapter under the
-  installation's `node_modules`, which makes that whole tree readable in the session. A process
-  reading its own executable is always safe to allow, and some system frameworks the process links
-  against do exactly that for self-introspection (see below).
+- A harness's own executable is readable, even under `$HOME` (e.g. an nvm- or
+  `~/.opencode/bin`-installed binary). For ordinary harnesses whose executable resolves under
+  `node_modules`, the read allowance still covers the nearest enclosing `node_modules` tree so
+  package siblings remain available. Bundled Claude and Codex ACP role sessions are narrower: they
+  can read the selected adapter executable and its required runtime packages, while unrelated
+  sibling packages stay denied. A process reading its own executable is always safe to allow, and
+  some system frameworks the process links against do exactly that for self-introspection (see
+  below).
 - The janissary **server's own** Node binary directory (`SERVER_NODE_DIR_L`/`SERVER_NODE_DIR_R`,
   resolved from `process.execPath` — same literal/real dual reasoning) is readable for the same
   self-introspection reason, and its path is also exposed to sandboxed processes via the
@@ -112,10 +111,11 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   [[task-picker]]) — without the carve-in, an installation under `$HOME` (a global npm prefix, or a
   development checkout) falls under the `$HOME` content deny and the agent is handed a file it cannot
   open. Deliberately `ai/` alone rather than the whole install root: those files are prompts written
-  to be read by an agent and hold no user data. A separate executable carve-in applies when a
-  harness or ACP agent's resolved executable is under `node_modules`; in that case `SELF_DIR_R`
-  exposes the nearest enclosing `node_modules` tree, including the installation's own tree for
-  bundled Claude and Codex ACP role sessions. The install root and unrelated paths stay denied.
+  to be read by an agent and hold no user data. A separate executable carve-in applies when an
+  executable resolves under `node_modules`. Ordinary harnesses and other ACP agents can read the
+  nearest enclosing `node_modules` tree. Bundled Claude and Codex ACP role sessions can read only
+  their selected adapter package and its required runtime dependency closure; unrelated sibling
+  packages and the rest of the installation stay denied.
   Read-only — an agent able to write those prompts could rewrite what a later, unsandboxed run follows
   — and unconditional, for the same reason the Playwright directories are: it grants read access to
   one directory of Janissary's own, and gating it would thread a flag through every spawn path to no
