@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -10,6 +11,7 @@ vi.mock('../janissary-root.js', () => ({ janissaryRoot: () => install.root }));
 import { locateAcpCommand } from './command-path.js';
 
 const originalShell = process.env.SHELL;
+const serverNodeDir = path.dirname(process.execPath);
 let roots: string[] = [];
 
 // A stand-in for the user's shell: it adds `binDir` to PATH, as an rc file would, and runs the last
@@ -31,18 +33,19 @@ function binDirWith(name: string): string {
   return binDir;
 }
 
-// A stand-in install root whose `node_modules/.bin` holds the given executables.
-function installRootWith(...names: string[]): string {
+// A stand-in install root whose `node_modules/.bin` holds the given executables, each a script with
+// the given body.
+function installRootWith(names: string[], body = '#!/bin/sh\n'): string {
   const directory = mkdtempSync(path.join(os.tmpdir(), 'janissary-acp-install-'));
   roots.push(directory);
   const binDir = path.join(directory, 'node_modules', '.bin');
   mkdirSync(binDir, { recursive: true });
-  for (const name of names) writeFileSync(path.join(binDir, name), '#!/bin/sh\n', { mode: 0o755 });
+  for (const name of names) writeFileSync(path.join(binDir, name), body, { mode: 0o755 });
   return directory;
 }
 
 beforeEach(() => {
-  install.root = installRootWith('claude-agent-acp');
+  install.root = installRootWith(['claude-agent-acp']);
 });
 
 afterEach(() => {
@@ -74,7 +77,7 @@ describe('locateAcpCommand', () => {
     const located = locateAcpCommand('opencode', { PATH: '/usr/bin:/bin', OTHER: 'kept' });
 
     expect(located.command).toBe(path.join(binDir, 'opencode'));
-    expect(located.env.PATH?.split(':', 1)[0]).toBe(binDir);
+    expect(located.env.PATH).toBe(`${binDir}:${process.env.PATH}`);
     expect(located.env.OTHER).toBe('kept');
   });
 
@@ -85,9 +88,30 @@ describe('locateAcpCommand', () => {
     expect(locateAcpCommand('janissary-missing-agent', env)).toEqual({ command: 'janissary-missing-agent', env });
   });
 
-  it('resolves a command the install bundles to its absolute path, keeping the environment', () => {
+  it('resolves a command the install bundles to its absolute path, putting the server\'s node first on PATH', () => {
     process.env.SHELL = userShellAdding('/nonexistent');
-    const env = { PATH: '/usr/bin:/bin' };
+    const env = { PATH: '/nonexistent-a:/nonexistent-b', OTHER: 'kept' };
+
+    const located = locateAcpCommand('claude-agent-acp', env);
+
+    expect(located.command).toBe(path.join(install.root, 'node_modules', '.bin', 'claude-agent-acp'));
+    expect(located.env).toEqual({ PATH: `${serverNodeDir}:/nonexistent-a:/nonexistent-b`, OTHER: 'kept' });
+    expect(env.PATH).toBe('/nonexistent-a:/nonexistent-b');
+  });
+
+  it('prefers the bundled copy even when the given PATH also resolves the command', () => {
+    const binDir = binDirWith('claude-agent-acp');
+    process.env.SHELL = userShellAdding('/nonexistent');
+    const env = { PATH: `/nonexistent-a:${binDir}` };
+
+    const located = locateAcpCommand('claude-agent-acp', env);
+
+    expect(located.command).toBe(path.join(install.root, 'node_modules', '.bin', 'claude-agent-acp'));
+    expect(located.env).toEqual({ PATH: `${serverNodeDir}:/nonexistent-a:${binDir}` });
+  });
+
+  it('keeps the environment of a bundled command whose PATH already lists the server\'s node', () => {
+    const env = { PATH: `/nonexistent-a:${serverNodeDir}` };
 
     const located = locateAcpCommand('claude-agent-acp', env);
 
@@ -95,15 +119,18 @@ describe('locateAcpCommand', () => {
     expect(located.env).toBe(env);
   });
 
-  it('prefers the bundled copy even when the given PATH also resolves the command', () => {
-    const binDir = binDirWith('claude-agent-acp');
-    process.env.SHELL = userShellAdding('/nonexistent');
-    const env = { PATH: `/usr/bin:${binDir}` };
+  it('gives a bundled command with no PATH the server\'s node directory as its PATH', () => {
+    const located = locateAcpCommand('claude-agent-acp', { OTHER: 'kept' });
 
-    const located = locateAcpCommand('claude-agent-acp', env);
+    expect(located.env).toEqual({ PATH: serverNodeDir, OTHER: 'kept' });
+  });
 
-    expect(located.command).toBe(path.join(install.root, 'node_modules', '.bin', 'claude-agent-acp'));
-    expect(located.env).toBe(env);
+  it('starts a bundled node script when the given PATH holds no node', () => {
+    install.root = installRootWith(['codex-acp'], '#!/usr/bin/env node\nprocess.stdout.write(\'started\');\n');
+
+    const located = locateAcpCommand('codex-acp', { PATH: '/nonexistent-a' });
+
+    expect(execFileSync(located.command, [], { env: located.env, encoding: 'utf8' })).toBe('started');
   });
 
   it('leaves a bundled command given as a path alone', () => {
