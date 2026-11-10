@@ -135,7 +135,7 @@ Type a fragment of the line you're after — the characters must appear together
 
 The highlight follows the matching text in the original line even when lowercasing changes a character's length.
 
-`↑`/`↓` move down the list and the buffer jumps to each line as you go, placing the match about one quarter of the editor's height from the top so you can read below it. Press `Return` to jump to the first match, even if another row is highlighted; the search stays open. `Escape` closes it and leaves the cursor on the last line you looked at, ready to type. Clicking a row does the same jump. `Escape` still closes the overlay if you've clicked back into the file while it's open.
+`↑`/`↓` move down the list and the buffer jumps to each line as you go, placing the match about one quarter of the editor's height from the top so you can read below it. Press `Return` to close the search with the cursor on the highlighted line; if you arrowed to it, the buffer does not scroll. `Escape` closes it and leaves the cursor on the last line you looked at, ready to type. Clicking a row does the same jump. `Escape` still closes the overlay if you've clicked back into the file while it's open.
 
 A query that matches nothing shows `No matching lines`. Clearing it brings back the `type to search` hint.
 

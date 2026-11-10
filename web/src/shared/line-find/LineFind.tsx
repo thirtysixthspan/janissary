@@ -9,6 +9,7 @@ type Properties = {
   selected: number;
   onChangeSelected: (index: number) => void;
   onClose: () => void;
+  onEnter?: () => void;
   placeholder: string;
   inputRef?: React.RefObject<HTMLInputElement | null>;
   rowLabel?: (result: FuzzyMatchResult) => React.ReactNode;
@@ -76,10 +77,10 @@ function editorFindBody(
 // input over the ranked lines, modeled on `QuickOpen`. Purely presentational — revealing the
 // highlighted row belongs to the tab that owns the lines. Owns its own key handling so
 // Up/Down/Enter/Escape never reach the surface behind it.
-export function LineFind({ query, onChangeQuery, results, selected, onChangeSelected, onClose, placeholder, inputRef, rowLabel, status, announcement }: Properties) {
-  const rankedKeys = rankedOverlayKeys(selected, results.length, onChangeSelected, () => {
+export function LineFind({ query, onChangeQuery, results, selected, onChangeSelected, onClose, onEnter, placeholder, inputRef, rowLabel, status, announcement }: Properties) {
+  const rankedKeys = rankedOverlayKeys(selected, results.length, onChangeSelected, onEnter ?? (() => {
     if (results.length > 0) onChangeSelected(0);
-  }, onClose);
+  }), onClose);
   const onKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (event) => {
     if (event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'f') {
       event.preventDefault();
