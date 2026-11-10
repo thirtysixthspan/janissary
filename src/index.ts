@@ -3,12 +3,10 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { createController } from './controller.js';
 import { makeToken, originAllowed, tokenFromReq as tokenFromRequest, tokenMatches } from './security.js';
 import type { ServerEvent } from './protocol.js';
-import { handle } from './message/handler.js';
 import { buildStateEvent } from './state/event.js';
-import { clientParamsProblem, isClientMessage } from './client-message.js';
+import { attachClientConnection } from './client-connection.js';
 import { guardRequest } from './request-boundary.js';
 import { staticFileServer } from './serve-static.js';
-import { errorText } from './error-text.js';
 import { messageBus } from './bus.js';
 import { ResumeWatch } from './resume-watch.js';
 import { openLaunchShell } from './launch-shell.js';
@@ -36,6 +34,10 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   const resumeSubscription = messageBus.on('system', 'resumed', () => {
     if (exitTimer && !closed) armExit();
   });
+  const stopBackground = () => {
+    resumeWatch.stop();
+    resumeSubscription.unsubscribe();
+  };
   resumeWatch.start();
 
   const broadcast = (event: ServerEvent) => {
@@ -63,10 +65,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   try {
     await openLaunchShell(controller.managers);
   } catch (error) {
-    try { await controller.shutdown(); } finally {
-      resumeWatch.stop();
-      resumeSubscription.unsubscribe();
-    }
+    try { await controller.shutdown(); } finally { stopBackground(); }
     throw error;
   }
   await controller.managers.systemShell.ensure();
@@ -86,42 +85,19 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     wss.handleUpgrade(request, socket, head, (ws) => wss.emit('connection', ws, request));
   });
 
-  wss.on('connection', (ws: WebSocket) => {
-    if (exitTimer) {
+  wss.on('connection', (ws: WebSocket) => attachClientConnection(ws, {
+    controller, clients, broadcast, armExit, isClosed: () => closed,
+    cancelExit: () => {
       clearTimeout(exitTimer);
       exitTimer = undefined;
-    }
-    clients.add(ws);
-    ws.on('message', (raw) => {
-      let message: unknown;
-      try { message = JSON.parse(raw.toString()) as unknown; } catch { return; }
-      if (!isClientMessage(message)) return;
-      const problem = clientParamsProblem(message);
-      if (problem !== undefined) {
-        ws.send(JSON.stringify({ t: 'rpc-reply', id: message.id, error: problem }));
-        return;
-      }
-      try {
-        handle(controller, message, (event) => ws.send(JSON.stringify(event)));
-      } catch (error) {
-        ws.send(JSON.stringify({ t: 'rpc-reply', id: message.id, error: errorText(error) }));
-      }
-    });
-    ws.on('close', () => {
-      clients.delete(ws);
-      if (clients.size === 0 && !closed) {
-        broadcast({ t: 'bye' });
-        armExit();
-      }
-    });
-  });
+    },
+  }));
 
   let closePromise: Promise<void> | undefined;
   const close = (): Promise<void> => {
     if (closePromise) return closePromise;
     closed = true;
-    resumeWatch.stop();
-    resumeSubscription.unsubscribe();
+    stopBackground();
     if (exitTimer) clearTimeout(exitTimer);
     closePromise = (async () => {
       let shutdownError: unknown;
@@ -143,8 +119,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     });
   } catch (error) {
     closed = true;
-    resumeWatch.stop();
-    resumeSubscription.unsubscribe();
+    stopBackground();
     try { await controller.shutdown(); } finally {
       await new Promise<void>((resolve) => http.close(() => resolve()));
     }
