@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
@@ -117,6 +117,26 @@ describe('locateAcpCommand', () => {
 
     expect(located.command).toBe(path.join(install.root, 'node_modules', '.bin', 'claude-agent-acp'));
     expect(located.env).toBe(env);
+  });
+
+  it('keeps the environment of a bundled command whose PATH reaches the server\'s node through a symlink', () => {
+    const linkDir = mkdtempSync(path.join(os.tmpdir(), 'janissary-acp-node-link-'));
+    roots.push(linkDir);
+    symlinkSync(process.execPath, path.join(linkDir, 'node'));
+    const env = { PATH: `${linkDir}:/nonexistent-a` };
+
+    const located = locateAcpCommand('claude-agent-acp', env);
+
+    expect(located.command).toBe(path.join(install.root, 'node_modules', '.bin', 'claude-agent-acp'));
+    expect(located.env).toBe(env);
+  });
+
+  it('puts the server\'s node first for a bundled command whose PATH finds a different node first', () => {
+    const otherNodeDir = binDirWith('node');
+
+    const located = locateAcpCommand('claude-agent-acp', { PATH: `${otherNodeDir}:/nonexistent-a` });
+
+    expect(located.env).toEqual({ PATH: `${serverNodeDir}:${otherNodeDir}:/nonexistent-a` });
   });
 
   it('gives a bundled command with no PATH the server\'s node directory as its PATH', () => {
