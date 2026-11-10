@@ -21,17 +21,41 @@ describe('acpLaunchFor', () => {
   });
 });
 
+const CODEX_DENY_ALL = {
+  web_search: 'disabled',
+  features: {
+    shell_tool: false,
+    unified_exec: false,
+    view_image: false,
+    image_generation: false,
+    multi_agent: false,
+    apps: false,
+    goals: false,
+    tool_suggest: false,
+    multi_agent_v2: false,
+    code_mode: false,
+    request_permissions_tool: false,
+    standalone_web_search: false,
+  },
+  tools: { update_plan: { enabled: false }, experimental_request_user_input: { enabled: false } },
+};
+
 describe('acpLaunchForEntry', () => {
-  it('launches an opencode entry exactly as an opencode persona', () => {
-    expect(acpLaunchForEntry({ harness: 'opencode', model: 'opencode-go/deepseek-v4.1-flash', effort: 'medium' }))
-      .toEqual(acpLaunchFor({ harness: 'opencode', model: 'opencode-go/deepseek-v4.1-flash', variant: 'medium' }));
+  it('launches an opencode entry as an opencode persona with every permission denied', () => {
+    const launch = acpLaunchForEntry({ harness: 'opencode', model: 'opencode-go/deepseek-v4.1-flash', effort: 'medium' });
+
+    expect(launch?.command).toBe('opencode');
+    expect(launch?.args).toEqual(['acp']);
+    expect(JSON.parse(launch?.env.OPENCODE_CONFIG_CONTENT ?? ''))
+      .toEqual({ model: 'opencode-go/deepseek-v4.1-flash', permission: 'deny' });
   });
 
-  it('launches a claude entry through the bundled adapter with its model and effort', () => {
+  it('launches a claude entry through the bundled adapter with its model, effort, and no built-in tools', () => {
     expect(acpLaunchForEntry({ harness: 'claude', model: 'claude-haiku-4-5', effort: 'high' })).toEqual({
       command: 'claude-agent-acp',
       args: [],
       env: { ANTHROPIC_MODEL: 'claude-haiku-4-5', CLAUDE_THINKING_EFFORT: 'high' },
+      sessionMeta: { claudeCode: { options: { tools: [] } } },
     });
   });
 
@@ -40,13 +64,17 @@ describe('acpLaunchForEntry', () => {
 
     expect(launch?.command).toBe('codex-acp');
     expect(launch?.args).toEqual([]);
-    expect(JSON.parse(launch?.env.CODEX_CONFIG ?? '')).toEqual({ model: 'gpt-6-luna', model_reasoning_effort: 'high' });
+    expect(launch?.env.INITIAL_AGENT_MODE).toBe('read-only');
+    expect(JSON.parse(launch?.env.CODEX_CONFIG ?? ''))
+      .toEqual({ model: 'gpt-6-luna', model_reasoning_effort: 'high', ...CODEX_DENY_ALL });
   });
 
   it('leaves codex’s effort alone when the entry sets none', () => {
     const launch = acpLaunchForEntry({ harness: 'codex', model: 'gpt-6-luna' });
 
-    expect(JSON.parse(launch?.env.CODEX_CONFIG ?? '')).toEqual({ model: 'gpt-6-luna' });
+    expect(launch?.args).toEqual([]);
+    expect(launch?.env.INITIAL_AGENT_MODE).toBe('read-only');
+    expect(JSON.parse(launch?.env.CODEX_CONFIG ?? '')).toEqual({ model: 'gpt-6-luna', ...CODEX_DENY_ALL });
   });
 
   it('has no launch for a harness without an ACP adapter', () => {

@@ -756,7 +756,7 @@ describe('AcpManager — remote tabs', () => {
     acp.run('tab1', 'ask hello');
 
     const open = channel.send.mock.calls[0][0] as { env: Record<string, string> };
-    expect(JSON.parse(open.env.OPENCODE_CONFIG_CONTENT)).toEqual({ model: 'google/gemini-3.1-flash-lite' });
+    expect(JSON.parse(open.env.OPENCODE_CONFIG_CONTENT)).toEqual({ model: 'google/gemini-3.1-flash-lite', permission: 'deny' });
   });
 
   // What the agent reports as its "model" is really the session's current mode name, so the popup

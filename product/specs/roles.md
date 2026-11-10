@@ -202,5 +202,7 @@ grants stay in effect; an empty or missing `commands` list grants no tools. A no
 whose entries are all disabled does not fall back to the built-in models. No launch dialog, command
 flag, or agent consults a role description. Other consumers read `roles.json` itself. Entries carry
 harness, model, and effort; `commands` contains native ACP grants.
+Role connections deny all of their harness's internal tools, so a role grants only native commands:
+the agent can run the granted commands that are enabled for agents and nothing else.
 Keyboard reordering is not provided — adding and removing entries and roles are pointer-free, but
 order rides the drag.

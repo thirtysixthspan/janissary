@@ -38,6 +38,9 @@ those same commands plus database create/delete and browser eval. If you add or 
 next prompt reads the updated role. A missing ask or tell role uses its built-in model and command
 defaults; an existing role with no grants has no native tools.
 
+The agent has no built-in tools of its own, such as a shell, file editing, or web search, so it can
+only run the native commands its role grants.
+
 ## Separate ask and tell conversations
 
 The first prompt for each role starts its own connection in the shell's working directory. Later

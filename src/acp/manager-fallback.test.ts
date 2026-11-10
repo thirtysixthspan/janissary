@@ -23,6 +23,17 @@ import { AcpManager } from './manager.js';
 const OPENCODE: RoleEntry = { harness: 'opencode', model: 'opencode-go/deepseek-v4.1-flash', effort: 'medium' };
 const CLAUDE: RoleEntry = { harness: 'claude', model: 'claude-haiku-4-5', effort: 'high' };
 const CODEX: RoleEntry = { harness: 'codex', model: 'gpt-6-luna', effort: 'high' };
+const CODEX_FEATURES = [
+  'shell_tool', 'unified_exec', 'view_image', 'image_generation', 'multi_agent', 'apps', 'goals', 'tool_suggest',
+  'multi_agent_v2', 'code_mode', 'request_permissions_tool', 'standalone_web_search',
+];
+const CODEX_CONFIG = {
+  model: CODEX.model,
+  model_reasoning_effort: 'high',
+  web_search: 'disabled',
+  features: Object.fromEntries(CODEX_FEATURES.map((name) => [name, false])),
+  tools: { update_plan: { enabled: false }, experimental_request_user_input: { enabled: false } },
+};
 
 const sessions: AcpSession[] = [];
 
@@ -88,7 +99,7 @@ describe('AcpManager — ask role fallback', () => {
     expect(askModels).toHaveBeenCalledWith('/project', 'ask');
     expect(mocks.connectAcp).toHaveBeenCalledOnce();
     expect(launched(0)).toMatchObject({ command: 'opencode', args: ['acp'] });
-    expect(JSON.parse(launched(0).env!.OPENCODE_CONFIG_CONTENT)).toEqual({ model: OPENCODE.model });
+    expect(JSON.parse(launched(0).env!.OPENCODE_CONFIG_CONTENT)).toEqual({ model: OPENCODE.model, permission: 'deny' });
   });
 
   it('moves to the next model when a prompt fails before any reply, and settles with its answer', () => {
@@ -101,6 +112,7 @@ describe('AcpManager — ask role fallback', () => {
     expect(sessions[0].kill).toHaveBeenCalled();
     expect(launched(1)).toMatchObject({ command: 'claude-agent-acp', args: [] });
     expect(launched(1).env).toEqual({ ANTHROPIC_MODEL: 'claude-haiku-4-5', CLAUDE_THINKING_EFFORT: 'high' });
+    expect(launched(1).sessionMeta).toEqual({ claudeCode: { options: { tools: [] } } });
     expect(append).toHaveBeenCalledWith('tab1', {
       input: '', output: 'ACP: opencode opencode-go/deepseek-v4.1-flash failed — trying claude claude-haiku-4-5.',
     });
@@ -142,7 +154,7 @@ describe('AcpManager — ask role fallback', () => {
 
     expect(mocks.connectAcp).toHaveBeenCalledTimes(2);
     expect(launched(1)).toMatchObject({ command: 'codex-acp', args: [] });
-    expect(JSON.parse(launched(1).env!.CODEX_CONFIG)).toEqual({ model: CODEX.model, model_reasoning_effort: 'high' });
+    expect(JSON.parse(launched(1).env!.CODEX_CONFIG)).toEqual(CODEX_CONFIG);
   });
 
   it('fails the request only once every model in the role has failed, naming each attempt', () => {
@@ -237,7 +249,7 @@ describe('AcpManager — ask role fallback', () => {
 
     expect(acp.start('tab1').model).toBe('gpt-6-luna');
     expect(launched(0)).toMatchObject({ command: 'codex-acp', args: [] });
-    expect(JSON.parse(launched(0).env!.CODEX_CONFIG)).toEqual({ model: CODEX.model, model_reasoning_effort: 'high' });
+    expect(JSON.parse(launched(0).env!.CODEX_CONFIG)).toEqual(CODEX_CONFIG);
   });
 
   it('refuses when the ask role resolves to no models', () => {
