@@ -17,6 +17,7 @@ import { TabPluginHost } from './plugins/host.js';
 import { SystemShellManager } from './system-shell.js';
 import { SystemScheduleManager } from './schedule/system/manager.js';
 import { ScheduleManager } from './schedule/manager.js';
+import { ResumeWatch } from './resume-watch.js';
 
 const webDir = mkdtempSync(path.join(tmpdir(), 'janus-test-'));
 writeFileSync(path.join(webDir, 'index.html'), '<!DOCTYPE html><html><body></body></html>');
@@ -299,6 +300,51 @@ describe.skipIf(!canBindLoopback)('startServer (WS + RPC + security)', () => {
     } finally {
       gate.resolve();
       shutdown.mockRestore();
+      await new Promise<void>((resolve) => blocker.close(() => resolve()));
+    }
+  });
+
+  it('releases the background watchers and rethrows when the launch shell fails to open', async () => {
+    const reason = new Error('no zsh');
+    const run = vi.spyOn(TabPluginHost.prototype, 'runCommandResult').mockResolvedValue({ status: 'rejected', reason });
+    const dispose = vi.spyOn(AgentRunManager.prototype, 'dispose');
+    const stop = vi.spyOn(ResumeWatch.prototype, 'stop');
+    const realOn = messageBus.on.bind(messageBus);
+    const unsubscribes: ReturnType<typeof vi.fn>[] = [];
+    const on = vi.spyOn(messageBus, 'on').mockImplementation((...args) => {
+      const subscription = realOn(...args);
+      if (args[0] !== 'system' || args[1] !== 'resumed') return subscription;
+      const unsubscribe = vi.fn(subscription.unsubscribe);
+      unsubscribes.push(unsubscribe);
+      return { unsubscribe };
+    });
+    try {
+      await expect(startServer({ webDir })).rejects.toThrow('could not open the launch shell');
+      expect(dispose).toHaveBeenCalledOnce();
+      expect(stop).toHaveBeenCalledOnce();
+      expect(unsubscribes[0]).toHaveBeenCalledOnce();
+    } finally {
+      run.mockRestore();
+      dispose.mockRestore();
+      stop.mockRestore();
+      on.mockRestore();
+    }
+  });
+
+  it('releases the background watchers and the controller when the requested port cannot bind', async () => {
+    const blocker = http.createServer();
+    await new Promise<void>((resolve) => blocker.listen(0, '127.0.0.1', resolve));
+    const address = blocker.address();
+    if (!address || typeof address === 'string') throw new Error('expected a TCP listener');
+    const dispose = vi.spyOn(AgentRunManager.prototype, 'dispose');
+    const stop = vi.spyOn(ResumeWatch.prototype, 'stop');
+    try {
+      await expect(startServer({ webDir, port: address.port })).rejects.toThrow();
+      expect(dispose).toHaveBeenCalledOnce();
+      expect(stop).toHaveBeenCalledOnce();
+    } finally {
+      dispose.mockRestore();
+      stop.mockRestore();
       await new Promise<void>((resolve) => blocker.close(() => resolve()));
     }
   });
