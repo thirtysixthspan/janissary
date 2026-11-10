@@ -47,6 +47,7 @@ let negotiated = null;
 let promptId = null;
 let configuredEffort = false;
 let cancels = 0;
+let receivedMeta = { present: false, value: undefined };
 
 function write(message) {
   const line = JSON.stringify(message) + '\n';
@@ -109,6 +110,7 @@ function handle(message) {
   }
   if (message.method === 'session/new') {
     sessions += 1;
+    receivedMeta = { present: '_meta' in message.params, value: message.params._meta };
     write({
       jsonrpc: '2.0',
       id: message.id,
@@ -138,6 +140,11 @@ function handle(message) {
     return;
   }
   if (mode === 'cancel') chunk('cancels=' + cancels + ' ');
+  if (mode === 'meta') {
+    chunk('meta=' + (receivedMeta.present ? JSON.stringify(receivedMeta.value) : 'absent'));
+    write({ jsonrpc: '2.0', id: message.id, result: { stopReason: 'end_turn' } });
+    return;
+  }
   if (mode === 'permission') {
     promptId = message.id;
     write({
@@ -201,6 +208,7 @@ function connect(
   effort?: { level: string; model: string },
   onActivity?: (update: unknown) => void,
   installedSkillDirs?: string[],
+  sessionMeta?: Record<string, unknown>,
 ): Connected {
   const errors: string[] = [];
   const connected = Promise.withResolvers<AcpInfo>();
@@ -215,6 +223,7 @@ function connect(
     effort,
     installedSkillDirs,
     onActivity,
+    sessionMeta,
   });
   sessions.push(session);
   return { session, info: connected.promise, errors };
@@ -480,6 +489,23 @@ describe('connectAcp', () => {
       toolCall: { toolCallId: 'tool-1', title: 'WebFetch', kind: 'fetch' },
       outcome: { outcome: 'selected', optionId: 'once' },
     }]);
+  });
+
+  it('sends a launch-supplied session meta as the session/new _meta unchanged', async () => {
+    const sessionMeta = { claudeCode: { options: { tools: [] } } };
+    const { session } = connect('meta', undefined, undefined, undefined, undefined, undefined, sessionMeta);
+
+    const reply = await prompt(session, 'report meta');
+
+    expect(reply.text).toBe('meta={"claudeCode":{"options":{"tools":[]}}}');
+  });
+
+  it('omits the session/new _meta key when no session meta is set', async () => {
+    const { session } = connect('meta');
+
+    const reply = await prompt(session, 'report meta');
+
+    expect(reply.text).toBe('meta=absent');
   });
 
   it('sets the advertised effort configuration before the first prompt', async () => {

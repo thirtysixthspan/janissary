@@ -126,7 +126,11 @@ export function connectAcp(options: AcpOptions): AcpSession {
     ready ??= (async () => {
       const init = await conn.initialize({ protocolVersion: PROTOCOL_VERSION, clientCapabilities: {} });
       if (killed) throw new Error('ACP session closed.');
-      const response = await conn.newSession({ cwd: options.cwd, mcpServers: [] });
+      const response = await conn.newSession({
+        cwd: options.cwd,
+        mcpServers: [],
+        ...(options.sessionMeta !== undefined && { _meta: options.sessionMeta }),
+      });
       if (killed) throw new Error('ACP session closed.');
       sessionId = response.sessionId;
       if (options.effort) {
