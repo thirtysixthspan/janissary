@@ -2,8 +2,6 @@
 
 ## ready
 
-* Configure all role based acp connections to deny all internal tool usage by default. The agent should only be allowed to execute janissary commands that have been enabled for agents in commands.json. 
-
 ## development
 
 * add an ACP skill to allow an agent to spin up other agents with different models, pass them ai tasks (form the repository) to execute and access to monitor the transcript as the agent works, and to recieve the response.
