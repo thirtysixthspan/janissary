@@ -70,6 +70,27 @@ describe('locateAcpCommand', () => {
     expect(locateAcpCommand('opencode', env)).toEqual({ command: 'opencode', env });
   });
 
+  it('does not resolve a missing bundled adapter from the server PATH', () => {
+    const binDir = binDirWith('codex-acp');
+    const env = { PATH: binDir, OTHER: 'kept' };
+
+    const located = locateAcpCommand('codex-acp', env);
+
+    expect(located.command).toBe('codex-acp');
+    expect(located.env).toBe(env);
+  });
+
+  it('does not resolve a missing bundled adapter from the interactive shell PATH', () => {
+    const binDir = binDirWith('codex-acp');
+    process.env.SHELL = userShellAdding(binDir, '', '/nonexistent');
+    const env = { PATH: '/nonexistent-a', OTHER: 'kept' };
+
+    const located = locateAcpCommand('codex-acp', env);
+
+    expect(located.command).toBe('codex-acp');
+    expect(located.env).toBe(env);
+  });
+
   it('resolves a command only the user\'s interactive shell finds, despite a banner', () => {
     const binDir = binDirWith('opencode');
     process.env.SHELL = userShellAdding(binDir, 'Welcome back', '/nonexistent-a');

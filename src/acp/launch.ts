@@ -1,5 +1,6 @@
 import type { PersonaHarness } from '../persona-parsing.js';
 import type { RoleEntry } from '../plugins/roles/shared.js';
+import { BUNDLED_ACP_ADAPTERS } from './bundled-adapters.js';
 import { internalToolDenial } from './internal-tools.js';
 
 export const MARKDOWN_INSTRUCTION = 'Write your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.';
@@ -53,7 +54,7 @@ function baseLaunchForEntry(entry: RoleEntry): AcpLaunch | undefined {
   }
   if (entry.harness === 'claude') {
     return {
-      command: 'claude-agent-acp',
+      command: BUNDLED_ACP_ADAPTERS.claude,
       args: [],
       env: { ANTHROPIC_MODEL: entry.model, CLAUDE_THINKING_EFFORT: variant },
     };
@@ -61,7 +62,7 @@ function baseLaunchForEntry(entry: RoleEntry): AcpLaunch | undefined {
   if (entry.harness !== 'codex') return undefined;
   const effort = entry.effort === undefined ? {} : { model_reasoning_effort: entry.effort };
   return {
-    command: 'codex-acp',
+    command: BUNDLED_ACP_ADAPTERS.codex,
     args: [],
     env: { CODEX_CONFIG: JSON.stringify({ model: entry.model, ...effort }) },
   };

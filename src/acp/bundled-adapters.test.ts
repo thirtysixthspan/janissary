@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { janissaryRoot } from '../janissary-root.js';
+import { BUNDLED_ACP_ADAPTERS } from './bundled-adapters.js';
 import { acpLaunchForEntry } from './launch.js';
 
 type PackageJson = {
@@ -23,6 +24,15 @@ function installedAdapter(name: string): PackageJson {
 function pinnedVersion(name: string): string | undefined {
   return readPackageJson(janissaryRoot()).dependencies?.[name];
 }
+
+it('keeps the bundled adapter roster in sync with role launches', () => {
+  const launchCommands = [
+    acpLaunchForEntry({ harness: 'claude', model: 'any-model' })?.command,
+    acpLaunchForEntry({ harness: 'codex', model: 'any-model' })?.command,
+  ];
+
+  expect(new Set(launchCommands)).toEqual(new Set(Object.values(BUNDLED_ACP_ADAPTERS)));
+});
 
 describe.each([
   { harness: 'claude', adapter: '@agentclientprotocol/claude-agent-acp' },
