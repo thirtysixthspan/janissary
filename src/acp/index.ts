@@ -29,7 +29,8 @@ import { acpCredentials } from './credentials.js';
  * Scope: streams `agent_message_chunk` text into the prompt handler and advertises no fs/terminal
  * capabilities (so the agent never calls those back). Tool permission requests are denied unless
  * `options.allowedTools` opts a classified web tool in (see acp-tools.ts) — undefined/empty (every
- * non-monitor caller and every tool-less persona) denies every request, as before.
+ * non-monitor caller and every tool-less persona) denies every request, as before. A denied request
+ * is recorded through `options.onActivity` as a `permission_decision` update.
  *
  * Every subprocess requests Seatbelt confinement to its workspace or working directory. Ordinary
  * sessions own private scratch and OAuth credentials; workspace sessions use workspace-owned data.
@@ -93,7 +94,8 @@ export function connectAcp(options: AcpOptions): AcpSession {
         control.current?.handlers.onChunk(update.content.text);
       }
     },
-    // Deny every tool request unless the persona's allowlist opts a classified web tool in.
+    // Deny every tool request unless the persona's allowlist opts a classified web tool in, and record
+    // each denial through `onActivity`.
     async requestPermission(params): Promise<RequestPermissionResponse> {
       if (killed || !control.current || control.current.cancelled) return { outcome: { outcome: 'cancelled' } };
       if (options.autonomous === true) {
@@ -105,7 +107,11 @@ export function connectAcp(options: AcpOptions): AcpSession {
         options.onActivity?.({ sessionUpdate: 'permission_decision', toolCall: params.toolCall, outcome });
         return { outcome };
       }
-      return { outcome: decidePermission(options.allowedTools, params.toolCall, params.options) };
+      const outcome = decidePermission(options.allowedTools, params.toolCall, params.options);
+      if (outcome.outcome === 'cancelled') {
+        options.onActivity?.({ sessionUpdate: 'permission_decision', toolCall: params.toolCall, outcome });
+      }
+      return { outcome };
     },
   };
 

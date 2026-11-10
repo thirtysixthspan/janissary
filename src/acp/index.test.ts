@@ -231,6 +231,10 @@ function prompt(session: AcpSession, text: string): Promise<{ text: string; stop
   });
 }
 
+function permissionDecisions(activity: unknown[]): unknown[] {
+  return activity.filter((update) => (update as { sessionUpdate?: string }).sessionUpdate === 'permission_decision');
+}
+
 afterEach(() => {
   sandboxCalls.bypassWorkspace = false;
   for (const session of sessions) session.kill();
@@ -427,27 +431,55 @@ describe('connectAcp', () => {
   });
 
   it('denies a tool permission request when no tools are allowed', async () => {
-    const { session } = connect('permission');
+    const activity: unknown[] = [];
+    const { session } = connect('permission', undefined, undefined, undefined, (update) => { activity.push(update); });
 
     const reply = await prompt(session, 'fetch something');
 
     expect(reply.text).toBe('outcome={"outcome":"cancelled"}');
+    expect(permissionDecisions(activity)).toEqual([{
+      sessionUpdate: 'permission_decision',
+      toolCall: { toolCallId: 'tool-1', title: 'WebFetch', kind: 'fetch' },
+      outcome: { outcome: 'cancelled' },
+    }]);
+  });
+
+  it('records a denial when the allowlist excludes the requested tool', async () => {
+    const activity: unknown[] = [];
+    const { session } = connect('permission', ['web_search'], undefined, undefined, (update) => { activity.push(update); });
+
+    const reply = await prompt(session, 'fetch something');
+
+    expect(reply.text).toBe('outcome={"outcome":"cancelled"}');
+    expect(permissionDecisions(activity)).toEqual([{
+      sessionUpdate: 'permission_decision',
+      toolCall: { toolCallId: 'tool-1', title: 'WebFetch', kind: 'fetch' },
+      outcome: { outcome: 'cancelled' },
+    }]);
   });
 
   it('selects the allowed option for a permitted web tool', async () => {
-    const { session } = connect('permission', ['web_fetch']);
+    const activity: unknown[] = [];
+    const { session } = connect('permission', ['web_fetch'], undefined, undefined, (update) => { activity.push(update); });
 
     const reply = await prompt(session, 'fetch something');
 
     expect(reply.text).toBe('outcome={"outcome":"selected","optionId":"once"}');
+    expect(permissionDecisions(activity)).toEqual([]);
   });
 
   it('approves provider permissions only for an explicitly autonomous connection', async () => {
-    const { session } = connect('permission', undefined, true);
+    const activity: unknown[] = [];
+    const { session } = connect('permission', undefined, true, undefined, (update) => { activity.push(update); });
 
     const reply = await prompt(session, 'run task tools');
 
     expect(reply.text).toBe('outcome={"outcome":"selected","optionId":"once"}');
+    expect(permissionDecisions(activity)).toEqual([{
+      sessionUpdate: 'permission_decision',
+      toolCall: { toolCallId: 'tool-1', title: 'WebFetch', kind: 'fetch' },
+      outcome: { outcome: 'selected', optionId: 'once' },
+    }]);
   });
 
   it('sets the advertised effort configuration before the first prompt', async () => {
