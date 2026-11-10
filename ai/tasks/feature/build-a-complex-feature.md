@@ -41,10 +41,11 @@ For a source plan rated 1–3, skip decomposition. Record the original plan as t
 Delegate this step to a fresh subagent. Provide the entire source plan, relevant repository constraints, and the requirement that each subplan rate 1–5.
 
 1. Break the plan into the smallest coherent, ordered subplans that deliver the original goal without dropping scope. Write a complete draft plan for every subplan, each stating its goal, decisions and dependencies, existing code to reuse, proposed changes, tests, verification, and out-of-scope boundaries.
-2. Ensure the subplans collectively cover every requirement and edge case in the source plan. Include explicit integration work where pieces meet. A subplan may depend on earlier subplans, but never on future work.
-3. Return the ordered subplan paths, dependencies, ratings, and a requirement-to-subplan coverage map to the orchestrator. Do not write source code or implementation changes in this step.
+2. Rate every draft subplan by opening `ai/tasks/planning/rate-plan-complexity-quantitative.md` and executing every step in order, except `Step 0 — Prepare the workspace` and `Step 1 — Pick the plan`, once per subplan with that subplan as the target. The `**Complexity: N/10** — <rationale>` line it records under the subplan's `#` title is the subplan's rating; do not assign one by judgment. A subplan it rates 6 or higher is split again, and each resulting subplan is rated the same way, until every subplan is rated 1–5.
+3. Ensure the subplans collectively cover every requirement and edge case in the source plan. Include explicit integration work where pieces meet. A subplan may depend on earlier subplans, but never on future work.
+4. Return the ordered subplan paths, dependencies, ratings, and a requirement-to-subplan coverage map to the orchestrator. Do not write source code or implementation changes in this step.
 
-The orchestrator checks that the source plan's full scope is represented exactly once or explicitly shared across named subplans, dependencies form a workable order, and every rating is below 6. If not, send the decomposition back for correction before proceeding.
+The orchestrator checks that the source plan's full scope is represented exactly once or explicitly shared across named subplans, dependencies form a workable order, and every rating is below 6 and was recorded by the quantitative rating task. If not, send the decomposition back for correction before proceeding.
 
 ## Step 2 — Publish all subplans and open the PR
 

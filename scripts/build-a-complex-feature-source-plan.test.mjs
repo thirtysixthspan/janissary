@@ -23,11 +23,11 @@ describe('the build-a-complex-feature source plan', () => {
 
   it('keeps low-complexity plans intact while retaining every delivery stage', () => {
     const routing = section('## Orchestration rules', '## Step 0');
-    expect(routing).toContain('Plans rated 1–3 are not decomposed');
+    expect(routing).toContain('Plans rated 1–5 are not decomposed');
     expect(routing).toContain('Run publication, improvement, implementation, focused review and repairs, full review, and PR updates');
     expect(routing).toContain('Never create a duplicate plan or fold the canonical plan into itself');
     expect(section('## Step 1', '## Step 2')).toContain('no subplan files. Continue to Step 2 and all subsequent stages');
-    expect(routing).toContain('For plans rated 4–10, decompose');
+    expect(routing).toContain('For plans rated 6–10, decompose');
     expect(routing).toContain('each with an honest `**Complexity: N/10**` rating where `N` is 1–5');
   });
 
