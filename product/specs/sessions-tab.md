@@ -83,7 +83,8 @@ absent on an ssh row, and on a detached or terminated row. See [[diff-tab]].
 parked session it opens one ssh connection and brings the whole peer back, opening a tab for each
 process still running on it; pressing it on any row of that session brings back all of them, because
 one connection serves them all. On a reconnecting session it means "try now" and collapses the
-backoff wait.
+backoff wait. A session parked before the remote installation was upgraded cannot be attached: the
+attach reports a failure, an automatic reconnect keeps retrying, and the session stays parked.
 
 Attachment works when the remote workspace path does not exist on the local machine. The restored tabs return to the saved workspace on the remote host, and its saved cwd is never checked against a directory on the local machine. Remote shell rows reopen the same running PTY with its saved cwd, offline mode, and zsh marker nonce; no navigator opens beside it. The same shell tabs return on every launch.
 
@@ -110,7 +111,8 @@ reason is recorded in the notifications feed rather than left as a control that 
 session stays exactly as it was: nothing is given up locally and nothing is parked on the host.
 
 **Terminate** applies to a parked session and destroys it: janissary reconnects far enough to tell
-the peer to stop its processes and remove its remote workspace. It asks for confirmation. A live
+the peer to stop its processes and remove its remote workspace. This works for a session parked
+before the remote installation was upgraded too. It asks for confirmation. A live
 session's launching row also carries Terminate; confirming it stops the peer, removes its remote
 workspace, and closes every tab and navigator sharing that session. Joined rows keep Close instead.
 
