@@ -36,7 +36,12 @@ describe('the decompose-plan task', () => {
   it('decomposes every plan whatever its rating', () => {
     expect(task).toContain('Every plan you are given is decomposed, whatever its own rating, and whether or not it has one.');
     expect(task).not.toContain('needs no decomposition');
-    expect(section('## Step 3', '## Step 4')).toContain('Break the plan into two or more');
+  });
+
+  it('lets a plan with no smaller coherent pieces become a single subplan', () => {
+    const write = section('## Step 3', '## Step 4');
+    expect(write).toContain('Write such a plan as a single subplan that carries its full scope rather than forcing an artificial split.');
+    expect(task).not.toContain('two or more');
   });
 
   it('never rates the source plan', () => {
