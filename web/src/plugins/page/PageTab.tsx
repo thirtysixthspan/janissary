@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faArrowRight, faRotateRight } from '@fortawesome/free-solid-svg-icons';
 import type { PagePayload } from '@shared/plugins/page/shared';
-import type { TabPluginClientCapabilities } from '../api';
+import { fireIntent, type TabPluginClientCapabilities } from '../api';
 import { usePageContentSync } from './usePageContentSync';
 import { usePageFrame } from './usePageFrame';
 import { PageAddressInput } from './PageAddressInput';
@@ -29,7 +29,7 @@ export function PageTab({
   // A tab-scoped intent is fire-and-forget here: the server answers by replacing this tab's payload,
   // so there is no result to await and a refused request must not surface as an unhandled rejection.
   const send = useCallback((intent: string, payload: unknown) => {
-    void capabilities.intent(intent, payload).catch(() => {});
+    fireIntent(capabilities, intent, payload);
   }, [capabilities]);
   const { followFrame } = frame;
   const sync = useCallback((url: string, text: string) => {

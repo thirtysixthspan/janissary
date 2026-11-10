@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import type { AudioPayload, AudioTrack } from '@shared/plugins/audio/shared';
-import type { TabPluginClientCapabilities } from '../api';
+import { fireIntent, type TabPluginClientCapabilities } from '../api';
 import { Playlist } from './Playlist';
 import { audioTransport, useAudioKeys } from './useAudioKeys';
 
@@ -19,9 +19,8 @@ export function AudioTab({
   const track = audio.current === null ? undefined : audio.tracks[audio.current];
 
   const send = (name: string, payload: unknown) => {
-    void capabilities.intent(name, payload).catch(() => {
-      // A rejected intent is the server refusing one request; the queue it already holds stands.
-    });
+    // A rejected intent is the server refusing one request; the queue it already holds stands.
+    fireIntent(capabilities, name, payload);
   };
   const select = (entry: AudioTrack) => { send('select-track', { path: entry.path }); };
   const remove = (entry: AudioTrack) => { send('remove-track', { path: entry.path }); };

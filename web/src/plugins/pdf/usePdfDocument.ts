@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PdfLoadFailure } from '@shared/plugins/pdf/shared';
-import type { TabPluginClientCapabilities } from '../api';
+import { fireIntent, type TabPluginClientCapabilities } from '../api';
 import { loadPdf, type LoadedPdf } from './pdf-document';
 
 export type PdfDocumentState =
@@ -28,7 +28,7 @@ export function usePdfDocument(
     setState({ status: 'failed' });
     if (reported.current) return;
     reported.current = true;
-    void intent.current('load-failed', { reason }).catch(() => {});
+    fireIntent({ intent: intent.current }, 'load-failed', { reason });
   }, []);
   const onRenderFailure = useCallback(() => { fail('other'); }, [fail]);
 
