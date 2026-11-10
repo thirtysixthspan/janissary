@@ -15,8 +15,9 @@ import { BUNDLED_ACP_ADAPTERS } from './bundled-adapters.js';
 // Ahead of both PATH lookups comes the install's own `node_modules/.bin`. The ACP adapters Janissary
 // bundles as dependencies (the Claude Agent and Codex adapters a role entry runs) are found there by
 // their `bin` name, so a role launch runs the installed copy whatever PATH holds. A bundled adapter
-// name missing there stays bare instead of falling through to PATH, where an unrelated same-named
-// command could bypass the role's built-in-tool denial. Other names still use the PATH lookups below.
+// missing there targets its expected absolute install-local path, so spawn fails instead of finding
+// an unrelated same-named command on PATH that could bypass the role's built-in-tool denial. Other
+// names still use the PATH lookups below.
 // Both adapters start with `#!/usr/bin/env node`, and a `.bin` hit skips the shell fallback that
 // would have supplied its PATH, so a server whose own PATH holds no `node` could not start them. A
 // bundled adapter is therefore given the node running the server, put ahead of a PATH that neither
@@ -85,15 +86,16 @@ function withServerNode(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
 // `node_modules/.bin` holds becomes that absolute path, with the server's node directory added to the
 // front of PATH when PATH neither lists the server's node directory nor resolves `node` to the
 // server's own node, and the environment otherwise unchanged. A name the given PATH already
-// resolves is left alone. A bundled adapter missing from `.bin` is left bare with its environment
-// unchanged, without checking either PATH. A name only the user's interactive shell resolves becomes
-// that absolute path, and the agent gets the shell's PATH too, so whatever it runs in turn (an nvm
-// `node` behind its shebang, most often) is found the same way.
+// resolves is left alone. A bundled adapter missing from `.bin` targets its expected absolute path
+// with the environment unchanged, so spawn cannot resolve a PATH substitute. A name only the user's
+// interactive shell resolves becomes that absolute path, and the agent gets the shell's PATH too, so
+// whatever it runs in turn (an nvm `node` behind its shebang, most often) is found the same way.
 export function locateAcpCommand(command: string, env: NodeJS.ProcessEnv): { command: string; env: NodeJS.ProcessEnv } {
   if (command.includes('/')) return { command, env };
-  const bundled = findOnPath(command, path.join(janissaryRoot(), 'node_modules', '.bin'));
+  const binDir = path.join(janissaryRoot(), 'node_modules', '.bin');
+  const bundled = findOnPath(command, binDir);
   if (bundled) return { command: bundled, env: withServerNode(env) };
-  if (BUNDLED_ADAPTER_COMMANDS.has(command)) return { command, env };
+  if (BUNDLED_ADAPTER_COMMANDS.has(command)) return { command: path.join(binDir, command), env };
   if (findOnPath(command, env.PATH ?? '')) return { command, env };
   const shellPath = interactiveShellPath(process.env.SHELL || 'bash');
   const located = shellPath ? findOnPath(command, shellPath) : undefined;

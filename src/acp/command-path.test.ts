@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
@@ -24,13 +24,19 @@ function userShellAdding(binDir: string, banner = '', basePath = '$PATH'): strin
   return shell;
 }
 
-function binDirWith(name: string): string {
+function binDirWith(name: string, body = '#!/bin/sh\n'): string {
   const directory = mkdtempSync(path.join(os.tmpdir(), 'janissary-acp-bin-'));
   roots.push(directory);
   const binDir = path.join(directory, 'bin');
   mkdirSync(binDir);
-  writeFileSync(path.join(binDir, name), '#!/bin/sh\n', { mode: 0o755 });
+  writeFileSync(path.join(binDir, name), body, { mode: 0o755 });
   return binDir;
+}
+
+function markerPath(): string {
+  const directory = mkdtempSync(path.join(os.tmpdir(), 'janissary-acp-decoy-'));
+  roots.push(directory);
+  return path.join(directory, 'executed');
 }
 
 // A stand-in install root whose `node_modules/.bin` holds the given executables, each a script with
@@ -70,25 +76,36 @@ describe('locateAcpCommand', () => {
     expect(locateAcpCommand('opencode', env)).toEqual({ command: 'opencode', env });
   });
 
-  it('does not resolve a missing bundled adapter from the server PATH', () => {
-    const binDir = binDirWith('codex-acp');
+  it('does not spawn a missing bundled adapter from the server PATH', () => {
+    const marker = markerPath();
+    const binDir = binDirWith('codex-acp', `#!/bin/sh\nprintf server > '${marker}'\n`);
     const env = { PATH: binDir, OTHER: 'kept' };
 
     const located = locateAcpCommand('codex-acp', env);
+    const result = spawnSync(located.command, [], { env: located.env });
 
-    expect(located.command).toBe('codex-acp');
+    expect(located.command).toBe(path.join(install.root, 'node_modules', '.bin', 'codex-acp'));
     expect(located.env).toBe(env);
+    expect(result.error?.code).toBe('ENOENT');
+    expect(existsSync(marker)).toBe(false);
   });
 
-  it('does not resolve a missing bundled adapter from the interactive shell PATH', () => {
-    const binDir = binDirWith('codex-acp');
-    process.env.SHELL = userShellAdding(binDir, '', '/nonexistent');
-    const env = { PATH: '/nonexistent-a', OTHER: 'kept' };
+  it('does not spawn a missing bundled adapter from the interactive-shell PATH', () => {
+    const marker = markerPath();
+    const binDir = binDirWith('codex-acp', `#!/bin/sh\nprintf shell > '${marker}'\n`);
+    const shell = userShellAdding(binDir, '', '/nonexistent');
+    process.env.SHELL = shell;
+    const shellPath = execFileSync(shell, ['-c', 'printf "%s" "$PATH"'], { encoding: 'utf8' }).trim();
+    const env = { PATH: shellPath, OTHER: 'kept' };
 
     const located = locateAcpCommand('codex-acp', env);
+    const result = spawnSync(located.command, [], { env: located.env });
 
-    expect(located.command).toBe('codex-acp');
+    expect(shellPath.split(':')).toContain(binDir);
+    expect(located.command).toBe(path.join(install.root, 'node_modules', '.bin', 'codex-acp'));
     expect(located.env).toBe(env);
+    expect(result.error?.code).toBe('ENOENT');
+    expect(existsSync(marker)).toBe(false);
   });
 
   it('resolves a command only the user\'s interactive shell finds, despite a banner', () => {
