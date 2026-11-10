@@ -17,8 +17,13 @@ describe('the build-a-complex-feature source plan', () => {
   it('accepts the full source complexity range and selects a route', () => {
     const validate = section('## Step 0', '## Step 1');
     expect(validate).toContain('an honest complexity rating from 1–10');
-    expect(validate).toContain('single-plan route (1–3) or decomposition (4–10)');
+    expect(validate).toContain('single-plan route (1–5) or decomposition (6–10)');
     expect(validate).not.toContain('6/10 or higher');
+  });
+
+  it('routes by one threshold everywhere it names one', () => {
+    expect(playbook).not.toContain('1–3');
+    expect(playbook).not.toContain('4–10');
   });
 
   it('keeps low-complexity plans intact while retaining every delivery stage', () => {
@@ -36,7 +41,7 @@ describe('the build-a-complex-feature source plan', () => {
     const improve = section('## Step 3', '## Step 4');
     expect(improve).toContain("Explicitly override improve-plan's draft-only location restriction");
     expect(improve).toContain('Keep the plan in `complete/`; do not promote or duplicate it');
-    expect(improve).toContain('honest rating remain 1–3');
+    expect(improve).toContain('honest rating remain 1–5');
     const implement = section('## Step 4', '## Step 5');
     expect(implement).toContain("override the build task's ready-plan selection and promotion steps");
     expect(implement).toContain('Apply overrides 2 and 3 above unchanged');
