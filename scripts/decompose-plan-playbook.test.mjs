@@ -33,8 +33,15 @@ describe('the decompose-plan task', () => {
     expect(task).toContain(`When another task opens this one, execute every step in order ${SKIP}`);
   });
 
-  it('stops on a source plan that is already rated 1–5', () => {
-    expect(section('## Step 2', '## Step 3')).toContain('If the source plan is rated 1–5, it needs no decomposition. Report that, with its rating, and stop.');
+  it('decomposes every plan whatever its rating', () => {
+    expect(task).toContain('Every plan you are given is decomposed, whatever its own rating, and whether or not it has one.');
+    expect(task).not.toContain('needs no decomposition');
+    expect(section('## Step 3', '## Step 4')).toContain('Break the plan into two or more');
+  });
+
+  it('never rates the source plan', () => {
+    expect(task).toContain('never add one if it has none. Do not run a rating task on it.');
+    expect(section('## Step 2', '## Step 3')).not.toContain(RATING_TASK);
   });
 
   it('writes every subplan as a draft', () => {

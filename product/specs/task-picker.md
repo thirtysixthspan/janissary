@@ -51,7 +51,7 @@ This task is the single definition of the scale. Both plan improvement tasks end
 
 ### Decomposing a plan
 
-`planning/decompose-plan.md` splits one plan that is too large to build in one pass into ordered subplans. The plan is the one named in the invocation, among the drafts or the ready plans, or otherwise the only ready plan; several ready plans or none stop the task, and so does a named plan that is already complete or deferred. A plan with no rating is rated by formula first. A plan rated 1 to 5 needs no split, so the task reports its rating and stops.
+`planning/decompose-plan.md` splits one plan into two or more ordered subplans. The plan is the one named in the invocation, among the drafts or the ready plans, or otherwise the only ready plan; several ready plans or none stop the task, and so does a named plan that is already complete or deferred. Every plan it is given is split, whatever its rating. The original plan is never rated: one without a rating stays without one, and an existing rating is left as it is.
 
 Every subplan is written to the drafts, numbered in build order, and states its goal, decisions and dependencies, reused code, changes, tests, verification, and boundaries. A subplan depends only on earlier ones. Each is rated by formula, never by judgment, and one rated 6 or higher is split again until all are rated 1 to 5. The task then checks that every requirement of the original plan lands in a subplan and moves the original plan to the completed plans, unchanged, as the record of the whole feature. It reports the subplans in order with their ratings and dependencies, plus a map from each requirement to its subplan. It writes no code and does not promote the subplans.
 
