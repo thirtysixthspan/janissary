@@ -202,7 +202,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
           query={find.query} onChangeQuery={find.setQuery}
           results={find.results} selected={find.selected}
           onChangeSelected={interactions.selectFindResult}
-          onClose={() => { find.close(); textareaRef.current?.focus(); }}
+          onClose={() => { find.close(); refocusBuffer(); }}
         />
       )}
     </div>
