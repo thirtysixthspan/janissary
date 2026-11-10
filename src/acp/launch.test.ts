@@ -32,7 +32,7 @@ describe('acpLaunchForEntry', () => {
       .toEqual({ model: 'opencode-go/deepseek-v4.1-flash', permission: 'deny' });
   });
 
-  it('launches a claude entry through the bundled adapter with its model, effort, and no built-in tools', () => {
+  it('launches a claude entry through the bundled adapter with model and effort env values and no built-in tools', () => {
     expect(acpLaunchForEntry({ harness: 'claude', model: 'claude-haiku-4-5', effort: 'high' })).toEqual({
       command: 'claude-agent-acp',
       args: [],
