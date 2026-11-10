@@ -45,6 +45,10 @@ The task prepares the workspace once, before it drafts anything. Both improvemen
 
 This task is the single definition of the scale. Both plan improvement tasks end by running it on the plan they just improved, without preparing the workspace or picking a plan again. The minimalism pass keeps its expectation that trimming only lowers a rating.
 
+### Rating a plan's complexity by formula
+
+`planning/rate-plan-complexity-quantitative.md` rates one plan from 1 to 9 by counting instead of judging. It answers five counting questions about the plan and the code it touches (lines added, existing production files edited, behavioral requirements, test scenarios, new units), feeds them through a fixed formula that predicts the size of the whole pull request, and maps the result to a score with fixed thresholds chosen to match the spread of the existing ratings. It records the same single complexity line under the plan's title, picks and prepares exactly as the judgment task does, and changes nothing else. Nothing calls it: the plan improvement tasks keep delegating to the judgment task, so the judgment task stays the single definition of the 1 to 10 scale.
+
 ### Removing a feature
 
 `feature/remove-an-existing-feature.md` takes a feature the user names at invocation, in free text such as a spec name, a command name, or a description, and removes it with all of its code, tests, specs, and documentation. The target can also be part of a feature, such as one subcommand or option. When no name is given, or the name matches nothing or more than one thing, its first question offers the closest candidates; it never guesses.
