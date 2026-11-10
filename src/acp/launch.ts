@@ -27,19 +27,28 @@ export function acpLaunchFor(harness: PersonaHarness): AcpLaunch {
   };
 }
 
-// A role entry's launch. OpenCode and Claude launch exactly as a persona of that harness does; codex
-// runs its ACP adapter with codex's own `-c key=value` config overrides for the model and effort. A
-// harness with no ACP adapter answers undefined, which the caller reports as that entry failing.
+// A role entry's launch. OpenCode launches exactly as an opencode persona does. Claude and codex run
+// the ACP adapters bundled with Janissary by their `bin` name, which `locateAcpCommand` finds in the
+// install's `node_modules/.bin`. Codex takes its model and effort through `CODEX_CONFIG`, because its
+// adapter ignores argv. A harness with no ACP adapter answers undefined, which the caller reports as
+// that entry failing.
 export function acpLaunchForEntry(entry: RoleEntry): AcpLaunch | undefined {
   const variant = entry.effort ?? 'default';
-  if (entry.harness === 'opencode' || entry.harness === 'claude') {
+  if (entry.harness === 'opencode') {
     return acpLaunchFor({ harness: entry.harness, model: entry.model, variant });
   }
+  if (entry.harness === 'claude') {
+    return {
+      command: 'claude-agent-acp',
+      args: [],
+      env: { ANTHROPIC_MODEL: entry.model, CLAUDE_THINKING_EFFORT: variant },
+    };
+  }
   if (entry.harness !== 'codex') return undefined;
-  const effort = entry.effort === undefined ? [] : ['-c', `model_reasoning_effort=${JSON.stringify(entry.effort)}`];
+  const effort = entry.effort === undefined ? {} : { model_reasoning_effort: entry.effort };
   return {
-    command: 'npx',
-    args: ['@zed-industries/codex-acp', '-c', `model=${JSON.stringify(entry.model)}`, ...effort],
-    env: {},
+    command: 'codex-acp',
+    args: [],
+    env: { CODEX_CONFIG: JSON.stringify({ model: entry.model, ...effort }) },
   };
 }

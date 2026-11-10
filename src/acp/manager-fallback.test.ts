@@ -99,7 +99,7 @@ describe('AcpManager — ask role fallback', () => {
     loop(0).error('out of credits');
 
     expect(sessions[0].kill).toHaveBeenCalled();
-    expect(launched(1)).toMatchObject({ command: 'npx', args: ['@zed-industries/claude-code-acp'] });
+    expect(launched(1)).toMatchObject({ command: 'claude-agent-acp', args: [] });
     expect(launched(1).env).toEqual({ ANTHROPIC_MODEL: 'claude-haiku-4-5', CLAUDE_THINKING_EFFORT: 'high' });
     expect(append).toHaveBeenCalledWith('tab1', {
       input: '', output: 'ACP: opencode opencode-go/deepseek-v4.1-flash failed — trying claude claude-haiku-4-5.',
@@ -141,9 +141,8 @@ describe('AcpManager — ask role fallback', () => {
     loop(0).error('out of credits');
 
     expect(mocks.connectAcp).toHaveBeenCalledTimes(2);
-    expect(launched(1).args).toEqual([
-      '@zed-industries/codex-acp', '-c', `model="${CODEX.model}"`, '-c', 'model_reasoning_effort="high"',
-    ]);
+    expect(launched(1)).toMatchObject({ command: 'codex-acp', args: [] });
+    expect(JSON.parse(launched(1).env!.CODEX_CONFIG)).toEqual({ model: CODEX.model, model_reasoning_effort: 'high' });
   });
 
   it('fails the request only once every model in the role has failed, naming each attempt', () => {
@@ -237,7 +236,8 @@ describe('AcpManager — ask role fallback', () => {
     const { acp } = setup([{ harness: 'gemini', model: 'gemini-3' }, CODEX]);
 
     expect(acp.start('tab1').model).toBe('gpt-6-luna');
-    expect(launched(0).args).toEqual(['@zed-industries/codex-acp', '-c', 'model="gpt-6-luna"', '-c', 'model_reasoning_effort="high"']);
+    expect(launched(0)).toMatchObject({ command: 'codex-acp', args: [] });
+    expect(JSON.parse(launched(0).env!.CODEX_CONFIG)).toEqual({ model: CODEX.model, model_reasoning_effort: 'high' });
   });
 
   it('refuses when the ask role resolves to no models', () => {
