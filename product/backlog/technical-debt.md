@@ -2,17 +2,6 @@
 
 ## ready
 
-* Replace the hand-rolled deferred-promise boilerplate repeated across the server, remote, and editor code with one shared helper.
-
-Existing Debt: Nine call sites build a promise and capture its resolve and reject functions by hand, each in a slightly different shape (an `expire` closure, a `{ resolve }` holder object, a definite-assignment `let`), and seven of them carry an `eslint-disable` for `unicorn/prefer-promise-with-resolvers` because the web project's ES2023 library lacks `Promise.withResolvers`, so the missing shared abstraction is paid for in suppressions and variant copies. Severity: 4/10
-
-Existing Risk: 3/10 - A copy that forgets to initialise its captured functions, or settles twice, hangs a waiter or drops an error silently, and each variant has to be re-verified by hand.
-
-Proposal Risk: 2/10 - The helper is small and each call site keeps its own settlement rules, but a call site whose resolver is invoked before the promise is observed could change timing if the helper wraps it differently, which only the timeout and abort tests around those sites would reveal.
-
-Proposal: Add a `deferred<T>()` helper (returns `{ promise, resolve, reject }`) in a module importable by both projects, for example `src/shared/deferred.ts` if the `@shared` alias used by `web/src` reaches it (check how `@shared/protocol` and `@shared/editor/save-conflict` resolve), with a colocated `deferred.test.ts` covering resolve, reject, and a settle-twice no-op. Then replace the hand-rolled sites and delete their `eslint-disable` lines: `timeout` in `src/plugins/guard.ts`, `stopped` in `awaitReady` in `src/agent/readiness.ts`, `ready` in `src/remote/entry-factory.ts`, the two promises in `src/remote/acp-session.ts`, `open` in `src/remote/channel/pending-requests.ts`, `save` in `web/src/editor/save-coordinator.ts`, and the `cleanupPromise` and `beginAllocation` promises in `AgentRun` in `src/agent/run.ts` (these two have no suppression comment but hand-roll the same thing). Keep each site's surrounding semantics unchanged, including the `void ready.catch(() => {})` guards that stop an unobserved rejection from crashing. Existing tests to keep passing: `src/plugins/guard.test.ts`, `src/agent/readiness.test.ts`, `src/remote/channel/pending-requests.test.ts`, `web/src/editor/save-coordinator.test.ts`, and the agent run tests under `src/agent/`; run whichever of these exist.
-
-
 * Give the editor tab's file lifecycle hooks explicit inputs so the six `exhaustive-deps` suppressions and the shared mutable `documentRead` object are no longer needed.
 
 Existing Debt: `useEditorFile` and `useEditorWatchReload` coordinate through a mutable `{ generation, url }` object passed positionally as the ninth argument of a hook, both effects bump that generation counter from different files, and every effect in `web/src/editor/` silences `react-hooks/exhaustive-deps` with a "refs are stable" comment, so the dependency lists are no longer checked against what the effects actually read. Severity: 6/10

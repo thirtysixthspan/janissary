@@ -1,4 +1,5 @@
 import { messageBus } from '../bus.js';
+import { deferred as createDeferred } from '../deferred.js';
 import { getGitIdentity } from '../git/identity.js';
 import { withoutCredentials } from '../git/repository-url.js';
 import { rootRefusalMessage } from '../launch-name/messages.js';
@@ -63,10 +64,7 @@ export function createRemoteEntry({
 }: RemoteEntryFactoryOptions): RemoteEntry {
   const state = { resuming: resume !== undefined };
   const transcript = createRemoteTranscriptSource();
-  let resolveReady = (_dir: string) => {};
-  let rejectReady = (_error: Error) => {};
-  // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the project targets ES2023
-  const ready = new Promise<string>((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
+  const { promise: ready, resolve: resolveReady, reject: rejectReady } = createDeferred<string>();
   void ready.catch(() => {});
   const deferred: { channel?: RemoteChannel; session?: PtySession } = {};
   const terminal = (data: string) => messageBus.emit('pty', { type: 'data', id: deferred.session?.id ?? '', data });

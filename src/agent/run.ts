@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { getConfig } from '../config.js';
+import { deferred } from '../deferred.js';
 import type { AgentRunView, AgentSnapshot } from './types.js';
 import type { AcpActivityKind } from '../acp/activity.js';
 import type { AgentRecordFeed } from './record-feed.js';
@@ -140,12 +141,11 @@ export class AgentRun {
 
   beginAllocation(): (() => void) | undefined {
     if (this.outcome) return undefined;
-    const resolver: { resolve: () => void } = { resolve: () => {} };
-    const pending = new Promise<void>((resolve) => { resolver.resolve = resolve; });
+    const { promise: pending, resolve } = deferred<void>();
     this.allocations.add(pending);
     return () => {
       if (!this.allocations.delete(pending)) return;
-      resolver.resolve();
+      resolve();
     };
   }
 
@@ -166,8 +166,8 @@ export class AgentRun {
 
   finish(outcome: AgentOutcome): Promise<void> {
     if (this.cleanupPromise) return this.cleanupPromise;
-    const completion = { resolve: () => {}, reject: (_error: unknown) => {} };
-    this.cleanupPromise = new Promise<void>((resolve, reject) => { completion.resolve = resolve; completion.reject = reject; });
+    const completion = deferred<void>();
+    this.cleanupPromise = completion.promise;
     this.outcome = outcome;
     this.record?.finish(outcome, this.response);
     this.setStatus(outcome === 'completed' ? 'Completed' : outcome === 'failed' ? 'Failed' : 'Terminated');

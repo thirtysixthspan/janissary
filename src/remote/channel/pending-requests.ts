@@ -3,6 +3,8 @@
 // or by the channel going away. Kept as one tested primitive so a new request family gets all four
 // by using it rather than by remembering to write each one again.
 
+import { deferred } from '../../deferred.js';
+
 export type Settlement<T> = { value: T } | { reason: Error };
 
 type Entry<T> = {
@@ -17,10 +19,7 @@ export class PendingRequests<T> {
   // Register a request under `id` and answer the promise its settlement resolves. A deadline's timer
   // is unref'd, so a request still waiting never holds the process open on its own.
   open(id: string, options: { deadlineMs?: number; onTimeout?: (id: string) => void } = {}): Promise<T> {
-    let resolve = (_value: T) => {};
-    let reject = (_reason: Error) => {};
-    // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the project targets ES2023
-    const promise = new Promise<T>((done, refuse) => { resolve = done; reject = refuse; });
+    const { promise, resolve, reject } = deferred<T>();
     const entry: Entry<T> = { resolve, reject };
     if (options.deadlineMs !== undefined) {
       entry.timer = setTimeout(() => options.onTimeout?.(id), options.deadlineMs);

@@ -1,3 +1,4 @@
+import { deferred } from '@shared/deferred';
 import { contentHash } from '@shared/editor/save-conflict';
 
 type Write = (text: string, expectedHash?: string) => Promise<void>;
@@ -21,10 +22,7 @@ export class SaveCoordinator {
   save(text: string, write: Write, overwrite = false): Promise<void> {
     const last = this.pending.at(-1);
     if (last?.text === text && last.overwrite === overwrite) return last.promise;
-    let resolve!: () => void;
-    let reject!: (error: unknown) => void;
-    // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the web project's ES2023 library excludes Promise.withResolvers
-    const promise = new Promise<void>((accept, refuse) => { resolve = accept; reject = refuse; });
+    const { promise, resolve, reject } = deferred<void>();
     this.pending.push({ text, write, overwrite, promise, resolve, reject });
     if (this.pending.length === 1) void this.flush();
     return promise;
