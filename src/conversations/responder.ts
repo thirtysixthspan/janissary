@@ -92,15 +92,7 @@ export class ConversationResponder {
     const pending = this.inFlight.get(id);
     this.sessions.close(id);
     if (!pending) return false;
-    if (pending.timer) clearTimeout(pending.timer);
-    pending.conversation.turns = pending.conversation.turns.filter(
-      (turn) => turn !== pending.turn,
-    );
-    if (pending.naming && pending.conversation.title === pending.naming.to) {
-      pending.conversation.title = pending.naming.from;
-    }
-    pending.conversation.updatedAt = pending.previousUpdatedAt;
-    this.inFlight.delete(id);
+    this.undoSend(id, pending);
     this.changed();
     return true;
   }
@@ -110,9 +102,7 @@ export class ConversationResponder {
   }
 
   dispose(): void {
-    for (const pending of this.inFlight.values()) {
-      if (pending.timer) clearTimeout(pending.timer);
-    }
+    for (const pending of this.inFlight.values()) this.clearTimer(pending);
     this.inFlight.clear();
     this.sessions.dispose();
   }
@@ -128,7 +118,7 @@ export class ConversationResponder {
 
   private complete(id: string, pending: InFlight): void {
     if (this.inFlight.get(id) !== pending) return;
-    if (pending.timer) clearTimeout(pending.timer);
+    this.clearTimer(pending);
     delete pending.turn.streaming;
     this.inFlight.delete(id);
     this.writeTerminal(id, pending);
@@ -137,7 +127,7 @@ export class ConversationResponder {
 
   private fail(id: string, pending: InFlight, message: string): void {
     if (this.inFlight.get(id) !== pending) return;
-    if (pending.timer) clearTimeout(pending.timer);
+    this.clearTimer(pending);
     delete pending.turn.streaming;
     pending.turn.error = isRateLimitError(message) ? `Rate limited: ${message}` : message;
     this.inFlight.delete(id);
@@ -147,16 +137,24 @@ export class ConversationResponder {
   }
 
   private rollbackStartup(id: string, pending: InFlight, error: unknown): void {
+    this.undoSend(id, pending);
+    this.sessions.close(id);
+    this.report(id, `Could not start the response: ${errorText(error)}`);
+    this.changed();
+  }
+
+  private clearTimer(pending: InFlight): void {
     if (pending.timer) clearTimeout(pending.timer);
+  }
+
+  private undoSend(id: string, pending: InFlight): void {
+    this.clearTimer(pending);
     pending.conversation.turns = pending.conversation.turns.filter((turn) => turn !== pending.turn);
     if (pending.naming && pending.conversation.title === pending.naming.to) {
       pending.conversation.title = pending.naming.from;
     }
     pending.conversation.updatedAt = pending.previousUpdatedAt;
     this.inFlight.delete(id);
-    this.sessions.close(id);
-    this.report(id, `Could not start the response: ${errorText(error)}`);
-    this.changed();
   }
 
   private writeTerminal(id: string, pending: InFlight): void {

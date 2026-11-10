@@ -2,17 +2,6 @@
 
 ## ready
 
-* Fold the duplicated undo-the-send paths and repeated timer clears in the conversation responder into single helpers, and cover the responder directly.
-
-Existing Debt: `ConversationResponder.cancel` and `rollbackStartup` in `src/conversations/responder.ts` each hand-write the same block that removes the pending turn, restores the title and `updatedAt`, and drops the in-flight entry, and the `if (pending.timer) clearTimeout(pending.timer)` line is repeated five times, with the class only exercised indirectly through the manager. Severity: 4/10
-
-Existing Risk: 5/10 - A fix to how a cancelled send restores the conversation's title or timestamp lands in one copy and not the other, leaving a failed start with a stale name or a turn that never existed in the history the user sees.
-
-Proposal Risk: 3/10 - Both paths mutate the same conversation object that is then persisted, so a helper that restores slightly different fields would corrupt a saved conversation; the new direct tests are what make a mistake visible.
-
-Proposal: Before refactoring, add `src/conversations/responder.test.ts` that drives `ConversationResponder` with a stub `ConversationSessions` and `ConversationStore` and asserts, for `send` then `cancel`, and for `send` where `sessions.session` throws: the turn is removed, the title is restored only when it still equals the generated one, `updatedAt` is restored, and `changed` fires. Then add two private methods, `clearTimer(pending)` and `undoSend(pending)` (turn removal, title restore, `updatedAt` restore, in-flight delete), and call them from `cancel`, `rollbackStartup`, `complete`, `fail`, and `dispose`. Keep the differences: `cancel` closes the session before the early return, `rollbackStartup` also reports the error, and `fail` keeps the turn with its error. The constructor takes six positional collaborators; leave that alone in this change. `src/conversations/manager.test.ts` and `src/conversations/sessions.test.ts` must keep passing unchanged.
-
-
 * Express undo and redo replay once, in terms of a direction-aware view of a history step, instead of re-deriving the flipped sides at every use.
 
 Existing Debt: Whether a history step's `from` and `to` are swapped depends on `direction === 'undo'`, and that flip is spelled out sixteen times across `src/file-navigator/manager/mutations.ts`, `src/file-navigator/manager/history.ts`, and `src/file-navigator/moves.ts`, including three nested ternaries in `replayMutation` that recompute the same pairs for the pre-flight refusal check and for the post-replay `pathsMoved` call. Severity: 5/10
