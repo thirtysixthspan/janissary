@@ -1,22 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { internalToolDenial } from './internal-tools.js';
-
-const CODEX_FEATURES_OFF = {
-  shell_tool: false,
-  unified_exec: false,
-  view_image: false,
-  image_generation: false,
-  multi_agent: false,
-  apps: false,
-  goals: false,
-  tool_suggest: false,
-  multi_agent_v2: false,
-  code_mode: false,
-  request_permissions_tool: false,
-  standalone_web_search: false,
-};
-
-const CODEX_TOOLS_OFF = { update_plan: { enabled: false }, experimental_request_user_input: { enabled: false } };
+import { CODEX_FEATURES_OFF, CODEX_TOOLS_OFF } from './internal-tools-test-fixture.js';
 
 const codexBase = { CODEX_CONFIG: JSON.stringify({ model: 'gpt-6-luna', model_reasoning_effort: 'high' }) };
 

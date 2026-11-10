@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { acpLaunchFor, acpLaunchForEntry } from './launch.js';
+import { CODEX_DENY_ALL } from './internal-tools-test-fixture.js';
 
 describe('acpLaunchFor', () => {
   it('maps opencode to its ACP command and model configuration', () => {
@@ -20,25 +21,6 @@ describe('acpLaunchFor', () => {
       });
   });
 });
-
-const CODEX_DENY_ALL = {
-  web_search: 'disabled',
-  features: {
-    shell_tool: false,
-    unified_exec: false,
-    view_image: false,
-    image_generation: false,
-    multi_agent: false,
-    apps: false,
-    goals: false,
-    tool_suggest: false,
-    multi_agent_v2: false,
-    code_mode: false,
-    request_permissions_tool: false,
-    standalone_web_search: false,
-  },
-  tools: { update_plan: { enabled: false }, experimental_request_user_input: { enabled: false } },
-};
 
 describe('acpLaunchForEntry', () => {
   it('launches an opencode entry as an opencode persona with every permission denied', () => {

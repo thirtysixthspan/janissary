@@ -7,6 +7,7 @@ import type { AcpRoleSettings } from './ask-role.js';
 import { makeTab } from '../tab/index.js';
 import { command as askCommand } from '../commands/ask.js';
 import { command as tellCommand } from '../commands/tell.js';
+import { CODEX_DENY_ALL } from './internal-tools-test-fixture.js';
 
 const mocks = vi.hoisted(() => ({
   connectAcp: vi.fn(),
@@ -23,17 +24,7 @@ import { AcpManager } from './manager.js';
 const OPENCODE: RoleEntry = { harness: 'opencode', model: 'opencode-go/deepseek-v4.1-flash', effort: 'medium' };
 const CLAUDE: RoleEntry = { harness: 'claude', model: 'claude-haiku-4-5', effort: 'high' };
 const CODEX: RoleEntry = { harness: 'codex', model: 'gpt-6-luna', effort: 'high' };
-const CODEX_FEATURES = [
-  'shell_tool', 'unified_exec', 'view_image', 'image_generation', 'multi_agent', 'apps', 'goals', 'tool_suggest',
-  'multi_agent_v2', 'code_mode', 'request_permissions_tool', 'standalone_web_search',
-];
-const CODEX_CONFIG = {
-  model: CODEX.model,
-  model_reasoning_effort: 'high',
-  web_search: 'disabled',
-  features: Object.fromEntries(CODEX_FEATURES.map((name) => [name, false])),
-  tools: { update_plan: { enabled: false }, experimental_request_user_input: { enabled: false } },
-};
+const CODEX_CONFIG = { model: CODEX.model, model_reasoning_effort: 'high', ...CODEX_DENY_ALL };
 
 const sessions: AcpSession[] = [];
 
