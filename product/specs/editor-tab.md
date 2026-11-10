@@ -494,7 +494,7 @@ the overlay stays open. The cursor move is not an edit: it never dirties the buf
 an undo step, so an undo right after a jump undoes the last real edit.
 
 Escape closes the overlay and leaves the cursor on the last previewed line, with focus back in the
-buffer ready to type. Escape closes the overlay the same way when focus has moved back into the
+buffer ready to type. Closing the overlay never scrolls the buffer: the view stays exactly where it was. Escape closes the overlay the same way when focus has moved back into the
 buffer while it is open; that Escape only closes the overlay and does not also collapse a selection.
 Switching away from the editor tab also closes it; returning to the tab shows
 no overlay, and Cmd+F opens a fresh, empty one. Nothing about the overlay — its query or its

@@ -1542,6 +1542,18 @@ describe('EditorTab', () => {
       expect(document.activeElement).toBe(textarea());
     });
 
+    it('refocuses the buffer on Escape without letting the browser scroll it', async () => {
+      const { client } = makeClient();
+      await renderLoaded(client);
+      openFind();
+      const focusSpy = vi.spyOn(textarea(), 'focus');
+
+      fireEvent.keyDown(findInput(), { key: 'Escape' });
+
+      expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true });
+      focusSpy.mockRestore();
+    });
+
     it('closes on Escape pressed in the buffer after focus left the overlay', async () => {
       const { client } = makeClient();
       const { container } = await renderLoaded(client);
