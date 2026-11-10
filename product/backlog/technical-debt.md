@@ -2,8 +2,6 @@
 
 ## ready
 
-## development
-
 * Replace the hand-rolled deferred-promise boilerplate repeated across the server, remote, and editor code with one shared helper.
 
 Existing Debt: Nine call sites build a promise and capture its resolve and reject functions by hand, each in a slightly different shape (an `expire` closure, a `{ resolve }` holder object, a definite-assignment `let`), and seven of them carry an `eslint-disable` for `unicorn/prefer-promise-with-resolvers` because the web project's ES2023 library lacks `Promise.withResolvers`, so the missing shared abstraction is paid for in suppressions and variant copies. Severity: 4/10
@@ -81,16 +79,7 @@ Proposal Risk: 2/10 - The calls are already fire-and-forget, so the only behavio
 Proposal: Add `fireIntent(capabilities, name, payload)` next to the plugin capability types in `web/src/plugins/` (see `web/src/plugins/api.ts`, whose `intent<Result>(name, payload)` returns a promise) that calls the intent and reports a rejection once through the project's existing client-side error path; look for it first in `web/src/shared/` before adding anything new, and fall back to a single `console.warn` with the intent name if there is none. Replace the `void ....catch(() => {})` sites that call `capabilities.intent(` or an `intent.current(` ref, leaving sites that need the result alone. Keep the helper free of React so it can be tested without a render, with a colocated test that a rejecting intent is reported and does not throw. Existing tests that call these components with a stub `capabilities` must keep passing; run the plugin tests for `page`, `launcher`, `shell`, and `pdf`.
 
 
-* Check server events at the web client's socket boundary as the server already checks client messages, and tidy the mis-indented `break` lines in `onEvent`.
-
-Existing Debt: The server decodes every client message with `isClientMessage` and `clientParamsProblem` before acting, but `JanusClient` in `web/src/shared/ws/ws.ts` parses incoming frames with `JSON.parse(data) as ServerEvent`, a cast that asserts a shape nothing verifies, and its `onEvent` switch has `break` lines at the wrong indentation inside several cases. Severity: 3/10
-
-Existing Risk: 3/10 - A server event with a missing or renamed field (a version skew after an update, a stale tab left open) reaches listeners as `undefined` and fails somewhere far from the socket, instead of being dropped at the boundary with an identifiable cause.
-
-Proposal Risk: 3/10 - A guard that is stricter than what the server really sends would drop legitimate events and freeze part of the UI, so the guard has to be written against the event union in `src/protocol/events.ts` and checked by a test that feeds each event kind through it.
-
-Proposal: In `web/src/shared/ws/`, add `server-event.ts` exporting `isServerEvent(value: unknown): value is ServerEvent` that checks `t` against the known set of event kinds and, for the hot ones (`state`, `pty`, `rpc-reply`), the fields the switch reads; derive the set of kinds from a single `as const` list in `src/protocol/events.ts` if one does not exist, so adding an event kind to the union cannot skip the guard. In the `SocketConnection` message callback in the `JanusClient` constructor, replace the cast with a `try`/parse, `isServerEvent` check, and drop-with-`console.warn` for anything else. Re-indent the `break` lines in `onEvent` (the cases from `layout` through `rpc-reply`) to match the first cases. Existing tests that pin behavior: `web/src/shared/ws/ws.test.ts`. Add a table test over every event kind that the guard accepts a valid sample and rejects one with a wrong `t`.
-
+## development
 
 ## deferred
 
