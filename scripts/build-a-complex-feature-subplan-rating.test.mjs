@@ -5,8 +5,9 @@ import { describe, expect, it } from 'vitest';
 // `ai/tasks/feature/build-a-complex-feature.md` accepts a decomposition only when every subplan is
 // rated below 6. Step 1 hands the split and the rating to `ai/tasks/planning/decompose-plan.md`,
 // skipping its preparation and pick steps by heading, and then checks the ratings came from the
-// quantitative rating task. These assertions pin that delegation, its place in Step 1, the headings
-// it names, the acceptance check, and the cap Step 3 keeps, and nothing else.
+// quantitative rating task. Step 3 sends a subplan that improvement pushes to 6 or higher back
+// through the same task and the same check. These assertions pin both delegations, the headings
+// they name, the acceptance check, and the cap Step 3 keeps, and nothing else.
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
 const read = (relative) => readFileSync(path.join(repoRoot, relative), 'utf8');
@@ -53,6 +54,24 @@ describe('the build-a-complex-feature decomposition', () => {
     expect(improve).toContain('Preserve its assigned 1–5 rating; improve-plan may correct the rating only if it remains below 6');
     expect(improve).toContain('If the improvement finds the plan cannot remain below 6, split it');
     expect(improve).not.toContain('below 7');
+  });
+
+  it('re-splits an oversized subplan with the decompose-plan task, skipping Step 0 and Step 1', () => {
+    const improve = section('## Step 3', '## Step 4');
+    expect(improve).toContain(
+      `opens \`${DECOMPOSE_TASK}\` and executes every step in order, except \`${PREPARE_STEP}\` and \`${PICK_STEP}\`, with that subplan's draft path as the target`,
+    );
+    expect(improve).not.toContain('split it into smaller subplans');
+  });
+
+  it('accepts the re-split pieces only through the Step 1 check', () => {
+    expect(section('## Step 3', '## Step 4')).toContain("Apply Step 1's acceptance check to the pieces");
+  });
+
+  it('names the decompose-plan task for every split in the orchestration rules', () => {
+    const rules = section('## Orchestration rules', '## Step 0');
+    expect(rules).toContain('decompose all planned behavior with `decompose-plan.md`');
+    expect(rules).toContain('split it again with `decompose-plan.md` until every piece is below 6');
   });
 
   it('names headings the decompose-plan task still has', () => {
