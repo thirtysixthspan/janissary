@@ -55,7 +55,7 @@ This task is the single definition of the scale. Both plan improvement tasks end
 
 Every subplan is written to the drafts, numbered in build order, and states its goal, decisions and dependencies, reused code, changes, tests, verification, and boundaries. A subplan depends only on earlier ones. Each is rated by formula, never by judgment, and one rated 6 or higher is split again until all are rated 1 to 5. The task then checks that every requirement of the original plan lands in a subplan and moves the original plan to the completed plans, unchanged, as the record of the whole feature. It reports the subplans in order with their ratings and dependencies, plus a map from each requirement to its subplan. It writes no code and does not promote the subplans.
 
-Run on its own it prepares the workspace first. The complex-feature workflow opens it to decompose a plan rated 6 to 10, without preparing the workspace or picking a plan again.
+Run on its own it prepares the workspace first. The complex-feature workflow opens it to decompose a plan rated 6 to 10, and again to split a subplan that improvement rates 6 or higher, without preparing the workspace or picking a plan again.
 
 ### Removing a feature
 
