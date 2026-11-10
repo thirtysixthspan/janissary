@@ -1162,6 +1162,36 @@ describe('detached peer rendezvous', () => {
       } finally { peer.close(); }
     });
 
+    it('drops an oversized complete accepted terminate reply before forwarding or shutdown', async () => {
+      const session = randomUUID();
+      const answer = `${encodeFrame({ type: 'attach-result', accepted: true, ignored: 'x'.repeat(1024) })}\n`;
+      const peer = await fakePeer(session, answer);
+      const output: string[] = [];
+      const ended = vi.fn();
+      const socket = relayPeer(repoDir, session, (data) => { output.push(data); }, ended, false, true);
+      try {
+        await vi.waitFor(() => expect(ended).toHaveBeenCalledExactlyOnceWith(false));
+        expect(peer.received.join('')).toBe(`{"type":"attach","session":"${session}"}\n`);
+        expect(output).toEqual([]);
+      } finally { socket?.destroy(); peer.close(); }
+    });
+
+    it('drops a multibyte partial terminate reply when its first line exceeds the byte limit', async () => {
+      const session = randomUUID();
+      const answer = encodeFrame({ type: 'attach-result', accepted: true, ignored: '💬'.repeat(260) });
+      expect(answer).not.toContain('\n');
+      expect(Buffer.byteLength(answer)).toBeGreaterThan(1024);
+      const peer = await fakePeer(session, answer);
+      const output: string[] = [];
+      const ended = vi.fn();
+      const socket = relayPeer(repoDir, session, (data) => { output.push(data); }, ended, false, true);
+      try {
+        await vi.waitFor(() => expect(ended).toHaveBeenCalledExactlyOnceWith(false));
+        expect(peer.received.join('')).toBe(`{"type":"attach","session":"${session}"}\n`);
+        expect(output).toEqual([]);
+      } finally { socket?.destroy(); peer.close(); }
+    });
+
     it.each([
       ['no version', undefined],
       ['an older version', REMOTE_PROTOCOL_VERSION - 1],

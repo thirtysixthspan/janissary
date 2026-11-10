@@ -310,6 +310,8 @@ without an answer, when the session ends locally while it is outstanding — its
 closed, the session detached or terminated, or the app shutting down — rather than running out the
 full wait first.
 
+The peer's first reply line is capped at 1024 bytes before UTF-8 decoding. A longer line is discarded without forwarding or sending the peer a shutdown instruction.
+
 Output the far side prints outside the protocol does not end the session. The remote's own error
 reporting shares the connection the frames travel on, so a line that is not a frame at all is treated
 as terminal output from that host and ignored, and the frames on either side of it are handled

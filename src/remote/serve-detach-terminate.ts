@@ -24,20 +24,23 @@ export function terminatePeer(
   socketPath: string, session: string, output: (data: string) => void, ended: (terminated: boolean) => void,
 ): Socket {
   const socket = createConnection(socketPath);
-  let buffer = '';
+  let buffer = Buffer.alloc(0);
   let answered = false;
-  socket.setEncoding('utf8');
   socket.once('connect', () => socket.write(`${encodeFrame({ type: 'attach', session })}\n`));
-  socket.on('data', (data: string) => {
+  socket.on('data', (data: Buffer) => {
     if (answered) return;
-    buffer += data;
-    const newline = buffer.indexOf('\n');
+    const newline = data.indexOf(0x0a);
+    const firstLine = newline === -1 ? data : data.subarray(0, newline);
+    if (buffer.byteLength + firstLine.byteLength > ANSWER_BUDGET_BYTES) {
+      socket.destroy();
+      return;
+    }
+    buffer = Buffer.concat([buffer, firstLine]);
     if (newline === -1) {
-      if (buffer.length > ANSWER_BUDGET_BYTES) socket.destroy();
       return;
     }
     answered = true;
-    const line = buffer.slice(0, newline);
+    const line = buffer.toString('utf8');
     if (isAccepted(line)) socket.write(`${encodeFrame({ type: 'shutdown' })}\n`);
     socket.end();
     output(`${line}\n`);
