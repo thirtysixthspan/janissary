@@ -10,7 +10,7 @@ import type { Managers } from '../../managers.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, UndoRedoResult } from '../../protocol.js';
 import { containedAbsolute } from '../../path-containment.js';
 import path from 'node:path';
-import { isPasteGroup } from '../moves.js';
+import { stacksFor, stepMoves } from '../moves.js';
 import { mapMaybe } from '../../maybe-promise.js';
 import { pathsMoved } from './paths-moved.js';
 
@@ -104,15 +104,11 @@ export function replayMutation(
   skipConflicts: boolean,
 ): MaybePromise<UndoRedoResult> {
   return withFilesState(context.tabs, label, {}, (state) => {
-    const fromStack = direction === 'undo' ? state.undoStack : state.redoStack;
-    const toStack = direction === 'undo' ? state.redoStack : state.undoStack;
+    const { fromStack, toStack } = stacksFor(state, direction);
     const step = fromStack.at(-1);
     if (!step) return {};
-    const movingFrom = isPasteGroup(step)
-      ? step.mode === 'cut' ? step.pairs.map((pair) => direction === 'undo' ? pair.to : pair.from) : []
-      : step.entries.map((entry) => direction === 'undo' ? entry.to : entry.from);
-    for (const source of movingFrom) {
-      const relative = path.isAbsolute(source) ? path.relative(state.root, source) : source;
+    for (const { from } of stepMoves(step, direction)) {
+      const relative = path.isAbsolute(from) ? path.relative(state.root, from) : from;
       const refusal = liveTranscriptRefusal(context.managers, state, relative);
       if (refusal) return refusal;
     }
@@ -120,21 +116,10 @@ export function replayMutation(
     return mapMaybe(replayHistory(
       state, direction, overwrite, skipConflicts, afterMutation(context, label, state),
     ), (result) => {
-      const currentToStack = direction === 'undo' ? state.redoStack : state.undoStack;
+      const currentToStack = stacksFor(state, direction).toStack;
       const completed = currentToStack.length > previousLength ? currentToStack.at(-1) : undefined;
-      if (completed && isPasteGroup(completed)) {
-        if (completed.mode === 'cut') {
-          pathsMoved(context.managers, state, completed.pairs.map((pair) => ({
-            from: direction === 'undo' ? pair.to : pair.from,
-            to: direction === 'undo' ? pair.from : pair.to,
-          })));
-        }
-      } else if (completed) {
-        pathsMoved(context.managers, state, completed.entries.map((entry) => ({
-          from: direction === 'undo' ? entry.to : entry.from,
-          to: direction === 'undo' ? entry.from : entry.to,
-        })));
-      }
+      const moves = completed ? stepMoves(completed, direction) : [];
+      if (moves.length > 0) pathsMoved(context.managers, state, moves);
       return result;
     });
   });

@@ -1,4 +1,4 @@
-import { applyStackMove, applyStackPaste, isPasteGroup, type HistoryStep } from '../moves.js';
+import { applyStackMove, applyStackPaste, isPasteGroup, stacksFor, type HistoryStep } from '../moves.js';
 import type { UndoRedoResult } from '../../protocol.js';
 import type { FileSystemPort } from '../filesystem-port.js';
 import { mapMaybe, type MaybePromise } from '../../maybe-promise.js';
@@ -27,8 +27,7 @@ export function replayHistory(
       return replayed.result;
     });
   }
-  const fromStack = direction === 'undo' ? state.undoStack : state.redoStack;
-  const toStack = direction === 'undo' ? state.redoStack : state.undoStack;
+  const { fromStack, toStack } = stacksFor(state, direction);
   const step = fromStack.at(-1);
   if (!step) return {};
   const policy = overwrite ? 'overwrite-all' : skipConflicts ? 'skip-conflicts' : undefined;
