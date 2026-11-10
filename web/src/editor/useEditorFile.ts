@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { EditorView } from '@shared/protocol';
 import { SAVE_CONFLICT_ERROR } from '@shared/editor/save-conflict';
 import type { JanusClient } from '../shared/ws/ws';
+import { useLatestRef } from '../shared/useLatestRef';
+import { DocumentReads } from './document-reads';
 import { toText } from './model';
 import type { EditorApi } from './useEditor';
 import { useEditorWatchReload } from './useEditorWatchReload';
@@ -18,6 +20,8 @@ export type EditorFileApi = {
   dismissConflict: () => void;
 };
 
+const zeroBasedLine = (line: number | undefined) => (line === undefined ? undefined : line - 1);
+
 // The editor tab's file lifecycle: the initial load, save with overwrite-conflict detection, dirty
 // tracking against the last-saved text, and the watched external-change reload. Split out of
 // `EditorTab.tsx` so the component is left with rendering and input handling, mirroring the other
@@ -29,7 +33,9 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
   const [savedFlash, setSavedFlash] = useState(false);
   const [conflictOpen, setConflictOpen] = useState(false);
   const [saves] = useState(() => new SaveCoordinator());
-  const documentRead = useRef({ generation: 0, url: editor.url });
+  const [reads] = useState(() => new DocumentReads());
+  const latest = useLatestRef({ client, api, editor });
+  const { url, name, sync } = editor;
   const setBaseline = useCallback((text: string) => {
     saves.setBaseline(text);
     setLastSaved(text);
@@ -58,8 +64,7 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
     setTimeout(() => setSavedFlash(false), 1500);
   };
 
-  const writeRef = useRef(writeToDisk);
-  writeRef.current = writeToDisk;
+  const writeRef = useLatestRef(writeToDisk);
   const queueWrite = (text: string, overwrite = false) => saves.save(
     text, (content, expectedHash) => writeRef.current(content, expectedHash), overwrite,
   );
@@ -78,45 +83,41 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
     // A synced tab opens immediately, before its shared workspace clone exists; loading here would
     // fetch a not-yet-real file and get stuck. Wait for `sync` to leave 'provisioning' — the same
     // signal `finishOpenSynced` already flips once the workspace is ready — before fetching.
-    if (editor.sync === 'provisioning') return;
-    if (api.stateRef.current !== null) return;
+    if (sync === 'provisioning') return;
+    if (latest.current.api.stateRef.current !== null) return;
     // A new file has nothing to read: its path is deliberately one that isn't taken yet, and stays
     // off disk until the first save, so its registered reference answers 404 by design (see
     // `src/open/route.ts`). Fetching it would report a real resource failure for a file the user has
     // not created yet. Start on the empty buffer that first save will write instead.
-    if (editor.newFile) {
-      api.load('', editor.line === undefined ? undefined : editor.line - 1);
+    if (latest.current.editor.newFile) {
+      latest.current.api.load('', zeroBasedLine(latest.current.editor.line));
       setBaseline('');
       return;
     }
-    const activeDocumentRead = documentRead.current;
-    const generation = ++activeDocumentRead.generation;
-    activeDocumentRead.url = editor.url;
+    const read = reads.begin();
     const load = async () => {
       try {
-        const text = await client.readFile(editor.url);
-        if (activeDocumentRead.generation !== generation || activeDocumentRead.url !== editor.url) return;
-        if (api.stateRef.current === null) api.load(text, editor.line === undefined ? undefined : editor.line - 1);
+        const text = await latest.current.client.readFile(url);
+        if (!read.isCurrent()) return;
+        const { api: liveApi, editor: liveEditor } = latest.current;
+        if (liveApi.stateRef.current === null) liveApi.load(text, zeroBasedLine(liveEditor.line));
         setBaseline(text);
       } catch {
-        if (activeDocumentRead.generation === generation && activeDocumentRead.url === editor.url) {
-          setLoadError(`Failed to load ${editor.name}`);
-        }
+        if (read.isCurrent()) setLoadError(`Failed to load ${name}`);
       }
     };
     void load();
-    return () => {
-      if (activeDocumentRead.generation === generation) activeDocumentRead.generation += 1;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- editor identity triggers loading; refs and setters remain stable for the mounted file
-  }, [editor.url, editor.name, editor.sync]);
+    return read.cancel;
+  }, [url, name, sync, latest, reads, setBaseline]);
 
   const dirty = useMemo(
     () => api.state !== null && lastSaved !== null && toText(api.state) !== lastSaved,
     [api.state, lastSaved],
   );
 
-  useEditorWatchReload(editor.mtimeMs, dirty, conflictPendingRef, api, setBaseline, client, editor.url, editor.line, documentRead);
+  useEditorWatchReload({
+    mtimeMs: editor.mtimeMs, dirty, conflictPendingRef, api, setBaseline, client, url, initialLine: editor.line, reads,
+  });
 
   return {
     dirty,

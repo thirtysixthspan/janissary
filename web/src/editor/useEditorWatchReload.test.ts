@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { JanusClient } from '../shared/ws/ws';
+import { DocumentReads } from './document-reads';
 import { fromText } from './model';
 import type { EditorApi } from './useEditor';
 import { useEditorWatchReload } from './useEditorWatchReload';
@@ -31,10 +32,12 @@ function deferred<T>() {
 function renderWatch(mtimeMs: number | undefined, dirty: boolean, api: EditorApi, client: JanusClient) {
   const conflictPendingRef = { current: false };
   const setLastSaved = vi.fn();
-  const documentRead = { current: { generation: 0, url: '/open/1' } };
+  const reads = new DocumentReads();
   const view = renderHook<void, { m: number | undefined; isDirty?: boolean }>(
     ({ m, isDirty }: { m: number | undefined; isDirty?: boolean }) =>
-      useEditorWatchReload(m, isDirty ?? dirty, conflictPendingRef, api, setLastSaved, client, '/open/1', undefined, documentRead),
+      useEditorWatchReload({
+        mtimeMs: m, dirty: isDirty ?? dirty, conflictPendingRef, api, setBaseline: setLastSaved, client, url: '/open/1', initialLine: undefined, reads,
+      }),
     { initialProps: { m: mtimeMs, isDirty: undefined } },
   );
   return { ...view, conflictPendingRef, setLastSaved };
