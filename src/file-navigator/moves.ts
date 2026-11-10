@@ -20,6 +20,24 @@ export function isPasteGroup(step: HistoryStep): step is PasteGroup {
   return 'mode' in step;
 }
 
+export type ReplayDirection = 'undo' | 'redo';
+
+// The from/to pairs a step moves when replayed in `direction`, in the order the step recorded them.
+// Undo swaps each pair. A copy paste moves nothing, so it yields no pairs.
+export function stepMoves(step: HistoryStep, direction: ReplayDirection): MoveEntry[] {
+  if (isPasteGroup(step) && step.mode === 'copy') return [];
+  const recorded: MoveEntry[] = isPasteGroup(step) ? step.pairs : step.entries;
+  return recorded.map(({ from, to }) => (direction === 'undo' ? { from: to, to: from } : { from, to }));
+}
+
+export function stacksFor(
+  state: { undoStack: HistoryStep[]; redoStack: HistoryStep[] }, direction: ReplayDirection,
+): { fromStack: HistoryStep[]; toStack: HistoryStep[] } {
+  return direction === 'undo'
+    ? { fromStack: state.undoStack, toStack: state.redoStack }
+    : { fromStack: state.redoStack, toStack: state.undoStack };
+}
+
 function moveReplayLeg(root: string, entry: MoveEntry, direction: 'undo' | 'redo'): ReplayLeg<MoveEntry> {
   const sourceRel = entry[direction === 'undo' ? 'to' : 'from'];
   const destinationPath = parentPath(entry[direction === 'undo' ? 'from' : 'to']);

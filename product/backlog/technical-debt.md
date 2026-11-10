@@ -2,17 +2,6 @@
 
 ## ready
 
-* Express undo and redo replay once, in terms of a direction-aware view of a history step, instead of re-deriving the flipped sides at every use.
-
-Existing Debt: Whether a history step's `from` and `to` are swapped depends on `direction === 'undo'`, and that flip is spelled out sixteen times across `src/file-navigator/manager/mutations.ts`, `src/file-navigator/manager/history.ts`, and `src/file-navigator/moves.ts`, including three nested ternaries in `replayMutation` that recompute the same pairs for the pre-flight refusal check and for the post-replay `pathsMoved` call. Severity: 5/10
-
-Existing Risk: 5/10 - A flipped condition in any one of the sixteen copies sends a live-transcript refusal check or a `pathsMoved` notification to the wrong side of a move, so undoing a rename or cut-paste would update the wrong paths in other tabs, and the symmetric redo case is easy to leave untested.
-
-Proposal Risk: 3/10 - Undo and redo of cut-paste across hosts and conflict policies is subtle and the move/paste group shapes differ, so the helper has to preserve both shapes, and any step type without a test is where a regression would hide.
-
-Proposal: In `src/file-navigator/moves.ts` (it already owns `HistoryStep`, `isPasteGroup`, `applyStackMove`, and `applyStackPaste`), add a pure function `stepMoves(step, direction): { from: string; to: string }[]` that returns the pairs in replay order for either a move group (`entries`) or a paste group (`pairs`, and only for `mode === 'cut'`), with a colocated test for all four combinations of undo/redo and move/paste. Use it in `replayMutation` in `mutations.ts` to produce both the pre-flight `movingFrom` list (the `from` sides) and the `pathsMoved` argument, removing the nested ternaries and the second branch for non-paste steps; add a `stacksFor(state, direction)` helper returning `{ fromStack, toStack }` and use it in both `mutations.ts` and `history.ts`. Leave `applyStackMove` and `applyStackPaste` internals alone. Tests that pin behavior: `src/file-navigator/manager/paths-moved.test.ts`, `src/file-navigator/moves.test.ts`, and the file-navigator manager tests that exercise undo and redo; `replayMutation` has no test of its own, so add one for cut-paste undo notifying `pathsMoved` with the reversed pairs.
-
-
 * Break `startServer` in the server entry module into named setup, connection-handling, and teardown steps so the repeated shutdown sequence is written once.
 
 Existing Debt: The one function in `src/index.ts` that builds the controller, HTTP server, and WebSocket server inlines three separate failure and shutdown paths that each repeat `resumeWatch.stop()`, `resumeSubscription.unsubscribe()`, and `controller.shutdown()` (the launch-shell failure, the listen failure, and `close`), with its own `closed` flag and an `exitTimer` reassigned from inside a connection handler. Severity: 5/10

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { applyStackPaste, type HistoryStep, type PasteGroup } from './moves.js';
+import { applyStackPaste, stacksFor, stepMoves, type HistoryStep, type PasteGroup } from './moves.js';
 import { fileIdentity } from './file-identity.js';
 import type { PastePair } from './paste.js';
 
@@ -238,5 +238,42 @@ describe('applyStackPaste', () => {
     expect(history.from).toEqual([{ mode: 'copy', pairs: [missing] }]);
     expect(history.to).toEqual([{ mode: 'copy', pairs: [copied] }]);
     expect(rebuild).toHaveBeenCalledOnce();
+  });
+});
+
+describe('stepMoves', () => {
+  const move: HistoryStep = { entries: [{ from: 'a', to: 'd/a' }, { from: 'b', to: 'd/b' }] };
+  const cut: HistoryStep = { mode: 'cut', pairs: [{ from: '/x/a', to: '/y/a' }] };
+
+  it('keeps recorded sides on redo of a move group', () => {
+    expect(stepMoves(move, 'redo')).toEqual([{ from: 'a', to: 'd/a' }, { from: 'b', to: 'd/b' }]);
+  });
+
+  it('swaps sides on undo of a move group', () => {
+    expect(stepMoves(move, 'undo')).toEqual([{ from: 'd/a', to: 'a' }, { from: 'd/b', to: 'b' }]);
+  });
+
+  it('keeps recorded sides on redo of a cut paste group', () => {
+    expect(stepMoves(cut, 'redo')).toEqual([{ from: '/x/a', to: '/y/a' }]);
+  });
+
+  it('swaps sides on undo of a cut paste group', () => {
+    expect(stepMoves(cut, 'undo')).toEqual([{ from: '/y/a', to: '/x/a' }]);
+  });
+
+  it('yields nothing for a copy paste group in either direction', () => {
+    const copy: HistoryStep = { mode: 'copy', pairs: [{ from: '/x/a', to: '/y/a' }] };
+    expect(stepMoves(copy, 'undo')).toEqual([]);
+    expect(stepMoves(copy, 'redo')).toEqual([]);
+  });
+});
+
+describe('stacksFor', () => {
+  it('reads from the undo stack on undo and from the redo stack on redo', () => {
+    const state = { undoStack: [] as HistoryStep[], redoStack: [] as HistoryStep[] };
+    expect(stacksFor(state, 'undo').fromStack).toBe(state.undoStack);
+    expect(stacksFor(state, 'undo').toStack).toBe(state.redoStack);
+    expect(stacksFor(state, 'redo').fromStack).toBe(state.redoStack);
+    expect(stacksFor(state, 'redo').toStack).toBe(state.undoStack);
   });
 });
