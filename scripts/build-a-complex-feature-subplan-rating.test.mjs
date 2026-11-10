@@ -45,6 +45,13 @@ describe('the build-a-complex-feature decomposition', () => {
     expect(decompose).toContain('every rating is below 6 and was recorded by the quantitative rating task');
   });
 
+  it('keeps the same cap when a subplan is improved', () => {
+    const improve = playbook.slice(playbook.indexOf('## Step 3'), playbook.indexOf('## Step 4'));
+    expect(improve).toContain('Preserve its assigned 1–5 rating; improve-plan may correct the rating only if it remains below 6');
+    expect(improve).toContain('If the improvement finds the plan cannot remain below 6, split it');
+    expect(improve).not.toContain('below 7');
+  });
+
   it('names headings the quantitative rating task still has', () => {
     const rating = read(RATING_TASK);
     expect(rating).toContain(`## ${PREPARE_STEP}`);
