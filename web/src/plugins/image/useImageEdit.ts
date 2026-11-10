@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { isSaveEditResult } from '@shared/plugins/image/shared';
-import type { TabPluginClientCapabilities } from '../api';
+import { useTransientValue, type TabPluginClientCapabilities } from '../api';
 import {
   activeOperations, applyOperation, emptyEditModel, outputSize,
   redoOperation, sameOperations, undoOperation, type EditModel, type ImageOperation, type Size,
@@ -37,7 +37,7 @@ export function useImageEdit(capabilities: TabPluginClientCapabilities) {
   const savedOperationsRef = useRef(initialSnapshot.savedOperations);
   const [model, setModel] = useState(initialSnapshot.model);
   const [sourceSize, setSourceSize] = useState<Size | null>(initialSnapshot.sourceSize);
-  const [saved, setSaved] = useState<string | null>(null);
+  const [saved, showSaved] = useTransientValue<string>(CONFIRMATION_MS);
   const [busy, setBusy] = useState(false);
   // The operations this tab last wrote, not the cursor position they stood at. Dirty is the distance
   // from that sequence, not from the original: a save leaves the edits on the canvas but settles the
@@ -45,7 +45,6 @@ export function useImageEdit(capabilities: TabPluginClientCapabilities) {
   // number cannot stand in for the sequence — editing after an undo rewrites the list beneath the
   // same position, which is how a flip applied over an undone save used to read as saved.
   const [savedOperations, setSavedOperations] = useState<readonly ImageOperation[]>(initialSnapshot.savedOperations);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const active = activeOperations(model);
   const dirty = !sameOperations(active, savedOperations);
   const dimensions = sourceSize ? outputSize(sourceSize, active) : null;
@@ -71,8 +70,6 @@ export function useImageEdit(capabilities: TabPluginClientCapabilities) {
     syncSnapshot();
     return unsubscribe;
   }, [capabilities.tabState]);
-
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   const compose = useCallback((): HTMLCanvasElement | null => {
     const source = sourceRef.current;
@@ -124,13 +121,11 @@ export function useImageEdit(capabilities: TabPluginClientCapabilities) {
       const snapshot = writeSnapshot({ savedOperations: sent });
       savedOperationsRef.current = snapshot.savedOperations;
       setSavedOperations(snapshot.savedOperations);
-      setSaved(result.name);
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => { setSaved(null); }, CONFIRMATION_MS);
+      showSaved(result.name);
     } finally {
       setBusy(false);
     }
-  }, [capabilities, compose, model, writeSnapshot]);
+  }, [capabilities, compose, model, showSaved, writeSnapshot]);
 
   // A plugin tab stays mounted while hidden, so the undo chords consult the host's `active` flag
   // rather than assuming this editor is the one on screen.

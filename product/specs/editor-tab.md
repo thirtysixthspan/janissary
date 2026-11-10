@@ -189,7 +189,7 @@ The editor saves with the metadata header's save button or Ctrl+S / Cmd+S. The s
 current buffer content to a same-directory temporary file and atomically replaces the file at its
 path, preserving an existing file's permission bits. The live tab, draft, watcher, and sync state
 advance only after replacement succeeds, so a failed save leaves the prior file and editor state
-intact. On success a "Saved" flash appears in the metadata header; on failure the server error
+intact. On success a "Saved" flash appears in the metadata header for a moment, and a second save in that moment restarts it for its full duration; on failure the server error
 message is shown and the save button remains enabled.
 
 Saves from the button, keyboard shortcut, overwrite confirmation, commit action, and close dialog share one ordered sequence per editor. Repeating a pending save of the same text waits for that write. Saving changed text while a write is pending waits its turn and checks against the preceding successful save, so the editor's own earlier write does not raise an overwrite conflict. A failed write rejects the saves waiting behind it; the user can retry afterward. Edits made after the last requested snapshot remain unsaved.
