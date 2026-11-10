@@ -14,13 +14,13 @@ const originalShell = process.env.SHELL;
 const serverNodeDir = path.dirname(process.execPath);
 let roots: string[] = [];
 
-// A stand-in for the user's shell: it adds `binDir` to PATH, as an rc file would, and runs the last
-// argument it is given as the command.
-function userShellAdding(binDir: string, banner = ''): string {
+// A stand-in for the user's shell: it adds `binDir` ahead of `basePath` on PATH, as an rc file would,
+// and runs the last argument it is given as the command. The default base is the inherited PATH.
+function userShellAdding(binDir: string, banner = '', basePath = '$PATH'): string {
   const directory = mkdtempSync(path.join(os.tmpdir(), 'janissary-acp-path-'));
   roots.push(directory);
   const shell = path.join(directory, 'user-shell');
-  writeFileSync(shell, `#!/bin/sh\necho '${banner}'\nPATH="${binDir}:$PATH"; export PATH\nfor last; do :; done\nexec /bin/sh -c "$last"\n`, { mode: 0o755 });
+  writeFileSync(shell, `#!/bin/sh\necho '${banner}'\nPATH="${binDir}:${basePath}"; export PATH\nfor last; do :; done\nexec /bin/sh -c "$last"\n`, { mode: 0o755 });
   return shell;
 }
 
@@ -72,12 +72,13 @@ describe('locateAcpCommand', () => {
 
   it('resolves a command only the user\'s interactive shell finds, despite a banner', () => {
     const binDir = binDirWith('opencode');
-    process.env.SHELL = userShellAdding(binDir, 'Welcome back');
+    process.env.SHELL = userShellAdding(binDir, 'Welcome back', '/nonexistent-a');
 
     const located = locateAcpCommand('opencode', { PATH: '/usr/bin:/bin', OTHER: 'kept' });
 
     expect(located.command).toBe(path.join(binDir, 'opencode'));
-    expect(located.env.PATH).toBe(`${binDir}:${process.env.PATH}`);
+    expect(located.env.PATH).toBe(`${binDir}:/nonexistent-a`);
+    expect(located.env.PATH?.split(':')).not.toContain(serverNodeDir);
     expect(located.env.OTHER).toBe('kept');
   });
 

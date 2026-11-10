@@ -1,13 +1,3 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
-
-* Make the shell-fallback test's assertion that the server's node is not added hold on every machine, as the node-on-PATH fix plan promised, rather than only on one whose PATH lacks the server's node.
-
-Existing Issue: The interactive-shell fallback case now asserts `located.env.PATH` equals `${binDir}:${process.env.PATH}`, but the stand-in shell builds its PATH from the test runner's own `process.env.PATH`, which on a typical nvm setup already lists `path.dirname(process.execPath)`, so a regression that applied the node prepend to the fallback branch would leave that PATH unchanged and the test would still pass. Severity: 2/10
-
-Existing Risk: 3/10 - An accidental move of the prepend into the fallback branch would put the server's node ahead of the nvm node a user's rc file chose for `opencode` and every other shell-located agent, and it would pass CI or a developer run whenever npm runs under the same node the PATH lists.
-
-Proposal Risk: 1/10 - The assertion becomes deterministic, and only a stand-in shell that ignores the fixed PATH it is given would make it vacuous again, which the exact-equality check itself would expose.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1983 "pin the shell-fallback test's no-node-added assertion with a fixed shell PATH that lacks the server's node". In `src/acp/command-path.test.ts`, the case `resolves a command only the user's interactive shell finds, despite a banner` uses `userShellAdding(binDir, 'Welcome back')`, whose script prepends `binDir` to the inherited `$PATH`, so the resulting PATH contains whatever the runner's PATH holds, including `serverNodeDir` under nvm. Give `userShellAdding` an optional base-PATH argument (or add a sibling helper) so the stand-in script sets `PATH="${binDir}:<base>"` instead of `PATH="${binDir}:$PATH"`, call it in that case with a base such as `/nonexistent-a`, and assert `located.env.PATH` equals `${binDir}:/nonexistent-a` exactly and does not include `serverNodeDir`. Every other caller of `userShellAdding` keeps its current behavior. Do not change production code; `locateAcpCommand` in `src/acp/command-path.ts` must keep returning the shell's PATH untouched on that branch. Confirm the test is effective by temporarily wrapping the fallback branch's env in `withServerNode`, seeing the case fail, and reverting, then verify with `$janissary/scripts/run.mjs check-diff`.
