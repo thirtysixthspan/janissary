@@ -54,7 +54,8 @@ Execute `ai/tasks/workspace/prepare-workspace.md` in full. It checks out and pul
 1. Read the project constraints in [`AGENTS.md`](../../AGENTS.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
 2. Read every file relevant to the fix to understand the code involved.
 3. Write a plan file following the format of existing plans in `./product/plans/complete/` — include a complexity rating, goal, approach, implementation steps, tests, and out-of-scope items. Write it to `./product/plans/draft/<fix-name>.md`.
-4. After the plan is written, move it from `./product/plans/draft/` to `./product/plans/ready/`. Use plain `mv` (not `git mv`) — the new plan file is not tracked by git yet, and `git mv` fails on an untracked file:
+4. Judge the plan's complexity by opening `ai/tasks/planning/rate-plan-complexity-quantitative.md` and executing every step in order, except `Step 0 — Prepare the workspace` and `Step 1 — Pick the plan`. Your target is the plan you just wrote, and the task records the `**Complexity: N/10** — <rationale>` line directly under its `#` title. Use that rating as the plan's complexity rating and in the Step 9 report; do not assign one by judgment. If the rating is 7 or higher, the fix requires significant new architecture: apply the same rule as Step 1 (when the issue was picked from the backlog, pick a simpler one instead and report why; when it was named in the invocation, report the rating and stop).
+5. After the plan is rated, move it from `./product/plans/draft/` to `./product/plans/ready/`. Use plain `mv` (not `git mv`) — the new plan file is not tracked by git yet, and `git mv` fails on an untracked file:
    ```bash
    mv ./product/plans/draft/<fix-name>.md ./product/plans/ready/<fix-name>.md
    ```
