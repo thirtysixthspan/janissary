@@ -282,17 +282,23 @@ the tab claimed to show only the staged ones, so the handshake refuses the misma
 Protocol version 39 adds optional session options to the ACP open request: a plain object the remote passes to the
 agent as the ACP session's `_meta`. Role sessions use it to turn the Claude adapter's built-in tools off. A version-38
 remote would ignore the field and start a role session with its built-in tools on while both ends looked healthy, so
-the handshake refuses the mismatch. Both hosts also need the bundled ACP adapters, which the exact-version handshake
+the handshake refuses the mismatch. An attach into a session parked under another version is refused by the relaying
+server instead, as described below. Both hosts also need the bundled ACP adapters, which the exact-version handshake
 ensures.
 
 Unavailable sends, explicit disconnect, transport loss, protocol failure, and channel finish settle and detach ACP listeners, including before readiness. Late frames for detached ids are ignored. A lost core ACP session is closed locally and replaced by a later request once its channel is ready; autonomous runs retain their transport-loss termination. Durable activity capture belongs only to the initiating project's recorder. The sessions tab's existing shell/harness restoration policy is unchanged.
 
 The handshake check is narrower for an attach than for a launch. An attach is answered by the
 freshly started remote server that then relays into the parked peer, so the version it announces is
-whatever is installed on that host now — not the version of the peer waiting behind it. A session
-parked while the remote installation was upgraded therefore passes the handshake and is then refused
-by name by the older peer. The query is bounded rather than open-ended so that case settles: no
-answer within the wait ends the accepted session, closes its placeholder tab, and shuts down the
+whatever is installed on that host now — not the version of the peer waiting behind it. Each parked
+peer therefore records the protocol version it speaks when it starts, and the relaying server
+compares it with its own before connecting. A session parked while the remote installation was
+upgraded, or by an installation old enough to record no version, is never relayed into: nothing
+reaches the parked peer, the attach reports a failure rather than an ended session, an automatic
+reconnect keeps retrying, and the session stays parked with its record. A parked peer whose process
+has already exited is still reported as ended. The session-state query is also bounded rather than
+open-ended, so a peer that accepts an attach and then never answers settles: no answer within the
+wait ends the accepted session, closes its placeholder tab, and shuts down the
 remote workspace rather than leaving an uninspectable peer behind. The wait also ends at once,
 without an answer, when the session ends locally while it is outstanding — its placeholder tab
 closed, the session detached or terminated, or the app shutting down — rather than running out the

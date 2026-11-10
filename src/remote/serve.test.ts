@@ -753,6 +753,21 @@ describe('RemoteServer — settling the root', () => {
       } finally { server.shutdown(0); write.mockRestore(); peer.dispose(); }
     });
 
+    it('exits nonzero with no attach-result when the peer parked under the home clone speaks another version', async () => {
+      const peer = await parkAtHomeClone();
+      const recordPath = path.join(relayHome(), 'origin', '.janissary', 'remote', `${peer.session}.json`);
+      const record = JSON.parse(readFileSync(recordPath, 'utf8'));
+      writeFileSync(recordPath, JSON.stringify({ ...record, version: REMOTE_PROTOCOL_VERSION - 1 }));
+      const output: string[] = [], frames: ServerFrame[] = [], exit = vi.fn();
+      const write = vi.spyOn(process.stdout, 'write').mockImplementation((data) => { output.push(String(data)); return true; });
+      const server = new RemoteServer('~', (frame) => { frames.push(frame); }, exit, { settle: settleAt, home: relayHome() });
+      try {
+        server.receive(`${encodeFrame({ type: 'attach', session: peer.session, origin: origin() })}\n`);
+        await vi.waitFor(() => expect(exit).toHaveBeenCalledExactlyOnceWith(1));
+        expect(frames).toEqual([]); expect(output.join('')).not.toContain('attach-result');
+      } finally { write.mockRestore(); peer.dispose(); }
+    });
+
     it('answers a parked-capture query carrying the origin from the peer parked under the home clone', async () => {
       const peer = await parkAtHomeClone((id) => (id === 'r1' ? { text: 'home screen', capturedAt: 7 } : undefined));
       const { server, frames } = homeServer();
@@ -1009,11 +1024,54 @@ describe('detached peer rendezvous', () => {
       expect(relayPeer(repoDir, peer.session, vi.fn(), ended)).toBeUndefined();
       expect(ended).toHaveBeenLastCalledWith(true);
       ended.mockClear();
-      writeFileSync(recordPath, JSON.stringify({ pid: process.pid, socket: path.join(tmpDir, 'absent.sock') }));
+      writeFileSync(recordPath, JSON.stringify({ pid: process.pid, socket: path.join(tmpDir, 'absent.sock'), version: REMOTE_PROTOCOL_VERSION }));
       const unreachable = relayPeer(repoDir, peer.session, vi.fn(), ended)!;
       await vi.waitFor(() => expect(ended).toHaveBeenCalledExactlyOnceWith(false));
       unreachable.destroy();
     } finally { socket.destroy(); peer.dispose(); }
+  });
+
+  it('stamps its record with this build\'s protocol version, and keeps it when the label is set', async () => {
+    const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn());
+    await peer.start(vi.fn());
+    const recordPath = path.join(repoDir, '.janissary', 'remote', `${peer.session}.json`);
+    try {
+      expect(JSON.parse(readFileSync(recordPath, 'utf8'))).toMatchObject({ pid: process.pid, version: REMOTE_PROTOCOL_VERSION });
+      peer.setLabel('claude');
+      expect(JSON.parse(readFileSync(recordPath, 'utf8'))).toMatchObject({ label: 'claude', version: REMOTE_PROTOCOL_VERSION });
+    } finally { peer.dispose(); }
+  });
+
+  it.each([
+    ['no version', undefined],
+    ['an older version', REMOTE_PROTOCOL_VERSION - 1],
+    ['a newer version', REMOTE_PROTOCOL_VERSION + 1],
+  ])('never connects to a live peer whose record carries %s, and leaves it parked', async (_name, version) => {
+    const received = vi.fn();
+    const peer = new DetachedPeer(repoDir, randomUUID(), received, vi.fn());
+    await peer.start(vi.fn());
+    peer.detach();
+    peer.emit({ type: 'transcript', blocks: ['held while parked'] });
+    const recordPath = path.join(repoDir, '.janissary', 'remote', `${peer.session}.json`);
+    const record = JSON.parse(readFileSync(recordPath, 'utf8'));
+    const output: string[] = [];
+    try {
+      writeFileSync(recordPath, JSON.stringify({ pid: record.pid, socket: record.socket, ...(version !== undefined && { version }) }));
+      const ended = vi.fn();
+      expect(relayPeer(repoDir, peer.session, (data) => { output.push(data); }, ended)).toBeUndefined();
+      expect(ended).toHaveBeenCalledExactlyOnceWith(false);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(output).toEqual([]); expect(received).not.toHaveBeenCalled();
+      writeFileSync(recordPath, JSON.stringify(record));
+      const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, vi.fn())!;
+      try {
+        await vi.waitFor(() => expect(output.join('')).toContain('transcript'));
+        expect(output.join('').trim().split('\n').map((line) => decodeFrame(line))).toEqual([
+          { type: 'attach-result', accepted: true },
+          { type: 'transcript', blocks: ['held while parked'] },
+        ]);
+      } finally { socket.destroy(); }
+    } finally { peer.dispose(); }
   });
 
   it('expires an unattached peer and cleans up its workspace', async () => {

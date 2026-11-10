@@ -136,15 +136,15 @@ describe('answerCaptureRequest', () => {
 });
 
 describe('DetachedPeer.setLabel', () => {
-  it('stamps the record with the label, keeping pid and socket, and capture queries still reach it', async () => {
+  it('stamps the record with the label, keeping pid, socket and version, and capture queries still reach it', async () => {
     const peer = new DetachedPeer(root, randomUUID(), vi.fn(), vi.fn(), () => ({ text: 'labeled screen', capturedAt: 3 }));
     await peer.start(vi.fn());
     const file = path.join(root, '.janissary', 'remote', `${peer.session}.json`);
-    const before = JSON.parse(readFileSync(file, 'utf8')) as { pid: number; socket: string };
+    const before = JSON.parse(readFileSync(file, 'utf8')) as { pid: number; socket: string; version: number };
     peer.setLabel('foo');
     peer.detach();
     try {
-      expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ pid: before.pid, socket: before.socket, label: 'foo' });
+      expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ pid: before.pid, socket: before.socket, label: 'foo', version: before.version });
       await expect(requestParkedCapture(root, peer.session, 'r1', 'q1')).resolves.toEqual({ text: 'labeled screen', capturedAt: 3 });
     } finally { peer.dispose(); }
   });

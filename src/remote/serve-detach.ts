@@ -3,7 +3,7 @@ import { chmodSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { isPidAlive } from '../instance-lock.js';
-import { encodeFrame } from './protocol.js';
+import { encodeFrame, REMOTE_PROTOCOL_VERSION } from './protocol.js';
 import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 import { ReplayHistory } from './replay-history.js';
 import { peerRecordPath, readPeerRecord, writePeerRecord } from './peer-record.js';
@@ -61,15 +61,15 @@ export class DetachedPeer {
       server.listen(socketPath, resolve);
     });
     this.socketPath = socketPath;
-    writePeerRecord(this.record, { pid: process.pid, socket: socketPath });
+    writePeerRecord(this.record, { pid: process.pid, socket: socketPath, version: REMOTE_PROTOCOL_VERSION });
   }
 
   // Stamp the record with the label this peer is provisioning, before its clone starts, so another
-  // `remote-serve` on this host asked for the same label sees it running and refuses. `pid` and
-  // `socket` are rewritten unchanged; the readers of those two ignore the extra field.
+  // `remote-serve` on this host asked for the same label sees it running and refuses. `pid`,
+  // `socket` and `version` are rewritten unchanged; the readers of those ignore the extra field.
   setLabel(label: string): void {
     if (this.stopped || this.socketPath === undefined) return;
-    writePeerRecord(this.record, { pid: process.pid, socket: this.socketPath, label });
+    writePeerRecord(this.record, { pid: process.pid, socket: this.socketPath, label, version: REMOTE_PROTOCOL_VERSION });
   }
 
   emit(frame: ServerFrame): void {
@@ -183,6 +183,11 @@ export function relayPeer(
   if (record === 'missing') { ended(true); return; }
   if (record === 'invalid') { ended(false); return; }
   if (!isPidAlive(record.pid)) { ended(true); return; }
+  // The handshake this relay answered bound the version installed now, not the parked peer's. A peer
+  // started under another version, or before records carried one, could decode the relayed frames
+  // differently — a version-38 peer drops a role session's `sessionMeta` — so it is never connected
+  // to, and the non-terminal end leaves it parked rather than declaring the session gone.
+  if (record.version !== REMOTE_PROTOCOL_VERSION) { ended(false); return; }
   const socket = createConnection(record.socket);
   socket.setEncoding('utf8');
   socket.once('connect', () => socket.write(`${encodeFrame({ type: 'attach', session, ...(restore && { restore }) })}\n`));

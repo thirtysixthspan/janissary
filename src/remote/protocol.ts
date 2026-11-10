@@ -201,8 +201,10 @@
 // Version 39 adds an optional `sessionMeta` to `acp-open`, the ACP session `_meta` that turns a role
 // session's Claude built-in tools off. A version-38 remote drops undeclared fields while decoding, so
 // it would start the role session with its built-in tools on while both ends looked healthy; refusing
-// the mismatch at the handshake prevents that silent exposure. Both hosts also need the bundled ACP
-// adapters, which the exact-version handshake already guarantees.
+// the mismatch at the handshake prevents that silent exposure. An attach's handshake is answered by
+// the relaying process rather than the parked peer, so a peer parked under another version is refused
+// at relay time instead, by the version its peer record carries (`relayPeer` in `./serve-detach.ts`).
+// Both hosts also need the bundled ACP adapters, which the exact-version handshake already guarantees.
 export const REMOTE_PROTOCOL_VERSION = 39;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it

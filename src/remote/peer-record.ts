@@ -3,9 +3,10 @@ import path from 'node:path';
 
 // The on-disk record a `DetachedPeer` keeps at `.janissary/remote/<session>.json` under its root:
 // the pid that owns it, the Unix socket a relay connects to, and — once the peer is provisioning
-// one — the label its workspace is named after. It is a contract between processes on one host, so
-// its path, its writer and its one validated reader all live here.
-export type PeerRecord = { pid: number; socket: string; label?: string };
+// one — the label its workspace is named after, and the remote protocol version the peer speaks. It
+// is a contract between processes on one host, so its path, its writer and its one validated reader
+// all live here. A record written before the version was stamped has none.
+export type PeerRecord = { pid: number; socket: string; label?: string; version?: number };
 
 export function peerRecordDir(root: string): string {
   return path.join(root, '.janissary', 'remote');
@@ -24,7 +25,8 @@ function isPeerRecord(value: unknown): value is PeerRecord {
   const record = value as Record<string, unknown>;
   return Number.isSafeInteger(record.pid) && (record.pid as number) > 0
     && typeof record.socket === 'string'
-    && (record.label === undefined || typeof record.label === 'string');
+    && (record.label === undefined || typeof record.label === 'string')
+    && (record.version === undefined || Number.isSafeInteger(record.version));
 }
 
 // `'missing'` when no record file exists — a peer that has already gone — and `'invalid'` when one
