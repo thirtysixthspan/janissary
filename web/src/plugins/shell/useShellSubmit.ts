@@ -1,5 +1,5 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
-import type { TabPluginClientCapabilities } from '../api';
+import { fireIntent, type TabPluginClientCapabilities } from '../api';
 import { isShellAcpReceipt } from '@shared/plugins/shell/shared';
 import type { ShellAcpReceipt, ShellDispatchResult } from '@shared/plugins/shell/shared';
 import { opensShellHistory, routeFor, shellLine, transcriptSearchQuery } from './command-line-rules';
@@ -48,7 +48,7 @@ export function useShellSubmit(input: {
     const remember = (line: string) => {
       if (!record) return;
       setSent((previous) => appendShellHistory(previous, line));
-      void capabilities.intent('remember', line).catch(() => {});
+      fireIntent(capabilities, 'remember', line);
     };
     const runInShell = (line: string) => {
       const command = stripTerminalControls(line);

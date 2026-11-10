@@ -343,3 +343,4 @@ export type PluginClientCapabilityOptions = {
 };
 
 export { createPluginClientCapabilities } from './plugin-client-capabilities';
+export { fireIntent } from './fire-intent';

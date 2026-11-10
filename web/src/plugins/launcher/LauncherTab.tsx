@@ -4,6 +4,7 @@ import { faClipboard, faGear } from '@fortawesome/free-solid-svg-icons';
 import type { LauncherPayload } from '@shared/plugins/launcher/shared';
 import { SUMMARIZER_FLUSH_MS } from '@shared/plugins/launcher/shared';
 import {
+  fireIntent,
   PluginActionsHeader,
   type TabPluginClientCapabilities,
 } from '../api';
@@ -51,7 +52,7 @@ export function LauncherTab({ payload, capabilities }: Properties) {
   useEffect(() => {
     if (!capabilities.active) return;
     const timer = setInterval(() => {
-      void capabilities.intent('summarize', {}).catch(() => {});
+      fireIntent(capabilities, 'summarize', {});
     }, SUMMARIZER_FLUSH_MS);
     return () => { clearInterval(timer); };
   }, [capabilities.active, capabilities]);
@@ -103,7 +104,7 @@ export function LauncherTab({ payload, capabilities }: Properties) {
         payload={payload}
         listRef={tabsRef}
         onToggleFocus={() => { commandsRef.current?.focus(); }}
-        onFocus={(row) => { void capabilities.intent('focus-tab', { label: row.label }).catch(() => {}); }}
+        onFocus={(row) => { fireIntent(capabilities, 'focus-tab', { label: row.label }); }}
         now={now}
       />
       {reply !== null && <div className="launcher-reply">{reply}</div>}
