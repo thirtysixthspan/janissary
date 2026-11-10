@@ -48,6 +48,19 @@ describe('createRemoteAcpSession — opening', () => {
     }]);
   });
 
+  it('carries the session options on the open frame when the launch sets them', () => {
+    const fake = fakeChannel();
+    const sessionMeta = { claudeCode: { options: { tools: [] } } };
+
+    createRemoteAcpSession(fake.channel, { ...OPTIONS, sessionMeta }, { onError: vi.fn(), onConnect: vi.fn() });
+
+    expect(fake.sent).toEqual([{
+      type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp'],
+      env: { OPENCODE_CONFIG_CONTENT: '{"model":"google/gemini-3.1-flash-lite"}' }, offline: false,
+      sessionMeta,
+    }]);
+  });
+
   it('invokes the connect hook when the remote reports its handshake done', () => {
     const s = makeSession();
 

@@ -720,6 +720,27 @@ describe('AcpManager — remote tabs', () => {
     expect(acp.has('tab1')).toBe(true);
   });
 
+  it('sends a claude role session\'s built-in-tool denial across on the open frame', () => {
+    const { acp, channel } = remoteSetup();
+
+    acp.session('tab1', '/cwd', CLAUDE, { onError: vi.fn(), onConnect: vi.fn() });
+
+    expect(channel.send).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'acp-open', command: 'claude-agent-acp', sessionMeta: { claudeCode: { options: { tools: [] } } },
+    }));
+  });
+
+  it('sends no session options for an opencode role session', () => {
+    const { acp, channel } = remoteSetup();
+
+    acp.session('tab1', '/cwd', GEMINI, { onError: vi.fn(), onConnect: vi.fn() });
+
+    const open = channel.send.mock.calls.map(([frame]) => frame as Record<string, unknown>)
+      .find((frame) => frame.type === 'acp-open');
+    expect(open).toBeDefined();
+    expect(open).not.toHaveProperty('sessionMeta');
+  });
+
   it('keeps ask and tell remote sessions on separate ids over one channel', () => {
     const { acp, channel } = remoteSetup();
     const ask = acp.start('tab1');

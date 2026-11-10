@@ -279,6 +279,12 @@ changes, only the staged changes, or only the most recent commit, read on the fa
 request naming any other source is malformed. A version-37 remote would ignore it and answer with every change while
 the tab claimed to show only the staged ones, so the handshake refuses the mismatch.
 
+Protocol version 39 adds optional session options to the ACP open request: a plain object the remote passes to the
+agent as the ACP session's `_meta`. Role sessions use it to turn the Claude adapter's built-in tools off. A version-38
+remote would ignore the field and start a role session with its built-in tools on while both ends looked healthy, so
+the handshake refuses the mismatch. Both hosts also need the bundled ACP adapters, which the exact-version handshake
+ensures.
+
 Unavailable sends, explicit disconnect, transport loss, protocol failure, and channel finish settle and detach ACP listeners, including before readiness. Late frames for detached ids are ignored. A lost core ACP session is closed locally and replaced by a later request once its channel is ready; autonomous runs retain their transport-loss termination. Durable activity capture belongs only to the initiating project's recorder. The sessions tab's existing shell/harness restoration policy is unchanged.
 
 The handshake check is narrower for an attach than for a launch. An attach is answered by the
@@ -309,7 +315,8 @@ mismatched sender rather than a field to quietly drop. Filesystem frames additio
 the declared closed set, and the exact argument shape for that operation; paths and history entries
 are validated before the workspace holder sees them. An ACP frame's agent command must be a nonempty
 string, its argument list an array of strings (possibly empty), and its environment overrides a plain
-object of string values — an array or a null is refused. A reply chunk may be empty, since an agent
+object of string values — an array or a null is refused. Its session options, when present, must be a plain object —
+an array, a null, or a scalar is refused. A reply chunk may be empty, since an agent
 can legitimately stream one; a stop reason and an error message may not. An error frame's fatal flag
 is required rather than optional, because an absent flag would default a dead session to recoverable.
 A browser-exit frame's message is optional but, when present, must be a nonempty string; it carries

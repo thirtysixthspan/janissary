@@ -6,7 +6,8 @@ import type { ClientFrame, RemoteAcpActivityKind } from './protocol-frames.js';
 import { errorText } from '../error-text.js';
 
 // What the local side decides and sends across: which agent runs, with what arguments and
-// environment, and whether it is confined offline. The remote supplies the workspace directory it
+// environment, whether it is confined offline, and the ACP session options that turn a role
+// session's built-in tools off. The remote supplies the workspace directory it
 // provisioned, so no cwd travels — for a remote tab the local `cwdOf(label)` is a path on the other
 // machine and means nothing here.
 export type RemoteAcpOptions = {
@@ -17,6 +18,7 @@ export type RemoteAcpOptions = {
   offline?: boolean;
   autonomous?: true;
   effort?: { level: string; model: string };
+  sessionMeta?: Record<string, unknown>;
 };
 
 // Hooks the owner supplies, matching `AcpManager`'s own `ConnectHooks`: `onError` is the
@@ -49,7 +51,7 @@ export function createRemoteAcpSession(
   options: RemoteAcpOptions,
   hooks: RemoteAcpHooks,
 ): RemoteAcpSession {
-  const { id, command, args, env, offline, autonomous, effort } = options;
+  const { id, command, args, env, offline, autonomous, effort, sessionMeta } = options;
   // The one in-flight prompt, matching the discipline `connectAcp` keeps with its own `current`.
   const control = new AcpPromptControl();
   let live = true;
@@ -121,6 +123,7 @@ export function createRemoteAcpSession(
     type: 'acp-open', id, command, args,
     ...(env !== undefined && { env }), ...(offline !== undefined && { offline }),
     ...(autonomous !== undefined && { autonomous }), ...(effort !== undefined && { effort }),
+    ...(sessionMeta !== undefined && { sessionMeta }),
   });
 
   const release = (): Promise<boolean> => {

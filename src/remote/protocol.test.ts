@@ -162,6 +162,11 @@ describe('frame codec', () => {
     expect(roundTrip(frame)).toEqual(frame);
   });
 
+  it('accepts an acp-open carrying empty session options', () => {
+    const frame: RemoteFrame = { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], sessionMeta: {} };
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
   // Base64 is the whole reason the payload can't be mistaken for framing.
   it('carries terminal control bytes and embedded newlines through intact', () => {
     const data = '[2J[H first\nsecond\r\n{"type":"kill"}\n';
@@ -295,6 +300,9 @@ describe('frame codec', () => {
     ['acp-open with a null env', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], env: null }],
     ['acp-open with a non-string env value', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], env: { A: 1 } }],
     ['acp-open with a non-boolean offline flag', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], offline: 'yes' }],
+    ['acp-open with an array sessionMeta', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], sessionMeta: [] }],
+    ['acp-open with a null sessionMeta', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], sessionMeta: null }],
+    ['acp-open with a string sessionMeta', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], sessionMeta: 'tools' }],
     ['acp-prompt without an id', { type: 'acp-prompt', text: 'aGk=' }],
     ['acp-prompt without string text', { type: 'acp-prompt', id: 'racp1', text: 7 }],
     ['acp-close without an id', { type: 'acp-close' }],
@@ -529,6 +537,7 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   'acp-open': {
     type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp'], env: { A: '1' }, offline: true,
     autonomous: true, effort: { level: 'high', model: 'google/gemini-3.1-flash-lite' },
+    sessionMeta: { claudeCode: { options: { tools: [] } } },
   },
   'acp-prompt': { type: 'acp-prompt', id: 'racp1', text: 'summarize this project' },
   'acp-close': { type: 'acp-close', id: 'racp1' },
@@ -681,8 +690,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 38', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(38);
+  it('is 39', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(39);
   });
 });
 

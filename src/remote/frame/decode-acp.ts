@@ -1,5 +1,6 @@
 import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js';
 import { isAcpActivityKind } from '../../acp/activity.js';
+import { isRecord } from '../../value-guards.js';
 
 // The ACP family's decoders, in their own module for the same reason `decode-history.ts` has
 // one: `decode.ts` is the dispatcher, and six frame shapes are more validation than a
@@ -19,10 +20,18 @@ function decodeEnv(value: unknown): Record<string, string> | undefined | 'invali
   return env;
 }
 
+// Only the top-level shape is checked: the frame came through `JSON.parse`, so its contents are JSON
+// already, and the remote hands them to the agent as the session's `_meta` without reading them.
+function decodeSessionMeta(value: unknown): Record<string, unknown> | undefined | 'invalid' {
+  if (value === undefined) return undefined;
+  return isRecord(value) ? value : 'invalid';
+}
+
 export function decodeAcpOpen(record: Record<string, unknown>): DecodeResult {
   const { id, command, args, offline, autonomous, effort } = record;
   const env = decodeEnv(record.env);
-  if (!nonEmptyString(id) || !nonEmptyString(command) || env === 'invalid'
+  const sessionMeta = decodeSessionMeta(record.sessionMeta);
+  if (!nonEmptyString(id) || !nonEmptyString(command) || env === 'invalid' || sessionMeta === 'invalid'
     || !Array.isArray(args) || args.some((argument) => typeof argument !== 'string')
     || !(offline === undefined || typeof offline === 'boolean')
     || !(autonomous === undefined || autonomous === true)
@@ -35,6 +44,7 @@ export function decodeAcpOpen(record: Record<string, unknown>): DecodeResult {
     ...(offline !== undefined && { offline }),
     ...(autonomous === true && { autonomous }),
     ...(effort !== undefined && { effort: effort as { level: string; model: string } }),
+    ...(sessionMeta !== undefined && { sessionMeta }),
   };
 }
 

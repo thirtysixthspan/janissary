@@ -148,6 +148,7 @@ export type ClientFrame =
     type: 'acp-open'; id: string; command: string; args: string[];
     env?: Record<string, string>; offline?: boolean;
     autonomous?: true; effort?: { level: string; model: string };
+    sessionMeta?: Record<string, unknown>;
   }
   | { type: 'acp-prompt'; id: string; text: string }
   | { type: 'acp-cancel'; id: string }

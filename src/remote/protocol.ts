@@ -198,7 +198,12 @@
 // Version 38 adds a required `source` to `change-set`, so a remote diff tab can read the staged changes
 // or the most recent commit. A version-37 remote would ignore the field and answer with every change
 // while the tab claimed to show only the staged ones.
-export const REMOTE_PROTOCOL_VERSION = 38;
+// Version 39 adds an optional `sessionMeta` to `acp-open`, the ACP session `_meta` that turns a role
+// session's Claude built-in tools off. A version-38 remote drops undeclared fields while decoding, so
+// it would start the role session with its built-in tools on while both ends looked healthy; refusing
+// the mismatch at the handshake prevents that silent exposure. Both hosts also need the bundled ACP
+// adapters, which the exact-version handshake already guarantees.
+export const REMOTE_PROTOCOL_VERSION = 39;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.

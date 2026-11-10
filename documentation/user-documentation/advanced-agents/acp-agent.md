@@ -40,7 +40,6 @@ defaults; an existing role with no grants has no native tools.
 
 The agent has no built-in tools of its own, such as a shell, file editing, or web search, so it can
 only run the native commands its role grants.
-For now, a `claude` role session hosted on a remote machine keeps its built-in tools: it can still read files, and every permission request it raises is denied.
 
 ## Separate ask and tell conversations
 
