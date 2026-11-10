@@ -14,6 +14,8 @@ vi.mock('./loop.js', () => ({ runAcpToolLoop: mocks.runAcpToolLoop }));
 import { runCorePrompt } from './run-prompt.js';
 
 const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
+const NO_BUILTIN_TOOLS_LINE = 'You have no built-in tools; use only the commands listed here.';
+const NO_TOOLS_LINE = 'You have no tools; answer in prose.';
 
 function settingsWith(
   rows: Record<string, { effectiveEnabled?: boolean; effectiveAgentAccess?: boolean }>,
@@ -72,6 +74,7 @@ describe('runCorePrompt role primer', () => {
     expect(primer('tell')).toBe([
       'database primer',
       'Only these commands are allowed: db sqlite query.',
+      NO_BUILTIN_TOOLS_LINE,
       TELL_INSTRUCTION,
       MARKDOWN_INSTRUCTION,
     ].join('\n\n'));
@@ -85,13 +88,18 @@ describe('runCorePrompt role primer', () => {
   });
 
   it('keeps the tell instruction when the tab-wide no-tools override removes tool text', () => {
-    expect(primer('tell', { withoutTools: true })).toBe([TELL_INSTRUCTION, MARKDOWN_INSTRUCTION].join('\n\n'));
+    expect(primer('tell', { withoutTools: true }))
+      .toBe([NO_TOOLS_LINE, TELL_INSTRUCTION, MARKDOWN_INSTRUCTION].join('\n\n'));
   });
 
   it('omits the tell instruction from ask when the tab-wide no-tools override is set', () => {
     const result = primer('ask', { withoutTools: true });
-    expect(result).toBe(MARKDOWN_INSTRUCTION);
+    expect(result).toBe([NO_TOOLS_LINE, MARKDOWN_INSTRUCTION].join('\n\n'));
     expect(result).not.toContain(TELL_INSTRUCTION);
+  });
+
+  it('starts the primer with the no-tools line for a role with no grants', () => {
+    expect(primer('ask', { commands: [] })).toBe([NO_TOOLS_LINE, MARKDOWN_INSTRUCTION].join('\n\n'));
   });
 
   it('excludes an agent-off command from the allow-list but keeps its owner primer', () => {
@@ -103,6 +111,8 @@ describe('runCorePrompt role primer', () => {
     expect(result).toContain('database primer');
     expect(result).toContain('Only these commands are allowed: db sqlite query.');
     expect(result).not.toContain('browser goto,');
+    expect(result).toContain(NO_BUILTIN_TOOLS_LINE);
+    expect(result).not.toContain(NO_TOOLS_LINE);
   });
 
   it.each([
@@ -113,7 +123,7 @@ describe('runCorePrompt role primer', () => {
       commands: ['browser goto'],
       settings: settingsWith({ 'browser goto': setting }),
     });
-    expect(result).toBe([BROWSER_PRIMER, MARKDOWN_INSTRUCTION].join('\n\n'));
+    expect(result).toBe([BROWSER_PRIMER, NO_TOOLS_LINE, MARKDOWN_INSTRUCTION].join('\n\n'));
     expect(result).not.toContain('Only these commands are allowed');
   });
 
@@ -124,7 +134,8 @@ describe('runCorePrompt role primer', () => {
     });
     const allowList = result.indexOf('Only these commands are allowed: db sqlite query.');
     expect(result.indexOf(BROWSER_PRIMER)).toBeLessThan(allowList);
-    expect(allowList).toBeLessThan(result.indexOf(TELL_INSTRUCTION));
+    expect(allowList).toBeLessThan(result.indexOf(NO_BUILTIN_TOOLS_LINE));
+    expect(result.indexOf(NO_BUILTIN_TOOLS_LINE)).toBeLessThan(result.indexOf(TELL_INSTRUCTION));
     expect(result.indexOf(TELL_INSTRUCTION)).toBeLessThan(result.indexOf(MARKDOWN_INSTRUCTION));
   });
 });

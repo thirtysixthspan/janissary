@@ -35,6 +35,10 @@ const CODEX_DISABLED_TOOLS = {
   experimental_request_user_input: { enabled: false },
 };
 
+// The role primer's tool-availability lines: one follows the allow-list, the other replaces it.
+export const NO_BUILTIN_TOOLS_LINE = 'You have no built-in tools; use only the commands listed here.';
+export const NO_TOOLS_LINE = 'You have no tools; answer in prose.';
+
 function parseRecord(json: string | undefined): Record<string, unknown> {
   if (json === undefined) return {};
   const parsed: unknown = JSON.parse(json);

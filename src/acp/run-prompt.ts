@@ -14,6 +14,7 @@ import { coreActivity } from './record-feed.js';
 import { acpRoleRuntime } from './role-state.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { effectiveCommandSetting } from '../native-commands/policy.js';
+import { NO_BUILTIN_TOOLS_LINE, NO_TOOLS_LINE } from './internal-tools.js';
 
 const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
 
@@ -32,6 +33,7 @@ export function runCorePrompt(
   const settings = managers.nativeCommandSettings?.current();
   const allowedCommands = NATIVE_ACP_COMMANDS.filter((command) => request.commands.includes(command)
     && effectiveCommandSetting(settings, command).effectiveAgentAccess);
+  const toolsAvailable = tools.length > 0 && allowedCommands.length > 0;
   const runCommand = toolRunner(managers, tools, request.roleName, request.commands, label);
   const recordTool = (text: string) => coreActivity(managers.acpRecords, runtime, 'tool', text, request.role);
   const recordAsyncResult = async (result: Promise<string>) => {
@@ -51,8 +53,12 @@ export function runCorePrompt(
     },
   }, request.prompt, {
     signal: request.abort.signal,
-    primer: [toolPrimer(tools, allowedCommands), request.role === 'tell' ? TELL_INSTRUCTION : '', MARKDOWN_INSTRUCTION]
-      .filter(Boolean).join('\n\n'),
+    primer: [
+      toolPrimer(tools, allowedCommands),
+      toolsAvailable ? NO_BUILTIN_TOOLS_LINE : NO_TOOLS_LINE,
+      request.role === 'tell' ? TELL_INSTRUCTION : '',
+      MARKDOWN_INSTRUCTION,
+    ].filter(Boolean).join('\n\n'),
     runCommand: (command) => {
       if (!active()) throw new Error('ACP: prompt cancelled.');
       recordTool(command);
