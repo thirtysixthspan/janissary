@@ -19,6 +19,9 @@ export type RemoteResume = {
   // `janus` missing from the remote PATH. It establishes nothing about the session, so the record
   // survives and the row keeps its attach button.
   onFailed?: (message: string) => void;
+  // Set only by a sessions-tab terminate: its attach asks the far side to end the session, not to
+  // bring it back, which is what lets the relay reach a peer parked under another protocol version.
+  terminate?: true;
 };
 
 /**

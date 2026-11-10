@@ -283,7 +283,8 @@ Protocol version 39 adds optional session options to the ACP open request: a pla
 agent as the ACP session's `_meta`. Role sessions use it to turn the Claude adapter's built-in tools off. A version-38
 remote would ignore the field and start a role session with its built-in tools on while both ends looked healthy, so
 the handshake refuses the mismatch. An attach into a session parked under another version is refused by the relaying
-server instead, as described below. Both hosts also need the bundled ACP adapters, which the exact-version handshake
+server instead, as described below. The same version lets an attach say that it is a terminate, which is what still
+reaches such a session. Both hosts also need the bundled ACP adapters, which the exact-version handshake
 ensures.
 
 Unavailable sends, explicit disconnect, transport loss, protocol failure, and channel finish settle and detach ACP listeners, including before readiness. Late frames for detached ids are ignored. A lost core ACP session is closed locally and replaced by a later request once its channel is ready; autonomous runs retain their transport-loss termination. Durable activity capture belongs only to the initiating project's recorder. The sessions tab's existing shell/harness restoration policy is unchanged.
@@ -296,7 +297,12 @@ compares it with its own before connecting. A session parked while the remote in
 upgraded, or by an installation old enough to record no version, is never relayed into: nothing
 reaches the parked peer, the attach reports a failure rather than an ended session, an automatic
 reconnect keeps retrying, and the session stays parked with its record. A parked peer whose process
-has already exited is still reported as ended. The session-state query is also bounded rather than
+has already exited is still reported as ended. A terminate is the one attach that still reaches a
+peer parked under another version, or under none: the relaying server never relays a terminate, but
+itself sends the peer an attach request in the form every version understands and, once the peer
+accepts it, the instruction to shut down. It passes on only the peer's answer and nothing the local
+side sends, so the session's processes, workspace, and label are released after an upgrade without
+anything else reaching the older peer. The session-state query is also bounded rather than
 open-ended, so a peer that accepts an attach and then never answers settles: no answer within the
 wait ends the accepted session, closes its placeholder tab, and shuts down the
 remote workspace rather than leaving an uninspectable peer behind. The wait also ends at once,
@@ -512,7 +518,8 @@ Only surviving shell and harness processes are restored. Legacy agent-only recor
 Remote shell tabs are restored around their existing PTYs on every launch and when attaching a parked session. Their last reported cwd, offline mode, and marker nonce are retained, and no navigator is reopened. The sessions tab identifies these rows as `shell`.
 
 A session can be terminated for good from its parked state: janissary reconnects far enough to tell the
-peer to shut down, which stops its processes and removes its remote workspace. Forgetting a parked
+peer to shut down, which stops its processes and removes its remote workspace. This works for a
+session parked before the remote installation was upgraded too, although attaching to one does not. Forgetting a parked
 session removes janissary's own record and touches nothing on the far side.
 
 When the application itself quits, each remote process, ACP session, and navigator session is told

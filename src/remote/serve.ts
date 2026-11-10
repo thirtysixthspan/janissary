@@ -50,6 +50,9 @@ export class RemoteServer {
   readonly sessionId = randomUUID();
   private peer: DetachedPeer | undefined;
   private relay: Socket | undefined;
+  // A terminate attach is never relayed: what the local side sends after it is dropped, not written
+  // into a parked peer that may speak another protocol version.
+  private terminating = false;
 
   constructor(
     private pathArgument: string | undefined,
@@ -74,7 +77,7 @@ export class RemoteServer {
   // Everything the local side wrote, in arrival order. Newline-delimited, so a frame split across
   // two reads is buffered until it is complete.
   receive(chunk: string): void {
-    if (this.relay) { this.relay.write(chunk); return; }
+    if (this.relay) { if (!this.terminating) this.relay.write(chunk); return; }
     this.buffer = drainFrames(this.buffer + chunk, (line) => this.dispatch(line));
   }
 
@@ -164,10 +167,11 @@ export class RemoteServer {
   private attach(frame: Extract<ClientFrame, { type: 'attach' }>): void {
     const root = this.workspaceDir ? undefined : this.lookupRoot(frame.origin);
     if (root === undefined) { this.emit({ type: 'attach-result', accepted: false }); return; }
+    this.terminating = frame.terminate === true;
     this.relay = relayPeer(root, frame.session, (data) => { process.stdout.write(data); }, (terminated) => {
       if (terminated) this.emit({ type: 'attach-result', accepted: false });
       this.shutdown(terminated ? 0 : 1);
-    }, frame.restore);
+    }, frame.restore, frame.terminate);
   }
 
   // Settle the root if this is the first provision (see `serve-root-settle.ts`), then check the

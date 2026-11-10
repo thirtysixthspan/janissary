@@ -29,6 +29,7 @@ describe('frame codec', () => {
     { type: 'attach', session: '12345678-1234-1234-1234-123456789abc' },
     { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: true },
     { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: false },
+    { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: true, terminate: true },
     { type: 'attach-result', accepted: true },
     { type: 'attach-result', accepted: false },
     { type: 'workspace-ready', dir: '/remote/ws', home: '/home/remote' },
@@ -37,6 +38,8 @@ describe('frame codec', () => {
   it.each([
     { type: 'attach', session: '../../elsewhere' }, { type: 'attach' },
     { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: 'true' },
+    { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', terminate: false },
+    { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', terminate: 'true' },
     { type: 'attach-result', accepted: 'true' }, { type: 'attach-result' },
   ])('rejects malformed attachment %j', (frame) => {
     expect(decodeFrame(JSON.stringify(frame))).toEqual({ error: expect.stringContaining('Malformed') });
@@ -508,6 +511,7 @@ describe('session-state frames', () => {
 const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame, { type: K }> } = {
   'attach': {
     type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: true, origin: 'git@github.com:owner/repo.git',
+    terminate: true,
   },
   'session-state': { type: 'session-state' },
   'shutdown': { type: 'shutdown' },

@@ -607,7 +607,7 @@ const RECORDED_SESSION = '12345678-1234-1234-1234-123456789abc';
 describe('RemoteManager attach from a record', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  function resumeHarness(origin?: string) {
+  function resumeHarness(origin?: string, terminate?: true) {
     let transport: { onData: (data: string) => void; onExit: () => void } | undefined;
     const write = vi.fn();
     const kill = vi.fn();
@@ -626,7 +626,7 @@ describe('RemoteManager attach from a record', () => {
     const handlers: RemoteLaunchHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
     const onResult = vi.fn();
     remote.create('creator', address('devbox'), '/remote/ws', handlers, {
-      session: RECORDED_SESSION, workspaceDir: '/remote/ws', onResult,
+      session: RECORDED_SESSION, workspaceDir: '/remote/ws', onResult, ...(terminate && { terminate }),
     });
     return { remote, handlers, onResult, write, kill, spawnTransport: managers.pty.spawnTransport, transport: () => transport };
   }
@@ -649,6 +649,13 @@ describe('RemoteManager attach from a record', () => {
     const sent = h.write.mock.calls.map(([data]: [string]) => JSON.parse(String(data).trim()) as { type: string });
     expect(sent.map((frame) => frame.type)).toEqual(['attach']);
     expect(sent[0]).toEqual({ type: 'attach', session: RECORDED_SESSION, restore: true });
+  });
+
+  it('marks the attach of a resume opened to terminate the session, and only that one', () => {
+    const h = resumeHarness(undefined, true);
+    h.transport()?.onData(`${encodeHandshake(RECORDED_SESSION)}\n`);
+    const sent = h.write.mock.calls.map(([data]: [string]) => JSON.parse(String(data).trim()) as { type: string });
+    expect(sent).toEqual([{ type: 'attach', session: RECORDED_SESSION, restore: true, terminate: true }]);
   });
 
   // The far side classifies the attach's root with it, so a session a launch rooted at

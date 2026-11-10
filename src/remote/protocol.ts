@@ -204,7 +204,10 @@
 // the mismatch at the handshake prevents that silent exposure. An attach's handshake is answered by
 // the relaying process rather than the parked peer, so a peer parked under another version is refused
 // at relay time instead, by the version its peer record carries (`relayPeer` in `./serve-detach.ts`).
-// Both hosts also need the bundled ACP adapters, which the exact-version handshake already guarantees.
+// The same version adds an optional `terminate` to `attach`, so that refusal does not also strand a
+// parked session nobody can end: a sessions-tab terminate marks its attach, and the relay answers it
+// for a peer under any version by writing only an `attach` carrying nothing but `session`, then a
+// `shutdown`, and relaying nothing the local side sends (`./serve-detach-terminate.ts`). Both hosts also need the bundled ACP adapters, which the exact-version handshake already guarantees.
 export const REMOTE_PROTOCOL_VERSION = 39;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it

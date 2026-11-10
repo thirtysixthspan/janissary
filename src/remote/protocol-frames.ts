@@ -75,8 +75,10 @@ export type ClientFrame =
   // announced when the peer was first created, and it is the only credential the far side checks:
   // `relayPeer` refuses any `attach` whose id does not match the peer it found. `origin` is the
   // attaching project's, as `provision` carries it, so a relay finds the root a launch cloned into
-  // the home directory.
-  | { type: 'attach'; session: string; restore?: boolean; origin?: string }
+  // the home directory. `terminate` marks the attach a sessions-tab terminate opens only to end the
+  // session: it is never relayed, whatever version the parked peer speaks — the relaying server
+  // writes the attach and a `shutdown` to the peer itself and passes on nothing the local side sends.
+  | { type: 'attach'; session: string; restore?: boolean; origin?: string; terminate?: true }
   // No payload: there is one workspace per peer, so "which processes are alive" has a single
   // answer and nothing to address it by.
   | { type: 'session-state' }

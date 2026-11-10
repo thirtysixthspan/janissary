@@ -17,7 +17,7 @@ import type { ServerFrame } from './protocol-frames.js';
 import { DetachedPeer, relayPeer, REMOTE_DETACH_TIMEOUT_MS } from './serve-detach.js';
 import { provisionRemoteWorkspace } from './serve-provision.js';
 import { randomUUID } from 'node:crypto';
-import { createConnection } from 'node:net';
+import { createConnection, createServer } from 'node:net';
 import { readFileSync } from 'node:fs';
 
 // Only the process spawners are faked: every other part of this file drives the real server against
@@ -733,10 +733,12 @@ describe('RemoteServer — settling the root', () => {
     beforeEach(() => { mkdirSync(relayHome(), { recursive: true }); });
     afterEach(() => { rmSync(relayHome(), { recursive: true, force: true }); });
 
-    const parkAtHomeClone = async (capture?: (id: string) => { text: string; capturedAt: number } | undefined) => {
+    const parkAtHomeClone = async (
+      capture?: (id: string) => { text: string; capturedAt: number } | undefined, receive: (data: string) => void = vi.fn(),
+    ) => {
       const root = path.join(relayHome(), 'origin');
       execSync(`git clone "${origin()}" "${root}"`, { stdio: 'pipe' });
-      const peer = new DetachedPeer(root, randomUUID(), vi.fn(), vi.fn(), capture);
+      const peer = new DetachedPeer(root, randomUUID(), receive, vi.fn(), capture);
       await peer.start(vi.fn());
       peer.detach();
       return peer;
@@ -765,6 +767,29 @@ describe('RemoteServer — settling the root', () => {
         server.receive(`${encodeFrame({ type: 'attach', session: peer.session, origin: origin() })}\n`);
         await vi.waitFor(() => expect(exit).toHaveBeenCalledExactlyOnceWith(1));
         expect(frames).toEqual([]); expect(output.join('')).not.toContain('attach-result');
+      } finally { write.mockRestore(); peer.dispose(); }
+    });
+
+    // The relay version refusal must not strand a session nobody can end: a terminate still reaches
+    // the older peer, but what the local side sends after it — here a role `acp-open` — never does.
+    it('terminates the peer parked under the home clone that speaks another version, relaying nothing the local side sends', async () => {
+      const received = vi.fn();
+      const peer = await parkAtHomeClone(undefined, received);
+      const recordPath = path.join(relayHome(), 'origin', '.janissary', 'remote', `${peer.session}.json`);
+      const record = JSON.parse(readFileSync(recordPath, 'utf8'));
+      writeFileSync(recordPath, JSON.stringify({ ...record, version: REMOTE_PROTOCOL_VERSION - 1 }));
+      const output: string[] = [], frames: ServerFrame[] = [], exit = vi.fn();
+      const write = vi.spyOn(process.stdout, 'write').mockImplementation((data) => { output.push(String(data)); return true; });
+      const server = new RemoteServer('~', (frame) => { frames.push(frame); }, exit, { settle: settleAt, home: relayHome() });
+      try {
+        server.receive(`${encodeFrame({ type: 'attach', session: peer.session, restore: true, origin: origin(), terminate: true })}\n`);
+        await vi.waitFor(() => expect(output.join('')).toContain('"accepted":true'));
+        server.receive(`${encodeFrame({ ...ACP_OPEN_FRAME, sessionMeta: { claudeCode: { options: { tools: [] } } } })}\n`);
+        server.receive(`${encodeFrame({ type: 'shutdown' })}\n`);
+        await vi.waitFor(() => expect(exit).toHaveBeenCalledExactlyOnceWith(1));
+        expect(received.mock.calls.map(([data]) => String(data)).join('')).toBe(`${encodeFrame({ type: 'shutdown' })}\n`);
+        expect(output).toEqual([`${encodeFrame({ type: 'attach-result', accepted: true })}\n`]);
+        expect(frames).toEqual([]);
       } finally { write.mockRestore(); peer.dispose(); }
     });
 
@@ -1072,6 +1097,122 @@ describe('detached peer rendezvous', () => {
         ]);
       } finally { socket.destroy(); }
     } finally { peer.dispose(); }
+  });
+
+  describe('terminating a parked peer', () => {
+    const recordPathOf = (session: string) => path.join(repoDir, '.janissary', 'remote', `${session}.json`);
+    const ACCEPTED = `${encodeFrame({ type: 'attach-result', accepted: true })}\n`;
+    const REFUSED = `${encodeFrame({ type: 'attach-result', accepted: false })}\n`;
+
+    // A stand-in for a peer of any version: it records every byte it is sent and answers the first
+    // line with `answer`, so the test sees exactly what reached the peer and nothing a decoder dropped.
+    const fakePeer = async (session: string, answer: string, version?: number) => {
+      const dir = mkdtempSync(path.join(tmpdir(), 'jt-'));
+      const socketPath = path.join(dir, 'peer.sock');
+      const received: string[] = [];
+      const server = createServer((socket) => {
+        socket.setEncoding('utf8');
+        socket.on('error', () => socket.destroy());
+        socket.on('data', (data: string) => {
+          const first = !received.join('').includes('\n');
+          received.push(data);
+          if (first && data.includes('\n')) socket.write(answer);
+        });
+      });
+      await new Promise<void>((resolve) => { server.listen(socketPath, resolve); });
+      mkdirSync(path.dirname(recordPathOf(session)), { recursive: true });
+      writeFileSync(recordPathOf(session), JSON.stringify({ pid: process.pid, socket: socketPath, ...(version !== undefined && { version }) }));
+      return {
+        received,
+        close: () => { server.close(); rmSync(recordPathOf(session), { force: true }); rmSync(dir, { recursive: true, force: true }); },
+      };
+    };
+
+    it.each([
+      ['no version', undefined],
+      ['an older version', REMOTE_PROTOCOL_VERSION - 1],
+    ])('writes a peer whose record carries %s only an oldest-encoding attach and then a shutdown, never signalling its pid', async (_name, version) => {
+      const session = randomUUID();
+      const peer = await fakePeer(session, `${ACCEPTED}${encodeFrame({ type: 'transcript', blocks: ['replayed'] })}\n`, version);
+      const kill = vi.spyOn(process, 'kill');
+      const output: string[] = [];
+      const ended = vi.fn();
+      try {
+        const socket = relayPeer(repoDir, session, (data) => { output.push(data); }, ended, true, true)!;
+        await vi.waitFor(() => expect(output).toEqual([ACCEPTED]));
+        socket.write(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
+        await vi.waitFor(() => expect(ended).toHaveBeenCalledExactlyOnceWith(false));
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        expect(peer.received.join('')).toBe(`{"type":"attach","session":"${session}"}\n{"type":"shutdown"}\n`);
+        expect(output).toEqual([ACCEPTED]);
+        expect(kill.mock.calls.filter(([, signal]) => signal !== 0)).toEqual([]);
+      } finally { kill.mockRestore(); peer.close(); }
+    });
+
+    it('sends no shutdown to a peer that refuses the terminate, and forwards the refusal', async () => {
+      const session = randomUUID();
+      const peer = await fakePeer(session, REFUSED);
+      const output: string[] = [];
+      const ended = vi.fn();
+      try {
+        relayPeer(repoDir, session, (data) => { output.push(data); }, ended, false, true);
+        await vi.waitFor(() => expect(ended).toHaveBeenCalledExactlyOnceWith(false));
+        expect(peer.received.join('')).toBe(`{"type":"attach","session":"${session}"}\n`);
+        expect(output).toEqual([REFUSED]);
+      } finally { peer.close(); }
+    });
+
+    it.each([
+      ['no version', undefined],
+      ['an older version', REMOTE_PROTOCOL_VERSION - 1],
+      ['a newer version', REMOTE_PROTOCOL_VERSION + 1],
+      ['this version', REMOTE_PROTOCOL_VERSION],
+    ])('shuts down a real parked peer whose record carries %s, while an ordinary attach into a mismatched one stays refused', async (_name, version) => {
+      const received = vi.fn();
+      const peer = new DetachedPeer(repoDir, randomUUID(), received, vi.fn());
+      await peer.start(vi.fn());
+      peer.detach();
+      peer.emit({ type: 'transcript', blocks: ['held while parked'] });
+      const record = JSON.parse(readFileSync(recordPathOf(peer.session), 'utf8'));
+      try {
+        writeFileSync(recordPathOf(peer.session), JSON.stringify({ pid: record.pid, socket: record.socket, ...(version !== undefined && { version }) }));
+        if (version !== REMOTE_PROTOCOL_VERSION) {
+          const refused = vi.fn();
+          expect(relayPeer(repoDir, peer.session, vi.fn(), refused)).toBeUndefined();
+          expect(refused).toHaveBeenCalledExactlyOnceWith(false);
+        }
+        const output: string[] = [];
+        const ended = vi.fn();
+        relayPeer(repoDir, peer.session, (data) => { output.push(data); }, ended, false, true);
+        await vi.waitFor(() => expect(ended).toHaveBeenCalledExactlyOnceWith(false));
+        expect(received.mock.calls.map(([data]) => String(data)).join('')).toBe(`${encodeFrame({ type: 'shutdown' })}\n`);
+        expect(output).toEqual([ACCEPTED]);
+      } finally { peer.dispose(); }
+    });
+
+    it('drops what the local side sends while a terminate waits for the peer to answer', async () => {
+      const session = randomUUID();
+      const peer = await fakePeer(session, '', REMOTE_PROTOCOL_VERSION - 1);
+      const { server } = makeServer();
+      try {
+        server.receive(`${encodeFrame({ type: 'attach', session, restore: true, terminate: true })}\n`);
+        await vi.waitFor(() => expect(peer.received.join('')).toContain('\n'));
+        server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n${encodeFrame(SPAWN_FRAME)}\n`);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        expect(peer.received.join('')).toBe(`{"type":"attach","session":"${session}"}\n`);
+      } finally { server.shutdown(0); peer.close(); }
+    });
+
+    it('still reports a terminate into a peer whose process is gone as ended', () => {
+      const session = randomUUID();
+      mkdirSync(path.dirname(recordPathOf(session)), { recursive: true });
+      writeFileSync(recordPathOf(session), JSON.stringify({ pid: 2_147_483_647, socket: path.join(tmpDir, 'absent.sock') }));
+      const ended = vi.fn();
+      try {
+        expect(relayPeer(repoDir, session, vi.fn(), ended, false, true)).toBeUndefined();
+        expect(ended).toHaveBeenCalledExactlyOnceWith(true);
+      } finally { rmSync(recordPathOf(session), { force: true }); }
+    });
   });
 
   it('expires an unattached peer and cleans up its workspace', async () => {

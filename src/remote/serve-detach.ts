@@ -8,6 +8,7 @@ import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 import { ReplayHistory } from './replay-history.js';
 import { peerRecordPath, readPeerRecord, writePeerRecord } from './peer-record.js';
 import { classifyPreAttachFrame, encodeCaptureReply, busyTransitionFrames } from './serve-detach-capture.js';
+import { terminatePeer } from './serve-detach-terminate.js';
 
 export const REMOTE_DETACH_TIMEOUT_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -177,12 +178,15 @@ export class DetachedPeer {
 
 export function relayPeer(
   root: string, session: string, output: (data: string) => void, ended: (terminated: boolean) => void,
-  restore = false,
+  restore = false, terminate = false,
 ): Socket | undefined {
   const record = readPeerRecord(peerRecordPath(root, session));
   if (record === 'missing') { ended(true); return; }
   if (record === 'invalid') { ended(false); return; }
   if (!isPidAlive(record.pid)) { ended(true); return; }
+  // A terminate relays nothing: this process writes the attach and the shutdown itself, in encodings
+  // every peer decodes, so it is the one attach that still reaches a peer under another version.
+  if (terminate) return terminatePeer(record.socket, session, output, ended);
   // The handshake this relay answered bound the version installed now, not the parked peer's. A peer
   // started under another version, or before records carried one, could decode the relayed frames
   // differently — a version-38 peer drops a role session's `sessionMeta` — so it is never connected
