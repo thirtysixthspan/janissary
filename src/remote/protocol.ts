@@ -69,10 +69,11 @@
 // That check is narrower here than elsewhere, and deliberately so. An attach's handshake is written
 // by the freshly started `janus remote-serve` that then relays into the parked peer (`relayPeer` in
 // `./serve-detach.ts`), not by the parked peer itself — so it binds the relaying process's version,
-// which is whatever is installed on the host now. A peer parked across a remote upgrade therefore
-// announces 15 and hands the query to a 14 that refuses it by name. Nothing in the handshake can see
-// that, so the bounded wait in `askSessionState` is what catches it: the attach reports a failure
-// and the session stays parked, rather than waiting for an answer that will never come.
+// which is whatever is installed on the host now. Nothing in the handshake can see a peer parked
+// across a remote upgrade, so each parked peer records the protocol version it speaks, and
+// `relayPeer` refuses to relay into a live peer whose record carries another version or none: the
+// attach reports a failure and the session stays parked. The bounded wait in `askSessionState`
+// remains for a peer that accepts an attach and then never answers.
 // Version 16 adds `restore` to attachment so rebuilt tabs receive retained display and transcript
 // history while transport recovery does not duplicate transcript blocks already delivered. It also
 // renames version 14's two frames to `attach` and `attach-result`, so the wire uses the one word the
