@@ -488,9 +488,11 @@ numbers, in first-in-file order.
 
 ↑/↓ move the highlighted row and immediately move the editor cursor to that line, scrolling the
 buffer behind the overlay so the match sits about one quarter of the editor body's height below its
-top edge. Clicking a row does the same and keeps focus in the overlay's input. Return moves the
-cursor to the first ranked match and scrolls it into view, even when another row is highlighted;
-the overlay stays open. The cursor move is not an edit: it never dirties the buffer and never becomes
+top edge. Clicking a row does the same and keeps focus in the overlay's input. Return closes the
+overlay and leaves the cursor on the highlighted row's line, with focus back in the buffer. After
+arrowing to a result the cursor is already there, so Return closes the overlay without scrolling the
+buffer; if the query was typed and no row was navigated to, Return first moves the cursor to the
+highlighted (first ranked) match. With no matches, Return just closes the overlay. The cursor move is not an edit: it never dirties the buffer and never becomes
 an undo step, so an undo right after a jump undoes the last real edit.
 
 Escape closes the overlay and leaves the cursor on the last previewed line, with focus back in the

@@ -1512,19 +1512,50 @@ describe('EditorTab', () => {
       expect(body.scrollTop).toBe(310);
     });
 
-    it('jumps to the first match and scrolls it into view on Enter', async () => {
+    it('moves the cursor to the highlighted match and closes on Enter', async () => {
       const { client } = makeClient();
       const { container } = await renderLoaded(client);
-      const scrollIntoView = vi.mocked(Element.prototype.scrollIntoView);
       openFind();
       await searchForOneRow(container, 'two');
-      scrollIntoView.mockClear();
 
       fireEvent.keyDown(findInput(), { key: 'Enter' });
 
       await waitFor(() => expect(currentLine(container)).toBe('line two'));
-      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
-      expect(findInput()).toBeInTheDocument();
+      expect(noFindInput()).toBeNull();
+      expect(document.activeElement).toBe(textarea());
+    });
+
+    it('closes on Enter without scrolling after arrowing to a match', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+      openFind();
+      await searchForOneRow(container, 'two');
+      fireEvent.keyDown(findInput(), { key: 'ArrowDown' });
+      await waitFor(() => expect(currentLine(container)).toBe('line two'));
+      const scrollIntoView = vi.mocked(Element.prototype.scrollIntoView);
+      scrollIntoView.mockClear();
+      const focusSpy = vi.spyOn(textarea(), 'focus');
+
+      fireEvent.keyDown(findInput(), { key: 'Enter' });
+
+      expect(noFindInput()).toBeNull();
+      expect(currentLine(container)).toBe('line two');
+      expect(scrollIntoView).not.toHaveBeenCalled();
+      expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true });
+      focusSpy.mockRestore();
+    });
+
+    it('closes on Enter without moving the cursor when nothing matches', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+      openFind();
+      search('zzz');
+      await waitFor(() => expect(screen.getByText('No matching lines')).toBeInTheDocument());
+
+      fireEvent.keyDown(findInput(), { key: 'Enter' });
+
+      expect(noFindInput()).toBeNull();
+      expect(currentLine(container)).toBe('line one');
     });
 
     it('closes on Escape and leaves the cursor on the previewed line', async () => {

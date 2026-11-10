@@ -142,6 +142,12 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   // The overwrite prompt held focus while open; either answer hands it back to the buffer without
   // scrolling it, as the autofocus effect does.
   const refocusBuffer = () => { textareaRef.current?.focus({ preventScroll: true }); };
+  const commitFind = () => {
+    const result = find.results[find.selected];
+    if (result && state?.cursor.line !== result.index) interactions.selectFindResult(find.selected);
+    find.close();
+    refocusBuffer();
+  };
   const commitEditorName =(next: string) => { renameAndRefocus(client, editor.url, next, focusBuffer); };
   const commitOrigin = () => { void commitAfterSave(client, () => saveRef.current(), editor.url, editor.name); };
 
@@ -203,6 +209,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
           results={find.results} selected={find.selected}
           onChangeSelected={interactions.selectFindResult}
           onClose={() => { find.close(); refocusBuffer(); }}
+          onEnter={commitFind}
         />
       )}
     </div>

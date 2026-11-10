@@ -190,6 +190,14 @@ describe('LineFind', () => {
     expect(onChangeSelected).toHaveBeenCalledWith(0);
   });
 
+  it('hands Enter to onEnter instead of selecting the first result when given one', () => {
+    const onEnter = vi.fn();
+    const { onChangeSelected } = renderFind({ onEnter });
+    fireEvent.keyDown(input(), { key: 'Enter' });
+    expect(onEnter).toHaveBeenCalledTimes(1);
+    expect(onChangeSelected).not.toHaveBeenCalled();
+  });
+
   it('does nothing on Enter when the query has no results', () => {
     const { onChangeSelected } = renderFind({ query: 'zzz', results: [] });
     fireEvent.keyDown(input(), { key: 'Enter' });
