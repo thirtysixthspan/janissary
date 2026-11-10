@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the sandbox spec and profile comment that say the installation's `node_modules` stays unreadable, now that every bundled-adapter role launch carves the install's whole `node_modules` in.
-
-Existing Issue: `product/specs/sandbox.md` and the profile comment in `src/sandbox/install-reads.ts` state that `ai/`, `scripts/`, and `security/` are the only parts of the installation carved in and that its `node_modules` stays denied, while a role session's command is now an absolute path under `<install>/node_modules/.bin`, so `resolveExecutableDirs` in `src/sandbox/harness-spawn.ts` sets `SELF_DIR_R` to the whole install `node_modules` on every claude and codex role launch, local or remote. Severity: 4/10
-
-Existing Risk: 3/10 - A later change to the sandbox, or a future plugin that relies on install `node_modules` being unreadable from a confined agent, is designed against a boundary the specification states but the code no longer keeps.
-
-Proposal Risk: 1/10 - The documents describe the boundary that actually ships; if someone later decides the carve-in is too wide, the corrected text is what tells them where it comes from.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1983 "correct the sandbox spec and profile comment that say the installation's node_modules stays denied". In `product/specs/sandbox.md`, amend the `security/` bullet's closing sentences ("`ai/`, `scripts/`, and `security/` are the only three parts of the installation carved in; the install root itself, `node_modules` ... stay denied") and the matching clause in the `ai/` bullet to say that a harness or ACP agent whose executable lives inside a `node_modules` tree gets that whole tree readable through the `SELF_DIR_L`/`SELF_DIR_R` carve-in (`packageRootDir`), which for a role session's bundled Claude or Codex adapter is the installation's own `node_modules`; and extend the `SELF_DIR_L`/`SELF_DIR_R` bullet to name the widening to the enclosing `node_modules`. Make the same correction to the comment block in `src/sandbox/install-reads.ts` that ends "the root itself, node_modules, and a checkout's .janissary/ stay denied", and add one sentence to the `packageRootDir` comment in `src/sandbox/harness-spawn.ts` noting it covers the install's bundled ACP adapters. Change no profile rule and no parameter; this is documentation only, and the existing sandbox profile tests must pass untouched.
-
-
 * Correct the pull request description and the ACP spec where they say a harness with no known deny-all configuration runs on the permission denial alone, when every other harness is refused at launch.
 
 Existing Issue: The description says "Any other harness runs on layer two alone, with no warning" and `product/specs/acp.md` says "A harness with no known configuration runs with the second layer alone and no warning", while `baseLaunchForEntry` in `src/acp/launch.ts` returns undefined for every harness but opencode, claude, and codex, so such an entry fails with `no ACP adapter for harness "<name>"` and never runs at all. Severity: 3/10

@@ -54,8 +54,12 @@ export function installReadRule(skillCount: number): string {
 ; the supply-chain blocklist check-malicious-package reads from beside its own scripts/ directory,
 ; and every package-update task runs that gate before touching node_modules, so without it the gate
 ; fails before checking anything. Read-only so an agent cannot clear a blocked release that a later
-; unsandboxed install would then accept. ai/, scripts/, and security/ are the only parts of the
-; installation carved in; the root itself, node_modules, and a checkout's .janissary/ stay denied.
+; unsandboxed install would then accept. ai/, scripts/, and security/ are the three unconditional
+; installation-directory carve-ins. SELF_DIR_R separately widens to the nearest enclosing
+; node_modules tree when the resolved harness executable lives under one. This covers the bundled
+; Claude and Codex ACP role adapters, whose executables are in the installation's node_modules.
+; The install root, a checkout's .janissary/, and other paths remain denied unless another carve-in
+; covers them.
 (allow file-read-data file-read-xattr
   (subpath (param "SELF_DIR_L"))
   (subpath (param "SELF_DIR_R"))

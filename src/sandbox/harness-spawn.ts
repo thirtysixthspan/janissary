@@ -51,7 +51,9 @@ function claudeScratchDir(): string {
 // claude.exe) leaves those sibling requires denied. Carving in the whole `node_modules/` directory
 // instead covers every globally-installed package uniformly (not just the one being run), which is
 // harmless — it's still just $HOME-scoped code, not secrets. Falls back to the script's own
-// directory when there's no `node_modules` ancestor (a single-file bundled binary).
+// directory when there's no `node_modules` ancestor (a single-file bundled binary). Bundled Claude
+// and Codex ACP role adapters resolve inside the installation's `node_modules`, so this carve-in
+// covers that tree for those sessions too.
 function packageRootDir(resolvedBin: string): string {
   let dir = path.dirname(resolvedBin);
   for (;;) {

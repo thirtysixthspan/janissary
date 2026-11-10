@@ -84,9 +84,13 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   in principle than the other carve-ins — see [Known OS quirks](#known-os-quirks-and-their-carve-ins).
 - A harness's own executable directory (`SELF_DIR_L`/`SELF_DIR_R`, resolved from `PATH` at spawn
   time — both the literal and realpath-resolved form, same reasoning as dotfile symlinks above) is
-  always readable, even under `$HOME` (e.g. an nvm- or `~/.opencode/bin`-installed binary). A
-  process reading its own executable is always safe to allow, and some system frameworks the
-  process links against do exactly that for self-introspection (see below).
+  always readable, even under `$HOME` (e.g. an nvm- or `~/.opencode/bin`-installed binary). When
+  the resolved executable is under `node_modules`, `SELF_DIR_R` widens to the nearest enclosing
+  `node_modules` tree via `packageRootDir` in `src/sandbox/harness-spawn.ts`, so package siblings
+  remain readable too. A bundled Claude or Codex ACP role session resolves its adapter under the
+  installation's `node_modules`, which makes that whole tree readable in the session. A process
+  reading its own executable is always safe to allow, and some system frameworks the process links
+  against do exactly that for self-introspection (see below).
 - The janissary **server's own** Node binary directory (`SERVER_NODE_DIR_L`/`SERVER_NODE_DIR_R`,
   resolved from `process.execPath` — same literal/real dual reasoning) is readable for the same
   self-introspection reason, and its path is also exposed to sandboxed processes via the
@@ -108,11 +112,14 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   [[task-picker]]) — without the carve-in, an installation under `$HOME` (a global npm prefix, or a
   development checkout) falls under the `$HOME` content deny and the agent is handed a file it cannot
   open. Deliberately `ai/` alone rather than the whole install root: those files are prompts written
-  to be read by an agent and hold no user data, while `node_modules` and the rest of the tree stay
-  denied. Read-only — an agent able to write those prompts could rewrite what a later, unsandboxed
-  run follows — and unconditional, for the same reason the Playwright directories are: it grants read
-  access to one directory of Janissary's own, and gating it would thread a flag through every spawn
-  path to no benefit.
+  to be read by an agent and hold no user data. A separate executable carve-in applies when a
+  harness or ACP agent's resolved executable is under `node_modules`; in that case `SELF_DIR_R`
+  exposes the nearest enclosing `node_modules` tree, including the installation's own tree for
+  bundled Claude and Codex ACP role sessions. The install root and unrelated paths stay denied.
+  Read-only — an agent able to write those prompts could rewrite what a later, unsandboxed run follows
+  — and unconditional, for the same reason the Playwright directories are: it grants read access to
+  one directory of Janissary's own, and gating it would thread a flag through every spawn path to no
+  benefit.
 - That same installation's **`scripts/` directory** is readable on identical terms — both forms,
   read-only, unconditional. The task prompts under `ai/` tell the agent to run
   `$janissary/scripts/run.mjs <script>` for the project's lint, test, commit, and pull-request
@@ -126,9 +133,12 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   directory, and every package-update task runs that gate before touching `node_modules/`. Without
   the carve-in the gate fails on its first read, before it checks anything. Read-only, so an agent
   cannot clear a blocked release that a later unsandboxed install would then accept. `ai/`,
-  `scripts/`, and `security/` are the only three parts of the installation carved in; the install
-  root itself, `node_modules`, a development checkout's `.janissary/`, and everything else stay
-  denied. So a script that reaches further still fails inside a workspace: a bare
+  `scripts/`, and `security/` are the only unconditional installation-directory carve-ins. The
+  separate `SELF_DIR_L`/`SELF_DIR_R` executable carve-in also exposes the nearest enclosing
+  `node_modules` tree when a harness or ACP agent executable resolves inside one; for bundled
+  Claude and Codex ACP role sessions, that is the installation's own `node_modules`. The install
+  root itself, a development checkout's `.janissary/`, and other paths stay denied unless another
+  carve-in covers them. So a script that reaches further still fails inside a workspace: a bare
   `check-malicious-package --audit` reads the installation's own `package-lock.json`. `lint-files`
   does not reach that far: it runs the ESLint installed in the working directory's own
   `node_modules`, never the installation's, and stops with a pointer to `npm install` when the
