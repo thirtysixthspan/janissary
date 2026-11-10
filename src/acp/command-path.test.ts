@@ -140,6 +140,15 @@ describe('locateAcpCommand', () => {
     expect(located.env).toEqual({ PATH: `${serverNodeDir}:${otherNodeDir}:/nonexistent-a` });
   });
 
+  it('keeps the environment of a bundled command whose PATH lists the server\'s node after a different node', () => {
+    const otherNodeDir = binDirWith('node');
+    const env = { PATH: `${otherNodeDir}:${serverNodeDir}` };
+
+    const located = locateAcpCommand('claude-agent-acp', env);
+
+    expect(located.env).toBe(env);
+  });
+
   it('gives a bundled command with no PATH the server\'s node directory as its PATH', () => {
     const located = locateAcpCommand('claude-agent-acp', { OTHER: 'kept' });
 
