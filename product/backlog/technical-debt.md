@@ -2,17 +2,6 @@
 
 ## ready
 
-* Extract the "show a confirmation for a few seconds, then clear it" timer into one hook shared by the editor, image, and video tabs.
-
-Existing Debt: Three tabs each implement a transient confirmation with their own state, timeout, and cleanup, with different durations and different cleanup discipline: `useImageEdit` and `useVideoShot` keep the timer in a ref, clear the previous one, and clear on unmount, while `useEditorFile` fires an untracked `setTimeout(() => setSavedFlash(false), 1500)` that is never cleared. Severity: 3/10
-
-Existing Risk: 3/10 - The editor's untracked timer can call a state setter after the tab unmounts or restart a flash early when two saves land within 1.5 seconds, a small visible glitch that reappears with each new tab that copies the nearest variant.
-
-Proposal Risk: 2/10 - The behavior is cosmetic and well isolated, but the editor's flash is a boolean while the other two carry the saved file name, so a helper with the wrong value type would change what the metadata rows render.
-
-Proposal: Add `useTransientValue<T>(durationMs)` in `web/src/shared/` (follow `ai/guidelines/react-code-organization.md` for placement and the shared-to-feature import direction) returning `[value, show(value), clear()]`, which clears any previous timer on each `show` and on unmount; give it a colocated test using fake timers. Use it in `web/src/plugins/image/useImageEdit.ts` and `web/src/plugins/video/useVideoShot.ts` (both define `CONFIRMATION_MS = 4000` and a `timer` ref) and in `web/src/editor/useEditorFile.ts` (replace `savedFlash` state and the 1500 ms `setTimeout` in `writeToDisk`; keep the `savedFlash: boolean` shape that `EditorMetaRow.tsx` consumes, derived from whether the value is set). Existing tests to keep passing: `web/src/editor/EditorTab.test.tsx` and the image and video plugin tests that assert the confirmation appears and disappears.
-
-
 * Fold the duplicated undo-the-send paths and repeated timer clears in the conversation responder into single helpers, and cover the responder directly.
 
 Existing Debt: `ConversationResponder.cancel` and `rollbackStartup` in `src/conversations/responder.ts` each hand-write the same block that removes the pending turn, restores the title and `updatedAt`, and drops the in-flight entry, and the `if (pending.timer) clearTimeout(pending.timer)` line is repeated five times, with the class only exercised indirectly through the manager. Severity: 4/10

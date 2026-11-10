@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   isCaptureFrameResult,
 } from '@shared/plugins/video/shared';
-import type { TabPluginClientCapabilities } from '../api';
+import { useTransientValue, type TabPluginClientCapabilities } from '../api';
 
 // How long the saved-file name stays in the video tab's header after a capture.
 const CONFIRMATION_MS = 4000;
@@ -15,11 +15,8 @@ export function useVideoShot(
   videoRef: React.RefObject<HTMLVideoElement | null>,
   capabilities: TabPluginClientCapabilities,
 ) {
-  const [saved, setSaved] = useState<string | null>(null);
+  const [saved, showSaved] = useTransientValue<string>(CONFIRMATION_MS);
   const [busy, setBusy] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   const capture = useCallback(() => {
     const element = videoRef.current;
@@ -42,11 +39,9 @@ export function useVideoShot(
         capabilities.reportFailure('invalid capture-frame result');
         return;
       }
-      setSaved(result.name);
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => { setSaved(null); }, CONFIRMATION_MS);
+      showSaved(result.name);
     }, () => { setBusy(false); });
-  }, [videoRef, capabilities]);
+  }, [videoRef, capabilities, showSaved]);
 
   return { capture, saved, busy };
 }

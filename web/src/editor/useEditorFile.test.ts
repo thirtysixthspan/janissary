@@ -166,6 +166,27 @@ describe('useEditorFile — save', () => {
     expect(result.current.savedFlash).toBe(true);
   });
 
+  it('clears the saved flash after its window and restarts the window on a second save', async () => {
+    const client = makeClient();
+    const api = makeApi();
+    const { result } = renderHook(() => useEditorFile(client, makeView(), api));
+    await waitFor(() => expect(api.load).toHaveBeenCalled());
+    vi.useFakeTimers();
+    try {
+      api.stateRef.current = fromText('first');
+      await act(async () => { await result.current.save(); });
+      act(() => { vi.advanceTimersByTime(1000); });
+      api.stateRef.current = fromText('second');
+      await act(async () => { await result.current.save(); });
+      act(() => { vi.advanceTimersByTime(1000); });
+      expect(result.current.savedFlash).toBe(true);
+      act(() => { vi.advanceTimersByTime(500); });
+      expect(result.current.savedFlash).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('makes the next save conditional on the text the previous save wrote', async () => {
     const client = makeClient();
     const api = makeApi();

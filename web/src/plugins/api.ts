@@ -157,6 +157,11 @@ export { isRecord } from '@shared/value-guards';
 // `TAB_PLUGIN_API_VERSION` does not move.
 export { copyText } from '../shared/system-clipboard';
 
+// A value that shows for a fixed time and then clears itself, published so a plugin's brief
+// confirmation (a saved file name) restarts on each new one and cannot fire after unmount, instead
+// of hand-rolling a timer. Additive, so `TAB_PLUGIN_API_VERSION` does not move.
+export { useTransientValue } from '../shared/useTransientValue';
+
 // The selection *state* behind that rule, for a plugin list whose rows arrive whole: which row is
 // highlighted, which row the user confirmed, and the three rules that keep both inside a list the
 // server has since rebuilt. Published on the same terms as `nextListSelection` — the two lists that

@@ -8,6 +8,7 @@ import { toText } from './model';
 import type { EditorApi } from './useEditor';
 import { useEditorWatchReload } from './useEditorWatchReload';
 import { SaveCoordinator } from './save-coordinator';
+import { useTransientValue } from '../shared/useTransientValue';
 
 export type EditorFileApi = {
   dirty: boolean;
@@ -20,6 +21,8 @@ export type EditorFileApi = {
   dismissConflict: () => void;
 };
 
+const SAVED_FLASH_MS = 1500;
+
 const zeroBasedLine = (line: number | undefined) => (line === undefined ? undefined : line - 1);
 
 // The editor tab's file lifecycle: the initial load, save with overwrite-conflict detection, dirty
@@ -30,7 +33,7 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
-  const [savedFlash, setSavedFlash] = useState(false);
+  const [savedFlash, flashSaved] = useTransientValue<true>(SAVED_FLASH_MS);
   const [conflictOpen, setConflictOpen] = useState(false);
   const [saves] = useState(() => new SaveCoordinator());
   const [reads] = useState(() => new DocumentReads());
@@ -60,8 +63,7 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
     if (error) { setSaveError(error); throw new Error(error); }
     setLastSaved(text);
     conflictPendingRef.current = false;
-    setSavedFlash(true);
-    setTimeout(() => setSavedFlash(false), 1500);
+    flashSaved(true);
   };
 
   const writeRef = useLatestRef(writeToDisk);
@@ -123,7 +125,7 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
     dirty,
     loadError,
     saveError,
-    savedFlash,
+    savedFlash: savedFlash !== null,
     conflictOpen,
     save,
     // The overwrite dialog's own button, not a handle call: nothing is awaiting an answer, and a
