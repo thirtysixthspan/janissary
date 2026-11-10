@@ -72,7 +72,8 @@ State the correct behavior in one or two sentences before planning the fix. If t
 2. Read every file relevant to the fix to understand the code involved and the root cause of the bug — fix the cause, not just the symptom.
 3. Choose a short, descriptive `kebab-case` name for the fix — call it `<bug-name>` (for example `orientation-reset-on-load`). Use this exact same name for the plan file at every stage below.
 4. Write a plan file following the format of existing plans in `./product/plans/complete/` — include a complexity rating, the root cause, the correct behavior (from Step 2), the reproduction (from Step 1), the approach, implementation steps, the regression test, a Verification section, and out-of-scope items. The Verification section names the live end-to-end check Step 5 will run (what the driver does and what it expects to see), or says why no live check is possible for this bug. Write it to `./product/plans/draft/<bug-name>.md`.
-5. After the plan is written, move it from `./product/plans/draft/` to `./product/plans/ready/`. Use plain `mv` (not `git mv`) — the new plan file is not tracked by git yet, and `git mv` fails on an untracked file:
+5. Judge the plan's complexity by opening `ai/tasks/planning/rate-plan-complexity-quantitative.md` and executing every step in order, except `Step 0 — Prepare the workspace` and `Step 1 — Pick the plan`. Your target is the plan you just wrote, and the task records the `**Complexity: N/10** — <rationale>` line directly under its `#` title. Use that rating as the plan's complexity rating and in the final report; do not assign one by judgment.
+6. After the plan is rated, move from `./product/plans/draft/` to `./product/plans/ready/`. Use plain `mv` (not `git mv`) — the new plan file is not tracked by git yet, and `git mv` fails on an untracked file:
    ```bash
    mv ./product/plans/draft/<bug-name>.md ./product/plans/ready/<bug-name>.md
    ```

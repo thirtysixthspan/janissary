@@ -66,7 +66,8 @@ State your pick, whether it came from the branch backlog or from the invocation,
 1. Read the project constraints in [`AGENTS.md`](../../../AGENTS.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
 2. Read every file relevant to the fix to understand the code involved.
 3. Write a plan file following the format of existing plans in `./product/plans/complete/` — include a complexity rating, goal, approach, implementation steps, tests, and out-of-scope items. Write it to `./product/plans/draft/<fix-name>.md`.
-4. After the plan is written, move it from `./product/plans/draft/` to `./product/plans/ready/`. Use plain `mv` (not `git mv`) — the new plan file is not tracked by git yet, and `git mv` fails on an untracked file:
+4. Judge the plan's complexity by opening `ai/tasks/planning/rate-plan-complexity-quantitative.md` and executing every step in order, except `Step 0 — Prepare the workspace` and `Step 1 — Pick the plan`. Your target is the plan you just wrote, and the task records the `**Complexity: N/10** — <rationale>` line directly under its `#` title. Use that rating as the plan's complexity rating and in the final report; do not assign one by judgment.
+5. After the plan is rated, move from `./product/plans/draft/` to `./product/plans/ready/`. Use plain `mv` (not `git mv`) — the new plan file is not tracked by git yet, and `git mv` fails on an untracked file:
    ```bash
    mv ./product/plans/draft/<fix-name>.md ./product/plans/ready/<fix-name>.md
    ```

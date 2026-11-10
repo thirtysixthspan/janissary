@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 // `ai/tasks/planning/rate-plan-complexity.md` is the single home of the 1-10 complexity scale. The two
-// improvement tasks delegate their Step 5 to it and skip its Step 0 and Step 1 by heading, so a
+// improvement tasks delegate their Step 5 to the quantitative rating task and skip its Step 0 and Step 1 by heading, so a
 // renamed heading, or a band copied back into a caller, would leave the delegation pointing at
 // nothing or the scale split across files and still read fine. These assertions pin the delegation
 // wording, the headings it names, and the scale's single location, and nothing else.
@@ -12,7 +12,8 @@ const repoRoot = path.resolve(import.meta.dirname, '..');
 const read = (relative) => readFileSync(path.join(repoRoot, relative), 'utf8');
 
 const RATING_TASK = 'ai/tasks/planning/rate-plan-complexity.md';
-const CALLERS = ['improve-plan.md', 'improve-plan-with-minimalism.md'];
+const CALLER_RATING_TASK = 'ai/tasks/planning/rate-plan-complexity-quantitative.md';
+const CALLERS =['improve-plan.md', 'improve-plan-with-minimalism.md'];
 const PREPARE_STEP = 'Step 0 — Prepare the workspace';
 const PICK_STEP = 'Step 1 — Pick the plan';
 const PREPARE = 'Execute `ai/tasks/workspace/prepare-workspace.md` in full';
@@ -55,7 +56,7 @@ describe.each(CALLERS)('%s', (task) => {
 
   it('delegates its rating to the rating task, skipping Step 0 and Step 1', () => {
     expect(caller).toContain(
-      `Open \`${RATING_TASK}\` and execute every step in order, except \`${PREPARE_STEP}\` and \`${PICK_STEP}\``,
+      `Open \`${CALLER_RATING_TASK}\` and execute every step in order, except \`${PREPARE_STEP}\` and \`${PICK_STEP}\``,
     );
   });
 

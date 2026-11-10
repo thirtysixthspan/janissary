@@ -145,6 +145,8 @@ Name the plan `remove-<feature-slug>.md`, where the slug is the kebab-case name 
 
 Write it to `./product/plans/draft/remove-<feature-slug>.md` in the house shape of `product/plans/complete/remove-gruvbox-dark-theme.md`: a complexity line, the goal, the approach, implementation steps in the order they will be done, tests, spec updates, verification, and out of scope. Record every scope decision from Step 5 in it. The Verification section carries the complete Step 2 dead-code baseline, so the comparison survives the run and ships with the PR, and it names each live check Step 9 will make.
 
+Then judge the plan's complexity by opening `ai/tasks/planning/rate-plan-complexity-quantitative.md` and executing every step in order, except `Step 0 — Prepare the workspace` and `Step 1 — Pick the plan`. Your target is the plan you just wrote, and the task records the `**Complexity: N/10** — <rationale>` line directly under its `#` title. Use that rating as the plan's complexity line and in the final report; do not assign one by judgment.
+
 Then move it to `./product/plans/ready/` with plain `mv`, not `git mv`. The file is untracked until the PR workflow stages it.
 
 ```bash
