@@ -2,17 +2,6 @@
 
 ## ready
 
-* Give the editor tab's file lifecycle hooks explicit inputs so the six `exhaustive-deps` suppressions and the shared mutable `documentRead` object are no longer needed.
-
-Existing Debt: `useEditorFile` and `useEditorWatchReload` coordinate through a mutable `{ generation, url }` object passed positionally as the ninth argument of a hook, both effects bump that generation counter from different files, and every effect in `web/src/editor/` silences `react-hooks/exhaustive-deps` with a "refs are stable" comment, so the dependency lists are no longer checked against what the effects actually read. Severity: 6/10
-
-Existing Risk: 6/10 - A reload or load that reads a stale `client`, `api`, or `initialLine` from a suppressed effect, or a generation bump that one hook forgets, leaves the buffer showing old file content or overwrites unsaved text, and no lint rule will flag the mistake.
-
-Proposal Risk: 4/10 - The load and reload paths guard against unsaved-work loss and external-change conflicts, so reordering their effects can change when a conflict is detected; the existing editor tests exercise this only through rendered scenarios.
-
-Proposal: In `web/src/editor/`, introduce one small `useDocumentReads` hook (or a plain class held in a `useState` initialiser, the way `SaveCoordinator` is) that owns the `{ generation, url }` state and exposes `begin(url): { isCurrent(): boolean; cancel(): void }`, so `useEditorFile.ts` and `useEditorWatchReload.ts` stop sharing a raw mutable object. Change `useEditorWatchReload` from nine positional parameters to a single options object, and note that it is handed `setBaseline` under the parameter name `setLastSaved`, which reads as a different function. Store the latest `client`, `api`, `initialLine`, and `editor.line` in a `useLatestRef` (`web/src/useLatestRef.ts` already exists) inside each hook so the effects read `.current` and declare honest dependencies, then remove the `eslint-disable-next-line react-hooks/exhaustive-deps` lines in `useEditorFile.ts` and `useEditorWatchReload.ts`. Do the other suppressions in `EditorTab.tsx`, `useEditorLineJump.ts`, and `useEditorSuggest.ts` as a follow-up unit, not in this one. In `useEditorFile.ts`, `writeRef.current = writeToDisk` is assigned during render and can move to the same `useLatestRef`. Tests that pin behavior: `web/src/editor/EditorTab.test.tsx` and any `useEditor*.test.ts(x)` files beside it, plus `web/src/editor/save-coordinator.test.ts`. Add a test for "external change while dirty sets the conflict flag, and while clean reloads" if none of them states it directly, before refactoring.
-
-
 * Extract the "show a confirmation for a few seconds, then clear it" timer into one hook shared by the editor, image, and video tabs.
 
 Existing Debt: Three tabs each implement a transient confirmation with their own state, timeout, and cleanup, with different durations and different cleanup discipline: `useImageEdit` and `useVideoShot` keep the timer in a ref, clear the previous one, and clear on unmount, while `useEditorFile` fires an untracked `setTimeout(() => setSavedFlash(false), 1500)` that is never cleared. Severity: 3/10
