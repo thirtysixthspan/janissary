@@ -204,5 +204,6 @@ flag, or agent consults a role description. Other consumers read `roles.json` it
 harness, model, and effort; `commands` contains native ACP grants.
 Role connections deny all of their harness's internal tools, so a role grants only native commands:
 the agent can run the granted commands that are enabled for agents and nothing else.
+For now, a `claude` role session hosted on a remote machine keeps its built-in tools: it can still read files, and every permission request it raises is denied.
 Keyboard reordering is not provided — adding and removing entries and roles are pointer-free, but
 order rides the drag.
