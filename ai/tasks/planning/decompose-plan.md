@@ -1,6 +1,6 @@
 # Decompose a Plan into Subplans (one plan per run)
 
-Your job: take **one** plan and break it into ordered subplans, each rated **1–5**. Every plan you are given is decomposed, whatever its own rating, and whether or not it has one. You write every subplan as a new plan in `./product/plans/draft/` and move the original plan to `./product/plans/complete/`, where it stays as the canonical record of the whole feature. You write plans only; you change no source code.
+Your job: take **one** plan and break it into ordered subplans, each rated **1–5**. Every plan you are given is decomposed, whatever its own rating, and whether or not it has one. A plan with no smaller coherent pieces becomes a single subplan. You write every subplan as a new plan in `./product/plans/draft/` and move the original plan to `./product/plans/complete/`, where it stays as the canonical record of the whole feature. You write plans only; you change no source code.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory, which is the project being worked on. It never refers to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
@@ -52,7 +52,7 @@ State your pick in one sentence.
 
 ## Step 3 — Write the subplans
 
-Break the plan into two or more of the smallest coherent, ordered subplans that deliver the original goal without dropping scope. Order them so each can be implemented and verified against the preceding completed work. A subplan may depend on earlier subplans, but never on future work. Include explicit integration, migration, and end-to-end verification work where pieces meet; do not leave required work as an implied final cleanup.
+Break the plan into the smallest coherent, ordered subplans that deliver the original goal without dropping scope. Some plans, such as one rated 1, have no smaller coherent pieces. Write such a plan as a single subplan that carries its full scope rather than forcing an artificial split. Order the subplans so each can be implemented and verified against the preceding completed work. A subplan may depend on earlier subplans, but never on future work. Include explicit integration, migration, and end-to-end verification work where pieces meet; do not leave required work as an implied final cleanup.
 
 Write a complete draft plan for every subplan to `./product/plans/draft/<source-name>-<N>-<slug>.md`, where `<source-name>` is the source plan's file name without `.md`, `<N>` is the subplan's 1-based position in the order, and `<slug>` names what it delivers. Each subplan states its goal, decisions and dependencies, existing code to reuse, proposed changes, tests, verification, and out-of-scope boundaries. Each names the source plan's path in `./product/plans/complete/` and the earlier subplans it depends on. Match the house style of the plans in `./product/plans/ready/` and use natural line breaks (per `AGENTS.md`).
 
