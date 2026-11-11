@@ -321,6 +321,33 @@ describe('RemoteChannel — ACP session routing', () => {
     expect(onError).toHaveBeenCalledWith('ACP: cancellation failed: Remote connection unavailable.', true);
     expect(otherError).not.toHaveBeenCalled();
   });
+
+  it('fails an unavailable run only on its addressed session', () => {
+    const h = harness();
+    const onError = vi.fn();
+    const otherError = vi.fn();
+    h.channel.attachAcp('first', { onReady: vi.fn(), onChunk: vi.fn(), onEnd: vi.fn(), onError });
+    h.channel.attachAcp('second', { onReady: vi.fn(), onChunk: vi.fn(), onEnd: vi.fn(), onError: otherError });
+    h.channel.send({
+      type: 'acp-run', id: 'first', text: 'summarize',
+      snapshot: { kind: 'agent', grants: [], askUser: false },
+    });
+    expect(onError).toHaveBeenCalledWith('Remote connection unavailable.', true);
+    expect(otherError).not.toHaveBeenCalled();
+    expect(h.written).toEqual([]);
+  });
+
+  it('drops an unavailable tool result without a word to any listener', () => {
+    const h = harness();
+    const listener = {
+      onReady: vi.fn(), onChunk: vi.fn(), onEnd: vi.fn(), onActivity: vi.fn(), onClosed: vi.fn(), onError: vi.fn(),
+    };
+    h.channel.attachAcp('first', listener);
+    h.channel.send({ type: 'acp-tool-result', id: 'first', request: 0, output: 'done' });
+    for (const spy of Object.values(listener)) expect(spy).not.toHaveBeenCalled();
+    expect(h.written).toEqual([]);
+    expect(h.errors).toEqual([]);
+  });
   function acpHarness() {
     const h = harness();
     h.channel.receive(`${encodeHandshake()}\n`);

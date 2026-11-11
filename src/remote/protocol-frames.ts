@@ -156,6 +156,7 @@ export type ClientFrame =
   }
   | { type: 'acp-prompt'; id: string; text: string }
   | { type: 'acp-run'; id: string; text: string; snapshot: AcpRunSnapshot }
+  | { type: 'acp-tool-result'; id: string; request: number; output?: string; error?: string }
   | { type: 'acp-cancel'; id: string }
   | { type: 'acp-close'; id: string };
 
@@ -294,7 +295,7 @@ export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
   provision: true, 'clone-answer': true, spawn: true, input: true, resize: true, kill: true, 'capture-request': true, 'resume-ack': true,
   'filesystem-open': true, 'filesystem-close': true, 'filesystem-request': true,
   'agent-resolve': true,
-  'acp-open': true, 'acp-prompt': true, 'acp-run': true, 'acp-cancel': true, 'acp-close': true,
+  'acp-open': true, 'acp-prompt': true, 'acp-run': true, 'acp-tool-result': true, 'acp-cancel': true, 'acp-close': true,
 };
 export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'attach-result': true, 'session-state-result': true, 'clone-offer': true, 'root-refused': true,

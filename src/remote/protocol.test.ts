@@ -70,6 +70,52 @@ describe('acp-run codec', () => {
   });
 });
 
+describe('acp-tool-result codec', () => {
+  it('round-trips an output holding a newline and a control byte, base64 on the wire', () => {
+    const output = 'first\nsecond\u{1}';
+    const frame: ClientFrame = { type: 'acp-tool-result', id: 'run1', request: 0, output };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toMatchObject({ output: Buffer.from(output).toString('base64') });
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it('round-trips an error with its message plain on the wire', () => {
+    const frame: ClientFrame = { type: 'acp-tool-result', id: 'run1', request: 3, error: 'tool exited 1' };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toMatchObject({ error: 'tool exited 1' });
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it('round-trips an empty output', () => {
+    const frame: ClientFrame = { type: 'acp-tool-result', id: 'run1', request: 0, output: '' };
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it.each([
+    ['both fields', { output: 'out', error: 'err' }],
+    ['both fields with an empty output', { output: '', error: 'err' }],
+    ['neither field', {}],
+    ['missing id', { request: 0, output: '' }],
+    ['empty id', { id: '', request: 0, output: '' }],
+    ['non-string output', { id: 'run1', request: 0, output: 1 }],
+    ['empty error', { id: 'run1', request: 0, error: '' }],
+    ['negative request', { id: 'run1', request: -1, output: '' }],
+    ['fractional request', { id: 'run1', request: 1.5, output: '' }],
+    ['non-numeric request', { id: 'run1', request: '0', output: '' }],
+  ])('refuses %s', (_label, fields) => {
+    expect(decodeFrame(JSON.stringify({ type: 'acp-tool-result', ...fields })))
+      .toEqual({ error: 'Malformed remote frame "acp-tool-result".' });
+  });
+
+  it('drops undeclared fields', () => {
+    const raw = {
+      type: 'acp-tool-result', id: 'run1', request: 2,
+      output: Buffer.from('done').toString('base64'), extra: 'drop',
+    };
+    expect(decodeFrame(JSON.stringify(raw))).toEqual({ type: 'acp-tool-result', id: 'run1', request: 2, output: 'done' });
+  });
+});
+
 describe('frame codec', () => {
   it('ties filesystem request arguments to their operation', () => {
     const request: ClientFrame = {
@@ -606,6 +652,7 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   },
   'acp-prompt': { type: 'acp-prompt', id: 'racp1', text: 'summarize this project' },
   'acp-run': { type: 'acp-run', id: 'racp1', text: 'summarize this project', snapshot: { kind: 'agent', grants: ['file'], askUser: true } },
+  'acp-tool-result': { type: 'acp-tool-result', id: 'racp1', request: 0, output: 'first\nsecond' },
   'acp-close': { type: 'acp-close', id: 'racp1' },
   'acp-cancel': { type: 'acp-cancel', id: 'racp1' },
   'attach-result': { type: 'attach-result', accepted: true, truncated: true },
@@ -767,7 +814,7 @@ describe('protocol version', () => {
 describe('admitted frame types', () => {
   it('admits exactly the declared client frame types', () => {
     expect(Object.keys(CLIENT_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-cancel', 'acp-close', 'acp-open', 'acp-prompt', 'acp-run', 'agent-resolve', 'attach', 'capture-request', 'clone-answer',
+      'acp-cancel', 'acp-close', 'acp-open', 'acp-prompt', 'acp-run', 'acp-tool-result', 'agent-resolve', 'attach', 'capture-request', 'clone-answer',
       'filesystem-close', 'filesystem-open', 'filesystem-request',
       'input', 'kill', 'provision', 'resize', 'resume-ack', 'session-state', 'shutdown', 'spawn',
     ]);

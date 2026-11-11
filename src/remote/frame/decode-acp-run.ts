@@ -1,11 +1,25 @@
 import type { AcpRunSnapshot, AcpRunSnapshotRow } from '../../acp/types.js';
 import { isRecord } from '../../value-guards.js';
-import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js';
+import { malformed, nonEmptyString, nonNegativeInteger, type DecodeResult } from './decode-shared.js';
 
 export function decodeAcpRun(record: Record<string, unknown>): DecodeResult {
   const snapshot = decodeAcpRunSnapshot(record.snapshot);
   if (!nonEmptyString(record.id) || typeof record.text !== 'string' || !snapshot) return malformed('acp-run');
   return { type: 'acp-run', id: record.id, text: Buffer.from(record.text, 'base64').toString('utf8'), snapshot };
+}
+
+export function decodeAcpToolResult(record: Record<string, unknown>): DecodeResult {
+  const { id, request, output, error } = record;
+  if (!nonEmptyString(id) || !nonNegativeInteger(request)) return malformed('acp-tool-result');
+  if ((output === undefined) === (error === undefined)) return malformed('acp-tool-result');
+  if (output !== undefined) {
+    return typeof output === 'string'
+      ? { type: 'acp-tool-result', id, request, output: Buffer.from(output, 'base64').toString('utf8') }
+      : malformed('acp-tool-result');
+  }
+  return nonEmptyString(error)
+    ? { type: 'acp-tool-result', id, request, error }
+    : malformed('acp-tool-result');
 }
 
 function isStringArray(value: unknown): value is string[] {

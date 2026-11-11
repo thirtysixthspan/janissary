@@ -20,3 +20,7 @@ export function optionalNonEmptyString(value: unknown): value is string | undefi
 export function positiveInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
 }
+
+export function nonNegativeInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+}

@@ -17,7 +17,8 @@ export function unavailableSend(
     break;
   }
   case 'acp-open':
-  case 'acp-prompt': {
+  case 'acp-prompt':
+  case 'acp-run': {
     sessions.get(frame.id)?.onError('Remote connection unavailable.', true);
     break;
   }
