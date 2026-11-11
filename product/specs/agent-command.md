@@ -74,6 +74,8 @@ Default-name remote plugin launches created by an agent run retry a host name re
 
 When workspace confinement is active, support files beneath each selected installed skill are readable by the local autonomous ACP session; unselected skills and unrelated installation files remain denied.
 
+A local run granted `file` can request `janissary file read <path>` and receive numbered lines from its execution workspace. The caller's directory is not the read root. A run without the grant receives `Agent: command not permitted: <command>.` as tool output.
+
 Autonomous provider tool permissions select the least expansive available approval option. Janissary commands use a separate whole-command grant check: only an exact canonical command name declared by a selected skill's sidecar may run. The agent requests a Janissary command on its final nonempty reply line as `janissary <command>`. A question request is available only when the `ask-user` skill is selected and grants `question`; the run waits for the answer or receives `Question cancelled.`. A denial is returned to the agent as tool output and does not authorize a different command.
 
 A final command line inside a Markdown fenced code block is treated as an example, not a request. This applies to fences opened with either backticks or tildes.

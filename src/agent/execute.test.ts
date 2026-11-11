@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { AcpOptions } from '../acp/types.js';
@@ -79,6 +79,7 @@ describe('agent execution record capture', () => {
     }
     vi.spyOn(commandTools, 'runGrantedAgentCommand').mockResolvedValue('host result');
     await expect(dependencies!.runCommand('help')).resolves.toBe('host result');
+    handlers!.ranCommand('help', 'host result');
     handlers!.endTurn('Final answer');
     handlers!.finished('answered', Infinity);
     const result = await execution;
@@ -112,6 +113,110 @@ function notificationManagers() {
   };
   return { managers, callerTab, feed };
 }
+
+describe('agent shared driver host', () => {
+  let root: string;
+  let run: AgentRun;
+  let invocation: CommandInvocationContext;
+  let dependencies: AcpLoopDeps;
+  let handlers: AcpLoopHandlers;
+  let listener: AcpSessionListener | undefined;
+  const channel = {
+    attachAcp: (_id: string, value: AcpSessionListener) => { listener = value; },
+    detachAcp: vi.fn(),
+    send: (frame: { type: string }) => { if (frame.type === 'acp-close') listener?.onClosed(true); },
+  } as unknown as RemoteChannel;
+
+  beforeEach(() => {
+    root = mkdtempSync(path.join(tmpdir(), 'agent-workspace-'));
+    mkdirSync(path.join(root, 'notes'));
+    writeFileSync(path.join(root, 'notes/a.md'), 'workspace\n');
+    const caller = { label: 'janus', incarnation: 'one', cwd: '/distinct-caller', context: [] };
+    run = new AgentRun(caller, { taskPath: 'task.md', taskText: 'Read', skills: [], grants: ['file', 'db', 'question'] }, undefined, undefined, root);
+    invocation = { runId: run.id, invocationId: 'one', caller, signal: run.abortController.signal };
+    connectAcp.mockReturnValue({ prompt: vi.fn(), shutdown: async () => {} });
+    sandboxWillConfine.mockReturnValue(true);
+    runAcpToolLoop.mockClear();
+    runAcpToolLoop.mockImplementation((_session, _prompt, deps, events) => { dependencies = deps; handlers = events; });
+  });
+  afterEach(async () => { await run.finish('completed'); rmSync(root, { recursive: true, force: true }); vi.restoreAllMocks(); });
+
+  function start(remote = false) {
+    const execution = executeAgentRun(run, invocation, OPENCODE_MODELS[0], undefined, '', modelManagers() as never, remote ? { channel } : undefined);
+    return execution;
+  }
+
+  function finish() {
+    handlers.endTurn('Done');
+    handlers.finished('answered', Infinity);
+  }
+
+  it.each(['file read notes/a.md', '/file read notes/a.md'])('reads the execution workspace through %s', async (command) => {
+    const execution = start();
+    const activity = vi.fn();
+    run.record = { activity } as unknown as AgentRecordFeed;
+    const result = await dependencies.runCommand(command);
+    handlers.ranCommand(command, result);
+    expect(result).toBe('1\tworkspace');
+    expect(activity.mock.calls).toEqual([['tool', command], ['tool', result]]);
+    finish();
+    await execution;
+    run.record = undefined;
+  });
+
+  it('refuses a read without the file grant and records its result', async () => {
+    run.setSnapshot({ ...run.snapshot, grants: [] });
+    const execution = start();
+    const activity = vi.fn();
+    run.record = { activity } as unknown as AgentRecordFeed;
+    const command = 'file read notes/a.md';
+    const result = await dependencies.runCommand(command);
+    handlers.ranCommand(command, result);
+    expect(result).toBe('Agent: command not permitted: file read notes/a.md.');
+    expect(activity.mock.calls).toEqual([['tool', command], ['tool', result]]);
+    finish();
+    await execution;
+    run.record = undefined;
+  });
+
+  it('dispatches caller commands and changes status while a question is pending', async () => {
+    const dispatch = vi.spyOn(commandTools, 'runGrantedAgentCommand').mockResolvedValue('db result');
+    const execution = start();
+    await expect(dependencies.runCommand('db sqlite list')).resolves.toBe('db result');
+    expect(dispatch).toHaveBeenCalledWith('db sqlite list', run.snapshot, expect.anything(), invocation);
+    const question = Promise.withResolvers<string>();
+    dispatch.mockReturnValue(question.promise);
+    const pending = dependencies.runCommand('question ask "x"');
+    expect(run.view().status).toBe('Waiting for answer');
+    question.resolve('answer');
+    await expect(pending).resolves.toBe('answer');
+    expect(run.view().status).toBe('Running');
+    finish();
+    await execution;
+  });
+
+  it('refuses a remote workspace read even when the same path exists locally', async () => {
+    const execution = start(true);
+    listener!.onReady(true);
+    await vi.waitFor(() => expect(runAcpToolLoop).toHaveBeenCalledOnce());
+    expect(await dependencies.runCommand('file read notes/a.md')).toBe('Remote connection unavailable.');
+    finish();
+    await execution;
+  });
+
+  it('drops tool records and workspace work after termination', async () => {
+    const execution = start();
+    const activity = vi.fn();
+    run.record = { activity } as unknown as AgentRecordFeed;
+    run.abortController.abort();
+    expect(() => dependencies.runCommand('file read notes/a.md')).toThrow('Agent terminated.');
+    handlers.ranCommand('file read notes/a.md', 'late');
+    handlers.endTurn('late');
+    expect(activity).not.toHaveBeenCalled();
+    await expect(execution).resolves.toMatchObject({ status: 'terminated', response: 'Agent terminated.' });
+    run.record = undefined;
+  });
+});
 
 describe('executeAgentRun', () => {
   it.each([false, true])('reports the local confinement result: %s', async (sandboxed) => {
