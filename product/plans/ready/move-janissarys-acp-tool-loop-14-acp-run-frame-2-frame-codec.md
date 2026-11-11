@@ -1,6 +1,6 @@
 # ACP tool loop 14.2 — admit and encode the acp-run frame
 
-**Complexity: 5/10** — ~18 added production lines across 4 edited files, 5 requirements, 25 scenarios, 1 new function (p=5.39)
+**Complexity: 5/10** — ~18 added production lines across 4 edited files, 5 requirements, 27 scenarios, 1 new function (p=5.42)
 
 Run order: piece 2 of 2 of subplan 14 of 27. Source: `product/plans/complete/move-janissarys-acp-tool-loop-14-acp-run-frame.md`. Canonical feature: `product/plans/complete/move-janissarys-acp-tool-loop.md`. Depends on piece 1, `move-janissarys-acp-tool-loop-14-acp-run-frame-1-snapshot-decoder.md`, which validates and rebuilds snapshots. Original subplans 15–17 extend the decoder module; 19 and 21 integrate runtime handling and sending.
 
@@ -15,6 +15,7 @@ Add the complete additive `acp-run` wire contract with prompt text and a strictl
 - Encode text through the existing `encodeText` branch in `toWire`, and decode through the same Buffer base64-to-UTF-8 convention as `decodeAcpText`. Empty text is valid. Do not introduce stricter base64 checking.
 - Admit through `CLIENT_FRAME_TYPES` and dispatch through `decodeKnownFrame`'s exhaustive switch together with the union change. Extend the exhaustive codec fixture and client registry expectation in the same implementation step.
 - Keep `acp-prompt` and protocol version 39. No runtime sender or receiver changes: later work units own those integrations.
+- Import `DecodeResult` and `malformed` directly from `src/remote/frame/decode-shared.ts`, extending the existing `nonEmptyString` import; do not add a second snapshot validator or re-export the snapshot contract. Keep the decoder's returned snapshot exactly as `decodeAcpRunSnapshot` rebuilt it.
 
 ## What already exists (reuse, don't rebuild)
 
@@ -35,7 +36,7 @@ Add the complete additive `acp-run` wire contract with prompt text and a strictl
 
 ## Tests
 
-Round-trip core and agent snapshots; round-trip newline/control-byte text; accept empty text with empty grants/rows; reject missing id and empty id; reject non-string text; reject invalid snapshot; drop undeclared snapshot and row properties. The invalid-snapshot table exercises unknown kind, bad role, bad grants array/element, bad rows/row fields, bad withoutTools, empty roleName and bad askUser through raw JSON, proving the frame delegates to piece 1 and produces the frame-specific malformed result. Count the individual table variants when rating this work. Existing exhaustive fixtures cover admission and optional-field preservation.
+Round-trip core and agent snapshots; round-trip newline/control-byte text; accept empty text with empty grants/rows; reject missing id, empty id and non-string id; reject non-string text; reject invalid snapshot; drop undeclared top-level, snapshot and row properties. Use `decodeFrame(JSON.stringify(rawFrame))` for malformed cases, because `encodeFrame` accepts only a typed valid frame. The invalid-snapshot table exercises unknown kind, bad role, bad grants array/element, bad rows/row fields, bad withoutTools, empty roleName and bad askUser through raw JSON, proving the frame delegates to piece 1 and produces the frame-specific malformed result. Count the individual table variants when rating this work. Existing exhaustive fixtures cover admission and optional-field preservation.
 
 ## Out of scope
 
