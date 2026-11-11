@@ -17,6 +17,7 @@ import { SYNTAX_THEMES } from '../syntax-themes.js';
 import { completeSystemSchedule, type SystemScheduleCompletions } from './system-schedule.js';
 import { completeRunscriptCommand } from './runscript-commands.js';
 import { completeFilesCommand, type FilesCompletions } from './files.js';
+import { completeFileReadCommand } from './file-read.js';
 import { listHelpPages } from '../help-pages.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,6 +35,8 @@ const HELP_DIRECTORY = path.join(path.dirname(fileURLToPath(import.meta.url)), '
  *   (`browser use`, `browser window close`), the current tab's open window ids.
  * - At the start of a line, completes enabled application command names and aliases before
  *   filesystem paths. Disabled commands and their arguments are not completed.
+ * - For `file read`, completes the subcommand, its flags, and paths against `fileReadRoot`, the
+ *   root the read resolves against; with no root (a remote tab) it offers no paths.
  * - Otherwise completes a filesystem path relative to `cwd`.
  *
  * A single match is filled in fully; multiple matches fill in their longest common prefix
@@ -50,6 +53,7 @@ export function completeCommandLine(
   files?: FilesCompletions,
   modelsFor?: (harness: string) => string[],
   policy: CompletionPolicy = ALL_ENABLED_POLICY,
+  fileReadRoot?: string,
 ): CompletionResult {
   const cursor = readCompletionCursor(input, cursorOffset);
   const prefix = cursor.preceding.join(' ');
@@ -71,6 +75,7 @@ export function completeCommandLine(
     completeSearchCommand(cursor) ??
     completeSyntaxTheme(cursor, SYNTAX_THEMES) ??
     completeLayoutCommand(cursor) ??
+    completeFileReadCommand(cursor, fileReadRoot) ??
     (modelsFor ? completeHarnessModel(cursor, modelsFor) : null);
   return result ?? completeFilePath(cursor, cwd);
 }

@@ -381,4 +381,17 @@ describe('completeCommandLine — disabled command guard', () => {
       expect(result.matches, name).toEqual([]);
     }
   });
+
+  it('completes file read paths from the read root, not the shell directory', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'compl-read-root-'));
+    writeFileSync(path.join(root, 'readme.md'), '');
+    try {
+      const line = 'file read rea';
+      const read = completeCommandLine(line, line.length, dir, [], [], undefined, undefined, undefined, undefined, undefined, root);
+      expect(read.newInput).toBe('file read readme.md ');
+      expect(completeCommandLine('file read rep', 13, dir).matches).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

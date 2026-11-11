@@ -291,6 +291,7 @@ describe('completeLine', () => {
       expect.objectContaining({ labels: ['janus', 'shell'], navigators: [], workingDirOf: expect.any(Function) }),
       expect.any(Function),
       expect.objectContaining({ allows: expect.any(Function), names: expect.any(Array) }),
+      '/repo',
     );
     expect(managers.connection.completionConnections).toHaveBeenCalledWith('shell');
     expect(capabilities.originTab()).toEqual({ label: 'shell', cwd: '/repo/clone/subdir', root: '/repo' });
