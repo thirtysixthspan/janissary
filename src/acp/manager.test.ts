@@ -6,6 +6,7 @@ import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import type { AcpRoleSettings } from './ask-role.js';
 import type { AcpRole } from './role.js';
 import { makeTab } from '../tab/index.js';
+import { DB_PRIMER } from '../database/primer.js';
 
 const mocks = vi.hoisted(() => ({
   connectAcp: vi.fn(),
@@ -133,7 +134,7 @@ describe('AcpManager.run', () => {
     const first = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
     expect(first.primer).toContain('question ask');
     expect(first.primer).not.toContain('Only these commands are allowed');
-    expect(first.primer).not.toContain('db primer');
+    expect(first.primer).not.toContain(DB_PRIMER);
     expect(first.primer).toContain(NO_TOOLS_LINE);
     expect(first.extractCommand('question ask "Who?"')).toBe('question ask "Who?"');
     expect(first.extractCommand('db sqlite list')).toBeNull();
@@ -158,7 +159,7 @@ describe('AcpManager.run', () => {
     const next = mocks.runAcpToolLoop.mock.calls[2][2] as AcpLoopDeps;
     expect(roleSettings).toHaveBeenCalledTimes(2);
     expect(settingsCurrent).toHaveBeenCalledTimes(3);
-    expect(next.primer).toContain('db primer');
+    expect(next.primer).toContain(DB_PRIMER);
     expect(next.primer).not.toContain('question ask');
     expect(next.primer).toContain('Only these commands are allowed: db sqlite query.');
     expect(next.primer).toContain(NO_BUILTIN_TOOLS_LINE);
@@ -176,12 +177,12 @@ describe('AcpManager.run', () => {
 
     settingsRows.splice(0, settingsRows.length,
       { name: 'db sqlite query', effectiveEnabled: true, effectiveAgentAccess: false });
-    expect(next.runCommand('db sqlite query store SELECT 1'))
-      .toBe('Command is disabled: db sqlite query.');
-    expect(dispatchNativeLine).toHaveBeenCalledOnce();
-    expect(mocks.notify).toHaveBeenCalledWith(
-      managers, 'command-disabled', 'tab1', 'Command is disabled: db sqlite query.',
+    await expect(next.runCommand('db sqlite query store SELECT 1')).resolves.toBe('db ran');
+    expect(dispatchNativeLine).toHaveBeenCalledTimes(2);
+    expect(mocks.notify).not.toHaveBeenCalledWith(
+      expect.anything(), 'command-disabled', expect.anything(), expect.anything(),
     );
+    expect(settingsCurrent).toHaveBeenCalledTimes(3);
   });
 
   it('runs an agent-issued question command through the dispatcher with the prompt signal', async () => {
@@ -230,7 +231,7 @@ describe('AcpManager.run', () => {
     acp.run('tab1', 'ask summarize this');
 
     const deps = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
-    expect(deps.primer).toContain('db primer');
+    expect(deps.primer).toContain(DB_PRIMER);
     expect(deps.extractCommand('question ask "What port?"')).toBe('question ask "What port?"');
   });
 
@@ -247,14 +248,14 @@ describe('AcpManager.run', () => {
     acp.run('tab1', 'ask hello again');
 
     const deps = mocks.runAcpToolLoop.mock.calls[1][2] as AcpLoopDeps;
-    expect(deps.primer).not.toContain('db primer');
+    expect(deps.primer).not.toContain(DB_PRIMER);
 
     tabs.length = 0;
     tabs.push({ label: 'tab1' });
     acp.run('tab1', 'ask hello');
 
     expect((mocks.runAcpToolLoop.mock.calls[2][2] as AcpLoopDeps).primer)
-      .toContain('db primer');
+      .toContain(DB_PRIMER);
   });
 
   it('error handler updates output, cleans up busy, and calls onDone', () => {
@@ -616,7 +617,7 @@ describe('AcpManager role sessions', () => {
     const primers = calls.map((call) => (call[2] as AcpLoopDeps).primer);
     expect(primers).toHaveLength(2);
     for (const primer of primers) {
-      expect(primer).not.toContain('db primer');
+      expect(primer).not.toContain(DB_PRIMER);
       expect(primer).not.toContain('browser primer text');
       expect(primer).toContain(NO_TOOLS_LINE);
     }

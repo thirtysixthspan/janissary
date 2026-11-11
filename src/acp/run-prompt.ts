@@ -1,5 +1,5 @@
 import type { Managers } from '../managers.js';
-import type { AcpSession } from './types.js';
+import type { AcpRunSnapshot, AcpSession } from './types.js';
 import type { AcpPendingPrompt } from './prompt-state.js';
 import type { LogEntry, TabRuntime } from '../tab/types.js';
 import { runAcpToolLoop } from './loop.js';
@@ -8,7 +8,9 @@ import { appendAcp, settleAcpPrompt } from './response.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';
 import { isRateLimitError } from './rate-limit.js';
-import { createAcpToolTable, toolPrimer, toolRunner, toolExtractor } from './tool-table.js';
+import { createAcpToolTable, gateCommand, toolPrimer, toolExtractor, type AcpTool } from './tool-table.js';
+import { createInvocationContext } from '../command/invocation.js';
+import { readFileInTab } from '../file-read/tab-read.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { coreActivity } from './record-feed.js';
 import { acpRoleRuntime } from './role-state.js';
@@ -17,6 +19,60 @@ import { effectiveCommandSetting } from '../native-commands/policy.js';
 import { NO_BUILTIN_TOOLS_LINE, NO_TOOLS_LINE } from './internal-tools.js';
 
 const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
+
+// The prompt's gate authority, read once: a settings change mid-prompt takes effect from the next one.
+function coreSnapshot(
+  managers: Managers, runtime: TabRuntime, request: AcpPendingPrompt,
+): Extract<AcpRunSnapshot, { kind: 'core' }> {
+  const settings = managers.nativeCommandSettings?.current();
+  const rows = settings === undefined ? [] : NATIVE_ACP_COMMANDS.map((name) => {
+    const setting = effectiveCommandSetting(settings, name);
+    return { name, effectiveEnabled: setting.effectiveEnabled, effectiveAgentAccess: setting.effectiveAgentAccess };
+  });
+  return {
+    kind: 'core',
+    role: request.role,
+    roleName: request.roleName,
+    grants: request.commands,
+    rows,
+    withoutTools: runtime.acpWithoutTools === true,
+  };
+}
+
+// Gate each emitted command on the snapshot, then run it on its side or return the refusal.
+function coreToolRunner(
+  managers: Managers, label: string, snapshot: AcpRunSnapshot, tools: readonly AcpTool[], signal: AbortSignal,
+): (command: string) => string | Promise<string> {
+  return (command) => {
+    const decision = gateCommand(snapshot, tools, command);
+    if ('refusal' in decision) {
+      if (decision.refused === 'disabled') notify(managers, 'command-disabled', label, decision.refusal);
+      return decision.refusal;
+    }
+    if (decision.runsOn === 'workspace') return readFileInTab(managers, label, command);
+    return dispatchNative(managers, label, command, signal);
+  };
+}
+
+async function dispatchNative(
+  managers: Managers,
+  label: string,
+  command: string,
+  signal?: AbortSignal,
+): Promise<string> {
+  const invocation = createInvocationContext(managers, label, command, {
+    ...(signal !== undefined && { signal }),
+    awaitResult: true,
+    acpTool: true,
+  });
+  const result = await managers.command.dispatchNativeLine(label, command, invocation);
+  if (!result.dispatched) throw new Error(`No ACP tool matched command: ${command}`);
+  if (result.coreResponse) return result.output;
+  if (result.result === undefined) return result.output;
+  return typeof result.result === 'string'
+    ? result.result
+    : JSON.stringify(result.result) ?? String(result.result);
+}
 
 export function runCorePrompt(
   managers: Managers, label: string, runtime: TabRuntime, request: AcpPendingPrompt,
@@ -27,14 +83,12 @@ export function runCorePrompt(
   const updateRunning = (output: string, running: boolean) => {
     managers.tab.updateRunning(label, { markdown: true, entries: request.runningEntries }, output, running, { trailing: true });
   };
-  const tools = runtime.acpWithoutTools === true ? [] : createAcpToolTable(
-    managers, request.roleName, request.commands, request.abort.signal,
-  );
-  const settings = managers.nativeCommandSettings?.current();
-  const allowedCommands = NATIVE_ACP_COMMANDS.filter((command) => request.commands.includes(command)
-    && effectiveCommandSetting(settings, command).effectiveAgentAccess);
+  const snapshot = coreSnapshot(managers, runtime, request);
+  const tools = snapshot.withoutTools ? [] : createAcpToolTable(snapshot.grants);
+  const allowedCommands = NATIVE_ACP_COMMANDS.filter((command) => snapshot.grants.includes(command)
+    && snapshot.rows.find((row) => row.name === command)?.effectiveAgentAccess !== false);
   const toolsAvailable = tools.length > 0 && allowedCommands.length > 0;
-  const runCommand = toolRunner(managers, tools, request.roleName, request.commands, label);
+  const runCommand = coreToolRunner(managers, label, snapshot, tools, request.abort.signal);
   const recordTool = (text: string) => coreActivity(managers.acpRecords, runtime, 'tool', text, request.role);
   const recordAsyncResult = async (result: Promise<string>) => {
     const text = await result;

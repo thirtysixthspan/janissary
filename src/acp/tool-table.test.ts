@@ -1,7 +1,4 @@
-import { afterEach, describe, it, expect, vi } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
+import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('../browser/command.js', () => ({
   isBrowserCommandLine: vi.fn((line: string) => line.startsWith('browser ')),
@@ -11,68 +8,41 @@ vi.mock('../question-command.js', () => ({
   isQuestionCommandLine: vi.fn((line: string) => line.startsWith('question ask')),
   QUESTION_PRIMER: 'question primer text',
 }));
-vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
-
 import {
-  createAcpToolTable, gateCommand, toolPrimer, toolRunner, toolExtractor, type AcpTool,
+  createAcpToolTable, gateCommand, toolPrimer, toolExtractor, type AcpTool,
 } from './tool-table.js';
 import type { AcpRunSnapshot, AcpRunSnapshotRow } from './types.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
-import { NativeCommandSettingsManager } from '../native-commands/manager.js';
-import { notify } from '../notifications/index.js';
+import { DB_PRIMER } from '../database/primer.js';
+import { FILE_READ_PRIMER } from '../file-read/command.js';
 
-const settingsRoots: string[] = [];
-
-afterEach(() => {
-  for (const root of settingsRoots) rmSync(root, { recursive: true, force: true });
-  settingsRoots.length = 0;
-  vi.clearAllMocks();
-});
-
-function settingsWith(
-  values: Record<string, { enabled?: boolean; agentAccess?: boolean }>,
-): NativeCommandSettingsManager {
-  const root = mkdtempSync(path.join(tmpdir(), 'acp-tool-table-'));
-  settingsRoots.push(root);
-  const home = path.join(root, 'home');
-  mkdirSync(path.join(home, '.janissary'), { recursive: true });
-  writeFileSync(path.join(home, '.janissary', 'commands.json'), JSON.stringify(values));
-  return new NativeCommandSettingsManager(path.join(root, 'project'), home);
-}
-
-const setup = (
-  grants: readonly string[] = NATIVE_ACP_COMMANDS,
-  settings = settingsWith({}),
-  signal?: AbortSignal,
-) => {
-  const dispatchNativeLine = vi.fn(async () => ({ dispatched: true, output: 'dispatched output' }));
-  const isCommandLine = vi.fn((line: string) => line.startsWith('db '));
-  const managers = {
-    tab: { byLabel: vi.fn(), workingDirOf: vi.fn(() => '/project') },
-    browser: { run: vi.fn() },
-    questions: { register: vi.fn() },
-    database: { primer: 'db primer text', runInTab: vi.fn(), isCommandLine },
-    command: { dispatchNativeLine },
-    nativeCommandSettings: settings,
-  } as never;
-  return {
-    managers,
-    tools: createAcpToolTable(managers, 'ask', grants, signal),
-    dispatchNativeLine,
-    isCommandLine,
-    signal,
-  };
-};
+const setup = (grants: readonly string[] = NATIVE_ACP_COMMANDS) => ({ tools: createAcpToolTable(grants) });
 
 describe('createAcpToolTable', () => {
+  it('builds from grants alone, with no managers object', () => {
+    const tools = createAcpToolTable(['browser goto', 'db sqlite list']);
+    expect(tools.map((tool) => tool.primer)).toEqual(['browser primer text', DB_PRIMER]);
+  });
+
   it('keeps the existing table order and appends the canonical allow-list', () => {
     const { tools } = setup();
     expect(toolPrimer(tools, NATIVE_ACP_COMMANDS)).toBe([
       'browser primer text',
       'question primer text',
-      'db primer text',
+      FILE_READ_PRIMER,
+      DB_PRIMER,
       `Only these commands are allowed: ${NATIVE_ACP_COMMANDS.join(', ')}.`,
     ].join('\n\n'));
+  });
+
+  it('includes the file entry only when file read is granted', () => {
+    const [file, ...rest] = createAcpToolTable(['file read']);
+    expect(rest).toEqual([]);
+    expect(file.runsOn).toBe('workspace');
+    expect(file.primer).toBe(FILE_READ_PRIMER);
+    const without = createAcpToolTable(NATIVE_ACP_COMMANDS.filter((command) => command !== 'file read'));
+    expect(without.some((tool) => tool.primer === FILE_READ_PRIMER)).toBe(false);
+    expect(toolPrimer(without, NATIVE_ACP_COMMANDS)).not.toContain(FILE_READ_PRIMER);
   });
 
   it('filters omitted owners and de-duplicates unknown grants in the allow-list', () => {
@@ -93,115 +63,34 @@ describe('createAcpToolTable', () => {
     expect(toolExtractor(tools)('browser goto x')).toBeNull();
   });
 
-  it('runs the browser, question, and database entries on the caller side', () => {
+  it('runs the file entry on the workspace and the others on the caller side', () => {
     const { tools } = setup();
-    expect(tools.map((tool) => tool.runsOn)).toEqual(['caller', 'caller', 'caller']);
+    expect(tools.map((tool) => tool.runsOn)).toEqual(['caller', 'caller', 'workspace', 'caller']);
   });
 
   it('keeps the database entry last when it is included', () => {
     const { tools } = setup();
     expect(tools.at(-1)!.match('anything at all')).toBe(true);
     expect(tools.slice(0, -1).some((tool) => tool.match('anything at all'))).toBe(false);
+    const file = tools.find((tool) => tool.runsOn === 'workspace')!;
+    expect(file.match('anything at all')).toBe(false);
+    expect(file.match('db sqlite list')).toBe(false);
   });
 
   it('keeps every included group primer while listing only enabled commands', () => {
-    const settings = settingsWith({ 'browser goto': { agentAccess: false } });
-    const { tools } = setup(['browser goto', 'db sqlite list'], settings);
+    const { tools } = setup(['browser goto', 'db sqlite list']);
     expect(toolPrimer(tools, ['db sqlite list'])).toBe([
       'browser primer text',
-      'db primer text',
+      DB_PRIMER,
       'Only these commands are allowed: db sqlite list.',
     ].join('\n\n'));
   });
 
-  it.each([
-    ['disabled', { enabled: false }],
-    ['agent-off', { agentAccess: false }],
-  ])('keeps the group primer and extraction for a granted owner whose only command is %s', (_state, setting) => {
-    const settings = settingsWith({ 'browser goto': setting });
-    const { tools } = setup(['browser goto'], settings);
+  it('keeps the group primer and extraction for a granted owner whose only command is not allowed', () => {
+    const { tools } = setup(['browser goto']);
     expect(tools).toHaveLength(1);
     expect(toolPrimer(tools, [])).toBe('browser primer text');
     expect(toolExtractor(tools)('browser goto x')).toBe('browser goto x');
-  });
-});
-
-describe('toolRunner', () => {
-  it('routes a browser command through the dispatcher with the prompt signal', async () => {
-    const controller = new AbortController();
-    const { managers, tools, dispatchNativeLine } = setup(NATIVE_ACP_COMMANDS, settingsWith({}), controller.signal);
-    await expect(toolRunner(managers, tools, 'ask', NATIVE_ACP_COMMANDS, 'tab1')(
-      'browser goto https://example.com',
-    )).resolves.toBe('dispatched output');
-    expect(dispatchNativeLine).toHaveBeenCalledWith(
-      'tab1',
-      'browser goto https://example.com',
-      expect.objectContaining({ acpTool: true, awaitResult: true, signal: controller.signal }),
-    );
-  });
-
-  it('routes a question command through the dispatcher', async () => {
-    const { managers, tools, dispatchNativeLine } = setup();
-    await expect(toolRunner(managers, tools, 'ask', NATIVE_ACP_COMMANDS, 'tab1')(
-      'question ask "What port?"',
-    )).resolves.toBe('dispatched output');
-    expect(dispatchNativeLine).toHaveBeenCalledWith(
-      'tab1',
-      'question ask "What port?"',
-      expect.objectContaining({ acpTool: true, awaitResult: true }),
-    );
-  });
-
-  it('routes an allowed database command with trailing arguments through the dispatcher', async () => {
-    const { managers, tools, dispatchNativeLine } = setup(['db sqlite query']);
-    await expect(toolRunner(managers, tools, 'ask', ['db sqlite query'], 'tab1')(
-      'db sqlite query shop SELECT 1',
-    )).resolves.toBe('dispatched output');
-    expect(dispatchNativeLine).toHaveBeenCalledWith(
-      'tab1',
-      'db sqlite query shop SELECT 1',
-      expect.objectContaining({ acpTool: true, awaitResult: true }),
-    );
-  });
-
-  it('returns the disabled refusal before the role refusal for a disabled ungranted command', () => {
-    const settings = settingsWith({ 'browser eval': { enabled: false } });
-    const { managers, tools, dispatchNativeLine } = setup(['browser goto'], settings);
-    const run = toolRunner(managers, tools, 'Reader', ['browser goto'], 'tab1');
-    expect(run('browser eval document.title')).toBe('Command is disabled: browser eval.');
-    expect(notify).toHaveBeenCalledWith(
-      managers, 'command-disabled', 'tab1', 'Command is disabled: browser eval.',
-    );
-    expect(dispatchNativeLine).not.toHaveBeenCalled();
-  });
-
-  it('returns the same refusal for an agent-off granted command and notifies', () => {
-    const settings = settingsWith({ 'browser goto': { enabled: true, agentAccess: false } });
-    const { managers, tools, dispatchNativeLine } = setup(NATIVE_ACP_COMMANDS, settings);
-    const run = toolRunner(managers, tools, 'ask', NATIVE_ACP_COMMANDS, 'tab1');
-    expect(run('browser goto https://example.com')).toBe('Command is disabled: browser goto.');
-    expect(notify).toHaveBeenCalledWith(
-      managers, 'command-disabled', 'tab1', 'Command is disabled: browser goto.',
-    );
-    expect(dispatchNativeLine).not.toHaveBeenCalled();
-  });
-
-  it('returns the exact role refusal for an enabled but ungranted command', () => {
-    const grants = ['browser goto'];
-    const { managers, tools, dispatchNativeLine } = setup(grants);
-    const command = 'browser eval document.title';
-    expect(toolExtractor(tools)(command)).toBe(command);
-    expect(toolRunner(managers, tools, 'Reader', grants, 'tab1')(command)).toBe(
-      'Command not allowed for role "Reader": browser eval.',
-    );
-    expect(dispatchNativeLine).not.toHaveBeenCalled();
-  });
-
-  it('does not pass an unknown command to the database catch-all', () => {
-    const { managers, tools, dispatchNativeLine } = setup();
-    expect(() => toolRunner(managers, tools, 'ask', NATIVE_ACP_COMMANDS, 'tab1')('select 1'))
-      .toThrow('No ACP tool matched command: select 1');
-    expect(dispatchNativeLine).not.toHaveBeenCalled();
   });
 });
 
@@ -210,14 +99,12 @@ describe('gateCommand', () => {
     {
       primer: 'browser',
       match: (command) => /^browser\b/i.test(command),
-      run: () => 'unused',
       isCommandLine: () => false,
       runsOn: 'caller',
     },
     {
       primer: 'db',
       match: (command) => /^db\b/i.test(command),
-      run: () => 'unused',
       isCommandLine: () => false,
       runsOn: 'workspace',
     },
@@ -342,10 +229,10 @@ describe('toolExtractor', () => {
     expect(toolExtractor(tools)('I need to ask.\nquestion ask x')).toBe('question ask x');
   });
 
-  it('reaches the database entry through its manager predicate', () => {
-    const { tools, isCommandLine } = setup();
+  it('recognizes a database line through isDatabaseCommandLine', () => {
+    const { tools } = setup();
     expect(toolExtractor(tools)('Checking.\ndb sqlite list')).toBe('db sqlite list');
-    expect(isCommandLine).toHaveBeenCalledWith('db sqlite list');
+    expect(toolExtractor(tools)('Checking.\ndb sqlite bogus')).toBeNull();
   });
 
   it('picks the last command line even when an earlier line belongs to a tool listed first', () => {
@@ -359,9 +246,19 @@ describe('toolExtractor', () => {
     expect(toolExtractor(tools)('db sqlite list\nthen\nbrowser goto x')).toBe('browser goto x');
   });
 
-  it('returns a disabled granted command', () => {
-    const settings = settingsWith({ 'browser goto': { enabled: false } });
-    const { tools } = setup(['browser goto'], settings);
+  it('finds a trailing file read case-insensitively when the file entry is granted', () => {
+    const { tools } = setup();
+    expect(toolExtractor(tools)('Let me read it.\nfile read notes/a.md')).toBe('file read notes/a.md');
+    expect(toolExtractor(tools)('Let me read it.\nFile Read a.md')).toBe('File Read a.md');
+  });
+
+  it('returns null for a trailing file read on a table without the file entry', () => {
+    const { tools } = setup(['browser goto', 'db sqlite list']);
+    expect(toolExtractor(tools)('Let me read it.\nfile read')).toBeNull();
+  });
+
+  it('returns a granted command, since the table reads no settings', () => {
+    const { tools } = setup(['browser goto']);
     expect(toolExtractor(tools)('Let me look.\nbrowser goto x')).toBe('browser goto x');
   });
 
