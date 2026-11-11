@@ -55,6 +55,7 @@ export function terminateParkedSession(
     }, {
       session: record.session,
       workspaceDir: record.workspaceDir,
+      terminate: true,
       onResult: (accepted: boolean) => {
         // Settle the outcome first: `close` is the explicit-close path — it kills every process on
         // the channel, sends `shutdown`, and runs the launch handlers' `onClosed` sweep

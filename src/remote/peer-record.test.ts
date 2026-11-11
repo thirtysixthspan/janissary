@@ -30,6 +30,16 @@ describe('peer record', () => {
     expect(statSync(file).mode & 0o777).toBe(0o600);
   });
 
+  it('round-trips the protocol version the writer stamped', () => {
+    const file = peerRecordPath(root, 'session-1');
+    writePeerRecord(file, { pid: 42, socket: '/tmp/peer.sock', label: 'claude', version: 39 });
+    expect(readPeerRecord(file)).toEqual({ pid: 42, socket: '/tmp/peer.sock', label: 'claude', version: 39 });
+  });
+
+  it('still reads a record written before the version was stamped', () => {
+    expect(readPeerRecord(seed(JSON.stringify({ pid: 42, socket: '/s' })))).toEqual({ pid: 42, socket: '/s' });
+  });
+
   it('tells a missing record from an unreadable one', () => {
     expect(readPeerRecord(peerRecordPath(root, 'absent'))).toBe('missing');
     expect(readPeerRecord(seed('not json'))).toBe('invalid');
@@ -42,6 +52,8 @@ describe('peer record', () => {
     ['a non-positive pid', JSON.stringify({ pid: 0, socket: '/s' })],
     ['a non-string socket', JSON.stringify({ pid: 42, socket: 7 })],
     ['a non-string label', JSON.stringify({ pid: 42, socket: '/s', label: 3 })],
+    ['a fractional version', JSON.stringify({ pid: 42, socket: '/s', version: 38.5 })],
+    ['a non-number version', JSON.stringify({ pid: 42, socket: '/s', version: '39' })],
   ])('refuses %s as invalid', (_name, content) => {
     expect(readPeerRecord(seed(content))).toBe('invalid');
   });

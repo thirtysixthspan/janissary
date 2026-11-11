@@ -71,6 +71,7 @@ export class RemoteAcp {
       tokens: this.tokens,
       autonomous: frame.autonomous,
       effort: frame.effort,
+      sessionMeta: frame.sessionMeta,
       onActivity: (update) => {
         const activity = acpActivity(update);
         if (activity) this.send({ type: 'acp-activity', id, ...activity });

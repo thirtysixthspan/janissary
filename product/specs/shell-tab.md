@@ -329,6 +329,11 @@ Enter or Space. A row carrying this shell's own live ACP reference opens the cur
 connection tab the same way. A monitor row stays a plain row. The shell's panels offer no transcript
 snapshot button, and opening a row never opens a snapshot.
 
+Starting a monitor from the shell's command bar, such as `monitor activity`, adds that monitor's
+`monitor:<name>` row to the connections window. The shell tab stays open and its terminal keeps
+running; the monitor's row is a payload shape the shell plugin accepts, so it never disables the
+plugin.
+
 A shell tab can hold scheduled commands (see [[scheduling]]): `schedule` from its own command bar, or
 `schedule … in <shell tab>` from another tab, attaches the entry to it, and the "New schedule" dialog
 offers it as a target. Its entries appear in the schedule window. When one falls due, the command is

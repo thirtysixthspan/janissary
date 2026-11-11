@@ -55,6 +55,9 @@ export type AcpOptions = {
   // Autonomous tasks explicitly opt into approving provider tool requests; ordinary ACP stays denied.
   autonomous?: true;
   effort?: Readonly<{ level: string; model: string }>;
+  // Sent as the `session/new` request's `_meta`: per-session adapter options a launch supplies.
+  // Omitted from the request entirely when unset.
+  sessionMeta?: Record<string, unknown>;
 };
 
 export type AcpPromptHandlers = {

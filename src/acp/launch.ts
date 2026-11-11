@@ -1,5 +1,7 @@
 import type { PersonaHarness } from '../persona-parsing.js';
 import type { RoleEntry } from '../plugins/roles/shared.js';
+import { BUNDLED_ACP_ADAPTERS } from './bundled-adapters.js';
+import { internalToolDenial } from './internal-tools.js';
 
 export const MARKDOWN_INSTRUCTION = 'Write your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.';
 
@@ -7,6 +9,7 @@ export type AcpLaunch = {
   command: string;
   args: string[];
   env: Record<string, string>;
+  sessionMeta?: Record<string, unknown>;
 };
 
 export function acpLaunchFor(harness: PersonaHarness): AcpLaunch {
@@ -27,19 +30,40 @@ export function acpLaunchFor(harness: PersonaHarness): AcpLaunch {
   };
 }
 
-// A role entry's launch. OpenCode and Claude launch exactly as a persona of that harness does; codex
-// runs its ACP adapter with codex's own `-c key=value` config overrides for the model and effort. A
-// harness with no ACP adapter answers undefined, which the caller reports as that entry failing.
+// A role entry's launch. OpenCode launches as an opencode persona does. Claude and codex run the ACP
+// adapters bundled with Janissary by their `bin` name, which `locateAcpCommand` finds in the install's
+// `node_modules/.bin`. Codex takes its model and effort through `CODEX_CONFIG`, because its adapter
+// ignores argv. Every role entry also carries the internal-tool denial for its harness, which refuses
+// the harness's built-in tools. A harness with no ACP adapter answers undefined, which the caller
+// reports as that entry failing.
 export function acpLaunchForEntry(entry: RoleEntry): AcpLaunch | undefined {
+  const base = baseLaunchForEntry(entry);
+  if (base === undefined) return undefined;
+  const denial = internalToolDenial(entry.harness, base.env);
+  return {
+    ...base,
+    env: { ...base.env, ...denial?.env },
+    ...(denial?.sessionMeta !== undefined && { sessionMeta: denial.sessionMeta }),
+  };
+}
+
+function baseLaunchForEntry(entry: RoleEntry): AcpLaunch | undefined {
   const variant = entry.effort ?? 'default';
-  if (entry.harness === 'opencode' || entry.harness === 'claude') {
+  if (entry.harness === 'opencode') {
     return acpLaunchFor({ harness: entry.harness, model: entry.model, variant });
   }
+  if (entry.harness === 'claude') {
+    return {
+      command: BUNDLED_ACP_ADAPTERS.claude,
+      args: [],
+      env: { ANTHROPIC_MODEL: entry.model, CLAUDE_THINKING_EFFORT: variant },
+    };
+  }
   if (entry.harness !== 'codex') return undefined;
-  const effort = entry.effort === undefined ? [] : ['-c', `model_reasoning_effort=${JSON.stringify(entry.effort)}`];
+  const effort = entry.effort === undefined ? {} : { model_reasoning_effort: entry.effort };
   return {
-    command: 'npx',
-    args: ['@zed-industries/codex-acp', '-c', `model=${JSON.stringify(entry.model)}`, ...effort],
-    env: {},
+    command: BUNDLED_ACP_ADAPTERS.codex,
+    args: [],
+    env: { CODEX_CONFIG: JSON.stringify({ model: entry.model, ...effort }) },
   };
 }

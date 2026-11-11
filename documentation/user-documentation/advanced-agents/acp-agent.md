@@ -14,7 +14,7 @@ For an autonomous task that runs until completion and may use skill-granted Jani
 
 ## Before the first prompt
 
-Each harness your `ask` role lists must be installed, signed in, and on your `PATH`. With the default role that's `opencode`, then `claude`, then `codex`. A `claude` or `codex` entry runs its ACP adapter through `npx`. The `PATH` your shell's rc file sets up counts too, so an `opencode` installed through a version manager such as nvm is found even when the app was started without that setup. Run `opencode auth login` in a terminal if you have not signed in. You don't need all three. A model that can't run is skipped.
+Each harness your `ask` role lists must be signed in, and an `opencode` entry also needs `opencode` installed and on your `PATH`. With the default role that's `opencode`, then `claude`, then `codex`. The `claude` and `codex` ACP adapters ship with Janissary, so those entries need only the harness's own sign-in. The `PATH` your shell's rc file sets up counts too, so an `opencode` installed through a version manager such as nvm is found even when the app was started without that setup. Run `opencode auth login` in a terminal if you have not signed in. You don't need all three. A model that can't run is skipped.
 
 Use the explicit `ask` prefix for a model reply; unclaimed text in a shell bar goes to zsh.
 
@@ -37,6 +37,9 @@ databases, browse to a page and read its content, and ask or approve a question.
 those same commands plus database create/delete and browser eval. If you add or remove a grant, the
 next prompt reads the updated role. A missing ask or tell role uses its built-in model and command
 defaults; an existing role with no grants has no native tools.
+
+The agent has no built-in tools of its own, such as a shell, file editing, or web search, so it can
+only run the native commands its role grants.
 
 ## Separate ask and tell conversations
 

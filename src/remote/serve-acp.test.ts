@@ -101,6 +101,23 @@ describe('RemoteAcp — opening a session', () => {
     });
   });
 
+  it('hands the frame\'s session options to the agent connection', () => {
+    const { acp } = makeAcp();
+    const sessionMeta = { claudeCode: { options: { tools: [] } } };
+
+    acp.open({ ...OPEN, sessionMeta });
+
+    expect(acpMock.options[0].sessionMeta).toEqual(sessionMeta);
+  });
+
+  it('leaves the session options unset when the frame carries none', () => {
+    const { acp } = makeAcp();
+
+    acp.open(OPEN);
+
+    expect(acpMock.options[0].sessionMeta).toBeUndefined();
+  });
+
   // The forwarded-over-own map this server already computed. Reading its own credentials instead
   // would drop a forwarded key for exactly the sessions that need it most.
   it('injects the merged token map, with a forwarded token beating the remote\'s own', () => {

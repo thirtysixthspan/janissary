@@ -37,6 +37,8 @@ const makeSession = (): AcpSession => ({ prompt: vi.fn(), kill: vi.fn(), cancel:
 
 const GEMINI: RoleEntry = { harness: 'opencode', model: 'google/gemini-3.1-flash-lite' };
 const CLAUDE: RoleEntry = { harness: 'claude', model: 'claude-haiku-4-5' };
+const NO_BUILTIN_TOOLS_LINE = 'You have no built-in tools; use only the commands listed here.';
+const NO_TOOLS_LINE = 'You have no tools; answer in prose.';
 
 const setup = (
   entries: RoleEntry[] = [GEMINI], roleSettings?: (root: string, role: AcpRole) => AcpRoleSettings,
@@ -132,6 +134,7 @@ describe('AcpManager.run', () => {
     expect(first.primer).toContain('question ask');
     expect(first.primer).not.toContain('Only these commands are allowed');
     expect(first.primer).not.toContain('db primer');
+    expect(first.primer).toContain(NO_TOOLS_LINE);
     expect(first.extractCommand('question ask "Who?"')).toBe('question ask "Who?"');
     expect(first.extractCommand('db sqlite list')).toBeNull();
 
@@ -144,6 +147,7 @@ describe('AcpManager.run', () => {
     expect(roleSettings).toHaveBeenCalledOnce();
     expect(retry.primer).toContain('question ask');
     expect(retry.primer).not.toContain('Only these commands are allowed');
+    expect(retry.primer).toContain(NO_TOOLS_LINE);
     expect(retry.extractCommand('question ask "Who?"')).toBe('question ask "Who?"');
 
     const retryHandlers = mocks.runAcpToolLoop.mock.calls[1][3] as AcpLoopHandlers;
@@ -157,6 +161,7 @@ describe('AcpManager.run', () => {
     expect(next.primer).toContain('db primer');
     expect(next.primer).not.toContain('question ask');
     expect(next.primer).toContain('Only these commands are allowed: db sqlite query.');
+    expect(next.primer).toContain(NO_BUILTIN_TOOLS_LINE);
     expect(next.extractCommand('db sqlite query store SELECT 1'))
       .toBe('db sqlite query store SELECT 1');
     expect(next.extractCommand('question ask "Who?"')).toBeNull();
@@ -198,9 +203,9 @@ describe('AcpManager.run', () => {
   });
 
   // A session started without tools must not be able to reach them, and the proof has to be in what
-  // the loop is handed rather than in what the model is told: an empty table means the primer grows
-  // no tool text, no reply line is recognized as a command, and an emitted command has nothing to
-  // resolve to.
+  // the loop is handed rather than in what the model is told: an empty table means the primer carries
+  // only the no-tools line, no reply line is recognized as a command, and an emitted command has
+  // nothing to resolve to.
   it('hands the loop no tools at all for a session started without them', () => {
     const { acp } = withTab();
     acp.start('tab1', { withoutTools: true });
@@ -208,7 +213,7 @@ describe('AcpManager.run', () => {
     acp.run('tab1', 'ask summarize this');
 
     const deps = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
-    expect(deps.primer).toBe('Write your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.');
+    expect(deps.primer).toBe(`${NO_TOOLS_LINE}\n\nWrite your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.`);
     expect(deps.extractCommand('Let me look.\nbrowser open https://example.com')).toBeNull();
     expect(deps.extractCommand('question ask "What port?"')).toBeNull();
     expect(deps.extractCommand('db sqlite list')).toBeNull();
@@ -613,6 +618,7 @@ describe('AcpManager role sessions', () => {
     for (const primer of primers) {
       expect(primer).not.toContain('db primer');
       expect(primer).not.toContain('browser primer text');
+      expect(primer).toContain(NO_TOOLS_LINE);
     }
     for (const call of calls) {
       const deps = call[2] as AcpLoopDeps;
@@ -714,6 +720,27 @@ describe('AcpManager — remote tabs', () => {
     expect(acp.has('tab1')).toBe(true);
   });
 
+  it('sends a claude role session\'s built-in-tool denial across on the open frame', () => {
+    const { acp, channel } = remoteSetup();
+
+    acp.session('tab1', '/cwd', CLAUDE, { onError: vi.fn(), onConnect: vi.fn() });
+
+    expect(channel.send).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'acp-open', command: 'claude-agent-acp', sessionMeta: { claudeCode: { options: { tools: [] } } },
+    }));
+  });
+
+  it('sends no session options for an opencode role session', () => {
+    const { acp, channel } = remoteSetup();
+
+    acp.session('tab1', '/cwd', GEMINI, { onError: vi.fn(), onConnect: vi.fn() });
+
+    const open = channel.send.mock.calls.map(([frame]) => frame as Record<string, unknown>)
+      .find((frame) => frame.type === 'acp-open');
+    expect(open).toBeDefined();
+    expect(open).not.toHaveProperty('sessionMeta');
+  });
+
   it('keeps ask and tell remote sessions on separate ids over one channel', () => {
     const { acp, channel } = remoteSetup();
     const ask = acp.start('tab1');
@@ -756,7 +783,7 @@ describe('AcpManager — remote tabs', () => {
     acp.run('tab1', 'ask hello');
 
     const open = channel.send.mock.calls[0][0] as { env: Record<string, string> };
-    expect(JSON.parse(open.env.OPENCODE_CONFIG_CONTENT)).toEqual({ model: 'google/gemini-3.1-flash-lite' });
+    expect(JSON.parse(open.env.OPENCODE_CONFIG_CONTENT)).toEqual({ model: 'google/gemini-3.1-flash-lite', permission: 'deny' });
   });
 
   // What the agent reports as its "model" is really the session's current mode name, so the popup

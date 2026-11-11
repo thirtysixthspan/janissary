@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, rmSync, realpathSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, rmSync, realpathSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import path from 'node:path';
 import { setGitIdentity } from '../git/identity.js';
@@ -152,6 +152,54 @@ describe('confinedHarnessSpawn', () => {
   // the tree holds janissary's own dependencies and working state.
   it('does not carve in the install root itself', () => {
     expect(dValues(build())).not.toContain(janissaryRoot());
+  });
+
+  it.each([
+    {
+      agent: 'Claude',
+      binary: 'claude-agent-acp',
+      packageName: '@agentclientprotocol/claude-agent-acp',
+      runtimePackages: ['@anthropic-ai/claude-agent-sdk', '@modelcontextprotocol/sdk'],
+      sibling: '@agentclientprotocol/codex-acp',
+    },
+    {
+      agent: 'Codex',
+      binary: 'codex-acp',
+      packageName: '@agentclientprotocol/codex-acp',
+      runtimePackages: ['@openai/codex', 'path-key'],
+      sibling: '@agentclientprotocol/claude-agent-acp',
+    },
+  ])('limits the $agent role adapter to its executable dependency closure', ({ binary, packageName, runtimePackages, sibling }) => {
+    const root = janissaryRoot();
+    const executable = path.join(root, 'node_modules', '.bin', binary);
+    expect(existsSync(executable)).toBe(true);
+    const result = build({ selfBinaryHint: executable });
+    const packageReads = result.args
+      .filter((value, index) => result.args[index - 1] === '-D' && value.startsWith('ROLE_ADAPTER_PACKAGE_'))
+      .map((value) => value.slice(value.indexOf('=') + 1));
+
+    expect(result.args).toContain(`ROLE_ADAPTER_EXECUTABLE_L=${executable}`);
+    expect(result.args).toContain(`ROLE_ADAPTER_EXECUTABLE_R=${realpathSync(executable)}`);
+    expect(packageReads).toContain(realpathSync(path.join(root, 'node_modules', packageName)));
+    for (const dependency of runtimePackages) {
+      expect(packageReads).toContain(realpathSync(path.join(root, 'node_modules', dependency)));
+    }
+    expect(packageReads).not.toContain(path.join(root, 'node_modules'));
+    expect(packageReads).not.toContain(realpathSync(path.join(root, 'node_modules', sibling)));
+    expect(dValues(result)).not.toContain(path.join(root, 'node_modules'));
+    expect(dValues(result)).toContain(path.dirname(process.execPath));
+    expect(dValues(result)).toContain(path.dirname(realpathSync(process.execPath)));
+  });
+
+  it('keeps the nearest-node_modules self-read carve-in for ordinary harness executables', () => {
+    const root = janissaryRoot();
+    const executable = path.join(root, 'node_modules', '.bin', 'tsc');
+    const result = build({ selfBinaryHint: executable });
+
+    expect(result.args).toContain(`SELF_DIR_L=${path.dirname(executable)}`);
+    expect(result.args).toContain(`SELF_DIR_R=${path.join(root, 'node_modules')}`);
+    expect(result.args).toContain('ROLE_ADAPTER_EXECUTABLE_L=/nonexistent-janissary-self-bin-placeholder');
+    expect(result.args).not.toContain('ROLE_ADAPTER_PACKAGE_0_L');
   });
 
   it('sets the janissary install root, surviving the scrub', () => {

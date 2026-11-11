@@ -12,6 +12,7 @@ import { janissaryRoot, janissaryAiDir, janissaryScriptsDir, janissarySecurityDi
 import { scrubEnv, workspaceEnv } from './environment.js';
 import { containedStrictly } from '../path-containment.js';
 import type { ProjectTokens } from '../project/tokens.js';
+import { roleAdapterReadDirs, type AdapterReadDir } from './role-adapter-reads.js';
 
 // The `sandbox-exec` invocation for a harness spawn this host has already decided to confine: the
 // profile, its `-D` parameters, and the scrubbed environment. Split out of `sandboxSpawn` in
@@ -45,13 +46,15 @@ function claudeScratchDir(): string {
 }
 
 // Walk up from a resolved executable's path to the nearest ancestor directory literally named
-// `node_modules`, if any. A globally-installed npm package (`npm` itself included) is laid out as
+// `node_modules`, if any. Ordinary harness binaries keep this broad package-tree access for packages
+// whose runtime files are siblings of their executable. A globally-installed npm package is laid out as
 // `.../node_modules/<pkg>/bin/<script>`, where the script requires sibling files from `<pkg>/lib/`
 // and beyond — carving in only the immediate `bin/` directory (as for a single bundled binary like
 // claude.exe) leaves those sibling requires denied. Carving in the whole `node_modules/` directory
 // instead covers every globally-installed package uniformly (not just the one being run), which is
 // harmless — it's still just $HOME-scoped code, not secrets. Falls back to the script's own
-// directory when there's no `node_modules` ancestor (a single-file bundled binary).
+// directory when there's no `node_modules` ancestor (a single-file bundled binary). Bundled role
+// adapters are handled separately so this broad carve-in does not expose their package siblings.
 function packageRootDir(resolvedBin: string): string {
   let dir = path.dirname(resolvedBin);
   for (;;) {
@@ -70,25 +73,40 @@ function packageRootDir(resolvedBin: string): string {
 // calling process's own binary and its directory to determine code identity for ACL matching; denied,
 // the harness looks logged out even though its Keychain item is intact). Returns both the literal
 // (unresolved — e.g. many npm-global installs are a `bin/foo` symlink into `lib/node_modules/...`)
-// and fully realpath-resolved directory (widened to the enclosing `node_modules/` via
-// `packageRootDir` above, for packages — like npm — that are more than a single bundled file), same
-// dual reasoning as `dualParams` in paths.ts: a framework may `opendir`/`lstat` the
-// symlink's own directory as well as the resolved target's. Falls back to a path that matches
-// nothing so the profile's params always have a bound value.
-function resolveExecutableDirs(command: string): { literal: string; real: string } {
+// and fully realpath-resolved executable path. The ordinary self-read params widen the literal path
+// to its directory and the real path to the enclosing `node_modules/`; a bundled role adapter uses
+// the exact executable paths and a separate package-closure allow-list. This keeps the literal and
+// real forms needed for symlinks while preserving ordinary harness behavior. Missing commands use
+// a path that matches nothing so every profile param remains bound.
+function executableAccess(command: string): {
+  self: { literal: string; real: string };
+  executable: { literal: string; real: string };
+  adapterReads: AdapterReadDir[];
+} {
   const fallback = '/nonexistent-janissary-self-bin-placeholder';
   const literalBin = command.includes('/')
     ? (existsSync(command) ? command : undefined)
     : (process.env.PATH ?? '').split(':').filter(Boolean)
       .map((dir) => path.join(dir, command))
       .find((candidate) => existsSync(candidate));
-  if (!literalBin) return { literal: fallback, real: fallback };
-  return { literal: path.dirname(literalBin), real: packageRootDir(resolvePath(literalBin)) };
+  if (!literalBin) {
+    return { self: { literal: fallback, real: fallback }, executable: { literal: fallback, real: fallback }, adapterReads: [] };
+  }
+  const executable = { literal: literalBin, real: resolvePath(literalBin) };
+  const adapterReads = roleAdapterReadDirs(executable.real, janissaryRoot());
+  if (adapterReads) {
+    return { self: { literal: fallback, real: fallback }, executable, adapterReads };
+  }
+  return {
+    self: { literal: path.dirname(literalBin), real: packageRootDir(executable.real) },
+    executable: { literal: fallback, real: fallback },
+    adapterReads: [],
+  };
 }
 
 // The directory of the Node binary currently running the janissary server itself
 // (`process.execPath`), in both literal and realpath-resolved form (same dual reasoning as
-// `resolveExecutableDirs` above — an nvm-managed `node` is commonly a symlink). Carved into the
+// `executableAccess` above — an nvm-managed `node` is commonly a symlink). Carved into the
 // read allow-list so a script running inside the sandbox (e.g. a project's own `.claude/settings.json`
 // hook) can reliably invoke a known-good `node` via the `JANISSARY_NODE` env var below, instead of
 // hoping a bare `node` on the sandboxed process's PATH resolves to a working binary — PATH
@@ -142,7 +160,7 @@ export function confinedHarnessSpawn(
   scrubbed.TMPDIR = tmpDir;
 
   const gitObjects = parentGitObjectsDir(dir);
-  const selfDirs = resolveExecutableDirs(options.selfBinaryHint ?? command);
+  const executable = executableAccess(options.selfBinaryHint ?? command);
   const scratchDir = claudeScratchDir();
   const serverNodeDir = serverNodeDirs();
   const playwright = playwrightPackagePaths();
@@ -158,16 +176,18 @@ export function confinedHarnessSpawn(
   scrubbed[JANISSARY_HOME_ENV] = janissaryRoot();
   Object.assign(scrubbed, workspaceEnv(tmpDir, options.tokens ?? {}));
 
-  const profile = skillDirs.length > 0
-    ? sandboxProfile(Boolean(options.offline), skillDirs.length)
+  const profile = skillDirs.length > 0 || executable.adapterReads.length > 0
+    ? sandboxProfile(Boolean(options.offline), skillDirs.length, executable.adapterReads.length)
     : options.offline ? SANDBOX_PROFILE_OFFLINE : SANDBOX_PROFILE;
   const dParams = [
     '-D', `WORKSPACE=${workspaceDir}`,
     '-D', `TMPDIR=${tmpDir}`,
     '-D', `HOME=${home}`,
     '-D', `GIT_OBJECTS=${gitObjects}`,
-    '-D', `SELF_DIR_L=${selfDirs.literal}`,
-    '-D', `SELF_DIR_R=${selfDirs.real}`,
+    '-D', `SELF_DIR_L=${executable.self.literal}`,
+    '-D', `SELF_DIR_R=${executable.self.real}`,
+    '-D', `ROLE_ADAPTER_EXECUTABLE_L=${executable.executable.literal}`,
+    '-D', `ROLE_ADAPTER_EXECUTABLE_R=${executable.executable.real}`,
     '-D', `DARWIN_USER_CACHE_DIR=${darwinCacheDir}`,
     '-D', `CLAUDE_SCRATCH_DIR=${scratchDir}`,
     '-D', `SERVER_NODE_DIR_L=${serverNodeDir.literal}`,
@@ -180,6 +200,10 @@ export function confinedHarnessSpawn(
     '-D', `JANISSARY_SCRIPTS_R=${janissaryScripts.real}`,
     '-D', `JANISSARY_SECURITY_L=${janissarySecurity.literal}`,
     '-D', `JANISSARY_SECURITY_R=${janissarySecurity.real}`,
+    ...executable.adapterReads.flatMap((dirs, index) => [
+      '-D', `ROLE_ADAPTER_PACKAGE_${index}_L=${dirs.literal}`,
+      '-D', `ROLE_ADAPTER_PACKAGE_${index}_R=${dirs.real}`,
+    ]),
     ...skillDirs.flatMap((skillDir, index) => {
       const dual = dualPath(skillDir);
       return ['-D', `JANISSARY_SKILL_${index}_L=${dual.literal}`, '-D', `JANISSARY_SKILL_${index}_R=${dual.real}`];

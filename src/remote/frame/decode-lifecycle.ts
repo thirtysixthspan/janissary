@@ -42,14 +42,16 @@ function decodeEnv(value: unknown): Record<string, string> | undefined | false {
 }
 
 export function decodeAttach(record: Record<string, unknown>): DecodeResult {
-  const { session, restore } = record;
+  const { session, restore, terminate } = record;
   const origin = decodeOrigin(record.origin);
   if (typeof session !== 'string' || !/^[a-f\d-]{36}$/.test(session)
-    || !(restore === undefined || typeof restore === 'boolean') || origin === false) return malformed('attach');
+    || !(restore === undefined || typeof restore === 'boolean') || origin === false
+    || !(terminate === undefined || terminate === true)) return malformed('attach');
   return {
     type: 'attach', session,
     ...(restore !== undefined && { restore }),
     ...(origin !== undefined && { origin }),
+    ...(terminate && { terminate }),
   };
 }
 

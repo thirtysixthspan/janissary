@@ -45,7 +45,7 @@ const keychainWriteClause =
 const claudeConfigWriteClause =
   String.raw`  (require-all (subpath (param "HOME")) (regex #"/\.claude\.json\.[0-9a-f-]+\.tmp$"))`;
 
-function buildProfile(networkClause: string, skillCount = 0): string {
+function buildProfile(networkClause: string, skillCount = 0, adapterPackageCount = 0): string {
   return String.raw`(version 1)
 (deny default)
 (allow process-fork)
@@ -131,7 +131,7 @@ ${secretDenyClauses})
 ; level is exactly what those walks expect to see constantly, with no directory-existence lie
 ; involved.
 (deny file-read-data file-read-xattr (subpath (param "HOME")))
-${installReadRule(skillCount)}
+${installReadRule(skillCount, adapterPackageCount)}
 (allow file-read-data file-read-xattr
   (subpath (param "WORKSPACE"))
   (subpath (param "TMPDIR"))
@@ -203,6 +203,6 @@ ${BROWSER_PORT_BAND_DENY}
 export const SANDBOX_PROFILE = buildProfile('(allow network*)');
 export const SANDBOX_PROFILE_OFFLINE = buildProfile('(deny network*)');
 
-export function sandboxProfile(offline: boolean, skillCount: number): string {
-  return buildProfile(offline ? '(deny network*)' : '(allow network*)', skillCount);
+export function sandboxProfile(offline: boolean, skillCount: number, adapterPackageCount = 0): string {
+  return buildProfile(offline ? '(deny network*)' : '(allow network*)', skillCount, adapterPackageCount);
 }

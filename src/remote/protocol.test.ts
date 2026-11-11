@@ -29,6 +29,7 @@ describe('frame codec', () => {
     { type: 'attach', session: '12345678-1234-1234-1234-123456789abc' },
     { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: true },
     { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: false },
+    { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: true, terminate: true },
     { type: 'attach-result', accepted: true },
     { type: 'attach-result', accepted: false },
     { type: 'workspace-ready', dir: '/remote/ws', home: '/home/remote' },
@@ -37,6 +38,8 @@ describe('frame codec', () => {
   it.each([
     { type: 'attach', session: '../../elsewhere' }, { type: 'attach' },
     { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: 'true' },
+    { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', terminate: false },
+    { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', terminate: 'true' },
     { type: 'attach-result', accepted: 'true' }, { type: 'attach-result' },
   ])('rejects malformed attachment %j', (frame) => {
     expect(decodeFrame(JSON.stringify(frame))).toEqual({ error: expect.stringContaining('Malformed') });
@@ -159,6 +162,11 @@ describe('frame codec', () => {
 
   it('accepts an acp-open carrying no env and no offline flag', () => {
     const frame: RemoteFrame = { type: 'acp-open', id: 'racp1', command: 'opencode', args: [] };
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it('accepts an acp-open carrying empty session options', () => {
+    const frame: RemoteFrame = { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], sessionMeta: {} };
     expect(roundTrip(frame)).toEqual(frame);
   });
 
@@ -295,6 +303,9 @@ describe('frame codec', () => {
     ['acp-open with a null env', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], env: null }],
     ['acp-open with a non-string env value', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], env: { A: 1 } }],
     ['acp-open with a non-boolean offline flag', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], offline: 'yes' }],
+    ['acp-open with an array sessionMeta', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], sessionMeta: [] }],
+    ['acp-open with a null sessionMeta', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], sessionMeta: null }],
+    ['acp-open with a string sessionMeta', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], sessionMeta: 'tools' }],
     ['acp-prompt without an id', { type: 'acp-prompt', text: 'aGk=' }],
     ['acp-prompt without string text', { type: 'acp-prompt', id: 'racp1', text: 7 }],
     ['acp-close without an id', { type: 'acp-close' }],
@@ -500,6 +511,7 @@ describe('session-state frames', () => {
 const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame, { type: K }> } = {
   'attach': {
     type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: true, origin: 'git@github.com:owner/repo.git',
+    terminate: true,
   },
   'session-state': { type: 'session-state' },
   'shutdown': { type: 'shutdown' },
@@ -529,6 +541,7 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   'acp-open': {
     type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp'], env: { A: '1' }, offline: true,
     autonomous: true, effort: { level: 'high', model: 'google/gemini-3.1-flash-lite' },
+    sessionMeta: { claudeCode: { options: { tools: [] } } },
   },
   'acp-prompt': { type: 'acp-prompt', id: 'racp1', text: 'summarize this project' },
   'acp-close': { type: 'acp-close', id: 'racp1' },
@@ -681,8 +694,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 38', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(38);
+  it('is 39', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(39);
   });
 });
 

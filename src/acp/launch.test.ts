@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { acpLaunchFor, acpLaunchForEntry } from './launch.js';
+import { CODEX_DENY_ALL } from './internal-tools-test-fixture.js';
 
 describe('acpLaunchFor', () => {
   it('maps opencode to its ACP command and model configuration', () => {
@@ -22,27 +23,40 @@ describe('acpLaunchFor', () => {
 });
 
 describe('acpLaunchForEntry', () => {
-  it('launches an opencode entry exactly as an opencode persona', () => {
-    expect(acpLaunchForEntry({ harness: 'opencode', model: 'opencode-go/deepseek-v4.1-flash', effort: 'medium' }))
-      .toEqual(acpLaunchFor({ harness: 'opencode', model: 'opencode-go/deepseek-v4.1-flash', variant: 'medium' }));
+  it('launches an opencode entry as an opencode persona with every permission denied', () => {
+    const launch = acpLaunchForEntry({ harness: 'opencode', model: 'opencode-go/deepseek-v4.1-flash', effort: 'medium' });
+
+    expect(launch?.command).toBe('opencode');
+    expect(launch?.args).toEqual(['acp']);
+    expect(JSON.parse(launch?.env.OPENCODE_CONFIG_CONTENT ?? ''))
+      .toEqual({ model: 'opencode-go/deepseek-v4.1-flash', permission: 'deny' });
   });
 
-  it('launches a claude entry with its model and effort', () => {
-    expect(acpLaunchForEntry({ harness: 'claude', model: 'claude-haiku-4-5', effort: 'high' })?.env)
-      .toEqual({ ANTHROPIC_MODEL: 'claude-haiku-4-5', CLAUDE_THINKING_EFFORT: 'high' });
-  });
-
-  it('launches a codex entry through its ACP adapter with config overrides', () => {
-    expect(acpLaunchForEntry({ harness: 'codex', model: 'gpt-6-luna', effort: 'high' })).toEqual({
-      command: 'npx',
-      args: ['@zed-industries/codex-acp', '-c', 'model="gpt-6-luna"', '-c', 'model_reasoning_effort="high"'],
-      env: {},
+  it('launches a claude entry through the bundled adapter with model and effort env values and no built-in tools', () => {
+    expect(acpLaunchForEntry({ harness: 'claude', model: 'claude-haiku-4-5', effort: 'high' })).toEqual({
+      command: 'claude-agent-acp',
+      args: [],
+      env: { ANTHROPIC_MODEL: 'claude-haiku-4-5', CLAUDE_THINKING_EFFORT: 'high' },
+      sessionMeta: { claudeCode: { options: { tools: [] } } },
     });
   });
 
+  it('launches a codex entry through the bundled adapter with its config in CODEX_CONFIG', () => {
+    const launch = acpLaunchForEntry({ harness: 'codex', model: 'gpt-6-luna', effort: 'high' });
+
+    expect(launch?.command).toBe('codex-acp');
+    expect(launch?.args).toEqual([]);
+    expect(launch?.env.INITIAL_AGENT_MODE).toBe('read-only');
+    expect(JSON.parse(launch?.env.CODEX_CONFIG ?? ''))
+      .toEqual({ model: 'gpt-6-luna', model_reasoning_effort: 'high', ...CODEX_DENY_ALL });
+  });
+
   it('leaves codex’s effort alone when the entry sets none', () => {
-    expect(acpLaunchForEntry({ harness: 'codex', model: 'gpt-6-luna' })?.args)
-      .toEqual(['@zed-industries/codex-acp', '-c', 'model="gpt-6-luna"']);
+    const launch = acpLaunchForEntry({ harness: 'codex', model: 'gpt-6-luna' });
+
+    expect(launch?.args).toEqual([]);
+    expect(launch?.env.INITIAL_AGENT_MODE).toBe('read-only');
+    expect(JSON.parse(launch?.env.CODEX_CONFIG ?? '')).toEqual({ model: 'gpt-6-luna', ...CODEX_DENY_ALL });
   });
 
   it('has no launch for a harness without an ACP adapter', () => {

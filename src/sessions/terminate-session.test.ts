@@ -10,7 +10,7 @@ import type { RemoteSessionRecord } from './store.js';
 // launch handlers' `onClosed` sweep synchronously, and this channel's own handler is registered on
 // the closing entry. The outcome has to be settled before that sweep can speak.
 
-type Resume = { session: string; workspaceDir: string; onResult: (accepted: boolean) => void };
+type Resume = { session: string; workspaceDir: string; terminate?: true; onResult: (accepted: boolean) => void };
 
 type FakedRemote = {
   managers: Managers;
@@ -59,6 +59,13 @@ describe('terminateParkedSession', () => {
     fake.resume.onResult(true);
     await expect(promise).resolves.toEqual({ terminated: true });
     expect(fake.closeCalls).toEqual(['terminate-session:session-1']);
+  });
+
+  // The relay reads the marker to reach a peer parked under another protocol version, and to relay
+  // nothing the local side sends into it.
+  it('marks the attach it opens as a terminate', () => {
+    const { fake } = start(record());
+    expect(fake.resume).toMatchObject({ session: 'session-1', workspaceDir: '/remote/ws', terminate: true });
   });
 
   it('resolves terminated when the peer refuses the attach and never closes', async () => {

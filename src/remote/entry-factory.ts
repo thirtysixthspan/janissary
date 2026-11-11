@@ -92,6 +92,7 @@ export function createRemoteEntry({
         if ((entry.attach.active || state.resuming) && channel.sessionId) {
           channel.send({
             type: 'attach', session: channel.sessionId, ...(state.resuming && { restore: true }), ...provisionOrigin(managers),
+            ...(resume?.terminate && { terminate: true }),
           });
         } else {
           channel.send({

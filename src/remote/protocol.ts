@@ -69,10 +69,11 @@
 // That check is narrower here than elsewhere, and deliberately so. An attach's handshake is written
 // by the freshly started `janus remote-serve` that then relays into the parked peer (`relayPeer` in
 // `./serve-detach.ts`), not by the parked peer itself — so it binds the relaying process's version,
-// which is whatever is installed on the host now. A peer parked across a remote upgrade therefore
-// announces 15 and hands the query to a 14 that refuses it by name. Nothing in the handshake can see
-// that, so the bounded wait in `askSessionState` is what catches it: the attach reports a failure
-// and the session stays parked, rather than waiting for an answer that will never come.
+// which is whatever is installed on the host now. Nothing in the handshake can see a peer parked
+// across a remote upgrade, so each parked peer records the protocol version it speaks, and
+// `relayPeer` refuses to relay into a live peer whose record carries another version or none: the
+// attach reports a failure and the session stays parked. The bounded wait in `askSessionState`
+// remains for a peer that accepts an attach and then never answers.
 // Version 16 adds `restore` to attachment so rebuilt tabs receive retained display and transcript
 // history while transport recovery does not duplicate transcript blocks already delivered. It also
 // renames version 14's two frames to `attach` and `attach-result`, so the wire uses the one word the
@@ -198,7 +199,17 @@
 // Version 38 adds a required `source` to `change-set`, so a remote diff tab can read the staged changes
 // or the most recent commit. A version-37 remote would ignore the field and answer with every change
 // while the tab claimed to show only the staged ones.
-export const REMOTE_PROTOCOL_VERSION = 38;
+// Version 39 adds an optional `sessionMeta` to `acp-open`, the ACP session `_meta` that turns a role
+// session's Claude built-in tools off. A version-38 remote drops undeclared fields while decoding, so
+// it would start the role session with its built-in tools on while both ends looked healthy; refusing
+// the mismatch at the handshake prevents that silent exposure. An attach's handshake is answered by
+// the relaying process rather than the parked peer, so a peer parked under another version is refused
+// at relay time instead, by the version its peer record carries (`relayPeer` in `./serve-detach.ts`).
+// The same version adds an optional `terminate` to `attach`, so that refusal does not also strand a
+// parked session nobody can end: a sessions-tab terminate marks its attach, and the relay answers it
+// for a peer under any version by writing only an `attach` carrying nothing but `session`, then a
+// `shutdown`, and relaying nothing the local side sends (`./serve-detach-terminate.ts`). Both hosts also need the bundled ACP adapters, which the exact-version handshake already guarantees.
+export const REMOTE_PROTOCOL_VERSION = 39;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
