@@ -8,17 +8,14 @@ import { appendAcp, settleAcpPrompt } from './response.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';
 import { isRateLimitError } from './rate-limit.js';
-import { createAcpToolTable, gateCommand, toolPrimer, toolExtractor, type AcpTool } from './tool-table.js';
+import { createAcpToolTable, gateCommand, toolExtractor, type AcpTool } from './tool-table.js';
 import { createInvocationContext } from '../command/invocation.js';
 import { readFileInTab } from '../file-read/tab-read.js';
-import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { coreActivity } from './record-feed.js';
 import { acpRoleRuntime } from './role-state.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { effectiveCommandSetting } from '../native-commands/policy.js';
-import { NO_BUILTIN_TOOLS_LINE, NO_TOOLS_LINE } from './internal-tools.js';
-
-const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
+import { corePrimer } from './drive-loop.js';
 
 // The prompt's gate authority, read once: a settings change mid-prompt takes effect from the next one.
 function coreSnapshot(
@@ -85,9 +82,6 @@ export function runCorePrompt(
   };
   const snapshot = coreSnapshot(managers, runtime, request);
   const tools = snapshot.withoutTools ? [] : createAcpToolTable(snapshot.grants);
-  const allowedCommands = NATIVE_ACP_COMMANDS.filter((command) => snapshot.grants.includes(command)
-    && snapshot.rows.find((row) => row.name === command)?.effectiveAgentAccess !== false);
-  const toolsAvailable = tools.length > 0 && allowedCommands.length > 0;
   const runCommand = coreToolRunner(managers, label, snapshot, tools, request.abort.signal);
   const recordTool = (text: string) => coreActivity(managers.acpRecords, runtime, 'tool', text, request.role);
   const recordAsyncResult = async (result: Promise<string>) => {
@@ -107,12 +101,7 @@ export function runCorePrompt(
     },
   }, request.prompt, {
     signal: request.abort.signal,
-    primer: [
-      toolPrimer(tools, allowedCommands),
-      toolsAvailable ? NO_BUILTIN_TOOLS_LINE : NO_TOOLS_LINE,
-      request.role === 'tell' ? TELL_INSTRUCTION : '',
-      MARKDOWN_INSTRUCTION,
-    ].filter(Boolean).join('\n\n'),
+    primer: corePrimer(snapshot, tools),
     runCommand: (command) => {
       if (!active()) throw new Error('ACP: prompt cancelled.');
       recordTool(command);
