@@ -135,10 +135,11 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   cannot clear a blocked release that a later unsandboxed install would then accept. `ai/`,
   `scripts/`, and `security/` are the only unconditional installation-directory carve-ins. The
   separate `SELF_DIR_L`/`SELF_DIR_R` executable carve-in also exposes the nearest enclosing
-  `node_modules` tree when a harness or ACP agent executable resolves inside one; for bundled
-  Claude and Codex ACP role sessions, that is the installation's own `node_modules`. The install
-  root itself, a development checkout's `.janissary/`, and other paths stay denied unless another
-  carve-in covers them. So a script that reaches further still fails inside a workspace: a bare
+  `node_modules` tree when an ordinary harness or ACP agent executable resolves inside one. Bundled
+  Claude and Codex ACP role sessions do not get that tree: they read only their adapter executable
+  and the packages in its runtime dependency closure, so the installation's other `node_modules`
+  packages stay denied. The install root itself, a development checkout's `.janissary/`, and other
+  paths stay denied unless another carve-in covers them. So a script that reaches further still fails inside a workspace: a bare
   `check-malicious-package --audit` reads the installation's own `package-lock.json`. `lint-files`
   does not reach that far: it runs the ESLint installed in the working directory's own
   `node_modules`, never the installation's, and stops with a pointer to `npm install` when the
