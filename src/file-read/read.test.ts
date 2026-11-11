@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, truncateSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, truncateSync, writeFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -79,6 +79,12 @@ describe('readWorkspaceLines missing files and types', () => {
     symlinkSync(path.join(outside, 'nowhere'), path.join(root, 'dangling-out'));
     expect(read('dangling')).toBe('File not found: dangling.');
     expect(read('dangling-out')).toBe('File not found: dangling-out.');
+  });
+
+  it.skipIf(typeof process.getuid === 'function' && process.getuid() === 0)('reports an existing file without read permission as not found', () => {
+    write('locked.txt', 'secret');
+    chmodSync(path.join(root, 'locked.txt'), 0o000);
+    expect(read('locked.txt')).toBe('File not found: locked.txt.');
   });
 
   it('reports a path under a regular file as missing', () => {

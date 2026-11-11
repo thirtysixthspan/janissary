@@ -16,9 +16,9 @@ Each line is printed with its line number. A line longer than 2000 characters, c
 
 Each failure prints one line that names the path as you typed it:
 
-- `File not found: <path>.`
+- `File not found: <path>.` for a missing path, and also for a file that exists but cannot be read, such as one without read permission
 - `Is a directory: <path>.`
-- `Not a text file: <path>.` for binary content or text that is not valid UTF-8
+- `Not a text file: <path>.` for binary content, text that is not valid UTF-8, or anything that is not a regular file or directory, such as a named pipe, socket, or device
 - `File too large (>5 MB): <path>.`
 - `Outside the workspace: <path>.` for an absolute path, a path that leaves the root, or a symbolic link that points outside it
 - `Secret file: <path>.` for `.env` and `.env.*` files anywhere in the workspace, and for credential locations such as `.ssh`, `.aws`, `.gnupg`, `.kube`, `.netrc`, `.docker`, `.config/gh/hosts.yml`, and shell history files

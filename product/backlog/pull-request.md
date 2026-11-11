@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Make the file command help page's error conditions match the reader, which prints `File not found` for any unreadable file and `Not a text file` for any non-regular file.
-
-Existing Issue: The help page says `File not found` is printed for a missing path and `Not a text file` for binary or non-UTF-8 content, while `loadBytes` in the reader returns `File not found` for every exception (an existing file without read permission included) and `Not a text file` for any path that is not a regular file (a FIFO, socket, or device), so two of the documented rules state narrower conditions than the code applies. Severity: 2/10
-
-Existing Risk: 2/10 - A user who sees `File not found` for a file that plainly exists, because it is unreadable, has nothing in the help page to explain it and goes looking for a path typo that is not there.
-
-Proposal Risk: 1/10 - The page then describes the reader's real behavior; if the reader later distinguishes permission errors, the help sentence has to change with it, which a reviewer comparing the two would see.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1992 "align the file help page's error conditions with the reader". In `help/file.md`, under **Errors**, add a condition to the `File not found: <path>.` bullet saying it is also printed when the file exists but cannot be read, and extend the `Not a text file: <path>.` bullet so it names anything that is not a regular file (such as a named pipe or device) alongside binary content and invalid UTF-8. Ground both clauses in `loadBytes` and `decodeText` in `src/file-read/read.ts` (the catch-all `catch` returning `File not found`, the `!stats.isFile()` branch, and the NUL-byte check). Do not change `src/file-read/read.ts`. Verify by reading each bullet against those branches and `src/file-read/read.test.ts`, and run the diff-scoped checks so `src/commands.test.ts` still passes.
-
-
 * Handle tab completion for the new file command, which today offers no `read` subcommand and completes paths against the shell's current directory instead of the workspace root the read uses.
 
 Existing Issue: The commit adds `file read <path>` without a completion handler, so `completeCommandLine` falls through to `completeFilePath` with the tab's shell working directory from `workingDirOf`, which means `file r<Tab>` completes filesystem entries instead of `read`, and a path completed on a tab that has `cd`'d away from its workspace names a file the command then resolves against `workspaceDir` and reports as not found. Severity: 3/10
