@@ -5,6 +5,7 @@ import { PROJECT_TOKENS, type ProjectTokenName, type ProjectTokens } from '../pr
 import { ENV_SCRUB_PATTERNS } from './paths.js';
 import { resolvePath } from './resolve.js';
 import { opencodeDataHome, workspaceOpencodeDataHome } from './opencode-data.js';
+import { workspacePathEnvironment } from '../workspace/directories.js';
 
 // What a spawn's environment gains and loses, as opposed to the profile and its `-D` params built
 // in `./harness-spawn.ts`. Two of these apply whether or not this machine can confine anything: a
@@ -105,5 +106,5 @@ export function withWorkspaceCredentials(env: NodeJS.ProcessEnv, options: Worksp
 // value is a filesystem path to janissary's own code, not a credential, so there is nothing for the
 // unconfined path to be careful about.
 export function withJanissaryHome(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  return { ...env, [JANISSARY_HOME_ENV]: janissaryRoot() };
+  return { ...env, ...workspacePathEnvironment(), [JANISSARY_HOME_ENV]: janissaryRoot() };
 }

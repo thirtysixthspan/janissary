@@ -1,5 +1,9 @@
-import { describe, expect, it } from 'vitest';
-import { agentCredentialEnv } from './environment.js';
+import { beforeEach, describe, expect, it } from 'vitest';
+import path from 'node:path';
+import { agentCredentialEnv, withJanissaryHome } from './environment.js';
+import { janissaryRoot } from '../janissary-root.js';
+import { initWorkspaceDir } from '../workspace/index.js';
+import { workspaceDirectories } from '../workspace/directories.js';
 
 describe('agentCredentialEnv', () => {
   it('maps every harness token to each variable its row names', () => {
@@ -22,5 +26,41 @@ describe('agentCredentialEnv', () => {
 
   it('adds nothing when no token is configured', () => {
     expect(agentCredentialEnv({})).toEqual({});
+  });
+});
+
+describe('spawn path environment', () => {
+  beforeEach(() => {
+    const previous = { ...workspaceDirectories };
+    Object.assign(workspaceDirectories, { root: '', workspace: '' });
+    return () => { Object.assign(workspaceDirectories, previous); };
+  });
+
+  it('uses the current directory before project initialization', () => {
+    expect(withJanissaryHome({})).toEqual({
+      janissary: janissaryRoot(),
+      root: process.cwd(),
+      workspace: path.join(process.cwd(), '.janissary', 'workspace'),
+    });
+  });
+
+  it('overrides inherited paths with initialized project paths and preserves other entries', () => {
+    const project = path.join(process.cwd(), 'temp', 'path environment project');
+    initWorkspaceDir(project);
+    const env = { janissary: '/old/install', root: '/old/project', workspace: '/old/clones', PATH: '/usr/bin' };
+
+    expect(withJanissaryHome(env)).toEqual({
+      janissary: janissaryRoot(), root: project, workspace: path.join(project, '.janissary', 'workspace'), PATH: '/usr/bin',
+    });
+    expect(env.root).toBe('/old/project');
+  });
+
+  it('uses the new host project after workspace directories are reinitialized', () => {
+    initWorkspaceDir('/local/project');
+    initWorkspaceDir('/remote/project');
+
+    expect(withJanissaryHome({ root: '/local/project' })).toEqual({
+      janissary: janissaryRoot(), root: '/remote/project', workspace: '/remote/project/.janissary/workspace',
+    });
   });
 });

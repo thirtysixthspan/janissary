@@ -8,27 +8,26 @@ import { isRecord } from '../value-guards.js';
 import { toHttpsUrl } from '../git/repository-url.js';
 import { startGitClone, type GitCloneOptions } from '../git/clone.js';
 import { createWorkspaceScratch } from './scratch.js';
+import { workspaceDirectories } from './directories.js';
 
 const execFileAsync = promisify(execFile);
 
-let workspaceProjectRoot = '';
-let workspaceBaseDir = '';
 let workspaceClaudeConfig = '';
 
 export function initWorkspaceDir(
   projectDir: string,
   claudeJson: string = path.join(homedir(), '.claude.json'),
 ): void {
-  workspaceProjectRoot = projectDir;
-  workspaceBaseDir = path.join(projectDir, '.janissary', 'workspace');
+  workspaceDirectories.root = projectDir;
+  workspaceDirectories.workspace = path.join(projectDir, '.janissary', 'workspace');
   workspaceClaudeConfig = claudeJson;
 }
 
 // The project root the workspace base was initialized against, for the siblings of that base under
 // `.janissary/` (a detached peer's records live in `.janissary/remote/`).
 export function workspaceProjectDir(): string {
-  if (!workspaceProjectRoot) throw new Error('Workspace dir not initialized. Call initWorkspaceDir first.');
-  return workspaceProjectRoot;
+  if (!workspaceDirectories.root) throw new Error('Workspace dir not initialized. Call initWorkspaceDir first.');
+  return workspaceDirectories.root;
 }
 
 // The Claude configuration provisioning trusts clones through, so removal untrusts the same file.
@@ -37,12 +36,12 @@ export function workspaceClaudeConfigPath(): string {
 }
 
 export function ensureWorkspaceDir(): void {
-  mkdirSync(workspaceBaseDir, { recursive: true });
+  mkdirSync(workspaceDirectories.workspace, { recursive: true });
 }
 
 export function workspacePath(name: string): string {
-  if (!workspaceBaseDir) throw new Error('Workspace dir not initialized. Call initWorkspaceDir first.');
-  return path.join(workspaceBaseDir, name);
+  if (!workspaceDirectories.workspace) throw new Error('Workspace dir not initialized. Call initWorkspaceDir first.');
+  return path.join(workspaceDirectories.workspace, name);
 }
 
 export function findRepoRoot(from: string): string | undefined {
@@ -206,11 +205,11 @@ export function removeWorkspaceStrict(directory: string): void {
 }
 
 export function clearWorkspaceDir(): void {
-  if (!workspaceBaseDir) return;
+  if (!workspaceDirectories.workspace) return;
   try {
-    const entries = readdirSync(workspaceBaseDir);
+    const entries = readdirSync(workspaceDirectories.workspace);
     for (const entry of entries) {
-      rmSync(path.join(workspaceBaseDir, entry), { recursive: true, force: true });
+      rmSync(path.join(workspaceDirectories.workspace, entry), { recursive: true, force: true });
     }
   } catch { /* ignore */ }
 }

@@ -16,7 +16,7 @@ shell (`src/shell.ts`), a harness/interactive PTY (`src/pty.ts`), or an ACP agen
 (`src/acp.ts`). It passes the command and its arguments through unchanged when there's nothing to
 sandbox: no `workspaceDir`, the `sandboxWorkspaces` config toggle is off, or `sandbox-exec` isn't on
 the host (non-macOS). The environment is not quite a no-op even then — it still gains the `janissary`
-install root, and a workspaced spawn its credentials, neither of which is a confinement concern (see
+install root and the project's `root` and `workspace` paths, and a workspaced spawn its credentials, none of which is a confinement concern (see
 [Environment scrubbing](#environment-scrubbing)). Everything a sandboxed process itself spawns
 inherits the same confinement.
 
@@ -259,7 +259,11 @@ on every spawn, not only a workspaced one — the picker inserts the same comman
 it is populating, so a tab that could not expand it would be worse off than one handed a fixed path,
 and the value is a path to janissary's own code rather than anything that needs protecting. The e2e
 browser child is the exception, taking an environment allowlist rather than the scrub; it runs no
-zsh and no task. A tab launched with `-b`/`--browser` additionally gets
+zsh and no task.
+
+These same launches receive `root` set to the project directory and `workspace` set to the directory containing its workspace clones, so `$workspace/<name>` expands to the named clone's actual path. The values come from the project on the spawning host and replace stale inherited values. They remain available when workspace isolation is disabled and on non-workspaced launches. Before project initialization they use the current working directory as the root. The dedicated test browser receives neither variable. See [[root-path]].
+
+A tab launched with `-b`/`--browser` additionally gets
 `JANISSARY_PLAYWRIGHT`, the path to Janissary's own Playwright client, and
 `JANISSARY_BROWSER_WS_ENDPOINT`, the endpoint of the guard in front of that tab's browser (see
 [End-to-end browser](#end-to-end-browser)). Both name paths and ports on the machine the harness

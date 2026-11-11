@@ -6,6 +6,7 @@ import { setGitIdentity } from '../git/identity.js';
 import { janissaryRoot } from '../janissary-root.js';
 import { confinedHarnessSpawn, type HarnessSpawnOptions } from './harness-spawn.js';
 import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
+import { initWorkspaceDir } from '../workspace/index.js';
 
 // The confined harness spawn's arguments and environment, built without asking whether this host
 // can confine anything — so these run on every platform, CI's Linux runners included. Only the
@@ -40,6 +41,21 @@ function rulesOnly(text: string): string {
 }
 
 describe('confinedHarnessSpawn', () => {
+  it('supplies authoritative project paths after scrubbing stale inherited paths', () => {
+    const project = path.join(process.cwd(), 'temp', 'confined project');
+    initWorkspaceDir(project);
+    try {
+      const result = build({}, { janissary: '/old/install', root: '/old/root', workspace: '/old/clones', PATH: '/usr/bin' });
+
+      expect(result.command).toBe('sandbox-exec');
+      expect(result.env).toMatchObject({
+        janissary: janissaryRoot(), root: project, workspace: path.join(project, '.janissary', 'workspace'), PATH: '/usr/bin',
+      });
+    } finally {
+      initWorkspaceDir(process.cwd());
+    }
+  });
+
   it('runs the command after the profile and its parameters', () => {
     const result = build({}, process.env, ['-lc', 'echo hi']);
     expect(result.command).toBe('sandbox-exec');

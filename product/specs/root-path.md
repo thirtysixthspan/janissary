@@ -75,9 +75,15 @@ The transcript already abbreviates a path under the user's home directory to `~`
 
 `$root` is also recognized as a path prefix when typed by the user in commands that accept file paths (`open`, `edit`, `files`). The prefix is expanded to the project root directory before the path is resolved. This works alongside `~` (home directory), which is expanded the same way. Only the start of the path is expanded — `$root` or `~` appearing mid-path are left as literal text.
 
-### Display only
+### Process environment
 
-`$root` is a presentation shortcut. The underlying paths are unchanged — working directories, stored state, and the paths passed to commands all remain the real absolute paths; only what the transcript shows is shortened. The shortcut is not applied to the raw output of a shell command (that text is the user's own data and is shown verbatim); it abbreviates the paths the application renders around and about that output.
+Shells, harness terminals, and agent connections receive three path variables: `janissary` is the running installation directory, `root` is the project directory, and `workspace` is the directory containing that project's workspace clones. Thus `$workspace/<name>` expands to the named clone, including the hidden state directory in its actual path. These values replace inherited values from another session and remain available with workspace isolation disabled or without a workspace. A remote process receives paths on its own host. Before a project is initialized, the current working directory supplies the root. The dedicated test browser does not receive these variables.
+
+The standard Codex configuration preserves all three variables in commands run by the harness. Their presence does not change filesystem access permissions.
+
+### Path display
+
+The display shortcuts leave underlying paths unchanged: working directories, stored state, and the paths passed to commands remain real absolute paths. The shortcuts are not applied to the raw output of a shell command; they abbreviate the paths the application renders around that output. Shell expansion of the environment variables above uses their actual paths.
 
 ### The titlebar shows the full path
 

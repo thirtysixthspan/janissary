@@ -24,6 +24,9 @@ GITHUB_TOKEN = "include"
 JANISSARY_BROWSER_WS_ENDPOINT = "include"
 JANISSARY_PLAYWRIGHT = "include"
 JANISSARY_NODE = "include"
+janissary = "include"
+root = "include"
+workspace = "include"
 
 [features]
 apps = false

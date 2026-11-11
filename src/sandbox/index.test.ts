@@ -2,12 +2,14 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { loadConfig } from '../config.js';
 import { setGitIdentity } from '../git/identity.js';
 import { janissaryRoot } from '../janissary-root.js';
 import { sandboxSpawn } from './index.js';
 import { sandboxAvailable, shouldConfineWorkspace } from './confinement.js';
 import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
+import { initWorkspaceDir } from '../workspace/index.js';
 
 // A project whose config turns workspace isolation off — the same unconfined path a non-darwin
 // remote takes, reachable from any platform the suite runs on.
@@ -22,7 +24,8 @@ function configureUnconfined(): void {
 // root, which is added on every path because the task picker inserts the same `$janissary` command
 // whether or not the tab it populates is workspaced.
 function passedThrough(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  return { ...env, janissary: janissaryRoot() };
+  const root = process.cwd();
+  return { ...env, janissary: janissaryRoot(), root, workspace: path.join(root, '.janissary', 'workspace') };
 }
 
 function parenDepth(text: string): number {
@@ -175,6 +178,37 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
+});
+
+describe('sandboxSpawn project paths', () => {
+  const project = path.join(process.cwd(), 'temp', 'project with spaces');
+  const workspace = path.join(project, '.janissary', 'workspace');
+
+  beforeEach(() => {
+    configureUnconfined();
+    initWorkspaceDir(project);
+    return () => { initWorkspaceDir(process.cwd()); };
+  });
+
+  it('supplies all three path variables to an unconfined workspace process', () => {
+    const result = sandboxSpawn({ workspaceDir: path.join(workspace, 'helper') }, 'sh', [], { root: '/old/root' });
+
+    expect(result.command).toBe('sh');
+    expect(result.env).toMatchObject({ janissary: janissaryRoot(), root: project, workspace });
+  });
+
+  it('supplies project paths to a process without a workspace too', () => {
+    const result = sandboxSpawn({}, 'sh', [], {});
+
+    expect(result.env).toEqual({ janissary: janissaryRoot(), root: project, workspace });
+  });
+
+  it('lets shell commands expand paths containing spaces and address a named clone', () => {
+    const result = sandboxSpawn({}, 'sh', ['-c', String.raw`printf '%s\n' "$janissary" "$root" "$workspace/helper"`], {});
+    const output = execFileSync(result.command, result.args, { env: result.env, encoding: 'utf8' });
+
+    expect(output.split('\n')).toEqual([janissaryRoot(), project, path.join(workspace, 'helper'), '']);
+  });
 });
 
 describe('workspace confinement decision', () => {
