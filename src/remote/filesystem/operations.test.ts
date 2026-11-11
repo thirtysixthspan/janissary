@@ -4,12 +4,13 @@ import {
   type RemoteFilesystemOperationResult,
 } from './operations.js';
 import type { RemoteFilesystemArgumentsByOperation, RemoteFilesystemOperation } from '../protocol-frames.js';
+import { FILE_READ_MAX_LIMIT } from '../../file-read/command.js';
 
 // Written out rather than derived from the table, so an operation dropped from both the union and
 // the table is still caught here. Adding one to the protocol means adding it in both places.
 const ALL_OPERATIONS: RemoteFilesystemOperation[] = [
   'read-directory', 'stat', 'watch', 'unwatch', 'git', 'git-pull', 'git-commit', 'search',
-  'search-text', 'read-file', 'write-file', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
+  'search-text', 'read-file', 'read-lines', 'write-file', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
   'create-file', 'create-directory', 'replay', 'change-set',
 ];
 
@@ -35,6 +36,7 @@ const PATH_CASES: PathCase[] = [
   ['search', {}, []],
   ['search-text', { root: '', query: 'todo', include: 'src/**', exclude: '', regex: false, matchCase: false, wholeWord: false }, ['']],
   ['read-file', { path: 'a.txt' }, ['a.txt']],
+  ['read-lines', { path: 'a.txt', offset: 3, limit: 10 }, ['a.txt']],
   ['write-file', { path: 'a.txt', content: '', expectedHash: 'baseline' }, ['a.txt']],
   ['move', { from: 'a.txt', to: 'dest' }, ['a.txt', 'dest']],
   ['move', { from: 'a.txt', to: 'dest', overwrite: true }, ['a.txt', 'dest']],
@@ -72,6 +74,12 @@ const INVALID_CASES: [RemoteFilesystemOperation, Record<string, unknown>][] = [
   ['search-text', { root: '', query: 'todo', include: '', exclude: '', regex: false, matchCase: false, wholeWord: 'yes' }],
   ['search-text', { root: 1, query: 'todo', include: '', exclude: '', regex: false, matchCase: false, wholeWord: false }],
   ['read-file', {}],
+  ['read-lines', { offset: 1 }],
+  ['read-lines', { path: 'a.txt', offset: 0 }],
+  ['read-lines', { path: 'a.txt', limit: -1 }],
+  ['read-lines', { path: 'a.txt', offset: 1.5 }],
+  ['read-lines', { path: 'a.txt', limit: '5' }],
+  ['read-lines', { path: 'a.txt', limit: FILE_READ_MAX_LIMIT + 1 }],
   ['write-file', { path: 'a.txt' }],
   ['write-file', { path: 'a.txt', content: '', expectedHash: null }],
   ['write-file', { path: 'a.txt', content: '', expectedHash: 7 }],
@@ -102,6 +110,7 @@ const VALID_RESULTS: { [K in RemoteFilesystemOperation]: RemoteFilesystemOperati
   search: ['a.txt'],
   'search-text': [],
   'read-file': { content: 'YQ==' },
+  'read-lines': { text: '1\ta' },
   'write-file': { ok: false, reason: 'denied' },
   move: { ok: true, value: { from: 'a.txt', to: 'dest/a.txt' } },
   'move-many': { total: 1, failedPaths: [], moved: [{ from: 'a.txt', to: 'dest/a.txt' }], mutated: true },
@@ -208,6 +217,24 @@ describe('FILESYSTEM_OPERATIONS', () => {
       .toEqual({ path: 'a.txt', content: '', expectedHash: 'baseline' });
   });
 
+  it('accepts read-lines bounds and decodes only the integers it was sent', () => {
+    const readLines = operationDescriptor('read-lines');
+
+    expect(readLines.valid({ path: 'a.txt' })).toBe(true);
+    expect(readLines.valid({ path: 'a.txt', offset: 5, limit: 20 })).toBe(true);
+    expect(readLines.valid({ path: 'a.txt', limit: FILE_READ_MAX_LIMIT })).toBe(true);
+    const decoded = readLines.decode({ path: 'a.txt' });
+    expect(Object.hasOwn(decoded, 'offset')).toBe(false);
+    expect(Object.hasOwn(decoded, 'limit')).toBe(false);
+    expect(() => readLines.decode({ path: 'a.txt', offset: 0 }))
+      .toThrow('Invalid remote filesystem operation arguments.');
+  });
+
+  it('rejects a read-lines result without string text', () => {
+    expect(() => decodeFilesystemResult('read-lines', {})).toThrow('Invalid remote filesystem operation result.');
+    expect(() => decodeFilesystemResult('read-lines', { text: 3 })).toThrow('Invalid remote filesystem operation result.');
+  });
+
   it('names a refusal shape for exactly the operations whose result can carry one', () => {
     const classified = ALL_OPERATIONS.filter((operation) => operationDescriptor(operation).refusal);
 
@@ -222,7 +249,7 @@ describe('FILESYSTEM_OPERATIONS', () => {
 
     expect(alphabetical(rootDestination)).toEqual([
       'create-directory', 'create-file', 'git-commit', 'move', 'move-many', 'paste', 'read-directory',
-      'search-text', 'unwatch', 'watch',
+      'read-lines', 'search-text', 'unwatch', 'watch',
     ]);
   });
 });

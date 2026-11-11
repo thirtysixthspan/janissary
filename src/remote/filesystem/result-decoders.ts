@@ -53,6 +53,7 @@ export const resultDecoders = {
   search: decodeResult<string[]>(strings),
   'search-text': decodeResult<SearchMatch[]>(searchMatches),
   'read-file': decodeResult<{ content: string }>((value): value is { content: string } => record(value) && typeof value.content === 'string'),
+  'read-lines': decodeResult<{ text: string }>((value): value is { text: string } => record(value) && typeof value.text === 'string'),
   'write-file': decodeResult<FileOperationResult>((value): value is FileOperationResult => result(value)
     && (value.ok ? !Object.hasOwn(value, 'value') || value.value === undefined : typeof value.reason === 'string')),
   move: decodeResult<MoveOneResult>((value): value is MoveOneResult => result(value)

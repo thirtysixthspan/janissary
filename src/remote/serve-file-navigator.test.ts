@@ -6,6 +6,8 @@ import { RemoteFileNavigators } from './serve-file-navigator.js';
 import type { FileSystemPort, WatchHandle } from '../file-navigator/filesystem-port.js';
 import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 import { contentHash, SAVE_CONFLICT_ERROR } from '../editor/save-conflict.js';
+import { readWorkspaceLines } from '../file-read/read.js';
+import { FILE_READ_MAX_LIMIT } from '../file-read/command.js';
 
 type Request = Extract<ClientFrame, { type: 'filesystem-request' }>;
 
@@ -144,8 +146,38 @@ describe('RemoteFileNavigators', () => {
     expect(readFileSync(path.join(root, 'b.txt'), 'utf8')).toBe('source');
   });
 
+  it('reads numbered lines from a workspace file as the reader formats them', async () => {
+    const lines = Array.from({ length: 30 }, (_, index) => `line ${index + 1}`).join('\n');
+    writeFileSync(path.join(root, 'notes.txt'), lines);
+
+    expect(await request('read-lines', { path: 'notes.txt', offset: 1, limit: 30 }))
+      .toMatchObject({ result: { text: readWorkspaceLines(root, { path: 'notes.txt', offset: 1, limit: 30 }) } });
+    const windowed = readWorkspaceLines(root, { path: 'notes.txt', offset: 5, limit: 3 });
+    expect(windowed).toContain('line 7');
+    expect(windowed).not.toContain('line 8');
+    expect(windowed).toContain('(showing lines 5-7 of 30; continue with --offset 8)');
+    expect(await request('read-lines', { path: 'notes.txt', offset: 5, limit: 3 })).toMatchObject({ result: { text: windowed } });
+  });
+
+  it('defaults read-lines to the first line and the parser limit', async () => {
+    writeFileSync(path.join(root, 'notes.txt'), 'alpha\nbeta');
+
+    expect(await request('read-lines', { path: 'notes.txt' })).toMatchObject({
+      result: { text: readWorkspaceLines(root, { path: 'notes.txt', offset: 1, limit: FILE_READ_MAX_LIMIT }) },
+    });
+  });
+
+  it('answers read-lines reader failures as successful replies', async () => {
+    writeFileSync(path.join(root, '.env'), 'TOKEN=secret');
+
+    expect(await request('read-lines', { path: '.env' })).toMatchObject({ result: { text: 'Secret file: .env.' } });
+    expect(await request('read-lines', { path: 'missing.txt' })).toMatchObject({ result: { text: 'File not found: missing.txt.' } });
+    expect(await request('read-lines', { path: '' })).toMatchObject({ result: { text: 'Is a directory: .' } });
+  });
+
   it.each([
     ['read-file', { path: '../outside' }],
+    ['read-lines', { path: '../outside' }],
     ['watch', { path: '../outside' }],
     ['read-directory', { path: '../outside' }],
     ['stat', { paths: ['../outside'] }],
