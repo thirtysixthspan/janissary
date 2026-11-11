@@ -52,7 +52,7 @@ function checkLexical(root: string, requested: string): ReadFailure | undefined 
   const resolved = path.resolve(root, requested);
   if (!containedAbsolute(root, resolved)) return 'Outside the workspace';
   if (isSecretPath(path.relative(root, resolved))) return 'Secret file';
-  return isUnderHomeSecret(resolveExisting(resolved)) ? 'Secret file' : undefined;
+  return isUnderHomeSecret(path.join(resolveExisting(root), path.relative(root, resolved))) ? 'Secret file' : undefined;
 }
 
 function loadBytes(root: string, requested: string): Buffer | ReadFailure {

@@ -237,6 +237,18 @@ describe('readWorkspaceLines secrets under the home directory', () => {
     expect(readWorkspaceLines(dotfiles, args('gh/hosts.yml'))).toBe('Secret file: gh/hosts.yml.');
   });
 
+  it('reports an in-root symlink to a home secret outside the root as outside', () => {
+    writeAt(home, '.ssh/id_rsa', 'key\n');
+    symlinkSync(path.join(home, '.ssh', 'id_rsa'), path.join(root, 'link'));
+    expect(read('link')).toBe('Outside the workspace: link.');
+  });
+
+  it('reports a missing file under an in-root symlink to ~/.ssh as not found', () => {
+    mkdirSync(path.join(home, '.ssh'), { recursive: true });
+    symlinkSync(path.join(home, '.ssh'), path.join(root, 'dir'));
+    expect(read('dir/key')).toBe('File not found: dir/key.');
+  });
+
   it('reports a missing ordinary file under a root at ~/.config as not found', () => {
     mkdirSync(path.join(home, '.config'), { recursive: true });
     expect(readWorkspaceLines(path.join(home, '.config'), args('other.txt'))).toBe('File not found: other.txt.');
