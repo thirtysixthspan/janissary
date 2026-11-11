@@ -75,6 +75,20 @@ describe('formatFileLines long lines', () => {
     expect(formatFileLines(line, args())).toBe(`1\t${line}`);
   });
 
+  it('leaves a CRLF line of exactly the maximum alone', () => {
+    const line = 'x'.repeat(FILE_READ_MAX_LINE_LENGTH);
+    const output = formatFileLines(`${line}\r\n`, args());
+    expect(output).toBe(`1\t${line}`);
+    expect(output).not.toContain('…');
+    expect(output).not.toContain('\r');
+  });
+
+  it('cuts a CRLF line one character over the maximum without a carriage return', () => {
+    const output = formatFileLines(`${'x'.repeat(FILE_READ_MAX_LINE_LENGTH + 1)}\r\n`, args());
+    expect(output).toBe(`1\t${'x'.repeat(FILE_READ_MAX_LINE_LENGTH)}…`);
+    expect(output).not.toContain('\r');
+  });
+
   it('cuts astral characters by code point without leaving a lone surrogate', () => {
     const line = '😀'.repeat(FILE_READ_MAX_LINE_LENGTH + 1);
     const output = formatFileLines(line, args());
