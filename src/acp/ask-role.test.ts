@@ -26,7 +26,7 @@ const CLAUDE = { harness: 'claude', model: 'claude-haiku-4-5', effort: 'high' };
 const OPENCODE = { harness: 'opencode', model: 'opencode-go/deepseek-v4.1-flash', effort: 'medium' };
 const CODEX = { harness: 'codex', model: 'gpt-6-luna', effort: 'high' };
 const ASK_COMMANDS = [
-  'db sqlite list', 'db sqlite query', 'browser goto', 'browser content', 'question ask', 'question approve',
+  'db sqlite list', 'db sqlite query', 'browser goto', 'browser content', 'question ask', 'question approve', 'file read',
 ];
 
 describe('askRoleEntries', () => {
@@ -82,7 +82,7 @@ describe('readRoleSettings', () => {
     expect(readRoleSettings(root, 'ask', home)).toEqual({
       name: 'ask', entries: [OPENCODE, CLAUDE, CODEX], commands: ASK_COMMANDS,
     });
-    expect(readRoleSettings(root, 'tell', home).commands).toHaveLength(9);
+    expect(readRoleSettings(root, 'tell', home).commands).toHaveLength(10);
   });
 
   it('keeps an existing role grant list empty while falling back from empty model entries', () => {

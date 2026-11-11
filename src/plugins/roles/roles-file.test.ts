@@ -66,7 +66,7 @@ describe('reading the roles in effect', () => {
       ],
       commands: [
         'db sqlite list', 'db sqlite query', 'browser goto', 'browser content',
-        'question ask', 'question approve',
+        'question ask', 'question approve', 'file read',
       ],
     });
     expect(file['tell']).toEqual({
@@ -74,7 +74,7 @@ describe('reading the roles in effect', () => {
       entries: file['ask'].entries,
       commands: [
         'db sqlite create', 'db sqlite delete', 'db sqlite query', 'db sqlite list',
-        'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve',
+        'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve', 'file read',
       ],
     });
     expect(DEFAULT_ROLES.slice(0, 5).every((role) => role.commands.length === 0)).toBe(true);
@@ -88,6 +88,20 @@ describe('reading the roles in effect', () => {
     expect(read.problem).toBeUndefined();
     expect(read.roles).toEqual(DEFAULT_ROLES);
     expect(existsSync(homeFile(home))).toBe(false);
+  });
+
+  it('leaves an existing ask and tell role without file read untouched on disk', () => {
+    const { home, root } = directories();
+    writeJson(homeFile(home), {
+      ask: { description: 'Questions.', entries: [], commands: ['question ask'] },
+      tell: { description: 'Tasks.', entries: [], commands: ['browser goto', 'question approve'] },
+    });
+    const before = readFileSync(homeFile(home), 'utf8');
+
+    const read = readRolesFile(home, root);
+
+    expect(read.roles.map((role) => role.commands)).toEqual([['question ask'], ['browser goto', 'question approve']]);
+    expect(readFileSync(homeFile(home), 'utf8')).toBe(before);
   });
 
   it('reads the home file when it is the only one', () => {
