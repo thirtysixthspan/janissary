@@ -220,6 +220,27 @@ describe('readWorkspaceLines secrets under the home directory', () => {
     symlinkSync(dotfiles, path.join(home, '.config'));
     expect(readWorkspaceLines(dotfiles, args('gh/hosts.yml'))).toBe('Secret file: gh/hosts.yml.');
   });
+
+  it.each([
+    ['.config', 'gh/hosts.yml'],
+    ['.ssh', 'id_rsa'],
+    ['.local/share', 'opencode/auth.json'],
+  ])('reports a missing secret under a root at ~/%s as secret', (rootEntry, name) => {
+    mkdirSync(path.join(home, rootEntry), { recursive: true });
+    expect(readWorkspaceLines(path.join(home, rootEntry), args(name))).toBe(`Secret file: ${name}.`);
+  });
+
+  it('reports a missing secret under the target of a symlinked ~/.config as secret', () => {
+    const dotfiles = path.join(outside, 'dotfiles', 'config');
+    mkdirSync(dotfiles, { recursive: true });
+    symlinkSync(dotfiles, path.join(home, '.config'));
+    expect(readWorkspaceLines(dotfiles, args('gh/hosts.yml'))).toBe('Secret file: gh/hosts.yml.');
+  });
+
+  it('reports a missing ordinary file under a root at ~/.config as not found', () => {
+    mkdirSync(path.join(home, '.config'), { recursive: true });
+    expect(readWorkspaceLines(path.join(home, '.config'), args('other.txt'))).toBe('File not found: other.txt.');
+  });
 });
 
 describe('readWorkspaceCommand', () => {

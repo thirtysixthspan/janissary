@@ -26,11 +26,12 @@ function isSecretPath(relative: string): boolean {
   return SECRET_SEGMENT_RUNS.some((run) => containsRun(segments, run));
 }
 
-function resolveOrSelf(location: string): string {
+function resolveExisting(location: string): string {
   try {
     return realpathSync(location);
   } catch {
-    return location;
+    const parent = path.dirname(location);
+    return parent === location ? location : path.join(resolveExisting(parent), path.basename(location));
   }
 }
 
@@ -38,11 +39,11 @@ function resolveOrSelf(location: string): string {
 // built from the same table denies, anchored the same way: each entry under the real home
 // directory, in its literal and resolved forms, whatever root the read started from.
 function isUnderHomeSecret(realFile: string): boolean {
-  const home = resolveOrSelf(homedir());
+  const home = resolveExisting(homedir());
   const file = realFile.toLowerCase();
   return SECRET_DENY_PATHS.some((entry) => {
     const literal = path.join(home, entry);
-    return [literal, resolveOrSelf(literal)].some((location) => containedAbsolute(location.toLowerCase(), file));
+    return [literal, resolveExisting(literal)].some((location) => containedAbsolute(location.toLowerCase(), file));
   });
 }
 
@@ -50,7 +51,8 @@ function checkLexical(root: string, requested: string): ReadFailure | undefined 
   if (path.isAbsolute(requested)) return 'Outside the workspace';
   const resolved = path.resolve(root, requested);
   if (!containedAbsolute(root, resolved)) return 'Outside the workspace';
-  return isSecretPath(path.relative(root, resolved)) ? 'Secret file' : undefined;
+  if (isSecretPath(path.relative(root, resolved))) return 'Secret file';
+  return isUnderHomeSecret(resolveExisting(resolved)) ? 'Secret file' : undefined;
 }
 
 function loadBytes(root: string, requested: string): Buffer | ReadFailure {
