@@ -13,6 +13,7 @@ const BUILTIN_FORMS: Readonly<Record<string, ApplicationCommandDeclaration>> = {
   clipboard: { name: 'clipboard', forms: ['clipboard'] }, close: { name: 'close', forms: ['close'], aliases: ['exit'] },
   create: { name: 'create', forms: ['create'] }, db: { name: 'db', forms: ['db', 'db sqlite'] },
   edit: { name: 'edit', forms: ['edit'] }, execute: { name: 'execute', forms: ['execute'] },
+  file: { name: 'file', forms: ['file'] },
   files: { name: 'files', forms: ['files', 'files expand', 'files collapse', 'files cursor', 'files anchor', 'files select'] },
   harness: { name: 'harness', forms: ['harness'] }, hist: { name: 'hist', forms: ['hist'] },
   layout: { name: 'layout', forms: ['layout', 'layout window', 'layout sidebar', 'layout split', 'layout reporting', 'layout show'] },

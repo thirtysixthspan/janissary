@@ -74,4 +74,11 @@ describe('application command inventory', () => {
     expect(resolveApplicationCommand('question approve 1'))
       .toMatchObject({ name: 'question approve', forms: ['question approve'] });
   });
+
+  it('lists the file command as a parentless builtin that owns file read input', () => {
+    const file = rows.find((row) => row.kind === 'builtin' && row.name === 'file');
+    expect(file?.forms).toEqual(['file']);
+    expect(file?.parent).toBeUndefined();
+    expect(resolveApplicationCommand('file read a.md')).toMatchObject({ name: 'file', forms: ['file'] });
+  });
 });
