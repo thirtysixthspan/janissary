@@ -65,6 +65,7 @@ describe('shell shared contract', () => {
       { text: 'main.db', kind: 'sqlite' },
       { text: 'acp:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'janus', role: 'ask' } },
       { text: 'acp:tell:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'janus', role: 'tell' } },
+      { text: 'monitor:activity (opencode/x)', kind: 'acp', acpRef: { scope: 'monitor', name: 'activity' } },
       {
         text: 'reviewer (acp)',
         kind: 'acp',
@@ -82,6 +83,7 @@ describe('shell shared contract', () => {
     const refs: AcpRef[] = [
       { scope: 'tab', label: 'janus', role: 'ask' },
       { scope: 'tab', label: 'janus', role: 'tell' },
+      { scope: 'monitor', name: 'activity' },
       { scope: 'editor', label: 'notes', persona: 'reviewer' },
     ];
 
@@ -101,6 +103,15 @@ describe('shell shared contract', () => {
     expect(isShellPayload({
       ...PAYLOAD,
       connections: [{ text: 'x', kind: 'acp', acpRef: { scope: 'tab', label: 'janus', role: 'other' } }],
+    })).toBe(false);
+    // A monitor is addressed by its runtime name alone, so a monitor reference without one names nothing.
+    expect(isShellPayload({
+      ...PAYLOAD,
+      connections: [{ text: 'x', kind: 'acp', acpRef: { scope: 'monitor' } }],
+    })).toBe(false);
+    expect(isShellPayload({
+      ...PAYLOAD,
+      connections: [{ text: 'x', kind: 'acp', acpRef: { scope: 'monitor', name: 7 } }],
     })).toBe(false);
   });
 

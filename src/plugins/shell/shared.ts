@@ -18,11 +18,13 @@ export const SHELL_PROGRAM = '/bin/zsh';
 export type ShellConnectionKind =
   | 'shell' | 'acp' | 'ssh' | 'browser' | 'terminal' | 'sqlite';
 
-// A discriminated union, as the protocol's own is: a tab-scoped reference names only its tab, and an
-// editor-scoped one names a persona too. Flattening that into one optional field would make a row that
-// claims an editor scope without a persona expressible, which the protocol deliberately is not.
+// A discriminated union, as the protocol's own is: a tab-scoped reference names only its tab, a
+// monitor-scoped one only the monitor's runtime name, and an editor-scoped one names a persona too.
+// Flattening that into one optional field would make a row that claims an editor scope without a
+// persona expressible, which the protocol deliberately is not.
 export type ShellAcpRef =
   | { scope: 'tab'; label: string; role: 'ask' | 'tell' }
+  | { scope: 'monitor'; name: string }
   | { scope: 'editor'; label: string; persona: string };
 
 export type ShellConnectionRow = {
@@ -131,7 +133,9 @@ const CONNECTION_KINDS: ReadonlySet<string> = new Set([
 ]);
 
 function isAcpRef(value: unknown): value is ShellAcpRef {
-  if (!isRecord(value) || typeof value.label !== 'string') return false;
+  if (!isRecord(value)) return false;
+  if (value.scope === 'monitor') return typeof value.name === 'string';
+  if (typeof value.label !== 'string') return false;
   if (value.scope === 'tab') return value.role === 'ask' || value.role === 'tell';
   return value.scope === 'editor' && typeof value.persona === 'string';
 }

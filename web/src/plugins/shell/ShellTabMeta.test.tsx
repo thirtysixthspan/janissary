@@ -122,6 +122,24 @@ describe('ShellTabMeta connections rows', () => {
     expect(openConnection).toHaveBeenNthCalledWith(1, row);
     expect(openConnection).toHaveBeenNthCalledWith(2, row);
   });
+
+  it('shows a monitor row as a plain row that opens nothing', () => {
+    const openConnection = vi.fn();
+    const row = { text: 'monitor:activity', kind: 'acp' as const, acpRef: { scope: 'monitor' as const, name: 'activity' } };
+    render(<ShellTabMeta
+      payload={{ ...payload, connections: [row] }}
+      capabilities={capabilities({ active: true, openConnection })}
+    />);
+
+    const element = document.querySelector('.panel-row')!;
+    fireEvent.click(element);
+    fireEvent.keyDown(element, { key: 'Enter' });
+
+    expect(element).toHaveTextContent('monitor:activity');
+    expect(element).not.toHaveAttribute('role');
+    expect(openConnection).not.toHaveBeenCalled();
+    expect(document.querySelector('.panel-row-transcript')).toBeNull();
+  });
 });
 
 describe('ShellTabMeta diff button', () => {

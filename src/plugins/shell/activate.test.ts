@@ -695,6 +695,20 @@ describe('shell plugin activation', () => {
     expect(updated[0].payload).toEqual({ ...PAYLOAD, connections: rows, schedule });
   });
 
+  it('keeps a valid payload when the host pushes the row of a monitor started from this shell', () => {
+    const { capabilities, updated } = fakeCapabilities();
+    const rows = [
+      { text: 'zsh', kind: 'terminal' },
+      { text: 'monitor:activity (opencode/x)', kind: 'acp', acpRef: { scope: 'monitor', name: 'activity' } },
+    ];
+
+    activate().hostState?.({ instanceKey: 'shell-1', tabPayload: PAYLOAD, connections: rows, schedule: [] }, capabilities);
+
+    expect(updated).toHaveLength(1);
+    expect(updated[0].payload).toEqual({ ...PAYLOAD, connections: rows, schedule: [] });
+    expect(isShellPayload(updated[0].payload)).toBe(true);
+  });
+
   // The rows arrive from the host, but the payload they are merged into came from this plugin, so an
   // unreadable one means something upstream produced it wrong. Writing over it would replace a payload
   // the tab still needs; there is nothing to merge into and nothing to say.

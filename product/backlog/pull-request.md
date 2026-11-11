@@ -1,13 +1,3 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
-
-* Make starting a monitor on a shell tab keep the shell tab open
-
-Existing Issue: Typing `monitor activity` in a shell tab launches the monitor and then disables the shell tab with `Tab plugin "shell" disabled: produced an invalid tab payload.`, leaving only a notifications tab. Severity: 6/10
-
-Existing Risk: 6/10 - Any user who starts a monitor on a shell tab loses that tab and its terminal session, and then cannot start the autonomous agent run the plan pairs with the same check.
-
-Proposal Risk: 2/10 - Adding the monitor scope to the shell row is small, but the row must also open the monitor when clicked; missing that client branch would leave the row inert rather than break the tab.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1983 "Accept a monitor connection row in the shell tab payload". Plan step P5: "A monitor persona and an autonomous `agent` run still launch through their existing paths and permission policies." Do: in a shell tab type `monitor activity`. The step expected the monitor to start (`→ Now monitoring <tab> (persona: activity)`) with the shell tab still usable. Observed twice on fresh app instances (17:36 and 17:38): the activity log records `→ Now monitoring janus (persona: activity)`, then the shell tab is replaced by a notifications tab reading `Tab plugin "shell" disabled: produced an invalid tab payload.`, and the autonomous `agent` run could not be typed from that tab. The cause is that `monitorConnections` in `src/monitor/info.ts` returns `{ text: 'monitor:<name>', kind: 'acp', acpRef: { scope: 'monitor', name } }`, and `ConnectionManager.connectionsFor` in `src/connection/manager.ts` puts that row into the shell tab's `connections`; the `ShellAcpRef` union and its `isAcpRef` guard in `src/plugins/shell/shared.ts` accept only `{ scope: 'tab' }` and `{ scope: 'editor' }`, so `isShellPayload` refuses the payload, and `validateTabValue` in `src/plugins/tab-value.ts` throws through `src/plugins/update-tab-capability.ts`, which disables the shell plugin. The likely fix is to add `{ scope: 'monitor'; name: string }` to `ShellAcpRef` and accept it in `isAcpRef`, then make the shell's connection row open the monitor view for that scope. A regression test should assert `isShellPayload` accepts a monitor `acpRef` row and that a shell payload carrying a monitor row stays valid, plus that clicking the row opens the monitor view.
