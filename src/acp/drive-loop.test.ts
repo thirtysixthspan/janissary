@@ -90,7 +90,7 @@ function makeHandlers() {
   return { h, events };
 }
 
-function drive(snapshot: CoreSnapshot, replies: string[]) {
+function drive(snapshot: AcpRunSnapshot, replies: string[]) {
   const { session, sent } = makeSession(replies);
   const { h, events } = makeHandlers();
   const host = { runCaller: vi.fn(() => 'caller output'), runWorkspace: vi.fn(() => 'workspace output') };
@@ -228,5 +228,66 @@ describe('runToolLoop', () => {
     expect(host.runCaller).toHaveBeenCalledExactlyOnceWith(QUERY);
     expect(sent[1]).toContain('caller output');
     expect(events.at(-1)).toEqual(['finished', 'answered', 8]);
+  });
+
+  it('drives an agent run through the gate-and-route driver', () => {
+    const { session, sent } = makeSession(['janissary db sqlite list', 'Done.']);
+    const { h, events } = makeHandlers();
+    const host = { runCaller: vi.fn(() => 'caller output'), runWorkspace: vi.fn(() => 'workspace output') };
+    runToolLoop(session, 'do it', { kind: 'agent', grants: ['db'], askUser: false }, host, h, new AbortController().signal);
+    expect(host.runCaller).toHaveBeenCalledExactlyOnceWith('db sqlite list');
+    expect(sent[1]).toContain('caller output');
+    expect(events.at(-1)).toEqual(['finished', 'answered', Infinity]);
+  });
+});
+
+describe('driveToolLoop agent runs', () => {
+  it('uses only the Markdown primer and routes an extracted caller command', () => {
+    const { sent, events, host } = drive({ kind: 'agent', grants: ['db'], askUser: false }, ['janissary db sqlite list', 'Done.']);
+    expect(sent[0]).toBe(`${MARKDOWN_INSTRUCTION}\n\ndo it`);
+    expect(host.runCaller).toHaveBeenCalledExactlyOnceWith('db sqlite list');
+    expect(host.runWorkspace).not.toHaveBeenCalled();
+    expect(sent[1]).toContain('caller output');
+    expect(ofKind(events, 'ranCommand')).toEqual([['ranCommand', 'db sqlite list', 'caller output', false, undefined]]);
+  });
+
+  it('routes granted file reads to the workspace', () => {
+    const { sent, events, host } = drive({ kind: 'agent', grants: ['file'], askUser: false }, ['janissary file read a.md', 'Done.']);
+    expect(host.runWorkspace).toHaveBeenCalledExactlyOnceWith('file read a.md');
+    expect(host.runCaller).not.toHaveBeenCalled();
+    expect(sent[1]).toContain('workspace output');
+    expect(ofKind(events, 'startCommand')).toEqual([['startCommand', 'file read a.md', true]]);
+    expect(ofKind(events, 'ranCommand')).toEqual([['ranCommand', 'file read a.md', 'workspace output', true, undefined]]);
+  });
+
+  it('feeds an ungranted file read refusal back as one step without invoking either host side', () => {
+    const { sent, events, host } = drive({ kind: 'agent', grants: [], askUser: false }, ['janissary file read a.md', 'Done.']);
+    const refusal = 'Agent: command not permitted: file read a.md.';
+    expect(host.runWorkspace).not.toHaveBeenCalled();
+    expect(host.runCaller).not.toHaveBeenCalled();
+    expect(sent[1]).toContain(refusal);
+    expect(ofKind(events, 'ranCommand')).toEqual([['ranCommand', 'file read a.md', refusal, false, undefined]]);
+  });
+
+  it.each([false, true])('extracts a bare question only with askUser enabled (%s)', (askUser) => {
+    const command = 'question ask "x"';
+    const { sent, host } = drive({ kind: 'agent', grants: ['question'], askUser }, [command, 'Done.']);
+    if (askUser) {
+      expect(host.runCaller).toHaveBeenCalledExactlyOnceWith(command);
+      expect(sent).toHaveLength(2);
+    } else {
+      expect(host.runCaller).not.toHaveBeenCalled();
+      expect(sent).toHaveLength(1);
+    }
+    expect(host.runWorkspace).not.toHaveBeenCalled();
+  });
+
+  it('runs twenty steps without a cap', () => {
+    const replies = [...Array.from({ length: 20 }, () => 'janissary db sqlite list'), 'Done.'];
+    const { sent, events, host } = drive({ kind: 'agent', grants: ['db'], askUser: false }, replies);
+    expect(host.runCaller).toHaveBeenCalledTimes(20);
+    expect(sent).toHaveLength(21);
+    expect(ofKind(events, 'ranCommand')).toHaveLength(20);
+    expect(events.at(-1)).toEqual(['finished', 'answered', Infinity]);
   });
 });

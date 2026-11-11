@@ -15,7 +15,8 @@ import { sandboxWillConfine } from '../sandbox/confinement.js';
 import { janissaryRoot } from '../janissary-root.js';
 import { containedStrictly } from '../path-containment.js';
 import { acpActivity } from '../acp/activity.js';
-import { agentPrimer, extractAgentCommand, runGrantedAgentCommand } from './command-tools.js';
+import { agentPrimer, runGrantedAgentCommand } from './command-tools.js';
+import { extractAgentCommand } from './command-extract.js';
 import { awaitReady } from './readiness.js';
 import type { AgentRun } from './run.js';
 

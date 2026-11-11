@@ -4,6 +4,7 @@ import { runAcpToolLoop } from './loop.js';
 import { NO_BUILTIN_TOOLS_LINE, NO_TOOLS_LINE } from './internal-tools.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
+import { extractAgentCommand } from '../agent/command-extract.js';
 
 const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
 
@@ -21,8 +22,6 @@ export function corePrimer(snapshot: Extract<AcpRunSnapshot, { kind: 'core' }>, 
 
 export const CORE_MAX_STEPS = 8;
 
-type CoreSnapshot = Extract<AcpRunSnapshot, { kind: 'core' }>;
-
 type DrivenStep = { workspace: boolean; refused?: 'disabled' };
 
 async function settleUnlessAborted(result: Promise<string>, signal: AbortSignal): Promise<string> {
@@ -39,7 +38,7 @@ function dropLateRejection(result: string | Promise<string>, signal: AbortSignal
 }
 
 function gatedRunner(
-  snapshot: CoreSnapshot, tools: readonly AcpTool[], host: AcpToolHost, events: AcpLoopHandlers,
+  snapshot: AcpRunSnapshot, tools: readonly AcpTool[], host: AcpToolHost, events: AcpLoopHandlers,
   remember: (step: DrivenStep) => void, signal: AbortSignal,
 ): (command: string) => string | Promise<string> {
   return (command) => {
@@ -57,18 +56,18 @@ function gatedRunner(
 }
 
 export function driveToolLoop(
-  session: AcpLoopSession, prompt: string, snapshot: CoreSnapshot,
+  session: AcpLoopSession, prompt: string, snapshot: AcpRunSnapshot,
   host: AcpToolHost, events: AcpLoopHandlers, signal: AbortSignal,
 ): void {
-  const tools: AcpTool[] = snapshot.withoutTools ? [] : createAcpToolTable(snapshot.grants);
+  const tools: AcpTool[] = snapshot.kind === 'core' && !snapshot.withoutTools ? createAcpToolTable(snapshot.grants) : [];
   let step: DrivenStep = { workspace: false };
   const runCommand = gatedRunner(snapshot, tools, host, events, (next) => { step = next; }, signal);
   runAcpToolLoop(session, prompt, {
     signal,
-    primer: corePrimer(snapshot, tools),
+    primer: snapshot.kind === 'core' ? corePrimer(snapshot, tools) : MARKDOWN_INSTRUCTION,
     runCommand,
-    extractCommand: toolExtractor(tools),
-    maxSteps: CORE_MAX_STEPS,
+    extractCommand: snapshot.kind === 'core' ? toolExtractor(tools) : (text) => extractAgentCommand(text, snapshot.askUser),
+    maxSteps: snapshot.kind === 'core' ? CORE_MAX_STEPS : Infinity,
   }, {
     startTurn: (isFirst) => { events.startTurn(isFirst); },
     chunk: (cumulative) => { events.chunk(cumulative); },
@@ -80,7 +79,7 @@ export function driveToolLoop(
 }
 
 export function runToolLoop(
-  session: AcpLoopSession, prompt: string, snapshot: CoreSnapshot,
+  session: AcpLoopSession, prompt: string, snapshot: AcpRunSnapshot,
   host: AcpToolHost, events: AcpLoopHandlers, signal: AbortSignal,
 ): void {
   driveToolLoop(session, prompt, snapshot, host, events, signal);
