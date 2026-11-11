@@ -3,6 +3,7 @@ import type { RemoteChannel } from '../../remote/channel/index.js';
 import type { NavigatorListener } from '../../remote/channel/types.js';
 import type { ClientFrame } from '../../remote/protocol-frames.js';
 import type { SearchMatch } from '../../protocol.js';
+import { OUTSIDE_ROOT_REASON } from '../file-operation-result.js';
 import { RemoteFileSystemPort } from './port.js';
 
 function harness() {
@@ -376,5 +377,62 @@ describe('RemoteFileSystemPort remaining operations', () => {
       .resolves.toMatchObject({ ok: false, reason: expect.stringContaining('closed') as string });
     expect(sent.some((frame) => frame.type === 'filesystem-open')).toBe(false);
     expect(listener).toBeDefined();
+  });
+});
+
+describe('RemoteFileSystemPort.readLines', () => {
+  const hasRequest = (sent: ClientFrame[]) => sent.some((frame) => frame.type === 'filesystem-request');
+
+  it('sends the mapped path with no offset or limit and resolves to the text and the sent path', async () => {
+    const h = harness();
+    const pending = h.port.readLines('/remote/ws', './notes/a.md');
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    const request = h.sent.findLast((frame) => frame.type === 'filesystem-request');
+    expect(request).toMatchObject({ operation: 'read-lines', args: { path: 'notes/a.md' } });
+    expect(request?.type === 'filesystem-request' && Object.keys(request.args)).toEqual(['path']);
+    h.reply({ text: '1\thello' });
+    await expect(pending).resolves.toEqual({ text: '1\thello', path: 'notes/a.md' });
+  });
+
+  it('forwards the offset and limit when given', async () => {
+    const h = harness();
+    const pending = h.port.readLines('/remote/ws', 'a.md', 3, 10);
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    expect(h.sent.findLast((frame) => frame.type === 'filesystem-request'))
+      .toMatchObject({ operation: 'read-lines', args: { path: 'a.md', offset: 3, limit: 10 } });
+    h.reply({ text: '3\tthree' });
+    await expect(pending).resolves.toEqual({ text: '3\tthree', path: 'a.md' });
+  });
+
+  it('answers an absolute path as outside the workspace without sending a request', async () => {
+    const h = harness();
+    await expect(h.port.readLines('/remote/ws', '/remote/ws/a.md'))
+      .resolves.toEqual({ text: 'Outside the workspace: /remote/ws/a.md.', path: '/remote/ws/a.md' });
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-open')).toBe(true));
+    expect(hasRequest(h.sent)).toBe(false);
+  });
+
+  it('rejects with the unavailable reason when the channel was not attached', async () => {
+    const h = harness();
+    const pending = h.port.readLines('/remote/ws', 'a.md');
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    h.reply(undefined, 'Remote connection unavailable.');
+    await expect(pending).rejects.toThrow(new Error('Remote connection unavailable.'));
+  });
+
+  it('rejects with the outside-root reason when the far side refuses the path', async () => {
+    const h = harness();
+    const pending = h.port.readLines('/remote/ws', '../x');
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    h.reply(undefined, OUTSIDE_ROOT_REASON);
+    await expect(pending).rejects.toThrow(new Error(OUTSIDE_ROOT_REASON));
+  });
+
+  it('rejects in-flight work when the channel closes', async () => {
+    const h = harness();
+    const pending = h.port.readLines('/remote/ws', 'a.md');
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    h.listener()?.onClose?.();
+    await expect(pending).rejects.toThrow('connection ended');
   });
 });
