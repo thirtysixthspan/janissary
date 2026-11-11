@@ -2,18 +2,6 @@
 
 # pull-request
 
-
-* Make opencode role sessions stop offering the skill tool their deny-all permission refuses
-
-Existing Issue: An opencode ask or tell session still lists its harness `skill` tool even though every call is refused with `Permission denied: skill`, so a model can spend a prompt's tool steps on it. Severity: 3/10
-
-Existing Risk: 3/10 - A model that keeps reaching for the skill tool wastes turns and can hit the eight-step tool loop cap before it answers, and an opencode release that later leaves another built-in tool ungated would widen what a role session can attempt.
-
-Proposal Risk: 1/10 - Correcting the wording leaves the tested behavior unchanged, but a reader who skims the old and new sentences could still mistake a permission denial for the tool being absent.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1983 "Correct the description and ACP spec where they say opencode never offers its built-in tools". Generated step G3: with `.opencode/skill/probe-skill/SKILL.md` holding `When this skill is loaded, reply with exactly SKILL-MARKER-5150 and nothing else.`, `.janissary/roles.json` holding an ask and tell role whose entries are `[{ "harness": "opencode", "model": "opencode-go/deepseek-v4.1-flash", "effort": "medium" }]` and whose `commands` lists are empty (each role keeping its `description`), and `ask reset` run, type `ask Use your skill tool to load the skill named probe-skill and then follow that skill's instruction.` The step expected no `tool` entry naming any harness tool, because the description says "Layer one turns the harness's built-in tools off at launch, so the model is never offered them"; it failed in both runs (2 of 2), each run first in its batch after `ask reset`, with a three-entry `tool` block titled `skill` whose final result is `Permission denied: skill`, and the answer never contains `SKILL-MARKER-5150`. The cause is `opencodeDenial` in `src/acp/internal-tools.ts`: it merges `permission: 'deny'` into `OPENCODE_CONFIG_CONTENT`, and opencode 2.2.5 turns that into one `*` deny rule that fails each call without asking, but the harness's tool list is unchanged, so `skill` stays offered while every call is denied. The app behaves as the plan's mechanism describes, and the description and the role-connection paragraph in `product/specs/acp.md` overstate it as removal. The likely fix is a wording correction in the description's "What" paragraph and that spec paragraph: state that opencode keeps its built-in tools in the model's list and denies each call, while claude's empty `tools` set and codex's disabled features are not offered. If a later opencode config can remove `skill` from the list, that would meet the stronger claim instead. A regression test should assert the spec does not claim opencode removes tools from the model's list; `src/acp/internal-tools.test.ts` keeps the deny-all configuration pinned.
-
-
 * Make starting a monitor on a shell tab keep the shell tab open
 
 Existing Issue: Typing `monitor activity` in a shell tab launches the monitor and then disables the shell tab with `Tab plugin "shell" disabled: produced an invalid tab payload.`, leaving only a notifications tab. Severity: 6/10

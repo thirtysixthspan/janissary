@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { internalToolDenial } from './internal-tools.js';
 import { CODEX_FEATURES_OFF, CODEX_TOOLS_OFF } from './internal-tools-test-fixture.js';
+
+const acpSpec = readFileSync(new URL('../../product/specs/acp.md', import.meta.url), 'utf8');
 
 const codexBase = { CODEX_CONFIG: JSON.stringify({ model: 'gpt-6-luna', model_reasoning_effort: 'high' }) };
 
@@ -16,6 +19,13 @@ describe('internalToolDenial', () => {
     const denial = internalToolDenial('opencode', {});
 
     expect(JSON.parse(denial?.env?.OPENCODE_CONFIG_CONTENT ?? '')).toEqual({ permission: 'deny' });
+  });
+
+  it('says opencode keeps its built-in tools in the model’s list and denies every call', () => {
+    const paragraph = acpSpec.split('\n').find((line) => line.includes('Role connections deny every internal tool'));
+    expect(paragraph).toBeDefined();
+    expect(paragraph).toContain("`opencode` keeps its built-in tools in the model's list and denies every call");
+    expect(paragraph).not.toMatch(/`opencode`[^.]*never offered/u);
   });
 
   it('gives claude an empty session tool set and no environment', () => {

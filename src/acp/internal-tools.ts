@@ -1,9 +1,10 @@
 import { isRecord } from '../value-guards.js';
 
 // The internal-tool policy for role sessions: the launch configuration that turns each harness's
-// built-in tools off, so the model is never offered them and can only run Janissary native commands.
-// A harness with no known configuration answers undefined and is protected by the permission-request
-// denial alone.
+// built-in tools off where the harness allows it. opencode keeps its tools in the model's list and
+// denies every call; claude and codex never offer theirs. Either way the model can only run Janissary
+// native commands. A harness with no known configuration answers undefined and is protected by the
+// permission-request denial alone.
 export type InternalToolDenial = {
   env?: Record<string, string>;
   sessionMeta?: Record<string, unknown>;
@@ -46,7 +47,10 @@ function parseRecord(json: string | undefined): Record<string, unknown> {
 }
 
 // opencode 2.2.5 (`@opencode/cli`, not bundled): the config loader turns a top-level string
-// `permission` into one `*` deny rule, which fails every tool call without asking.
+// `permission` into one `*` deny rule, which fails every tool call without asking. The rule does not
+// remove the tools from the model's list. opencode's whole-tool removal check reads the last rule
+// matching the tool name, and the bundled browser plugin later adds a narrow `skill: browser` deny
+// rule, so `skill` stays offered. No supported config key removes it while that rule is present.
 function opencodeDenial(baseEnv: Record<string, string>): InternalToolDenial {
   const config = { ...parseRecord(baseEnv.OPENCODE_CONFIG_CONTENT), permission: 'deny' };
   return { env: { OPENCODE_CONFIG_CONTENT: JSON.stringify(config) } };

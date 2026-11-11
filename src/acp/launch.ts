@@ -33,8 +33,8 @@ export function acpLaunchFor(harness: PersonaHarness): AcpLaunch {
 // A role entry's launch. OpenCode launches as an opencode persona does. Claude and codex run the ACP
 // adapters bundled with Janissary by their `bin` name, which `locateAcpCommand` finds in the install's
 // `node_modules/.bin`. Codex takes its model and effort through `CODEX_CONFIG`, because its adapter
-// ignores argv. Every role entry also carries the internal-tool denial for its harness, which turns
-// the harness's built-in tools off. A harness with no ACP adapter answers undefined, which the caller
+// ignores argv. Every role entry also carries the internal-tool denial for its harness, which refuses
+// the harness's built-in tools. A harness with no ACP adapter answers undefined, which the caller
 // reports as that entry failing.
 export function acpLaunchForEntry(entry: RoleEntry): AcpLaunch | undefined {
   const base = baseLaunchForEntry(entry);
