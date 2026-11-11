@@ -1,4 +1,4 @@
-export const APPLICATION_COMMAND_NATIVE_TOOLS = ['database', 'browser', 'question'] as const;
+export const APPLICATION_COMMAND_NATIVE_TOOLS = ['database', 'browser', 'question', 'file'] as const;
 export const APPLICATION_COMMAND_SOURCES = ['home', 'project', 'default'] as const;
 export const APPLICATION_COMMAND_KINDS = ['builtin', 'plugin', 'help', 'native'] as const;
 

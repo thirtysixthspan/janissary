@@ -22,6 +22,7 @@ describe('application command inventory', () => {
     expect(rows.find((row) => row.name === 'browser goto')).toMatchObject({ parent: 'browser', nativeTool: 'browser' });
     expect(rows.find((row) => row.name === 'db sqlite query')).toMatchObject({ parent: 'db sqlite', nativeTool: 'database' });
     expect(rows.find((row) => row.name === 'question approve')?.nativeTool).toBe('question');
+    expect(rows.find((row) => row.name === 'file read')).toMatchObject({ kind: 'native', parent: 'file', nativeTool: 'file' });
   });
 
   it('gives each built-in fixed subcommand form its own row linked to its parent', () => {
@@ -75,10 +76,12 @@ describe('application command inventory', () => {
       .toMatchObject({ name: 'question approve', forms: ['question approve'] });
   });
 
-  it('lists the file command as a parentless builtin that owns file read input', () => {
+  it('lists the file command as a parentless builtin while the native row owns file read input', () => {
     const file = rows.find((row) => row.kind === 'builtin' && row.name === 'file');
     expect(file?.forms).toEqual(['file']);
     expect(file?.parent).toBeUndefined();
-    expect(resolveApplicationCommand('file read a.md')).toMatchObject({ name: 'file', forms: ['file'] });
+    expect(resolveApplicationCommand('file read a.md'))
+      .toMatchObject({ name: 'file read', kind: 'native', forms: ['file read'] });
+    expect(resolveApplicationCommand('file')).toMatchObject({ name: 'file', kind: 'builtin', forms: ['file'] });
   });
 });
