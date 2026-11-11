@@ -90,6 +90,11 @@ describe('createAcpToolTable', () => {
     expect(toolExtractor(tools)('browser goto x')).toBeNull();
   });
 
+  it('runs the browser, question, and database entries on the caller side', () => {
+    const { tools } = setup();
+    expect(tools.map((tool) => tool.runsOn)).toEqual(['caller', 'caller', 'caller']);
+  });
+
   it('keeps the database entry last when it is included', () => {
     const { tools } = setup();
     expect(tools.at(-1)!.match('anything at all')).toBe(true);

@@ -25,6 +25,8 @@ export type AcpTool = {
   run: (label: string, command: string) => string | Promise<string>;
   // Whether one cleaned reply line is a command in this tool's grammar.
   isCommandLine: (line: string) => boolean;
+  // Which side runs an emitted command: the caller's machine or the workspace.
+  runsOn: 'caller' | 'workspace';
 };
 
 // Resolution strategy for running: **first match over an ordered array**, the same rule
@@ -44,6 +46,7 @@ export function createAcpToolTable(
         match: (command) => /^browser\b/i.test(command),
         run,
         isCommandLine: (line) => isBrowserCommandLine(line),
+        runsOn: 'caller',
       },
     },
     {
@@ -53,6 +56,7 @@ export function createAcpToolTable(
         match: (command) => /^question\b/i.test(command),
         run,
         isCommandLine: (line) => isQuestionCommandLine(line),
+        runsOn: 'caller',
       },
     },
     {
@@ -62,6 +66,7 @@ export function createAcpToolTable(
         match: () => true,
         run,
         isCommandLine: (line) => managers.database.isCommandLine(line),
+        runsOn: 'caller',
       },
     },
   ];
