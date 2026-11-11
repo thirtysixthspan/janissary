@@ -77,7 +77,7 @@ describe('createAcpToolTable', () => {
     expect(file.match('db sqlite list')).toBe(false);
   });
 
-  it('keeps every included group primer while listing only enabled commands', () => {
+  it('keeps every included group primer while listing only the given allow-list', () => {
     const { tools } = setup(['browser goto', 'db sqlite list']);
     expect(toolPrimer(tools, ['db sqlite list'])).toBe([
       'browser primer text',
