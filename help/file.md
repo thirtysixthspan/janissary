@@ -1,6 +1,6 @@
 ### file
 
-Read a text file from the workspace and print it as numbered lines in the current tab. A local tab reads from its workspace, or from the project directory when the tab has no workspace. Paths are relative to that root. The output carries no host tag.
+Read a text file from the workspace and print it as numbered lines in the current tab. A local tab reads from its workspace, or from the project directory when the tab has no workspace. Paths are relative to that root. A remote tab reads from its remote workspace clone on the remote machine, never from the local disk, with paths relative to that workspace. The output carries no host tag.
 
 **Usage**
 
@@ -23,6 +23,8 @@ Each failure prints one line that names the path as you typed it:
 - `Outside the workspace: <path>.` for an absolute path, a path that leaves the root, or a symbolic link that points outside it
 - `Secret file: <path>.` for `.env` and `.env.*` files anywhere in the workspace, and for credential locations such as `.ssh`, `.aws`, `.gnupg`, `.kube`, `.netrc`, `.docker`, `.config/gh/hosts.yml`, and shell history files
 - `Offset past end of file (<total> lines): <path>.` when `--offset` is beyond the last line; a one-line file prints `(1 lines)`
+
+On a remote tab, `Remote connection unavailable.` is printed when the tab has no live connection or its workspace is still being prepared. A connection that drops or stops answering mid-read prints `The remote connection ended.` or `The remote machine did not answer in time.`.
 
 Bare `file`, `file read` without a path, an unknown subcommand, a second path argument, a path that starts with `--`, an unknown flag, a repeated flag, an `--offset` or `--limit` that is not a positive whole number, and a `--limit` above 2000 all print the usage line `Usage: file read <path> [--offset <line>] [--limit <lines>]`. The path is a single token with no whitespace, so a path containing spaces is read as two path arguments and cannot be read with this command.
 

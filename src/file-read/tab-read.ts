@@ -1,8 +1,12 @@
 import type { Managers } from '../managers.js';
-import { parseFileRead } from './command.js';
+import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
+import { RemoteFileSystemPort } from '../file-navigator/remote/port.js';
+import { parseFileRead, type FileReadArgs } from './command.js';
 import { readWorkspaceLines } from './read.js';
 
 const REMOTE_UNAVAILABLE = 'Remote connection unavailable.';
+
+let sessionNumber = 0;
 
 export function localReadRoot(managers: Managers, label: string): string | undefined {
   const tab = managers.tab.byLabel(label);
@@ -10,10 +14,41 @@ export function localReadRoot(managers: Managers, label: string): string | undef
   return tab?.workspaceDir ?? managers.tab.launchDir;
 }
 
+function asTyped(text: string, sent: string, typed: string): string {
+  if (sent === typed || text.includes('\n') || text.includes('\t')) return text;
+  const suffix = `: ${sent}.`;
+  if (!text.endsWith(suffix)) return text;
+  return `${text.slice(0, -suffix.length)}: ${typed}.`;
+}
+
+function rejectionLine(error: unknown, typed: string): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message === OUTSIDE_ROOT_REASON) return `Outside the workspace: ${typed}.`;
+  if (message === REMOTE_UNAVAILABLE) return REMOTE_UNAVAILABLE;
+  return message;
+}
+
+async function readRemoteFile(managers: Managers, label: string, parsed: FileReadArgs): Promise<string> {
+  const channel = managers.remote?.get(label);
+  const ready = managers.remote?.readyOf(label);
+  const workspace = managers.remote?.workspaceOf(label);
+  if (!channel || !ready || !workspace) return REMOTE_UNAVAILABLE;
+  sessionNumber += 1;
+  const port = new RemoteFileSystemPort(channel, `file-read-${sessionNumber}`, ready);
+  try {
+    const { text, path } = await port.readLines(workspace, parsed.path, parsed.offset, parsed.limit);
+    return asTyped(text, path, parsed.path);
+  } catch (error) {
+    return rejectionLine(error, parsed.path);
+  } finally {
+    port.dispose();
+  }
+}
+
 export async function readFileInTab(managers: Managers, label: string, input: string): Promise<string> {
   const parsed = parseFileRead(input);
   if ('error' in parsed) return parsed.error;
   const root = localReadRoot(managers, label);
-  if (root === undefined) return REMOTE_UNAVAILABLE;
+  if (root === undefined) return readRemoteFile(managers, label, parsed);
   return readWorkspaceLines(root, parsed);
 }
