@@ -16,6 +16,7 @@ function fakeTerminal() {
   document.body.append(textarea);
   const buffer = { active: { baseY: 10, cursorY: 3, type: 'normal' } };
   const cursorListeners = new Set<() => void>();
+  const parsedListeners = new Set<() => void>();
   const decorations: FakeDecoration[] = [];
   const terminal = {
     textarea,
@@ -23,6 +24,10 @@ function fakeTerminal() {
     onCursorMove: (listener: () => void) => {
       cursorListeners.add(listener);
       return { dispose: () => { cursorListeners.delete(listener); } };
+    },
+    onWriteParsed: (listener: () => void) => {
+      parsedListeners.add(listener);
+      return { dispose: () => { parsedListeners.delete(listener); } };
     },
     registerMarker: () => {
       const marker = { line: buffer.active.baseY + buffer.active.cursorY, disposed: false, dispose: () => { marker.disposed = true; } };
@@ -47,6 +52,13 @@ function fakeTerminal() {
     moveCursor: (cursorY: number) => {
       buffer.active.cursorY = cursorY;
       for (const listener of cursorListeners) listener();
+    },
+    // Output scrolling the buffer raises baseY while the cursor's viewport row and column stay put,
+    // so the cursor-move event does not fire. The marker's absolute line stays with the line it was
+    // registered on.
+    scroll: (rows = 1) => { buffer.active.baseY += rows; },
+    parseWrite: () => {
+      for (const listener of parsedListeners) listener();
     },
     cleanup: () => { textarea.remove(); },
   };
@@ -120,6 +132,49 @@ describe('attachPromptMask', () => {
     expect(first.disposed).toBe(true);
     expect(fake.live()).toHaveLength(1);
     expect(fake.live()[0].line).toBe(15);
+    fake.cleanup();
+  });
+
+  it('follows the prompt when output scrolls the buffer without a cursor move', () => {
+    const fake = fakeTerminal();
+    const mask = attachPromptMask(fake.terminal);
+    mask.setIdle(true);
+    const first = fake.live()[0];
+    expect(first.line).toBe(13);
+
+    fake.scroll();
+    fake.parseWrite();
+
+    expect(first.disposed).toBe(true);
+    expect(fake.live()).toHaveLength(1);
+    expect(fake.live()[0].line).toBe(14);
+    fake.cleanup();
+  });
+
+  it('keeps its decoration when a parsed write leaves the cursor row unchanged', () => {
+    const fake = fakeTerminal();
+    const mask = attachPromptMask(fake.terminal);
+    mask.setIdle(true);
+    const first = fake.live()[0];
+
+    fake.parseWrite();
+
+    expect(fake.live()).toEqual([first]);
+    expect(first.disposed).toBe(false);
+    fake.cleanup();
+  });
+
+  it('stops following parsed writes once disposed', () => {
+    const fake = fakeTerminal();
+    const mask = attachPromptMask(fake.terminal);
+    mask.setIdle(true);
+
+    mask.dispose();
+    fake.scroll();
+    fake.parseWrite();
+
+    expect(fake.live()).toEqual([]);
+    expect(fake.decorations).toHaveLength(1);
     fake.cleanup();
   });
 

@@ -52,7 +52,9 @@ never touch. The terminal's own prompt and cursor follow the same rule. While th
 terminal, zsh's waiting prompt and the blinking cursor show as usual. While it is anywhere else, the
 terminal shows neither, so the command bar's prompt is the only one on screen. Only the prompt zsh is
 waiting at is hidden: the prompts on earlier command lines stay in the scrollback, and a program
-running in the terminal is drawn as it is. Inside a shell tab,
+running in the terminal is drawn as it is. The mask follows that waiting prompt when output is parsed,
+including output that scrolls the terminal, so an application command's echoed line keeps its own
+prompt and the fresh prompt beneath it stays hidden. Inside a shell tab,
 `Shift+Tab` belongs to the tab: the application's section cycling, which takes the chord everywhere
 else, does not move focus out of it.
 

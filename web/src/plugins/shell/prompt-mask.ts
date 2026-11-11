@@ -13,7 +13,9 @@ export type PromptMask = {
 // in the terminal's background; zsh itself is never told, so nothing is typed into its input.
 //
 // zsh signals that it is idle before it draws the prompt, so the mask follows the cursor's row rather
-// than being placed once: each cursor move while it applies re-places it on the row the prompt is on.
+// than being placed once: each parsed write while it applies re-places it on the row the prompt is on.
+// Parsed writes and not only cursor moves, because output that scrolls the terminal leaves the
+// cursor's viewport row — and so its move event — unchanged while its buffer row advances.
 export function attachPromptMask(terminal: Terminal): PromptMask {
   let idle = false;
   let focused = terminal.textarea !== undefined && terminal.textarea === document.activeElement;
@@ -42,6 +44,7 @@ export function attachPromptMask(terminal: Terminal): PromptMask {
   terminal.textarea?.addEventListener('focus', onFocus);
   terminal.textarea?.addEventListener('blur', onBlur);
   const cursor = terminal.onCursorMove(update);
+  const parsed = terminal.onWriteParsed(update);
 
   return {
     setIdle(next) {
@@ -50,6 +53,7 @@ export function attachPromptMask(terminal: Terminal): PromptMask {
     },
     dispose() {
       cursor.dispose();
+      parsed.dispose();
       terminal.textarea?.removeEventListener('focus', onFocus);
       terminal.textarea?.removeEventListener('blur', onBlur);
       clear();
