@@ -1,21 +1,19 @@
 import type { Managers } from '../managers.js';
-import type { AcpRunSnapshot, AcpSession } from './types.js';
+import type { AcpLoopSession, AcpRunSnapshot, AcpSession, AcpToolHost } from './types.js';
 import type { AcpPendingPrompt } from './prompt-state.js';
 import type { LogEntry, TabRuntime } from '../tab/types.js';
-import { runAcpToolLoop } from './loop.js';
 import { guardAcpHandlers } from './guard-handlers.js';
 import { appendAcp, settleAcpPrompt } from './response.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';
 import { isRateLimitError } from './rate-limit.js';
-import { createAcpToolTable, gateCommand, toolExtractor, type AcpTool } from './tool-table.js';
 import { createInvocationContext } from '../command/invocation.js';
 import { readFileInTab } from '../file-read/tab-read.js';
 import { coreActivity } from './record-feed.js';
 import { acpRoleRuntime } from './role-state.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { effectiveCommandSetting } from '../native-commands/policy.js';
-import { corePrimer } from './drive-loop.js';
+import { runToolLoop } from './drive-loop.js';
 
 // The prompt's gate authority, read once: a settings change mid-prompt takes effect from the next one.
 function coreSnapshot(
@@ -33,21 +31,6 @@ function coreSnapshot(
     grants: request.commands,
     rows,
     withoutTools: runtime.acpWithoutTools === true,
-  };
-}
-
-// Gate each emitted command on the snapshot, then run it on its side or return the refusal.
-function coreToolRunner(
-  managers: Managers, label: string, snapshot: AcpRunSnapshot, tools: readonly AcpTool[], signal: AbortSignal,
-): (command: string) => string | Promise<string> {
-  return (command) => {
-    const decision = gateCommand(snapshot, tools, command);
-    if ('refusal' in decision) {
-      if (decision.refused === 'disabled') notify(managers, 'command-disabled', label, decision.refusal);
-      return decision.refusal;
-    }
-    if (decision.runsOn === 'workspace') return readFileInTab(managers, label, command);
-    return dispatchNative(managers, label, command, signal);
   };
 }
 
@@ -71,6 +54,19 @@ async function dispatchNative(
     : JSON.stringify(result.result) ?? String(result.result);
 }
 
+function guardedSession(session: AcpSession, active: () => boolean): AcpLoopSession {
+  return {
+    prompt: (text, handlers) => {
+      if (!active()) return;
+      session.prompt(text, {
+        onChunk: (chunk) => { if (active()) handlers.onChunk(chunk); },
+        onEnd: (reason) => { if (active()) handlers.onEnd(reason); },
+        onError: (message) => { if (active()) handlers.onError(message); },
+      });
+    },
+  };
+}
+
 export function runCorePrompt(
   managers: Managers, label: string, runtime: TabRuntime, request: AcpPendingPrompt,
   session: AcpSession, identity: string, current: () => boolean,
@@ -81,39 +77,19 @@ export function runCorePrompt(
     managers.tab.updateRunning(label, { markdown: true, entries: request.runningEntries }, output, running, { trailing: true });
   };
   const snapshot = coreSnapshot(managers, runtime, request);
-  const tools = snapshot.withoutTools ? [] : createAcpToolTable(snapshot.grants);
-  const runCommand = coreToolRunner(managers, label, snapshot, tools, request.abort.signal);
   const recordTool = (text: string) => coreActivity(managers.acpRecords, runtime, 'tool', text, request.role);
-  const recordAsyncResult = async (result: Promise<string>) => {
-    const text = await result;
-    if (active()) recordTool(text);
-    return text;
+  const host: AcpToolHost = {
+    runCaller: (command) => {
+      if (!active()) throw new Error('ACP: prompt cancelled.');
+      return dispatchNative(managers, label, command, request.abort.signal);
+    },
+    runWorkspace: (command) => {
+      if (!active()) throw new Error('ACP: prompt cancelled.');
+      return readFileInTab(managers, label, command);
+    },
   };
   let lastAnswer = '';
-  runAcpToolLoop({
-    prompt: (text, handlers) => {
-      if (!active()) return;
-      session.prompt(text, {
-        onChunk: (chunk) => { if (active()) handlers.onChunk(chunk); },
-        onEnd: (reason) => { if (active()) handlers.onEnd(reason); },
-        onError: (message) => { if (active()) handlers.onError(message); },
-      });
-    },
-  }, request.prompt, {
-    signal: request.abort.signal,
-    primer: corePrimer(snapshot, tools),
-    runCommand: (command) => {
-      if (!active()) throw new Error('ACP: prompt cancelled.');
-      recordTool(command);
-      const result = runCommand(command);
-      if (!(result instanceof Promise)) {
-        if (active()) recordTool(result);
-        return result;
-      }
-      return recordAsyncResult(result);
-    },
-    extractCommand: toolExtractor(tools),
-  }, guardAcpHandlers({
+  runToolLoop(guardedSession(session, active), request.prompt, snapshot, host, guardAcpHandlers({
     startTurn: (isFirst) => {
       if (isFirst) notify(managers, 'agent-start', label);
       const entry: LogEntry = { input: isFirst ? request.prompt : '', output: '', running: true, markdown: true };
@@ -122,7 +98,12 @@ export function runCorePrompt(
     },
     chunk: (buffer) => updateRunning(buffer, true),
     endTurn: (final) => { updateRunning(final, false); lastAnswer = final; request.replied = true; },
-    ranCommand: (command, result) => appendAcp(managers, label, { input: command, output: result, acp: true }),
+    startCommand: (command) => { recordTool(command); },
+    ranCommand: (command, result, _workspace, refused) => {
+      if (refused === 'disabled') notify(managers, 'command-disabled', label, result);
+      recordTool(result);
+      appendAcp(managers, label, { input: command, output: result, acp: true });
+    },
     finished: (reason, maxSteps) => {
       notify(managers, 'state-change', label);
       if (isRateLimitError(lastAnswer)) notify(managers, 'rate-limited', label);
@@ -140,5 +121,5 @@ export function runCorePrompt(
       request.modelFailed = true;
       settleAcpPrompt(managers, label, { answered: false, error }, undefined, request.role);
     },
-  }, active));
+  }, active), request.abort.signal);
 }

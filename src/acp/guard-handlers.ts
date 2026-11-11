@@ -6,7 +6,8 @@ export function guardAcpHandlers(handlers: AcpLoopHandlers, active: () => boolea
     startTurn: (first) => { if (active()) handlers.startTurn(first); },
     chunk: (text) => { if (active()) handlers.chunk(text); },
     endTurn: (text) => { if (active()) handlers.endTurn(text); },
-    ranCommand: (command, result) => { if (active()) handlers.ranCommand(command, result); },
+    startCommand: (command, workspace) => { if (active()) handlers.startCommand?.(command, workspace); },
+    ranCommand: (command, result, workspace, refused) => { if (active()) handlers.ranCommand(command, result, workspace, refused); },
     finished: (reason, steps) => { if (active()) handlers.finished(reason, steps); },
     error: (message) => { if (active()) handlers.error(message); },
   };

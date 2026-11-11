@@ -7,7 +7,7 @@ import { readWorkspaceLines } from '../file-read/read.js';
 import type { Managers } from '../managers.js';
 import type { TabRuntime } from '../tab/types.js';
 import type { AcpPendingPrompt } from './prompt-state.js';
-import type { AcpLoopDeps, AcpSession } from './types.js';
+import type { AcpLoopDeps, AcpLoopHandlers, AcpLoopSession, AcpPromptHandlers, AcpSession } from './types.js';
 import type { NativeCommandSettingsManager } from '../native-commands/manager.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { BROWSER_PRIMER } from '../browser/command.js';
@@ -63,28 +63,37 @@ function harness(options: Omit<StartOptions, 'commands' | 'roleName'> = {}) {
   const managers = {
     tab: {
       updateRunning: vi.fn(),
+      append: vi.fn(),
       byLabel: vi.fn(() => options.tab),
       workingDirOf: vi.fn(() => '/project'),
       launchDir: options.launchDir ?? '/launch',
     },
-    acpRecords: {},
+    acpRecords: { activity: vi.fn() },
     command: { dispatchNativeLine },
     ...(options.settings && { nativeCommandSettings: options.settings }),
   } as unknown as Managers;
   const runtime = { acpWithoutTools: options.withoutTools ?? false, acpRoles: {} } as unknown as TabRuntime;
-  const session = { prompt: vi.fn() } as unknown as AcpSession;
-  const start = (role: 'ask' | 'tell' = 'ask', commands: string[] = ['db sqlite query'], roleName: string = role) => {
+  const providerPrompt = vi.fn();
+  const session = { prompt: providerPrompt } as unknown as AcpSession;
+  const start = (
+    role: 'ask' | 'tell' = 'ask', commands: string[] = ['db sqlite query'], roleName: string = role, recordId?: string,
+  ) => {
     const request: AcpPendingPrompt = {
       finish: vi.fn(), abort: new AbortController(), prompt: 'instructions', role,
-      roleName, commands, runningEntries: new Set(),
+      roleName, commands, runningEntries: new Set(), ...(recordId !== undefined && { recordId }),
     };
-    (runtime as unknown as { acpRoles: Record<string, unknown> }).acpRoles[role] = { prompt: request };
+    (runtime as unknown as { acpRoles: Record<string, unknown> }).acpRoles[role] = {
+      prompt: request, ...(recordId !== undefined && { recordId }),
+    };
     mocks.runAcpToolLoop.mockClear();
     runCorePrompt(managers, 'shell', runtime, request, session, 'session', () => true);
-    const deps = mocks.runAcpToolLoop.mock.calls.at(-1)?.[2] as AcpLoopDeps;
-    return { deps, request };
+    const call = mocks.runAcpToolLoop.mock.calls.at(-1);
+    const deps = call?.[2] as AcpLoopDeps;
+    const handlers = call?.[3] as AcpLoopHandlers;
+    const loopSession = call?.[0] as AcpLoopSession;
+    return { deps, request, handlers, session: loopSession };
   };
-  return { managers, dispatchNativeLine, start };
+  return { managers, dispatchNativeLine, providerPrompt, start };
 }
 
 function primer(role: 'ask' | 'tell', options: StartOptions = {}): string {
@@ -183,12 +192,57 @@ describe('runCorePrompt tool runner', () => {
     ['agent-off', { effectiveAgentAccess: false }],
   ])('refuses a %s command synchronously and raises the disabled notification', (_state, setting) => {
     const { start, managers, dispatchNativeLine } = harness({ settings: settingsWith({ 'db sqlite query': setting }) });
-    const { deps } = start('ask', ['db sqlite query']);
-    expect(deps.runCommand('db sqlite query shop SELECT 1')).toBe('Command is disabled: db sqlite query.');
+    const { deps, handlers } = start('ask', ['db sqlite query']);
+    const command = 'db sqlite query shop SELECT 1';
+    const refusal = deps.runCommand(command);
+    expect(refusal).toBe('Command is disabled: db sqlite query.');
+    expect(mocks.notify).not.toHaveBeenCalledWith(expect.anything(), 'command-disabled', expect.anything(), expect.anything());
+    handlers.ranCommand(command, refusal as string);
     expect(mocks.notify).toHaveBeenCalledWith(
       managers, 'command-disabled', 'shell', 'Command is disabled: db sqlite query.',
     );
     expect(dispatchNativeLine).not.toHaveBeenCalled();
+  });
+
+  it('caps the loop at eight tool steps', () => {
+    const { start } = harness();
+    expect(start('ask', ['db sqlite query']).deps.maxSteps).toBe(8);
+  });
+
+  it('records the command and its result, and appends the result entry', async () => {
+    const { start, managers } = harness({ settings: settingsWith({}) });
+    const { deps, handlers } = start('ask', ['db sqlite query'], 'ask', 'record-1');
+    const command = 'db sqlite query shop SELECT 1';
+    const result = await deps.runCommand(command);
+    expect(managers.acpRecords.activity).toHaveBeenCalledTimes(1);
+    expect(managers.acpRecords.activity).toHaveBeenCalledWith('record-1', 'tool', command);
+    handlers.ranCommand(command, result);
+    expect(managers.acpRecords.activity).toHaveBeenLastCalledWith('record-1', 'tool', 'dispatched output');
+    expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: command, output: 'dispatched output', acp: true });
+  });
+
+  it('runs, records, and settles nothing after the prompt is aborted', () => {
+    const { start, managers, dispatchNativeLine } = harness({ settings: settingsWith({}) });
+    const { deps, handlers, request } = start('ask', ['db sqlite query'], 'ask', 'record-1');
+    request.abort.abort();
+    expect(() => deps.runCommand('db sqlite query shop SELECT 1')).toThrow('ACP: prompt cancelled.');
+    expect(dispatchNativeLine).not.toHaveBeenCalled();
+    handlers.ranCommand('db sqlite query shop SELECT 1', 'late');
+    handlers.finished('answered', 8);
+    expect(managers.acpRecords.activity).not.toHaveBeenCalled();
+    expect(managers.tab.append).not.toHaveBeenCalled();
+    expect(mocks.notify).not.toHaveBeenCalledWith(expect.anything(), 'state-change', expect.anything());
+  });
+
+  it('drops a provider error that arrives after the abort', () => {
+    const { start, providerPrompt } = harness();
+    const { session, request } = start('ask', ['db sqlite query']);
+    const spyHandlers: AcpPromptHandlers = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
+    session.prompt('hello', spyHandlers);
+    const forwarded = providerPrompt.mock.calls.at(-1)?.[1] as AcpPromptHandlers;
+    request.abort.abort();
+    forwarded.onError('late failure');
+    expect(spyHandlers.onError).not.toHaveBeenCalled();
   });
 
   it('returns the role refusal for an ungranted enabled command without a notification', () => {
