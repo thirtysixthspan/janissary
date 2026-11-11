@@ -1,4 +1,5 @@
 import { readFileSync, realpathSync, statSync } from 'node:fs';
+import { homedir } from 'node:os';
 import path from 'node:path';
 import { containedAbsolute } from '../path-containment.js';
 import { SECRET_DENY_PATHS } from '../sandbox/paths.js';
@@ -25,6 +26,26 @@ function isSecretPath(relative: string): boolean {
   return SECRET_SEGMENT_RUNS.some((run) => containsRun(segments, run));
 }
 
+function resolveOrSelf(location: string): string {
+  try {
+    return realpathSync(location);
+  } catch {
+    return location;
+  }
+}
+
+// The reader runs outside the sandbox on an agent's behalf, so it must deny what the Seatbelt rule
+// built from the same table denies, anchored the same way: each entry under the real home
+// directory, in its literal and resolved forms, whatever root the read started from.
+function isUnderHomeSecret(realFile: string): boolean {
+  const home = resolveOrSelf(homedir());
+  const file = realFile.toLowerCase();
+  return SECRET_DENY_PATHS.some((entry) => {
+    const literal = path.join(home, entry);
+    return [literal, resolveOrSelf(literal)].some((location) => containedAbsolute(location.toLowerCase(), file));
+  });
+}
+
 function checkLexical(root: string, requested: string): ReadFailure | undefined {
   if (path.isAbsolute(requested)) return 'Outside the workspace';
   const resolved = path.resolve(root, requested);
@@ -38,6 +59,7 @@ function loadBytes(root: string, requested: string): Buffer | ReadFailure {
     const realFile = realpathSync(path.resolve(root, requested));
     if (!containedAbsolute(realRoot, realFile)) return 'Outside the workspace';
     if (isSecretPath(path.relative(realRoot, realFile))) return 'Secret file';
+    if (isUnderHomeSecret(realFile)) return 'Secret file';
     const stats = statSync(realFile);
     if (stats.isDirectory()) return 'Is a directory';
     if (!stats.isFile()) return 'Not a text file';

@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, truncateSync, writeFileSyn
 import { createServer, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FILE_READ_MAX_LIMIT, FILE_READ_USAGE, parseFileRead, type FileReadArgs } from './command.js';
 import { FILE_READ_MAX_BYTES, readWorkspaceCommand, readWorkspaceLines } from './read.js';
 
@@ -172,6 +172,53 @@ describe('readWorkspaceLines secrets', () => {
   it('reports a missing secret as secret', () => {
     expect(read('.env')).toBe('Secret file: .env.');
     expect(read('foo/../.env')).toBe('Secret file: foo/../.env.');
+  });
+});
+
+describe('readWorkspaceLines secrets under the home directory', () => {
+  let home: string;
+
+  beforeEach(() => {
+    home = mkdtempSync(path.join(tmpdir(), 'janus-file-read-home-'));
+    vi.stubEnv('HOME', home);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  function writeAt(base: string, relative: string, content: string): void {
+    const target = path.join(base, relative);
+    mkdirSync(path.dirname(target), { recursive: true });
+    writeFileSync(target, content);
+  }
+
+  it.each([
+    ['.config', 'gh/hosts.yml'],
+    ['.ssh', 'id_rsa'],
+    ['.local/share', 'opencode/auth.json'],
+  ])('refuses a secret under a root at ~/%s', (rootEntry, name) => {
+    writeAt(path.join(home, rootEntry), name, 'token\n');
+    expect(readWorkspaceLines(path.join(home, rootEntry), args(name))).toBe(`Secret file: ${name}.`);
+  });
+
+  it('reads an ordinary file under a root at ~/.config', () => {
+    writeAt(path.join(home, '.config'), 'other.txt', 'hello\n');
+    expect(readWorkspaceLines(path.join(home, '.config'), args('other.txt'))).toBe('1\thello');
+  });
+
+  it('reads a file under a .ssh ancestor that is not in the home directory', () => {
+    const projectRoot = path.join(outside, '.ssh', 'proj');
+    writeAt(projectRoot, 'a.txt', 'hello\n');
+    expect(readWorkspaceLines(projectRoot, args('a.txt'))).toBe('1\thello');
+  });
+
+  it('refuses a secret reached through the target of a symlinked ~/.config', () => {
+    const dotfiles = path.join(outside, 'dotfiles', 'config');
+    writeAt(dotfiles, 'gh/hosts.yml', 'token\n');
+    symlinkSync(dotfiles, path.join(home, '.config'));
+    expect(readWorkspaceLines(dotfiles, args('gh/hosts.yml'))).toBe('Secret file: gh/hosts.yml.');
   });
 });
 
