@@ -86,6 +86,7 @@ vi.mock('@xterm/xterm', () => ({
     textarea = undefined;
     buffer = { active: fakeActiveBuffer(() => this.lines) };
     onCursorMove() { return { dispose: () => {} }; }
+    onWriteParsed() { return { dispose: () => {} }; }
     registerMarker() { return { line: 0, dispose: () => {} }; }
     registerDecoration() {
       const element = document.createElement('div');

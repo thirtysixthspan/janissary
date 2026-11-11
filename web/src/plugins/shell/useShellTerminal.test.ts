@@ -37,6 +37,7 @@ vi.mock('@xterm/xterm', () => ({
     textarea = undefined;
     buffer = { active: { baseY: 0, cursorY: 0, type: 'normal' } };
     onCursorMove() { return { dispose: () => {} }; }
+    onWriteParsed() { return { dispose: () => {} }; }
     registerMarker() { return { line: 0, dispose: () => {} }; }
     registerDecoration() {}
     onData(handler: (data: string) => void) { terminalDataHandlers.push(handler); }

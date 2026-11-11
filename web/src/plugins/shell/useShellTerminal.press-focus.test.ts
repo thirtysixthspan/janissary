@@ -40,6 +40,7 @@ vi.mock('@xterm/xterm', () => ({
     clearSelection() {}
     attachCustomKeyEventHandler() {}
     onCursorMove() { return { dispose: () => {} }; }
+    onWriteParsed() { return { dispose: () => {} }; }
     registerMarker() { return { line: 0, dispose: () => {} }; }
     registerDecoration() {}
     onData() {}
