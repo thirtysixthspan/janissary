@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import type { AcpRunSnapshot, AcpRunSnapshotRow } from './types.js';
-import { corePrimer } from './drive-loop.js';
+import { describe, expect, it, vi } from 'vitest';
+import type { AcpLoopHandlers, AcpLoopSession, AcpRunSnapshot, AcpRunSnapshotRow } from './types.js';
+import { corePrimer, driveToolLoop, runToolLoop } from './drive-loop.js';
 import { createAcpToolTable } from './tool-table.js';
 import { NO_BUILTIN_TOOLS_LINE, NO_TOOLS_LINE } from './internal-tools.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
@@ -54,5 +54,131 @@ describe('corePrimer', () => {
   it('gives only the no-tools line and Markdown when the caller passes no tools', () => {
     const snapshot = coreSnapshot('ask', ['db sqlite query'], [], true);
     expect(corePrimer(snapshot, [])).toBe([NO_TOOLS_LINE, MARKDOWN_INSTRUCTION].join('\n\n'));
+  });
+});
+
+const QUERY = 'db sqlite query movies SELECT 1';
+
+function makeSession(replies: string[]) {
+  const sent: string[] = [];
+  let index = 0;
+  const session: AcpLoopSession = {
+    prompt(text, h) {
+      sent.push(text);
+      const reply = replies[Math.min(index, replies.length - 1)] ?? '';
+      index++;
+      h.onChunk(reply);
+      h.onEnd('end_turn');
+    },
+  };
+  return { session, sent };
+}
+
+function makeHandlers() {
+  const events: unknown[][] = [];
+  const h: AcpLoopHandlers = {
+    startTurn: (isFirst) => { events.push(['startTurn', isFirst]); },
+    chunk: (c) => { events.push(['chunk', c]); },
+    endTurn: (f) => { events.push(['endTurn', f]); },
+    startCommand: (command, workspace) => { events.push(['startCommand', command, workspace]); },
+    ranCommand: (command, result, workspace, refused) => {
+      events.push(['ranCommand', command, result, workspace, refused]);
+    },
+    finished: (reason, max) => { events.push(['finished', reason, max]); },
+    error: (m) => { events.push(['error', m]); },
+  };
+  return { h, events };
+}
+
+function drive(snapshot: CoreSnapshot, replies: string[]) {
+  const { session, sent } = makeSession(replies);
+  const { h, events } = makeHandlers();
+  const host = { runCaller: vi.fn(() => 'caller output'), runWorkspace: vi.fn(() => 'workspace output') };
+  driveToolLoop(session, 'do it', snapshot, host, h, new AbortController().signal);
+  return { sent, events, host };
+}
+
+const ofKind = (events: unknown[][], kind: string) => events.filter((event) => event[0] === kind);
+
+describe('driveToolLoop', () => {
+  it('routes a caller command to runCaller and feeds its output back', () => {
+    const { sent, host } = drive(coreSnapshot('tell', ['db sqlite query']), [QUERY, 'Done.']);
+    expect(host.runCaller).toHaveBeenCalledExactlyOnceWith(QUERY);
+    expect(host.runWorkspace).not.toHaveBeenCalled();
+    expect(sent[1]).toContain(`Output of \`${QUERY}\`:`);
+    expect(sent[1]).toContain('caller output');
+  });
+
+  it('routes a file read to runWorkspace and feeds its output back', () => {
+    const { sent, host } = drive(coreSnapshot('tell', ['file read']), ['file read notes.md', 'Done.']);
+    expect(host.runWorkspace).toHaveBeenCalledExactlyOnceWith('file read notes.md');
+    expect(host.runCaller).not.toHaveBeenCalled();
+    expect(sent[1]).toContain('workspace output');
+  });
+
+  it('fires events in order for one caller step and a plain answer', () => {
+    const { events } = drive(coreSnapshot('tell', ['db sqlite query']), [QUERY, 'Done.']);
+    expect(events).toEqual([
+      ['startTurn', true],
+      ['chunk', QUERY],
+      ['endTurn', ''],
+      ['startCommand', QUERY, false],
+      ['ranCommand', QUERY, 'caller output', false, undefined],
+      ['startTurn', false],
+      ['chunk', 'Done.'],
+      ['endTurn', 'Done.'],
+      ['finished', 'answered', 8],
+    ]);
+  });
+
+  it('reports a file read step as a workspace step', () => {
+    const { events } = drive(coreSnapshot('tell', ['file read']), ['file read notes.md', 'Done.']);
+    expect(ofKind(events, 'startCommand')).toEqual([['startCommand', 'file read notes.md', true]]);
+    expect(ofKind(events, 'ranCommand')).toEqual([
+      ['ranCommand', 'file read notes.md', 'workspace output', true, undefined],
+    ]);
+  });
+
+  it('returns a disabled refusal as one step without calling the host', () => {
+    const snapshot = coreSnapshot('tell', ['db sqlite query'], [
+      { name: 'db sqlite query', effectiveEnabled: true, effectiveAgentAccess: false },
+    ]);
+    const { sent, events, host } = drive(snapshot, [QUERY, 'Done.']);
+    const refusal = 'Command is disabled: db sqlite query.';
+    expect(ofKind(events, 'startCommand')).toEqual([['startCommand', QUERY, false]]);
+    expect(ofKind(events, 'ranCommand')).toEqual([['ranCommand', QUERY, refusal, false, 'disabled']]);
+    expect(events.findIndex((e) => e[0] === 'startCommand')).toBeLessThan(events.findIndex((e) => e[0] === 'ranCommand'));
+    expect(host.runCaller).not.toHaveBeenCalled();
+    expect(host.runWorkspace).not.toHaveBeenCalled();
+    expect(sent[1]).toContain(refusal);
+  });
+
+  it('returns a role refusal as one step without calling the host', () => {
+    const { sent, events, host } = drive(coreSnapshot('ask', ['db sqlite list']), [QUERY, 'Done.']);
+    const refusal = 'Command not allowed for role "ask": db sqlite query.';
+    expect(ofKind(events, 'startCommand')).toEqual([['startCommand', QUERY, false]]);
+    expect(ofKind(events, 'ranCommand')).toEqual([['ranCommand', QUERY, refusal, false, undefined]]);
+    expect(host.runCaller).not.toHaveBeenCalled();
+    expect(host.runWorkspace).not.toHaveBeenCalled();
+    expect(sent[1]).toContain(refusal);
+  });
+
+  it('stops after eight steps with the capped reason', () => {
+    const { events, host } = drive(coreSnapshot('tell', ['db sqlite query']), [QUERY]);
+    expect(host.runCaller).toHaveBeenCalledTimes(8);
+    expect(ofKind(events, 'ranCommand')).toHaveLength(8);
+    expect(events.at(-1)).toEqual(['finished', 'capped', 8]);
+  });
+});
+
+describe('runToolLoop', () => {
+  it('drives a core run through the gate-and-route driver', () => {
+    const { session, sent } = makeSession([QUERY, 'Done.']);
+    const { h, events } = makeHandlers();
+    const host = { runCaller: vi.fn(() => 'caller output'), runWorkspace: vi.fn(() => 'workspace output') };
+    runToolLoop(session, 'do it', coreSnapshot('tell', ['db sqlite query']), host, h, new AbortController().signal);
+    expect(host.runCaller).toHaveBeenCalledExactlyOnceWith(QUERY);
+    expect(sent[1]).toContain('caller output');
+    expect(events.at(-1)).toEqual(['finished', 'answered', 8]);
   });
 });
