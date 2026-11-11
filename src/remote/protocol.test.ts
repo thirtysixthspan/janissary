@@ -9,6 +9,67 @@ function roundTrip(frame: RemoteFrame): RemoteFrame | { error: string } {
   return decodeFrame(encodeFrame(frame));
 }
 
+describe('acp-run codec', () => {
+  const row = { name: 'file read', effectiveEnabled: false, effectiveAgentAccess: false };
+  const core = { kind: 'core', role: 'ask', roleName: 'reader', grants: ['file read'], rows: [row], withoutTools: false } as const;
+  const agent = { kind: 'agent', grants: ['file'], askUser: false } as const;
+
+  it.each([core, agent])('round-trips a $kind snapshot with control bytes', (snapshot) => {
+    const frame: ClientFrame = { type: 'acp-run', id: 'run1', text: 'first\nsecond\u{1}', snapshot };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toMatchObject({ text: Buffer.from(frame.text).toString('base64') });
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it('accepts empty text, grants, and rows', () => {
+    const frame: ClientFrame = {
+      type: 'acp-run', id: 'run1', text: '', snapshot: { ...core, grants: [], rows: [] },
+    };
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it.each([
+    ['missing id', { text: '', snapshot: agent }],
+    ['empty id', { id: '', text: '', snapshot: agent }],
+    ['non-string id', { id: 1, text: '', snapshot: agent }],
+    ['non-string text', { id: 'run1', text: 1, snapshot: agent }],
+  ])('refuses %s', (_label, fields) => {
+    expect(decodeFrame(JSON.stringify({ type: 'acp-run', ...fields }))).toEqual({ error: 'Malformed remote frame "acp-run".' });
+  });
+
+  it.each([
+    ['missing snapshot', undefined],
+    ['unknown kind', { ...core, kind: 'other' }],
+    ['bad role', { ...core, role: 'other' }],
+    ['empty role name', { ...core, roleName: '' }],
+    ['non-string role name', { ...core, roleName: 1 }],
+    ['non-array core grants', { ...core, grants: 'file' }],
+    ['non-string core grant', { ...core, grants: [1] }],
+    ['non-array agent grants', { ...agent, grants: 'file' }],
+    ['non-string agent grant', { ...agent, grants: [1] }],
+    ['bad rows', { ...core, rows: {} }],
+    ['bad row', { ...core, rows: [null] }],
+    ['bad row name', { ...core, rows: [{ ...row, name: 1 }] }],
+    ['bad row enabled', { ...core, rows: [{ ...row, effectiveEnabled: 1 }] }],
+    ['missing row access', { ...core, rows: [{ name: 'file read', effectiveEnabled: true }] }],
+    ['bad row access', { ...core, rows: [{ ...row, effectiveAgentAccess: 1 }] }],
+    ['bad withoutTools', { ...core, withoutTools: 1 }],
+    ['missing askUser', { kind: 'agent', grants: [] }],
+    ['bad askUser', { ...agent, askUser: 1 }],
+  ])('refuses a snapshot with %s', (_label, snapshot) => {
+    const raw = { type: 'acp-run', id: 'run1', text: '', snapshot };
+    expect(decodeFrame(JSON.stringify(raw))).toEqual({ error: 'Malformed remote frame "acp-run".' });
+  });
+
+  it('drops undeclared frame, snapshot, and row fields', () => {
+    const raw = {
+      type: 'acp-run', id: 'run1', text: '', extra: 'drop',
+      snapshot: { ...core, extra: 'drop', rows: [{ ...row, extra: 'drop' }] },
+    };
+    expect(decodeFrame(JSON.stringify(raw))).toEqual({ type: 'acp-run', id: 'run1', text: '', snapshot: core });
+  });
+});
+
 describe('frame codec', () => {
   it('ties filesystem request arguments to their operation', () => {
     const request: ClientFrame = {
@@ -544,6 +605,7 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
     sessionMeta: { claudeCode: { options: { tools: [] } } },
   },
   'acp-prompt': { type: 'acp-prompt', id: 'racp1', text: 'summarize this project' },
+  'acp-run': { type: 'acp-run', id: 'racp1', text: 'summarize this project', snapshot: { kind: 'agent', grants: ['file'], askUser: true } },
   'acp-close': { type: 'acp-close', id: 'racp1' },
   'acp-cancel': { type: 'acp-cancel', id: 'racp1' },
   'attach-result': { type: 'attach-result', accepted: true, truncated: true },
@@ -705,7 +767,7 @@ describe('protocol version', () => {
 describe('admitted frame types', () => {
   it('admits exactly the declared client frame types', () => {
     expect(Object.keys(CLIENT_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-cancel', 'acp-close', 'acp-open', 'acp-prompt', 'agent-resolve', 'attach', 'capture-request', 'clone-answer',
+      'acp-cancel', 'acp-close', 'acp-open', 'acp-prompt', 'acp-run', 'agent-resolve', 'attach', 'capture-request', 'clone-answer',
       'filesystem-close', 'filesystem-open', 'filesystem-request',
       'input', 'kill', 'provision', 'resize', 'resume-ack', 'session-state', 'shutdown', 'spawn',
     ]);

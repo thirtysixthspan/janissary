@@ -1,6 +1,12 @@
 import type { AcpRunSnapshot, AcpRunSnapshotRow } from '../../acp/types.js';
 import { isRecord } from '../../value-guards.js';
-import { nonEmptyString } from './decode-shared.js';
+import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js';
+
+export function decodeAcpRun(record: Record<string, unknown>): DecodeResult {
+  const snapshot = decodeAcpRunSnapshot(record.snapshot);
+  if (!nonEmptyString(record.id) || typeof record.text !== 'string' || !snapshot) return malformed('acp-run');
+  return { type: 'acp-run', id: record.id, text: Buffer.from(record.text, 'base64').toString('utf8'), snapshot };
+}
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');

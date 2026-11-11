@@ -241,6 +241,7 @@ function toWire(frame: RemoteFrame): Record<string, unknown> {
   if (frame.type === 'shell-history') {
     return { ...frame, runs: frame.runs.map((run) => ({ ...run, text: encodeText(run.text) })) };
   }
+  if (frame.type === 'acp-run') return { ...frame, text: encodeText(frame.text) };
   if (frame.type === 'acp-prompt' || frame.type === 'acp-chunk') return { ...frame, text: encodeText(frame.text) };
   if (frame.type === 'acp-activity') return { ...frame, text: encodeText(frame.text) };
   if (frame.type === 'gate-event' && frame.capture !== undefined) return { ...frame, capture: encodeText(frame.capture) };

@@ -5,6 +5,7 @@ import type { ResumeReset } from '../harness/auto-resume.js';
 import type { HistoryStep } from '../file-navigator/moves.js';
 import type { AgentSnapshot } from '../agent/types.js';
 import type { AcpActivityKind } from '../acp/activity.js';
+import type { AcpRunSnapshot } from '../acp/types.js';
 import type { SearchRequest } from '../protocol.js';
 import type { DiffSource } from '../plugins/diff/shared.js';
 
@@ -154,6 +155,7 @@ export type ClientFrame =
     sessionMeta?: Record<string, unknown>;
   }
   | { type: 'acp-prompt'; id: string; text: string }
+  | { type: 'acp-run'; id: string; text: string; snapshot: AcpRunSnapshot }
   | { type: 'acp-cancel'; id: string }
   | { type: 'acp-close'; id: string };
 
@@ -292,7 +294,7 @@ export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
   provision: true, 'clone-answer': true, spawn: true, input: true, resize: true, kill: true, 'capture-request': true, 'resume-ack': true,
   'filesystem-open': true, 'filesystem-close': true, 'filesystem-request': true,
   'agent-resolve': true,
-  'acp-open': true, 'acp-prompt': true, 'acp-cancel': true, 'acp-close': true,
+  'acp-open': true, 'acp-prompt': true, 'acp-run': true, 'acp-cancel': true, 'acp-close': true,
 };
 export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'attach-result': true, 'session-state-result': true, 'clone-offer': true, 'root-refused': true,

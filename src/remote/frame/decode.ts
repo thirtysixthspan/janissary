@@ -1,4 +1,5 @@
 import type { RemoteFrame } from '../protocol-frames.js';
+import { decodeAcpRun } from './decode-acp-run.js';
 import { malformed, type DecodeResult } from './decode-shared.js';
 import { decodeFilesystemFrame } from './decode-filesystem.js';
 import { decodeAgentResolve, decodeAgentResolveResult } from './decode-agent.js';
@@ -75,6 +76,7 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'agent-resolve': { return decodeAgentResolve(record); }
   case 'agent-resolve-result': { return decodeAgentResolveResult(record); }
   case 'acp-open': { return decodeAcpOpen(record); }
+  case 'acp-run': { return decodeAcpRun(record); }
   case 'acp-prompt':
   case 'acp-chunk': { return decodeAcpText(type, record); }
   case 'acp-close':
