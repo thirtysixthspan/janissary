@@ -25,9 +25,22 @@ type CoreSnapshot = Extract<AcpRunSnapshot, { kind: 'core' }>;
 
 type DrivenStep = { workspace: boolean; refused?: 'disabled' };
 
+async function settleUnlessAborted(result: Promise<string>, signal: AbortSignal): Promise<string> {
+  try {
+    return await result;
+  } catch (error) {
+    if (signal.aborted) return '';
+    throw error;
+  }
+}
+
+function dropLateRejection(result: string | Promise<string>, signal: AbortSignal): string | Promise<string> {
+  return result instanceof Promise ? settleUnlessAborted(result, signal) : result;
+}
+
 function gatedRunner(
   snapshot: CoreSnapshot, tools: readonly AcpTool[], host: AcpToolHost, events: AcpLoopHandlers,
-  remember: (step: DrivenStep) => void,
+  remember: (step: DrivenStep) => void, signal: AbortSignal,
 ): (command: string) => string | Promise<string> {
   return (command) => {
     const decision = gateCommand(snapshot, tools, command);
@@ -39,7 +52,7 @@ function gatedRunner(
     const workspace = decision.runsOn === 'workspace';
     remember({ workspace });
     events.startCommand?.(command, workspace);
-    return workspace ? host.runWorkspace(command) : host.runCaller(command);
+    return dropLateRejection(workspace ? host.runWorkspace(command) : host.runCaller(command), signal);
   };
 }
 
@@ -49,7 +62,7 @@ export function driveToolLoop(
 ): void {
   const tools: AcpTool[] = snapshot.withoutTools ? [] : createAcpToolTable(snapshot.grants);
   let step: DrivenStep = { workspace: false };
-  const runCommand = gatedRunner(snapshot, tools, host, events, (next) => { step = next; });
+  const runCommand = gatedRunner(snapshot, tools, host, events, (next) => { step = next; }, signal);
   runAcpToolLoop(session, prompt, {
     signal,
     primer: corePrimer(snapshot, tools),

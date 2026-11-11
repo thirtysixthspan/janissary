@@ -98,7 +98,26 @@ function drive(snapshot: CoreSnapshot, replies: string[]) {
   return { sent, events, host };
 }
 
-const ofKind = (events: unknown[][], kind: string) => events.filter((event) => event[0] === kind);
+function drivePending() {
+  const { session, sent } = makeSession([QUERY, 'Done.']);
+  const { h, events } = makeHandlers();
+  const controller = new AbortController();
+  const { promise, resolve, reject } = Promise.withResolvers<string>();
+  const host = { runCaller: vi.fn(() => promise), runWorkspace: vi.fn(() => 'workspace output') };
+  driveToolLoop(session, 'do it', coreSnapshot('tell', ['db sqlite query']), host, h, controller.signal);
+  return { sent, events, host, controller, resolve, reject };
+}
+
+const flush = () => new Promise((r) => setTimeout(r, 0));
+
+const PENDING_EVENTS = [
+  ['startTurn', true],
+  ['chunk', QUERY],
+  ['endTurn', ''],
+  ['startCommand', QUERY, false],
+];
+
+const ofKind =(events: unknown[][], kind: string) => events.filter((event) => event[0] === kind);
 
 describe('driveToolLoop', () => {
   it('routes a caller command to runCaller and feeds its output back', () => {
@@ -168,6 +187,35 @@ describe('driveToolLoop', () => {
     expect(host.runCaller).toHaveBeenCalledTimes(8);
     expect(ofKind(events, 'ranCommand')).toHaveLength(8);
     expect(events.at(-1)).toEqual(['finished', 'capped', 8]);
+  });
+
+  it('drops a host result that arrives after the abort', async () => {
+    const { sent, events, host, controller, resolve } = drivePending();
+    expect(host.runCaller).toHaveBeenCalledExactlyOnceWith(QUERY);
+    controller.abort();
+    resolve('caller output');
+    await flush();
+    expect(events).toEqual(PENDING_EVENTS);
+    expect(sent).toHaveLength(1);
+  });
+
+  it('drops a host rejection that arrives after the abort', async () => {
+    const { sent, events, host, controller, reject } = drivePending();
+    expect(host.runCaller).toHaveBeenCalledExactlyOnceWith(QUERY);
+    controller.abort();
+    reject(new Error('host failed'));
+    await flush();
+    expect(events).toEqual(PENDING_EVENTS);
+    expect(sent).toHaveLength(1);
+  });
+
+  it('reports a host rejection before any abort as one error', async () => {
+    const { sent, events, host, reject } = drivePending();
+    expect(host.runCaller).toHaveBeenCalledExactlyOnceWith(QUERY);
+    reject(new Error('host failed'));
+    await vi.waitFor(() => { expect(ofKind(events, 'error')).toEqual([['error', 'host failed']]); });
+    expect(ofKind(events, 'ranCommand')).toEqual([]);
+    expect(sent).toHaveLength(1);
   });
 });
 
