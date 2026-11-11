@@ -172,8 +172,8 @@ directory shorten to `~`.
 `$root/workspace/git-sync`, which gets its own shorter name: `$git-sync`. It wins over `$root`, so a
 synced file's editor tab shows its location as `$git-sync/product/backlog/issues.md`, and the clone
 itself appears as `$git-sync/`. Only the clone named exactly `git-sync` gets this name. A sibling
-folder such as `git-sync-old` keeps the ordinary `$root/workspace/git-sync-old` form. Like
-`$workspace`, `$git-sync` is display-only — you can't type it as a path.
+folder such as `git-sync-old` keeps the ordinary `$root/workspace/git-sync-old` form.
+`$git-sync` is display-only; you can't type it as a path.
 
 A [workspaced](/user-documentation/advanced-agents/workspaced-agent) tab's metadata row shortens
 one step further: the clone reads as `$workspace/<name>` (its own directory name, e.g.
@@ -195,8 +195,9 @@ shortening. One line is the exception: a directory a remote host was asked to us
 and could not — a missing path, a folder with no `origin`, an occupied home-directory target — keeps
 its absolute path, since `$root` would misname it and it is the one thing on the line you can go and
 fix. See [Remote agents](/user-documentation/advanced-agents/remote-agents#when-the-name-is-already-in-use).
-Everything here is display-only. The underlying absolute paths do not change, and the raw output of
-your shell commands is never rewritten.
+The display abbreviations leave underlying absolute paths unchanged, and the raw output of your shell commands is never rewritten.
+
+Shells and harnesses also receive `$root` as the project directory, `$workspace` as the directory containing its workspace clones, and `$janissary` as the running Janissary installation. In a shell command, `"$workspace/emrah"` expands to that clone's full path, including the hidden state directory. On a remote host these variables name directories on that host. The variables remain available when workspace isolation is off, and the standard Codex configuration preserves them for commands the harness runs.
 
 You can also type `$root` or `~` at the start of a path passed to `open`, `edit`, `newfile`, `newdir`, or `files`:
 

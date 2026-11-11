@@ -56,6 +56,22 @@ describe('scaffoldProject', () => {
     expect(config).toContain('GITHUB_TOKEN = "include"');
   });
 
+  it.each(['new', 'existing'])('preserves spawn path variables in %s Codex configuration', (state) => {
+    const configPath = path.join(projectDir, '.codex', 'config.toml');
+    if (state === 'existing') {
+      mkdirSync(path.dirname(configPath), { recursive: true });
+      writeFileSync(configPath, '[shell_environment_policy.filters]\nPATH = "include"\n');
+    }
+
+    scaffoldProject(projectDir);
+
+    const config = readFileSync(configPath, 'utf8');
+    const filters = config.split('[shell_environment_policy.filters]', 2)[1].split('[features]', 1)[0];
+    for (const variable of ['janissary', 'root', 'workspace']) {
+      expect(filters).toContain(`${variable} = "include"`);
+    }
+  });
+
   it('installs Codex permission defaults without the ignored sandbox_permissions setting', () => {
     scaffoldProject(projectDir);
 

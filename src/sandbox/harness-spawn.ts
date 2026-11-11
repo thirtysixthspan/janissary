@@ -8,8 +8,8 @@ import {
   HOME_WRITE_CARVEOUTS, HOME_READ_CARVEINS, SECRET_DENY_PATHS, HOME_READ_LISTING_DIRS, HOME_WRITE_PREFIX_CARVEOUTS,
   WRITE_CARVEOUT_PARAMS, READ_CARVEIN_PARAMS, SECRET_DENY_PARAMS, LISTING_DIR_PARAMS, WRITE_PREFIX_PARAMS,
 } from './paths.js';
-import { janissaryRoot, janissaryAiDir, janissaryScriptsDir, janissarySecurityDir, JANISSARY_HOME_ENV } from '../janissary-root.js';
-import { scrubEnv, workspaceEnv } from './environment.js';
+import { janissaryRoot, janissaryAiDir, janissaryScriptsDir, janissarySecurityDir } from '../janissary-root.js';
+import { scrubEnv, workspaceEnv, withJanissaryHome } from './environment.js';
 import { containedStrictly } from '../path-containment.js';
 import type { ProjectTokens } from '../project/tokens.js';
 import { roleAdapterReadDirs, type AdapterReadDir } from './role-adapter-reads.js';
@@ -156,7 +156,7 @@ export function confinedHarnessSpawn(
   const tmpDir = resolvePath(options.tmpDir ?? `${dir}.tmp`);
   const home = resolvePath(homedir());
   const darwinCacheDir = darwinUserCacheDir();
-  const scrubbed = scrubEnv(env);
+  const scrubbed = withJanissaryHome(scrubEnv(env));
   scrubbed.TMPDIR = tmpDir;
 
   const gitObjects = parentGitObjectsDir(dir);
@@ -173,7 +173,6 @@ export function confinedHarnessSpawn(
     .filter((skillDir) => containedStrictly(installedSkillsRealRoot, resolvePath(skillDir)));
 
   scrubbed.JANISSARY_NODE = process.execPath;
-  scrubbed[JANISSARY_HOME_ENV] = janissaryRoot();
   Object.assign(scrubbed, workspaceEnv(tmpDir, options.tokens ?? {}));
 
   const profile = skillDirs.length > 0 || executable.adapterReads.length > 0
