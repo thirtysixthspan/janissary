@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Complete the file command help page's list of inputs that print the usage line, so it says a second path argument (including a path containing spaces) and a path starting with `--` are refused.
-
-Existing Issue: The help page presents the inputs that print the usage line as a complete list, but the parser also prints usage for any second positional argument and for a path token beginning with `--`, so a user typing `file read my notes.md` gets the usage line with no documented reason and no hint that paths containing whitespace cannot be read at all. Severity: 3/10
-
-Existing Risk: 3/10 - Users with spaces in a file name repeatedly retype a command that can never succeed, and the help page they consult tells them their input is valid.
-
-Proposal Risk: 1/10 - The page and the parser agree; the inability to read a whitespace path remains a parser limitation, now stated where a user looks, and a later parser change that adds quoting would need to update the sentence.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1992 "document every input that makes file read print its usage line". In `help/file.md`, extend the paragraph that begins "Bare `file`, `file read` without a path, …" so it also names a second path argument and a path that starts with `--`, and add one sentence saying the path is a single whitespace-free token, so a path containing spaces cannot be read with this command. Base each clause on `scanArguments` and `parseFileRead` in `src/file-read/command.ts` (whitespace split on `\s+`; a token starting with `--` other than `--offset`/`--limit` returns undefined; a second non-flag token when `scanned.path` is already set returns undefined). Do not change the parser. Keep the `help/commands.md` row unchanged. Verify by rereading each clause against `src/file-read/command.test.ts`, which already pins these usage cases, and run the diff-scoped checks so `src/commands.test.ts` (help page and row pairing) still passes.
-
-
 * Make the file command help page's error conditions match the reader, which prints `File not found` for any unreadable file and `Not a text file` for any non-regular file.
 
 Existing Issue: The help page says `File not found` is printed for a missing path and `Not a text file` for binary or non-UTF-8 content, while `loadBytes` in the reader returns `File not found` for every exception (an existing file without read permission included) and `Not a text file` for any path that is not a regular file (a FIFO, socket, or device), so two of the documented rules state narrower conditions than the code applies. Severity: 2/10

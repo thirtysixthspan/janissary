@@ -62,6 +62,14 @@ describe('parseFileRead', () => {
     expect(parseFileRead('file read a.md b.md')).toEqual(usage);
   });
 
+  it('returns the usage line for a path containing a space', () => {
+    expect(parseFileRead('file read my notes.md')).toEqual(usage);
+  });
+
+  it('returns the usage line for a path that starts with --', () => {
+    expect(parseFileRead('file read --notes.md')).toEqual(usage);
+  });
+
   it('matches the keywords case-insensitively and keeps the path case', () => {
     expect(parseFileRead('FILE READ notes/a.md')).toEqual({ path: 'notes/a.md', offset: 1, limit: 2000 });
     expect(parseFileRead('file read Notes/A.md')).toEqual({ path: 'Notes/A.md', offset: 1, limit: 2000 });

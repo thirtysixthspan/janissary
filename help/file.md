@@ -24,7 +24,7 @@ Each failure prints one line that names the path as you typed it:
 - `Secret file: <path>.` for `.env` and `.env.*` files anywhere in the workspace, and for credential locations such as `.ssh`, `.aws`, `.gnupg`, `.kube`, `.netrc`, `.docker`, `.config/gh/hosts.yml`, and shell history files
 - `Offset past end of file (<total> lines): <path>.` when `--offset` is beyond the last line; a one-line file prints `(1 lines)`
 
-Bare `file`, `file read` without a path, an unknown subcommand, an unknown flag, a repeated flag, an `--offset` or `--limit` that is not a positive whole number, and a `--limit` above 2000 all print the usage line `Usage: file read <path> [--offset <line>] [--limit <lines>]`.
+Bare `file`, `file read` without a path, an unknown subcommand, a second path argument, a path that starts with `--`, an unknown flag, a repeated flag, an `--offset` or `--limit` that is not a positive whole number, and a `--limit` above 2000 all print the usage line `Usage: file read <path> [--offset <line>] [--limit <lines>]`. The path is a single token with no whitespace, so a path containing spaces is read as two path arguments and cannot be read with this command.
 
 **Use cases**
 
