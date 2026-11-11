@@ -117,7 +117,7 @@ const PENDING_EVENTS = [
   ['startCommand', QUERY, false],
 ];
 
-const ofKind =(events: unknown[][], kind: string) => events.filter((event) => event[0] === kind);
+const ofKind = (events: unknown[][], kind: string) => events.filter((event) => event[0] === kind);
 
 describe('driveToolLoop', () => {
   it('routes a caller command to runCaller and feeds its output back', () => {
