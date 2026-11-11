@@ -112,4 +112,9 @@ export type AcpRunSnapshot =
     grants: readonly string[];
     rows: readonly AcpRunSnapshotRow[];
     withoutTools: boolean;
+  }
+  | {
+    kind: 'agent';
+    grants: readonly string[];
+    askUser: boolean;
   };

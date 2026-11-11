@@ -287,6 +287,52 @@ describe('gateCommand', () => {
     expect(gateCommand(snapshot, gateTools, 'db sqlite query select 1')).toStrictEqual(first);
     expect(gateCommand(snapshot, gateTools, 'browser goto https://x')).toStrictEqual({ runsOn: 'caller' });
   });
+
+  const agent = (overrides: { grants?: readonly string[]; askUser?: boolean } = {}): AcpRunSnapshot => ({
+    kind: 'agent',
+    grants: overrides.grants ?? [],
+    askUser: overrides.askUser ?? false,
+  });
+
+  it('runs a granted agent file read on the workspace', () => {
+    expect(gateCommand(agent({ grants: ['file'] }), [], 'file read a.md')).toStrictEqual({ runsOn: 'workspace' });
+  });
+
+  it('refuses an ungranted agent file read with no refused key', () => {
+    expect(gateCommand(agent({ grants: ['db'] }), [], 'file read a.md')).toStrictEqual({
+      refusal: 'Agent: command not permitted: file read a.md.',
+    });
+  });
+
+  it('matches agent file read case-insensitively and after a leading slash', () => {
+    const granted = agent({ grants: ['file'] });
+    expect(gateCommand(granted, [], 'FILE READ a.md')).toStrictEqual({ runsOn: 'workspace' });
+    expect(gateCommand(granted, [], '  file read a.md')).toStrictEqual({ runsOn: 'workspace' });
+    expect(gateCommand(granted, [], '/file read a.md')).toStrictEqual({ runsOn: 'workspace' });
+    expect(gateCommand(agent(), [], '/file read a.md')).toStrictEqual({
+      refusal: 'Agent: command not permitted: /file read a.md.',
+    });
+  });
+
+  it.each(['file readme x', 'db sqlite list', 'question ask "x"'])(
+    'runs the agent command %s on the caller side',
+    (command) => {
+      expect(gateCommand(agent(), [], command)).toStrictEqual({ runsOn: 'caller' });
+    },
+  );
+
+  it('ignores the tool list for an agent snapshot', () => {
+    expect(gateCommand(agent(), gateTools, 'db sqlite query select 1')).toStrictEqual({ runsOn: 'caller' });
+    expect(() => gateCommand(agent(), gateTools, 'select 1')).not.toThrow();
+    expect(gateCommand(agent(), gateTools, 'select 1')).toStrictEqual({ runsOn: 'caller' });
+  });
+
+  it('decides the same way twice from a deep-frozen agent snapshot', () => {
+    const snapshot = Object.freeze(agent({ grants: Object.freeze(['file']) }));
+    const first = gateCommand(snapshot, [], 'file read a.md');
+    expect(gateCommand(snapshot, [], 'file read a.md')).toStrictEqual(first);
+    expect(gateCommand(snapshot, [], 'db sqlite list')).toStrictEqual({ runsOn: 'caller' });
+  });
 });
 
 describe('toolExtractor', () => {

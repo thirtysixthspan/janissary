@@ -10,6 +10,7 @@ import { effectiveCommandSetting } from '../native-commands/policy.js';
 import { notify } from '../notifications/index.js';
 import { createInvocationContext } from '../command/invocation.js';
 import type { AcpRunSnapshot } from './types.js';
+import { isFileReadCommandLine } from '../file-read/command.js';
 
 // One tool on the ACP run path. The three loop options the agent sees — what it is told the tools
 // are, what runs a command it emitted, and what pulls a command out of its reply — are all derived
@@ -148,6 +149,7 @@ export type AcpGateDecision =
 export function gateCommand(
   snapshot: AcpRunSnapshot, tools: readonly AcpTool[], command: string,
 ): AcpGateDecision {
+  if (snapshot.kind === 'agent') return gateAgentCommand(snapshot, command);
   return gateCoreCommand(snapshot, tools, command);
 }
 
@@ -166,6 +168,15 @@ function gateCoreCommand(
     return { refusal: `Command not allowed for role "${snapshot.roleName}": ${native}.` };
   }
   return { runsOn: tool.runsOn };
+}
+
+function gateAgentCommand(
+  snapshot: Extract<AcpRunSnapshot, { kind: 'agent' }>, command: string,
+): AcpGateDecision {
+  const input = command.trim().replace(/^\//, '');
+  if (!isFileReadCommandLine(input)) return { runsOn: 'caller' };
+  if (!snapshot.grants.includes('file')) return { refusal: `Agent: command not permitted: ${command}.` };
+  return { runsOn: 'workspace' };
 }
 
 // The command on the reply's last line that any tool recognizes, or null when no line is one.
