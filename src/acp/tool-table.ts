@@ -9,6 +9,7 @@ import { refuseDisabledCommand } from '../native-commands/dispatch-policy.js';
 import { effectiveCommandSetting } from '../native-commands/policy.js';
 import { notify } from '../notifications/index.js';
 import { createInvocationContext } from '../command/invocation.js';
+import type { AcpRunSnapshot } from './types.js';
 
 // One tool on the ACP run path. The three loop options the agent sees — what it is told the tools
 // are, what runs a command it emitted, and what pulls a command out of its reply — are all derived
@@ -136,6 +137,35 @@ export function toolRunner(
     if (!allowed.has(native)) return `Command not allowed for role "${role}": ${native}.`;
     return tool.run(label, command);
   };
+}
+
+// What the gate decided for one command: the side that runs it, or the tool-result text refusing it.
+export type AcpGateDecision =
+  | { runsOn: AcpTool['runsOn'] }
+  | { refusal: string; refused?: 'disabled' };
+
+// Decide from the snapshot alone whether a command may run, and on which side.
+export function gateCommand(
+  snapshot: AcpRunSnapshot, tools: readonly AcpTool[], command: string,
+): AcpGateDecision {
+  return gateCoreCommand(snapshot, tools, command);
+}
+
+function gateCoreCommand(
+  snapshot: Extract<AcpRunSnapshot, { kind: 'core' }>, tools: readonly AcpTool[], command: string,
+): AcpGateDecision {
+  const native = nativeCommandName(command);
+  if (native === undefined) throw new Error(`No ACP tool matched command: ${command}`);
+  const tool = tools.find((candidate) => candidate.match(command));
+  if (!tool) throw new Error(`No ACP tool matched command: ${command}`);
+  const row = snapshot.rows.find((candidate) => candidate.name === native);
+  if (row !== undefined && (!row.effectiveEnabled || !row.effectiveAgentAccess)) {
+    return { refusal: `Command is disabled: ${native}.`, refused: 'disabled' };
+  }
+  if (!snapshot.grants.includes(native)) {
+    return { refusal: `Command not allowed for role "${snapshot.roleName}": ${native}.` };
+  }
+  return { runsOn: tool.runsOn };
 }
 
 // The command on the reply's last line that any tool recognizes, or null when no line is one.

@@ -13,7 +13,10 @@ vi.mock('../question-command.js', () => ({
 }));
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 
-import { createAcpToolTable, toolPrimer, toolRunner, toolExtractor } from './tool-table.js';
+import {
+  createAcpToolTable, gateCommand, toolPrimer, toolRunner, toolExtractor, type AcpTool,
+} from './tool-table.js';
+import type { AcpRunSnapshot, AcpRunSnapshotRow } from './types.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { NativeCommandSettingsManager } from '../native-commands/manager.js';
 import { notify } from '../notifications/index.js';
@@ -199,6 +202,90 @@ describe('toolRunner', () => {
     expect(() => toolRunner(managers, tools, 'ask', NATIVE_ACP_COMMANDS, 'tab1')('select 1'))
       .toThrow('No ACP tool matched command: select 1');
     expect(dispatchNativeLine).not.toHaveBeenCalled();
+  });
+});
+
+describe('gateCommand', () => {
+  const gateTools: AcpTool[] = [
+    {
+      primer: 'browser',
+      match: (command) => /^browser\b/i.test(command),
+      run: () => 'unused',
+      isCommandLine: () => false,
+      runsOn: 'caller',
+    },
+    {
+      primer: 'db',
+      match: (command) => /^db\b/i.test(command),
+      run: () => 'unused',
+      isCommandLine: () => false,
+      runsOn: 'workspace',
+    },
+  ];
+
+  const core = (overrides: {
+    grants?: readonly string[];
+    rows?: readonly AcpRunSnapshotRow[];
+    roleName?: string;
+  } = {}): AcpRunSnapshot => ({
+    kind: 'core',
+    role: 'ask',
+    roleName: overrides.roleName ?? 'ask',
+    grants: overrides.grants ?? ['browser goto', 'db sqlite query'],
+    rows: overrides.rows ?? [],
+    withoutTools: false,
+  });
+
+  const dbOff: AcpRunSnapshotRow = { name: 'db sqlite query', effectiveEnabled: false, effectiveAgentAccess: true };
+
+  it('throws for a command with no native name or no claiming tool', () => {
+    expect(() => gateCommand(core(), gateTools, 'select 1')).toThrow('No ACP tool matched command: select 1');
+    expect(() => gateCommand(core(), gateTools, 'question ask "x"'))
+      .toThrow('No ACP tool matched command: question ask "x"');
+  });
+
+  it('refuses a disabled command and marks it disabled', () => {
+    expect(gateCommand(core({ rows: [dbOff] }), gateTools, 'db sqlite query select 1')).toStrictEqual({
+      refusal: 'Command is disabled: db sqlite query.', refused: 'disabled',
+    });
+  });
+
+  it('refuses an agent-off command with the same text and flag', () => {
+    const rows = [{ name: 'db sqlite query', effectiveEnabled: true, effectiveAgentAccess: false }];
+    expect(gateCommand(core({ rows }), gateTools, 'db sqlite query select 1')).toStrictEqual({
+      refusal: 'Command is disabled: db sqlite query.', refused: 'disabled',
+    });
+  });
+
+  it('reports the disabled refusal for a disabled ungranted command', () => {
+    expect(gateCommand(core({ rows: [dbOff], grants: [] }), gateTools, 'db sqlite query select 1')).toStrictEqual({
+      refusal: 'Command is disabled: db sqlite query.', refused: 'disabled',
+    });
+  });
+
+  it('refuses an enabled ungranted command with the role refusal and no refused key', () => {
+    const snapshot = core({ grants: ['db sqlite query'], roleName: 'researcher' });
+    expect(gateCommand(snapshot, gateTools, 'browser goto https://x')).toStrictEqual({
+      refusal: 'Command not allowed for role "researcher": browser goto.',
+    });
+  });
+
+  it('allows a granted command with no row and returns the matched tool side', () => {
+    expect(gateCommand(core(), gateTools, 'browser goto https://x')).toStrictEqual({ runsOn: 'caller' });
+    expect(gateCommand(core(), gateTools, 'db sqlite query select 1')).toStrictEqual({ runsOn: 'workspace' });
+  });
+
+  it('allows a granted command whose row is enabled with agent access', () => {
+    const rows = [{ name: 'browser goto', effectiveEnabled: true, effectiveAgentAccess: true }];
+    expect(gateCommand(core({ rows }), gateTools, 'browser goto https://x')).toStrictEqual({ runsOn: 'caller' });
+  });
+
+  it('decides the same way twice from a deep-frozen snapshot', () => {
+    const rows = Object.freeze([Object.freeze({ ...dbOff })]);
+    const snapshot = Object.freeze(core({ rows, grants: Object.freeze(['browser goto']) }));
+    const first = gateCommand(snapshot, gateTools, 'db sqlite query select 1');
+    expect(gateCommand(snapshot, gateTools, 'db sqlite query select 1')).toStrictEqual(first);
+    expect(gateCommand(snapshot, gateTools, 'browser goto https://x')).toStrictEqual({ runsOn: 'caller' });
   });
 });
 

@@ -1,4 +1,5 @@
 import type { ProjectTokens } from '../project/tokens.js';
+import type { AcpRole } from './role.js';
 
 export type PromptHandlers = {
   onChunk: (text: string) => void;
@@ -98,3 +99,17 @@ export type AcpLoopHandlers = {
   // A connection/prompt error occurred.
   error: (message: string) => void;
 };
+
+// One native command's effective setting, keyed by its native vocabulary name (`file read`).
+export type AcpRunSnapshotRow = { name: string; effectiveEnabled: boolean; effectiveAgentAccess: boolean };
+
+// The plain-data authority a prompt's gate decides from, taken once per prompt.
+export type AcpRunSnapshot =
+  | {
+    kind: 'core';
+    role: AcpRole;
+    roleName: string;
+    grants: readonly string[];
+    rows: readonly AcpRunSnapshotRow[];
+    withoutTools: boolean;
+  };
