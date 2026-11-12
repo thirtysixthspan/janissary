@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Render the file read usage line in full when a typed read is malformed
-
-Existing Issue: Every malformed typed `file read` prints only `Usage: file read` because the shell renders the reply as Markdown and drops the angle-bracket placeholders, so the promised `Usage: file read <path> [--offset <line>] [--limit <lines>]` never reaches the user. Severity: 5/10
-
-Existing Risk: 4/10 - A user who mistypes `file read` loses the flags and argument syntax the error exists to show and must find `help file` to recover.
-
-Proposal Risk: 2/10 - Escaping or plain-text-rendering command replies could alter intentional Markdown in replies that contain HTML-like text, but a regression case for this usage line and one ordinary Markdown reply contains that.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1992 "Render the file read usage line in full". Description step D20: "Do: Type each of these in turn, pressing Enter after each: `file`, `file read`, `file write x`, `file read notes/sample.md --offset 0`, `file read notes/sample.md --limit -1`, `file read notes/sample.md --limit 1.5`, `file read notes/sample.md --limit 2001`. Expect: Each prints exactly `Usage: file read <path> [--offset <line>] [--limit <lines>]`." Expected promise: the pull request body states the usage line and `help/file.md` lists it. Observed on e246c9b6, twice: all seven commands display exactly `Usage: file read` with no placeholders or flags; the server's activity log records the full `Usage: file read <path> [--offset <line>] [--limit <lines>]`, and the visible reply block's HTML is `<p>Usage: file read </p>`. Root cause: `src/commands/file.ts` writes `FILE_READ_USAGE` from `src/file-read/command.ts` through `appendCommandOutput`; the shell renders replies in `web/src/plugins/shell/write-shell-reply.ts` via `insertMarkdownBlock` in `web/src/plugins/shell/markdown-block.ts`, which calls `renderMarkdown` in `web/src/shared/transcript/markdown.ts` (`marked` plus `DOMPurify`), and `<path>`, `<line>`, and `<lines>` are parsed as HTML tags and removed. The same truncation affects the pre-existing `ask` usage (`Usage: ask .`), so the defect is renderer-level. Likely fix: render single-line command error and usage replies as plain text, or escape `<` and `>` before Markdown rendering in `writeShellReply`, instead of changing only `FILE_READ_USAGE`; a command-level code span or `&lt;` entities would fix this line alone. Regression test: render `Usage: file read <path> [--offset <line>] [--limit <lines>]` through the shell reply path and assert the visible text contains all three placeholders and both flags, plus an ordinary Markdown reply still renders.
-
-
 * Correct the disabled-command step to stop expecting a notification the default settings suppress
 
 Existing Issue: The description's step 21 expects a `command-disabled` notification to appear, but a refusal only raises the event, and `shouldNotify` drops it for the active tab and because the default `notifications.events.commandDisabled` is off; the app shows exactly `Command is disabled: file read.` with no toast and no feed line. Severity: 2/10

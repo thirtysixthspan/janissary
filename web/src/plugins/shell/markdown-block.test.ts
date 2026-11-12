@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Terminal } from '@xterm/xterm';
 import { parseHarnessCommand } from '@shared/harness/command-parse.js';
 import { parseTabCommand } from '@shared/commands/parse-tab.js';
+import { FILE_READ_USAGE } from '@shared/file-read/command.js';
 import { insertMarkdownBlock } from './markdown-block';
 
 // The usage error the `harness` command itself answers with for `command`, so the test renders the
@@ -218,6 +219,37 @@ describe('insertMarkdownBlock', () => {
     fake.render(element);
 
     expect(element.querySelector('p')?.textContent).toBe(DISPLAYED_LAYOUT_USAGE);
+  });
+
+  it('draws every placeholder and flag of the typed file read usage line', () => {
+    const fake = fakeTerminal();
+
+    expect(insertMarkdownBlock(fake.terminal, 'file read', FILE_READ_USAGE, vi.fn())).toBe(true);
+
+    const element = document.createElement('div');
+    fake.render(element);
+    expect(element.textContent).toBe(`${FILE_READ_USAGE}\n`);
+  });
+
+  it('draws the ask usage placeholder as visible text', () => {
+    const fake = fakeTerminal();
+
+    expect(insertMarkdownBlock(fake.terminal, 'ask', 'Usage: ask <prompt>.', vi.fn())).toBe(true);
+
+    const element = document.createElement('div');
+    fake.render(element);
+    expect(element.textContent).toBe('Usage: ask <prompt>.\n');
+  });
+
+  it('still renders a single-line Markdown reply as Markdown', () => {
+    const fake = fakeTerminal();
+
+    expect(insertMarkdownBlock(fake.terminal, 'help', '**Bold** and [a link](https://example.com).', vi.fn())).toBe(true);
+
+    const element = document.createElement('div');
+    fake.render(element);
+    expect(element.querySelector('strong')?.textContent).toBe('Bold');
+    expect(element.querySelector('a')?.getAttribute('href')).toBe('https://example.com');
   });
 
   it.each([
