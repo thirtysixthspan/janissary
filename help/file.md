@@ -21,7 +21,7 @@ Each failure prints one line that names the path as you typed it:
 - `Not a text file: <path>.` for binary content, text that is not valid UTF-8, or anything that is not a regular file or directory, such as a named pipe, socket, or device
 - `File too large (>5 MB): <path>.`
 - `Outside the workspace: <path>.` for an absolute path, a path that leaves the root, or a symbolic link that points outside it
-- `Secret file: <path>.` for `.env` and `.env.*` files anywhere in the workspace, and for credential locations such as `.ssh`, `.aws`, `.gnupg`, `.kube`, `.netrc`, `.docker`, `.config/gh/hosts.yml`, and shell history files
+- `Secret file: <path>.` for `.env` and `.env.*` files anywhere in the workspace, for credential locations such as `.ssh`, `.aws`, `.gnupg`, `.kube`, `.netrc`, `.docker`, `.config/gh/hosts.yml`, and shell history files, and for those locations under your home directory even when the tab's workspace is that directory or inside it
 - `Offset past end of file (<total> lines): <path>.` when `--offset` is beyond the last line; a one-line file prints `(1 lines)`
 
 On a remote tab, `Remote connection unavailable.` is printed when the tab has no live connection or its workspace is still being prepared. A connection that drops or stops answering mid-read prints `The remote connection ended.` or `The remote machine did not answer in time.`.
