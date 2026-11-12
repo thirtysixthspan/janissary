@@ -1,9 +1,12 @@
 import type { AcpLoopHandlers, AcpToolHost } from '../acp/types.js';
 import type { AcpPromptControl, ProviderTurn } from '../acp/prompt-control.js';
 import { CORE_MAX_STEPS } from '../acp/drive-loop.js';
-import type { RemoteFrame } from './protocol-frames.js';
+import { errorText } from '../error-text.js';
+import type { ClientFrame, RemoteFrame } from './protocol-frames.js';
 
 type TurnFrame = Extract<RemoteFrame, { type: 'acp-turn' }>;
+type ToolRequestFrame = Extract<RemoteFrame, { type: 'acp-tool-request' }>;
+type ToolStepFrame = Extract<RemoteFrame, { type: 'acp-tool-step' }>;
 type RunEndReason = Extract<RemoteFrame, { type: 'acp-run-end' }>['reason'];
 
 type RunState = {
@@ -17,11 +20,15 @@ export type RemoteAcpRun = {
   start: (runCaller: AcpToolHost['runCaller'], events: AcpLoopHandlers) => boolean;
   chunk: (delta: string) => void;
   turn: (frame: TurnFrame) => void;
+  request: (frame: ToolRequestFrame) => void;
+  step: (frame: ToolStepFrame) => void;
   end: (reason: RunEndReason) => void;
 };
 
-export function createRemoteAcpRun(control: AcpPromptControl): RemoteAcpRun {
+export function createRemoteAcpRun(control: AcpPromptControl, send: (frame: ClientFrame) => void): RemoteAcpRun {
   let current: RunState | undefined;
+
+  const active = (turn: ProviderTurn) => control.owns(turn) && !turn.cancelled;
 
   const accumulate = (state: RunState, delta: string) => {
     if (!control.owns(state.turn)) return;
@@ -57,6 +64,28 @@ export function createRemoteAcpRun(control: AcpPromptControl): RemoteAcpRun {
       } else {
         current.events.endTurn(frame.display);
       }
+    },
+    request(frame) {
+      const state = current;
+      if (!state || !active(state.turn)) return;
+      const { turn, events, runCaller } = state;
+      events.startCommand?.(frame.command, false);
+      void (async () => {
+        try {
+          const output = await runCaller(frame.command);
+          if (!active(turn)) return;
+          events.ranCommand(frame.command, output, false);
+          send({ type: 'acp-tool-result', id: frame.id, request: frame.request, output });
+        } catch (error) {
+          if (active(turn)) send({ type: 'acp-tool-result', id: frame.id, request: frame.request, error: errorText(error) });
+        }
+      })();
+    },
+    step(frame) {
+      const state = current;
+      if (!state || !active(state.turn)) return;
+      state.events.startCommand?.(frame.command, frame.workspace);
+      state.events.ranCommand(frame.command, frame.result, frame.workspace, frame.refused);
     },
     end(reason) {
       if (current && control.owns(current.turn)) control.end(current.turn, reason);

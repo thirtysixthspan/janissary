@@ -226,7 +226,7 @@ describe('createRemoteAcpSession — running', () => {
   function runEvents(): AcpLoopHandlers {
     return {
       startTurn: vi.fn(), chunk: vi.fn(), endTurn: vi.fn(),
-      ranCommand: vi.fn(), finished: vi.fn(), error: vi.fn(),
+      startCommand: vi.fn(), ranCommand: vi.fn(), finished: vi.fn(), error: vi.fn(),
     };
   }
 
@@ -322,6 +322,123 @@ describe('createRemoteAcpSession — running', () => {
 
     expect(events.error).toHaveBeenCalledWith('Remote connection lost before agent readiness.');
     expect(s.detached).toEqual(['racp1']);
+  });
+
+  it.each(['All tests pass', ''])('answers a caller tool request with output %j', async (output) => {
+    const s = makeSession();
+    const events = runEvents();
+    const runCaller = vi.fn(() => Promise.resolve(output));
+    s.session.run('go', snapshot, runCaller, events);
+
+    s.listener().onToolRequest({ type: 'acp-tool-request', id: 'racp1', request: 4, command: 'npm test' });
+    await vi.waitFor(() => expect(events.ranCommand).toHaveBeenCalled());
+
+    expect(events.startCommand).toHaveBeenCalledWith('npm test', false);
+    expect(runCaller).toHaveBeenCalledWith('npm test');
+    expect(events.startCommand!.mock.invocationCallOrder[0])
+      .toBeLessThan(runCaller.mock.invocationCallOrder[0]!);
+    expect(events.ranCommand).toHaveBeenCalledWith('npm test', output, false);
+    expect(s.sent.at(-1)).toEqual({ type: 'acp-tool-result', id: 'racp1', request: 4, output });
+  });
+
+  it('answers a failed caller tool with the error text and no command event', async () => {
+    const s = makeSession();
+    const events = runEvents();
+    s.session.run('go', snapshot, vi.fn(async () => { throw new Error('database unavailable'); }), events);
+
+    s.listener().onToolRequest({ type: 'acp-tool-request', id: 'racp1', request: 9, command: 'db status' });
+    await vi.waitFor(() => expect(s.sent.at(-1)).toMatchObject({ type: 'acp-tool-result', error: 'database unavailable' }));
+
+    expect(events.ranCommand).not.toHaveBeenCalled();
+    expect(s.sent.at(-1)).toEqual({ type: 'acp-tool-result', id: 'racp1', request: 9, error: 'database unavailable' });
+  });
+
+  it('ignores tool frames with no run in flight', () => {
+    const s = makeSession();
+    const listener = s.listener();
+    const before = s.sent.length;
+
+    listener.onToolRequest({ type: 'acp-tool-request', id: 'racp1', request: 1, command: 'npm test' });
+    listener.onToolStep({ type: 'acp-tool-step', id: 'racp1', command: 'ls', result: 'a.txt', workspace: true });
+
+    expect(s.sent).toHaveLength(before);
+  });
+
+  it('drops a caller result that resolves after cancel and a successor run starts', async () => {
+    const s = makeSession();
+    const events = runEvents();
+    const caller = Promise.withResolvers<string>();
+    const runCaller = vi.fn(() => caller.promise);
+    s.session.run('go', snapshot, runCaller, events);
+    s.listener().onToolRequest({ type: 'acp-tool-request', id: 'racp1', request: 2, command: 'sleep 5' });
+    const cancellation = s.session.cancel();
+    s.listener().onRunEnd('cancelled');
+    await cancellation;
+    const successor = runEvents();
+    s.session.run('next', snapshot, vi.fn(), successor);
+
+    caller.resolve('late output');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(events.ranCommand).not.toHaveBeenCalled();
+    expect(successor.startCommand).not.toHaveBeenCalled();
+    expect(successor.ranCommand).not.toHaveBeenCalled();
+    expect(s.sent.filter((frame) => frame.type === 'acp-tool-result')).toEqual([]);
+  });
+
+  it('drops a caller result that resolves after release', async () => {
+    const s = makeSession();
+    const events = runEvents();
+    const caller = Promise.withResolvers<string>();
+    s.session.run('go', snapshot, () => caller.promise, events);
+    s.listener().onToolRequest({ type: 'acp-tool-request', id: 'racp1', request: 6, command: 'sleep 5' });
+    const releasing = s.session.release();
+
+    caller.resolve('late output');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(events.error).toHaveBeenCalledWith('ACP session closed.');
+    expect(events.ranCommand).not.toHaveBeenCalled();
+    expect(s.sent.filter((frame) => frame.type === 'acp-tool-result')).toEqual([]);
+    s.listener().onClosed(true);
+    await expect(releasing).resolves.toBe(true);
+  });
+
+  it('maps a far-side workspace step onto both command events', () => {
+    const s = makeSession();
+    const events = runEvents();
+    s.session.run('go', snapshot, vi.fn(), events);
+
+    s.listener().onToolStep({ type: 'acp-tool-step', id: 'racp1', command: 'ls', result: 'a.txt', workspace: true });
+
+    expect(events.startCommand).toHaveBeenCalledWith('ls', true);
+    expect(events.ranCommand).toHaveBeenCalledWith('ls', 'a.txt', true, undefined);
+  });
+
+  it('maps a far-side refusal onto both command events', () => {
+    const s = makeSession();
+    const events = runEvents();
+    s.session.run('go', snapshot, vi.fn(), events);
+
+    s.listener().onToolStep({
+      type: 'acp-tool-step', id: 'racp1', command: 'rm -rf /', result: 'Command disabled.', workspace: false, refused: 'disabled',
+    });
+
+    expect(events.startCommand).toHaveBeenCalledWith('rm -rf /', false);
+    expect(events.ranCommand).toHaveBeenCalledWith('rm -rf /', 'Command disabled.', false, 'disabled');
+  });
+
+  it('passes an absent refusal through as undefined', () => {
+    const s = makeSession();
+    const events = runEvents();
+    s.session.run('go', snapshot, vi.fn(), events);
+
+    s.listener().onToolStep({ type: 'acp-tool-step', id: 'racp1', command: 'pwd', result: '/home/me', workspace: false });
+
+    expect(events.startCommand).toHaveBeenCalledWith('pwd', false);
+    expect(events.ranCommand).toHaveBeenCalledWith('pwd', '/home/me', false, undefined);
   });
 });
 

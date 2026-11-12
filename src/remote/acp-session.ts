@@ -59,7 +59,6 @@ export function createRemoteAcpSession(
   const { id, command, args, env, offline, autonomous, effort, sessionMeta } = options;
   // The one in-flight prompt, matching the discipline `connectAcp` keeps with its own `current`.
   const control = new AcpPromptControl();
-  const run = createRemoteAcpRun(control);
   let live = true;
   const { promise: ready, resolve: resolveReady, reject: rejectReady } = deferred<boolean>();
   void ready.catch(() => {});
@@ -86,6 +85,7 @@ export function createRemoteAcpSession(
       detach(message, () => hooks.onError(message));
     }
   };
+  const run = createRemoteAcpRun(control, send);
 
   channel.attachAcp(id, {
     onReady: (sandboxed) => {
@@ -107,6 +107,8 @@ export function createRemoteAcpSession(
       detach('Remote connection lost before agent readiness.', () => hooks.onTransportLost?.());
     },
     onTurn: (frame) => run.turn(frame),
+    onToolRequest: (frame) => run.request(frame),
+    onToolStep: (frame) => run.step(frame),
     onRunEnd: (reason) => run.end(reason),
     onEnd: (stopReason) => {
       const turn = control.current;
