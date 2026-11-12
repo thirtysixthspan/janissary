@@ -27,7 +27,7 @@ export type AgentResult = Readonly<{
   cleanupWarnings: readonly string[];
 }>;
 
-export type RemoteAgentTarget = Readonly<{ channel: RemoteChannel; offline?: boolean }>;
+export type RemoteAgentTarget = Readonly<{ channel: RemoteChannel; host: string; offline?: boolean }>;
 
 function taskPrompt(task: string, parameters: string): string {
   return [task, parameters].filter(Boolean).join('\n');
@@ -127,6 +127,8 @@ export async function executeAgentRun(
     connectionFailure = (message) => fail(new Error(`Agent: ${message}`));
     run.abortController.signal.addEventListener('abort', () => finish('Agent terminated.'), { once: true });
     const active = () => !run.outcome && !run.abortController.signal.aborted;
+    const tagged = (text: string, workspace: boolean | undefined) =>
+      remote !== undefined && workspace === true ? `[${remote.host}] ${text}` : text;
     const loopSession: AcpLoopSession | RemoteAcpSession = 'remote' in session ? session : {
       prompt: (text, handlers) => {
         if (!active()) return;
@@ -159,8 +161,8 @@ export async function executeAgentRun(
       startTurn: () => {},
       chunk: () => {},
       endTurn: (answer) => { finalAnswer = answer; },
-      startCommand: (command) => { run.record?.activity('tool', command); },
-      ranCommand: (_command, result) => { run.record?.activity('tool', result); },
+      startCommand: (command, workspace) => { run.record?.activity('tool', tagged(command, workspace)); },
+      ranCommand: (_command, result, workspace) => { run.record?.activity('tool', tagged(result, workspace)); },
       finished: () => {
         if (finalAnswer.trim()) finish(finalAnswer);
         else fail(new Error('Agent: task returned an empty response.'));

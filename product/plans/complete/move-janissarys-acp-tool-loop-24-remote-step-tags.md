@@ -1,6 +1,6 @@
 # ACP tool loop 24 — `[<host>] ` tags on remote workspace steps
 
-**Complexity: 4/10** — ~18 added lines across 3 production files, 7 requirements, 8 scenarios (p=5.09)
+**Complexity: 4/10** — ~18 added lines across 3 production files, 7 requirements, 8 scenarios, 2 inline helpers (p=5.12)
 
 Run order: 24 of 27 in the ACP tool loop series. Source plan: `product/plans/complete/move-janissarys-acp-tool-loop.md` (decision 8; the tagging and `RemoteAgentTarget` sentences of "Local side"). Depends on subplan 23 (`move-janissarys-acp-tool-loop-23-remote-loop-switch.md`), after which workspace steps on remote tabs and runs come from the far side.
 
@@ -38,6 +38,7 @@ When a tool step ran on a remote host, the transcript and the connection record 
 - `src/agent/execute.ts`: add `host` to the execute-side `RemoteAgentTarget`, read `workspace` in both handlers, and prefix both activity lines when `remote` is set and the step is a workspace step.
 - `src/agent/launch.ts`: pass `host: remoteTarget.host` through `executeAgentRunSafely`.
 - No other production file changes. The far side, `src/remote/acp-session-run.ts`, `src/remote/serve-acp-loop.ts`, `src/acp/record-feed.ts`, and the wire protocol stay as they are; the tag is added only on the local display side.
+- `src/commands/agent.test.ts`: its remote launch fixture asserts the exact `RemoteAgentTarget` shape produced by `src/agent/launch.ts`, which now includes `host`, so its expected target must carry `host: 'devbox'`. That fixture is the only change in this file.
 - File sizes after the edits stay well under the 200-line `max-lines` limit: `run-prompt.ts` 129, `execute.ts` 177, and `launch.ts` 174 before the change, so no extraction is needed.
 
 ## Tests
@@ -53,6 +54,7 @@ When a tool step ran on a remote host, the transcript and the connection record 
   - a remote run's far-side `file read` step is tagged with the execution host on both activity lines;
   - its `db` step (`onToolRequest`, `workspace: false`) is untagged;
   - a local run's `file read` step is untagged.
+- `src/commands/agent.test.ts`: the agent-command case that asserts the exact remote target passed to `execute` (`:724`) expects `{ channel, host: 'devbox', offline: undefined }`, because its fixture asserts the `RemoteAgentTarget` shape produced by `src/agent/launch.ts`, which now includes `host`.
 - No far-side or wire tests change: `src/remote/serve-acp-loop.test.ts` and `src/remote/serve-acp.test.ts` keep asserting raw `acp-tool-step` text, because the prefix is added after the frame is received.
 
 ## Out of scope

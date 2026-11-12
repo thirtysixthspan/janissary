@@ -75,7 +75,7 @@ async function executeAgentRunSafely(
 ): Promise<AgentResult> {
   try {
     return await executeAgentRun(run, invocation, run.view().model, launch.effort, launch.parameters, managers,
-      remoteTarget ? { channel: remoteTarget.channel, offline } : undefined);
+      remoteTarget ? { channel: remoteTarget.channel, host: remoteTarget.host, offline } : undefined);
   } catch (error) {
     return agentFailure(error);
   }

@@ -93,6 +93,9 @@ export function runCorePrompt(
   const loopSession: AcpLoopSession | RemoteAcpSession = 'remote' in session
     ? session
     : guardedSession(session, active);
+  const remoteHost = 'remote' in session ? managers.tab.byLabel(label)?.remote?.host : undefined;
+  const tagged = (text: string, workspace: boolean | undefined) =>
+    remoteHost !== undefined && workspace === true ? `[${remoteHost}] ${text}` : text;
   runToolLoop(loopSession, request.prompt, snapshot, host, guardAcpHandlers({
     startTurn: (isFirst) => {
       if (isFirst) notify(managers, 'agent-start', label);
@@ -102,11 +105,11 @@ export function runCorePrompt(
     },
     chunk: (buffer) => updateRunning(buffer, true),
     endTurn: (final) => { updateRunning(final, false); lastAnswer = final; request.replied = true; },
-    startCommand: (command) => { recordTool(command); },
-    ranCommand: (command, result, _workspace, refused) => {
+    startCommand: (command, workspace) => { recordTool(tagged(command, workspace)); },
+    ranCommand: (command, result, workspace, refused) => {
       if (refused === 'disabled') notify(managers, 'command-disabled', label, result);
-      recordTool(result);
-      appendAcp(managers, label, { input: command, output: result, acp: true });
+      recordTool(tagged(result, workspace));
+      appendAcp(managers, label, { input: tagged(command, workspace), output: result, acp: true });
     },
     finished: (reason, maxSteps) => {
       notify(managers, 'state-change', label);

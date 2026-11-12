@@ -371,6 +371,47 @@ describe('runCorePrompt tool runner', () => {
       expect(dispatchNativeLine).not.toHaveBeenCalled();
     });
 
+    it('tags a remote tab\'s workspace step with the host on the transcript and record lines', () => {
+      const { start, managers, run } = harness({
+        remoteSession: true, tab: { workspaceDir: dir, remote: { host: 'far' } }, launchDir: dir,
+      });
+      start('ask', ['file read'], 'ask', 'record-1');
+      const events = remoteCall(run)[3];
+
+      events.startCommand?.('file read a.txt', true);
+      events.ranCommand('file read a.txt', '1\talpha', true);
+
+      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', '[far] file read a.txt');
+      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', '[far] 1\talpha');
+      expect(managers.tab.append).toHaveBeenCalledWith('shell', {
+        input: '[far] file read a.txt', output: '1\talpha', acp: true,
+      });
+    });
+
+    it('leaves a local tab\'s workspace step untagged', async () => {
+      const { start, managers } = harness({ tab: { workspaceDir: dir } });
+      const { deps, handlers } = start('ask', ['file read'], 'ask', 'record-1');
+      const command = 'file read a.txt';
+      const result = await deps.runCommand(command);
+      handlers.ranCommand(command, result);
+
+      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', command);
+      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', result);
+      expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: command, output: result, acp: true });
+    });
+
+    it('leaves a remote tab\'s fallback local workspace step untagged', async () => {
+      const { start, managers } = harness({ tab: { workspaceDir: dir, remote: { host: 'far' } } });
+      const { deps, handlers } = start('ask', ['file read'], 'ask', 'record-1');
+      const command = 'file read a.txt';
+      const result = await deps.runCommand(command);
+      handlers.ranCommand(command, result);
+
+      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', command);
+      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', result);
+      expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: command, output: result, acp: true });
+    });
+
     it('refuses an ungranted file read with the role refusal', () => {
       const { start } = harness({ tab: { workspaceDir: dir } });
       const { deps } = start('ask', ['db sqlite query'], 'Reader');
@@ -426,6 +467,37 @@ describe('runCorePrompt remote session', () => {
     events.ranCommand('db sqlite query shop SELECT 1', refusal, false, 'disabled');
 
     expect(mocks.notify).toHaveBeenCalledWith(managers, 'command-disabled', 'shell', refusal);
+  });
+
+  it('leaves a remote tab\'s caller-side step untagged', () => {
+    const { start, managers, run } = harness({ remoteSession: true, tab: { remote: { host: 'far' } } });
+    start('ask', ['db sqlite query'], 'ask', 'record-1');
+    const events = remoteCall(run)[3];
+    const command = 'db sqlite query shop SELECT 1';
+
+    events.startCommand?.(command, false);
+    events.ranCommand(command, 'dispatched output', false);
+
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', command);
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', 'dispatched output');
+    expect(managers.tab.append).toHaveBeenCalledWith('shell', {
+      input: command, output: 'dispatched output', acp: true,
+    });
+  });
+
+  it('leaves a remote tab\'s refused step untagged', () => {
+    const { start, managers, run } = harness({ remoteSession: true, tab: { remote: { host: 'far' } } });
+    start('ask', ['db sqlite query'], 'ask', 'record-1');
+    const events = remoteCall(run)[3];
+    const command = 'db sqlite query shop SELECT 1';
+    const refusal = 'Command is disabled: db sqlite query.';
+
+    events.startCommand?.(command, false);
+    events.ranCommand(command, refusal, false, 'disabled');
+
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', command);
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', refusal);
+    expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: command, output: refusal, acp: true });
   });
 
   it('appends the capped paragraph to a far-side capped answer', () => {

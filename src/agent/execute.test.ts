@@ -69,7 +69,7 @@ describe('agent execution record capture', () => {
       handlers = h;
       session.prompt(prompt, { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() });
     });
-    const execution = executeAgentRun(run, invocation, model, undefined, 'Parameters\nverbatim ', modelManagers() as never, remote ? { channel } : undefined);
+    const execution = executeAgentRun(run, invocation, model, undefined, 'Parameters\nverbatim ', modelManagers() as never, remote ? { channel, host: 'build-box' } : undefined);
     expect(records.window(run.recordId!)?.blocks[0].prompt).toBe(`${commandTools.agentPrimer(run.snapshot)}\nParameters\nverbatim `);
     if (remote) {
       expect(runAcpToolLoop).not.toHaveBeenCalled();
@@ -173,7 +173,7 @@ describe('agent shared driver host', () => {
   afterEach(async () => { await run.finish('completed'); rmSync(root, { recursive: true, force: true }); vi.restoreAllMocks(); });
 
   function start(remote = false) {
-    const execution = executeAgentRun(run, invocation, OPENCODE_MODELS[0], undefined, '', modelManagers() as never, remote ? { channel } : undefined);
+    const execution = executeAgentRun(run, invocation, OPENCODE_MODELS[0], undefined, '', modelManagers() as never, remote ? { channel, host: 'build-box' } : undefined);
     return execution;
   }
 
@@ -243,7 +243,7 @@ describe('agent shared driver host', () => {
     listener!.onToolStep({
       type: 'acp-tool-step', id: 'agent', command: 'file read notes/a.md', result: '1\tworkspace', workspace: true,
     });
-    expect(activity.mock.calls).toEqual([['tool', 'file read notes/a.md'], ['tool', '1\tworkspace']]);
+    expect(activity.mock.calls).toEqual([['tool', '[build-box] file read notes/a.md'], ['tool', '[build-box] 1\tworkspace']]);
 
     listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'start', first: true });
     listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'end', display: 'Done' });
@@ -268,6 +268,28 @@ describe('agent shared driver host', () => {
     listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'end', display: 'Done' });
     listener!.onRunEnd('answered');
     await execution;
+  });
+
+  it('leaves a remote run\'s caller-side step untagged', async () => {
+    vi.spyOn(commandTools, 'runGrantedAgentCommand').mockResolvedValue('db result');
+    const execution = start(true);
+    listener!.onReady(true);
+    await vi.waitFor(() => expect(sent.some((frame) => frame.type === 'acp-run')).toBe(true));
+    const activity = vi.fn();
+    run.record = { activity } as unknown as AgentRecordFeed;
+
+    listener!.onToolRequest({ type: 'acp-tool-request', id: 'agent', request: 9, command: 'db sqlite list' });
+    await vi.waitFor(() => expect(sent.at(-1)).toMatchObject({
+      type: 'acp-tool-result', id: 'agent', request: 9, output: 'db result',
+    }));
+
+    expect(activity.mock.calls).toEqual([['tool', 'db sqlite list'], ['tool', 'db result']]);
+
+    listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'start', first: true });
+    listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'end', display: 'Done' });
+    listener!.onRunEnd('answered');
+    await execution;
+    run.record = undefined;
   });
 
   it('drops tool records and workspace work after termination', async () => {
@@ -336,7 +358,7 @@ describe('executeAgentRun', () => {
     const invocation: CommandInvocationContext = {
       runId: run.id, invocationId: 'invocation-1', caller, signal: run.abortController.signal,
     };
-    const execution = executeAgentRun(run, invocation, model, undefined, '', managers as never, { channel });
+    const execution = executeAgentRun(run, invocation, model, undefined, '', managers as never, { channel, host: 'build-box' });
 
     await vi.waitFor(() => expect(listener).toBeDefined());
     listener?.onReady(sandboxed);
@@ -504,7 +526,7 @@ describe('executeAgentRun failure paths', () => {
     vi.useFakeTimers();
     try {
       const { run, invocation } = newRun();
-      const execution = executeAgentRun(run, invocation, openCodeModel(), undefined, '', modelManagers() as never, { channel: silentChannel() });
+      const execution = executeAgentRun(run, invocation, openCodeModel(), undefined, '', modelManagers() as never, { channel: silentChannel(), host: 'build-box' });
       const outcome = expect(execution).rejects.toThrow('Agent: remote agent readiness timed out.');
       await vi.advanceTimersByTimeAsync(15_000);
       await outcome;
@@ -516,7 +538,7 @@ describe('executeAgentRun failure paths', () => {
 
   it('ends a remote run terminated while its agent is still getting ready', async () => {
     const { run, invocation } = newRun();
-    const execution = executeAgentRun(run, invocation, openCodeModel(), undefined, '', modelManagers() as never, { channel: silentChannel() });
+    const execution = executeAgentRun(run, invocation, openCodeModel(), undefined, '', modelManagers() as never, { channel: silentChannel(), host: 'build-box' });
     run.abortController.abort();
     await expect(execution).rejects.toThrow('Agent terminated.');
     expect(runAcpToolLoop).not.toHaveBeenCalled();
