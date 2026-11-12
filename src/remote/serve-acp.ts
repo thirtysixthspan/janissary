@@ -3,13 +3,14 @@ import { acpActivity } from '../acp/activity.js';
 import type { AcpSession } from '../acp/types.js';
 import type { ProjectTokens } from '../project/tokens.js';
 import type { ClientFrame, ServerFrame } from './protocol-frames.js';
+import { startRemoteLoop, type RemoteLoopHandle } from './serve-acp-loop.js';
 import { sandboxWillConfine } from '../sandbox/confinement.js';
 import { errorText } from '../error-text.js';
 
 const ACP_SHUTDOWN_TIMEOUT_MS = 5000;
 
 type RemoteAcpRecord =
-  | { state: 'live'; session: AcpSession; runOnly: boolean }
+  | { state: 'live'; session: AcpSession; runOnly: boolean; run?: RemoteLoopHandle }
   | { state: 'closing'; session: AcpSession; pending: Promise<boolean> }
   | { state: 'settled'; released: boolean; session?: AcpSession };
 
@@ -98,6 +99,32 @@ export class RemoteAcp {
       // over one would throw away the whole accumulated conversation.
       onError: (message) => { this.send({ type: 'acp-error', id, message, fatal: false }); },
     });
+  }
+
+  run(frame: Extract<ClientFrame, { type: 'acp-run' }>): void {
+    const id = frame.id;
+    const record = this.records.get(id);
+    if (record?.state !== 'live') {
+      this.send({ type: 'acp-error', id, message: 'No remote ACP session is open.', fatal: true });
+      return;
+    }
+    if (record.run) {
+      this.send({ type: 'acp-error', id, message: 'ACP: a prompt is already running.', fatal: false });
+      return;
+    }
+    let terminal = false;
+    const handle = startRemoteLoop(record.session, frame, this.workspaceDir, (sent) => {
+      this.send(sent);
+      if (sent.type !== 'acp-run-end' && !(sent.type === 'acp-error' && !sent.fatal)) return;
+      terminal = true;
+      record.run = undefined;
+    });
+    if (!terminal) record.run = handle;
+  }
+
+  toolResult(frame: Extract<ClientFrame, { type: 'acp-tool-result' }>): void {
+    const record = this.records.get(frame.id);
+    if (record?.state === 'live') record.run?.toolResult(frame);
   }
 
   async close(id: string): Promise<void> {

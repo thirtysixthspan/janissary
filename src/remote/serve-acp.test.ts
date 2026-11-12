@@ -1,5 +1,8 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { AcpOptions, PromptHandlers } from '../acp/types.js';
+import type { AcpOptions, AcpRunSnapshot, AcpRunSnapshotRow, PromptHandlers } from '../acp/types.js';
 import type { ServerFrame } from './protocol-frames.js';
 import * as confinement from '../sandbox/confinement.js';
 
@@ -28,18 +31,36 @@ const OPEN = {
   env: { OPENCODE_CONFIG_CONTENT: '{"model":"google/gemini-3.1-flash-lite"}' }, offline: false,
 } as const;
 
-function makeAcp(tokens = {}) {
+function makeAcp(tokens = {}, workspace = WORKSPACE) {
   const frames: ServerFrame[] = [];
-  const acp = new RemoteAcp((frame) => { frames.push(frame); }, WORKSPACE, tokens);
+  const acp = new RemoteAcp((frame) => { frames.push(frame); }, workspace, tokens);
   return { acp, frames };
 }
+
+type CoreSnapshot = Extract<AcpRunSnapshot, { kind: 'core' }>;
+
+function coreSnapshot(
+  role: 'ask' | 'tell', grants: string[], rows: AcpRunSnapshotRow[] = [], withoutTools = false,
+): CoreSnapshot {
+  return { kind: 'core', role, roleName: role, grants, rows, withoutTools };
+}
+
+const RUN_FRAME = {
+  type: 'acp-run', id: 'racp1', text: 'do it',
+  snapshot: coreSnapshot('tell', ['file read', 'db sqlite query']),
+} as const;
+
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 // The handlers `RemoteAcp` gave the faked session for its most recent prompt.
 function lastHandlers(): PromptHandlers {
   return acpMock.prompt.mock.calls.at(-1)![1] as PromptHandlers;
 }
 
+let workspace: string;
+
 beforeEach(() => {
+  workspace = mkdtempSync(path.join(tmpdir(), 'janus-serve-acp-'));
   vi.spyOn(confinement, 'sandboxWillConfine').mockReturnValue(true);
   acpMock.options.length = 0;
   acpMock.prompt.mockReset();
@@ -48,7 +69,10 @@ beforeEach(() => {
   acpMock.cancel.mockReset().mockResolvedValue(undefined);
 });
 
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  rmSync(workspace, { recursive: true, force: true });
+  vi.useRealTimers();
+});
 
 describe('RemoteAcp — opening a session', () => {
   it('emits a ready frame once the handshake completes', () => {
@@ -254,6 +278,142 @@ describe('RemoteAcp — prompting', () => {
     lastHandlers().onEnd('end_turn');
 
     expect(frames).toEqual([{ type: 'acp-end', id: 'racp2', stopReason: 'end_turn' }]);
+  });
+});
+
+describe('RemoteAcp — running', () => {
+  it('runs a live session end to end and feeds a caller result into the next prompt', async () => {
+    writeFileSync(path.join(workspace, 'a.md'), 'one\ntwo\n');
+    const { acp, frames } = makeAcp({}, workspace);
+    acp.open(OPEN);
+
+    acp.run(RUN_FRAME);
+
+    lastHandlers().onChunk('file read a.md');
+    lastHandlers().onEnd('end_turn');
+    await flush();
+
+    expect(frames.filter((frame) => frame.type === 'acp-tool-step')).toEqual([
+      { type: 'acp-tool-step', id: 'racp1', command: 'file read a.md', result: '1\tone\n2\ttwo', workspace: true },
+    ]);
+
+    lastHandlers().onChunk('db sqlite query movies SELECT 1');
+    lastHandlers().onEnd('end_turn');
+    await flush();
+
+    expect(frames.filter((frame) => frame.type === 'acp-tool-request')).toEqual([
+      { type: 'acp-tool-request', id: 'racp1', request: 1, command: 'db sqlite query movies SELECT 1' },
+    ]);
+
+    acp.toolResult({ type: 'acp-tool-result', id: 'racp1', request: 1, output: '42' });
+    await flush();
+
+    expect(acpMock.prompt.mock.calls[2][0]).toContain('Output of `db sqlite query movies SELECT 1`:\n42');
+
+    lastHandlers().onChunk('Done.');
+    lastHandlers().onEnd('end_turn');
+    await flush();
+
+    expect(frames.at(-1)).toEqual({ type: 'acp-run-end', id: 'racp1', reason: 'answered' });
+  });
+
+  it('refuses a run for a missing or closed session', async () => {
+    const { acp, frames } = makeAcp();
+
+    acp.run({ ...RUN_FRAME, id: 'racp9' });
+
+    expect(frames).toEqual([
+      { type: 'acp-error', id: 'racp9', message: 'No remote ACP session is open.', fatal: true },
+    ]);
+
+    acp.open(OPEN);
+    await acp.close('racp1');
+    frames.length = 0;
+
+    acp.run(RUN_FRAME);
+
+    expect(frames).toEqual([
+      { type: 'acp-error', id: 'racp1', message: 'No remote ACP session is open.', fatal: true },
+    ]);
+    expect(acpMock.prompt).not.toHaveBeenCalled();
+  });
+
+  it('refuses a second run while the first is still in flight', () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+
+    acp.run(RUN_FRAME);
+    acp.run(RUN_FRAME);
+
+    expect(frames.filter((frame) => frame.type === 'acp-error')).toEqual([
+      { type: 'acp-error', id: 'racp1', message: 'ACP: a prompt is already running.', fatal: false },
+    ]);
+    expect(acpMock.prompt).toHaveBeenCalledOnce();
+  });
+
+  it('ignores a tool result for a live session with no run and after its run has ended', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+
+    expect(() => acp.toolResult({ type: 'acp-tool-result', id: 'racp1', request: 1, output: '42' })).not.toThrow();
+    expect(frames).toEqual([]);
+
+    acp.run(RUN_FRAME);
+    lastHandlers().onChunk('Done.');
+    lastHandlers().onEnd('end_turn');
+    await flush();
+    expect(frames.at(-1)).toEqual({ type: 'acp-run-end', id: 'racp1', reason: 'answered' });
+
+    const before = frames.length;
+    expect(() => acp.toolResult({ type: 'acp-tool-result', id: 'racp1', request: 1, output: 'late' })).not.toThrow();
+    expect(frames).toHaveLength(before);
+  });
+
+  it('admits another run after the first ends with acp-run-end', async () => {
+    const { acp } = makeAcp();
+    acp.open(OPEN);
+
+    acp.run(RUN_FRAME);
+    lastHandlers().onChunk('Done.');
+    lastHandlers().onEnd('end_turn');
+    await flush();
+
+    acp.run(RUN_FRAME);
+
+    expect(acpMock.prompt).toHaveBeenCalledTimes(2);
+  });
+
+  it('admits another run after a caller result ends the first with acp-error', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    acp.run({ ...RUN_FRAME, snapshot: coreSnapshot('tell', ['db sqlite query']) });
+
+    lastHandlers().onChunk('db sqlite query movies SELECT 1');
+    lastHandlers().onEnd('end_turn');
+    await flush();
+
+    acp.toolResult({ type: 'acp-tool-result', id: 'racp1', request: 1, error: 'database unavailable' });
+    await flush();
+
+    expect(frames.at(-1)).toEqual({ type: 'acp-error', id: 'racp1', message: 'database unavailable', fatal: false });
+
+    acp.run(RUN_FRAME);
+
+    expect(acpMock.prompt).toHaveBeenCalledTimes(2);
+  });
+
+  it('leaves no stale run handle when the loop finishes during startRemoteLoop', () => {
+    const { acp } = makeAcp();
+    acp.open(OPEN);
+    acpMock.prompt.mockImplementation((_text: string, handlers: PromptHandlers) => {
+      handlers.onChunk('Done.');
+      handlers.onEnd('end_turn');
+    });
+
+    acp.run(RUN_FRAME);
+    acp.run(RUN_FRAME);
+
+    expect(acpMock.prompt).toHaveBeenCalledTimes(2);
   });
 });
 
