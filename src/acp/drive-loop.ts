@@ -1,4 +1,5 @@
 import type { AcpLoopHandlers, AcpLoopSession, AcpRunSnapshot, AcpToolHost } from './types.js';
+import type { RemoteAcpSession } from '../remote/acp-session.js';
 import { createAcpToolTable, gateCommand, toolExtractor, toolPrimer, type AcpTool } from './tool-table.js';
 import { runAcpToolLoop } from './loop.js';
 import { NO_BUILTIN_TOOLS_LINE, NO_TOOLS_LINE } from './internal-tools.js';
@@ -79,8 +80,13 @@ export function driveToolLoop(
 }
 
 export function runToolLoop(
-  session: AcpLoopSession, prompt: string, snapshot: AcpRunSnapshot,
+  session: AcpLoopSession | RemoteAcpSession, prompt: string, snapshot: AcpRunSnapshot,
   host: AcpToolHost, events: AcpLoopHandlers, signal: AbortSignal,
 ): void {
+  if ('remote' in session) {
+    if (signal.aborted) return;
+    session.run(prompt, snapshot, host.runCaller, events);
+    return;
+  }
   driveToolLoop(session, prompt, snapshot, host, events, signal);
 }

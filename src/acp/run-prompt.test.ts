@@ -7,7 +7,10 @@ import { readWorkspaceLines } from '../file-read/read.js';
 import type { Managers } from '../managers.js';
 import type { TabRuntime } from '../tab/types.js';
 import type { AcpPendingPrompt } from './prompt-state.js';
-import type { AcpLoopDeps, AcpLoopHandlers, AcpLoopSession, AcpPromptHandlers, AcpSession } from './types.js';
+import type {
+  AcpLoopDeps, AcpLoopHandlers, AcpLoopSession, AcpPromptHandlers, AcpRunSnapshot, AcpSession, AcpToolHost,
+} from './types.js';
+import type { RemoteAcpSession } from '../remote/acp-session.js';
 import type { NativeCommandSettingsManager } from '../native-commands/manager.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { BROWSER_PRIMER } from '../browser/command.js';
@@ -56,15 +59,18 @@ type StartOptions = {
   settings?: NativeCommandSettingsManager;
   tab?: { workspaceDir?: string; remote?: unknown };
   launchDir?: string;
+  remoteSession?: boolean;
 };
 
 function harness(options: Omit<StartOptions, 'commands' | 'roleName'> = {}) {
   const dispatchNativeLine = vi.fn(async () => ({ dispatched: true, output: 'dispatched output' }));
+  const runtime = { acpWithoutTools: options.withoutTools ?? false, acpRoles: {} } as unknown as TabRuntime;
   const managers = {
     tab: {
       updateRunning: vi.fn(),
+      deleteBusy: vi.fn(),
       append: vi.fn(),
-      byLabel: vi.fn(() => options.tab),
+      byLabel: vi.fn(() => ({ runtime, ...options.tab })),
       workingDirOf: vi.fn(() => '/project'),
       launchDir: options.launchDir ?? '/launch',
     },
@@ -72,11 +78,17 @@ function harness(options: Omit<StartOptions, 'commands' | 'roleName'> = {}) {
     command: { dispatchNativeLine },
     ...(options.settings && { nativeCommandSettings: options.settings }),
   } as unknown as Managers;
-  const runtime = { acpWithoutTools: options.withoutTools ?? false, acpRoles: {} } as unknown as TabRuntime;
   const providerPrompt = vi.fn();
-  const session = { prompt: providerPrompt } as unknown as AcpSession;
+  const run = vi.fn();
+  const localSession = { prompt: providerPrompt } as unknown as AcpSession;
+  const remoteSession: RemoteAcpSession = {
+    remote: true, run, ready: Promise.resolve(true), release: async () => true,
+    cancel: async () => {}, kill: () => {}, shutdown: async () => {},
+  };
+  const session: AcpSession | RemoteAcpSession = options.remoteSession ? remoteSession : localSession;
   const start = (
-    role: 'ask' | 'tell' = 'ask', commands: string[] = ['db sqlite query'], roleName: string = role, recordId?: string,
+    role: 'ask' | 'tell' = 'ask', commands: string[] = ['db sqlite query'], roleName: string = role,
+    recordId?: string, aborted = false,
   ) => {
     const request: AcpPendingPrompt = {
       finish: vi.fn(), abort: new AbortController(), prompt: 'instructions', role,
@@ -86,14 +98,21 @@ function harness(options: Omit<StartOptions, 'commands' | 'roleName'> = {}) {
       prompt: request, ...(recordId !== undefined && { recordId }),
     };
     mocks.runAcpToolLoop.mockClear();
+    if (aborted) request.abort.abort();
     runCorePrompt(managers, 'shell', runtime, request, session, 'session', () => true);
     const call = mocks.runAcpToolLoop.mock.calls.at(-1);
     const deps = call?.[2] as AcpLoopDeps;
     const handlers = call?.[3] as AcpLoopHandlers;
     const loopSession = call?.[0] as AcpLoopSession;
-    return { deps, request, handlers, session: loopSession };
+    return { deps, request, handlers, session: loopSession, run };
   };
-  return { managers, dispatchNativeLine, providerPrompt, start };
+  return { managers, dispatchNativeLine, providerPrompt, start, run };
+}
+
+type RemoteCall = [string, AcpRunSnapshot, AcpToolHost['runCaller'], AcpLoopHandlers];
+
+function remoteCall(run: ReturnType<typeof vi.fn>): RemoteCall {
+  return run.mock.calls[0] as RemoteCall;
 }
 
 function primer(role: 'ask' | 'tell', options: StartOptions = {}): string {
@@ -326,10 +345,21 @@ describe('runCorePrompt tool runner', () => {
       expect(dispatchNativeLine).not.toHaveBeenCalled();
     });
 
-    it('takes the remote path on a remote tab, never the local disk', async () => {
-      const { start } = harness({ tab: { workspaceDir: dir, remote: { host: 'far' } }, launchDir: dir });
-      const { deps } = start('ask', ['file read']);
-      await expect(deps.runCommand('file read a.txt')).resolves.toBe('Remote connection unavailable.');
+    it('leaves a remote tab\'s workspace read to the far side, never the local disk', () => {
+      const { start, dispatchNativeLine, run } = harness({
+        remoteSession: true, tab: { workspaceDir: dir, remote: { host: 'far' } }, launchDir: dir,
+      });
+      start('ask', ['file read']);
+      const call = remoteCall(run);
+      const runCaller = call[2];
+      const events = call[3];
+
+      events.startCommand?.('file read a.txt', true);
+      events.ranCommand('file read a.txt', '1\talpha', true);
+
+      expect(run).toHaveBeenCalledOnce();
+      expect(typeof runCaller).toBe('function');
+      expect(dispatchNativeLine).not.toHaveBeenCalled();
     });
 
     it('refuses an ungranted file read with the role refusal', () => {
@@ -344,5 +374,68 @@ describe('runCorePrompt tool runner', () => {
     const { deps } = start('ask', ['db sqlite query']);
     expect(deps.extractCommand('Checking.\ndb sqlite query shop SELECT 1')).toBeNull();
     expect(deps.primer.startsWith(NO_TOOLS_LINE)).toBe(true);
+  });
+});
+
+describe('runCorePrompt remote session', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('hands the prompt, role snapshot, caller runner, and guarded events to the far side', () => {
+    const { start, run } = harness({ remoteSession: true });
+    const { request } = start('ask', ['db sqlite query']);
+    const [text, snapshot, runCaller, events] = remoteCall(run);
+
+    expect(text).toBe('instructions');
+    expect(snapshot).toMatchObject({
+      kind: 'core', role: 'ask', roleName: 'ask', grants: ['db sqlite query'],
+    });
+    expect(typeof runCaller).toBe('function');
+    expect(typeof events.finished).toBe('function');
+    expect(mocks.runAcpToolLoop).not.toHaveBeenCalled();
+    expect(request.abort.signal.aborted).toBe(false);
+  });
+
+  it('dispatches a granted caller command through the guarded runner with the prompt signal', async () => {
+    const { start, dispatchNativeLine, run } = harness({ remoteSession: true });
+    const { request } = start('ask', ['db sqlite query']);
+    const runCaller = remoteCall(run)[2];
+
+    await expect(runCaller('db sqlite query shop SELECT 1')).resolves.toBe('dispatched output');
+    expect(dispatchNativeLine).toHaveBeenCalledWith(
+      'shell',
+      'db sqlite query shop SELECT 1',
+      expect.objectContaining({ acpTool: true, awaitResult: true, signal: request.abort.signal }),
+    );
+  });
+
+  it('raises the command-disabled notification for a far-side refused step', () => {
+    const { start, managers, run } = harness({ remoteSession: true });
+    start('ask', ['db sqlite query']);
+    const events = remoteCall(run)[3];
+    const refusal = 'Command is disabled: db sqlite query.';
+
+    events.ranCommand('db sqlite query shop SELECT 1', refusal, false, 'disabled');
+
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'command-disabled', 'shell', refusal);
+  });
+
+  it('appends the capped paragraph to a far-side capped answer', () => {
+    const { start, run } = harness({ remoteSession: true });
+    const { request } = start('ask', ['db sqlite query']);
+    const events = remoteCall(run)[3];
+
+    events.endTurn('partial');
+    events.finished('capped', 8);
+
+    expect(request.finish).toHaveBeenCalledWith({
+      answered: true, reply: 'partial\n\n(stopped after 8 tool steps)', session: 'session',
+    });
+  });
+
+  it('sends no run when the request is already aborted', () => {
+    const { start, run } = harness({ remoteSession: true });
+    start('ask', ['db sqlite query'], 'ask', undefined, true);
+
+    expect(run).not.toHaveBeenCalled();
   });
 });

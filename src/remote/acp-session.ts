@@ -32,7 +32,7 @@ export type RemoteAcpHooks = {
   onTransportLost?: () => void;
 };
 
-export type RemoteAcpSession = AcpSession & {
+export type RemoteAcpSession = Omit<AcpSession, 'prompt'> & {
   remote: true;
   run: (
     text: string, snapshot: AcpRunSnapshot, runCaller: AcpToolHost['runCaller'], events: AcpLoopHandlers,
@@ -164,10 +164,6 @@ export function createRemoteAcpSession(
     run: (text, snapshot, runCaller, events) => {
       if (!run.start(runCaller, events)) return;
       send({ type: 'acp-run', id, text, snapshot });
-    },
-    prompt: (text, handlers) => {
-      if (!control.admit(handlers)) return;
-      send({ type: 'acp-prompt', id, text });
     },
     cancel: () => {
       if (!live) return Promise.resolve();

@@ -270,7 +270,8 @@ describe('connectAcp', () => {
         if (!('type' in frame)) throw new Error(frame.error);
         switch (frame.type) {
         case 'acp-open': { holder.open({ ...frame, command: process.execPath, args: [script, 'cancel'], env: {} }); break; }
-        case 'acp-prompt': { holder.prompt(frame); break; }
+        case 'acp-run': { holder.run(frame); break; }
+        case 'acp-tool-result': { holder.toolResult(frame); break; }
         case 'acp-cancel': { holder.cancel(frame.id); break; }
         case 'acp-close': { void holder.close(frame.id); break; }
         default: { throw new Error(`Unexpected test frame ${frame.type}`); }

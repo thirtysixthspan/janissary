@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { AcpLoopHandlers, AcpLoopSession, AcpRunSnapshot, AcpRunSnapshotRow } from './types.js';
+import type { RemoteAcpSession } from '../remote/acp-session.js';
 import { corePrimer, driveToolLoop, runToolLoop } from './drive-loop.js';
 import { createAcpToolTable } from './tool-table.js';
 import { NO_BUILTIN_TOOLS_LINE, NO_TOOLS_LINE } from './internal-tools.js';
@@ -220,6 +221,42 @@ describe('driveToolLoop', () => {
 });
 
 describe('runToolLoop', () => {
+  function makeRemoteSession() {
+    const run = vi.fn();
+    const session: RemoteAcpSession = {
+      remote: true, run, ready: Promise.resolve(true), release: async () => true,
+      cancel: async () => {}, kill: () => {}, shutdown: async () => {},
+    };
+    return { session, run };
+  }
+
+  it('hands a remote session its run instead of driving the local loop', () => {
+    const { session, run } = makeRemoteSession();
+    const { h, events } = makeHandlers();
+    const host = { runCaller: vi.fn(() => 'caller output'), runWorkspace: vi.fn(() => 'workspace output') };
+    const snapshot = coreSnapshot('tell', ['db sqlite query']);
+
+    runToolLoop(session, 'do it', snapshot, host, h, new AbortController().signal);
+
+    expect(run).toHaveBeenCalledExactlyOnceWith('do it', snapshot, host.runCaller, h);
+    expect(host.runCaller).not.toHaveBeenCalled();
+    expect(host.runWorkspace).not.toHaveBeenCalled();
+    expect(events).toEqual([]);
+  });
+
+  it('sends nothing to a remote session when the signal is already aborted', () => {
+    const { session, run } = makeRemoteSession();
+    const controller = new AbortController();
+    controller.abort();
+
+    runToolLoop(
+      session, 'do it', coreSnapshot('tell', ['db sqlite query']),
+      { runCaller: vi.fn(), runWorkspace: vi.fn() }, makeHandlers().h, controller.signal,
+    );
+
+    expect(run).not.toHaveBeenCalled();
+  });
+
   it('drives a core run through the gate-and-route driver', () => {
     const { session, sent } = makeSession([QUERY, 'Done.']);
     const { h, events } = makeHandlers();

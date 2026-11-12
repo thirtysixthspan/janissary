@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AcpSession, AcpLoopDeps, AcpLoopHandlers } from './types.js';
+import type { AcpSession, AcpLoopDeps, AcpLoopHandlers, AcpRunSnapshot } from './types.js';
 import type { Tab } from '../tab/types.js';
 import type { RoleEntry } from '../plugins/roles/shared.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
@@ -7,6 +7,7 @@ import type { AcpRoleSettings } from './ask-role.js';
 import type { AcpRole } from './role.js';
 import { makeTab } from '../tab/index.js';
 import { DB_PRIMER } from '../database/primer.js';
+import type { AcpSessionListener } from '../remote/channel/acp.js';
 
 const mocks = vi.hoisted(() => ({
   connectAcp: vi.fn(),
@@ -35,6 +36,15 @@ vi.mock('../browser/command.js', () => ({
 import { AcpManager } from './manager.js';
 
 const makeSession = (): AcpSession => ({ prompt: vi.fn(), kill: vi.fn(), cancel: vi.fn(async () => {}), shutdown: vi.fn(async () => {}) });
+
+const snapshot: AcpRunSnapshot = { kind: 'agent', grants: [], askUser: false };
+
+function runEvents(): AcpLoopHandlers {
+  return {
+    startTurn: vi.fn(), chunk: vi.fn(), endTurn: vi.fn(),
+    startCommand: vi.fn(), ranCommand: vi.fn(), finished: vi.fn(), error: vi.fn(),
+  };
+}
 
 const GEMINI: RoleEntry = { harness: 'opencode', model: 'google/gemini-3.1-flash-lite' };
 const CLAUDE: RoleEntry = { harness: 'claude', model: 'claude-haiku-4-5' };
@@ -673,8 +683,7 @@ describe('AcpManager role sessions', () => {
 });
 
 // A remote tab runs its agent on the far side, inside the workspace clone that host
-// provisioned. Only where the session comes from changes; the tool loop and everything built on it
-// never learn that it is remote.
+// provisioned. The tool loop hands a remote session the run; only frames cross the channel back.
 describe('AcpManager — remote tabs', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -698,13 +707,8 @@ describe('AcpManager — remote tabs', () => {
   }
 
   // The listener the adapter registered for its session id — the callbacks the remote's frames feed.
-  function acpListener(channel: { attachAcp: ReturnType<typeof vi.fn> }) {
-    return channel.attachAcp.mock.calls[0][1] as {
-      onReady: () => void;
-      onChunk: (text: string) => void;
-      onEnd: (stopReason: string) => void;
-      onError: (message: string, fatal: boolean) => void;
-    };
+  function acpListener(channel: { attachAcp: ReturnType<typeof vi.fn> }): AcpSessionListener {
+    return channel.attachAcp.mock.calls[0][1] as AcpSessionListener;
   }
 
   it('backs the session with the channel and never spawns an agent locally', () => {
@@ -717,7 +721,11 @@ describe('AcpManager — remote tabs', () => {
     expect(channel.send).toHaveBeenCalledWith(expect.objectContaining({
       type: 'acp-open', command: 'opencode', args: ['acp'],
     }));
-    expect(mocks.runAcpToolLoop).toHaveBeenCalledOnce();
+    expect(mocks.runAcpToolLoop).not.toHaveBeenCalled();
+    expect(channel.send).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'acp-run', text: 'hello',
+      snapshot: expect.objectContaining({ kind: 'core', role: 'ask', roleName: 'ask' }),
+    }));
     expect(acp.has('tab1')).toBe(true);
   });
 
@@ -746,21 +754,22 @@ describe('AcpManager — remote tabs', () => {
     const { acp, channel } = remoteSetup();
     const ask = acp.start('tab1');
     const tell = acp.start('tab1', undefined, 'tell');
-    const askHandlers = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
-    const tellHandlers = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
+    const askEvents = runEvents();
+    const tellEvents = runEvents();
     const askSession = acp.session('tab1', '/cwd', GEMINI, { onError: vi.fn(), onConnect: vi.fn() }, 'ask');
     const tellSession = acp.session('tab1', '/cwd', CLAUDE, { onError: vi.fn(), onConnect: vi.fn() }, 'tell');
-    const listeners = channel.attachAcp.mock.calls.map(([, listener]) => listener as {
-      onChunk: (text: string) => void;
-      onEnd: (reason: string) => void;
-    });
+    const listeners = channel.attachAcp.mock.calls.map(([, listener]) => listener as AcpSessionListener);
 
-    askSession.prompt('ask text', askHandlers);
-    tellSession.prompt('tell text', tellHandlers);
+    askSession.run('ask text', snapshot, vi.fn(), askEvents);
+    tellSession.run('tell text', snapshot, vi.fn(), tellEvents);
+    listeners[0]!.onTurn({ type: 'acp-turn', id: 'racp1', phase: 'start', first: true });
+    listeners[1]!.onTurn({ type: 'acp-turn', id: 'racp2', phase: 'start', first: true });
     listeners[0]!.onChunk('ask partial');
     listeners[1]!.onChunk('tell partial');
-    listeners[0]!.onEnd('end_turn');
-    listeners[1]!.onEnd('end_turn');
+    listeners[0]!.onTurn({ type: 'acp-turn', id: 'racp1', phase: 'end', display: 'ask partial' });
+    listeners[1]!.onTurn({ type: 'acp-turn', id: 'racp2', phase: 'end', display: 'tell partial' });
+    listeners[0]!.onRunEnd('answered');
+    listeners[1]!.onRunEnd('answered');
 
     expect(ask.session).toBeDefined();
     expect(tell.session).toBeDefined();
@@ -768,12 +777,14 @@ describe('AcpManager — remote tabs', () => {
     expect(channel.attachAcp.mock.calls.map(([id]) => id)).toEqual(['racp1', 'racp2']);
     expect(channel.send.mock.calls.filter(([frame]) => (frame as { type: string }).type === 'acp-open')
       .map(([frame]) => (frame as { id: string }).id)).toEqual(['racp1', 'racp2']);
-    expect(channel.send).toHaveBeenCalledWith({ type: 'acp-prompt', id: 'racp1', text: 'ask text' });
-    expect(channel.send).toHaveBeenCalledWith({ type: 'acp-prompt', id: 'racp2', text: 'tell text' });
-    expect(askHandlers.onChunk).toHaveBeenCalledWith('ask partial');
-    expect(tellHandlers.onChunk).toHaveBeenCalledWith('tell partial');
-    expect(askHandlers.onEnd).toHaveBeenCalledWith('end_turn');
-    expect(tellHandlers.onEnd).toHaveBeenCalledWith('end_turn');
+    expect(channel.send).toHaveBeenCalledWith({ type: 'acp-run', id: 'racp1', text: 'ask text', snapshot });
+    expect(channel.send).toHaveBeenCalledWith({ type: 'acp-run', id: 'racp2', text: 'tell text', snapshot });
+    expect(askEvents.chunk).toHaveBeenLastCalledWith('ask partial');
+    expect(tellEvents.chunk).toHaveBeenLastCalledWith('tell partial');
+    expect(askEvents.endTurn).toHaveBeenCalledWith('ask partial');
+    expect(tellEvents.endTurn).toHaveBeenCalledWith('tell partial');
+    expect(askEvents.finished).toHaveBeenCalledWith('answered', 8);
+    expect(tellEvents.finished).toHaveBeenCalledWith('answered', 8);
   });
 
   // The model is chosen here and sent across, so a remote session cannot silently disagree with a
@@ -820,12 +831,13 @@ describe('AcpManager — remote tabs', () => {
   it('retrying once the channel has attached then works', () => {
     const { acp, channel } = remoteSetup({ attached: false });
     acp.run('tab1', 'ask hello');
+    expect(channel.send).not.toHaveBeenCalled();
 
     channel.attached = true;
     acp.run('tab1', 'ask hello');
 
     expect(channel.attachAcp).toHaveBeenCalledOnce();
-    expect(mocks.runAcpToolLoop).toHaveBeenCalledOnce();
+    expect(channel.send).toHaveBeenCalledWith(expect.objectContaining({ type: 'acp-run', text: 'hello' }));
   });
 
   it('falls back to a local session for a remote tab with no channel at all', () => {
@@ -861,30 +873,32 @@ describe('AcpManager — remote tabs', () => {
     expect(channel.attachAcp.mock.calls[1][0]).toBe('racp2');
   });
 
-  it('keeps the session alive on a non-fatal error, reporting it through the running prompt only', () => {
+  it('keeps the session alive on a non-fatal error, reporting it through the running run only', () => {
     const { acp, channel } = remoteSetup();
-    acp.run('tab1', 'ask hello');
-    const promptHandlers = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
-    acp.session('tab1', '/cwd', GEMINI, { onError: vi.fn(), onConnect: vi.fn() }).prompt('hi', promptHandlers);
+    const events = runEvents();
+    acp.session('tab1', '/cwd', GEMINI, { onError: vi.fn(), onConnect: vi.fn() }).run('hi', snapshot, vi.fn(), events);
 
     acpListener(channel).onError('rate limited', false);
 
-    expect(promptHandlers.onError).toHaveBeenCalledWith('rate limited');
+    expect(events.error).toHaveBeenCalledWith('rate limited');
     expect(acp.has('tab1')).toBe(true);
   });
 
-  it('streams chunks and the stop reason to the in-flight prompt', () => {
+  it('streams chunks and the run end to the in-flight run', () => {
     const { acp, channel } = remoteSetup();
-    acp.run('tab1', 'ask hello');
-    const promptHandlers = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
-    acp.session('tab1', '/cwd', GEMINI, { onError: vi.fn(), onConnect: vi.fn() }).prompt('hi', promptHandlers);
+    const events = runEvents();
+    acp.session('tab1', '/cwd', GEMINI, { onError: vi.fn(), onConnect: vi.fn() }).run('hi', snapshot, vi.fn(), events);
+    const listener = acpListener(channel);
 
-    acpListener(channel).onChunk('partial ');
-    acpListener(channel).onEnd('end_turn');
+    listener.onTurn({ type: 'acp-turn', id: 'racp1', phase: 'start', first: true });
+    listener.onChunk('partial ');
+    listener.onTurn({ type: 'acp-turn', id: 'racp1', phase: 'end', display: 'partial answer' });
+    listener.onRunEnd('answered');
 
-    expect(channel.send).toHaveBeenCalledWith({ type: 'acp-prompt', id: 'racp1', text: 'hi' });
-    expect(promptHandlers.onChunk).toHaveBeenCalledWith('partial ');
-    expect(promptHandlers.onEnd).toHaveBeenCalledWith('end_turn');
+    expect(channel.send).toHaveBeenCalledWith({ type: 'acp-run', id: 'racp1', text: 'hi', snapshot });
+    expect(events.chunk).toHaveBeenLastCalledWith('partial ');
+    expect(events.endTurn).toHaveBeenCalledWith('partial answer');
+    expect(events.finished).toHaveBeenCalledWith('answered', 8);
   });
 
   it('closing the tab\'s session sends the close frame and detaches the listener', () => {

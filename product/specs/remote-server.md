@@ -668,10 +668,11 @@ already been reported as failed is ignored.
 
 A remote shell or other supported plugin tab's core ACP agent is a further exception, and it splits three ways. The **agent
 process** runs on the remote, in the workspace clone, so it sees the files the tab is working on; the
-remote hosts the ACP client too, so what crosses the channel is prompt text and reply chunks rather
-than JSON-RPC. The **autonomous tool loop** stays local — a remote agent's `db`, `browser`, and
-`question` commands execute on the machine janissary is running on, against local files and a local
-browser, not the remote workspace's. And **which agent and model run** is decided locally and sent
+remote hosts the ACP client too, so what crosses the channel is prompt text, turns, and tool steps rather
+than JSON-RPC. The **autonomous tool loop** runs beside the agent in the clone, so workspace commands
+resolve there; its caller-side tools — `db`, `browser`, and `question` — still execute on the machine
+janissary is running on, against local data and a local browser, and their results travel back as tool
+results. And **which agent and model run** is decided locally and sent
 across on the frame that opens the session, so one definition holds and the two installations cannot
 silently disagree about the model. See [[acp]].
 
@@ -690,9 +691,10 @@ The selected execution host resolves the task and requested skills from its work
 installed Janissary tasks and skills, then returns an immutable snapshot before ACP starts. The
 `agent-resolve` request carries a correlation id, task and skill names; its `agent-resolve-result`
 reply carries that id and either the snapshot or an error. Resolution waits at most 15 seconds and
-fails if the connection is lost before the reply arrives. The ACP process runs on the execution host
-with the selected model and effort, and `acp-ready` reports that host's confinement result. The
-autonomous tool loop and granted Janissary command execution remain local. Command authorization,
+fails if the connection is lost before the reply arrives. The ACP process and its tool loop run on
+the execution host, inside the run's workspace clone, so workspace commands resolve there; granted
+`db`, `browser`, and `question` commands still execute on the machine running Janissary and travel
+back as tool results. Command authorization,
 output, questions, and other invocation context stay bound to the original caller even when execution
 moves to another host. Remote activity is routed only to its run.
 
@@ -841,6 +843,6 @@ a shared channel's server holds one agent per tab using it.
 - Arbitrating two janissary instances attaching one peer — last attach wins, and the loser enters
   its own reconnect backoff.
 - `ask` in a remote **harness** tab — it is already driving its own agent binary in a terminal.
-- Running an ACP agent's `db`, `browser`, and `question` commands on the remote host; the tool loop
-  stays local.
+- Running an ACP agent's `db`, `browser`, and `question` commands on the remote host; those
+  caller-side tools stay local.
 - More than one ACP session per remote tab, and multiplexing one remote agent across tabs.

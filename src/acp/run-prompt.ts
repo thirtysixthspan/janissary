@@ -1,5 +1,6 @@
 import type { Managers } from '../managers.js';
 import type { AcpLoopSession, AcpRunSnapshot, AcpSession, AcpToolHost } from './types.js';
+import type { RemoteAcpSession } from '../remote/acp-session.js';
 import type { AcpPendingPrompt } from './prompt-state.js';
 import type { LogEntry, TabRuntime } from '../tab/types.js';
 import { guardAcpHandlers } from './guard-handlers.js';
@@ -69,7 +70,7 @@ function guardedSession(session: AcpSession, active: () => boolean): AcpLoopSess
 
 export function runCorePrompt(
   managers: Managers, label: string, runtime: TabRuntime, request: AcpPendingPrompt,
-  session: AcpSession, identity: string, current: () => boolean,
+  session: AcpSession | RemoteAcpSession, identity: string, current: () => boolean,
 ): void {
   const roleState = acpRoleRuntime(runtime, request.role);
   const active = () => current() && roleState.prompt === request && !request.abort.signal.aborted;
@@ -89,7 +90,10 @@ export function runCorePrompt(
     },
   };
   let lastAnswer = '';
-  runToolLoop(guardedSession(session, active), request.prompt, snapshot, host, guardAcpHandlers({
+  const loopSession: AcpLoopSession | RemoteAcpSession = 'remote' in session
+    ? session
+    : guardedSession(session, active);
+  runToolLoop(loopSession, request.prompt, snapshot, host, guardAcpHandlers({
     startTurn: (isFirst) => {
       if (isFirst) notify(managers, 'agent-start', label);
       const entry: LogEntry = { input: isFirst ? request.prompt : '', output: '', running: true, markdown: true };

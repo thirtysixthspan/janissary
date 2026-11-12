@@ -2,9 +2,10 @@ import { realpathSync } from 'node:fs';
 import path from 'node:path';
 import { acpLaunchFor } from '../acp/launch.js';
 import { connectAcp } from '../acp/index.js';
-import { createRemoteAcpSession } from '../remote/acp-session.js';
+import { createRemoteAcpSession, type RemoteAcpSession } from '../remote/acp-session.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
 import { runToolLoop } from '../acp/drive-loop.js';
+import type { AcpLoopSession } from '../acp/types.js';
 import { readWorkspaceCommand } from '../file-read/read.js';
 import { selectedModel } from './model.js';
 import { guardAcpHandlers } from '../acp/guard-handlers.js';
@@ -126,7 +127,7 @@ export async function executeAgentRun(
     connectionFailure = (message) => fail(new Error(`Agent: ${message}`));
     run.abortController.signal.addEventListener('abort', () => finish('Agent terminated.'), { once: true });
     const active = () => !run.outcome && !run.abortController.signal.aborted;
-    runToolLoop({
+    const loopSession: AcpLoopSession | RemoteAcpSession = 'remote' in session ? session : {
       prompt: (text, handlers) => {
         if (!active()) return;
         session.prompt(text, {
@@ -135,13 +136,14 @@ export async function executeAgentRun(
           onError: (message) => { if (active()) handlers.onError(message); },
         });
       },
-    }, prompt, {
+    };
+    runToolLoop(loopSession, prompt, {
       kind: 'agent', grants: run.snapshot.grants,
       askUser: run.snapshot.skills.some(({ name }) => name === 'ask-user'),
     }, {
       runWorkspace: (command) => {
         if (!active()) throw new Error('Agent terminated.');
-        return remote ? 'Remote connection unavailable.' : readWorkspaceCommand(run.executionDir, command.trim().replace(/^\//, ''));
+        return readWorkspaceCommand(run.executionDir, command.trim().replace(/^\//, ''));
       },
       runCaller: async (command) => {
         if (!active()) throw new Error('Agent terminated.');

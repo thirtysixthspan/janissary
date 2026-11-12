@@ -47,6 +47,8 @@ function setup(remote = false) {
     return session;
   });
   const listeners: AcpSessionListener[] = [];
+  const streamed = new Map<number, string>();
+  const started = new Set<number>();
   const channel = {
     attached: true, send: vi.fn(),
     attachAcp: (_id: string, value: AcpSessionListener) => { listeners.push(value); },
@@ -64,12 +66,24 @@ function setup(remote = false) {
     else sessions[index]!.options.onConnect?.({ provider: 'reported', model: 'mode' });
   };
   const chunk = (text: string, index = (remote ? listeners : sessions).length - 1) => {
-    if (remote) listeners[index]!.onChunk(text);
-    else sessions[index]!.control.current!.handlers.onChunk(text);
+    if (remote) {
+      if (!started.has(index)) {
+        started.add(index);
+        listeners[index]!.onTurn({ type: 'acp-turn', id: `racp${index + 1}`, phase: 'start', first: true });
+      }
+      listeners[index]!.onChunk(text);
+      streamed.set(index, (streamed.get(index) ?? '') + text);
+    } else sessions[index]!.control.current!.handlers.onChunk(text);
   };
   const end = (index = (remote ? listeners : sessions).length - 1) => {
-    if (remote) listeners[index]!.onEnd('end_turn');
-    else {
+    if (remote) {
+      listeners[index]!.onTurn({
+        type: 'acp-turn', id: `racp${index + 1}`, phase: 'end', display: streamed.get(index) ?? '',
+      });
+      started.delete(index);
+      streamed.delete(index);
+      listeners[index]!.onRunEnd('answered');
+    } else {
       const control = sessions[index]!.control;
       control.end(control.current!, 'end_turn');
     }
