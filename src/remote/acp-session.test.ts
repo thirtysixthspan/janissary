@@ -353,6 +353,22 @@ describe('createRemoteAcpSession — running', () => {
     expect(s.sent.at(-1)).toEqual({ type: 'acp-tool-result', id: 'racp1', request: 9, error: 'database unavailable' });
   });
 
+  it('answers a failed caller tool carrying no error text with a non-empty fallback', async () => {
+    const s = makeSession();
+    const events = runEvents();
+    s.session.run('go', snapshot, vi.fn(async () => {
+      const empty = new Error('placeholder');
+      empty.message = '';
+      throw empty;
+    }), events);
+
+    s.listener().onToolRequest({ type: 'acp-tool-request', id: 'racp1', request: 10, command: 'db status' });
+    await vi.waitFor(() => expect(s.sent.at(-1)).toMatchObject({ type: 'acp-tool-result', error: 'Command failed.' }));
+
+    expect(events.ranCommand).not.toHaveBeenCalled();
+    expect(s.sent.at(-1)).toEqual({ type: 'acp-tool-result', id: 'racp1', request: 10, error: 'Command failed.' });
+  });
+
   it('ignores tool frames with no run in flight', () => {
     const s = makeSession();
     const listener = s.listener();

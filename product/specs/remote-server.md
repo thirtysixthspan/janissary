@@ -360,7 +360,9 @@ ACP handlers.
 
 An ACP-level failure is not a channel-level fault. An agent that fails to spawn or errors mid-prompt
 is reported on its own error frame and routed to the session that owns it; only a malformed or
-unknown frame interrupts the channel. An established session then attempts to attach.
+unknown frame interrupts the channel. A caller tool that fails with no error message is sent back as
+`Command failed.`, so an empty failure is still a tool result rather than a malformed frame. An
+established session then attempts to attach.
 
 A process that fails to start on the remote host is not a channel-level fault either. A pseudo-terminal
 that will not start, or a persistent shell whose program is missing or not executable, is answered

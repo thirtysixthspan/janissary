@@ -77,7 +77,10 @@ export function createRemoteAcpRun(control: AcpPromptControl, send: (frame: Clie
           events.ranCommand(frame.command, output, false);
           send({ type: 'acp-tool-result', id: frame.id, request: frame.request, output });
         } catch (error) {
-          if (active(turn)) send({ type: 'acp-tool-result', id: frame.id, request: frame.request, error: errorText(error) });
+          if (active(turn)) {
+            const message = errorText(error) || 'Command failed.';
+            send({ type: 'acp-tool-result', id: frame.id, request: frame.request, error: message });
+          }
         }
       })();
     },
