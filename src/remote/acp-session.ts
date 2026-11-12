@@ -117,10 +117,6 @@ export function createRemoteAcpSession(
     onToolRequest: (frame) => run.request(frame),
     onToolStep: (frame) => run.step(frame),
     onRunEnd: (reason) => run.end(reason),
-    onEnd: (stopReason) => {
-      const turn = control.current;
-      if (turn) control.end(turn, stopReason);
-    },
     // A prompt that merely failed goes to the running loop, which reports it and leaves the session
     // alone. A fatal one also goes to the connection hook, which is what drops the session — and to
     // the in-flight prompt as well, so the loop terminates rather than waiting on a reply that is

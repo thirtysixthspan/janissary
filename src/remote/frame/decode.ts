@@ -14,7 +14,7 @@ import {
   decodeCaptureRequest, decodeCaptureReply, decodeGateEvent, decodeBusyTransition, decodeResumeEvent, decodeResumeAddressed,
 } from './decode-detect.js';
 import {
-  decodeAcpOpen, decodeAcpText, decodeAcpAddressed, decodeAcpEnd, decodeAcpError, decodeAcpActivity, decodeAcpClosed,
+  decodeAcpOpen, decodeAcpText, decodeAcpAddressed, decodeAcpError, decodeAcpActivity, decodeAcpClosed,
 } from './decode-acp.js';
 import { decodeProvision } from './decode-provision.js';
 import {
@@ -84,12 +84,10 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'acp-tool-request': { return decodeAcpToolRequest(record); }
   case 'acp-tool-step': { return decodeAcpToolStep(record); }
   case 'acp-run-end': { return decodeAcpRunEnd(record); }
-  case 'acp-prompt':
   case 'acp-chunk': { return decodeAcpText(type, record); }
   case 'acp-close':
   case 'acp-cancel':
   case 'acp-ready': { return decodeAcpAddressed(type, record); }
-  case 'acp-end': { return decodeAcpEnd(record); }
   case 'acp-error': { return decodeAcpError(record); }
   case 'acp-activity': { return decodeAcpActivity(record); }
   case 'acp-closed': { return decodeAcpClosed(record); }

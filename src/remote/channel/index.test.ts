@@ -295,7 +295,7 @@ describe('RemoteChannel — ACP session routing', () => {
     if (phase !== 'authentication') h.channel.receive(`${encodeHandshake()}\n`);
     const first = {
       onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(),
-      onRunEnd: vi.fn(), onEnd: vi.fn(), onError: vi.fn(), onTransportLost: vi.fn(),
+      onRunEnd: vi.fn(), onError: vi.fn(), onTransportLost: vi.fn(),
     };
     const second = { ...first, onTransportLost: vi.fn() };
     first.onTransportLost.mockImplementation(() => { h.channel.detachAcp('second'); });
@@ -318,8 +318,8 @@ describe('RemoteChannel — ACP session routing', () => {
     const h = harness();
     const onError = vi.fn();
     const otherError = vi.fn();
-    h.channel.attachAcp('first', { onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(), onRunEnd: vi.fn(), onEnd: vi.fn(), onError });
-    h.channel.attachAcp('second', { onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(), onRunEnd: vi.fn(), onEnd: vi.fn(), onError: otherError });
+    h.channel.attachAcp('first', { onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(), onRunEnd: vi.fn(), onError });
+    h.channel.attachAcp('second', { onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(), onRunEnd: vi.fn(), onError: otherError });
     h.channel.send({ type: 'acp-cancel', id: 'first' });
     expect(onError).toHaveBeenCalledWith('ACP: cancellation failed: Remote connection unavailable.', true);
     expect(otherError).not.toHaveBeenCalled();
@@ -329,8 +329,8 @@ describe('RemoteChannel — ACP session routing', () => {
     const h = harness();
     const onError = vi.fn();
     const otherError = vi.fn();
-    h.channel.attachAcp('first', { onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(), onRunEnd: vi.fn(), onEnd: vi.fn(), onError });
-    h.channel.attachAcp('second', { onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(), onRunEnd: vi.fn(), onEnd: vi.fn(), onError: otherError });
+    h.channel.attachAcp('first', { onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(), onRunEnd: vi.fn(), onError });
+    h.channel.attachAcp('second', { onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(), onRunEnd: vi.fn(), onError: otherError });
     h.channel.send({
       type: 'acp-run', id: 'first', text: 'summarize',
       snapshot: { kind: 'agent', grants: [], askUser: false },
@@ -344,7 +344,7 @@ describe('RemoteChannel — ACP session routing', () => {
     const h = harness();
     const listener = {
       onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(),
-      onRunEnd: vi.fn(), onEnd: vi.fn(), onActivity: vi.fn(), onClosed: vi.fn(), onError: vi.fn(),
+      onRunEnd: vi.fn(), onActivity: vi.fn(), onClosed: vi.fn(), onError: vi.fn(),
     };
     h.channel.attachAcp('first', listener);
     h.channel.send({ type: 'acp-tool-result', id: 'first', request: 0, output: 'done' });
@@ -357,22 +357,22 @@ describe('RemoteChannel — ACP session routing', () => {
     h.channel.receive(`${encodeHandshake()}\n`);
     const listener = {
       onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(),
-      onRunEnd: vi.fn(), onEnd: vi.fn(), onActivity: vi.fn(), onClosed: vi.fn(), onError: vi.fn(),
+      onRunEnd: vi.fn(), onActivity: vi.fn(), onClosed: vi.fn(), onError: vi.fn(),
     };
     return { ...h, listener };
   }
 
-  it('routes ready, chunk, and end frames to the listener that owns the id', () => {
+  it('routes ready, chunk, and run-end frames to the listener that owns the id', () => {
     const h = acpHarness();
     h.channel.attachAcp('racp1', h.listener);
 
     h.channel.receive(`${encodeFrame({ type: 'acp-ready', id: 'racp1', sandboxed: true })}\n`);
     h.channel.receive(`${encodeFrame({ type: 'acp-chunk', id: 'racp1', text: 'partial' })}\n`);
-    h.channel.receive(`${encodeFrame({ type: 'acp-end', id: 'racp1', stopReason: 'end_turn' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-run-end', id: 'racp1', reason: 'answered' })}\n`);
 
     expect(h.listener.onReady).toHaveBeenCalledTimes(1);
     expect(h.listener.onChunk).toHaveBeenCalledWith('partial');
-    expect(h.listener.onEnd).toHaveBeenCalledWith('end_turn');
+    expect(h.listener.onRunEnd).toHaveBeenCalledWith('answered');
     expect(h.frames).toEqual([]);
   });
 
@@ -546,7 +546,7 @@ it('preserves process and navigator routing but detaches ACP on a dropped peer t
   h.channel.attachNavigator('n', { onReply, onEvent: vi.fn(), onClose });
   h.channel.attachAcp('a', {
     onReady: vi.fn(), onChunk, onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(),
-    onRunEnd: vi.fn(), onEnd: vi.fn(), onError: vi.fn(),
+    onRunEnd: vi.fn(), onError: vi.fn(),
   });
   h.channel.closed(); expect(onClose).not.toHaveBeenCalled();
   h.channel.replaceTransport({ id: 'new', write: vi.fn(), kill: vi.fn() });

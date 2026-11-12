@@ -351,13 +351,11 @@ describe('RemoteServer', () => {
     const { server, frames } = makeServer();
 
     server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
-    server.receive(`${encodeFrame({ type: 'acp-prompt', id: 'racp1', text: 'hi' })}\n`);
     server.receive(`${encodeFrame(ACP_RUN_FRAME)}\n`);
     server.receive(`${encodeFrame({ type: 'acp-cancel', id: 'racp1' })}\n`);
     expect(acpMock.cancel).not.toHaveBeenCalled();
 
     expect(frames).toEqual([
-      { type: 'workspace-failed', message: 'No remote workspace has been provisioned.' },
       { type: 'workspace-failed', message: 'No remote workspace has been provisioned.' },
       { type: 'workspace-failed', message: 'No remote workspace has been provisioned.' },
     ]);
@@ -371,7 +369,7 @@ describe('RemoteServer', () => {
 
     server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
     server.receive(`${encodeFrame({ ...ACP_OPEN_FRAME, id: 'racp2' })}\n`);
-    server.receive(`${encodeFrame({ type: 'acp-prompt', id: 'racp1', text: 'summarize this' })}\n`);
+    server.receive(`${encodeFrame({ ...ACP_RUN_FRAME, text: 'summarize this' })}\n`);
     server.receive(`${encodeFrame({ type: 'acp-cancel', id: 'missing' })}\n`);
     server.receive('{"type":"acp-cancel","id":"racp1","undeclared":true}\n');
     expect(acpMock.cancel).toHaveBeenCalledOnce();
@@ -380,7 +378,7 @@ describe('RemoteServer', () => {
     server.receive(`${encodeFrame({ type: 'acp-close', id: 'racp1' })}\n`);
 
     expect(acpMock.options[0]).toMatchObject({ command: 'opencode', args: ['acp'], cwd: dir, workspaceDir: dir });
-    expect(acpMock.prompt.mock.calls[0][0]).toBe('summarize this');
+    expect(acpMock.prompt.mock.calls[0][0]).toContain('summarize this');
     expect(acpMock.kill).toHaveBeenCalledTimes(1);
     server.shutdown(0);
   });
@@ -932,15 +930,15 @@ describe('detached peer rendezvous', () => {
     peer.emit({ type: 'transcript', blocks: ['first missed block'] });
     peer.emit({ type: 'transcript', blocks: ['second missed block'] });
     peer.emit({ type: 'acp-chunk', id: 'a1', text: 'reply' });
-    peer.emit({ type: 'acp-end', id: 'a1', stopReason: 'end_turn' });
+    peer.emit({ type: 'acp-run-end', id: 'a1', reason: 'answered' });
     peer.track({ ...SPAWN_FRAME, id: 'shell', mode: 'pipe' });
     peer.emit({ type: 'output', id: 'shell', data: 'command completion sentinel' });
     const ended = vi.fn();
     const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, ended)!;
     try {
-      await vi.waitFor(() => expect(output.join('')).toContain('acp-end'));
+      await vi.waitFor(() => expect(output.join('')).toContain('acp-run-end'));
       const frames = output.join('').trim().split('\n').map((line) => JSON.parse(line));
-      expect(frames.map((frame) => frame.type)).toEqual(['attach-result', 'output', 'output', 'transcript', 'transcript', 'acp-chunk', 'acp-end', 'output']);
+      expect(frames.map((frame) => frame.type)).toEqual(['attach-result', 'output', 'output', 'transcript', 'transcript', 'acp-chunk', 'acp-run-end', 'output']);
       expect(frames.at(-1).id).toBe('shell');
       socket.write(`${encodeFrame({ type: 'input', id: 'r1', data: 'new input' })}\n`);
       await vi.waitFor(() => expect(received).toHaveBeenCalledWith(expect.stringContaining('input')));

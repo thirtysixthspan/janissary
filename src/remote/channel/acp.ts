@@ -12,7 +12,6 @@ export type AcpSessionListener = {
   onToolRequest: (frame: AcpToolRequestFrame) => void;
   onToolStep: (frame: AcpToolStepFrame) => void;
   onRunEnd: (reason: AcpRunEndReason) => void;
-  onEnd: (stopReason: string) => void;
   onActivity: (kind: RemoteAcpActivityKind, text: string) => void;
   onClosed: (released: boolean) => void;
   onTransportLost?: () => void;
@@ -27,7 +26,6 @@ export function dispatchAcp(sessions: Map<string, AcpSessionListener>, frame: Re
   case 'acp-tool-request': { sessions.get(frame.id)?.onToolRequest(frame); return true; }
   case 'acp-tool-step': { sessions.get(frame.id)?.onToolStep(frame); return true; }
   case 'acp-run-end': { sessions.get(frame.id)?.onRunEnd(frame.reason); return true; }
-  case 'acp-end': { sessions.get(frame.id)?.onEnd(frame.stopReason); return true; }
   case 'acp-activity': { sessions.get(frame.id)?.onActivity(frame.kind, frame.text); return true; }
   case 'acp-closed': { sessions.get(frame.id)?.onClosed(frame.released); return true; }
   case 'acp-error': { sessions.get(frame.id)?.onError(frame.message, frame.fatal); return true; }

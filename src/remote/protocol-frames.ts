@@ -145,16 +145,16 @@ export type ClientFrame =
   | { type: 'filesystem-open'; session: string }
   | { type: 'filesystem-close'; session: string }
   | { type: 'agent-resolve'; id: string; task: string; skills: string[] }
-  // The ACP family: a remote tab's ACP client is hosted by the far side, so what crosses here
-  // is prompts and reply text, never JSON-RPC. The local side still chooses which agent and model
-  // run, which is why the open frame names the command rather than the remote deciding for itself.
+  // The ACP family: a remote tab's ACP client is hosted by the far side, so what crosses here is
+  // runs, their turn and tool traffic, and reply text, never JSON-RPC. The local side still chooses
+  // which agent and model run, which is why the open frame names the command rather than the remote
+  // deciding for itself.
   | {
     type: 'acp-open'; id: string; command: string; args: string[];
     env?: Record<string, string>; offline?: boolean;
     autonomous?: true; effort?: { level: string; model: string };
     sessionMeta?: Record<string, unknown>;
   }
-  | { type: 'acp-prompt'; id: string; text: string }
   | { type: 'acp-run'; id: string; text: string; snapshot: AcpRunSnapshot }
   | { type: 'acp-tool-result'; id: string; request: number; output?: string; error?: string }
   | { type: 'acp-cancel'; id: string }
@@ -273,7 +273,6 @@ export type ServerFrame =
   // is the far side's cancellation path. Only a `core` run can be capped, and both sides share
   // `CORE_MAX_STEPS`, so no step count travels.
   | { type: 'acp-run-end'; id: string; reason: 'answered' | 'capped' | 'cancelled' }
-  | { type: 'acp-end'; id: string; stopReason: string }
   | { type: 'acp-activity'; id: string; kind: RemoteAcpActivityKind; text: string }
   | { type: 'acp-closed'; id: string; released: boolean }
   // `fatal` distinguishes a session that no longer exists (a failed spawn, a dead agent) from a
@@ -315,7 +314,7 @@ export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
   provision: true, 'clone-answer': true, spawn: true, input: true, resize: true, kill: true, 'capture-request': true, 'resume-ack': true,
   'filesystem-open': true, 'filesystem-close': true, 'filesystem-request': true,
   'agent-resolve': true,
-  'acp-open': true, 'acp-prompt': true, 'acp-run': true, 'acp-tool-result': true, 'acp-cancel': true, 'acp-close': true,
+  'acp-open': true, 'acp-run': true, 'acp-tool-result': true, 'acp-cancel': true, 'acp-close': true,
 };
 export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'attach-result': true, 'session-state-result': true, 'clone-offer': true, 'root-refused': true,
@@ -325,6 +324,6 @@ export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'filesystem-reply': true, 'filesystem-event': true,
   'agent-resolve-result': true,
   'acp-ready': true, 'acp-chunk': true, 'acp-turn': true, 'acp-tool-request': true, 'acp-tool-step': true,
-  'acp-run-end': true, 'acp-end': true,
+  'acp-run-end': true,
   'acp-activity': true, 'acp-closed': true, 'acp-error': true,
 };

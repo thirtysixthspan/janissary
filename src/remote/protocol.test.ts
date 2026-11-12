@@ -359,7 +359,6 @@ describe('frame codec', () => {
         type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp'],
         env: { OPENCODE_CONFIG_CONTENT: '{"model":"google/gemini-3.1-flash-lite"}' }, offline: false,
       },
-      { type: 'acp-prompt', id: 'racp1', text: 'summarize this project' },
       { type: 'acp-close', id: 'racp1' },
       { type: 'acp-cancel', id: 'racp1' },
     ];
@@ -405,16 +404,14 @@ describe('frame codec', () => {
       { type: 'filesystem-event', session: 'files1', path: 'src' },
       { type: 'acp-ready', id: 'racp1', sandboxed: true },
       { type: 'acp-chunk', id: 'racp1', text: 'partial reply' },
-      { type: 'acp-end', id: 'racp1', stopReason: 'end_turn' },
       { type: 'acp-error', id: 'racp1', message: 'rate limited', fatal: false },
       { type: 'acp-error', id: 'racp1', message: 'ACP agent exited.', fatal: true },
     ];
     for (const frame of frames) expect(roundTrip(frame)).toEqual(frame);
   });
 
-  it('carries a prompt and a reply chunk through the base64 path intact', () => {
+  it('carries a reply chunk through the base64 path intact', () => {
     const text = '# heading\n\n```js\nconst x = `tick`;\n```\n\nnaïve — 🌍\n{"type":"kill"}';
-    expect(roundTrip({ type: 'acp-prompt', id: 'racp1', text })).toEqual({ type: 'acp-prompt', id: 'racp1', text });
     expect(roundTrip({ type: 'acp-chunk', id: 'racp1', text })).toEqual({ type: 'acp-chunk', id: 'racp1', text });
     expect(encodeFrame({ type: 'acp-chunk', id: 'racp1', text })).not.toContain('\n');
   });
@@ -455,6 +452,12 @@ describe('frame codec', () => {
   it('rejects a frame with an unknown type rather than ignoring it', () => {
     expect(decodeFrame(JSON.stringify({ type: 'exec', id: 'r1' }))).toEqual({
       error: expect.stringContaining('Unknown remote frame type "exec"'),
+    });
+    expect(decodeFrame(JSON.stringify({ type: 'acp-prompt', id: 'racp1', text: 'hi' }))).toEqual({
+      error: 'Unknown remote frame type "acp-prompt".',
+    });
+    expect(decodeFrame(JSON.stringify({ type: 'acp-end', id: 'racp1', stopReason: 'end_turn' }))).toEqual({
+      error: 'Unknown remote frame type "acp-end".',
     });
   });
 
@@ -572,8 +575,6 @@ describe('frame codec', () => {
     ['acp-open with an array sessionMeta', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], sessionMeta: [] }],
     ['acp-open with a null sessionMeta', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], sessionMeta: null }],
     ['acp-open with a string sessionMeta', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], sessionMeta: 'tools' }],
-    ['acp-prompt without an id', { type: 'acp-prompt', text: 'aGk=' }],
-    ['acp-prompt without string text', { type: 'acp-prompt', id: 'racp1', text: 7 }],
     ['acp-close without an id', { type: 'acp-close' }],
     ['acp-cancel without an id', { type: 'acp-cancel' }],
     ['acp-cancel empty id', { type: 'acp-cancel', id: '' }],
@@ -581,8 +582,6 @@ describe('frame codec', () => {
     ['acp-ready without an id', { type: 'acp-ready' }],
     ['acp-ready without sandbox state', { type: 'acp-ready', id: 'racp1' }],
     ['acp-chunk without string text', { type: 'acp-chunk', id: 'racp1', text: null }],
-    ['acp-end without a stop reason', { type: 'acp-end', id: 'racp1' }],
-    ['acp-end with an empty stop reason', { type: 'acp-end', id: 'racp1', stopReason: '' }],
     ['acp-error without a message', { type: 'acp-error', id: 'racp1', fatal: true }],
     ['acp-error without a fatal flag', { type: 'acp-error', id: 'racp1', message: 'gone' }],
     ['acp-error with a non-boolean fatal flag', { type: 'acp-error', id: 'racp1', message: 'gone', fatal: 'yes' }],
@@ -809,7 +808,6 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
     autonomous: true, effort: { level: 'high', model: 'google/gemini-3.1-flash-lite' },
     sessionMeta: { claudeCode: { options: { tools: [] } } },
   },
-  'acp-prompt': { type: 'acp-prompt', id: 'racp1', text: 'summarize this project' },
   'acp-run': { type: 'acp-run', id: 'racp1', text: 'summarize this project', snapshot: { kind: 'agent', grants: ['file'], askUser: true } },
   'acp-tool-result': { type: 'acp-tool-result', id: 'racp1', request: 0, output: 'first\nsecond' },
   'acp-close': { type: 'acp-close', id: 'racp1' },
@@ -853,7 +851,6 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
     type: 'acp-tool-step', id: 'racp1', command: 'db query', result: 'command not granted', workspace: false, refused: 'disabled',
   },
   'acp-run-end': { type: 'acp-run-end', id: 'racp1', reason: 'answered' },
-  'acp-end': { type: 'acp-end', id: 'racp1', stopReason: 'end_turn' },
   'acp-error': { type: 'acp-error', id: 'racp1', message: 'rate limited', fatal: false },
   'acp-activity': { type: 'acp-activity', id: 'racp1', kind: 'thought', text: 'considering 🧭' },
   'acp-closed': { type: 'acp-closed', id: 'racp1', released: true },
@@ -968,8 +965,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 39', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(39);
+  it('is 40', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(40);
   });
 });
 
@@ -979,7 +976,7 @@ describe('protocol version', () => {
 describe('admitted frame types', () => {
   it('admits exactly the declared client frame types', () => {
     expect(Object.keys(CLIENT_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-cancel', 'acp-close', 'acp-open', 'acp-prompt', 'acp-run', 'acp-tool-result', 'agent-resolve', 'attach', 'capture-request', 'clone-answer',
+      'acp-cancel', 'acp-close', 'acp-open', 'acp-run', 'acp-tool-result', 'agent-resolve', 'attach', 'capture-request', 'clone-answer',
       'filesystem-close', 'filesystem-open', 'filesystem-request',
       'input', 'kill', 'provision', 'resize', 'resume-ack', 'session-state', 'shutdown', 'spawn',
     ]);
@@ -987,7 +984,7 @@ describe('admitted frame types', () => {
 
   it('admits exactly the declared server frame types', () => {
     expect(Object.keys(SERVER_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-activity', 'acp-chunk', 'acp-closed', 'acp-end', 'acp-error', 'acp-ready', 'acp-run-end',
+      'acp-activity', 'acp-chunk', 'acp-closed', 'acp-error', 'acp-ready', 'acp-run-end',
       'acp-tool-request', 'acp-tool-step', 'acp-turn',
       'agent-resolve-result', 'attach-result', 'browser-exited', 'browser-started',
       'busy-transition', 'capture-reply', 'clone-offer', 'exit', 'filesystem-event', 'filesystem-reply', 'gate-event', 'name-in-use',

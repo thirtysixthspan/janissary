@@ -35,9 +35,9 @@ async function stopSession(session: AcpSession): Promise<boolean> {
 }
 
 // The remote server's ACP holder: one live agent session per session id, driven by the ACP frames.
-// The JSON-RPC never leaves this machine — the local side sends prompts and gets reply text back —
-// so nothing `opencode` writes to stderr can land mid-frame in a stream that must be strictly
-// newline-delimited JSON.
+// The JSON-RPC never leaves this machine — the local side sends runs and gets turn, tool, and reply
+// traffic back — so nothing `opencode` writes to stderr can land mid-frame in a stream that must be
+// strictly newline-delimited JSON.
 //
 // Keyed by id rather than holding a single session, because one `remote-serve` serves every tab
 // sharing its channel: the launching tab and each agent joined from it through ➕ provision no second
@@ -90,22 +90,6 @@ export class RemoteAcp {
       onConnect: () => { this.send({ type: 'acp-ready', id, sandboxed }); },
     });
     this.records.set(id, { state: 'live', session, runOnly: frame.autonomous === true });
-  }
-
-  prompt(frame: Extract<ClientFrame, { type: 'acp-prompt' }>): void {
-    const id = frame.id;
-    const record = this.records.get(id);
-    if (record?.state !== 'live') {
-      this.send({ type: 'acp-error', id, message: 'No remote ACP session is open.', fatal: true });
-      return;
-    }
-    record.session.prompt(frame.text, {
-      onChunk: (text) => { this.send({ type: 'acp-chunk', id, text }); },
-      onEnd: (stopReason) => { this.send({ type: 'acp-end', id, stopReason }); },
-      // The prompt failed, not the session. A rate limit clears on its own, and killing the session
-      // over one would throw away the whole accumulated conversation.
-      onError: (message) => { this.send({ type: 'acp-error', id, message, fatal: false }); },
-    });
   }
 
   run(frame: Extract<ClientFrame, { type: 'acp-run' }>): void {

@@ -187,23 +187,6 @@ describe('RemoteAcp — opening a session', () => {
 });
 
 describe('RemoteAcp — prompting', () => {
-  it('delegates cancellation to a live addressed holder and preserves its original terminal frame', async () => {
-    const { acp, frames } = makeAcp();
-    acp.open(OPEN);
-    acp.prompt({ type: 'acp-prompt', id: 'racp1', text: 'held' });
-    acp.cancel('missing');
-    acp.cancel('racp1');
-    expect(acpMock.cancel).toHaveBeenCalledOnce();
-    expect(frames).toEqual([]);
-    lastHandlers().onEnd('cancelled');
-    expect(frames).toEqual([{ type: 'acp-end', id: 'racp1', stopReason: 'cancelled' }]);
-    acp.prompt({ type: 'acp-prompt', id: 'racp1', text: 'next' });
-    expect(acpMock.prompt).toHaveBeenCalledTimes(2);
-    await acp.close('racp1');
-    acp.cancel('racp1');
-    expect(acpMock.cancel).toHaveBeenCalledOnce();
-  });
-
   it('contains cancellation rejection as a session-local fatal error', async () => {
     const { acp, frames } = makeAcp();
     acp.open(OPEN);
@@ -212,72 +195,20 @@ describe('RemoteAcp — prompting', () => {
     await Promise.resolve();
     expect(frames).toEqual([{ type: 'acp-error', id: 'racp1', message: 'ACP: cancellation failed: write failed', fatal: true }]);
   });
-  it('emits a chunk frame per chunk and an end frame on completion', () => {
-    const { acp, frames } = makeAcp();
-    acp.open(OPEN);
-
-    acp.prompt({ type: 'acp-prompt', id: 'racp1', text: 'summarize this' });
-    lastHandlers().onChunk('first ');
-    lastHandlers().onChunk('second');
-    lastHandlers().onEnd('end_turn');
-
-    expect(acpMock.prompt.mock.calls[0][0]).toBe('summarize this');
-    expect(frames).toEqual([
-      { type: 'acp-chunk', id: 'racp1', text: 'first ' },
-      { type: 'acp-chunk', id: 'racp1', text: 'second' },
-      { type: 'acp-end', id: 'racp1', stopReason: 'end_turn' },
-    ]);
-  });
-
   // The split the whole design rests on. A rate limit clears on its own, so the session keeps its
   // accumulated conversation; a dead agent does not, so the local side must forget it.
-  it('emits a non-fatal error for a failed prompt and a fatal one for a dead session', () => {
+  it('emits a non-fatal error for a failed run and a fatal one for a dead session', () => {
     const { acp, frames } = makeAcp();
     acp.open(OPEN);
-    acp.prompt({ type: 'acp-prompt', id: 'racp1', text: 'hi' });
+    acp.run(RUN_FRAME);
 
     lastHandlers().onError('rate limited');
     acpMock.options[0].onError('ACP agent exited.');
 
-    expect(frames).toEqual([
+    expect(frames.filter((frame) => frame.type === 'acp-error')).toEqual([
       { type: 'acp-error', id: 'racp1', message: 'rate limited', fatal: false },
       { type: 'acp-error', id: 'racp1', message: 'ACP agent exited.', fatal: true },
     ]);
-  });
-
-  // Silently dropping it would leave the local side waiting on a reply that is never coming.
-  it('emits a fatal error for a prompt addressed to an unknown session', () => {
-    const { acp, frames } = makeAcp();
-
-    acp.prompt({ type: 'acp-prompt', id: 'racp9', text: 'hi' });
-
-    expect(frames).toEqual([
-      { type: 'acp-error', id: 'racp9', message: 'No remote ACP session is open.', fatal: true },
-    ]);
-    expect(acpMock.prompt).not.toHaveBeenCalled();
-  });
-
-  it('emits a fatal error for a prompt addressed to an id that was closed', () => {
-    const { acp, frames } = makeAcp();
-    acp.open(OPEN);
-    acp.close('racp1');
-
-    acp.prompt({ type: 'acp-prompt', id: 'racp1', text: 'hi' });
-
-    expect(frames.at(-1)).toEqual({ type: 'acp-error', id: 'racp1', message: 'No remote ACP session is open.', fatal: true });
-  });
-
-  // Two tabs sharing one channel: each prompt reaches its own agent, and each reply carries the id
-  // that routes it back to the tab that asked.
-  it('routes a prompt to the session its id names', () => {
-    const { acp, frames } = makeAcp();
-    acp.open(OPEN);
-    acp.open({ ...OPEN, id: 'racp2' });
-
-    acp.prompt({ type: 'acp-prompt', id: 'racp2', text: 'hi' });
-    lastHandlers().onEnd('end_turn');
-
-    expect(frames).toEqual([{ type: 'acp-end', id: 'racp2', stopReason: 'end_turn' }]);
   });
 });
 
@@ -527,10 +458,6 @@ describe('RemoteAcp — cancelling, closing, and losing a run', () => {
     acp.detachRuns();
 
     expect(acpMock.shutdown).toHaveBeenCalledTimes(2);
-    acp.prompt({ type: 'acp-prompt', id: 'racp1', text: 'still live' });
-    acp.prompt({ type: 'acp-prompt', id: 'racp2', text: 'ended' });
-    acp.prompt({ type: 'acp-prompt', id: 'run-1', text: 'ended' });
-    expect(acpMock.prompt).toHaveBeenCalledTimes(2);
   });
 
   it('ends a run on a fatal connection error and admits another run', async () => {
@@ -701,8 +628,5 @@ describe('RemoteAcp — closing', () => {
     acp.detachRuns();
 
     expect(acpMock.shutdown).toHaveBeenCalledOnce();
-    acp.prompt({ type: 'acp-prompt', id: 'racp1', text: 'still live' });
-    acp.prompt({ type: 'acp-prompt', id: 'run-1', text: 'ended' });
-    expect(acpMock.prompt).toHaveBeenCalledOnce();
   });
 });

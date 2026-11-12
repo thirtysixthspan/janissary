@@ -150,7 +150,6 @@ export class RemoteServer {
       return;
     }
     case 'acp-open': { if (this.requireWorkspace()) this.acp?.open(frame); return; }
-    case 'acp-prompt': { if (this.requireWorkspace()) this.acp?.prompt(frame); return; }
     case 'acp-run': { if (this.requireWorkspace()) this.acp?.run(frame); return; }
     case 'acp-tool-result': { this.acp?.toolResult(frame); return; }
     case 'acp-close': { this.acp?.close(frame.id); return; }
