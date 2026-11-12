@@ -11,22 +11,12 @@ import type { Managers } from '../managers.js';
 import type { RoleEntry } from '../plugins/roles/shared.js';
 import {
   attemptOrder, exhaustedError, fallbackNotice, finalAttemptResult, noRoleModels, readRoleSettings,
-  type AcpRoleSettings, type AttemptFailure,
+  type AcpRoleSettings, type Attempt, type AttemptFailure,
 } from './ask-role.js';
 import { acpRoleRuntime, existingAcpRoleRuntime } from './role-state.js';
 import { DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
 
 const STILL_CONNECTING = 'ACP: the remote session is still connecting.';
-type Attempt = {
-  command: string;
-  prompt: string;
-  role: AcpRole;
-  settings: AcpRoleSettings;
-  queue: RoleEntry[];
-  failures: AttemptFailure[];
-  replyId?: string;
-  onDone: (result: AcpPromptResult) => void;
-};
 
 export class AcpManager extends AcpSessionManager {
   constructor(
@@ -100,8 +90,11 @@ export class AcpManager extends AcpSessionManager {
       onDone({ answered: false, error });
       return;
     }
+    // The prompt's gate authority, read once: a settings change mid-prompt takes effect from the next one.
+    const nativeSettings = this.managers.nativeCommandSettings?.current();
     this.attempt(label, {
-      command, prompt, role, settings, queue, failures: [], ...options.replyId && { replyId: options.replyId }, onDone,
+      nativeSettings, command, prompt, role, settings, queue, failures: [],
+      ...options.replyId && { replyId: options.replyId }, onDone,
     });
   }
 
@@ -132,7 +125,7 @@ export class AcpManager extends AcpSessionManager {
       const session = this.acquire(label, entry, attempt.role);
       if (acpRoleRuntime(runtime, attempt.role).prompt !== request
         || !this.isCurrent(label, session, attempt.role)) return;
-      runCorePrompt(this.managers, label, runtime, request, session,
+      runCorePrompt(this.managers, label, runtime, request, attempt.nativeSettings, session,
         this.sessionIdentity(label, attempt.role) ?? '', () => this.isCurrent(label, session, attempt.role));
     } catch (error) {
       const output = `ACP error: ${errorText(error)}`;

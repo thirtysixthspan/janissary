@@ -105,7 +105,8 @@ function harness(options: Omit<StartOptions, 'commands' | 'roleName'> = {}) {
     };
     mocks.runAcpToolLoop.mockClear();
     if (aborted) request.abort.abort();
-    runCorePrompt(managers, 'shell', runtime, request, session, 'session', () => true);
+    const nativeSettings = options.settings?.current();
+    runCorePrompt(managers, 'shell', runtime, request, nativeSettings, session, 'session', () => true);
     const call = mocks.runAcpToolLoop.mock.calls.at(-1);
     const deps = call?.[2] as AcpLoopDeps;
     const handlers = call?.[3] as AcpLoopHandlers;
@@ -308,7 +309,7 @@ describe('runCorePrompt tool runner', () => {
     expect(dispatchNativeLine).toHaveBeenCalledWith('shell', 'browser goto https://x', expect.anything());
   });
 
-  it('reads the settings once per prompt however many commands run', async () => {
+  it('keeps the settings captured when the prompt starts for every command it runs', async () => {
     const settings = mutableSettings({});
     const { start } = harness({ settings: settings.manager });
     const { deps } = start('ask', ['db sqlite query', 'db sqlite list']);

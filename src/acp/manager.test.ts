@@ -61,7 +61,7 @@ const setup = (
   const deleteBusy = vi.fn();
   const registerQuestion = vi.fn(async () => 'Production');
   const settingsRows: Array<{ name: string; effectiveEnabled: boolean; effectiveAgentAccess: boolean }> = [];
-  const settingsCurrent = vi.fn(() => ({ commands: settingsRows, source: 'default' as const, path: '' }));
+  const settingsCurrent = vi.fn(() => ({ commands: [...settingsRows], source: 'default' as const, path: '' }));
   const dispatchNativeLine = vi.fn(async () => ({ dispatched: true, output: 'db ran' }));
   const tabs: Tab[] = [makeTab('tab1', '#fff')];
   const records = { begin: vi.fn(() => 'record-id'), prompt: vi.fn(() => true), activity: vi.fn(), answer: vi.fn(), close: vi.fn() };
@@ -134,7 +134,7 @@ describe('AcpManager.run', () => {
     expect(typeof handlers.error).toBe('function');
   });
 
-  it('keeps one role grant snapshot through retries and reads the next prompt afresh', async () => {
+  it('keeps the role grant and native-command snapshot for the logical prompt and reads the next prompt afresh', async () => {
     let commands = ['question ask'];
     const roleSettings = vi.fn(() => ({
       name: 'ask', entries: [GEMINI, CLAUDE], commands: [...commands],
@@ -149,18 +149,22 @@ describe('AcpManager.run', () => {
     expect(first.primer).toContain(NO_TOOLS_LINE);
     expect(first.extractCommand('question ask "Who?"')).toBe('question ask "Who?"');
     expect(first.extractCommand('db sqlite list')).toBeNull();
+    expect(settingsCurrent).toHaveBeenCalledOnce();
 
     commands = ['db sqlite query'];
     settingsRows.splice(0, settingsRows.length,
-      { name: 'question ask', effectiveEnabled: true, effectiveAgentAccess: false },
+      { name: 'question ask', effectiveEnabled: true, effectiveAgentAccess: true },
       { name: 'db sqlite query', effectiveEnabled: true, effectiveAgentAccess: true });
     (mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers).error('retry');
     const retry = mocks.runAcpToolLoop.mock.calls[1][2] as AcpLoopDeps;
     expect(roleSettings).toHaveBeenCalledOnce();
+    expect(settingsCurrent).toHaveBeenCalledOnce();
     expect(retry.primer).toContain('question ask');
     expect(retry.primer).not.toContain('Only these commands are allowed');
     expect(retry.primer).toContain(NO_TOOLS_LINE);
     expect(retry.extractCommand('question ask "Who?"')).toBe('question ask "Who?"');
+    expect(retry.runCommand('question ask "Who?"')).toBe('Command is disabled: question ask.');
+    expect(dispatchNativeLine).not.toHaveBeenCalled();
 
     const retryHandlers = mocks.runAcpToolLoop.mock.calls[1][3] as AcpLoopHandlers;
     retryHandlers.endTurn('done');
@@ -169,7 +173,7 @@ describe('AcpManager.run', () => {
 
     const next = mocks.runAcpToolLoop.mock.calls[2][2] as AcpLoopDeps;
     expect(roleSettings).toHaveBeenCalledTimes(2);
-    expect(settingsCurrent).toHaveBeenCalledTimes(3);
+    expect(settingsCurrent).toHaveBeenCalledTimes(2);
     expect(next.primer).toContain(DB_PRIMER);
     expect(next.primer).not.toContain('question ask');
     expect(next.primer).toContain('Only these commands are allowed: db sqlite query.');
@@ -193,7 +197,7 @@ describe('AcpManager.run', () => {
     expect(mocks.notify).not.toHaveBeenCalledWith(
       expect.anything(), 'command-disabled', expect.anything(), expect.anything(),
     );
-    expect(settingsCurrent).toHaveBeenCalledTimes(3);
+    expect(settingsCurrent).toHaveBeenCalledTimes(2);
   });
 
   it('runs an agent-issued question command through the dispatcher with the prompt signal', async () => {

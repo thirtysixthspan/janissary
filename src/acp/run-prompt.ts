@@ -14,13 +14,12 @@ import { coreActivity } from './record-feed.js';
 import { acpRoleRuntime } from './role-state.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { effectiveCommandSetting } from '../native-commands/policy.js';
+import type { CommandSettingsSnapshot } from '../native-commands/settings-types.js';
 import { runToolLoop } from './drive-loop.js';
 
-// The prompt's gate authority, read once: a settings change mid-prompt takes effect from the next one.
 function coreSnapshot(
-  managers: Managers, runtime: TabRuntime, request: AcpPendingPrompt,
+  runtime: TabRuntime, request: AcpPendingPrompt, settings: CommandSettingsSnapshot | undefined,
 ): Extract<AcpRunSnapshot, { kind: 'core' }> {
-  const settings = managers.nativeCommandSettings?.current();
   const rows = settings === undefined ? [] : NATIVE_ACP_COMMANDS.map((name) => {
     const setting = effectiveCommandSetting(settings, name);
     return { name, effectiveEnabled: setting.effectiveEnabled, effectiveAgentAccess: setting.effectiveAgentAccess };
@@ -70,6 +69,7 @@ function guardedSession(session: AcpSession, active: () => boolean): AcpLoopSess
 
 export function runCorePrompt(
   managers: Managers, label: string, runtime: TabRuntime, request: AcpPendingPrompt,
+  nativeSettings: CommandSettingsSnapshot | undefined,
   session: AcpSession | RemoteAcpSession, identity: string, current: () => boolean,
 ): void {
   const roleState = acpRoleRuntime(runtime, request.role);
@@ -77,7 +77,7 @@ export function runCorePrompt(
   const updateRunning = (output: string, running: boolean) => {
     managers.tab.updateRunning(label, { markdown: true, entries: request.runningEntries }, output, running, { trailing: true });
   };
-  const snapshot = coreSnapshot(managers, runtime, request);
+  const snapshot = coreSnapshot(runtime, request, nativeSettings);
   const recordTool = (text: string) => coreActivity(managers.acpRecords, runtime, 'tool', text, request.role);
   const host: AcpToolHost = {
     runCaller: (command) => {
