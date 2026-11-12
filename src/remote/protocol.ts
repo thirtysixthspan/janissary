@@ -242,6 +242,7 @@ function toWire(frame: RemoteFrame): Record<string, unknown> {
     return { ...frame, runs: frame.runs.map((run) => ({ ...run, text: encodeText(run.text) })) };
   }
   if (frame.type === 'acp-run') return { ...frame, text: encodeText(frame.text) };
+  if (frame.type === 'acp-turn' && frame.phase === 'end') return { ...frame, display: encodeText(frame.display) };
   if (frame.type === 'acp-tool-result' && frame.output !== undefined) return { ...frame, output: encodeText(frame.output) };
   if (frame.type === 'acp-prompt' || frame.type === 'acp-chunk') return { ...frame, text: encodeText(frame.text) };
   if (frame.type === 'acp-activity') return { ...frame, text: encodeText(frame.text) };

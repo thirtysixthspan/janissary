@@ -22,6 +22,30 @@ export function decodeAcpToolResult(record: Record<string, unknown>): DecodeResu
     : malformed('acp-tool-result');
 }
 
+export function decodeAcpTurn(record: Record<string, unknown>): DecodeResult {
+  const { id, phase, first, display } = record;
+  if (!nonEmptyString(id)) return malformed('acp-turn');
+  if (phase === 'start') {
+    return typeof first === 'boolean'
+      ? { type: 'acp-turn', id, phase: 'start', first }
+      : malformed('acp-turn');
+  }
+  if (phase === 'end') {
+    return typeof display === 'string'
+      ? { type: 'acp-turn', id, phase: 'end', display: Buffer.from(display, 'base64').toString('utf8') }
+      : malformed('acp-turn');
+  }
+  return malformed('acp-turn');
+}
+
+export function decodeAcpRunEnd(record: Record<string, unknown>): DecodeResult {
+  const { id, reason } = record;
+  if (!nonEmptyString(id) || (reason !== 'answered' && reason !== 'capped' && reason !== 'cancelled')) {
+    return malformed('acp-run-end');
+  }
+  return { type: 'acp-run-end', id, reason };
+}
+
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }

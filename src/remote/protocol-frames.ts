@@ -253,6 +253,16 @@ export type ServerFrame =
   // knows whether its workspace was actually confined.
   | { type: 'acp-ready'; id: string; sandboxed: boolean }
   | { type: 'acp-chunk'; id: string; text: string }
+  // A turn's boundaries, so the local side can open and close a transcript entry. `first` is true
+  // only for a run's opening turn. `display` is the turn's final text with the extracted command
+  // removed, which cannot be rebuilt from `acp-chunk` deltas: chunks carry provider deltas, and the
+  // removal happens once per turn. An empty `display` is ordinary when a reply was only a command.
+  | { type: 'acp-turn'; id: string; phase: 'start'; first: boolean }
+  | { type: 'acp-turn'; id: string; phase: 'end'; display: string }
+  // A run's terminal frame. `answered` and `capped` are the loop's `finished` reasons; `cancelled`
+  // is the far side's cancellation path. Only a `core` run can be capped, and both sides share
+  // `CORE_MAX_STEPS`, so no step count travels.
+  | { type: 'acp-run-end'; id: string; reason: 'answered' | 'capped' | 'cancelled' }
   | { type: 'acp-end'; id: string; stopReason: string }
   | { type: 'acp-activity'; id: string; kind: RemoteAcpActivityKind; text: string }
   | { type: 'acp-closed'; id: string; released: boolean }
@@ -304,5 +314,6 @@ export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'resume-cancel': true,
   'filesystem-reply': true, 'filesystem-event': true,
   'agent-resolve-result': true,
-  'acp-ready': true, 'acp-chunk': true, 'acp-end': true, 'acp-activity': true, 'acp-closed': true, 'acp-error': true,
+  'acp-ready': true, 'acp-chunk': true, 'acp-turn': true, 'acp-run-end': true, 'acp-end': true,
+  'acp-activity': true, 'acp-closed': true, 'acp-error': true,
 };

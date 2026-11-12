@@ -116,6 +116,71 @@ describe('acp-tool-result codec', () => {
   });
 });
 
+describe('acp-turn codec', () => {
+  it.each([true, false])('round-trips a start with first: %s and no display on the wire', (first) => {
+    const frame: RemoteFrame = { type: 'acp-turn', id: 'run1', phase: 'start', first };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toEqual(frame);
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it('round-trips an end holding a newline and a control byte, base64 on the wire', () => {
+    const display = 'first\nsecond\u{1}';
+    const frame: RemoteFrame = { type: 'acp-turn', id: 'run1', phase: 'end', display };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toEqual({ ...frame, display: Buffer.from(display).toString('base64') });
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it('round-trips an empty display with no first on the wire', () => {
+    const frame: RemoteFrame = { type: 'acp-turn', id: 'run1', phase: 'end', display: '' };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toEqual(frame);
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it.each([
+    ['unknown phase', { type: 'acp-turn', id: 'run1', phase: 'middle' }],
+    ['missing phase', { type: 'acp-turn', id: 'run1' }],
+    ['start without first', { type: 'acp-turn', id: 'run1', phase: 'start' }],
+    ['start with a non-boolean first', { type: 'acp-turn', id: 'run1', phase: 'start', first: 'yes' }],
+    ['end without display', { type: 'acp-turn', id: 'run1', phase: 'end' }],
+    ['end with a non-string display', { type: 'acp-turn', id: 'run1', phase: 'end', display: 1 }],
+    ['missing id', { type: 'acp-turn', phase: 'start', first: true }],
+    ['empty id', { type: 'acp-turn', id: '', phase: 'start', first: true }],
+  ])('refuses %s', (_label, record) => {
+    expect(decodeFrame(JSON.stringify(record))).toEqual({ error: 'Malformed remote frame "acp-turn".' });
+  });
+
+  it('drops undeclared phase fields', () => {
+    const start = { type: 'acp-turn', id: 'run1', phase: 'start', first: false, display: 'drop' };
+    expect(decodeFrame(JSON.stringify(start)))
+      .toEqual({ type: 'acp-turn', id: 'run1', phase: 'start', first: false });
+    const end = {
+      type: 'acp-turn', id: 'run1', phase: 'end', display: Buffer.from('done').toString('base64'), first: true,
+    };
+    expect(decodeFrame(JSON.stringify(end)))
+      .toEqual({ type: 'acp-turn', id: 'run1', phase: 'end', display: 'done' });
+  });
+});
+
+describe('acp-run-end codec', () => {
+  it.each(['answered', 'capped', 'cancelled'] as const)('round-trips %s', (reason) => {
+    const frame: RemoteFrame = { type: 'acp-run-end', id: 'run1', reason };
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it.each([
+    ['unknown reason', { type: 'acp-run-end', id: 'run1', reason: 'ended' }],
+    ['missing reason', { type: 'acp-run-end', id: 'run1' }],
+    ['non-string reason', { type: 'acp-run-end', id: 'run1', reason: 1 }],
+    ['missing id', { type: 'acp-run-end', reason: 'answered' }],
+    ['empty id', { type: 'acp-run-end', id: '', reason: 'answered' }],
+  ])('refuses %s', (_label, record) => {
+    expect(decodeFrame(JSON.stringify(record))).toEqual({ error: 'Malformed remote frame "acp-run-end".' });
+  });
+});
+
 describe('frame codec', () => {
   it('ties filesystem request arguments to their operation', () => {
     const request: ClientFrame = {
@@ -688,6 +753,8 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   },
   'acp-ready': { type: 'acp-ready', id: 'racp1', sandboxed: true },
   'acp-chunk': { type: 'acp-chunk', id: 'racp1', text: 'partial reply' },
+  'acp-turn': { type: 'acp-turn', id: 'racp1', phase: 'end', display: 'first\nsecond' },
+  'acp-run-end': { type: 'acp-run-end', id: 'racp1', reason: 'answered' },
   'acp-end': { type: 'acp-end', id: 'racp1', stopReason: 'end_turn' },
   'acp-error': { type: 'acp-error', id: 'racp1', message: 'rate limited', fatal: false },
   'acp-activity': { type: 'acp-activity', id: 'racp1', kind: 'thought', text: 'considering 🧭' },
@@ -822,7 +889,8 @@ describe('admitted frame types', () => {
 
   it('admits exactly the declared server frame types', () => {
     expect(Object.keys(SERVER_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-activity', 'acp-chunk', 'acp-closed', 'acp-end', 'acp-error', 'acp-ready', 'agent-resolve-result', 'attach-result', 'browser-exited', 'browser-started',
+      'acp-activity', 'acp-chunk', 'acp-closed', 'acp-end', 'acp-error', 'acp-ready', 'acp-run-end', 'acp-turn',
+      'agent-resolve-result', 'attach-result', 'browser-exited', 'browser-started',
       'busy-transition', 'capture-reply', 'clone-offer', 'exit', 'filesystem-event', 'filesystem-reply', 'gate-event', 'name-in-use',
       'output', 'resume-cancel', 'resume-event', 'root-refused', 'session-state-result', 'shell-history', 'transcript', 'workspace-failed',
       'workspace-ready',
