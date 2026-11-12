@@ -12,14 +12,20 @@ import type {
 } from './types.js';
 import type { RemoteAcpSession } from '../remote/acp-session.js';
 import type { NativeCommandSettingsManager } from '../native-commands/manager.js';
+import type * as TabRead from '../file-read/tab-read.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { BROWSER_PRIMER } from '../browser/command.js';
 import { DB_PRIMER } from '../database/primer.js';
 
-const mocks = vi.hoisted(() => ({ runAcpToolLoop: vi.fn(), notify: vi.fn() }));
+const mocks = vi.hoisted(() => ({ runAcpToolLoop: vi.fn(), notify: vi.fn(), readFileInTab: vi.fn() }));
 
 vi.mock('./loop.js', () => ({ runAcpToolLoop: mocks.runAcpToolLoop }));
 vi.mock('../notifications/index.js', () => ({ notify: mocks.notify }));
+vi.mock('../file-read/tab-read.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof TabRead>();
+  mocks.readFileInTab.mockImplementation(actual.readFileInTab);
+  return { ...actual, readFileInTab: mocks.readFileInTab };
+});
 
 import { runCorePrompt } from './run-prompt.js';
 
@@ -349,6 +355,7 @@ describe('runCorePrompt tool runner', () => {
       const { start, dispatchNativeLine, run } = harness({
         remoteSession: true, tab: { workspaceDir: dir, remote: { host: 'far' } }, launchDir: dir,
       });
+      mocks.readFileInTab.mockClear();
       start('ask', ['file read']);
       const call = remoteCall(run);
       const runCaller = call[2];
@@ -359,6 +366,8 @@ describe('runCorePrompt tool runner', () => {
 
       expect(run).toHaveBeenCalledOnce();
       expect(typeof runCaller).toBe('function');
+      expect(mocks.readFileInTab).not.toHaveBeenCalled();
+      expect(mocks.runAcpToolLoop).not.toHaveBeenCalled();
       expect(dispatchNativeLine).not.toHaveBeenCalled();
     });
 
