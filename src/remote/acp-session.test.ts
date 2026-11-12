@@ -3,6 +3,8 @@ import { createRemoteAcpSession } from './acp-session.js';
 import type { AcpSessionListener } from './channel/acp.js';
 import type { RemoteChannel } from './channel/index.js';
 import type { ClientFrame } from './protocol-frames.js';
+import type { AcpLoopHandlers, AcpRunSnapshot } from '../acp/types.js';
+import { CORE_MAX_STEPS } from '../acp/drive-loop.js';
 
 const OPTIONS = {
   id: 'racp1',
@@ -215,6 +217,111 @@ describe('createRemoteAcpSession — prompting', () => {
 
     expect(second.onChunk).toHaveBeenCalledWith('reply');
     expect(s.handlers.onChunk).not.toHaveBeenCalled();
+  });
+});
+
+describe('createRemoteAcpSession — running', () => {
+  const snapshot: AcpRunSnapshot = { kind: 'agent', grants: [], askUser: false };
+
+  function runEvents(): AcpLoopHandlers {
+    return {
+      startTurn: vi.fn(), chunk: vi.fn(), endTurn: vi.fn(),
+      ranCommand: vi.fn(), finished: vi.fn(), error: vi.fn(),
+    };
+  }
+
+  it('sends a run frame, refuses an overlapping run, and admits the next after the end', () => {
+    const s = makeSession();
+    const first = runEvents();
+
+    s.session.run('summarize', snapshot, vi.fn(), first);
+
+    expect(s.session.remote).toBe(true);
+    expect(s.sent.at(-1)).toEqual({ type: 'acp-run', id: 'racp1', text: 'summarize', snapshot });
+
+    const overlap = runEvents();
+    s.session.run('overlap', snapshot, vi.fn(), overlap);
+
+    expect(overlap.error).toHaveBeenCalledWith('ACP: a prompt is already running.');
+    expect(s.sent.filter((frame) => frame.type === 'acp-run')).toHaveLength(1);
+
+    s.listener().onRunEnd('answered');
+
+    expect(first.finished).toHaveBeenCalledWith('answered', CORE_MAX_STEPS);
+    expect(overlap.finished).not.toHaveBeenCalled();
+    const next = runEvents();
+    s.session.run('next', snapshot, vi.fn(), next);
+    expect(s.sent.filter((frame) => frame.type === 'acp-run')).toHaveLength(2);
+    expect(next.error).not.toHaveBeenCalled();
+  });
+
+  it('opens a turn, accumulates deltas, resets on a new turn, and closes with the display text', () => {
+    const s = makeSession();
+    const events = runEvents();
+    s.session.run('go', snapshot, vi.fn(), events);
+    const listener = s.listener();
+
+    listener.onTurn({ type: 'acp-turn', id: 'racp1', phase: 'start', first: true });
+    listener.onChunk('first ');
+    listener.onChunk('second');
+    expect(events.startTurn).toHaveBeenCalledWith(true);
+    expect(events.chunk.mock.calls).toEqual([['first '], ['first second']]);
+
+    listener.onTurn({ type: 'acp-turn', id: 'racp1', phase: 'start', first: false });
+    listener.onChunk('again');
+    expect(events.startTurn).toHaveBeenLastCalledWith(false);
+    expect(events.chunk).toHaveBeenLastCalledWith('again');
+
+    listener.onTurn({ type: 'acp-turn', id: 'racp1', phase: 'end', display: 'Final' });
+    expect(events.endTurn).toHaveBeenCalledWith('Final');
+  });
+
+  it.each(['answered', 'capped'] as const)('maps an %s run end to the core step cap', (reason) => {
+    const s = makeSession();
+    const events = runEvents();
+    s.session.run('go', snapshot, vi.fn(), events);
+
+    s.listener().onRunEnd(reason);
+
+    expect(events.finished).toHaveBeenCalledWith(reason, CORE_MAX_STEPS);
+  });
+
+  it('drains a cancelled run without a finished event, then admits the next run', async () => {
+    const s = makeSession();
+    const events = runEvents();
+    s.session.run('go', snapshot, vi.fn(), events);
+
+    const cancellation = s.session.cancel();
+    expect(s.sent.at(-1)).toEqual({ type: 'acp-cancel', id: 'racp1' });
+    s.listener().onRunEnd('cancelled');
+    await cancellation;
+
+    expect(events.finished).not.toHaveBeenCalled();
+    expect(events.error).not.toHaveBeenCalled();
+    s.session.run('next', snapshot, vi.fn(), runEvents());
+    expect(s.sent.filter((frame) => frame.type === 'acp-run')).toHaveLength(2);
+  });
+
+  it('routes a non-fatal error to the run events', () => {
+    const s = makeSession();
+    const events = runEvents();
+    s.session.run('go', snapshot, vi.fn(), events);
+
+    s.listener().onError('rate limited', false);
+
+    expect(events.error).toHaveBeenCalledWith('rate limited');
+    expect(s.onError).not.toHaveBeenCalled();
+  });
+
+  it('reports a transport loss mid-run to the run events', () => {
+    const s = makeSession();
+    const events = runEvents();
+    s.session.run('go', snapshot, vi.fn(), events);
+
+    s.listener().onTransportLost?.();
+
+    expect(events.error).toHaveBeenCalledWith('Remote connection lost before agent readiness.');
+    expect(s.detached).toEqual(['racp1']);
   });
 });
 

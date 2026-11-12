@@ -1,9 +1,10 @@
-import type { AcpSession } from '../acp/types.js';
+import type { AcpLoopHandlers, AcpRunSnapshot, AcpSession, AcpToolHost } from '../acp/types.js';
 import { deferred } from '../deferred.js';
 import { AcpPromptControl } from '../acp/prompt-control.js';
 import type { RemoteChannel } from './channel/index.js';
 import type { ClientFrame, RemoteAcpActivityKind } from './protocol-frames.js';
 import { errorText } from '../error-text.js';
+import { createRemoteAcpRun } from './acp-session-run.js';
 
 // What the local side decides and sends across: which agent runs, with what arguments and
 // environment, whether it is confined offline, and the ACP session options that turn a role
@@ -32,6 +33,10 @@ export type RemoteAcpHooks = {
 };
 
 export type RemoteAcpSession = AcpSession & {
+  remote: true;
+  run: (
+    text: string, snapshot: AcpRunSnapshot, runCaller: AcpToolHost['runCaller'], events: AcpLoopHandlers,
+  ) => void;
   ready: Promise<boolean>;
   release: () => Promise<boolean>;
 };
@@ -54,6 +59,7 @@ export function createRemoteAcpSession(
   const { id, command, args, env, offline, autonomous, effort, sessionMeta } = options;
   // The one in-flight prompt, matching the discipline `connectAcp` keeps with its own `current`.
   const control = new AcpPromptControl();
+  const run = createRemoteAcpRun(control);
   let live = true;
   const { promise: ready, resolve: resolveReady, reject: rejectReady } = deferred<boolean>();
   void ready.catch(() => {});
@@ -100,6 +106,8 @@ export function createRemoteAcpSession(
     onTransportLost: () => {
       detach('Remote connection lost before agent readiness.', () => hooks.onTransportLost?.());
     },
+    onTurn: (frame) => run.turn(frame),
+    onRunEnd: (reason) => run.end(reason),
     onEnd: (stopReason) => {
       const turn = control.current;
       if (turn) control.end(turn, stopReason);
@@ -145,10 +153,15 @@ export function createRemoteAcpSession(
   };
 
   return {
+    remote: true,
     ready,
     release,
     shutdown: async () => {
       if (!await release()) throw new Error('Remote agent close was not acknowledged.');
+    },
+    run: (text, snapshot, runCaller, events) => {
+      if (!run.start(runCaller, events)) return;
+      send({ type: 'acp-run', id, text, snapshot });
     },
     prompt: (text, handlers) => {
       if (!control.admit(handlers)) return;
