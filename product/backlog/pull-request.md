@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the agent-command spec and page's claim that a remote run's workspace step appears in monitor activity, which the implementation writes only to the connection record.
-
-Existing Issue: `product/specs/agent-command.md` says a remote run's workspace step is tagged `[<host>] ` on both monitor and record activity lines, and `documentation/user-documentation/advanced-agents/agent-command.md` says it starts its activity line, while `src/agent/execute.ts` writes each step only through `run.record?.activity(...)` and `AgentRun.reportActivity` in `src/agent/run.ts` is the only path that fills `run.activity`, which `web/src/plugins/agent-monitor/view.tsx` renders, so the monitor never shows the step at all. Severity: 5/10
-
-Existing Risk: 4/10 - A user watching a remote run's monitor looks for the tagged `file read` step and never sees it, and the spec keeps the next reader looking at a surface that does not show the loop's tools.
-
-Proposal Risk: 1/10 - The spec and page would describe the connection record that already carries both tagged lines, but the monitor would still omit the step, so the product decision remains visible rather than hidden.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1992 "correct the agent-command monitor tagging claim". Compare the two documents with the two display paths before editing. `src/agent/execute.ts`'s `startCommand` and `ranCommand` handlers call only `run.record?.activity(...)`, and `AgentRun.reportActivity` in `src/agent/run.ts` is what pushes to `run.activity`, the array `web/src/plugins/agent-monitor/view.tsx` renders; the far-side `acp-tool-step` path in `src/remote/acp-session-run.ts` reaches those same handlers, so no loop step reaches the monitor. Change `product/specs/agent-command.md` to say the tag appears on both `tool` activity lines in the connection record, and change `documentation/user-documentation/advanced-agents/agent-command.md` to drop the monitor claim and keep the record wording. Do not change the core-tab tagging in `src/acp/run-prompt.ts` or its tests. If the monitor is later required to show the step, route both tagged calls through `run.reportActivity('tool', tagged(...))` in `src/agent/execute.ts` (which also writes the record) and add a remote-run assertion on `run.view().activity` for both `[<host>] ...` lines; that is a separate behavior change, not this documentation correction.
-
-
 * Update the ask, tell, and roles help pages, which still describe the pre-file-read default grant sets and the nine-command tell role.
 
 Existing Issue: `help/ask.md` lists only databases, browsing, and questions for the default ask role, `help/tell.md` says the default tell role has "all nine native commands" and omits `file read`, and `help/roles.md` says ask can query databases, browse pages, and ask or approve questions, while `DEFAULT_ROLES` in `src/plugins/roles/roles-file.ts` grants `file read` to ask and grants tell all ten commands in `NATIVE_ACP_COMMANDS`. Severity: 4/10
