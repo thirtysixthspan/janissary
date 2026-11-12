@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Clear the technical debt of a stale remote-session module comment that still describes the pre-switch local loop and the old session contract.
-
-Existing Issue: The module comment at the top of `src/remote/acp-session.ts` still says the adapter satisfies `AcpSession`, that only prompt text and reply chunks cross the wire, and that `runAcpToolLoop` drives it without knowing the agent is remote, while this commit makes the type `Omit<AcpSession, 'prompt'>` plus `run`/`ready`/`release`, sends turns, tool steps, and tool requests and results over the channel, and has `runToolLoop` branch on the `remote` discriminant. Severity: 2/10
-
-Existing Risk: 2/10 - A contributor trusting that comment can reintroduce a `prompt`-based path or assume the far side is only a transport, and prose does not fail the compiler.
-
-Proposal Risk: 1/10 - The correction is text-only and cannot alter behavior; the only residual risk is the same drift when subplan 25 deletes the legacy `acp-end` path.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1992 "correct the stale remote ACP session module documentation". Update the module comment in `src/remote/acp-session.ts` so it describes the post-split contract: the adapter is surfaced as `Omit<AcpSession, 'prompt'>` plus `run`, `ready`, `release`, and `remote: true`; `runToolLoop` in `src/acp/drive-loop.ts` dispatches a remote session to `run` rather than `driveToolLoop`; and `acp-run`, `acp-turn`, `acp-chunk`, `acp-tool-step`, `acp-tool-request`/`acp-tool-result`, `acp-cancel`, and `acp-run-end` cross the channel, not JSON-RPC. Update the "one in-flight prompt" wording near the `AcpPromptControl` instance to say "run" where it describes this adapter. Change no code or tests; `src/remote/acp-session.test.ts` already pins the frame-to-callback behavior. Verification is a read of the comment against `src/remote/acp-session.ts` and `src/acp/drive-loop.ts`; a doc-only change needs no tooling, though the repository's usual diff check is harmless.
-
-
 * Deliver the plan's remote-tab workspace-read test, which currently never observes the local workspace runner it is meant to rule out.
 
 Existing Issue: The replacement case `leaves a remote tab's workspace read to the far side, never the local disk` in `src/acp/run-prompt.test.ts` asserts only that `session.run` was called and `dispatchNativeLine` was not, while the plan requires it to prove the local host receives no workspace request; it never observes `readFileInTab`, the local workspace runner behind `host.runWorkspace`. Severity: 3/10

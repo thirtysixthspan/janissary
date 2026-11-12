@@ -42,11 +42,18 @@ export type RemoteAcpSession = Omit<AcpSession, 'prompt'> & {
 };
 
 /**
- * An ACP session running on another machine, surfaced locally as an object satisfying `AcpSession`
- * (`src/acp/types.ts`) — the same adapter trick `createRemoteShell` uses for a remote tab's shell.
- * The ACP client itself lives on the far side, so what crosses the wire is prompt text and reply
- * chunks, never JSON-RPC. Everything built on the session — `runAcpToolLoop`, the transcript
- * entries, the busy dot, the connections panel — therefore works without knowing where the agent runs.
+ * An ACP session running on another machine, surfaced locally as `Omit<AcpSession, 'prompt'>` plus
+ * this adapter's own `run`, `ready`, `release`, and `remote: true` (`src/acp/types.ts`) — the same
+ * adapter trick `createRemoteShell` uses for a remote tab's shell. The ACP client and the tool loop
+ * live on the far side, so `runToolLoop` (`src/acp/drive-loop.ts`) sees the `remote` discriminant
+ * and hands a run to `run` rather than driving it in-process through `driveToolLoop`. `run` returns
+ * once the request is admitted; the frames that follow settle it.
+ *
+ * A run crosses the channel as `acp-run`, its boundaries as `acp-turn`, its reply as `acp-chunk`,
+ * and a far-side workspace step as `acp-tool-step`. A caller tool the far side cannot run itself
+ * travels out as `acp-tool-request` and its result returns as `acp-tool-result`. `cancel` sends
+ * `acp-cancel`, and the far side's terminal `acp-run-end` (`answered`, `capped`, or `cancelled`)
+ * settles the run; transport loss releases it with an error. None of this is JSON-RPC.
  *
  * It holds no reference to `Managers`, the tab, or the transcript: it turns frames into callbacks
  * and nothing else.
@@ -57,7 +64,7 @@ export function createRemoteAcpSession(
   hooks: RemoteAcpHooks,
 ): RemoteAcpSession {
   const { id, command, args, env, offline, autonomous, effort, sessionMeta } = options;
-  // The one in-flight prompt, matching the discipline `connectAcp` keeps with its own `current`.
+  // The one in-flight run, matching the discipline `connectAcp` keeps with its own `current`.
   const control = new AcpPromptControl();
   let live = true;
   const { promise: ready, resolve: resolveReady, reject: rejectReady } = deferred<boolean>();
