@@ -38,6 +38,30 @@ export function decodeAcpTurn(record: Record<string, unknown>): DecodeResult {
   return malformed('acp-turn');
 }
 
+export function decodeAcpToolRequest(record: Record<string, unknown>): DecodeResult {
+  const { id, request, command } = record;
+  if (!nonEmptyString(id) || !nonNegativeInteger(request) || !nonEmptyString(command)) {
+    return malformed('acp-tool-request');
+  }
+  return { type: 'acp-tool-request', id, request, command: Buffer.from(command, 'base64').toString('utf8') };
+}
+
+export function decodeAcpToolStep(record: Record<string, unknown>): DecodeResult {
+  const { id, command, result, workspace, refused } = record;
+  if (!nonEmptyString(id) || !nonEmptyString(command) || typeof result !== 'string' || typeof workspace !== 'boolean') {
+    return malformed('acp-tool-step');
+  }
+  if (refused !== undefined && refused !== 'disabled') return malformed('acp-tool-step');
+  if (refused === 'disabled' && workspace) return malformed('acp-tool-step');
+  return {
+    type: 'acp-tool-step', id,
+    command: Buffer.from(command, 'base64').toString('utf8'),
+    result: Buffer.from(result, 'base64').toString('utf8'),
+    workspace,
+    ...(refused === 'disabled' && { refused }),
+  };
+}
+
 export function decodeAcpRunEnd(record: Record<string, unknown>): DecodeResult {
   const { id, reason } = record;
   if (!nonEmptyString(id) || (reason !== 'answered' && reason !== 'capped' && reason !== 'cancelled')) {

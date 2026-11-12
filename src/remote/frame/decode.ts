@@ -1,5 +1,7 @@
 import type { RemoteFrame } from '../protocol-frames.js';
-import { decodeAcpRun, decodeAcpRunEnd, decodeAcpToolResult, decodeAcpTurn } from './decode-acp-run.js';
+import {
+  decodeAcpRun, decodeAcpRunEnd, decodeAcpToolRequest, decodeAcpToolResult, decodeAcpToolStep, decodeAcpTurn,
+} from './decode-acp-run.js';
 import { malformed, type DecodeResult } from './decode-shared.js';
 import { decodeFilesystemFrame } from './decode-filesystem.js';
 import { decodeAgentResolve, decodeAgentResolveResult } from './decode-agent.js';
@@ -79,6 +81,8 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'acp-run': { return decodeAcpRun(record); }
   case 'acp-tool-result': { return decodeAcpToolResult(record); }
   case 'acp-turn': { return decodeAcpTurn(record); }
+  case 'acp-tool-request': { return decodeAcpToolRequest(record); }
+  case 'acp-tool-step': { return decodeAcpToolStep(record); }
   case 'acp-run-end': { return decodeAcpRunEnd(record); }
   case 'acp-prompt':
   case 'acp-chunk': { return decodeAcpText(type, record); }

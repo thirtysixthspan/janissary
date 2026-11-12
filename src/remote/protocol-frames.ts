@@ -259,6 +259,16 @@ export type ServerFrame =
   // removal happens once per turn. An empty `display` is ordinary when a reply was only a command.
   | { type: 'acp-turn'; id: string; phase: 'start'; first: boolean }
   | { type: 'acp-turn'; id: string; phase: 'end'; display: string }
+  // A far-side loop's caller step, run by the local side because the tool belongs to it. `request`
+  // is the run's counter value, scoped by `id`, which the local side's `acp-tool-result` echoes back
+  // so the pair can be matched. The local side records and displays that step itself, so the far
+  // side sends no `acp-tool-step` for it.
+  | { type: 'acp-tool-request'; id: string; request: number; command: string }
+  // A step the far side completed on its own: a workspace-tool run (`workspace: true`) or a gate
+  // refusal (`workspace: false`). `refused` is present only as `'disabled'`, for a disabled or
+  // agent-off refusal. `command` and `result` are base64-encoded free text, and an empty `result` is
+  // a successful step, not a missing one.
+  | { type: 'acp-tool-step'; id: string; command: string; result: string; workspace: boolean; refused?: 'disabled' }
   // A run's terminal frame. `answered` and `capped` are the loop's `finished` reasons; `cancelled`
   // is the far side's cancellation path. Only a `core` run can be capped, and both sides share
   // `CORE_MAX_STEPS`, so no step count travels.
@@ -314,6 +324,7 @@ export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'resume-cancel': true,
   'filesystem-reply': true, 'filesystem-event': true,
   'agent-resolve-result': true,
-  'acp-ready': true, 'acp-chunk': true, 'acp-turn': true, 'acp-run-end': true, 'acp-end': true,
+  'acp-ready': true, 'acp-chunk': true, 'acp-turn': true, 'acp-tool-request': true, 'acp-tool-step': true,
+  'acp-run-end': true, 'acp-end': true,
   'acp-activity': true, 'acp-closed': true, 'acp-error': true,
 };

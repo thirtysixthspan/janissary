@@ -181,6 +181,100 @@ describe('acp-run-end codec', () => {
   });
 });
 
+describe('acp-tool-request codec', () => {
+  it('round-trips request 0 and a command holding a newline and a control byte, base64 on the wire', () => {
+    const command = 'file read\nnotes.txt\u{1}';
+    const frame: RemoteFrame = { type: 'acp-tool-request', id: 'racp1', request: 0, command };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toMatchObject({ command: Buffer.from(command).toString('base64') });
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it.each([
+    ['missing id', { request: 0, command: 'ls' }],
+    ['empty id', { id: '', request: 0, command: 'ls' }],
+    ['missing request', { id: 'racp1', command: 'ls' }],
+    ['negative request', { id: 'racp1', request: -1, command: 'ls' }],
+    ['fractional request', { id: 'racp1', request: 1.5, command: 'ls' }],
+    ['non-numeric request', { id: 'racp1', request: '0', command: 'ls' }],
+    ['missing command', { id: 'racp1', request: 0 }],
+    ['empty command', { id: 'racp1', request: 0, command: '' }],
+    ['non-string command', { id: 'racp1', request: 0, command: 1 }],
+  ])('refuses %s', (_label, fields) => {
+    expect(decodeFrame(JSON.stringify({ type: 'acp-tool-request', ...fields })))
+      .toEqual({ error: 'Malformed remote frame "acp-tool-request".' });
+  });
+
+  it('drops undeclared fields', () => {
+    const raw = {
+      type: 'acp-tool-request', id: 'racp1', request: 2,
+      command: Buffer.from('ls').toString('base64'), workspace: true, extra: 'drop',
+    };
+    expect(decodeFrame(JSON.stringify(raw))).toEqual({ type: 'acp-tool-request', id: 'racp1', request: 2, command: 'ls' });
+  });
+});
+
+describe('acp-tool-step codec', () => {
+  it('round-trips a workspace run with a multi-line result, both fields base64 on the wire', () => {
+    const command = 'file read\nnotes.txt';
+    const result = 'first\nsecond';
+    const frame: RemoteFrame = { type: 'acp-tool-step', id: 'racp1', command, result, workspace: true };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toMatchObject({
+      command: Buffer.from(command).toString('base64'),
+      result: Buffer.from(result).toString('base64'),
+    });
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it('round-trips an empty result with workspace: true', () => {
+    const frame: RemoteFrame = { type: 'acp-tool-step', id: 'racp1', command: 'file read', result: '', workspace: true };
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it('round-trips a refusal with workspace: false and no refused flag', () => {
+    const frame: RemoteFrame = {
+      type: 'acp-tool-step', id: 'racp1', command: 'db query', result: 'command not granted', workspace: false,
+    };
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it('round-trips a disabled refusal and keeps the flag on the wire', () => {
+    const frame: RemoteFrame = {
+      type: 'acp-tool-step', id: 'racp1', command: 'db query', result: 'tools are off', workspace: false, refused: 'disabled',
+    };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toMatchObject({ refused: 'disabled' });
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it.each([
+    ['missing id', { command: 'ls', result: '', workspace: true }],
+    ['empty id', { id: '', command: 'ls', result: '', workspace: true }],
+    ['missing command', { id: 'racp1', result: '', workspace: true }],
+    ['empty command', { id: 'racp1', command: '', result: '', workspace: true }],
+    ['non-string command', { id: 'racp1', command: 1, result: '', workspace: true }],
+    ['missing result', { id: 'racp1', command: 'ls', workspace: true }],
+    ['non-string result', { id: 'racp1', command: 'ls', result: 1, workspace: true }],
+    ['missing workspace', { id: 'racp1', command: 'ls', result: '' }],
+    ['non-boolean workspace', { id: 'racp1', command: 'ls', result: '', workspace: 'yes' }],
+    ['unknown refused flag', { id: 'racp1', command: 'ls', result: '', workspace: false, refused: 'blocked' }],
+    ['refused alongside a workspace run', { id: 'racp1', command: 'ls', result: '', workspace: true, refused: 'disabled' }],
+  ])('refuses %s', (_label, fields) => {
+    expect(decodeFrame(JSON.stringify({ type: 'acp-tool-step', ...fields })))
+      .toEqual({ error: 'Malformed remote frame "acp-tool-step".' });
+  });
+
+  it('drops undeclared fields', () => {
+    const raw = {
+      type: 'acp-tool-step', id: 'racp1', command: Buffer.from('ls').toString('base64'),
+      result: Buffer.from('done').toString('base64'), workspace: false, request: 3, extra: 'drop',
+    };
+    expect(decodeFrame(JSON.stringify(raw)))
+      .toEqual({ type: 'acp-tool-step', id: 'racp1', command: 'ls', result: 'done', workspace: false });
+  });
+});
+
 describe('frame codec', () => {
   it('ties filesystem request arguments to their operation', () => {
     const request: ClientFrame = {
@@ -754,6 +848,10 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   'acp-ready': { type: 'acp-ready', id: 'racp1', sandboxed: true },
   'acp-chunk': { type: 'acp-chunk', id: 'racp1', text: 'partial reply' },
   'acp-turn': { type: 'acp-turn', id: 'racp1', phase: 'end', display: 'first\nsecond' },
+  'acp-tool-request': { type: 'acp-tool-request', id: 'racp1', request: 1, command: 'file read\nnotes.txt' },
+  'acp-tool-step': {
+    type: 'acp-tool-step', id: 'racp1', command: 'db query', result: 'command not granted', workspace: false, refused: 'disabled',
+  },
   'acp-run-end': { type: 'acp-run-end', id: 'racp1', reason: 'answered' },
   'acp-end': { type: 'acp-end', id: 'racp1', stopReason: 'end_turn' },
   'acp-error': { type: 'acp-error', id: 'racp1', message: 'rate limited', fatal: false },
@@ -889,7 +987,8 @@ describe('admitted frame types', () => {
 
   it('admits exactly the declared server frame types', () => {
     expect(Object.keys(SERVER_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-activity', 'acp-chunk', 'acp-closed', 'acp-end', 'acp-error', 'acp-ready', 'acp-run-end', 'acp-turn',
+      'acp-activity', 'acp-chunk', 'acp-closed', 'acp-end', 'acp-error', 'acp-ready', 'acp-run-end',
+      'acp-tool-request', 'acp-tool-step', 'acp-turn',
       'agent-resolve-result', 'attach-result', 'browser-exited', 'browser-started',
       'busy-transition', 'capture-reply', 'clone-offer', 'exit', 'filesystem-event', 'filesystem-reply', 'gate-event', 'name-in-use',
       'output', 'resume-cancel', 'resume-event', 'root-refused', 'session-state-result', 'shell-history', 'transcript', 'workspace-failed',
