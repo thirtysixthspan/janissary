@@ -287,6 +287,8 @@ server instead, as described below. The same version lets an attach say that it 
 reaches such a session. Both hosts also need the bundled ACP adapters, which the exact-version handshake
 ensures.
 
+Protocol version 40 moves Janissary's ACP tool loop onto the far side. `acp-run` replaces `acp-prompt` and carries the prompt plus its settings snapshot; `acp-run-end` replaces `acp-end` as the terminal frame. `acp-turn` adds turn boundaries, `acp-tool-request` and `acp-tool-result` carry caller-tool round trips, and `acp-tool-step` carries a far-side workspace step or gate refusal. `acp-chunk` still carries reply deltas, and `acp-ready`, `acp-activity`, `acp-error`, and `acp-close` are unchanged. The version also adds `read-lines`, the read-only filesystem operation behind a typed `file read` on a remote tab; it returns numbered lines or the reader's error line. A version-39 peer would accept prompts but run no loop, so workspace tools would never run where the workspace is while both ends looked healthy; the handshake refuses it. A peer parked under 39 is refused at relay time by its peer record, as for every earlier bump.
+
 Unavailable sends, explicit disconnect, transport loss, protocol failure, and channel finish settle and detach ACP listeners, including before readiness. Late frames for detached ids are ignored. A lost core ACP session is closed locally and replaced by a later request once its channel is ready; autonomous runs retain their transport-loss termination. Durable activity capture belongs only to the initiating project's recorder. The sessions tab's existing shell/harness restoration policy is unchanged.
 
 The handshake check is narrower for an attach than for a launch. An attach is answered by the
