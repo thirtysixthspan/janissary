@@ -79,7 +79,14 @@ export class RemoteAcp {
       },
       // The connection-level channel: a failed spawn or a dead agent means the session no longer
       // exists, so it travels as fatal and the local side drops its record of it.
-      onError: (message) => { this.send({ type: 'acp-error', id, message, fatal: true }); },
+      onError: (message) => {
+        this.send({ type: 'acp-error', id, message, fatal: true });
+        const record = this.records.get(id);
+        if (record?.state !== 'live' || !record.run) return;
+        const run = record.run;
+        record.run = undefined;
+        run.abort();
+      },
       onConnect: () => { this.send({ type: 'acp-ready', id, sandboxed }); },
     });
     this.records.set(id, { state: 'live', session, runOnly: frame.autonomous === true });
@@ -130,6 +137,8 @@ export class RemoteAcp {
   async close(id: string): Promise<void> {
     let record = this.records.get(id);
     if (record?.state === 'live') {
+      record.run?.abort();
+      record.run = undefined;
       record = this.trackShutdown(id, record.session);
     }
     const released = record?.state === 'closing' ? await record.pending
@@ -143,6 +152,15 @@ export class RemoteAcp {
   cancel(id: string): void {
     const record = this.records.get(id);
     if (record?.state !== 'live') return;
+    const run = record.run;
+    if (run) {
+      void run.cancel().catch((error: unknown) => {
+        if (this.records.get(id) !== record) return;
+        record.run = undefined;
+        this.send({ type: 'acp-error', id, message: `ACP: cancellation failed: ${errorText(error)}`, fatal: true });
+      });
+      return;
+    }
     void record.session.cancel().catch((error: unknown) => {
       if (this.records.get(id) === record) {
         this.send({ type: 'acp-error', id, message: `ACP: cancellation failed: ${errorText(error)}`, fatal: true });
@@ -152,7 +170,9 @@ export class RemoteAcp {
 
   detachRuns(): void {
     for (const [id, record] of this.records) {
-      if (record.state !== 'live' || !record.runOnly) continue;
+      if (record.state !== 'live' || !(record.run || record.runOnly)) continue;
+      record.run?.abort();
+      record.run = undefined;
       this.trackShutdown(id, record.session);
     }
   }
@@ -163,7 +183,10 @@ export class RemoteAcp {
   dispose(): boolean | Promise<boolean> {
     const pending: { id: string; session: AcpSession; result: Promise<boolean>; outcome?: boolean }[] = [];
     for (const [id, record] of this.records) {
-      if (record.state === 'closing') {
+      if (record.state === 'live') {
+        record.run?.abort();
+        record.run = undefined;
+      } else if (record.state === 'closing') {
         pending.push({ id, session: record.session, result: record.pending });
         continue;
       }

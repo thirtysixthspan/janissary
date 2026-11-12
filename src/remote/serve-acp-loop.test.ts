@@ -4,7 +4,8 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { NO_TOOLS_LINE } from '../acp/internal-tools.js';
 import { MARKDOWN_INSTRUCTION } from '../acp/launch.js';
-import type { AcpLoopSession, AcpRunSnapshot, AcpRunSnapshotRow } from '../acp/types.js';
+import type { AcpRunSnapshot, AcpRunSnapshotRow, AcpSession, PromptHandlers } from '../acp/types.js';
+import { deferred } from '../deferred.js';
 import type { ServerFrame } from './protocol-frames.js';
 import { startRemoteLoop } from './serve-acp-loop.js';
 
@@ -26,7 +27,7 @@ function agentSnapshot(grants: string[], askUser = false): AcpRunSnapshot {
 function makeSession(turns: string[][]) {
   const sent: string[] = [];
   let index = 0;
-  const session: AcpLoopSession = {
+  const session: AcpSession = {
     prompt(text, handlers) {
       sent.push(text);
       const deltas = turns[Math.min(index, turns.length - 1)] ?? [];
@@ -34,6 +35,9 @@ function makeSession(turns: string[][]) {
       for (const delta of deltas) handlers.onChunk(delta);
       handlers.onEnd('end_turn');
     },
+    cancel: async () => {},
+    kill: () => {},
+    shutdown: async () => {},
   };
   return { session, sent };
 }
@@ -58,6 +62,38 @@ function start(turns: string[][], snapshot: AcpRunSnapshot) {
     (frame) => { frames.push(frame); },
   );
   return { frames, sent, handle };
+}
+
+function heldSession() {
+  const sent: string[] = [];
+  const handlers: PromptHandlers[] = [];
+  const cancellation = deferred<void>();
+  let cancels = 0;
+  const session: AcpSession = {
+    prompt(text, promptHandlers) {
+      sent.push(text);
+      handlers.push(promptHandlers);
+    },
+    cancel() {
+      cancels += 1;
+      return cancellation.promise;
+    },
+    kill: () => {},
+    shutdown: async () => {},
+  };
+  return { session, sent, handlers, cancellation, cancels: () => cancels };
+}
+
+function startHeld(snapshot: AcpRunSnapshot) {
+  const held = heldSession();
+  const frames: ServerFrame[] = [];
+  const handle = startRemoteLoop(
+    held.session,
+    { type: 'acp-run', id: RUN_ID, text: 'do it', snapshot },
+    workspace,
+    (frame) => { frames.push(frame); },
+  );
+  return { ...held, frames, handle, last: () => held.handlers.at(-1)! };
 }
 
 function framesOf<T extends ServerFrame['type']>(frames: ServerFrame[], type: T) {
@@ -264,5 +300,87 @@ describe('startRemoteLoop agent runs', () => {
     const steps = framesOf(frames, 'acp-tool-step');
     expect(steps).toHaveLength(1);
     expect(steps[0]).toMatchObject({ workspace: true, result: '1\tone' });
+  });
+});
+
+describe('startRemoteLoop cancellation', () => {
+  it('cancels a turn once, ending the run only after the provider cancellation settles', async () => {
+    const run = startHeld(coreSnapshot('tell', []));
+    const cancelled = run.handle.cancel();
+
+    expect(run.handle.cancel()).toBe(cancelled);
+    await flush();
+    expect(framesOf(run.frames, 'acp-run-end')).toEqual([]);
+
+    run.cancellation.resolve();
+    await cancelled;
+
+    expect(framesOf(run.frames, 'acp-run-end')).toEqual([
+      { type: 'acp-run-end', id: RUN_ID, reason: 'cancelled' },
+    ]);
+    expect(run.cancels()).toBe(1);
+
+    const before = run.frames.length;
+    run.last().onEnd('end_turn');
+    run.last().onChunk('late');
+    run.last().onError('late failure');
+    await flush();
+
+    expect(run.frames).toHaveLength(before);
+    expect(run.sent).toHaveLength(1);
+  });
+
+  it('cancels a run waiting on a caller result and ignores a late result', async () => {
+    const run = startHeld(coreSnapshot('tell', ['db sqlite query']));
+    run.last().onChunk(QUERY);
+    run.last().onEnd('end_turn');
+    await flush();
+    expect(framesOf(run.frames, 'acp-tool-request')).toHaveLength(1);
+
+    const cancelled = run.handle.cancel();
+    run.cancellation.resolve();
+    await flush();
+
+    expect(framesOf(run.frames, 'acp-run-end')).toEqual([
+      { type: 'acp-run-end', id: RUN_ID, reason: 'cancelled' },
+    ]);
+    expect(run.sent).toHaveLength(1);
+
+    run.handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 1, output: 'late' });
+    await cancelled;
+
+    expect(run.sent).toHaveLength(1);
+    expect(framesOf(run.frames, 'acp-run-end')).toHaveLength(1);
+  });
+
+  it('aborts a run waiting on a caller result without sending a frame', async () => {
+    const run = startHeld(coreSnapshot('tell', ['db sqlite query']));
+    run.last().onChunk(QUERY);
+    run.last().onEnd('end_turn');
+    await flush();
+    const before = run.frames.length;
+
+    run.handle.abort();
+    await flush();
+
+    expect(run.frames).toHaveLength(before);
+    expect(run.sent).toHaveLength(1);
+    expect(run.cancels()).toBe(0);
+
+    run.handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 1, output: 'late' });
+    run.last().onError('late failure');
+    await flush();
+
+    expect(run.frames).toHaveLength(before);
+    expect(run.sent).toHaveLength(1);
+  });
+
+  it('rejects without a run-end when the provider cancellation fails', async () => {
+    const run = startHeld(coreSnapshot('tell', []));
+    const cancelled = run.handle.cancel();
+    run.cancellation.reject(new Error('write failed'));
+
+    await expect(cancelled).rejects.toThrow('write failed');
+    expect(framesOf(run.frames, 'acp-run-end')).toEqual([]);
   });
 });

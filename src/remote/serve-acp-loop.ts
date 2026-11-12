@@ -1,5 +1,5 @@
 import { driveToolLoop } from '../acp/drive-loop.js';
-import type { AcpLoopHandlers, AcpLoopSession, AcpToolHost } from '../acp/types.js';
+import type { AcpLoopHandlers, AcpLoopSession, AcpSession, AcpToolHost } from '../acp/types.js';
 import { deferred, type Deferred } from '../deferred.js';
 import { readWorkspaceCommand } from '../file-read/read.js';
 import type { ClientFrame, ServerFrame } from './protocol-frames.js';
@@ -9,23 +9,35 @@ type AcpToolResultFrame = Extract<ClientFrame, { type: 'acp-tool-result' }>;
 
 export type RemoteLoopHandle = {
   toolResult: (frame: AcpToolResultFrame) => void;
+  cancel: () => Promise<void>;
+  abort: () => void;
 };
 
 export function startRemoteLoop(
-  session: AcpLoopSession,
+  session: AcpSession,
   frame: AcpRunFrame,
   workspaceDir: string,
   send: (frame: ServerFrame) => void,
 ): RemoteLoopHandle {
   const controller = new AbortController();
+  const aborted = () => controller.signal.aborted;
   const id = frame.id;
   let requestNumber = 0;
   let forwarded = false;
+  let cancellation: Promise<void> | undefined;
   const pending = new Map<number, Deferred<string>>();
+
+  const abort = () => {
+    if (aborted()) return;
+    controller.abort();
+    for (const request of pending.values()) request.reject(new Error('ACP: run aborted.'));
+    pending.clear();
+  };
 
   const host: AcpToolHost = {
     runWorkspace: (command) => readWorkspaceCommand(workspaceDir, command.trim().replace(/^\//, '')),
     runCaller: (command) => {
+      if (aborted()) return '';
       const request = ++requestNumber;
       const result = deferred<string>();
       pending.set(request, result);
@@ -36,10 +48,11 @@ export function startRemoteLoop(
   };
 
   const events: AcpLoopHandlers = {
-    startTurn: (first) => { send({ type: 'acp-turn', id, phase: 'start', first }); },
+    startTurn: (first) => { if (!aborted()) send({ type: 'acp-turn', id, phase: 'start', first }); },
     chunk: () => {},
-    endTurn: (display) => { send({ type: 'acp-turn', id, phase: 'end', display }); },
+    endTurn: (display) => { if (!aborted()) send({ type: 'acp-turn', id, phase: 'end', display }); },
     ranCommand: (command, result, workspace, refused) => {
+      if (aborted()) return;
       if (forwarded) {
         forwarded = false;
         return;
@@ -50,8 +63,8 @@ export function startRemoteLoop(
         ...(refused !== undefined && { refused }),
       });
     },
-    finished: (reason) => { send({ type: 'acp-run-end', id, reason }); },
-    error: (message) => { send({ type: 'acp-error', id, message, fatal: false }); },
+    finished: (reason) => { if (!aborted()) send({ type: 'acp-run-end', id, reason }); },
+    error: (message) => { if (!aborted()) send({ type: 'acp-error', id, message, fatal: false }); },
   };
 
   const forwarding: AcpLoopSession = {
@@ -59,7 +72,7 @@ export function startRemoteLoop(
       session.prompt(text, {
         onChunk: (delta) => {
           handlers.onChunk(delta);
-          send({ type: 'acp-chunk', id, text: delta });
+          if (!aborted()) send({ type: 'acp-chunk', id, text: delta });
         },
         onEnd: (stopReason) => { handlers.onEnd(stopReason); },
         onError: (message) => { handlers.onError(message); },
@@ -77,5 +90,15 @@ export function startRemoteLoop(
       if (result.output === undefined) request.reject(new Error(result.error));
       else request.resolve(result.output);
     },
+    cancel: () => {
+      if (aborted()) return cancellation ?? Promise.resolve();
+      cancellation = (async () => {
+        abort();
+        await session.cancel();
+        send({ type: 'acp-run-end', id, reason: 'cancelled' });
+      })();
+      return cancellation;
+    },
+    abort,
   };
 }

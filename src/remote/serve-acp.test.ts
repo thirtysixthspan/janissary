@@ -417,6 +417,147 @@ describe('RemoteAcp — running', () => {
   });
 });
 
+describe('RemoteAcp — cancelling, closing, and losing a run', () => {
+  it('cancels a running loop only after the provider cancellation settles', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    const cancellation = Promise.withResolvers<void>();
+    acpMock.cancel.mockReturnValue(cancellation.promise);
+    acp.run(RUN_FRAME);
+
+    acp.cancel('racp1');
+    await flush();
+    expect(frames.filter((frame) => frame.type === 'acp-run-end')).toEqual([]);
+    expect(acpMock.cancel).toHaveBeenCalledOnce();
+
+    cancellation.resolve();
+    await flush();
+    expect(frames.filter((frame) => frame.type === 'acp-run-end')).toEqual([
+      { type: 'acp-run-end', id: 'racp1', reason: 'cancelled' },
+    ]);
+
+    const before = frames.length;
+    const prompts = acpMock.prompt.mock.calls.length;
+    lastHandlers().onEnd('cancelled');
+    await flush();
+
+    expect(frames).toHaveLength(before);
+    expect(acpMock.prompt).toHaveBeenCalledTimes(prompts);
+  });
+
+  it('cancels between turns with a caller result pending', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    acp.run({ ...RUN_FRAME, snapshot: coreSnapshot('tell', ['db sqlite query']) });
+    lastHandlers().onChunk('db sqlite query movies SELECT 1');
+    lastHandlers().onEnd('end_turn');
+    await flush();
+    expect(frames.filter((frame) => frame.type === 'acp-tool-request')).toHaveLength(1);
+
+    acp.cancel('racp1');
+    await flush();
+    expect(frames.at(-1)).toEqual({ type: 'acp-run-end', id: 'racp1', reason: 'cancelled' });
+    const prompts = acpMock.prompt.mock.calls.length;
+
+    acp.toolResult({ type: 'acp-tool-result', id: 'racp1', request: 1, output: 'late' });
+    await flush();
+
+    expect(acpMock.prompt).toHaveBeenCalledTimes(prompts);
+    expect(frames.filter((frame) => frame.type === 'acp-run-end')).toHaveLength(1);
+  });
+
+  it('reports a failed run cancellation as fatal and admits another run', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    acpMock.cancel.mockRejectedValue(new Error('write failed'));
+    acp.run(RUN_FRAME);
+
+    acp.cancel('racp1');
+    await flush();
+
+    expect(frames.filter((frame) => frame.type === 'acp-error')).toEqual([
+      { type: 'acp-error', id: 'racp1', message: 'ACP: cancellation failed: write failed', fatal: true },
+    ]);
+    expect(frames.filter((frame) => frame.type === 'acp-run-end')).toEqual([]);
+
+    acp.run(RUN_FRAME);
+    expect(acpMock.prompt).toHaveBeenCalledTimes(2);
+  });
+
+  it('closes a running loop without a run-end or a cancel', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    acp.run({ ...RUN_FRAME, snapshot: coreSnapshot('tell', ['db sqlite query']) });
+    lastHandlers().onChunk('db sqlite query movies SELECT 1');
+    lastHandlers().onEnd('end_turn');
+    await flush();
+
+    await acp.close('racp1');
+
+    expect(frames.filter((frame) => frame.type === 'acp-run-end')).toEqual([]);
+    expect(frames.filter((frame) => frame.type === 'acp-error')).toEqual([]);
+    expect(frames.at(-1)).toEqual({ type: 'acp-closed', id: 'racp1', released: true });
+    expect(acpMock.cancel).not.toHaveBeenCalled();
+
+    const before = frames.length;
+    acp.toolResult({ type: 'acp-tool-result', id: 'racp1', request: 1, output: 'late' });
+    expect(frames).toHaveLength(before);
+  });
+
+  it('disposes a running loop without a frame or a cancel', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    acp.run(RUN_FRAME);
+    const before = frames.length;
+
+    await acp.dispose();
+
+    expect(frames).toHaveLength(before);
+    expect(acpMock.shutdown).toHaveBeenCalledOnce();
+    expect(acpMock.cancel).not.toHaveBeenCalled();
+  });
+
+  it('ends a running tab session and an idle run-only session on detach but preserves an idle tab session', () => {
+    const { acp } = makeAcp();
+    acp.open(OPEN);
+    acp.open({ ...OPEN, id: 'racp2' });
+    acp.open({ ...OPEN, id: 'run-1', autonomous: true });
+
+    acp.run({ ...RUN_FRAME, id: 'racp2' });
+    acp.detachRuns();
+
+    expect(acpMock.shutdown).toHaveBeenCalledTimes(2);
+    acp.prompt({ type: 'acp-prompt', id: 'racp1', text: 'still live' });
+    acp.prompt({ type: 'acp-prompt', id: 'racp2', text: 'ended' });
+    acp.prompt({ type: 'acp-prompt', id: 'run-1', text: 'ended' });
+    expect(acpMock.prompt).toHaveBeenCalledTimes(2);
+  });
+
+  it('ends a run on a fatal connection error and admits another run', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    acp.run({ ...RUN_FRAME, snapshot: coreSnapshot('tell', ['db sqlite query']) });
+    lastHandlers().onChunk('db sqlite query movies SELECT 1');
+    lastHandlers().onEnd('end_turn');
+    await flush();
+
+    acpMock.options[0].onError('ACP agent exited.');
+    await flush();
+
+    expect(frames.filter((frame) => frame.type === 'acp-error')).toEqual([
+      { type: 'acp-error', id: 'racp1', message: 'ACP agent exited.', fatal: true },
+    ]);
+    expect(frames.filter((frame) => frame.type === 'acp-run-end')).toEqual([]);
+
+    const before = frames.length;
+    acp.toolResult({ type: 'acp-tool-result', id: 'racp1', request: 1, output: 'late' });
+    expect(frames).toHaveLength(before);
+
+    acp.run(RUN_FRAME);
+    expect(acpMock.prompt).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('RemoteAcp — closing', () => {
   it('awaits shutdown once and is safe to call twice', async () => {
     const { acp, frames } = makeAcp();
