@@ -8,6 +8,7 @@ import type { AcpRole } from './role.js';
 import { makeTab } from '../tab/index.js';
 import { DB_PRIMER } from '../database/primer.js';
 import type { AcpSessionListener } from '../remote/channel/acp.js';
+import type { RemoteAcpSession } from '../remote/acp-session.js';
 
 const mocks = vi.hoisted(() => ({
   connectAcp: vi.fn(),
@@ -711,6 +712,11 @@ describe('AcpManager — remote tabs', () => {
     return channel.attachAcp.mock.calls[0][1] as AcpSessionListener;
   }
 
+  function asRemoteSession(session: AcpSession | RemoteAcpSession): RemoteAcpSession {
+    if (!('remote' in session)) throw new Error('Expected a remote ACP session.');
+    return session;
+  }
+
   it('backs the session with the channel and never spawns an agent locally', () => {
     const { acp, channel } = remoteSetup();
 
@@ -756,8 +762,12 @@ describe('AcpManager — remote tabs', () => {
     const tell = acp.start('tab1', undefined, 'tell');
     const askEvents = runEvents();
     const tellEvents = runEvents();
-    const askSession = acp.session('tab1', '/cwd', GEMINI, { onError: vi.fn(), onConnect: vi.fn() }, 'ask');
-    const tellSession = acp.session('tab1', '/cwd', CLAUDE, { onError: vi.fn(), onConnect: vi.fn() }, 'tell');
+    const askSession = asRemoteSession(
+      acp.session('tab1', '/cwd', GEMINI, { onError: vi.fn(), onConnect: vi.fn() }, 'ask'),
+    );
+    const tellSession = asRemoteSession(
+      acp.session('tab1', '/cwd', CLAUDE, { onError: vi.fn(), onConnect: vi.fn() }, 'tell'),
+    );
     const listeners = channel.attachAcp.mock.calls.map(([, listener]) => listener as AcpSessionListener);
 
     askSession.run('ask text', snapshot, vi.fn(), askEvents);
@@ -804,7 +814,7 @@ describe('AcpManager — remote tabs', () => {
     const { acp, channel } = remoteSetup();
     acp.run('tab1', 'ask hello');
 
-    acpListener(channel).onReady();
+    acpListener(channel).onReady(true);
 
     expect(acp.label('tab1')).toBe('google/gemini-3.1-flash-lite');
     expect(mocks.messageBusEmit).toHaveBeenCalledWith('state', { type: 'dirty' });
@@ -876,7 +886,8 @@ describe('AcpManager — remote tabs', () => {
   it('keeps the session alive on a non-fatal error, reporting it through the running run only', () => {
     const { acp, channel } = remoteSetup();
     const events = runEvents();
-    acp.session('tab1', '/cwd', GEMINI, { onError: vi.fn(), onConnect: vi.fn() }).run('hi', snapshot, vi.fn(), events);
+    const session = asRemoteSession(acp.session('tab1', '/cwd', GEMINI, { onError: vi.fn(), onConnect: vi.fn() }));
+    session.run('hi', snapshot, vi.fn(), events);
 
     acpListener(channel).onError('rate limited', false);
 
@@ -887,7 +898,8 @@ describe('AcpManager — remote tabs', () => {
   it('streams chunks and the run end to the in-flight run', () => {
     const { acp, channel } = remoteSetup();
     const events = runEvents();
-    acp.session('tab1', '/cwd', GEMINI, { onError: vi.fn(), onConnect: vi.fn() }).run('hi', snapshot, vi.fn(), events);
+    const session = asRemoteSession(acp.session('tab1', '/cwd', GEMINI, { onError: vi.fn(), onConnect: vi.fn() }));
+    session.run('hi', snapshot, vi.fn(), events);
     const listener = acpListener(channel);
 
     listener.onTurn({ type: 'acp-turn', id: 'racp1', phase: 'start', first: true });
