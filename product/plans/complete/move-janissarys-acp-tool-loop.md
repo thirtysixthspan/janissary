@@ -184,7 +184,7 @@ The whole plan ships as one pull request. Within it, each step leaves typecheck 
 3. `runCorePrompt` and `executeAgentRun` switched to the driver for local sessions, with the prompt-scoped settings capture in `AcpManager.run`.
 4. Protocol 40 and the loop frames: the frame swap, the far-side loop, `RemoteAcpSession.run`, the session type split, and the remote agent-run path.
 5. `[<host>] ` tags on remote workspace steps.
-6. Specs, help, and user docs.
+6. Specs, help, user docs, and the shell's literal `Usage:` rendering.
 7. The end-to-end verification pass.
 
 ## Tests
