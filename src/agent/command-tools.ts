@@ -2,6 +2,7 @@ import { commands } from '../commands/index.js';
 import type { CommandInvocationContext } from '../commands/types.js';
 import type { Managers } from '../managers.js';
 import type { AgentSnapshot } from './types.js';
+import { isFileMutationCommandLine } from '../file-write/command.js';
 
 export function agentPrimer(snapshot: AgentSnapshot): string {
   const skills = snapshot.skills.map(({ name, instructions }) => `## ${name}\n${instructions}`).join('\n\n');
@@ -21,6 +22,7 @@ export async function runGrantedAgentCommand(
   invocation: CommandInvocationContext,
 ): Promise<string> {
   const input = command.trim().replace(/^\//, '');
+  if (isFileMutationCommandLine(input)) return `Agent: command not permitted: ${command}.`;
   const entry = commands.find((candidate) => candidate.match(input));
   if (!entry || !snapshot.grants.includes(entry.name)) {
     return `Agent: command not permitted: ${command}.`;

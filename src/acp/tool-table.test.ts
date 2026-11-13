@@ -208,6 +208,26 @@ describe('gateCommand', () => {
     },
   );
 
+  it.each([
+    ['granted', ['file']],
+    ['ungranted', []],
+  ])('refuses agent file mutations when %s', (_label, grants) => {
+    for (const command of ['file write {"path":"a.md"}', 'file edit {"path":"a.md"}', '/file write {"path":"a.md"}', 'FILE WRITE {"path":"a.md"}', 'file edit {']) {
+      expect(gateCommand(agent({ grants }), [], command)).toStrictEqual({
+        refusal: `Agent: command not permitted: ${command}.`,
+      });
+    }
+  });
+
+  it('keeps file read and non-mutation routing beside the mutation refusal', () => {
+    expect(gateCommand(agent({ grants: ['file'] }), [], 'file read a.md')).toStrictEqual({ runsOn: 'workspace' });
+    expect(gateCommand(agent(), [], 'file read a.md')).toStrictEqual({
+      refusal: 'Agent: command not permitted: file read a.md.',
+    });
+    expect(gateCommand(agent({ grants: ['file'] }), [], 'file writer x')).toStrictEqual({ runsOn: 'caller' });
+    expect(gateCommand(agent({ grants: ['file'] }), [], 'db sqlite list')).toStrictEqual({ runsOn: 'caller' });
+  });
+
   it('ignores the tool list for an agent snapshot', () => {
     expect(gateCommand(agent(), gateTools, 'db sqlite query select 1')).toStrictEqual({ runsOn: 'caller' });
     expect(() => gateCommand(agent(), gateTools, 'select 1')).not.toThrow();
