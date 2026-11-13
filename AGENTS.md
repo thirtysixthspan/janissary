@@ -185,6 +185,16 @@ Inside a sandboxed workspace, only `$janissary/ai/` and `$janissary/scripts/` ar
 
 **Running a script.** See [Running scripts](#running-scripts).
 
+## `$root` and `$workspace`
+
+Janissary sets two more path variables beside `$janissary` on every process it spawns. `$root` is the project directory Janissary was launched for. That's the main checkout, not a workspace clone. `$workspace` is the directory that holds the project's workspace clones, `$root/.janissary/workspace`, so `$workspace/<name>` is the clone named `<name>`.
+
+In a workspaced tab your working directory is your own clone under `$workspace`. Edit there, not under `$root`. The app writes paths in the same `$root/...` and `$workspace/<name>` forms in notifications and tab headers, and expanding the variable gives the real path.
+
+Both are set with or without workspace isolation, and they replace any stale value inherited from another session. On a remote tab they're paths on the machine you're running on. Before a project is initialized, `$root` falls back to the current working directory.
+
+They carry paths, not permissions. A sandboxed workspace can still write only inside its own clone, so don't use `$root` to reach around the sandbox.
+
 ## Running scripts
 
 Use `$janissary/scripts/run.mjs <name>` to run any script in `scripts/`. Use `npm run <name>` for package scripts declared in `package.json`. Do not invoke a file under `scripts/` directly with `bash` or `node`; the runner resolves the script and keeps agent permissions scoped.

@@ -81,6 +81,8 @@ Shells, harness terminals, and agent connections receive three path variables: `
 
 The standard Codex configuration preserves all three variables in commands run by the harness. Their presence does not change filesystem access permissions.
 
+The repository's agent guide, `AGENTS.md`, explains all three to coding agents: `$janissary` for reaching shipped tasks and scripts, and `$root` and `$workspace` for locating the main checkout and the workspace clones. `scripts/agent-guidance.test.mjs` pins those sections.
+
 ### Path display
 
 The display shortcuts leave underlying paths unchanged: working directories, stored state, and the paths passed to commands remain real absolute paths. The shortcuts are not applied to the raw output of a shell command; they abbreviate the paths the application renders around that output. Shell expansion of the environment variables above uses their actual paths.
