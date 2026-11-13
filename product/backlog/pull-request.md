@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Restore the ACP spec's file-read section so its read primer and default-grant paragraphs sit under the read heading and no longer claim the file tool's primer is only the read primer.
-
-Existing Issue: The plan-fidelity spec edit inserted the new "Typed file writes and edits" heading in the middle of the "File read" section of the ACP spec, so the paragraph stating "The file tool's primer is exactly `FILE_READ_PRIMER`" and the read default-grant paragraph now sit under the writes heading and contradict the later "File write and edit tools" section, which says the primer is composed from the grants; the dispatcher paragraph also still names only the read runners as the workspace route. Severity: 3/10
-
-Existing Risk: 3/10 - A reader or agent changing the primer or the workspace routing trusts the "exactly FILE_READ_PRIMER" sentence and the read-only routing sentence, and either drops the mutation primer or misses that mutations route through `mutateFileInTab` and `runFileMutation`.
-
-Proposal Risk: 1/10 - Documentation only; the residual risk is a wording slip, which a reread of the three file subsections against `src/acp/tool-table.ts` would expose.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1996 "restore the ACP spec's file-read section order and correct its primer and workspace-route sentences". In `product/specs/acp.md`, move the whole "### Typed file writes and edits" subsection so it follows the paragraph "`file read` is granted by default to the `ask` and `tell` roles…" instead of preceding the read primer, leaving the read primer block and the default-grant paragraph under "### File read". Reword "The file tool's primer is exactly `FILE_READ_PRIMER` from `src/file-read/command.ts`:" to say that when a role grants `file read`, the read part of the file tool's primer is exactly `FILE_READ_PRIMER`, and point at the "File write and edit tools" subsection for the composed primer (`filePrimer` in `src/acp/tool-table.ts`). In the earlier dispatcher paragraph ("A workspace command such as `file read` does not pass the dispatcher…"), add that a `file write` or `file edit` goes to `mutateFileInTab` (`src/file-write/tab-write.ts`) on a local session and `runFileMutation` on the far side (`src/remote/serve-acp-loop.ts`). Change no code. No tests cover spec wording; verify by reading the three file subsections in order and confirming each sentence matches `createAcpToolTable`, `runCorePrompt` in `src/acp/run-prompt.ts`, and `startRemoteLoop`.
-
-
 * Refuse a write or edit path that ends in a path separator instead of silently treating it as a file name.
 
 Existing Issue: A functionality gap: `resolveMutationTarget` in `src/file-write/target.ts` resolves the requested path with `path.resolve`, which drops a trailing `/`, and the remote port's `RemotePortPaths.to` drops it too, so `file write {"path":"notes/","content":"x"}` creates a regular file named `notes` and prints `Wrote notes/.`, and `file edit` on `a.txt/` edits `a.txt`, where an ordinary filesystem write would fail because the path names a directory. Severity: 2/10
