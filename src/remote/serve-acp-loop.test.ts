@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -382,5 +382,92 @@ describe('startRemoteLoop cancellation', () => {
 
     await expect(cancelled).rejects.toThrow('write failed');
     expect(framesOf(run.frames, 'acp-run-end')).toEqual([]);
+  });
+});
+
+const WRITE = `file write ${JSON.stringify({ path: 'b.md', content: 'hello\n' })}`;
+const EDIT = `file edit ${JSON.stringify({ path: 'a.md', oldString: 'one', newString: 'uno' })}`;
+
+describe('startRemoteLoop workspace mutations', () => {
+  it('runs a granted file write on the workspace as a workspace step', async () => {
+    const { frames } = start([[WRITE], ['Done.']], coreSnapshot('tell', ['file write']));
+    await flush();
+
+    expect(readFileSync(path.join(workspace, 'b.md'), 'utf8')).toBe('hello\n');
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([
+      { type: 'acp-tool-step', id: RUN_ID, command: WRITE, result: 'Wrote b.md.', workspace: true },
+    ]);
+    expect(framesOf(frames, 'acp-tool-request')).toEqual([]);
+  });
+
+  it('runs a granted file edit on the workspace as a workspace step', async () => {
+    writeFileSync(path.join(workspace, 'a.md'), 'one\ntwo\n');
+
+    const { frames } = start([[EDIT], ['Done.']], coreSnapshot('tell', ['file edit']));
+    await flush();
+
+    expect(readFileSync(path.join(workspace, 'a.md'), 'utf8')).toBe('uno\ntwo\n');
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([
+      { type: 'acp-tool-step', id: RUN_ID, command: EDIT, result: 'Edited a.md (1 replacements).', workspace: true },
+    ]);
+  });
+
+  it('answers malformed JSON with the write usage line and writes nothing', async () => {
+    const { frames } = start([['file write {nope'], ['Done.']], coreSnapshot('tell', ['file write']));
+    await flush();
+
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([{
+      type: 'acp-tool-step', id: RUN_ID, command: 'file write {nope', result: 'Usage: file write <JSON>', workspace: true,
+    }]);
+    expect(existsSync(path.join(workspace, 'b.md'))).toBe(false);
+  });
+
+  it('refuses an ungranted mutation and writes nothing', async () => {
+    const { frames } = start([[WRITE], ['Done.']], coreSnapshot('tell', ['file read']));
+    await flush();
+
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([{
+      type: 'acp-tool-step', id: RUN_ID, command: WRITE,
+      result: 'Command not allowed for role "tell": file write.', workspace: false,
+    }]);
+    expect(existsSync(path.join(workspace, 'b.md'))).toBe(false);
+  });
+
+  it('refuses every mutation on an agent snapshot', async () => {
+    const { frames } = start([[`janissary ${WRITE}`], ['Done.']], agentSnapshot(['file']));
+    await flush();
+
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([{
+      type: 'acp-tool-step', id: RUN_ID, command: WRITE,
+      result: `Agent: command not permitted: ${WRITE}.`, workspace: false,
+    }]);
+    expect(existsSync(path.join(workspace, 'b.md'))).toBe(false);
+  });
+
+  it('still forwards a db command after a write as request 1', async () => {
+    const { frames } = start([[WRITE], [QUERY], ['Done.']], coreSnapshot('tell', ['file write', 'db sqlite query']));
+    await flush();
+
+    expect(existsSync(path.join(workspace, 'b.md'))).toBe(true);
+    expect(framesOf(frames, 'acp-tool-request')).toEqual([
+      { type: 'acp-tool-request', id: RUN_ID, request: 1, command: QUERY },
+    ]);
+  });
+
+  it('keeps the written file and suppresses later frames after an abort', async () => {
+    const run = startHeld(coreSnapshot('tell', ['file write']));
+    run.last().onChunk(WRITE);
+    run.last().onEnd('end_turn');
+    await flush();
+    expect(framesOf(run.frames, 'acp-tool-step')).toHaveLength(1);
+    const before = run.frames.length;
+
+    run.handle.abort();
+    run.last().onChunk('Done.');
+    run.last().onEnd('end_turn');
+    await flush();
+
+    expect(run.frames).toHaveLength(before);
+    expect(readFileSync(path.join(workspace, 'b.md'), 'utf8')).toBe('hello\n');
   });
 });
