@@ -1,6 +1,7 @@
-import { readdir } from 'node:fs/promises';
+import { readdir, stat } from 'node:fs/promises';
 import type { Dirent } from 'node:fs';
 import path from 'node:path';
+import { checkLexicalPath } from '../file-read/policy.js';
 import { createGlobMatcher, type GlobMatcher } from './match.js';
 
 export interface GlobWalkOptions {
@@ -8,13 +9,16 @@ export interface GlobWalkOptions {
   start: string;
   pattern: string;
   hidden: boolean;
+  dirs: boolean;
   limit: number;
+  deadline: number;
   ignored: ReadonlySet<string>;
 }
 
 export interface GlobWalkResult {
   paths: string[];
   truncated: boolean;
+  timedOut: boolean;
 }
 
 type EntryKind = 'file' | 'directory' | 'skip';
@@ -24,6 +28,7 @@ interface WalkState {
   matcher: GlobMatcher;
   paths: string[];
   stopped: boolean;
+  timedOut: boolean;
 }
 
 function compareCodeUnits(a: string, b: string): number {
@@ -47,15 +52,22 @@ function isPruned(name: string, rootRelative: string, options: GlobWalkOptions):
   return name.startsWith('.') || name === 'node_modules' || options.ignored.has(rootRelative);
 }
 
-function classify(entry: Dirent): EntryKind {
+async function classify(entry: Dirent, absDir: string): Promise<EntryKind> {
   if (entry.isFile()) return 'file';
   if (entry.isDirectory()) return 'directory';
-  return 'skip';
+  if (!entry.isSymbolicLink()) return 'skip';
+  try {
+    const target = await stat(path.join(absDir, entry.name));
+    return target.isFile() ? 'file' : 'skip';
+  } catch {
+    return 'skip';
+  }
 }
 
-function record(state: WalkState, startRelative: string, rootRelative: string): void {
+function record(state: WalkState, startRelative: string, rootRelative: string, isDirectory: boolean): void {
   if (!state.matcher(startRelative)) return;
-  state.paths.push(rootRelative);
+  if (checkLexicalPath(state.options.root, rootRelative) === 'Secret file') return;
+  state.paths.push(isDirectory ? `${rootRelative}/` : rootRelative);
   if (state.paths.length > state.options.limit) state.stopped = true;
 }
 
@@ -63,19 +75,30 @@ function joinRelative(parent: string, name: string): string {
   return parent ? `${parent}/${name}` : name;
 }
 
+async function visitEntry(state: WalkState, entry: Dirent, absDir: string, startRelDir: string, rootRelative: string): Promise<void> {
+  const kind = await classify(entry, absDir);
+  const startRelative = joinRelative(startRelDir, entry.name);
+  if (kind === 'file') {
+    if (!state.options.dirs) record(state, startRelative, rootRelative, false);
+  } else if (kind === 'directory') {
+    if (state.options.dirs) record(state, startRelative, rootRelative, true);
+    await walkDirectory(state, path.join(absDir, entry.name), startRelative, rootRelative);
+  }
+}
+
 async function walkDirectory(state: WalkState, absDir: string, startRelDir: string, rootRelDir: string): Promise<void> {
+  if (state.stopped) return;
+  if (Date.now() >= state.options.deadline) {
+    state.timedOut = true;
+    state.stopped = true;
+    return;
+  }
   const entries = await readSorted(absDir);
   for (const entry of entries) {
     if (state.stopped) return;
     const rootRelative = joinRelative(rootRelDir, entry.name);
     if (isPruned(entry.name, rootRelative, state.options)) continue;
-    const kind = classify(entry);
-    const startRelative = joinRelative(startRelDir, entry.name);
-    if (kind === 'file') {
-      record(state, startRelative, rootRelative);
-    } else if (kind === 'directory') {
-      await walkDirectory(state, path.join(absDir, entry.name), startRelative, rootRelative);
-    }
+    await visitEntry(state, entry, absDir, startRelDir, rootRelative);
   }
 }
 
@@ -85,8 +108,13 @@ export async function walkGlob(options: GlobWalkOptions): Promise<GlobWalkResult
     matcher: createGlobMatcher(options.pattern, options.hidden),
     paths: [],
     stopped: false,
+    timedOut: false,
   };
   const prefix = path.relative(options.root, options.start).split(path.sep).join('/');
   await walkDirectory(state, options.start, '', prefix);
-  return { paths: state.paths.slice(0, options.limit), truncated: state.stopped };
+  return {
+    paths: state.paths.slice(0, options.limit),
+    truncated: state.paths.length > options.limit,
+    timedOut: state.timedOut,
+  };
 }

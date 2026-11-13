@@ -24,7 +24,7 @@ describe('walkGlob', () => {
   afterEach(() => { rmSync(root, { recursive: true, force: true }); });
 
   function walk(overrides: Partial<GlobWalkOptions> = {}): ReturnType<typeof walkGlob> {
-    return walkGlob({ root, start: root, pattern: '**/*', hidden: false, limit: 100, ignored: new Set(), ...overrides });
+    return walkGlob({ root, start: root, pattern: '**/*', hidden: false, dirs: false, limit: 100, deadline: Date.now() + 60_000, ignored: new Set(), ...overrides });
   }
 
   async function listed(overrides: Partial<GlobWalkOptions> = {}): Promise<string[]> {
@@ -35,7 +35,7 @@ describe('walkGlob', () => {
   it('lists matches in sorted depth-first code-unit order', async () => {
     for (const file of ['a-b/x', 'a/x', 'a/y/z', 'B.ts', 'a.ts']) write(root, file);
     const result = await walk();
-    expect(result).toEqual({ paths: ['B.ts', 'a/x', 'a/y/z', 'a-b/x', 'a.ts'], truncated: false });
+    expect(result).toEqual({ paths: ['B.ts', 'a/x', 'a/y/z', 'a-b/x', 'a.ts'], truncated: false, timedOut: false });
   });
 
   it('anchors the pattern at the start directory and prints root-relative paths', async () => {
@@ -95,18 +95,18 @@ describe('walkGlob', () => {
 
   it('truncates at limit + 1 matches', async () => {
     for (const file of ['a', 'b', 'c']) write(root, file);
-    expect(await walk({ limit: 2 })).toEqual({ paths: ['a', 'b'], truncated: true });
+    expect(await walk({ limit: 2 })).toEqual({ paths: ['a', 'b'], truncated: true, timedOut: false });
   });
 
   it('does not truncate at exactly limit matches', async () => {
     for (const file of ['a', 'b']) write(root, file);
-    expect(await walk({ limit: 2 })).toEqual({ paths: ['a', 'b'], truncated: false });
+    expect(await walk({ limit: 2 })).toEqual({ paths: ['a', 'b'], truncated: false, timedOut: false });
   });
 
   it('stops reading directories once it holds limit + 1 matches', async () => {
     for (const file of ['a', 'b', 'c/x', 'd/y']) write(root, file);
     vi.mocked(readdir).mockClear();
-    expect(await walk({ limit: 1 })).toEqual({ paths: ['a'], truncated: true });
+    expect(await walk({ limit: 1 })).toEqual({ paths: ['a'], truncated: true, timedOut: false });
     expect(vi.mocked(readdir).mock.calls.map(([dir]) => dir)).toEqual([root]);
   });
 
@@ -124,6 +124,6 @@ describe('walkGlob', () => {
   });
 
   it('yields nothing for a start directory that does not exist', async () => {
-    expect(await walk({ start: path.join(root, 'missing') })).toEqual({ paths: [], truncated: false });
+    expect(await walk({ start: path.join(root, 'missing') })).toEqual({ paths: [], truncated: false, timedOut: false });
   });
 });
