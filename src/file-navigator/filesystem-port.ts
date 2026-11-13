@@ -17,6 +17,8 @@ import { readRowStat, type RowStat } from './stats.js';
 import { pasteBatch, type PasteManyResult } from './paste.js';
 import { failureResult, OUTSIDE_ROOT_REASON, runFileOperation, type FileOperationResult } from './file-operation-result.js';
 import { atomicWriteFile } from '../atomic-write.js';
+import type { FileWritePolicy } from '../file-write/types.js';
+import { writeToolTextBytes } from '../file-write/port-adapter.js';
 import { contentHash, SAVE_CONFLICT_ERROR } from '../editor/save-conflict.js';
 import type { BulkConflictPolicy } from '../protocol.js';
 import type { UndoRedoResult } from '../protocol.js';
@@ -89,7 +91,10 @@ export interface FileSystemPort {
   search(root: string): Promise<string[]>;
   searchText(root: string, request: SearchRequest): Promise<SearchMatch[]>;
   readFile(root: string, relPath: string): Promise<Uint8Array>;
-  writeFile(root: string, relPath: string, content: Uint8Array, expectedHash?: string): MaybePromise<FileOperationResult>;
+  // `policy` selects the stricter tool-text write; without it the write keeps editor and binary semantics.
+  writeFile(
+    root: string, relPath: string, content: Uint8Array, expectedHash?: string, policy?: FileWritePolicy,
+  ): MaybePromise<FileOperationResult>;
   // Refuses to replace an existing destination unless `overwrite` is set, answering the conflict as
   // `{ conflictPaths }` instead — the same contract `moveMany` keeps for an unset policy.
   move(root: string, fromRelPath: string, toRelPath: string, overwrite?: boolean): MaybePromise<MoveOneResult>;
@@ -182,7 +187,8 @@ export class LocalFileSystemPort implements FileSystemPort {
     return readFileSync(absolute);
   }
 
-  writeFile(root: string, relPath: string, content: Uint8Array, expectedHash?: string): FileOperationResult {
+  writeFile(root: string, relPath: string, content: Uint8Array, expectedHash?: string, policy?: FileWritePolicy): FileOperationResult {
+    if (policy === 'tool-text') return writeToolTextBytes(root, relPath, content, expectedHash);
     const absolute = containedPath(root, relPath);
     if (!absolute) return failureResult(OUTSIDE_ROOT_REASON);
     if (expectedHash !== undefined) {
