@@ -1,4 +1,6 @@
-import type { FileMutationRequest, FileWriteRequest } from './types.js';
+import type { FileEditRequest, FileMutationRequest, FileWriteRequest } from './types.js';
+import { displayPath } from './messages.js';
+import { FILE_POLICY_MAX_BYTES } from '../file-read/policy.js';
 import { isRecord } from '../value-guards.js';
 
 export const FILE_MUTATION_PRIMER = [
@@ -64,7 +66,21 @@ function readOptionalString(record: Record<string, unknown>, key: string): Field
   return typeof value === 'string' ? { ok: true, value } : { ok: false };
 }
 
+function readOptionalBoolean(record: Record<string, unknown>, key: string): FieldRead<boolean | undefined> {
+  if (!Object.hasOwn(record, key)) return { ok: true, value: undefined };
+  const value = record[key];
+  return typeof value === 'boolean' ? { ok: true, value } : { ok: false };
+}
+
+const WRITE_KEYS: ReadonlySet<string> = new Set(['path', 'content', 'expectedHash']);
+const EDIT_KEYS: ReadonlySet<string> = new Set(['path', 'oldString', 'newString', 'replaceAll']);
+
+function hasOnlyAllowedKeys(record: Record<string, unknown>, allowed: ReadonlySet<string>): boolean {
+  return Object.keys(record).every((key) => allowed.has(key));
+}
+
 function buildWriteRequest(record: Record<string, unknown>): FileWriteRequest | undefined {
+  if (!hasOnlyAllowedKeys(record, WRITE_KEYS)) return undefined;
   const path = readRequiredString(record, 'path');
   const content = readRequiredString(record, 'content');
   const expectedHash = readOptionalString(record, 'expectedHash');
@@ -74,11 +90,33 @@ function buildWriteRequest(record: Record<string, unknown>): FileWriteRequest | 
   return request;
 }
 
+function buildEditRequest(record: Record<string, unknown>): FileEditRequest | undefined {
+  if (!hasOnlyAllowedKeys(record, EDIT_KEYS)) return undefined;
+  const path = readRequiredString(record, 'path');
+  const oldString = readRequiredString(record, 'oldString');
+  const newString = readRequiredString(record, 'newString');
+  const replaceAll = readOptionalBoolean(record, 'replaceAll');
+  if (!path.ok || !oldString.ok || !newString.ok || !replaceAll.ok) return undefined;
+  if (path.value === '' || oldString.value === '') return undefined;
+  return {
+    kind: 'edit',
+    path: path.value,
+    oldString: oldString.value,
+    newString: newString.value,
+    replaceAll: replaceAll.value ?? false,
+  };
+}
+
 export function parseFileMutation(input: string): FileMutationRequest | { error: string } {
   const extracted = extractArgument(input);
   if (!extracted) return { error: FILE_WRITE_USAGE };
   const usage = extracted.subcommand === 'write' ? FILE_WRITE_USAGE : FILE_EDIT_USAGE;
   const record = parseJsonObject(extracted.argument);
-  if (!record || extracted.subcommand === 'edit') return { error: usage };
-  return buildWriteRequest(record) ?? { error: usage };
+  if (!record) return { error: usage };
+  const request = extracted.subcommand === 'write' ? buildWriteRequest(record) : buildEditRequest(record);
+  if (!request) return { error: usage };
+  if (Buffer.byteLength(extracted.argument, 'utf8') > FILE_POLICY_MAX_BYTES) {
+    return { error: `File too large (>5 MB): ${displayPath(request.path)}.` };
+  }
+  return request;
 }

@@ -71,11 +71,49 @@ describe('parseFileMutation usage errors', () => {
   });
 });
 
-describe('parseFileMutation interim edit behavior', () => {
-  it('returns the edit usage for a well-formed edit object', () => {
-    expect(parseFileMutation('file edit {"path":"a","oldString":"x","newString":"y"}')).toEqual(editUsage);
+describe('parseFileMutation edit requests', () => {
+  it('parses an edit without replaceAll as false and keeps true', () => {
+    expect(parseFileMutation('file edit {"path":"a","oldString":"x","newString":"y"}')).toEqual({
+      kind: 'edit',
+      path: 'a',
+      oldString: 'x',
+      newString: 'y',
+      replaceAll: false,
+    });
+    expect(parseFileMutation('FILE EDIT {"path":"a","oldString":"x","newString":"","replaceAll":true}')).toEqual({
+      kind: 'edit',
+      path: 'a',
+      oldString: 'x',
+      newString: '',
+      replaceAll: true,
+    });
   });
 
+  it.each([
+    ['a missing path', 'file edit {"oldString":"x","newString":"y"}'],
+    ['a missing oldString', 'file edit {"path":"a","newString":"y"}'],
+    ['a missing newString', 'file edit {"path":"a","oldString":"x"}'],
+    ['a string replaceAll', 'file edit {"path":"a","oldString":"x","newString":"y","replaceAll":"true"}'],
+    ['the misspelling replaceall', 'file edit {"path":"a","oldString":"x","newString":"y","replaceall":true}'],
+    ['content on an edit', 'file edit {"path":"a","oldString":"x","newString":"y","content":"z"}'],
+    ['an empty path', 'file edit {"path":"","oldString":"x","newString":"y"}'],
+    ['an empty oldString', 'file edit {"path":"a","oldString":"","newString":"y"}'],
+  ])('rejects %s', (_name, line) => {
+    expect(parseFileMutation(line)).toEqual(editUsage);
+  });
+});
+
+describe('parseFileMutation strict write keys', () => {
+  it.each([
+    ['an unknown field', 'file write {"path":"a","content":"b","mode":"x"}'],
+    ['replaceAll on a write', 'file write {"path":"a","content":"b","replaceAll":true}'],
+    ['a __proto__ key', 'file write {"path":"a","content":"b","__proto__":{}}'],
+  ])('rejects %s', (_name, line) => {
+    expect(parseFileMutation(line)).toEqual(writeUsage);
+  });
+});
+
+describe('parseFileMutation malformed edit', () => {
   it('returns the edit usage for malformed edit JSON', () => {
     expect(parseFileMutation('file edit {oops')).toEqual(editUsage);
   });
