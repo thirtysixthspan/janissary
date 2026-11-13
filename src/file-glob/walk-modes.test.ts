@@ -72,6 +72,25 @@ describe('walkGlob modes', () => {
     expect(await listed({ dirs: true })).toEqual([]);
   });
 
+  it('omits a symbolic link to a secret file and does not count it toward the limit', async () => {
+    write(root, '.env');
+    write(root, 'a');
+    symlinkSync('.env', path.join(root, 'notes.txt'));
+    expect(await walk({ limit: 1 })).toEqual({ paths: ['a'], truncated: false, timedOut: false });
+  });
+
+  it('omits a symbolic link to a file outside the root', async () => {
+    const outside = mkdtempSync(path.join(tmpdir(), 'file-glob-outside-'));
+    try {
+      write(outside, 'target.ts');
+      write(root, 'keep.ts');
+      symlinkSync(path.join(outside, 'target.ts'), path.join(root, 'out.ts'));
+      expect(await listed()).toEqual(['keep.ts']);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
   it('skips a broken symbolic link in both modes', async () => {
     write(root, 'a.ts');
     symlinkSync('missing', path.join(root, 'broken'));

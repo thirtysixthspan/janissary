@@ -1,7 +1,7 @@
-import { readdir, stat } from 'node:fs/promises';
+import { readdir, realpath, stat } from 'node:fs/promises';
 import type { Dirent } from 'node:fs';
 import path from 'node:path';
-import { checkLexicalPath } from '../file-read/policy.js';
+import { checkLexicalPath, checkRealTarget } from '../file-read/policy.js';
 import { createGlobMatcher, type GlobMatcher } from './match.js';
 
 export interface GlobWalkOptions {
@@ -21,10 +21,11 @@ export interface GlobWalkResult {
   timedOut: boolean;
 }
 
-type EntryKind = 'file' | 'directory' | 'skip';
+type EntryKind = 'file' | 'link' | 'directory' | 'skip';
 
 interface WalkState {
   options: GlobWalkOptions;
+  realRoot: string;
   matcher: GlobMatcher;
   paths: string[];
   stopped: boolean;
@@ -58,16 +59,25 @@ async function classify(entry: Dirent, absDir: string): Promise<EntryKind> {
   if (!entry.isSymbolicLink()) return 'skip';
   try {
     const target = await stat(path.join(absDir, entry.name));
-    return target.isFile() ? 'file' : 'skip';
+    return target.isFile() ? 'link' : 'skip';
   } catch {
     return 'skip';
   }
 }
 
-function record(state: WalkState, startRelative: string, rootRelative: string, isDirectory: boolean): void {
+async function linkTargetAllowed(state: WalkState, absPath: string): Promise<boolean> {
+  try {
+    return checkRealTarget(state.realRoot, await realpath(absPath)) === undefined;
+  } catch {
+    return false;
+  }
+}
+
+async function record(state: WalkState, startRelative: string, rootRelative: string, kind: Exclude<EntryKind, 'skip'>, absPath: string): Promise<void> {
   if (!state.matcher(startRelative)) return;
   if (checkLexicalPath(state.options.root, rootRelative) === 'Secret file') return;
-  state.paths.push(isDirectory ? `${rootRelative}/` : rootRelative);
+  if (kind === 'link' && !(await linkTargetAllowed(state, absPath))) return;
+  state.paths.push(kind === 'directory' ? `${rootRelative}/` : rootRelative);
   if (state.paths.length > state.options.limit) state.stopped = true;
 }
 
@@ -78,11 +88,12 @@ function joinRelative(parent: string, name: string): string {
 async function visitEntry(state: WalkState, entry: Dirent, absDir: string, startRelDir: string, rootRelative: string): Promise<void> {
   const kind = await classify(entry, absDir);
   const startRelative = joinRelative(startRelDir, entry.name);
-  if (kind === 'file') {
-    if (!state.options.dirs) record(state, startRelative, rootRelative, false);
+  const absPath = path.join(absDir, entry.name);
+  if (kind === 'file' || kind === 'link') {
+    if (!state.options.dirs) await record(state, startRelative, rootRelative, kind, absPath);
   } else if (kind === 'directory') {
-    if (state.options.dirs) record(state, startRelative, rootRelative, true);
-    await walkDirectory(state, path.join(absDir, entry.name), startRelative, rootRelative);
+    if (state.options.dirs) await record(state, startRelative, rootRelative, kind, absPath);
+    await walkDirectory(state, absPath, startRelative, rootRelative);
   }
 }
 
@@ -105,6 +116,7 @@ async function walkDirectory(state: WalkState, absDir: string, startRelDir: stri
 export async function walkGlob(options: GlobWalkOptions): Promise<GlobWalkResult> {
   const state: WalkState = {
     options,
+    realRoot: await realpath(options.root),
     matcher: createGlobMatcher(options.pattern, options.hidden),
     paths: [],
     stopped: false,
