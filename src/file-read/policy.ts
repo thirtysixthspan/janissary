@@ -68,10 +68,14 @@ export function checkRealTarget(realRoot: string, realTarget: string): FilePolic
   return undefined;
 }
 
+function foldSegment(segment: string): string {
+  return segment.normalize('NFKC').toLowerCase();
+}
+
 // Mutation-only: the tool writer refuses the directories holding its own authorization and git's
 // executable hooks and config. The reader never calls this, so those files stay readable.
 export function checkProtectedPath(relative: string): FilePolicyFailure | undefined {
-  return relative.toLowerCase().split(path.sep).some((segment) => PROTECTED_SEGMENTS.has(segment)) ? 'Protected file' : undefined;
+  return relative.split(path.sep).some((segment) => PROTECTED_SEGMENTS.has(foldSegment(segment))) ? 'Protected file' : undefined;
 }
 
 export function classifyStats(stats: Stats): FilePolicyFailure | undefined {

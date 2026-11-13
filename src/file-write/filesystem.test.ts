@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, truncateSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, truncateSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -101,6 +101,14 @@ describe('writeToolTextFile content', () => {
     expect(reason(root, '.git/hooks/pre-commit', '#!/bin/sh\n')).toBe('Protected file');
     expect(readFileSync(roles, 'utf8')).toBe('{"roles":[]}');
     expect(existsSync(at('.git/hooks'))).toBe(false);
+  });
+
+  it('refuses a long-s alias of the roles file, leaving it byte-identical and creating no folder', () => {
+    const roles = seed('.janissary/roles.json', '{"roles":[]}');
+    const longS = '\u{17F}';
+    expect(reason(root, `.jani${longS}${longS}ary/roles.json`, '{"roles":["granted"]}')).toBe('Protected file');
+    expect(readFileSync(roles, 'utf8')).toBe('{"roles":[]}');
+    expect(readdirSync(root)).toEqual(['.janissary']);
   });
 });
 

@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, truncateSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, symlinkSync, truncateSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -27,6 +27,15 @@ function writeAt(base: string, relative: string, content = 'text\n'): string {
   mkdirSync(path.dirname(target), { recursive: true });
   writeFileSync(target, content);
   return target;
+}
+
+const LONG_S = '\u{17F}';
+
+function caseInsensitiveVolume(): boolean {
+  writeFileSync(path.join(root, 'case-probe'), '');
+  const insensitive = existsSync(path.join(root, 'CASE-PROBE'));
+  rmSync(path.join(root, 'case-probe'));
+  return insensitive;
 }
 
 function resolved(requested: string): WriteTarget {
@@ -243,6 +252,20 @@ describe('resolveMutationTarget protected directories', () => {
     symlinkSync(path.join(root, '.git', 'hooks'), path.join(root, 'hooks'));
     expect(refusal('hooks/pre-commit')).toBe('Protected file');
     expect(existsSync(path.join(root, '.git', 'hooks'))).toBe(false);
+  });
+
+  it('resolves an existing ancestor to its on-disk spelling on a case-insensitive volume', (context) => {
+    if (!caseInsensitiveVolume()) context.skip();
+    mkdirSync(path.join(root, 'Docs'));
+    expect(resolved('docs/a.txt')).toMatchObject({ realPath: path.join(root, 'Docs', 'a.txt'), exists: false });
+  });
+
+  it('refuses a long-s alias of an existing .janissary and creates no folder', () => {
+    writeAt(root, '.janissary/roles.json', '{"roles":[]}');
+    expect(refusal(`.jani${LONG_S}${LONG_S}ary/roles.json`)).toBe('Protected file');
+    expect(refusal(`.jani${LONG_S}${LONG_S}ary/scripts/run.sh`)).toBe('Protected file');
+    expect(readdirSync(root)).toEqual(['.janissary']);
+    expect(readdirSync(path.join(root, '.janissary'))).toEqual(['roles.json']);
   });
 
   it('creates no folder for a nested path under .git or a symlink alias to it', () => {

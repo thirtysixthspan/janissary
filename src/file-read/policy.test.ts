@@ -123,6 +123,15 @@ describe('checkProtectedPath', () => {
     expect(checkProtectedPath(relative)).toBe('Protected file');
   });
 
+  it.each([
+    `.jani\u{17F}\u{17F}ary/roles.json`,
+    `.jani\u{17F}sary/commands.json`,
+    `.JANI\u{17F}SARY/scripts/run.sh`,
+    'vendor/.Gi\u{FF54}/config',
+  ])('refuses the case-folding alias %s', (relative) => {
+    expect(checkProtectedPath(relative)).toBe('Protected file');
+  });
+
   it.each(['src/a.ts', '.github/workflows/ci.yml', '.gitignore', 'docs/janissary.md', ''])('allows %j', (relative) => {
     expect(checkProtectedPath(relative)).toBeUndefined();
   });

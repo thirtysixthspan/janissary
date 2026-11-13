@@ -14,6 +14,8 @@ type Ancestor = { realAncestor: string; missingSegments: string[] };
 
 type ExistingCheck = { exists: false } | { exists: true; realPath: string };
 
+const canonicalPath = realpathSync.native;
+
 const NOT_A_DIRECTORY_REASON = fileOperationReason({ code: 'ENOTDIR' });
 
 function hasCode(error: unknown, code: string): boolean {
@@ -30,14 +32,14 @@ function danglingEntryRefusal(realRoot: string, candidate: string): string | und
   } catch (error) {
     return hasCode(error, 'ENOENT') ? undefined : fileOperationReason(error);
   }
-  const linkTarget = runFileOperation(() => path.resolve(realpathSync(path.dirname(candidate)), readlinkSync(candidate)));
+  const linkTarget = runFileOperation(() => path.resolve(canonicalPath(path.dirname(candidate)), readlinkSync(candidate)));
   if (!linkTarget.ok) return linkTarget.reason;
   return checkMutablePath(realRoot, linkTarget.value) ?? 'Not a text file';
 }
 
 function findAncestor(realRoot: string, candidate: string, missingSegments: string[]): FileOperationResult<Ancestor> {
   try {
-    return { ok: true, value: { realAncestor: realpathSync(candidate), missingSegments } };
+    return { ok: true, value: { realAncestor: canonicalPath(candidate), missingSegments } };
   } catch (error) {
     const parent = path.dirname(candidate);
     if (!hasCode(error, 'ENOENT') || parent === candidate) return failureResult(fileOperationReason(error));
@@ -56,7 +58,7 @@ function classifyExisting(realTarget: string): FilePolicyFailure | undefined {
 function followSymlink(realRoot: string, location: string): FileOperationResult<string> {
   let realTarget: string;
   try {
-    realTarget = realpathSync(location);
+    realTarget = canonicalPath(location);
   } catch {
     return failureResult('Not a text file');
   }
@@ -88,7 +90,7 @@ function checkContainedPaths(realRoot: string, realPaths: string[]): FilePolicyF
 }
 
 function resolveRoot(root: string): FileOperationResult<string> {
-  return runFileOperation(() => realpathSync(root));
+  return runFileOperation(() => canonicalPath(root));
 }
 
 function resolveRootItself(realRoot: string): FileOperationResult<WriteTarget> {
@@ -138,7 +140,7 @@ export function resolveMutationTarget(root: string, requested: string): FileOper
 }
 
 function recheckDestination(target: WriteTarget): FileOperationResult<string> {
-  const realParent = runFileOperation(() => realpathSync(path.dirname(target.realPath)));
+  const realParent = runFileOperation(() => canonicalPath(path.dirname(target.realPath)));
   if (!realParent.ok) return realParent;
   const destination = path.join(realParent.value, path.basename(target.realPath));
   const containment = checkContainedPaths(target.realRoot, [realParent.value, destination]);
