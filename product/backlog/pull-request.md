@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description so it mentions two behaviors the diff adds but never describes: the trailing-separator refusal and the shortened follow-up prompt label for file mutations.
-
-Existing Issue: The description says nothing about `file write` and `file edit` refusing a path that ends in a path separator with `Is a directory: <path>.`, or about the ACP tool loop's follow-up prompt naming a mutation only as `file write <path>` or `file edit <path>` instead of echoing the whole command back to the agent, even though both ship in this branch and are documented in the help page and ACP spec. Severity: 2/10
-
-Existing Risk: 3/10 - A reviewer who checks the description's behavior examples and How-to-verify steps never sees these two agent-visible behaviors, so a regression in either, or a surprised user asking why `notes/` is refused or why the agent no longer sees its own command echoed, has no statement of intent in the pull request to check against.
-
-Proposal Risk: 1/10 - The description and the code agree; the only remaining risk is that the new wording drifts from the help page, which a reread of `help/file.md` and the ACP spec against the edited body would show.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1996 "describe the trailing-separator refusal and the shortened follow-up prompt label in the PR description". The trailing-separator refusal comes from `endsInSeparator` in `src/file-write/target.ts`, used by `resolveMutationTarget` and by `applyMutation` in `src/file-write/tab-write.ts`. The follow-up label comes from `describeLoopCommand` in `src/file-write/command.ts`, which `driveToolLoop` in `src/acp/drive-loop.ts` passes to `runAcpToolLoop` in `src/acp/loop.ts` as `describeCommand`. Edit PR #1996's body through `gh pr edit --body-file` and keep the title and every other paragraph. In the "problem it solves" paragraph, add that a path ending in a separator, such as `notes/`, is refused as `Is a directory: <path>.` on local and remote tabs before anything is written or any remote request is sent. In the ACP paragraph, add that the follow-up prompt names a mutation by subcommand and path only, so the content and old and new strings are not sent back to the agent a second time, while history, transcripts, and recordings keep the full command. Add `file write {"path":"notes/","content":"x"}` printing `Is a directory: notes/.` to the Behavior examples refusal block, and add a matching Edge cases step to How to verify that expects no `notes` file or folder to be created, renumbering the steps after it. No code, test, spec, or help file changes. `src/file-write/tab-write.test.ts`, `src/file-write/target.test.ts`, and `src/acp/drive-loop.test.ts` already pin both behaviors. Verify by comparing the applied body with the intended edit.
-
-
 * Refuse file write and edit paths whose last segment is `.`, which today silently write or edit a file named after the parent folder, the same defect the trailing-separator fix closed.
 
 Existing Issue: A path such as `notes/.` or `a.txt/.` passes `endsInSeparator`, and `path.resolve` in `resolveMutationTarget` (and `RemotePortPaths.to` on a remote tab) then normalizes it to `notes` or `a.txt`, so `file write` creates or overwrites a file named `notes` and `file edit` edits `a.txt`, where the filesystem itself would refuse the path. Severity: 3/10
