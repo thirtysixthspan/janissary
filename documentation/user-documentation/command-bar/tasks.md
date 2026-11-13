@@ -73,4 +73,4 @@ Picking a task only inserts the command; the agent then reads that file and foll
 - A final phase settles whatever is still open, including anything the two passes raised.
 - It moves the finished plan from `product/plans/draft/` to `product/plans/ready/`, where `build-a-feature` picks it up.
 
-Each phase is a round of numbered questions, every one with a recommended answer, and the draft is rewritten as you answer. A phase is finished when no question is left hanging, so the questioning is the longest part of the task rather than something you can skip past.
+It asks one question at a time. Each question lists at least three numbered answers and a last **Other** answer where you type your own. One answer is marked as recommended, and one as the lowest-cost option, the one least likely to grow the scope. A single answer can carry both marks. The draft is rewritten as you answer. A phase is finished when no question is left hanging, so the questioning is the longest part of the task rather than something you can skip past.
