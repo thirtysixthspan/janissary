@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description so it states that writes and edits refuse any target inside a .janissary or .git folder with Protected file, and add a verification step for it.
-
-Existing Issue: The description lists the containment, symlink, secret-path, size and text rules but never mentions the Protected file refusal for .janissary and .git that the diff adds, and its How to verify section has no step that exercises it, so the security boundary that protects role grants, command settings and git hooks from a tell agent is invisible to a reviewer. Severity: 4/10
-
-Existing Risk: 4/10 - A reviewer judging what a granted tell agent can change reads a looser boundary than the one shipped, and a later change that weakens or drops the protection has no stated promise in the pull request to be checked against.
-
-Proposal Risk: 1/10 - The description and code agree; the only remaining hazard is that the wording drifts again if the protected set changes, which a reader of help/file.md would notice.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1996 "state the Protected file refusal for .janissary and .git in the pull request description". In the description's paragraph that lists the containment rules (the one starting "The problem it solves"), add a sentence saying writes and edits refuse any target inside a .janissary or .git folder below the root, in any letter case and through symbolic links, with Protected file: <path>., before any folder is created, because those folders hold the role grants and command settings that are the only check on agent mutations and the git hooks and config git runs outside any sandbox; reads and editor saves are unaffected. Add the refusal to the Behavior examples refusal block (for example file write {"path":".git/hooks/pre-commit","content":"x"} printing Protected file: .git/hooks/pre-commit.) and add an Edge cases step to How to verify that runs the same command in the verify-write tab after creating .git/ there, expecting the Protected file line and no hooks folder. Base the wording on src/file-read/policy.ts checkProtectedPath, src/file-write/target.ts checkMutablePath, help/file.md and product/specs/acp.md, which already describe the behavior. Change no code; the existing tests in src/file-write/target.test.ts, src/file-write/filesystem.test.ts, src/file-write/edit.test.ts and src/remote/serve-file-navigator.test.ts already pin it.
-
-
 * Refuse lone-surrogate write content and edit strings before they are encoded to UTF-8, so local and remote mutations reject them instead of silently writing or matching U+FFFD.
 
 Existing Issue: applyMutation in src/file-write/tab-write.ts encodes write content with Buffer.from(content, 'utf8') and remoteEditFile in src/file-navigator/remote/port-reads.ts does the same to oldString and newString, which replaces every lone surrogate with U+FFFD, so the !isWellFormed() refusal in writeToolTextFile never fires through any real caller and a remote edit replaces or matches U+FFFD where the same local edit is refused. Severity: 4/10
