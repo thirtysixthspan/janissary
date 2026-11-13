@@ -160,6 +160,15 @@ describe('RemoteFileSystemPort', () => {
     expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(false);
   });
 
+  it('refuses lone-surrogate edit strings with the local reasons and sends no frame', async () => {
+    const h = harness();
+    await expect(h.port.editFile('/remote/ws', 'a.txt', '\u{D800}', 'y', false))
+      .resolves.toEqual({ ok: false, reason: 'No matching text' });
+    await expect(h.port.editFile('/remote/ws', 'a.txt', 'x', 'y\u{DFFF}', false))
+      .resolves.toEqual({ ok: false, reason: 'Not a text file' });
+    expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(false);
+  });
+
   it('answers a root-escaping edit or tool write locally and sends no frame', async () => {
     const h = harness();
     await expect(h.port.editFile('/remote/ws/src', '../b.txt', 'x', 'y', false))

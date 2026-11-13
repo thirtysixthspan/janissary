@@ -2,7 +2,7 @@ import path from 'node:path';
 import type { RemoteRequest } from './port-git.js';
 import type { RemotePortPaths } from './port-paths.js';
 import { failureResult, type FileOperationResult } from '../file-operation-result.js';
-import type { FileEditValue, FileWritePolicy } from '../../file-write/types.js';
+import { NO_MATCHING_TEXT_REASON, type FileEditValue, type FileWritePolicy } from '../../file-write/types.js';
 
 // `RemoteFileSystemPort`'s line read, write and text edit, extracted so that file stays under the size limit — the same
 // split `port-moves.ts` uses. It takes the port's bound request sender and its path mapper as
@@ -56,6 +56,8 @@ export async function remoteEditFile(
   oldString: string, newString: string, replaceAll: boolean,
 ): Promise<FileOperationResult<FileEditValue>> {
   if (outsideRoot(root, relPath)) return failureResult('Outside the workspace');
+  if (!oldString.isWellFormed()) return failureResult(NO_MATCHING_TEXT_REASON);
+  if (!newString.isWellFormed()) return failureResult('Not a text file');
   return request('edit-file', {
     path: await paths.to(root, relPath),
     oldString: Buffer.from(oldString, 'utf8').toString('base64'),

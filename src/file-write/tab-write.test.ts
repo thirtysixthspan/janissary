@@ -90,9 +90,33 @@ describe('mutateFileInTab', () => {
     expect(readdirSync(root)).toEqual([]);
   });
 
+  const loneSurrogateCases = [
+    [String.raw`file write {"path":"a.txt","content":"x\ud800"}`, 'Not a text file: a.txt.'],
+    [String.raw`file edit {"path":"a.txt","oldString":"\ud800","newString":"b"}`, 'No matching text: a.txt.'],
+    [String.raw`file edit {"path":"a.txt","oldString":"one","newString":"\udfff"}`, 'Not a text file: a.txt.'],
+  ] as const;
+
+  it.each(loneSurrogateCases)('refuses lone-surrogate text on a local tab: %s', async (line, expected) => {
+    writeFileSync(path.join(root, 'b.txt'), 'one');
+    expect(await run(line)).toBe(expected);
+    expect(readdirSync(root)).toEqual(['b.txt']);
+    expect(readFileSync(path.join(root, 'b.txt'), 'utf8')).toBe('one');
+  });
+
+  it.each(loneSurrogateCases)('refuses lone-surrogate text without changing an existing file: %s', async (line, expected) => {
+    writeFileSync(path.join(root, 'a.txt'), 'one\u{FFFD}');
+    expect(await run(line)).toBe(expected);
+    expect(readFileSync(path.join(root, 'a.txt'), 'utf8')).toBe('one\u{FFFD}');
+  });
+
   describe('on a remote tab', () => {
     beforeEach(() => {
       tabs = [{ label: 'janus', remote: { host: 'box' } }];
+    });
+
+    it.each(loneSurrogateCases)('refuses lone-surrogate text and sends no frame: %s', async (line, expected) => {
+      expect(await run(line)).toBe(expected);
+      expect(remote.requests()).toHaveLength(0);
     });
 
     const withReply = async (line: string, result: unknown, error?: string) => {

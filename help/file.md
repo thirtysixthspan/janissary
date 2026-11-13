@@ -59,7 +59,8 @@ Failures print one line naming the path, with control characters and bidirection
 
 - `Outside the workspace: <path>.`, `Secret file: <path>.`, `File not found: <path>.`, `Is a directory: <path>.`, `Not a text file: <path>.`, and `File too large (>5 MB): <path>.`, with the same rules as `file read`
 - `Protected file: <path>.` for any path inside a `.janissary` or `.git` folder, in any letter case and also when reached through a symbolic link. These folders hold the role grants and command settings that decide what an agent may run, and git hooks and settings that git later runs on its own, so neither command changes them and no missing folder is created inside them. `file read` can still read these files.
-- `No matching text: <path>.` when `oldString` is not found
+- `Not a text file: <path>.` also when `content` or `newString` contains an unpaired surrogate escape such as `\ud800`, checked before anything is written, on local and remote tabs alike
+- `No matching text: <path>.` when `oldString` is not found, or contains an unpaired surrogate escape
 - `Multiple matches: <path>; set replaceAll to true.` when `oldString` matches more than once
 - `This file changed on disk since it was loaded: <path>.` when `expectedHash` no longer matches
 - `<reason>: <path>.` for any other filesystem or remote failure, such as a permission error or an invalid remote reply

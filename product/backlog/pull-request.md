@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Refuse lone-surrogate write content and edit strings before they are encoded to UTF-8, so local and remote mutations reject them instead of silently writing or matching U+FFFD.
-
-Existing Issue: applyMutation in src/file-write/tab-write.ts encodes write content with Buffer.from(content, 'utf8') and remoteEditFile in src/file-navigator/remote/port-reads.ts does the same to oldString and newString, which replaces every lone surrogate with U+FFFD, so the !isWellFormed() refusal in writeToolTextFile never fires through any real caller and a remote edit replaces or matches U+FFFD where the same local edit is refused. Severity: 4/10
-
-Existing Risk: 3/10 - An agent that emits a JSON escape such as \ud83d without its pair gets Wrote <path>. while the file silently gains replacement characters, and a remote edit can rewrite existing U+FFFD text that the local route would refuse, so the two routes disagree on the same command.
-
-Proposal Risk: 1/10 - Both routes refuse ill-formed text the same way; the remaining difference is only the wording a direct port caller sees, which a test pins.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1996 "refuse lone-surrogate content and edit strings before UTF-8 encoding". In applyMutation in src/file-write/tab-write.ts, before any port call, refuse a write whose content is not well formed (String.prototype.isWellFormed) and an edit whose newString is not well formed with mutationFailureLine('Not a text file', path), and an edit whose oldString is not well formed with the No matching text line, matching the helper rules in src/file-write/filesystem.ts encodeToolText and src/file-write/edit-text.ts checkEditReplacement and replaceExactText. Also make remoteEditFile, and remoteWriteFile under the tool policy, in src/file-navigator/remote/port-reads.ts refuse ill-formed strings before encoding, so a direct port caller gets the same result as the local port. Add tests in src/file-write/tab-write.test.ts showing a typed write with "\ud800" content and an edit with a lone-surrogate oldString or newString are refused with nothing written on a local tab and no frame sent on a remote tab, and a port-level case in src/file-navigator/remote/port.test.ts. src/file-write/filesystem.test.ts and src/file-write/edit.test.ts already cover the helper-level refusal and must keep passing.
-
-
 * Keep a leading U+FEFF in remote edit strings by decoding edit-file's oldString and newString without stripping a BOM, so a remote edit matches the same text as a local one.
 
 Existing Issue: decodeBase64Text in src/remote/filesystem/edit-file-operation.ts decodes with new TextDecoder('utf-8', { fatal: true }), whose default ignoreBOM false strips a leading U+FEFF, so an oldString or newString that begins with a byte order mark loses it on the far side while the local edit and the far side's file decode (ignoreBOM true) keep it. Severity: 4/10

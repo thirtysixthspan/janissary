@@ -2,12 +2,20 @@ import type { Managers } from '../managers.js';
 import { LocalFileSystemPort, type FileSystemPort } from '../file-navigator/filesystem-port.js';
 import { localReadRoot } from '../file-read/tab-read.js';
 import { withRemoteTabPort } from '../file-read/remote-tab-port.js';
-import type { FileMutationRequest } from './types.js';
+import { NO_MATCHING_TEXT_REASON, type FileMutationRequest } from './types.js';
 import { parseFileMutation } from './command.js';
 import { editSuccessLine, writeSuccessLine } from './messages.js';
 import { mutationFailureLine, mutationRejectionLine } from './outcome.js';
 
+function illFormedReason(request: FileMutationRequest): string | undefined {
+  if (request.kind === 'write') return request.content.isWellFormed() ? undefined : 'Not a text file';
+  if (!request.oldString.isWellFormed()) return NO_MATCHING_TEXT_REASON;
+  return request.newString.isWellFormed() ? undefined : 'Not a text file';
+}
+
 async function applyMutation(port: FileSystemPort, root: string, request: FileMutationRequest): Promise<string> {
+  const refused = illFormedReason(request);
+  if (refused !== undefined) return mutationFailureLine(refused, request.path);
   if (request.kind === 'write') {
     const content = Buffer.from(request.content, 'utf8');
     const result = await port.writeFile(root, request.path, content, request.expectedHash, 'tool-text');
