@@ -1,0 +1,128 @@
+import { lstatSync, mkdirSync, realpathSync, statSync } from 'node:fs';
+import path from 'node:path';
+import { checkLexicalPath, checkRealTarget, type FilePolicyFailure } from '../file-read/policy.js';
+import { failureResult, fileOperationReason, runFileOperation, type FileOperationResult } from '../file-navigator/file-operation-result.js';
+
+export type WriteTarget = {
+  realRoot: string;
+  realPath: string;
+  exists: boolean;
+  missingSegments: string[];
+};
+
+type Ancestor = { realAncestor: string; missingSegments: string[] };
+
+type ExistingCheck = { exists: false } | { exists: true; realPath: string };
+
+const NOT_A_DIRECTORY_REASON = fileOperationReason({ code: 'ENOTDIR' });
+
+function hasCode(error: unknown, code: string): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === code;
+}
+
+function findAncestor(candidate: string, missingSegments: string[]): FileOperationResult<Ancestor> {
+  try {
+    return { ok: true, value: { realAncestor: realpathSync(candidate), missingSegments } };
+  } catch (error) {
+    const parent = path.dirname(candidate);
+    if (!hasCode(error, 'ENOENT') || parent === candidate) return failureResult(fileOperationReason(error));
+    return findAncestor(parent, [path.basename(candidate), ...missingSegments]);
+  }
+}
+
+function classifyExisting(realTarget: string): FilePolicyFailure | undefined {
+  const stats = statSync(realTarget);
+  if (stats.isDirectory()) return 'Is a directory';
+  return stats.isFile() ? undefined : 'Not a text file';
+}
+
+function followSymlink(realRoot: string, location: string): FileOperationResult<string> {
+  let realTarget: string;
+  try {
+    realTarget = realpathSync(location);
+  } catch {
+    return failureResult('Not a text file');
+  }
+  const failure = checkRealTarget(realRoot, realTarget);
+  return failure === undefined ? { ok: true, value: realTarget } : failureResult(failure);
+}
+
+function checkExisting(realRoot: string, location: string): FileOperationResult<ExistingCheck> {
+  let isSymlink: boolean;
+  try {
+    isSymlink = lstatSync(location).isSymbolicLink();
+  } catch (error) {
+    return hasCode(error, 'ENOENT') ? { ok: true, value: { exists: false } } : failureResult(fileOperationReason(error));
+  }
+  const followed = isSymlink ? followSymlink(realRoot, location) : { ok: true as const, value: location };
+  if (!followed.ok) return followed;
+  const classified = runFileOperation(() => classifyExisting(followed.value));
+  if (!classified.ok) return classified;
+  if (classified.value !== undefined) return failureResult(classified.value);
+  return { ok: true, value: { exists: true, realPath: followed.value } };
+}
+
+function checkContainedPaths(realRoot: string, realPaths: string[]): FilePolicyFailure | undefined {
+  for (const realPath of realPaths) {
+    const failure = checkRealTarget(realRoot, realPath);
+    if (failure !== undefined) return failure;
+  }
+  return undefined;
+}
+
+function resolveRoot(root: string): FileOperationResult<string> {
+  return runFileOperation(() => realpathSync(root));
+}
+
+function resolveRootItself(realRoot: string): FileOperationResult<WriteTarget> {
+  const existing = checkExisting(realRoot, realRoot);
+  if (!existing.ok) return existing;
+  return failureResult('Is a directory');
+}
+
+function resolveBelowRoot(realRoot: string, resolved: string): FileOperationResult<WriteTarget> {
+  const ancestor = findAncestor(path.dirname(resolved), []);
+  if (!ancestor.ok) return ancestor;
+  const { realAncestor, missingSegments } = ancestor.value;
+  const isDirectory = runFileOperation(() => statSync(realAncestor).isDirectory());
+  if (!isDirectory.ok) return isDirectory;
+  if (!isDirectory.value) return failureResult(NOT_A_DIRECTORY_REASON);
+  const lexicalDestination = path.join(realAncestor, ...missingSegments, path.basename(resolved));
+  const containment = checkContainedPaths(realRoot, [realAncestor, lexicalDestination]);
+  if (containment !== undefined) return failureResult(containment);
+  const base = { realRoot, missingSegments };
+  if (missingSegments.length > 0) return { ok: true, value: { ...base, realPath: lexicalDestination, exists: false } };
+  const existing = checkExisting(realRoot, lexicalDestination);
+  if (!existing.ok) return existing;
+  if (!existing.value.exists) return { ok: true, value: { ...base, realPath: lexicalDestination, exists: false } };
+  return { ok: true, value: { ...base, realPath: existing.value.realPath, exists: true } };
+}
+
+export function resolveMutationTarget(root: string, requested: string): FileOperationResult<WriteTarget> {
+  const lexical = checkLexicalPath(root, requested);
+  if (lexical !== undefined) return failureResult(lexical);
+  const realRoot = resolveRoot(root);
+  if (!realRoot.ok) return realRoot;
+  const resolved = path.resolve(root, requested);
+  if (path.relative(root, resolved) === '') return resolveRootItself(realRoot.value);
+  return resolveBelowRoot(realRoot.value, path.join(realRoot.value, path.relative(root, resolved)));
+}
+
+function recheckDestination(target: WriteTarget): FileOperationResult<string> {
+  const realParent = runFileOperation(() => realpathSync(path.dirname(target.realPath)));
+  if (!realParent.ok) return realParent;
+  const destination = path.join(realParent.value, path.basename(target.realPath));
+  const containment = checkContainedPaths(target.realRoot, [realParent.value, destination]);
+  if (containment !== undefined) return failureResult(containment);
+  const existing = checkExisting(target.realRoot, destination);
+  if (!existing.ok) return existing;
+  return { ok: true, value: existing.value.exists ? existing.value.realPath : destination };
+}
+
+export function createTargetParents(target: WriteTarget): FileOperationResult<string> {
+  if (target.missingSegments.length > 0) {
+    const created = runFileOperation(() => mkdirSync(path.dirname(target.realPath), { recursive: true }));
+    if (!created.ok) return created;
+  }
+  return recheckDestination(target);
+}
