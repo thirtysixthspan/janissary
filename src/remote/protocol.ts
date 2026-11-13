@@ -220,7 +220,9 @@
 // Version 41 adds an optional `policy: 'tool-text'` to `write-file`, so the far side applies the
 // hosted write tool's rules in its own workspace. A version-40 remote would drop the field and apply
 // the editor's looser write rules while both ends looked healthy, so the mismatch is refused at the
-// handshake.
+// handshake. Version 41 also adds the `edit-file` operation, which a version-40 remote would refuse
+// as unknown after the handshake had already passed, so the exact-version handshake refuses that
+// pairing first.
 export const REMOTE_PROTOCOL_VERSION = 41;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it

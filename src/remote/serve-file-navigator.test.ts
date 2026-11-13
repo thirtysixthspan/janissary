@@ -8,6 +8,7 @@ import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 import { contentHash, SAVE_CONFLICT_ERROR } from '../editor/save-conflict.js';
 import { readWorkspaceLines } from '../file-read/read.js';
 import { FILE_READ_MAX_LIMIT } from '../file-read/command.js';
+import { operationDescriptor } from './filesystem/operations.js';
 
 type Request = Extract<ClientFrame, { type: 'filesystem-request' }>;
 
@@ -33,6 +34,11 @@ describe('RemoteFileNavigators', () => {
     files.request({ type: 'filesystem-request', session: 'files1', request: id, operation, args });
     await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'filesystem-reply' && frame.request === id)).toBe(true));
     return frames.find((frame) => frame.type === 'filesystem-reply' && frame.request === id)!;
+  }
+
+  // The frame decoder turns the wire's base64 edit text into plain text before the request is served.
+  function edit(args: Record<string, unknown>): Promise<ServerFrame> {
+    return request('edit-file', operationDescriptor('edit-file').decode(args));
   }
 
   it('reads, lists, stats, searches, writes, and mutates inside the workspace', async () => {
@@ -99,6 +105,43 @@ describe('RemoteFileNavigators', () => {
     });
     expect(binary).toMatchObject({ result: { ok: false } });
     expect(readdirSync(root)).toEqual([]);
+  });
+
+  it('runs an edit in the far-side workspace only, with no cache entry or temporary file', async () => {
+    const local = mkdtempSync(path.join(tmpdir(), 'janus-local-'));
+    writeFileSync(path.join(local, 'notes.txt'), 'alpha beta');
+    writeFileSync(path.join(root, 'notes.txt'), 'alpha beta');
+
+    const reply = await edit({
+      path: 'notes.txt', oldString: Buffer.from('beta').toString('base64'),
+      newString: Buffer.from('gamma').toString('base64'), replaceAll: false,
+    });
+
+    expect(reply).toMatchObject({ result: { ok: true, value: { replacements: 1 } } });
+    expect(readFileSync(path.join(root, 'notes.txt'), 'utf8')).toBe('alpha gamma');
+    expect(readFileSync(path.join(local, 'notes.txt'), 'utf8')).toBe('alpha beta');
+    expect(readdirSync(root)).toEqual(['notes.txt']);
+    expect(readdirSync(local)).toEqual(['notes.txt']);
+    rmSync(local, { recursive: true, force: true });
+  });
+
+  it('refuses an escaping or secret edit path on the far side', async () => {
+    writeFileSync(path.join(root, '.env'), 'KEY=1');
+    const args = { oldString: Buffer.from('KEY').toString('base64'), newString: '', replaceAll: false };
+
+    expect(await edit({ path: '../outside.txt', ...args })).toMatchObject({ result: { ok: false, reason: expect.any(String) } });
+    expect(await edit({ path: '.env', ...args })).toMatchObject({ result: { ok: false, reason: expect.any(String) } });
+    expect(readFileSync(path.join(root, '.env'), 'utf8')).toBe('KEY=1');
+  });
+
+  it('refuses an ambiguous edit unless replaceAll is set', async () => {
+    writeFileSync(path.join(root, 'twice.txt'), 'x y x');
+    const args = { path: 'twice.txt', oldString: Buffer.from('x').toString('base64'), newString: Buffer.from('z').toString('base64') };
+
+    expect(await edit({ ...args, replaceAll: false })).toMatchObject({ result: { ok: false, reason: expect.stringContaining('Multiple matches') } });
+    expect(readFileSync(path.join(root, 'twice.txt'), 'utf8')).toBe('x y x');
+    expect(await edit({ ...args, replaceAll: true })).toMatchObject({ result: { ok: true, value: { replacements: 2 } } });
+    expect(readFileSync(path.join(root, 'twice.txt'), 'utf8')).toBe('z y z');
   });
 
   it('refuses a directory symlink that resolves outside the workspace', async () => {

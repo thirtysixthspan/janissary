@@ -9,6 +9,7 @@ import type { PasteManyResult } from '../../file-navigator/paste.js';
 import type { CommitResult } from '../../git/commit.js';
 import type { HistoryStep } from '../../file-navigator/moves.js';
 import { isChangeSetResult, type ChangeSetResult } from '../../plugins/diff/change-set.js';
+import type { FileEditValue } from '../../file-write/types.js';
 import type { SearchMatch } from '../../search/types.js';
 
 export const decodeResult = <R>(check: (value: unknown) => value is R) => (value: unknown): R => {
@@ -72,6 +73,9 @@ export const resultDecoders = {
     && (strings(value.conflictPaths) || (batch(value) && pairs(value.pairs) && typeof value.mutated === 'boolean'))),
   'create-file': decodeResult<FileOperationResult<{ path: string }>>((value): value is FileOperationResult<{ path: string }> => result(value)
     && (value.ok ? record(value.value) && typeof value.value.path === 'string' : typeof value.reason === 'string')),
+  'edit-file': decodeResult<FileOperationResult<FileEditValue>>((value): value is FileOperationResult<FileEditValue> => result(value)
+    && (value.ok ? record(value.value) && Number.isSafeInteger(value.value.replacements) && (value.value.replacements as number) >= 1
+      : typeof value.reason === 'string')),
   'create-directory': decodeResult<FileOperationResult<{ path: string }>>((value): value is FileOperationResult<{ path: string }> => result(value)
     && (value.ok ? record(value.value) && typeof value.value.path === 'string' : typeof value.reason === 'string')),
   replay: decodeResult<ReplayResult>((value): value is ReplayResult => record(value) && record(value.result)

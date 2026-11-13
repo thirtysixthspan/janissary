@@ -10,7 +10,7 @@ import { FILE_READ_MAX_LIMIT } from '../../file-read/command.js';
 // the table is still caught here. Adding one to the protocol means adding it in both places.
 const ALL_OPERATIONS: RemoteFilesystemOperation[] = [
   'read-directory', 'stat', 'watch', 'unwatch', 'git', 'git-pull', 'git-commit', 'search',
-  'search-text', 'read-file', 'read-lines', 'write-file', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
+  'search-text', 'read-file', 'read-lines', 'write-file', 'edit-file', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
   'create-file', 'create-directory', 'replay', 'change-set',
 ];
 
@@ -39,6 +39,7 @@ const PATH_CASES: PathCase[] = [
   ['read-lines', { path: 'a.txt', offset: 3, limit: 10 }, ['a.txt']],
   ['write-file', { path: 'a.txt', content: '', expectedHash: 'baseline' }, ['a.txt']],
   ['write-file', { path: 'a.txt', content: '', policy: 'tool-text' }, ['a.txt']],
+  ['edit-file', { path: 'a.txt', oldString: 'b2xk', newString: '', replaceAll: false }, ['a.txt']],
   ['move', { from: 'a.txt', to: 'dest' }, ['a.txt', 'dest']],
   ['move', { from: 'a.txt', to: 'dest', overwrite: true }, ['a.txt', 'dest']],
   ['move-many', { sources: ['a.txt', 'b.txt'], destination: 'dest' }, ['a.txt', 'b.txt', 'dest']],
@@ -87,6 +88,11 @@ const INVALID_CASES: [RemoteFilesystemOperation, Record<string, unknown>][] = [
   ['write-file', { path: 'a.txt', content: '', policy: 'other' }],
   ['write-file', { path: 'a.txt', content: '', policy: 7 }],
   ['write-file', { path: 'a.txt', content: '', policy: null }],
+  ['edit-file', { path: 'a.txt', newString: '', replaceAll: false }],
+  ['edit-file', { path: 'a.txt', oldString: 'b2xk', newString: '' }],
+  ['edit-file', { path: 'a.txt', oldString: 'b2xk', newString: '', replaceAll: 'true' }],
+  ['edit-file', { path: 'a.txt', oldString: '!!', newString: '', replaceAll: false }],
+  ['edit-file', { path: 'a.txt', oldString: Buffer.from([0xff]).toString('base64'), newString: '', replaceAll: false }],
   ['move', { from: 'a.txt' }],
   ['move', { from: 'a.txt', to: 'dest', overwrite: 'yes' }],
   ['move-many', { sources: ['a.txt'], destination: 'dest', policy: 'nonsense' }],
@@ -116,6 +122,7 @@ const VALID_RESULTS: { [K in RemoteFilesystemOperation]: RemoteFilesystemOperati
   'read-file': { content: 'YQ==' },
   'read-lines': { text: '1\ta' },
   'write-file': { ok: false, reason: 'denied' },
+  'edit-file': { ok: true, value: { replacements: 2 } },
   move: { ok: true, value: { from: 'a.txt', to: 'dest/a.txt' } },
   'move-many': { total: 1, failedPaths: [], moved: [{ from: 'a.txt', to: 'dest/a.txt' }], mutated: true },
   delete: { ok: false, reason: 'denied' },
@@ -239,11 +246,27 @@ describe('FILESYSTEM_OPERATIONS', () => {
     expect(() => decodeFilesystemResult('read-lines', { text: 3 })).toThrow('Invalid remote filesystem operation result.');
   });
 
+  it('decodes edit-file arguments to plain text', () => {
+    expect(operationDescriptor('edit-file').decode({
+      path: 'a.txt', oldString: Buffer.from('old é').toString('base64'), newString: '', replaceAll: true,
+    })).toEqual({ path: 'a.txt', oldString: 'old é', newString: '', replaceAll: true });
+    expect(() => operationDescriptor('edit-file').decode({ path: 'a.txt', oldString: '!!', newString: '', replaceAll: true }))
+      .toThrow('Invalid remote filesystem operation arguments.');
+  });
+
+  it('accepts an edit-file count or failure and rejects anything else', () => {
+    expect(decodeFilesystemResult('edit-file', { ok: true, value: { replacements: 1 } })).toEqual({ ok: true, value: { replacements: 1 } });
+    expect(decodeFilesystemResult('edit-file', { ok: false, reason: 'No matching text' })).toEqual({ ok: false, reason: 'No matching text' });
+    for (const bad of [{ ok: true, value: { replacements: 0 } }, { ok: true, value: { replacements: 1.5 } }, { ok: true, value: {} }, { ok: false, reason: 3 }]) {
+      expect(() => decodeFilesystemResult('edit-file', bad)).toThrow('Invalid remote filesystem operation result.');
+    }
+  });
+
   it('names a refusal shape for exactly the operations whose result can carry one', () => {
     const classified = ALL_OPERATIONS.filter((operation) => operationDescriptor(operation).refusal);
 
     expect(alphabetical(classified)).toEqual([
-      'create-directory', 'create-file', 'delete', 'delete-many', 'move', 'move-many',
+      'create-directory', 'create-file', 'delete', 'delete-many', 'edit-file', 'move', 'move-many',
       'paste', 'rename', 'replay', 'write-file',
     ]);
   });
