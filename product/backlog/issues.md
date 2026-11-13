@@ -2,7 +2,7 @@
 
 ## ready
 
-* ACP sessions should be provided a complete primer on how to use the available commands granted by a role. This should specify the full command signature and the expected format of certain parameters and any details of the expected communication format over the ACP channel.
+* ACP sessions should be provided a complete primer on how to use the available commands granted by a role. This should specify the full command signature and the expected format of certain parameters and any details of the expected communication format over the ACP channel. For example, a new agent should be able to write text content to a new file without the user's help.
 
 * $janissary, $root, $workspace are set as variables in the workspace environment. Document these in AGENTS.md
 
