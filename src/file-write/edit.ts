@@ -9,8 +9,11 @@ import type { FileEditValue } from './types.js';
 type EditableFile = { text: string; byteLength: number };
 
 function readEditableFile(realPath: string): FileOperationResult<EditableFile> {
-  if (statSync(realPath).size > FILE_POLICY_MAX_BYTES) return failureResult<EditableFile>('File too large (>5 MB)');
+  const stats = statSync(realPath);
+  if (!stats.isFile()) return failureResult<EditableFile>('Not a text file');
+  if (stats.size > FILE_POLICY_MAX_BYTES) return failureResult<EditableFile>('File too large (>5 MB)');
   const bytes = readFileSync(realPath);
+  if (bytes.byteLength > FILE_POLICY_MAX_BYTES) return failureResult<EditableFile>('File too large (>5 MB)');
   const decoded = decodeEditableText(bytes);
   if (!decoded.ok) return decoded;
   return { ok: true, value: { text: decoded.value, byteLength: bytes.byteLength } };
