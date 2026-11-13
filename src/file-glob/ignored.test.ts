@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -26,7 +26,10 @@ describe('loadIgnoredPaths', () => {
   let root: string;
 
   beforeEach(() => { root = mkdtempSync(path.join(tmpdir(), 'file-glob-ignored-')); });
-  afterEach(() => { rmSync(root, { recursive: true, force: true }); });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    rmSync(root, { recursive: true, force: true });
+  });
 
   function initIgnoringRepo(): void {
     initRepo(root);
@@ -82,8 +85,13 @@ describe('loadIgnoredPaths', () => {
   });
 
   it('returns an empty set outside any repository', async () => {
+    vi.stubEnv('GIT_CEILING_DIRECTORIES', path.dirname(realpathSync(root)));
     write(root, 'a.log');
     const ignored = await loadIgnoredPaths(root);
     expect(ignored.size).toBe(0);
+  });
+
+  it('resolves to an empty set — never rejects — when the root does not exist', async () => {
+    await expect(loadIgnoredPaths(path.join(root, 'does-not-exist'))).resolves.toEqual(new Set());
   });
 });
