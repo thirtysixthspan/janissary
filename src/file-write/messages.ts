@@ -6,8 +6,16 @@ const NAMED_ESCAPES: Readonly<Record<string, string>> = {
   '\t': String.raw`\t`,
 };
 
+function isBidiControl(code: number): boolean {
+  return code === 0x06_1C
+    || code === 0x20_0E
+    || code === 0x20_0F
+    || (code >= 0x20_2A && code <= 0x20_2E)
+    || (code >= 0x20_66 && code <= 0x20_69);
+}
+
 function isEscapedCode(code: number): boolean {
-  return code < 0x20 || (code >= 0x7F && code <= 0x9F) || code === 0x20_28 || code === 0x20_29;
+  return code < 0x20 || (code >= 0x7F && code <= 0x9F) || code === 0x20_28 || code === 0x20_29 || isBidiControl(code);
 }
 
 function escapeCharacter(character: string): string {

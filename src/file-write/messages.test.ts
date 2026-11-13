@@ -40,6 +40,25 @@ describe('displayPath', () => {
     expect(displayPath(path)).toBe(expected);
   });
 
+  it('escapes bidirectional and invisible formatting controls', () => {
+    const codes = [0x06_1C, 0x20_0E, 0x20_0F, 0x20_2A, 0x20_2B, 0x20_2C, 0x20_2D, 0x20_2E, 0x20_66, 0x20_67, 0x20_68, 0x20_69];
+    const path = codes.map((code, index) => `${String(index)}${String.fromCodePoint(code)}`).join('');
+    const escapes = ['u061c', 'u200e', 'u200f', 'u202a', 'u202b', 'u202c', 'u202d', 'u202e', 'u2066', 'u2067', 'u2068', 'u2069'];
+    const expected = escapes.map((escape, index) => `${String(index)}\\${escape}`).join('');
+    expect(displayPath(path)).toBe(expected);
+  });
+
+  it('shows a right-to-left override as an escape rather than reordering the path', () => {
+    const rendered = displayPath(`invoice${String.fromCodePoint(0x20_2E)}fdp.exe`);
+    expect(rendered).toBe(String.raw`invoice\u202efdp.exe`);
+    expect(rendered).not.toContain(String.fromCodePoint(0x20_2E));
+  });
+
+  it('leaves code points just outside the bidirectional control ranges unchanged', () => {
+    const path = [0x20_0D, 0x20_10, 0x20_65, 0x20_6A].map((code) => String.fromCodePoint(code)).join('');
+    expect(displayPath(path)).toBe(path);
+  });
+
   it('leaves backslashes, spaces, and non-ASCII letters unchanged', () => {
     expect(displayPath(String.raw`dir\my file é.md`)).toBe(String.raw`dir\my file é.md`);
   });
