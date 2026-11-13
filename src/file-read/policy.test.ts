@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, truncateSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, symlinkSync, truncateSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -58,6 +58,12 @@ describe('checkRealTarget', () => {
 
   it('accepts an ordinary contained file', () => {
     expect(checkRealTarget(root, writeAt(root, 'a.txt'))).toBeUndefined();
+  });
+
+  it('refuses the resolved target of a file reached through a symlinked directory leaving the root', () => {
+    writeAt(outside, 'a.txt');
+    symlinkSync(outside, path.join(root, 'link'));
+    expect(checkRealTarget(root, realpathSync(path.join(root, 'link', 'a.txt')))).toBe('Outside the workspace');
   });
 });
 

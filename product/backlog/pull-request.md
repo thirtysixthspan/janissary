@@ -1,13 +1,3 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
-
-* Document the real-path precondition on the exported physical containment check so later writer callers cannot pass it an unresolved path and silently skip symlink containment.
-
-Existing Issue: The newly exported checkRealTarget trusts that both arguments were already passed through realpathSync, but neither its signature nor any comment says so, and handed a lexical or partially resolved path it returns undefined for a target reached through a symlinked parent that leaves the root. Severity: 3/10
-
-Existing Risk: 4/10 - The writer and editor in later subplans must handle targets that do not exist yet and so cannot be realpath'd directly, and a caller that passes the joined lexical target instead of a resolved parent plus basename ships a guard that fails open on a symlink escape while every policy test still passes.
-
-Proposal Risk: 2/10 - The contract becomes visible at the call site an agent reads, but it remains a convention rather than an enforced check, so a careless caller can still misuse it and only that caller's own symlink-escape tests would catch it.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1996 "document the real-path precondition on checkRealTarget". In src/file-read/policy.ts, add a short comment above the exported checkRealTarget stating that realRoot and realTarget must both already be canonical paths from realpathSync (for a target that does not exist yet, the realpath of its nearest existing parent joined with the remaining segments), that the function performs no resolution of its own by design so it stays I/O-free per the shared-file-policy subplan, and that passing an unresolved path skips symlink containment; add a matching one-line note above checkLexicalPath saying it is the pre-I/O check and does not replace checkRealTarget. Do not add a realpathSync call or any other I/O to checkRealTarget, since the subplan requires it to do none beyond the home-secret resolution. Optionally pin the hazard in src/file-read/policy.test.ts with a case that creates a symlinked directory inside root pointing at the outside temp directory and asserts checkRealTarget on the realpathSync of a file under it returns Outside the workspace. Verify that src/file-read/policy.test.ts and src/file-read/read.test.ts stay green unchanged apart from any added case, and that no behavior of readWorkspaceLines in src/file-read/read.ts moves.

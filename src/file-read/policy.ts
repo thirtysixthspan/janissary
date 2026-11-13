@@ -46,6 +46,7 @@ function isUnderHomeSecret(realFile: string): boolean {
   });
 }
 
+// The pre-I/O check on the path as requested; it does not replace checkRealTarget.
 export function checkLexicalPath(root: string, requested: string): FilePolicyFailure | undefined {
   if (path.isAbsolute(requested)) return 'Outside the workspace';
   const resolved = path.resolve(root, requested);
@@ -54,6 +55,10 @@ export function checkLexicalPath(root: string, requested: string): FilePolicyFai
   return isUnderHomeSecret(path.join(resolveExisting(root), path.relative(root, resolved))) ? 'Secret file' : undefined;
 }
 
+// realRoot and realTarget must already be canonical paths from realpathSync. For a target that does
+// not exist yet, pass the realpath of its nearest existing parent joined with the remaining segments.
+// This check resolves nothing about the target by design, so it stays free of target I/O; handed an
+// unresolved path, it compares strings only and skips symlink containment.
 export function checkRealTarget(realRoot: string, realTarget: string): FilePolicyFailure | undefined {
   if (!containedAbsolute(realRoot, realTarget)) return 'Outside the workspace';
   if (isSecretPath(path.relative(realRoot, realTarget))) return 'Secret file';
