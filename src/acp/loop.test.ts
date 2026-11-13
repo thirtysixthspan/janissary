@@ -36,6 +36,18 @@ function makeHandlers() {
 }
 
 describe('runAcpToolLoop', () => {
+  it('labels the follow-up with describeCommand while ranCommand keeps the full command', () => {
+    const command = 'db sqlite query movies SELECT name FROM actors';
+    const { session, sent } = makeSession([command, 'Done.']);
+    const { h, events } = makeHandlers();
+    runAcpToolLoop(session, 'list actors', {
+      runCommand: () => 'ok', extractCommand: extractDatabaseCommand, describeCommand: () => 'short label',
+    }, h);
+    expect(sent[1]).toContain('Output of `short label`:\nok');
+    expect(sent[1]).not.toContain(command);
+    expect(events).toContainEqual(['ranCommand', command, 'ok']);
+  });
+
   it('runs an extracted command, feeds the output back, and stops when the agent answers', () => {
     const { session, sent } = makeSession([
       'Looking it up.\ndb sqlite query movies SELECT name FROM actors',

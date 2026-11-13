@@ -62,7 +62,7 @@ export function runAcpToolLoop(
           if (dependencies.signal?.aborted) return;
           h.ranCommand(command, result);
           const followUp =
-            `Output of \`${command}\`:\n${result}\n\n` +
+            `Output of \`${dependencies.describeCommand?.(command) ?? command}\`:\n${result}\n\n` +
             'If the task is complete, reply with the final answer and no command. ' +
             'Otherwise issue the next command. ' +
             'Be concise: do not explain what you are doing. Only output commands and the final answer.';

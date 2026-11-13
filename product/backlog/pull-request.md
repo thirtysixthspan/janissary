@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Stop echoing a whole file write or edit payload back to the agent in the tool loop's follow-up prompt, so a large write does not double its size in the agent's context.
-
-Existing Issue: runAcpToolLoop in src/acp/loop.ts builds every follow-up prompt as "Output of `<command>`:" followed by the result, and a file write or file edit command carries its whole content or old and new strings (up to 5 MiB), so each mutation step sends the full payload back to the agent on top of the reply that already contained it. Severity: 4/10
-
-Existing Risk: 5/10 - A tell agent writing a large file can push the next prompt past the provider's context or cost budget, ending the run with a provider error after the write has already committed, or crowd out the conversation it needs to finish the task.
-
-Proposal Risk: 2/10 - The follow-up names the command briefly and the result line already carries the path, so the agent still knows what ran; the remaining risk is losing context an agent relied on, which tests of the follow-up text would expose.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1996 "shorten file mutation commands in the tool loop follow-up prompt". In src/acp/loop.ts, build the follow-up's "Output of" line from a short label rather than the raw command when the command is a file write or file edit, for example file write <path> or file edit <path>; keep loop.ts generic by injecting a describeCommand option through AcpLoopDeps from src/acp/drive-loop.ts that uses isFileMutationCommandLine and parseFileMutation from src/file-write/command.ts, falling back to the bare subcommand when the JSON does not parse. Leave transcript entries, connection records and h.ranCommand unchanged, since the plan keeps recording the full command text by user decision. Add tests in src/acp/drive-loop.test.ts (or the loop's own test file) showing a write's follow-up prompt does not contain the content but does contain the path and the result line, and that reads and other tools still echo their command verbatim. Existing loop, drive-loop, run-prompt and serve-acp-loop tests cover the follow-up shape for other commands and must keep passing.
-
-
 * Explain in the file help page that expectedHash is the editor's internal content fingerprint, which file read does not print, so a user does not guess a value and get a misleading changed-on-disk refusal.
 
 Existing Issue: help/file.md tells users file write takes an optional expectedHash and refuses the write when the file changed, but no command shows the value, which is the private contentHash fingerprint in src/editor/save-conflict.ts, so any value a user types is refused as This file changed on disk since it was loaded; the mutation-primer fix removed the field from the agent primer for exactly this reason. Severity: 2/10

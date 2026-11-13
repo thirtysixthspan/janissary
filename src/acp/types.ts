@@ -83,6 +83,8 @@ export type AcpLoopDeps = {
   extractCommand: (text: string) => string | null;
   // Maximum number of auto-run command steps before stopping (default 8).
   maxSteps?: number;
+  // Label for a command in the follow-up prompt; defaults to the command text itself.
+  describeCommand?: (command: string) => string;
 };
 
 export type AcpLoopHandlers = {

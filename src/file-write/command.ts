@@ -120,3 +120,11 @@ export function parseFileMutation(input: string): FileMutationRequest | { error:
   }
   return request;
 }
+
+export function describeLoopCommand(command: string): string {
+  const extracted = extractArgument(command);
+  if (!extracted) return command;
+  const label = `file ${extracted.subcommand}`;
+  const request = parseFileMutation(command);
+  return 'error' in request ? label : `${label} ${displayPath(request.path)}`;
+}
