@@ -76,6 +76,31 @@ describe('RemoteFileNavigators', () => {
     expect(readFileSync(target, 'utf8')).toBe('editor draft');
   });
 
+  it('runs a tool-text write in the far-side workspace only, creating nested parents', async () => {
+    const reply = await request('write-file', {
+      path: 'deep/nested/new.txt', content: Buffer.from('tool text\n').toString('base64'), policy: 'tool-text',
+    });
+
+    expect(reply).toMatchObject({ result: { ok: true } });
+    expect(readFileSync(path.join(root, 'deep', 'nested', 'new.txt'), 'utf8')).toBe('tool text\n');
+    expect(readdirSync(path.join(root, 'deep', 'nested'))).toEqual(['new.txt']);
+    expect(readdirSync(root)).toEqual(['deep']);
+  });
+
+  it('refuses a secret path and invalid UTF-8 for a tool-text write on the far side', async () => {
+    const secret = await request('write-file', {
+      path: '.env', content: Buffer.from('KEY=1').toString('base64'), policy: 'tool-text',
+    });
+    expect(secret).toMatchObject({ result: { ok: false } });
+    expect(existsSync(path.join(root, '.env'))).toBe(false);
+
+    const binary = await request('write-file', {
+      path: 'bad.txt', content: Buffer.from([0xff, 0xfe, 0x00]).toString('base64'), policy: 'tool-text',
+    });
+    expect(binary).toMatchObject({ result: { ok: false } });
+    expect(readdirSync(root)).toEqual([]);
+  });
+
   it('refuses a directory symlink that resolves outside the workspace', async () => {
     const outside = mkdtempSync(path.join(tmpdir(), 'janus-remote-outside-'));
     try {

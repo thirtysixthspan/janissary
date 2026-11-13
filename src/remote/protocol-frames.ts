@@ -1,3 +1,4 @@
+import type { FileWritePolicy } from '../file-write/types.js';
 import type { ProjectTokens } from '../project/tokens.js';
 import type { GitIdentity } from '../git/identity.js';
 import type { RootRefusal } from './root-refusal.js';
@@ -33,7 +34,7 @@ export type RemoteFilesystemArgumentsByOperation = {
   'search-text': SearchRequest & { root: string };
   'read-file': { path: string };
   'read-lines': { path: string; offset?: number; limit?: number };
-  'write-file': { path: string; content: string; expectedHash?: string };
+  'write-file': { path: string; content: string; expectedHash?: string; policy?: FileWritePolicy };
   move: { from: string; to: string; overwrite?: boolean };
   'move-many': { sources: string[]; destination: string; policy?: 'overwrite-all' | 'skip-conflicts' };
   delete: { path: string };
