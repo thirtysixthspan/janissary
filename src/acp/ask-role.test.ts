@@ -82,7 +82,9 @@ describe('readRoleSettings', () => {
     expect(readRoleSettings(root, 'ask', home)).toEqual({
       name: 'ask', entries: [OPENCODE, CLAUDE, CODEX], commands: ASK_COMMANDS,
     });
-    expect(readRoleSettings(root, 'tell', home).commands).toHaveLength(10);
+    const tell = readRoleSettings(root, 'tell', home).commands;
+    expect(tell).toHaveLength(12);
+    expect(tell).toEqual(expect.arrayContaining(['file write', 'file edit']));
   });
 
   it('keeps an existing role grant list empty while falling back from empty model entries', () => {
@@ -121,6 +123,13 @@ describe('readRoleSettings', () => {
     writeRoles(home, { ask: { description: 'Questions.', entries: [CLAUDE], commands: ['question ask'] } });
 
     expect(readRoleSettings(root, 'ask', home).commands).toEqual(['question ask']);
+  });
+
+  it('keeps a saved tell role without file write or file edit', () => {
+    const { home, root } = directories();
+    writeRoles(home, { tell: { description: 'Tasks.', entries: [], commands: ['file read'] } });
+
+    expect(readRoleSettings(root, 'tell', home).commands).toEqual(['file read']);
   });
 });
 
