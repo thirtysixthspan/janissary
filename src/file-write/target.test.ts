@@ -101,6 +101,18 @@ describe('resolveMutationTarget ancestors', () => {
     expect(existsSync(path.join(outside, 'sub'))).toBe(false);
   });
 
+  it.each(['link/a.txt', 'link/sub/a.txt'])('refuses %s under a dangling ancestor symlink escaping the root', (requested) => {
+    symlinkSync(path.join(outside, 'new'), path.join(root, 'link'));
+    expect(refusal(requested)).toBe('Outside the workspace');
+    expect(existsSync(path.join(outside, 'new'))).toBe(false);
+  });
+
+  it('refuses a dangling ancestor symlink inside the root as not a text file', () => {
+    symlinkSync(path.join(root, 'missing'), path.join(root, 'link'));
+    expect(refusal('link/a.txt')).toBe('Not a text file');
+    expect(existsSync(path.join(root, 'missing'))).toBe(false);
+  });
+
   it('refuses an ancestor that is a regular file with the ENOTDIR reason', () => {
     writeAt(root, 'file.txt');
     expect(refusal('file.txt/sub/a.txt')).toBe('Filesystem error ENOTDIR; check the item and destination, then try again');

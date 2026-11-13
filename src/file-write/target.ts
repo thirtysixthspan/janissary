@@ -1,4 +1,4 @@
-import { lstatSync, mkdirSync, realpathSync, statSync } from 'node:fs';
+import { lstatSync, mkdirSync, readlinkSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { checkLexicalPath, checkRealTarget, type FilePolicyFailure } from '../file-read/policy.js';
 import { failureResult, fileOperationReason, runFileOperation, type FileOperationResult } from '../file-navigator/file-operation-result.js';
@@ -20,13 +20,26 @@ function hasCode(error: unknown, code: string): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === code;
 }
 
-function findAncestor(candidate: string, missingSegments: string[]): FileOperationResult<Ancestor> {
+function danglingEntryRefusal(realRoot: string, candidate: string): string | undefined {
+  try {
+    lstatSync(candidate);
+  } catch (error) {
+    return hasCode(error, 'ENOENT') ? undefined : fileOperationReason(error);
+  }
+  const linkTarget = runFileOperation(() => path.resolve(realpathSync(path.dirname(candidate)), readlinkSync(candidate)));
+  if (!linkTarget.ok) return linkTarget.reason;
+  return checkRealTarget(realRoot, linkTarget.value) ?? 'Not a text file';
+}
+
+function findAncestor(realRoot: string, candidate: string, missingSegments: string[]): FileOperationResult<Ancestor> {
   try {
     return { ok: true, value: { realAncestor: realpathSync(candidate), missingSegments } };
   } catch (error) {
     const parent = path.dirname(candidate);
     if (!hasCode(error, 'ENOENT') || parent === candidate) return failureResult(fileOperationReason(error));
-    return findAncestor(parent, [path.basename(candidate), ...missingSegments]);
+    const dangling = danglingEntryRefusal(realRoot, candidate);
+    if (dangling !== undefined) return failureResult(dangling);
+    return findAncestor(realRoot, parent, [path.basename(candidate), ...missingSegments]);
   }
 }
 
@@ -81,7 +94,7 @@ function resolveRootItself(realRoot: string): FileOperationResult<WriteTarget> {
 }
 
 function resolveBelowRoot(realRoot: string, resolved: string): FileOperationResult<WriteTarget> {
-  const ancestor = findAncestor(path.dirname(resolved), []);
+  const ancestor = findAncestor(realRoot, path.dirname(resolved), []);
   if (!ancestor.ok) return ancestor;
   const { realAncestor, missingSegments } = ancestor.value;
   const isDirectory = runFileOperation(() => statSync(realAncestor).isDirectory());
