@@ -22,7 +22,7 @@ Read any file in the repo to ground a plan in real code. Create new plan files u
 
 1. **Writing implementation code into a plan.** No function bodies, no JSX/CSS blocks, no "here's the code." Name the module/type/contract in prose, per `ai/tasks/planning/improve-plan.md`'s rule — the same rule applies here since you are authoring, not implementing.
 2. **Editing any source, test, or config file.** This task only touches `./product/backlog/features.md` and its own plan file, under `./product/plans/draft/` and then `./product/plans/ready/`.
-3. **Skipping question resolution.** Never invent a plan's scope, edge-case behavior, or UI wording without asking, when the answer is a product decision rather than something the codebase already settles. Keep asking targeted rounds until every such decision is resolved.
+3. **Skipping question resolution.** Never invent a plan's scope, edge-case behavior, or UI wording without asking, when the answer is a product decision rather than something the codebase already settles. Keep asking targeted questions, one at a time, until every such decision is resolved.
 4. **Promoting a plan before it is complete.** The plan stays in `./product/plans/draft/` while it is drafted, questioned, and improved, because the improvement passes in 2g look for it there. It moves to `./product/plans/ready/` only in 2i, after every box in both 2h checklists is checked.
 5. **Removing a feature's entry from `./product/backlog/features.md` before its plan is complete.** Don't clear the backlog ahead of a complete plan actually existing. Never add a feature named at invocation to the file either — an unlisted feature is planned without ever passing through the backlog.
 
@@ -92,13 +92,24 @@ Do not add a `**Complexity: N/10**` line — that is `ai/tasks/planning/improve-
 
 ### Phased questioning — the decision tree
 
-All questioning in this task works a **decision tree** of decisions: model every undecided point as a decision that branches into the decisions hanging off it — and treat dependencies as the tree's edges. Work the tree in **rounds** over what is **askable now**: every decision whose prerequisites are already settled, so asking it now requires no guess at an answer you have not yet heard. Ask the whole askable set in one round — number each question and give your **recommended answer** for each — then wait for the user's answers before the next round. Each round's answers reshape the tree: settled decisions push the askable frontier outward and unblock questions that depended on them, so recompute the askable set and ask the next round. A question whose answer depends on another question still open in the round belongs to a **later** round, not this one. Facts are your job, never the user's: when a question needs a fact from the environment (code, specs, tools), look it up yourself rather than asking the user for anything you could find there. The **decisions** are the user's — put each to them and wait.
+All questioning in this task works a **decision tree** of decisions: model every undecided point as a decision that branches into the decisions hanging off it — and treat dependencies as the tree's edges. Work the tree over what is **askable now**: every decision whose prerequisites are already settled, so asking it now requires no guess at an answer you have not yet heard. Ask **one question at a time**: pick one question from the askable set, ask it in the question format below, and wait for the user's answer before asking anything else. Never put two questions in one call. Each answer reshapes the tree: a settled decision pushes the askable frontier outward and unblocks questions that depended on it, so write the answer into the draft, recompute the askable set, and ask the next question. A question whose answer depends on another open question waits until that question is answered. Facts are your job, never the user's: when a question needs a fact from the environment (code, specs, tools), look it up yourself rather than asking the user for anything you could find there. The **decisions** are the user's — put each to them and wait.
 
 **No limits on the number of questions.** Questions are asked without any cap — as many as the tree demands, one after another, until all the product and implementation design decisions are finalized. A phase ends only when its frontier is empty: every branch of its tree visited, nothing left silently assumed.
 
+### Question format
+
+Every question in every phase offers numbered answers for the user to pick from:
+
+- **At least three concrete answers**, numbered from 1, each grounded in what Step 2a found or in an earlier answer. Never ask an open "what should happen?".
+- **An "Other" answer**, numbered last, that lets the user write their own answer instead.
+- **A recommendation.** Mark the answer you recommend.
+- **A lowest-cost option.** Mark the answer that costs the least to build and is least likely to increase scope.
+
+One answer may carry both marks when the answer you recommend is also the lowest-cost option. Every other answer carries neither.
+
 ### 2d. Phase 1 — resolve product decisions
 
-Work the product-decision tree using the mechanism described above. Ask the user questions using `AskUserQuestion`, one call per round. Before the first round, make sure you have at least one question in each of these categories that isn't already answered by the feature's existing text:
+Work the product-decision tree using the mechanism described above. Ask the user questions using `AskUserQuestion`, one question per call. Before the first question, make sure you have at least one question in each of these categories that isn't already answered by the feature's existing text:
 
 - **Primary flow** — what exactly does the user do, and what do they see happen, step by step.
 - **Edge cases** — what happens on the empty state, a conflict, a cancel, an error, or an unexpected input.
@@ -107,17 +118,17 @@ Work the product-decision tree using the mechanism described above. Ask the user
 
 Skip a category only if the feature's existing description in `./product/backlog/features.md` already answers it unambiguously — quote that text back to the user as your understanding rather than silently assuming it.
 
-Every question must offer concrete options grounded in what you found in Step 2a, rather than an open-ended "what should happen?". If a question has no natural small set of options, still propose your best-guess default as one of the options so the user can simply confirm it. Skip any category only if the feature's existing description in `./product/backlog/features.md` already answers it unambiguously — quote that text back to the user as your understanding rather than silently assuming it.
+Every question uses the question format above, with answers grounded in what you found in Step 2a. If a question has no natural small set of options, still propose your best-guess default as the recommended answer so the user can simply confirm it. Skip any category only if the feature's existing description in `./product/backlog/features.md` already answers it unambiguously — quote that text back to the user as your understanding rather than silently assuming it.
 
-Keep asking rounds until the phase's frontier is empty — every product decision settled, none silently assumed. After the user answers each round, update the initial draft with every answer before continuing. Each answer must become a decision, behavior, scope boundary, or exact user-visible wording in the relevant existing section.
+Keep asking questions until the phase's frontier is empty — every product decision settled, none silently assumed. After the user answers each question, update the initial draft with every answer before continuing. Each answer must become a decision, behavior, scope boundary, or exact user-visible wording in the relevant existing section.
 
 ### 2e. Phase 2 — resolve UI decisions
 
 **This phase runs only when the feature has a UI**: it adds or changes something the user sees or operates in the web UI, such as a tab view, sidebar panel, popup, picker, dialog, control, status display, or key binding. A feature that changes only a command's behavior or its transcript text has no UI for this purpose; Phase 1's naming/wording category already covers transcript text. If the feature has no UI, skip directly to 2f without asking anything here, and leave the UI design section out of the plan.
 
-UI decisions hang off product decisions, so start this phase only once Phase 1's frontier is empty. Before the first round, open the existing UI surface closest to the feature (the component it extends, or the one it most resembles) and read it, so every option can name a real component, style, or convention rather than a hypothetical one.
+UI decisions hang off product decisions, so start this phase only once Phase 1's frontier is empty. Before the first question, open the existing UI surface closest to the feature (the component it extends, or the one it most resembles) and read it, so every option can name a real component, style, or convention rather than a hypothetical one.
 
-Work the UI-decision tree using the same mechanism and no limits. Ask the user questions using `AskUserQuestion`, one call per round. Before the first round, make sure you have at least one question in each of these categories that isn't already answered by the feature's existing text or by Phase 1's answers:
+Work the UI-decision tree using the same mechanism and no limits. Ask the user questions using `AskUserQuestion`, one question per call. Before the first question, make sure you have at least one question in each of these categories that isn't already answered by the feature's existing text or by Phase 1's answers:
 
 - **Placement and layout** — where the UI appears (a centre tab, a docked sidebar, a popup over the command bar, a status area) and how its contents are arranged.
 - **Interaction** — how the user opens, operates, and dismisses it, and where focus goes when it opens and when it closes.
@@ -125,13 +136,13 @@ Work the UI-decision tree using the same mechanism and no limits. Ask the user q
 - **Keyboard and accessibility** — the key bindings it adds and whether they collide with any in `help/keys.md`, focus order, what Escape does, and the accessible name of each control.
 - **Visual consistency** — which existing component, style, or theme convention it matches, named from what you just read.
 
-Every question offers concrete options with your recommended default, exactly as in Phase 1. Skip a category only when the feature text or Phase 1's answers already settle it unambiguously, and quote that text back to the user as your understanding.
+Every question uses the question format above, exactly as in Phase 1. Skip a category only when the feature text or Phase 1's answers already settle it unambiguously, and quote that text back to the user as your understanding.
 
-Keep asking rounds until the phase's frontier is empty. After each round, write every answer into the plan's UI design section as a layout, interaction, state, binding, or convention it must follow. That section also states, as fact rather than as a question for the user, where the client code goes under `ai/guidelines/react-code-organization.md`: a feature directory named for the feature, decisions in pure modules and hooks, thin components, and no import from another feature. It keeps every piece of state the server owns on the server, per `ai/guidelines/architecture-principles.md` §1.
+Keep asking questions until the phase's frontier is empty. After each answer, write it into the plan's UI design section as a layout, interaction, state, binding, or convention it must follow. That section also states, as fact rather than as a question for the user, where the client code goes under `ai/guidelines/react-code-organization.md`: a feature directory named for the feature, decisions in pure modules and hooks, thin components, and no import from another feature. It keeps every piece of state the server owns on the server, per `ai/guidelines/architecture-principles.md` §1.
 
 ### 2f. Phase 3 — resolve implementation decisions
 
-**If Step 2b said this feature is high complexity**, work the implementation-decision tree with the same mechanism and no limits: rounds of numbered questions, each with your recommended answer, phrased as a choice between concrete approaches (e.g. "extend module X" vs "add a new module") — never as an open "how should this be built?" — covering where the code should live, which existing mechanism it extends or replaces, and any new protocol message or concurrency concern 2b flagged. Keep going until every implementation decision is settled, updating the draft after each round as above.
+**If Step 2b said this feature is high complexity**, work the implementation-decision tree with the same mechanism and no limits: one question at a time in the question format above, phrased as a choice between concrete approaches (e.g. "extend module X" vs "add a new module") — never as an open "how should this be built?" — covering where the code should live, which existing mechanism it extends or replaces, and any new protocol message or concurrency concern 2b flagged. Keep going until every implementation decision is settled, updating the draft after each answer as above.
 
 **If all four checks said "no"**, this phase carries no questions to ask: the default is product-only decisions for a small, precedented feature, so skip directly to 2g without asking the user anything here.
 
@@ -163,7 +174,7 @@ If either gate is unchecked, finish that task before continuing. If a task canno
 - [ ] You know the exact user-visible wording, if any.
 - [ ] If the feature has a UI, you know its placement, interaction, every state, and its key bindings.
 
-If every box is checked and both improvement passes surfaced nothing new, the plan is complete. Otherwise, work one more decision-tree phase over: the unchecked items, plus any new questions the improvement passes raised — new and remaining decisions alike join the same tree. Unchecked items with no dependency are askable now; items whose answers hang on another open question wait for a later round in this phase, with no limit on rounds. Target only the open items, and apply every answer to the draft, then re-read it and repeat this step. Continue until every box is checked and nothing surfaced remains unresolved; do not leave unresolved product or implementation decisions in the plan.
+If every box is checked and both improvement passes surfaced nothing new, the plan is complete. Otherwise, work one more decision-tree phase over: the unchecked items, plus any new questions the improvement passes raised — new and remaining decisions alike join the same tree. Unchecked items with no dependency are askable now; items whose answers hang on another open question wait until that question is answered, with no limit on questions. Ask them one at a time in the question format above. Target only the open items, and apply every answer to the draft, then re-read it and repeat this step. Continue until every box is checked and nothing surfaced remains unresolved; do not leave unresolved product or implementation decisions in the plan.
 
 Before moving on, check the completed plan against this list:
 

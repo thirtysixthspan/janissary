@@ -65,6 +65,30 @@ describe('the plan-a-new-feature playbook', () => {
     expect([...stepReferences.difference(stepHeadings)]).toEqual([]);
   });
 
+  it('asks one question at a time rather than the whole askable set in one round', () => {
+    const tree = playbook.slice(playbook.indexOf('### Phased questioning'), playbook.indexOf('### 2d.'));
+    expect(tree).toContain('Ask **one question at a time**');
+    expect(tree).toContain('Never put two questions in one call.');
+    expect(playbook).not.toContain('Ask the whole askable set in one round');
+    expect(playbook).not.toContain('one call per round');
+  });
+
+  it('defines numbered answers with an Other choice, a recommendation, and a lowest-cost option', () => {
+    const format = playbook.slice(playbook.indexOf('### Question format'), playbook.indexOf('### 2d.'));
+    expect(format).toContain('**At least three concrete answers**, numbered from 1');
+    expect(format).toContain('**An "Other" answer**');
+    expect(format).toContain('**A recommendation.**');
+    expect(format).toContain('**A lowest-cost option.**');
+    expect(format).toContain('least likely to increase scope');
+    expect(format).toContain('One answer may carry both marks');
+  });
+
+  it.each(['### 2d.', '### 2e.', '### 2f.', '### 2h.'])('uses the question format in %s', (heading) => {
+    const start = playbook.indexOf(heading);
+    const section = playbook.slice(start, playbook.indexOf('\n### ', start + heading.length));
+    expect(section).toMatch(/question format above/);
+  });
+
   it('names only ai/ files that exist', () => {
     expect(aiPaths).toContain('ai/guidelines/react-code-organization.md');
     const missing = [...aiPaths].filter((relative) => !existsSync(path.join(repoRoot, relative)));
