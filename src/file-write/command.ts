@@ -1,3 +1,6 @@
+import type { FileMutationRequest, FileWriteRequest } from './types.js';
+import { isRecord } from '../value-guards.js';
+
 export const FILE_MUTATION_PRIMER = [
   'To write or edit a file in the workspace, end your reply with one line:',
   'file write {"path":"<path>","content":"<text>"}',
@@ -17,4 +20,65 @@ export function isFileEditCommandLine(line: string): boolean {
 
 export function isFileMutationCommandLine(line: string): boolean {
   return isFileWriteCommandLine(line) || isFileEditCommandLine(line);
+}
+
+export const FILE_WRITE_USAGE = 'Usage: file write <JSON>';
+export const FILE_EDIT_USAGE = 'Usage: file edit <JSON>';
+
+type Subcommand = 'write' | 'edit';
+
+interface MutationArgument {
+  subcommand: Subcommand;
+  argument: string;
+}
+
+type FieldRead<T> = { ok: true; value: T } | { ok: false };
+
+function extractArgument(input: string): MutationArgument | undefined {
+  const trimmed = input.trim();
+  const match = /^file\s+(write|edit)(?:\s|$)/i.exec(trimmed);
+  if (!match) return undefined;
+  const subcommand: Subcommand = match[1].toLowerCase() === 'write' ? 'write' : 'edit';
+  return { subcommand, argument: trimmed.slice(match[0].length).trimStart() };
+}
+
+function parseJsonObject(argument: string): Record<string, unknown> | undefined {
+  if (argument.trim() === '') return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(argument);
+  } catch {
+    return undefined;
+  }
+  return isRecord(parsed) ? parsed : undefined;
+}
+
+function readRequiredString(record: Record<string, unknown>, key: string): FieldRead<string> {
+  const value = Object.hasOwn(record, key) ? record[key] : undefined;
+  return typeof value === 'string' ? { ok: true, value } : { ok: false };
+}
+
+function readOptionalString(record: Record<string, unknown>, key: string): FieldRead<string | undefined> {
+  if (!Object.hasOwn(record, key)) return { ok: true, value: undefined };
+  const value = record[key];
+  return typeof value === 'string' ? { ok: true, value } : { ok: false };
+}
+
+function buildWriteRequest(record: Record<string, unknown>): FileWriteRequest | undefined {
+  const path = readRequiredString(record, 'path');
+  const content = readRequiredString(record, 'content');
+  const expectedHash = readOptionalString(record, 'expectedHash');
+  if (!path.ok || !content.ok || !expectedHash.ok || path.value === '') return undefined;
+  const request: FileWriteRequest = { kind: 'write', path: path.value, content: content.value };
+  if (expectedHash.value !== undefined) request.expectedHash = expectedHash.value;
+  return request;
+}
+
+export function parseFileMutation(input: string): FileMutationRequest | { error: string } {
+  const extracted = extractArgument(input);
+  if (!extracted) return { error: FILE_WRITE_USAGE };
+  const usage = extracted.subcommand === 'write' ? FILE_WRITE_USAGE : FILE_EDIT_USAGE;
+  const record = parseJsonObject(extracted.argument);
+  if (!record || extracted.subcommand === 'edit') return { error: usage };
+  return buildWriteRequest(record) ?? { error: usage };
 }
