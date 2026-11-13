@@ -62,6 +62,13 @@ describe('walkGlob', () => {
     expect(result.paths).toEqual(['dist-old/x.ts', 'keep.ts']);
   });
 
+  it('looks up ignored paths relative to the root when start is below it', async () => {
+    for (const file of ['src/gen/out.ts', 'src/keep.ts', 'gen/out.ts']) write(root, file);
+    const start = path.join(root, 'src');
+    expect(await listed({ start, ignored: new Set(['src/gen']) })).toEqual(['src/keep.ts']);
+    expect(await listed({ start, ignored: new Set(['gen']) })).toEqual(['src/gen/out.ts', 'src/keep.ts']);
+  });
+
   it('does not consult the ignored set under hidden', async () => {
     write(root, 'dist/x.ts');
     write(root, 'a.log');
