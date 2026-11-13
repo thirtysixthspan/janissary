@@ -5,6 +5,7 @@ import {
   isFileEditCommandLine,
   isFileMutationCommandLine,
   isFileWriteCommandLine,
+  parseFileMutation,
 } from './command.js';
 
 describe('mutation command line recognition', () => {
@@ -56,6 +57,19 @@ describe('FILE_MUTATION_PRIMER', () => {
     expect(FILE_MUTATION_PRIMER).toContain('replaceAll');
     expect(FILE_MUTATION_PRIMER).toContain('creates missing parent folders.');
     expect(FILE_MUTATION_PRIMER).not.toContain('expectedHash');
-    expect(FILE_MUTATION_PRIMER.split('\n')).toHaveLength(6);
+    expect(FILE_MUTATION_PRIMER.split('\n')).toHaveLength(9);
+  });
+
+  it('explains escaping, shows a new-file example, and names the replies', () => {
+    expect(FILE_MUTATION_PRIMER).toContain(String.raw`Inside JSON strings escape " as \" and \ as \\.`);
+    expect(FILE_MUTATION_PRIMER).toContain(String.raw`file write {"path":"notes/todo.md","content":"# Todo\n- first item\n"}`);
+    expect(FILE_MUTATION_PRIMER).toContain('`Wrote <path>.`');
+    expect(FILE_MUTATION_PRIMER).toContain('`Edited <path> (<n> replacements).`');
+  });
+
+  it('gives an example line that parses as a write creating the named file', () => {
+    const example = FILE_MUTATION_PRIMER.split('\n').find((line) => line.startsWith('Example'))!;
+    const command = example.slice(example.indexOf('file write'));
+    expect(parseFileMutation(command)).toEqual({ kind: 'write', path: 'notes/todo.md', content: '# Todo\n- first item\n' });
   });
 });

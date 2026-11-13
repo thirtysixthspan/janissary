@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { AcpLoopHandlers, AcpLoopSession, AcpRunSnapshot, AcpRunSnapshotRow } from './types.js';
 import type { RemoteAcpSession } from '../remote/acp-session.js';
-import { corePrimer, driveToolLoop, runToolLoop } from './drive-loop.js';
+import { CORE_MAX_STEPS, corePrimer, driveToolLoop, runToolLoop } from './drive-loop.js';
+import { commandProtocolPrimer } from './command-protocol.js';
 import { createAcpToolTable } from './tool-table.js';
 import { NO_BUILTIN_TOOLS_LINE, NO_TOOLS_LINE } from './internal-tools.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
@@ -23,11 +24,12 @@ function primerFor(snapshot: CoreSnapshot): string {
 }
 
 describe('corePrimer', () => {
-  it('orders tool text, the tools line, the tell instruction, and Markdown for tell', () => {
+  it('orders tool text, the tools line, the protocol, the tell instruction, and Markdown for tell', () => {
     expect(primerFor(coreSnapshot('tell', ['db sqlite query']))).toBe([
       DB_PRIMER,
       'Only these commands are allowed: db sqlite query.',
       NO_BUILTIN_TOOLS_LINE,
+      commandProtocolPrimer(CORE_MAX_STEPS),
       TELL_INSTRUCTION,
       MARKDOWN_INSTRUCTION,
     ].join('\n\n'));
@@ -55,6 +57,19 @@ describe('corePrimer', () => {
   it('gives only the no-tools line and Markdown when the caller passes no tools', () => {
     const snapshot = coreSnapshot('ask', ['db sqlite query'], [], true);
     expect(corePrimer(snapshot, [])).toBe([NO_TOOLS_LINE, MARKDOWN_INSTRUCTION].join('\n\n'));
+  });
+
+  it('states the exchange protocol with the loop step cap when commands are available', () => {
+    const result = primerFor(coreSnapshot('ask', ['file write']));
+    expect(result).toContain(commandProtocolPrimer(CORE_MAX_STEPS));
+    expect(result).toContain('At most 8 commands run for one request.');
+  });
+
+  it('omits the exchange protocol when every granted command is unavailable', () => {
+    const result = primerFor(coreSnapshot('ask', ['browser goto'], [
+      { name: 'browser goto', effectiveEnabled: true, effectiveAgentAccess: false },
+    ]));
+    expect(result).not.toContain('How commands work:');
   });
 });
 

@@ -18,6 +18,8 @@ import type * as TabRead from '../file-read/tab-read.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { BROWSER_PRIMER } from '../browser/command.js';
 import { DB_PRIMER } from '../database/primer.js';
+import { commandProtocolPrimer } from './command-protocol.js';
+import { CORE_MAX_STEPS } from './drive-loop.js';
 
 const mocks = vi.hoisted(() => ({ runAcpToolLoop: vi.fn(), notify: vi.fn(), readFileInTab: vi.fn(), mutateFileInTab: vi.fn() }));
 
@@ -136,11 +138,12 @@ function primer(role: 'ask' | 'tell', options: StartOptions = {}): string {
 describe('runCorePrompt role primer', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it('places the tell instruction after available tool text and before Markdown', () => {
+  it('places the tell instruction after available tool text and the protocol, before Markdown', () => {
     expect(primer('tell')).toBe([
       DB_PRIMER,
       'Only these commands are allowed: db sqlite query.',
       NO_BUILTIN_TOOLS_LINE,
+      commandProtocolPrimer(CORE_MAX_STEPS),
       TELL_INSTRUCTION,
       MARKDOWN_INSTRUCTION,
     ].join('\n\n'));
@@ -201,7 +204,8 @@ describe('runCorePrompt role primer', () => {
     const allowList = result.indexOf('Only these commands are allowed: db sqlite query.');
     expect(result.indexOf(BROWSER_PRIMER)).toBeLessThan(allowList);
     expect(allowList).toBeLessThan(result.indexOf(NO_BUILTIN_TOOLS_LINE));
-    expect(result.indexOf(NO_BUILTIN_TOOLS_LINE)).toBeLessThan(result.indexOf(TELL_INSTRUCTION));
+    expect(result.indexOf(NO_BUILTIN_TOOLS_LINE)).toBeLessThan(result.indexOf('How commands work:'));
+    expect(result.indexOf('How commands work:')).toBeLessThan(result.indexOf(TELL_INSTRUCTION));
     expect(result.indexOf(TELL_INSTRUCTION)).toBeLessThan(result.indexOf(MARKDOWN_INSTRUCTION));
   });
 });
