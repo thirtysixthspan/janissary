@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the `tell` help page, which still says the default tell role grants ten native commands and omits file write and edit.
-
-Existing Issue: `help/tell.md` states that the default tell role has all ten native commands and lists them ending with `file read`, while `DEFAULT_ROLES` now grants twelve including `file write` and `file edit`, and neither the plan's documentation list nor the diff updated that page. Severity: 4/10
-
-Existing Risk: 4/10 - The help page a user reads before running `tell` hides that the default role can now create and change workspace files without an approval prompt, so a user can hand out write power without knowing it.
-
-Proposal Risk: 1/10 - A wording change; the residual risk is the page drifting again on the next vocabulary change, which a grep for the command count would catch.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1996 "update help/tell.md for the twelve default tell grants". In `help/tell.md`, change the default-grants sentence to say the default tell role has all twelve native commands, add file write and file edit to its list, and add one sentence that an existing roles file is not migrated so a saved tell keeps the grants it lists, matching `product/specs/roles.md` and `documentation/user-documentation/tab-types/roles.md`. Confirm `help/ask.md` still matches the unchanged ask grants. No code changes; any test that snapshots help page content must still pass.
-
-
 * Bring the remote user documentation in line with the updated specs, which now say remote tool loops write and edit in the remote clone and that text edits get the ten-minute deadline.
 
 Existing Issue: `product/specs/remote-server.md` and `product/specs/acp.md` were updated for remote writes, edits, and the `edit-file` long deadline, but the user pages still describe only `file read` on the remote host and list ten-minute operations without text edits. Severity: 2/10
