@@ -1,8 +1,8 @@
-import { readFileSync, statSync } from 'node:fs';
 import { atomicWriteFile } from '../atomic-write.js';
 import { contentHash, SAVE_CONFLICT_ERROR } from '../editor/save-conflict.js';
 import { failureResult, runFileOperation, type FileOperationResult } from '../file-navigator/file-operation-result.js';
 import { FILE_POLICY_MAX_BYTES } from '../file-read/policy.js';
+import { readBoundedRegularFile } from './bounded-read.js';
 import { createTargetParents, resolveMutationTarget, type WriteTarget } from './target.js';
 
 function encodeToolText(content: string): FileOperationResult<Buffer> {
@@ -14,8 +14,9 @@ function encodeToolText(content: string): FileOperationResult<Buffer> {
 }
 
 function readExistingText(realPath: string): FileOperationResult<string> {
-  if (statSync(realPath).size > FILE_POLICY_MAX_BYTES) return failureResult<string>('File too large (>5 MB)');
-  const onDisk = readFileSync(realPath, 'utf8');
+  const read = readBoundedRegularFile(realPath);
+  if (!read.ok) return read;
+  const onDisk = read.value.toString('utf8');
   return { ok: true, value: onDisk.startsWith('\u{FEFF}') ? onDisk.slice(1) : onDisk };
 }
 

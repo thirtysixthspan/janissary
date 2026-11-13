@@ -1,7 +1,6 @@
-import { readFileSync, statSync } from 'node:fs';
 import { atomicWriteFile } from '../atomic-write.js';
 import { failureResult, runFileOperation, type FileOperationResult } from '../file-navigator/file-operation-result.js';
-import { FILE_POLICY_MAX_BYTES } from '../file-read/policy.js';
+import { readBoundedRegularFile } from './bounded-read.js';
 import { checkEditReplacement, decodeEditableText, replaceExactText } from './edit-text.js';
 import { createTargetParents, resolveMutationTarget, type WriteTarget } from './target.js';
 import type { FileEditValue } from './types.js';
@@ -9,11 +8,9 @@ import type { FileEditValue } from './types.js';
 type EditableFile = { text: string; byteLength: number };
 
 function readEditableFile(realPath: string): FileOperationResult<EditableFile> {
-  const stats = statSync(realPath);
-  if (!stats.isFile()) return failureResult<EditableFile>('Not a text file');
-  if (stats.size > FILE_POLICY_MAX_BYTES) return failureResult<EditableFile>('File too large (>5 MB)');
-  const bytes = readFileSync(realPath);
-  if (bytes.byteLength > FILE_POLICY_MAX_BYTES) return failureResult<EditableFile>('File too large (>5 MB)');
+  const read = readBoundedRegularFile(realPath);
+  if (!read.ok) return read;
+  const bytes = read.value;
   const decoded = decodeEditableText(bytes);
   if (!decoded.ok) return decoded;
   return { ok: true, value: { text: decoded.value, byteLength: bytes.byteLength } };

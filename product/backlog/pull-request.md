@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Give the whole-file write's expected-hash read the same read-time regular-file and post-read size guards the edit helper was hardened with.
-
-Existing Issue: `readExistingText` in the write helper bounds the existing target with `statSync(...).size` and then calls `readFileSync` with no regular-file check at read time and no size check on the bytes read, while `readEditableFile` in the edit helper refuses a target that turned non-regular and rechecks the bytes it read, so the two helpers on the same owning machine apply different guards to the same kind of read. Severity: 4/10
-
-Existing Risk: 4/10 - A target swapped for a named pipe after classification blocks `readFileSync` synchronously, which on a remote host stalls the whole serving process and every channel it serves, and a file grown after the stat is read unbounded into memory, which is exactly the case the edit helper's race test was written to prevent.
-
-Proposal Risk: 2/10 - The stat-to-open window the plan explicitly leaves out of scope remains, but both helpers then share one guarded read and a test pins it.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1996 "guard the write helper's expected-hash read like the edit helper's read". In `src/file-write/filesystem.ts`, make `readExistingText` keep its own `statSync` result, refuse `!stats.isFile()` as `Not a text file` before opening, keep the size refusal, read the bytes with `readFileSync(realPath)` and refuse `bytes.byteLength > FILE_POLICY_MAX_BYTES`, then decode as today (lossy UTF-8 with one leading BOM stripped, matching the editor's save-conflict read in `LocalFileSystemPort.writeFile` in `src/file-navigator/filesystem-port.ts`). Preferably extract one bounded regular-file byte read into a small shared module in `src/file-write/` and use it from both `readExistingText` and `readEditableFile` in `src/file-write/edit.ts`, so the guards cannot drift again. Add a `writeToolTextFile` counterpart to `src/file-write/edit-read-race.test.ts` (or a sibling race test using the same `node:fs` mock) showing a target that turns non-regular or grows past 5 MiB after classification is refused with `expectedHash` set, without the file being opened or changed. `src/file-write/filesystem.test.ts` and `src/file-write/edit-read-race.test.ts` must keep passing unchanged.
-
-
 * Correct the `tell` help page, which still says the default tell role grants ten native commands and omits file write and edit.
 
 Existing Issue: `help/tell.md` states that the default tell role has all ten native commands and lists them ending with `file read`, while `DEFAULT_ROLES` now grants twelve including `file write` and `file edit`, and neither the plan's documentation list nor the diff updated that page. Severity: 4/10
