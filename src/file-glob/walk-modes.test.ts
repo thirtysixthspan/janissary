@@ -57,6 +57,7 @@ describe('walkGlob modes', () => {
     expect(await listed({ dirs: true, pattern: 'src' })).toEqual(['src/']);
     expect(await listed({ dirs: true, pattern: 'src/*' })).toEqual(['src/x/']);
     expect(await listed({ dirs: true, pattern: 'x', start: path.join(root, 'src') })).toEqual(['src/x/']);
+    expect(await listed({ dirs: true, pattern: 'src/' })).toEqual([]);
   });
 
   it('never lists .git under dirs, as a directory or a file, with or without hidden', async () => {

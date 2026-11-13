@@ -6,7 +6,7 @@ Every `--dirs` case in `src/file-glob/walk-modes.test.ts` uses the pattern `**/*
 
 ## Goal
 
-A test fails if a refactor moves the trailing-slash suffix ahead of the matcher, so that literal and single-segment `--dirs` patterns keep matching directories by their slash-free paths while the listed paths still carry the slash.
+A test fails if a refactor moves the trailing-slash suffix ahead of the matcher, so that literal and single-segment `--dirs` patterns keep matching directories by their slash-free paths while the listed paths still carry the slash. The assertion that detects that regression is the slash-terminated pattern `src/`, added by `file-glob-dirs-slash-free-match-discriminating-test.md`. The literal patterns alone cannot detect it: minimatch accepts a candidate that runs one empty segment past the pattern, so `src/` matches `src` and `x/` matches `x`, and it compiles a whole-segment `*` to its non-empty form, so `src/` does not match `src/*`.
 
 ## Approach
 
@@ -22,6 +22,7 @@ Add one test case to `src/file-glob/walk-modes.test.ts`. No production change is
 - `listed({ dirs: true, pattern: 'src' })` is `['src/']` — a literal pattern matches the directory by its slash-free path, and `srcx` is not a prefix match.
 - `listed({ dirs: true, pattern: 'src/*' })` is `['src/x/']` — a single-segment wildcard matches the nested directory, not the file `src/a.ts`.
 - With `start` set to `src` and pattern `x`, `listed` is `['src/x/']` — the start-relative path is matched without a slash while the recorded root-relative path carries one.
+- `listed({ dirs: true, pattern: 'src/' })` is `[]` — the only one of these assertions that fails if the matcher receives `src/`, which would list `['src/']`. The three above pin the listed paths but pass either way, because minimatch matches a candidate with one trailing empty segment against a pattern without it and never matches `src/` against `src/*`. Added by `file-glob-dirs-slash-free-match-discriminating-test.md`.
 
 ## Out of scope
 
