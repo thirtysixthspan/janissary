@@ -29,4 +29,12 @@ describe('agent guidance', () => {
     expect(instructions).toContain('$janissary/ai/tasks/<path>');
     expect(instructions).toContain('./scripts/run.mjs <name>');
   });
+
+  it('explains $root and $workspace for locating the project and its clones', () => {
+    const instructions = readProjectFile('AGENTS.md');
+
+    expect(instructions).toContain('## `$root` and `$workspace`');
+    expect(instructions).toContain('$root/.janissary/workspace');
+    expect(instructions).toContain('`$workspace/<name>` is the clone named `<name>`');
+  });
 });
