@@ -5,7 +5,7 @@ import type { ClientFrame } from '../../remote/protocol-frames.js';
 import type { SearchMatch } from '../../protocol.js';
 import { OUTSIDE_ROOT_REASON } from '../file-operation-result.js';
 import { RemoteFileSystemPort } from './port.js';
-import { LONG_REQUEST_DEADLINE_MS } from './port-requests.js';
+import { CLOSED_REASON, ENDED_REASON, LONG_REQUEST_DEADLINE_MS } from './port-requests.js';
 
 function harness() {
   const sent: ClientFrame[] = [];
@@ -173,8 +173,14 @@ describe('RemoteFileSystemPort', () => {
     const closed = harness();
     const onClose = closed.port.editFile('/remote/ws', 'a.txt', 'x', 'y', false);
     await vi.waitFor(() => expect(closed.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
-    closed.listener()?.onClose?.();
-    await expect(onClose).resolves.toMatchObject({ ok: false });
+    closed.port.dispose();
+    await expect(onClose).resolves.toEqual({ ok: false, reason: CLOSED_REASON });
+
+    const dropped = harness();
+    const onDrop = dropped.port.editFile('/remote/ws', 'a.txt', 'x', 'y', false);
+    await vi.waitFor(() => expect(dropped.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    dropped.listener()?.onClose?.();
+    await expect(onDrop).resolves.toEqual({ ok: false, reason: ENDED_REASON });
 
     const ended = harness();
     const onError = ended.port.editFile('/remote/ws', 'a.txt', 'x', 'y', false);
