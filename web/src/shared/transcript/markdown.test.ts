@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import DOMPurify from 'dompurify';
+import { FILE_READ_USAGE } from '@shared/file-read/command.js';
 
 vi.mock('marked', () => ({ marked: { parse: vi.fn() } }));
 
@@ -91,6 +92,28 @@ describe('renderMarkdown', () => {
       'Cannot diff on <no-such-tab>: no open shell or harness tab named "no-such-tab" has a workspace.\n',
       'Usage: diff [path] [on <tab name>]\n',
     ]);
+  });
+
+  it('renders a single-line usage reply with its placeholders literal', async () => {
+    await withRealParse();
+    const { renderMarkdown } = await import('./markdown');
+    const host = document.createElement('div');
+    host.innerHTML = renderMarkdown(FILE_READ_USAGE) ?? '';
+    expect(host.textContent).toBe(`${FILE_READ_USAGE}\n`);
+  });
+
+  it('leaves a single-line Markdown reply on the Markdown path', async () => {
+    await withRealParse();
+    const { renderMarkdown } = await import('./markdown');
+    const html = renderMarkdown('**Bold** and [a link](https://example.com).') ?? '';
+    expect(html).toContain('<strong');
+    expect(html).toContain('href="https://example.com"');
+  });
+
+  it('leaves raw HTML outside a usage reply alone', async () => {
+    await withRealParse();
+    const { renderMarkdown } = await import('./markdown');
+    expect(renderMarkdown('<label>Kept</label>')).toContain('<label>');
   });
 
   it('renders a bare angle-bracket placeholder as raw HTML, dropping its text', async () => {

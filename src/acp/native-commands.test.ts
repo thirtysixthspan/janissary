@@ -14,6 +14,7 @@ describe('native ACP commands', () => {
       'browser eval',
       'question ask',
       'question approve',
+      'file read',
     ]);
   });
 
@@ -27,6 +28,7 @@ describe('native ACP commands', () => {
     ['browser eval document.title', 'browser'],
     ['question ask How are you?', 'question'],
     ['question approve 123', 'question'],
+    ['file read notes/a.md', 'file'],
   ] as const)('assigns %s to %s, including trailing arguments', (command, tool) => {
     expect(nativeCommandTool(command)).toBe(tool);
     expect(isNativeCommand(command)).toBe(true);
@@ -43,5 +45,8 @@ describe('native ACP commands', () => {
     expect(nativeCommandName('question unknown')).toBeUndefined();
     expect(nativeCommandTool('db sqlite')).toBeUndefined();
     expect(isNativeCommand('question unknown')).toBe(false);
+    expect(nativeCommandName('file')).toBeUndefined();
+    expect(nativeCommandName('file readme x')).toBeUndefined();
+    expect(nativeCommandName('files x')).toBeUndefined();
   });
 });

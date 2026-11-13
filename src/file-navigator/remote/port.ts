@@ -17,6 +17,7 @@ import type { HistoryStep } from '../moves.js';
 import type { DiffSource } from '../../plugins/diff/shared.js';
 import { remoteGitCommit, remoteGitMetadata, remoteGitPull, type RemoteRequest } from './port-git.js';
 import { remoteMove, remoteMoveMany } from './port-moves.js';
+import { remoteReadLines } from './port-reads.js';
 import { remoteDeleteMany, remoteReplay, remoteSearch, remoteStatRows } from './port-mapped.js';
 import type { CommitResult } from '../../git/commit.js';
 import type { SearchMatch, SearchRequest } from '../../search/types.js';
@@ -114,6 +115,10 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
   async readFile(root: string, relPath: string): Promise<Uint8Array> {
     const result = await this.request('read-file', { path: await this.paths.to(root, relPath) });
     return Buffer.from(result.content, 'base64');
+  }
+
+  readLines(root: string, relPath: string, offset?: number, limit?: number): Promise<{ text: string; path: string }> {
+    return remoteReadLines(this.requester(), this.paths, root, relPath, offset, limit);
   }
 
   async writeFile(

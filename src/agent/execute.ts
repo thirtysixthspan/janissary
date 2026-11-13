@@ -1,10 +1,12 @@
 import { realpathSync } from 'node:fs';
 import path from 'node:path';
-import { acpLaunchFor, MARKDOWN_INSTRUCTION } from '../acp/launch.js';
+import { acpLaunchFor } from '../acp/launch.js';
 import { connectAcp } from '../acp/index.js';
-import { createRemoteAcpSession } from '../remote/acp-session.js';
+import { createRemoteAcpSession, type RemoteAcpSession } from '../remote/acp-session.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
-import { runAcpToolLoop } from '../acp/loop.js';
+import { runToolLoop } from '../acp/drive-loop.js';
+import type { AcpLoopSession } from '../acp/types.js';
+import { readWorkspaceCommand } from '../file-read/read.js';
 import { selectedModel } from './model.js';
 import { guardAcpHandlers } from '../acp/guard-handlers.js';
 import type { CommandInvocationContext } from '../commands/types.js';
@@ -15,7 +17,7 @@ import { sandboxWillConfine } from '../sandbox/confinement.js';
 import { janissaryRoot } from '../janissary-root.js';
 import { containedStrictly } from '../path-containment.js';
 import { acpActivity } from '../acp/activity.js';
-import { agentPrimer, extractAgentCommand, runGrantedAgentCommand } from './command-tools.js';
+import { agentPrimer, runGrantedAgentCommand } from './command-tools.js';
 import { awaitReady } from './readiness.js';
 import type { AgentRun } from './run.js';
 
@@ -25,7 +27,7 @@ export type AgentResult = Readonly<{
   cleanupWarnings: readonly string[];
 }>;
 
-export type RemoteAgentTarget = Readonly<{ channel: RemoteChannel; offline?: boolean }>;
+export type RemoteAgentTarget = Readonly<{ channel: RemoteChannel; host: string; offline?: boolean }>;
 
 function taskPrompt(task: string, parameters: string): string {
   return [task, parameters].filter(Boolean).join('\n');
@@ -125,7 +127,9 @@ export async function executeAgentRun(
     connectionFailure = (message) => fail(new Error(`Agent: ${message}`));
     run.abortController.signal.addEventListener('abort', () => finish('Agent terminated.'), { once: true });
     const active = () => !run.outcome && !run.abortController.signal.aborted;
-    runAcpToolLoop({
+    const tagged = (text: string, workspace: boolean | undefined) =>
+      remote !== undefined && workspace === true ? `[${remote.host}] ${text}` : text;
+    const loopSession: AcpLoopSession | RemoteAcpSession = 'remote' in session ? session : {
       prompt: (text, handlers) => {
         if (!active()) return;
         session.prompt(text, {
@@ -134,20 +138,21 @@ export async function executeAgentRun(
           onError: (message) => { if (active()) handlers.onError(message); },
         });
       },
-    }, prompt, {
-      signal: run.abortController.signal,
-      primer: MARKDOWN_INSTRUCTION,
-      maxSteps: Infinity,
-      extractCommand: (text) => extractAgentCommand(text, run.snapshot.skills.some(({ name }) => name === 'ask-user')),
-      runCommand: async (command) => {
-        if (run.outcome || run.abortController.signal.aborted) throw new Error('Agent terminated.');
-        run.record?.activity('tool', command);
+    };
+    runToolLoop(loopSession, prompt, {
+      kind: 'agent', grants: run.snapshot.grants,
+      askUser: run.snapshot.skills.some(({ name }) => name === 'ask-user'),
+    }, {
+      runWorkspace: (command) => {
+        if (!active()) throw new Error('Agent terminated.');
+        return readWorkspaceCommand(run.executionDir, command.trim().replace(/^\//, ''));
+      },
+      runCaller: async (command) => {
+        if (!active()) throw new Error('Agent terminated.');
         const isQuestion = command.startsWith('question ');
         if (isQuestion) run.setStatus('Waiting for answer');
         try {
-          const result = await runGrantedAgentCommand(command, run.snapshot, managers, invocation);
-          if (!run.outcome && !run.abortController.signal.aborted) run.record?.activity('tool', result);
-          return result;
+          return await runGrantedAgentCommand(command, run.snapshot, managers, invocation);
         } finally {
           if (isQuestion && !run.abortController.signal.aborted) run.setStatus('Running');
         }
@@ -156,13 +161,14 @@ export async function executeAgentRun(
       startTurn: () => {},
       chunk: () => {},
       endTurn: (answer) => { finalAnswer = answer; },
-      ranCommand: () => {},
+      startCommand: (command, workspace) => { run.record?.activity('tool', tagged(command, workspace)); },
+      ranCommand: (_command, result, workspace) => { run.record?.activity('tool', tagged(result, workspace)); },
       finished: () => {
         if (finalAnswer.trim()) finish(finalAnswer);
         else fail(new Error('Agent: task returned an empty response.'));
       },
       error: (message) => fail(new Error(`Agent: ${message}`)),
-    }, active));
+    }, active), run.abortController.signal);
   });
   return { status: run.abortController.signal.aborted ? 'terminated' : 'completed', response, cleanupWarnings: [] };
 }

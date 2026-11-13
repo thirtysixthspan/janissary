@@ -48,9 +48,9 @@ export function decodeAcpOpen(record: Record<string, unknown>): DecodeResult {
   };
 }
 
-// An empty prompt cannot occur (`AcpManager.run` refuses one before sending) but an empty chunk is
-// ordinary, so the text is checked for being a string rather than for being nonempty.
-export function decodeAcpText(type: 'acp-prompt' | 'acp-chunk', record: Record<string, unknown>): DecodeResult {
+// An empty chunk is ordinary — a provider can stream one — so the text is checked for being a
+// string rather than for being nonempty.
+export function decodeAcpText(type: 'acp-chunk', record: Record<string, unknown>): DecodeResult {
   if (!nonEmptyString(record.id) || typeof record.text !== 'string') return malformed(type);
   return { type, id: record.id, text: Buffer.from(record.text, 'base64').toString('utf8') };
 }
@@ -63,11 +63,6 @@ export function decodeAcpAddressed(type: 'acp-close' | 'acp-cancel' | 'acp-ready
       : malformed(type);
   }
   return { type, id: record.id };
-}
-
-export function decodeAcpEnd(record: Record<string, unknown>): DecodeResult {
-  if (!nonEmptyString(record.id) || !nonEmptyString(record.stopReason)) return malformed('acp-end');
-  return { type: 'acp-end', id: record.id, stopReason: record.stopReason };
 }
 
 // `fatal` is required rather than optional: an absent flag would default a dead session to

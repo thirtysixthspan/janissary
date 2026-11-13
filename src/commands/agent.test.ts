@@ -721,7 +721,7 @@ describe('agent command', () => {
 
     expect(channel.resolveAgentSnapshot).toHaveBeenCalledWith('task.md', []);
     expect(execute.mock.calls[0]?.[0]).toMatchObject({ snapshot });
-    expect(execute.mock.calls[0]?.[6]).toEqual({ channel, offline: undefined });
+    expect(execute.mock.calls[0]?.[6]).toEqual({ channel, host: 'devbox', offline: undefined });
     expect(release).toHaveBeenCalledOnce();
   });
 

@@ -3,13 +3,14 @@ import { acpActivity } from '../acp/activity.js';
 import type { AcpSession } from '../acp/types.js';
 import type { ProjectTokens } from '../project/tokens.js';
 import type { ClientFrame, ServerFrame } from './protocol-frames.js';
+import { startRemoteLoop, type RemoteLoopHandle } from './serve-acp-loop.js';
 import { sandboxWillConfine } from '../sandbox/confinement.js';
 import { errorText } from '../error-text.js';
 
 const ACP_SHUTDOWN_TIMEOUT_MS = 5000;
 
 type RemoteAcpRecord =
-  | { state: 'live'; session: AcpSession; runOnly: boolean }
+  | { state: 'live'; session: AcpSession; runOnly: boolean; run?: RemoteLoopHandle }
   | { state: 'closing'; session: AcpSession; pending: Promise<boolean> }
   | { state: 'settled'; released: boolean; session?: AcpSession };
 
@@ -34,9 +35,9 @@ async function stopSession(session: AcpSession): Promise<boolean> {
 }
 
 // The remote server's ACP holder: one live agent session per session id, driven by the ACP frames.
-// The JSON-RPC never leaves this machine — the local side sends prompts and gets reply text back —
-// so nothing `opencode` writes to stderr can land mid-frame in a stream that must be strictly
-// newline-delimited JSON.
+// The JSON-RPC never leaves this machine — the local side sends runs and gets turn, tool, and reply
+// traffic back — so nothing `opencode` writes to stderr can land mid-frame in a stream that must be
+// strictly newline-delimited JSON.
 //
 // Keyed by id rather than holding a single session, because one `remote-serve` serves every tab
 // sharing its channel: the launching tab and each agent joined from it through ➕ provision no second
@@ -78,31 +79,50 @@ export class RemoteAcp {
       },
       // The connection-level channel: a failed spawn or a dead agent means the session no longer
       // exists, so it travels as fatal and the local side drops its record of it.
-      onError: (message) => { this.send({ type: 'acp-error', id, message, fatal: true }); },
+      onError: (message) => {
+        this.send({ type: 'acp-error', id, message, fatal: true });
+        const record = this.records.get(id);
+        if (record?.state !== 'live' || !record.run) return;
+        const run = record.run;
+        record.run = undefined;
+        run.abort();
+      },
       onConnect: () => { this.send({ type: 'acp-ready', id, sandboxed }); },
     });
     this.records.set(id, { state: 'live', session, runOnly: frame.autonomous === true });
   }
 
-  prompt(frame: Extract<ClientFrame, { type: 'acp-prompt' }>): void {
+  run(frame: Extract<ClientFrame, { type: 'acp-run' }>): void {
     const id = frame.id;
     const record = this.records.get(id);
     if (record?.state !== 'live') {
       this.send({ type: 'acp-error', id, message: 'No remote ACP session is open.', fatal: true });
       return;
     }
-    record.session.prompt(frame.text, {
-      onChunk: (text) => { this.send({ type: 'acp-chunk', id, text }); },
-      onEnd: (stopReason) => { this.send({ type: 'acp-end', id, stopReason }); },
-      // The prompt failed, not the session. A rate limit clears on its own, and killing the session
-      // over one would throw away the whole accumulated conversation.
-      onError: (message) => { this.send({ type: 'acp-error', id, message, fatal: false }); },
+    if (record.run) {
+      this.send({ type: 'acp-error', id, message: 'ACP: a prompt is already running.', fatal: false });
+      return;
+    }
+    let terminal = false;
+    const handle = startRemoteLoop(record.session, frame, this.workspaceDir, (sent) => {
+      this.send(sent);
+      if (sent.type !== 'acp-run-end' && !(sent.type === 'acp-error' && !sent.fatal)) return;
+      terminal = true;
+      record.run = undefined;
     });
+    if (!terminal) record.run = handle;
+  }
+
+  toolResult(frame: Extract<ClientFrame, { type: 'acp-tool-result' }>): void {
+    const record = this.records.get(frame.id);
+    if (record?.state === 'live') record.run?.toolResult(frame);
   }
 
   async close(id: string): Promise<void> {
     let record = this.records.get(id);
     if (record?.state === 'live') {
+      record.run?.abort();
+      record.run = undefined;
       record = this.trackShutdown(id, record.session);
     }
     const released = record?.state === 'closing' ? await record.pending
@@ -116,6 +136,15 @@ export class RemoteAcp {
   cancel(id: string): void {
     const record = this.records.get(id);
     if (record?.state !== 'live') return;
+    const run = record.run;
+    if (run) {
+      void run.cancel().catch((error: unknown) => {
+        if (this.records.get(id) !== record) return;
+        record.run = undefined;
+        this.send({ type: 'acp-error', id, message: `ACP: cancellation failed: ${errorText(error)}`, fatal: true });
+      });
+      return;
+    }
     void record.session.cancel().catch((error: unknown) => {
       if (this.records.get(id) === record) {
         this.send({ type: 'acp-error', id, message: `ACP: cancellation failed: ${errorText(error)}`, fatal: true });
@@ -125,7 +154,9 @@ export class RemoteAcp {
 
   detachRuns(): void {
     for (const [id, record] of this.records) {
-      if (record.state !== 'live' || !record.runOnly) continue;
+      if (record.state !== 'live' || !(record.run || record.runOnly)) continue;
+      record.run?.abort();
+      record.run = undefined;
       this.trackShutdown(id, record.session);
     }
   }
@@ -136,7 +167,10 @@ export class RemoteAcp {
   dispose(): boolean | Promise<boolean> {
     const pending: { id: string; session: AcpSession; result: Promise<boolean>; outcome?: boolean }[] = [];
     for (const [id, record] of this.records) {
-      if (record.state === 'closing') {
+      if (record.state === 'live') {
+        record.run?.abort();
+        record.run = undefined;
+      } else if (record.state === 'closing') {
         pending.push({ id, session: record.session, result: record.pending });
         continue;
       }

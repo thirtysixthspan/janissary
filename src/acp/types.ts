@@ -1,4 +1,5 @@
 import type { ProjectTokens } from '../project/tokens.js';
+import type { AcpRole } from './role.js';
 
 export type PromptHandlers = {
   onChunk: (text: string) => void;
@@ -91,10 +92,46 @@ export type AcpLoopHandlers = {
   chunk: (cumulative: string) => void;
   // The current turn finished with this final text.
   endTurn: (final: string) => void;
+  // A command is about to run; `workspace` is true when it runs in the workspace.
+  startCommand?: (command: string, workspace: boolean) => void;
   // A command was auto-run; show it and its result.
-  ranCommand: (command: string, result: string) => void;
+  ranCommand: (
+    command: string,
+    result: string,
+    // True when the command ran in the workspace; absent means false.
+    workspace?: boolean,
+    // Present only when the gate refused the command because it is disabled.
+    refused?: 'disabled',
+  ) => void;
   // The loop ended: `answered` (no command emitted) or `capped` (hit `maxSteps`).
   finished: (reason: 'answered' | 'capped', maxSteps: number) => void;
   // A connection/prompt error occurred.
   error: (message: string) => void;
 };
+
+// Where the loop driver runs a gated command: the caller's side or the workspace.
+export type AcpToolHost = {
+  // Run a command on the caller's side and return its output.
+  runCaller: (command: string) => string | Promise<string>;
+  // Run a command in the workspace and return its output.
+  runWorkspace: (command: string) => string | Promise<string>;
+};
+
+// One native command's effective setting, keyed by its native vocabulary name (`file read`).
+export type AcpRunSnapshotRow = { name: string; effectiveEnabled: boolean; effectiveAgentAccess: boolean };
+
+// The plain-data authority a prompt's gate decides from, taken once per prompt.
+export type AcpRunSnapshot =
+  | {
+    kind: 'core';
+    role: AcpRole;
+    roleName: string;
+    grants: readonly string[];
+    rows: readonly AcpRunSnapshotRow[];
+    withoutTools: boolean;
+  }
+  | {
+    kind: 'agent';
+    grants: readonly string[];
+    askUser: boolean;
+  };

@@ -1,9 +1,10 @@
-import type { AcpSession } from '../acp/types.js';
+import type { AcpLoopHandlers, AcpRunSnapshot, AcpSession, AcpToolHost } from '../acp/types.js';
 import { deferred } from '../deferred.js';
 import { AcpPromptControl } from '../acp/prompt-control.js';
 import type { RemoteChannel } from './channel/index.js';
 import type { ClientFrame, RemoteAcpActivityKind } from './protocol-frames.js';
 import { errorText } from '../error-text.js';
+import { createRemoteAcpRun } from './acp-session-run.js';
 
 // What the local side decides and sends across: which agent runs, with what arguments and
 // environment, whether it is confined offline, and the ACP session options that turn a role
@@ -31,17 +32,28 @@ export type RemoteAcpHooks = {
   onTransportLost?: () => void;
 };
 
-export type RemoteAcpSession = AcpSession & {
+export type RemoteAcpSession = Omit<AcpSession, 'prompt'> & {
+  remote: true;
+  run: (
+    text: string, snapshot: AcpRunSnapshot, runCaller: AcpToolHost['runCaller'], events: AcpLoopHandlers,
+  ) => void;
   ready: Promise<boolean>;
   release: () => Promise<boolean>;
 };
 
 /**
- * An ACP session running on another machine, surfaced locally as an object satisfying `AcpSession`
- * (`src/acp/types.ts`) — the same adapter trick `createRemoteShell` uses for a remote tab's shell.
- * The ACP client itself lives on the far side, so what crosses the wire is prompt text and reply
- * chunks, never JSON-RPC. Everything built on the session — `runAcpToolLoop`, the transcript
- * entries, the busy dot, the connections panel — therefore works without knowing where the agent runs.
+ * An ACP session running on another machine, surfaced locally as `Omit<AcpSession, 'prompt'>` plus
+ * this adapter's own `run`, `ready`, `release`, and `remote: true` (`src/acp/types.ts`) — the same
+ * adapter trick `createRemoteShell` uses for a remote tab's shell. The ACP client and the tool loop
+ * live on the far side, so `runToolLoop` (`src/acp/drive-loop.ts`) sees the `remote` discriminant
+ * and hands a run to `run` rather than driving it in-process through `driveToolLoop`. `run` returns
+ * once the request is admitted; the frames that follow settle it.
+ *
+ * A run crosses the channel as `acp-run`, its boundaries as `acp-turn`, its reply as `acp-chunk`,
+ * and a far-side workspace step as `acp-tool-step`. A caller tool the far side cannot run itself
+ * travels out as `acp-tool-request` and its result returns as `acp-tool-result`. `cancel` sends
+ * `acp-cancel`, and the far side's terminal `acp-run-end` (`answered`, `capped`, or `cancelled`)
+ * settles the run; transport loss releases it with an error. None of this is JSON-RPC.
  *
  * It holds no reference to `Managers`, the tab, or the transcript: it turns frames into callbacks
  * and nothing else.
@@ -52,7 +64,7 @@ export function createRemoteAcpSession(
   hooks: RemoteAcpHooks,
 ): RemoteAcpSession {
   const { id, command, args, env, offline, autonomous, effort, sessionMeta } = options;
-  // The one in-flight prompt, matching the discipline `connectAcp` keeps with its own `current`.
+  // The one in-flight run, matching the discipline `connectAcp` keeps with its own `current`.
   const control = new AcpPromptControl();
   let live = true;
   const { promise: ready, resolve: resolveReady, reject: rejectReady } = deferred<boolean>();
@@ -80,6 +92,7 @@ export function createRemoteAcpSession(
       detach(message, () => hooks.onError(message));
     }
   };
+  const run = createRemoteAcpRun(control, send);
 
   channel.attachAcp(id, {
     onReady: (sandboxed) => {
@@ -100,10 +113,10 @@ export function createRemoteAcpSession(
     onTransportLost: () => {
       detach('Remote connection lost before agent readiness.', () => hooks.onTransportLost?.());
     },
-    onEnd: (stopReason) => {
-      const turn = control.current;
-      if (turn) control.end(turn, stopReason);
-    },
+    onTurn: (frame) => run.turn(frame),
+    onToolRequest: (frame) => run.request(frame),
+    onToolStep: (frame) => run.step(frame),
+    onRunEnd: (reason) => run.end(reason),
     // A prompt that merely failed goes to the running loop, which reports it and leaves the session
     // alone. A fatal one also goes to the connection hook, which is what drops the session — and to
     // the in-flight prompt as well, so the loop terminates rather than waiting on a reply that is
@@ -145,14 +158,15 @@ export function createRemoteAcpSession(
   };
 
   return {
+    remote: true,
     ready,
     release,
     shutdown: async () => {
       if (!await release()) throw new Error('Remote agent close was not acknowledged.');
     },
-    prompt: (text, handlers) => {
-      if (!control.admit(handlers)) return;
-      send({ type: 'acp-prompt', id, text });
+    run: (text, snapshot, runCaller, events) => {
+      if (!run.start(runCaller, events)) return;
+      send({ type: 'acp-run', id, text, snapshot });
     },
     cancel: () => {
       if (!live) return Promise.resolve();

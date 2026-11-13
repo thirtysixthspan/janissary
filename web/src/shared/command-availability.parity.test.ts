@@ -7,6 +7,7 @@ const INPUTS = [
   'question ask', 'question approve now', 'ask reset', 'ask something', 'tell reset',
   'search transcript', 'search transcript foo', 'browser goto', 'browser', 'theme sync',
   'exit', 'close tab', '  CLOSE   tab ', 'files expand', 'nonexistent command',
+  'file read a.md', 'file',
 ];
 
 function disabledRows(): DisabledApplicationCommand[] {

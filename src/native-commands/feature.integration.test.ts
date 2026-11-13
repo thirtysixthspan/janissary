@@ -126,7 +126,7 @@ describe('native command settings across the feature seams', () => {
     const allowed = grants.filter((command) => (
       snapshot.commands.find((entry) => entry.name === command)?.effectiveAgentAccess ?? true
     ));
-    const tools = createAcpToolTable(managers, 'ask', grants);
+    const tools = createAcpToolTable(grants);
     expect(allowed).not.toContain('browser content');
     const allowLine = toolPrimer(tools, allowed)
       .split('\n').find((line) => line.startsWith('Only these commands are allowed:'));

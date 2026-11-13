@@ -1,6 +1,6 @@
 import type { AcpSession, AcpPromptResult } from './types.js';
 import { connectAcp } from './index.js';
-import { createRemoteAcpSession } from '../remote/acp-session.js';
+import { createRemoteAcpSession, type RemoteAcpSession } from '../remote/acp-session.js';
 import { acpLaunchForEntry } from './launch.js';
 import type { RoleEntry } from '../plugins/roles/shared.js';
 import type { Managers } from '../managers.js';
@@ -12,7 +12,8 @@ import { beginCoreRecord, closeCoreRecord, coreActivity } from './record-feed.js
 import { ACP_ROLES, DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
 
 type ConnectHooks = { onError: (message: string) => void; onConnect: () => void };
-type CoreSession = { session?: AcpSession; runtime: TabRuntime; identity: string; entry: RoleEntry; model?: string };
+type Session = AcpSession | RemoteAcpSession;
+type CoreSession = { session?: Session; runtime: TabRuntime; identity: string; entry: RoleEntry; model?: string };
 type RoleSessions = Map<AcpRole, CoreSession>;
 
 export class AcpSessionManager {
@@ -34,7 +35,7 @@ export class AcpSessionManager {
 
   session(
     label: string, cwd: string, entry: RoleEntry, hooks: ConnectHooks, role: AcpRole = DEFAULT_ACP_ROLE,
-  ): AcpSession {
+  ): Session {
     const tab = this.managers.tab.byLabel(label);
     if (!tab) throw new Error('Tab not found');
     const runtime = tabRuntime(tab);
@@ -128,7 +129,7 @@ export class AcpSessionManager {
 
   dispose(): void { this.closeAll(); }
 
-  protected currentSession(label: string, role: AcpRole = DEFAULT_ACP_ROLE): AcpSession | undefined {
+  protected currentSession(label: string, role: AcpRole = DEFAULT_ACP_ROLE): Session | undefined {
     return this.sessions.get(label)?.get(role)?.session;
   }
 
@@ -139,7 +140,7 @@ export class AcpSessionManager {
     return current ? holder.entry : undefined;
   }
 
-  protected isCurrent(label: string, session: AcpSession, role: AcpRole = DEFAULT_ACP_ROLE): boolean {
+  protected isCurrent(label: string, session: Session, role: AcpRole = DEFAULT_ACP_ROLE): boolean {
     const holder = this.sessions.get(label)?.get(role);
     return holder?.session === session && holder.runtime === this.managers.tab.byLabel(label)?.runtime;
   }

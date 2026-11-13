@@ -1,0 +1,100 @@
+import type { AcpRunSnapshot, AcpRunSnapshotRow } from '../../acp/types.js';
+import { isRecord } from '../../value-guards.js';
+import { malformed, nonEmptyString, nonNegativeInteger, type DecodeResult } from './decode-shared.js';
+
+export function decodeAcpRun(record: Record<string, unknown>): DecodeResult {
+  const snapshot = decodeAcpRunSnapshot(record.snapshot);
+  if (!nonEmptyString(record.id) || typeof record.text !== 'string' || !snapshot) return malformed('acp-run');
+  return { type: 'acp-run', id: record.id, text: Buffer.from(record.text, 'base64').toString('utf8'), snapshot };
+}
+
+export function decodeAcpToolResult(record: Record<string, unknown>): DecodeResult {
+  const { id, request, output, error } = record;
+  if (!nonEmptyString(id) || !nonNegativeInteger(request)) return malformed('acp-tool-result');
+  if ((output === undefined) === (error === undefined)) return malformed('acp-tool-result');
+  if (output !== undefined) {
+    return typeof output === 'string'
+      ? { type: 'acp-tool-result', id, request, output: Buffer.from(output, 'base64').toString('utf8') }
+      : malformed('acp-tool-result');
+  }
+  return nonEmptyString(error)
+    ? { type: 'acp-tool-result', id, request, error }
+    : malformed('acp-tool-result');
+}
+
+export function decodeAcpTurn(record: Record<string, unknown>): DecodeResult {
+  const { id, phase, first, display } = record;
+  if (!nonEmptyString(id)) return malformed('acp-turn');
+  if (phase === 'start') {
+    return typeof first === 'boolean'
+      ? { type: 'acp-turn', id, phase: 'start', first }
+      : malformed('acp-turn');
+  }
+  if (phase === 'end') {
+    return typeof display === 'string'
+      ? { type: 'acp-turn', id, phase: 'end', display: Buffer.from(display, 'base64').toString('utf8') }
+      : malformed('acp-turn');
+  }
+  return malformed('acp-turn');
+}
+
+export function decodeAcpToolRequest(record: Record<string, unknown>): DecodeResult {
+  const { id, request, command } = record;
+  if (!nonEmptyString(id) || !nonNegativeInteger(request) || !nonEmptyString(command)) {
+    return malformed('acp-tool-request');
+  }
+  return { type: 'acp-tool-request', id, request, command: Buffer.from(command, 'base64').toString('utf8') };
+}
+
+export function decodeAcpToolStep(record: Record<string, unknown>): DecodeResult {
+  const { id, command, result, workspace, refused } = record;
+  if (!nonEmptyString(id) || !nonEmptyString(command) || typeof result !== 'string' || typeof workspace !== 'boolean') {
+    return malformed('acp-tool-step');
+  }
+  if (refused !== undefined && refused !== 'disabled') return malformed('acp-tool-step');
+  if (refused === 'disabled' && workspace) return malformed('acp-tool-step');
+  return {
+    type: 'acp-tool-step', id,
+    command: Buffer.from(command, 'base64').toString('utf8'),
+    result: Buffer.from(result, 'base64').toString('utf8'),
+    workspace,
+    ...(refused === 'disabled' && { refused }),
+  };
+}
+
+export function decodeAcpRunEnd(record: Record<string, unknown>): DecodeResult {
+  const { id, reason } = record;
+  if (!nonEmptyString(id) || (reason !== 'answered' && reason !== 'capped' && reason !== 'cancelled')) {
+    return malformed('acp-run-end');
+  }
+  return { type: 'acp-run-end', id, reason };
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function decodeRows(value: unknown): AcpRunSnapshotRow[] | undefined {
+  if (!Array.isArray(value)) return;
+  const rows: AcpRunSnapshotRow[] = [];
+  for (const row of value) {
+    if (!isRecord(row) || typeof row.name !== 'string'
+      || typeof row.effectiveEnabled !== 'boolean' || typeof row.effectiveAgentAccess !== 'boolean') return;
+    rows.push({ name: row.name, effectiveEnabled: row.effectiveEnabled, effectiveAgentAccess: row.effectiveAgentAccess });
+  }
+  return rows;
+}
+
+export function decodeAcpRunSnapshot(value: unknown): AcpRunSnapshot | undefined {
+  if (!isRecord(value) || !isStringArray(value.grants)) return;
+  const grants = [...value.grants];
+  if (value.kind === 'agent') {
+    if (typeof value.askUser !== 'boolean') return;
+    return { kind: 'agent', grants, askUser: value.askUser };
+  }
+  if (value.kind !== 'core' || (value.role !== 'ask' && value.role !== 'tell')
+    || !nonEmptyString(value.roleName) || typeof value.withoutTools !== 'boolean') return;
+  const rows = decodeRows(value.rows);
+  if (!rows) return;
+  return { kind: 'core', role: value.role, roleName: value.roleName, grants, rows, withoutTools: value.withoutTools };
+}

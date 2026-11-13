@@ -293,7 +293,10 @@ describe('RemoteChannel — ACP session routing', () => {
   it.each(['authentication', 'disconnect', 'closed', 'fail', 'finish'])('settles all ACP listeners on %s', (phase) => {
     const h = harness();
     if (phase !== 'authentication') h.channel.receive(`${encodeHandshake()}\n`);
-    const first = { onReady: vi.fn(), onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn(), onTransportLost: vi.fn() };
+    const first = {
+      onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(),
+      onRunEnd: vi.fn(), onError: vi.fn(), onTransportLost: vi.fn(),
+    };
     const second = { ...first, onTransportLost: vi.fn() };
     first.onTransportLost.mockImplementation(() => { h.channel.detachAcp('second'); });
     h.channel.attachAcp('first', first);
@@ -315,32 +318,61 @@ describe('RemoteChannel — ACP session routing', () => {
     const h = harness();
     const onError = vi.fn();
     const otherError = vi.fn();
-    h.channel.attachAcp('first', { onReady: vi.fn(), onChunk: vi.fn(), onEnd: vi.fn(), onError });
-    h.channel.attachAcp('second', { onReady: vi.fn(), onChunk: vi.fn(), onEnd: vi.fn(), onError: otherError });
+    h.channel.attachAcp('first', { onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(), onRunEnd: vi.fn(), onError });
+    h.channel.attachAcp('second', { onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(), onRunEnd: vi.fn(), onError: otherError });
     h.channel.send({ type: 'acp-cancel', id: 'first' });
     expect(onError).toHaveBeenCalledWith('ACP: cancellation failed: Remote connection unavailable.', true);
     expect(otherError).not.toHaveBeenCalled();
+  });
+
+  it('fails an unavailable run only on its addressed session', () => {
+    const h = harness();
+    const onError = vi.fn();
+    const otherError = vi.fn();
+    h.channel.attachAcp('first', { onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(), onRunEnd: vi.fn(), onError });
+    h.channel.attachAcp('second', { onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(), onRunEnd: vi.fn(), onError: otherError });
+    h.channel.send({
+      type: 'acp-run', id: 'first', text: 'summarize',
+      snapshot: { kind: 'agent', grants: [], askUser: false },
+    });
+    expect(onError).toHaveBeenCalledWith('Remote connection unavailable.', true);
+    expect(otherError).not.toHaveBeenCalled();
+    expect(h.written).toEqual([]);
+  });
+
+  it('drops an unavailable tool result without a word to any listener', () => {
+    const h = harness();
+    const listener = {
+      onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(),
+      onRunEnd: vi.fn(), onActivity: vi.fn(), onClosed: vi.fn(), onError: vi.fn(),
+    };
+    h.channel.attachAcp('first', listener);
+    h.channel.send({ type: 'acp-tool-result', id: 'first', request: 0, output: 'done' });
+    for (const spy of Object.values(listener)) expect(spy).not.toHaveBeenCalled();
+    expect(h.written).toEqual([]);
+    expect(h.errors).toEqual([]);
   });
   function acpHarness() {
     const h = harness();
     h.channel.receive(`${encodeHandshake()}\n`);
     const listener = {
-      onReady: vi.fn(), onChunk: vi.fn(), onEnd: vi.fn(), onActivity: vi.fn(), onClosed: vi.fn(), onError: vi.fn(),
+      onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(),
+      onRunEnd: vi.fn(), onActivity: vi.fn(), onClosed: vi.fn(), onError: vi.fn(),
     };
     return { ...h, listener };
   }
 
-  it('routes ready, chunk, and end frames to the listener that owns the id', () => {
+  it('routes ready, chunk, and run-end frames to the listener that owns the id', () => {
     const h = acpHarness();
     h.channel.attachAcp('racp1', h.listener);
 
     h.channel.receive(`${encodeFrame({ type: 'acp-ready', id: 'racp1', sandboxed: true })}\n`);
     h.channel.receive(`${encodeFrame({ type: 'acp-chunk', id: 'racp1', text: 'partial' })}\n`);
-    h.channel.receive(`${encodeFrame({ type: 'acp-end', id: 'racp1', stopReason: 'end_turn' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-run-end', id: 'racp1', reason: 'answered' })}\n`);
 
     expect(h.listener.onReady).toHaveBeenCalledTimes(1);
     expect(h.listener.onChunk).toHaveBeenCalledWith('partial');
-    expect(h.listener.onEnd).toHaveBeenCalledWith('end_turn');
+    expect(h.listener.onRunEnd).toHaveBeenCalledWith('answered');
     expect(h.frames).toEqual([]);
   });
 
@@ -379,6 +411,45 @@ describe('RemoteChannel — ACP session routing', () => {
     expect(h.listener.onError).toHaveBeenCalledWith('rate limited', false);
   });
 
+  it('routes turn and run-end frames to the owning ACP session', () => {
+    const h = acpHarness();
+    h.channel.attachAcp('racp1', h.listener);
+
+    h.channel.receive(`${encodeFrame({ type: 'acp-turn', id: 'racp1', phase: 'start', first: true })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-turn', id: 'racp1', phase: 'end', display: 'Done.' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-run-end', id: 'racp1', reason: 'answered' })}\n`);
+
+    expect(h.listener.onTurn).toHaveBeenNthCalledWith(1, { type: 'acp-turn', id: 'racp1', phase: 'start', first: true });
+    expect(h.listener.onTurn).toHaveBeenNthCalledWith(2, { type: 'acp-turn', id: 'racp1', phase: 'end', display: 'Done.' });
+    expect(h.listener.onRunEnd).toHaveBeenCalledWith('answered');
+    expect(h.frames).toEqual([]);
+    expect(h.errors).toEqual([]);
+  });
+
+  it('routes a caller tool request to the owning ACP session', () => {
+    const h = acpHarness();
+    h.channel.attachAcp('racp1', h.listener);
+    const toolRequest = { type: 'acp-tool-request', id: 'racp1', request: 3, command: 'npm test' } as const;
+
+    h.channel.receive(`${encodeFrame(toolRequest)}\n`);
+
+    expect(h.listener.onToolRequest).toHaveBeenCalledWith(toolRequest);
+    expect(h.frames).toEqual([]);
+    expect(h.errors).toEqual([]);
+  });
+
+  it('routes a far-side tool step to the owning ACP session', () => {
+    const h = acpHarness();
+    h.channel.attachAcp('racp1', h.listener);
+    const toolStep = { type: 'acp-tool-step', id: 'racp1', command: 'ls', result: 'a.txt', workspace: true } as const;
+
+    h.channel.receive(`${encodeFrame(toolStep)}\n`);
+
+    expect(h.listener.onToolStep).toHaveBeenCalledWith(toolStep);
+    expect(h.frames).toEqual([]);
+    expect(h.errors).toEqual([]);
+  });
+
   // What makes a chunk still in flight from a session `ask reset` disposed land nowhere instead of
   // in its successor's transcript entry.
   it('drops frames for an id with no attached listener, without faulting the channel', () => {
@@ -388,8 +459,17 @@ describe('RemoteChannel — ACP session routing', () => {
 
     h.channel.receive(`${encodeFrame({ type: 'acp-chunk', id: 'racp1', text: 'stale' })}\n`);
     h.channel.receive(`${encodeFrame({ type: 'acp-chunk', id: 'racp2', text: 'never attached' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-turn', id: 'racp1', phase: 'start', first: true })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-turn', id: 'racp2', phase: 'end', display: 'never attached' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-run-end', id: 'racp1', reason: 'cancelled' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-tool-request', id: 'racp1', request: 1, command: 'npm test' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-tool-step', id: 'racp2', command: 'ls', result: '', workspace: true })}\n`);
 
     expect(h.listener.onChunk).not.toHaveBeenCalled();
+    expect(h.listener.onTurn).not.toHaveBeenCalled();
+    expect(h.listener.onRunEnd).not.toHaveBeenCalled();
+    expect(h.listener.onToolRequest).not.toHaveBeenCalled();
+    expect(h.listener.onToolStep).not.toHaveBeenCalled();
     expect(h.errors).toEqual([]);
     expect(h.kill).not.toHaveBeenCalled();
   });
@@ -464,7 +544,10 @@ it('preserves process and navigator routing but detaches ACP on a dropped peer t
   const onOutput = vi.fn(), onReply = vi.fn(), onChunk = vi.fn(), onClose = vi.fn();
   h.channel.attach('p', { onOutput, onExit: vi.fn() });
   h.channel.attachNavigator('n', { onReply, onEvent: vi.fn(), onClose });
-  h.channel.attachAcp('a', { onReady: vi.fn(), onChunk, onEnd: vi.fn(), onError: vi.fn() });
+  h.channel.attachAcp('a', {
+    onReady: vi.fn(), onChunk, onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(),
+    onRunEnd: vi.fn(), onError: vi.fn(),
+  });
   h.channel.closed(); expect(onClose).not.toHaveBeenCalled();
   h.channel.replaceTransport({ id: 'new', write: vi.fn(), kill: vi.fn() });
   h.channel.receive(`${encodeHandshake()}\n`);

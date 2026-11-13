@@ -9,6 +9,272 @@ function roundTrip(frame: RemoteFrame): RemoteFrame | { error: string } {
   return decodeFrame(encodeFrame(frame));
 }
 
+describe('acp-run codec', () => {
+  const row = { name: 'file read', effectiveEnabled: false, effectiveAgentAccess: false };
+  const core = { kind: 'core', role: 'ask', roleName: 'reader', grants: ['file read'], rows: [row], withoutTools: false } as const;
+  const agent = { kind: 'agent', grants: ['file'], askUser: false } as const;
+
+  it.each([core, agent])('round-trips a $kind snapshot with control bytes', (snapshot) => {
+    const frame: ClientFrame = { type: 'acp-run', id: 'run1', text: 'first\nsecond\u{1}', snapshot };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toMatchObject({ text: Buffer.from(frame.text).toString('base64') });
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it('accepts empty text, grants, and rows', () => {
+    const frame: ClientFrame = {
+      type: 'acp-run', id: 'run1', text: '', snapshot: { ...core, grants: [], rows: [] },
+    };
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it.each([
+    ['missing id', { text: '', snapshot: agent }],
+    ['empty id', { id: '', text: '', snapshot: agent }],
+    ['non-string id', { id: 1, text: '', snapshot: agent }],
+    ['non-string text', { id: 'run1', text: 1, snapshot: agent }],
+  ])('refuses %s', (_label, fields) => {
+    expect(decodeFrame(JSON.stringify({ type: 'acp-run', ...fields }))).toEqual({ error: 'Malformed remote frame "acp-run".' });
+  });
+
+  it.each([
+    ['missing snapshot', undefined],
+    ['unknown kind', { ...core, kind: 'other' }],
+    ['bad role', { ...core, role: 'other' }],
+    ['empty role name', { ...core, roleName: '' }],
+    ['non-string role name', { ...core, roleName: 1 }],
+    ['non-array core grants', { ...core, grants: 'file' }],
+    ['non-string core grant', { ...core, grants: [1] }],
+    ['non-array agent grants', { ...agent, grants: 'file' }],
+    ['non-string agent grant', { ...agent, grants: [1] }],
+    ['bad rows', { ...core, rows: {} }],
+    ['bad row', { ...core, rows: [null] }],
+    ['bad row name', { ...core, rows: [{ ...row, name: 1 }] }],
+    ['bad row enabled', { ...core, rows: [{ ...row, effectiveEnabled: 1 }] }],
+    ['missing row access', { ...core, rows: [{ name: 'file read', effectiveEnabled: true }] }],
+    ['bad row access', { ...core, rows: [{ ...row, effectiveAgentAccess: 1 }] }],
+    ['bad withoutTools', { ...core, withoutTools: 1 }],
+    ['missing askUser', { kind: 'agent', grants: [] }],
+    ['bad askUser', { ...agent, askUser: 1 }],
+  ])('refuses a snapshot with %s', (_label, snapshot) => {
+    const raw = { type: 'acp-run', id: 'run1', text: '', snapshot };
+    expect(decodeFrame(JSON.stringify(raw))).toEqual({ error: 'Malformed remote frame "acp-run".' });
+  });
+
+  it('drops undeclared frame, snapshot, and row fields', () => {
+    const raw = {
+      type: 'acp-run', id: 'run1', text: '', extra: 'drop',
+      snapshot: { ...core, extra: 'drop', rows: [{ ...row, extra: 'drop' }] },
+    };
+    expect(decodeFrame(JSON.stringify(raw))).toEqual({ type: 'acp-run', id: 'run1', text: '', snapshot: core });
+  });
+});
+
+describe('acp-tool-result codec', () => {
+  it('round-trips an output holding a newline and a control byte, base64 on the wire', () => {
+    const output = 'first\nsecond\u{1}';
+    const frame: ClientFrame = { type: 'acp-tool-result', id: 'run1', request: 0, output };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toMatchObject({ output: Buffer.from(output).toString('base64') });
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it('round-trips an error with its message plain on the wire', () => {
+    const frame: ClientFrame = { type: 'acp-tool-result', id: 'run1', request: 3, error: 'tool exited 1' };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toMatchObject({ error: 'tool exited 1' });
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it('round-trips an empty output', () => {
+    const frame: ClientFrame = { type: 'acp-tool-result', id: 'run1', request: 0, output: '' };
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it.each([
+    ['both fields', { output: 'out', error: 'err' }],
+    ['both fields with an empty output', { output: '', error: 'err' }],
+    ['neither field', {}],
+    ['missing id', { request: 0, output: '' }],
+    ['empty id', { id: '', request: 0, output: '' }],
+    ['non-string output', { id: 'run1', request: 0, output: 1 }],
+    ['empty error', { id: 'run1', request: 0, error: '' }],
+    ['negative request', { id: 'run1', request: -1, output: '' }],
+    ['fractional request', { id: 'run1', request: 1.5, output: '' }],
+    ['non-numeric request', { id: 'run1', request: '0', output: '' }],
+  ])('refuses %s', (_label, fields) => {
+    expect(decodeFrame(JSON.stringify({ type: 'acp-tool-result', ...fields })))
+      .toEqual({ error: 'Malformed remote frame "acp-tool-result".' });
+  });
+
+  it('drops undeclared fields', () => {
+    const raw = {
+      type: 'acp-tool-result', id: 'run1', request: 2,
+      output: Buffer.from('done').toString('base64'), extra: 'drop',
+    };
+    expect(decodeFrame(JSON.stringify(raw))).toEqual({ type: 'acp-tool-result', id: 'run1', request: 2, output: 'done' });
+  });
+});
+
+describe('acp-turn codec', () => {
+  it.each([true, false])('round-trips a start with first: %s and no display on the wire', (first) => {
+    const frame: RemoteFrame = { type: 'acp-turn', id: 'run1', phase: 'start', first };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toEqual(frame);
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it('round-trips an end holding a newline and a control byte, base64 on the wire', () => {
+    const display = 'first\nsecond\u{1}';
+    const frame: RemoteFrame = { type: 'acp-turn', id: 'run1', phase: 'end', display };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toEqual({ ...frame, display: Buffer.from(display).toString('base64') });
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it('round-trips an empty display with no first on the wire', () => {
+    const frame: RemoteFrame = { type: 'acp-turn', id: 'run1', phase: 'end', display: '' };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toEqual(frame);
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it.each([
+    ['unknown phase', { type: 'acp-turn', id: 'run1', phase: 'middle' }],
+    ['missing phase', { type: 'acp-turn', id: 'run1' }],
+    ['start without first', { type: 'acp-turn', id: 'run1', phase: 'start' }],
+    ['start with a non-boolean first', { type: 'acp-turn', id: 'run1', phase: 'start', first: 'yes' }],
+    ['end without display', { type: 'acp-turn', id: 'run1', phase: 'end' }],
+    ['end with a non-string display', { type: 'acp-turn', id: 'run1', phase: 'end', display: 1 }],
+    ['missing id', { type: 'acp-turn', phase: 'start', first: true }],
+    ['empty id', { type: 'acp-turn', id: '', phase: 'start', first: true }],
+  ])('refuses %s', (_label, record) => {
+    expect(decodeFrame(JSON.stringify(record))).toEqual({ error: 'Malformed remote frame "acp-turn".' });
+  });
+
+  it('drops undeclared phase fields', () => {
+    const start = { type: 'acp-turn', id: 'run1', phase: 'start', first: false, display: 'drop' };
+    expect(decodeFrame(JSON.stringify(start)))
+      .toEqual({ type: 'acp-turn', id: 'run1', phase: 'start', first: false });
+    const end = {
+      type: 'acp-turn', id: 'run1', phase: 'end', display: Buffer.from('done').toString('base64'), first: true,
+    };
+    expect(decodeFrame(JSON.stringify(end)))
+      .toEqual({ type: 'acp-turn', id: 'run1', phase: 'end', display: 'done' });
+  });
+});
+
+describe('acp-run-end codec', () => {
+  it.each(['answered', 'capped', 'cancelled'] as const)('round-trips %s', (reason) => {
+    const frame: RemoteFrame = { type: 'acp-run-end', id: 'run1', reason };
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it.each([
+    ['unknown reason', { type: 'acp-run-end', id: 'run1', reason: 'ended' }],
+    ['missing reason', { type: 'acp-run-end', id: 'run1' }],
+    ['non-string reason', { type: 'acp-run-end', id: 'run1', reason: 1 }],
+    ['missing id', { type: 'acp-run-end', reason: 'answered' }],
+    ['empty id', { type: 'acp-run-end', id: '', reason: 'answered' }],
+  ])('refuses %s', (_label, record) => {
+    expect(decodeFrame(JSON.stringify(record))).toEqual({ error: 'Malformed remote frame "acp-run-end".' });
+  });
+});
+
+describe('acp-tool-request codec', () => {
+  it('round-trips request 0 and a command holding a newline and a control byte, base64 on the wire', () => {
+    const command = 'file read\nnotes.txt\u{1}';
+    const frame: RemoteFrame = { type: 'acp-tool-request', id: 'racp1', request: 0, command };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toMatchObject({ command: Buffer.from(command).toString('base64') });
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it.each([
+    ['missing id', { request: 0, command: 'ls' }],
+    ['empty id', { id: '', request: 0, command: 'ls' }],
+    ['missing request', { id: 'racp1', command: 'ls' }],
+    ['negative request', { id: 'racp1', request: -1, command: 'ls' }],
+    ['fractional request', { id: 'racp1', request: 1.5, command: 'ls' }],
+    ['non-numeric request', { id: 'racp1', request: '0', command: 'ls' }],
+    ['missing command', { id: 'racp1', request: 0 }],
+    ['empty command', { id: 'racp1', request: 0, command: '' }],
+    ['non-string command', { id: 'racp1', request: 0, command: 1 }],
+  ])('refuses %s', (_label, fields) => {
+    expect(decodeFrame(JSON.stringify({ type: 'acp-tool-request', ...fields })))
+      .toEqual({ error: 'Malformed remote frame "acp-tool-request".' });
+  });
+
+  it('drops undeclared fields', () => {
+    const raw = {
+      type: 'acp-tool-request', id: 'racp1', request: 2,
+      command: Buffer.from('ls').toString('base64'), workspace: true, extra: 'drop',
+    };
+    expect(decodeFrame(JSON.stringify(raw))).toEqual({ type: 'acp-tool-request', id: 'racp1', request: 2, command: 'ls' });
+  });
+});
+
+describe('acp-tool-step codec', () => {
+  it('round-trips a workspace run with a multi-line result, both fields base64 on the wire', () => {
+    const command = 'file read\nnotes.txt';
+    const result = 'first\nsecond';
+    const frame: RemoteFrame = { type: 'acp-tool-step', id: 'racp1', command, result, workspace: true };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toMatchObject({
+      command: Buffer.from(command).toString('base64'),
+      result: Buffer.from(result).toString('base64'),
+    });
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it('round-trips an empty result with workspace: true', () => {
+    const frame: RemoteFrame = { type: 'acp-tool-step', id: 'racp1', command: 'file read', result: '', workspace: true };
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it('round-trips a refusal with workspace: false and no refused flag', () => {
+    const frame: RemoteFrame = {
+      type: 'acp-tool-step', id: 'racp1', command: 'db query', result: 'command not granted', workspace: false,
+    };
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it('round-trips a disabled refusal and keeps the flag on the wire', () => {
+    const frame: RemoteFrame = {
+      type: 'acp-tool-step', id: 'racp1', command: 'db query', result: 'tools are off', workspace: false, refused: 'disabled',
+    };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toMatchObject({ refused: 'disabled' });
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it.each([
+    ['missing id', { command: 'ls', result: '', workspace: true }],
+    ['empty id', { id: '', command: 'ls', result: '', workspace: true }],
+    ['missing command', { id: 'racp1', result: '', workspace: true }],
+    ['empty command', { id: 'racp1', command: '', result: '', workspace: true }],
+    ['non-string command', { id: 'racp1', command: 1, result: '', workspace: true }],
+    ['missing result', { id: 'racp1', command: 'ls', workspace: true }],
+    ['non-string result', { id: 'racp1', command: 'ls', result: 1, workspace: true }],
+    ['missing workspace', { id: 'racp1', command: 'ls', result: '' }],
+    ['non-boolean workspace', { id: 'racp1', command: 'ls', result: '', workspace: 'yes' }],
+    ['unknown refused flag', { id: 'racp1', command: 'ls', result: '', workspace: false, refused: 'blocked' }],
+    ['refused alongside a workspace run', { id: 'racp1', command: 'ls', result: '', workspace: true, refused: 'disabled' }],
+  ])('refuses %s', (_label, fields) => {
+    expect(decodeFrame(JSON.stringify({ type: 'acp-tool-step', ...fields })))
+      .toEqual({ error: 'Malformed remote frame "acp-tool-step".' });
+  });
+
+  it('drops undeclared fields', () => {
+    const raw = {
+      type: 'acp-tool-step', id: 'racp1', command: Buffer.from('ls').toString('base64'),
+      result: Buffer.from('done').toString('base64'), workspace: false, request: 3, extra: 'drop',
+    };
+    expect(decodeFrame(JSON.stringify(raw)))
+      .toEqual({ type: 'acp-tool-step', id: 'racp1', command: 'ls', result: 'done', workspace: false });
+  });
+});
+
 describe('frame codec', () => {
   it('ties filesystem request arguments to their operation', () => {
     const request: ClientFrame = {
@@ -93,7 +359,6 @@ describe('frame codec', () => {
         type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp'],
         env: { OPENCODE_CONFIG_CONTENT: '{"model":"google/gemini-3.1-flash-lite"}' }, offline: false,
       },
-      { type: 'acp-prompt', id: 'racp1', text: 'summarize this project' },
       { type: 'acp-close', id: 'racp1' },
       { type: 'acp-cancel', id: 'racp1' },
     ];
@@ -139,16 +404,14 @@ describe('frame codec', () => {
       { type: 'filesystem-event', session: 'files1', path: 'src' },
       { type: 'acp-ready', id: 'racp1', sandboxed: true },
       { type: 'acp-chunk', id: 'racp1', text: 'partial reply' },
-      { type: 'acp-end', id: 'racp1', stopReason: 'end_turn' },
       { type: 'acp-error', id: 'racp1', message: 'rate limited', fatal: false },
       { type: 'acp-error', id: 'racp1', message: 'ACP agent exited.', fatal: true },
     ];
     for (const frame of frames) expect(roundTrip(frame)).toEqual(frame);
   });
 
-  it('carries a prompt and a reply chunk through the base64 path intact', () => {
+  it('carries a reply chunk through the base64 path intact', () => {
     const text = '# heading\n\n```js\nconst x = `tick`;\n```\n\nnaïve — 🌍\n{"type":"kill"}';
-    expect(roundTrip({ type: 'acp-prompt', id: 'racp1', text })).toEqual({ type: 'acp-prompt', id: 'racp1', text });
     expect(roundTrip({ type: 'acp-chunk', id: 'racp1', text })).toEqual({ type: 'acp-chunk', id: 'racp1', text });
     expect(encodeFrame({ type: 'acp-chunk', id: 'racp1', text })).not.toContain('\n');
   });
@@ -189,6 +452,12 @@ describe('frame codec', () => {
   it('rejects a frame with an unknown type rather than ignoring it', () => {
     expect(decodeFrame(JSON.stringify({ type: 'exec', id: 'r1' }))).toEqual({
       error: expect.stringContaining('Unknown remote frame type "exec"'),
+    });
+    expect(decodeFrame(JSON.stringify({ type: 'acp-prompt', id: 'racp1', text: 'hi' }))).toEqual({
+      error: 'Unknown remote frame type "acp-prompt".',
+    });
+    expect(decodeFrame(JSON.stringify({ type: 'acp-end', id: 'racp1', stopReason: 'end_turn' }))).toEqual({
+      error: 'Unknown remote frame type "acp-end".',
     });
   });
 
@@ -306,8 +575,6 @@ describe('frame codec', () => {
     ['acp-open with an array sessionMeta', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], sessionMeta: [] }],
     ['acp-open with a null sessionMeta', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], sessionMeta: null }],
     ['acp-open with a string sessionMeta', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], sessionMeta: 'tools' }],
-    ['acp-prompt without an id', { type: 'acp-prompt', text: 'aGk=' }],
-    ['acp-prompt without string text', { type: 'acp-prompt', id: 'racp1', text: 7 }],
     ['acp-close without an id', { type: 'acp-close' }],
     ['acp-cancel without an id', { type: 'acp-cancel' }],
     ['acp-cancel empty id', { type: 'acp-cancel', id: '' }],
@@ -315,8 +582,6 @@ describe('frame codec', () => {
     ['acp-ready without an id', { type: 'acp-ready' }],
     ['acp-ready without sandbox state', { type: 'acp-ready', id: 'racp1' }],
     ['acp-chunk without string text', { type: 'acp-chunk', id: 'racp1', text: null }],
-    ['acp-end without a stop reason', { type: 'acp-end', id: 'racp1' }],
-    ['acp-end with an empty stop reason', { type: 'acp-end', id: 'racp1', stopReason: '' }],
     ['acp-error without a message', { type: 'acp-error', id: 'racp1', fatal: true }],
     ['acp-error without a fatal flag', { type: 'acp-error', id: 'racp1', message: 'gone' }],
     ['acp-error with a non-boolean fatal flag', { type: 'acp-error', id: 'racp1', message: 'gone', fatal: 'yes' }],
@@ -543,7 +808,8 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
     autonomous: true, effort: { level: 'high', model: 'google/gemini-3.1-flash-lite' },
     sessionMeta: { claudeCode: { options: { tools: [] } } },
   },
-  'acp-prompt': { type: 'acp-prompt', id: 'racp1', text: 'summarize this project' },
+  'acp-run': { type: 'acp-run', id: 'racp1', text: 'summarize this project', snapshot: { kind: 'agent', grants: ['file'], askUser: true } },
+  'acp-tool-result': { type: 'acp-tool-result', id: 'racp1', request: 0, output: 'first\nsecond' },
   'acp-close': { type: 'acp-close', id: 'racp1' },
   'acp-cancel': { type: 'acp-cancel', id: 'racp1' },
   'attach-result': { type: 'attach-result', accepted: true, truncated: true },
@@ -579,7 +845,12 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   },
   'acp-ready': { type: 'acp-ready', id: 'racp1', sandboxed: true },
   'acp-chunk': { type: 'acp-chunk', id: 'racp1', text: 'partial reply' },
-  'acp-end': { type: 'acp-end', id: 'racp1', stopReason: 'end_turn' },
+  'acp-turn': { type: 'acp-turn', id: 'racp1', phase: 'end', display: 'first\nsecond' },
+  'acp-tool-request': { type: 'acp-tool-request', id: 'racp1', request: 1, command: 'file read\nnotes.txt' },
+  'acp-tool-step': {
+    type: 'acp-tool-step', id: 'racp1', command: 'db query', result: 'command not granted', workspace: false, refused: 'disabled',
+  },
+  'acp-run-end': { type: 'acp-run-end', id: 'racp1', reason: 'answered' },
   'acp-error': { type: 'acp-error', id: 'racp1', message: 'rate limited', fatal: false },
   'acp-activity': { type: 'acp-activity', id: 'racp1', kind: 'thought', text: 'considering 🧭' },
   'acp-closed': { type: 'acp-closed', id: 'racp1', released: true },
@@ -694,8 +965,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 39', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(39);
+  it('is 40', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(40);
   });
 });
 
@@ -705,7 +976,7 @@ describe('protocol version', () => {
 describe('admitted frame types', () => {
   it('admits exactly the declared client frame types', () => {
     expect(Object.keys(CLIENT_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-cancel', 'acp-close', 'acp-open', 'acp-prompt', 'agent-resolve', 'attach', 'capture-request', 'clone-answer',
+      'acp-cancel', 'acp-close', 'acp-open', 'acp-run', 'acp-tool-result', 'agent-resolve', 'attach', 'capture-request', 'clone-answer',
       'filesystem-close', 'filesystem-open', 'filesystem-request',
       'input', 'kill', 'provision', 'resize', 'resume-ack', 'session-state', 'shutdown', 'spawn',
     ]);
@@ -713,7 +984,9 @@ describe('admitted frame types', () => {
 
   it('admits exactly the declared server frame types', () => {
     expect(Object.keys(SERVER_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-activity', 'acp-chunk', 'acp-closed', 'acp-end', 'acp-error', 'acp-ready', 'agent-resolve-result', 'attach-result', 'browser-exited', 'browser-started',
+      'acp-activity', 'acp-chunk', 'acp-closed', 'acp-error', 'acp-ready', 'acp-run-end',
+      'acp-tool-request', 'acp-tool-step', 'acp-turn',
+      'agent-resolve-result', 'attach-result', 'browser-exited', 'browser-started',
       'busy-transition', 'capture-reply', 'clone-offer', 'exit', 'filesystem-event', 'filesystem-reply', 'gate-event', 'name-in-use',
       'output', 'resume-cancel', 'resume-event', 'root-refused', 'session-state-result', 'shell-history', 'transcript', 'workspace-failed',
       'workspace-ready',

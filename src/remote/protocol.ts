@@ -209,7 +209,15 @@
 // parked session nobody can end: a sessions-tab terminate marks its attach, and the relay answers it
 // for a peer under any version by writing only an `attach` carrying nothing but `session`, then a
 // `shutdown`, and relaying nothing the local side sends (`./serve-detach-terminate.ts`). Both hosts also need the bundled ACP adapters, which the exact-version handshake already guarantees.
-export const REMOTE_PROTOCOL_VERSION = 39;
+// Version 40 moves janissary's ACP tool loop onto the far side. `acp-run` carries the prompt and its
+// per-prompt snapshot in place of `acp-prompt`, `acp-run-end` replaces `acp-end` as a run's terminal,
+// and `acp-turn`, `acp-tool-request`, `acp-tool-result`, and `acp-tool-step` add turn boundaries,
+// caller-tool round trips, and far-side steps; `acp-chunk` keeps carrying reply deltas. It also adds
+// the read-only `read-lines` operation that backs a typed `file read` on a remote tab. A version-39
+// remote would accept prompts and run no loop at all, so workspace tools would never run where the
+// workspace is while both ends looked healthy; the exact-version handshake refuses that pairing. A
+// peer parked under 39 is refused at relay time by its peer record, as for every earlier bump.
+export const REMOTE_PROTOCOL_VERSION = 40;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
@@ -241,7 +249,14 @@ function toWire(frame: RemoteFrame): Record<string, unknown> {
   if (frame.type === 'shell-history') {
     return { ...frame, runs: frame.runs.map((run) => ({ ...run, text: encodeText(run.text) })) };
   }
-  if (frame.type === 'acp-prompt' || frame.type === 'acp-chunk') return { ...frame, text: encodeText(frame.text) };
+  if (frame.type === 'acp-run') return { ...frame, text: encodeText(frame.text) };
+  if (frame.type === 'acp-turn' && frame.phase === 'end') return { ...frame, display: encodeText(frame.display) };
+  if (frame.type === 'acp-tool-result' && frame.output !== undefined) return { ...frame, output: encodeText(frame.output) };
+  if (frame.type === 'acp-tool-request') return { ...frame, command: encodeText(frame.command) };
+  if (frame.type === 'acp-tool-step') {
+    return { ...frame, command: encodeText(frame.command), result: encodeText(frame.result) };
+  }
+  if (frame.type === 'acp-chunk') return { ...frame, text: encodeText(frame.text) };
   if (frame.type === 'acp-activity') return { ...frame, text: encodeText(frame.text) };
   if (frame.type === 'gate-event' && frame.capture !== undefined) return { ...frame, capture: encodeText(frame.capture) };
   if (frame.type === 'resume-event' && frame.capture !== undefined) return { ...frame, capture: encodeText(frame.capture) };

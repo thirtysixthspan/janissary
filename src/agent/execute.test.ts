@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { AcpOptions } from '../acp/types.js';
@@ -54,9 +54,13 @@ describe('agent execution record capture', () => {
       return { prompt: vi.fn(), kill: vi.fn(), shutdown: async () => {}, cancel: async () => {} };
     });
     let listener: AcpSessionListener | undefined;
+    const sent: { type: string; [key: string]: unknown }[] = [];
     const channel = {
       attachAcp: (_id: string, value: AcpSessionListener) => { listener = value; }, detachAcp: vi.fn(),
-      send: (frame: { type: string }) => { if (frame.type === 'acp-close') listener?.onClosed(true); },
+      send: (frame: { type: string }) => {
+        sent.push(frame);
+        if (frame.type === 'acp-close') listener?.onClosed(true);
+      },
     } as unknown as RemoteChannel;
     let dependencies: AcpLoopDeps | undefined;
     let handlers: AcpLoopHandlers | undefined;
@@ -65,12 +69,15 @@ describe('agent execution record capture', () => {
       handlers = h;
       session.prompt(prompt, { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() });
     });
-    const execution = executeAgentRun(run, invocation, model, undefined, 'Parameters\nverbatim ', modelManagers() as never, remote ? { channel } : undefined);
+    const execution = executeAgentRun(run, invocation, model, undefined, 'Parameters\nverbatim ', modelManagers() as never, remote ? { channel, host: 'build-box' } : undefined);
     expect(records.window(run.recordId!)?.blocks[0].prompt).toBe(`${commandTools.agentPrimer(run.snapshot)}\nParameters\nverbatim `);
     if (remote) {
       expect(runAcpToolLoop).not.toHaveBeenCalled();
       listener!.onReady(true);
-      await vi.waitFor(() => expect(handlers).toBeDefined());
+      await vi.waitFor(() => expect(sent.some((frame) => frame.type === 'acp-run')).toBe(true));
+      expect(sent.find((frame) => frame.type === 'acp-run')).toMatchObject({
+        snapshot: { kind: 'agent', grants: ['help'], askUser: false },
+      });
       listener!.onActivity('thought', ' ');
       listener!.onActivity('tool', 'native tool');
     } else {
@@ -78,15 +85,34 @@ describe('agent execution record capture', () => {
       options!.onActivity?.({ sessionUpdate: 'tool_call', content: 'native tool' });
     }
     vi.spyOn(commandTools, 'runGrantedAgentCommand').mockResolvedValue('host result');
-    await expect(dependencies!.runCommand('help')).resolves.toBe('host result');
-    handlers!.endTurn('Final answer');
-    handlers!.finished('answered', Infinity);
+    if (remote) {
+      listener!.onToolRequest({ type: 'acp-tool-request', id: 'agent', request: 1, command: 'help' });
+      await vi.waitFor(() => expect(sent.at(-1)).toMatchObject({
+        type: 'acp-tool-result', request: 1, output: 'host result',
+      }));
+      listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'start', first: true });
+      listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'end', display: 'Final answer' });
+      listener!.onRunEnd('answered');
+    } else {
+      await expect(dependencies!.runCommand('help')).resolves.toBe('host result');
+      handlers!.ranCommand('help', 'host result');
+      handlers!.endTurn('Final answer');
+      handlers!.finished('answered', Infinity);
+    }
     const result = await execution;
     run.setStatus('Cleaning up', result.response);
     await run.finish(result.status);
-    if (remote) listener!.onActivity('message', 'late');
-    else options!.onActivity?.({ sessionUpdate: 'agent_message_chunk', content: 'late' });
-    await expect(dependencies!.runCommand('help')).rejects.toThrow('Agent terminated.');
+    if (remote) {
+      listener!.onActivity('message', 'late');
+      const results = sent.filter((frame) => frame.type === 'acp-tool-result').length;
+      listener!.onToolRequest({ type: 'acp-tool-request', id: 'agent', request: 2, command: 'help' });
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(sent.filter((frame) => frame.type === 'acp-tool-result')).toHaveLength(results);
+    } else {
+      options!.onActivity?.({ sessionUpdate: 'agent_message_chunk', content: 'late' });
+      await expect(dependencies!.runCommand('help')).rejects.toThrow('Agent terminated.');
+    }
     expect(records.window(run.recordId!)).toMatchObject({ status: 'Completed', blocks: [{ answer: 'Final answer', entries: [
       { kind: 'thought', text: ' ' }, { kind: 'tool', text: 'native tool' },
       { kind: 'tool', text: 'help' }, { kind: 'tool', text: 'host result' },
@@ -112,6 +138,173 @@ function notificationManagers() {
   };
   return { managers, callerTab, feed };
 }
+
+describe('agent shared driver host', () => {
+  let root: string;
+  let run: AgentRun;
+  let invocation: CommandInvocationContext;
+  let dependencies: AcpLoopDeps;
+  let handlers: AcpLoopHandlers;
+  let listener: AcpSessionListener | undefined;
+  let sent: { type: string; [key: string]: unknown }[];
+  const channel = {
+    attachAcp: (_id: string, value: AcpSessionListener) => { listener = value; },
+    detachAcp: vi.fn(),
+    send: (frame: { type: string }) => {
+      sent.push(frame);
+      if (frame.type === 'acp-close') listener?.onClosed(true);
+    },
+  } as unknown as RemoteChannel;
+
+  beforeEach(() => {
+    root = mkdtempSync(path.join(tmpdir(), 'agent-workspace-'));
+    mkdirSync(path.join(root, 'notes'));
+    writeFileSync(path.join(root, 'notes/a.md'), 'workspace\n');
+    const caller = { label: 'janus', incarnation: 'one', cwd: '/distinct-caller', context: [] };
+    run = new AgentRun(caller, { taskPath: 'task.md', taskText: 'Read', skills: [], grants: ['file', 'db', 'question'] }, undefined, undefined, root);
+    invocation = { runId: run.id, invocationId: 'one', caller, signal: run.abortController.signal };
+    connectAcp.mockReturnValue({ prompt: vi.fn(), shutdown: async () => {} });
+    sandboxWillConfine.mockReturnValue(true);
+    runAcpToolLoop.mockClear();
+    runAcpToolLoop.mockImplementation((_session, _prompt, deps, events) => { dependencies = deps; handlers = events; });
+    sent = [];
+    listener = undefined;
+  });
+  afterEach(async () => { await run.finish('completed'); rmSync(root, { recursive: true, force: true }); vi.restoreAllMocks(); });
+
+  function start(remote = false) {
+    const execution = executeAgentRun(run, invocation, OPENCODE_MODELS[0], undefined, '', modelManagers() as never, remote ? { channel, host: 'build-box' } : undefined);
+    return execution;
+  }
+
+  function finish() {
+    handlers.endTurn('Done');
+    handlers.finished('answered', Infinity);
+  }
+
+  it.each(['file read notes/a.md', '/file read notes/a.md'])('reads the execution workspace through %s', async (command) => {
+    const execution = start();
+    const activity = vi.fn();
+    run.record = { activity } as unknown as AgentRecordFeed;
+    const result = await dependencies.runCommand(command);
+    handlers.ranCommand(command, result);
+    expect(result).toBe('1\tworkspace');
+    expect(activity.mock.calls).toEqual([['tool', command], ['tool', result]]);
+    finish();
+    await execution;
+    run.record = undefined;
+  });
+
+  it('refuses a read without the file grant and records its result', async () => {
+    run.setSnapshot({ ...run.snapshot, grants: [] });
+    const execution = start();
+    const activity = vi.fn();
+    run.record = { activity } as unknown as AgentRecordFeed;
+    const command = 'file read notes/a.md';
+    const result = await dependencies.runCommand(command);
+    handlers.ranCommand(command, result);
+    expect(result).toBe('Agent: command not permitted: file read notes/a.md.');
+    expect(activity.mock.calls).toEqual([['tool', command], ['tool', result]]);
+    finish();
+    await execution;
+    run.record = undefined;
+  });
+
+  it('dispatches caller commands and changes status while a question is pending', async () => {
+    const dispatch = vi.spyOn(commandTools, 'runGrantedAgentCommand').mockResolvedValue('db result');
+    const execution = start();
+    await expect(dependencies.runCommand('db sqlite list')).resolves.toBe('db result');
+    expect(dispatch).toHaveBeenCalledWith('db sqlite list', run.snapshot, expect.anything(), invocation);
+    const question = Promise.withResolvers<string>();
+    dispatch.mockReturnValue(question.promise);
+    const pending = dependencies.runCommand('question ask "x"');
+    expect(run.view().status).toBe('Waiting for answer');
+    question.resolve('answer');
+    await expect(pending).resolves.toBe('answer');
+    expect(run.view().status).toBe('Running');
+    finish();
+    await execution;
+  });
+
+  it('sends the agent snapshot to the far side and renders its workspace step', async () => {
+    connectAcp.mockClear();
+    const execution = start(true);
+    listener!.onReady(true);
+    await vi.waitFor(() => expect(sent.some((frame) => frame.type === 'acp-run')).toBe(true));
+    expect(sent.find((frame) => frame.type === 'acp-run')).toMatchObject({
+      text: expect.stringContaining('Read'),
+      snapshot: { kind: 'agent', grants: ['file', 'db', 'question'], askUser: false },
+    });
+    expect(connectAcp).not.toHaveBeenCalled();
+    expect(runAcpToolLoop).not.toHaveBeenCalled();
+
+    const activity = vi.fn();
+    run.record = { activity } as unknown as AgentRecordFeed;
+    listener!.onToolStep({
+      type: 'acp-tool-step', id: 'agent', command: 'file read notes/a.md', result: '1\tworkspace', workspace: true,
+    });
+    expect(activity.mock.calls).toEqual([['tool', '[build-box] file read notes/a.md'], ['tool', '[build-box] 1\tworkspace']]);
+
+    listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'start', first: true });
+    listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'end', display: 'Done' });
+    listener!.onRunEnd('answered');
+    await execution;
+    run.record = undefined;
+  });
+
+  it('runs a remote run\'s caller tool locally and writes its result back', async () => {
+    const dispatch = vi.spyOn(commandTools, 'runGrantedAgentCommand').mockResolvedValue('db result');
+    const execution = start(true);
+    listener!.onReady(true);
+    await vi.waitFor(() => expect(sent.some((frame) => frame.type === 'acp-run')).toBe(true));
+
+    listener!.onToolRequest({ type: 'acp-tool-request', id: 'agent', request: 7, command: 'db sqlite list' });
+    await vi.waitFor(() => expect(sent.at(-1)).toMatchObject({
+      type: 'acp-tool-result', id: 'agent', request: 7, output: 'db result',
+    }));
+    expect(dispatch).toHaveBeenCalledWith('db sqlite list', run.snapshot, expect.anything(), invocation);
+
+    listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'start', first: true });
+    listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'end', display: 'Done' });
+    listener!.onRunEnd('answered');
+    await execution;
+  });
+
+  it('leaves a remote run\'s caller-side step untagged', async () => {
+    vi.spyOn(commandTools, 'runGrantedAgentCommand').mockResolvedValue('db result');
+    const execution = start(true);
+    listener!.onReady(true);
+    await vi.waitFor(() => expect(sent.some((frame) => frame.type === 'acp-run')).toBe(true));
+    const activity = vi.fn();
+    run.record = { activity } as unknown as AgentRecordFeed;
+
+    listener!.onToolRequest({ type: 'acp-tool-request', id: 'agent', request: 9, command: 'db sqlite list' });
+    await vi.waitFor(() => expect(sent.at(-1)).toMatchObject({
+      type: 'acp-tool-result', id: 'agent', request: 9, output: 'db result',
+    }));
+
+    expect(activity.mock.calls).toEqual([['tool', 'db sqlite list'], ['tool', 'db result']]);
+
+    listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'start', first: true });
+    listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'end', display: 'Done' });
+    listener!.onRunEnd('answered');
+    await execution;
+    run.record = undefined;
+  });
+
+  it('drops tool records and workspace work after termination', async () => {
+    const execution = start();
+    const activity = vi.fn();
+    run.record = { activity } as unknown as AgentRecordFeed;
+    run.abortController.abort();
+    expect(() => dependencies.runCommand('file read notes/a.md')).toThrow('Agent terminated.');
+    handlers.ranCommand('file read notes/a.md', 'late');
+    handlers.endTurn('late');
+    expect(activity).not.toHaveBeenCalled();
+    await expect(execution).resolves.toMatchObject({ status: 'terminated', response: 'Agent terminated.' });
+    run.record = undefined;
+  });
+});
 
 describe('executeAgentRun', () => {
   it.each([false, true])('reports the local confinement result: %s', async (sandboxed) => {
@@ -145,20 +338,18 @@ describe('executeAgentRun', () => {
   });
 
   it.each([false, true])('uses remote readiness confinement state: %s', async (sandboxed) => {
-    runAcpToolLoop.mockClear();
+    runAcpToolLoop.mockReset();
     sandboxWillConfine.mockClear();
     let listener: AcpSessionListener | undefined;
+    const sent: { type: string; [key: string]: unknown }[] = [];
     const channel = {
       attachAcp: (_id: string, value: AcpSessionListener) => { listener = value; },
       detachAcp: vi.fn(),
       send: (frame: { type: string }) => {
+        sent.push(frame);
         if (frame.type === 'acp-close') listener?.onClosed(true);
       },
     } as unknown as RemoteChannel;
-    runAcpToolLoop.mockImplementation((_session, _prompt, _dependencies, handlers) => {
-      handlers.endTurn('Finished.');
-      handlers.finished('answered', Infinity);
-    });
     const model = OPENCODE_MODELS[0];
     if (!model) throw new Error('No OpenCode model is available for this test.');
     const caller = { label: 'janus', incarnation: 'caller-1', cwd: '/source', context: [] };
@@ -167,13 +358,18 @@ describe('executeAgentRun', () => {
     const invocation: CommandInvocationContext = {
       runId: run.id, invocationId: 'invocation-1', caller, signal: run.abortController.signal,
     };
-    const execution = executeAgentRun(run, invocation, model, undefined, '', managers as never, { channel });
+    const execution = executeAgentRun(run, invocation, model, undefined, '', managers as never, { channel, host: 'build-box' });
 
     await vi.waitFor(() => expect(listener).toBeDefined());
     listener?.onReady(sandboxed);
+    await vi.waitFor(() => expect(sent.some((frame) => frame.type === 'acp-run')).toBe(true));
+    listener?.onTurn({ type: 'acp-turn', id: 'agent', phase: 'start', first: true });
+    listener?.onTurn({ type: 'acp-turn', id: 'agent', phase: 'end', display: 'Finished.' });
+    listener?.onRunEnd('answered');
     await expect(execution).resolves.toMatchObject({ status: 'completed', response: 'Finished.' });
     await run.finish('completed');
 
+    expect(runAcpToolLoop).not.toHaveBeenCalled();
     expect(managers.notifications.all.map(({ message }) => message)).toEqual(
       sandboxed ? [] : ['Agent: sandboxing is disabled.'],
     );
@@ -330,7 +526,7 @@ describe('executeAgentRun failure paths', () => {
     vi.useFakeTimers();
     try {
       const { run, invocation } = newRun();
-      const execution = executeAgentRun(run, invocation, openCodeModel(), undefined, '', modelManagers() as never, { channel: silentChannel() });
+      const execution = executeAgentRun(run, invocation, openCodeModel(), undefined, '', modelManagers() as never, { channel: silentChannel(), host: 'build-box' });
       const outcome = expect(execution).rejects.toThrow('Agent: remote agent readiness timed out.');
       await vi.advanceTimersByTimeAsync(15_000);
       await outcome;
@@ -342,7 +538,7 @@ describe('executeAgentRun failure paths', () => {
 
   it('ends a remote run terminated while its agent is still getting ready', async () => {
     const { run, invocation } = newRun();
-    const execution = executeAgentRun(run, invocation, openCodeModel(), undefined, '', modelManagers() as never, { channel: silentChannel() });
+    const execution = executeAgentRun(run, invocation, openCodeModel(), undefined, '', modelManagers() as never, { channel: silentChannel(), host: 'build-box' });
     run.abortController.abort();
     await expect(execution).rejects.toThrow('Agent terminated.');
     expect(runAcpToolLoop).not.toHaveBeenCalled();

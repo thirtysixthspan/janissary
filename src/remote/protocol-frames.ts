@@ -5,6 +5,7 @@ import type { ResumeReset } from '../harness/auto-resume.js';
 import type { HistoryStep } from '../file-navigator/moves.js';
 import type { AgentSnapshot } from '../agent/types.js';
 import type { AcpActivityKind } from '../acp/activity.js';
+import type { AcpRunSnapshot } from '../acp/types.js';
 import type { SearchRequest } from '../protocol.js';
 import type { DiffSource } from '../plugins/diff/shared.js';
 
@@ -15,7 +16,7 @@ import type { DiffSource } from '../plugins/diff/shared.js';
 
 export type RemoteFilesystemOperation =
   | 'read-directory' | 'stat' | 'watch' | 'unwatch' | 'git' | 'git-pull' | 'git-commit' | 'search'
-  | 'search-text' | 'read-file' | 'write-file' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
+  | 'search-text' | 'read-file' | 'read-lines' | 'write-file' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
   | 'create-file' | 'create-directory' | 'replay' | 'change-set';
 
 // The five activity kinds the ACP mapping produces (`../acp/activity.ts`), which is what travels.
@@ -31,6 +32,7 @@ export type RemoteFilesystemArgumentsByOperation = {
   search: Record<string, never>;
   'search-text': SearchRequest & { root: string };
   'read-file': { path: string };
+  'read-lines': { path: string; offset?: number; limit?: number };
   'write-file': { path: string; content: string; expectedHash?: string };
   move: { from: string; to: string; overwrite?: boolean };
   'move-many': { sources: string[]; destination: string; policy?: 'overwrite-all' | 'skip-conflicts' };
@@ -143,16 +145,18 @@ export type ClientFrame =
   | { type: 'filesystem-open'; session: string }
   | { type: 'filesystem-close'; session: string }
   | { type: 'agent-resolve'; id: string; task: string; skills: string[] }
-  // The ACP family: a remote tab's ACP client is hosted by the far side, so what crosses here
-  // is prompts and reply text, never JSON-RPC. The local side still chooses which agent and model
-  // run, which is why the open frame names the command rather than the remote deciding for itself.
+  // The ACP family: a remote tab's ACP client is hosted by the far side, so what crosses here is
+  // runs, their turn and tool traffic, and reply text, never JSON-RPC. The local side still chooses
+  // which agent and model run, which is why the open frame names the command rather than the remote
+  // deciding for itself.
   | {
     type: 'acp-open'; id: string; command: string; args: string[];
     env?: Record<string, string>; offline?: boolean;
     autonomous?: true; effort?: { level: string; model: string };
     sessionMeta?: Record<string, unknown>;
   }
-  | { type: 'acp-prompt'; id: string; text: string }
+  | { type: 'acp-run'; id: string; text: string; snapshot: AcpRunSnapshot }
+  | { type: 'acp-tool-result'; id: string; request: number; output?: string; error?: string }
   | { type: 'acp-cancel'; id: string }
   | { type: 'acp-close'; id: string };
 
@@ -249,7 +253,26 @@ export type ServerFrame =
   // knows whether its workspace was actually confined.
   | { type: 'acp-ready'; id: string; sandboxed: boolean }
   | { type: 'acp-chunk'; id: string; text: string }
-  | { type: 'acp-end'; id: string; stopReason: string }
+  // A turn's boundaries, so the local side can open and close a transcript entry. `first` is true
+  // only for a run's opening turn. `display` is the turn's final text with the extracted command
+  // removed, which cannot be rebuilt from `acp-chunk` deltas: chunks carry provider deltas, and the
+  // removal happens once per turn. An empty `display` is ordinary when a reply was only a command.
+  | { type: 'acp-turn'; id: string; phase: 'start'; first: boolean }
+  | { type: 'acp-turn'; id: string; phase: 'end'; display: string }
+  // A far-side loop's caller step, run by the local side because the tool belongs to it. `request`
+  // is the run's counter value, scoped by `id`, which the local side's `acp-tool-result` echoes back
+  // so the pair can be matched. The local side records and displays that step itself, so the far
+  // side sends no `acp-tool-step` for it.
+  | { type: 'acp-tool-request'; id: string; request: number; command: string }
+  // A step the far side completed on its own: a workspace-tool run (`workspace: true`) or a gate
+  // refusal (`workspace: false`). `refused` is present only as `'disabled'`, for a disabled or
+  // agent-off refusal. `command` and `result` are base64-encoded free text, and an empty `result` is
+  // a successful step, not a missing one.
+  | { type: 'acp-tool-step'; id: string; command: string; result: string; workspace: boolean; refused?: 'disabled' }
+  // A run's terminal frame. `answered` and `capped` are the loop's `finished` reasons; `cancelled`
+  // is the far side's cancellation path. Only a `core` run can be capped, and both sides share
+  // `CORE_MAX_STEPS`, so no step count travels.
+  | { type: 'acp-run-end'; id: string; reason: 'answered' | 'capped' | 'cancelled' }
   | { type: 'acp-activity'; id: string; kind: RemoteAcpActivityKind; text: string }
   | { type: 'acp-closed'; id: string; released: boolean }
   // `fatal` distinguishes a session that no longer exists (a failed spawn, a dead agent) from a
@@ -291,7 +314,7 @@ export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
   provision: true, 'clone-answer': true, spawn: true, input: true, resize: true, kill: true, 'capture-request': true, 'resume-ack': true,
   'filesystem-open': true, 'filesystem-close': true, 'filesystem-request': true,
   'agent-resolve': true,
-  'acp-open': true, 'acp-prompt': true, 'acp-cancel': true, 'acp-close': true,
+  'acp-open': true, 'acp-run': true, 'acp-tool-result': true, 'acp-cancel': true, 'acp-close': true,
 };
 export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'attach-result': true, 'session-state-result': true, 'clone-offer': true, 'root-refused': true,
@@ -300,5 +323,7 @@ export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'resume-cancel': true,
   'filesystem-reply': true, 'filesystem-event': true,
   'agent-resolve-result': true,
-  'acp-ready': true, 'acp-chunk': true, 'acp-end': true, 'acp-activity': true, 'acp-closed': true, 'acp-error': true,
+  'acp-ready': true, 'acp-chunk': true, 'acp-turn': true, 'acp-tool-request': true, 'acp-tool-step': true,
+  'acp-run-end': true,
+  'acp-activity': true, 'acp-closed': true, 'acp-error': true,
 };

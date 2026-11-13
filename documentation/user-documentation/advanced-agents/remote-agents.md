@@ -198,7 +198,7 @@ The command implies a remote workspace even if you include `--no-workspace`. It 
 
 ## Querying remote ACP
 
-Use `ask <prompt>` in a remote shell tab to query a core ACP connection running against that host's workspace — see [ACP agents](/user-documentation/advanced-agents/acp-agent). The `db` and `browser` commands it runs on its own still act on your machine, not the remote.
+Use `ask <prompt>` in a remote shell tab to query a core ACP connection running against that host's workspace — see [ACP agents](/user-documentation/advanced-agents/acp-agent). The tool loop runs on the remote host too, so `file read` reads that host's workspace clone. The `db`, `browser`, and `question` commands it runs on its own still act on your machine, not the remote, and their results come back to it.
 
 For this to work, `opencode` has to be installed and authenticated on the remote — or an OpenCode or Gemini API key configured in your local project, which is forwarded across the connection the same way the other credentials are.
 
@@ -212,4 +212,4 @@ agent on devbox execute fix the tests
 
 The host resolves the task and requested skills from its workspace and Janissary installation. It must already have `janus` available and accept non-interactive SSH authentication, since an autonomous run has no tab in which to answer a password prompt. A missing host, failed authentication, unsupported protocol, or task-resolution error fails the run. Janissary does not fall back to running it locally.
 
-If the host matches an established remote workspace and you leave off a path, the run shares that workspace. Otherwise, Janissary opens a run-only SSH connection and provisions the project there. The selected agent and model run remotely, but the autonomous tool loop stays on your machine. Its `db`, `browser`, and `question` commands use your local app and files. Closing the caller, detaching its remote session, or losing the connection stops the run. The remote agent's close is acknowledged before cleanup; if that acknowledgment is missing, the result includes `Cleanup warning: Remote agent close was not acknowledged.`
+If the host matches an established remote workspace and you leave off a path, the run shares that workspace. Otherwise, Janissary opens a run-only SSH connection and provisions the project there. The selected agent and model run remotely, and the autonomous tool loop runs beside them on the remote host. `file read` reads the run's remote workspace. Its `db`, `browser`, and `question` commands use your local app and files, and other granted commands still run and are authorized locally. Closing the caller, detaching its remote session, or losing the connection stops the run. The remote agent's close is acknowledged before cleanup; if that acknowledgment is missing, the result includes `Cleanup warning: Remote agent close was not acknowledged.`

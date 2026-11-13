@@ -28,6 +28,7 @@ import { command as send } from './send.js';
 import { command as queue } from './queue.js';
 import { command as rename } from './rename.js';
 import { command as search } from './search.js';
+import { command as file } from './file.js';
 import { command as files } from './files.js';
 import { command as notifications } from './notifications.js';
 import { command as notify } from './notify.js';
@@ -74,6 +75,7 @@ export const coreCommands: Command[] = [
   queue,
   rename,
   search,
+  file,
   files,
   notifications,
   notify,

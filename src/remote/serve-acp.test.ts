@@ -1,5 +1,8 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { AcpOptions, PromptHandlers } from '../acp/types.js';
+import type { AcpOptions, AcpRunSnapshot, AcpRunSnapshotRow, PromptHandlers } from '../acp/types.js';
 import type { ServerFrame } from './protocol-frames.js';
 import * as confinement from '../sandbox/confinement.js';
 
@@ -28,18 +31,36 @@ const OPEN = {
   env: { OPENCODE_CONFIG_CONTENT: '{"model":"google/gemini-3.1-flash-lite"}' }, offline: false,
 } as const;
 
-function makeAcp(tokens = {}) {
+function makeAcp(tokens = {}, workspace = WORKSPACE) {
   const frames: ServerFrame[] = [];
-  const acp = new RemoteAcp((frame) => { frames.push(frame); }, WORKSPACE, tokens);
+  const acp = new RemoteAcp((frame) => { frames.push(frame); }, workspace, tokens);
   return { acp, frames };
 }
+
+type CoreSnapshot = Extract<AcpRunSnapshot, { kind: 'core' }>;
+
+function coreSnapshot(
+  role: 'ask' | 'tell', grants: string[], rows: AcpRunSnapshotRow[] = [], withoutTools = false,
+): CoreSnapshot {
+  return { kind: 'core', role, roleName: role, grants, rows, withoutTools };
+}
+
+const RUN_FRAME = {
+  type: 'acp-run', id: 'racp1', text: 'do it',
+  snapshot: coreSnapshot('tell', ['file read', 'db sqlite query']),
+} as const;
+
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 // The handlers `RemoteAcp` gave the faked session for its most recent prompt.
 function lastHandlers(): PromptHandlers {
   return acpMock.prompt.mock.calls.at(-1)![1] as PromptHandlers;
 }
 
+let workspace: string;
+
 beforeEach(() => {
+  workspace = mkdtempSync(path.join(tmpdir(), 'janus-serve-acp-'));
   vi.spyOn(confinement, 'sandboxWillConfine').mockReturnValue(true);
   acpMock.options.length = 0;
   acpMock.prompt.mockReset();
@@ -48,7 +69,10 @@ beforeEach(() => {
   acpMock.cancel.mockReset().mockResolvedValue(undefined);
 });
 
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  rmSync(workspace, { recursive: true, force: true });
+  vi.useRealTimers();
+});
 
 describe('RemoteAcp — opening a session', () => {
   it('emits a ready frame once the handshake completes', () => {
@@ -163,23 +187,6 @@ describe('RemoteAcp — opening a session', () => {
 });
 
 describe('RemoteAcp — prompting', () => {
-  it('delegates cancellation to a live addressed holder and preserves its original terminal frame', async () => {
-    const { acp, frames } = makeAcp();
-    acp.open(OPEN);
-    acp.prompt({ type: 'acp-prompt', id: 'racp1', text: 'held' });
-    acp.cancel('missing');
-    acp.cancel('racp1');
-    expect(acpMock.cancel).toHaveBeenCalledOnce();
-    expect(frames).toEqual([]);
-    lastHandlers().onEnd('cancelled');
-    expect(frames).toEqual([{ type: 'acp-end', id: 'racp1', stopReason: 'cancelled' }]);
-    acp.prompt({ type: 'acp-prompt', id: 'racp1', text: 'next' });
-    expect(acpMock.prompt).toHaveBeenCalledTimes(2);
-    await acp.close('racp1');
-    acp.cancel('racp1');
-    expect(acpMock.cancel).toHaveBeenCalledOnce();
-  });
-
   it('contains cancellation rejection as a session-local fatal error', async () => {
     const { acp, frames } = makeAcp();
     acp.open(OPEN);
@@ -188,72 +195,293 @@ describe('RemoteAcp — prompting', () => {
     await Promise.resolve();
     expect(frames).toEqual([{ type: 'acp-error', id: 'racp1', message: 'ACP: cancellation failed: write failed', fatal: true }]);
   });
-  it('emits a chunk frame per chunk and an end frame on completion', () => {
-    const { acp, frames } = makeAcp();
-    acp.open(OPEN);
-
-    acp.prompt({ type: 'acp-prompt', id: 'racp1', text: 'summarize this' });
-    lastHandlers().onChunk('first ');
-    lastHandlers().onChunk('second');
-    lastHandlers().onEnd('end_turn');
-
-    expect(acpMock.prompt.mock.calls[0][0]).toBe('summarize this');
-    expect(frames).toEqual([
-      { type: 'acp-chunk', id: 'racp1', text: 'first ' },
-      { type: 'acp-chunk', id: 'racp1', text: 'second' },
-      { type: 'acp-end', id: 'racp1', stopReason: 'end_turn' },
-    ]);
-  });
-
   // The split the whole design rests on. A rate limit clears on its own, so the session keeps its
   // accumulated conversation; a dead agent does not, so the local side must forget it.
-  it('emits a non-fatal error for a failed prompt and a fatal one for a dead session', () => {
+  it('emits a non-fatal error for a failed run and a fatal one for a dead session', () => {
     const { acp, frames } = makeAcp();
     acp.open(OPEN);
-    acp.prompt({ type: 'acp-prompt', id: 'racp1', text: 'hi' });
+    acp.run(RUN_FRAME);
 
     lastHandlers().onError('rate limited');
     acpMock.options[0].onError('ACP agent exited.');
 
-    expect(frames).toEqual([
+    expect(frames.filter((frame) => frame.type === 'acp-error')).toEqual([
       { type: 'acp-error', id: 'racp1', message: 'rate limited', fatal: false },
       { type: 'acp-error', id: 'racp1', message: 'ACP agent exited.', fatal: true },
     ]);
   });
+});
 
-  // Silently dropping it would leave the local side waiting on a reply that is never coming.
-  it('emits a fatal error for a prompt addressed to an unknown session', () => {
+describe('RemoteAcp — running', () => {
+  it('runs a live session end to end and feeds a caller result into the next prompt', async () => {
+    writeFileSync(path.join(workspace, 'a.md'), 'one\ntwo\n');
+    const { acp, frames } = makeAcp({}, workspace);
+    acp.open(OPEN);
+
+    acp.run(RUN_FRAME);
+
+    lastHandlers().onChunk('file read a.md');
+    lastHandlers().onEnd('end_turn');
+    await flush();
+
+    expect(frames.filter((frame) => frame.type === 'acp-tool-step')).toEqual([
+      { type: 'acp-tool-step', id: 'racp1', command: 'file read a.md', result: '1\tone\n2\ttwo', workspace: true },
+    ]);
+
+    lastHandlers().onChunk('db sqlite query movies SELECT 1');
+    lastHandlers().onEnd('end_turn');
+    await flush();
+
+    expect(frames.filter((frame) => frame.type === 'acp-tool-request')).toEqual([
+      { type: 'acp-tool-request', id: 'racp1', request: 1, command: 'db sqlite query movies SELECT 1' },
+    ]);
+
+    acp.toolResult({ type: 'acp-tool-result', id: 'racp1', request: 1, output: '42' });
+    await flush();
+
+    expect(acpMock.prompt.mock.calls[2][0]).toContain('Output of `db sqlite query movies SELECT 1`:\n42');
+
+    lastHandlers().onChunk('Done.');
+    lastHandlers().onEnd('end_turn');
+    await flush();
+
+    expect(frames.at(-1)).toEqual({ type: 'acp-run-end', id: 'racp1', reason: 'answered' });
+  });
+
+  it('refuses a run for a missing or closed session', async () => {
     const { acp, frames } = makeAcp();
 
-    acp.prompt({ type: 'acp-prompt', id: 'racp9', text: 'hi' });
+    acp.run({ ...RUN_FRAME, id: 'racp9' });
 
     expect(frames).toEqual([
       { type: 'acp-error', id: 'racp9', message: 'No remote ACP session is open.', fatal: true },
     ]);
+
+    acp.open(OPEN);
+    await acp.close('racp1');
+    frames.length = 0;
+
+    acp.run(RUN_FRAME);
+
+    expect(frames).toEqual([
+      { type: 'acp-error', id: 'racp1', message: 'No remote ACP session is open.', fatal: true },
+    ]);
     expect(acpMock.prompt).not.toHaveBeenCalled();
   });
 
-  it('emits a fatal error for a prompt addressed to an id that was closed', () => {
+  it('refuses a second run while the first is still in flight', () => {
     const { acp, frames } = makeAcp();
     acp.open(OPEN);
-    acp.close('racp1');
 
-    acp.prompt({ type: 'acp-prompt', id: 'racp1', text: 'hi' });
+    acp.run(RUN_FRAME);
+    acp.run(RUN_FRAME);
 
-    expect(frames.at(-1)).toEqual({ type: 'acp-error', id: 'racp1', message: 'No remote ACP session is open.', fatal: true });
+    expect(frames.filter((frame) => frame.type === 'acp-error')).toEqual([
+      { type: 'acp-error', id: 'racp1', message: 'ACP: a prompt is already running.', fatal: false },
+    ]);
+    expect(acpMock.prompt).toHaveBeenCalledOnce();
   });
 
-  // Two tabs sharing one channel: each prompt reaches its own agent, and each reply carries the id
-  // that routes it back to the tab that asked.
-  it('routes a prompt to the session its id names', () => {
+  it('ignores a tool result for a live session with no run and after its run has ended', async () => {
     const { acp, frames } = makeAcp();
     acp.open(OPEN);
-    acp.open({ ...OPEN, id: 'racp2' });
 
-    acp.prompt({ type: 'acp-prompt', id: 'racp2', text: 'hi' });
+    expect(() => acp.toolResult({ type: 'acp-tool-result', id: 'racp1', request: 1, output: '42' })).not.toThrow();
+    expect(frames).toEqual([]);
+
+    acp.run(RUN_FRAME);
+    lastHandlers().onChunk('Done.');
     lastHandlers().onEnd('end_turn');
+    await flush();
+    expect(frames.at(-1)).toEqual({ type: 'acp-run-end', id: 'racp1', reason: 'answered' });
 
-    expect(frames).toEqual([{ type: 'acp-end', id: 'racp2', stopReason: 'end_turn' }]);
+    const before = frames.length;
+    expect(() => acp.toolResult({ type: 'acp-tool-result', id: 'racp1', request: 1, output: 'late' })).not.toThrow();
+    expect(frames).toHaveLength(before);
+  });
+
+  it('admits another run after the first ends with acp-run-end', async () => {
+    const { acp } = makeAcp();
+    acp.open(OPEN);
+
+    acp.run(RUN_FRAME);
+    lastHandlers().onChunk('Done.');
+    lastHandlers().onEnd('end_turn');
+    await flush();
+
+    acp.run(RUN_FRAME);
+
+    expect(acpMock.prompt).toHaveBeenCalledTimes(2);
+  });
+
+  it('admits another run after a caller result ends the first with acp-error', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    acp.run({ ...RUN_FRAME, snapshot: coreSnapshot('tell', ['db sqlite query']) });
+
+    lastHandlers().onChunk('db sqlite query movies SELECT 1');
+    lastHandlers().onEnd('end_turn');
+    await flush();
+
+    acp.toolResult({ type: 'acp-tool-result', id: 'racp1', request: 1, error: 'database unavailable' });
+    await flush();
+
+    expect(frames.at(-1)).toEqual({ type: 'acp-error', id: 'racp1', message: 'database unavailable', fatal: false });
+
+    acp.run(RUN_FRAME);
+
+    expect(acpMock.prompt).toHaveBeenCalledTimes(2);
+  });
+
+  it('leaves no stale run handle when the loop finishes during startRemoteLoop', () => {
+    const { acp } = makeAcp();
+    acp.open(OPEN);
+    acpMock.prompt.mockImplementation((_text: string, handlers: PromptHandlers) => {
+      handlers.onChunk('Done.');
+      handlers.onEnd('end_turn');
+    });
+
+    acp.run(RUN_FRAME);
+    acp.run(RUN_FRAME);
+
+    expect(acpMock.prompt).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('RemoteAcp — cancelling, closing, and losing a run', () => {
+  it('cancels a running loop only after the provider cancellation settles', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    const cancellation = Promise.withResolvers<void>();
+    acpMock.cancel.mockReturnValue(cancellation.promise);
+    acp.run(RUN_FRAME);
+
+    acp.cancel('racp1');
+    await flush();
+    expect(frames.filter((frame) => frame.type === 'acp-run-end')).toEqual([]);
+    expect(acpMock.cancel).toHaveBeenCalledOnce();
+
+    cancellation.resolve();
+    await flush();
+    expect(frames.filter((frame) => frame.type === 'acp-run-end')).toEqual([
+      { type: 'acp-run-end', id: 'racp1', reason: 'cancelled' },
+    ]);
+
+    const before = frames.length;
+    const prompts = acpMock.prompt.mock.calls.length;
+    lastHandlers().onEnd('cancelled');
+    await flush();
+
+    expect(frames).toHaveLength(before);
+    expect(acpMock.prompt).toHaveBeenCalledTimes(prompts);
+  });
+
+  it('cancels between turns with a caller result pending', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    acp.run({ ...RUN_FRAME, snapshot: coreSnapshot('tell', ['db sqlite query']) });
+    lastHandlers().onChunk('db sqlite query movies SELECT 1');
+    lastHandlers().onEnd('end_turn');
+    await flush();
+    expect(frames.filter((frame) => frame.type === 'acp-tool-request')).toHaveLength(1);
+
+    acp.cancel('racp1');
+    await flush();
+    expect(frames.at(-1)).toEqual({ type: 'acp-run-end', id: 'racp1', reason: 'cancelled' });
+    const prompts = acpMock.prompt.mock.calls.length;
+
+    acp.toolResult({ type: 'acp-tool-result', id: 'racp1', request: 1, output: 'late' });
+    await flush();
+
+    expect(acpMock.prompt).toHaveBeenCalledTimes(prompts);
+    expect(frames.filter((frame) => frame.type === 'acp-run-end')).toHaveLength(1);
+  });
+
+  it('reports a failed run cancellation as fatal and admits another run', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    acpMock.cancel.mockRejectedValue(new Error('write failed'));
+    acp.run(RUN_FRAME);
+
+    acp.cancel('racp1');
+    await flush();
+
+    expect(frames.filter((frame) => frame.type === 'acp-error')).toEqual([
+      { type: 'acp-error', id: 'racp1', message: 'ACP: cancellation failed: write failed', fatal: true },
+    ]);
+    expect(frames.filter((frame) => frame.type === 'acp-run-end')).toEqual([]);
+
+    acp.run(RUN_FRAME);
+    expect(acpMock.prompt).toHaveBeenCalledTimes(2);
+  });
+
+  it('closes a running loop without a run-end or a cancel', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    acp.run({ ...RUN_FRAME, snapshot: coreSnapshot('tell', ['db sqlite query']) });
+    lastHandlers().onChunk('db sqlite query movies SELECT 1');
+    lastHandlers().onEnd('end_turn');
+    await flush();
+
+    await acp.close('racp1');
+
+    expect(frames.filter((frame) => frame.type === 'acp-run-end')).toEqual([]);
+    expect(frames.filter((frame) => frame.type === 'acp-error')).toEqual([]);
+    expect(frames.at(-1)).toEqual({ type: 'acp-closed', id: 'racp1', released: true });
+    expect(acpMock.cancel).not.toHaveBeenCalled();
+
+    const before = frames.length;
+    acp.toolResult({ type: 'acp-tool-result', id: 'racp1', request: 1, output: 'late' });
+    expect(frames).toHaveLength(before);
+  });
+
+  it('disposes a running loop without a frame or a cancel', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    acp.run(RUN_FRAME);
+    const before = frames.length;
+
+    await acp.dispose();
+
+    expect(frames).toHaveLength(before);
+    expect(acpMock.shutdown).toHaveBeenCalledOnce();
+    expect(acpMock.cancel).not.toHaveBeenCalled();
+  });
+
+  it('ends a running tab session and an idle run-only session on detach but preserves an idle tab session', () => {
+    const { acp } = makeAcp();
+    acp.open(OPEN);
+    acp.open({ ...OPEN, id: 'racp2' });
+    acp.open({ ...OPEN, id: 'run-1', autonomous: true });
+
+    acp.run({ ...RUN_FRAME, id: 'racp2' });
+    acp.detachRuns();
+
+    expect(acpMock.shutdown).toHaveBeenCalledTimes(2);
+  });
+
+  it('ends a run on a fatal connection error and admits another run', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    acp.run({ ...RUN_FRAME, snapshot: coreSnapshot('tell', ['db sqlite query']) });
+    lastHandlers().onChunk('db sqlite query movies SELECT 1');
+    lastHandlers().onEnd('end_turn');
+    await flush();
+
+    acpMock.options[0].onError('ACP agent exited.');
+    await flush();
+
+    expect(frames.filter((frame) => frame.type === 'acp-error')).toEqual([
+      { type: 'acp-error', id: 'racp1', message: 'ACP agent exited.', fatal: true },
+    ]);
+    expect(frames.filter((frame) => frame.type === 'acp-run-end')).toEqual([]);
+
+    const before = frames.length;
+    acp.toolResult({ type: 'acp-tool-result', id: 'racp1', request: 1, output: 'late' });
+    expect(frames).toHaveLength(before);
+
+    acp.run(RUN_FRAME);
+    expect(acpMock.prompt).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -400,8 +628,5 @@ describe('RemoteAcp — closing', () => {
     acp.detachRuns();
 
     expect(acpMock.shutdown).toHaveBeenCalledOnce();
-    acp.prompt({ type: 'acp-prompt', id: 'racp1', text: 'still live' });
-    acp.prompt({ type: 'acp-prompt', id: 'run-1', text: 'ended' });
-    expect(acpMock.prompt).toHaveBeenCalledOnce();
   });
 });

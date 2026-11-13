@@ -1,4 +1,7 @@
 import type { RemoteFrame } from '../protocol-frames.js';
+import {
+  decodeAcpRun, decodeAcpRunEnd, decodeAcpToolRequest, decodeAcpToolResult, decodeAcpToolStep, decodeAcpTurn,
+} from './decode-acp-run.js';
 import { malformed, type DecodeResult } from './decode-shared.js';
 import { decodeFilesystemFrame } from './decode-filesystem.js';
 import { decodeAgentResolve, decodeAgentResolveResult } from './decode-agent.js';
@@ -11,7 +14,7 @@ import {
   decodeCaptureRequest, decodeCaptureReply, decodeGateEvent, decodeBusyTransition, decodeResumeEvent, decodeResumeAddressed,
 } from './decode-detect.js';
 import {
-  decodeAcpOpen, decodeAcpText, decodeAcpAddressed, decodeAcpEnd, decodeAcpError, decodeAcpActivity, decodeAcpClosed,
+  decodeAcpOpen, decodeAcpText, decodeAcpAddressed, decodeAcpError, decodeAcpActivity, decodeAcpClosed,
 } from './decode-acp.js';
 import { decodeProvision } from './decode-provision.js';
 import {
@@ -75,12 +78,16 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'agent-resolve': { return decodeAgentResolve(record); }
   case 'agent-resolve-result': { return decodeAgentResolveResult(record); }
   case 'acp-open': { return decodeAcpOpen(record); }
-  case 'acp-prompt':
+  case 'acp-run': { return decodeAcpRun(record); }
+  case 'acp-tool-result': { return decodeAcpToolResult(record); }
+  case 'acp-turn': { return decodeAcpTurn(record); }
+  case 'acp-tool-request': { return decodeAcpToolRequest(record); }
+  case 'acp-tool-step': { return decodeAcpToolStep(record); }
+  case 'acp-run-end': { return decodeAcpRunEnd(record); }
   case 'acp-chunk': { return decodeAcpText(type, record); }
   case 'acp-close':
   case 'acp-cancel':
   case 'acp-ready': { return decodeAcpAddressed(type, record); }
-  case 'acp-end': { return decodeAcpEnd(record); }
   case 'acp-error': { return decodeAcpError(record); }
   case 'acp-activity': { return decodeAcpActivity(record); }
   case 'acp-closed': { return decodeAcpClosed(record); }

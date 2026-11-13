@@ -8,7 +8,7 @@ ask summarize the open TODO comments in this project
 
 The command returns to the bar immediately. The shell stays usable while the prompt runs, so ordinary non-ACP commands keep working; a second `ask` prompt is refused with exactly `ACP: a prompt is already running.`, and nothing is queued. The shell prints the exact line you typed as soon as you send it. When the answer is ready, it appears once as rendered Markdown, right beneath that line if nothing else was printed in the meantime. If other output arrived first, the shell prints your line again at the current bottom with the answer under it, and the intervening output stays above. There is no ACP response panel, no responding status, and no Reset ACP button. The agent uses the Agent Client Protocol (ACP), and the app manages its connection for you. While an accepted `ask` or `tell` prompt runs, its echoed line ends with `Thinking` and a spinner; click either to open its connection tab, where you can follow the agent's thoughts and tool steps. When the prompt settles with a conversation record, `see thought process` opens that same conversation, even after a reset, model switch, or session close; both echoed lines carry the link if the answer is printed again at the bottom. If the final model attempt fails before creating a record, the marker disappears without a link. A refusal or reset also removes the marker, while a deleted or expired conversation leaves a link that does nothing. The marker is not terminal text, so search and copy omit it, and it disappears after reload, docking, or undocking; use `connections` or the shell's connections window to reach a conversation by keyboard.
 
-For an autonomous task that runs until completion and may use skill-granted Janissary commands, see [Run an autonomous task](/user-documentation/advanced-agents/agent-command). It uses a separate local session and its own retained record.
+For an autonomous task that runs until completion and may use skill-granted Janissary commands, see [Run an autonomous task](/user-documentation/advanced-agents/agent-command). It uses a separate session and its own retained record.
 
 <img class="agent-float" src="/agents/dogan-south-west.png" alt="" />
 
@@ -32,11 +32,11 @@ Once a model has replied, the session sticks with it. Later prompts in the tab g
 
 The connections window shows the model the session started with. That choice is separate from the models used by monitors, conversations, and editor queries.
 
-The `tell` command uses the matching `tell` role. With the built-in roles, ask can list and query
-databases, browse to a page and read its content, and ask or approve a question. Tell starts with
-those same commands plus database create/delete and browser eval. If you add or remove a grant, the
-next prompt reads the updated role. A missing ask or tell role uses its built-in model and command
-defaults; an existing role with no grants has no native tools.
+The `tell` command uses the matching `tell` role. With the built-in roles, ask can read a file from
+the workspace, list and query databases, browse to a page and read its content, and ask or approve a
+question. Tell starts with those same commands plus database create/delete and browser eval. If you
+add or remove a grant, the next prompt reads the updated role. A missing ask or tell role uses its
+built-in model and command defaults; an existing role with no grants has no native tools.
 
 The agent has no built-in tools of its own, such as a shell, file editing, or web search, so it can
 only run the native commands its role grants.
@@ -68,16 +68,15 @@ Closing the shell also closes its ask and tell sessions. Reset cancels a questio
 
 <img class="agent-float left" src="/agents/ekrem-south.png" alt="" />
 
-The agent can use the database, browser, and question tools granted to its role. By default, ask can
-list and query databases, open a page, read its content, and ask or approve a question. Tell has those
-commands plus database create/delete and browser eval. If the model tries a known command its role
-doesn't allow, it receives `Command not allowed for role "<role>": <subcommand>.` and can choose
-another action. The result of each allowed tool step goes back to the model, up to eight tool steps
-per prompt. If a prompt reaches that cap, the settled shell reply and the record's final answer in
+The agent can use the file, database, browser, and question tools granted to its role. By default, ask
+can read a file from the workspace, list and query databases, open a page, read its content, and ask or
+approve a question. Tell has those commands plus database create/delete and browser eval. If the model
+tries a known command its role doesn't allow, it receives `Command not allowed for role "<role>": <subcommand>.` and can choose another action. The result of each allowed tool step goes back to the model,
+up to eight tool steps per prompt. If a prompt reaches that cap, the settled shell reply and the record's final answer in
 the connection tab end with a `(stopped after 8 tool steps)` paragraph, so you can tell the answer was
 cut short and retry a narrower request.
 
-Tool steps and the agent's thinking appear in the connection tab, not in the shell output. Thought entries start collapsed there and tool entries start expanded. Click an entry's label to open or close it. A tool step whose text is JSON reads as indented JSON. Only these three tools are available in this loop; it cannot run arbitrary shell commands.
+Tool steps and the agent's thinking appear in the connection tab, not in the shell output. Thought entries start collapsed there and tool entries start expanded. Click an entry's label to open or close it. A tool step whose text is JSON reads as indented JSON. Only these four tools are available in this loop; it cannot run arbitrary shell commands.
 
 Questions identify the tab asking them. Answer or cancel in the question surface owned by that tab. A selected docked shell can show its question too. A hidden docked shell does not raise a question panel, and a centre question renders once.
 
@@ -103,7 +102,11 @@ Every ACP process requests confinement to its workspace, or to its working direc
 shell starts its ACP process on that host in the remote workspace. Model selection and command grants
 still come from your local `ask` or `tell` role.
 
-The database, browser, and question tools continue to act on the machine running Janissary. A remote ACP query therefore uses your local database and browser for those tools.
+`file read` reads the workspace on the host running the agent, so on a remote tab it reads the remote
+clone. The database, browser, and question tools continue to act on the machine running Janissary; a
+remote ACP query uses your local database and browser for those tools. A remote workspace step shows
+`[<host>] ` at the start of its transcript line and of both activity lines in the connection record. A
+typed `file read` and a caller-side step carry no tag.
 
 Before SSH has finished connecting, a prompt reports `ACP: the remote session is still connecting.`. Finish connecting and retry. See [Shell tabs](/user-documentation/command-bar/shell) for local and remote launches.
 

@@ -23,7 +23,7 @@ Send a task to the tab's core ACP session, which runs the models and native comm
 
 **Notes**
 
-- The models and commands come from the `tell` role in the project's `.janissary/roles.json`, else `~/.janissary/roles.json`. If the file has no tell role, the built-in tell defaults apply. A missing or empty `commands` list grants no tools; editing the role applies to its next prompt. The default tell role has all nine native commands: database create, delete, query, and list; browser goto, content, and eval; and question ask and approve.
+- The models and commands come from the `tell` role in the project's `.janissary/roles.json`, else `~/.janissary/roles.json`. If the file has no tell role, the built-in tell defaults apply. A missing or empty `commands` list grants no tools; editing the role applies to its next prompt. The default tell role has all ten native commands: database create, delete, query, and list; browser goto, content, and eval; question ask and approve; and file read.
 - The agent has no built-in tools: no shell, file, or web tools of its own. It can only run the granted native commands.
 - The tell primer asks the model to carry out the task with its available commands and briefly report what it did. An ungranted command from an available tool owner returns `Command not allowed for role "tell": <subcommand>.` to the model as a tool result. For example, this is the expected result for `db sqlite create` when that command is removed from tell.
 - The tell session is separate from ask. One ask and one tell prompt can run at once in the same tab. A second prompt for tell while its prompt is active is refused with `ACP: a prompt is already running.`; it is not queued. Ask can still run while tell is active.

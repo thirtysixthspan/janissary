@@ -14,6 +14,7 @@ import { WorkspaceManager } from '../workspace/manager.js';
 import { RemoteChannel } from './channel/index.js';
 import { encodeFrame, decodeFrame, encodeHandshake, parseHandshake, REMOTE_PROTOCOL_VERSION } from './protocol.js';
 import type { ServerFrame } from './protocol-frames.js';
+import type { PromptHandlers } from '../acp/types.js';
 import { DetachedPeer, relayPeer, REMOTE_DETACH_TIMEOUT_MS } from './serve-detach.js';
 import { provisionRemoteWorkspace } from './serve-provision.js';
 import { randomUUID } from 'node:crypto';
@@ -59,6 +60,11 @@ const SPAWN_FRAME = {
 
 const ACP_OPEN_FRAME = {
   type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp'],
+} as const;
+
+const ACP_RUN_FRAME = {
+  type: 'acp-run', id: 'racp1', text: 'hi',
+  snapshot: { kind: 'core', role: 'tell', roleName: 'tell', grants: ['db sqlite query'], rows: [], withoutTools: false },
 } as const;
 
 let tmpDir: string;
@@ -345,7 +351,7 @@ describe('RemoteServer', () => {
     const { server, frames } = makeServer();
 
     server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
-    server.receive(`${encodeFrame({ type: 'acp-prompt', id: 'racp1', text: 'hi' })}\n`);
+    server.receive(`${encodeFrame(ACP_RUN_FRAME)}\n`);
     server.receive(`${encodeFrame({ type: 'acp-cancel', id: 'racp1' })}\n`);
     expect(acpMock.cancel).not.toHaveBeenCalled();
 
@@ -363,7 +369,7 @@ describe('RemoteServer', () => {
 
     server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
     server.receive(`${encodeFrame({ ...ACP_OPEN_FRAME, id: 'racp2' })}\n`);
-    server.receive(`${encodeFrame({ type: 'acp-prompt', id: 'racp1', text: 'summarize this' })}\n`);
+    server.receive(`${encodeFrame({ ...ACP_RUN_FRAME, text: 'summarize this' })}\n`);
     server.receive(`${encodeFrame({ type: 'acp-cancel', id: 'missing' })}\n`);
     server.receive('{"type":"acp-cancel","id":"racp1","undeclared":true}\n');
     expect(acpMock.cancel).toHaveBeenCalledOnce();
@@ -372,8 +378,29 @@ describe('RemoteServer', () => {
     server.receive(`${encodeFrame({ type: 'acp-close', id: 'racp1' })}\n`);
 
     expect(acpMock.options[0]).toMatchObject({ command: 'opencode', args: ['acp'], cwd: dir, workspaceDir: dir });
-    expect(acpMock.prompt.mock.calls[0][0]).toBe('summarize this');
+    expect(acpMock.prompt.mock.calls[0][0]).toContain('summarize this');
     expect(acpMock.kill).toHaveBeenCalledTimes(1);
+    server.shutdown(0);
+  });
+
+  it('runs an ACP tool loop on the provisioned workspace and answers its caller request', async () => {
+    const { server, frames } = makeServer();
+    server.receive(`${encodeFrame({ type: 'provision', label: 'acp-run-driven' })}\n`);
+    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+
+    server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
+    server.receive(`${encodeFrame(ACP_RUN_FRAME)}\n`);
+    const handlers = acpMock.prompt.mock.calls[0][1] as PromptHandlers;
+    handlers.onChunk('db sqlite query movies SELECT 1');
+    handlers.onEnd('end_turn');
+
+    await vi.waitFor(() => expect(frames.some((f) => f.type === 'acp-tool-request')).toBe(true));
+    server.receive(`${encodeFrame({ type: 'acp-tool-result', id: 'racp1', request: 1, output: '42' })}\n`);
+
+    await vi.waitFor(() => expect(acpMock.prompt).toHaveBeenCalledTimes(2));
+
+    expect(acpMock.prompt.mock.calls[1][0]).toContain('42');
+    expect(frames.some((f) => f.type === 'workspace-failed')).toBe(false);
     server.shutdown(0);
   });
 
@@ -903,15 +930,15 @@ describe('detached peer rendezvous', () => {
     peer.emit({ type: 'transcript', blocks: ['first missed block'] });
     peer.emit({ type: 'transcript', blocks: ['second missed block'] });
     peer.emit({ type: 'acp-chunk', id: 'a1', text: 'reply' });
-    peer.emit({ type: 'acp-end', id: 'a1', stopReason: 'end_turn' });
+    peer.emit({ type: 'acp-run-end', id: 'a1', reason: 'answered' });
     peer.track({ ...SPAWN_FRAME, id: 'shell', mode: 'pipe' });
     peer.emit({ type: 'output', id: 'shell', data: 'command completion sentinel' });
     const ended = vi.fn();
     const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, ended)!;
     try {
-      await vi.waitFor(() => expect(output.join('')).toContain('acp-end'));
+      await vi.waitFor(() => expect(output.join('')).toContain('acp-run-end'));
       const frames = output.join('').trim().split('\n').map((line) => JSON.parse(line));
-      expect(frames.map((frame) => frame.type)).toEqual(['attach-result', 'output', 'output', 'transcript', 'transcript', 'acp-chunk', 'acp-end', 'output']);
+      expect(frames.map((frame) => frame.type)).toEqual(['attach-result', 'output', 'output', 'transcript', 'transcript', 'acp-chunk', 'acp-run-end', 'output']);
       expect(frames.at(-1).id).toBe('shell');
       socket.write(`${encodeFrame({ type: 'input', id: 'r1', data: 'new input' })}\n`);
       await vi.waitFor(() => expect(received).toHaveBeenCalledWith(expect.stringContaining('input')));
