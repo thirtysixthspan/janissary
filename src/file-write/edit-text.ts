@@ -42,7 +42,7 @@ export function replaceExactText(
   newString: string,
   replaceAll: boolean,
 ): FileOperationResult<EditedText> {
-  if (oldString === '') return failureResult<EditedText>(NO_MATCHING_TEXT_REASON);
+  if (oldString === '' || !oldString.isWellFormed()) return failureResult<EditedText>(NO_MATCHING_TEXT_REASON);
   const count = countMatches(text, oldString);
   if (count === 0) return failureResult<EditedText>(NO_MATCHING_TEXT_REASON);
   if (count > 1 && !replaceAll) return failureResult<EditedText>(MULTIPLE_MATCHES_REASON);

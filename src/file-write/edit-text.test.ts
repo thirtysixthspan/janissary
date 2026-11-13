@@ -44,6 +44,11 @@ describe('replaceExactText matching', () => {
     expect(replace('text', '', 'x', true)).toEqual({ ok: false, reason: NO_MATCHING_TEXT_REASON });
   });
 
+  it('refuses a lone surrogate that would split a surrogate pair', () => {
+    const text = `a${String.fromCodePoint(0x1_f6_00)}b`;
+    expect(replace(text, String.fromCodePoint(0xde_00), 'x')).toEqual({ ok: false, reason: NO_MATCHING_TEXT_REASON });
+  });
+
   it('finds no match in empty text', () => {
     expect(replace('', 'a', 'b')).toEqual({ ok: false, reason: NO_MATCHING_TEXT_REASON });
   });
