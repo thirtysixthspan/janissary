@@ -46,7 +46,7 @@ Bare `file`, `file read` without a path, an unknown subcommand, a second path ar
 
 **Writing and editing**
 
-`file write <JSON>` creates or overwrites a text file. The JSON object takes `path`, `content`, and an optional `expectedHash`; when the hash is given and the file changed since then, the write is refused. Missing parent folders are created.
+`file write <JSON>` creates or overwrites a text file. The JSON object takes `path`, `content`, and an optional `expectedHash`; when the hash is given and the file changed since then, the write is refused. The hash is the editor's internal content fingerprint, which `file read` does not print, so typed writes normally leave it out; a write without it simply creates or overwrites the file. Missing parent folders are created.
 
 `file edit <JSON>` replaces exact text in an existing text file. The JSON object takes `path`, `oldString`, `newString`, and an optional `replaceAll`. The `oldString` must match exactly once unless `replaceAll` is `true`, which replaces every match.
 
