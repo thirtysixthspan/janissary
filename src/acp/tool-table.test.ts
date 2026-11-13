@@ -36,7 +36,7 @@ describe('createAcpToolTable', () => {
     ].join('\n\n'));
   });
 
-  it('includes the file entry only when file read is granted', () => {
+  it('gives a file-read-only grant the read primer and omits the file entry when no file command is granted', () => {
     const [file, ...rest] = createAcpToolTable(['file read']);
     expect(rest).toEqual([]);
     expect(file.runsOn).toBe('workspace');
