@@ -1,13 +1,11 @@
 import type { Managers } from '../managers.js';
 import { LocalFileSystemPort, type FileSystemPort } from '../file-navigator/filesystem-port.js';
-import { RemoteFileSystemPort } from '../file-navigator/remote/port.js';
 import { localReadRoot } from '../file-read/tab-read.js';
+import { withRemoteTabPort } from '../file-read/remote-tab-port.js';
 import type { FileMutationRequest } from './types.js';
 import { parseFileMutation } from './command.js';
 import { editSuccessLine, writeSuccessLine } from './messages.js';
-import { mutationFailureLine, mutationRejectionLine, REMOTE_UNAVAILABLE } from './outcome.js';
-
-let sessionNumber = 0;
+import { mutationFailureLine, mutationRejectionLine } from './outcome.js';
 
 async function applyMutation(port: FileSystemPort, root: string, request: FileMutationRequest): Promise<string> {
   if (request.kind === 'write') {
@@ -31,18 +29,8 @@ export async function runFileMutation(port: FileSystemPort, root: string, input:
   }
 }
 
-async function mutateRemoteFile(managers: Managers, label: string, input: string): Promise<string> {
-  const channel = managers.remote?.get(label);
-  const ready = managers.remote?.readyOf(label);
-  const workspace = managers.remote?.workspaceOf(label);
-  if (!channel || !ready || !workspace) return REMOTE_UNAVAILABLE;
-  sessionNumber += 1;
-  const port = new RemoteFileSystemPort(channel, `file-write-${String(sessionNumber)}`, ready);
-  try {
-    return await runFileMutation(port, workspace, input);
-  } finally {
-    port.dispose();
-  }
+function mutateRemoteFile(managers: Managers, label: string, input: string): Promise<string> {
+  return withRemoteTabPort(managers, label, 'file-write', (port, workspace) => runFileMutation(port, workspace, input));
 }
 
 export async function mutateFileInTab(managers: Managers, label: string, input: string): Promise<string> {

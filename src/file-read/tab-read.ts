@@ -1,12 +1,8 @@
 import type { Managers } from '../managers.js';
 import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
-import { RemoteFileSystemPort } from '../file-navigator/remote/port.js';
 import { parseFileRead, type FileReadArgs } from './command.js';
 import { readWorkspaceLines } from './read.js';
-
-const REMOTE_UNAVAILABLE = 'Remote connection unavailable.';
-
-let sessionNumber = 0;
+import { REMOTE_UNAVAILABLE, withRemoteTabPort } from './remote-tab-port.js';
 
 export function localReadRoot(managers: Managers, label: string): string | undefined {
   const tab = managers.tab.byLabel(label);
@@ -28,21 +24,15 @@ function rejectionLine(error: unknown, typed: string): string {
   return message;
 }
 
-async function readRemoteFile(managers: Managers, label: string, parsed: FileReadArgs): Promise<string> {
-  const channel = managers.remote?.get(label);
-  const ready = managers.remote?.readyOf(label);
-  const workspace = managers.remote?.workspaceOf(label);
-  if (!channel || !ready || !workspace) return REMOTE_UNAVAILABLE;
-  sessionNumber += 1;
-  const port = new RemoteFileSystemPort(channel, `file-read-${sessionNumber}`, ready);
-  try {
-    const { text, path } = await port.readLines(workspace, parsed.path, parsed.offset, parsed.limit);
-    return asTyped(text, path, parsed.path);
-  } catch (error) {
-    return rejectionLine(error, parsed.path);
-  } finally {
-    port.dispose();
-  }
+function readRemoteFile(managers: Managers, label: string, parsed: FileReadArgs): Promise<string> {
+  return withRemoteTabPort(managers, label, 'file-read', async (port, workspace) => {
+    try {
+      const { text, path } = await port.readLines(workspace, parsed.path, parsed.offset, parsed.limit);
+      return asTyped(text, path, parsed.path);
+    } catch (error) {
+      return rejectionLine(error, parsed.path);
+    }
+  });
 }
 
 export async function readFileInTab(managers: Managers, label: string, input: string): Promise<string> {

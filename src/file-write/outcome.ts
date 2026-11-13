@@ -1,8 +1,7 @@
 import { fileOperationReason, OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
 import { CLOSED_REASON, ENDED_REASON, TIMED_OUT_REASON } from '../file-navigator/remote/port-requests.js';
+import { REMOTE_UNAVAILABLE } from '../file-read/remote-tab-port.js';
 import { displayPath, matchFailureLine } from './messages.js';
-
-export const REMOTE_UNAVAILABLE = 'Remote connection unavailable.';
 
 const OUTSIDE_WORKSPACE = 'Outside the workspace';
 
