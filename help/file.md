@@ -1,6 +1,6 @@
 ### file
 
-Read a text file from the workspace and print it as numbered lines in the current tab. A local tab reads from its workspace, or from the project directory when the tab has no workspace. Paths are relative to that root. A remote tab reads from its remote workspace clone on the remote machine, never from the local disk, with paths relative to that workspace. The output carries no host tag.
+Read a text file from the workspace and print it as numbered lines in the current tab, or write or edit a text file there. A local tab reads from its workspace, or from the project directory when the tab has no workspace. Paths are relative to that root. A remote tab reads from its remote workspace clone on the remote machine, never from the local disk, with paths relative to that workspace. The output carries no host tag.
 
 **Usage**
 
@@ -39,3 +39,29 @@ Bare `file`, `file read` without a path, an unknown subcommand, a second path ar
 - `file read README.md` prints the first 2000 lines of `README.md`.
 - `file read src/index.ts --offset 40 --limit 20` prints lines 40 to 59 of `src/index.ts`.
 - `file read docs/guide.md --offset 2001` continues a long file after its first 2000 lines.
+
+**Writing and editing**
+
+`file write <JSON>` creates or overwrites a text file. The JSON object takes `path`, `content`, and an optional `expectedHash`; when the hash is given and the file changed since then, the write is refused. Missing parent folders are created.
+
+`file edit <JSON>` replaces exact text in an existing text file. The JSON object takes `path`, `oldString`, `newString`, and an optional `replaceAll`. The `oldString` must match exactly once unless `replaceAll` is `true`, which replaces every match.
+
+Both use the same root as `file read`: the tab's workspace, or the project directory when the tab has none. A remote tab writes only in its remote workspace on the remote machine, never on the local disk. Paths are relative to that root. Because the path is a JSON string, it may contain spaces. Write newlines inside `content` as `\n`. Files and arguments are limited to 5 MB, and only UTF-8 text is written. Each command prints one line, and file content never appears in it:
+
+- `Wrote <path>.`
+- `Edited <path> (<count> replacements).`
+
+Failures print one line naming the path, with control characters escaped:
+
+- `Outside the workspace: <path>.`, `Secret file: <path>.`, `File not found: <path>.`, `Is a directory: <path>.`, `Not a text file: <path>.`, and `File too large (>5 MB): <path>.`, with the same rules as `file read`
+- `No matching text: <path>.` when `oldString` is not found
+- `Multiple matches: <path>; set replaceAll to true.` when `oldString` matches more than once
+- `This file changed on disk since it was loaded: <path>.` when `expectedHash` no longer matches
+- `<reason>: <path>.` for any other filesystem or remote failure, such as a permission error or an invalid remote reply
+- On a remote tab, `Remote connection unavailable.`, `The remote connection ended.`, or `The remote machine did not answer in time.`
+
+Missing or invalid JSON, a missing required field, an empty `path` or `oldString`, a field of the wrong type, or an unknown field prints `Usage: file write <JSON>` or `Usage: file edit <JSON>`.
+
+- `file write {"path":"notes/todo list.md","content":"first\nsecond\n"}` writes a two-line file, creating `notes/` if needed.
+- `file edit {"path":"notes/todo list.md","oldString":"second","newString":"done"}` prints `Edited notes/todo list.md (1 replacements).`.
+- `file edit {"path":"src/a.ts","oldString":"foo","newString":"bar","replaceAll":true}` replaces every `foo`.

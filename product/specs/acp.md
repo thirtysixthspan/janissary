@@ -116,6 +116,10 @@ A typed read on a remote tab can also print `Remote connection unavailable.`, `T
 
 A typed read's output carries no host tag. The loop's workspace step is the only place the tag appears.
 
+### Typed file writes and edits
+
+`file write <JSON>` and `file edit <JSON>` are typed application commands that share the `file` command and its root choice: a local tab writes under its workspace, or the project directory when it has none, and a remote tab writes only in its remote workspace, printing `Remote connection unavailable.` rather than ever falling back to the local disk. A write takes `path`, `content`, and an optional `expectedHash` and creates missing parent folders; an edit takes `path`, `oldString`, `newString`, and an optional `replaceAll`, and replaces exact text that must match once unless `replaceAll` is true. Each prints exactly one line: `Wrote <path>.`, `Edited <path> (<count> replacements).`, or a failure line naming the path as typed with control characters escaped. A path outside the root prints `Outside the workspace: <path>.`; a missing or ambiguous match prints `No matching text: <path>.` or `Multiple matches: <path>; set replaceAll to true.`; other refusals print `<reason>: <path>.`; a dropped or slow remote connection prints its connection line unchanged; and a malformed remote reply is a failure, never success. Bad or incomplete JSON prints `Usage: file write <JSON>` or `Usage: file edit <JSON>` and changes nothing. File content never appears in the output. A typed mutation consults no role grant; history and transcripts record the command text as typed.
+
 The file tool's primer is exactly `FILE_READ_PRIMER` from `src/file-read/command.ts`:
 
 ```
