@@ -50,6 +50,15 @@ describe('walkGlob modes', () => {
     expect(await listed({ dirs: true, start: path.join(root, 'src') })).toEqual(['src/x/', 'src/x/y/', 'src/z/']);
   });
 
+  it('matches the pattern against the directory path without its trailing slash under dirs', async () => {
+    mkdirSync(path.join(root, 'src/x'), { recursive: true });
+    mkdirSync(path.join(root, 'srcx'));
+    write(root, 'src/a.ts');
+    expect(await listed({ dirs: true, pattern: 'src' })).toEqual(['src/']);
+    expect(await listed({ dirs: true, pattern: 'src/*' })).toEqual(['src/x/']);
+    expect(await listed({ dirs: true, pattern: 'x', start: path.join(root, 'src') })).toEqual(['src/x/']);
+  });
+
   it('never lists .git under dirs, as a directory or a file, with or without hidden', async () => {
     write(root, '.git/HEAD');
     write(root, 'sub/.git');
