@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
 import type { NavigatorListener } from '../remote/channel/types.js';
 import type { ClientFrame } from '../remote/protocol-frames.js';
+import { LONG_REQUEST_DEADLINE_MS } from '../file-navigator/remote/port-requests.js';
 import { mutateFileInTab } from './tab-write.js';
 
 type FakeTab = { label: string; workspaceDir?: string; remote?: unknown };
@@ -131,6 +132,21 @@ describe('mutateFileInTab', () => {
       expect(await withReply('file edit {"path":"a.txt","oldString":"a","newString":"b"}', { ok: true, value: { replacements: 0 } }))
         .toBe('Invalid remote filesystem operation result.: a.txt.');
       expect(remote.channel.detachNavigator).toHaveBeenCalledOnce();
+    });
+
+    it('reports a timed-out edit once and does not resend it', async () => {
+      vi.useFakeTimers();
+      try {
+        const pending = run('file edit {"path":"a.txt","oldString":"a","newString":"b"}');
+        await vi.waitFor(() => expect(remote.requests()).toHaveLength(1));
+        await vi.advanceTimersByTimeAsync(LONG_REQUEST_DEADLINE_MS + 1);
+        expect(await pending).toContain('The remote machine did not answer in time.');
+        remote.reply({ ok: true, value: { replacements: 1 } });
+        expect(remote.requests()).toHaveLength(1);
+        expect(remote.channel.detachNavigator).toHaveBeenCalledOnce();
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

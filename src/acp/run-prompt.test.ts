@@ -589,4 +589,32 @@ describe('runCorePrompt file mutations', () => {
     expect(managers.tab.append).not.toHaveBeenCalled();
     expect(providerPrompt).not.toHaveBeenCalled();
   });
+
+  it('refuses a mutation the role does not grant without opening a question', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', ['file read']);
+    expect(await deps.runCommand(WRITE)).toBe('Command not allowed for role "tell": file write.');
+    expect(existsSync(path.join(dir, 'notes/b.md'))).toBe(false);
+    expect(mocks.mutateFileInTab).not.toHaveBeenCalled();
+    expect(mocks.notify).not.toHaveBeenCalledWith(expect.anything(), 'question', expect.anything(), expect.anything());
+  });
+
+  it('refuses a mutation disabled in settings without opening a question', async () => {
+    const settings = settingsWith({ 'file write': { effectiveEnabled: false, effectiveAgentAccess: false } });
+    const { start } = harness({ tab: { workspaceDir: dir }, settings });
+    const { deps } = start('tell', GRANTS);
+    expect(await deps.runCommand(WRITE)).toBe('Command is disabled: file write.');
+    expect(existsSync(path.join(dir, 'notes/b.md'))).toBe(false);
+    expect(mocks.mutateFileInTab).not.toHaveBeenCalled();
+    expect(mocks.notify).not.toHaveBeenCalledWith(expect.anything(), 'question', expect.anything(), expect.anything());
+  });
+
+  it('records a successful write and appends its result entry', async () => {
+    const { start, managers } = harness({ tab: { workspaceDir: dir } });
+    const { deps, handlers } = start('tell', GRANTS, 'tell', 'record-1');
+    const result = await deps.runCommand(WRITE);
+    handlers.ranCommand(WRITE, result);
+    expect(managers.acpRecords.activity).toHaveBeenCalledWith('record-1', 'tool', WRITE);
+    expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: WRITE, output: result, acp: true });
+  });
 });

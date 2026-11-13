@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -469,5 +469,37 @@ describe('startRemoteLoop workspace mutations', () => {
 
     expect(run.frames).toHaveLength(before);
     expect(readFileSync(path.join(workspace, 'b.md'), 'utf8')).toBe('hello\n');
+  });
+
+  it('writes only the far workspace and leaves a same-named local sentinel alone', async () => {
+    const local = mkdtempSync(path.join(tmpdir(), 'janus-serve-acp-loop-local-'));
+    try {
+      writeFileSync(path.join(local, 'b.md'), 'local');
+      start([[WRITE], ['Done.']], coreSnapshot('tell', ['file write']));
+      await flush();
+
+      expect(readFileSync(path.join(workspace, 'b.md'), 'utf8')).toBe('hello\n');
+      expect(readFileSync(path.join(local, 'b.md'), 'utf8')).toBe('local');
+      expect(readdirSync(local)).toEqual(['b.md']);
+      expect(readdirSync(workspace)).toEqual(['b.md']);
+    } finally {
+      rmSync(local, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses outside-workspace and secret paths and creates nothing', async () => {
+    const escape = `file write ${JSON.stringify({ path: '../escape.md', content: 'x' })}`;
+    const secret = `file write ${JSON.stringify({ path: '.env', content: 'x' })}`;
+    const parent = path.dirname(workspace);
+    const { frames } = start([[escape], [secret], ['Done.']], coreSnapshot('tell', ['file write']));
+    await flush();
+
+    const steps = framesOf(frames, 'acp-tool-step');
+    expect(steps.map((step) => step.command)).toEqual([escape, secret]);
+    expect(steps[0]?.result).toMatch(/^Outside the workspace/);
+    expect(steps[1]?.result).toMatch(/^Secret file/);
+    expect(existsSync(path.join(parent, 'escape.md'))).toBe(false);
+    expect(existsSync(path.join(workspace, '.env'))).toBe(false);
+    expect(readdirSync(workspace)).toEqual([]);
   });
 });
