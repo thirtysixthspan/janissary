@@ -6,6 +6,10 @@ Read a text file from the workspace and print it as numbered lines in the curren
 
 `file read <path> [--offset <line>] [--limit <lines>]`
 
+`file write <JSON>`
+
+`file edit <JSON>`
+
 `--offset` is the first line to print and defaults to 1. `--limit` is the number of lines to print and defaults to 2000. One read prints at most 2000 lines, and files over 5 MB are refused.
 
 **Output**
@@ -51,7 +55,7 @@ Both use the same root as `file read`: the tab's workspace, or the project direc
 - `Wrote <path>.`
 - `Edited <path> (<count> replacements).`
 
-Failures print one line naming the path, with control characters escaped:
+Failures print one line naming the path, with control characters and bidirectional formatting controls escaped:
 
 - `Outside the workspace: <path>.`, `Secret file: <path>.`, `File not found: <path>.`, `Is a directory: <path>.`, `Not a text file: <path>.`, and `File too large (>5 MB): <path>.`, with the same rules as `file read`
 - `No matching text: <path>.` when `oldString` is not found
