@@ -17,8 +17,8 @@ import type { HistoryStep } from '../moves.js';
 import type { DiffSource } from '../../plugins/diff/shared.js';
 import { remoteGitCommit, remoteGitMetadata, remoteGitPull, type RemoteRequest } from './port-git.js';
 import { remoteMove, remoteMoveMany } from './port-moves.js';
-import { remoteReadLines, remoteWriteFile } from './port-reads.js';
-import type { FileWritePolicy } from '../../file-write/types.js';
+import { remoteEditFile, remoteReadLines, remoteWriteFile } from './port-reads.js';
+import type { FileEditValue, FileWritePolicy } from '../../file-write/types.js';
 import { remoteDeleteMany, remoteReplay, remoteSearch, remoteStatRows } from './port-mapped.js';
 import type { CommitResult } from '../../git/commit.js';
 import type { SearchMatch, SearchRequest } from '../../search/types.js';
@@ -126,6 +126,12 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
     root: string, relPath: string, content: Uint8Array, expectedHash?: string, policy?: FileWritePolicy,
   ): Promise<FileOperationResult> {
     return remoteWriteFile(this.requester(), this.paths, root, relPath, content, expectedHash, policy);
+  }
+
+  editFile(
+    root: string, relPath: string, oldString: string, newString: string, replaceAll: boolean,
+  ): Promise<FileOperationResult<FileEditValue>> {
+    return remoteEditFile(this.requester(), this.paths, root, relPath, oldString, newString, replaceAll);
   }
 
   move(root: string, from: string, to: string, overwrite?: boolean): Promise<MoveOneResult> {

@@ -2,9 +2,9 @@ import path from 'node:path';
 import type { RemoteRequest } from './port-git.js';
 import type { RemotePortPaths } from './port-paths.js';
 import { failureResult, type FileOperationResult } from '../file-operation-result.js';
-import type { FileWritePolicy } from '../../file-write/types.js';
+import type { FileEditValue, FileWritePolicy } from '../../file-write/types.js';
 
-// `RemoteFileSystemPort`'s line read and write, extracted so that file stays under the size limit — the same
+// `RemoteFileSystemPort`'s line read, write and text edit, extracted so that file stays under the size limit — the same
 // split `port-moves.ts` uses. It takes the port's bound request sender and its path mapper as
 // parameters, so nothing here knows about the port's session bookkeeping.
 
@@ -39,5 +39,21 @@ export async function remoteWriteFile(
     path: await paths.to(root, relPath), content: Buffer.from(content).toString('base64'),
     ...(expectedHash !== undefined && { expectedHash }),
     ...(policy !== undefined && { policy }),
+  });
+}
+
+// A text edit always runs under the tool rules, so an absolute path is refused here like a tool write.
+// The path crosses plain; only the old and new text are one base64 layer of UTF-8. The reply is
+// already validated by the `edit-file` result decoder.
+export async function remoteEditFile(
+  request: RemoteRequest, paths: RemotePortPaths, root: string, relPath: string,
+  oldString: string, newString: string, replaceAll: boolean,
+): Promise<FileOperationResult<FileEditValue>> {
+  if (path.posix.isAbsolute(relPath)) return failureResult('Outside the workspace');
+  return request('edit-file', {
+    path: await paths.to(root, relPath),
+    oldString: Buffer.from(oldString, 'utf8').toString('base64'),
+    newString: Buffer.from(newString, 'utf8').toString('base64'),
+    replaceAll,
   });
 }
