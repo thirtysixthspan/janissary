@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Add a walker test that pins early stopping at the limit, so a regression to walking the whole tree and slicing afterwards fails a test.
-
-Existing Issue: The walker's two limit tests only assert the returned paths and the truncated flag, which a walk that read every directory and sliced its result at the end would produce identically, so the plan's core reason for a custom walker (stop reading once limit + 1 matches are held) is not pinned by any test. Severity: 4/10
-
-Existing Risk: 4/10 - A later refactor, such as piece 2 extending the classify and record helpers or a move to parallel reads, could drop the stop check and silently make every truncated search walk the full tree, which shows up only as slowness on large repositories.
-
-Proposal Risk: 2/10 - The test pins that no further directory is read once the walk stops, though a mock of the filesystem module can drift from the real readdir signature and would then need updating alongside it.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2001 "pin the glob walker's early stop at limit + 1 with a test". In src/file-glob/walk.test.ts add a test that proves walkGlob stops reading once it holds limit + 1 matches: wrap readdir from node:fs/promises with a vi.mock factory that delegates to the real implementation (via importOriginal) and records each directory it is called with, then build files a, b, c/x and d/y under the temp root, call walkGlob with limit 1, and assert the result is paths ['a'] with truncated true and that the recorded calls contain only the root directory (neither c nor d was read). If module mocking interferes with the other tests in the file, put the new test in its own file such as src/file-glob/walk-stop.test.ts. Do not change src/file-glob/walk.ts; the existing limit tests in walk.test.ts ("truncates at limit + 1 matches" and "does not truncate at exactly limit matches") must keep passing unchanged. Verify with $janissary/scripts/run.mjs check-diff.
-
-
 * Add a walker test where the start directory is below the root and the ignored set names a nested path, so the ignored lookup is pinned to root-relative paths.
 
 Existing Issue: Every walker test that passes a non-empty ignored set starts at the root, where root-relative and start-relative paths are identical, so isPruned in the walker could be handed the start-relative path instead of the root-relative one and every test would still pass. Severity: 3/10

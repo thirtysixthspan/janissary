@@ -1,8 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, chmodSync } from 'node:fs';
+import { readdir } from 'node:fs/promises';
+import type * as FileSystemPromises from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { walkGlob, type GlobWalkOptions } from './walk.js';
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof FileSystemPromises>();
+  return { ...actual, readdir: vi.fn(actual.readdir) };
+});
 
 function write(root: string, relative: string, content = 'x'): void {
   const target = path.join(root, relative);
@@ -87,6 +94,13 @@ describe('walkGlob', () => {
   it('does not truncate at exactly limit matches', async () => {
     for (const file of ['a', 'b']) write(root, file);
     expect(await walk({ limit: 2 })).toEqual({ paths: ['a', 'b'], truncated: false });
+  });
+
+  it('stops reading directories once it holds limit + 1 matches', async () => {
+    for (const file of ['a', 'b', 'c/x', 'd/y']) write(root, file);
+    vi.mocked(readdir).mockClear();
+    expect(await walk({ limit: 1 })).toEqual({ paths: ['a'], truncated: true });
+    expect(vi.mocked(readdir).mock.calls.map(([dir]) => dir)).toEqual([root]);
   });
 
   it.skipIf(typeof process.getuid === 'function' && process.getuid() === 0)('skips an unreadable directory and keeps walking its siblings', async () => {
