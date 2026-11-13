@@ -62,9 +62,9 @@ describe('command restrictions from the commands snapshot', () => {
       .toEqual({ 'file read': 'application-wide' });
   });
 
-  it('follows a disabled file parent into file read', () => {
+  it('follows a disabled file parent into every file command', () => {
     expect(commandRestrictionsFrom(snapshotWith({ file: { enabled: false } })))
-      .toEqual({ 'file read': 'application-wide' });
+      .toEqual({ 'file read': 'application-wide', 'file write': 'application-wide', 'file edit': 'application-wide' });
   });
 
   it('omits a disabled non-native command', () => {

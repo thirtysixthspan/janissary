@@ -15,6 +15,7 @@ import type { AcpRunSnapshot, AcpRunSnapshotRow } from './types.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { DB_PRIMER } from '../database/primer.js';
 import { FILE_READ_PRIMER } from '../file-read/command.js';
+import { FILE_MUTATION_PRIMER } from '../file-write/command.js';
 
 const setup = (grants: readonly string[] = NATIVE_ACP_COMMANDS) => ({ tools: createAcpToolTable(grants) });
 
@@ -29,7 +30,7 @@ describe('createAcpToolTable', () => {
     expect(toolPrimer(tools, NATIVE_ACP_COMMANDS)).toBe([
       'browser primer text',
       'question primer text',
-      FILE_READ_PRIMER,
+      `${FILE_READ_PRIMER}\n\n${FILE_MUTATION_PRIMER}`,
       DB_PRIMER,
       `Only these commands are allowed: ${NATIVE_ACP_COMMANDS.join(', ')}.`,
     ].join('\n\n'));
@@ -40,7 +41,7 @@ describe('createAcpToolTable', () => {
     expect(rest).toEqual([]);
     expect(file.runsOn).toBe('workspace');
     expect(file.primer).toBe(FILE_READ_PRIMER);
-    const without = createAcpToolTable(NATIVE_ACP_COMMANDS.filter((command) => command !== 'file read'));
+    const without = createAcpToolTable(NATIVE_ACP_COMMANDS.filter((command) => !command.startsWith('file ')));
     expect(without.some((tool) => tool.primer === FILE_READ_PRIMER)).toBe(false);
     expect(toolPrimer(without, NATIVE_ACP_COMMANDS)).not.toContain(FILE_READ_PRIMER);
   });
@@ -286,5 +287,67 @@ describe('toolExtractor', () => {
     const { tools } = setup();
     expect(toolExtractor(tools)('here is the final answer')).toBeNull();
     expect(toolExtractor(tools)('browser open https://example.com')).toBeNull();
+  });
+});
+
+describe('file mutation tools', () => {
+  const fileTool = (grants: readonly string[]) => createAcpToolTable(grants).find((tool) => tool.runsOn === 'workspace');
+
+  it('selects the file tool for any file grant', () => {
+    for (const grant of ['file read', 'file write', 'file edit']) expect(fileTool([grant])).toBeDefined();
+    expect(fileTool(['browser goto'])).toBeUndefined();
+  });
+
+  it('includes mutation primer text only when a mutation is granted', () => {
+    expect(fileTool(['file read'])!.primer).toBe(FILE_READ_PRIMER);
+    expect(fileTool(['file write'])!.primer).toBe(FILE_MUTATION_PRIMER);
+    expect(fileTool(['file read', 'file edit'])!.primer).toBe(`${FILE_READ_PRIMER}\n\n${FILE_MUTATION_PRIMER}`);
+  });
+
+  it('gives a grant of only file edit the file tool with no read text', () => {
+    const primer = fileTool(['file edit'])!.primer;
+    expect(primer).not.toContain(FILE_READ_PRIMER);
+    expect(primer).toContain('file edit');
+  });
+
+  it('extracts a trailing file write and a malformed file edit', () => {
+    const extract = toolExtractor(createAcpToolTable(['file write', 'file edit']));
+    expect(extract('Writing.\nfile write {"path":"a.md","content":"x"}')).toBe('file write {"path":"a.md","content":"x"}');
+    expect(extract('Editing.\nfile edit {')).toBe('file edit {');
+  });
+
+  const coreSnapshot = (grants: readonly string[], rows: AcpRunSnapshotRow[] = []): AcpRunSnapshot => ({
+    kind: 'core', role: 'tell', roleName: 'writer', grants, rows, withoutTools: false,
+  });
+  const write = 'file write {"path":"a.md","content":"x"}';
+  const edit = 'file edit {"path":"a.md","oldString":"x","newString":"y"}';
+
+  it('refuses an ungranted mutation', () => {
+    const tools = createAcpToolTable(['file read']);
+    expect(gateCommand(coreSnapshot(['file read']), tools, write)).toStrictEqual({
+      refusal: 'Command not allowed for role "writer": file write.',
+    });
+  });
+
+  it('refuses a disabled file write and an agent-inaccessible file edit', () => {
+    const grants = ['file write', 'file edit'];
+    const tools = createAcpToolTable(grants);
+    const rows = [
+      { name: 'file write', effectiveEnabled: false, effectiveAgentAccess: true },
+      { name: 'file edit', effectiveEnabled: true, effectiveAgentAccess: false },
+    ];
+    expect(gateCommand(coreSnapshot(grants, rows), tools, write)).toStrictEqual({
+      refusal: 'Command is disabled: file write.', refused: 'disabled',
+    });
+    expect(gateCommand(coreSnapshot(grants, rows), tools, edit)).toStrictEqual({
+      refusal: 'Command is disabled: file edit.', refused: 'disabled',
+    });
+  });
+
+  it('routes a granted mutation to the workspace', () => {
+    const grants = ['file write', 'file edit'];
+    const tools = createAcpToolTable(grants);
+    expect(gateCommand(coreSnapshot(grants), tools, write)).toStrictEqual({ runsOn: 'workspace' });
+    expect(gateCommand(coreSnapshot(grants), tools, edit)).toStrictEqual({ runsOn: 'workspace' });
   });
 });

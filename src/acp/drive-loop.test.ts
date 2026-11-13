@@ -328,3 +328,26 @@ describe('driveToolLoop agent runs', () => {
     expect(events.at(-1)).toEqual(['finished', 'answered', Infinity]);
   });
 });
+
+describe('driveToolLoop file mutations', () => {
+  const WRITE = 'file write {"path":"a.md","content":"x"}';
+
+  it('routes a granted write to runWorkspace and feeds its one-line result back', () => {
+    const { sent, host } = drive(coreSnapshot('tell', ['file write']), [WRITE, 'Done.']);
+    expect(host.runWorkspace).toHaveBeenCalledExactlyOnceWith(WRITE);
+    expect(host.runCaller).not.toHaveBeenCalled();
+    expect(sent[1]).toContain('workspace output');
+  });
+
+  it('exposes no file tools without tools', () => {
+    const { sent, host } = drive(coreSnapshot('tell', ['file write'], [], true), [WRITE]);
+    expect(host.runWorkspace).not.toHaveBeenCalled();
+    expect(sent).toHaveLength(1);
+  });
+
+  it('caps repeated writes at eight steps', () => {
+    const { events, host } = drive(coreSnapshot('tell', ['file write']), [WRITE]);
+    expect(host.runWorkspace).toHaveBeenCalledTimes(8);
+    expect(events.at(-1)).toEqual(['finished', 'capped', 8]);
+  });
+});

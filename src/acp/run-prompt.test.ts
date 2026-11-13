@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { parseFileRead, type FileReadArgs } from '../file-read/command.js';
+import { parseFileMutation } from '../file-write/command.js';
+import type * as TabWrite from '../file-write/tab-write.js';
 import { readWorkspaceLines } from '../file-read/read.js';
 import type { Managers } from '../managers.js';
 import type { TabRuntime } from '../tab/types.js';
@@ -17,7 +19,7 @@ import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { BROWSER_PRIMER } from '../browser/command.js';
 import { DB_PRIMER } from '../database/primer.js';
 
-const mocks = vi.hoisted(() => ({ runAcpToolLoop: vi.fn(), notify: vi.fn(), readFileInTab: vi.fn() }));
+const mocks = vi.hoisted(() => ({ runAcpToolLoop: vi.fn(), notify: vi.fn(), readFileInTab: vi.fn(), mutateFileInTab: vi.fn() }));
 
 vi.mock('./loop.js', () => ({ runAcpToolLoop: mocks.runAcpToolLoop }));
 vi.mock('../notifications/index.js', () => ({ notify: mocks.notify }));
@@ -25,6 +27,11 @@ vi.mock('../file-read/tab-read.js', async (importOriginal) => {
   const actual = await importOriginal<typeof TabRead>();
   mocks.readFileInTab.mockImplementation(actual.readFileInTab);
   return { ...actual, readFileInTab: mocks.readFileInTab };
+});
+vi.mock('../file-write/tab-write.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof TabWrite>();
+  mocks.mutateFileInTab.mockImplementation(actual.mutateFileInTab);
+  return { ...actual, mutateFileInTab: mocks.mutateFileInTab };
 });
 
 import { runCorePrompt } from './run-prompt.js';
@@ -519,5 +526,67 @@ describe('runCorePrompt remote session', () => {
     start('ask', ['db sqlite query'], 'ask', undefined, true);
 
     expect(run).not.toHaveBeenCalled();
+  });
+});
+
+describe('runCorePrompt file mutations', () => {
+  let dir: string;
+  beforeEach(() => {
+    vi.clearAllMocks();
+    dir = mkdtempSync(path.join(tmpdir(), 'acp-run-prompt-write-'));
+    writeFileSync(path.join(dir, 'a.txt'), 'alpha\n');
+  });
+  afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+
+  const WRITE = 'file write {"path":"notes/b.md","content":"hello"}';
+  const GRANTS = ['file read', 'file write', 'file edit'];
+
+  it('runs a granted file write through the tab runner and changes the file on disk', async () => {
+    const { start, dispatchNativeLine } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+    const result = await deps.runCommand(WRITE);
+    expect(typeof result).toBe('string');
+    expect(readFileSync(path.join(dir, 'notes/b.md'), 'utf8')).toBe('hello');
+    expect(mocks.mutateFileInTab).toHaveBeenCalledWith(expect.anything(), 'shell', WRITE);
+    expect(mocks.readFileInTab).not.toHaveBeenCalled();
+    expect(dispatchNativeLine).not.toHaveBeenCalled();
+    expect(mocks.notify).not.toHaveBeenCalledWith(expect.anything(), 'question', expect.anything(), expect.anything());
+  });
+
+  it('returns usage text for a malformed file edit and writes nothing', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+    const usage = (parseFileMutation('file edit {') as { error: string }).error;
+    await expect(deps.runCommand('file edit {')).resolves.toBe(usage);
+    expect(readFileSync(path.join(dir, 'a.txt'), 'utf8')).toBe('alpha\n');
+  });
+
+  it('still sends a read to readFileInTab', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+    await deps.runCommand('file read a.txt');
+    expect(mocks.readFileInTab).toHaveBeenCalledWith(expect.anything(), 'shell', 'file read a.txt');
+    expect(mocks.mutateFileInTab).not.toHaveBeenCalled();
+  });
+
+  it('throws and writes nothing when the prompt is cancelled before the mutation runs', () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps, request } = start('tell', GRANTS);
+    request.abort.abort();
+    expect(() => deps.runCommand(WRITE)).toThrow('ACP: prompt cancelled.');
+    expect(existsSync(path.join(dir, 'notes/b.md'))).toBe(false);
+    expect(mocks.mutateFileInTab).not.toHaveBeenCalled();
+  });
+
+  it('suppresses the late result and next turn when cancelled during a pending mutation', async () => {
+    const { start, managers, providerPrompt } = harness({ tab: { workspaceDir: dir } });
+    const { deps, handlers, request, session } = start('tell', GRANTS);
+    const pending = deps.runCommand(WRITE);
+    request.abort.abort();
+    const result = await pending;
+    handlers.ranCommand(WRITE, result);
+    session.prompt('next', { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() });
+    expect(managers.tab.append).not.toHaveBeenCalled();
+    expect(providerPrompt).not.toHaveBeenCalled();
   });
 });

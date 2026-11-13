@@ -11,6 +11,8 @@ export const NATIVE_ACP_COMMANDS = [
   'question ask',
   'question approve',
   'file read',
+  'file write',
+  'file edit',
 ] as const;
 
 // One harness/model/effort choice inside a role. `effort` is absent for the default (no effort

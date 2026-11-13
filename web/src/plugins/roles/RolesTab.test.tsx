@@ -685,4 +685,25 @@ describe('RolesTab', () => {
       expect(screen.getByText(/showing the rest of this file\./)).toHaveClass('roles-problem');
     });
   });
+
+  it('offers file write and file edit as ordinary picker entries with remove buttons and restriction indicators', () => {
+    const payload = makePayload({
+      roles: [{ name: 'research', description: 'Research.', entries: [], commands: ['file write'] }],
+      commandRestrictions: { 'file write': 'agents' },
+    });
+    const { intent } = renderTab(payload);
+    const entry = [...screen.getByRole('list', { name: 'Commands of role research' })
+      .querySelectorAll('.roles-command-entry')].find((row) => row.textContent?.trim() === 'file write');
+    expect(entry).toHaveClass('roles-entry-restricted');
+    fireEvent.click(screen.getByRole('button', { name: 'Remove file write' }));
+    expect(intent).toHaveBeenLastCalledWith('remove-command', { role: 'research', command: 'file write' });
+    fireEvent.click(screen.getByRole('button', { name: 'Add command' }));
+    const picker = screen.getByLabelText('Command to add to role research') as HTMLSelectElement;
+    const values = [...picker.options].map(({ value }) => value);
+    expect(values).toContain('file edit');
+    expect(values).not.toContain('file write');
+    fireEvent.change(picker, { target: { value: 'file edit' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(intent).toHaveBeenCalledWith('add-command', { role: 'research', command: 'file edit' });
+  });
 });
