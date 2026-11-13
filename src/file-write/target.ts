@@ -115,12 +115,19 @@ function resolveBelowRoot(realRoot: string, resolved: string): FileOperationResu
   return { ok: true, value: { ...base, realPath: existing.value.realPath, exists: true } };
 }
 
-export function endsInSeparator(requested: string): boolean {
-  return requested.endsWith('/') || requested.endsWith(path.sep);
+function escapesLexically(requested: string): boolean {
+  const normalized = path.normalize(requested);
+  return path.isAbsolute(requested) || normalized === '..' || normalized.startsWith(`..${path.sep}`);
+}
+
+export function namesDirectory(requested: string): boolean {
+  if (requested.endsWith('/') || requested.endsWith(path.sep)) return true;
+  const last = requested.split('/').at(-1)?.split(path.sep).at(-1);
+  return (last === '.' || last === '..') && !escapesLexically(requested);
 }
 
 export function resolveMutationTarget(root: string, requested: string): FileOperationResult<WriteTarget> {
-  if (endsInSeparator(requested)) return failureResult('Is a directory');
+  if (namesDirectory(requested)) return failureResult('Is a directory');
   const resolved = path.resolve(root, requested);
   const lexical = checkLexicalPath(root, requested) ?? checkProtectedPath(path.relative(root, resolved));
   if (lexical !== undefined) return failureResult(lexical);

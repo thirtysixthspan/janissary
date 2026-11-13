@@ -72,6 +72,26 @@ describe('resolveMutationTarget policy refusals', () => {
     expect(existsSync(path.join(root, 'missing.txt'))).toBe(false);
   });
 
+  it('refuses a path whose last segment is a dot for an existing file', () => {
+    writeAt(root, 'a.txt');
+    expect(refusal('a.txt/.')).toBe('Is a directory');
+  });
+
+  it.each(['notes/.', 'a/b/..'])('refuses a dot-segment path for a missing file and creates nothing: %s', (requested) => {
+    expect(refusal(requested)).toBe('Is a directory');
+    expect(existsSync(path.join(root, 'notes'))).toBe(false);
+    expect(existsSync(path.join(root, 'a'))).toBe(false);
+  });
+
+  it('still resolves a leading dot segment and a dot-prefixed name', () => {
+    expect(resolved('./a.txt')).toMatchObject({ realPath: path.join(root, 'a.txt') });
+    expect(resolved('.x')).toMatchObject({ realPath: path.join(root, '.x') });
+  });
+
+  it.each(['..', '../..'])('still refuses an escaping dot-segment path as outside the workspace: %s', (requested) => {
+    expect(refusal(requested)).toBe('Outside the workspace');
+  });
+
   it.each([
     [path.join('/', 'tmp', 'a.txt'), 'Outside the workspace'],
     ['../escape.txt', 'Outside the workspace'],
