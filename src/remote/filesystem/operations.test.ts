@@ -254,6 +254,14 @@ describe('FILESYSTEM_OPERATIONS', () => {
       .toThrow('Invalid remote filesystem operation arguments.');
   });
 
+  it('keeps a leading byte order mark in decoded edit-file strings', () => {
+    const bom = String.fromCodePoint(0xFE_FF);
+    expect(operationDescriptor('edit-file').decode({
+      path: 'a.txt', oldString: Buffer.from(`${bom}old`).toString('base64'),
+      newString: Buffer.from(`${bom}new`).toString('base64'), replaceAll: false,
+    })).toEqual({ path: 'a.txt', oldString: `${bom}old`, newString: `${bom}new`, replaceAll: false });
+  });
+
   it('accepts an edit-file count or failure and rejects anything else', () => {
     expect(decodeFilesystemResult('edit-file', { ok: true, value: { replacements: 1 } })).toEqual({ ok: true, value: { replacements: 1 } });
     expect(decodeFilesystemResult('edit-file', { ok: false, reason: 'No matching text' })).toEqual({ ok: false, reason: 'No matching text' });

@@ -11,7 +11,7 @@ function decodeBase64Text(value: unknown): string | undefined {
   const bytes = Buffer.from(value, 'base64');
   if (bytes.toString('base64') !== value) return undefined;
   try {
-    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
   } catch {
     return undefined;
   }

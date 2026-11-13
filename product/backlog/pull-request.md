@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Keep a leading U+FEFF in remote edit strings by decoding edit-file's oldString and newString without stripping a BOM, so a remote edit matches the same text as a local one.
-
-Existing Issue: decodeBase64Text in src/remote/filesystem/edit-file-operation.ts decodes with new TextDecoder('utf-8', { fatal: true }), whose default ignoreBOM false strips a leading U+FEFF, so an oldString or newString that begins with a byte order mark loses it on the far side while the local edit and the far side's file decode (ignoreBOM true) keep it. Severity: 4/10
-
-Existing Risk: 4/10 - An edit meant to remove or change a file's leading BOM reports a successful replacement on a remote tab while leaving the BOM in place, or inserts text without the BOM the caller sent, so the remote result silently differs from the local result for the same command.
-
-Proposal Risk: 1/10 - Both sides decode the same way; the remaining hazard is another decoder on the remote path defaulting to BOM stripping, which the new round-trip test would catch for this operation.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1996 "keep a leading BOM in remote edit-file strings". In src/remote/filesystem/edit-file-operation.ts, change decodeBase64Text to use new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }), matching decodeEditableText in src/file-write/edit-text.ts and decodeToolText in src/file-write/port-adapter.ts. Add a case to src/remote/filesystem/operations.test.ts showing edit-file decodes a base64 oldString and newString that start with U+FEFF to strings that still start with it, and a case to src/remote/serve-file-navigator.test.ts showing a far-side edit with oldString "﻿hello" and newString "hello" on a file holding "﻿hello\n" leaves "hello\n" on disk. The existing edit-file argument tests (strict base64, invalid UTF-8) must keep passing unchanged.
-
-
 * Stop echoing a whole file write or edit payload back to the agent in the tool loop's follow-up prompt, so a large write does not double its size in the agent's context.
 
 Existing Issue: runAcpToolLoop in src/acp/loop.ts builds every follow-up prompt as "Output of `<command>`:" followed by the result, and a file write or file edit command carries its whole content or old and new strings (up to 5 MiB), so each mutation step sends the full payload back to the agent on top of the reply that already contained it. Severity: 4/10

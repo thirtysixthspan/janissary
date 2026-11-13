@@ -125,6 +125,19 @@ describe('RemoteFileNavigators', () => {
     rmSync(local, { recursive: true, force: true });
   });
 
+  it('removes a leading byte order mark when a far-side edit names it', async () => {
+    const bom = String.fromCodePoint(0xFE_FF);
+    writeFileSync(path.join(root, 'bom.txt'), `${bom}hello\n`);
+
+    const reply = await edit({
+      path: 'bom.txt', oldString: Buffer.from(`${bom}hello`).toString('base64'),
+      newString: Buffer.from('hello').toString('base64'), replaceAll: false,
+    });
+
+    expect(reply).toMatchObject({ result: { ok: true, value: { replacements: 1 } } });
+    expect(readFileSync(path.join(root, 'bom.txt'), 'utf8')).toBe('hello\n');
+  });
+
   it('refuses an escaping or secret edit path on the far side', async () => {
     writeFileSync(path.join(root, '.env'), 'KEY=1');
     const args = { oldString: Buffer.from('KEY').toString('base64'), newString: '', replaceAll: false };
