@@ -5,6 +5,7 @@ import { withRemoteTabPort } from '../file-read/remote-tab-port.js';
 import { NO_MATCHING_TEXT_REASON, type FileMutationRequest } from './types.js';
 import { parseFileMutation } from './command.js';
 import { editSuccessLine, writeSuccessLine } from './messages.js';
+import { endsInSeparator } from './target.js';
 import { mutationFailureLine, mutationRejectionLine } from './outcome.js';
 
 function illFormedReason(request: FileMutationRequest): string | undefined {
@@ -14,6 +15,7 @@ function illFormedReason(request: FileMutationRequest): string | undefined {
 }
 
 async function applyMutation(port: FileSystemPort, root: string, request: FileMutationRequest): Promise<string> {
+  if (endsInSeparator(request.path)) return mutationFailureLine('Is a directory', request.path);
   const refused = illFormedReason(request);
   if (refused !== undefined) return mutationFailureLine(refused, request.path);
   if (request.kind === 'write') {

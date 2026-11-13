@@ -62,6 +62,16 @@ describe('resolveMutationTarget destinations', () => {
 });
 
 describe('resolveMutationTarget policy refusals', () => {
+  it('refuses a path ending in a separator for an existing file', () => {
+    writeAt(root, 'a.txt');
+    expect(refusal('a.txt/')).toBe('Is a directory');
+  });
+
+  it('refuses a path ending in a separator for a missing file and creates nothing', () => {
+    expect(refusal('missing.txt/')).toBe('Is a directory');
+    expect(existsSync(path.join(root, 'missing.txt'))).toBe(false);
+  });
+
   it.each([
     [path.join('/', 'tmp', 'a.txt'), 'Outside the workspace'],
     ['../escape.txt', 'Outside the workspace'],

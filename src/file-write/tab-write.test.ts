@@ -109,9 +109,28 @@ describe('mutateFileInTab', () => {
     expect(readFileSync(path.join(root, 'a.txt'), 'utf8')).toBe('one\u{FFFD}');
   });
 
+  it('refuses a write path ending in a separator and creates nothing', async () => {
+    expect(await run('file write {"path":"notes/","content":"x"}')).toBe('Is a directory: notes/.');
+    expect(readdirSync(root)).toEqual([]);
+  });
+
+  it('refuses an edit path ending in a separator and leaves the file unchanged', async () => {
+    writeFileSync(path.join(root, 'a.txt'), 'one');
+    expect(await run('file edit {"path":"a.txt/","oldString":"one","newString":"two"}')).toBe('Is a directory: a.txt/.');
+    expect(readFileSync(path.join(root, 'a.txt'), 'utf8')).toBe('one');
+  });
+
   describe('on a remote tab', () => {
     beforeEach(() => {
       tabs = [{ label: 'janus', remote: { host: 'box' } }];
+    });
+
+    it.each([
+      ['file write {"path":"notes/","content":"x"}', 'Is a directory: notes/.'],
+      ['file edit {"path":"a.txt/","oldString":"a","newString":"b"}', 'Is a directory: a.txt/.'],
+    ])('refuses a path ending in a separator and sends no frame: %s', async (line, expected) => {
+      expect(await run(line)).toBe(expected);
+      expect(remote.requests()).toHaveLength(0);
     });
 
     it.each(loneSurrogateCases)('refuses lone-surrogate text and sends no frame: %s', async (line, expected) => {

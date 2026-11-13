@@ -115,7 +115,12 @@ function resolveBelowRoot(realRoot: string, resolved: string): FileOperationResu
   return { ok: true, value: { ...base, realPath: existing.value.realPath, exists: true } };
 }
 
+export function endsInSeparator(requested: string): boolean {
+  return requested.endsWith('/') || requested.endsWith(path.sep);
+}
+
 export function resolveMutationTarget(root: string, requested: string): FileOperationResult<WriteTarget> {
+  if (endsInSeparator(requested)) return failureResult('Is a directory');
   const resolved = path.resolve(root, requested);
   const lexical = checkLexicalPath(root, requested) ?? checkProtectedPath(path.relative(root, resolved));
   if (lexical !== undefined) return failureResult(lexical);
