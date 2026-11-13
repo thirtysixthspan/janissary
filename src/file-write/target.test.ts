@@ -177,3 +177,49 @@ describe('createTargetParents', () => {
     expect(createTargetParents(target)).toEqual({ ok: false, reason: 'Outside the workspace' });
   });
 });
+
+describe('resolveMutationTarget protected directories', () => {
+  it.each([
+    '.janissary/roles.json',
+    '.janissary/commands.json',
+    '.git/config',
+    '.git/hooks/pre-commit',
+    '.GIT/config',
+    'vendor/lib/.git/hooks/pre-commit',
+  ])('refuses %s as protected', (requested) => {
+    expect(refusal(requested)).toBe('Protected file');
+  });
+
+  it.each(['.github/workflows/ci.yml', '.gitignore', 'docs/janissary.md'])('still resolves %s', (requested) => {
+    expect(resolved(requested)).toMatchObject({ exists: false });
+  });
+
+  it.each([
+    ['.git/hooks', 'hooks', 'hooks/pre-commit'],
+    ['.janissary', 'settings', 'settings/roles.json'],
+  ])('refuses a directory symlink aliasing %s', (directory, alias, requested) => {
+    mkdirSync(path.join(root, directory), { recursive: true });
+    symlinkSync(path.join(root, directory), path.join(root, alias));
+    expect(refusal(requested)).toBe('Protected file');
+  });
+
+  it('refuses a file symlink aliasing .git/config', () => {
+    symlinkSync(writeAt(root, '.git/config'), path.join(root, 'config'));
+    expect(refusal('config')).toBe('Protected file');
+  });
+
+  it('refuses a dangling ancestor symlink pointing into .git and creates nothing', () => {
+    mkdirSync(path.join(root, '.git'));
+    symlinkSync(path.join(root, '.git', 'hooks'), path.join(root, 'hooks'));
+    expect(refusal('hooks/pre-commit')).toBe('Protected file');
+    expect(existsSync(path.join(root, '.git', 'hooks'))).toBe(false);
+  });
+
+  it('creates no folder for a nested path under .git or a symlink alias to it', () => {
+    mkdirSync(path.join(root, '.git'));
+    symlinkSync(path.join(root, '.git'), path.join(root, 'repo'));
+    expect(refusal('.git/hooks/new/a.txt')).toBe('Protected file');
+    expect(refusal('repo/hooks/new/a.txt')).toBe('Protected file');
+    expect(existsSync(path.join(root, '.git', 'hooks'))).toBe(false);
+  });
+});

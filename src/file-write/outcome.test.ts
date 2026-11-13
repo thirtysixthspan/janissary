@@ -13,6 +13,7 @@ describe('mutationFailureLine', () => {
 
   it('prints a policy word, the save conflict, and a filesystem reason with the path', () => {
     expect(mutationFailureLine('Secret file', '.env')).toBe('Secret file: .env.');
+    expect(mutationFailureLine('Protected file', '.git/config')).toBe('Protected file: .git/config.');
     expect(mutationFailureLine(SAVE_CONFLICT_ERROR, 'a.md')).toBe(`${SAVE_CONFLICT_ERROR}: a.md.`);
     const reason = fileOperationReason({ code: 'EACCES' });
     expect(mutationFailureLine(reason, 'a.md')).toBe(`${reason}: a.md.`);

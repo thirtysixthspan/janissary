@@ -1,6 +1,6 @@
 import { lstatSync, mkdirSync, readlinkSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { checkLexicalPath, checkRealTarget, type FilePolicyFailure } from '../file-read/policy.js';
+import { checkLexicalPath, checkProtectedPath, checkRealTarget, type FilePolicyFailure } from '../file-read/policy.js';
 import { failureResult, fileOperationReason, runFileOperation, type FileOperationResult } from '../file-navigator/file-operation-result.js';
 
 export type WriteTarget = {
@@ -20,6 +20,10 @@ function hasCode(error: unknown, code: string): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === code;
 }
 
+function checkMutablePath(realRoot: string, realPath: string): FilePolicyFailure | undefined {
+  return checkRealTarget(realRoot, realPath) ?? checkProtectedPath(path.relative(realRoot, realPath));
+}
+
 function danglingEntryRefusal(realRoot: string, candidate: string): string | undefined {
   try {
     lstatSync(candidate);
@@ -28,7 +32,7 @@ function danglingEntryRefusal(realRoot: string, candidate: string): string | und
   }
   const linkTarget = runFileOperation(() => path.resolve(realpathSync(path.dirname(candidate)), readlinkSync(candidate)));
   if (!linkTarget.ok) return linkTarget.reason;
-  return checkRealTarget(realRoot, linkTarget.value) ?? 'Not a text file';
+  return checkMutablePath(realRoot, linkTarget.value) ?? 'Not a text file';
 }
 
 function findAncestor(realRoot: string, candidate: string, missingSegments: string[]): FileOperationResult<Ancestor> {
@@ -56,7 +60,7 @@ function followSymlink(realRoot: string, location: string): FileOperationResult<
   } catch {
     return failureResult('Not a text file');
   }
-  const failure = checkRealTarget(realRoot, realTarget);
+  const failure = checkMutablePath(realRoot, realTarget);
   return failure === undefined ? { ok: true, value: realTarget } : failureResult(failure);
 }
 
@@ -77,7 +81,7 @@ function checkExisting(realRoot: string, location: string): FileOperationResult<
 
 function checkContainedPaths(realRoot: string, realPaths: string[]): FilePolicyFailure | undefined {
   for (const realPath of realPaths) {
-    const failure = checkRealTarget(realRoot, realPath);
+    const failure = checkMutablePath(realRoot, realPath);
     if (failure !== undefined) return failure;
   }
   return undefined;
@@ -112,11 +116,11 @@ function resolveBelowRoot(realRoot: string, resolved: string): FileOperationResu
 }
 
 export function resolveMutationTarget(root: string, requested: string): FileOperationResult<WriteTarget> {
-  const lexical = checkLexicalPath(root, requested);
+  const resolved = path.resolve(root, requested);
+  const lexical = checkLexicalPath(root, requested) ?? checkProtectedPath(path.relative(root, resolved));
   if (lexical !== undefined) return failureResult(lexical);
   const realRoot = resolveRoot(root);
   if (!realRoot.ok) return realRoot;
-  const resolved = path.resolve(root, requested);
   if (path.relative(root, resolved) === '') return resolveRootItself(realRoot.value);
   return resolveBelowRoot(realRoot.value, path.join(realRoot.value, path.relative(root, resolved)));
 }

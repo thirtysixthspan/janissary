@@ -58,6 +58,7 @@ Both use the same root as `file read`: the tab's workspace, or the project direc
 Failures print one line naming the path, with control characters and bidirectional formatting controls escaped:
 
 - `Outside the workspace: <path>.`, `Secret file: <path>.`, `File not found: <path>.`, `Is a directory: <path>.`, `Not a text file: <path>.`, and `File too large (>5 MB): <path>.`, with the same rules as `file read`
+- `Protected file: <path>.` for any path inside a `.janissary` or `.git` folder, in any letter case and also when reached through a symbolic link. These folders hold the role grants and command settings that decide what an agent may run, and git hooks and settings that git later runs on its own, so neither command changes them and no missing folder is created inside them. `file read` can still read these files.
 - `No matching text: <path>.` when `oldString` is not found
 - `Multiple matches: <path>; set replaceAll to true.` when `oldString` matches more than once
 - `This file changed on disk since it was loaded: <path>.` when `expectedHash` no longer matches

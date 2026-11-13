@@ -7,7 +7,9 @@ import { SECRET_DENY_PATHS } from '../sandbox/paths.js';
 
 export const FILE_POLICY_MAX_BYTES = 5 * 1024 * 1024;
 
-export type FilePolicyFailure = 'File not found' | 'Is a directory' | 'Not a text file' | 'File too large (>5 MB)' | 'Outside the workspace' | 'Secret file';
+export type FilePolicyFailure = 'File not found' | 'Is a directory' | 'Not a text file' | 'File too large (>5 MB)' | 'Outside the workspace' | 'Secret file' | 'Protected file';
+
+const PROTECTED_SEGMENTS: ReadonlySet<string> = new Set(['.janissary', '.git']);
 
 const SECRET_SEGMENT_RUNS = SECRET_DENY_PATHS.map((entry) => entry.toLowerCase().split('/'));
 
@@ -64,6 +66,12 @@ export function checkRealTarget(realRoot: string, realTarget: string): FilePolic
   if (isSecretPath(path.relative(realRoot, realTarget))) return 'Secret file';
   if (isUnderHomeSecret(realTarget)) return 'Secret file';
   return undefined;
+}
+
+// Mutation-only: the tool writer refuses the directories holding its own authorization and git's
+// executable hooks and config. The reader never calls this, so those files stay readable.
+export function checkProtectedPath(relative: string): FilePolicyFailure | undefined {
+  return relative.toLowerCase().split(path.sep).some((segment) => PROTECTED_SEGMENTS.has(segment)) ? 'Protected file' : undefined;
 }
 
 export function classifyStats(stats: Stats): FilePolicyFailure | undefined {

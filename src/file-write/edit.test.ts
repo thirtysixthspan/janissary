@@ -154,6 +154,17 @@ describe('editToolTextFile targets', () => {
     expectUnchanged(at('.env'), 'SECRET=1');
   });
 
+  it('refuses the commands file, git config, and a symlink alias to it, leaving them unchanged', () => {
+    const commands = seed('.janissary/commands.json', '{"disabled":["x"]}');
+    const config = seed('.git/config', '[core]\n');
+    symlinkSync(config, at('config'));
+    expect(reason(root, '.janissary/commands.json', 'x', 'y', false)).toBe('Protected file');
+    expect(reason(root, '.git/config', 'core', 'alias', false)).toBe('Protected file');
+    expect(reason(root, 'config', 'core', 'alias', false)).toBe('Protected file');
+    expectUnchanged(commands, '{"disabled":["x"]}');
+    expectUnchanged(config, '[core]\n');
+  });
+
   it('refuses an escaping symlink and leaves the outside file unchanged', () => {
     const outsideFile = path.join(outside, 'a.txt');
     writeFileSync(outsideFile, 'abc');

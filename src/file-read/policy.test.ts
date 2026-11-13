@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, symlinkSync, tr
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { checkLexicalPath, checkRealTarget, classifyStats, FILE_POLICY_MAX_BYTES } from './policy.js';
+import { checkLexicalPath, checkProtectedPath, checkRealTarget, classifyStats, FILE_POLICY_MAX_BYTES } from './policy.js';
 
 let root: string;
 let outside: string;
@@ -108,5 +108,27 @@ describe('classifyStats', () => {
     const target = writeAt(root, 'big.txt', '');
     truncateSync(target, FILE_POLICY_MAX_BYTES + 1);
     expect(classifyStats(statSync(target))).toBe('File too large (>5 MB)');
+  });
+});
+
+describe('checkProtectedPath', () => {
+  it.each([
+    '.git/config',
+    '.git/hooks/pre-commit',
+    '.janissary/roles.json',
+    '.JANISSARY/commands.json',
+    '.Git/HEAD',
+    'vendor/lib/.git/hooks/pre-commit',
+  ])('refuses %s', (relative) => {
+    expect(checkProtectedPath(relative)).toBe('Protected file');
+  });
+
+  it.each(['src/a.ts', '.github/workflows/ci.yml', '.gitignore', 'docs/janissary.md', ''])('allows %j', (relative) => {
+    expect(checkProtectedPath(relative)).toBeUndefined();
+  });
+
+  it('is not part of the read checks', () => {
+    expect(checkLexicalPath(root, '.git/config')).toBeUndefined();
+    expect(checkRealTarget(root, path.join(root, '.janissary', 'roles.json'))).toBeUndefined();
   });
 });

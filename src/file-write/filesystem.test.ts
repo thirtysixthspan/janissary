@@ -93,6 +93,15 @@ describe('writeToolTextFile content', () => {
     expect(reason(root, 'deep/.env', 'SECRET=1')).toBe('Secret file');
     expect(existsSync(at('deep'))).toBe(false);
   });
+
+  it('refuses the roles file and a git hook, leaving the file unchanged and creating nothing', () => {
+    const roles = seed('.janissary/roles.json', '{"roles":[]}');
+    mkdirSync(at('.git'));
+    expect(reason(root, '.janissary/roles.json', '{"roles":["granted"]}')).toBe('Protected file');
+    expect(reason(root, '.git/hooks/pre-commit', '#!/bin/sh\n')).toBe('Protected file');
+    expect(readFileSync(roles, 'utf8')).toBe('{"roles":[]}');
+    expect(existsSync(at('.git/hooks'))).toBe(false);
+  });
 });
 
 describe('writeToolTextFile expected hash', () => {

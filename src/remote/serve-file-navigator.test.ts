@@ -134,6 +134,34 @@ describe('RemoteFileNavigators', () => {
     expect(readFileSync(path.join(root, '.env'), 'utf8')).toBe('KEY=1');
   });
 
+  it('refuses tool writes and edits under .git and .janissary on the far side while reads and editor saves still work', async () => {
+    mkdirSync(path.join(root, '.git'));
+    mkdirSync(path.join(root, '.janissary'));
+    const roles = path.join(root, '.janissary', 'roles.json');
+    writeFileSync(roles, '{"roles":[]}');
+
+    const hook = await request('write-file', {
+      path: '.git/hooks/pre-commit', content: Buffer.from('#!/bin/sh\n').toString('base64'), policy: 'tool-text',
+    });
+    expect(hook).toMatchObject({ result: { ok: false, reason: 'Protected file' } });
+    expect(existsSync(path.join(root, '.git', 'hooks'))).toBe(false);
+
+    const edited = await edit({
+      path: '.janissary/roles.json', oldString: Buffer.from('[]').toString('base64'),
+      newString: Buffer.from('["granted"]').toString('base64'), replaceAll: false,
+    });
+    expect(edited).toMatchObject({ result: { ok: false, reason: 'Protected file' } });
+    expect(readFileSync(roles, 'utf8')).toBe('{"roles":[]}');
+
+    expect(await request('read-lines', { path: '.janissary/roles.json' })).toMatchObject({
+      result: { text: readWorkspaceLines(root, { path: '.janissary/roles.json', offset: 1, limit: FILE_READ_MAX_LIMIT }) },
+    });
+    expect(await request('write-file', {
+      path: '.janissary/roles.json', content: Buffer.from('{"roles":["saved"]}').toString('base64'),
+    })).toMatchObject({ result: { ok: true } });
+    expect(readFileSync(roles, 'utf8')).toBe('{"roles":["saved"]}');
+  });
+
   it('refuses an ambiguous edit unless replaceAll is set', async () => {
     writeFileSync(path.join(root, 'twice.txt'), 'x y x');
     const args = { path: 'twice.txt', oldString: Buffer.from('x').toString('base64'), newString: Buffer.from('z').toString('base64') };
