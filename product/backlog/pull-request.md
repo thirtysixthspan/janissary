@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Bring the remote user documentation in line with the updated specs, which now say remote tool loops write and edit in the remote clone and that text edits get the ten-minute deadline.
-
-Existing Issue: `product/specs/remote-server.md` and `product/specs/acp.md` were updated for remote writes, edits, and the `edit-file` long deadline, but the user pages still describe only `file read` on the remote host and list ten-minute operations without text edits. Severity: 2/10
-
-Existing Risk: 3/10 - A user reading the docs cannot tell where an agent's write lands on a remote tab, or why an edit waited ten minutes before failing, and the user docs and specs keep diverging.
-
-Proposal Risk: 1/10 - Documentation only; the residual risk is a missed sentence, which a grep for `file read` across the user documentation would surface.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1996 "update remote user docs for host-tool writes and edits". In `documentation/user-documentation/advanced-agents/acp-agent.md`, extend the paragraph beginning "`file read` reads the workspace on the host running the agent" to say granted `file write` and `file edit` also run there, so on a remote tab they change only the remote clone, and that a typed write or edit carries no tag. In `documentation/user-documentation/advanced-agents/remote-agents.md`, say in the remote `ask` paragraph that the tool loop's reads, writes, and edits all resolve in the host's workspace clone, and add text edits to the list of operations that wait up to ten minutes. Add text edits to the same ten-minute list in `documentation/user-documentation/tab-types/file-navigator.md`. Leave the autonomous `agent` paragraphs alone, since that command still refuses mutations.
-
-
 * Stop advertising `expectedHash` in the agent's mutation primer, since an agent has no way to obtain the editor's private fingerprint it must match.
 
 Existing Issue: `FILE_MUTATION_PRIMER` tells ACP agents that `"expectedHash" is optional on write`, but the value must equal the custom 53-bit `contentHash` fingerprint from `src/editor/save-conflict.ts`, which no tool output exposes (adding hashes to `file read` output is out of scope), so the option is unusable by the agent the primer addresses. Severity: 3/10

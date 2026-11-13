@@ -103,10 +103,11 @@ shell starts its ACP process on that host in the remote workspace. Model selecti
 still come from your local `ask` or `tell` role.
 
 `file read` reads the workspace on the host running the agent, so on a remote tab it reads the remote
-clone. The database, browser, and question tools continue to act on the machine running Janissary; a
+clone. Granted `file write` and `file edit` run there too, so on a remote tab they change only the remote
+clone, never your local copy. The database, browser, and question tools continue to act on the machine running Janissary; a
 remote ACP query uses your local database and browser for those tools. A remote workspace step shows
 `[<host>] ` at the start of its transcript line and of both activity lines in the connection record. A
-typed `file read` and a caller-side step carry no tag.
+typed `file read`, `file write`, or `file edit` and a caller-side step carry no tag.
 
 Before SSH has finished connecting, a prompt reports `ACP: the remote session is still connecting.`. Finish connecting and retry. See [Shell tabs](/user-documentation/command-bar/shell) for local and remote launches.
 
