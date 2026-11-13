@@ -1,3 +1,5 @@
+import { positiveInteger } from '../positive-integer.js';
+
 export type FileGlobArgs = {
   pattern: string;
   dir: string | undefined;
@@ -13,12 +15,6 @@ export const FILE_GLOB_MAX_LIMIT = 1000;
 export const FILE_GLOB_USAGE = 'Usage: file glob <pattern> [--path <dir>] [--hidden] [--dirs] [--limit <n>]';
 
 type ScannedArgs = Partial<FileGlobArgs>;
-
-function positiveInteger(value: string | undefined): number | undefined {
-  if (value === undefined || !/^\d+$/.test(value)) return undefined;
-  const parsed = Number(value);
-  return Number.isSafeInteger(parsed) && parsed >= 1 ? parsed : undefined;
-}
 
 function scanSwitch(scanned: ScannedArgs, key: 'hidden' | 'dirs'): number | undefined {
   if (scanned[key] !== undefined) return undefined;
