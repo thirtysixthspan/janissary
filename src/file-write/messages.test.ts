@@ -4,6 +4,7 @@ import { displayPath, editSuccessLine, matchFailureLine, writeSuccessLine } from
 import { MULTIPLE_MATCHES_REASON, NO_MATCHING_TEXT_REASON } from './types.js';
 
 const LINE_SEPARATOR_CODE = 0x20_28;
+const PARAGRAPH_SEPARATOR_CODE = 0x20_29;
 
 describe('file mutation success lines', () => {
   it('reports a write', () => {
@@ -33,9 +34,9 @@ describe('matchFailureLine', () => {
 
 describe('displayPath', () => {
   it('escapes line breaks, tabs, and control characters onto one line', () => {
-    const controls = [0x0A, 0x0D, 0x09, 0x1B, 0x7F, 0x85, LINE_SEPARATOR_CODE].map((code) => String.fromCodePoint(code));
+    const controls = [0x0A, 0x0D, 0x09, 0x1B, 0x7F, 0x85, LINE_SEPARATOR_CODE, PARAGRAPH_SEPARATOR_CODE].map((code) => String.fromCodePoint(code));
     const path = controls.map((character, index) => `${String(index)}${character}`).join('');
-    const escapes = ['n', 'r', 't', 'u001b', 'u007f', 'u0085', `u${LINE_SEPARATOR_CODE.toString(16)}`];
+    const escapes = ['n', 'r', 't', 'u001b', 'u007f', 'u0085', `u${LINE_SEPARATOR_CODE.toString(16)}`, `u${PARAGRAPH_SEPARATOR_CODE.toString(16)}`];
     const expected = escapes.map((escape, index) => `${String(index)}\\${escape}`).join('');
     expect(displayPath(path)).toBe(expected);
   });
