@@ -28,11 +28,12 @@ describe('mutation command line recognition', () => {
 });
 
 describe('FILE_MUTATION_PRIMER', () => {
-  it('shows both command forms and the optional fields', () => {
+  it('shows both command forms and only the options an agent can use', () => {
     expect(FILE_MUTATION_PRIMER).toContain('file write {');
     expect(FILE_MUTATION_PRIMER).toContain('file edit {');
     expect(FILE_MUTATION_PRIMER).toContain('replaceAll');
-    expect(FILE_MUTATION_PRIMER).toContain('expectedHash');
+    expect(FILE_MUTATION_PRIMER).toContain('creates missing parent folders.');
+    expect(FILE_MUTATION_PRIMER).not.toContain('expectedHash');
     expect(FILE_MUTATION_PRIMER.split('\n')).toHaveLength(6);
   });
 });

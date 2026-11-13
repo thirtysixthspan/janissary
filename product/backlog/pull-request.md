@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Stop advertising `expectedHash` in the agent's mutation primer, since an agent has no way to obtain the editor's private fingerprint it must match.
-
-Existing Issue: `FILE_MUTATION_PRIMER` tells ACP agents that `"expectedHash" is optional on write`, but the value must equal the custom 53-bit `contentHash` fingerprint from `src/editor/save-conflict.ts`, which no tool output exposes (adding hashes to `file read` output is out of scope), so the option is unusable by the agent the primer addresses. Severity: 3/10
-
-Existing Risk: 3/10 - An agent trying to be careful supplies a guessed hash such as a SHA-256 and receives `This file changed on disk since it was loaded`, a misleading refusal that spends tool steps against the eight-step cap or leads it to conclude the file is being changed concurrently.
-
-Proposal Risk: 1/10 - Typed users and the parser keep `expectedHash`, so nothing is removed; the only cost is that an agent no longer learns about an option it could not use.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1996 "remove expectedHash from the agent mutation primer". In `src/file-write/command.ts`, drop the `"expectedHash" is optional on write` clause from `FILE_MUTATION_PRIMER`, keeping the sentence about creating or overwriting files and missing parent folders, and leave `parseFileMutation` and `WRITE_KEYS` unchanged so typed and programmatic callers can still send it. Update `src/file-write/command.test.ts`, which asserts the primer contains `expectedHash` and has six lines, and check `src/acp/tool-table.test.ts`, which compares primers against the constant and should pass unchanged. If `product/specs/acp.md` describes the primer's contents, update that sentence to match.
-
-
 * Share the remote tab port setup between the typed file reader and the new file mutator instead of duplicating it.
 
 Existing Issue: `src/file-write/tab-write.ts` copies the remote branch of `src/file-read/tab-read.ts` nearly line for line, with its own module-level session counter, its own channel, ready, and workspace lookup, its own open-and-dispose sequence, and a second `Remote connection unavailable.` constant in `src/file-write/outcome.ts` beside the private one in `tab-read.ts`. Severity: 2/10
