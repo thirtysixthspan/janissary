@@ -10,6 +10,9 @@ export const FILE_MUTATION_PRIMER = [
   String.raw`Keep the JSON on that one line; write newlines inside strings as \n. Paths are relative to the workspace root.`,
   'A write creates or overwrites the file and creates missing parent folders.',
   'An edit replaces exact text that must match once, unless "replaceAll" is true. Files and arguments are limited to 5 MB.',
+  String.raw`Inside JSON strings escape " as \" and \ as \\.`,
+  String.raw`Example, creating notes/todo.md: file write {"path":"notes/todo.md","content":"# Todo\n- first item\n"}`,
+  'A write answers `Wrote <path>.`; an edit answers `Edited <path> (<n> replacements).`',
 ].join('\n');
 
 export function isFileWriteCommandLine(line: string): boolean {

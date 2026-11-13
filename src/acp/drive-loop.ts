@@ -7,8 +7,11 @@ import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { extractAgentCommand } from '../agent/command-extract.js';
 import { describeLoopCommand } from '../file-write/command.js';
+import { commandProtocolPrimer } from './command-protocol.js';
 
 const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
+
+export const CORE_MAX_STEPS = 8;
 
 export function corePrimer(snapshot: Extract<AcpRunSnapshot, { kind: 'core' }>, tools: AcpTool[]): string {
   const allowList = NATIVE_ACP_COMMANDS.filter((command) => snapshot.grants.includes(command)
@@ -17,12 +20,11 @@ export function corePrimer(snapshot: Extract<AcpRunSnapshot, { kind: 'core' }>, 
   return [
     toolPrimer(tools, allowList),
     toolsAvailable ? NO_BUILTIN_TOOLS_LINE : NO_TOOLS_LINE,
+    toolsAvailable ? commandProtocolPrimer(CORE_MAX_STEPS) : '',
     snapshot.role === 'tell' ? TELL_INSTRUCTION : '',
     MARKDOWN_INSTRUCTION,
   ].filter(Boolean).join('\n\n');
 }
-
-export const CORE_MAX_STEPS = 8;
 
 type DrivenStep = { workspace: boolean; refused?: 'disabled' };
 
