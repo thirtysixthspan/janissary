@@ -34,7 +34,7 @@ The connections window shows the model the session started with. That choice is 
 
 The `tell` command uses the matching `tell` role. With the built-in roles, ask can read a file from
 the workspace, list and query databases, browse to a page and read its content, and ask or approve a
-question. Tell starts with those same commands plus database create/delete and browser eval. If you
+question. Tell starts with those same commands plus database create/delete, browser eval, and writing and editing workspace files. If you
 add or remove a grant, the next prompt reads the updated role. A missing ask or tell role uses its
 built-in model and command defaults; an existing role with no grants has no native tools.
 
@@ -70,7 +70,7 @@ Closing the shell also closes its ask and tell sessions. Reset cancels a questio
 
 The agent can use the file, database, browser, and question tools granted to its role. By default, ask
 can read a file from the workspace, list and query databases, open a page, read its content, and ask or
-approve a question. Tell has those commands plus database create/delete and browser eval. If the model
+approve a question. Tell has those commands plus database create/delete, browser eval, and writing and editing workspace files. If the model
 tries a known command its role doesn't allow, it receives `Command not allowed for role "<role>": <subcommand>.` and can choose another action. The result of each allowed tool step goes back to the model,
 up to eight tool steps per prompt. If a prompt reaches that cap, the settled shell reply and the record's final answer in
 the connection tab end with a `(stopped after 8 tool steps)` paragraph, so you can tell the answer was
@@ -103,10 +103,11 @@ shell starts its ACP process on that host in the remote workspace. Model selecti
 still come from your local `ask` or `tell` role.
 
 `file read` reads the workspace on the host running the agent, so on a remote tab it reads the remote
-clone. The database, browser, and question tools continue to act on the machine running Janissary; a
+clone. Granted `file write` and `file edit` run there too, so on a remote tab they change only the remote
+clone, never your local copy. The database, browser, and question tools continue to act on the machine running Janissary; a
 remote ACP query uses your local database and browser for those tools. A remote workspace step shows
 `[<host>] ` at the start of its transcript line and of both activity lines in the connection record. A
-typed `file read` and a caller-side step carry no tag.
+typed `file read`, `file write`, or `file edit` and a caller-side step carry no tag.
 
 Before SSH has finished connecting, a prompt reports `ACP: the remote session is still connecting.`. Finish connecting and retry. See [Shell tabs](/user-documentation/command-bar/shell) for local and remote launches.
 

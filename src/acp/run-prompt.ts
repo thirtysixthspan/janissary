@@ -10,6 +10,8 @@ import { notify } from '../notifications/index.js';
 import { isRateLimitError } from './rate-limit.js';
 import { createInvocationContext } from '../command/invocation.js';
 import { readFileInTab } from '../file-read/tab-read.js';
+import { mutateFileInTab } from '../file-write/tab-write.js';
+import { isFileMutationCommandLine } from '../file-write/command.js';
 import { coreActivity } from './record-feed.js';
 import { acpRoleRuntime } from './role-state.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
@@ -86,6 +88,7 @@ export function runCorePrompt(
     },
     runWorkspace: (command) => {
       if (!active()) throw new Error('ACP: prompt cancelled.');
+      if (isFileMutationCommandLine(command.trim().replace(/^\//, ''))) return mutateFileInTab(managers, label, command);
       return readFileInTab(managers, label, command);
     },
   };

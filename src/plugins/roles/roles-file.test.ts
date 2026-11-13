@@ -75,6 +75,7 @@ describe('reading the roles in effect', () => {
       commands: [
         'db sqlite create', 'db sqlite delete', 'db sqlite query', 'db sqlite list',
         'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve', 'file read',
+        'file write', 'file edit',
       ],
     });
     expect(DEFAULT_ROLES.slice(0, 5).every((role) => role.commands.length === 0)).toBe(true);
@@ -102,6 +103,28 @@ describe('reading the roles in effect', () => {
 
     expect(read.roles.map((role) => role.commands)).toEqual([['question ask'], ['browser goto', 'question approve']]);
     expect(readFileSync(homeFile(home), 'utf8')).toBe(before);
+  });
+
+  it('keeps a saved tell role without file write or file edit as it is on disk', () => {
+    const { home, root } = directories();
+    const saved = [
+      'db sqlite create', 'db sqlite delete', 'db sqlite query', 'db sqlite list',
+      'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve', 'file read',
+    ];
+    writeJson(homeFile(home), { tell: { description: 'Tasks.', entries: [], commands: saved } });
+    const before = readFileSync(homeFile(home), 'utf8');
+
+    const read = readRolesFile(home, root);
+
+    expect(read.roles[0]?.commands).toEqual(saved);
+    expect(readFileSync(homeFile(home), 'utf8')).toBe(before);
+  });
+
+  it('keeps file write on a saved ask role', () => {
+    const { home, root } = directories();
+    writeJson(homeFile(home), { ask: { description: 'Questions.', entries: [], commands: ['file write'] } });
+
+    expect(readRolesFile(home, root).roles[0]?.commands).toEqual(['file write']);
   });
 
   it('reads the home file when it is the only one', () => {

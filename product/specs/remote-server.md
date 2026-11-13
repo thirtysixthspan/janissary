@@ -289,6 +289,8 @@ ensures.
 
 Protocol version 40 moves Janissary's ACP tool loop onto the far side. `acp-run` replaces `acp-prompt` and carries the prompt plus its settings snapshot; `acp-run-end` replaces `acp-end` as the terminal frame. `acp-turn` adds turn boundaries, `acp-tool-request` and `acp-tool-result` carry caller-tool round trips, and `acp-tool-step` carries a far-side workspace step or gate refusal. `acp-chunk` still carries reply deltas, and `acp-ready`, `acp-activity`, `acp-error`, and `acp-close` are unchanged. The version also adds `read-lines`, the read-only filesystem operation behind a typed `file read` on a remote tab; it returns numbered lines or the reader's error line. A version-39 peer would accept prompts but run no loop, so workspace tools would never run where the workspace is while both ends looked healthy; the handshake refuses it. A peer parked under 39 is refused at relay time by its peer record, as for every earlier bump.
 
+Protocol version 41 lets `write-file` carry `policy: 'tool-text'`, the selector for the hosted write tool. The far side validates it and then enforces the tool's path, secret, protected-folder, size, and text rules in its own workspace, creating missing parent folders there; any other policy value is an invalid request. Content still crosses as one base64 copy, and no local cache entry or temporary file is involved. A tool write naming an absolute path, or a relative path that climbs out of the root the request was made against, is answered on the near side as outside the workspace, without a request. Editor saves are unchanged. A version-40 peer would drop the policy and apply the editor's looser rules while both ends looked healthy, so the handshake refuses it. Version 41 also adds the `edit-file` operation, with a plain `path`, `oldString` and `newString` (each one base64 layer of UTF-8 text, decoded strictly on the far side with a leading byte order mark kept as text), and a required `replaceAll`. The far side reads the file, matches the old text, replaces it, and writes atomically in its own workspace, with no local file cache or temporary file; it answers the replacement count or `{ ok: false, reason }`. A reply carrying anything else, such as a count below 1, is rejected as an invalid result rather than resolved. The near side refuses an absolute or root-escaping edit path the same way it does for a tool write, and refuses an `oldString` or `newString` holding an unpaired surrogate before encoding it, since encoding would turn it into a replacement character; a typed write or edit whose path ends in a separator or in a `.` or `..` segment is refused before any request is sent. A version-40 peer would refuse the unknown operation only after connecting, so the handshake refuses it first.
+
 Unavailable sends, explicit disconnect, transport loss, protocol failure, and channel finish settle and detach ACP listeners, including before readiness. Late frames for detached ids are ignored. A lost core ACP session is closed locally and replaced by a later request once its channel is ready; autonomous runs retain their transport-loss termination. Durable activity capture belongs only to the initiating project's recorder. The sessions tab's existing shell/harness restoration policy is unchanged.
 
 The handshake check is narrower for an attach than for a launch. An attach is answered by the
@@ -663,7 +665,7 @@ request in it and the session reconnects, or the reply is among the oldest outpu
 remote discards once its replay buffer is full. A request is therefore never left waiting forever:
 one that has no reply within a minute is reported as failed the same way, with the reason that the
 remote machine did not answer in time. Work that really runs on the remote — a pull, a commit, a
-search, a batch move, delete, or paste, an undo or redo replay, and a whole-file read or write — is
+search, a batch move, delete, or paste, an undo or redo replay, a whole-file read or write, and a text edit — is
 given ten minutes. A request still waiting when the session reconnects is not failed early, since
 the remote replays its queued replies on reattach; a reply that arrives after its request has
 already been reported as failed is ignored.
@@ -671,8 +673,8 @@ already been reported as failed is ignored.
 A remote shell or other supported plugin tab's core ACP agent is a further exception, and it splits three ways. The **agent
 process** runs on the remote, in the workspace clone, so it sees the files the tab is working on; the
 remote hosts the ACP client too, so what crosses the channel is prompt text, turns, and tool steps rather
-than JSON-RPC. The **autonomous tool loop** runs beside the agent in the clone, so workspace commands
-resolve there; its caller-side tools — `db`, `browser`, and `question` — still execute on the machine
+than JSON-RPC. The **autonomous tool loop** runs beside the agent in the clone, so workspace commands —
+reads, writes, and edits — all resolve in the clone on the remote machine; its caller-side tools — `db`, `browser`, and `question` — still execute on the machine
 janissary is running on, against local data and a local browser, and their results travel back as tool
 results. And **which agent and model run** is decided locally and sent
 across on the frame that opens the session, so one definition holds and the two installations cannot

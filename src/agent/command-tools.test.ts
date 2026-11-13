@@ -27,6 +27,20 @@ describe('agent command tools', () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
+  it('refuses file write and edit forms even with the file grant, before dispatch', async () => {
+    const dispatch = vi.fn(async () => ({ dispatched: true, output: 'read' }));
+    const managers = { command: { dispatchLineInInvocation: dispatch } } as unknown as Managers;
+    const fileSnapshot: AgentSnapshot = { ...snapshot, grants: ['file'] };
+
+    for (const command of ['file write {"path":"a.md"}', 'file edit {"path":"a.md"}', '/file write {"path":"a.md"}', 'file edit {']) {
+      await expect(runGrantedAgentCommand(command, fileSnapshot, managers, invocation('w')))
+        .resolves.toBe(`Agent: command not permitted: ${command}.`);
+    }
+    expect(dispatch).not.toHaveBeenCalled();
+    await expect(runGrantedAgentCommand('file read a.md', fileSnapshot, managers, invocation('r'))).resolves.toBe('read');
+    expect(dispatch).toHaveBeenCalledTimes(1);
+  });
+
   it('dispatches granted commands through the caller context and isolates overlapping replies', async () => {
     const dispatch = vi.fn(async (_label: string, input: string, context: CommandInvocationContext) => ({
       dispatched: true,

@@ -6,6 +6,7 @@ import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { nativeCommandName, nativeCommandTool, type NativeCommandTool } from './native-commands.js';
 import type { AcpRunSnapshot } from './types.js';
 import { FILE_READ_PRIMER, isFileReadCommandLine } from '../file-read/command.js';
+import { FILE_MUTATION_PRIMER, isFileMutationCommandLine } from '../file-write/command.js';
 
 // One tool on the ACP run path. The three loop options the agent sees — what it is told the tools
 // are, which side runs a command it emitted, and what pulls a command out of its reply — are all
@@ -31,6 +32,7 @@ export type AcpTool = {
 // it the fall-through for a command no other tool recognized. Extraction does not use table order:
 // the reply's last line that any tool recognizes is the command, whichever tool owns it.
 export function createAcpToolTable(grants: readonly string[]): AcpTool[] {
+  const allowed = NATIVE_ACP_COMMANDS.filter((command) => grants.includes(command));
   const ownedTools: Array<{ owner: NativeCommandTool; tool: AcpTool }> = [
     {
       owner: 'browser',
@@ -53,9 +55,9 @@ export function createAcpToolTable(grants: readonly string[]): AcpTool[] {
     {
       owner: 'file',
       tool: {
-        primer: FILE_READ_PRIMER,
+        primer: filePrimer(allowed),
         match: (command) => /^file\b/i.test(command),
-        isCommandLine: (line) => isFileReadCommandLine(line),
+        isCommandLine: (line) => isFileReadCommandLine(line) || isFileMutationCommandLine(line),
         runsOn: 'workspace',
       },
     },
@@ -69,10 +71,16 @@ export function createAcpToolTable(grants: readonly string[]): AcpTool[] {
       },
     },
   ];
-  const allowed = NATIVE_ACP_COMMANDS.filter((command) => grants.includes(command));
   return ownedTools
     .filter(({ owner }) => allowed.some((command) => nativeCommandTool(command) === owner))
     .map(({ tool }) => tool);
+}
+
+function filePrimer(allowed: readonly string[]): string {
+  return [
+    ...(allowed.includes('file read') ? [FILE_READ_PRIMER] : []),
+    ...(allowed.includes('file write') || allowed.includes('file edit') ? [FILE_MUTATION_PRIMER] : []),
+  ].join('\n\n');
 }
 
 // The joined primer and canonical allow-list, in table and vocabulary order.
@@ -119,6 +127,7 @@ function gateAgentCommand(
   snapshot: Extract<AcpRunSnapshot, { kind: 'agent' }>, command: string,
 ): AcpGateDecision {
   const input = command.trim().replace(/^\//, '');
+  if (isFileMutationCommandLine(input)) return { refusal: `Agent: command not permitted: ${command}.` };
   if (!isFileReadCommandLine(input)) return { runsOn: 'caller' };
   if (!snapshot.grants.includes('file')) return { refusal: `Agent: command not permitted: ${command}.` };
   return { runsOn: 'workspace' };

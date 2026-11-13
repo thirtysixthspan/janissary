@@ -15,6 +15,8 @@ describe('native ACP commands', () => {
       'question ask',
       'question approve',
       'file read',
+      'file write',
+      'file edit',
     ]);
   });
 

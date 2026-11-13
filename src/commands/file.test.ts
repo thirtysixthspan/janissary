@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -123,6 +123,26 @@ describe('file command run', () => {
     expect(lookups).toEqual([]);
     expect(remote.attachNavigator).not.toHaveBeenCalled();
     expect(remoteCalls).toEqual([]);
+  });
+
+  it('writes and edits a file with one output line each', async () => {
+    tabs = [{ label: 'janus' }];
+    expect(await run(String.raw`file write {"path":"new/a.txt","content":"a\nb\n"}`)).toBe('Wrote new/a.txt.');
+    appended = [];
+    expect(await run('file edit {"path":"new/a.txt","oldString":"b","newString":"c"}')).toBe('Edited new/a.txt (1 replacements).');
+    expect(readFileSync(path.join(root, 'new', 'a.txt'), 'utf8')).toBe('a\nc\n');
+  });
+
+  it('creates nothing for malformed JSON or unknown fields', async () => {
+    tabs = [{ label: 'janus' }];
+    expect(await run('file write {"path":"dir/a.txt"')).toBe('Usage: file write <JSON>');
+    appended = [];
+    expect(await run('file edit {"path":"dir/a.txt","oldString":"a","newString":"b","extra":1}')).toBe('Usage: file edit <JSON>');
+    expect(existsSync(path.join(root, 'dir'))).toBe(false);
+  });
+
+  it('keeps the read usage line for bare file', async () => {
+    expect(await run('file')).toBe(FILE_READ_USAGE);
   });
 
   describe('on a remote tab', () => {

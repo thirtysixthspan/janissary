@@ -17,7 +17,8 @@ import type { HistoryStep } from '../moves.js';
 import type { DiffSource } from '../../plugins/diff/shared.js';
 import { remoteGitCommit, remoteGitMetadata, remoteGitPull, type RemoteRequest } from './port-git.js';
 import { remoteMove, remoteMoveMany } from './port-moves.js';
-import { remoteReadLines } from './port-reads.js';
+import { remoteEditFile, remoteReadLines, remoteWriteFile } from './port-reads.js';
+import type { FileEditValue, FileWritePolicy } from '../../file-write/types.js';
 import { remoteDeleteMany, remoteReplay, remoteSearch, remoteStatRows } from './port-mapped.js';
 import type { CommitResult } from '../../git/commit.js';
 import type { SearchMatch, SearchRequest } from '../../search/types.js';
@@ -121,13 +122,16 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
     return remoteReadLines(this.requester(), this.paths, root, relPath, offset, limit);
   }
 
-  async writeFile(
-    root: string, relPath: string, content: Uint8Array, expectedHash?: string,
+  writeFile(
+    root: string, relPath: string, content: Uint8Array, expectedHash?: string, policy?: FileWritePolicy,
   ): Promise<FileOperationResult> {
-    return this.request('write-file', {
-      path: await this.paths.to(root, relPath), content: Buffer.from(content).toString('base64'),
-      ...(expectedHash !== undefined && { expectedHash }),
-    });
+    return remoteWriteFile(this.requester(), this.paths, root, relPath, content, expectedHash, policy);
+  }
+
+  editFile(
+    root: string, relPath: string, oldString: string, newString: string, replaceAll: boolean,
+  ): Promise<FileOperationResult<FileEditValue>> {
+    return remoteEditFile(this.requester(), this.paths, root, relPath, oldString, newString, replaceAll);
   }
 
   move(root: string, from: string, to: string, overwrite?: boolean): Promise<MoveOneResult> {

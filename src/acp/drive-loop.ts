@@ -6,6 +6,7 @@ import { NO_BUILTIN_TOOLS_LINE, NO_TOOLS_LINE } from './internal-tools.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { extractAgentCommand } from '../agent/command-extract.js';
+import { describeLoopCommand } from '../file-write/command.js';
 
 const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
 
@@ -69,6 +70,7 @@ export function driveToolLoop(
     runCommand,
     extractCommand: snapshot.kind === 'core' ? toolExtractor(tools) : (text) => extractAgentCommand(text, snapshot.askUser),
     maxSteps: snapshot.kind === 'core' ? CORE_MAX_STEPS : Infinity,
+    describeCommand: describeLoopCommand,
   }, {
     startTurn: (isFirst) => { events.startTurn(isFirst); },
     chunk: (cumulative) => { events.chunk(cumulative); },

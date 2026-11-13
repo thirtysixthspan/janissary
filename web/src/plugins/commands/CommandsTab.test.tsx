@@ -456,3 +456,22 @@ describe('CommandsTab controls', () => {
     expect(close).not.toHaveBeenCalled();
   });
 });
+
+describe('CommandsTab file mutation rows', () => {
+  it('renders file write and file edit as native rows under file with both toggles', () => {
+    renderTab(makePayload({
+      commands: [
+        row({ name: 'file', label: 'file', enabled: false, effectiveEnabled: false }),
+        row({ name: 'file read', label: 'file read', nativeTool: 'file', parent: 'file', effectiveEnabled: false }),
+        row({ name: 'file write', label: 'file write', nativeTool: 'file', parent: 'file', effectiveEnabled: false }),
+        row({ name: 'file edit', label: 'file edit', nativeTool: 'file', parent: 'file', effectiveEnabled: false }),
+      ],
+    }));
+    for (const name of ['file write', 'file edit']) {
+      const enabled = screen.getByLabelText(`Enabled: ${name}`);
+      expect(screen.getByLabelText(`Agent access: ${name}`)).toBeDisabled();
+      expect(enabled).toBeDisabled();
+      expect(within(enabled.closest('.commands-row') as HTMLElement).getByText('Disabled by parent command: file.')).toBeInTheDocument();
+    }
+  });
+});

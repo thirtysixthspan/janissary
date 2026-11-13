@@ -12,6 +12,7 @@ import { descriptorFor, type AnyOperationDescriptor, type OperationContext } fro
 import type { HistoryStep } from '../../file-navigator/moves.js';
 import { resultDecoders } from './result-decoders.js';
 import { writeFileOperation } from './write-file-operation.js';
+import { editFileOperation } from './edit-file-operation.js';
 import { searchTextOperation } from './search-text-operation.js';
 import { readLinesOperation } from './read-lines-operation.js';
 import { changeSetOperation } from './change-set-operation.js';
@@ -72,6 +73,7 @@ const READ_OPERATIONS = {
 // The operations that write. Each names the refusal shape matching its own result type.
 const MUTATION_OPERATIONS = {
   'write-file': writeFileOperation,
+  'edit-file': editFileOperation,
   move: descriptorFor<'move'>()({
     valid: (args) => stringValue(args.from) && stringValue(args.to)
       && (args.overwrite === undefined || typeof args.overwrite === 'boolean'),

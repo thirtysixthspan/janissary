@@ -1,7 +1,10 @@
 import { driveToolLoop } from '../acp/drive-loop.js';
 import type { AcpLoopHandlers, AcpLoopSession, AcpSession, AcpToolHost } from '../acp/types.js';
 import { deferred, type Deferred } from '../deferred.js';
+import { LocalFileSystemPort } from '../file-navigator/filesystem-port.js';
 import { readWorkspaceCommand } from '../file-read/read.js';
+import { isFileMutationCommandLine } from '../file-write/command.js';
+import { runFileMutation } from '../file-write/tab-write.js';
 import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 
 type AcpRunFrame = Extract<ClientFrame, { type: 'acp-run' }>;
@@ -35,7 +38,13 @@ export function startRemoteLoop(
   };
 
   const host: AcpToolHost = {
-    runWorkspace: (command) => readWorkspaceCommand(workspaceDir, command.trim().replace(/^\//, '')),
+    runWorkspace: (command) => {
+      const normalized = command.trim().replace(/^\//, '');
+      if (isFileMutationCommandLine(normalized)) {
+        return runFileMutation(new LocalFileSystemPort(), workspaceDir, normalized);
+      }
+      return readWorkspaceCommand(workspaceDir, normalized);
+    },
     runCaller: (command) => {
       if (aborted()) return '';
       const request = ++requestNumber;

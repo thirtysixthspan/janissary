@@ -45,6 +45,7 @@ describe('RemotePortRequests deadlines', () => {
   it('gives work the far side really does, like a pull, the long deadline', () => {
     expect(requestDeadline('git-pull')).toBe(LONG_REQUEST_DEADLINE_MS);
     expect(requestDeadline('search')).toBe(LONG_REQUEST_DEADLINE_MS);
+    expect(requestDeadline('edit-file')).toBe(LONG_REQUEST_DEADLINE_MS);
     expect(requestDeadline('search-text')).toBe(LONG_REQUEST_DEADLINE_MS);
     expect(requestDeadline('read-directory')).toBe(REQUEST_DEADLINE_MS);
     expect(requestDeadline('read-lines')).toBe(REQUEST_DEADLINE_MS);

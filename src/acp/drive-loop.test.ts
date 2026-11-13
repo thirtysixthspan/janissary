@@ -134,6 +134,23 @@ describe('driveToolLoop', () => {
     expect(host.runWorkspace).toHaveBeenCalledExactlyOnceWith('file read notes.md');
     expect(host.runCaller).not.toHaveBeenCalled();
     expect(sent[1]).toContain('workspace output');
+    expect(sent[1]).toContain('Output of `file read notes.md`:');
+  });
+
+  it('names a file write by path in the follow-up but records the full command', () => {
+    const write = 'file write {"path":"notes.md","content":"SECRET BODY"}';
+    const { sent, events } = drive(coreSnapshot('tell', ['file write']), [write, 'Done.']);
+    expect(sent[1]).toContain('Output of `file write notes.md`:\nworkspace output');
+    expect(sent[1]).not.toContain('SECRET BODY');
+    expect(ofKind(events, 'ranCommand')).toEqual([['ranCommand', write, 'workspace output', true, undefined]]);
+  });
+
+  it('names a file edit by path in the follow-up without its strings', () => {
+    const edit = 'file edit {"path":"a.md","oldString":"OLD TEXT","newString":"NEW TEXT"}';
+    const { sent } = drive(coreSnapshot('tell', ['file edit']), [edit, 'Done.']);
+    expect(sent[1]).toContain('Output of `file edit a.md`:');
+    expect(sent[1]).not.toContain('OLD TEXT');
+    expect(sent[1]).not.toContain('NEW TEXT');
   });
 
   it('fires events in order for one caller step and a plain answer', () => {
@@ -326,5 +343,28 @@ describe('driveToolLoop agent runs', () => {
     expect(sent).toHaveLength(21);
     expect(ofKind(events, 'ranCommand')).toHaveLength(20);
     expect(events.at(-1)).toEqual(['finished', 'answered', Infinity]);
+  });
+});
+
+describe('driveToolLoop file mutations', () => {
+  const WRITE = 'file write {"path":"a.md","content":"x"}';
+
+  it('routes a granted write to runWorkspace and feeds its one-line result back', () => {
+    const { sent, host } = drive(coreSnapshot('tell', ['file write']), [WRITE, 'Done.']);
+    expect(host.runWorkspace).toHaveBeenCalledExactlyOnceWith(WRITE);
+    expect(host.runCaller).not.toHaveBeenCalled();
+    expect(sent[1]).toContain('workspace output');
+  });
+
+  it('exposes no file tools without tools', () => {
+    const { sent, host } = drive(coreSnapshot('tell', ['file write'], [], true), [WRITE]);
+    expect(host.runWorkspace).not.toHaveBeenCalled();
+    expect(sent).toHaveLength(1);
+  });
+
+  it('caps repeated writes at eight steps', () => {
+    const { events, host } = drive(coreSnapshot('tell', ['file write']), [WRITE]);
+    expect(host.runWorkspace).toHaveBeenCalledTimes(8);
+    expect(events.at(-1)).toEqual(['finished', 'capped', 8]);
   });
 });

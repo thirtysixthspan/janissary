@@ -5,6 +5,7 @@ import type { ClientFrame } from '../../remote/protocol-frames.js';
 import type { SearchMatch } from '../../protocol.js';
 import { OUTSIDE_ROOT_REASON } from '../file-operation-result.js';
 import { RemoteFileSystemPort } from './port.js';
+import { CLOSED_REASON, ENDED_REASON, LONG_REQUEST_DEADLINE_MS } from './port-requests.js';
 
 function harness() {
   const sent: ClientFrame[] = [];
@@ -64,6 +65,151 @@ describe('RemoteFileSystemPort', () => {
     expect(request?.type === 'filesystem-request' && Object.hasOwn(request.args, 'expectedHash')).toBe(false);
     h.reply({ ok: true });
     await overwrite;
+  });
+
+  it('forwards the tool-text policy only when supplied, with content as one base64 copy', async () => {
+    const h = harness();
+    const tool = h.port.writeFile('/remote/ws', 'notes.txt', Buffer.from('héllo'), undefined, 'tool-text');
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    expect(h.sent.findLast((frame) => frame.type === 'filesystem-request')).toMatchObject({
+      operation: 'write-file',
+      args: { path: 'notes.txt', content: Buffer.from('héllo').toString('base64'), policy: 'tool-text' },
+    });
+    h.reply({ ok: true });
+    await expect(tool).resolves.toEqual({ ok: true });
+
+    const editor = h.port.writeFile('/remote/ws', 'notes.txt', Buffer.from('x'));
+    await vi.waitFor(() => expect(h.sent.filter((frame) => frame.type === 'filesystem-request')).toHaveLength(2));
+    const request = h.sent.findLast((frame) => frame.type === 'filesystem-request');
+    expect(request?.type === 'filesystem-request' && request.args)
+      .toEqual({ path: 'notes.txt', content: Buffer.from('x').toString('base64') });
+    h.reply({ ok: true });
+    await editor;
+  });
+
+  it('answers an absolute path under the tool policy locally and sends no frame', async () => {
+    const h = harness();
+    await expect(h.port.writeFile('/remote/ws', '/remote/ws/a.txt', Buffer.from('x'), undefined, 'tool-text'))
+      .resolves.toEqual({ ok: false, reason: 'Outside the workspace' });
+    expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(false);
+  });
+
+  it('still sends an absolute path without the tool policy', async () => {
+    const h = harness();
+    const pending = h.port.writeFile('/remote/ws', '/remote/ws/a.txt', Buffer.from('x'));
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    h.reply({ ok: true });
+    await expect(pending).resolves.toEqual({ ok: true });
+  });
+
+  it('resolves a policy write as a failure value on close, an error reply, and a timeout', async () => {
+    const closed = harness();
+    const onClose = closed.port.writeFile('/remote/ws', 'a.txt', Buffer.from('x'), undefined, 'tool-text');
+    await vi.waitFor(() => expect(closed.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    closed.listener()?.onClose?.();
+    await expect(onClose).resolves.toMatchObject({ ok: false });
+
+    const ended = harness();
+    const onError = ended.port.writeFile('/remote/ws', 'a.txt', Buffer.from('x'), undefined, 'tool-text');
+    await vi.waitFor(() => expect(ended.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    ended.reply(undefined, 'Secret file');
+    await expect(onError).resolves.toMatchObject({ ok: false });
+
+    vi.useFakeTimers();
+    try {
+      const timed = harness();
+      const onTimeout = timed.port.writeFile('/remote/ws', 'a.txt', Buffer.from('x'), undefined, 'tool-text');
+      await vi.waitFor(() => expect(timed.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+      await vi.advanceTimersByTimeAsync(LONG_REQUEST_DEADLINE_MS + 1);
+      await expect(onTimeout).resolves.toMatchObject({ ok: false });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('sends an edit with a plain mapped path, one base64 layer of text, and the replaceAll flag', async () => {
+    const h = harness();
+    const pending = h.port.editFile('/remote/ws/src', 'a.txt', 'héllo', 'wörld', true);
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    const request = h.sent.findLast((frame) => frame.type === 'filesystem-request');
+    expect(request).toMatchObject({ operation: 'edit-file' });
+    const args = request?.type === 'filesystem-request' ? request.args as Record<string, unknown> : {};
+    expect(args).toEqual({
+      path: 'src/a.txt',
+      oldString: Buffer.from('héllo', 'utf8').toString('base64'),
+      newString: Buffer.from('wörld', 'utf8').toString('base64'),
+      replaceAll: true,
+    });
+    expect(Buffer.from(String(args.oldString), 'base64').toString('utf8')).toBe('héllo');
+    h.reply({ ok: true, value: { replacements: 2 } });
+    await expect(pending).resolves.toEqual({ ok: true, value: { replacements: 2 } });
+  });
+
+  it('fails an edit whose reply reports zero replacements', async () => {
+    const h = harness();
+    const pending = h.port.editFile('/remote/ws', 'a.txt', 'x', 'y', false);
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    h.reply({ ok: true, value: { replacements: 0 } });
+    await expect(pending).rejects.toThrow('Invalid remote filesystem operation result.');
+  });
+
+  it('answers an absolute edit path locally and sends no frame', async () => {
+    const h = harness();
+    await expect(h.port.editFile('/remote/ws', '/remote/ws/a.txt', 'x', 'y', false))
+      .resolves.toEqual({ ok: false, reason: 'Outside the workspace' });
+    expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(false);
+  });
+
+  it('refuses lone-surrogate edit strings with the local reasons and sends no frame', async () => {
+    const h = harness();
+    await expect(h.port.editFile('/remote/ws', 'a.txt', '\u{D800}', 'y', false))
+      .resolves.toEqual({ ok: false, reason: 'No matching text' });
+    await expect(h.port.editFile('/remote/ws', 'a.txt', 'x', 'y\u{DFFF}', false))
+      .resolves.toEqual({ ok: false, reason: 'Not a text file' });
+    expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(false);
+  });
+
+  it('answers a root-escaping edit or tool write locally and sends no frame', async () => {
+    const h = harness();
+    await expect(h.port.editFile('/remote/ws/src', '../b.txt', 'x', 'y', false))
+      .resolves.toEqual({ ok: false, reason: 'Outside the workspace' });
+    await expect(h.port.writeFile('/remote/ws/src', '../b.txt', Buffer.from('x'), undefined, 'tool-text'))
+      .resolves.toEqual({ ok: false, reason: 'Outside the workspace' });
+    expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(false);
+  });
+
+  it('resolves an edit as a failure value on close, connection end, and timeout', async () => {
+    const closed = harness();
+    const onClose = closed.port.editFile('/remote/ws', 'a.txt', 'x', 'y', false);
+    await vi.waitFor(() => expect(closed.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    closed.port.dispose();
+    await expect(onClose).resolves.toEqual({ ok: false, reason: CLOSED_REASON });
+
+    const dropped = harness();
+    const onDrop = dropped.port.editFile('/remote/ws', 'a.txt', 'x', 'y', false);
+    await vi.waitFor(() => expect(dropped.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    dropped.listener()?.onClose?.();
+    await expect(onDrop).resolves.toEqual({ ok: false, reason: ENDED_REASON });
+
+    const ended = harness();
+    const onError = ended.port.editFile('/remote/ws', 'a.txt', 'x', 'y', false);
+    await vi.waitFor(() => expect(ended.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    ended.reply(undefined, 'The remote connection ended.');
+    await expect(onError).resolves.toEqual({ ok: false, reason: 'The remote connection ended.' });
+
+    vi.useFakeTimers();
+    try {
+      const timed = harness();
+      const onTimeout = timed.port.editFile('/remote/ws', 'a.txt', 'x', 'y', false);
+      await vi.waitFor(() => expect(timed.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+      await vi.advanceTimersByTimeAsync(LONG_REQUEST_DEADLINE_MS + 1);
+      await expect(onTimeout).resolves.toEqual({ ok: false, reason: 'The remote machine did not answer in time.' });
+      timed.reply({ ok: true, value: { replacements: 1 } });
+      await expect(onTimeout).resolves.toEqual({ ok: false, reason: 'The remote machine did not answer in time.' });
+      expect(timed.sent.filter((frame) => frame.type === 'filesystem-request')).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('routes watch events and unwatches when the handle stops', async () => {
