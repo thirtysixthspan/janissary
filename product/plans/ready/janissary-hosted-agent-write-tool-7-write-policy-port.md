@@ -1,6 +1,6 @@
 # Hosted write tool 7 — tool-text write policy on the filesystem port contract
 
-**Complexity: 3/10** — ~30 added lines, 1 edited file plus a small adapter, 5 requirements, 10 scenarios (p=4.79).
+**Complexity: 3/10** — ~31 added lines, 2 edited files (port plus a one-entry web tsconfig lib change) and a small adapter, 6 requirements, 10 scenarios.
 
 Source plan: `./product/plans/complete/janissary-hosted-agent-write-tool.md`. Run order: 7 of 15 in the hosted write tool series. Depends on plan 2 (its pieces 2a/2b/2c1/2c2, complete) for the `FileWritePolicy` type and plan 5 (`janissary-hosted-agent-write-tool-5-tool-text-write.md`, complete) for the helper the policy selects. Both have landed on this branch, so this plan can start immediately.
 
@@ -20,6 +20,7 @@ Editor saves and binary-file writes already go through `FileSystemPort.writeFile
 - The policy branch is the **first** statement of `LocalFileSystemPort.writeFile` (`src/file-navigator/filesystem-port.ts`, `writeFile(root: string, relPath: string, content: Uint8Array, expectedHash?: string): FileOperationResult`), before its `containedPath(root, relPath)` check and its inline `expectedHash` check. The tool path must not run the editor's containment, hash, or symlink-following logic: `writeToolTextFile` resolves the target itself through `resolveMutationTarget` (`src/file-write/target.ts`) and applies its own hash rule (a missing target skips the check). The existing body below the branch stays byte-for-byte unchanged.
 - `RemoteFileSystemPort.writeFile` (`src/file-navigator/remote/port.ts`, `async writeFile(root, relPath, content, expectedHash?)`) keeps its current signature in this plan; a method with fewer parameters still satisfies the interface. No caller passes `policy` until plan 11, and plan 8 lands the remote half before then, so no remote write can silently drop the selector in practice.
 - `src/remote/serve-file-navigator.ts` constructs a `LocalFileSystemPort` on the far side, and `src/remote/filesystem/write-file-operation.ts` calls `context.filesystem.writeFile(context.root, args.path, Buffer.from(args.content, 'base64'), args.expectedHash)`. Leave that call unchanged here; plan 8 adds the selector to it, and the far side then runs this same branch.
+- Web typecheck scope change (decided during implementation): `web/tsconfig.json` (`"lib": ["ES2023", "DOM", "DOM.Iterable"]`, `"paths": { "@shared/*": ["../src/*"] }`) typechecks `src/file-navigator/filesystem-port.ts` through the `@shared/*` alias, so the new chain `filesystem-port.ts → src/file-write/port-adapter.ts → src/file-write/filesystem.ts` exposes `String.prototype.isWellFormed` (ES2024; `filesystem.ts:10` `content.isWellFormed()`) to the web typecheck, which fails with TS2550. Add `"ES2024.String"` to that `lib` array. This is type-only: the browser never executes this path, and the server `tsconfig.json` already uses `"lib": ["ES2024", "DOM"]`. Do not rewrite the `isWellFormed` call sites in `src/file-write/filesystem.ts` or `src/file-write/edit-text.ts`, and do not widen the web lib to all of `ES2024`.
 - The only implementers of `FileSystemPort` are `LocalFileSystemPort` and `RemoteFileSystemPort`; no test fake implements the interface, so no fake needs updating.
 
 ## What already exists (reuse, don't rebuild)
@@ -32,10 +33,11 @@ Editor saves and binary-file writes already go through `FileSystemPort.writeFile
 | `src/file-read/policy.ts` `FILE_POLICY_MAX_BYTES` | Pre-decode size cap |
 | `src/file-navigator/file-operation-result.ts` `failureResult` | Refusal shape |
 | `src/editor/save.ts` | The main existing caller; unchanged |
+| `web/tsconfig.json` `lib` array; server `tsconfig.json` `"lib": ["ES2024", "DOM"]` | Add only `"ES2024.String"` to the web lib so the shared import chain typechecks |
 
 ## Proposed changes
 
-Extend the `FileSystemPort.writeFile` signature and its comment with the optional trailing `policy`. In `LocalFileSystemPort.writeFile`, branch to `writeToolTextBytes` when the policy is present and keep the existing body as the no-policy path. Create `src/file-write/port-adapter.ts` with the decoding adapter. No other caller changes; `src/editor/save.ts` and the remote operation keep calling without a policy.
+Extend the `FileSystemPort.writeFile` signature and its comment with the optional trailing `policy`. In `LocalFileSystemPort.writeFile`, branch to `writeToolTextBytes` when the policy is present and keep the existing body as the no-policy path. Create `src/file-write/port-adapter.ts` with the decoding adapter. Add `"ES2024.String"` to the `lib` array in `web/tsconfig.json` in the same change as the port import, so the web typecheck never goes red. No other caller changes; `src/editor/save.ts` and the remote operation keep calling without a policy.
 
 ## Tests
 
@@ -44,10 +46,11 @@ Extend the `FileSystemPort.writeFile` signature and its comment with the optiona
 
 ## Verification
 
-Run `$janissary/scripts/run.mjs check-diff` after each change. No end-to-end manual check is reachable yet (no caller passes `policy` until plan 11), so the port tests are the verification; confirm with `git diff` that `src/editor/save.ts` and `src/remote/filesystem/write-file-operation.ts` are untouched.
+Run `$janissary/scripts/run.mjs check-diff` after each change; it must pass both the server and the web typecheck (the `web/tsconfig.json` lib entry is what keeps the web one green). No end-to-end manual check is reachable yet (no caller passes `policy` until plan 11), so the port tests are the verification; confirm with `git diff` that `src/editor/save.ts` and `src/remote/filesystem/write-file-operation.ts` are untouched.
 
 ## Out of scope
 
 - Remote transport of the selector and the protocol version bump (plan 8).
 - The edit contract (plans 9 and 10).
 - Changing editor save or binary write semantics.
+- Rewriting `isWellFormed` call sites or changing web build targets beyond the single `ES2024.String` lib entry.
