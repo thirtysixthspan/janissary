@@ -160,6 +160,15 @@ describe('RemoteFileSystemPort', () => {
     expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(false);
   });
 
+  it('answers a root-escaping edit or tool write locally and sends no frame', async () => {
+    const h = harness();
+    await expect(h.port.editFile('/remote/ws/src', '../b.txt', 'x', 'y', false))
+      .resolves.toEqual({ ok: false, reason: 'Outside the workspace' });
+    await expect(h.port.writeFile('/remote/ws/src', '../b.txt', Buffer.from('x'), undefined, 'tool-text'))
+      .resolves.toEqual({ ok: false, reason: 'Outside the workspace' });
+    expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(false);
+  });
+
   it('resolves an edit as a failure value on close, connection end, and timeout', async () => {
     const closed = harness();
     const onClose = closed.port.editFile('/remote/ws', 'a.txt', 'x', 'y', false);

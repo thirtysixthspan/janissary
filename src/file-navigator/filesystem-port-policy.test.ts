@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { LocalFileSystemPort } from './filesystem-port.js';
@@ -115,6 +115,15 @@ describe('LocalFileSystemPort.editFile', () => {
     const root = tree();
     expect(port.editFile(root, path.join(root, 'notes.txt'), 'notes', 'x', false))
       .toEqual({ ok: false, reason: 'Outside the workspace' });
+    expect(readFileSync(path.join(root, 'notes.txt'), 'utf8')).toBe('notes');
+  });
+
+  it('refuses a relative path that climbs out of the root', () => {
+    const root = tree();
+    const sub = path.join(root, 'sub');
+    mkdirSync(sub);
+    expect(port.editFile(sub, '../notes.txt', 'notes', 'x', false)).toEqual({ ok: false, reason: 'Outside the workspace' });
+    expect(toolWrite(sub, '../notes.txt', Buffer.from('x'))).toEqual({ ok: false, reason: 'Outside the workspace' });
     expect(readFileSync(path.join(root, 'notes.txt'), 'utf8')).toBe('notes');
   });
 });

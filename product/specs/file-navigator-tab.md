@@ -178,6 +178,10 @@ notifications feed without changing the filesystem or clearing the clipboard mar
 remote row into a command bar, an editor, or a harness inserts `<host>:<absolute-remote-path>`;
 local rows retain their relative-path behavior.
 
+An agent's text edit or text write on a remote tree is bounded by the tree's own root, exactly as on
+a local tree: a path that is absolute or climbs above that root is refused as outside the workspace
+before anything is sent to the remote host, even when it would still land inside the remote workspace.
+
 An action naming a path outside the workspace is refused on the remote host, and nothing it named
 runs — including the parts of a multi-item action whose own paths were inside the tree. The refusal
 reads exactly as it does on a local tree: the same message, attached to the same item, and for a

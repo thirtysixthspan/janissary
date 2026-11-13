@@ -28,13 +28,19 @@ export async function remoteReadLines(
 }
 
 // Content crosses as one base64 copy. Under the tool policy an absolute path is refused here with the
-// local tool branch's own reason, for the same mapping reason as the line read above; an editor save
+// local tool branch's own reason, as is a relative path that climbs out of the root, for the same mapping reason as the line read above; an editor save
 // keeps mapping and sending it.
+function outsideRoot(root: string, relPath: string): boolean {
+  if (path.posix.isAbsolute(relPath)) return true;
+  const rel = path.posix.relative(root, path.posix.resolve(root, relPath));
+  return rel === '..' || rel.startsWith('../');
+}
+
 export async function remoteWriteFile(
   request: RemoteRequest, paths: RemotePortPaths, root: string, relPath: string,
   content: Uint8Array, expectedHash?: string, policy?: FileWritePolicy,
 ): Promise<FileOperationResult> {
-  if (policy !== undefined && path.posix.isAbsolute(relPath)) return failureResult('Outside the workspace');
+  if (policy !== undefined && outsideRoot(root, relPath)) return failureResult('Outside the workspace');
   return request('write-file', {
     path: await paths.to(root, relPath), content: Buffer.from(content).toString('base64'),
     ...(expectedHash !== undefined && { expectedHash }),
@@ -42,14 +48,14 @@ export async function remoteWriteFile(
   });
 }
 
-// A text edit always runs under the tool rules, so an absolute path is refused here like a tool write.
+// A text edit always runs under the tool rules, so an absolute or root-escaping path is refused here like a tool write.
 // The path crosses plain; only the old and new text are one base64 layer of UTF-8. The reply is
 // already validated by the `edit-file` result decoder.
 export async function remoteEditFile(
   request: RemoteRequest, paths: RemotePortPaths, root: string, relPath: string,
   oldString: string, newString: string, replaceAll: boolean,
 ): Promise<FileOperationResult<FileEditValue>> {
-  if (path.posix.isAbsolute(relPath)) return failureResult('Outside the workspace');
+  if (outsideRoot(root, relPath)) return failureResult('Outside the workspace');
   return request('edit-file', {
     path: await paths.to(root, relPath),
     oldString: Buffer.from(oldString, 'utf8').toString('base64'),
