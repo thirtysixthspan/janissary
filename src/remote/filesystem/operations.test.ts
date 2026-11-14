@@ -5,12 +5,13 @@ import {
 } from './operations.js';
 import type { RemoteFilesystemArgumentsByOperation, RemoteFilesystemOperation } from '../protocol-frames.js';
 import { FILE_READ_MAX_LIMIT } from '../../file-read/command.js';
+import { FILE_GLOB_MAX_LIMIT } from '../../file-glob/command.js';
 
 // Written out rather than derived from the table, so an operation dropped from both the union and
 // the table is still caught here. Adding one to the protocol means adding it in both places.
 const ALL_OPERATIONS: RemoteFilesystemOperation[] = [
   'read-directory', 'stat', 'watch', 'unwatch', 'git', 'git-pull', 'git-commit', 'search',
-  'search-text', 'read-file', 'read-lines', 'write-file', 'edit-file', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
+  'search-text', 'read-file', 'read-lines', 'glob-paths', 'write-file', 'edit-file', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
   'create-file', 'create-directory', 'replay', 'change-set',
 ];
 
@@ -37,6 +38,8 @@ const PATH_CASES: PathCase[] = [
   ['search-text', { root: '', query: 'todo', include: 'src/**', exclude: '', regex: false, matchCase: false, wholeWord: false }, ['']],
   ['read-file', { path: 'a.txt' }, ['a.txt']],
   ['read-lines', { path: 'a.txt', offset: 3, limit: 10 }, ['a.txt']],
+  ['glob-paths', { pattern: '**/*.ts' }, []],
+  ['glob-paths', { pattern: '*.ts', dir: 'src', hidden: true, dirs: true, limit: 20 }, ['src']],
   ['write-file', { path: 'a.txt', content: '', expectedHash: 'baseline' }, ['a.txt']],
   ['write-file', { path: 'a.txt', content: '', policy: 'tool-text' }, ['a.txt']],
   ['edit-file', { path: 'a.txt', oldString: 'b2xk', newString: '', replaceAll: false }, ['a.txt']],
@@ -82,6 +85,22 @@ const INVALID_CASES: [RemoteFilesystemOperation, Record<string, unknown>][] = [
   ['read-lines', { path: 'a.txt', offset: 1.5 }],
   ['read-lines', { path: 'a.txt', limit: '5' }],
   ['read-lines', { path: 'a.txt', limit: FILE_READ_MAX_LIMIT + 1 }],
+  ['glob-paths', {}],
+  ['glob-paths', { pattern: 3 }],
+  ['glob-paths', { pattern: '*.ts', dir: 3 }],
+  ['glob-paths', { pattern: '*.ts', hidden: 'yes' }],
+  ['glob-paths', { pattern: '*.ts', dirs: 'yes' }],
+  ['glob-paths', { pattern: '*.ts', limit: 0 }],
+  ['glob-paths', { pattern: '*.ts', limit: FILE_GLOB_MAX_LIMIT + 1 }],
+  ['glob-paths', { pattern: '*.ts', limit: 1.5 }],
+  ['glob-paths', { pattern: '*.ts', limit: '5' }],
+  ['glob-paths', { pattern: '*?'.repeat(12) + 'Z' }],
+  ['glob-paths', { pattern: 'a'.repeat(1025) }],
+  ['glob-paths', { pattern: 'x' + String.raw`\{a,b}`.repeat(16) }],
+  ['glob-paths', { pattern: String.raw`*a*a*\{b,c,d}` }],
+  ['glob-paths', { pattern: '**/../a/b/'.repeat(13) + 'c' }],
+  ['glob-paths', { pattern: '{..,x}/a' }],
+  ['glob-paths', { pattern: String.raw`a\..\b` }],
   ['write-file', { path: 'a.txt' }],
   ['write-file', { path: 'a.txt', content: '', expectedHash: null }],
   ['write-file', { path: 'a.txt', content: '', expectedHash: 7 }],
@@ -121,6 +140,7 @@ const VALID_RESULTS: { [K in RemoteFilesystemOperation]: RemoteFilesystemOperati
   'search-text': [],
   'read-file': { content: 'YQ==' },
   'read-lines': { text: '1\ta' },
+  'glob-paths': { text: 'src/a.ts' },
   'write-file': { ok: false, reason: 'denied' },
   'edit-file': { ok: true, value: { replacements: 2 } },
   move: { ok: true, value: { from: 'a.txt', to: 'dest/a.txt' } },
@@ -246,6 +266,22 @@ describe('FILESYSTEM_OPERATIONS', () => {
     expect(() => decodeFilesystemResult('read-lines', { text: 3 })).toThrow('Invalid remote filesystem operation result.');
   });
 
+  it('accepts a glob-paths limit bound and decodes only the fields it was sent', () => {
+    const globPaths = operationDescriptor('glob-paths');
+
+    expect(globPaths.valid({ pattern: '*.ts', limit: FILE_GLOB_MAX_LIMIT })).toBe(true);
+    const decoded = globPaths.decode({ pattern: '*.ts' });
+    expect(decoded).toEqual({ pattern: '*.ts' });
+    for (const key of ['dir', 'hidden', 'dirs', 'limit']) expect(Object.hasOwn(decoded, key)).toBe(false);
+    expect(() => globPaths.decode({ pattern: '*.ts', limit: 0 }))
+      .toThrow('Invalid remote filesystem operation arguments.');
+  });
+
+  it('rejects a glob-paths result without string text', () => {
+    expect(() => decodeFilesystemResult('glob-paths', {})).toThrow('Invalid remote filesystem operation result.');
+    expect(() => decodeFilesystemResult('glob-paths', { text: 3 })).toThrow('Invalid remote filesystem operation result.');
+  });
+
   it('decodes edit-file arguments to plain text', () => {
     expect(operationDescriptor('edit-file').decode({
       path: 'a.txt', oldString: Buffer.from('old é').toString('base64'), newString: '', replaceAll: true,
@@ -283,7 +319,7 @@ describe('FILESYSTEM_OPERATIONS', () => {
     const rootDestination = ALL_OPERATIONS.filter((operation) => operationDescriptor(operation).rootDestination);
 
     expect(alphabetical(rootDestination)).toEqual([
-      'create-directory', 'create-file', 'git-commit', 'move', 'move-many', 'paste', 'read-directory',
+      'create-directory', 'create-file', 'git-commit', 'glob-paths', 'move', 'move-many', 'paste', 'read-directory',
       'read-lines', 'search-text', 'unwatch', 'watch',
     ]);
   });

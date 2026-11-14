@@ -83,11 +83,11 @@ The shell uses the following rules, in order of precedence:
 - **Candidates:** The enabled model ids in the current catalog for the harness named earlier on the same command line. Disabled models are not offered.
 - **Behavior:** The `--model` flag may appear anywhere after the harness name, alongside the command's other flags and options.
 
-### File read command (`file read`)
+### File command (`file read`, `file glob`)
 
 - **Context:** The arguments of the `file` command.
-- **Candidates:** The first argument offers the `read` subcommand. After `file read`, a word starting with `--` offers `--offset` and `--limit`, and any other word completes a filesystem path.
-- **Behavior:** Paths complete against the root the read resolves against — the tab's workspace, or the project directory when the tab has no workspace — not the shell's current directory, so a completed path names the file the command reads. A remote tab offers no path candidates. The value after `--offset` or `--limit`, and any argument under a subcommand other than `read`, gets no candidates and does not fall back to filesystem completion.
+- **Candidates:** The first argument offers the enabled subcommands `glob` and `read`; a subcommand whose `file read` or `file glob` row is disabled is not offered. After `file read`, a word starting with `--` offers `--offset` and `--limit`, and any other word completes a filesystem path. After `file glob`, a word starting with `--` offers `--dirs`, `--hidden`, `--limit`, and `--path`, and the word after `--path` completes directory names only.
+- **Behavior:** Paths complete against the root the read resolves against — the tab's workspace, or the project directory when the tab has no workspace — not the shell's current directory, so a completed path names the file the command reads. `file glob` directories complete against the same root. A remote tab offers no path or directory candidates; subcommands and flags still complete there. The value after `--offset` or `--limit`, the `file glob` pattern, and any argument under a subcommand other than `read` or `glob`, gets no candidates and does not fall back to filesystem completion.
 
 ### 5. Filesystem Path Completion
 

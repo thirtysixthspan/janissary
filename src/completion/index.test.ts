@@ -382,6 +382,17 @@ describe('completeCommandLine — disabled command guard', () => {
     }
   });
 
+  it('drops a disabled file glob subcommand after file', () => {
+    const policy = policyWith(['file glob']);
+    expect(completeCommandLine('file ', 5, dir).matches).toEqual(['glob', 'read']);
+    expect(completeCommandLine('file ', 5, dir, [], [], undefined, undefined, undefined, undefined, policy).matches)
+      .toEqual(['read']);
+
+    const line = 'file glob * --path ';
+    expect(completeCommandLine(line, line.length, dir, [], [], undefined, undefined, undefined, undefined, policy))
+      .toEqual({ newInput: line, newCursor: line.length, matches: [] });
+  });
+
   it('completes file read paths from the read root, not the shell directory', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'compl-read-root-'));
     writeFileSync(path.join(root, 'readme.md'), '');

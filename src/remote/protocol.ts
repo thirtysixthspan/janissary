@@ -223,7 +223,10 @@
 // handshake. Version 41 also adds the `edit-file` operation, which a version-40 remote would refuse
 // as unknown after the handshake had already passed, so the exact-version handshake refuses that
 // pairing first.
-export const REMOTE_PROTOCOL_VERSION = 41;
+// Version 42 adds the read-only `glob-paths` operation, so a typed `file glob` on a remote tab walks
+// the remote clone rather than the local disk. A version-41 remote would refuse it as unknown after
+// the handshake had already passed, so the exact-version handshake refuses that pairing first.
+export const REMOTE_PROTOCOL_VERSION = 42;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.

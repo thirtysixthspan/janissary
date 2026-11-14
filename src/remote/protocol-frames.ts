@@ -17,7 +17,7 @@ import type { DiffSource } from '../plugins/diff/shared.js';
 
 export type RemoteFilesystemOperation =
   | 'read-directory' | 'stat' | 'watch' | 'unwatch' | 'git' | 'git-pull' | 'git-commit' | 'search'
-  | 'search-text' | 'read-file' | 'read-lines' | 'write-file' | 'edit-file' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
+  | 'search-text' | 'read-file' | 'read-lines' | 'glob-paths' | 'write-file' | 'edit-file' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
   | 'create-file' | 'create-directory' | 'replay' | 'change-set';
 
 // The five activity kinds the ACP mapping produces (`../acp/activity.ts`), which is what travels.
@@ -34,6 +34,7 @@ export type RemoteFilesystemArgumentsByOperation = {
   'search-text': SearchRequest & { root: string };
   'read-file': { path: string };
   'read-lines': { path: string; offset?: number; limit?: number };
+  'glob-paths': { pattern: string; dir?: string; hidden?: boolean; dirs?: boolean; limit?: number };
   'write-file': { path: string; content: string; expectedHash?: string; policy?: FileWritePolicy };
   'edit-file': { path: string; oldString: string; newString: string; replaceAll: boolean };
   move: { from: string; to: string; overwrite?: boolean };

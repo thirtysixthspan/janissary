@@ -1,4 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AcpLoopHandlers, AcpLoopSession, AcpRunSnapshot, AcpRunSnapshotRow } from './types.js';
 import type { RemoteAcpSession } from '../remote/acp-session.js';
 import { CORE_MAX_STEPS, corePrimer, driveToolLoop, runToolLoop } from './drive-loop.js';
@@ -8,6 +11,8 @@ import { NO_BUILTIN_TOOLS_LINE, NO_TOOLS_LINE } from './internal-tools.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { BROWSER_PRIMER } from '../browser/command.js';
 import { DB_PRIMER } from '../database/primer.js';
+import { globWorkspaceCommand } from '../file-glob/glob.js';
+import { DEFAULT_ROLES } from '../plugins/roles/roles-file.js';
 
 const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
 
@@ -381,5 +386,37 @@ describe('driveToolLoop file mutations', () => {
     const { events, host } = drive(coreSnapshot('tell', ['file write']), [WRITE]);
     expect(host.runWorkspace).toHaveBeenCalledTimes(8);
     expect(events.at(-1)).toEqual(['finished', 'capped', 8]);
+  });
+});
+
+describe('driveToolLoop file glob end to end', () => {
+  const GLOB = 'file glob *editor* --path product/plans/complete';
+  let root: string;
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it('runs the default ask role glob against the workspace and feeds the matching paths back', async () => {
+    root = mkdtempSync(path.join(tmpdir(), 'drive-loop-glob-'));
+    const plans = path.join(root, 'product', 'plans', 'complete');
+    mkdirSync(plans, { recursive: true });
+    for (const name of ['editor-split.md', 'editor-tabs.md', 'other.md']) writeFileSync(path.join(plans, name), '');
+    const grants = DEFAULT_ROLES.find((role) => role.name === 'ask')?.commands ?? [];
+    const { session, sent } = makeSession([`Let me look.\n${GLOB}`, 'Done.']);
+    const { h, events } = makeHandlers();
+    const host = {
+      runCaller: vi.fn(() => 'caller output'),
+      runWorkspace: vi.fn((command: string) => globWorkspaceCommand(root, command)),
+    };
+    driveToolLoop(session, 'list the editor plans', coreSnapshot('ask', [...grants]), host, h, new AbortController().signal);
+    await vi.waitFor(() => expect(ofKind(events, 'finished')).toHaveLength(1));
+    expect(host.runWorkspace).toHaveBeenCalledExactlyOnceWith(GLOB);
+    expect(host.runCaller).not.toHaveBeenCalled();
+    expect(sent[1]).toContain(
+      `Output of \`${GLOB}\`:\nproduct/plans/complete/editor-split.md\nproduct/plans/complete/editor-tabs.md`,
+    );
+    expect(sent[1]).not.toContain('other.md');
+    expect(ofKind(events, 'ranCommand').map((event) => event[3])).toEqual([true]);
   });
 });

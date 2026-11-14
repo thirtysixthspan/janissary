@@ -37,6 +37,8 @@ const HELP_DIRECTORY = path.join(path.dirname(fileURLToPath(import.meta.url)), '
  *   filesystem paths. Disabled commands and their arguments are not completed.
  * - For `file read`, completes the subcommand, its flags, and paths against `fileReadRoot`, the
  *   root the read resolves against; with no root (a remote tab) it offers no paths.
+ * - For `file glob`, completes the subcommand, its flags, and directory names after `--path`
+ *   against `fileReadRoot`; with no root (a remote tab) it offers no directories.
  * - Otherwise completes a filesystem path relative to `cwd`.
  *
  * A single match is filled in fully; multiple matches fill in their longest common prefix
@@ -75,7 +77,7 @@ export function completeCommandLine(
     completeSearchCommand(cursor) ??
     completeSyntaxTheme(cursor, SYNTAX_THEMES) ??
     completeLayoutCommand(cursor) ??
-    completeFileReadCommand(cursor, fileReadRoot) ??
+    completeFileReadCommand(cursor, fileReadRoot, policy) ??
     (modelsFor ? completeHarnessModel(cursor, modelsFor) : null);
   return result ?? completeFilePath(cursor, cwd);
 }

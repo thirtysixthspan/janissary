@@ -16,6 +16,7 @@ import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { DB_PRIMER } from '../database/primer.js';
 import { FILE_READ_PRIMER } from '../file-read/command.js';
 import { FILE_MUTATION_PRIMER } from '../file-write/command.js';
+import { FILE_GLOB_PRIMER } from '../file-glob/command.js';
 
 const setup = (grants: readonly string[] = NATIVE_ACP_COMMANDS) => ({ tools: createAcpToolTable(grants) });
 
@@ -30,7 +31,7 @@ describe('createAcpToolTable', () => {
     expect(toolPrimer(tools, NATIVE_ACP_COMMANDS)).toBe([
       'browser primer text',
       'question primer text',
-      `${FILE_READ_PRIMER}\n\n${FILE_MUTATION_PRIMER}`,
+      `${FILE_READ_PRIMER}\n\n${FILE_GLOB_PRIMER}\n\n${FILE_MUTATION_PRIMER}`,
       DB_PRIMER,
       `Only these commands are allowed: ${NATIVE_ACP_COMMANDS.join(', ')}.`,
     ].join('\n\n'));
@@ -220,12 +221,24 @@ describe('gateCommand', () => {
     }
   });
 
+  it.each([
+    ['granted', ['file']],
+    ['ungranted', []],
+  ])('refuses agent file globs when %s', (_label, grants) => {
+    for (const command of ['file glob **/*', 'file glob', 'FILE GLOB x', '/file glob x']) {
+      expect(gateCommand(agent({ grants }), [], command)).toStrictEqual({
+        refusal: `Agent: command not permitted: ${command}.`,
+      });
+    }
+  });
+
   it('keeps file read and non-mutation routing beside the mutation refusal', () => {
     expect(gateCommand(agent({ grants: ['file'] }), [], 'file read a.md')).toStrictEqual({ runsOn: 'workspace' });
     expect(gateCommand(agent(), [], 'file read a.md')).toStrictEqual({
       refusal: 'Agent: command not permitted: file read a.md.',
     });
     expect(gateCommand(agent({ grants: ['file'] }), [], 'file writer x')).toStrictEqual({ runsOn: 'caller' });
+    expect(gateCommand(agent({ grants: ['file'] }), [], 'file globs x')).toStrictEqual({ runsOn: 'caller' });
     expect(gateCommand(agent({ grants: ['file'] }), [], 'db sqlite list')).toStrictEqual({ runsOn: 'caller' });
   });
 
@@ -278,6 +291,21 @@ describe('toolExtractor', () => {
     expect(toolExtractor(tools)('Let me read it.\nfile read')).toBeNull();
   });
 
+  it('finds a trailing file glob on a table granting file glob', () => {
+    const { tools } = setup(['file glob']);
+    expect(toolExtractor(tools)('Let me look.\nfile glob **/*.ts')).toBe('file glob **/*.ts');
+  });
+
+  it('returns null for a trailing file glob on a table without the file entry', () => {
+    const { tools } = setup(['browser goto', 'db sqlite list']);
+    expect(toolExtractor(tools)('Let me look.\nfile glob **/*.ts')).toBeNull();
+  });
+
+  it('still extracts a trailing file glob on a table granting only file read', () => {
+    const { tools } = setup(['file read']);
+    expect(toolExtractor(tools)('Let me look.\nfile glob **/*.ts')).toBe('file glob **/*.ts');
+  });
+
   it('returns a granted command, since the table reads no settings', () => {
     const { tools } = setup(['browser goto']);
     expect(toolExtractor(tools)('Let me look.\nbrowser goto x')).toBe('browser goto x');
@@ -294,7 +322,7 @@ describe('file mutation tools', () => {
   const fileTool = (grants: readonly string[]) => createAcpToolTable(grants).find((tool) => tool.runsOn === 'workspace');
 
   it('selects the file tool for any file grant', () => {
-    for (const grant of ['file read', 'file write', 'file edit']) expect(fileTool([grant])).toBeDefined();
+    for (const grant of ['file read', 'file glob', 'file write', 'file edit']) expect(fileTool([grant])).toBeDefined();
     expect(fileTool(['browser goto'])).toBeUndefined();
   });
 
@@ -302,6 +330,13 @@ describe('file mutation tools', () => {
     expect(fileTool(['file read'])!.primer).toBe(FILE_READ_PRIMER);
     expect(fileTool(['file write'])!.primer).toBe(FILE_MUTATION_PRIMER);
     expect(fileTool(['file read', 'file edit'])!.primer).toBe(`${FILE_READ_PRIMER}\n\n${FILE_MUTATION_PRIMER}`);
+  });
+
+  it('includes glob primer text only when file glob is granted, between read and mutation', () => {
+    expect(fileTool(['file glob'])!.primer).toBe(FILE_GLOB_PRIMER);
+    expect(fileTool(['file read', 'file glob', 'file edit'])!.primer)
+      .toBe(`${FILE_READ_PRIMER}\n\n${FILE_GLOB_PRIMER}\n\n${FILE_MUTATION_PRIMER}`);
+    expect(fileTool(['file read'])!.primer).not.toContain(FILE_GLOB_PRIMER);
   });
 
   it('gives a grant of only file edit the file tool with no read text', () => {
@@ -349,5 +384,25 @@ describe('file mutation tools', () => {
     const tools = createAcpToolTable(grants);
     expect(gateCommand(coreSnapshot(grants), tools, write)).toStrictEqual({ runsOn: 'workspace' });
     expect(gateCommand(coreSnapshot(grants), tools, edit)).toStrictEqual({ runsOn: 'workspace' });
+  });
+
+  it('refuses an ungranted file glob', () => {
+    const tools = createAcpToolTable(['file read']);
+    expect(gateCommand(coreSnapshot(['file read']), tools, 'file glob x')).toStrictEqual({
+      refusal: 'Command not allowed for role "writer": file glob.',
+    });
+  });
+
+  it('refuses a disabled file glob', () => {
+    const grants = ['file glob'];
+    const rows = [{ name: 'file glob', effectiveEnabled: false, effectiveAgentAccess: true }];
+    expect(gateCommand(coreSnapshot(grants, rows), createAcpToolTable(grants), 'file glob x')).toStrictEqual({
+      refusal: 'Command is disabled: file glob.', refused: 'disabled',
+    });
+  });
+
+  it('routes a granted file glob to the workspace', () => {
+    const grants = ['file glob'];
+    expect(gateCommand(coreSnapshot(grants), createAcpToolTable(grants), 'file glob x')).toStrictEqual({ runsOn: 'workspace' });
   });
 });

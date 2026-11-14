@@ -110,6 +110,7 @@
     "diff": "^9.0.0",
     "dompurify": "^3.4.11",
     "marked": "^18.0.5",
+    "minimatch": "^10.2.5",
     "node-pty": "^1.1.0",
     "pdfjs-dist": "6.3.289",
     "playwright": "^1.50.0",
