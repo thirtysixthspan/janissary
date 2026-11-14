@@ -1,3 +1,13 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
+
+* Pin the command-bar wiring that filters a disabled file glob subcommand, so dropping the policy argument can no longer silently re-offer it.
+
+Existing Issue: The commit forwards the completion policy from completeCommandLine to completeFileReadCommand, but that parameter defaults to ALL_ENABLED_POLICY and only the unit tests that call completeFileReadCommand directly check the subcommand filter, so the wiring in completeCommandLine, the path users actually reach, has no test. Severity: 3/10
+
+Existing Risk: 3/10 - A later refactor of the completeCommandLine chain that drops the third argument still compiles and passes every test, because the default fails open, and the command bar goes back to offering `glob` after `file` while the `file glob` row is disabled, which contradicts product/specs/tab-completion.md.
+
+Proposal Risk: 1/10 - The wiring is pinned at the level users reach, though the fail-open default parameter stays as the plan designed it, so a new caller of completeFileReadCommand elsewhere could still omit the policy without a test noticing.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2001 "add a completeCommandLine test that a disabled file glob row is not offered after file". In src/completion/index.test.ts, inside describe('completeCommandLine — disabled command guard'), add a test that builds a policy with that file's existing policyWith helper (it takes a list of disabled row names) disabling only `file glob`, calls completeCommandLine('file ', 5, dir, [], [], undefined, undefined, undefined, undefined, policy) and expects matches to equal ['read'], and also asserts that the same call with no policy offers ['glob', 'read'] so the test proves the filter rather than the fixture. Add a second assertion in the same test that 'file glob * --path ' under the same policy returns the line unchanged with no matches, pinning the existing prefix guard for the new subcommand. Do not change completeFileReadCommand's default parameter in src/completion/file-read.ts; the subplan product/plans/complete/file-glob-9-completion-and-end-to-end.md chose it so existing callers stay unchanged. Verify by temporarily removing the policy argument from the completeFileReadCommand call in src/completion/index.ts and confirming the new test fails, then restore it; the existing tests in src/completion/file-read.test.ts and src/completion/index.test.ts must keep passing.
