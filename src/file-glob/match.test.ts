@@ -74,6 +74,18 @@ describe('createGlobMatcher', () => {
     expect(performance.now() - started).toBeLessThan(100);
   });
 
+  it('answers a pattern minimatch would split at each **/.. quickly with no match', () => {
+    const started = performance.now();
+    const match = createGlobMatcher('**/../a/b/'.repeat(13) + 'c', false);
+    expect(match('a/b/c')).toBe(false);
+    expect(performance.now() - started).toBeLessThan(100);
+  });
+
+  it('matches nothing for a .. folder but still drops a . folder', () => {
+    expect(createGlobMatcher('x/../a.ts', false)('a.ts')).toBe(false);
+    expect(createGlobMatcher('src/./a.ts', false)('src/a.ts')).toBe(true);
+  });
+
   it('treats a backslash as a path separator', () => {
     expect(createGlobMatcher(String.raw`a\b.ts`, false)('a/b.ts')).toBe(true);
     expect(createGlobMatcher(String.raw`a\{b,c}.ts`, false)('a/c.ts')).toBe(true);

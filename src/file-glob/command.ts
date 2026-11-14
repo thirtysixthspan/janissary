@@ -1,5 +1,5 @@
 import { positiveInteger } from '../positive-integer.js';
-import { FILE_GLOB_TOO_COMPLEX, isGlobPatternTooComplex } from './pattern-limits.js';
+import { globPatternRefusal } from './pattern-limits.js';
 
 export type FileGlobArgs = {
   pattern: string;
@@ -82,7 +82,8 @@ export function parseFileGlob(input: string): FileGlobArgs | { error: string } {
   if (scanned?.pattern === undefined) return { error: FILE_GLOB_USAGE };
   const limit = scanned.limit ?? FILE_GLOB_DEFAULT_LIMIT;
   if (limit > FILE_GLOB_MAX_LIMIT) return { error: FILE_GLOB_USAGE };
-  if (isGlobPatternTooComplex(scanned.pattern)) return { error: FILE_GLOB_TOO_COMPLEX };
+  const refusal = globPatternRefusal(scanned.pattern);
+  if (refusal !== undefined) return { error: refusal };
   return {
     pattern: scanned.pattern,
     dir: scanned.dir,

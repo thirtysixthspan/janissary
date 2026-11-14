@@ -5,6 +5,9 @@ import {
   FILE_GLOB_MAX_ALTERNATIVES_AT_MAX_STARS,
   FILE_GLOB_MAX_NAME_STARS,
   FILE_GLOB_MAX_PATTERN_LENGTH,
+  FILE_GLOB_PARENT_SEGMENT,
+  FILE_GLOB_TOO_COMPLEX,
+  globPatternRefusal,
   isGlobPatternTooComplex,
   normalizeGlobPattern,
 } from './pattern-limits.js';
@@ -70,6 +73,25 @@ describe('isGlobPatternTooComplex', () => {
   it('counts three-star alternatives behind a backslash toward the combined budget', () => {
     expect(isGlobPatternTooComplex(String.raw`*a*a*\{b,c}`)).toBe(false);
     expect(isGlobPatternTooComplex(String.raw`*a*a*\{b,c,d}`)).toBe(true);
+  });
+
+  it('refuses a .. folder in any alternative, after backslashes become separators', () => {
+    for (const pattern of ['../a', 'a/..', '**/../a/b/c', '{..,x}/a', '.{.,}/a', String.raw`a\..\b`, '**/../a/b/'.repeat(13) + 'c']) {
+      expect(globPatternRefusal(pattern)).toBe(FILE_GLOB_PARENT_SEGMENT);
+      expect(isGlobPatternTooComplex(pattern)).toBe(true);
+    }
+  });
+
+  it('allows names that only contain dots', () => {
+    for (const pattern of ['..a', 'a..', '...', '.env', '**/.github/**', 'src/./a.ts']) {
+      expect(globPatternRefusal(pattern)).toBeUndefined();
+    }
+  });
+
+  it('keeps the too-complex refusal for the other caps', () => {
+    expect(globPatternRefusal('a'.repeat(FILE_GLOB_MAX_PATTERN_LENGTH + 1))).toBe(FILE_GLOB_TOO_COMPLEX);
+    expect(globPatternRefusal('{a,b}'.repeat(7))).toBe(FILE_GLOB_TOO_COMPLEX);
+    expect(globPatternRefusal('*a'.repeat(4))).toBe(FILE_GLOB_TOO_COMPLEX);
   });
 
   it('keeps two * wildcards in one name legal at the full combination cap', () => {
