@@ -15,6 +15,7 @@ Verified against the code: `classify` in `src/file-glob/walk.ts` returns `'link'
 - `product/plans/complete/file-glob-3-sorted-walker-2-dirs-links-secrets-deadline.md`, the "Classification with `stat`" decision ("A file target classifies as `'file'`") and the matching requirement bullet ("A link to a file counts as a file").
 - `product/plans/complete/file-glob.md`, the "Symbolic links" decision ("A symbolic link to a file is listed like a file") and the walker implementation note ("a link to a file counts as a file").
 - `product/plans/complete/file-glob.md`'s `src/file-glob/glob.test.ts` test list names only "a symlink to a file that is listed".
+- Missed by this repair and qualified by the follow-up `file-glob-plan-link-listing-qualification.md`: `product/plans/complete/file-glob-3-sorted-walker.md`'s symbolic link decision ("A link to a file counts as a file"), its classify helper description ("classifies one `Dirent` as file, directory, or skip"), and its Tests bullet ("a symbolic link to a file is listed"); the 3.2 subplan's opening summary ("so a link to a file is listed") and its `walk-modes.test.ts` bullet ("a symbolic link to a file is listed in file mode"); and `product/plans/complete/file-glob.md`'s "Files or directories" decision ("regular files and symbolic links to files").
 
 Edit plan text only. Each qualification points at the rule already stated in the Secret files decision and the "Link target check" decision rather than restating it differently.
 

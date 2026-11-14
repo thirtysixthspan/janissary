@@ -4,7 +4,7 @@
 
 Run order: piece 2 of 2 of file glob subplan 3, which is 3 of 9 in the file glob series. Subplan 3 is recorded whole in `product/plans/complete/file-glob-3-sorted-walker.md`; the feature's canonical plan is `product/plans/complete/file-glob.md`. Depends on piece 1 (`product/plans/complete/file-glob-3-sorted-walker-1-core-walk.md`, already landed: `walkGlob`, `GlobWalkOptions`, `GlobWalkResult` in `src/file-glob/walk.ts`) and on subplan 2 (`createGlobMatcher` in `src/file-glob/match.ts`, also landed). After this piece, `walkGlob` has the full contract subplan 4 (`product/plans/draft/file-glob-4-workspace-entry.md`) calls: `walkGlob({ root, start, pattern, hidden, dirs, limit, deadline, ignored })` returning `{ paths, truncated, timedOut }`.
 
-This piece completes the walker. It adds `--dirs` mode, classifies symbolic links with one `stat` so a link to a file is listed and a link to a directory is never entered, drops secret files before they count toward the limit, and stops at the deadline.
+This piece completes the walker. It adds `--dirs` mode, classifies symbolic links with one `stat` so a link to a file is listed unless the link target check below drops it, and a link to a directory is never entered, drops secret files before they count toward the limit, and stops at the deadline.
 
 ## Design decisions
 
@@ -64,7 +64,7 @@ New `src/file-glob/walk-modes.test.ts`, with its own `mkdtempSync(path.join(tmpd
 - `--dirs` order: directories `a/b`, `a-b` give `['a/', 'a/b/', 'a-b/']` in that order.
 - `dirs`: directories listed with a trailing `/`, an empty directory included, the start directory excluded (also with `start` set to a subdirectory: that subdirectory is not listed, its child directories are, root-relative), and files not listed.
 - `.git` never listed under `dirs`, with or without `hidden`, whether it is a directory or a file (completing piece 1's file-mode case).
-- A symbolic link to a parent directory (a cycle) terminates and is not listed, in file mode and in `dirs` mode; a symbolic link to a file is listed in file mode and not in `dirs` mode; a broken link is skipped in both modes.
+- A symbolic link to a parent directory (a cycle) terminates and is not listed, in file mode and in `dirs` mode; a symbolic link to an in-workspace file is listed in file mode and not in `dirs` mode; a broken link is skipped in both modes.
 - Secret files (`.env`, `.env.local`, `.env.example`, a file under `.aws/`) omitted under `hidden`, and not counted toward the limit (with `hidden`, `limit: 1`, and only `.env` plus one ordinary file `a`, the result is `{ paths: ['a'], truncated: false, timedOut: false }`); `.aws/` omitted under `dirs` and `hidden`.
 - An already-passed deadline (`deadline: 0`) returns `{ paths: [], truncated: false, timedOut: true }`.
 - A deadline that passes mid-walk: files `a` and `b/x`, `deadline: 1`, and a `vi.spyOn` spy on `Date.now` that returns `0` on its first call and `2` on every later call, so the start directory's check passes and `b`'s trips; the result is `{ paths: ['a'], truncated: false, timedOut: true }`. This test calls `walkGlob` directly with a literal options object, not the `walk` helper, and installs the spy just before that call: the helper's default `Date.now() + 60_000` would otherwise consume the first mocked value and trip the start directory's check.
