@@ -41,6 +41,31 @@ describe('agent command tools', () => {
     expect(dispatch).toHaveBeenCalledTimes(1);
   });
 
+  it('refuses file glob lines with or without the file grant, before dispatch', async () => {
+    const dispatch = vi.fn(async () => ({ dispatched: true, output: 'read' }));
+    const managers = { command: { dispatchLineInInvocation: dispatch } } as unknown as Managers;
+
+    for (const grants of [['file'], []]) {
+      for (const command of ['file glob **/*', 'file glob', '/file glob x']) {
+        await expect(runGrantedAgentCommand(command, { ...snapshot, grants }, managers, invocation('g')))
+          .resolves.toBe(`Agent: command not permitted: ${command}.`);
+      }
+    }
+    expect(dispatch).not.toHaveBeenCalled();
+    await expect(runGrantedAgentCommand('file read a.md', { ...snapshot, grants: ['file'] }, managers, invocation('r')))
+      .resolves.toBe('read');
+    expect(dispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not treat file globs as a glob line, leaving it to the grant check', async () => {
+    const dispatch = vi.fn(async () => ({ dispatched: true, output: 'not a glob' }));
+    const managers = { command: { dispatchLineInInvocation: dispatch } } as unknown as Managers;
+
+    await expect(runGrantedAgentCommand('file globs x', { ...snapshot, grants: ['file'] }, managers, invocation('s')))
+      .resolves.toBe('not a glob');
+    expect(dispatch).toHaveBeenCalledWith('janus', 'file globs x', expect.anything());
+  });
+
   it('dispatches granted commands through the caller context and isolates overlapping replies', async () => {
     const dispatch = vi.fn(async (_label: string, input: string, context: CommandInvocationContext) => ({
       dispatched: true,
