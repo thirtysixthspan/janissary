@@ -1,12 +1,22 @@
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type * as DriveLoop from '../acp/drive-loop.js';
 import { NO_TOOLS_LINE } from '../acp/internal-tools.js';
 import { MARKDOWN_INSTRUCTION } from '../acp/launch.js';
-import type { AcpRunSnapshot, AcpRunSnapshotRow, AcpSession, PromptHandlers } from '../acp/types.js';
+import type { AcpRunSnapshot, AcpRunSnapshotRow, AcpSession, AcpToolHost, PromptHandlers } from '../acp/types.js';
 import { deferred } from '../deferred.js';
 import type { ServerFrame } from './protocol-frames.js';
+
+const mocks = vi.hoisted(() => ({ driveToolLoop: vi.fn() }));
+
+vi.mock('../acp/drive-loop.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof DriveLoop>();
+  mocks.driveToolLoop.mockImplementation(actual.driveToolLoop);
+  return { ...actual, driveToolLoop: mocks.driveToolLoop };
+});
+
 import { startRemoteLoop } from './serve-acp-loop.js';
 
 const RUN_ID = 'run-1';
@@ -501,5 +511,24 @@ describe('startRemoteLoop workspace mutations', () => {
     expect(existsSync(path.join(parent, 'escape.md'))).toBe(false);
     expect(existsSync(path.join(workspace, '.env'))).toBe(false);
     expect(readdirSync(workspace)).toEqual([]);
+  });
+});
+
+describe('startRemoteLoop workspace glob routing', () => {
+  const capturedHost = () => mocks.driveToolLoop.mock.calls.at(-1)?.[3] as AcpToolHost;
+
+  it('runs a file glob against the workspace', async () => {
+    writeFileSync(path.join(workspace, 'a.md'), 'one\ntwo\n');
+    writeFileSync(path.join(workspace, 'b.txt'), 'other\n');
+    start([['Done.']], coreSnapshot('tell', ['file read']));
+
+    await expect(capturedHost().runWorkspace('file glob *.md')).resolves.toBe('a.md');
+  });
+
+  it('still sends a file read to the read runner', async () => {
+    writeFileSync(path.join(workspace, 'a.md'), 'one\ntwo\n');
+    start([['Done.']], coreSnapshot('tell', ['file read']));
+
+    expect(await capturedHost().runWorkspace('file read a.md')).toBe('1\tone\n2\ttwo');
   });
 });

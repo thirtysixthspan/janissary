@@ -15,13 +15,18 @@ import type {
 import type { RemoteAcpSession } from '../remote/acp-session.js';
 import type { NativeCommandSettingsManager } from '../native-commands/manager.js';
 import type * as TabRead from '../file-read/tab-read.js';
+import type * as TabGlob from '../file-glob/tab-glob.js';
+import type * as DriveLoop from './drive-loop.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { BROWSER_PRIMER } from '../browser/command.js';
 import { DB_PRIMER } from '../database/primer.js';
 import { commandProtocolPrimer } from './command-protocol.js';
 import { CORE_MAX_STEPS } from './drive-loop.js';
 
-const mocks = vi.hoisted(() => ({ runAcpToolLoop: vi.fn(), notify: vi.fn(), readFileInTab: vi.fn(), mutateFileInTab: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  runAcpToolLoop: vi.fn(), notify: vi.fn(), readFileInTab: vi.fn(), mutateFileInTab: vi.fn(),
+  globFilesInTab: vi.fn(), runToolLoop: vi.fn(),
+}));
 
 vi.mock('./loop.js', () => ({ runAcpToolLoop: mocks.runAcpToolLoop }));
 vi.mock('../notifications/index.js', () => ({ notify: mocks.notify }));
@@ -34,6 +39,16 @@ vi.mock('../file-write/tab-write.js', async (importOriginal) => {
   const actual = await importOriginal<typeof TabWrite>();
   mocks.mutateFileInTab.mockImplementation(actual.mutateFileInTab);
   return { ...actual, mutateFileInTab: mocks.mutateFileInTab };
+});
+vi.mock('../file-glob/tab-glob.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof TabGlob>();
+  mocks.globFilesInTab.mockImplementation(actual.globFilesInTab);
+  return { ...actual, globFilesInTab: mocks.globFilesInTab };
+});
+vi.mock('./drive-loop.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof DriveLoop>();
+  mocks.runToolLoop.mockImplementation(actual.runToolLoop);
+  return { ...actual, runToolLoop: mocks.runToolLoop };
 });
 
 import { runCorePrompt } from './run-prompt.js';
@@ -129,6 +144,10 @@ type RemoteCall = [string, AcpRunSnapshot, AcpToolHost['runCaller'], AcpLoopHand
 
 function remoteCall(run: ReturnType<typeof vi.fn>): RemoteCall {
   return run.mock.calls[0] as RemoteCall;
+}
+
+function capturedHost(): AcpToolHost {
+  return mocks.runToolLoop.mock.calls.at(-1)?.[3] as AcpToolHost;
 }
 
 function primer(role: 'ask' | 'tell', options: StartOptions = {}): string {
@@ -620,5 +639,70 @@ describe('runCorePrompt file mutations', () => {
     handlers.ranCommand(WRITE, result);
     expect(managers.acpRecords.activity).toHaveBeenCalledWith('record-1', 'tool', WRITE);
     expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: WRITE, output: result, acp: true });
+  });
+});
+
+describe('runCorePrompt file glob routing', () => {
+  let dir: string;
+  beforeEach(() => {
+    vi.clearAllMocks();
+    dir = mkdtempSync(path.join(tmpdir(), 'acp-run-prompt-glob-'));
+    writeFileSync(path.join(dir, 'a.txt'), 'alpha\n');
+  });
+  afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+
+  const GLOB = 'file glob *.txt';
+  const GRANTS = ['file read', 'file write', 'file edit'];
+
+  it('runs a file glob through the tab glob runner', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    start('tell', GRANTS);
+    await expect(capturedHost().runWorkspace(GLOB)).resolves.toBe('a.txt');
+    expect(mocks.globFilesInTab).toHaveBeenCalledWith(expect.anything(), 'shell', GLOB);
+    expect(mocks.readFileInTab).not.toHaveBeenCalled();
+    expect(mocks.mutateFileInTab).not.toHaveBeenCalled();
+  });
+
+  it('still sends a read to readFileInTab', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    start('tell', GRANTS);
+    await capturedHost().runWorkspace('file read a.txt');
+    expect(mocks.readFileInTab).toHaveBeenCalledWith(expect.anything(), 'shell', 'file read a.txt');
+    expect(mocks.globFilesInTab).not.toHaveBeenCalled();
+  });
+
+  it('still sends a write to mutateFileInTab', async () => {
+    const write = 'file write {"path":"b.md","content":"x"}';
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    start('tell', GRANTS);
+    await capturedHost().runWorkspace(write);
+    expect(mocks.mutateFileInTab).toHaveBeenCalledWith(expect.anything(), 'shell', write);
+    expect(mocks.globFilesInTab).not.toHaveBeenCalled();
+  });
+
+  it('throws and runs no glob when the prompt is cancelled first', () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { request } = start('tell', GRANTS);
+    request.abort.abort();
+    expect(() => capturedHost().runWorkspace(GLOB)).toThrow('ACP: prompt cancelled.');
+    expect(mocks.globFilesInTab).not.toHaveBeenCalled();
+  });
+
+  it('tags a remote tab\'s glob step with the host on the transcript and record lines', () => {
+    const { start, managers, run } = harness({
+      remoteSession: true, tab: { workspaceDir: dir, remote: { host: 'far' } }, launchDir: dir,
+    });
+    start('tell', GRANTS, 'tell', 'record-1');
+    const events = remoteCall(run)[3];
+
+    events.startCommand?.('file glob *.md', true);
+    events.ranCommand('file glob *.md', 'a.md', true);
+
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', '[far] file glob *.md');
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', '[far] a.md');
+    expect(managers.tab.append).toHaveBeenCalledWith('shell', {
+      input: '[far] file glob *.md', output: 'a.md', acp: true,
+    });
+    expect(mocks.globFilesInTab).not.toHaveBeenCalled();
   });
 });
