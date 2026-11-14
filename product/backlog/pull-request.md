@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Bring the pull request's own plan back in line with the code after the five repairs, so its glob semantics, ignored-set, and walker decisions stop describing behavior the branch no longer has.
-
-Existing Issue: The own plan still says a pattern minimatch rejects (over 64 KiB) prints `(no matches)` and lists the matcher's option set without `noext`, says any `git ls-files` failure resolves to an empty set, says the walker prunes only by the root-relative path in the ignored set, and says the per-match secret check runs `checkLexicalPath` and `checkRealTarget`, while the code now refuses over-cap patterns with `Pattern too complex: ...`, treats extglob groups literally, reports a deadline-cut lookup as a timed-out empty result, also prunes by real location under a linked `--path`, and uses one real-target check built per walk. Severity: 2/10
-
-Existing Risk: 2/10 - A later change planned from this record, such as the deferred worker move or the `file grep` item, inherits wrong statements about the error message, the git failure fallback, and the secret check, and either reintroduces the old behavior or argues with tests that pin the new one.
-
-Proposal Risk: 1/10 - The plan and code agree again; a remaining mismatch would show up only when someone next compares the plan to the code, as this review did.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2001 "bring the file glob plan back in line with the code after the five repairs". Edit only `product/plans/complete/file-glob.md`: in the Glob semantics decision, add `noext: true` to the option list, say extglob groups match literally, and replace the 64 KiB sentence with the 1024-character, three-stars-per-name, and 64-alternative caps and the `Pattern too complex: ...` message from `src/file-glob/pattern-limits.ts` (keeping the match-nothing fallback as defense in depth); in the Workspace outside git decision and the `loadIgnoredPaths` bullet, say a lookup cut off by the deadline resolves `undefined` and `globWorkspace` prints `(no matches)` plus the timeout line, as `src/file-glob/ignored.ts` and `src/file-glob/glob.ts` do; in the walker bullets, say the ignored set is also consulted at the real location under a linked start (`isIgnored` in `src/file-glob/walk.ts`) and that the secret check uses one `createRealTargetCheck(realRoot)` from `src/file-read/policy.ts` built per walk. Cross-check each sentence against `product/plans/complete/file-glob-pattern-limits.md`, `product/plans/complete/file-glob-ignored-lookup-deadline.md`, `product/plans/complete/file-glob-secret-check-no-io.md`, and `product/plans/complete/file-glob-linked-path-ignored.md`. No code or test changes.
-
-
 * Correct the pull request description so it states the new pattern complexity caps, the `Pattern too complex` refusal, and that extglob groups are matched literally, closing a description-fidelity gap left by the pattern-limits repair (description-only change).
 
 Existing Issue: The description says matching uses minimatch with Node's own `path.matchesGlob` options except case folding and never mentions the caps, so it omits that the branch also turns off extglobs (`+(a|b)` is literal, unlike `path.matchesGlob`), refuses patterns over 1024 characters, with more than three `*` in one name, or expanding past 64 alternatives with `Pattern too complex: use at most 1024 characters, three * wildcards in one name, and 64 {a,b} combinations.`, and has the far side reject such a pattern as an invalid `glob-paths` request. Severity: 4/10
