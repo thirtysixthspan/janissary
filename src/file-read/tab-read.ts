@@ -10,14 +10,14 @@ export function localReadRoot(managers: Managers, label: string): string | undef
   return tab?.workspaceDir ?? managers.tab.launchDir;
 }
 
-function asTyped(text: string, sent: string, typed: string): string {
+export function asTyped(text: string, sent: string, typed: string): string {
   if (sent === typed || text.includes('\n') || text.includes('\t')) return text;
   const suffix = `: ${sent}.`;
   if (!text.endsWith(suffix)) return text;
   return `${text.slice(0, -suffix.length)}: ${typed}.`;
 }
 
-function rejectionLine(error: unknown, typed: string): string {
+export function rejectionLine(error: unknown, typed: string): string {
   const message = error instanceof Error ? error.message : String(error);
   if (message === OUTSIDE_ROOT_REASON) return `Outside the workspace: ${typed}.`;
   if (message === REMOTE_UNAVAILABLE) return REMOTE_UNAVAILABLE;

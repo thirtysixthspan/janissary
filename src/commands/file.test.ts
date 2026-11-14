@@ -141,8 +141,15 @@ describe('file command run', () => {
     expect(existsSync(path.join(root, 'dir'))).toBe(false);
   });
 
-  it('keeps the read usage line for bare file', async () => {
+  it('keeps the read usage line for bare file and file globs', async () => {
     expect(await run('file')).toBe(FILE_READ_USAGE);
+    appended = [];
+    expect(await run('file globs x')).toBe(FILE_READ_USAGE);
+  });
+
+  it('globs under the workspace of a local tab that has one, untagged', async () => {
+    tabs = [{ label: 'janus', workspaceDir: workspace }];
+    expect(await run('file glob *.md')).toBe('notes.md');
   });
 
   describe('on a remote tab', () => {
@@ -237,6 +244,60 @@ describe('file command run', () => {
       appended = [];
       remote = fakeChannel();
       await readWithReply('file read notes.md', undefined, 'boom');
+      expect(output()).toBe('boom');
+      expect(remote.channel.detachNavigator).toHaveBeenCalledOnce();
+    });
+
+    it('sends glob-paths on its own session and prints the reply unchanged', async () => {
+      expect(await readWithReply('file glob *.md', { text: 'a.md\nb.md' })).toBe('a.md\nb.md');
+      const [request] = remote.requests();
+      if (request.type !== 'filesystem-request') throw new Error('Expected a filesystem request.');
+      expect(request.operation).toBe('glob-paths');
+      expect(request.args).toEqual({ pattern: '*.md', limit: 100 });
+      expect(request.session.startsWith('file-glob-')).toBe(true);
+    });
+
+    it('forwards the glob switches and limit', async () => {
+      await readWithReply('file glob * --hidden --dirs --limit 5', { text: '(no matches)' });
+      expect(remote.requests()[0]).toMatchObject({ args: { pattern: '*', hidden: true, dirs: true, limit: 5 } });
+    });
+
+    it('sends the root for a dot --path', async () => {
+      await readWithReply('file glob *.md --path .', { text: '(no matches)' });
+      expect(remote.requests()[0]).toMatchObject({ args: { pattern: '*.md', dir: '', limit: 100 } });
+    });
+
+    it('rewrites a far-side directory line to the --path as typed', async () => {
+      expect(await readWithReply('file glob *.md --path ./notes/', { text: 'Directory not found: notes.' }))
+        .toBe('Directory not found: ./notes/.');
+      expect(remote.requests()[0]).toMatchObject({ args: { dir: 'notes' } });
+    });
+
+    it('maps the far-side containment refusal to the --path as typed', async () => {
+      expect(await readWithReply('file glob * --path ../x', undefined, OUTSIDE_ROOT_REASON))
+        .toBe('Outside the workspace: ../x.');
+    });
+
+    it('answers an absolute --path without sending a request', async () => {
+      await start('file glob * --path /etc');
+      expect(output()).toBe('Outside the workspace: /etc.');
+      expect(remote.requests()).toEqual([]);
+    });
+
+    it('prints the ended line when the channel closes mid-glob', async () => {
+      const pending = start('file glob *.md');
+      await vi.waitFor(() => expect(remote.requests()).toHaveLength(1));
+      remote.listener()?.onClose?.();
+      await pending;
+      expect(output()).toBe('The remote connection ended.');
+    });
+
+    it('detaches its session after a successful and a rejected glob', async () => {
+      await readWithReply('file glob *.md', { text: 'a.md' });
+      expect(remote.channel.detachNavigator).toHaveBeenCalledOnce();
+      appended = [];
+      remote = fakeChannel();
+      await readWithReply('file glob *.md', undefined, 'boom');
       expect(output()).toBe('boom');
       expect(remote.channel.detachNavigator).toHaveBeenCalledOnce();
     });
