@@ -15,6 +15,7 @@ describe('native ACP commands', () => {
       'question ask',
       'question approve',
       'file read',
+      'file glob',
       'file write',
       'file edit',
     ]);
@@ -31,6 +32,7 @@ describe('native ACP commands', () => {
     ['question ask How are you?', 'question'],
     ['question approve 123', 'question'],
     ['file read notes/a.md', 'file'],
+    ['file glob **/*.ts', 'file'],
   ] as const)('assigns %s to %s, including trailing arguments', (command, tool) => {
     expect(nativeCommandTool(command)).toBe(tool);
     expect(isNativeCommand(command)).toBe(true);
@@ -49,6 +51,7 @@ describe('native ACP commands', () => {
     expect(isNativeCommand('question unknown')).toBe(false);
     expect(nativeCommandName('file')).toBeUndefined();
     expect(nativeCommandName('file readme x')).toBeUndefined();
+    expect(nativeCommandName('file globs x')).toBeUndefined();
     expect(nativeCommandName('files x')).toBeUndefined();
   });
 });

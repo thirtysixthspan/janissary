@@ -34,6 +34,17 @@ const disabledFileRead = {
   }],
 } as const satisfies CommandSettingsSnapshot;
 
+const disabledFileGlob = {
+  ...snapshot,
+  commands: [{
+    name: 'file', kind: 'builtin', aliases: [], forms: ['file'],
+    enabled: true, agentAccess: true, effectiveEnabled: true, effectiveAgentAccess: true,
+  }, {
+    name: 'file glob', kind: 'native', aliases: [], forms: ['file glob'], parent: 'file',
+    enabled: false, agentAccess: true, effectiveEnabled: false, effectiveAgentAccess: true,
+  }],
+} as const satisfies CommandSettingsSnapshot;
+
 describe('disabledApplicationCommand', () => {
   it('resolves a space-separated line without a fallback', () => {
     expect(disabledApplicationCommand('ask hello', disabledAsk)?.name).toBe('ask');
@@ -47,6 +58,11 @@ describe('disabledApplicationCommand', () => {
   it('refuses a disabled file read row without disabling bare file', () => {
     expect(disabledApplicationCommand('file read a.md', disabledFileRead)?.name).toBe('file read');
     expect(disabledApplicationCommand('file', disabledFileRead)).toBeUndefined();
+  });
+
+  it('refuses a disabled file glob row without disabling bare file', () => {
+    expect(disabledApplicationCommand('file glob *.ts', disabledFileGlob)?.name).toBe('file glob');
+    expect(disabledApplicationCommand('file', disabledFileGlob)).toBeUndefined();
   });
 
   it('does not refuse when the fallback row is enabled', () => {

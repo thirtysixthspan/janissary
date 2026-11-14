@@ -39,13 +39,21 @@ function resolveExisting(location: string): string {
 // The reader and the tool writer run outside the sandbox on an agent's behalf, so they must deny
 // what the Seatbelt rule built from the same table denies, anchored the same way: each entry under
 // the real home directory, in its literal and resolved forms, whatever root the operation started from.
-function isUnderHomeSecret(realFile: string): boolean {
+function resolveHomeSecretAnchors(): string[] {
   const home = resolveExisting(homedir());
-  const file = realFile.toLowerCase();
-  return SECRET_DENY_PATHS.some((entry) => {
+  return SECRET_DENY_PATHS.flatMap((entry) => {
     const literal = path.join(home, entry);
-    return [literal, resolveExisting(literal)].some((location) => containedAbsolute(location.toLowerCase(), file));
+    return [literal, resolveExisting(literal)].map((location) => location.toLowerCase());
   });
+}
+
+function isUnderAnchors(anchors: readonly string[], realFile: string): boolean {
+  const file = realFile.toLowerCase();
+  return anchors.some((anchor) => containedAbsolute(anchor, file));
+}
+
+function isUnderHomeSecret(realFile: string): boolean {
+  return isUnderAnchors(resolveHomeSecretAnchors(), realFile);
 }
 
 // The pre-I/O check on the path as requested; it does not replace checkRealTarget.
@@ -62,10 +70,18 @@ export function checkLexicalPath(root: string, requested: string): FilePolicyFai
 // This check resolves nothing about the target by design, so it stays free of target I/O; handed an
 // unresolved path, it compares strings only and skips symlink containment.
 export function checkRealTarget(realRoot: string, realTarget: string): FilePolicyFailure | undefined {
-  if (!containedAbsolute(realRoot, realTarget)) return 'Outside the workspace';
-  if (isSecretPath(path.relative(realRoot, realTarget))) return 'Secret file';
-  if (isUnderHomeSecret(realTarget)) return 'Secret file';
-  return undefined;
+  return createRealTargetCheck(realRoot)(realTarget);
+}
+
+// checkRealTarget with the home-secret locations resolved once at creation, so each call is pure
+// string work. A caller checking many targets in one operation, such as a glob walk, builds it once.
+export function createRealTargetCheck(realRoot: string): (realTarget: string) => FilePolicyFailure | undefined {
+  const anchors = resolveHomeSecretAnchors();
+  return (realTarget) => {
+    if (!containedAbsolute(realRoot, realTarget)) return 'Outside the workspace';
+    if (isSecretPath(path.relative(realRoot, realTarget))) return 'Secret file';
+    return isUnderAnchors(anchors, realTarget) ? 'Secret file' : undefined;
+  };
 }
 
 function foldSegment(segment: string): string {

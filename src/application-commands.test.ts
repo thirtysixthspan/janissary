@@ -23,8 +23,10 @@ describe('application command inventory', () => {
     expect(rows.find((row) => row.name === 'db sqlite query')).toMatchObject({ parent: 'db sqlite', nativeTool: 'database' });
     expect(rows.find((row) => row.name === 'question approve')?.nativeTool).toBe('question');
     expect(rows.find((row) => row.name === 'file read')).toMatchObject({ kind: 'native', parent: 'file', nativeTool: 'file' });
+    expect(rows.find((row) => row.name === 'file glob')).toMatchObject({ kind: 'native', parent: 'file', nativeTool: 'file' });
     expect(rows.find((row) => row.name === 'file write')).toMatchObject({ kind: 'native', parent: 'file', nativeTool: 'file' });
     expect(rows.find((row) => row.name === 'file edit')).toMatchObject({ kind: 'native', parent: 'file', nativeTool: 'file' });
+    expect(resolveApplicationCommand('file glob *.ts')?.name).toBe('file glob');
     expect(resolveApplicationCommand('file write {"path":"a.md"}')?.name).toBe('file write');
     expect(resolveApplicationCommand('file edit {')?.name).toBe('file edit');
   });

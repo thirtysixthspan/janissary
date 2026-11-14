@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, symlinkSync, tr
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { checkLexicalPath, checkProtectedPath, checkRealTarget, classifyStats, FILE_POLICY_MAX_BYTES } from './policy.js';
+import { checkLexicalPath, checkProtectedPath, checkRealTarget, classifyStats, createRealTargetCheck, FILE_POLICY_MAX_BYTES } from './policy.js';
 
 let root: string;
 let outside: string;
@@ -83,6 +83,19 @@ describe('checkRealTarget under the home directory', () => {
   it('refuses a target under the home .ssh directory', () => {
     const target = writeAt(home, '.ssh/id_rsa');
     expect(checkRealTarget(path.join(home, '.ssh'), target)).toBe('Secret file');
+  });
+
+  it('gives createRealTargetCheck the same results as checkRealTarget', () => {
+    const check = createRealTargetCheck(home);
+    const targets = [writeAt(home, 'a.txt'), writeAt(home, 'nested/.env'), writeAt(outside, 'a.txt'), writeAt(home, '.ssh/id_rsa')];
+    expect(targets.map((target) => check(target))).toEqual([undefined, 'Secret file', 'Outside the workspace', 'Secret file']);
+    expect(targets.map((target) => checkRealTarget(home, target))).toEqual(targets.map((target) => check(target)));
+  });
+
+  it('refuses through createRealTargetCheck a target under a linked home secret entry, resolved at creation', () => {
+    const target = writeAt(home, 'aws-real/credentials');
+    symlinkSync(path.join(home, 'aws-real'), path.join(home, '.aws'));
+    expect(createRealTargetCheck(home)(target)).toBe('Secret file');
   });
 });
 

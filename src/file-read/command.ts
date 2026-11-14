@@ -1,3 +1,5 @@
+import { positiveInteger } from '../positive-integer.js';
+
 export type FileReadArgs = {
   path: string;
   offset: number;
@@ -9,12 +11,6 @@ export const FILE_READ_MAX_LIMIT = 2000;
 export const FILE_READ_USAGE = 'Usage: file read <path> [--offset <line>] [--limit <lines>]';
 
 type ScannedArgs = Partial<FileReadArgs>;
-
-function positiveInteger(value: string | undefined): number | undefined {
-  if (value === undefined || !/^\d+$/.test(value)) return undefined;
-  const parsed = Number(value);
-  return Number.isSafeInteger(parsed) && parsed >= 1 ? parsed : undefined;
-}
 
 function scanArguments(tokens: string[]): ScannedArgs | undefined {
   const scanned: ScannedArgs = {};

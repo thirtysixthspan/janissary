@@ -3,6 +3,7 @@ import type { RemoteChannel } from '../../remote/channel/index.js';
 import type { NavigatorListener } from '../../remote/channel/types.js';
 import type { ClientFrame } from '../../remote/protocol-frames.js';
 import type { SearchMatch } from '../../protocol.js';
+import type { FileGlobArgs } from '../../file-glob/command.js';
 import { OUTSIDE_ROOT_REASON } from '../file-operation-result.js';
 import { RemoteFileSystemPort } from './port.js';
 import { CLOSED_REASON, ENDED_REASON, LONG_REQUEST_DEADLINE_MS } from './port-requests.js';
@@ -580,5 +581,69 @@ describe('RemoteFileSystemPort.readLines', () => {
     await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
     h.listener()?.onClose?.();
     await expect(pending).rejects.toThrow('connection ended');
+  });
+});
+
+describe('RemoteFileSystemPort.globPaths', () => {
+  const hasRequest = (sent: ClientFrame[]) => sent.some((frame) => frame.type === 'filesystem-request');
+  const lastRequest = (sent: ClientFrame[]) => sent.findLast((frame) => frame.type === 'filesystem-request');
+  const args = (overrides: Partial<FileGlobArgs> = {}): FileGlobArgs => ({
+    pattern: '**/*.ts', dir: undefined, hidden: false, dirs: false, limit: 100, ...overrides,
+  });
+
+  it('sends only the pattern and limit when no path or flags are given', async () => {
+    const h = harness();
+    const pending = h.port.globPaths('/remote/ws', args());
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    const request = lastRequest(h.sent);
+    expect(request).toMatchObject({ operation: 'glob-paths', args: { pattern: '**/*.ts', limit: 100 } });
+    expect(request?.type === 'filesystem-request' && Object.keys(request.args)).toEqual(['pattern', 'limit']);
+    h.reply({ text: 'a.ts' });
+    await expect(pending).resolves.toEqual({ text: 'a.ts', dir: undefined });
+  });
+
+  it('sends the mapped path and resolves with it', async () => {
+    const h = harness();
+    const pending = h.port.globPaths('/remote/ws', args({ dir: './src/' }));
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    expect(lastRequest(h.sent)).toMatchObject({ operation: 'glob-paths', args: { dir: 'src' } });
+    h.reply({ text: 'src/a.ts' });
+    await expect(pending).resolves.toEqual({ text: 'src/a.ts', dir: 'src' });
+  });
+
+  it.each(['.', 'src/..'])('sends an empty dir for %s, which names the root', async (dir) => {
+    const h = harness();
+    const pending = h.port.globPaths('/remote/ws', args({ dir }));
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    const request = lastRequest(h.sent);
+    expect(request?.type === 'filesystem-request' && request.args).toHaveProperty('dir', '');
+    h.reply({ text: 'a.ts' });
+    await expect(pending).resolves.toEqual({ text: 'a.ts', dir: '' });
+  });
+
+  it('answers an absolute path as outside the workspace without sending a request', async () => {
+    const h = harness();
+    await expect(h.port.globPaths('/remote/ws', args({ dir: '/remote/ws/src' })))
+      .resolves.toEqual({ text: 'Outside the workspace: /remote/ws/src.', dir: '/remote/ws/src' });
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-open')).toBe(true));
+    expect(hasRequest(h.sent)).toBe(false);
+  });
+
+  it('sends the hidden and dirs flags as true when set', async () => {
+    const h = harness();
+    const pending = h.port.globPaths('/remote/ws', args({ hidden: true, dirs: true }));
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    expect(lastRequest(h.sent)).toMatchObject({ operation: 'glob-paths', args: { hidden: true, dirs: true } });
+    h.reply({ text: '.config' });
+    await expect(pending).resolves.toEqual({ text: '.config', dir: undefined });
+  });
+
+  it('sends an escaping path as is and rejects with the outside-root reason', async () => {
+    const h = harness();
+    const pending = h.port.globPaths('/remote/ws', args({ dir: '../x' }));
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    expect(lastRequest(h.sent)).toMatchObject({ operation: 'glob-paths', args: { dir: '../x' } });
+    h.reply(undefined, OUTSIDE_ROOT_REASON);
+    await expect(pending).rejects.toThrow(new Error(OUTSIDE_ROOT_REASON));
   });
 });

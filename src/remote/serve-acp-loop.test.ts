@@ -1,12 +1,22 @@
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NO_TOOLS_LINE } from '../acp/internal-tools.js';
 import { MARKDOWN_INSTRUCTION } from '../acp/launch.js';
 import type { AcpRunSnapshot, AcpRunSnapshotRow, AcpSession, PromptHandlers } from '../acp/types.js';
 import { deferred } from '../deferred.js';
+import type * as Glob from '../file-glob/glob.js';
 import type { ServerFrame } from './protocol-frames.js';
+
+const mocks = vi.hoisted(() => ({ globWorkspaceCommand: vi.fn() }));
+
+vi.mock('../file-glob/glob.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof Glob>();
+  mocks.globWorkspaceCommand.mockImplementation(actual.globWorkspaceCommand);
+  return { ...actual, globWorkspaceCommand: mocks.globWorkspaceCommand };
+});
+
 import { startRemoteLoop } from './serve-acp-loop.js';
 
 const RUN_ID = 'run-1';
@@ -501,5 +511,31 @@ describe('startRemoteLoop workspace mutations', () => {
     expect(existsSync(path.join(parent, 'escape.md'))).toBe(false);
     expect(existsSync(path.join(workspace, '.env'))).toBe(false);
     expect(readdirSync(workspace)).toEqual([]);
+  });
+});
+
+describe('startRemoteLoop workspace glob routing', () => {
+  it('runs a granted file glob against the workspace as a workspace step', async () => {
+    writeFileSync(path.join(workspace, 'a.md'), 'one\ntwo\n');
+    writeFileSync(path.join(workspace, 'b.txt'), 'other\n');
+    const { frames } = start([['file glob *.md'], ['Done.']], coreSnapshot('tell', ['file glob']));
+
+    await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toEqual([
+      { type: 'acp-tool-step', id: RUN_ID, command: 'file glob *.md', result: 'a.md', workspace: true },
+    ]));
+    expect(framesOf(frames, 'acp-tool-request')).toEqual([]);
+  });
+
+  it('passes the run abort signal to the workspace glob', async () => {
+    writeFileSync(path.join(workspace, 'a.md'), 'one\n');
+    mocks.globWorkspaceCommand.mockClear();
+    const { frames, handle } = start([['file glob *.md'], ['Done.']], coreSnapshot('tell', ['file glob']));
+
+    await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
+    expect(mocks.globWorkspaceCommand).toHaveBeenCalledWith(workspace, 'file glob *.md', expect.any(AbortSignal));
+    const signal = mocks.globWorkspaceCommand.mock.calls[0]?.[2] as AbortSignal;
+    expect(signal.aborted).toBe(false);
+    handle.abort();
+    expect(signal.aborted).toBe(true);
   });
 });
