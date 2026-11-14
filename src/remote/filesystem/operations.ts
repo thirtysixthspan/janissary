@@ -15,6 +15,7 @@ import { writeFileOperation } from './write-file-operation.js';
 import { editFileOperation } from './edit-file-operation.js';
 import { searchTextOperation } from './search-text-operation.js';
 import { readLinesOperation } from './read-lines-operation.js';
+import { globPathsOperation } from './glob-paths-operation.js';
 import { changeSetOperation } from './change-set-operation.js';
 
 // What an operation's `run` reaches, handed over as one value so the table stays a plain data
@@ -68,6 +69,7 @@ const READ_OPERATIONS = {
     run: (context, args) => context.readFile(args.path),
   }),
   'read-lines': readLinesOperation,
+  'glob-paths': globPathsOperation,
 } as const satisfies Record<string, AnyOperationDescriptor>;
 
 // The operations that write. Each names the refusal shape matching its own result type.

@@ -284,6 +284,31 @@ describe('RemoteFileNavigators', () => {
     expect(await request('read-lines', { path: '' })).toMatchObject({ result: { text: 'Is a directory: .' } });
   });
 
+  it('globs the far-side workspace and treats an empty dir as the root', async () => {
+    mkdirSync(path.join(root, 'src'));
+    writeFileSync(path.join(root, 'b.txt'), 'b');
+    writeFileSync(path.join(root, 'src', 'a.txt'), 'a');
+    writeFileSync(path.join(root, 'src', 'c.ts'), 'c');
+
+    expect(await request('glob-paths', { pattern: '**/*.txt' })).toMatchObject({ result: { text: 'b.txt\nsrc/a.txt' } });
+    expect(await request('glob-paths', { pattern: '**/*.txt', dir: '' })).toMatchObject({ result: { text: 'b.txt\nsrc/a.txt' } });
+  });
+
+  it('refuses a glob-paths dir that escapes the workspace as an error', async () => {
+    const reply = await request('glob-paths', { pattern: '*', dir: '../x' });
+
+    expect(reply).toMatchObject({ error: expect.stringContaining('outside this file navigator') });
+    expect(reply).not.toHaveProperty('result');
+  });
+
+  it('answers a missing or secret glob-paths dir as a successful reply', async () => {
+    mkdirSync(path.join(root, '.aws'));
+    writeFileSync(path.join(root, '.aws', 'credentials'), 'key');
+
+    expect(await request('glob-paths', { pattern: '*', dir: 'missing' })).toMatchObject({ result: { text: 'Directory not found: missing.' } });
+    expect(await request('glob-paths', { pattern: '*', dir: '.aws' })).toMatchObject({ result: { text: '(no matches)' } });
+  });
+
   it.each([
     ['read-file', { path: '../outside' }],
     ['read-lines', { path: '../outside' }],
