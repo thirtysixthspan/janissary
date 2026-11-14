@@ -301,6 +301,15 @@ describe('RemoteFileNavigators', () => {
     expect(reply).not.toHaveProperty('result');
   });
 
+  it('refuses a glob-paths dir of . or the absolute root as an error, leaving the root to an empty dir', async () => {
+    for (const dir of ['.', root]) {
+      const reply = await request('glob-paths', { pattern: '*', dir });
+
+      expect(reply).toMatchObject({ error: expect.stringContaining('outside this file navigator') });
+      expect(reply).not.toHaveProperty('result');
+    }
+  });
+
   it('answers a missing or secret glob-paths dir as a successful reply', async () => {
     mkdirSync(path.join(root, '.aws'));
     writeFileSync(path.join(root, '.aws', 'credentials'), 'key');
