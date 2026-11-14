@@ -54,8 +54,8 @@ and risk.`), `implementation` (`Implementation of an approved plan or a describe
 `opencode-go/deepseek-v4.1-flash` at `medium`, `claude` `claude-haiku-4-5` at `high`, and `codex`
 `gpt-6-luna` at `high`. The `tell` role follows `ask`, has the description `When you tell a model to
 carry out a task via ACP.`, and starts with the same three entries. The `ask` role grants `db sqlite
-list`, `db sqlite query`, `browser goto`, `browser content`, `question ask`, `question approve`, and
-`file read`. The `tell` role grants all twelve native commands: those seven plus `db sqlite create`, `db
+list`, `db sqlite query`, `browser goto`, `browser content`, `question ask`, `question approve`,
+`file read`, and `file glob`. The `tell` role grants all thirteen native commands: those eight plus `db sqlite create`, `db
 sqlite delete`, `browser eval`, `file write`, and `file edit`. An existing roles file is not changed, so its saved `tell` keeps the grants it lists. `planning`, `research`, `code review`, `implementation`, and
 `documentation` start with no command grants. Only `planning`, `ask`, and `tell` start with entries.
 

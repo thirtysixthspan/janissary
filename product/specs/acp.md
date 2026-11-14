@@ -134,11 +134,11 @@ file read <path> [--offset <line>] [--limit <lines>]
 Paths are relative to the workspace root. The output is numbered lines, at most 2000 per read; use --offset to continue a long file.
 ```
 
-`file read` is granted by default to the built-in `ask` and `tell` roles: ask grants seven commands and tell grants twelve, including `file write` and `file edit`.
+`file read` is granted by default to the built-in `ask` and `tell` roles: ask grants eight commands, including `file glob`, and tell grants thirteen, including `file glob`, `file write`, and `file edit`.
 
 ### File glob
 
-`file glob <pattern> [--path <dir>] [--hidden] [--dirs] [--limit <n>]` is a typed application command that lists workspace paths matching a pattern. It is also a native ACP command a role can grant; an agent run's `janissary file glob …` is still refused rather than run. It matches names only and never prints file contents; searching contents is the job of `file grep`. `help file` is its typed reference page.
+`file glob <pattern> [--path <dir>] [--hidden] [--dirs] [--limit <n>]` is a typed application command that lists workspace paths matching a pattern. It is also a native ACP command a role can grant, granted by default to the built-in `ask` and `tell` roles; an agent run's `janissary file glob …` is still refused rather than run. It matches names only and never prints file contents; searching contents is the job of `file grep`. `help file` is its typed reference page.
 
 The pattern is one whitespace-free token. `--path` takes one value that does not start with `--`; `--limit` takes a positive whole number from 1 to 1000 and defaults to 100; `--hidden` and `--dirs` are switches. A missing pattern, a second pattern, an unknown or repeated flag, a `--path` with no value or followed by a flag, and a `--limit` that is not a positive whole number or is above 1000 print `Usage: file glob <pattern> [--path <dir>] [--hidden] [--dirs] [--limit <n>]`.
 
