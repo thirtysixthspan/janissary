@@ -159,6 +159,49 @@ describe('file command run', () => {
     expect(await run('file glob *.md')).toBe('notes.md\nproject-only.md');
   });
 
+  describe('file glob end to end', () => {
+    beforeEach(() => {
+      for (const dir of ['file-read', 'alpha', 'beta', 'delta', 'epsilon', 'gamma']) {
+        mkdirSync(path.join(root, 'src', dir), { recursive: true });
+      }
+      for (const file of ['command.test.ts', 'policy.test.ts', 'command.ts']) {
+        writeFileSync(path.join(root, 'src', 'file-read', file), '');
+      }
+      writeFileSync(path.join(root, '.env.example'), 'A=1\n');
+      writeFileSync(path.join(root, '.env.local'), 'A=2\n');
+    });
+
+    it('lists the sorted test paths under a --path directory', async () => {
+      expect(await run('file glob **/*.test.ts --path src/file-read'))
+        .toBe('src/file-read/command.test.ts\nsrc/file-read/policy.test.ts');
+    });
+
+    it('lists the first five directories with the truncation line', async () => {
+      expect(await run('file glob * --dirs --path src --limit 5')).toBe([
+        'src/alpha/', 'src/beta/', 'src/delta/', 'src/epsilon/', 'src/file-read/',
+        '(showing the first 5 matches; narrow the pattern or raise --limit)',
+      ].join('\n'));
+    });
+
+    it('prints no matches for a pattern that matches nothing', async () => {
+      expect(await run('file glob nothing-matches-this')).toBe('(no matches)');
+    });
+
+    it('prints a missing --path directory', async () => {
+      expect(await run('file glob *.ts --path missing')).toBe('Directory not found: missing.');
+    });
+
+    it('never lists .env files, even with --hidden', async () => {
+      expect(await run('file glob .env.* --hidden')).toBe('(no matches)');
+    });
+
+    it('omits .env files from a --hidden listing of every name', async () => {
+      const output = await run('file glob * --hidden');
+      expect(output).not.toContain('.env.example');
+      expect(output).not.toContain('.env.local');
+    });
+  });
+
   describe('on a remote tab', () => {
     beforeEach(() => {
       tabs = [{ label: 'janus', remote: { host: 'box' } }];
