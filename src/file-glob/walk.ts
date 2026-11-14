@@ -1,7 +1,7 @@
 import { readdir, realpath, stat } from 'node:fs/promises';
 import type { Dirent } from 'node:fs';
 import path from 'node:path';
-import { checkLexicalPath, checkRealTarget } from '../file-read/policy.js';
+import { createRealTargetCheck, type FilePolicyFailure } from '../file-read/policy.js';
 import { createGlobMatcher, type GlobMatcher } from './match.js';
 
 export interface GlobWalkOptions {
@@ -28,6 +28,7 @@ interface WalkState {
   options: GlobWalkOptions;
   realRoot: string;
   realPrefix: string | undefined;
+  secretCheck: (realTarget: string) => FilePolicyFailure | undefined;
   matcher: GlobMatcher;
   paths: string[];
   stopped: boolean;
@@ -69,16 +70,16 @@ async function classify(entry: Dirent, absDir: string): Promise<EntryKind> {
 
 async function linkTargetAllowed(state: WalkState, absPath: string): Promise<boolean> {
   try {
-    return checkRealTarget(state.realRoot, await realpath(absPath)) === undefined;
+    return state.secretCheck(await realpath(absPath)) === undefined;
   } catch {
     return false;
   }
 }
 
 function isSecretMatch(state: WalkState, startRelative: string, rootRelative: string): boolean {
-  if (checkLexicalPath(state.options.root, rootRelative) === 'Secret file') return true;
+  if (state.secretCheck(path.join(state.realRoot, rootRelative)) === 'Secret file') return true;
   if (state.realPrefix === undefined) return false;
-  return checkRealTarget(state.realRoot, path.join(state.realRoot, state.realPrefix, startRelative)) === 'Secret file';
+  return state.secretCheck(path.join(state.realRoot, state.realPrefix, startRelative)) === 'Secret file';
 }
 
 async function record(state: WalkState, startRelative: string, rootRelative: string, kind: Exclude<EntryKind, 'skip'>, absPath: string): Promise<void> {
@@ -137,6 +138,7 @@ export async function walkGlob(options: GlobWalkOptions): Promise<GlobWalkResult
     options,
     realRoot,
     realPrefix: options.realStart === prefix ? undefined : options.realStart,
+    secretCheck: createRealTargetCheck(realRoot),
     matcher: createGlobMatcher(options.pattern, options.hidden),
     paths: [],
     stopped: false,

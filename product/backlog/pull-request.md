@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's promise that the per-match secret check does no I/O, so a glob stops issuing dozens of synchronous `realpath` calls on the main event loop for every match.
-
-Existing Issue: The walker's `isSecretMatch` calls `checkLexicalPath` for every match that passes the pattern, and that function's home-directory check runs `realpathSync` on the root, on the home directory, and on each of the roughly 27 `SECRET_DENY_PATHS` locations (recursing to parents for missing ones), with a second round through `checkRealTarget` under a linked `--path`, while the plan states the secret check costs "no I/O per match" and that "regular files and directories pay no extra I/O". Severity: 4/10
-
-Existing Risk: 4/10 - A glob near its 1000-match limit, or a `--hidden` glob whose dropped secret matches do not count toward the limit, performs tens of thousands of blocking filesystem calls on the server's main loop per command, a lag that grows with every agent step and is invisible to the 30-second deadline.
-
-Proposal Risk: 3/10 - Hoisting the home-secret locations out of the per-match path must keep the exact same denial set as `file read`, so a mistake there would silently list a secret path; sharing one policy helper with the reader rather than re-implementing it keeps that risk contained.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2001 "make the file glob secret check do no I/O per match". In `src/file-read/policy.ts`, factor the home-secret anchors that `isUnderHomeSecret` computes (the resolved home directory and each `SECRET_DENY_PATHS` entry's literal and resolved location) into a function that resolves them once and returns a pure predicate, and add a precomputed form of the lexical and real-target secret checks (for example `createSecretPathCheck(root)` returning a function over a root-relative or real path) that reuses the existing `isSecretPath` and that predicate; keep `checkLexicalPath` and `checkRealTarget` behaving exactly as today for `file read` and the tool writer by building them on the same helpers. In `src/file-glob/walk.ts`, build the check once in `walkGlob` alongside `realRoot` and use it in `isSecretMatch` and `linkTargetAllowed` instead of the per-call policy functions. The secret-file tests in `src/file-glob/walk-modes.test.ts` and `src/file-glob/glob.test.ts` (including the linked `cfg` and `.claude` cases) and the policy tests under `src/file-read/` must keep passing untouched; add a walk test that counts `realpathSync` calls through a mock of `node:fs` and asserts the count does not grow with the number of matches.
-
-
 * Refuse a file glob line on the agent run's caller-side runner as well, so the description's promise that an agent's glob never falls through to the caller's directory holds even when the far side of a remote run sends one.
 
 Existing Issue: `gateAgentCommand` refuses an agent run's `file glob` before it is routed, but `runGrantedAgentCommand` in the caller-side runner still refuses only mutation lines, so a `file glob` arriving there (as an `acp-tool-request` from a remote far side, which the local runner executes without re-gating) with the `file` grant is dispatched in the caller tab and lists the caller's local files, the exact fall-through the plan and description say cannot happen. Severity: 3/10
