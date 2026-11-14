@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Keep the walker fail-soft when the workspace root cannot be resolved, as the plan's read-failure rule requires, instead of letting the new root realpath reject the whole walk.
-
-Existing Issue: `walkGlob` in `src/file-glob/walk.ts` now calls `await realpath(options.root)` unguarded while building `WalkState`, so a root removed between validation and walking (the default `--path` start is the root itself) makes `walkGlob` reject, where before the repair it returned no paths with `truncated` and `timedOut` false as the subplan's "Read failures, completed" decision states. Severity: 3/10
-
-Existing Risk: 3/10 - A rare race (workspace deleted or renamed mid-command) turns a quiet empty result into an unhandled rejection in whatever subplan 4 wires `walkGlob` into, the one failure path in the walker that is not fail-soft.
-
-Proposal Risk: 1/10 - The rejection is caught and mapped to the same empty result as a deleted start, so the only remaining exposure is that a link check can no longer run when the root is gone, which is moot because nothing under a missing root can be listed.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2001 "keep walkGlob fail-soft when the root realpath rejects". In `walkGlob` in `src/file-glob/walk.ts`, resolve the root before building the state inside a `try`/`catch` (a small helper such as `resolveRoot(root): Promise<string | undefined>` keeps `walkGlob` flat); on rejection return `{ paths: [], truncated: false, timedOut: false }` without walking, matching the deleted-start behavior pinned by the `start: path.join(root, 'missing')` case in `src/file-glob/walk.test.ts`. Do not fall back to the unresolved `options.root` for `realRoot`, since `checkRealTarget` in `src/file-read/policy.ts` expects canonical paths and would wrongly drop in-root links under a symlinked root such as macOS's `/var`. Add a case to `src/file-glob/walk.test.ts` that removes a fresh `mkdtempSync` directory and walks with it as both `root` and `start`, expecting the empty result. Existing cases in `walk.test.ts` and `walk-modes.test.ts`, including `lists a symbolic link to a file in file mode only`, must pass unchanged. Run `$janissary/scripts/run.mjs check-diff`.
-
-
 * Bring the plans' remaining link-classification sentences in line with the widened link target rule, so no complete plan still says a link to a file classifies or lists exactly like a regular file.
 
 Existing Issue: The repair added the link target rule to `file-glob.md`'s Secret files decision and a new decision to the 3.2 subplan, but left the 3.2 subplan's "Classification with `stat`" decision saying a file target classifies as `'file'` (the code now returns `'link'`, and the new bullet directly below says so), and left `file-glob.md`'s "Symbolic links" decision ("A symbolic link to a file is listed like a file") and its walker implementation note ("a link to a file counts as a file") unqualified. Severity: 2/10

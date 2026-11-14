@@ -113,10 +113,20 @@ async function walkDirectory(state: WalkState, absDir: string, startRelDir: stri
   }
 }
 
+async function resolveRoot(root: string): Promise<string | undefined> {
+  try {
+    return await realpath(root);
+  } catch {
+    return undefined;
+  }
+}
+
 export async function walkGlob(options: GlobWalkOptions): Promise<GlobWalkResult> {
+  const realRoot = await resolveRoot(options.root);
+  if (realRoot === undefined) return { paths: [], truncated: false, timedOut: false };
   const state: WalkState = {
     options,
-    realRoot: await realpath(options.root),
+    realRoot,
     matcher: createGlobMatcher(options.pattern, options.hidden),
     paths: [],
     stopped: false,

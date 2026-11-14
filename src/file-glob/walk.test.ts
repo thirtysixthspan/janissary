@@ -126,4 +126,10 @@ describe('walkGlob', () => {
   it('yields nothing for a start directory that does not exist', async () => {
     expect(await walk({ start: path.join(root, 'missing') })).toEqual({ paths: [], truncated: false, timedOut: false });
   });
+
+  it('yields nothing for a root that no longer exists', async () => {
+    const gone = mkdtempSync(path.join(tmpdir(), 'file-glob-walk-gone-'));
+    rmSync(gone, { recursive: true, force: true });
+    expect(await walk({ root: gone, start: gone })).toEqual({ paths: [], truncated: false, timedOut: false });
+  });
 });
