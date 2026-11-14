@@ -119,11 +119,22 @@ function makeServer(pathArgument: string | undefined = repoDir, home = homeDir) 
   return { server, frames, exit };
 }
 
+// Provisioning runs a real `git clone` and its follow-up git setup, which CI can take past the
+// one-second `vi.waitFor` default; every wait for `workspace-ready` shares this budget.
+const WORKSPACE_READY_TIMEOUT_MS = 10_000;
+
+function waitForWorkspaceReady(frames: ServerFrame[]): Promise<void> {
+  return vi.waitFor(
+    () => expect(frames.some((frame) => frame.type === 'workspace-ready')).toBe(true),
+    { timeout: WORKSPACE_READY_TIMEOUT_MS },
+  );
+}
+
 describe('RemoteServer', () => {
   it.each(['SIGTERM', 'SIGINT'])('preserves work on SIGHUP, then cleans up on %s', async (signal) => {
     const { server, frames, exit } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: `sleep-${signal}` })}\n`);
-    await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'workspace-ready')).toBe(true));
+    await waitForWorkspaceReady(frames);
     const ready = frames.find((frame) => frame.type === 'workspace-ready')!;
     server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
     const kill = vi.mocked(spawnPty).mock.results.at(-1)!.value.kill;
@@ -140,7 +151,7 @@ describe('RemoteServer', () => {
   it('shuts down and removes the workspace on an explicit shutdown frame', async () => {
     const { server, frames, exit } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'sleep-shutdown' })}\n`);
-    await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'workspace-ready')).toBe(true));
+    await waitForWorkspaceReady(frames);
     const ready = frames.find((frame) => frame.type === 'workspace-ready')!;
     server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
     const kill = vi.mocked(spawnPty).mock.results.at(-1)!.value.kill;
@@ -163,7 +174,7 @@ describe('RemoteServer', () => {
   it('clones the root\'s origin on a provision request and answers workspace-ready', async () => {
     const { server, frames } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'claude-ready' })}\n`);
-    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+    await waitForWorkspaceReady(frames);
 
     const ready = frames.find((f) => f.type === 'workspace-ready');
     expect(ready?.dir).toBe(path.join(repoDir, '.janissary', 'workspace', 'claude-ready'));
@@ -178,7 +189,7 @@ describe('RemoteServer', () => {
   it('says nothing about the token when the forwarded one is in use', async () => {
     const { server, frames } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'claude-forwarded', tokens: { github: 'github_pat_forwarded' } })}\n`);
-    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+    await waitForWorkspaceReady(frames);
 
     expect(frames.find((f) => f.type === 'workspace-ready')?.notice ?? '').not.toContain('github token:');
     server.shutdown(0);
@@ -187,7 +198,7 @@ describe('RemoteServer', () => {
   it('reports a workspace left with no token at all', async () => {
     const { server, frames } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'claude-tokenless' })}\n`);
-    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+    await waitForWorkspaceReady(frames);
 
     expect(frames.find((f) => f.type === 'workspace-ready')?.notice).toContain('github token:');
     server.shutdown(0);
@@ -198,7 +209,7 @@ describe('RemoteServer', () => {
   it('hands a remote workspace the forwarded Claude token and says nothing about it', async () => {
     const { server, frames } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'claude-oauth', tokens: { claude: 'sk-ant-oat01-forwarded' } })}\n`);
-    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+    await waitForWorkspaceReady(frames);
     server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
 
     expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ tokens: { claude: 'sk-ant-oat01-forwarded' } });
@@ -209,7 +220,7 @@ describe('RemoteServer', () => {
   it('hands a remote workspace the forwarded OpenCode key and says nothing about it', async () => {
     const { server, frames } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'opencode-key', tokens: { opencode: 'oc_live_forwarded' } })}\n`);
-    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+    await waitForWorkspaceReady(frames);
     server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
 
     expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ tokens: { opencode: 'oc_live_forwarded' } });
@@ -220,7 +231,7 @@ describe('RemoteServer', () => {
   it('hands a remote workspace the forwarded Gemini key and says nothing about it', async () => {
     const { server, frames } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'gemini-key', tokens: { gemini: 'AIzaSyForwarded' } })}\n`);
-    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+    await waitForWorkspaceReady(frames);
     server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
 
     expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ tokens: { gemini: 'AIzaSyForwarded' } });
@@ -235,7 +246,7 @@ describe('RemoteServer', () => {
     try {
       const { server, frames } = makeServer();
       server.receive(`${encodeFrame({ type: 'provision', label: 'gemini-own-key' })}\n`);
-      await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+      await waitForWorkspaceReady(frames);
       server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
 
       expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ tokens: { gemini: 'AIzaSyRemoteOwn' } });
@@ -253,7 +264,7 @@ describe('RemoteServer', () => {
     try {
       const { server, frames } = makeServer();
       server.receive(`${encodeFrame({ type: 'provision', label: 'opencode-own-key' })}\n`);
-      await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+      await waitForWorkspaceReady(frames);
       server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
 
       expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ tokens: { opencode: 'oc_live_remote_own' } });
@@ -271,7 +282,7 @@ describe('RemoteServer', () => {
     try {
       const { server, frames } = makeServer();
       server.receive(`${encodeFrame({ type: 'provision', label: 'claude-own-token' })}\n`);
-      await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+      await waitForWorkspaceReady(frames);
       server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
 
       expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ tokens: { claude: 'sk-ant-oat01-remote-own' } });
@@ -291,7 +302,7 @@ describe('RemoteServer', () => {
       type: 'provision', label: 'identity-forwarded',
       identity: { name: 'Ada Lovelace', email: 'ada@example.com' },
     })}\n`);
-    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+    await waitForWorkspaceReady(frames);
 
     expect(getGitIdentity()).toEqual({ name: 'Ada Lovelace', email: 'ada@example.com' });
     server.shutdown(0);
@@ -301,7 +312,7 @@ describe('RemoteServer', () => {
     loadGitIdentity(repoDir);
     const { server, frames } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'identity-own' })}\n`);
-    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+    await waitForWorkspaceReady(frames);
 
     expect(getGitIdentity()).toEqual({ name: 'test', email: 'test@test.com' });
     server.shutdown(0);
@@ -310,7 +321,7 @@ describe('RemoteServer', () => {
   it('removes the clone when the session ends, after disposing the ACP agent that lives in it', async () => {
     const { server, frames, exit } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'claude-cleanup' })}\n`);
-    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+    await waitForWorkspaceReady(frames);
     const dir = frames.find((f) => f.type === 'workspace-ready')!.dir;
     server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
 
@@ -331,7 +342,7 @@ describe('RemoteServer', () => {
   it('keeps the clone when bounded ACP teardown cannot confirm process exit', async () => {
     const { server, frames, exit } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'claude-unconfirmed-cleanup' })}\n`);
-    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+    await waitForWorkspaceReady(frames);
     const dir = frames.find((f) => f.type === 'workspace-ready')!.dir;
     server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
     acpMock.shutdown.mockImplementation(() => new Promise<void>(() => {}));
@@ -364,7 +375,7 @@ describe('RemoteServer', () => {
   it('drives the ACP holder once a workspace has been provisioned', async () => {
     const { server, frames } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'acp-driven' })}\n`);
-    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+    await waitForWorkspaceReady(frames);
     const dir = frames.find((f) => f.type === 'workspace-ready')!.dir;
 
     server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
@@ -386,7 +397,7 @@ describe('RemoteServer', () => {
   it('runs an ACP tool loop on the provisioned workspace and answers its caller request', async () => {
     const { server, frames } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'acp-run-driven' })}\n`);
-    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+    await waitForWorkspaceReady(frames);
 
     server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
     server.receive(`${encodeFrame(ACP_RUN_FRAME)}\n`);
@@ -469,7 +480,7 @@ describe('RemoteServer', () => {
   it('answers session-state with one entry per live process', async () => {
     const { server, frames } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'claude-state' })}\n`);
-    await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'workspace-ready')).toBe(true));
+    await waitForWorkspaceReady(frames);
     server.receive(`${encodeFrame({ ...SPAWN_FRAME, harness: 'claude' })}\n`);
     server.receive(`${encodeFrame({ type: 'session-state' })}\n`);
 
@@ -483,7 +494,7 @@ describe('RemoteServer', () => {
   it('answers an empty list once every process has exited', async () => {
     const { server, frames } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'claude-empty' })}\n`);
-    await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'workspace-ready')).toBe(true));
+    await waitForWorkspaceReady(frames);
     server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
     const handlers = vi.mocked(spawnPty).mock.calls.at(-1)![3];
     handlers.onExit('pty1', 0);
@@ -499,7 +510,7 @@ describe('RemoteServer', () => {
   it('answers a spawn whose PTY will not start with that process\'s exit, and keeps serving', async () => {
     const { server, frames, exit } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'claude-spawn-fails' })}\n`);
-    await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'workspace-ready')).toBe(true));
+    await waitForWorkspaceReady(frames);
     vi.mocked(spawnPty).mockImplementationOnce(() => { throw new Error('pty refused'); });
 
     expect(() => server.receive(`${encodeFrame({ ...SPAWN_FRAME, harness: 'claude' })}\n`)).not.toThrow();
@@ -562,7 +573,7 @@ describe('RemoteServer provision — label check', () => {
     writeFileSync(path.join(leftover, 'uncommitted.txt'), 'stale work');
     const { server, frames } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'leftover-label' })}\n`);
-    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+    await waitForWorkspaceReady(frames);
 
     expect(frames.find((f) => f.type === 'workspace-ready')).toMatchObject({ dir: leftover, cleaned: leftover });
     expect(existsSync(path.join(leftover, 'uncommitted.txt'))).toBe(false);
@@ -704,7 +715,7 @@ describe('RemoteServer — settling the root', () => {
       server.receive(`${encodeFrame({ type: 'provision', label: 'offered-label', origin: origin() })}\n`);
       await vi.waitFor(() => expect(frames).toEqual([{ type: 'clone-offer', path: target, url: origin() }]));
       server.receive(`${encodeFrame({ type: 'clone-answer', accept: true })}\n`);
-      await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'workspace-ready')).toBe(true));
+      await waitForWorkspaceReady(frames);
       expect(frames.find((frame) => frame.type === 'workspace-ready')).toMatchObject({
         dir: path.join(target, '.janissary', 'workspace', 'offered-label'),
         cloned: { url: origin(), path: target },
@@ -1275,7 +1286,7 @@ describe('detached peer rendezvous', () => {
   it('expires an unattached peer and cleans up its workspace', async () => {
     const { server, frames, exit } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'sleep-expiry' })}\n`);
-    await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'workspace-ready')).toBe(true));
+    await waitForWorkspaceReady(frames);
     const ready = frames.find((frame) => frame.type === 'workspace-ready')!;
     const peer = new DetachedPeer(repoDir, randomUUID(), (data) => server.receive(data), () => server.shutdown(0));
     await peer.start(vi.fn());
