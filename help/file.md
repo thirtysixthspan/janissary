@@ -54,7 +54,7 @@ Bare `file`, `file read` without a path, an unknown subcommand, a second path ar
 - `file glob *.md --path product --limit 20` lists up to 20 Markdown files directly inside `product/`.
 - `file glob * --dirs --path src` lists the folders directly inside `src/`.
 
-The pattern is one token with no whitespace, and matching is case-sensitive. `**` matches any number of folders, `*` matches any characters within one name, `?` matches one character, and `{a,b}` matches either `a` or `b`. The pattern is matched against paths relative to `--path`, which defaults to the root. A pattern without a slash matches only names directly inside that folder, so `file glob *.ts --path src` lists `src/a.ts` but not `src/x/b.ts`; use `**/*.ts` to search below it.
+The pattern is one token with no whitespace, and matching is case-sensitive. `**` matches any number of folders, `*` matches any characters within one name, `?` matches one character, and `{a,b}` matches either `a` or `b`. The pattern is matched against paths relative to `--path`, which defaults to the root. A pattern without a slash matches only names directly inside that folder, so `file glob *.ts --path src` lists `src/a.ts` but not `src/x/b.ts`; use `**/*.ts` to search below it. Other pattern syntax, such as `+(a|b)`, is matched literally.
 
 Each result is a path relative to the root, written with forward slashes, so you can pass it straight to `file read`. Results come depth-first, by name within each folder, so `a/b.ts` comes before `a.ts`.
 
@@ -76,7 +76,7 @@ A `--path` naming a secret folder, such as `.aws`, prints `(no matches)`.
 
 On a remote tab, `Remote connection unavailable.` is printed when the tab has no live connection or its workspace is still being prepared. A connection that drops or stops answering mid-search prints `The remote connection ended.` or `The remote machine did not answer in time.`.
 
-A missing pattern, a second pattern, an unknown or repeated flag, a `--path` with no value or followed by another flag, and a `--limit` that is not a positive whole number or is above 1000 all print the usage line `Usage: file glob <pattern> [--path <dir>] [--hidden] [--dirs] [--limit <n>]`.
+A missing pattern, a second pattern, an unknown or repeated flag, a `--path` with no value or followed by another flag, and a `--limit` that is not a positive whole number or is above 1000 all print the usage line `Usage: file glob <pattern> [--path <dir>] [--hidden] [--dirs] [--limit <n>]`. A pattern longer than 1024 characters, with more than three `*` wildcards in one name, or whose `{a,b}` choices combine into more than 64 patterns is refused with `Pattern too complex: use at most 1024 characters, three * wildcards in one name, and 64 {a,b} combinations.`, because matching it could take minutes. A `**` folder wildcard does not count toward the three.
 
 **Writing and editing**
 

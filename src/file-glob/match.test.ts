@@ -52,6 +52,21 @@ describe('createGlobMatcher', () => {
     }
   });
 
+  it('answers a catastrophically backtracking pattern quickly with no match', () => {
+    const match = createGlobMatcher('*?'.repeat(12) + 'Z', false);
+    const started = performance.now();
+    expect(match('a'.repeat(60))).toBe(false);
+    expect(performance.now() - started).toBeLessThan(100);
+  });
+
+  it('matches extglob groups literally', () => {
+    expect(createGlobMatcher('+(a|b).ts', false)('a.ts')).toBe(false);
+    expect(createGlobMatcher('+(a|b).ts', false)('+(a|b).ts')).toBe(true);
+    const started = performance.now();
+    expect(createGlobMatcher('+(a|aa)'.repeat(4) + 'Z', false)('a'.repeat(60))).toBe(false);
+    expect(performance.now() - started).toBeLessThan(100);
+  });
+
   it('treats a pattern minimatch rejects as matching nothing', () => {
     const match = createGlobMatcher('a'.repeat(70_000), false);
     expect(() => match('a')).not.toThrow();

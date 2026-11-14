@@ -94,6 +94,8 @@ const INVALID_CASES: [RemoteFilesystemOperation, Record<string, unknown>][] = [
   ['glob-paths', { pattern: '*.ts', limit: FILE_GLOB_MAX_LIMIT + 1 }],
   ['glob-paths', { pattern: '*.ts', limit: 1.5 }],
   ['glob-paths', { pattern: '*.ts', limit: '5' }],
+  ['glob-paths', { pattern: '*?'.repeat(12) + 'Z' }],
+  ['glob-paths', { pattern: 'a'.repeat(1025) }],
   ['write-file', { path: 'a.txt' }],
   ['write-file', { path: 'a.txt', content: '', expectedHash: null }],
   ['write-file', { path: 'a.txt', content: '', expectedHash: 7 }],

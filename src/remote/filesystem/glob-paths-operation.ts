@@ -3,6 +3,7 @@ import { descriptorFor } from './operation-types.js';
 import { resultDecoders } from './result-decoders.js';
 import { globWorkspace, GLOB_TIMEOUT_MS } from '../../file-glob/glob.js';
 import { FILE_GLOB_DEFAULT_LIMIT, FILE_GLOB_MAX_LIMIT } from '../../file-glob/command.js';
+import { isGlobPatternTooComplex } from '../../file-glob/pattern-limits.js';
 
 const INVALID_ARGUMENTS = 'Invalid remote filesystem operation arguments.';
 
@@ -20,7 +21,7 @@ function optionalBoolean(value: unknown): boolean {
 }
 
 export const globPathsOperation = descriptorFor<'glob-paths'>()({
-  valid: (args) => stringValue(args.pattern)
+  valid: (args) => stringValue(args.pattern) && !isGlobPatternTooComplex(args.pattern)
     && (args.dir === undefined || stringValue(args.dir))
     && optionalBoolean(args.hidden) && optionalBoolean(args.dirs)
     && (args.limit === undefined || globLimit(args.limit)),

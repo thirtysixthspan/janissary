@@ -6,6 +6,7 @@ import {
   isFileGlobCommandLine,
   parseFileGlob,
 } from './command.js';
+import { FILE_GLOB_TOO_COMPLEX } from './pattern-limits.js';
 
 const usage = { error: FILE_GLOB_USAGE };
 
@@ -84,6 +85,15 @@ describe('parseFileGlob', () => {
     expect(parseFileGlob('file glob x --limit x')).toEqual(usage);
     expect(parseFileGlob('file glob x --limit 1.5')).toEqual(usage);
     expect(parseFileGlob('file glob x --limit -3')).toEqual(usage);
+  });
+
+  it('refuses a pattern over a complexity cap and parses one at the caps', () => {
+    const tooComplex = { error: FILE_GLOB_TOO_COMPLEX };
+    expect(parseFileGlob(`file glob ${'*?'.repeat(12)}Z`)).toEqual(tooComplex);
+    expect(parseFileGlob(`file glob ${'a'.repeat(1025)} --dirs`)).toEqual(tooComplex);
+    expect(parseFileGlob(`file glob ${'{a,b}'.repeat(7)}`)).toEqual(tooComplex);
+    expect(parseFileGlob('file glob *a*a*a.ts')).toEqual({ pattern: '*a*a*a.ts', ...defaults });
+    expect(parseFileGlob(`file glob ${'a'.repeat(1024)}`)).toEqual({ pattern: 'a'.repeat(1024), ...defaults });
   });
 
   it('accepts limits from 1 to 1000 and leading zeros', () => {

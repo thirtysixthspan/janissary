@@ -1,4 +1,5 @@
 import { Minimatch } from 'minimatch';
+import { isGlobPatternTooComplex } from './pattern-limits.js';
 
 export type GlobMatcher = (relative: string) => boolean;
 
@@ -7,12 +8,16 @@ const matchNothing: GlobMatcher = () => false;
 // `path.matchesGlob` folds case on macOS and Windows with no way to turn it off, so this calls
 // minimatch with Node's own option set except `nocase`, keeping matching case-sensitive everywhere.
 // minimatch's typings have no `'posix'` platform; any non-`win32` value gives the same POSIX rules.
+// `noext` also turns off extglob groups such as `+(a|b)`, which are undocumented and compile to
+// nested quantifiers that backtrack catastrophically.
 export function createGlobMatcher(pattern: string, hidden: boolean): GlobMatcher {
+  if (isGlobPatternTooComplex(pattern)) return matchNothing;
   let compiled: Minimatch;
   try {
     compiled = new Minimatch(pattern, {
       nocase: false,
       nonegate: true,
+      noext: true,
       nocomment: true,
       windowsPathsNoEscape: true,
       optimizationLevel: 2,
