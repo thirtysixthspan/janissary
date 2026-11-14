@@ -11,6 +11,7 @@ export const NATIVE_ACP_COMMANDS = [
   'question ask',
   'question approve',
   'file read',
+  'file glob',
   'file write',
   'file edit',
 ] as const;

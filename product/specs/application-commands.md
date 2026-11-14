@@ -6,7 +6,7 @@ Application commands use `~/.janissary/commands.json`, with a project-level `.ja
 
 Each named fixed subcommand form of a built-in command, such as `tab dock`, `files expand`, `layout window`, `notifications clear`, `schedule cancel`, `open external`, and `db sqlite`, has its own row whose name is the full form and whose parent is the command. Disabling one form leaves the command's other forms enabled, while disabling the parent command disables every form. The `ask reset`, `tell reset`, and `search transcript` rows keep sharing their command's name.
 
-The native `file read`, `file write`, and `file edit` rows have the parent `file` and each has its own Enabled and Agent access settings. Disabling `file write` disables only that row, and refuses the typed `file write` command as well as the agent tool; disabling `file` disables all three. They appear as ordinary rows in the Commands table and as ordinary entries in the Roles command picker.
+The native `file read`, `file glob`, `file write`, and `file edit` rows have the parent `file` and each has its own Enabled and Agent access settings. Disabling `file write` disables only that row, and refuses the typed `file write` command as well as the agent tool; disabling `file glob` likewise refuses the typed `file glob` as well as the agent tool; disabling `file` disables all four. They appear as ordinary rows in the Commands table and as ordinary entries in the Roles command picker.
 
 The command inventory lists a bundled plugin's command and aliases only when the host accepted those claims. A plugin whose command or alias claims a name already reserved by a built-in command, or already claimed by another plugin, contributes no row and no alias for that claim, even though the built-in keeps the name.
 

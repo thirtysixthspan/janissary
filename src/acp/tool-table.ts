@@ -7,7 +7,7 @@ import { nativeCommandName, nativeCommandTool, type NativeCommandTool } from './
 import type { AcpRunSnapshot } from './types.js';
 import { FILE_READ_PRIMER, isFileReadCommandLine } from '../file-read/command.js';
 import { FILE_MUTATION_PRIMER, isFileMutationCommandLine } from '../file-write/command.js';
-import { isFileGlobCommandLine } from '../file-glob/command.js';
+import { FILE_GLOB_PRIMER, isFileGlobCommandLine } from '../file-glob/command.js';
 
 // One tool on the ACP run path. The three loop options the agent sees — what it is told the tools
 // are, which side runs a command it emitted, and what pulls a command out of its reply — are all
@@ -58,7 +58,7 @@ export function createAcpToolTable(grants: readonly string[]): AcpTool[] {
       tool: {
         primer: filePrimer(allowed),
         match: (command) => /^file\b/i.test(command),
-        isCommandLine: (line) => isFileReadCommandLine(line) || isFileMutationCommandLine(line),
+        isCommandLine: (line) => isFileReadCommandLine(line) || isFileGlobCommandLine(line) || isFileMutationCommandLine(line),
         runsOn: 'workspace',
       },
     },
@@ -80,6 +80,7 @@ export function createAcpToolTable(grants: readonly string[]): AcpTool[] {
 function filePrimer(allowed: readonly string[]): string {
   return [
     ...(allowed.includes('file read') ? [FILE_READ_PRIMER] : []),
+    ...(allowed.includes('file glob') ? [FILE_GLOB_PRIMER] : []),
     ...(allowed.includes('file write') || allowed.includes('file edit') ? [FILE_MUTATION_PRIMER] : []),
   ].join('\n\n');
 }
