@@ -3,8 +3,9 @@ import type { RemoteRequest } from './port-git.js';
 import type { RemotePortPaths } from './port-paths.js';
 import { failureResult, type FileOperationResult } from '../file-operation-result.js';
 import { NO_MATCHING_TEXT_REASON, type FileEditValue, type FileWritePolicy } from '../../file-write/types.js';
+import type { FileGlobArgs } from '../../file-glob/command.js';
 
-// `RemoteFileSystemPort`'s line read, write and text edit, extracted so that file stays under the size limit — the same
+// `RemoteFileSystemPort`'s line read, glob, write and text edit, extracted so that file stays under the size limit — the same
 // split `port-moves.ts` uses. It takes the port's bound request sender and its path mapper as
 // parameters, so nothing here knows about the port's session bookkeeping.
 
@@ -25,6 +26,26 @@ export async function remoteReadLines(
     ...(limit !== undefined && { limit }),
   });
   return { text: result.text, path: sent };
+}
+
+// The glob follows the line read's rules: an absolute `--path` is answered here without a request,
+// and `dir` is the spelling actually sent. `paths.to` turns a `--path` naming the root into `''`,
+// which the far side globs as the root, where a literal `.` would be refused.
+export async function remoteGlobPaths(
+  request: RemoteRequest, paths: RemotePortPaths, root: string, args: FileGlobArgs,
+): Promise<{ text: string; dir: string | undefined }> {
+  if (args.dir !== undefined && path.posix.isAbsolute(args.dir)) {
+    return { text: `Outside the workspace: ${args.dir}.`, dir: args.dir };
+  }
+  const dir = args.dir === undefined ? undefined : await paths.to(root, args.dir);
+  const result = await request('glob-paths', {
+    pattern: args.pattern,
+    ...(dir !== undefined && { dir }),
+    ...(args.hidden && { hidden: true }),
+    ...(args.dirs && { dirs: true }),
+    limit: args.limit,
+  });
+  return { text: result.text, dir };
 }
 
 // Content crosses as one base64 copy. Under the tool policy an absolute path is refused here with the
