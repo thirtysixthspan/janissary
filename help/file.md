@@ -12,15 +12,15 @@ Read a text file from the workspace and print it as numbered lines in the curren
 
 `file edit <JSON>`
 
-`--offset` is the first line to print and defaults to 1. `--limit` is the number of lines to print and defaults to 2000. One read prints at most 2000 lines, and files over 5 MB are refused.
+For `file read`, `--offset` is the first line to print and defaults to 1, and `--limit` is the number of lines to print and defaults to 2000. One read prints at most 2000 lines, and files over 5 MB are refused. The **Output** and **Errors** notes below cover `file read` too. `file glob` has its own flags and defaults under **Finding files**. `file write` and `file edit` are under **Writing and editing**.
 
 **Output**
 
-Each line is printed with its line number. A line longer than 2000 characters, counted in code points, is cut and ends with `…`. An empty file prints `(empty file)`. When lines remain after the last one printed, the read ends with a notice such as `(showing lines 1-2000 of 3500; continue with --offset 2001)`; run the same command with that offset to read the next part.
+`file read` prints each line with its line number. A line longer than 2000 characters, counted in code points, is cut and ends with `…`. An empty file prints `(empty file)`. When lines remain after the last one printed, the read ends with a notice such as `(showing lines 1-2000 of 3500; continue with --offset 2001)`; run the same command with that offset to read the next part.
 
 **Errors**
 
-Each failure prints one line that names the path as you typed it:
+Each `file read` failure prints one line that names the path as you typed it:
 
 - `File not found: <path>.` for a missing path, and also for a file that exists but cannot be read, such as one without read permission
 - `Is a directory: <path>.`

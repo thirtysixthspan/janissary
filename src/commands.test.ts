@@ -148,6 +148,16 @@ describe('getOutput help pages', () => {
     expect(outputText('help /quit')).toContain('### quit');
   });
 
+  it('scopes the file page read notes to file read and leaves glob its own limit', () => {
+    const text = outputText('help file');
+    expect(text).toContain('For `file read`, `--offset` is the first line to print and defaults to 1, and `--limit` is the number of lines to print and defaults to 2000.');
+    expect(text).toContain('`file glob` has its own flags and defaults under **Finding files**.');
+    expect(text).toContain('`file read` prints each line with its line number.');
+    expect(text).toContain('Each `file read` failure prints one line that names the path as you typed it:');
+    expect(text).toContain('`--limit` sets how many paths to print, from 1 to 1000, and defaults to 100.');
+    expect(text).not.toMatch(/^`--limit` is the number of lines to print/m);
+  });
+
   it('keeps the tab command page examples and usage aligned with the parser', () => {
     const text = outputText('help tab');
     const examples = [
