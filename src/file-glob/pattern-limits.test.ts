@@ -6,6 +6,7 @@ import {
   FILE_GLOB_MAX_NAME_STARS,
   FILE_GLOB_MAX_PATTERN_LENGTH,
   isGlobPatternTooComplex,
+  normalizeGlobPattern,
 } from './pattern-limits.js';
 
 describe('isGlobPatternTooComplex', () => {
@@ -52,6 +53,23 @@ describe('isGlobPatternTooComplex', () => {
     expect(isGlobPatternTooComplex('*-*-*.{ts,js}')).toBe(false);
     expect(isGlobPatternTooComplex('*-*-*.{ts,js,md}')).toBe(true);
     expect(isGlobPatternTooComplex('*a*a*' + '{b,c}'.repeat(6))).toBe(true);
+  });
+
+  it('normalizes each backslash to the / separator minimatch reads it as', () => {
+    expect(normalizeGlobPattern(String.raw`a\{b,c}\*.ts`)).toBe('a/{b,c}/*.ts');
+    expect(normalizeGlobPattern('src/*.ts')).toBe('src/*.ts');
+  });
+
+  it('counts {a,b} combinations behind a backslash', () => {
+    const group = String.raw`\{a,b}`;
+    expect(isGlobPatternTooComplex('x' + group.repeat(6))).toBe(false);
+    expect(isGlobPatternTooComplex('x' + group.repeat(7))).toBe(true);
+    expect(isGlobPatternTooComplex('x' + group.repeat(16))).toBe(true);
+  });
+
+  it('counts three-star alternatives behind a backslash toward the combined budget', () => {
+    expect(isGlobPatternTooComplex(String.raw`*a*a*\{b,c}`)).toBe(false);
+    expect(isGlobPatternTooComplex(String.raw`*a*a*\{b,c,d}`)).toBe(true);
   });
 
   it('keeps two * wildcards in one name legal at the full combination cap', () => {

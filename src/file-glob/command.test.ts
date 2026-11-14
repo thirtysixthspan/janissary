@@ -96,6 +96,12 @@ describe('parseFileGlob', () => {
     expect(parseFileGlob(`file glob ${'a'.repeat(1024)}`)).toEqual({ pattern: 'a'.repeat(1024), ...defaults });
   });
 
+  it('refuses a pattern whose backslash-escaped braces expand past a cap', () => {
+    const tooComplex = { error: FILE_GLOB_TOO_COMPLEX };
+    expect(parseFileGlob(`file glob x${String.raw`\{a,b}`.repeat(16)}`)).toEqual(tooComplex);
+    expect(parseFileGlob(String.raw`file glob *a*a*\{b,c,d}`)).toEqual(tooComplex);
+  });
+
   it('accepts limits from 1 to 1000 and leading zeros', () => {
     expect(parseFileGlob('file glob x --limit 1000')).toEqual({ pattern: 'x', ...defaults, limit: 1000 });
     expect(parseFileGlob('file glob x --limit 1')).toEqual({ pattern: 'x', ...defaults, limit: 1 });

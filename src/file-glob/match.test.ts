@@ -66,6 +66,19 @@ describe('createGlobMatcher', () => {
     expect(performance.now() - started).toBeLessThan(50);
   });
 
+  it('answers backslash-escaped brace alternatives past the cap quickly with no match', () => {
+    const started = performance.now();
+    const match = createGlobMatcher('x' + String.raw`\{a,b}`.repeat(16), false);
+    expect(match('a'.repeat(60))).toBe(false);
+    expect(match('x' + '/a'.repeat(16))).toBe(false);
+    expect(performance.now() - started).toBeLessThan(100);
+  });
+
+  it('treats a backslash as a path separator', () => {
+    expect(createGlobMatcher(String.raw`a\b.ts`, false)('a/b.ts')).toBe(true);
+    expect(createGlobMatcher(String.raw`a\{b,c}.ts`, false)('a/c.ts')).toBe(true);
+  });
+
   it('matches extglob groups literally', () => {
     expect(createGlobMatcher('+(a|b).ts', false)('a.ts')).toBe(false);
     expect(createGlobMatcher('+(a|b).ts', false)('+(a|b).ts')).toBe(true);
