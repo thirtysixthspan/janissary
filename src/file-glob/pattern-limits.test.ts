@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+  FILE_GLOB_MANY_ALTERNATIVES_NAME_STARS,
   FILE_GLOB_MAX_ALTERNATIVES,
+  FILE_GLOB_MAX_ALTERNATIVES_AT_MAX_STARS,
   FILE_GLOB_MAX_NAME_STARS,
   FILE_GLOB_MAX_PATTERN_LENGTH,
   isGlobPatternTooComplex,
@@ -43,5 +45,19 @@ describe('isGlobPatternTooComplex', () => {
     expect(isGlobPatternTooComplex('{a,b}'.repeat(6))).toBe(false);
     expect(isGlobPatternTooComplex('{a,b}'.repeat(6) + '{c,d}')).toBe(true);
     expect(isGlobPatternTooComplex('{a,b}'.repeat(30))).toBe(true);
+  });
+
+  it('allows three * wildcards in one name only up to two {a,b} combinations', () => {
+    expect(FILE_GLOB_MAX_ALTERNATIVES_AT_MAX_STARS).toBe(2);
+    expect(isGlobPatternTooComplex('*-*-*.{ts,js}')).toBe(false);
+    expect(isGlobPatternTooComplex('*-*-*.{ts,js,md}')).toBe(true);
+    expect(isGlobPatternTooComplex('*a*a*' + '{b,c}'.repeat(6))).toBe(true);
+  });
+
+  it('keeps two * wildcards in one name legal at the full combination cap', () => {
+    const groups = '{b,c}'.repeat(6);
+    expect(isGlobPatternTooComplex('*a'.repeat(FILE_GLOB_MANY_ALTERNATIVES_NAME_STARS) + groups)).toBe(false);
+    expect(isGlobPatternTooComplex('*a'.repeat(FILE_GLOB_MANY_ALTERNATIVES_NAME_STARS + 1) + groups)).toBe(true);
+    expect(isGlobPatternTooComplex('*a*a*/' + groups)).toBe(true);
   });
 });

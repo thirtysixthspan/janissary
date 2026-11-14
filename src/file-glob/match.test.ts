@@ -59,6 +59,13 @@ describe('createGlobMatcher', () => {
     expect(performance.now() - started).toBeLessThan(100);
   });
 
+  it('answers many three-star {a,b} alternatives quickly with no match', () => {
+    const match = createGlobMatcher('*?a*?a*?' + '{b,c}'.repeat(6), false);
+    const started = performance.now();
+    expect(match('a'.repeat(255))).toBe(false);
+    expect(performance.now() - started).toBeLessThan(50);
+  });
+
   it('matches extglob groups literally', () => {
     expect(createGlobMatcher('+(a|b).ts', false)('a.ts')).toBe(false);
     expect(createGlobMatcher('+(a|b).ts', false)('+(a|b).ts')).toBe(true);
