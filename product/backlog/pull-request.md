@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Pin the command-level glob test to the workspace root, as the plan's named test promises, so it fails if the glob ever searches the project directory instead.
-
-Existing Issue: The plan names a test in which `file glob *.md` on a local tab with a workspace prints `notes.md` from the workspace while "the project root's `notes.md` is not consulted", but the shared `beforeEach` writes a `notes.md` into both the project root and the workspace, so the test passes identically whichever root is globbed and verifies routing only. Severity: 2/10
-
-Existing Risk: 3/10 - A later change to the `file` command that passes the wrong root to the glob would still pass this test, leaving only the lower-level `globFilesInTab` test to catch it, and the test's name tells a reader the root is pinned when it is not.
-
-Proposal Risk: 1/10 - The assertion becomes discriminating, though root choice still rests on the shared `localReadRoot` and any future root rule would need its own case.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2001 "make the file command's local glob test distinguish the workspace from the project root". In `src/commands/file.test.ts`, the test `globs under the workspace of a local tab that has one, untagged` currently expects `notes.md`, a name present in both `root` and `workspace` from the `beforeEach`. Inside that test only, write an extra Markdown file into `root` (for example `project-only.md`) before running `file glob *.md`, and keep the expectation exactly `notes.md`, so a glob of the project directory would print `notes.md\nproject-only.md` and fail; optionally add the mirror case with `tabs = [{ label: 'janus' }]` expecting `notes.md\nproject-only.md`. Do not change the shared `beforeEach`, which the read tests depend on, and do not change `src/commands/file.ts` or `src/file-glob/tab-glob.ts`. Verify with the diff-scoped server tests; the existing read tests and the `globFilesInTab` tests in `src/file-glob/tab-glob.test.ts` must keep passing unchanged.
-
-
 * Clarify the `help file` page's Usage notes so the read-only `--offset`/`--limit` defaults no longer appear to apply to the newly listed `file glob`.
 
 Existing Issue: The commit inserts the `file glob` usage line into the page's shared **Usage** list, directly above the unchanged paragraph saying "`--limit` is the number of lines to print and defaults to 2000" and the unqualified **Output** and **Errors** sections, all of which describe `file read` only, while `file glob --limit` counts paths, defaults to 100, and caps at 1000. Severity: 3/10

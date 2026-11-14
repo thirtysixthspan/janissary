@@ -149,7 +149,14 @@ describe('file command run', () => {
 
   it('globs under the workspace of a local tab that has one, untagged', async () => {
     tabs = [{ label: 'janus', workspaceDir: workspace }];
+    writeFileSync(path.join(root, 'project-only.md'), 'project only\n');
     expect(await run('file glob *.md')).toBe('notes.md');
+  });
+
+  it('globs under the project directory for a local tab without a workspace', async () => {
+    tabs = [{ label: 'janus' }];
+    writeFileSync(path.join(root, 'project-only.md'), 'project only\n');
+    expect(await run('file glob *.md')).toBe('notes.md\nproject-only.md');
   });
 
   describe('on a remote tab', () => {
