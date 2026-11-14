@@ -58,7 +58,7 @@ The pattern is one token with no whitespace, and matching is case-sensitive. `**
 
 Each result is a path relative to the root, written with forward slashes, so you can pass it straight to `file read`. Results come depth-first, by name within each folder, so `a/b.ts` comes before `a.ts`.
 
-By default, names that start with a dot, `node_modules` folders, and paths git ignores are skipped. `--hidden` includes them, and wildcards then match names that start with a dot too, so `file glob **/*.yml --hidden` finds `.github/workflows/ci.yml`. The `.git` folder is never listed. Outside a git repository, nothing counts as git-ignored. Secret files are always left out, even with `--hidden`: `.env` and every `.env.*` file, and credential locations such as `.ssh`, `.aws`, `.gnupg`, `.kube`, `.netrc`, `.docker`, `.config/gh/hosts.yml`, and shell history files.
+By default, names that start with a dot, `node_modules` folders, and paths git ignores are skipped. `--hidden` includes them, and wildcards then match names that start with a dot too, so `file glob **/*.yml --hidden` finds `.github/workflows/ci.yml`. The `--path` folder itself is never skipped, so `file glob **/*.yml --path .github` finds it without `--hidden`. The `.git` folder is never listed. Outside a git repository, nothing counts as git-ignored. Secret files are always left out, even with `--hidden`: `.env` and every `.env.*` file, and credential locations such as `.ssh`, `.aws`, `.gnupg`, `.kube`, `.netrc`, `.docker`, `.config/gh/hosts.yml`, and shell history files.
 
 Symbolic links to folders are never entered or listed. A symbolic link to a file is listed unless its target is a secret file, lies outside the workspace, or can't be found.
 
