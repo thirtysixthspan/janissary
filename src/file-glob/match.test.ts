@@ -91,6 +91,16 @@ describe('createGlobMatcher', () => {
     expect(createGlobMatcher(String.raw`a\{b,c}.ts`, false)('a/c.ts')).toBe(true);
   });
 
+  it('matches a literal wildcard or brace through a bracket class', () => {
+    expect(createGlobMatcher('a[*].ts', false)('a*.ts')).toBe(true);
+    expect(createGlobMatcher('a[*].ts', false)('ax.ts')).toBe(false);
+    expect(createGlobMatcher('a[?].ts', false)('a?.ts')).toBe(true);
+    expect(createGlobMatcher('a[{].ts', false)('a{.ts')).toBe(true);
+    expect(createGlobMatcher('a[[]b.ts', false)('a[b.ts')).toBe(true);
+    expect(createGlobMatcher(String.raw`a\*.ts`, false)('a*.ts')).toBe(false);
+    expect(createGlobMatcher(String.raw`a\*.ts`, false)('a/x.ts')).toBe(true);
+  });
+
   it('matches extglob groups literally', () => {
     expect(createGlobMatcher('+(a|b).ts', false)('a.ts')).toBe(false);
     expect(createGlobMatcher('+(a|b).ts', false)('+(a|b).ts')).toBe(true);
