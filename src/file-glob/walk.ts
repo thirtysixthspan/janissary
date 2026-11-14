@@ -50,10 +50,16 @@ async function readSorted(dir: string): Promise<Dirent[]> {
   }
 }
 
-function isPruned(name: string, rootRelative: string, options: GlobWalkOptions): boolean {
+function isIgnored(state: WalkState, rootRelative: string, startRelative: string): boolean {
+  const { ignored } = state.options;
+  if (ignored.has(rootRelative)) return true;
+  return state.realPrefix !== undefined && ignored.has(joinRelative(state.realPrefix, startRelative));
+}
+
+function isPruned(state: WalkState, name: string, rootRelative: string, startRelative: string): boolean {
   if (name === '.git') return true;
-  if (options.hidden) return false;
-  return name.startsWith('.') || name === 'node_modules' || options.ignored.has(rootRelative);
+  if (state.options.hidden) return false;
+  return name.startsWith('.') || name === 'node_modules' || isIgnored(state, rootRelative, startRelative);
 }
 
 async function classify(entry: Dirent, absDir: string): Promise<EntryKind> {
@@ -94,9 +100,8 @@ function joinRelative(parent: string, name: string): string {
   return parent ? `${parent}/${name}` : name;
 }
 
-async function visitEntry(state: WalkState, entry: Dirent, absDir: string, startRelDir: string, rootRelative: string): Promise<void> {
+async function visitEntry(state: WalkState, entry: Dirent, absDir: string, startRelative: string, rootRelative: string): Promise<void> {
   const kind = await classify(entry, absDir);
-  const startRelative = joinRelative(startRelDir, entry.name);
   const absPath = path.join(absDir, entry.name);
   if (kind === 'file' || kind === 'link') {
     if (!state.options.dirs) await record(state, startRelative, rootRelative, kind, absPath);
@@ -117,8 +122,9 @@ async function walkDirectory(state: WalkState, absDir: string, startRelDir: stri
   for (const entry of entries) {
     if (state.stopped) return;
     const rootRelative = joinRelative(rootRelDir, entry.name);
-    if (isPruned(entry.name, rootRelative, state.options)) continue;
-    await visitEntry(state, entry, absDir, startRelDir, rootRelative);
+    const startRelative = joinRelative(startRelDir, entry.name);
+    if (isPruned(state, entry.name, rootRelative, startRelative)) continue;
+    await visitEntry(state, entry, absDir, startRelative, rootRelative);
   }
 }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, chmodSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, chmodSync, symlinkSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import type * as FileSystemPromises from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -67,6 +67,14 @@ describe('walkGlob', () => {
     const start = path.join(root, 'src');
     expect(await listed({ start, ignored: new Set(['src/gen']) })).toEqual(['src/keep.ts']);
     expect(await listed({ start, ignored: new Set(['gen']) })).toEqual(['src/gen/out.ts', 'src/keep.ts']);
+  });
+
+  it('looks up ignored paths by their real location under a linked start', async () => {
+    for (const file of ['src/gen/out.ts', 'src/keep.ts']) write(root, file);
+    symlinkSync('src', path.join(root, 'lnk'));
+    const linked = { start: path.join(root, 'lnk'), realStart: 'src', ignored: new Set(['src/gen']) };
+    expect(await listed(linked)).toEqual(['lnk/keep.ts']);
+    expect(await listed({ ...linked, hidden: true })).toEqual(['lnk/gen/out.ts', 'lnk/keep.ts']);
   });
 
   it('does not consult the ignored set under hidden', async () => {

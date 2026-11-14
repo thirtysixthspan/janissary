@@ -146,6 +146,12 @@ describe('globWorkspace', () => {
       expect(await glob('* --path dist')).toBe('dist/b.ts');
     });
 
+    it('prunes git-ignored paths by their real location under an in-root linked --path', async () => {
+      symlinkSync('src', path.join(root, 'lnk'));
+      expect(await glob('**/*.ts --path lnk')).toBe('lnk/a.ts');
+      expect(await glob('**/*.ts --path lnk --hidden')).toBe('lnk/a.ts\nlnk/gen/x.ts');
+    });
+
     describe('with a git lookup that outlasts the deadline', () => {
       let bin: string;
 
