@@ -13,6 +13,7 @@ export interface GlobWalkOptions {
   limit: number;
   deadline: number;
   ignored: ReadonlySet<string>;
+  realStart?: string;
 }
 
 export interface GlobWalkResult {
@@ -26,6 +27,7 @@ type EntryKind = 'file' | 'link' | 'directory' | 'skip';
 interface WalkState {
   options: GlobWalkOptions;
   realRoot: string;
+  realPrefix: string | undefined;
   matcher: GlobMatcher;
   paths: string[];
   stopped: boolean;
@@ -73,9 +75,15 @@ async function linkTargetAllowed(state: WalkState, absPath: string): Promise<boo
   }
 }
 
+function isSecretMatch(state: WalkState, startRelative: string, rootRelative: string): boolean {
+  if (checkLexicalPath(state.options.root, rootRelative) === 'Secret file') return true;
+  if (state.realPrefix === undefined) return false;
+  return checkRealTarget(state.realRoot, path.join(state.realRoot, state.realPrefix, startRelative)) === 'Secret file';
+}
+
 async function record(state: WalkState, startRelative: string, rootRelative: string, kind: Exclude<EntryKind, 'skip'>, absPath: string): Promise<void> {
   if (!state.matcher(startRelative)) return;
-  if (checkLexicalPath(state.options.root, rootRelative) === 'Secret file') return;
+  if (isSecretMatch(state, startRelative, rootRelative)) return;
   if (kind === 'link' && !(await linkTargetAllowed(state, absPath))) return;
   state.paths.push(kind === 'directory' ? `${rootRelative}/` : rootRelative);
   if (state.paths.length > state.options.limit) state.stopped = true;
@@ -124,15 +132,16 @@ async function resolveRoot(root: string): Promise<string | undefined> {
 export async function walkGlob(options: GlobWalkOptions): Promise<GlobWalkResult> {
   const realRoot = await resolveRoot(options.root);
   if (realRoot === undefined) return { paths: [], truncated: false, timedOut: false };
+  const prefix = path.relative(options.root, options.start).split(path.sep).join('/');
   const state: WalkState = {
     options,
     realRoot,
+    realPrefix: options.realStart === prefix ? undefined : options.realStart,
     matcher: createGlobMatcher(options.pattern, options.hidden),
     paths: [],
     stopped: false,
     timedOut: false,
   };
-  const prefix = path.relative(options.root, options.start).split(path.sep).join('/');
   await walkDirectory(state, options.start, '', prefix);
   return {
     paths: state.paths.slice(0, options.limit),

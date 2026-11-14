@@ -7,7 +7,7 @@ import { walkGlob } from './walk.js';
 
 export const GLOB_TIMEOUT_MS = 30_000;
 
-type StartResolution = { failure: string } | { secret: true } | { start: string };
+type StartResolution = { failure: string } | { secret: true } | { start: string; realStart?: string };
 
 async function resolveReal(root: string, target: string): Promise<{ realRoot: string; realTarget: string } | undefined> {
   try {
@@ -36,7 +36,7 @@ async function resolveStart(root: string, dir: string): Promise<StartResolution>
   if (target === 'Outside the workspace') return { failure: `Outside the workspace: ${dir}.` };
   if (!(await isDirectory(real.realTarget))) return { failure: `Not a directory: ${dir}.` };
   if (lexical === 'Secret file' || target === 'Secret file') return { secret: true };
-  return { start };
+  return { start, realStart: path.relative(real.realRoot, real.realTarget).split(path.sep).join('/') };
 }
 
 export async function globWorkspace(root: string, args: FileGlobArgs, deadline: number): Promise<string> {
@@ -47,6 +47,7 @@ export async function globWorkspace(root: string, args: FileGlobArgs, deadline: 
   const result = await walkGlob({
     root,
     start: resolution.start,
+    realStart: resolution.realStart,
     pattern: args.pattern,
     hidden: args.hidden,
     dirs: args.dirs,

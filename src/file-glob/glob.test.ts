@@ -215,6 +215,19 @@ describe('globWorkspace', () => {
       expect(await glob('* --path linked')).toBe('linked/a.ts');
     });
 
+    it('omits secret matches by their real location under an in-root link to a secret path prefix', async () => {
+      for (const file of ['.config/gh/hosts.yml', '.config/gcloud/x', '.config/ok.txt']) write(root, file);
+      symlinkSync('.config', path.join(root, 'cfg'));
+      expect(await glob('** --path cfg')).toBe('cfg/ok.txt');
+      expect(await glob('** --path cfg --hidden')).toBe('cfg/ok.txt');
+    });
+
+    it('does not count a secret match under an in-root link toward the limit', async () => {
+      for (const file of ['.claude/.credentials.json', '.claude/settings.json']) write(root, file);
+      symlinkSync('.claude', path.join(root, 'c'));
+      expect(await glob('** --path c --hidden --limit 1')).toBe('c/settings.json');
+    });
+
     it('lists a dot-directory named as --path without --hidden', async () => {
       write(root, '.github/workflows/ci.yml');
       expect(await glob('**/* --path .github')).toBe('.github/workflows/ci.yml');
