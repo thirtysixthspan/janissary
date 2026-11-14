@@ -16,10 +16,10 @@ function globRemotePaths(managers: Managers, label: string, args: FileGlobArgs):
   });
 }
 
-export async function globFilesInTab(managers: Managers, label: string, input: string): Promise<string> {
+export async function globFilesInTab(managers: Managers, label: string, input: string, signal?: AbortSignal): Promise<string> {
   const parsed = parseFileGlob(input);
   if ('error' in parsed) return parsed.error;
   const root = localReadRoot(managers, label);
   if (root === undefined) return globRemotePaths(managers, label, parsed);
-  return globWorkspace(root, parsed, Date.now() + GLOB_TIMEOUT_MS);
+  return globWorkspace(root, parsed, Date.now() + GLOB_TIMEOUT_MS, signal);
 }

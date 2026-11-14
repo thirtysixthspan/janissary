@@ -646,9 +646,9 @@ describe('runCorePrompt file glob routing', () => {
 
   it('runs a granted file glob through the tab glob runner', async () => {
     const { start } = harness({ tab: { workspaceDir: dir } });
-    const { deps } = start('tell', GRANTS);
+    const { deps, request } = start('tell', GRANTS);
     await expect(deps.runCommand(GLOB)).resolves.toBe('a.txt');
-    expect(mocks.globFilesInTab).toHaveBeenCalledWith(expect.anything(), 'shell', GLOB);
+    expect(mocks.globFilesInTab).toHaveBeenCalledWith(expect.anything(), 'shell', GLOB, request.abort.signal);
     expect(mocks.readFileInTab).not.toHaveBeenCalled();
     expect(mocks.mutateFileInTab).not.toHaveBeenCalled();
   });
@@ -676,6 +676,21 @@ describe('runCorePrompt file glob routing', () => {
     request.abort.abort();
     expect(() => deps.runCommand(GLOB)).toThrow('ACP: prompt cancelled.');
     expect(mocks.globFilesInTab).not.toHaveBeenCalled();
+  });
+
+  it('aborts the signal handed to a pending glob when the prompt is cancelled', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps, request } = start('tell', GRANTS);
+    let received: AbortSignal | undefined;
+    mocks.globFilesInTab.mockImplementationOnce((_managers: Managers, _label: string, _input: string, signal?: AbortSignal) => {
+      received = signal;
+      return new Promise<string>((resolve) => { signal?.addEventListener('abort', () => { resolve('(no matches)'); }); });
+    });
+    const pending = deps.runCommand(GLOB);
+    expect(received?.aborted).toBe(false);
+    request.abort.abort();
+    await expect(pending).resolves.toBe('(no matches)');
+    expect(received?.aborted).toBe(true);
   });
 
   it('tags a remote tab\'s glob step with the host on the transcript and record lines', () => {

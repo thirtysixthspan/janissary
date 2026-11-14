@@ -121,4 +121,14 @@ describe('loadIgnoredPaths', () => {
     expect(await loadIgnoredPaths(root, started + 200)).toBeUndefined();
     expect(Date.now() - started).toBeLessThan(3000);
   });
+
+  it('kills a git call still running when its signal is aborted and resolves undefined', async () => {
+    initIgnoringRepo();
+    stubHangingGit(path.join(root, 'bin'));
+    const controller = new AbortController();
+    const started = Date.now();
+    setTimeout(() => { controller.abort(); }, 100);
+    expect(await loadIgnoredPaths(root, later(), controller.signal)).toBeUndefined();
+    expect(Date.now() - started).toBeLessThan(3000);
+  });
 });

@@ -39,11 +39,11 @@ async function resolveStart(root: string, dir: string): Promise<StartResolution>
   return { start, realStart: path.relative(real.realRoot, real.realTarget).split(path.sep).join('/') };
 }
 
-export async function globWorkspace(root: string, args: FileGlobArgs, deadline: number): Promise<string> {
+export async function globWorkspace(root: string, args: FileGlobArgs, deadline: number, signal?: AbortSignal): Promise<string> {
   const resolution = args.dir === undefined ? { start: root } : await resolveStart(root, args.dir);
   if ('failure' in resolution) return resolution.failure;
   if ('secret' in resolution) return formatGlobResult([], { limit: args.limit, truncated: false, timedOut: false });
-  const ignored = args.hidden ? new Set<string>() : await loadIgnoredPaths(root, deadline);
+  const ignored = args.hidden ? new Set<string>() : await loadIgnoredPaths(root, deadline, signal);
   if (ignored === undefined) return formatGlobResult([], { limit: args.limit, truncated: false, timedOut: true });
   const result = await walkGlob({
     root,
@@ -55,12 +55,13 @@ export async function globWorkspace(root: string, args: FileGlobArgs, deadline: 
     limit: args.limit,
     deadline,
     ignored,
+    signal,
   });
   return formatGlobResult(result.paths, { limit: args.limit, truncated: result.truncated, timedOut: result.timedOut });
 }
 
-export async function globWorkspaceCommand(root: string, input: string): Promise<string> {
+export async function globWorkspaceCommand(root: string, input: string, signal?: AbortSignal): Promise<string> {
   const parsed = parseFileGlob(input);
   if ('error' in parsed) return parsed.error;
-  return globWorkspace(root, parsed, Date.now() + GLOB_TIMEOUT_MS);
+  return globWorkspace(root, parsed, Date.now() + GLOB_TIMEOUT_MS, signal);
 }

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Stop a running file glob walk when its ACP prompt is cancelled, closing a functionality gap where a cancelled agent glob keeps walking the workspace for up to 30 seconds.
-
-Existing Issue: `runWorkspace` in the core prompt runner checks cancellation only before it calls `globFilesInTab`, and neither `globWorkspace` nor `walkGlob` takes a cancellation signal, so a cancelled prompt's glob keeps reading directories and running matches until its limit or its 30-second deadline, and its result is then thrown away. Severity: 3/10
-
-Existing Risk: 3/10 - A user who cancels a slow agent glob and retries starts a second full walk beside the first, doubling disk reads and main-loop matching on a large tree for up to 30 seconds with no visible sign that the first walk is still running.
-
-Proposal Risk: 1/10 - The walk stops at the next directory read after cancellation, so at most one directory's matching still runs after cancel; a regression would show as a cancelled glob still reading directories in a spy-based test.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2001 "stop a running file glob walk when its ACP prompt is cancelled". Add an optional `signal?: AbortSignal` to `GlobWalkOptions` in `src/file-glob/walk.ts`, checked in `walkDirectory` beside the existing deadline check so a cancelled walk sets `stopped` without marking `timedOut`, and thread it through `globWorkspace` in `src/file-glob/glob.ts` (also pass it to `execFile` in `loadIgnoredPaths` in `src/file-glob/ignored.ts` so the git lookup is aborted). Have `globFilesInTab` in `src/file-glob/tab-glob.ts` accept the optional signal and pass it for local roots, and have `runWorkspace` in `src/acp/run-prompt.ts` pass the prompt's abort signal (the one `active()` reflects). The far-side loop in `src/remote/serve-acp-loop.ts` can pass its run's signal the same way through `globWorkspaceCommand`. Typed globs pass nothing and behave as today. Add a `src/file-glob/walk.test.ts` case that aborts mid-walk and asserts no further `readdir` (reuse the `readdir` spy pattern from the existing limit test), and a `src/acp/run-prompt.test.ts` case that cancels while a glob is pending. Existing walk, glob, and run-prompt tests must keep passing untouched.
-
-
 * Bring the pull request's own plan back in line with the code after the five repairs, so its glob semantics, ignored-set, and walker decisions stop describing behavior the branch no longer has.
 
 Existing Issue: The own plan still says a pattern minimatch rejects (over 64 KiB) prints `(no matches)` and lists the matcher's option set without `noext`, says any `git ls-files` failure resolves to an empty set, says the walker prunes only by the root-relative path in the ignored set, and says the per-match secret check runs `checkLexicalPath` and `checkRealTarget`, while the code now refuses over-cap patterns with `Pattern too complex: ...`, treats extglob groups literally, reports a deadline-cut lookup as a timed-out empty result, also prunes by real location under a linked `--path`, and uses one real-target check built per walk. Severity: 2/10

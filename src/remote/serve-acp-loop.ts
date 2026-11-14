@@ -45,7 +45,7 @@ export function startRemoteLoop(
       if (isFileMutationCommandLine(normalized)) {
         return runFileMutation(new LocalFileSystemPort(), workspaceDir, normalized);
       }
-      if (isFileGlobCommandLine(normalized)) return globWorkspaceCommand(workspaceDir, normalized);
+      if (isFileGlobCommandLine(normalized)) return globWorkspaceCommand(workspaceDir, normalized, controller.signal);
       return readWorkspaceCommand(workspaceDir, normalized);
     },
     runCaller: (command) => {

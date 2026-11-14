@@ -92,7 +92,7 @@ export function runCorePrompt(
       if (!active()) throw new Error('ACP: prompt cancelled.');
       const normalized = command.trim().replace(/^\//, '');
       if (isFileMutationCommandLine(normalized)) return mutateFileInTab(managers, label, command);
-      if (isFileGlobCommandLine(normalized)) return globFilesInTab(managers, label, command);
+      if (isFileGlobCommandLine(normalized)) return globFilesInTab(managers, label, command, request.abort.signal);
       return readFileInTab(managers, label, command);
     },
   };

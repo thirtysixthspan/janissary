@@ -14,6 +14,7 @@ export interface GlobWalkOptions {
   deadline: number;
   ignored: ReadonlySet<string>;
   realStart?: string;
+  signal?: AbortSignal;
 }
 
 export interface GlobWalkResult {
@@ -113,6 +114,10 @@ async function visitEntry(state: WalkState, entry: Dirent, absDir: string, start
 
 async function walkDirectory(state: WalkState, absDir: string, startRelDir: string, rootRelDir: string): Promise<void> {
   if (state.stopped) return;
+  if (state.options.signal?.aborted === true) {
+    state.stopped = true;
+    return;
+  }
   if (Date.now() >= state.options.deadline) {
     state.timedOut = true;
     state.stopped = true;

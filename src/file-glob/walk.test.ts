@@ -118,6 +118,26 @@ describe('walkGlob', () => {
     expect(vi.mocked(readdir).mock.calls.map(([dir]) => dir)).toEqual([root]);
   });
 
+  it('stops reading directories once its signal is aborted, without timing out', async () => {
+    for (const file of ['a/x', 'b/y', 'c/z']) write(root, file);
+    const controller = new AbortController();
+    const actual = await vi.importActual<typeof FileSystemPromises>('node:fs/promises');
+    vi.mocked(readdir).mockClear();
+    vi.mocked(readdir).mockImplementationOnce(((dir: string, options: { withFileTypes: true }) => {
+      controller.abort();
+      return actual.readdir(dir, options);
+    }) as unknown as typeof readdir);
+    expect(await walk({ signal: controller.signal })).toEqual({ paths: [], truncated: false, timedOut: false });
+    expect(vi.mocked(readdir).mock.calls.map(([dir]) => dir)).toEqual([root]);
+  });
+
+  it('reads no directory when its signal is already aborted', async () => {
+    write(root, 'a');
+    vi.mocked(readdir).mockClear();
+    expect(await walk({ signal: AbortSignal.abort() })).toEqual({ paths: [], truncated: false, timedOut: false });
+    expect(vi.mocked(readdir)).not.toHaveBeenCalled();
+  });
+
   it.skipIf(typeof process.getuid === 'function' && process.getuid() === 0)('skips an unreadable directory and keeps walking its siblings', async () => {
     write(root, 'a/x');
     write(root, 'b/locked/y');
