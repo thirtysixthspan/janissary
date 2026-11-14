@@ -7,16 +7,23 @@ function normalize(entry: string): string {
   return entry.endsWith('/') ? entry.slice(0, -1) : entry;
 }
 
-export async function loadIgnoredPaths(root: string): Promise<ReadonlySet<string>> {
+function wasKilled(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'killed' in error && error.killed === true;
+}
+
+export async function loadIgnoredPaths(root: string, deadline: number): Promise<ReadonlySet<string> | undefined> {
+  const remaining = deadline - Date.now();
+  if (remaining <= 0) return undefined;
   try {
     const { stdout } = await execFileAsync(
       'git',
       ['ls-files', '--others', '--ignored', '--exclude-standard', '--directory', '-z'],
-      { cwd: root, maxBuffer: 1024 * 1024 * 64 },
+      { cwd: root, maxBuffer: 1024 * 1024 * 64, timeout: remaining, killSignal: 'SIGKILL' },
     );
     const entries = stdout.split('\0').filter(Boolean).map((entry) => normalize(entry));
     return new Set(entries.filter((entry) => entry !== '.'));
-  } catch {
+  } catch (error) {
+    if (wasKilled(error) || Date.now() >= deadline) return undefined;
     return new Set();
   }
 }

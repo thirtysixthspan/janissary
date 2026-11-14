@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Bound the git ignored-set lookup by the glob's 30-second deadline so the search really stops after 30 seconds, closing a functionality gap in the timeout promise.
-
-Existing Issue: `loadIgnoredPaths` in the new ignored-set module runs `git ls-files --others --ignored --exclude-standard --directory -z` with no timeout and is not given the deadline, so a slow git call (a large untracked tree, a cold filesystem) can run far past 30 seconds before the walk even starts, and the walk then only notices the deadline has already passed. Severity: 4/10
-
-Existing Risk: 4/10 - A typed or agent glob in a large repository hangs well past the promised 30 seconds, and on a remote tab a git call longer than the 60-second request deadline turns the documented `(search stopped after 30 seconds; ...)` line into `The remote machine did not answer in time.`, contradicting the spec, the help page, and the PR description.
-
-Proposal Risk: 2/10 - Killing git at the deadline leaves an empty ignored set, which is harmless only because the walk then times out immediately; if that ordering were ever changed, ignored paths could be listed, so a test should pin it.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2001 "bound the file glob git ignored-set lookup by the search deadline". Change `loadIgnoredPaths(root)` in `src/file-glob/ignored.ts` to `loadIgnoredPaths(root, deadline)` and pass `timeout: Math.max(1, deadline - Date.now())` (and a `killSignal`) to the `execFile` call, keeping the existing catch-all that resolves an empty set; update its one caller, `globWorkspace` in `src/file-glob/glob.ts`, to pass the deadline it already receives, so a git call cut off at the deadline is followed by a walk that sees the passed deadline and prints the matches so far (none) plus the timeout line. Add a test in `src/file-glob/ignored.test.ts` that an already-passed or tiny deadline resolves to an empty set without waiting, and one in `src/file-glob/glob.test.ts` that a git lookup consuming the deadline yields `(no matches)` followed by the timeout line rather than an unpruned listing (stub `execFile`, or use a deadline in the past inside a repository). The existing ignored-set tests in `src/file-glob/ignored.test.ts` and the git-ignored block in `src/file-glob/glob.test.ts` cover the behavior that must not move.
-
-
 * Deliver the plan's promise that the per-match secret check does no I/O, so a glob stops issuing dozens of synchronous `realpath` calls on the main event loop for every match.
 
 Existing Issue: The walker's `isSecretMatch` calls `checkLexicalPath` for every match that passes the pattern, and that function's home-directory check runs `realpathSync` on the root, on the home directory, and on each of the roughly 27 `SECRET_DENY_PATHS` locations (recursing to parents for missing ones), with a second round through `checkRealTarget` under a linked `--path`, while the plan states the secret check costs "no I/O per match" and that "regular files and directories pay no extra I/O". Severity: 4/10

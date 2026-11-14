@@ -145,6 +145,30 @@ describe('globWorkspace', () => {
     it('lists the contents of a git-ignored folder named as --path', async () => {
       expect(await glob('* --path dist')).toBe('dist/b.ts');
     });
+
+    describe('with a git lookup that outlasts the deadline', () => {
+      let bin: string;
+
+      beforeEach(() => {
+        bin = mkdtempSync(path.join(tmpdir(), 'file-glob-git-'));
+        writeFileSync(path.join(bin, 'git'), '#!/bin/sh\nexec /bin/sleep 5\n', { mode: 0o755 });
+        vi.stubEnv('PATH', bin);
+      });
+      afterEach(() => {
+        vi.unstubAllEnvs();
+        rmSync(bin, { recursive: true, force: true });
+      });
+
+      it('prints (no matches) and the timeout line instead of an unpruned listing', async () => {
+        const started = Date.now();
+        expect(await glob('**/*.ts', started + 200)).toBe(`(no matches)\n${TIMEOUT_LINE}`);
+        expect(Date.now() - started).toBeLessThan(3000);
+      });
+
+      it('never consults git under --hidden', async () => {
+        expect(await glob('**/*.ts --hidden', Date.now() + 2000)).toBe('dist/b.ts\nsrc/a.ts\nsrc/gen/x.ts');
+      });
+    });
   });
 
   describe('limit', () => {

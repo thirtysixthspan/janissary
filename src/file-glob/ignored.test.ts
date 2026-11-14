@@ -22,6 +22,16 @@ function write(root: string, relative: string, content = 'x'): void {
   writeFileSync(target, content);
 }
 
+function later(): number {
+  return Date.now() + 60_000;
+}
+
+function stubHangingGit(dir: string): void {
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(path.join(dir, 'git'), '#!/bin/sh\nexec /bin/sleep 5\n', { mode: 0o755 });
+  vi.stubEnv('PATH', dir);
+}
+
 describe('loadIgnoredPaths', () => {
   let root: string;
 
@@ -42,7 +52,7 @@ describe('loadIgnoredPaths', () => {
     write(root, 'dist/sub/y.js');
     write(root, 'a.log');
     write(root, 'keep.txt');
-    const ignored = await loadIgnoredPaths(root);
+    const ignored = await loadIgnoredPaths(root, later());
     expect(ignored.has('dist')).toBe(true);
     expect(ignored.has('a.log')).toBe(true);
     expect(ignored.has('dist/sub/y.js')).toBe(false);
@@ -53,7 +63,7 @@ describe('loadIgnoredPaths', () => {
     initIgnoringRepo();
     write(root, 'logs/b.log');
     write(root, 'logs/c.log');
-    const ignored = await loadIgnoredPaths(root);
+    const ignored = await loadIgnoredPaths(root, later());
     expect(ignored.has('logs')).toBe(true);
   });
 
@@ -62,7 +72,7 @@ describe('loadIgnoredPaths', () => {
     write(root, 'tracked.log');
     execSync('git add -f tracked.log', { cwd: root, stdio: 'pipe' });
     execSync('git commit -m tracked', { cwd: root, stdio: 'pipe' });
-    const ignored = await loadIgnoredPaths(root);
+    const ignored = await loadIgnoredPaths(root, later());
     expect(ignored.has('tracked.log')).toBe(false);
   });
 
@@ -72,7 +82,7 @@ describe('loadIgnoredPaths', () => {
     write(root, 'sub/keep.txt');
     commitAll(root);
     write(root, 'sub/deep/z.txt');
-    const ignored = await loadIgnoredPaths(path.join(root, 'sub'));
+    const ignored = await loadIgnoredPaths(path.join(root, 'sub'), later());
     expect(ignored.has('deep')).toBe(true);
     expect(ignored.has('sub/deep')).toBe(false);
   });
@@ -80,18 +90,35 @@ describe('loadIgnoredPaths', () => {
   it('returns an empty set for a root inside an ignored directory', async () => {
     initIgnoringRepo();
     write(root, 'dist/sub/y.js');
-    const ignored = await loadIgnoredPaths(path.join(root, 'dist'));
+    const ignored = await loadIgnoredPaths(path.join(root, 'dist'), later());
     expect(ignored.size).toBe(0);
   });
 
   it('returns an empty set outside any repository', async () => {
     vi.stubEnv('GIT_CEILING_DIRECTORIES', path.dirname(realpathSync(root)));
     write(root, 'a.log');
-    const ignored = await loadIgnoredPaths(root);
+    const ignored = await loadIgnoredPaths(root, later());
     expect(ignored.size).toBe(0);
   });
 
   it('resolves to an empty set — never rejects — when the root does not exist', async () => {
-    await expect(loadIgnoredPaths(path.join(root, 'does-not-exist'))).resolves.toEqual(new Set());
+    await expect(loadIgnoredPaths(path.join(root, 'does-not-exist'), later())).resolves.toEqual(new Set());
+  });
+
+  it('resolves undefined without running git for a deadline already passed', async () => {
+    initIgnoringRepo();
+    write(root, 'a.log');
+    stubHangingGit(path.join(root, 'bin'));
+    const started = Date.now();
+    expect(await loadIgnoredPaths(root, started)).toBeUndefined();
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+
+  it('kills a git call still running at the deadline and resolves undefined', async () => {
+    initIgnoringRepo();
+    stubHangingGit(path.join(root, 'bin'));
+    const started = Date.now();
+    expect(await loadIgnoredPaths(root, started + 200)).toBeUndefined();
+    expect(Date.now() - started).toBeLessThan(3000);
   });
 });

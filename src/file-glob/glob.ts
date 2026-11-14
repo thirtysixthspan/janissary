@@ -43,7 +43,8 @@ export async function globWorkspace(root: string, args: FileGlobArgs, deadline: 
   const resolution = args.dir === undefined ? { start: root } : await resolveStart(root, args.dir);
   if ('failure' in resolution) return resolution.failure;
   if ('secret' in resolution) return formatGlobResult([], { limit: args.limit, truncated: false, timedOut: false });
-  const ignored = args.hidden ? new Set<string>() : await loadIgnoredPaths(root);
+  const ignored = args.hidden ? new Set<string>() : await loadIgnoredPaths(root, deadline);
+  if (ignored === undefined) return formatGlobResult([], { limit: args.limit, truncated: false, timedOut: true });
   const result = await walkGlob({
     root,
     start: resolution.start,
