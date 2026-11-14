@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Pin with tests that each link of the agent glob cancellation chain passes its abort signal on, from the far-side loop and the typed-tab entry down to the git lookup and the walk.
-
-Existing Issue: The cancel-walk repair threads an optional `AbortSignal` through `startRemoteLoop`, `globFilesInTab`, `globWorkspaceCommand`, and `globWorkspace` into `loadIgnoredPaths` and `walkGlob`, but only the two ends are tested (`run-prompt.test.ts` asserts the signal reaches a mocked `globFilesInTab`, and `walk.test.ts` and `ignored.test.ts` honour a signal handed to them directly), so no test fails if any middle hop drops the argument. Severity: 3/10
-
-Existing Risk: 3/10 - A later refactor of `globWorkspace`, `globFilesInTab`, or the far-side `runWorkspace` that drops the optional trailing `signal` would pass every test while silently restoring the bug where a cancelled agent glob keeps walking and keeps its git child alive until the limit or the 30-second deadline.
-
-Proposal Risk: 1/10 - Only tests are added and production code is untouched; a mistake would show up as a failing or flaky new test, most likely from the timing of the hanging-git stub, rather than as changed behaviour.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2001 "add tests that the abort signal survives every hop from the glob entries to the git lookup and the walk". In `src/file-glob/glob.test.ts`, add a `cancellation` block: with the existing hanging-`git` stub on `PATH` inside the `git-ignored paths` setup and a far deadline, `globWorkspace(root, parsed, Date.now() + 60_000, signal)` aborted after about 100 ms resolves `(no matches)` followed by the timeout line well under the stub's 5 seconds (proving the signal reached `loadIgnoredPaths`), and `globWorkspace` with `--hidden` and `AbortSignal.abort()` resolves `(no matches)` with no timeout line (proving it reached `walkGlob`); also call `globWorkspaceCommand(root, 'file glob ** --hidden', AbortSignal.abort())` and expect `(no matches)`. In `src/file-glob/tab-glob.test.ts`, call `globFilesInTab` on the local workspace tab with `file glob **/*.md --hidden` and `AbortSignal.abort()` and expect `(no matches)`, where the same call without a signal lists `docs/guide.md` and `workspace.md`. In `src/remote/serve-acp-loop.test.ts`, inside `startRemoteLoop workspace glob routing`, spy on `globWorkspaceCommand` (a `vi.mock` of `../file-glob/glob.js` that wraps the actual export, as `src/acp/run-prompt.test.ts` does for `tab-glob.js`) and assert it was called with the workspace, the normalized line, and an `AbortSignal` that becomes `aborted` after `handle.abort()`. Existing glob, tab-glob, and serve-acp-loop tests must keep passing untouched; no production file changes.
-
-
 * Correct the pull request description so it states that the branch rebuilds `file read`'s shared real-target secret check, not only the `--limit` helper, as part of the change.
 
 Existing Issue: The description names `positiveInteger` as the one piece `file read` and `file glob` now share, but never says that `checkRealTarget` in `src/file-read/policy.ts`, which `file read` and the hosted write tool rely on to refuse secret and outside paths, was rebuilt on a new exported `createRealTargetCheck` with the home-secret anchor resolution split out of `isUnderHomeSecret`. Severity: 3/10

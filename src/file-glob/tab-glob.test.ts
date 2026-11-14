@@ -43,6 +43,12 @@ describe('globFilesInTab', () => {
     expect(await globFilesInTab(managers, 'janus', 'file glob **/*.md')).toBe('docs/guide.md\nworkspace.md');
   });
 
+  it('passes the signal to the local workspace glob', async () => {
+    const managers = managersWith([{ label: 'janus', workspaceDir: workspace }]);
+    expect(await globFilesInTab(managers, 'janus', 'file glob **/*.md --hidden')).toBe('docs/guide.md\nworkspace.md');
+    expect(await globFilesInTab(managers, 'janus', 'file glob **/*.md --hidden', AbortSignal.abort())).toBe('(no matches)');
+  });
+
   it('globs the launch directory for a tab without a workspace', async () => {
     expect(await globFilesInTab(managersWith([{ label: 'janus' }]), 'janus', 'file glob *.md')).toBe('launch.md');
   });

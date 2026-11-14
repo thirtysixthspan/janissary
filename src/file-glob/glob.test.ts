@@ -174,6 +174,14 @@ describe('globWorkspace', () => {
       it('never consults git under --hidden', async () => {
         expect(await glob('**/*.ts --hidden', Date.now() + 2000)).toBe('dist/b.ts\nsrc/a.ts\nsrc/gen/x.ts');
       });
+
+      it('kills the lookup and prints the timeout line when the signal aborts before the deadline', async () => {
+        const parsed = parseFileGlob('file glob **/*.ts');
+        if ('error' in parsed) throw new Error(parsed.error);
+        const started = Date.now();
+        expect(await globWorkspace(root, parsed, started + 60_000, AbortSignal.timeout(100))).toBe(`(no matches)\n${TIMEOUT_LINE}`);
+        expect(Date.now() - started).toBeLessThan(3000);
+      });
     });
   });
 
@@ -286,6 +294,25 @@ describe('globWorkspace', () => {
       if ('error' in parsed) throw new Error(parsed.error);
       vi.spyOn(Date, 'now').mockReturnValueOnce(0).mockReturnValue(2);
       expect(await globWorkspace(root, parsed, 1)).toBe(`a\n${TIMEOUT_LINE}`);
+    });
+  });
+
+  describe('cancellation', () => {
+    beforeEach(() => {
+      write(root, 'a.ts');
+      write(root, 'src/b.ts');
+    });
+
+    it('stops the walk without a timeout line when the signal is already aborted', async () => {
+      const parsed = parseFileGlob('file glob ** --hidden');
+      if ('error' in parsed) throw new Error(parsed.error);
+      expect(await globWorkspace(root, parsed, Date.now() + 60_000)).toBe('a.ts\nsrc/b.ts');
+      expect(await globWorkspace(root, parsed, Date.now() + 60_000, AbortSignal.abort())).toBe('(no matches)');
+    });
+
+    it('passes the signal from globWorkspaceCommand to the walk', async () => {
+      expect(await globWorkspaceCommand(root, 'file glob ** --hidden')).toBe('a.ts\nsrc/b.ts');
+      expect(await globWorkspaceCommand(root, 'file glob ** --hidden', AbortSignal.abort())).toBe('(no matches)');
     });
   });
 
