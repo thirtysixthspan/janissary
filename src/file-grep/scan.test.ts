@@ -459,11 +459,12 @@ describe('scanFiles deadlines', () => {
     mocks.createMatcherWorker.mockReturnValue(worker);
     const reader = vi.fn((relPath: string) => relPath === 'a.txt' ? Promise.resolve('a') : later.promise);
     mocks.createCandidateReader.mockResolvedValue(reader);
-    const scanning = scanFiles('/root', ['a.txt', 'b.txt'], args(), 1100);
+    const scanning = scanFiles('/root', ['a.txt', 'b.txt'], args({ limit: 1 }), 1100);
 
     await vi.advanceTimersByTimeAsync(0);
     await vi.advanceTimersByTimeAsync(100);
     await expect(scanning).resolves.toEqual({ rows: [first], ending: { kind: 'timeout' } });
+    expect(reader).toHaveBeenCalledTimes(2);
     expect(worker.dispose).toHaveBeenCalledOnce();
   });
 });
