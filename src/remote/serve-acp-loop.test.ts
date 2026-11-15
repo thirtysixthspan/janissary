@@ -75,6 +75,7 @@ beforeEach(() => {
   workspace = mkdtempSync(path.join(tmpdir(), 'janus-serve-acp-loop-'));
   homeDir = mkdtempSync(path.join(tmpdir(), 'janus-serve-acp-loop-home-'));
   home.dir = homeDir;
+  mocks.grepWorkspaceCommand.mockClear();
 });
 
 afterEach(() => {
