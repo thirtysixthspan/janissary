@@ -187,6 +187,8 @@ On the typed remote route the `--path` is mapped once before the request. An abs
 
 A typed grep's output carries no host tag and creates one command entry whose input is the command as typed; history and transcripts record that spelling. A granted grep in the loop is described below; its workspace step, not the typed command, is the only place the tag appears.
 
+The command bar completes `grep` as a `file` subcommand. Before the pattern, a current word starting with `--` offers the seven flags `--literal`, `--word`, `--case-sensitive`, `--path`, `--include`, `--exclude`, and `--limit` in lowercase spelling only: an uppercase flag prefix offers nothing, and a committed uppercase option starts the pattern. The word after `--path` completes files and directories from the same root the search resolves against. A committed flag value is consumed as a value even when it looks like a flag, a terminator, or a pattern. The values after `--include`, `--exclude`, and `--limit`, and every word once the pattern or a `--` terminator has started, get no candidates and never fall back to filesystem paths. A remote tab still completes the flags but offers no paths after `--path`. Disabling `file grep` removes it from the subcommand candidates while `glob` and `read` remain; disabling `file` suppresses every `file` candidate and argument.
+
 When a role grants `file grep`, the grep part of the file tool's primer is exactly the four lines below. It comes after the glob primer and before the mutation primer, each separated by a blank line, and has no trailing newline:
 
 ```

@@ -2,9 +2,10 @@ import type { CompletionCursor, CompletionResult } from './types.js';
 import { completeWord } from './helpers.js';
 import { completeFilePath } from './fs.js';
 import { unchanged } from './candidates.js';
+import { completeFileGrepArgument } from './file-grep.js';
 import { ALL_ENABLED_POLICY, type CompletionPolicy } from './command-policy.js';
 
-const FILE_SUBCOMMANDS = ['glob', 'read'];
+const FILE_SUBCOMMANDS = ['glob', 'grep', 'read'];
 const FILE_READ_FLAGS = ['--limit', '--offset'];
 const FILE_GLOB_FLAGS = ['--dirs', '--hidden', '--limit', '--path'];
 
@@ -35,6 +36,7 @@ export function completeFileReadCommand(
   }
   const subcommand = preceding[1]?.toLowerCase();
   if (subcommand === 'glob') return completeGlobArgument(cursor, root);
+  if (subcommand === 'grep') return completeFileGrepArgument(cursor, root);
   if (subcommand !== 'read') return unchanged(cursor);
   const previous = preceding.at(-1)?.toLowerCase() ?? '';
   if (FILE_READ_FLAGS.includes(previous)) return unchanged(cursor);
