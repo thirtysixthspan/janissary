@@ -1,4 +1,5 @@
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import type * as nodeOs from 'node:os';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -7,15 +8,29 @@ import { MARKDOWN_INSTRUCTION } from '../acp/launch.js';
 import type { AcpRunSnapshot, AcpRunSnapshotRow, AcpSession, PromptHandlers } from '../acp/types.js';
 import { deferred } from '../deferred.js';
 import type * as Glob from '../file-glob/glob.js';
+import type * as Grep from '../file-grep/grep.js';
+import { FILE_GREP_USAGE } from '../file-grep/command.js';
 import * as fileRead from '../file-read/read.js';
 import type { ServerFrame } from './protocol-frames.js';
 
-const mocks = vi.hoisted(() => ({ globWorkspaceCommand: vi.fn() }));
+const mocks = vi.hoisted(() => ({ globWorkspaceCommand: vi.fn(), grepWorkspaceCommand: vi.fn() }));
+const home = vi.hoisted(() => ({ dir: '' }));
+
+vi.mock('node:os', async (importOriginal) => ({
+  ...await importOriginal<typeof nodeOs>(),
+  homedir: vi.fn(() => home.dir),
+}));
 
 vi.mock('../file-glob/glob.js', async (importOriginal) => {
   const actual = await importOriginal<typeof Glob>();
   mocks.globWorkspaceCommand.mockImplementation(actual.globWorkspaceCommand);
   return { ...actual, globWorkspaceCommand: mocks.globWorkspaceCommand };
+});
+
+vi.mock('../file-grep/grep.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof Grep>();
+  mocks.grepWorkspaceCommand.mockImplementation(actual.grepWorkspaceCommand);
+  return { ...actual, grepWorkspaceCommand: mocks.grepWorkspaceCommand };
 });
 
 import { startRemoteLoop } from './serve-acp-loop.js';
@@ -54,13 +69,17 @@ function makeSession(turns: string[][]) {
 }
 
 let workspace: string;
+let homeDir: string;
 
 beforeEach(() => {
   workspace = mkdtempSync(path.join(tmpdir(), 'janus-serve-acp-loop-'));
+  homeDir = mkdtempSync(path.join(tmpdir(), 'janus-serve-acp-loop-home-'));
+  home.dir = homeDir;
 });
 
 afterEach(() => {
   rmSync(workspace, { recursive: true, force: true });
+  rmSync(homeDir, { recursive: true, force: true });
 });
 
 function start(turns: string[][], snapshot: AcpRunSnapshot) {
@@ -319,6 +338,7 @@ describe('startRemoteLoop agent runs', () => {
   ])('refuses an extracted file grep without a workspace read or caller request when %s', (_label, grants) => {
     writeFileSync(path.join(workspace, 'a.md'), 'TODO\n');
     mocks.globWorkspaceCommand.mockClear();
+    mocks.grepWorkspaceCommand.mockClear();
     const read = vi.spyOn(fileRead, 'readWorkspaceCommand');
     try {
       const { frames, sent } = start([['janissary file grep TODO'], ['Done.']], agentSnapshot(grants));
@@ -332,6 +352,7 @@ describe('startRemoteLoop agent runs', () => {
       expect(frames.at(-1)).toEqual({ type: 'acp-run-end', id: RUN_ID, reason: 'answered' });
       expect(read).not.toHaveBeenCalled();
       expect(mocks.globWorkspaceCommand).not.toHaveBeenCalled();
+      expect(mocks.grepWorkspaceCommand).not.toHaveBeenCalled();
     } finally {
       read.mockRestore();
     }
@@ -562,5 +583,199 @@ describe('startRemoteLoop workspace glob routing', () => {
     expect(signal.aborted).toBe(false);
     handle.abort();
     expect(signal.aborted).toBe(true);
+  });
+});
+
+function regexMessage(pattern: string): string {
+  try {
+    new RegExp(pattern, 'i');
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  throw new Error(`Expected ${pattern} to be an invalid regular expression`);
+}
+
+const GREP = 'file grep TODO';
+
+describe('startRemoteLoop workspace grep routing', () => {
+  it('searches the far workspace, not a conflicting caller fixture, in a two-argument delegation', async () => {
+    writeFileSync(path.join(workspace, 'a.txt'), 'workspace TODO\n');
+    const caller = mkdtempSync(path.join(tmpdir(), 'janus-serve-acp-loop-caller-'));
+    try {
+      writeFileSync(path.join(caller, 'a.txt'), 'caller TODO\n');
+      mocks.grepWorkspaceCommand.mockClear();
+      const { frames, sent } = start([[GREP], ['Done.']], coreSnapshot('tell', ['file grep']));
+
+      await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
+      expect(framesOf(frames, 'acp-tool-step')).toEqual([{
+        type: 'acp-tool-step', id: RUN_ID, command: GREP, result: 'a.txt:1: workspace TODO', workspace: true,
+      }]);
+      expect(mocks.grepWorkspaceCommand).toHaveBeenCalledWith(workspace, GREP);
+      expect(mocks.grepWorkspaceCommand.mock.calls[0]).toHaveLength(2);
+      expect(framesOf(frames, 'acp-tool-request')).toEqual([]);
+      expect(sent[1]).toContain('Output of `file grep TODO`:\na.txt:1: workspace TODO');
+      expect(readdirSync(caller)).toEqual(['a.txt']);
+      expect(readFileSync(path.join(caller, 'a.txt'), 'utf8')).toBe('caller TODO\n');
+    } finally {
+      rmSync(caller, { recursive: true, force: true });
+    }
+  });
+
+  it('answers the grep usage line for a bare command', async () => {
+    const { frames } = start([['file grep'], ['Done.']], coreSnapshot('tell', ['file grep']));
+
+    await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([{
+      type: 'acp-tool-step', id: RUN_ID, command: 'file grep', result: FILE_GREP_USAGE, workspace: true,
+    }]);
+  });
+
+  it('prints the missing-path text', async () => {
+    const { frames } = start([['file grep --path missing TODO'], ['Done.']], coreSnapshot('tell', ['file grep']));
+
+    await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
+    expect(framesOf(frames, 'acp-tool-step')[0]?.result).toBe('Path not found: missing.');
+  });
+
+  it('reports a malformed regex before a contained secret is read', async () => {
+    writeFileSync(path.join(workspace, '.env'), 'TODO=secret\n');
+    const { frames } = start([['file grep [unclosed'], ['Done.']], coreSnapshot('tell', ['file grep']));
+
+    await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
+    expect(framesOf(frames, 'acp-tool-step')[0]?.result)
+      .toBe(`${regexMessage('[unclosed')}\nUse --literal to search for the text as typed.`);
+  });
+
+  it('reports an empty-matching regex before a missing path', async () => {
+    const { frames } = start([['file grep --path missing x*'], ['Done.']], coreSnapshot('tell', ['file grep']));
+
+    await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
+    expect(framesOf(frames, 'acp-tool-step')[0]?.result)
+      .toBe('Pattern matches empty text, so it would match every line: x*.');
+  });
+
+  it('reports the workspace regex diagnostic before an absolute path', async () => {
+    const { frames } = start([['file grep --path /etc [unclosed'], ['Done.']], coreSnapshot('tell', ['file grep']));
+
+    await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
+    expect(framesOf(frames, 'acp-tool-step')[0]?.result)
+      .toBe(`${regexMessage('[unclosed')}\nUse --literal to search for the text as typed.`);
+  });
+
+  it('answers no matches', async () => {
+    writeFileSync(path.join(workspace, 'a.txt'), 'nothing here\n');
+    const { frames } = start([[GREP], ['Done.']], coreSnapshot('tell', ['file grep']));
+
+    await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
+    expect(framesOf(frames, 'acp-tool-step')[0]?.result).toBe('(no matches)');
+  });
+
+  it('emits the existing nonfatal acp-error for an unexpected rejection', async () => {
+    mocks.grepWorkspaceCommand.mockImplementationOnce(() => Promise.reject(new Error('grep worker stopped')));
+    const { frames } = start([[GREP], ['Done.']], coreSnapshot('tell', ['file grep']));
+
+    await vi.waitFor(() => expect(framesOf(frames, 'acp-error')).toHaveLength(1));
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([]);
+    expect(frames.at(-1)).toEqual({
+      type: 'acp-error', id: RUN_ID, message: 'grep worker stopped', fatal: false,
+    });
+  });
+
+  it('still forwards a later database command as caller request 1', async () => {
+    writeFileSync(path.join(workspace, 'a.txt'), 'TODO\n');
+    const { frames, handle } = start([[GREP], [QUERY], ['Done.']], coreSnapshot('tell', ['file grep', 'db sqlite query']));
+
+    await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
+    expect(framesOf(frames, 'acp-tool-request')).toEqual([
+      { type: 'acp-tool-request', id: RUN_ID, request: 1, command: QUERY },
+    ]);
+    expect(framesOf(frames, 'acp-tool-step')[0]?.result).toBe('a.txt:1: TODO');
+
+    handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 1, output: '42' });
+    await flush();
+    expect(frames.at(-1)).toEqual({ type: 'acp-run-end', id: RUN_ID, reason: 'answered' });
+  });
+
+  it('refuses an ungranted grep with workspace false and no refused marker', () => {
+    const { frames } = start([[GREP], ['Done.']], coreSnapshot('tell', ['file read']));
+
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([{
+      type: 'acp-tool-step', id: RUN_ID, command: GREP,
+      result: 'Command not allowed for role "tell": file grep.', workspace: false,
+    }]);
+    expect(mocks.grepWorkspaceCommand).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['disabled', { effectiveEnabled: false, effectiveAgentAccess: true }],
+    ['agent-off', { effectiveEnabled: true, effectiveAgentAccess: false }],
+  ] as const)('refuses a %s grep with workspace false and the disabled marker', (_label, setting) => {
+    const rows = [{ name: 'file grep', ...setting }];
+    const { frames } = start([[GREP], ['Done.']], coreSnapshot('tell', ['file grep'], rows));
+
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([{
+      type: 'acp-tool-step', id: RUN_ID, command: GREP,
+      result: 'Command is disabled: file grep.', workspace: false, refused: 'disabled',
+    }]);
+    expect(mocks.grepWorkspaceCommand).not.toHaveBeenCalled();
+  });
+});
+
+describe('startRemoteLoop grep loop preservation', () => {
+  it('extracts no grep on a withoutTools snapshot even with the grant', async () => {
+    const { frames, sent } = start([[GREP], ['Done.']], coreSnapshot('tell', ['file grep'], [], true));
+
+    await vi.waitFor(() => expect(framesOf(frames, 'acp-run-end')).toHaveLength(1));
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([]);
+    expect(mocks.grepWorkspaceCommand).not.toHaveBeenCalled();
+    expect(sent[0]).toContain(NO_TOOLS_LINE);
+    expect(frames.at(-1)).toEqual({ type: 'acp-run-end', id: RUN_ID, reason: 'answered' });
+  });
+
+  it('caps eight repeated grep steps and makes a ninth provider turn', async () => {
+    const previous = mocks.grepWorkspaceCommand.getMockImplementation();
+    mocks.grepWorkspaceCommand.mockImplementation(() => Promise.resolve('a.txt:1: TODO'));
+    try {
+      const { frames, sent } = start([[GREP]], coreSnapshot('tell', ['file grep']));
+
+      await vi.waitFor(() => expect(framesOf(frames, 'acp-run-end')).toHaveLength(1));
+      expect(framesOf(frames, 'acp-tool-step')).toHaveLength(8);
+      expect(sent).toHaveLength(9);
+      expect(mocks.grepWorkspaceCommand).toHaveBeenCalledTimes(8);
+      expect(framesOf(frames, 'acp-run-end')).toEqual([{ type: 'acp-run-end', id: RUN_ID, reason: 'capped' }]);
+    } finally {
+      if (previous) mocks.grepWorkspaceCommand.mockImplementation(previous);
+    }
+  });
+
+  it('runs no grep when the run is aborted before execution', async () => {
+    const run = startHeld(coreSnapshot('tell', ['file grep']));
+    run.last().onChunk(GREP);
+    run.handle.abort();
+    run.last().onEnd('end_turn');
+    await flush();
+
+    expect(mocks.grepWorkspaceCommand).not.toHaveBeenCalled();
+    expect(framesOf(run.frames, 'acp-tool-step')).toEqual([]);
+    expect(framesOf(run.frames, 'acp-run-end')).toEqual([]);
+  });
+
+  it('suppresses a late grep result and the next turn after an abort', async () => {
+    const pending = deferred<string>();
+    mocks.grepWorkspaceCommand.mockImplementationOnce(() => pending.promise);
+    const run = startHeld(coreSnapshot('tell', ['file grep']));
+    run.last().onChunk(GREP);
+    run.last().onEnd('end_turn');
+    await vi.waitFor(() => expect(mocks.grepWorkspaceCommand).toHaveBeenCalledOnce());
+    const before = run.frames.length;
+
+    run.handle.abort();
+    pending.resolve('a.txt:1: TODO');
+    await flush();
+
+    expect(run.frames).toHaveLength(before);
+    expect(framesOf(run.frames, 'acp-tool-step')).toEqual([]);
+    expect(run.sent).toHaveLength(1);
+    expect(framesOf(run.frames, 'acp-run-end')).toEqual([]);
   });
 });

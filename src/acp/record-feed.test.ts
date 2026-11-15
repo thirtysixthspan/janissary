@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import type * as nodeOs from 'node:os';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { Managers } from '../managers.js';
@@ -18,6 +19,11 @@ import { closeTabResources } from '../tab/cleanup.js';
 
 const mock = vi.hoisted(() => ({ connect: vi.fn() }));
 const shellMock = vi.hoisted(() => ({ spawn: vi.fn(), execute: vi.fn(), pwd: vi.fn() }));
+const home = vi.hoisted(() => ({ dir: '' }));
+vi.mock('node:os', async (importOriginal) => ({
+  ...await importOriginal<typeof nodeOs>(),
+  homedir: vi.fn(() => home.dir),
+}));
 vi.mock('./index.js', () => ({ connectAcp: mock.connect }));
 vi.mock('../shell/index.js', () => ({
   spawnShell: (...args: unknown[]) => shellMock.spawn(...args),
@@ -29,6 +35,7 @@ const fixtures: ReturnType<typeof setup>[] = [];
 
 function setup(remote = false) {
   const root = mkdtempSync(path.join(tmpdir(), 'core-record-feed-'));
+  home.dir = root;
   const records = new AcpSessionRecords({ projectDir: root });
   const managers = { acpRecords: records } as Managers;
   managers.models = { isKnownModel: () => true } as Managers['models'];
@@ -268,6 +275,81 @@ describe('core record feeds', () => {
     const restarted = new AcpSessionRecords({ projectDir: f.root });
     expect(restarted.window(id)?.status).toBe('Closed');
     restarted.dispose();
+  });
+
+  it('records a local grep step and reopens its block without touching command history', async () => {
+    const f = setup();
+    writeFileSync(path.join(f.root, 'a.txt'), 'TODO\n');
+    f.managers.tab.tabs[0].workspaceDir = f.root;
+    f.managers.tab.tabs[0].cmdHistory = ['git status'];
+    const pending = f.managers.acp.prompt('owner', 'find it');
+    f.handshake();
+    const id = f.managers.tab.byLabel('owner')!.runtime!.acpRoles!.ask!.recordId!;
+
+    f.chunk('file grep TODO');
+    f.end();
+    await vi.waitFor(() => { expect(f.sessions[0].control.current).toBeDefined(); });
+    f.chunk('found it');
+    f.end();
+    await expect(pending).resolves.toBe('found it');
+
+    expect(f.records.window(id)?.blocks[0]?.entries).toMatchObject([
+      { kind: 'tool', text: 'file grep TODO' },
+      { kind: 'tool', text: 'a.txt:1: TODO' },
+    ]);
+    expect(f.managers.tab.byLabel('owner')!.log.filter((entry) => entry.acp === true)).toEqual([
+      { input: 'file grep TODO', output: 'a.txt:1: TODO', acp: true },
+    ]);
+    expect(f.managers.tab.byLabel('owner')!.cmdHistory).toEqual(['git status']);
+
+    f.managers.acp.close('owner');
+    expect(new AcpRecordStore({ projectDir: f.root }).read(id)).toMatchObject({
+      outcome: 'Closed',
+      blocks: [{
+        entries: [{ kind: 'tool', text: 'file grep TODO' }, { kind: 'tool', text: 'a.txt:1: TODO' }],
+        answer: 'found it',
+      }],
+    });
+  });
+
+  it('records a far-side grep frame as tagged tool entries and reopens it without history changes', async () => {
+    const f = setup(true);
+    f.managers.tab.tabs[0].workspaceDir = f.root;
+    f.managers.tab.tabs[0].cmdHistory = ['git status'];
+    const pending = f.managers.acp.prompt('owner', 'find it');
+    f.handshake();
+    const id = f.managers.tab.byLabel('owner')!.runtime!.acpRoles!.ask!.recordId!;
+    const listener = f.listener();
+
+    listener.onTurn({ type: 'acp-turn', id: 'racp1', phase: 'start', first: true });
+    listener.onChunk('file grep TODO');
+    listener.onTurn({ type: 'acp-turn', id: 'racp1', phase: 'end', display: '' });
+    listener.onToolStep({
+      type: 'acp-tool-step', id: 'racp1', command: 'file grep TODO', result: 'a.txt:1: TODO', workspace: true,
+    });
+    listener.onTurn({ type: 'acp-turn', id: 'racp1', phase: 'start', first: false });
+    listener.onChunk('found it');
+    listener.onTurn({ type: 'acp-turn', id: 'racp1', phase: 'end', display: 'found it' });
+    listener.onRunEnd('answered');
+    await expect(pending).resolves.toBe('found it');
+
+    expect(f.records.window(id)?.blocks[0]?.entries).toMatchObject([
+      { kind: 'tool', text: '[host] file grep TODO' },
+      { kind: 'tool', text: '[host] a.txt:1: TODO' },
+    ]);
+    expect(f.managers.tab.byLabel('owner')!.log.filter((entry) => entry.acp === true)).toEqual([
+      { input: '[host] file grep TODO', output: 'a.txt:1: TODO', acp: true },
+    ]);
+    expect(f.managers.tab.byLabel('owner')!.cmdHistory).toEqual(['git status']);
+
+    f.managers.acp.close('owner');
+    expect(new AcpRecordStore({ projectDir: f.root }).read(id)).toMatchObject({
+      outcome: 'Closed',
+      blocks: [{
+        entries: [{ kind: 'tool', text: '[host] file grep TODO' }, { kind: 'tool', text: '[host] a.txt:1: TODO' }],
+        answer: 'found it',
+      }],
+    });
   });
 
   it('refuses every overlapping entry point without settling or adding a block', async () => {
