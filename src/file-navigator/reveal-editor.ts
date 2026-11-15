@@ -1,7 +1,12 @@
 import path from 'node:path';
 import { containedStrictly } from '../path-containment.js';
+import { revealPath } from './navigation.js';
+import { openOrRetargetLocalAt, type OpenPort } from './open.js';
+import { localCloneOf } from '../plugins/origin-workspace-records.js';
+import { nextRestoreRevision } from './restore.js';
 import { isRemoteCacheFile, remoteFileFor } from './remote/file-cache.js';
 import type { EditorView } from '../tab/types.js';
+import type { NavigationPort } from './port.js';
 
 // The navigator root and tree-relative path an edited file is revealed at. `file` and `root` are
 // absolute — `file` is the editor's path, `root` is the tab manager's launch directory — and
@@ -39,4 +44,29 @@ export function editorRevealBlocked(editor: EditorView): EditorView['revealBlock
   if (editor.newFile) return 'unsaved';
   if (isRemoteCacheFile(editor.path) && !remoteFileFor(editor.path)) return 'no-route';
   return undefined;
+}
+
+export type RevealPort = OpenPort & Pick<NavigationPort, 'setCwd' | 'hasTab' | 'reportFailure'>;
+
+export function revealEditorFile(port: RevealPort, editorLabel: string): void {
+  const editor = port.managers.tab.byLabel(editorLabel)?.editor;
+  if (!editor || editorRevealBlocked(editor) !== undefined) return;
+  if (isRemoteCacheFile(editor.path) && remoteFileFor(editor.path)) return;
+  const { navigatorRoot, relPath } = revealTargetFor(editor.path, {
+    clone: localCloneOf(editor.path),
+    root: port.managers.tab.launchDir,
+  });
+  const label = openOrRetargetLocalAt(port, navigatorRoot);
+  if (label === undefined) return;
+  revealPath(port, label, relPath);
+  const state = port.states.get(label);
+  if (!state) return;
+  state.restore = {
+    revision: nextRestoreRevision(),
+    cursor: relPath,
+    anchor: relPath,
+    selected: [relPath],
+  };
+  port.rebuild(label);
+  port.managers.tab.setActiveTab(port.managers.tab.findIndex(label));
 }
