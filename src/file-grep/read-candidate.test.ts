@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import type { Stats } from 'node:fs';
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import type * as nodeOs from 'node:os';
 import { homedir, tmpdir } from 'node:os';
@@ -7,7 +8,9 @@ import { lstat, readFile, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SEARCH_MAX_FILE_BYTES } from '../search/types.js';
+import type { FileGrepArgs } from './command.js';
 import { createCandidateReader } from './read-candidate.js';
+import { scanFiles } from './scan.js';
 
 const home = vi.hoisted(() => ({ dir: '' }));
 
@@ -43,6 +46,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.clearAllMocks();
   rmSync(base, { recursive: true, force: true });
 });
@@ -299,5 +303,132 @@ describe('createCandidateReader policy caching', () => {
     expect(targets.filter((target) => target === root)).toHaveLength(1);
     expect(targets.filter((target) => target === path.join(root, 'one.txt'))).toHaveLength(1);
     expect(targets.filter((target) => target === path.join(root, 'two.txt'))).toHaveLength(1);
+  });
+});
+
+describe('createCandidateReader abort checks', () => {
+  it('starts no root work when the factory is created with an aborted signal', async () => {
+    writeAt(root, 'a.txt', 'a');
+    const controller = new AbortController();
+    controller.abort();
+    const reader = await createCandidateReader(root, controller.signal);
+    expect(await reader('a.txt')).toBeNull();
+    expect(vi.mocked(realpath)).not.toHaveBeenCalled();
+    expect(vi.mocked(lstat)).not.toHaveBeenCalled();
+    expect(vi.mocked(readFile)).not.toHaveBeenCalled();
+  });
+
+  it('resolves an always-null reader when abort happens during root canonicalization', async () => {
+    writeAt(root, 'a.txt', 'a');
+    const gate = Promise.withResolvers<string>();
+    vi.mocked(realpath).mockReturnValueOnce(gate.promise);
+    const controller = new AbortController();
+    const pending = createCandidateReader(root, controller.signal);
+    controller.abort();
+    gate.resolve(root);
+    const reader = await pending;
+    expect(await reader('a.txt')).toBeNull();
+    expect(vi.mocked(realpath)).toHaveBeenCalledOnce();
+    expect(vi.mocked(readFile)).not.toHaveBeenCalled();
+  });
+
+  it('stops after a pending ancestor lstat when aborted', async () => {
+    writeAt(root, 'dir/notes.txt', 'notes');
+    const controller = new AbortController();
+    const reader = await createCandidateReader(root, controller.signal);
+    const gate = Promise.withResolvers<Stats>();
+    vi.mocked(lstat).mockReturnValueOnce(gate.promise);
+    const pending = reader('dir/notes.txt');
+    controller.abort();
+    gate.resolve({ isDirectory: () => true } as Stats);
+    expect(await pending).toBeNull();
+    expect(vi.mocked(lstat)).toHaveBeenCalledOnce();
+    expect(vi.mocked(lstat).mock.calls[0]?.[0]).toBe(path.join(root, 'dir'));
+    expect(vi.mocked(realpath)).toHaveBeenCalledOnce();
+    expect(vi.mocked(readFile)).not.toHaveBeenCalled();
+  });
+
+  it('stops after a pending final lstat when aborted', async () => {
+    writeAt(root, 'a.txt', 'a');
+    const controller = new AbortController();
+    const reader = await createCandidateReader(root, controller.signal);
+    const gate = Promise.withResolvers<Stats>();
+    vi.mocked(lstat).mockReturnValueOnce(gate.promise);
+    const pending = reader('a.txt');
+    controller.abort();
+    gate.resolve({ isFile: () => true, size: 1 } as Stats);
+    expect(await pending).toBeNull();
+    expect(vi.mocked(realpath)).toHaveBeenCalledOnce();
+    expect(vi.mocked(readFile)).not.toHaveBeenCalled();
+  });
+
+  it('stops after a pending candidate realpath when aborted', async () => {
+    writeAt(root, 'a.txt', 'a');
+    const controller = new AbortController();
+    const reader = await createCandidateReader(root, controller.signal);
+    const gate = Promise.withResolvers<string>();
+    vi.mocked(realpath).mockReturnValueOnce(gate.promise);
+    const pending = reader('a.txt');
+    controller.abort();
+    gate.resolve(path.join(root, 'a.txt'));
+    expect(await pending).toBeNull();
+    expect(vi.mocked(readFile)).not.toHaveBeenCalled();
+  });
+
+  it('stops immediately before content when aborted at the last boundary', async () => {
+    writeAt(root, 'a.txt', 'a');
+    const controller = new AbortController();
+    const reader = await createCandidateReader(root, controller.signal);
+    vi.mocked(realpath).mockImplementationOnce(async (target) => {
+      controller.abort();
+      return String(target);
+    });
+    expect(await reader('a.txt')).toBeNull();
+    expect(vi.mocked(readFile)).not.toHaveBeenCalled();
+  });
+
+  it('passes the signal to readFile and resolves null when content is aborted', async () => {
+    writeAt(root, 'a.txt', 'a');
+    const controller = new AbortController();
+    const reader = await createCandidateReader(root, controller.signal);
+    vi.mocked(readFile).mockImplementationOnce(async () => {
+      controller.abort();
+      throw new DOMException('Aborted', 'AbortError');
+    });
+    expect(await reader('a.txt')).toBeNull();
+    expect(vi.mocked(readFile)).toHaveBeenCalledWith(path.join(root, 'a.txt'), { signal: controller.signal });
+  });
+});
+
+describe('scan timeout with the candidate reader', () => {
+  it('keeps the timeout ending and never starts content after late metadata settles', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1000);
+    writeAt(root, 'late.txt', 'late text');
+    const metadata = Promise.withResolvers<Stats>();
+    const metadataStarted = Promise.withResolvers<void>();
+    vi.mocked(lstat).mockImplementationOnce(async () => {
+      metadataStarted.resolve();
+      return metadata.promise;
+    });
+    const scanArgs: FileGrepArgs = {
+      pattern: 'late',
+      include: '',
+      exclude: '',
+      literal: false,
+      word: false,
+      caseSensitive: false,
+      limit: 10,
+      path: undefined,
+    };
+    const scanning = scanFiles(root, ['late.txt'], scanArgs, 1100);
+
+    await metadataStarted.promise;
+    await vi.advanceTimersByTimeAsync(100);
+    await expect(scanning).resolves.toEqual({ rows: [], ending: { kind: 'timeout' } });
+
+    metadata.resolve({ isFile: () => true, size: 9 } as Stats);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(vi.mocked(readFile)).not.toHaveBeenCalled();
   });
 });
