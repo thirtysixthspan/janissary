@@ -134,7 +134,7 @@ file read <path> [--offset <line>] [--limit <lines>]
 Paths are relative to the workspace root. The output is numbered lines, at most 2000 per read; use --offset to continue a long file.
 ```
 
-`file read` is granted by default to the built-in `ask` and `tell` roles: ask grants eight commands, including `file glob`, and tell grants thirteen, including `file glob`, `file write`, and `file edit`.
+`file read` is granted by default to the built-in `ask` and `tell` roles: ask grants nine commands, including `file glob` and `file grep`, and tell grants fourteen, including `file glob`, `file grep`, `file write`, and `file edit`.
 
 ### File glob
 
@@ -171,7 +171,7 @@ A remote loop's glob step is tagged `[<host>] ` like any other workspace step. A
 
 ### File grep
 
-`file grep [--literal] [--word] [--case-sensitive] [--path <path>] [--include <globs>] [--exclude <globs>] [--limit <n>] [--] <pattern>` is a typed application command that searches workspace files for text and reports where it appears. In this version it is only a typed command: it is not a native ACP command, has no role grant or primer text, and the loop does not run a `file grep` line. `help file` is its typed reference page.
+`file grep [--literal] [--word] [--case-sensitive] [--path <path>] [--include <globs>] [--exclude <globs>] [--limit <n>] [--] <pattern>` is a typed application command that searches workspace files for text and reports where it appears. It is also a native ACP command a role can grant, granted by default to the built-in `ask` and `tell` roles; it has no primer text, and the loop does not run a `file grep` line. `help file` is its typed reference page.
 
 Flags come first, in any order, and each may appear once. The first token that is not one of these flags starts the pattern, and the pattern is the rest of the line from there, with internal spaces kept exactly as typed. A `--` ends the flags, so `file grep --literal -- --limit` searches for `--limit`; without it, an unknown flag before the pattern prints the usage line. Flag values are single whitespace-free tokens. `--limit` defaults to 100 and accepts 1 through 250, the search tab's ceiling. Malformed arguments print `Usage: file grep [--literal] [--word] [--case-sensitive] [--path <path>] [--include <globs>] [--exclude <globs>] [--limit <n>] [--] <pattern>`.
 
@@ -185,7 +185,7 @@ A local tab searches its workspace directory, or its launch or project directory
 
 On the typed remote route the `--path` is mapped once before the request. An absolute `--path` is refused as `Outside the workspace: <path>.` before any request and before far-side regex validation, so a malformed pattern does not win there. A returned `Path not found: <sent>.` or `Outside the workspace: <sent>.` line is rewritten to the `--path` as typed only when it is the whole successful reply; a row preview that happens to end the same way is left unchanged, and multi-line text is never rewritten. `Remote connection unavailable.`, `The remote connection ended.`, `The remote machine did not answer in time.`, and `The remote file navigator is closed.` are passed through, as are generic remote error text and invalid-result decoder text. A failure never becomes no matches and never falls back to a local search. Each typed remote grep uses its own `file-grep-` port session, separate from the tab's session, and disposes it after the reply whether the search succeeded or failed.
 
-A typed grep's output carries no host tag and creates one command entry whose input is the command as typed; history and transcripts record that spelling. Remote ACP loop execution, grants, and primer composition are not part of this version.
+A typed grep's output carries no host tag and creates one command entry whose input is the command as typed; history and transcripts record that spelling. Remote ACP loop execution and grep primer composition are not part of this version: a role can be granted `file grep`, but the loop does not run that grant.
 
 An autonomous agent run's `janissary file grep …` is refused in this version, with or without a `file` grant: its tool result is exactly `Agent: command not permitted: <command>.`, and no grep search runs. A remote host that sends a grep line back as a caller command is refused independently on the local side, so it never searches the caller's files.
 

@@ -138,4 +138,52 @@ describe('native command settings across the feature seams', () => {
     });
     expect(managers.browser.runInteractive).toHaveBeenCalledWith('browser content', 'janus');
   });
+
+  it('persists, projects, restricts, and restores a disabled grep child', async () => {
+    const { home, managers } = fixture();
+
+    await expect(runCommandsTopicAction(managers, {
+      topic: 'commands', action: 'set', name: 'file grep', setting: 'enabled', value: false,
+    })).resolves.toBeUndefined();
+
+    expect(persisted(home)).toHaveProperty('file grep', { enabled: false, agentAccess: true });
+    const snapshot = readCommandsTopic(managers);
+    expect(snapshot.commands.find(({ name }) => name === 'file grep')).toMatchObject({
+      name: 'file grep', kind: 'native', aliases: [], forms: ['file grep'], parent: 'file', nativeTool: 'file',
+      enabled: false, agentAccess: true, effectiveEnabled: false,
+    });
+    expect(projectDisabledApplicationCommands(snapshot).map(({ name }) => name)).toContain('file grep');
+    expect(commandRestrictionsFrom(snapshot)).toMatchObject({ 'file grep': 'application-wide' });
+    await expect(managers.command.dispatchLineWithOutput('janus', 'file grep --literal TODO')).resolves.toEqual({
+      dispatched: true, output: 'Command is disabled: file grep.',
+    });
+
+    await expect(runCommandsTopicAction(managers, {
+      topic: 'commands', action: 'set', name: 'file grep', setting: 'enabled', value: true,
+    })).resolves.toBeUndefined();
+
+    expect(persisted(home)).toHaveProperty('file grep', { enabled: true, agentAccess: true });
+    const restored = readCommandsTopic(managers);
+    expect(restored.commands.find(({ name }) => name === 'file grep'))
+      .toMatchObject({ effectiveEnabled: true, effectiveAgentAccess: true });
+    expect(projectDisabledApplicationCommands(restored).map(({ name }) => name)).not.toContain('file grep');
+    expect(commandRestrictionsFrom(restored)).not.toHaveProperty('file grep');
+  });
+
+  it('keeps an agent-only grep restriction out of the human projection', async () => {
+    const { home, managers } = fixture();
+
+    await expect(runCommandsTopicAction(managers, {
+      topic: 'commands', action: 'set', name: 'file grep', setting: 'agentAccess', value: false,
+    })).resolves.toBeUndefined();
+
+    expect(persisted(home)).toHaveProperty('file grep', { enabled: true, agentAccess: false });
+    const snapshot = readCommandsTopic(managers);
+    expect(snapshot.commands.find(({ name }) => name === 'file grep')).toMatchObject({
+      name: 'file grep', kind: 'native', forms: ['file grep'], enabled: true, agentAccess: false,
+      effectiveEnabled: true, effectiveAgentAccess: false,
+    });
+    expect(projectDisabledApplicationCommands(snapshot).map(({ name }) => name)).not.toContain('file grep');
+    expect(commandRestrictionsFrom(snapshot)).toMatchObject({ 'file grep': 'agents' });
+  });
 });

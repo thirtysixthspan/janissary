@@ -94,7 +94,7 @@ describe('file mutation rows', () => {
     roots.length = 0;
   });
 
-  function current(values: Record<string, { enabled?: boolean }>): CommandSettingsSnapshot {
+  function current(values: Record<string, { enabled?: boolean; agentAccess?: boolean }>): CommandSettingsSnapshot {
     const base = mkdtempSync(path.join(os.tmpdir(), 'native-command-policy-'));
     roots.push(base);
     mkdirSync(path.join(base, 'project'));
@@ -102,6 +102,47 @@ describe('file mutation rows', () => {
     writeFileSync(path.join(base, 'home', '.janissary', 'commands.json'), JSON.stringify(values));
     return new NativeCommandSettingsManager(path.join(base, 'project'), path.join(base, 'home')).current();
   }
+
+  it('allows grep for both uses with its default setting', () => {
+    const settings = current({});
+    expect(effectiveCommandSetting(settings, 'file grep'))
+      .toEqual({ effectiveEnabled: true, effectiveAgentAccess: true });
+    expect(disabledApplicationCommand('file grep --literal TODO', settings)).toBeUndefined();
+  });
+
+  it('disables only file grep when file grep is disabled', () => {
+    const settings = current({ 'file grep': { enabled: false } });
+    expect(effectiveCommandSetting(settings, 'file grep').effectiveEnabled).toBe(false);
+    expect(effectiveCommandSetting(settings, 'file read').effectiveEnabled).toBe(true);
+    expect(effectiveCommandSetting(settings, 'file glob').effectiveEnabled).toBe(true);
+    expect(effectiveCommandSetting(settings, 'file write').effectiveEnabled).toBe(true);
+    expect(effectiveCommandSetting(settings, 'file edit').effectiveEnabled).toBe(true);
+    expect(disabledApplicationCommand('file grep --literal TODO', settings)?.name).toBe('file grep');
+    expect(disabledApplicationCommand('file greps x', settings)).toBeUndefined();
+    expect(disabledApplicationCommand('file', settings)).toBeUndefined();
+  });
+
+  it('keeps grep enabled for people while denying it to agents', () => {
+    const settings = current({ 'file grep': { agentAccess: false } });
+    expect(effectiveCommandSetting(settings, 'file grep'))
+      .toEqual({ effectiveEnabled: true, effectiveAgentAccess: false });
+    expect(disabledApplicationCommand('file grep --literal TODO', settings)).toBeUndefined();
+  });
+
+  it('disables a saved enabled grep child when the file parent is disabled without changing its saved fields', () => {
+    const settings = current({ file: { enabled: false }, 'file grep': { enabled: true, agentAccess: true } });
+    const grep = settings.commands.find(({ name }) => name === 'file grep');
+    expect(grep).toMatchObject({ enabled: true, agentAccess: true, effectiveEnabled: false });
+    expect(effectiveCommandSetting(settings, 'file grep').effectiveEnabled).toBe(false);
+  });
+
+  it('leaves native file children enabled when only the parent denies agent access', () => {
+    const settings = current({ file: { agentAccess: false } });
+    expect(effectiveCommandSetting(settings, 'file grep'))
+      .toEqual({ effectiveEnabled: true, effectiveAgentAccess: true });
+    expect(effectiveCommandSetting(settings, 'file read'))
+      .toEqual({ effectiveEnabled: true, effectiveAgentAccess: true });
+  });
 
   it('disables only file write when file write is disabled', () => {
     const settings = current({ 'file write': { enabled: false } });
