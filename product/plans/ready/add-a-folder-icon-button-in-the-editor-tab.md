@@ -1,0 +1,189 @@
+# Add a folder icon button in the editor tab
+
+**Complexity: 7/10** — ~270 added lines across 21 files, 22 requirements, 43 test scenarios (p=7.80)
+
+The editor tab's metadata row gets a folder icon button, **Reveal in file navigator**, that finds the edited file in the file navigator. Clicking it opens the file navigator on the workspace that file belongs to, local or remote. It expands every directory above the file, selects the file's row, and gives the tree keyboard focus. Today there's no way back from an open editor to the file's place in the tree. You have to open a navigator and dig down by hand, or use its search pop-up, which only helps once you're already in the right tree. On macOS, Cmd+Shift+E does the same thing from the buffer.
+
+## Design decisions
+
+Each decision comes from the feature text, from existing behavior ("from precedent"), from a binding guideline ("guideline"), or from a user answer ("user decision").
+
+- **Where the button lives (feature text).** A folder icon button in the editor tab's metadata row.
+- **What it does (feature text).** It opens the file navigator on the workspace associated with the edited file, expands every directory above the file, and selects the file's row with keyboard focus in the tree.
+- **Local and remote (feature text).** It works for a local file and for a remote file opened from a remote navigator.
+- **Intent (feature text).** The purpose is to locate the file in the navigator, not to edit or act on it.
+- **Root for a local file (user decision).** The navigator is rooted at the workspace clone (`$workspace/<name>`) that contains the file, when there is one. Otherwise it is rooted at the project root (`$root`) when the file is inside it. A file outside both is rooted at its own directory, so the file is a top-level row with nothing to expand.
+- **Which navigator (user decision).** The button follows the shell and harness folder button's rule exactly. If any file navigator is open, the most recently focused one is retargeted to the resolved root. That clears its expanded directories and its move undo/redo history, even when it was already on that root. If none is open, a new navigator opens docked in the left sidebar. A retargeted navigator keeps its identity, position, and dock placement.
+- **Remote file (user decision).** A remote file is a cached copy opened from a remote navigator. Its record in `src/file-navigator/remote/file-cache.ts` names that navigator and keeps the file's route back to the remote host. The button reveals the file in that source navigator, at the navigator's current root. It does not retarget any navigator, because the source navigator is the file's only live route back.
+- **Remote record lifetime (from precedent).** A record is forgotten only when its navigator's filesystem port is disposed: on close (`closeTabState` in `src/file-navigator/manager/profile.ts`) and on a retarget (`releaseRemote` in `src/file-navigator/open.ts`). Moving a remote navigator up or down inside its workspace (`rerootTree` in `src/file-navigator/navigation.ts`) keeps the same port and the same record. So the source navigator's current root can differ from the root the record was made under, and the reveal path is recomputed against the current root (see Proposed changes).
+- **Remote file outside its navigator's current root (user decision).** When that re-root has left the file outside the source navigator's current root, for example after moving into a sibling folder, the reveal first re-roots the source navigator to its remote workspace root and then reveals the file there. A file already inside the current root reveals without any re-root.
+- **Orphaned remote file (user decision).** A remote file whose source navigator has closed or been retargeted has no record, and so no route back to the remote host. While that holds, the button is dimmed and inert, with a tooltip explaining why. The server projects this onto the editor's payload, since only the server knows whether the record still exists (architecture principle 1). The same test already gates saving: `saveFile` in `src/editor/save.ts` refuses when `isRemoteCacheFile` holds and `remoteFileFor` finds nothing.
+- **New, never-saved file (user decision).** A new-file editor whose target does not exist on disk yet has no row to select. The button is dimmed and inert, with its own tooltip, until the first save creates the file.
+- **GitHub-synced file (user decision).** A synced file is edited inside the shared git-sync clone, which lives at `$workspace/git-sync`. The local root rule applies to it unchanged: the navigator is rooted at the git-sync clone and selects the file actually being edited. There's no special case and no mapping back to the main checkout.
+- **File missing on disk (user decision).** The edited file, or a directory above it, may have been deleted or moved by another process after the editor opened it. The click still opens or retargets the navigator as usual. Any ancestor that's gone collapses away on the next rebuild, the file selects nothing, and nothing is reported. That matches the silent drop a `files select` clause already applies to a vanished path.
+- **Missing root (from precedent).** When the resolved local root is not a directory at click time, nothing opens or changes. `openOrRetarget` already behaves this way for a shell tab whose cwd has gone.
+- **Entry points (user decision).** The button, plus a key binding that does exactly what a click does. There's no command and no context-menu entry in this version.
+- **Key binding (user decision).** Cmd+Shift+E, on macOS only. Ctrl+Shift+E is already an editor binding on every platform: Ctrl+E moves to the line's end, so adding Shift extends the selection there (`ctrlAction` in `web/src/editor/keys.ts`). It keeps that meaning. Outside macOS the button is the only route.
+- **Enabled wording (user decision).** The enabled button's tooltip and accessible name are both `Reveal in file navigator`.
+- **Disabled wording (user decision).** The reason is appended to the enabled label, in both the tooltip and the accessible name. A new, never-saved file reads `Reveal in file navigator (save the file first)`. An orphaned remote file reads `Reveal in file navigator (reopen from a remote navigator)`.
+- **Icon (from precedent).** The shell and harness metadata rows already carry a folder icon file-navigator button (`openFilesIcon`, Font Awesome `faFolder`, in `web/src/shared/icons.ts`). The editor's button uses the same icon.
+- **Request shape (user decision).** A new client-to-server RPC, `revealInFileNavigator`, names the editor tab by label. The shell button's `openFileNavigatorFor` is left alone, so its keep-focus-where-it-was behavior can't be disturbed.
+- **Selection and focus delivery (user decision).** The server writes a `FileNavigatorRestoreHint` onto the chosen navigator, the same hint a `files select` clause writes. It names the file as cursor, anchor, and only selected row, under a new revision, and carries a new `focus` flag.
+- **Focus applied exactly once (user decision).** Once a navigator client has applied a focus hint, or dropped it because the user moved first, it sends `fileNavigatorRevealApplied` with the navigator label and the revision. The server removes `focus` from that navigator's hint if the revision still matches. Without this, a later remount of the tree, such as docking or undocking it, would replay the hint and pull focus away from wherever the user is typing.
+- **Disabled-state projection (user decision).** The disabled reason is computed in the tab-view projection on every broadcast, never stored. That way it can't go stale when a remote navigator closes.
+- **Docked navigator visibility (user decision).** Which entry a sidebar shows is client view state, held by `useSidebarSelection` in the app shell. The sidebar host selects a docked file navigator whose restore hint carries `focus` under a revision it hasn't acted on yet. The navigator feature imports nothing from the app shell.
+- **Server code location (user decision).** The local open-or-retarget step is extracted from `src/file-navigator/open.ts` so it can be called with a root rather than a source tab. A new reveal module calls it. The shell and harness button's behavior is unchanged.
+
+## What already exists (reuse, don't rebuild)
+
+| Piece | Where | What it gives this feature |
+| --- | --- | --- |
+| Metadata-row folder button on shell and harness tabs | `web/src/harness/HarnessTabMeta.tsx`, `web/src/plugins/shell/ShellTabMeta.tsx` | The icon and the open-or-retarget rule: open a navigator docked left, or retarget the most recently focused one |
+| `openOrRetarget` and its `openLocal`/`retarget` helpers | `src/file-navigator/open.ts` | Fresh-open and retarget sequences for a local root; the step this feature extracts |
+| `revealPath` and `expandAndWatch` | `src/file-navigator/navigation.ts` | Expand every ancestor of a tree-relative path, watching each, then rebuild; used today by the search pop-up's Enter |
+| `pruneCachedRows` | `src/file-navigator/filesystem-cache.ts` | On every rebuild, drops an expanded directory its loaded parent listing no longer contains and releases its watcher, so `revealPath` needs no existence check for a missing ancestor |
+| Metadata-row command senders | `web/src/editor/editor-file-commands.ts` (`commitAfterSave`, `renameAndRefocus`) | Home for the editor's new plain send function |
+| Restore-hint selection logic | `web/src/file-navigator/file/navigator-selection.ts` (`selectionFromRestore`) | Home for the pending-focus-hint decision |
+| Restore hint | `FileNavigatorRestoreHint` in `src/tab/types.ts`; written by `src/file-navigator/restore-command.ts`; stored as `FilesTabState.restore` (`src/file-navigator/state.ts`); sent by `src/file-navigator/manager/payload.ts`; applied by `web/src/file-navigator/useFileNavigatorSelection.ts` | Server-sent cursor, anchor, and selection that the client applies once per revision |
+| `nextRestoreRevision` | `src/file-navigator/restore.ts` | Monotonic revision for a new hint |
+| Remote file cache | `src/file-navigator/remote/file-cache.ts` (`isRemoteCacheFile`, `remoteFileFor`) | Whether an editor file is a remote cached copy, and, while its navigator stays on that root, that navigator's label and the file's tree-relative path |
+| Workspace clone lookup | `localCloneOf` in `src/plugins/origin-workspace-records.ts` | The `$workspace/<name>` directory containing a local path, or `undefined`; already used for an editor's origin workspace by `editorWorkspace` in `src/plugins/origin-workspace-kinds.ts` |
+| Project root | `TabManager.launchDir` in `src/tab/manager.ts` | The `$root` absolute path |
+| Active-tab guard for docked tabs | `setActiveTabOp` in `src/tab/navigation-commands.ts` (`if (tabs[index]?.dock \|\| tabs[index]?.hidden) return;`) | Activating a docked tab is already a no-op, so the reveal can activate unconditionally |
+| Editor key table | `web/src/editor/keys.ts` (`metaAction`, `KeyAction`) | Where a Cmd chord becomes an editor action |
+| Editor commit button | `web/src/editor/EditorCommitButton.tsx`, `.editor-commit-button` in `web/src/theme.css` | Precedent for an editor metadata-row action component and its styling |
+| Sidebar selection | `web/src/useSidebarSelection.ts` | The app-shell hook that picks which docked entry a sidebar shows, already reacting to tab payload changes |
+| Search pop-up reveal | `web/src/file-navigator/useFileNavigatorSearch.ts` | Precedent for waiting until a revealed row exists in `rows` before selecting it |
+
+## Proposed changes
+
+### Wire contract — `src/protocol/file-navigator.ts`, `src/tab/types.ts`
+
+`FileNavigatorRpcCall` gains `revealInFileNavigator` with params `{ label }` (the editor tab's label) and `fileNavigatorRevealApplied` with params `{ label, revision }` (the navigator tab's label and the hint revision it applied or dropped). Both are fire-and-forget like `openFileNavigatorFor`, so `src/client-message.ts` lists them as `ack` (its `openFileNavigatorFor: 'ack'` entry is the model). `src/client-params/file-navigator.ts` validates `label` as a string, and `revision` as a number for the second, beside its `openFileNavigatorFor: (p) => isString(p.label)` entry. `src/message/handler.ts` and `src/message/tabs.ts` route them the way `case 'openFileNavigatorFor'` is routed today, to two new methods on the file-navigator controller adapter (`src/controller/file/navigator-adapter.ts`, beside `openFileNavigatorFor`). Those forward to two new wrappers in `src/controller/file/navigator.ts` that delegate to `FileNavigatorManager`. The acknowledgement wrapper checks `isOpenTab` first, like that file's other label-addressed requests, so an acknowledgement for a navigator that has since closed does nothing.
+
+`FileNavigatorRestoreHint` gains an optional `focus: true`. `EditorView` gains an optional `revealBlocked` of `'unsaved' | 'no-route'`. It's commented as projection-only: the server never stores it on the tab record, and the tab-view projection sets it.
+
+### One new server module — `src/file-navigator/reveal-editor.ts`
+
+Everything server-side that is new lives in this one module: the disabled-state check, the local target rule, the reveal itself, and the focus acknowledgement. Each piece is a few lines, they belong to one feature, and none has a second caller, so they don't get a module each.
+
+#### Disabled-state projection
+
+A function `editorRevealBlocked(editor)` returns `'unsaved'` when `editor.newFile` is set. It returns `'no-route'` when `isRemoteCacheFile(editor.path)` holds and `remoteFileFor(editor.path)` finds no record. Otherwise it returns `undefined`. `buildTabView` in `src/tab/view.ts` calls it at the editor projection (`editor: tab.editor ? { ...tab.editor, path: shorten(tab.editor.path) } : undefined`), passing the absolute `tab.editor.path` before it is shortened, and spreads `revealBlocked` in only when defined. `view.ts` is 238 raw lines, so the logic stays in `reveal-editor.ts` and `view.ts` gains one call.
+
+#### Local reveal target
+
+`revealTargetFor(file, { clone, root })` is an exported pure function with no filesystem access. It takes an absolute file path, the clone directory the caller got from `localCloneOf(file)` (or `undefined`), and the project root from `managers.tab.launchDir`. It answers `{ navigatorRoot, relPath }`:
+
+- With a `clone`, the navigator roots at it. That covers the git-sync clone and every agent or shell workspace clone, because all of them live under `$workspace`.
+- Otherwise, a file strictly inside `root` roots at `root`, tested with `containedStrictly` from `src/path-containment.ts`, the same check `localCloneOf` uses.
+- Otherwise the file roots at its own directory, with `relPath` being its basename.
+
+`relPath` is `path.relative(navigatorRoot, file)` with POSIX separators, matching the navigator's row paths. The clone is looked up by the caller rather than inside this function, so it stays pure and testable without an initialized workspace directory. `localCloneOf` already answers `undefined` when the workspace directory isn't initialized. The clone check comes first because `$workspace` sits inside `$root`.
+
+### Open-or-retarget at a root — `src/file-navigator/open.ts`
+
+The local branch of `openOrRetarget` is extracted into an exported `openOrRetargetLocalAt(port, root)`. It applies the same rule `openOrRetarget` applies for a local source tab: when the most recently focused navigator exists, release any remote tie it holds and retarget it to `root`; otherwise open a fresh navigator docked left. It returns the navigator's label, or `undefined` when `root` is not a directory. `openOrRetarget` calls it for its local branch and then keeps its own last step, activating the source tab. That keeps the shell and harness button's behavior byte-for-byte the same.
+
+#### Reveal
+
+`revealEditorFile(port, editorLabel)` does five things in order:
+
+1. **Find the editor.** It looks up the editor tab by label and returns silently when the tab is gone, is not an editor, or `editorRevealBlocked` reports a reason. The client already disables the button in those states, so this is a guard, not a user path.
+2. **Pick the navigator and path.** A remote cached file uses the navigator named by its `remoteFileFor` record, with no retarget. Its remote absolute path is the record's `root` joined with its `relPath` (POSIX), and the reveal path is that absolute path made relative to the navigator's current `FilesTabState.root`. The current root can differ from the record's after a re-root (see "Remote record lifetime"). When the absolute path isn't inside the current root (`containedAbsolute(root, target)` from `src/path-containment.ts` is false, the check `retargetEditorTab` in `src/tab/retarget-editor.ts` uses), it first runs the existing `reRootTree` sequence (`src/file-navigator/navigation.ts`) to the navigator's `FilesTabState.remoteRoot`, with no pre-read entries, which is how `updateRemoteRoot` in `open.ts` already re-roots a remote tree. The path is then made relative to that workspace root. A source navigator always has `remoteRoot` by then, because its file could only have been opened once the workspace was ready. A local file takes `revealTargetFor` and then `openOrRetargetLocalAt`. An `undefined` label stops here.
+3. **Expand the ancestors.** It calls the existing `revealPath(navPort, label, relPath)` from `src/file-navigator/navigation.ts` unchanged, the same call the search pop-up's Enter makes. That expands and watches every ancestor and rebuilds. A missing ancestor needs no extra check. The rebuild runs `pruneCachedRows` (`src/file-navigator/filesystem-cache.ts`), which drops any expanded directory its loaded parent listing doesn't contain, and releases its watcher. On a remote tree, an ancestor whose parent listing is still loading stays expanded on trust until that listing arrives and the next rebuild prunes it, as the restore path already relies on.
+4. **Write the hint.** It sets the navigator's `FilesTabState.restore` to a new hint with a fresh `nextRestoreRevision()`, `cursor`, `anchor`, and `selected` all naming `relPath`, and `focus: true`. The hint is written even when the file is missing. The client simply never finds the row, which gives the silent outcome decided above.
+5. **Show the navigator.** It calls `managers.tab.setActiveTab` for the navigator's index, so a centre-strip navigator comes to the front. For a docked navigator that call is already a no-op (`setActiveTabOp` returns early for a docked tab), and the sidebar host selects it from the hint instead.
+
+`clearRevealFocus(port, navigatorLabel, revision)` removes `focus` from that navigator's hint when its revision still equals `revision`, and rebuilds the payload. Any other revision is ignored, so a late acknowledgement can't strip a newer reveal.
+
+`FileNavigatorManager` (`src/file-navigator/manager.ts`) gains `revealEditorFile(editorLabel)` and `clearRevealFocus(label, revision)`. Each is a one-line delegation using the ports it already builds, the same shape as its existing `reveal`. The manager is 278 raw lines, so nothing else moves in.
+
+### Editor client — `web/src/editor/`
+
+- **Button.** A new presentational `EditorRevealButton.tsx` takes `revealBlocked` and an `onReveal` callback. It maps the blocked reason to its title through a module-level table, the way `EditorCommitButton.tsx` maps commit states through its `STATE_NOTES` table, using the three exact strings above. It renders a `<button>` with class `editor-reveal-button`, the `openFilesIcon`, `title` and `aria-label` both set to the title, and `disabled` when blocked. Its `onMouseUp` stops propagation, so the metadata row's focus-restoring `onMouseUp` (`onMetaMouseUp` in `EditorTab.tsx`) never hands focus back to the buffer after a click.
+- **Placement.** `EditorMetaRow.tsx` gains an `onReveal` prop and renders the button first inside `editor-actions`, ahead of `EditorSyncIcon`.
+- **Key binding.** `keys.ts` adds a `{ kind: 'revealInNavigator' }` member to `KeyAction`. `metaAction` returns it for `e` with Shift held. `ctrlAction` is untouched, so Ctrl+Shift+E keeps extending to the line end. The chord sits on the Cmd (meta) modifier with no platform check, like every other `metaAction` entry.
+- **Key dispatch.** `claimKey` in `web/src/editor/useEditorInteractions.ts` already intercepts `action.kind === 'find'` before `api.apply`. The new action is intercepted the same way, calling a `reveal` callback that `useEditorInteractions` takes as one more input. It never reaches `api.apply` or `applyKeyAction`, so it records no undo step and leaves the buffer untouched. `claimKey` calls `preventDefault`, and its caller stops propagation for every claimed key, so the window-level handler never sees the chord.
+- **Sender.** `web/src/editor/editor-file-commands.ts` already holds the metadata row's command senders (`commitAfterSave`, `renameAndRefocus`). It gains a plain function that sends `revealInFileNavigator` for the editor's label unless `revealBlocked` is set. It calls no React hook, so it is not a `use*` hook (react-code-organization §6). `EditorTab.tsx` binds it once and passes the bound callback to `EditorMetaRow` and to `useEditorInteractions`. `EditorTab.tsx` is at 217 raw lines; if the added lines cross the 200-line `max-lines` count, extract a cohesive piece per `ai/guidelines/code-guidelines.md`.
+- **Inherited suppression.** The editor already swallows every keystroke while a persona suggestion is pending, and an overlay takes every keystroke while open. The new chord inherits both, with no new handling.
+
+### Navigator client — `web/src/file-navigator/`
+
+- **Pure decision.** `file/navigator-selection.ts` (126 lines), which already holds `selectionFromRestore`, gains one function deciding, from the current hint, the rows, and the last revision acted on, whether a focus hint is pending, ready (its cursor row exists), or should be dropped. A root change that arrives in the same payload as the hint, as a fresh open, a retarget, or a remote re-root to the workspace root does, never drops it. Only a root change after the hint arrived does. It's dropped when the root changed, or when the user moved the cursor or clicked a row since the hint arrived.
+- **Hold the selection.** `useFileNavigatorSelection.ts` treats a hint carrying `focus` differently from an ordinary restore hint. It doesn't apply the selection until the cursor row exists in `rows`, and it marks a pending focus hint dropped when its own selection-changing handlers run before then. A hint without `focus` keeps today's behavior exactly.
+- **Focus and acknowledge.** A new hook, `useFileNavigatorRevealFocus`, focuses the tree container as soon as a new focus hint arrives. It's the same `containerRef.current?.focus()` that `FileNavigatorTab.tsx` passes as `focusTree`. When the selection lands, the row is scrolled into view through the tree's existing scroll-to-cursor behavior. The hook sends `fileNavigatorRevealApplied` once, when the selection is applied or dropped. `FileNavigatorTab.tsx` (181 raw lines) gains the hook call only.
+
+### Sidebar host — `web/src/useSidebarSelection.ts`
+
+A new effect selects the docked `files` entry whose `files.restore` carries `focus` under a revision this hook hasn't yet acted on. It records the revision so later broadcasts don't reselect. This is app-shell coordination; the hook already reads the full `TabView` list.
+
+`web/src/Sidebar.tsx` mounts a `FileNavigatorTab` only for the sidebar's current entry, and with `autoFocus={false}`. So a docked navigator that wasn't the current entry mounts only once this effect selects it. Its focus hook must therefore act on the hint at mount time as well as on a hint change. It can't rely on `autoFocus`, and it must not focus a navigator that isn't mounted yet.
+
+### Landing order
+
+The wire additions to `src/protocol/file-navigator.ts` and `src/tab/types.ts` come first, together with `src/client-message.ts` and `src/client-params/file-navigator.ts`. The `ack` map and the params validators are typed against the RPC union, so they must change in the same commit to keep typecheck green. The server modules and their routing follow, then the editor client, then the navigator client and sidebar host. Each step leaves `check-diff` green on its own.
+
+### Styling — `web/src/theme.css`
+
+`.editor-reveal-button` goes beside `.editor-commit-button` with the same declarations. `:hover` brightens to `--fg`. `:disabled` uses `--faint` and the default cursor, and its hover keeps `--faint`.
+
+### Specs, help, and docs
+
+- `product/specs/editor-tab.md`: name the button first in the Layout section's actions list, and add a "Revealing in the file navigator" subsection covering every decision above, its wording, and Cmd+Shift+E.
+- `product/specs/file-navigator-tab.md`: under "Opening from a tab's metadata row", add the editor's reveal as the one metadata-row route that moves focus into the tree and selects a file.
+- `help/keys.md`: add `Cmd+Shift+E` (macOS) to the Editor tab controls table.
+- `documentation/user-documentation/tab-types/editor.md`: describe the button and the chord.
+
+## UI design
+
+The button extends the editor tab's metadata row (`EditorMetaRow`), whose actions group sits at the right edge: sync status, save, commit to origin, connections, and Split. It resembles the folder button in `HarnessTabMeta`, which uses `openFilesIcon` with the class `tab-open-files`.
+
+- **Placement (user decision).** The button is the first control in the `editor-actions` group, left of the sync icon. That matches the shell and harness rows, where the folder button leads the actions group.
+- **Overflow (from precedent).** `.editor-meta` already wraps (`flex-wrap: wrap`) and `.editor-actions` does not shrink. On a narrow pane, the whole actions group, this button included, moves to its own line rather than being clipped.
+- **Visibility after a click (user decision).** The navigator is shown where it already is. A docked navigator becomes the selected entry in its sidebar, and the editor stays visible in the centre. A navigator in the centre strip becomes the active tab, so the editor goes behind it. A freshly opened navigator is docked left, so the editor stays visible.
+- **Focus (feature text).** Keyboard focus moves to the navigator's tree. This is the one difference from the shell and harness folder button, which leaves focus on the tab whose button was clicked.
+- **Focus protection (from precedent).** A plain click in the editor's metadata header restores focus to the buffer's hidden textarea on mouse-up (editor-tab spec, "Focus protection"). A click on this button is exempt, or the editor would take focus straight back from the tree.
+- **Selection timing (user decision).** The tree takes focus at once. As soon as the file's row exists in the tree's rows, it becomes the cursor, the anchor, and the only selected row, and it's scrolled into view. On a remote tree or a large local one, that can be a moment after the click. The pending selection is dropped if, before the row arrives, the user moves the tree's cursor, clicks a row, or the navigator is re-rooted or retargeted.
+- **Disabled state (user decision).** Dimmed and inert, with the reason appended to the tooltip and accessible name (see Design decisions). The key binding does nothing while the button is disabled.
+- **Visual style (user decision).** A new editor-scoped class, `editor-reveal-button`, in `web/src/theme.css` beside `.editor-commit-button`, with the same look: a transparent, borderless, `--muted` icon at 13px that brightens to `--fg` on hover. A disabled rule dims it to `--faint` with the default cursor and no hover change, matching `.editor-save-button:disabled`.
+- **Keyboard and accessibility (from precedent).** The button is an ordinary `<button>` in the row's DOM order, so Tab reaches it and Enter or Space activates it. It opens nothing of its own, so Escape has nothing to dismiss. Its accessible name equals its tooltip in every state.
+- **Key binding (user decision).** Cmd+Shift+E on macOS, while an editor tab's buffer has focus, does exactly what a click does. It isn't bound in `help/keys.md` today, in the editor's core key table, or by an editor plugin. Ctrl+Shift+E keeps its existing meaning.
+- **Client code placement (guideline).** Per `ai/guidelines/react-code-organization.md`, the button component and its send function live in the existing `web/src/editor/` feature directory. The navigator's side, which holds the pending selection, takes focus, and acknowledges, lives in `web/src/file-navigator/`. Sidebar selection is coordinated in the app shell's `useSidebarSelection`. Neither feature imports the other; they meet only through the server's tab payloads. Which file is locatable, which navigator to use, and what to select are all decided on the server (architecture principle 1). The client only renders the result, forwards the click, and reports that a focus hint was used.
+
+## Tests
+
+- **`src/file-navigator/reveal-editor.test.ts`**, `revealTargetFor`: a file with a clone (the git-sync clone, and an agent workspace clone), a file directly under `$root`, a nested file under `$root`, a file outside `$root` (roots at its own directory), and a sibling directory whose name begins with the project root's name (`/repo-other/x` against `/repo`), which must not count as inside it.
+- **`src/file-navigator/reveal-editor.test.ts`**, `editorRevealBlocked`: a new file gives `unsaved`; a remote cache file with a record gives nothing; one without a record gives `no-route`; an ordinary local file gives nothing.
+- **`src/file-navigator/open.test.ts`:** `openOrRetargetLocalAt` opens fresh docked left when no navigator is open, and retargets the most recently focused one otherwise, clearing its expanded set and undo/redo stacks. It returns `undefined` for a missing root. The existing `openOrRetarget` cases still pass unchanged.
+- **`src/file-navigator/reveal-editor.test.ts`**, `revealEditorFile` and `clearRevealFocus`: a local nested file expands each ancestor and writes a hint naming the file with `focus` and a fresh revision. A missing intermediate directory leaves no stale expanded entry after the rebuild, and the hint is still written. A remote cached file reveals in its source navigator without retargeting any navigator, including after that navigator re-rooted to a parent directory, where the reveal path gains the extra leading segment. After a re-root into a sibling directory that no longer contains the file, the navigator is re-rooted to its `remoteRoot` and the hint names the path relative to it. An unknown or blocked editor label changes nothing. A centre-strip navigator becomes the active tab, and a docked one doesn't. `clearRevealFocus` clears `focus` for a matching revision and ignores a stale one.
+- **`src/tab/view.test.ts`:** the editor projection carries `revealBlocked` only when the helper reports a reason.
+- **`src/client-params/file-navigator.test.ts`** (or the existing params test beside it): both new methods accept valid params and reject a non-string label or non-number revision.
+- **`web/src/editor/editor-file-commands.test.ts`:** the send function sends `revealInFileNavigator` with the label when unblocked, and sends nothing for either blocked reason.
+- **`web/src/editor/EditorRevealButton.test.tsx`:** the three states render the exact titles and accessible names, disabled only when blocked. It renders the folder icon. A click calls `onReveal` and doesn't bubble a mouse-up to the row. A disabled button ignores clicks.
+- **`web/src/editor/keys.test.ts`:** Cmd+Shift+E maps to `revealInNavigator`, and Ctrl+Shift+E still maps to extend-to-line-end.
+- **`web/src/editor/EditorTab.test.tsx`:** the button is first in the actions group. Clicking it sends `revealInFileNavigator` with the editor's label and leaves the textarea unfocused. Cmd+Shift+E sends the same, and sends nothing while blocked.
+- **`web/src/file-navigator/file/navigator-selection.test.ts`**, the pending-focus decision: pending until the row exists, ready once it does, dropped after a root change or a user cursor move, and not re-run for a revision already acted on.
+- **`web/src/file-navigator/useFileNavigatorSelection.test.ts`:** a focus hint whose row arrives in a later `rows` update selects it then. One overtaken by a user selection is never applied. An ordinary hint still applies at once.
+- **`web/src/file-navigator/FileNavigatorTab.test.tsx`:** a new focus hint focuses the tree container and sends `fileNavigatorRevealApplied` once. Remounting with the same hint after acknowledgement doesn't refocus.
+- **`web/src/useSidebarSelection.test.ts`** (new file; the hook has no test file today): a docked navigator with a new focus hint becomes the selected entry, and the same revision on a later broadcast doesn't reselect after the user picks another entry.
+
+## Out of scope
+
+- Acting on the file from the navigator: opening, renaming, or committing it. The button only locates it.
+- A typed command, a context-menu entry, or any entry point other than the button and Cmd+Shift+E.
+- A key binding outside macOS.
+- Mapping a git-synced file back to its copy in the main checkout.
+- Reopening a route for an orphaned remote file. The user reopens it from a remote navigator, as saving already requires.
+- Revealing a not-yet-saved new file's target directory.
+- Changing the shell and harness folder button, `openFileNavigatorFor`, the search pop-up's reveal, or how an ordinary `files` restore hint is applied.
+- Any notification. Every outcome here is either a visible tree change or silent.
+
+## Verification
+
+- `$janissary/scripts/run.mjs check-diff`
+- Manual, local: open `src/file-navigator/remote/file-cache.ts` in an editor with no navigator open and click the folder button. A navigator opens docked left, rooted at `$root`, with `src`, `src/file-navigator`, and `src/file-navigator/remote` expanded and `file-cache.ts` selected. Arrow keys move the tree's cursor, and the editor is still visible in the centre.
+- Manual, retarget: with a navigator docked on some other directory, press Cmd+Shift+E in an editor on a file inside a workspace clone. That navigator retargets to `$workspace/<name>` and selects the file. Ctrl+Shift+E in the buffer still extends the selection to the line end.
+- Manual, centre strip: undock the navigator into the centre strip, switch back to the editor, and click the button. The navigator becomes the active tab with the file selected and focused.
+- Manual, states: the button on a fresh `untitled.md` reads `Reveal in file navigator (save the file first)` and is inert until saved. Open a file from a remote navigator, close that navigator, and the button reads `Reveal in file navigator (reopen from a remote navigator)`.
+- Manual, remote: open a nested file from a remote navigator, collapse everything in that navigator, then click the editor's button. The ancestors expand as their listings arrive, the file is selected, and the tree has focus. Dock and undock that navigator afterwards: focus doesn't jump back into it. Then re-root that navigator into a sibling folder of the file's directory and click again: it re-roots to the workspace root and selects the file.
