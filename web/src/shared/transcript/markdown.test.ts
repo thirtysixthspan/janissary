@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import DOMPurify from 'dompurify';
-import { FILE_READ_USAGE } from '@shared/file-read/command.js';
+import { FILE_READ_USAGE } from '@shared/file-read/command';
 
 vi.mock('marked', () => ({ marked: { parse: vi.fn() } }));
 
