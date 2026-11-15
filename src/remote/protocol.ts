@@ -226,7 +226,10 @@
 // Version 42 adds the read-only `glob-paths` operation, so a typed `file glob` on a remote tab walks
 // the remote clone rather than the local disk. A version-41 remote would refuse it as unknown after
 // the handshake had already passed, so the exact-version handshake refuses that pairing first.
-export const REMOTE_PROTOCOL_VERSION = 42;
+// Version 43 adds the read-only `grep-files` operation, so a typed `file grep` on a remote tab searches
+// the remote clone rather than the local disk. A version-42 remote would refuse it as unknown after
+// the handshake had already passed, so the exact-version handshake refuses that pairing first.
+export const REMOTE_PROTOCOL_VERSION = 43;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
