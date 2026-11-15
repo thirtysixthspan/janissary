@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
+import { FILE_GREP_USAGE, parseFileGrep } from '../file-grep/command.js';
 import { FILE_READ_USAGE } from '../file-read/command.js';
 import type { NavigatorListener } from '../remote/channel/types.js';
 import type { ClientFrame } from '../remote/protocol-frames.js';
@@ -43,6 +44,7 @@ describe('file command run', () => {
   let root: string;
   let workspace: string;
   let appended: { input: string; output: string }[];
+  let invocationAppends: { label: string; entry: { input: string; output: string }; invocationId: string }[];
   let lookups: string[];
   let remoteCalls: string[];
   let tabs: FakeTab[];
@@ -58,6 +60,9 @@ describe('file command run', () => {
         return tabs.find((tab) => tab.label === label);
       },
       append: (_label: string, entry: { input: string; output: string }) => { appended.push(entry); },
+      appendForInvocation: (
+        label: string, entry: { input: string; output: string }, invocationId: string,
+      ) => { invocationAppends.push({ label, entry, invocationId }); },
     },
     remote: {
       get: (label: string) => {
@@ -86,6 +91,7 @@ describe('file command run', () => {
     root = mkdtempSync(path.join(tmpdir(), 'file-command-root-'));
     workspace = mkdtempSync(path.join(tmpdir(), 'file-command-workspace-'));
     appended = [];
+    invocationAppends = [];
     lookups = [];
     remoteCalls = [];
     tabs = [];
@@ -202,6 +208,56 @@ describe('file command run', () => {
     });
   });
 
+  describe('file grep end to end', () => {
+    it('greps under the workspace of a local tab that has one', async () => {
+      tabs = [{ label: 'janus', workspaceDir: workspace }];
+      writeFileSync(path.join(workspace, 'notes.md'), 'workspace needle\n');
+      writeFileSync(path.join(root, 'notes.md'), 'project needle\n');
+      expect(await run('file grep needle')).toBe('notes.md:1: workspace needle');
+    });
+
+    it('prints the grep usage line for a malformed grep', async () => {
+      tabs = [{ label: 'janus' }];
+      expect(await run('file grep')).toBe(FILE_GREP_USAGE);
+      appended = [];
+      expect(await run('file grep --limit 0 x')).toBe(FILE_GREP_USAGE);
+    });
+
+    it('keeps the read usage line for file greps', async () => {
+      expect(await run('file greps x')).toBe(FILE_READ_USAGE);
+    });
+
+    it('declares grep samples that parse as intended', () => {
+      const samples = command.samples.filter((sample) => sample.startsWith('file grep'));
+      expect(samples).toEqual(['file grep TODO', 'file grep --literal --include *.md request timed out']);
+      expect(parseFileGrep(samples[0])).toEqual({
+        pattern: 'TODO', include: '', exclude: '', literal: false, word: false, caseSensitive: false, limit: 100,
+        path: undefined,
+      });
+      expect(parseFileGrep(samples[1])).toEqual({
+        pattern: 'request timed out', include: '*.md', exclude: '', literal: true, word: false, caseSensitive: false,
+        limit: 100, path: undefined,
+      });
+    });
+
+    it('appends one invocation-aware entry with the exact command text and invocation id', async () => {
+      tabs = [{ label: 'janus', workspaceDir: workspace }];
+      writeFileSync(path.join(workspace, 'notes.md'), 'workspace needle\n');
+      const invocation = {
+        runId: 'run-1', invocationId: 'inv-1',
+        caller: { label: 'janus', cwd: root, context: [] },
+        signal: new AbortController().signal,
+      };
+      await command.run('file grep needle', { label: 'janus', index: 0 }, managers() as never, invocation);
+      expect(appended).toEqual([]);
+      expect(invocationAppends).toEqual([{
+        label: 'janus',
+        entry: { input: 'file grep needle', output: 'notes.md:1: workspace needle' },
+        invocationId: 'inv-1',
+      }]);
+    });
+  });
+
   describe('on a remote tab', () => {
     beforeEach(() => {
       tabs = [{ label: 'janus', remote: { host: 'box' } }];
@@ -296,6 +352,20 @@ describe('file command run', () => {
       await readWithReply('file read notes.md', undefined, 'boom');
       expect(output()).toBe('boom');
       expect(remote.channel.detachNavigator).toHaveBeenCalledOnce();
+    });
+
+    it('sends grep-files on its own session and prints the remote rows untagged', async () => {
+      expect(await readWithReply('file grep needle', { text: 'remote/a.ts:2: remote needle' }))
+        .toBe('remote/a.ts:2: remote needle');
+      const [request] = remote.requests();
+      if (request.type !== 'filesystem-request') throw new Error('Expected a filesystem request.');
+      expect(request.operation).toBe('grep-files');
+      expect(request.args).toEqual({
+        pattern: 'needle', include: '', exclude: '', literal: false, word: false, caseSensitive: false, limit: 100,
+      });
+      expect(request.session.startsWith('file-grep-')).toBe(true);
+      expect(request.session).not.toBe('janus');
+      expect(output()).not.toContain('project one');
     });
 
     it('sends glob-paths on its own session and prints the reply unchanged', async () => {

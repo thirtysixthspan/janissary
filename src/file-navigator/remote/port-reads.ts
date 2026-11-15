@@ -4,6 +4,7 @@ import type { RemotePortPaths } from './port-paths.js';
 import { failureResult, type FileOperationResult } from '../file-operation-result.js';
 import { NO_MATCHING_TEXT_REASON, type FileEditValue, type FileWritePolicy } from '../../file-write/types.js';
 import type { FileGlobArgs } from '../../file-glob/command.js';
+import type { FileGrepArgs } from '../../file-grep/command.js';
 
 // `RemoteFileSystemPort`'s line read, glob, write and text edit, extracted so that file stays under the size limit — the same
 // split `port-moves.ts` uses. It takes the port's bound request sender and its path mapper as
@@ -46,6 +47,30 @@ export async function remoteGlobPaths(
     limit: args.limit,
   });
   return { text: result.text, dir };
+}
+
+// Grep follows the same rules for its `--path`: an absolute one is answered here without a request,
+// and `path` is the spelling actually sent, so a far-side `Path not found:` line can be rewritten to
+// what the user typed. Every switch travels even when false or empty, because the far side's
+// validator requires all of them; only `path` is optional on the wire.
+export async function remoteGrepFiles(
+  request: RemoteRequest, paths: RemotePortPaths, root: string, args: FileGrepArgs,
+): Promise<{ text: string; path: string | undefined }> {
+  if (args.path !== undefined && path.posix.isAbsolute(args.path)) {
+    return { text: `Outside the workspace: ${args.path}.`, path: args.path };
+  }
+  const sent = args.path === undefined ? undefined : await paths.to(root, args.path);
+  const result = await request('grep-files', {
+    pattern: args.pattern,
+    include: args.include,
+    exclude: args.exclude,
+    literal: args.literal,
+    word: args.word,
+    caseSensitive: args.caseSensitive,
+    ...(sent !== undefined && { path: sent }),
+    limit: args.limit,
+  });
+  return { text: result.text, path: sent };
 }
 
 // Content crosses as one base64 copy. Under the tool policy an absolute path is refused here with the
