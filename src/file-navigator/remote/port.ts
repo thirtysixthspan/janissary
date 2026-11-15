@@ -20,7 +20,7 @@ import { remoteMove, remoteMoveMany } from './port-moves.js';
 import { remoteEditFile, remoteGlobPaths, remoteReadLines, remoteWriteFile } from './port-reads.js';
 import type { FileGlobArgs } from '../../file-glob/command.js';
 import type { FileEditValue, FileWritePolicy } from '../../file-write/types.js';
-import { remoteDeleteMany, remoteReplay, remoteSearch, remoteStatRows } from './port-mapped.js';
+import { remoteCreateItem, remoteDeleteMany, remoteReplay, remoteSearch, remoteStatRows } from './port-mapped.js';
 import type { CommitResult } from '../../git/commit.js';
 import type { SearchMatch, SearchRequest } from '../../search/types.js';
 import { RemotePortPaths, resolveRemoteWorkspace } from './port-paths.js';
@@ -168,11 +168,11 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
   }
 
   async createFile(root: string, destination: string): Promise<FileOperationResult<{ path: string }>> {
-    return this.createItem(root, destination, 'create-file');
+    return remoteCreateItem(this.requester(), this.paths, root, destination, 'create-file');
   }
 
   async createDirectory(root: string, destination: string): Promise<FileOperationResult<{ path: string }>> {
-    return this.createItem(root, destination, 'create-directory');
+    return remoteCreateItem(this.requester(), this.paths, root, destination, 'create-directory');
   }
 
   replay(
@@ -216,17 +216,6 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
     return this.request('paste', {
       sources, destination: await this.paths.to(root, destination), mode, policy,
     });
-  }
-
-  private async createItem(
-    root: string, destination: string, operation: 'create-file' | 'create-directory',
-  ): Promise<FileOperationResult<{ path: string }>> {
-    const remoteDestination = await this.paths.to(root, destination);
-    const result = operation === 'create-file'
-      ? await this.request('create-file', { destination: remoteDestination })
-      : await this.request('create-directory', { destination: remoteDestination });
-    if (!result.ok) return result;
-    return { ok: true, value: { path: await this.paths.from(root, result.value.path) } };
   }
 
   private async openSession(): Promise<void> {

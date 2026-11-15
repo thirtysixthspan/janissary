@@ -1,4 +1,5 @@
 import type { DeleteManyResult } from '../batch.js';
+import type { FileOperationResult } from '../file-operation-result.js';
 import type { ReplayResult } from '../filesystem-port.js';
 import type { HistoryStep } from '../moves.js';
 import type { RemoteRequest } from './port-git.js';
@@ -9,7 +10,7 @@ import type { RowStat } from '../stats.js';
 // `RemoteFileSystemPort`'s path-mapping operations, extracted on the same split as
 // `port-git.ts` and `port-moves.ts`: each takes the port's bound request sender and its
 // path mapper as parameters rather than reaching for them, so nothing here knows about the port's
-// session bookkeeping. What the four share is that the far side speaks workspace-relative paths, so
+// session bookkeeping. What they share is that the far side speaks workspace-relative paths, so
 // every path an operation names — in its arguments and in its answer — crosses the mapper here.
 
 // One status per path asked about, `null` for a path that is not there, keyed by the path the caller
@@ -57,4 +58,18 @@ export async function remoteReplay(
     undoStack: await mapRemoteHistory(result.undoStack, (item) => paths.from(root, item)),
     redoStack: await mapRemoteHistory(result.redoStack, (item) => paths.from(root, item)),
   };
+}
+
+// The created path is the far side's, so a successful answer is mapped back onto the tree; a refusal
+// names nothing, so it is handed back exactly as the far side wrote it.
+export async function remoteCreateItem(
+  request: RemoteRequest, paths: RemotePortPaths, root: string, destination: string,
+  operation: 'create-file' | 'create-directory',
+): Promise<FileOperationResult<{ path: string }>> {
+  const remoteDestination = await paths.to(root, destination);
+  const result = operation === 'create-file'
+    ? await request('create-file', { destination: remoteDestination })
+    : await request('create-directory', { destination: remoteDestination });
+  if (!result.ok) return result;
+  return { ok: true, value: { path: await paths.from(root, result.value.path) } };
 }

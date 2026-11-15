@@ -6,9 +6,9 @@ import type { SearchMatch } from '../../protocol.js';
 import type { FileGlobArgs } from '../../file-glob/command.js';
 import { OUTSIDE_ROOT_REASON } from '../file-operation-result.js';
 import { RemoteFileSystemPort } from './port.js';
-import { CLOSED_REASON, ENDED_REASON, LONG_REQUEST_DEADLINE_MS } from './port-requests.js';
+import { CLOSED_REASON, ENDED_REASON, LONG_REQUEST_DEADLINE_MS, REQUEST_DEADLINE_MS, TIMED_OUT_REASON } from './port-requests.js';
 
-function harness() {
+function harness(ready: Promise<unknown> = Promise.resolve('/remote/ws')) {
   const sent: ClientFrame[] = [];
   let listener: NavigatorListener | undefined;
   const channel = {
@@ -16,7 +16,7 @@ function harness() {
     detachNavigator: vi.fn(),
     send: (frame: ClientFrame) => { sent.push(frame); },
   } as unknown as RemoteChannel;
-  const port = new RemoteFileSystemPort(channel, 'files-1', Promise.resolve('/remote/ws'));
+  const port = new RemoteFileSystemPort(channel, 'files-1', ready);
   const reply = (result: unknown, error?: string) => {
     const request = sent.findLast((frame) => frame.type === 'filesystem-request');
     if (request?.type !== 'filesystem-request') throw new Error('No request was sent.');
@@ -477,6 +477,94 @@ describe('RemoteFileSystemPort remaining operations', () => {
     await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
     h.reply({ ok: false, reason: 'a file already holds that name' });
     await expect(pending).resolves.toEqual({ ok: false, reason: 'a file already holds that name' });
+  });
+
+  it('creates a file at the workspace root and maps its path back unchanged', async () => {
+    const h = harness();
+    const pending = h.port.createFile('/remote/ws', 'new.ts');
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    expect(lastRequest(h.sent)).toMatchObject({
+      operation: 'create-file', args: { destination: 'new.ts' },
+    });
+    h.reply({ ok: true, value: { path: 'new.ts' } });
+    await expect(pending).resolves.toEqual({ ok: true, value: { path: 'new.ts' } });
+  });
+
+  it('creates a directory at the workspace root and maps its path back unchanged', async () => {
+    const h = harness();
+    const pending = h.port.createDirectory('/remote/ws', 'sub');
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    expect(lastRequest(h.sent)).toMatchObject({
+      operation: 'create-directory', args: { destination: 'sub' },
+    });
+    h.reply({ ok: true, value: { path: 'sub' } });
+    await expect(pending).resolves.toEqual({ ok: true, value: { path: 'sub' } });
+  });
+
+  it('returns a directory-create refusal as it stands, with no path to map', async () => {
+    const h = harness();
+    const pending = h.port.createDirectory('/remote/ws/src', 'sub');
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    h.reply({ ok: false, reason: 'a directory already holds that name' });
+    await expect(pending).resolves.toEqual({ ok: false, reason: 'a directory already holds that name' });
+  });
+
+  it('reports an error reply to a creation as a failure value', async () => {
+    const h = harness();
+    const pending = h.port.createFile('/remote/ws', 'new.ts');
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    h.reply(undefined, 'The remote file navigator session is not open.');
+    await expect(pending).resolves.toEqual({
+      ok: false, reason: 'The remote file navigator session is not open.',
+    });
+  });
+
+  it('reports a creation requested after disposal without sending it', async () => {
+    const h = harness();
+    await vi.waitFor(() => expect(h.sent).toHaveLength(1));
+    h.port.dispose();
+    await expect(h.port.createFile('/remote/ws', 'new.ts'))
+      .resolves.toEqual({ ok: false, reason: CLOSED_REASON });
+    expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(false);
+  });
+
+  it('reports an in-flight creation as ended when the connection closes', async () => {
+    const h = harness();
+    const pending = h.port.createDirectory('/remote/ws/src', 'sub');
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    h.listener()?.onClose?.();
+    await expect(pending).resolves.toEqual({ ok: false, reason: ENDED_REASON });
+  });
+
+  it('settles a creation as unanswered after its deadline', async () => {
+    vi.useFakeTimers();
+    try {
+      const h = harness();
+      const pending = h.port.createFile('/remote/ws', 'new.ts');
+      await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+      await vi.advanceTimersByTimeAsync(REQUEST_DEADLINE_MS + 1);
+      await expect(pending).resolves.toEqual({ ok: false, reason: TIMED_OUT_REASON });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('rejects a creation whose successful reply carries no path', async () => {
+    const h = harness();
+    const pending = h.port.createDirectory('/remote/ws/src', 'sub');
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    h.reply({ ok: true, value: {} });
+    await expect(pending).rejects.toThrow('Invalid remote filesystem operation result.');
+  });
+
+  it('rejects a creation whose workspace cannot be resolved', async () => {
+    const { promise, reject } = Promise.withResolvers<string>();
+    const h = harness(promise);
+    const pending = h.port.createFile('/remote/ws', 'new.ts');
+    reject(new Error('The remote workspace is unavailable.'));
+    h.port.dispose();
+    await expect(pending).rejects.toThrow('The remote workspace is unavailable.');
+    expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(false);
   });
 
   // The far side keeps watching while any listener remains on the path, so stopping one of two
