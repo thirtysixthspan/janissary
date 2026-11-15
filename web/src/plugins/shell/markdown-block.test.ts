@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Terminal } from '@xterm/xterm';
-import { parseHarnessCommand } from '@shared/harness/command-parse.js';
-import { parseTabCommand } from '@shared/commands/parse-tab.js';
-import { FILE_READ_USAGE } from '@shared/file-read/command.js';
+import { parseHarnessCommand } from '@shared/harness/command-parse';
+import { parseTabCommand } from '@shared/commands/parse-tab';
+import { FILE_READ_USAGE } from '@shared/file-read/command';
 import { insertMarkdownBlock } from './markdown-block';
 
 // The usage error the `harness` command itself answers with for `command`, so the test renders the

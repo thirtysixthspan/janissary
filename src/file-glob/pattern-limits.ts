@@ -33,18 +33,18 @@ function hasTooManyStars(alternative: string, maxStars: number): boolean {
   return alternative.split('/').some((name) => starRuns(name) > maxStars);
 }
 
-// Each `*` in one name nests another backtracking loop in the compiled matcher, so the cost of a
-// failed match grows with the name length raised to the star count; `?` and `**` stay linear.
-// A failing name is tested against every {a,b} alternative in turn, so the costs add up. Against a
-// 255-character name, one three-star name measured up to 2.1 ms and 64 of them about 135 ms, while
-// 64 two-star alternatives took 0.9 ms; so three stars are allowed only up to two alternatives.
-// The matcher runs minimatch with `windowsPathsNoEscape`, which rewrites every `\` to `/` before it
-// expands braces, so `\{a,b}` is a real choice there, not an escaped brace. The cap judges the same
-// normalized pattern the matcher compiles, or such a pattern would pass as one alternative.
-// After brace expansion, minimatch's optimizationLevel 2 rewrites each `**/../<p>/<p>` into two
-// patterns and repeats, so `'**/../a/b/'.repeat(13) + 'c'` compiled 8,192 patterns in 0.72 s. That
-// split needs a `..` name, and the paths the matcher sees never hold one, so any alternative with a
-// `..` name is refused outright.
+// The matcher runs synchronously on the main event loop, and each `*` in one name adds a stage of
+// work to a failed match, so the cost grows with the name length raised to the star count; `?` and
+// `**` stay linear. A failing name is tested against every {a,b} alternative in turn, so the costs
+// add up. Against a 255-character name, one three-star name measured up to 2.1 ms and 64 of them
+// about 135 ms, while 64 two-star alternatives took 0.9 ms; so three stars are allowed only up to
+// two alternatives.
+// `normalizeGlobPattern` rewrites every `\` to `/` before the matcher expands braces, so `\{a,b}`
+// is a real choice there, not an escaped brace. The cap judges that same normalized pattern, or
+// such a pattern would pass as one alternative.
+// At optimizationLevel 2, minimatch splits each `**/../<p>/<p>` into additional patterns and
+// throws a RangeError once that growth passes its own limit. The paths the matcher sees never hold
+// a `..` name, so any alternative with one is refused outright before minimatch is constructed.
 export function globPatternRefusal(pattern: string): string | undefined {
   if (pattern.length > FILE_GLOB_MAX_PATTERN_LENGTH) return FILE_GLOB_TOO_COMPLEX;
   const alternatives = braceExpand(normalizeGlobPattern(pattern), { braceExpandMax: FILE_GLOB_MAX_ALTERNATIVES + 1 });
