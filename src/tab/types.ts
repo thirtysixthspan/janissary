@@ -164,6 +164,10 @@ export type EditorView = {
   // icon's tooltip pushes to, the same way `FileNavigatorView.branch` names it for the navigator's
   // own commit button.
   branch?: string;
+  // Projection-only, set by `buildTabView` on every broadcast and never stored on the tab record:
+  // why this editor cannot be revealed in a file navigator, absent when it can. Derived at view
+  // time so it cannot go stale when the route behind a cached remote file changes.
+  revealBlocked?: 'unsaved' | 'no-route';
 };
 
 // Which per-row detail a file navigator shows to the right of each name: none, a human-readable

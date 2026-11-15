@@ -10,6 +10,7 @@ import { remoteFileNavigatorTarget } from './remote-file-navigator-view.js';
 import { tabGroupName } from './groups.js';
 import { queueEntryLine } from '../command-queue/entry.js';
 import { backgroundRepliesFor, pendingAcpReplyNamesFor } from './background-replies.js';
+import { editorRevealBlocked } from '../file-navigator/reveal-editor.js';
 
 export function buildTabViews(
   tabs: Tab[],
@@ -108,6 +109,7 @@ export function buildTabView(
   // exits while the tab and its file outlive it.
   const transcript = tab.transcript;
   const queue = queueProjection(tab, declarationOf?.(tab.plugin?.id ?? ''), commandQueue);
+  const revealBlocked = tab.editor ? editorRevealBlocked(tab.editor) : undefined;
   return {
     label: tab.label,
     ...(tab.hidden && { hidden: true }),
@@ -167,7 +169,10 @@ export function buildTabView(
     harness: tab.harness && (recording === undefined
       ? tab.harness
       : { ...tab.harness, recording }),
-    editor: tab.editor ? { ...tab.editor, path: shorten(tab.editor.path) } : undefined,
+    editor: tab.editor ? {
+      ...tab.editor, path: shorten(tab.editor.path),
+      ...(revealBlocked !== undefined && { revealBlocked }),
+    } : undefined,
     // Deliberately NOT spreading `tab.editorDraft` here: the transient unsaved buffer is
     // server-only and must never be broadcast back to clients (see editor-live-buffer-sync plan).
     // Same for `tab.pageSnapshot`: the visible-text cache a plugin writes through `snapshotTab` is
