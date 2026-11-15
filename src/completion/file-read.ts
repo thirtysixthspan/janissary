@@ -21,9 +21,9 @@ function completeGlobArgument(cursor: CompletionCursor, root: string | undefined
   return unchanged(cursor);
 }
 
-// Complete `file read <path> [--offset <line>] [--limit <lines>]` and `file glob`. Paths complete
-// against `root`, the directory the read and the glob resolve against; an undefined root (a remote
-// tab) offers no paths. Subcommands disabled by `policy` are not offered.
+// Complete `file read <path> [--offset <line>] [--limit <lines>]`, `file glob`, and `file grep`.
+// Paths complete against `root`, the directory all three resolve against; an undefined root (a
+// remote tab) offers no paths. Subcommands disabled by `policy` are not offered.
 export function completeFileReadCommand(
   cursor: CompletionCursor,
   root: string | undefined,

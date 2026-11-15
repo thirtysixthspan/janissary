@@ -39,6 +39,10 @@ const HELP_DIRECTORY = path.join(path.dirname(fileURLToPath(import.meta.url)), '
  *   root the read resolves against; with no root (a remote tab) it offers no paths.
  * - For `file glob`, completes the subcommand, its flags, and directory names after `--path`
  *   against `fileReadRoot`; with no root (a remote tab) it offers no directories.
+ * - For `file grep`, completes the subcommand, its seven lowercase flags, and file or directory
+ *   names after `--path` against `fileReadRoot`, all before the pattern starts; with no root (a
+ *   remote tab) it offers no paths. The include, exclude, and limit values, and every word once
+ *   the pattern or a `--` terminator starts, get nothing.
  * - Otherwise completes a filesystem path relative to `cwd`.
  *
  * A single match is filled in fully; multiple matches fill in their longest common prefix
