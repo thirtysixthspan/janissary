@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { openOrRetarget } from './open.js';
+import { openOrRetarget, openOrRetargetLocalAt } from './open.js';
 import type { OpenPort } from './open.js';
 import type { Managers } from '../managers.js';
 import type { FilesTabState } from './state.js';
@@ -81,6 +81,15 @@ function makeManagers(options: {
     },
   } as unknown as Managers;
   return { managers, port: makePort(managers), tabs, opened, setCwd, setActiveTab, setDock, attach, release, source };
+}
+
+// A navigator with something to lose: one expanded directory and both move stacks populated.
+function navigatorState(): FilesTabState {
+  return {
+    root: '/old', expanded: new Set(['src']), watchers: new Map(), pendingWatchers: new Map(), listings: new Map(),
+    listingLoads: new Map(), statLoads: new Map(), cacheGeneration: 1, undoStack: [{}], redoStack: [{}],
+    details: 'name', stats: new Map(), filesystem: { dispose: vi.fn() },
+  } as unknown as FilesTabState;
 }
 
 describe('openOrRetarget', () => {
@@ -287,5 +296,109 @@ describe('openOrRetarget', () => {
 
     expect(port.states.size).toBe(0);
     expect(port.watchDir).toHaveBeenCalledOnce();
+  });
+});
+
+describe('openOrRetargetLocalAt', () => {
+  it('opens a fresh navigator at the root, docked left, and returns its label', () => {
+    const { port, opened, setCwd, setDock, setActiveTab } = makeManagers();
+    const root = tree();
+
+    const label = openOrRetargetLocalAt(port, root);
+
+    expect(label).toBe('files-1');
+    expect(opened).toHaveLength(1);
+    expect(opened[0].root).toBe(root);
+    expect(port.states.get('files-1')?.root).toBe(root);
+    expect(port.watchDir).toHaveBeenCalledWith('files-1', root, '');
+    expect(port.refreshGit).toHaveBeenCalledWith('files-1');
+    expect(setCwd).toHaveBeenCalledWith('files-1', root);
+    expect(setDock).toHaveBeenCalledWith(expect.any(Number), 'left');
+    expect(setActiveTab).not.toHaveBeenCalled();
+  });
+
+  it('retargets the most recent navigator rather than opening a second one', () => {
+    const { port, opened, setCwd, setDock, tabs } = makeManagers({ existing: 'files-1' });
+    const root = tree();
+    tabs.push({ label: 'files-1' });
+    port.states.set('files-1', navigatorState());
+
+    const label = openOrRetargetLocalAt(port, root);
+
+    expect(label).toBe('files-1');
+    expect(opened).toEqual([]);
+    const state = port.states.get('files-1');
+    expect(state?.root).toBe(root);
+    expect(state?.expanded.size).toBe(0);
+    expect(state?.undoStack).toEqual([]);
+    expect(state?.redoStack).toEqual([]);
+    expect(port.watchDir).toHaveBeenCalledWith('files-1', root, '');
+    expect(setCwd).toHaveBeenCalledWith('files-1', root);
+    expect(setDock).not.toHaveBeenCalled();
+  });
+
+  // Retargeting a navigator already rooted at the target is not a no-op: the reveal rule clears the
+  // expanded set and the move history even when the root does not move.
+  it('retargets a navigator already rooted at the target and clears its history', () => {
+    const { port, opened, setDock } = makeManagers({ existing: 'files-1' });
+    const root = tree();
+    port.states.set('files-1', { ...navigatorState(), root });
+
+    const label = openOrRetargetLocalAt(port, root);
+
+    expect(label).toBe('files-1');
+    expect(opened).toEqual([]);
+    const state = port.states.get('files-1');
+    expect(state?.root).toBe(root);
+    expect(state?.expanded.size).toBe(0);
+    expect(state?.undoStack).toEqual([]);
+    expect(state?.redoStack).toEqual([]);
+    expect(port.watchDir).toHaveBeenCalledWith('files-1', root, '');
+    expect(port.rebuild).toHaveBeenCalledWith('files-1');
+    expect(setDock).not.toHaveBeenCalled();
+  });
+
+  it('returns undefined for a root that is not a directory', () => {
+    const { port, opened, setActiveTab } = makeManagers();
+    const missing = path.join(tmpdir(), 'janus-navigator-open-absent');
+
+    expect(openOrRetargetLocalAt(port, missing)).toBeUndefined();
+
+    expect(opened).toEqual([]);
+    expect(port.states.size).toBe(0);
+    expect(port.watchDir).not.toHaveBeenCalled();
+    expect(setActiveTab).not.toHaveBeenCalled();
+  });
+
+  it('leaves the most recent navigator untouched for a root that is not a directory', () => {
+    const { port, opened, setCwd } = makeManagers({ existing: 'files-1' });
+    const missing = path.join(tmpdir(), 'janus-navigator-open-absent');
+    const seeded = navigatorState();
+    port.states.set('files-1', seeded);
+
+    expect(openOrRetargetLocalAt(port, missing)).toBeUndefined();
+
+    const state = port.states.get('files-1');
+    expect(state).toBe(seeded);
+    expect(opened).toEqual([]);
+    expect(state?.root).toBe('/old');
+    expect(state?.expanded).toEqual(new Set(['src']));
+    expect(state?.watchers).toBe(seeded.watchers);
+    expect(port.watchDir).not.toHaveBeenCalled();
+    expect(port.unwatchDir).not.toHaveBeenCalled();
+    expect(port.rebuild).not.toHaveBeenCalled();
+    expect(setCwd).not.toHaveBeenCalled();
+  });
+
+  it('returns undefined for a most-recent label with no state', () => {
+    const { port, opened, setCwd } = makeManagers({ existing: 'files-1' });
+    const root = tree();
+
+    expect(openOrRetargetLocalAt(port, root)).toBeUndefined();
+
+    expect(opened).toEqual([]);
+    expect(port.states.size).toBe(0);
+    expect(port.watchDir).not.toHaveBeenCalled();
+    expect(setCwd).not.toHaveBeenCalled();
   });
 });
