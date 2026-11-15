@@ -106,7 +106,7 @@ Tool results are recorded as ACP steps and appear in the connection tab as expan
 
 `file read <path> [--offset <line>] [--limit <lines>]` is both a typed application command and a tool in the autonomous loop. `parseFileRead` in `src/file-read/command.ts` accepts one path token and the optional flags; `--offset` defaults to 1 and `--limit` to 2000. One read prints at most 2000 lines, and a file over 5 MB is refused. The path is a single whitespace-free token relative to the root. `help file` is its typed reference page; this section states the behavior both forms share.
 
-A local tab reads its workspace directory, or its launch or project directory when it has no workspace. A remote tab reads its remote clone through the `read-lines` operation and never local disk. The loop's workspace tool reads that same root on the host running the loop: `readFileInTab` locally, `readWorkspaceCommand` in `src/file-read/read.ts` on the far side. Writes and edits use that same far-side root through `runFileMutation` with the remote machine's local filesystem. Content search uses that same remote clone and workspace root through its own read-only operation, described under File glob.
+A local tab reads its workspace directory, or its launch or project directory when it has no workspace. A remote tab reads its remote clone through the `read-lines` operation and never local disk. The loop's workspace tool reads that same root on the host running the loop: `readFileInTab` locally, `readWorkspaceCommand` in `src/file-read/read.ts` on the far side. Writes and edits use that same far-side root through `runFileMutation` with the remote machine's local filesystem. Content search uses that same remote clone and workspace root through its own read-only operation, described under File grep.
 
 Containment and secrets are checked before the file is read. An absolute path, a path that leaves the root, or a symbolic link resolving outside it returns `Outside the workspace: <path>.`. A `.env` or `.env.*` file and any path containing a run from `SECRET_DENY_PATHS` are refused anywhere in the workspace, and a path under the real home directory matching the same table is also refused. Any of them returns `Secret file: <path>.`. The reader names the path as typed.
 
@@ -126,7 +126,7 @@ A typed read on a remote tab can also print `Remote connection unavailable.`, `T
 
 A typed read's output carries no host tag. The loop's workspace step is the only place the tag appears.
 
-When a role grants `file read`, the read part of the file tool's primer is exactly the text below; the full primer, which adds the glob primer when `file glob` is granted, the grep primer when `file grep` is granted, and the mutation primer when a write or edit is granted, is described under File grep and File write and edit tools:
+When a role grants `file read`, the read part of the file tool's primer is exactly the text below; the full primer, which adds the glob primer when `file glob` is granted, the grep primer when `file grep` is granted, and the mutation primer when a write or edit is granted, is described under File glob, File grep, and File write and edit tools:
 
 ```
 To read a file in the workspace, end your reply with one line:
