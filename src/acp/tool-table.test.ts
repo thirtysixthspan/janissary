@@ -232,6 +232,44 @@ describe('gateCommand', () => {
     }
   });
 
+  const GREP_FORMS = [
+    'file grep TODO',
+    'file grep',
+    'file grep --limit',
+    'file grep [unclosed',
+    'FILE GREP TODO',
+    '  file\tgrep TODO  ',
+    '/file grep TODO',
+    '  /FiLe   GrEp   TODO  ',
+  ];
+
+  it.each([
+    ['granted', ['file']],
+    ['ungranted', []],
+  ])('refuses agent file grep commands when %s', (_label, grants) => {
+    for (const command of GREP_FORMS) {
+      expect(gateCommand(agent({ grants }), [], command)).toStrictEqual({
+        refusal: `Agent: command not permitted: ${command}.`,
+      });
+    }
+  });
+
+  it.each([
+    ['granted', ['file']],
+    ['ungranted', []],
+  ])('routes file greps and file grep-x to the caller when %s', (_label, grants) => {
+    for (const command of ['file greps x', 'file grep-x x']) {
+      expect(gateCommand(agent({ grants }), [], command)).toStrictEqual({ runsOn: 'caller' });
+    }
+  });
+
+  it.each([
+    ['granted', ['file'], { runsOn: 'workspace' }],
+    ['ungranted', [], { refusal: 'Agent: command not permitted: /FILE READ a.md.' }],
+  ] as const)('keeps the read boundary beside the grep refusal when %s', (_label, grants, expected) => {
+    expect(gateCommand(agent({ grants }), [], '/FILE READ a.md')).toStrictEqual(expected);
+  });
+
   it('keeps file read and non-mutation routing beside the mutation refusal', () => {
     expect(gateCommand(agent({ grants: ['file'] }), [], 'file read a.md')).toStrictEqual({ runsOn: 'workspace' });
     expect(gateCommand(agent(), [], 'file read a.md')).toStrictEqual({

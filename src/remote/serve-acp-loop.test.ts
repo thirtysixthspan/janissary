@@ -7,6 +7,7 @@ import { MARKDOWN_INSTRUCTION } from '../acp/launch.js';
 import type { AcpRunSnapshot, AcpRunSnapshotRow, AcpSession, PromptHandlers } from '../acp/types.js';
 import { deferred } from '../deferred.js';
 import type * as Glob from '../file-glob/glob.js';
+import * as fileRead from '../file-read/read.js';
 import type { ServerFrame } from './protocol-frames.js';
 
 const mocks = vi.hoisted(() => ({ globWorkspaceCommand: vi.fn() }));
@@ -310,6 +311,30 @@ describe('startRemoteLoop agent runs', () => {
     const steps = framesOf(frames, 'acp-tool-step');
     expect(steps).toHaveLength(1);
     expect(steps[0]).toMatchObject({ workspace: true, result: '1\tone' });
+  });
+
+  it.each([
+    ['granted', ['file']],
+    ['ungranted', []],
+  ])('refuses an extracted file grep without a workspace read or caller request when %s', (_label, grants) => {
+    writeFileSync(path.join(workspace, 'a.md'), 'TODO\n');
+    mocks.globWorkspaceCommand.mockClear();
+    const read = vi.spyOn(fileRead, 'readWorkspaceCommand');
+    try {
+      const { frames, sent } = start([['janissary file grep TODO'], ['Done.']], agentSnapshot(grants));
+      const refusal = 'Agent: command not permitted: file grep TODO.';
+
+      expect(framesOf(frames, 'acp-tool-step')).toEqual([{
+        type: 'acp-tool-step', id: RUN_ID, command: 'file grep TODO', result: refusal, workspace: false,
+      }]);
+      expect(framesOf(frames, 'acp-tool-request')).toEqual([]);
+      expect(sent[1]).toContain(`Output of \`file grep TODO\`:\n${refusal}`);
+      expect(frames.at(-1)).toEqual({ type: 'acp-run-end', id: RUN_ID, reason: 'answered' });
+      expect(read).not.toHaveBeenCalled();
+      expect(mocks.globWorkspaceCommand).not.toHaveBeenCalled();
+    } finally {
+      read.mockRestore();
+    }
   });
 });
 
