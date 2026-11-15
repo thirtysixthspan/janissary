@@ -10,6 +10,8 @@ import { deferred } from '../deferred.js';
 import type * as Glob from '../file-glob/glob.js';
 import type * as Grep from '../file-grep/grep.js';
 import { FILE_GREP_USAGE } from '../file-grep/command.js';
+import * as fileGrepCandidates from '../file-grep/candidates.js';
+import * as fileGrepScan from '../file-grep/scan.js';
 import * as fileRead from '../file-read/read.js';
 import type { ServerFrame } from './protocol-frames.js';
 
@@ -640,11 +642,20 @@ describe('startRemoteLoop workspace grep routing', () => {
 
   it('reports a malformed regex before a contained secret is read', async () => {
     writeFileSync(path.join(workspace, '.env'), 'TODO=secret\n');
-    const { frames } = start([['file grep [unclosed'], ['Done.']], coreSnapshot('tell', ['file grep']));
+    const discover = vi.spyOn(fileGrepCandidates, 'discoverGrepCandidates');
+    const scan = vi.spyOn(fileGrepScan, 'scanFiles');
+    try {
+      const { frames } = start([['file grep [unclosed'], ['Done.']], coreSnapshot('tell', ['file grep']));
 
-    await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
-    expect(framesOf(frames, 'acp-tool-step')[0]?.result)
-      .toBe(`${regexMessage('[unclosed')}\nUse --literal to search for the text as typed.`);
+      await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
+      expect(framesOf(frames, 'acp-tool-step')[0]?.result)
+        .toBe(`${regexMessage('[unclosed')}\nUse --literal to search for the text as typed.`);
+      expect(discover).not.toHaveBeenCalled();
+      expect(scan).not.toHaveBeenCalled();
+    } finally {
+      discover.mockRestore();
+      scan.mockRestore();
+    }
   });
 
   it('reports an empty-matching regex before a missing path', async () => {

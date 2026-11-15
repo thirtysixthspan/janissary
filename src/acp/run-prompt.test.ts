@@ -23,6 +23,8 @@ import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { BROWSER_PRIMER } from '../browser/command.js';
 import { DB_PRIMER } from '../database/primer.js';
 import { FILE_GREP_PRIMER, FILE_GREP_USAGE } from '../file-grep/command.js';
+import * as fileGrepCandidates from '../file-grep/candidates.js';
+import * as fileGrepScan from '../file-grep/scan.js';
 import { commandProtocolPrimer } from './command-protocol.js';
 import { CORE_MAX_STEPS } from './drive-loop.js';
 import { deferred } from '../deferred.js';
@@ -964,10 +966,18 @@ describe('runCorePrompt file grep routing', () => {
   it('reports a malformed regex before reading a contained secret', async () => {
     const { start } = harness({ tab: { workspaceDir: dir } });
     const { deps } = start('tell', GRANTS);
-
-    await expect(deps.runCommand('file grep [unclosed'))
-      .resolves.toBe(`${regexMessage('[unclosed')}\nUse --literal to search for the text as typed.`);
-    expect(mocks.readFileInTab).not.toHaveBeenCalled();
+    const discover = vi.spyOn(fileGrepCandidates, 'discoverGrepCandidates');
+    const scan = vi.spyOn(fileGrepScan, 'scanFiles');
+    try {
+      await expect(deps.runCommand('file grep [unclosed'))
+        .resolves.toBe(`${regexMessage('[unclosed')}\nUse --literal to search for the text as typed.`);
+      expect(discover).not.toHaveBeenCalled();
+      expect(scan).not.toHaveBeenCalled();
+      expect(mocks.readFileInTab).not.toHaveBeenCalled();
+    } finally {
+      discover.mockRestore();
+      scan.mockRestore();
+    }
   });
 
   it('reports an empty-matching regex before a missing path', async () => {
