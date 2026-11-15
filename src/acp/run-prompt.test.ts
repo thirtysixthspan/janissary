@@ -1056,6 +1056,56 @@ describe('runCorePrompt file grep routing', () => {
     expect(mocks.mutateFileInTab).toHaveBeenCalledWith(expect.anything(), 'shell', edit);
     expect(mocks.grepFilesInTab).not.toHaveBeenCalled();
   });
+
+  it('greps, reads the returned location, and answers through the real loop', async () => {
+    writeFileSync(path.join(dir, 'module.ts'), 'export const first = 1;\nexport const FILE_READ_USAGE = 2;\n');
+    const grep = 'file grep --literal --path . FILE_READ_USAGE';
+    const grepResult = 'module.ts:2: export const FILE_READ_USAGE = 2;';
+    const read = 'file read module.ts --offset 2 --limit 1';
+    const readResult = '2\texport const FILE_READ_USAGE = 2;';
+
+    await withRealLoop(async () => {
+      const { start, providerPrompt, managers, dispatchNativeLine, tab } = harness({ tab: { workspaceDir: dir } });
+      const { request } = start('tell', ['file read', 'file grep'], 'tell', 'record-1');
+
+      reply(providerPrompt, grep);
+      await vi.waitFor(() => expect(providerPrompt).toHaveBeenCalledTimes(2));
+
+      expect(providerPrompt.mock.calls[0]?.[0]).toContain(FILE_GREP_PRIMER);
+      expect(providerPrompt.mock.calls[1]?.[0]).toContain(`Output of \`${grep}\`:\n${grepResult}`);
+      expect(mocks.grepFilesInTab).toHaveBeenCalledWith(expect.anything(), 'shell', grep);
+      expect(mocks.grepFilesInTab.mock.calls[0]).toHaveLength(3);
+
+      reply(providerPrompt, read);
+      await vi.waitFor(() => expect(providerPrompt).toHaveBeenCalledTimes(3));
+
+      expect(providerPrompt.mock.calls[2]?.[0]).toContain(`Output of \`${read}\`:\n${readResult}`);
+      expect(mocks.readFileInTab).toHaveBeenCalledWith(expect.anything(), 'shell', read);
+      expect(mocks.mutateFileInTab).not.toHaveBeenCalled();
+      expect(mocks.globFilesInTab).not.toHaveBeenCalled();
+
+      reply(providerPrompt, 'Found FILE_READ_USAGE.');
+      await vi.waitFor(() => expect(request.finish).toHaveBeenCalled());
+
+      expect(request.finish).toHaveBeenCalledWith(expect.objectContaining({
+        answered: true, reply: 'Found FILE_READ_USAGE.', session: 'session',
+      }));
+      expect(dispatchNativeLine).not.toHaveBeenCalled();
+      expect(tab.cmdHistory).toEqual(['git status']);
+      const appended = vi.mocked(managers.tab.append).mock.calls
+        .map(([, entry]) => entry).filter((entry) => entry.acp === true);
+      expect(appended).toEqual([
+        { input: grep, output: grepResult, acp: true },
+        { input: read, output: readResult, acp: true },
+      ]);
+      expect(vi.mocked(managers.acpRecords.activity).mock.calls).toEqual([
+        ['record-1', 'tool', grep],
+        ['record-1', 'tool', grepResult],
+        ['record-1', 'tool', read],
+        ['record-1', 'tool', readResult],
+      ]);
+    });
+  });
 });
 
 describe('runCorePrompt file grep loop preservation', () => {

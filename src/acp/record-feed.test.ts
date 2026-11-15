@@ -14,6 +14,10 @@ import { makeTab } from '../tab/index.js';
 import { AcpPromptControl } from './prompt-control.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
 import type { AcpSessionListener } from '../remote/channel/acp.js';
+import { dispatchAcp } from '../remote/channel/acp.js';
+import type { ClientFrame, RemoteFrame, ServerFrame } from '../remote/protocol-frames.js';
+import { decodeFrame, encodeFrame } from '../remote/protocol.js';
+import { startRemoteLoop, type RemoteLoopHandle } from '../remote/serve-acp-loop.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { closeTabResources } from '../tab/cleanup.js';
 
@@ -33,8 +37,9 @@ vi.mock('../shell/index.js', () => ({
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 const fixtures: ReturnType<typeof setup>[] = [];
 
-function setup(remote = false) {
+function setup(remote = false, farLoop = false) {
   const root = mkdtempSync(path.join(tmpdir(), 'core-record-feed-'));
+  const farRoot = farLoop ? mkdtempSync(path.join(tmpdir(), 'core-record-feed-far-')) : undefined;
   home.dir = root;
   const records = new AcpSessionRecords({ projectDir: root });
   const managers = { acpRecords: records } as Managers;
@@ -54,11 +59,59 @@ function setup(remote = false) {
     return session;
   });
   const listeners: AcpSessionListener[] = [];
+  const listenersById = new Map<string, AcpSessionListener>();
   const streamed = new Map<number, string>();
   const started = new Set<number>();
+  const farPrompts: PromptHandlers[] = [];
+  const farTexts: string[] = [];
+  const farFrames: RemoteFrame[] = [];
+  const clientFrames: ClientFrame[] = [];
+  let farHandle: RemoteLoopHandle | undefined;
+  const farSession: AcpSession = {
+    prompt(text, handlers) { farTexts.push(text); farPrompts.push(handlers); },
+    cancel: async () => {}, kill: () => {}, shutdown: async () => {},
+  };
+  const sendServer = (frame: ServerFrame) => {
+    const decoded = decodeFrame(encodeFrame(frame));
+    if ('error' in decoded) throw new Error(decoded.error);
+    farFrames.push(decoded);
+    dispatchAcp(listenersById, decoded);
+  };
   const channel = {
-    attached: true, send: vi.fn(),
-    attachAcp: (_id: string, value: AcpSessionListener) => { listeners.push(value); },
+    attached: true,
+    send: vi.fn((frame: ClientFrame) => {
+      if (farRoot === undefined) return;
+      const decoded = decodeFrame(encodeFrame(frame));
+      if ('error' in decoded) throw new Error(decoded.error);
+      clientFrames.push(decoded);
+      switch (decoded.type) {
+      case 'acp-open': {
+        sendServer({ type: 'acp-ready', id: decoded.id, sandboxed: true });
+        break;
+      }
+      case 'acp-run': {
+        farHandle = startRemoteLoop(farSession, decoded, farRoot, sendServer);
+        break;
+      }
+      case 'acp-tool-result': {
+        farHandle?.toolResult(decoded);
+        break;
+      }
+      case 'acp-cancel': {
+        void farHandle?.cancel();
+        break;
+      }
+      case 'acp-close': {
+        farHandle?.abort();
+        sendServer({ type: 'acp-closed', id: decoded.id, released: true });
+        break;
+      }
+      }
+    }),
+    attachAcp: (id: string, value: AcpSessionListener) => {
+      listeners.push(value);
+      listenersById.set(id, value);
+    },
     detachAcp: vi.fn(),
   } as unknown as RemoteChannel;
   managers.remote = { get: () => channel } as Managers['remote'];
@@ -98,6 +151,16 @@ function setup(remote = false) {
   const fixture = {
     root, records, managers, sessions, handshake, chunk, end, shell: undefined as ShellManager | undefined,
     listener: () => listeners.at(-1)!,
+    clientFrames,
+    far: farRoot === undefined ? undefined : {
+      root: farRoot, prompts: farPrompts, texts: farTexts, frames: farFrames,
+      reply(index: number, text: string) {
+        const handlers = farPrompts[index];
+        if (!handlers) throw new Error(`No far-side provider prompt ${index}.`);
+        handlers.onChunk(text);
+        handlers.onEnd('end_turn');
+      },
+    },
   };
   fixtures.push(fixture);
   return fixture;
@@ -109,6 +172,7 @@ afterEach(() => {
     f.managers.acp.closeAll();
     f.records.dispose();
     rmSync(f.root, { recursive: true, force: true });
+    if (f.far) rmSync(f.far.root, { recursive: true, force: true });
   }
   fixtures.length = 0;
   vi.clearAllMocks();
@@ -348,6 +412,79 @@ describe('core record feeds', () => {
       blocks: [{
         entries: [{ kind: 'tool', text: '[host] file grep TODO' }, { kind: 'tool', text: '[host] a.txt:1: TODO' }],
         answer: 'found it',
+      }],
+    });
+  });
+
+  it('keeps one retained record through a real far-side grep, read, and answer', async () => {
+    const f = setup(true, true);
+    const far = f.far;
+    if (!far) throw new Error('Expected a far-side loop fixture.');
+    writeFileSync(path.join(f.root, 'module.ts'), 'local FILE_READ_USAGE\n');
+    writeFileSync(path.join(far.root, 'module.ts'), 'export const first = 1;\nexport const FILE_READ_USAGE = 2;\n');
+    f.managers.tab.tabs[0].workspaceDir = f.root;
+    f.managers.tab.tabs[0].cmdHistory = ['git status'];
+    const grep = 'file grep --literal --path . FILE_READ_USAGE';
+    const grepResult = 'module.ts:2: export const FILE_READ_USAGE = 2;';
+    const read = 'file read module.ts --offset 2 --limit 1';
+    const readResult = '2\texport const FILE_READ_USAGE = 2;';
+
+    const pending = f.managers.acp.prompt('owner', 'find FILE_READ_USAGE');
+    await vi.waitFor(() => { expect(far.prompts).toHaveLength(1); });
+    const id = f.managers.tab.byLabel('owner')!.runtime!.acpRoles!.ask!.recordId!;
+
+    far.reply(0, grep);
+    await vi.waitFor(() => { expect(far.prompts).toHaveLength(2); });
+    expect(far.texts[1]).toContain(`Output of \`${grep}\`:\n${grepResult}`);
+    expect(far.texts[1]).not.toContain('[host]');
+    expect(f.managers.tab.byLabel('owner')!.log.filter((entry) => entry.acp === true)).toEqual([
+      { input: `[host] ${grep}`, output: grepResult, acp: true },
+    ]);
+    expect(f.records.window(id)?.blocks[0]?.entries).toMatchObject([
+      { kind: 'tool', text: `[host] ${grep}` },
+      { kind: 'tool', text: `[host] ${grepResult}` },
+    ]);
+
+    far.reply(1, read);
+    await vi.waitFor(() => { expect(far.prompts).toHaveLength(3); });
+    expect(far.texts[2]).toContain(`Output of \`${read}\`:\n${readResult}`);
+    expect(f.managers.tab.byLabel('owner')!.log.filter((entry) => entry.acp === true)).toEqual([
+      { input: `[host] ${grep}`, output: grepResult, acp: true },
+      { input: `[host] ${read}`, output: readResult, acp: true },
+    ]);
+    expect(f.records.window(id)?.blocks[0]?.entries).toMatchObject([
+      { kind: 'tool', text: `[host] ${grep}` },
+      { kind: 'tool', text: `[host] ${grepResult}` },
+      { kind: 'tool', text: `[host] ${read}` },
+      { kind: 'tool', text: `[host] ${readResult}` },
+    ]);
+
+    far.reply(2, 'Found FILE_READ_USAGE.');
+    await expect(pending).resolves.toBe('Found FILE_READ_USAGE.');
+
+    const steps = far.frames.filter((frame) => frame.type === 'acp-tool-step');
+    expect(steps).toMatchObject([
+      { command: grep, result: grepResult, workspace: true },
+      { command: read, result: readResult, workspace: true },
+    ]);
+    expect(f.clientFrames.filter((frame) => frame.type === 'acp-tool-request')).toEqual([]);
+    expect(f.managers.tab.byLabel('owner')!.cmdHistory).toEqual(['git status']);
+    expect(f.records.window(id)?.blocks).toMatchObject([{
+      prompt: 'find FILE_READ_USAGE',
+      answer: 'Found FILE_READ_USAGE.',
+    }]);
+
+    f.managers.acp.close('owner');
+    expect(new AcpRecordStore({ projectDir: f.root }).read(id)).toMatchObject({
+      outcome: 'Closed',
+      blocks: [{
+        entries: [
+          { kind: 'tool', text: `[host] ${grep}` },
+          { kind: 'tool', text: `[host] ${grepResult}` },
+          { kind: 'tool', text: `[host] ${read}` },
+          { kind: 'tool', text: `[host] ${readResult}` },
+        ],
+        answer: 'Found FILE_READ_USAGE.',
       }],
     });
   });

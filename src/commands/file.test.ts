@@ -5,8 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
 import { FILE_GREP_USAGE, parseFileGrep } from '../file-grep/command.js';
 import { FILE_READ_USAGE } from '../file-read/command.js';
+import { decodeFileGrepArgs } from '../remote/filesystem/grep-files-arguments.js';
 import type { NavigatorListener } from '../remote/channel/types.js';
-import type { ClientFrame } from '../remote/protocol-frames.js';
+import type { ClientFrame, RemoteFrame, ServerFrame } from '../remote/protocol-frames.js';
+import { decodeFrame, encodeFrame } from '../remote/protocol.js';
+import { RemoteFileNavigators } from '../remote/serve-file-navigator.js';
 import { command } from './file.js';
 
 type FakeTab = { label: string; workspaceDir?: string; remote?: unknown };
@@ -32,6 +35,47 @@ function fakeChannel() {
   return { channel, attachNavigator, requests, reply, listener: () => listener };
 }
 
+type RequestFrame = Extract<ClientFrame, { type: 'filesystem-request' }>;
+
+function wireChannel(root: string) {
+  const entries: { line: string; frame: RemoteFrame }[] = [];
+  let listener: NavigatorListener | undefined;
+  const attachNavigator = vi.fn((_id: string, value: NavigatorListener) => { listener = value; });
+  const detachNavigator = vi.fn();
+  const roundTrip = (frame: ClientFrame | ServerFrame) => {
+    const line = encodeFrame(frame);
+    const decoded = decodeFrame(line);
+    if ('error' in decoded) throw new Error(decoded.error);
+    entries.push({ line, frame: decoded });
+    return decoded;
+  };
+  const navigator = new RemoteFileNavigators((frame) => {
+    const decoded = roundTrip(frame);
+    if (decoded.type === 'filesystem-reply') listener?.onReply(decoded);
+    else if (decoded.type === 'filesystem-event') listener?.onEvent(decoded.path);
+  }, root);
+  const channel = {
+    attachNavigator,
+    detachNavigator,
+    send: (frame: ClientFrame) => {
+      const decoded = roundTrip(frame);
+      if (decoded.type === 'filesystem-open') { navigator.open(decoded.session); return; }
+      if (decoded.type === 'filesystem-close') { navigator.close(decoded.session); return; }
+      if (decoded.type === 'filesystem-request') navigator.request(decoded);
+    },
+  };
+  const frames = () => entries.map((entry) => entry.frame);
+  const requests = () => entries.filter((entry): entry is { line: string; frame: RequestFrame } => (
+    entry.frame.type === 'filesystem-request'
+  ));
+  const closes = () => entries.filter((entry) => entry.frame.type === 'filesystem-close');
+  return {
+    channel, attachNavigator, detachNavigator, entries, frames, navigator, requests, closes,
+    reply: () => { throw new Error('The wired transport answers through the navigator.'); },
+    listener: () => listener,
+  };
+}
+
 describe('file command match', () => {
   it('accepts file and any letter case, and rejects files', () => {
     expect(command.match('file')).toBe(true);
@@ -49,6 +93,8 @@ describe('file command run', () => {
   let remoteCalls: string[];
   let tabs: FakeTab[];
   let remote: ReturnType<typeof fakeChannel>;
+  let remoteWorkspace: string;
+  let wired: ReturnType<typeof wireChannel>;
   let hasChannel: boolean;
   let workspaceKnown: boolean;
 
@@ -71,11 +117,11 @@ describe('file command run', () => {
       },
       readyOf: (label: string) => {
         remoteCalls.push(`readyOf:${label}`);
-        return Promise.resolve('/remote/ws');
+        return Promise.resolve(remoteWorkspace);
       },
       workspaceOf: (label: string) => {
         remoteCalls.push(`workspaceOf:${label}`);
-        return workspaceKnown ? '/remote/ws' : undefined;
+        return workspaceKnown ? remoteWorkspace : undefined;
       },
     },
   });
@@ -96,6 +142,7 @@ describe('file command run', () => {
     remoteCalls = [];
     tabs = [];
     remote = fakeChannel();
+    remoteWorkspace = '/remote/ws';
     hasChannel = true;
     workspaceKnown = true;
     writeFileSync(path.join(root, 'notes.md'), 'project one\nproject two\n');
@@ -420,6 +467,88 @@ describe('file command run', () => {
       await readWithReply('file glob *.md', undefined, 'boom');
       expect(output()).toBe('boom');
       expect(remote.channel.detachNavigator).toHaveBeenCalledOnce();
+    });
+
+    describe('file grep over the encoded navigator transport', () => {
+      let farRoot: string;
+
+      beforeEach(() => {
+        farRoot = mkdtempSync(path.join(tmpdir(), 'file-command-far-'));
+        mkdirSync(path.join(farRoot, 'src', 'keep'), { recursive: true });
+        writeFileSync(path.join(farRoot, 'a.ts'), 'remote needle one\n');
+        writeFileSync(path.join(farRoot, 'b.ts'), 'remote needle two\n');
+        writeFileSync(path.join(farRoot, 'notes.md'), 'docs only\n');
+        writeFileSync(path.join(farRoot, 'src', 'alpha.ts'), 'const REFERENCE: src.\n');
+        writeFileSync(path.join(farRoot, 'src', 'keep', 'gamma.ts'), 'const REFERENCE = 2\n');
+        writeFileSync(path.join(farRoot, 'src', 'beta.ts'), 'const REFERENCE = 3\n');
+        writeFileSync(path.join(root, 'a.ts'), 'near needle\n');
+        wired = wireChannel(farRoot);
+        remote = wired;
+        remoteWorkspace = farRoot;
+      });
+
+      afterEach(() => { rmSync(farRoot, { recursive: true, force: true }); });
+
+      it('searches the far root with default fields and sends no path key', async () => {
+        await start('file grep needle');
+
+        expect(output()).toBe('a.ts:1: remote needle one\nb.ts:1: remote needle two');
+        expect(output()).not.toContain('near');
+        const [request] = wired.requests();
+        if (request?.frame.type !== 'filesystem-request' || request.frame.operation !== 'grep-files') {
+          throw new Error('Expected one grep-files request.');
+        }
+        expect(request.frame.args).toEqual({
+          pattern: 'needle', include: '', exclude: '', literal: false, word: false, caseSensitive: false, limit: 100,
+        });
+        expect(decodeFileGrepArgs(request.frame.args)).toEqual({
+          pattern: 'needle', include: '', exclude: '', literal: false, word: false, caseSensitive: false, limit: 100,
+          path: undefined,
+        });
+        const wire = JSON.parse(request.line) as { args: Record<string, unknown> };
+        expect(Object.hasOwn(wire.args, 'path')).toBe(false);
+        expect(request.frame.session.startsWith('file-grep-')).toBe(true);
+        expect(request.frame.session).not.toBe('janus');
+        await vi.waitFor(() => expect(wired.closes()).toHaveLength(1));
+        expect(wired.closes()[0]?.frame).toMatchObject({ session: request.frame.session });
+        expect(wired.detachNavigator).toHaveBeenCalledWith(request.frame.session);
+      });
+
+      it('maps a nondefault --path through the codec and restores a missing typed path', async () => {
+        await start('file grep --literal --word --case-sensitive --path ./src/ --include *.ts --exclude beta.ts --limit 5 REFERENCE');
+
+        expect(output()).toBe([
+          'src/alpha.ts:1: const REFERENCE: src.',
+          'src/keep/gamma.ts:1: const REFERENCE = 2',
+        ].join('\n'));
+        expect(appended[0]?.input).toBe(
+          'file grep --literal --word --case-sensitive --path ./src/ --include *.ts --exclude beta.ts --limit 5 REFERENCE',
+        );
+        const [first] = wired.requests();
+        if (first?.frame.type !== 'filesystem-request' || first.frame.operation !== 'grep-files') {
+          throw new Error('Expected one grep-files request.');
+        }
+        expect(first.frame.args).toEqual({
+          pattern: 'REFERENCE', include: '*.ts', exclude: 'beta.ts',
+          literal: true, word: true, caseSensitive: true, limit: 5, path: 'src',
+        });
+        const wire = JSON.parse(first.line) as { args: Record<string, unknown> };
+        expect(wire.args.path).toBe('src');
+
+        appended = [];
+        await start('file grep --path ./missing/ x');
+
+        expect(output()).toBe('Path not found: ./missing/.');
+        const [, second] = wired.requests();
+        if (second?.frame.type !== 'filesystem-request' || second.frame.operation !== 'grep-files') {
+          throw new Error('Expected a second grep-files request.');
+        }
+        expect(second.frame.args).toMatchObject({ pattern: 'x', path: 'missing', limit: 100 });
+        expect(second.frame.session).not.toBe(first.frame.session);
+        expect(second.frame.session.startsWith('file-grep-')).toBe(true);
+        await vi.waitFor(() => expect(wired.closes()).toHaveLength(2));
+        expect(wired.detachNavigator).toHaveBeenCalledTimes(2);
+      });
     });
   });
 });

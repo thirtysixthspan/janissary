@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import type * as nodeOs from 'node:os';
 import os from 'node:os';
 import path from 'node:path';
 import type { Managers } from '../managers.js';
@@ -15,6 +16,15 @@ import { commandRestrictionsFrom } from '../plugins/roles/command-policy.js';
 import { commandNameCandidates, completionPolicy } from '../completion/command-policy.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { createAcpToolTable, toolExtractor, toolPrimer } from '../acp/tool-table.js';
+import * as fileGrepCandidates from '../file-grep/candidates.js';
+import * as fileGrepScan from '../file-grep/scan.js';
+
+const homeDir = vi.hoisted(() => ({ dir: '' }));
+
+vi.mock('node:os', async (importOriginal) => ({
+  ...await importOriginal<typeof nodeOs>(),
+  homedir: vi.fn(() => homeDir.dir),
+}));
 
 const roots: string[] = [];
 
@@ -24,17 +34,20 @@ afterEach(() => {
 });
 
 function fixture(): {
-  home: string; managers: Managers; settings: NativeCommandSettingsManager;
+  home: string; root: string; workspace: string; managers: Managers; settings: NativeCommandSettingsManager;
 } {
   const base = mkdtempSync(path.join(os.tmpdir(), 'native-command-feature-'));
   roots.push(base);
   const root = path.join(base, 'project');
   const home = path.join(base, 'home');
+  const workspace = path.join(base, 'workspace');
   mkdirSync(root);
   mkdirSync(home);
+  mkdirSync(workspace);
+  homeDir.dir = home;
   const settings = new NativeCommandSettingsManager(root, home);
   const managers = {} as Managers;
-  managers.tab = new TabManager(managers);
+  managers.tab = new TabManager(managers, root);
   seedRootTab(managers.tab);
   managers.shell = { run: vi.fn() } as unknown as Managers['shell'];
   managers.harness = { run: vi.fn(() => null), openLaunchDialog: vi.fn() } as unknown as Managers['harness'];
@@ -54,7 +67,7 @@ function fixture(): {
   managers.notifications = new NotificationQueue();
   managers.nativeCommandSettings = settings;
   managers.command = new CommandManager(managers);
-  return { home, managers, settings };
+  return { home, root, workspace, managers, settings };
 }
 
 function persisted(home: string): unknown {
@@ -185,5 +198,93 @@ describe('native command settings across the feature seams', () => {
     });
     expect(projectDisabledApplicationCommands(snapshot).map(({ name }) => name)).not.toContain('file grep');
     expect(commandRestrictionsFrom(snapshot)).toMatchObject({ 'file grep': 'agents' });
+  });
+
+  const COMMAND = 'file grep --literal needle   here';
+  const ROW = 'notes.md:1: needle   here';
+
+  function staged() {
+    const staged = fixture();
+    staged.managers.tab.cur().workspaceDir = staged.workspace;
+    writeFileSync(path.join(staged.workspace, 'notes.md'), 'needle   here\nother line\n');
+    writeFileSync(path.join(staged.root, 'notes.md'), 'project needle   here\n');
+    return staged;
+  }
+
+  it('runs the default grep against the tab workspace and records one typed entry', async () => {
+    const { managers } = staged();
+
+    managers.command.dispatch(COMMAND);
+
+    await vi.waitFor(() => expect(managers.tab.cur().log).toHaveLength(1));
+    expect(managers.tab.cur().log[0]).toMatchObject({ input: COMMAND, output: ROW });
+    expect(managers.tab.cur().log[0]?.output).not.toContain('project');
+    expect(managers.tab.cur().cmdHistory).toEqual([COMMAND]);
+  });
+
+  it('prints the exact disabled line without starting workspace or content work', async () => {
+    const { managers } = staged();
+    await expect(runCommandsTopicAction(managers, {
+      topic: 'commands', action: 'set', name: 'file grep', setting: 'enabled', value: false,
+    })).resolves.toBeUndefined();
+    const discover = vi.spyOn(fileGrepCandidates, 'discoverGrepCandidates');
+    const scan = vi.spyOn(fileGrepScan, 'scanFiles');
+    try {
+      managers.command.dispatch(COMMAND);
+
+      await vi.waitFor(() => expect(managers.tab.cur().log).toHaveLength(1));
+      expect(managers.tab.cur().log[0]).toMatchObject({
+        input: COMMAND, output: 'Command is disabled: file grep.',
+      });
+      expect(discover).not.toHaveBeenCalled();
+      expect(scan).not.toHaveBeenCalled();
+      expect(managers.tab.cur().cmdHistory).toEqual([COMMAND]);
+    } finally {
+      discover.mockRestore();
+      scan.mockRestore();
+    }
+  });
+
+  it('still runs a typed grep for the human when only agent access is off', async () => {
+    const { home, managers } = staged();
+    await expect(runCommandsTopicAction(managers, {
+      topic: 'commands', action: 'set', name: 'file grep', setting: 'agentAccess', value: false,
+    })).resolves.toBeUndefined();
+
+    managers.command.dispatch(COMMAND);
+
+    await vi.waitFor(() => expect(managers.tab.cur().log).toHaveLength(1));
+    expect(managers.tab.cur().log[0]).toMatchObject({ input: COMMAND, output: ROW });
+    expect(persisted(home)).toHaveProperty('file grep', { enabled: true, agentAccess: false });
+    expect(commandRestrictionsFrom(readCommandsTopic(managers))).toMatchObject({ 'file grep': 'agents' });
+    expect(managers.tab.cur().cmdHistory).toEqual([COMMAND]);
+  });
+
+  it('refuses an enabled child while its disabled file parent suppresses the run', async () => {
+    const { home, managers } = staged();
+    await expect(runCommandsTopicAction(managers, {
+      topic: 'commands', action: 'set', name: 'file grep', setting: 'enabled', value: true,
+    })).resolves.toBeUndefined();
+    await expect(runCommandsTopicAction(managers, {
+      topic: 'commands', action: 'set', name: 'file', setting: 'enabled', value: false,
+    })).resolves.toBeUndefined();
+    expect(persisted(home)).toHaveProperty('file grep', { enabled: true, agentAccess: true });
+    expect(persisted(home)).toHaveProperty('file', { enabled: false, agentAccess: true });
+    const discover = vi.spyOn(fileGrepCandidates, 'discoverGrepCandidates');
+    const scan = vi.spyOn(fileGrepScan, 'scanFiles');
+    try {
+      managers.command.dispatch(COMMAND);
+
+      await vi.waitFor(() => expect(managers.tab.cur().log).toHaveLength(1));
+      expect(managers.tab.cur().log[0]).toMatchObject({
+        input: COMMAND, output: 'Command is disabled: file grep.',
+      });
+      expect(discover).not.toHaveBeenCalled();
+      expect(scan).not.toHaveBeenCalled();
+      expect(managers.tab.cur().cmdHistory).toEqual([COMMAND]);
+    } finally {
+      discover.mockRestore();
+      scan.mockRestore();
+    }
   });
 });
