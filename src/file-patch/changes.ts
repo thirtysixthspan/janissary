@@ -1,5 +1,5 @@
 import type { PatchContent, PatchPlace } from './view-entry.js';
-import type { PatchView } from './view.js';
+import type { PatchViewReads } from './view.js';
 import { survives, type MoveRegistry, type MoveHop } from './move-chains.js';
 
 export interface PatchDelete {
@@ -30,7 +30,7 @@ export interface PatchRecord {
   removedByDelete: Set<PatchPlace>;
 }
 
-export function buildPatchChanges(view: PatchView, record: PatchRecord): PatchChanges {
+export function buildPatchChanges(view: PatchViewReads, record: PatchRecord): PatchChanges {
   const places = view.places();
   const locationMap = new Map(places.map((place) => [place.location, place]));
   const active = record.moves.chains.filter((chain) => chain.onDisk && survives(chain) && chain.current !== chain.origin);

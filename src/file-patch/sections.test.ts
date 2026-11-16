@@ -9,7 +9,7 @@ import { parsePatchText } from './parse.js';
 import { patchRows } from './rows.js';
 import { applySections } from './sections.js';
 import type { PatchContent, PatchPlace } from './view-entry.js';
-import { createPatchView } from './view.js';
+import { createPatchView, type PatchViewReads } from './view.js';
 
 let root: string;
 beforeEach(() => { root = realpathSync(mkdtempSync(path.join(tmpdir(), 'janus-sections-'))); });
@@ -287,8 +287,8 @@ describe('patch sections', () => {
       places.push(place);
       record.writes.set(content, { place, fromAdd: false });
     }
-    const changes = buildPatchChanges({ places: () => places, contents: () => [], plannedFolders: () => [],
-      resolve: () => { throw new Error('unexpected resolve'); } }, record);
+    const view: PatchViewReads = { places: () => places, plannedFolders: () => [] };
+    const changes = buildPatchChanges(view, record);
     expect(changes.writes.map((item) => item.text)).toEqual(places.filter((place) => place.exists).map((place) => place.requested));
     expect(reads).toBe(1000);
   });
@@ -318,7 +318,7 @@ describe('patch sections', () => {
     record.moves.chains = record.moves.chains.map((chain) => new Proxy(chain, {
       get(target, property, receiver) { reads += 1; return Reflect.get(target, property, receiver); },
     }));
-    const view = { places: () => places, contents: () => [], plannedFolders: () => [], resolve: () => { throw new Error('unexpected resolve'); } };
+    const view: PatchViewReads = { places: () => places, plannedFolders: () => [] };
     const changes = buildPatchChanges(view, record);
     const rows = patchRows(places, record.moves.chains);
     expect(changes.moves.map((move) => move.order)).toEqual(Array.from({ length: 1000 }, (_, i) => i));

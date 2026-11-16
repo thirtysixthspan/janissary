@@ -4,15 +4,18 @@ import { resolveMutationTarget } from '../file-write/target.js';
 import { volumeIgnoresCase } from './volume-case.js';
 import { placeKeys, readPatchContent, type PatchContent, type PatchPlace, type PlaceKeys } from './view-entry.js';
 
+export interface PatchViewReads {
+  places(): readonly PatchPlace[];
+  plannedFolders(): readonly string[];
+}
+
 // Only section application may change place existence, link text, content references, or current text.
 // Existence changes go through setExists so the planned-folder index stays current.
-export interface PatchView {
+export interface PatchView extends PatchViewReads {
   resolve(requested: string): FileOperationResult<PatchPlace>;
   resolveLink(place: PatchPlace): FileOperationResult<PatchPlace>;
   setExists(place: PatchPlace, value: boolean): void;
-  places(): readonly PatchPlace[];
   contents(): readonly PatchContent[];
-  plannedFolders(): readonly string[];
 }
 
 export function createPatchView(root: string, caseInsensitive = volumeIgnoresCase(root)): PatchView {
