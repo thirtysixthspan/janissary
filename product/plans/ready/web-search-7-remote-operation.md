@@ -8,7 +8,7 @@ The seventh slice of the `web search` feature (source plan: `./product/plans/com
 
 - `./product/plans/complete/web-search-1-command-grammar.md` — the range constants `WEB_SEARCH_MIN_RESULTS` (1), `WEB_SEARCH_MAX_RESULTS` (20), `WEB_SEARCH_MIN_CHARS` (200), `WEB_SEARCH_MAX_CHARS` (100000), and the types `WebSearchCommand` and `WebSearchDepth`, all exported from `src/web-search/command.ts`.
 - `./product/plans/complete/web-search-3-provider-tokens.md` — `REMOTE_PROTOCOL_VERSION` 43 with its version-43 comment in `src/remote/protocol.ts`, the "Protocol version 43 adds…" paragraph in `product/specs/remote-server.md`, and the `expect(REMOTE_PROTOCOL_VERSION).toBe(43)` assertion in `src/remote/protocol.test.ts`. This slice edits the comment and the paragraph that slice adds, so it lands after it.
-- `./product/plans/ready/web-search-6-search-core.md` — `webSearch(request, deps)` and `WebSearchDeps` (`tokens: ProjectTokens`, `fetch: typeof fetch`, optional `signal`, optional `reportDisabled`) from `src/web-search/search.ts`, resolving to `Promise<string>`.
+- `./product/plans/complete/web-search-6-search-core.md` — `webSearch(request, deps)` and `WebSearchDeps` (`tokens: ProjectTokens`, `fetch: typeof fetch`, optional `signal`, optional `reportDisabled`) from `src/web-search/search.ts`, resolving to `Promise<string>`.
 
 All 14 web-search slices ship on one pull request; the ordering above is the order the implementer applies them in so typecheck and tests stay green at each checkpoint.
 

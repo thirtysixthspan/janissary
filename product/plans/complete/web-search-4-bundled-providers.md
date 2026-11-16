@@ -81,6 +81,6 @@ Vitest `server` project, colocated, each with a fake `fetch` as in `src/models/p
 ## Out of scope
 
 - The catalog, manifests, lazy activation, version checks, and disabling (`./product/plans/complete/web-search-5-provider-registry.md`).
-- Fallback between providers, failure-line formatting, and cutting to `--results` (`./product/plans/ready/web-search-6-search-core.md`).
+- Fallback between providers, failure-line formatting, and cutting to `--results` (`./product/plans/complete/web-search-6-search-core.md`).
 - Normalizing, deduping, and rendering results (`./product/plans/complete/web-search-2-result-rendering.md`).
 - Paging a provider to reach `--results`; provider options beyond `--depth` (topics, locations, languages, dates, answers, raw content, images); configured domain filtering (user decisions).

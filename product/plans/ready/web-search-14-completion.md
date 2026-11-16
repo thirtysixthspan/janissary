@@ -6,7 +6,7 @@ The fourteenth and last slice of the `web search` feature (source plan: `./produ
 
 ## Dependencies
 
-- `./product/plans/ready/web-search-6-search-core.md` — `webSearchProviderNames()` exported from `src/web-search/search.ts`, the module-level registry's `providerNames()` (manifest ids in catalog order: `tavily`, `tinyfish`), built over `webSearchProviderCatalog` from `src/web-search/providers/catalog.ts` (slice 5) without importing any provider module.
+- `./product/plans/complete/web-search-6-search-core.md` — `webSearchProviderNames()` exported from `src/web-search/search.ts`, the module-level registry's `providerNames()` (manifest ids in catalog order: `tavily`, `tinyfish`), built over `webSearchProviderCatalog` from `src/web-search/providers/catalog.ts` (slice 5) without importing any provider module.
 - `./product/plans/ready/web-search-10-typed-command.md` — the parentless `web` builtin row (`BUILTIN_FORMS` in `src/application-commands.ts`), and `product/specs/web-search.md`, which this slice adds a completion section to.
 - `./product/plans/ready/web-search-12-acp-tool.md` — the native `web search` row, parented under `web`. Without it `policy.allows('web search')` resolves to the `web` row, so the "disabled `web search`" behavior and its test only exist once slice 12 has landed.
 
