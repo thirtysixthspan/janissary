@@ -5,7 +5,7 @@ import {
 } from './argument-checks.js';
 import { nonEmptyString } from '../frame/decode-shared.js';
 import {
-  refusedDeleteMany, refusedItem, refusedMoveMany, refusedPaste, refusedReplay,
+  refusedDeleteMany, refusedItem, refusedPaste, refusedReplay,
 } from './refusal-shapes.js';
 import type { RemoteFilesystemOperation } from '../protocol-frames.js';
 import { descriptorFor, type AnyOperationDescriptor, type OperationContext } from './operation-types.js';
@@ -19,6 +19,7 @@ import { globPathsOperation } from './glob-paths-operation.js';
 import { grepFilesOperation } from './grep-files-operation.js';
 import { webSearchOperation } from './web-search-operation.js';
 import { changeSetOperation } from './change-set-operation.js';
+import { moveManyOperation, moveOperation } from './move-operations.js';
 
 // What an operation's `run` reaches, handed over as one value so the table stays a plain data
 // module: `root` and `filesystem` are the far side's own, and the rest are bound closures over the
@@ -80,31 +81,8 @@ const READ_OPERATIONS = {
 const MUTATION_OPERATIONS = {
   'write-file': writeFileOperation,
   'edit-file': editFileOperation,
-  move: descriptorFor<'move'>()({
-    valid: (args) => stringValue(args.from) && stringValue(args.to)
-      && (args.overwrite === undefined || typeof args.overwrite === 'boolean'),
-    decode: (args) => ({
-      from: requireString(args.from), to: requireString(args.to),
-      ...(args.overwrite !== undefined && { overwrite: requireBoolean(args.overwrite) }),
-    }),
-    paths: (args) => [args.from, args.to],
-    rootDestination: true, refusal: refusedItem,
-    decodeResult: resultDecoders.move,
-    run: (context, args) => context.filesystem.move(context.root, args.from, args.to, args.overwrite),
-  }),
-  'move-many': descriptorFor<'move-many'>()({
-    valid: (args) => stringArray(args.sources) && stringValue(args.destination) && policy(args.policy),
-    decode: (args) => ({
-      sources: requireStringArray(args.sources), destination: requireString(args.destination),
-      ...optionalPolicy(args.policy),
-    }),
-    paths: (args) => [...args.sources, args.destination],
-    rootDestination: true, refusal: refusedMoveMany,
-    decodeResult: resultDecoders['move-many'],
-    run: (context, args) => context.filesystem.moveMany(
-      context.root, args.sources, args.destination, args.policy,
-    ),
-  }),
+  move: moveOperation,
+  'move-many': moveManyOperation,
   delete: descriptorFor<'delete'>()({
     valid: (args) => stringValue(args.path),
     decode: pathOnly, paths: namedPath, refusal: refusedItem,

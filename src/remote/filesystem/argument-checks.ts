@@ -4,7 +4,7 @@ import type { PastePair } from '../../file-navigator/paste.js';
 import { isRecord } from '../../value-guards.js';
 
 // The value-shape predicates every filesystem operation's argument validator is built from, and the
-// one decode helper two of them share. Kept apart from both the operation table and the frame
+// one decode helper two of them share, plus the base64 UTF-8 decoder text operations share. Kept apart from both the operation table and the frame
 // decoder so neither has to import the other to reach them. `nonEmptyString`, which every frame
 // decoder needs too, lives in `src/remote/frame/decode-shared.ts`.
 const INVALID_ARGUMENTS = 'Invalid remote filesystem operation arguments.';
@@ -30,6 +30,23 @@ export function requireStringArray(value: unknown): string[] {
 export function requireBoolean(value: unknown): boolean {
   if (typeof value !== 'boolean') throw new Error(INVALID_ARGUMENTS);
   return value;
+}
+
+export function decodeBase64Text(value: unknown): string | undefined {
+  if (!stringValue(value)) return undefined;
+  const bytes = Buffer.from(value, 'base64');
+  if (bytes.toString('base64') !== value) return undefined;
+  try {
+    return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
+  } catch {
+    return undefined;
+  }
+}
+
+export function requireBase64Text(value: unknown): string {
+  const text = decodeBase64Text(value);
+  if (text === undefined) throw new Error(INVALID_ARGUMENTS);
+  return text;
 }
 
 export function requireDirection(value: unknown): 'undo' | 'redo' {
