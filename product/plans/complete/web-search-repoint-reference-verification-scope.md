@@ -39,7 +39,7 @@ A reader following the plan's Tests section runs that search, finds the draft li
 - **Scope the claim to what the repair did.** Five links were edited and five now resolve under `complete/`; asserting anything about every reference turns a narrow, verified repair into a claim about files the entry never touched.
 - **Name the draft link where the reader will look.** The Tests bullet is the instruction a reader follows, so the exception belongs there rather than only in Out of scope. Repeating it in both places is deliberate: the test verifies the edited links, and the out-of-scope note records the untouched one.
 - **Describe the draft link without quoting its full path.** The plan's design decisions already avoid quoting the stale literal so the verifying search stays clean; naming the file and the draft folder identifies the reference without adding a fresh `web-search-14-completion` match to the plan itself.
-- **Correct the prose, not the subplans.** The five edited subplans, the completion plan, and the default-grants subplan are all accurate as they stand. Only the fix plan's verification claim overstates the repair.
+- **Correct the prose, not the subplans.** The four edited subplans and the completion plan are accurate as they stand, while `product/plans/complete/web-search-13-default-grants.md` is deliberately left unchanged and still carries the pre-existing stale draft-folder completion link. Only the repoint plan's verification claim overstated the repair.
 
 ## Proposed changes
 
@@ -74,7 +74,7 @@ No `./product/specs/` update. This corrects internal plan prose; it changes no u
 
 ## Out of scope
 
-- The five edited subplans, `product/plans/complete/web-search-14-completion.md`, and `product/plans/complete/web-search-13-default-grants.md`; all of their paths and prose are as intended.
+- The four edited subplans and `product/plans/complete/web-search-14-completion.md`; their paths and prose are as intended.
 - The draft-folder completion link in `product/plans/complete/web-search-13-default-grants.md`; it is the pre-existing stale link this plan records as out of scope, not one it repairs.
 - The repoint plan's Goal, Issue, Approach, Design decisions, Proposed changes, Verification, Spec, Out of scope, and Rating basis.
 - Every other plan, including the `ready/` plans that point at other subplans.
