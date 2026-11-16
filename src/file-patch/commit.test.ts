@@ -106,15 +106,13 @@ it('restores a vacated path that a later section re-creates', () => {
 
 it('restores a vacated path when a rename into it fails', () => {
   write('b', 'original\n', 0o640); write('d', 'other\n');
-  const patch = '*** Update File: b\n*** Move to: c\n*** Delete File: c\n*** Update File: d\n*** Move to: b\n*** Add File: later\n+x';
-  let writes = 0;
-  const operations: CommitOperations = { ...defaultCommitOperations, writeFile(name, bytes) { writes += 1; if (writes === 1) throw fail(); defaultCommitOperations.writeFile(name, bytes); } };
-  expect(run(patch, operations)).toMatchObject({ ok: false, restored: true, path: 'later' });
+  const patch = '*** Update File: b\n*** Move to: c\n*** Delete File: c\n*** Update File: d\n*** Move to: b';
+  const operations: CommitOperations = { ...defaultCommitOperations, rename(from, to) { if (to === file('b')) throw fail(); defaultCommitOperations.rename(from, to); } };
+  expect(run(patch, operations)).toMatchObject({ ok: false, restored: true, path: 'd' });
   expect(readFileSync(file('b'))).toEqual(Buffer.from('original\n'));
   expect(mode('b')).toBe(0o640);
   expect(read('d')).toBe('other\n');
   expect(existsSync(file('c'))).toBe(false);
-  expect(existsSync(file('later'))).toBe(false);
 });
 
 it('restores after rename and folder failures with the reported section path', () => {
