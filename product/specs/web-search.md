@@ -60,7 +60,7 @@ When a local search disables a provider, one notification, `Web search provider 
 
 ### Agent tool
 
-An ACP `ask` or `tell` session can run the same search as a callable tool when its role grants the native command `web search`; no built-in role grants it yet. The grammar is the typed command's, with the query followed by the optional `--results`, `--max-chars`, `--depth`, and `--provider` flags, and the output is the same Markdown list or failure line the typed search prints. [[acp]] states the exact primer an agent is given and the gate's refusal messages.
+An ACP `ask` or `tell` session can run the same search as a callable tool when its role grants the native command `web search`; the built-in `ask` and `tell` roles grant it by default, and a saved roles file is not migrated, so a saved role keeps the grants it lists. With no provider token configured, a granted search reports `Web search: no provider configured.` and sends nothing. The grammar is the typed command's, with the query followed by the optional `--results`, `--max-chars`, `--depth`, and `--provider` flags, and the output is the same Markdown list or failure line the typed search prints. [[acp]] states the exact primer an agent is given and the gate's refusal messages.
 
 The agent asks for a search by ending its reply with one `web search …` line. Only a lowercase `web search` line counts, so a final answer that begins a sentence with `Web search …` stays the answer rather than starting a search. A bare `web search` line is a command and answers with the usage line.
 

@@ -4,6 +4,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSyn
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { DEFAULT_ROLES, readRolesFile, writeRolesFile } from './roles-file.js';
+import { NATIVE_ACP_COMMANDS } from './shared.js';
 import type { Role } from './shared.js';
 
 vi.mock('node:fs', async (importOriginal) => {
@@ -74,7 +75,7 @@ describe('reading the roles in effect', () => {
       ],
       commands: [
         'db sqlite list', 'db sqlite query', 'browser goto', 'browser content',
-        'question ask', 'question approve', 'file read', 'file glob', 'file grep',
+        'question ask', 'question approve', 'file read', 'file glob', 'file grep', 'web search',
       ],
     });
     expect(file['tell']).toEqual({
@@ -83,11 +84,12 @@ describe('reading the roles in effect', () => {
       commands: [
         'db sqlite create', 'db sqlite delete', 'db sqlite query', 'db sqlite list',
         'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve', 'file read',
-        'file glob', 'file grep', 'file write', 'file edit',
+        'file glob', 'file grep', 'file write', 'file edit', 'web search',
       ],
     });
-    expect(file['ask'].commands).toHaveLength(9);
-    expect(file['tell'].commands).toHaveLength(14);
+    expect(file['ask'].commands).toHaveLength(10);
+    expect(file['tell'].commands).toHaveLength(15);
+    expect(file['tell'].commands).toEqual([...NATIVE_ACP_COMMANDS]);
     expect(DEFAULT_ROLES.slice(0, 5).every((role) => role.commands.length === 0)).toBe(true);
   });
 
@@ -140,7 +142,7 @@ describe('reading the roles in effect', () => {
     expect(readFileSync(homeFile(home), 'utf8')).toBe(before);
   });
 
-  it('leaves a saved ask and tell role with the previous default grants untouched on disk', () => {
+  it('leaves a saved ask and tell role with older default grants untouched on disk', () => {
     const { home, root } = directories();
     const ask = [
       'db sqlite list', 'db sqlite query', 'browser goto', 'browser content',
@@ -162,6 +164,8 @@ describe('reading the roles in effect', () => {
     expect(read.roles.map((role) => role.commands)).toEqual([ask, tell]);
     expect(read.roles[0]?.commands).not.toContain('file grep');
     expect(read.roles[1]?.commands).not.toContain('file grep');
+    expect(read.roles[0]?.commands).not.toContain('web search');
+    expect(read.roles[1]?.commands).not.toContain('web search');
     expect(readFileSync(homeFile(home), 'utf8')).toBe(before);
   });
 

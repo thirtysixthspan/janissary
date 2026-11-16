@@ -55,9 +55,10 @@ and risk.`), `implementation` (`Implementation of an approved plan or a describe
 `gpt-6-luna` at `high`. The `tell` role follows `ask`, has the description `When you tell a model to
 carry out a task via ACP.`, and starts with the same three entries. The `ask` role grants `db sqlite
 list`, `db sqlite query`, `browser goto`, `browser content`, `question ask`, `question approve`,
-`file read`, `file glob`, and `file grep`. The `tell` role grants fourteen of the fifteen native
-commands, every one except `web search`: those nine plus `db sqlite create`, `db
-sqlite delete`, `browser eval`, `file write`, and `file edit`. An existing roles file is not changed, so its saved `tell` keeps the grants it lists. `planning`, `research`, `code review`, `implementation`, and
+`file read`, `file glob`, `file grep`, and `web search`. The `tell` role grants all fifteen native
+commands: those ten plus `db sqlite create`, `db sqlite delete`, `browser eval`, `file write`, and
+`file edit`. An existing roles file is not changed, so its saved `ask` and `tell` keep the grants they list.
+`planning`, `research`, `code review`, `implementation`, and
 `documentation` start with no command grants. Only `planning`, `ask`, and `tell` start with entries.
 
 ### What the tab shows
