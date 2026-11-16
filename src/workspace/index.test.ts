@@ -210,10 +210,26 @@ describe('createWorkspace', () => {
   });
 
   it('can be cancelled mid-clone, leaving no partial target directory', async () => {
-    const handle = provisionWorkspace('test-agent-cancel', getRemoteUrl(repoDir));
-    handle.cancel();
-    await expect(handle.ready).rejects.toThrow();
-    expect(existsSync(handle.dir)).toBe(false);
+    // A real local clone can finish, or be killed before git creates its target, so drive the
+    // cancellation through a git that is guaranteed to have created a partial target first.
+    // That is the state a loaded CI runner reaches: the kill lands after git has made the folder.
+    const bin = path.join(tmpDir, 'slow-git');
+    mkdirSync(bin, { recursive: true });
+    const slowGit = path.join(bin, 'git');
+    writeFileSync(slowGit, '#!/bin/sh\nfor last; do :; done\nmkdir -p "$last"\nprintf partial > "$last/partial"\nexec sleep 30\n');
+    chmodSync(slowGit, 0o755);
+    const remoteUrl = getRemoteUrl(repoDir);
+    const originalPath = process.env['PATH'] ?? '';
+    process.env['PATH'] = `${bin}:${originalPath}`;
+    try {
+      const handle = provisionWorkspace('test-agent-cancel', remoteUrl);
+      await vi.waitFor(() => expect(existsSync(path.join(handle.dir, 'partial'))).toBe(true));
+      handle.cancel();
+      await expect(handle.ready).rejects.toThrow();
+      expect(existsSync(handle.dir)).toBe(false);
+    } finally {
+      process.env['PATH'] = originalPath;
+    }
   });
 });
 

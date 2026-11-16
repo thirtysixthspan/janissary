@@ -146,13 +146,29 @@ export function provisionWorkspace(
   const target = workspacePath(name);
   const clone = startGitClone(remoteUrl, target, { ...cloneOptions, githubToken });
   let oauthNotice: string | undefined;
+  let cancelled = false;
 
   async function run(): Promise<void> {
-    await clone.ready;
+    try {
+      await clone.ready;
+    } catch (error) {
+      // The kill can land after git has created the target, and git leaves a partial clone
+      // behind. Remove it so a cancelled workspace never leaves a folder that blocks the next
+      // launch under the same name.
+      if (cancelled) {
+        try { rmSync(target, { recursive: true, force: true }); } catch { /* keep the cancellation error */ }
+      }
+      throw error;
+    }
     oauthNotice = await finishProvisioning(target, remoteUrl);
   }
 
-  return { dir: target, ready: run(), cancel: clone.cancel, get oauthNotice() { return oauthNotice; } };
+  return {
+    dir: target,
+    ready: run(),
+    cancel: () => { cancelled = true; clone.cancel(); },
+    get oauthNotice() { return oauthNotice; },
+  };
 }
 
 async function finishProvisioning(target: string, remoteUrl: string): Promise<string | undefined> {
