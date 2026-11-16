@@ -61,10 +61,10 @@ disk yet, and `Reveal in file navigator (reopen from a remote navigator)` for a 
 whose source navigator has closed or been retargeted. The button is dimmed and inert in both
 blocked states.
 
-For a local file, the reveal roots the tree at the file's own place. The tree roots at the workspace clone
-that contains the file when there is one, otherwise at the project root when the file sits
-strictly inside it, otherwise at the file's own directory, where the file is a single row with
-nothing to expand. A click opens a fresh navigator docked in the left sidebar when none is open,
+For a local file, the reveal roots the tree at the file's own place. The tree roots at the
+workspace clone that contains the file when there is one, otherwise at the project root when the
+file sits strictly inside it, otherwise at the file's own directory, where the file is a single row
+with nothing to expand. A click opens a fresh navigator docked in the left sidebar when none is open,
 and otherwise retargets the most recently focused navigator to that root, exactly as those buttons
 do (see `file-navigator-tab.md`). A retarget clears the navigator's expanded directories and its
 move undo/redo history, even when it was already on that root; the navigator keeps its identity,
@@ -86,18 +86,19 @@ remains pending on the server in that case, because the missing row is never app
 a later reveal or an ordinary `files` hint replaces it. A resolved root that is no longer a directory
 changes nothing: no navigator opens and no open one is retargeted.
 
-The tree takes keyboard focus when the reveal's focus hint arrives, unless the user has already overtaken the reveal with a press of their own. The file's row becomes the cursor,
-the anchor, and the only selected row as soon as that row exists in the tree, which on a remote
-tree or a large local one can be a moment later, and the tree scrolls it into view. A pending
-selection is dropped if the user moves the tree's cursor or presses any row after asking for the
-reveal — including a row that is already selected — or if the navigator is re-rooted or retargeted
-before the row arrives. A dropped reveal changes no selection and moves no focus, and the row the
-user chose stays the cursor and the selected row. A press from before the reveal request does not
-drop it, so asking for a reveal after working in the tree still selects and focuses the file. A
-click on this button is the one metadata-header click exempt from the header's focus-restoring
-mouse-up, so the tree keeps the focus the editor would otherwise take back. Otherwise the button
-is ordinary: Tab reaches it, Enter or Space activates it, and it opens nothing of its own. On a
-narrow pane the whole actions group moves to its own line rather than being clipped.
+The tree takes keyboard focus when the reveal's focus hint arrives, unless the user has already
+overtaken the reveal with a press of their own. The file's row becomes the cursor, the anchor, and
+the only selected row as soon as that row exists in the tree, which on a remote tree or a large
+local one can be a moment later, and the tree scrolls it into view. A pending selection is dropped
+if the user moves the tree's cursor or presses any row after asking for the reveal — including a
+row that is already selected — or if the navigator is re-rooted or retargeted before the row
+arrives. A dropped reveal changes no selection and moves no focus, and the row the user chose stays
+the cursor and the selected row. A press from before the reveal request does not drop it, so asking
+for a reveal after working in the tree still selects and focuses the file. A click on this button is
+the one metadata-header click exempt from the header's focus-restoring mouse-up, so the tree keeps
+the focus the editor would otherwise take back. Otherwise the button is ordinary: Tab reaches it,
+Enter or Space activates it, and it opens nothing of its own. On a narrow pane the whole actions
+group moves to its own line rather than being clipped.
 
 A docked navigator becomes the sidebar's selected entry, and the editor stays visible beside it. A
 navigator in the center strip becomes the active tab, so the editor goes behind it. A fresh
