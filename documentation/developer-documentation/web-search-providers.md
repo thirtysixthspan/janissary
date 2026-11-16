@@ -141,7 +141,7 @@ Return an empty array when the search found nothing. That is an answer, not a fa
 | `fetch` | The request function to use. It is injected so tests run without the network. Do not reach for the global `fetch`. |
 | `signal` | Optional. Aborted when the caller cancels the search. Pass it through to `fetch`. It is absent for a typed search, which has no cancellation. |
 
-That is the whole vocabulary. A provider never reads token files, `Managers`, a tab, the remote channel, or any other host state. Each attempt gets a fresh capability built from that provider's token.
+That is the whole vocabulary. A provider never reads token files, `Managers`, a tab, the remote channel, or any other host state. Each attempt gets its own request object and a fresh capability built from that provider's token, so a provider that mutates what it receives changes only its own copy and never what a later fallback provider gets.
 
 ## Resolution and ordering
 

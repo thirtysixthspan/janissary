@@ -97,6 +97,42 @@ describe('runWebSearch', () => {
     expect(Object.keys(call?.[1] ?? {})).toEqual(['apiKey', 'fetch', 'signal']);
   });
 
+  it('gives each attempt its own request when a provider mutates what it receives', async () => {
+    const first = fakeProvider('tavily', async (request) => {
+      request.query = 'mutated query';
+      request.numResults = 1;
+      request.depth = 'advanced';
+      throw new ProviderRequestError('HTTP 429 Too Many Requests');
+    });
+    const second = fakeProvider('tinyfish', async () => [
+      result('One', 'https://e.com/1'),
+      result('Two', 'https://e.com/2'),
+      result('Three', 'https://e.com/3'),
+      result('Four', 'https://e.com/4'),
+      result('Five', 'https://e.com/5'),
+    ]);
+
+    const text = await runWebSearch(registryWith(first, second), command(), {
+      tokens: TOKENS,
+      fetch: fakeFetch(),
+    });
+
+    expect(first.search).toHaveBeenCalledOnce();
+    expect(second.search).toHaveBeenCalledOnce();
+    expect(second.search.mock.calls[0]?.[0]).toStrictEqual({
+      query: QUERY,
+      numResults: 5,
+      depth: 'basic',
+    });
+    expect(text).toBe([
+      '- [One](https://e.com/1)',
+      '- [Two](https://e.com/2)',
+      '- [Three](https://e.com/3)',
+      '- [Four](https://e.com/4)',
+      '- [Five](https://e.com/5)',
+    ].join('\n'));
+  });
+
   it.each(fallbackCases)('auto falls back after %s and prints only the winner', async (_case, makeError) => {
     const first = fakeProvider('tavily', async () => {
       throw makeError();

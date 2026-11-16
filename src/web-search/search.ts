@@ -36,14 +36,14 @@ export async function runWebSearch(
   deps.signal?.throwIfAborted();
   const resolution = registry.resolveAttempts(request.provider, deps.tokens);
   if (resolution.kind === 'line') return resolution.line;
-  const providerRequest: WebSearchRequest = {
-    query: request.query,
-    numResults: request.numResults,
-    depth: request.depth,
-  };
   const failures: ProviderFailure[] = [];
   for (const manifest of resolution.manifests) {
     deps.signal?.throwIfAborted();
+    const providerRequest: WebSearchRequest = {
+      query: request.query,
+      numResults: request.numResults,
+      depth: request.depth,
+    };
     const capability: WebSearchCapability = {
       apiKey: deps.tokens[manifest.token] ?? '',
       fetch: deps.fetch,
