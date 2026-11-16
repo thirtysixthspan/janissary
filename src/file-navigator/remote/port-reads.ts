@@ -7,7 +7,7 @@ import type { FileGlobArgs } from '../../file-glob/command.js';
 import type { FileGrepArgs } from '../../file-grep/command.js';
 import type { WebSearchCommand } from '../../web-search/command.js';
 
-// `RemoteFileSystemPort`'s line read, glob, write and text edit, extracted so that file stays under the size limit — the same
+// `RemoteFileSystemPort`'s line read, glob, write, text edit and patch, extracted so that file stays under the size limit — the same
 // split `port-moves.ts` uses. It takes the port's bound request sender and its path mapper as
 // parameters, so nothing here knows about the port's session bookkeeping.
 
@@ -122,4 +122,15 @@ export async function remoteEditFile(
     newString: Buffer.from(newString, 'utf8').toString('base64'),
     replaceAll,
   });
+}
+
+// A patch crosses unmapped and unchecked, one base64 layer of UTF-8: its sections name paths relative
+// to the workspace the far side applies them against. Ill-formed text is refused before it can be
+// encoded into a different patch than the one the caller holds.
+export async function remoteApplyPatch(
+  request: RemoteRequest, _root: string, patchText: string,
+): Promise<string> {
+  if (!patchText.isWellFormed()) throw new Error('Not a text file');
+  const result = await request('apply-patch', { patchText: Buffer.from(patchText, 'utf8').toString('base64') });
+  return result.text;
 }

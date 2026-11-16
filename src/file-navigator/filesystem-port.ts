@@ -30,6 +30,7 @@ import { readChangeSet } from '../plugins/diff/change-set.js';
 import type { DiffSource } from '../plugins/diff/shared.js';
 import { searchText as searchTextAtRoot } from './search-text.js';
 import type { SearchMatch, SearchRequest } from '../search/types.js';
+import { applyPatchText } from '../file-patch/apply.js';
 
 export type WatchHandle = { stop: () => void };
 export type GitMetadata = {
@@ -100,6 +101,10 @@ export interface FileSystemPort {
   editFile(
     root: string, relPath: string, oldString: string, newString: string, replaceAll: boolean,
   ): MaybePromise<FileOperationResult<FileEditValue>>;
+  // Applies a whole patch and resolves with its output text, every refusal already in that text;
+  // rejects only when the patch could not be delivered — a connection failure, or text a remote port
+  // cannot encode. `root` is the tree's root, which for a remote port is its workspace.
+  applyPatch(root: string, patchText: string): MaybePromise<string>;
   // Refuses to replace an existing destination unless `overwrite` is set, answering the conflict as
   // `{ conflictPaths }` instead — the same contract `moveMany` keeps for an unset policy.
   move(root: string, fromRelPath: string, toRelPath: string, overwrite?: boolean): MaybePromise<MoveOneResult>;
@@ -214,6 +219,10 @@ export class LocalFileSystemPort implements FileSystemPort {
 
   editFile(root: string, relPath: string, oldString: string, newString: string, replaceAll: boolean): FileOperationResult<FileEditValue> {
     return editToolTextFile(root, relPath, oldString, newString, replaceAll);
+  }
+
+  applyPatch(root: string, patchText: string): string {
+    return applyPatchText(root, patchText);
   }
 
   move(root: string, from: string, to: string, overwrite?: boolean) { return moveItem(root, from, to, overwrite); }
