@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the web-search plan's stale dispatch claim that a granted search runs on the host running the loop.
-
-Existing Issue: The plan's "What already exists" table says a `runsOn: 'workspace'` command runs on the host running the loop through `searchWebInTab`, while the same plan's design decision says a granted search runs on the side that owns the tab and `searchWebInTab` actually chooses the local or remote side from the tab's `remote` field, so the table describes the old routing the repaired ACP spec sentence just corrected. Severity: 3/10
-
-Existing Risk: 3/10 - a reader implementing from the table would put a local-fallback session's search on the local machine, the exact routing the plan and the repaired spec rule out, and the plan would contradict itself.
-
-Proposal Risk: 1/10 - the table, the design decision, and the repaired spec all state the same rule; the code and its tests are unchanged.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "correct the web-search plan's stale dispatch row". In `product/plans/complete/web-search.md`, "What already exists" table, replace the Workspace-side dispatch row's description with the delivered routing: a `runsOn: 'workspace'` command runs on the side that owns the tab, where `runWorkspace` in `src/acp/run-prompt.ts` calls `searchWebInTab` and `src/web-search/tab-search.ts` chooses a local search or the tab's remote port, while the far-side loop in `src/remote/serve-acp-loop.ts` calls `webSearch` directly with the workspace tokens. Leave the design decisions and every other line of the plan unchanged. Verify against `src/acp/run-prompt.ts`, `src/web-search/tab-search.ts`, `src/remote/serve-acp-loop.ts`, the "Where an agent's search runs" design decision, `product/specs/acp.md`, `product/specs/web-search.md`, and `documentation/user-documentation/advanced-agents/acp-agent.md`; no code, test, spec, or help edit.
-
-
 * Add typed web search to the ACP spec's list of untagged typed outputs.
 
 Existing Issue: The ACP spec's tag paragraph enumerates the typed outputs that carry no `[<host>] ` tag as `file read`, `file glob`, `file grep`, `file write`, and `file edit`, omitting typed `web search`, while the user documentation already lists `web search` among the untagged typed outputs and `searchWebInTab` returns a remote tab's typed result through `withRemoteTabPort` with no tag. Severity: 3/10
