@@ -72,7 +72,7 @@ Suites that pass unchanged: `src/plugins/roles/activate.test.ts` (compares again
 - Manual, in a scratch project with no `.janissary/roles.json`, started with `node bin/janus.mjs --no-open <project>`, with `~/.janissary/tavily-token` present. Move any existing `~/.janissary/roles.json` aside first (the app recreates it from the defaults on first read; restore yours afterwards), since a saved file is deliberately not migrated:
   1. Open the Roles tab: the `tell` card lists fourteen commands ending in `web search` and shows no **Add command**; the `ask` card lists nine ending in `web search`, and its **Add command** picker does not offer `web search`.
   2. Run `tell find the current Node.js LTS version on the web` and confirm the connection tab shows a `web search …` tool step and the answer cites a result.
-  3. Restore your own `~/.janissary/roles.json` (without `web search`), restart, run `tell find the current Node.js LTS version on the web` again, and confirm no web step runs (or, if the model emits one, it reads `Command not allowed for role "tell": web search.`).
+  3. Restore your own `~/.janissary/roles.json` (without `web search`), restart, and run `tell find the current Node.js LTS version on the web` again. Confirm no web step runs: the role's grants build the tool table and the run snapshot together, so a saved `tell` without the grant has no web tool, no web primer, and no `web search` in its allow-list. A model-emitted `web search` line therefore stays prose in the answer instead of producing `Command not allowed for role "tell": web search.`
 
 ## Out of scope
 
