@@ -87,8 +87,8 @@ it('restores an intermediate folder collision and continues after an undo failur
   expect(read('a')).toBe('a'); expect(existsSync(file('x'))).toBe(false);
   write('first', 'old\n'); write('second', 'old\n');
   let calls = 0;
-  const operations: CommitOperations = { ...defaultCommitOperations, writeFile(name, bytes) { calls += 1; if (calls === 3 || calls === 4) throw fail(); defaultCommitOperations.writeFile(name, bytes); } };
-  expect(run('*** Update File: first\n@@\n-old\n+new\n*** Update File: second\n@@\n-old\n+new\n*** Add File: fail\n+x', operations)).toMatchObject({ ok: false, restored: false, path: 'fail' });
+  const operations: CommitOperations = { ...defaultCommitOperations, writeFile(name, bytes) { calls += 1; if (calls === 3) throw fail(); if (calls === 4) throw Object.assign(new Error('undo failed'), { code: 'EACCES' }); defaultCommitOperations.writeFile(name, bytes); } };
+  expect(run('*** Update File: first\n@@\n-old\n+new\n*** Update File: second\n@@\n-old\n+new\n*** Add File: fail\n+x', operations)).toMatchObject({ ok: false, restored: false, path: 'fail', reason: 'The disk is full; free some space, then try again' });
   expect(read('first')).toBe('old\n'); expect(read('second')).toBe('new\n');
 });
 
