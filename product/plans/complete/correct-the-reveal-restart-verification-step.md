@@ -4,7 +4,7 @@
 
 ## Summary
 
-The description's How to verify step 16 tells the reader to leave the page open, restart the server, and wait for the page to reconnect. That cannot happen. `src/main.ts` passes a fresh `makeToken()` to `startServer` on every boot, `<server>` refuses a socket upgrade whose token does not match, and `web/src/shared/ws/session-url.ts` builds the reconnect URL from `location`, so the old page retries the token in its own address bar and stays on `Reconnecting…`. The restarted app is only reachable at the address it prints. The behavior the step was meant to exercise, the client's acknowledged-revision floor staying below the restarted server's first revision, is not observable from a browser at all: the floor is a module-level map in `web/src/file-navigator/useFileNavigatorRevealFocus.ts`, so a page opened at the new address is a fresh document with an empty floor.
+The description's How to verify step 16 tells the reader to leave the page open, restart the server, and wait for the page to reconnect. That cannot happen. `src/main.ts` passes a fresh `makeToken()` to `startServer` on every boot, `src/index.ts` refuses a socket upgrade whose token does not match, and `web/src/shared/ws/session-url.ts` builds the reconnect URL from `location`, so the old page retries the token in its own address bar and stays on `Reconnecting…`. The restarted app is only reachable at the address it prints. The behavior the step was meant to exercise, the client's acknowledged-revision floor staying below the restarted server's first revision, is not observable from a browser at all: the floor is a module-level map in `web/src/file-navigator/useFileNavigatorRevealFocus.ts`, so a page opened at the new address is a fresh document with an empty floor.
 
 ## Design decisions
 
@@ -16,7 +16,7 @@ The description's How to verify step 16 tells the reader to leave the page open,
 
 4. **Only step 16's Do and Expect lines change in the description.** Its heading, the Setup and Happy-path and Edge-case steps, and the whole `### Additional test cases` section stay byte-for-byte. The correction names one step, so only that step moves.
 
-5. **No regression test.** The behavior the old step claimed to check is already pinned by `src/file-navigator/restore.test.ts` (the restarted process's first revision lands above the previous process's) and `web/src/file-navigator/FileNavigatorTab.test.tsx` (a lower revision is ignored before a higher one focuses and acknowledges). A description correction has no test surface of its own.
+5. **No regression test.** The revision behavior the old step claimed to check is already pinned by `src/file-navigator/restore.test.ts` (successive revisions increase from a clock-seeded base) and `web/src/file-navigator/FileNavigatorTab.test.tsx` (a revision below the acknowledged floor is ignored, and a higher one focuses and acknowledges). A description correction has no test surface of its own.
 
 ## Proposed changes
 
