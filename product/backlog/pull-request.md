@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the provider reference page's example that would give a new provider Tavily's API key instead of its own token.
-
-Existing Issue: The page's "Files to add" example gives the hypothetical `example` provider `token: 'tavily'` and never says a new provider needs its own `PROJECT_TOKENS` row, so a provider author following the reference would hand Tavily's credential to a different service and auto-selection would treat the new provider as configured whenever the Tavily token exists. Severity: 5/10
-
-Existing Risk: 5/10 - A new provider receives another service's API key, and the page's claim that a provider sees only its own key becomes false for the example; the mistake is invisible to typechecking because `tavily` is a valid `ProjectTokenName`.
-
-Proposal Risk: 2/10 - The page would stop recommending the wrong token, though adding a token row still carries the existing token-registration work (file name, environment variable, spec/docs, and remote protocol bump when forwarded).
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "document a new web search provider's own token row instead of reusing Tavily's". In `documentation/developer-documentation/web-search-providers.md`, add a short token subsection after the manifest reference explaining that `token` must name a row in `PROJECT_TOKENS` in `src/project/tokens.ts`, that a new provider needs a new row with its `name`, `file`, and `env` values plus the matching token spec and documentation, and that a row forwarded to remote machines also moves `REMOTE_PROTOCOL_VERSION`. Change the `exampleManifest` snippet to use an `example` token name with that new row and state that the `fixture-v1` provider's `token: 'tavily'` is only a test stand-in whose value the compatibility test supplies. Keep `src/web-search/fixture-v1/manifest.ts` and its compatibility test unchanged; re-read the page to confirm every token value either names an existing `ProjectTokenName` or is explicitly labeled a placeholder.
-
-
 * Deliver the plan's disabled-provider resolution lines in the provider reference page.
 
 Existing Issue: The page's "Resolution and ordering" section presents the unknown-provider, not-configured, and no-provider lines as the complete set, omitting the explicit disabled-provider line and the auto all-providers-failed form that `resolveAttempts` returns. Severity: 3/10

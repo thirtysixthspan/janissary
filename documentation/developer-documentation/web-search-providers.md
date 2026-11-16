@@ -21,6 +21,8 @@ export const fixtureV1Manifest = {
 } as const satisfies WebSearchProviderManifest;
 ```
 
+`fixture-v1` is the frozen test provider, so its `token: 'tavily'` is a stand-in whose value the compatibility test supplies. A real provider names its own token row, as [Token rows](#token-rows) describes.
+
 The module sends the query and returns results:
 
 ```ts
@@ -54,13 +56,13 @@ That is a complete provider: it sends the query to its own endpoint and returns 
 
 ## Files to add
 
-For provider `example`, add `src/web-search/providers/example.ts` and any modules it needs beside it. Then add a manifest to `src/web-search/providers/catalog.ts` and include it in `webSearchProviderCatalog`:
+For provider `example`, add `src/web-search/providers/example.ts` and any modules it needs beside it. Then add a manifest to `src/web-search/providers/catalog.ts` and include it in `webSearchProviderCatalog`. Its `token` names the provider's own row in `PROJECT_TOKENS`, added as described in [Token rows](#token-rows); reusing another provider's name would hand the new provider that service's key:
 
 ```ts
 export const exampleManifest = {
   id: 'example',
   apiVersion: WEB_SEARCH_PROVIDER_API_VERSION,
-  token: 'tavily',
+  token: 'example', // the placeholder row added in "Token rows"
   activate: () => import('./example.js'),
 } as const satisfies WebSearchProviderManifest;
 
@@ -79,8 +81,26 @@ export const webSearchProviderCatalog = [
 |---|---|---|
 | `id` | yes | Stable lowercase identity, unique in the catalog and never `auto`. `--provider` matches it case-insensitively, and failure lines print it. |
 | `apiVersion` | yes | The provider API version the module was written against. It must equal `WEB_SEARCH_PROVIDER_API_VERSION`, or the provider is refused before its module is imported. |
-| `token` | yes | The `ProjectTokenName` of the token file whose value becomes `capability.apiKey`. |
+| `token` | yes | The `ProjectTokenName` of the token file whose value becomes `capability.apiKey`. A new provider needs its own row; see [Token rows](#token-rows). |
 | `activate` | yes | A literal dynamic import of the provider module. |
+
+## Token rows
+
+`token` names a row in `PROJECT_TOKENS` in `src/project/tokens.ts`. The row's `file` is the `.janissary/` file read for the value, and its `env` lists the variables that value is set under. A new provider needs a new row, never an existing one: `token: 'tavily'` in a provider of your own would hand it Tavily's key, and `auto` would treat that provider as configured whenever the Tavily token file exists.
+
+Add the `example` row beside the others:
+
+```ts
+{
+  name: 'example',
+  file: 'example-token',
+  env: ['EXAMPLE_API_KEY'],
+},
+```
+
+`name` must be unique in the table and is the value `token` carries, `file` must be a file no other row reads, and `env` names every variable the provider's consumer reads. The `'example'` value in the snippets on this page is a placeholder for this row; it is not a `ProjectTokenName` until the row exists.
+
+Adding a row is not only this table. The specs that enumerate the token files — `product/specs/workspaced-agent.md`, `product/specs/sandbox.md`, `product/specs/remote-server.md`, and `product/specs/acp.md` today — need the new file wherever they list the existing ones, as does the user documentation table in `documentation/user-documentation/advanced-agents/tokens.md`. A row forwarded to remote machines also moves `REMOTE_PROTOCOL_VERSION` in `src/remote/protocol.ts`: a remote decodes the provisioning token map against its own table and refuses an unknown name, so a forwarded credential a peer does not know fails the whole provisioning request.
 
 ## The provider module
 
