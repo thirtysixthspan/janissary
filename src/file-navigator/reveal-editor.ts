@@ -73,6 +73,7 @@ export function revealEditorFile(port: RevealPort, editorLabel: string): void {
   port.rebuild(label);
   const index = port.managers.tab.findIndex(label);
   if (port.managers.tab.tabs[index]?.dock === undefined) port.managers.tab.setActiveTab(index);
+  else port.managers.tab.setActiveTab(port.managers.tab.findIndex(editorLabel));
 }
 
 export function clearRevealFocus(port: RevealPort, navigatorLabel: string, revision: number): void {

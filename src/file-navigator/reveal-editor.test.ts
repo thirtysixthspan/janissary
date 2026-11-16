@@ -142,24 +142,49 @@ function revealFixture(options: {
   existing?: boolean;
   editor?: Partial<EditorView>;
   dock?: 'left' | 'right';
+  unrelatedFirst?: boolean;
 } = {}) {
   const root = revealTree();
   const state = freshFileNavigatorState(root, new LocalFileSystemPort());
-  const tabs: Record<string, unknown>[] = [
-    {
-      label: 'edit',
-      view: 'editor',
-      editor: {
-        name: 'a.ts', path: path.join(root, 'src', 'deep', 'a.ts'), size: '1 B', url: '/open/1', ...options.editor,
-      },
+  const editorTab = {
+    label: 'edit',
+    view: 'editor',
+    editor: {
+      name: 'a.ts', path: path.join(root, 'src', 'deep', 'a.ts'), size: '1 B', url: '/open/1', ...options.editor,
     },
-    { label: 'files', ...(options.dock && { dock: options.dock }) },
+  };
+  const unrelatedTab = { label: 'janus', view: 'agent' };
+  const tabs: Record<string, unknown>[] = [
+    ...(options.unrelatedFirst ? [unrelatedTab] : []),
+    editorTab,
+    ...(options.existing === false ? [] : [{ label: 'files', ...(options.dock && { dock: options.dock }) }]),
   ];
   const states = options.existing === false ? new Map<string, FilesTabState>() : new Map([['files', state]]);
   const opened: { root: string }[] = [];
+  let activeTab = options.unrelatedFirst ? 1 : 0;
   const setActiveTab = vi.fn((index: number) => {
     const tab = tabs[index];
-    if (tab) delete tab.dock;
+    if (!tab) return;
+    delete tab.dock;
+    activeTab = index;
+  });
+  const setDock = vi.fn((index: number, dock: 'left' | 'right' | null) => {
+    const tab = tabs[index];
+    if (!tab) return;
+    if (dock === null) {
+      delete tab.dock;
+      activeTab = index;
+      return;
+    }
+    tab.dock = dock;
+    if (activeTab !== index) return;
+    for (let step = 0; step < tabs.length; step++) {
+      const candidate = (index + step) % tabs.length;
+      if (tabs[candidate]?.dock === undefined) {
+        activeTab = candidate;
+        return;
+      }
+    }
   });
   const port = {
     states,
@@ -173,12 +198,13 @@ function revealFixture(options: {
         openFilesTab: (arg: { root: string }) => {
           opened.push({ root: arg.root });
           tabs.push({ label: `files-${tabs.length}`, ...arg });
+          activeTab = tabs.length - 1;
           return tabs.at(-1);
         },
-        cur: () => tabs.at(-1),
+        cur: () => tabs[activeTab],
         setCwd: vi.fn(),
         setActiveTab,
-        setDock: vi.fn(),
+        setDock,
       },
     },
     watchDir: vi.fn(),
@@ -192,7 +218,7 @@ function revealFixture(options: {
     setCwd: vi.fn(),
     hasTab: () => true,
   } as unknown as RevealPort;
-  return { root, state, states, port, opened, tabs, setActiveTab };
+  return { root, state, states, port, opened, tabs, setActiveTab, activeTab: () => activeTab };
 }
 
 describe('revealEditorFile', () => {
@@ -275,17 +301,30 @@ describe('revealEditorFile', () => {
     expect(setActiveTab).not.toHaveBeenCalled();
   });
 
-  it('activates a centre-strip navigator and leaves a docked one in its sidebar', () => {
+  it('activates a centre-strip navigator and restores the editor for a docked one', () => {
     const centre = revealFixture();
     revealEditorFile(centre.port, 'edit');
     expect(centre.setActiveTab).toHaveBeenCalledExactlyOnceWith(1);
 
     const docked = revealFixture({ dock: 'left' });
     revealEditorFile(docked.port, 'edit');
-    expect(docked.setActiveTab).not.toHaveBeenCalled();
+    expect(docked.setActiveTab).toHaveBeenCalledExactlyOnceWith(0);
     expect(docked.tabs[1]?.dock).toBe('left');
     expect(docked.state.expanded).toEqual(new Set(['src', 'src/deep']));
     expect(docked.state.restore?.cursor).toBe('src/deep/a.ts');
+  });
+
+  it('restores the editor after docking a freshly opened navigator hands activation away', () => {
+    const { port, states, tabs, setActiveTab, activeTab } = revealFixture({ existing: false, unrelatedFirst: true });
+
+    revealEditorFile(port, 'edit');
+
+    const fresh = states.get('files-2');
+    expect(tabs[2]).toMatchObject({ label: 'files-2', dock: 'left' });
+    expect(setActiveTab).toHaveBeenCalledExactlyOnceWith(1);
+    expect(activeTab()).toBe(1);
+    expect(fresh?.expanded).toEqual(new Set(['src', 'src/deep']));
+    expect(fresh?.restore?.cursor).toBe('src/deep/a.ts');
   });
 });
 
