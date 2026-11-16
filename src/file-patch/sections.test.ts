@@ -142,6 +142,15 @@ describe('patch sections', () => {
     symlinkSync('target', path.join(root, 'safe/link'));
     expect(apply('*** Update File: safe/link\n*** Move to: .git/link')).toMatchObject({ ok: false, section: 1, reason: 'Protected file' });
   });
+  it('refuses a moved link whose new target resolves into a protected directory', () => {
+    write('old/target', 'old\n');
+    write('.git/secret', 'old\n');
+    write('new/placeholder', '');
+    symlinkSync('target', path.join(root, 'old/link'));
+    symlinkSync('../.git/secret', path.join(root, 'new/target'));
+    expect(apply('*** Update File: old/link\n*** Move to: new/link\n*** Update File: new/link\n@@\n-old\n+changed'))
+      .toMatchObject({ ok: false, section: 2, reason: 'Protected file' });
+  });
   it('allows entry operations on a moved link with a missing target', () => {
     write('old/target', 'old\n');
     symlinkSync('target', path.join(root, 'old/link'));
