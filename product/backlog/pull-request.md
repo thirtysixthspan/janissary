@@ -1,3 +1,57 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
+
+* Stop exposing the two search provider keys to spawned processes that never read them.
+
+Existing Issue: The Tavily and TinyFish token rows are declared with environment variables, so `src/sandbox/environment.ts` copies `TAVILY_API_KEY` and `TINYFISH_API_KEY` into every workspaced shell, harness, and ACP agent as well as every ACP agent outside a workspace, although the search reads its keys only from `getProjectTokens()` and the far-side token map, and the row comments admit the variables are set only because every non-GitHub row's are. Severity: 6/10
+
+Existing Risk: 5/10 - a compromised or prompt-injected harness can read and exfiltrate search credentials it has no use for, burning the user's Tavily or TinyFish quota or reaching the provider account, and an ambient value survives the environment scrub on every workspaced spawn.
+
+Proposal Risk: 2/10 - the keys remain in the Janissary process and in the forwarded provisioning map, so a compromised server process can still use them, but the unnecessary copies in every spawned environment are gone.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "keep the search provider keys out of spawned process environments". Add an opt-out to the `PROJECT_TOKENS` row shape, for example `spawn: false` with a default of true, and set it on the `tavily` and `tinyfish` rows in `src/project/tokens.ts`; make `tokenVariables` in `src/sandbox/environment.ts` skip a row whose `spawn` is false so `workspaceCredentialEnv` and `agentCredentialEnv` no longer set `TAVILY_API_KEY` or `TINYFISH_API_KEY`. Add both names to `ENV_SCRUB_PATTERNS` in `src/sandbox/paths.ts` so an ambient value is removed on the confined and pass-through paths. Keep `loadProjectTokens`, the provisioning forwarding in `src/remote/serve-provision.ts` and `src/remote/frame/decode-provision.ts`, the `RemoteFileNavigators` and `RemoteAcp` token maps, and the provider capability unchanged: the far-side Janissary process still searches with the forwarded token or its own file. Update `product/specs/sandbox.md`, `product/specs/workspaced-agent.md`, `product/specs/remote-server.md`, `product/specs/acp.md`, `documentation/user-documentation/advanced-agents/tokens.md`, and `documentation/developer-documentation/web-search-providers.md` so they say the search keys are read by the server process and are not injected into spawned processes, and remove the "six harness credentials" references to the search keys. Update the expectations in `src/sandbox/environment.test.ts`, `src/sandbox/harness-spawn.test.ts`, and `src/sandbox/index.test.ts`, and add a test that both variables are absent from a workspaced and an outside-workspace spawn while a configured token still reaches `webSearch` through the far-side operation; `src/remote/serve-provision.test.ts` and the search suites must keep passing untouched.
+
+
+* Correct the web-search plan's stale dispatch claim that a granted search runs on the host running the loop.
+
+Existing Issue: The plan's "What already exists" table says a `runsOn: 'workspace'` command runs on the host running the loop through `searchWebInTab`, while the same plan's design decision says a granted search runs on the side that owns the tab and `searchWebInTab` actually chooses the local or remote side from the tab's `remote` field, so the table describes the old routing the repaired ACP spec sentence just corrected. Severity: 3/10
+
+Existing Risk: 3/10 - a reader implementing from the table would put a local-fallback session's search on the local machine, the exact routing the plan and the repaired spec rule out, and the plan would contradict itself.
+
+Proposal Risk: 1/10 - the table, the design decision, and the repaired spec all state the same rule; the code and its tests are unchanged.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "correct the web-search plan's stale dispatch row". In `product/plans/complete/web-search.md`, "What already exists" table, replace the Workspace-side dispatch row's description with the delivered routing: a `runsOn: 'workspace'` command runs on the side that owns the tab, where `runWorkspace` in `src/acp/run-prompt.ts` calls `searchWebInTab` and `src/web-search/tab-search.ts` chooses a local search or the tab's remote port, while the far-side loop in `src/remote/serve-acp-loop.ts` calls `webSearch` directly with the workspace tokens. Leave the design decisions and every other line of the plan unchanged. Verify against `src/acp/run-prompt.ts`, `src/web-search/tab-search.ts`, `src/remote/serve-acp-loop.ts`, the "Where an agent's search runs" design decision, `product/specs/acp.md`, `product/specs/web-search.md`, and `documentation/user-documentation/advanced-agents/acp-agent.md`; no code, test, spec, or help edit.
+
+
+* Add typed web search to the ACP spec's list of untagged typed outputs.
+
+Existing Issue: The ACP spec's tag paragraph enumerates the typed outputs that carry no `[<host>] ` tag as `file read`, `file glob`, `file grep`, `file write`, and `file edit`, omitting typed `web search`, while the user documentation already lists `web search` among the untagged typed outputs and `searchWebInTab` returns a remote tab's typed result through `withRemoteTabPort` with no tag. Severity: 3/10
+
+Existing Risk: 2/10 - a reader of the spec could expect a typed remote web result to be tagged or distrust the tag rule, and the two documents disagree on an observable transcript detail.
+
+Proposal Risk: 1/10 - the spec list matches the user documentation and the routing code; no behavior changes.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "add typed web search to the ACP spec's untagged typed-output list". In `product/specs/acp.md`, the tag paragraph, change "the output of typed `file read`, `file glob`, `file grep`, `file write`, and `file edit` are untagged" to include `web search` after `file grep`, matching the order in `documentation/user-documentation/advanced-agents/acp-agent.md`. Leave the Web search section and every other sentence unchanged. Verify against `src/acp/run-prompt.ts` (`tagged` applies only to a remote session's workspace step) and `src/web-search/tab-search.ts`; no code or test change.
+
+
+* Fix and test the first-result truncation when the note cannot fit alongside the link line.
+
+Existing Issue: In `src/web-search/render.ts`, `cutFirstResult` returns the link line and the truncation note whenever `room = maxChars - link.length - 3 - note.length` is at most 1, so with the 200-character minimum, a 150-character link and a two-result note can produce about 203 characters and omit the snippet even though the link line alone fits; no render test covers that boundary. Severity: 3/10
+
+Existing Risk: 2/10 - a long URL with a short snippet can exceed the user's `--max-chars` and drop the snippet, contrary to the plan's budget rule, and the untested branch can regress unnoticed.
+
+Proposal Risk: 1/10 - the output becomes deterministic and stays within the budget; only the over-budget edge changes.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "cover and correct the first-result truncation boundary". Add a case to `src/web-search/render.test.ts` with `maxChars: 200`, two results, a first link line between `maxChars - note.length - 3` and `maxChars`, and a short snippet. Decide the precedence the plan implies — the budget includes the note, so when the note cannot fit with the link line the link line is printed alone within budget — and implement it in `cutFirstResult` in `src/web-search/render.ts`: return the link line alone when `link.length + note.length` exceeds `maxChars`; when `room === 1`, print the link line plus an indented `…` and the note, which fits exactly; when `room <= 0`, print the link line and note without a snippet; otherwise keep the existing cut. Update the Truncation paragraph of `product/specs/web-search.md` and the output paragraph of `help/web.md` to state that the note is dropped when it cannot fit with the link line, and add the new test at the boundary. Keep the existing whole-result, over-budget-link, and empty-list cases passing.
+
+
+* Record the abort rule in the web-search behavior spec and correct the repair plan's claim that it is already there.
+
+Existing Issue: The aborted-search repair plan says `product/specs/web-search.md` already records that an aborted capability's original rejection is rethrown and nothing is disabled or reported, but that spec contains no abort or cancellation rule beyond "A typed search has no cancellation"; the rule exists in the aggregate plan's design decision and in `documentation/developer-documentation/web-search-providers.md`. Severity: 2/10
+
+Existing Risk: 2/10 - a future change to the registry's abort guards has no behavior-spec sentence to check against, and the repair plan points a reader to text that is not there.
+
+Proposal Risk: 1/10 - the spec states the rule and its synchronous-version-check exception; the code is unchanged.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "record the abort rule in the web-search behavior spec". Add a short cancellation paragraph to `product/specs/web-search.md` (near "Where a typed search runs" or "Disabled providers") stating that an agent search's attempt is tied to the prompt's signal; when it aborts, `runWebSearch` rethrows the abort before resolution, before each attempt, after a result, and before final failure lines; an aborted attempt that observes the signal disables and reports nothing, including a module without `search` or a non-array result, while a synchronous API-version mismatch is checked before activation and remains the documented disable path. Then correct `product/plans/complete/keep-aborted-search-from-disabling-provider.md` to cite the aggregate plan, the developer page, or the new spec paragraph instead of claiming the spec already had it. Verify against `src/web-search/search.ts`, `src/web-search/registry.ts`, `documentation/developer-documentation/web-search-providers.md`, and `product/specs/acp.md`; no code or test change.
