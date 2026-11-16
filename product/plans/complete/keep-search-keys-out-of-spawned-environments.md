@@ -4,7 +4,7 @@
 
 ## Goal
 
-Neither `TAVILY_API_KEY` nor `TINYFISH_API_KEY` may appear in the environment of any process Janissary spawns, whether the value came from a token file or from the server's own ambient environment. The search still works everywhere it did: `web search` reads the keys from `getProjectTokens()` in the Janissary server process, and a remote search reads them from the provisioning map on the far side.
+Neither `TAVILY_API_KEY` nor `TINYFISH_API_KEY` may appear in the environment of a workspaced shell, harness, or ACP agent, whether the value came from a token file or from the server's own ambient environment. A plain non-workspaced spawn keeps the user's own environment, as the Out of scope bullet below records. The search still works everywhere it did: `web search` reads the keys from `getProjectTokens()` in the Janissary server process, and a remote search reads them from the provisioning map on the far side.
 
 Today `src/sandbox/environment.ts` sets both variables from a configured token row because `tokenVariables` walks every row, so every workspaced shell, harness, and ACP agent gets them, as does every ACP agent outside a workspace through `agentCredentialEnv`. No spawned process reads either key. The two row comments in `src/project/tokens.ts` say so outright. A compromised or prompt-injected harness can read the values and burn the user's Tavily or TinyFish quota, or reach the provider account.
 
