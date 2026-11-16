@@ -174,26 +174,36 @@ describe('createProviderRegistry', () => {
       .resolves.toEqual({ kind: 'plugin-failed', reason: 'provider failed: sync exploded' });
   });
 
-  it('rejects a module without a search function', async () => {
+  it('disables and reports a module without a search function', async () => {
+    const reportDisabled = vi.fn();
     const manifest = fakeManifest('tavily', {
       module: { provider: { search: undefined as never } },
     });
-    const registry = createProviderRegistry([manifest]);
+    const registry = createProviderRegistry([manifest, fakeManifest('tinyfish')]);
 
-    await expect(registry.runAttempt(manifest, REQUEST, capability()))
+    await expect(registry.runAttempt(manifest, REQUEST, capability(), reportDisabled))
       .resolves.toEqual({ kind: 'plugin-failed', reason: 'provider failed: module has no provider' });
+    expect(reportDisabled).toHaveBeenCalledOnce();
+    expect(reportDisabled).toHaveBeenCalledWith('tavily', 'provider failed: module has no provider');
+    expect(ids(registry.resolveAttempts('auto', TOKENS))).toEqual(['tinyfish']);
   });
 
-  it('rejects a search that does not resolve to an array', async () => {
+  it('disables and reports a search that does not resolve to an array', async () => {
+    const reportDisabled = vi.fn();
     const manifest = fakeManifest('tavily', {
       module: moduleFor(async () => 'not an array' as unknown as WebSearchResult[]),
     });
-    const registry = createProviderRegistry([manifest]);
+    const registry = createProviderRegistry([manifest, fakeManifest('tinyfish')]);
 
-    await expect(registry.runAttempt(manifest, REQUEST, capability())).resolves.toEqual({
-      kind: 'plugin-failed',
-      reason: 'provider failed: search did not return an array',
-    });
+    await expect(registry.runAttempt(manifest, REQUEST, capability(), reportDisabled))
+      .resolves.toEqual({
+        kind: 'plugin-failed',
+        reason: 'provider failed: search did not return an array',
+      });
+    expect(reportDisabled).toHaveBeenCalledOnce();
+    expect(reportDisabled)
+      .toHaveBeenCalledWith('tavily', 'provider failed: search did not return an array');
+    expect(ids(registry.resolveAttempts('auto', TOKENS))).toEqual(['tinyfish']);
   });
 
   it('disables a provider after a plugin failure and reports it once', async () => {
@@ -232,6 +242,20 @@ describe('createProviderRegistry', () => {
       .toBe('Web search failed (tavily): provider failed: boom.');
     expect(line(registry.resolveAttempts('auto', TOKENS)))
       .toBe('Web search failed (tavily): provider failed: boom.');
+  });
+
+  it('prints the stored line for a disabled provider without a token', async () => {
+    const manifest = fakeManifest('tavily', {
+      module: moduleFor(async () => {
+        throw new Error('tavily boom.');
+      }),
+    });
+    const registry = createProviderRegistry([manifest, fakeManifest('tinyfish')]);
+
+    await registry.runAttempt(manifest, REQUEST, capability());
+
+    expect(line(registry.resolveAttempts('tavily', {})))
+      .toBe('Web search failed (tavily): provider failed: tavily boom.');
   });
 
   it('reports every configured provider failure for auto when all are disabled', async () => {
