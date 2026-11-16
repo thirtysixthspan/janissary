@@ -83,6 +83,7 @@ describe('patch view', () => {
     writeFileSync(file, 'changed');
     const target = resolve('target');
     expect(link).toMatchObject({ location: path.join(root, 'link'), linkText: 'target' });
+    expect(link.content.realPath).toBe(realpathSync.native(file));
     expect(target.location).toBe(file);
     expect(target.content).toBe(link.content);
     expect(target.content.current).toBe('original');
