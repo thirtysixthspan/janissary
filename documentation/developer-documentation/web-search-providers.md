@@ -145,13 +145,17 @@ That is the whole vocabulary. A provider never reads token files, `Managers`, a 
 
 ## Resolution and ordering
 
-An explicit `--provider <name>` selects that one provider. `--provider auto`, the default, walks the catalog in order and skips any provider without a token file, then skips any provider already disabled. Names match case-insensitively, and `auto` is reserved.
+An explicit `--provider <name>` selects that one provider, checked in the order unknown, then disabled, then not configured. `--provider auto`, the default, walks the catalog in order and skips any provider without a token file, then skips any provider already disabled. Names match case-insensitively, and `auto` is reserved.
 
 The lines a provider author will see from resolution are:
 
 - `Web search: unknown provider "<name>" (available: auto, tavily, tinyfish).`, with the name as typed and the catalog order after `auto`.
 - `Web search: provider "<name>" is not configured.`, with the manifest id of a known provider that has no token file.
 - `Web search: no provider configured.`, when `auto` has no provider with a token file.
+- `Web search failed (<id>): <reason>.`, for an explicit `--provider` naming a disabled provider, and for `auto` when its one configured provider is disabled. `<reason>` is the stored reason from the failure that disabled it.
+- `Web search: every provider failed.` followed by one `- <id>: <reason>` line for each provider, in catalog order, when `auto` has two or more configured providers and all of them are disabled.
+
+Both disabled-provider forms come from `formatFailures` in `src/web-search/failure-lines.ts`, the one function every web search failure line goes through, so a disabled provider and one that just failed read identically. The registry's `resolveAttempts` in `src/web-search/registry.ts` decides which line a search starts with; read it for the exact conditions.
 
 Attempts run sequentially, each awaited before the next starts. There is no concurrency between providers. A provider that resolves results ends the search, including when it resolves an empty array.
 

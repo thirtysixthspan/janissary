@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's disabled-provider resolution lines in the provider reference page.
-
-Existing Issue: The page's "Resolution and ordering" section presents the unknown-provider, not-configured, and no-provider lines as the complete set, omitting the explicit disabled-provider line and the auto all-providers-failed form that `resolveAttempts` returns. Severity: 3/10
-
-Existing Risk: 3/10 - A provider author or later maintainer cannot predict what the host prints after a provider is disabled, so troubleshooting and documentation of the disabled state stay incomplete.
-
-Proposal Risk: 2/10 - The page would list the missing lines, but it still duplicates their wording instead of generating it from `formatFailures`, so a future wording change can drift.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "document the disabled-provider resolution lines in the provider reference page". In `documentation/developer-documentation/web-search-providers.md`, extend the "Resolution and ordering" list with `Web search failed (<id>): <reason>.` for an explicit disabled provider and for auto with one configured provider, and with `Web search: every provider failed.` followed by one `- <id>: <reason>` line each when auto has two or more configured providers and all are disabled. Name `formatFailures` in `src/web-search/failure-lines.ts` as the shared formatter and point readers to the registry's `resolveAttempts` in `src/web-search/registry.ts` for the exact conditions. No source or test change is expected; the registry tests in `src/web-search/registry.test.ts` already pin the lines, so keep them passing and re-read the page after editing.
-
-
 * Deliver the plan's expected-failure fallback and remote-notification behavior in the provider reference page.
 
 Existing Issue: The page says an expected `ProviderRequestError` never disables but never says an auto search falls back to the next configured provider, and it says one notification appears without noting that a remote search passes no `reportDisabled` and shows the reason only in failure lines. Severity: 3/10
