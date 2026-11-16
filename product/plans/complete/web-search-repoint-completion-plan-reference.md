@@ -59,7 +59,7 @@ No automated test covers plan prose, and this fix changes no code. The existing 
 Verify the references by search:
 
 - A repository-wide search for the completion plan's ready-folder path returns no matches.
-- Every `web-search-14-completion` reference resolves under `product/plans/complete/`.
+- Each of the five edited references resolves under `product/plans/complete/`. The draft-folder completion link in `product/plans/complete/web-search-13-default-grants.md` is the pre-existing stale link that this repair leaves out of scope, as the Out of scope section records.
 - `product/plans/complete/web-search-14-completion.md` exists on the branch.
 
 ## Verification
