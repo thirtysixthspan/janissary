@@ -18,6 +18,7 @@ import { completeSystemSchedule, type SystemScheduleCompletions } from './system
 import { completeRunscriptCommand } from './runscript-commands.js';
 import { completeFilesCommand, type FilesCompletions } from './files.js';
 import { completeFileReadCommand } from './file-read.js';
+import { completeWebCommand } from './web.js';
 import { listHelpPages } from '../help-pages.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -43,6 +44,9 @@ const HELP_DIRECTORY = path.join(path.dirname(fileURLToPath(import.meta.url)), '
  *   names after `--path` against `fileReadRoot`, all before the pattern starts; with no root (a
  *   remote tab) it offers no paths. The include, exclude, and limit values, and every word once
  *   the pattern or a `--` terminator starts, get nothing.
+ * - For `web search`, completes the subcommand, the flags not yet used after the query, and the
+ *   values of `--depth` and `--provider`; the query and numeric values get no candidates and no
+ *   path fallback.
  * - Otherwise completes a filesystem path relative to `cwd`.
  *
  * A single match is filled in fully; multiple matches fill in their longest common prefix
@@ -82,6 +86,7 @@ export function completeCommandLine(
     completeSyntaxTheme(cursor, SYNTAX_THEMES) ??
     completeLayoutCommand(cursor) ??
     completeFileReadCommand(cursor, fileReadRoot, policy) ??
+    completeWebCommand(cursor, policy) ??
     (modelsFor ? completeHarnessModel(cursor, modelsFor) : null);
   return result ?? completeFilePath(cursor, cwd);
 }

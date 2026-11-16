@@ -12,6 +12,10 @@ The query is everything after `web search` up to the first whitespace-separated 
 
 The command claims every line that starts with the word `web`, so bare `web` and any other `web <word>` line reach it too. Every malformed form prints exactly `Usage: web search <query> [--results <1-20>] [--max-chars <200-100000>] [--depth basic|advanced] [--provider <name>]` and sends nothing. That covers bare `web`, bare `web search`, an empty query, an unknown or repeated flag, a flag with no value, a `--results` or `--max-chars` that is not a whole number in range, a `--depth` other than `basic` or `advanced`, and a word after the flags that is not a flag's value.
 
+### Completion
+
+The command bar completes `web` to `web search`, the flags not yet used after the query, and the values of `--depth` and `--provider`, but never the query or a numeric value; see [[tab-completion]] for the detail.
+
 ### Where a typed search runs
 
 A local tab's search runs on the machine running Janissary, with that machine's tokens. A remote tab's search runs on the remote machine, in that tab's workspace, with that workspace's merged tokens. It never falls back to the local machine. See [[remote-server]] and [[workspaced-agent]] for the remote workspace and connection.
