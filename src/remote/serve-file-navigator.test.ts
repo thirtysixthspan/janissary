@@ -64,6 +64,10 @@ describe('RemoteFileNavigators', () => {
     return request('edit-file', operationDescriptor('edit-file').decode(args));
   }
 
+  function patch(args: Record<string, unknown>): Promise<ServerFrame> {
+    return request('apply-patch', operationDescriptor('apply-patch').decode(args));
+  }
+
   it('reads, lists, stats, searches, writes, and mutates inside the workspace', async () => {
     mkdirSync(path.join(root, 'src'));
     writeFileSync(path.join(root, 'src', 'a.txt'), 'héllo\nworld');
@@ -168,6 +172,23 @@ describe('RemoteFileNavigators', () => {
     expect(await edit({ path: '../outside.txt', ...args })).toMatchObject({ result: { ok: false, reason: expect.any(String) } });
     expect(await edit({ path: '.env', ...args })).toMatchObject({ result: { ok: false, reason: expect.any(String) } });
     expect(readFileSync(path.join(root, '.env'), 'utf8')).toBe('KEY=1');
+  });
+
+  it('applies a patch in the far-side workspace only', async () => {
+    const reply = await patch({ patchText: Buffer.from('*** Add File: a.md\n+hi\n*** End Patch').toString('base64') });
+
+    expect(reply).toMatchObject({ result: { text: 'Patched 1 file:\nA a.md' } });
+    expect(readFileSync(path.join(root, 'a.md'), 'utf8')).toBe('hi\n');
+  });
+
+  it('answers an escaping patch section with the runner failure text, not an error', async () => {
+    const reply = await patch({ patchText: Buffer.from('*** Delete File: ../outside.txt').toString('base64') });
+
+    expect(reply).toMatchObject({
+      result: { text: 'Patch failed at section 1 (Delete File: ../outside.txt): Outside the workspace. No files were changed.' },
+    });
+    expect(reply).not.toHaveProperty('error');
+    expect(existsSync(path.join(tmpdir(), 'outside.txt'))).toBe(false);
   });
 
   it('refuses tool writes and edits under .git and .janissary on the far side while reads and editor saves still work', async () => {

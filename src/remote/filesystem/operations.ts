@@ -13,6 +13,7 @@ import type { HistoryStep } from '../../file-navigator/moves.js';
 import { resultDecoders } from './result-decoders.js';
 import { writeFileOperation } from './write-file-operation.js';
 import { editFileOperation } from './edit-file-operation.js';
+import { applyPatchOperation } from './apply-patch-operation.js';
 import { searchTextOperation } from './search-text-operation.js';
 import { readLinesOperation } from './read-lines-operation.js';
 import { globPathsOperation } from './glob-paths-operation.js';
@@ -81,6 +82,7 @@ const READ_OPERATIONS = {
 const MUTATION_OPERATIONS = {
   'write-file': writeFileOperation,
   'edit-file': editFileOperation,
+  'apply-patch': applyPatchOperation,
   move: moveOperation,
   'move-many': moveManyOperation,
   delete: descriptorFor<'delete'>()({

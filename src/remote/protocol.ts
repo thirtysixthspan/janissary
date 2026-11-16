@@ -236,7 +236,10 @@
 // typed `web search` on a remote tab runs on the remote machine with that workspace's tokens, which
 // now travel on the far side's operation context. A version-43 remote would refuse it as unknown
 // after the handshake had already passed, so the exact-version handshake refuses that pairing first.
-export const REMOTE_PROTOCOL_VERSION = 44;
+// Version 45 adds the `apply-patch` mutation, which carries a whole patch to the far side to apply in
+// its own workspace. A version-44 peer would refuse it as unknown after the handshake had already
+// passed, so the exact-version handshake refuses that pairing first.
+export const REMOTE_PROTOCOL_VERSION = 45;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
