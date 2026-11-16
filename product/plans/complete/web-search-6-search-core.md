@@ -89,11 +89,11 @@ All relative imports carry `.js`; type-only imports use `import type`.
 ## Verification
 
 - `$janissary/scripts/run.mjs check-diff`
-- No manual app check: nothing calls `webSearch` until `./product/plans/complete/web-search-10-typed-command.md` and `./product/plans/ready/web-search-11-workspace-routes.md`.
+- No manual app check: nothing calls `webSearch` until `./product/plans/complete/web-search-10-typed-command.md` and `./product/plans/complete/web-search-11-workspace-routes.md`.
 
 ## Out of scope
 
-- Calling `webSearch` from a tab, the remote operation, or either ACP loop (`./product/plans/complete/web-search-7-remote-operation.md`, `./product/plans/complete/web-search-10-typed-command.md`, `./product/plans/ready/web-search-11-workspace-routes.md`).
+- Calling `webSearch` from a tab, the remote operation, or either ACP loop (`./product/plans/complete/web-search-7-remote-operation.md`, `./product/plans/complete/web-search-10-typed-command.md`, `./product/plans/complete/web-search-11-workspace-routes.md`).
 - Posting the disabled-provider notification (slice 10); the core only passes `reportDisabled` through.
 - Resolution, the disabled set, and failure-line text (slice 5); the request timeout and abort classification inside a provider (slice 4).
 - A core query-length cap; paging a provider to reach `--results` (user decisions).

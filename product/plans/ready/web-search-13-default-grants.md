@@ -77,7 +77,7 @@ Suites that pass unchanged: `src/plugins/roles/activate.test.ts` (compares again
 ## Out of scope
 
 - Migrating saved roles files (user decision).
-- Any change to the vocabulary, tool table, primer, or routing (`./product/plans/ready/web-search-12-acp-tool.md`, `./product/plans/ready/web-search-11-workspace-routes.md`).
+- Any change to the vocabulary, tool table, primer, or routing (`./product/plans/ready/web-search-12-acp-tool.md`, `./product/plans/complete/web-search-11-workspace-routes.md`).
 - `help web` and `help/commands.md` (`./product/plans/complete/web-search-10-typed-command.md`); the tokens page (`./product/plans/complete/web-search-3-provider-tokens.md`).
 - Completion (`./product/plans/draft/web-search-14-completion.md`).
 - Granting `web search` to any other built-in role (they start with no grants).

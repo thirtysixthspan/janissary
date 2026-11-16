@@ -71,5 +71,5 @@ Carried from the source plan where they apply.
 - Bumping `REMOTE_PROTOCOL_VERSION` (slice 3 owns the feature's single bump).
 - The near side's `RemoteFileSystemPort.webSearch`, the long-running deadline (`LONG_RUNNING` in `src/file-navigator/remote/port-requests.ts`), and passing the merged tokens from provisioning in `src/remote/serve-provision.ts` (`./product/plans/complete/web-search-8-remote-port.md`).
 - The typed command that sends the operation (`./product/plans/complete/web-search-10-typed-command.md`).
-- The far-side ACP loop's own search route (`./product/plans/ready/web-search-11-workspace-routes.md`), which calls `webSearch` directly and does not use this operation.
+- The far-side ACP loop's own search route (`./product/plans/complete/web-search-11-workspace-routes.md`), which calls `webSearch` directly and does not use this operation.
 - Cancelling a typed search (user decision).

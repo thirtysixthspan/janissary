@@ -62,5 +62,5 @@ Carried verbatim from the source plan where they apply.
 - Adding `webSearch` to the `FileSystemPort` interface (source decision).
 - Any cancellation message over the wire (a typed search is not cancellable).
 - Bumping `REMOTE_PROTOCOL_VERSION` (slice 3 owns the feature's single bump) and the far-side `web-search` operation itself (slice 7).
-- Passing tokens to the far-side ACP loop (`./product/plans/ready/web-search-11-workspace-routes.md`).
+- Passing tokens to the far-side ACP loop (`./product/plans/complete/web-search-11-workspace-routes.md`).
 - The `file patch` plan's own `applyPatch` port method and `apply-patch` deadline entry.
