@@ -39,10 +39,13 @@ describe('sendResync', () => {
 });
 
 describe('sendRevealInFileNavigator', () => {
-  it('sends revealInFileNavigator with the editor label', () => {
+  it('sends revealInFileNavigator with the editor label and a request order', () => {
     const send = vi.fn();
     sendRevealInFileNavigator({ send }, 'editor', undefined);
-    expect(send).toHaveBeenCalledWith({ method: 'revealInFileNavigator', params: { label: 'editor' } });
+    expect(send).toHaveBeenCalledWith({
+      method: 'revealInFileNavigator',
+      params: { label: 'editor', requestOrder: expect.any(Number) },
+    });
   });
 
   it('sends nothing while an unsaved file is blocked', () => {

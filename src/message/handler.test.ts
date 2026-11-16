@@ -490,8 +490,10 @@ describe('handle', () => {
 
   it('routes revealInFileNavigator', () => {
     const controller = makeController();
-    const replies = dispatchCall(controller, 28, { method: 'revealInFileNavigator', params: { label: 'editor' } });
-    expect(controller.revealInFileNavigator).toHaveBeenCalledWith('editor');
+    const replies = dispatchCall(controller, 28, {
+      method: 'revealInFileNavigator', params: { label: 'editor', requestOrder: 9 },
+    });
+    expect(controller.revealInFileNavigator).toHaveBeenCalledWith('editor', 9);
     expect(replies).toEqual([{ t: 'rpc-reply', id: 28, result: 'ok' }]);
   });
 

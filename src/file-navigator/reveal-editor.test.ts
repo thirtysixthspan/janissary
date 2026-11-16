@@ -235,7 +235,20 @@ describe('revealEditorFile', () => {
       selected: ['src/deep/a.ts'],
     });
     expect(state.restore?.focus).toBe(true);
+    expect(state.restore?.requestOrder).toBeUndefined();
     expect(state.restore?.revision).toBeGreaterThan(before);
+  });
+
+  it('carries the reveal request order on its focus hint', () => {
+    const { state, port } = revealFixture();
+
+    revealEditorFile(port, 'edit', 42);
+
+    expect(state.restore).toMatchObject({
+      cursor: 'src/deep/a.ts',
+      focus: true,
+      requestOrder: 42,
+    });
   });
 
   it('drops a missing intermediate directory and still writes the hint', () => {

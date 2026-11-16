@@ -777,7 +777,10 @@ describe('EditorTab', () => {
     fireEvent.mouseUp(button);
     fireEvent.click(button);
 
-    expect(client.send).toHaveBeenCalledWith({ method: 'revealInFileNavigator', params: { label: 'notes' } });
+    expect(client.send).toHaveBeenCalledWith({
+      method: 'revealInFileNavigator',
+      params: { label: 'notes', requestOrder: expect.any(Number) },
+    });
     expect(document.activeElement).not.toBe(textarea());
     outside.remove();
   });
@@ -801,7 +804,10 @@ describe('EditorTab', () => {
 
     fireEvent.keyDown(textarea(), { key: 'e', metaKey: true, shiftKey: true });
 
-    expect(client.send).toHaveBeenCalledWith({ method: 'revealInFileNavigator', params: { label: 'notes' } });
+    expect(client.send).toHaveBeenCalledWith({
+      method: 'revealInFileNavigator',
+      params: { label: 'notes', requestOrder: expect.any(Number) },
+    });
   });
 
   it('adds no undo step and seals no typing group on Cmd+Shift+E', async () => {

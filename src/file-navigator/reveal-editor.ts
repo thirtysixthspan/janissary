@@ -52,7 +52,7 @@ export function editorRevealBlocked(editor: EditorView): EditorView['revealBlock
 
 export type RevealPort = OpenPort & Pick<NavigationPort, 'setCwd' | 'hasTab' | 'reportFailure'>;
 
-export function revealEditorFile(port: RevealPort, editorLabel: string): void {
+export function revealEditorFile(port: RevealPort, editorLabel: string, requestOrder?: number): void {
   const editor = port.managers.tab.byLabel(editorLabel)?.editor;
   if (!editor || editorRevealBlocked(editor) !== undefined) return;
   const target = isRemoteCacheFile(editor.path)
@@ -69,6 +69,7 @@ export function revealEditorFile(port: RevealPort, editorLabel: string): void {
     anchor: relPath,
     selected: [relPath],
     focus: true,
+    ...(requestOrder !== undefined && { requestOrder }),
   };
   port.rebuild(label);
   const index = port.managers.tab.findIndex(label);

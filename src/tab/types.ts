@@ -185,6 +185,10 @@ export type FileNavigatorRestoreHint = {
   // reports it applied or dropped through `fileNavigatorRevealApplied`; the server removes this member
   // when that report arrives. Absent on an ordinary `files` hint, whose payload is unchanged.
   focus?: true;
+  // The client's monotonic order for the request that produced this focus hint, echoed so the
+  // navigator can drop the hint when the user pressed a row after asking for the reveal. Absent on
+  // hints the server originates without a client request.
+  requestOrder?: number;
 };
 
 // A single visible row in a file navigator tab (opened via `files [path]`). `path` is relative to the

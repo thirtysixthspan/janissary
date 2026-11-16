@@ -8,6 +8,7 @@ import { FileNavigatorTab } from './FileNavigatorTab';
 import { Sidebar } from '../Sidebar';
 import { multiOpenablePaths } from '../multi-open';
 import type { CommandInputDropHandle } from '../shared/drop-handles';
+import { nextInteractionOrder } from '../shared/interaction-order';
 import { clearClipboard, getClipboardSnapshot, setClipboard } from './file/navigator-clipboard';
 
 beforeAll(() => {
@@ -938,6 +939,81 @@ describe('FileNavigatorTab', () => {
       expect(revealAcknowledgements(send)).toEqual([{ label: 'reveal-selected', revision: 110 }]);
       expect(screen.getByText('README.md').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
       expect(screen.getByText('later.ts').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'false');
+    });
+
+    it('keeps a press on an already-selected row made before the reveal hint arrives', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
+      const { rerender } = render(<FileNavigatorTab
+        files={makeFiles()}
+        client={client}
+        index={0}
+        label="reveal-overtaken"
+        autoFocus={false}
+      />);
+
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0 });
+      const requestOrder = nextInteractionOrder();
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0 });
+      expect(screen.getByText('README.md').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
+      const focusCallsBeforeHint = focusSpy.mock.calls.length;
+
+      rerender(<FileNavigatorTab
+        files={makeFiles({
+          rows: [...makeFiles().rows, { path: 'later.ts', name: 'later.ts', depth: 0, dir: false }],
+          restore: {
+            revision: 111, focus: true, requestOrder, cursor: 'later.ts', anchor: 'later.ts', selected: ['later.ts'],
+          },
+        })}
+        client={client}
+        index={0}
+        label="reveal-overtaken"
+        autoFocus={false}
+      />);
+
+      expect(screen.getByText('README.md').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByText('README.md').closest('[role="treeitem"]')).toHaveAttribute('data-cursor', 'true');
+      expect(screen.getByText('later.ts').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'false');
+      expect(screen.getByText('later.ts').closest('[role="treeitem"]')).not.toHaveAttribute('data-cursor');
+      expect(focusSpy).toHaveBeenCalledTimes(focusCallsBeforeHint);
+      expect(revealAcknowledgements(send)).toEqual([{ label: 'reveal-overtaken', revision: 111 }]);
+    });
+
+    it('applies a reveal requested after the press on an already-selected row', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
+      const { rerender } = render(<FileNavigatorTab
+        files={makeFiles()}
+        client={client}
+        index={0}
+        label="reveal-after-press"
+        autoFocus={false}
+      />);
+
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0 });
+      const requestOrder = nextInteractionOrder();
+      const focusCallsBeforeHint = focusSpy.mock.calls.length;
+
+      rerender(<FileNavigatorTab
+        files={makeFiles({
+          rows: [...makeFiles().rows, { path: 'later.ts', name: 'later.ts', depth: 0, dir: false }],
+          restore: {
+            revision: 112, focus: true, requestOrder, cursor: 'later.ts', anchor: 'later.ts', selected: ['later.ts'],
+          },
+        })}
+        client={client}
+        index={0}
+        label="reveal-after-press"
+        autoFocus={false}
+      />);
+
+      expect(screen.getByText('later.ts').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByText('later.ts').closest('[role="treeitem"]')).toHaveAttribute('data-cursor', 'true');
+      expect(screen.getByText('README.md').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'false');
+      expect(focusSpy).toHaveBeenCalledTimes(focusCallsBeforeHint + 1);
+      expect(revealAcknowledgements(send)).toEqual([{ label: 'reveal-after-press', revision: 112 }]);
     });
 
     it('acknowledges two navigators with different labels independently', () => {

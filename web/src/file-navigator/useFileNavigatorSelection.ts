@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FileNavigatorRestoreHint, FileNavigatorRow } from '@shared/protocol';
+import { nextInteractionOrder } from '../shared/interaction-order';
 import { clearNavigatorSelection, publishNavigatorSelection } from './file/navigator-selection-registry';
 import { siblingSelection } from './file/navigator-siblings';
 import {
@@ -28,6 +29,7 @@ export function useFileNavigatorSelection(
   const appliedRestore = useRef<number | undefined>(undefined);
   const focusOrigin = useRef<{ revision?: number; root: string }>({ root: absoluteRoot });
   const userMoved = useRef(false);
+  const lastInteractionOrder = useRef(0);
 
   const recordFocusOutcome = useCallback((revision: number, outcome: FocusHintOutcome) => {
     setRecordedFocus((current) => current?.revision === revision && current.outcome === outcome
@@ -45,7 +47,10 @@ export function useFileNavigatorSelection(
 
     if (pendingRestore?.focus === true && focusOrigin.current.revision !== pendingRestore.revision) {
       focusOrigin.current = { revision: pendingRestore.revision, root: absoluteRoot };
-      userMoved.current = false;
+      // A press recorded after the reveal was requested outranks the hint even though it happened
+      // before the hint arrived; a press from before the request leaves the reveal in charge.
+      userMoved.current = pendingRestore.requestOrder !== undefined
+        && lastInteractionOrder.current > pendingRestore.requestOrder;
     }
     const focusStatus = pendingRestore?.focus === true
       ? focusHintStatus(
@@ -117,6 +122,9 @@ export function useFileNavigatorSelection(
     : undefined;
 
   const dropPendingFocus = useCallback(() => {
+    // Every selection transition and row press passes through here, including a press that keeps an
+    // already-selected row, so this order is what a later focus hint is judged against.
+    lastInteractionOrder.current = nextInteractionOrder();
     if (focusHint?.outcome !== 'pending') return;
     userMoved.current = true;
     recordFocusOutcome(focusHint.revision, 'dropped');

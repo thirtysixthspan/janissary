@@ -171,8 +171,8 @@ export function openFileNavigatorFor(managers: Managers, label: string): void {
   managers.fileNavigator.openOrRetarget(label);
 }
 
-export function revealInFileNavigator(managers: Managers, label: string): void {
-  managers.fileNavigator.revealEditorFile(label);
+export function revealInFileNavigator(managers: Managers, label: string, requestOrder?: number): void {
+  managers.fileNavigator.revealEditorFile(label, requestOrder);
 }
 
 export function fileNavigatorRevealApplied(managers: Managers, label: string, revision: number): void {

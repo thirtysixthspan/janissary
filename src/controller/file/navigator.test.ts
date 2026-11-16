@@ -225,11 +225,11 @@ describe('controller-file-navigator', () => {
     expect(calls).toEqual([['agent']]);
   });
 
-  it('revealInFileNavigator delegates to FileNavigatorManager.revealEditorFile with the label', () => {
+  it('revealInFileNavigator delegates to FileNavigatorManager.revealEditorFile with the label and request order', () => {
     const calls: unknown[] = [];
     const managers = makeManagers('editor', { revealEditorFile: (...args: unknown[]) => { calls.push(args); } });
-    revealInFileNavigator(managers, 'editor');
-    expect(calls).toEqual([['editor']]);
+    revealInFileNavigator(managers, 'editor', 9);
+    expect(calls).toEqual([['editor', 9]]);
   });
 
   it('fileNavigatorRevealApplied delegates to FileNavigatorManager.clearRevealFocus with the label and revision', () => {

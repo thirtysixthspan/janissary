@@ -15,6 +15,7 @@ import {
   useFileNavigatorSelection,
 } from './useFileNavigatorSelection';
 import { collectNavigatorSelections } from './file/navigator-selection-registry';
+import { nextInteractionOrder } from '../shared/interaction-order';
 
 const rows = (paths: string[]): FileNavigatorRow[] =>
   paths.map((path) => ({ path, name: path.split('/').at(-1)!, depth: path.split('/').length - 1, dir: !path.includes('.') }));
@@ -326,6 +327,52 @@ describe('holding a focus hint until its row arrives', () => {
 
     expect(result.current.cursor).toBe('a');
     expect(result.current.focusHint).toEqual({ revision: 7, outcome: 'applied' });
+  });
+
+  type FocusHintProps = { visible: FileNavigatorRow[]; restore?: FileNavigatorRestoreHint };
+
+  it('drops a focus hint the user overtook before it arrived', () => {
+    const requestOrder = nextInteractionOrder();
+    const hint: FileNavigatorRestoreHint = {
+      revision: 12, focus: true, requestOrder, cursor: 'c', anchor: 'c', selected: ['c'],
+    };
+    const { result, rerender } = renderHook<ReturnType<typeof useFileNavigatorSelection>, FocusHintProps>(
+      ({ visible, restore }) => useFileNavigatorSelection(visible, '/root', 'navigator', restore),
+      { initialProps: { visible: rows(['a', 'b']) } },
+    );
+
+    act(() => { result.current.replace('a'); });
+
+    rerender({ visible: rows(['a', 'b', 'c']), restore: hint });
+
+    expect(result.current.cursor).toBe('a');
+    expect(result.current.selected).toEqual(new Set(['a']));
+    expect(result.current.focusHint).toEqual({ revision: 12, outcome: 'dropped' });
+
+    rerender({ visible: rows(['a', 'b', 'c']), restore: hint });
+
+    expect(result.current.cursor).toBe('a');
+    expect(result.current.selected).toEqual(new Set(['a']));
+    expect(result.current.focusHint).toEqual({ revision: 12, outcome: 'dropped' });
+  });
+
+  it('applies a focus hint requested after the last tree press', () => {
+    const { result, rerender } = renderHook<ReturnType<typeof useFileNavigatorSelection>, FocusHintProps>(
+      ({ visible, restore }) => useFileNavigatorSelection(visible, '/root', 'navigator', restore),
+      { initialProps: { visible: rows(['a', 'b']) } },
+    );
+
+    act(() => { result.current.replace('a'); });
+    const requestOrder = nextInteractionOrder();
+
+    rerender({
+      visible: rows(['a', 'b', 'c']),
+      restore: { revision: 13, focus: true, requestOrder, cursor: 'c', anchor: 'c', selected: ['c'] },
+    });
+
+    expect(result.current.cursor).toBe('c');
+    expect(result.current.selected).toEqual(new Set(['c']));
+    expect(result.current.focusHint).toEqual({ revision: 13, outcome: 'applied' });
   });
 
   it('reconciles the cursor while pending before applying the hint over it', () => {

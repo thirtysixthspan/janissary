@@ -196,8 +196,8 @@ export class FileNavigatorManager extends WatchedFilesTabs {
 
   // Reveal the file an editor tab is editing in the file navigator it belongs to, expanding its
   // ancestors and selecting its row. A blocked, vanished, or non-editor label is a silent no-op.
-  revealEditorFile(editorLabel: string): void {
-    revealEditorFile(this.revealPort(), editorLabel);
+  revealEditorFile(editorLabel: string, requestOrder?: number): void {
+    revealEditorFile(this.revealPort(), editorLabel, requestOrder);
   }
 
   clearRevealFocus(navigatorLabel: string, revision: number): void {

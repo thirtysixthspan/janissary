@@ -1,4 +1,5 @@
 import type { EditorView } from '@shared/protocol';
+import { nextInteractionOrder } from '../shared/interaction-order';
 import type { JanusClient } from '../shared/ws/ws';
 
 // The metadata row's commit-to-origin icon: the save lands first (its failure is already on
@@ -40,5 +41,5 @@ export function sendRevealInFileNavigator(
   revealBlocked: EditorView['revealBlocked'],
 ): void {
   if (revealBlocked !== undefined) return;
-  client.send({ method: 'revealInFileNavigator', params: { label } });
+  client.send({ method: 'revealInFileNavigator', params: { label, requestOrder: nextInteractionOrder() } });
 }

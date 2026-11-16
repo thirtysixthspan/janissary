@@ -52,7 +52,8 @@ export function dispatchTabMessage(controller: Controller, message: TabMessage):
     }
     case 'openFileNavigatorFor': { controller.openFileNavigatorFor(message.params.label); break;
     }
-    case 'revealInFileNavigator': { controller.revealInFileNavigator(message.params.label); break;
+    case 'revealInFileNavigator': {
+      controller.revealInFileNavigator(message.params.label, message.params.requestOrder); break;
     }
     case 'fileNavigatorRevealApplied': {
       controller.fileNavigatorRevealApplied(message.params.label, message.params.revision); break;

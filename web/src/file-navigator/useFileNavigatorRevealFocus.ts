@@ -17,10 +17,11 @@ export function useFileNavigatorRevealFocus(
   focusHint: ReturnType<typeof useFileNavigatorSelection>['focusHint'],
   containerRef: React.RefObject<HTMLDivElement | null>,
 ): void {
-  const revision = focusHint?.revision;
+  const revision = focusHint?.outcome === 'dropped' ? undefined : focusHint?.revision;
 
   // The revision is the only dependency that can change, so the outcome turning from `pending` to
-  // `applied` does not pull focus back out of the navigator's header a second time.
+  // `applied` does not pull focus back out of the navigator's header a second time. A hint the user
+  // overtook is dropped before it can take focus at all.
   useEffect(() => {
     if (revision === undefined || revision <= (acknowledgedRevisions.get(label) ?? 0)) return;
     containerRef.current?.focus();
