@@ -365,6 +365,43 @@ describe('runWebSearch', () => {
     })).rejects.toBe(abortError);
   });
 
+  it('rejects when the only provider fails as the signal aborts', async () => {
+    const controller = new AbortController();
+    const abortError = new Error('cancelled on the final failure');
+    const only = fakeProvider('tavily', async () => {
+      throw new Error('boom.');
+    });
+    const reportDisabled = vi.fn(() => {
+      controller.abort(abortError);
+    });
+
+    await expect(runWebSearch(registryWith(only), command(), {
+      tokens: { tavily: 'tavily-key' },
+      fetch: fakeFetch(),
+      signal: controller.signal,
+      reportDisabled,
+    })).rejects.toBe(abortError);
+    expect(reportDisabled).toHaveBeenCalledWith('tavily', 'provider failed: boom');
+  });
+
+  it('rejects before returning a resolution line when the signal already aborted', async () => {
+    const controller = new AbortController();
+    const abortError = new Error('cancelled before resolving');
+    controller.abort(abortError);
+    const tavily = fakeProvider('tavily');
+    const tinyfish = fakeProvider('tinyfish');
+    const fetchStub = fakeFetch();
+
+    await expect(runWebSearch(registryWith(tavily, tinyfish), command(), {
+      tokens: {},
+      fetch: fetchStub,
+      signal: controller.signal,
+    })).rejects.toBe(abortError);
+    expect(tavily.manifest.activate).not.toHaveBeenCalled();
+    expect(tinyfish.manifest.activate).not.toHaveBeenCalled();
+    expect(fetchStub).not.toHaveBeenCalled();
+  });
+
   it('reports a plugin failure once and still falls back without a reporter', async () => {
     const reportDisabled = vi.fn();
     const first = fakeProvider('tavily', async () => {

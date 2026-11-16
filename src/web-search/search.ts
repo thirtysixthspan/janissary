@@ -33,6 +33,7 @@ export async function runWebSearch(
   request: WebSearchCommand,
   deps: WebSearchDeps,
 ): Promise<string> {
+  deps.signal?.throwIfAborted();
   const resolution = registry.resolveAttempts(request.provider, deps.tokens);
   if (resolution.kind === 'line') return resolution.line;
   const providerRequest: WebSearchRequest = {
@@ -61,6 +62,7 @@ export async function runWebSearch(
     if (outcome.kind === 'aborted') throw outcome.error;
     failures.push({ name: manifest.id, reason: outcome.reason });
   }
+  deps.signal?.throwIfAborted();
   return formatFailures(failures);
 }
 

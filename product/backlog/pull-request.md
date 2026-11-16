@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Close the cancellation gap: make the search core reject on every abort, including one that lands on the final provider failure or before a resolution line is returned.
-
-Existing Issue: `runWebSearch` checks the signal only before each attempt and after a successful result, so when the only configured provider fails, or the registry returns a resolution line, while `deps.signal` is already aborted, the call resolves with failure or resolution text instead of rejecting. Severity: 6/10
-
-Existing Risk: 6/10 - A cancelled tool step can still print a late failure or no-provider line after the user cancels, which is the late result the workspace route relies on the rejection to suppress.
-
-Proposal Risk: 2/10 - The core then rejects on every abort it can observe; the only remaining window is an abort arriving after the final synchronous return, which cannot affect an awaited caller.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "make the search core reject on every abort". In `src/web-search/search.ts`, add `deps.signal?.throwIfAborted()` at the start of `runWebSearch` before `registry.resolveAttempts`, and replace the final `return formatFailures(failures)` with a `deps.signal?.throwIfAborted()` check followed by that return; keep the existing pre-attempt and post-results checks. The first addition covers an already-aborted signal that would otherwise return a resolution line such as `Web search: no provider configured.`, and the second covers an abort that lands during or just after the last attempt's `failed` or `plugin-failed` outcome, when no next iteration exists to catch it. Add tests to `src/web-search/search.test.ts`: one configured provider whose plain `Error` failure is accompanied by an abort (have `reportDisabled` abort the controller, as the between-attempt test does) must make `runWebSearch` reject with the abort, and a pre-aborted signal with no configured tokens must reject rather than resolve with the no-provider line. Keep the existing abort, fallback, and failure-line tests passing unchanged; `product/plans/complete/web-search-6-search-core.md` states both that a search rejects with the abort rather than returning a failure line and that once the signal aborts, `webSearch` always rejects.
-
-
 * Deliver the plan's provider-names test by making its no-activation assertion able to fail.
 
 Existing Issue: The test calls `mockRestore()` on every `activate` spy before asserting it was never called, and Vitest's `mockRestore()` resets call history, so the assertion passes even if `webSearchProviderNames()` activated a provider. Severity: 4/10
