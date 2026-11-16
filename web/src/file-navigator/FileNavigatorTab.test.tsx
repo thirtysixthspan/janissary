@@ -895,6 +895,51 @@ describe('FileNavigatorTab', () => {
       expect(screen.getByText('later.ts').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'false');
     });
 
+    it('drops a pending hint when the user clicks the already-selected row', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const restore: FileNavigatorRestoreHint = {
+        revision: 110, focus: true, cursor: 'later.ts', anchor: 'later.ts', selected: ['later.ts'],
+      };
+      const { rerender } = render(<FileNavigatorTab
+        files={makeFiles()}
+        client={client}
+        index={0}
+        label="reveal-selected"
+        autoFocus={false}
+      />);
+
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0 });
+      expect(screen.getByText('README.md').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
+
+      rerender(<FileNavigatorTab
+        files={makeFiles({ restore })}
+        client={client}
+        index={0}
+        label="reveal-selected"
+        autoFocus={false}
+      />);
+
+      expect(revealAcknowledgements(send)).toEqual([]);
+
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0 });
+
+      rerender(<FileNavigatorTab
+        files={makeFiles({
+          rows: [...makeFiles().rows, { path: 'later.ts', name: 'later.ts', depth: 0, dir: false }],
+          restore,
+        })}
+        client={client}
+        index={0}
+        label="reveal-selected"
+        autoFocus={false}
+      />);
+
+      expect(revealAcknowledgements(send)).toEqual([{ label: 'reveal-selected', revision: 110 }]);
+      expect(screen.getByText('README.md').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByText('later.ts').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'false');
+    });
+
     it('acknowledges two navigators with different labels independently', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;

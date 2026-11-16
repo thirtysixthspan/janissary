@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Drop a pending reveal focus hint when the user clicks an already-selected row, which the plan promises every row click does.
-
-Existing Issue: The plan and spec say a pending reveal selection is dropped when the user moves the tree's cursor or clicks a row, but `onRowMouseDown` in `web/src/file-navigator/use-file-navigator-row-events.ts` takes its `keepSelection` branch for a row that is already selected and never calls `selection.pointer`, so `dropPendingFocus` in `web/src/file-navigator/useFileNavigatorSelection.ts` never runs and the pending hint later replaces the selection when its row arrives. Severity: 3/10
-
-Existing Risk: 3/10 - On a slow remote tree, clicking the already-selected row to take control is followed by the reveal yanking the cursor to its own row, the interaction the plan says a click drops.
-
-Proposal Risk: 1/10 - The drop is one call in the existing mousedown path and leaves the selection, drag, and pointer logic untouched; the only exposure is a test that reuses a label and collides with the module-level revision floor.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2009 "drop a pending reveal focus hint when the user clicks an already-selected row". In `web/src/file-navigator/useFileNavigatorSelection.ts`, return the existing `dropPendingFocus` callback beside `focusHint` in the hook's result. In `web/src/file-navigator/use-file-navigator-row-events.ts`, call `selection.dropPendingFocus()` in `onRowMouseDown` after the rename-input guard and before the `keepSelection` branch, so a left-click on any row while a focus hint is pending drops it whether or not the click keeps the selection; leave `pointer`, `replace`, `extend`, `selectSiblings`, the drag start, and the `keepSelection` selection logic unchanged. In `web/src/file-navigator/useFileNavigatorSelection.test.ts`, add a case that renders a pending focus hint for a row absent from `rows`, calls `dropPendingFocus`, asserts `focusHint` reads `dropped`, then rerenders with the row present and asserts it is not selected. In `web/src/file-navigator/FileNavigatorTab.test.tsx`, add a case under `reveal focus` that renders with `autoFocus={false}` and a pending hint for a missing `later.ts`, fires `mouseDown` on the already-selected `README.md` row, rerenders with `later.ts` present, and asserts `fileNavigatorRevealApplied` was sent once with the hint revision and `README.md` is still the selected row. Do not add the drop to a right-click, a drag, or a header control: only the row's left-button mousedown counts as the user's click. Verify with `$janissary/scripts/run.mjs check-diff` and `npx vitest run --project client web/src/file-navigator/FileNavigatorTab.test.tsx web/src/file-navigator/useFileNavigatorSelection.test.ts`.
-
-
 * Keep reveal focus working after a server restart, when the revision counter restarts below the client's acknowledged floor.
 
 Existing Issue: `web/src/file-navigator/useFileNavigatorRevealFocus.ts` remembers each navigator label's highest acknowledged revision in a module-level map that is never cleared, and `nextRestoreRevision` in `src/file-navigator/restore.ts` starts its counter at 1 in every server process, so after a restart with the page still open a reveal on the reused `navigator` label can carry a revision at or below the old floor and both the focus effect and the acknowledgement effect skip it; the selection still applies, but the tree never takes focus and the hint is never acknowledged. Severity: 3/10

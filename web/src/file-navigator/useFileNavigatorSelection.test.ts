@@ -227,6 +227,28 @@ describe('holding a focus hint until its row arrives', () => {
     expect(result.current.focusHint).toEqual({ revision: 3, outcome: 'dropped' });
   });
 
+  it('drops a pending focus hint on a click that keeps the selection', () => {
+    const hint: FileNavigatorRestoreHint = {
+      revision: 8, focus: true, cursor: 'later.ts', anchor: 'later.ts', selected: ['later.ts'],
+    };
+    const { result, rerender } = renderHook(
+      ({ visible }) => useFileNavigatorSelection(visible, '/root', 'navigator', hint),
+      { initialProps: { visible: rows(['a', 'b']) } },
+    );
+
+    expect(result.current.focusHint).toEqual({ revision: 8, outcome: 'pending' });
+
+    act(() => { result.current.dropPendingFocus(); });
+
+    expect(result.current.focusHint).toEqual({ revision: 8, outcome: 'dropped' });
+
+    rerender({ visible: rows(['a', 'b', 'later.ts']) });
+
+    expect(result.current.cursor).toBeNull();
+    expect(result.current.selected).toEqual(new Set());
+    expect(result.current.focusHint).toEqual({ revision: 8, outcome: 'dropped' });
+  });
+
   it('applies an ordinary hint at once and reports no focus outcome', () => {
     const visible = rows(['a', 'b']);
     const { result } = renderHook(() => useFileNavigatorSelection(visible, '/root', 'navigator', {

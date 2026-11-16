@@ -159,6 +159,7 @@ export function useFileNavigatorSelection(
   return {
     ...state,
     focusHint,
+    dropPendingFocus,
     replace,
     extend,
     selectSiblings,

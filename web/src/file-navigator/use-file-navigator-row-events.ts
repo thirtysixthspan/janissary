@@ -35,6 +35,7 @@ export function useFileNavigatorRowEvents({ rows, selection, drag, containerRef,
   const onRowMouseDown = (row: FileNavigatorRow, event: React.MouseEvent) => {
     if (event.button !== 0) return;
     if (event.target instanceof HTMLElement && event.target.closest('.files-rename-input')) return;
+    selection.dropPendingFocus();
     pointerHandledRef.current = row.path;
     const modified = event.shiftKey || event.metaKey || event.ctrlKey;
     const keepSelection = !modified && selection.selected.has(row.path) && row.path !== '..';
