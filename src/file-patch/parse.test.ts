@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { parsePatchText } from './parse.js';
 
 describe('parsePatchText', () => {
-  it('parses sections in order and preserves content and raw update lines', () => {
+  it('parses sections in order and preserves content and update hunks', () => {
     expect(parsePatchText([
       '*** Begin Patch', '*** Add File:  a b  ', '+  first \t', '+', '*** Delete File: old',
-      '*** Update File: x', '*** Move to: y', '@@', '', '*** End of File', '*** End Patch',
+      '*** Update File: x', '*** Move to: y', '@@', ' ', '*** End of File', '*** End Patch',
     ].join('\n'))).toEqual({ sections: [
       { kind: 'add', path: 'a b', line: 2, lines: ['  first \t', ''] },
       { kind: 'delete', path: 'old', line: 5 },
-      { kind: 'update', path: 'x', line: 6, moveTo: 'y', bodyLines: [
-        { line: 8, text: '@@' }, { line: 9, text: '' }, { line: 10, text: '*** End of File' },
+      { kind: 'update', path: 'x', line: 6, moveTo: 'y', hunks: [
+        { lines: [{ kind: 'context', text: '' }], endOfFile: true },
       ] },
     ] });
   });
@@ -60,7 +60,7 @@ describe('parsePatchText', () => {
     ['*** Move to:', 1, 'Move to must follow Update File'],
     ['*** Add File: x\n*** Move to: y', 2, 'Move to must follow Update File'],
     ['*** Delete File: x\n*** Move to: y', 2, 'Move to must follow Update File'],
-    ['*** Update File: x\n@@\n*** Move to: y', 3, 'Move to must follow Update File'],
+    ['*** Update File: x\n@@\n+x\n*** Move to: y', 4, 'Move to must follow Update File'],
     ['*** Update File: x\n*** Move to: y\n*** Move to: z', 3, 'Move to must follow Update File'],
     ['*** Add File:foo', 1, 'unknown marker "*** Add File:foo"'],
     ['*** add file: x', 1, 'unknown marker "*** add file: x"'],
@@ -70,5 +70,29 @@ describe('parsePatchText', () => {
   ])('reports first error for %j', (text, line, problem) => {
     expect(parsePatchText(text)).toEqual({ error: { line, problem } });
     expect(parsePatchText(`*** Begin Patch\n${text}`)).toEqual({ error: { line: line + 1, problem } });
+  });
+
+  it('accepts move without hunks and rejects blank update lines', () => {
+    expect(parsePatchText('*** Update File: x\n*** Move to: y')).toEqual({ sections: [
+      { kind: 'update', path: 'x', line: 1, moveTo: 'y', hunks: [] },
+    ] });
+    expect(parsePatchText('*** Update File: x\n@@\n')).toEqual({ error: { line: 2, problem: 'hunk lines must start with " ", "-", or "+"' } });
+    expect(parsePatchText('*** Update File: x\n\n+x')).toEqual({ error: { line: 2, problem: 'hunk lines must start with " ", "-", or "+"' } });
+  });
+
+  it.each(['', '\n*** Add File: b'])('reports empty updates at their marker: %j', (suffix) => {
+    for (const prefix of ['', '*** Begin Patch\n']) {
+      expect(parsePatchText(`${prefix}*** Update File: a${suffix}`)).toEqual({ error: {
+        line: prefix ? 2 : 1, problem: 'Update File needs a hunk or Move to',
+      } });
+    }
+  });
+
+  it('reports the earliest structural error and the closing envelope line', () => {
+    const problem = 'hunk lines must start with " ", "-", or "+"';
+    expect(parsePatchText('*** Update File: a\n@@\nbad\n*** Foo')).toEqual({ error: { line: 3, problem } });
+    expect(parsePatchText('*** Update File: a\n*** Foo')).toEqual({ error: { line: 2, problem: 'unknown marker "*** Foo"' } });
+    expect(parsePatchText('*** Update File: a\n@@\n*** Add File:')).toEqual({ error: { line: 3, problem } });
+    expect(parsePatchText('*** Update File: a\n@@\n*** End Patch')).toEqual({ error: { line: 3, problem } });
   });
 });

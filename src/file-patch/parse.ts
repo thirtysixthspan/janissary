@@ -1,7 +1,13 @@
+import { parseHunks } from './parse-hunks.js';
+import type { PatchBodyLine, PatchHunk } from './parse-hunks.js';
+
 export type PatchSection =
   | { kind: 'add'; path: string; line: number; lines: string[] }
   | { kind: 'delete'; path: string; line: number }
-  | { kind: 'update'; path: string; line: number; moveTo?: string; bodyLines: { line: number; text: string }[] };
+  | { kind: 'update'; path: string; line: number; moveTo?: string; hunks: PatchHunk[] };
+
+type WorkingSection = Exclude<PatchSection, { kind: 'update' }>
+  | { kind: 'update'; path: string; line: number; moveTo?: string; bodyLines: PatchBodyLine[] };
 
 export type PatchParseError = { line: number; problem: string };
 
@@ -10,6 +16,7 @@ export const PATCH_PROBLEMS = {
   noSections: 'no file sections',
   misplacedMove: 'Move to must follow Update File',
   addLine: 'Add File lines must start with "+"',
+  emptyUpdate: 'Update File needs a hunk or Move to',
   unknownMarker: (line: string) => `unknown marker "${line}"`,
 };
 
@@ -30,7 +37,7 @@ function marker(text: string): Marker | undefined {
   return undefined;
 }
 
-function addSection(sections: PatchSection[], found: Marker, line: number): PatchParseError | undefined {
+function addSection(sections: WorkingSection[], found: Marker, line: number): PatchParseError | undefined {
   if (found.kind === 'move') {
     const previous = sections.at(-1);
     if (previous?.kind !== 'update' || previous.line !== line - 1) {
@@ -49,7 +56,7 @@ function addSection(sections: PatchSection[], found: Marker, line: number): Patc
   return undefined;
 }
 
-function addBody(sections: PatchSection[], text: string, line: number): PatchParseError | undefined {
+function addBody(sections: WorkingSection[], text: string, line: number): PatchParseError | undefined {
   const current = sections.at(-1);
   if (current?.kind === 'update' && text === '*** End of File') {
     current.bodyLines.push({ line, text });
@@ -68,6 +75,17 @@ function addBody(sections: PatchSection[], text: string, line: number): PatchPar
   return { line, problem: PATCH_PROBLEMS.unknownMarker(text) };
 }
 
+function closeUpdate(sections: WorkingSection[], completed: PatchSection[], endLine?: number, interrupted = false): PatchParseError | undefined {
+  const current = sections.at(-1);
+  if (current?.kind !== 'update') return undefined;
+  const result = parseHunks(current.bodyLines, endLine);
+  if ('error' in result) return result.error;
+  if (interrupted) return undefined;
+  if (result.hunks.length === 0 && !current.moveTo) return { line: current.line, problem: PATCH_PROBLEMS.emptyUpdate };
+  completed.push({ kind: 'update', path: current.path, line: current.line, ...(current.moveTo && { moveTo: current.moveTo }), hunks: result.hunks });
+  return undefined;
+}
+
 function splitLines(text: string): string[] {
   const lines = text === '' ? [] : text.split('\n');
   if (text.endsWith('\n')) lines.pop();
@@ -79,15 +97,33 @@ function splitLines(text: string): string[] {
   return lines;
 }
 
+function walkLine(sections: WorkingSection[], completed: PatchSection[], text: string, line: number): PatchParseError | undefined {
+  const found = marker(text);
+  if (found && found.kind !== 'move') {
+    const error = closeUpdate(sections, completed, line);
+    if (error) return error;
+    const previous = sections.at(-1);
+    if (previous && previous.kind !== 'update') completed.push(previous);
+  }
+  const error = found ? addSection(sections, found, line) : addBody(sections, text, line);
+  if (!error) return undefined;
+  const earlier = closeUpdate(sections, completed, line, true);
+  return earlier && earlier.line < error.line ? earlier : error;
+}
+
 export function parsePatchText(text: string): { sections: PatchSection[] } | { error: PatchParseError } {
   const lines = splitLines(text);
   const start = lines[0] === '*** Begin Patch' ? 1 : 0;
   const end = lines.at(-1) === '*** End Patch' ? lines.length - 1 : lines.length;
-  const sections: PatchSection[] = [];
+  const sections: WorkingSection[] = [];
+  const completed: PatchSection[] = [];
   for (let index = start; index < end; index++) {
-    const found = marker(lines[index]);
-    const error = found ? addSection(sections, found, index + 1) : addBody(sections, lines[index], index + 1);
+    const error = walkLine(sections, completed, lines[index], index + 1);
     if (error) return { error };
   }
-  return sections.length > 0 ? { sections } : { error: { line: 1, problem: PATCH_PROBLEMS.noSections } };
+  const error = closeUpdate(sections, completed, end < lines.length ? end + 1 : undefined);
+  if (error) return { error };
+  const last = sections.at(-1);
+  if (last && last.kind !== 'update') completed.push(last);
+  return completed.length > 0 ? { sections: completed } : { error: { line: 1, problem: PATCH_PROBLEMS.noSections } };
 }
