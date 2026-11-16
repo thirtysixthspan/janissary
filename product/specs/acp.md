@@ -237,7 +237,7 @@ Example: web search node.js permission model 2026 --results 5
 
 Only a line starting with lowercase `web search` is taken as a command. A final answer that begins a sentence with `Web search …` is not, so the reply stays the answer. A bare `web search` line is extracted like any other command and, when granted, answered with the usage line.
 
-The gate is by native command name. When the role grants `web search`, a row that is disabled or denied agent access refuses with exactly `Command is disabled: web search.`. A role that does not grant `web search` receives no web tool at all, so a `web search` line is never extracted and the agent's reply is treated as prose. Disabling the parent `web` row disables `web search` too, as disabling `file` disables its four commands.
+The gate is by native command name. When the role grants `web search`, a row that is disabled or denied agent access refuses with exactly `Command is disabled: web search.`. A role that does not grant `web search` receives no web tool at all, so a `web search` line is never extracted and the agent's reply is treated as prose. Disabling the parent `web` row disables `web search` too, as disabling `file` disables all five file commands.
 
 A granted step is a workspace step: it follows the workspace routing described above, so a `web` line reaches the same search as the typed command and searches on the side that owns the tab. An agent searches only through this command; the harness's own web search stays denied, so role grants, command settings, and connection records govern every search.
 

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the ACP spec's statement that disabling the file row disables its four commands, when the vocabulary has five.
-
-Existing Issue: `product/specs/acp.md` says disabling the parent `file` row disables its four commands, but `NATIVE_ACP_COMMANDS` in `src/plugins/roles/shared.ts` lists five file commands (file read, file glob, file grep, file write, file edit), and `product/specs/application-commands.md` already says disabling `file` disables all five. Severity: 2/10
-
-Existing Risk: 2/10 - The stale count understates the parent row's blast radius and contradicts the application-commands spec, so a reader deciding whether to disable `file` cannot tell which commands will stop working.
-
-Proposal Risk: 1/10 - The count becomes accurate; the only residual risk is another place carrying the same stale four-command claim, which a search for "four commands" and "all four" should catch.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "correct the ACP spec's four-command file claim". In the Web search section of `product/specs/acp.md`, change "as disabling `file` disables its four commands" to name the five file commands or say all five. Search `product/specs`, `help`, and `documentation` for other four-command or four-native file-row counts and correct any that describe the current vocabulary; leave historical plans that describe an earlier state alone. Verify the final sentence against `NATIVE_ACP_COMMANDS` and the five-row paragraph in `product/specs/application-commands.md`; no test change is needed because this is prose.
-
-
 * Remove the stale pre-delivery size estimate from the canonical web-search plan, which no longer matches the delivered change.
 
 Existing Issue: `product/plans/complete/web-search.md` still opens with "~920 added lines, 23 files edited, 44 requirements, 62 test scenarios (p=8.74)", while the branch changes 105 files with 4,587 insertions and folds 43 subplans and repair plans into this one; the header describes the original estimate, not the delivered plan. Severity: 2/10
