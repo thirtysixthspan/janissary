@@ -13,8 +13,9 @@ import type { FilesTabState } from './state.js';
 
 // The surviving selection, handed to the client on the tab's payload. `revision` changes only when
 // a new restore is applied, so the repeated full-state broadcasts never re-apply an old hint over
-// a selection the user has since changed.
-let nextRevision = 1;
+// a selection the user has since changed. The base is per-process so a restarted server's first
+// revision lands above any revision a client still remembers from the previous process.
+let nextRevision = Date.now();
 
 // Whether a requested expanded path should be expanded again. A local tree's port lists synchronously,
 // so the parent's listing answers at once. A remote tree's may still be loading; the path is then

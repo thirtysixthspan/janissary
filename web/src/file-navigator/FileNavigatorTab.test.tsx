@@ -965,6 +965,50 @@ describe('FileNavigatorTab', () => {
         { label: 'reveal-second', revision: 109 },
       ]);
     });
+
+    it('keeps the acknowledged floor when a restarted server sends a lower revision', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
+      const restore = (revision: number): FileNavigatorRestoreHint => ({
+        revision, focus: true, cursor: 'README.md', anchor: 'README.md', selected: ['README.md'],
+      });
+      const restartedAt = 1_700_000_000_000;
+      const { rerender } = render(<FileNavigatorTab
+        files={makeFiles({ restore: restore(restartedAt) })}
+        client={client}
+        index={0}
+        label="reveal-server-restart"
+        autoFocus={false}
+      />);
+      expect(revealAcknowledgements(send)).toEqual([{ label: 'reveal-server-restart', revision: restartedAt }]);
+
+      focusSpy.mockClear();
+      rerender(<FileNavigatorTab
+        files={makeFiles({ restore: restore(restartedAt - 1) })}
+        client={client}
+        index={0}
+        label="reveal-server-restart"
+        autoFocus={false}
+      />);
+
+      expect(focusSpy).not.toHaveBeenCalled();
+      expect(revealAcknowledgements(send)).toEqual([{ label: 'reveal-server-restart', revision: restartedAt }]);
+
+      rerender(<FileNavigatorTab
+        files={makeFiles({ restore: restore(restartedAt + 1) })}
+        client={client}
+        index={0}
+        label="reveal-server-restart"
+        autoFocus={false}
+      />);
+
+      expect(focusSpy).toHaveBeenCalledTimes(1);
+      expect(revealAcknowledgements(send)).toEqual([
+        { label: 'reveal-server-restart', revision: restartedAt },
+        { label: 'reveal-server-restart', revision: restartedAt + 1 },
+      ]);
+    });
   });
 
   describe('delete', () => {
