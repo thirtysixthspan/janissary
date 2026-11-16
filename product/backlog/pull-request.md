@@ -1,3 +1,24 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
+
+* Correct the application-commands spec's claim, added by this subplan, that disabling the native web search row leaves typed web search lines running.
+
+Existing Issue: The paragraph `product/specs/application-commands.md` gained for the native `web search` row says typed `web search` lines are claimed by the `web` builtin, so disabling only the native row does not refuse a typed search, while typed dispatch resolves `web search x` to the native `web search` row through `resolveApplicationCommand`'s longest-form ranking in `src/application-commands.ts` and `src/shared/command-matching.ts`, and `disabledApplicationCommand` in `src/native-commands/policy.ts` then refuses the line whenever that row's effective setting is off. Severity: 4/10
+
+Existing Risk: 3/10 - A user or a later slice trusts the spec, disables the native row expecting typed searches to keep working, and gets `Command is disabled: web search.` for every typed `web search` line until the row is re-enabled.
+
+Proposal Risk: 1/10 - The spec would state the resolver's actual rule, but the behavior itself stays unchanged, so a reader who only skims can still miss that the native row governs the typed line.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "correct the application-commands spec's claim that disabling the native web search row leaves typed web search running". In `product/specs/application-commands.md`, rewrite the paragraph added for the native `web search` row so it matches its `file write` sibling: disabling `web search` refuses both a typed `web search` line and the agent tool, disabling `web` disables both rows, and a typed `web search` line resolves to the native row exactly as a typed `file write` line does. Add a regression case in `src/native-commands/policy.test.ts` beside the file mutation cases, using the existing `current()` helper: with `{ "web search": { "enabled": false } }`, `disabledApplicationCommand('web search x', settings)?.name` is `web search` while `disabledApplicationCommand('web', settings)` is undefined; with `{ "web": { "enabled": false } }`, a typed `web search x` still resolves the effectively disabled native row and bare `web` resolves the builtin row. The existing file write, file glob, and `resolveApplicationCommand('file read a.md')` cases establish the matching precedent and must keep passing.
+
+
+* Correct the specs' claim, added by this subplan, that an agent's web search always runs on the host running the ACP loop.
+
+Existing Issue: The Agent tool paragraph in `product/specs/web-search.md` and the closing paragraph of the new Web search subsection in `product/specs/acp.md` say a granted search runs on the host running the ACP loop, while `searchWebInTab` in `src/web-search/tab-search.ts` sends a remote tab's search to that tab's remote host through `localReadRoot` in `src/file-read/tab-read.ts`, so a local-fallback ACP session on a remote tab searches on the remote machine rather than the machine running Janissary. Severity: 2/10
+
+Existing Risk: 2/10 - Someone debugging a local-fallback session's failed search looks on the wrong host and at the wrong token set, and a later slice may implement the documented but wrong rule.
+
+Proposal Risk: 1/10 - The corrected wording would match `tab-search` and the workspace-command paragraph already in `product/specs/acp.md`, leaving only the usual risk that a reader skims past the corner case.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "correct the specs' routing rule for an agent's web search". In `product/specs/web-search.md`, replace the sentence beginning "The search runs on the host running the ACP loop" with the rule `src/web-search/tab-search.ts` implements: a granted search goes through `searchWebInTab`, so a local tab searches on the machine running Janissary and a remote tab searches on that tab's remote host, including a local-fallback ACP session on a remote tab, which prints `Remote connection unavailable.` when no channel is ready, while a remote-hosted loop calls `webSearch` on the far side with that workspace's merged tokens. Reword the matching sentence at the end of the `product/specs/acp.md` Web search subsection to say the step follows the workspace routing described above and searches on the side that owns the tab, leaving the existing local-fallback paragraph as the detailed statement. The `routes a local fallback session on a remote tab through the tab search` case in `src/acp/run-prompt.test.ts` and the `searchWebInTab` and `localReadRoot` code are the verification references; this is a documentation correction with no runtime change.
