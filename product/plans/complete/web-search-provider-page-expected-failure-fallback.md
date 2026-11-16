@@ -16,7 +16,7 @@ Recorded on PR #2010's branch backlog, severity 3/10:
 
 Verified against the plans that own the behavior:
 
-- `./product/plans/ready/web-search-6-search-core.md` — `'failed'` and `'plugin-failed'` outcomes both record `{ name, reason }` and continue to the next manifest. An explicit `--provider` has a one-manifest list, so it never falls back. The failure lines are `Web search failed (<name>): <reason>.` for one attempt and the `Web search: every provider failed.` list for more than one.
+- `./product/plans/complete/web-search-6-search-core.md` — `'failed'` and `'plugin-failed'` outcomes both record `{ name, reason }` and continue to the next manifest. An explicit `--provider` has a one-manifest list, so it never falls back. The failure lines are `Web search failed (<name>): <reason>.` for one attempt and the `Web search: every provider failed.` list for more than one.
 - `./product/plans/complete/web-search-5-provider-registry.md` and `./product/plans/ready/web-search-7-remote-operation.md` — the registry calls the caller's optional `reportDisabled` once per disabled provider. The local typed path supplies a callback that posts the notification. The far-side remote operation passes no `reportDisabled`, so the reason appears only in failure lines because that machine has no notifications tab.
 - `src/web-search/registry.ts` — `classifyFailure` returns `{ kind: 'failed', reason: error.message }` for a `ProviderRequestError` and never calls `disable`; the abort check runs before that classification.
 
@@ -28,7 +28,7 @@ Edit only the "Validation and failure" section of the page:
 2. Keep the abort rule explicit. An abort is a cancellation that stops the search and never falls back to the next provider, whatever the rejection is.
 3. Qualify the notification sentence to a local search that supplies `reportDisabled`, and add the remote exception: a remote search passes no `reportDisabled`, so no notification appears and the reason is visible only in the failure lines.
 
-Then re-read the finished section and compare each claim with `src/web-search/registry.ts`, `./product/plans/ready/web-search-6-search-core.md`, and `./product/plans/ready/web-search-7-remote-operation.md`.
+Then re-read the finished section and compare each claim with `src/web-search/registry.ts`, `./product/plans/complete/web-search-6-search-core.md`, and `./product/plans/ready/web-search-7-remote-operation.md`.
 
 ## Design decisions
 
