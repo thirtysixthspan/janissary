@@ -107,9 +107,11 @@ still come from your local `ask` or `tell` role.
 
 `file read` reads the workspace on the host running the agent, so on a remote tab it reads the remote
 clone. A granted `file glob` searches that same workspace for paths, and a granted `file grep` searches
-those files for text. A granted `web search` also runs on the host running the agent, so on a remote tab
-it uses the remote machine's token files (forwarded tokens win), and its step carries the
-`[<host>] ` tag. Granted `file write` and `file edit` run there too, so on a remote tab they change only the remote
+those files for text. A granted `web search` follows the tab rather than the host running the agent: it
+runs on the side that owns the tab, so a remote tab searches on the remote machine, in that workspace,
+with that workspace's merged tokens (a forwarded token wins). Only a remote-hosted ACP session's
+workspace step carries the `[<host>] ` tag; a local-fallback session on a remote tab still searches
+remotely, but its workspace step is untagged. Granted `file write` and `file edit` run there too, so on a remote tab they change only the remote
 clone, never your local copy. The database, browser, and question tools continue to act on the machine running Janissary; a
 remote ACP query uses your local database and browser for those tools. A remote workspace step shows
 `[<host>] ` at the start of its transcript line and of both activity lines in the connection record. A
