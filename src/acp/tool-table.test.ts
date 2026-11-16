@@ -204,7 +204,7 @@ describe('gateCommand', () => {
     });
   });
 
-  it.each(['file readme x', 'db sqlite list', 'question ask "x"'])(
+  it.each(['file readme x', 'db sqlite list', 'question ask "x"', 'webby x', 'websearch x'])(
     'runs the agent command %s on the caller side',
     (command) => {
       expect(gateCommand(agent(), [], command)).toStrictEqual({ runsOn: 'caller' });
@@ -249,6 +249,18 @@ describe('gateCommand', () => {
     ['ungranted', []],
   ])('refuses agent file grep commands when %s', (_label, grants) => {
     for (const command of GREP_FORMS) {
+      expect(gateCommand(agent({ grants }), [], command)).toStrictEqual({
+        refusal: `Agent: command not permitted: ${command}.`,
+      });
+    }
+  });
+
+  it.each([
+    ['web granted', ['web']],
+    ['file granted', ['file']],
+    ['ungranted', []],
+  ])('refuses agent web lines when %s', (_label, grants) => {
+    for (const command of ['web search node.js', 'web', 'web foo', 'WEB SEARCH x', '/web search x']) {
       expect(gateCommand(agent({ grants }), [], command)).toStrictEqual({
         refusal: `Agent: command not permitted: ${command}.`,
       });

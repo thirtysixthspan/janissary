@@ -78,5 +78,5 @@ All relative imports carry `.js`; type-only imports use `import type`.
 - The vocabulary, native tool mapping, tool-table entry, primer, and reply-line extraction that make these routes reachable (`./product/plans/ready/web-search-12-acp-tool.md`), including the end-to-end test through the gate.
 - Default grants (`./product/plans/ready/web-search-13-default-grants.md`).
 - A cancel message for the remote `web-search` operation (a typed search is not cancellable, and the source plan adds none).
-- Agent-run (`agent …`) handling of `web` lines, already refused by `./product/plans/ready/web-search-9-agent-run-refusal.md`; `src/agent/execute.ts`'s workspace branch is not touched.
+- Agent-run (`agent …`) handling of `web` lines, already refused by `./product/plans/complete/web-search-9-agent-run-refusal.md`; `src/agent/execute.ts`'s workspace branch is not touched.
 - Provisioning changes: `serve-provision.ts` already passes the merged tokens to `RemoteAcp`.

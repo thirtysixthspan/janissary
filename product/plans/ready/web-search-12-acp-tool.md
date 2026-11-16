@@ -9,7 +9,7 @@ Before this slice, `gateCoreCommand` (`src/acp/tool-table.ts`) throws `No ACP to
 ## Dependencies
 
 - `./product/plans/complete/web-search-1-command-grammar.md` — `isWebCommandLine` (`/^web(\s|$)/i`, does not trim), `isWebSearchReplyLine` (lowercase `web`, whitespace, lowercase `search`, then whitespace or end of line; no `i` flag), and `WEB_SEARCH_PRIMER`, all from `src/web-search/command.ts`. That module imports only `positiveInteger`, so `tool-table.ts` (loaded on both hosts) can import it without pulling in `Managers`.
-- `./product/plans/ready/web-search-9-agent-run-refusal.md` — `gateAgentCommand` and `runGrantedAgentCommand` already refuse every `isWebCommandLine` line in `agent` runs, so growing the vocabulary opens no agent path.
+- `./product/plans/complete/web-search-9-agent-run-refusal.md` — `gateAgentCommand` and `runGrantedAgentCommand` already refuse every `isWebCommandLine` line in `agent` runs, so growing the vocabulary opens no agent path.
 - `./product/plans/ready/web-search-10-typed-command.md` — the parentless `web` builtin row in `BUILTIN_FORMS` (`src/application-commands.ts`), which the native `web search` row is parented under.
 - `./product/plans/ready/web-search-11-workspace-routes.md` — both `runWorkspace` hosts already route an `isWebCommandLine` line first: locally to `searchWebInTab(managers, label, command, request.abort.signal)` in `runCorePrompt` (`src/acp/run-prompt.ts`), on the far side to the private `searchWorkspaceCommand(normalized, tokens, controller.signal)` in `startRemoteLoop` (`src/remote/serve-acp-loop.ts`). Its test files already carry the `searchWebInTab` mock (`src/acp/run-prompt.test.ts`) and the `webSearch` mock plus the `tokens` argument on the `start`/`startHeld` helpers (`src/remote/serve-acp-loop.test.ts`); this slice's tests reuse them.
 - `./product/plans/complete/web-search-3-provider-tokens.md` — the feature's single protocol bump to `REMOTE_PROTOCOL_VERSION` 43. The far-side loop builds its own tool table from its own `NATIVE_ACP_COMMANDS`, so a pre-feature far side would throw `No ACP tool matched command` for a `web search` step; the exact-version handshake already refuses that pairing, and this slice changes no protocol version or protocol comment.
@@ -96,7 +96,7 @@ Suites that read `NATIVE_ACP_COMMANDS` or `APPLICATION_COMMAND_NATIVE_TOOLS` and
 
 - Default grants for the built-in `ask` and `tell` roles, and the help and user-doc counts that list them (`./product/plans/ready/web-search-13-default-grants.md`).
 - The `runWorkspace` routes themselves (`./product/plans/ready/web-search-11-workspace-routes.md`); neither `run-prompt.ts` nor `serve-acp-loop.ts` is edited here.
-- `web search` in `agent` runs (already refused by `./product/plans/ready/web-search-9-agent-run-refusal.md`), monitor personas, conversations, and editor persona queries (user decision).
+- `web search` in `agent` runs (already refused by `./product/plans/complete/web-search-9-agent-run-refusal.md`), monitor personas, conversations, and editor persona queries (user decision).
 - A JSON argument form, a harness function-calling tool, or an MCP server (user decision).
 - Enabling any harness's built-in web search tool (from precedent).
 - A remote protocol version change (slice 3 owns the feature's single bump).
