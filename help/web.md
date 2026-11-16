@@ -19,7 +19,7 @@ The output is a Markdown list with no header line. Each result is a `- [<title>]
 
 Before printing, each run of whitespace in a title or snippet becomes one space and the ends are trimmed. `[`, `]`, and `\` in a title are escaped, and spaces and parentheses in a URL are percent-encoded. An empty title is replaced by the URL. Two results whose URLs match after ignoring case of the scheme and host, dropping a `#fragment`, and dropping one trailing `/` from the path are duplicates, and the first is kept.
 
-When results do not all fit within `--max-chars`, the list ends with `(showing <k> of <n> results; raise --max-chars for more)`. The first result always appears; its snippet is cut and ends in `…` when needed, the note is dropped when it cannot fit alongside the link line, and a link line too long for the budget prints whole with no snippet.
+When results do not all fit within `--max-chars` and the first result's link line leaves room for the note, the list ends with `(showing <k> of <n> results; raise --max-chars for more)`. The first result always appears; its snippet is cut and ends in `…` when needed, the note is dropped when it cannot fit alongside the link line, and a link line too long for the budget prints whole with no snippet.
 
 A successful search that kept no results prints `No results for "<query>".`, with the query as sent. That is an answer, not a failure.
 

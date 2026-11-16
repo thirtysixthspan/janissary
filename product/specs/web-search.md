@@ -54,7 +54,7 @@ Before printing, every run of whitespace in a title or snippet becomes one space
 
 Two results are duplicates when their URLs match after lowercasing the scheme and host, dropping the `#fragment`, and dropping one trailing `/` from the path; query strings are kept. The first, higher-ranked occurrence is kept. Results stay in the provider's own relevance order.
 
-When results do not all fit within `--max-chars`, the list ends with `(showing <k> of <n> results; raise --max-chars for more)`. The budget includes that line. At least one result always appears. If its link line alone is longer than the budget, the link line is printed whole with no snippet. When the link line and the note cannot share the budget, the note is dropped and the link line is printed alone. When they fit, the snippet is cut and ends with `…` when needed; if no snippet room remains only the note follows the link line, and if one character of snippet room remains the snippet is just `…`.
+When results do not all fit within `--max-chars` and the first result's link line leaves room for the note, the list ends with `(showing <k> of <n> results; raise --max-chars for more)`. The budget includes that line. At least one result always appears. If its link line alone is longer than the budget, the link line is printed whole with no snippet. When the link line and the note cannot share the budget, the note is dropped and the link line is printed alone. When they fit, the snippet is cut and ends with `…` when needed; if no snippet room remains only the note follows the link line, and if one character of snippet room remains the snippet is just `…`.
 
 A successful search that kept no results prints `No results for "<query>".`, with the query as sent.
 

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the truncation note's unconditional wording in the description, plan, spec, and help page, which the delivered first-result budget rule contradicts.
-
-Existing Issue: The description, `product/specs/web-search.md`, `help/web.md`, and the Truncation decision in `product/plans/complete/web-search.md` all say that when results are left out the list ends with the `(showing <k> of <n> results; raise --max-chars for more)` line, while the same paragraphs, and `cutFirstResult` in `src/web-search/render.ts`, drop that line when the first result's link line and the note cannot share `--max-chars`. Severity: 3/10
-
-Existing Risk: 3/10 - A reader trusts the note as unconditional, and the description's own `--max-chars 200` verification example can print no note for a long first-result URL, which reads as a truncation regression rather than the documented boundary.
-
-Proposal Risk: 1/10 - The prose would state the condition once and agree with the code, but the boundary stays easy to miss until someone reads the exception sentence, so a future wording edit could reintroduce the same absolutism.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "make the truncation note's wording conditional in every description". In `product/specs/web-search.md` (Output), `help/web.md` (Output), the Truncation design decision in `product/plans/complete/web-search.md`, and the pull request body's What paragraph, reword the first truncation sentence to say that when results are left out and the first result's link line leaves room for the note, the list ends with the note; keep the existing sentences that state the note is dropped when the two cannot share the budget and that an over-budget link line prints whole. Do not change `src/web-search/render.ts` or its tests: `render.test.ts` already pins the 150-, 147-, and 143-character boundaries and must keep passing untouched. Verify by reading all four paragraphs against `cutFirstResult` and confirming no remaining sentence claims the list always ends with the note; the delivered rendering must not change.
-
-
 * Correct the description's remote-tab verification claim that results come from the remote's own provider token, which the merged-token rule contradicts.
 
 Existing Issue: The closing "Cannot be exercised in a browser" paragraph of the description says a remote-tab search's "results [are] served by the remote's own `tavily-token`", while `searchWebInTab` sends the near side's merged tokens and `provisionRemoteWorkspace` builds `{ ...own, ...forwarded }`, so with the Setup's local `~/.janissary/tavily-token` the forwarded value wins and the remote's own file is only the fallback. Severity: 3/10
