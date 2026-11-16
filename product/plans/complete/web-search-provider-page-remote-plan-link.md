@@ -58,7 +58,7 @@ Verify the references by search:
 
 ## Spec
 
-No `./product/specs/` update. This repairs an internal plan link; it changes no user-visible behavior, and the web search behavior spec is still deferred to `./product/plans/ready/web-search-10-typed-command.md`.
+No `./product/specs/` update. This repairs an internal plan link; it changes no user-visible behavior, and the web search behavior spec is still deferred to `./product/plans/complete/web-search-10-typed-command.md`.
 
 ## Out of scope
 

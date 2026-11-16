@@ -79,7 +79,7 @@ The existing request-and-capability shape test, every fallback test, and every r
 
 ## Spec
 
-No `./product/specs/` update. The web search behavior spec does not exist yet on this branch; `./product/plans/ready/web-search-10-typed-command.md` creates it in a later documentation slice, and `./product/plans/complete/web-search-reject-on-every-abort.md` already recorded the same deferral. No bundled provider mutates its request, and no user-visible message, output, or resolution behavior changes, so there is no behavior for a spec to state here.
+No `./product/specs/` update. The web search behavior spec does not exist yet on this branch; `./product/plans/complete/web-search-10-typed-command.md` creates it in a later documentation slice, and `./product/plans/complete/web-search-reject-on-every-abort.md` already recorded the same deferral. No bundled provider mutates its request, and no user-visible message, output, or resolution behavior changes, so there is no behavior for a spec to state here.
 
 ## Documentation
 

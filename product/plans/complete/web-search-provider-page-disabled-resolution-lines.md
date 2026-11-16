@@ -70,4 +70,4 @@ No `./product/specs/` update. This corrects a developer reference page without c
 - Changing `src/web-search/registry.ts`, `src/web-search/failure-lines.ts`, or their tests.
 - The other recorded entries on the branch backlog: the expected-failure fallback and remote-notification lines, and the activation-failure classification.
 - Updating `help/` or `documentation/user-documentation/`; neither describes provider resolution.
-- Writing a web search behavior spec ahead of `./product/plans/ready/web-search-10-typed-command.md`.
+- Writing a web search behavior spec ahead of `./product/plans/complete/web-search-10-typed-command.md`.

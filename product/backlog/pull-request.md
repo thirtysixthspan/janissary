@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Complete the plan promotion by repointing the six completed repair plans that still link to the typed-command subplan at its old ready path.
-
-Existing Issue: `product/plans/complete/web-search-activation-failure-classification.md`, `product/plans/complete/web-search-provider-page-remote-plan-link.md`, `product/plans/complete/web-search-provider-page-disabled-resolution-lines.md`, `product/plans/complete/web-search-provider-page-token-row.md`, `product/plans/complete/web-search-provider-page-expected-failure-fallback.md`, and `product/plans/complete/web-search-per-attempt-request.md` still reference `./product/plans/ready/web-search-10-typed-command.md`, which this commit moved to `product/plans/complete/`, leaving nine broken links across those six files. Severity: 3/10
-
-Existing Risk: 3/10 - A reader following the repair history reaches a missing plan and cannot tell whether the typed-command work was abandoned, moved, or never written.
-
-Proposal Risk: 1/10 - The links resolve again; the surrounding sentences still describe the behavior spec as deferred, which is historical wording rather than a live path.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "repoint the completed repair plans at the promoted typed-command subplan". In each of `product/plans/complete/web-search-activation-failure-classification.md` (three references), `product/plans/complete/web-search-provider-page-remote-plan-link.md` (one), `product/plans/complete/web-search-provider-page-disabled-resolution-lines.md` (one), `product/plans/complete/web-search-provider-page-token-row.md` (one), `product/plans/complete/web-search-provider-page-expected-failure-fallback.md` (two), and `product/plans/complete/web-search-per-attempt-request.md` (one), change `./product/plans/ready/web-search-10-typed-command.md` to `./product/plans/complete/web-search-10-typed-command.md`. Leave the historical sentences that say the behavior spec was deferred at the time of the repair; only the path changed. Verify with `grep -rn "plans/ready/web-search-10" product` and confirm no matches, and keep the change to those six plan files with no source, test, spec, or help edit.
-
-
 * Correct the plan's promised behavior spec and help page, which claim a disabled provider's failure line always reaches the search output even when a fallback succeeds.
 
 Existing Issue: The new `product/specs/web-search.md` says the disabled-provider notification is not added to the transcript because the search output already carries the failure line, and the new `help/web.md` says a remote search reports the reason only in its failure lines, while `src/web-search/search.ts` returns the first successful provider's rendered results and drops the accumulated failures, so a provider disabled before a fallback success appears in neither the results nor the far-side output. Severity: 4/10

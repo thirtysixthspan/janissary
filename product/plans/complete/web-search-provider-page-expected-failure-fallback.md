@@ -86,7 +86,7 @@ Verify the prose by reading it:
 
 ## Spec
 
-No `./product/specs/` update. This corrects a developer reference page without changing behavior, and the web search behavior spec is still deferred to `./product/plans/ready/web-search-10-typed-command.md`, as `./product/plans/complete/web-search-provider-page-token-row.md` records.
+No `./product/specs/` update. This corrects a developer reference page without changing behavior, and the web search behavior spec is still deferred to `./product/plans/complete/web-search-10-typed-command.md`, as `./product/plans/complete/web-search-provider-page-token-row.md` records.
 
 ## Out of scope
 
@@ -95,4 +95,4 @@ No `./product/specs/` update. This corrects a developer reference page without c
 - The other recorded entry on the branch backlog: activation failures that throw `ProviderRequestError`.
 - Documenting the every-provider-failed list beyond what "Resolution and ordering" already says.
 - Updating `help/` or `documentation/user-documentation/`; neither describes provider failure classification.
-- Writing a web search behavior spec ahead of `./product/plans/ready/web-search-10-typed-command.md`.
+- Writing a web search behavior spec ahead of `./product/plans/complete/web-search-10-typed-command.md`.

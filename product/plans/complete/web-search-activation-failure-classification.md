@@ -31,7 +31,7 @@ Verified in `src/web-search/registry.ts`: `runAttempt` sends both the activation
 - **The activation reason is the same `provider failed: <first line>` form.** The disabled line, the explicit-provider failure line, and the notification already consume that reason shape. A `ProviderRequestError`'s full message is not used as the reason, because a module that fails to import is a plugin failure, not an expected request answer.
 - **`search` classification is unchanged.** A `ProviderRequestError` from `search` still returns `'failed'` with its message and never disables, so `auto` still falls back on a normal API failure.
 - **Rename `classifyFailure` to `classifySearchFailure`.** After activation gets its own helper, the unqualified name would imply it covers both. It is private, so the rename has no external effect.
-- **No contract or spec change.** `src/web-search/contract.ts` and the behavior spec are not edited: the work item names the registry, its tests, and the provider reference page. The user-visible behavior spec is still deferred to `./product/plans/ready/web-search-10-typed-command.md`.
+- **No contract or spec change.** `src/web-search/contract.ts` and the behavior spec are not edited: the work item names the registry, its tests, and the provider reference page. The user-visible behavior spec is still deferred to `./product/plans/complete/web-search-10-typed-command.md`.
 
 ## Proposed changes
 
@@ -85,12 +85,12 @@ No other paragraph changes.
 
 ## Spec
 
-No `./product/specs/` update. The web search behavior spec does not exist yet and is owned by `./product/plans/ready/web-search-10-typed-command.md`. This fix hardens internal provider-plugin containment before that command surface lands; the developer reference page is the current documentation for the contract.
+No `./product/specs/` update. The web search behavior spec does not exist yet and is owned by `./product/plans/complete/web-search-10-typed-command.md`. This fix hardens internal provider-plugin containment before that command surface lands; the developer reference page is the current documentation for the contract.
 
 ## Out of scope
 
 - Changing `search` classification, fallback order, or `reportDisabled` behavior.
 - Editing `src/web-search/contract.ts`, `src/web-search/search.ts`, or the provider modules.
 - Updating `help/` or `documentation/user-documentation/`; neither describes provider failure classification.
-- Writing `product/specs/web-search.md` ahead of `./product/plans/ready/web-search-10-typed-command.md`.
+- Writing `product/specs/web-search.md` ahead of `./product/plans/complete/web-search-10-typed-command.md`.
 - Any change to resolution lines, notification text, or the API version contract.

@@ -51,7 +51,7 @@ Only `documentation/developer-documentation/web-search-providers.md` changes:
 
   Plus prose that adding a row also updates the matching specs and user documentation (`product/specs/workspaced-agent.md`, `documentation/user-documentation/advanced-agents/tokens.md`, and any other spec that enumerates the token files), and that a forwarded row moves `REMOTE_PROTOCOL_VERSION` in `src/remote/protocol.ts`.
 
-No source, test, config, or user-documentation change is needed. No spec update is needed either: this corrects a developer reference page without changing behavior, and the behavior spec for the web search feature is still deferred to `./product/plans/ready/web-search-10-typed-command.md`.
+No source, test, config, or user-documentation change is needed. No spec update is needed either: this corrects a developer reference page without changing behavior, and the behavior spec for the web search feature is still deferred to `./product/plans/complete/web-search-10-typed-command.md`.
 
 ## Tests
 
