@@ -81,8 +81,10 @@ mapping back to the main checkout.
 
 When the file, or a directory above it, has gone from disk since the editor opened it, the click
 still opens or retargets the navigator as usual. Ancestors that no longer exist collapse on the
-next rebuild, the missing file selects nothing, and nothing is reported. A resolved root that is
-no longer a directory changes nothing: no navigator opens and no open one is retargeted.
+next rebuild, the missing file selects nothing, and nothing is reported. The reveal's focus hint
+remains pending on the server in that case, because the missing row is never applied or dropped, and
+a later reveal or an ordinary `files` hint replaces it. A resolved root that is no longer a directory
+changes nothing: no navigator opens and no open one is retargeted.
 
 The tree takes keyboard focus as soon as the click is handled. The file's row becomes the cursor,
 the anchor, and the only selected row as soon as that row exists in the tree, which on a remote
