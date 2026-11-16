@@ -680,7 +680,7 @@ request in it and the session reconnects, or the reply is among the oldest outpu
 remote discards once its replay buffer is full. A request is therefore never left waiting forever:
 one that has no reply within a minute is reported as failed the same way, with the reason that the
 remote machine did not answer in time. Work that really runs on the remote — a pull, a commit, a
-search, a batch move, delete, or paste, an undo or redo replay, a whole-file read or write, and a text edit — is
+search, a web search that may fall back across providers, a batch move, delete, or paste, an undo or redo replay, a whole-file read or write, and a text edit — is
 given ten minutes. A request still waiting when the session reconnects is not failed early, since
 the remote replays its queued replies on reattach; a reply that arrives after its request has
 already been reported as failed is ignored.

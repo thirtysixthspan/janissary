@@ -2,7 +2,7 @@
 
 **Complexity: 6/10** — ~50 added lines across 6 edited files plus one new module, 8 requirements, 24 test scenarios driven by the argument-validation table (p=6.05)
 
-The seventh slice of the `web search` feature (source plan: `./product/plans/complete/web-search.md`). It adds the far-side half of a remote tab's typed search: a new path-free `web-search` read operation in `READ_OPERATIONS` that validates the parsed query and flags, runs `webSearch` on the remote machine with the workspace's tokens from the operation context, and returns `{ text }`. The operation context gains `tokens`, and `RemoteFileNavigators` takes them as a new constructor parameter. The protocol version moves only once for the whole feature: `./product/plans/complete/web-search-3-provider-tokens.md` already sets `REMOTE_PROTOCOL_VERSION` to 43, and this slice extends that version's comment and spec paragraph to name the `web-search` operation and the tokens on the operation context, so an older peer is refused at the handshake. The near side's port method and the provisioning wiring that hands real tokens to the context follow in `./product/plans/ready/web-search-8-remote-port.md`.
+The seventh slice of the `web search` feature (source plan: `./product/plans/complete/web-search.md`). It adds the far-side half of a remote tab's typed search: a new path-free `web-search` read operation in `READ_OPERATIONS` that validates the parsed query and flags, runs `webSearch` on the remote machine with the workspace's tokens from the operation context, and returns `{ text }`. The operation context gains `tokens`, and `RemoteFileNavigators` takes them as a new constructor parameter. The protocol version moves only once for the whole feature: `./product/plans/complete/web-search-3-provider-tokens.md` already sets `REMOTE_PROTOCOL_VERSION` to 43, and this slice extends that version's comment and spec paragraph to name the `web-search` operation and the tokens on the operation context, so an older peer is refused at the handshake. The near side's port method and the provisioning wiring that hands real tokens to the context follow in `./product/plans/complete/web-search-8-remote-port.md`.
 
 ## Dependencies
 
@@ -69,7 +69,7 @@ Carried from the source plan where they apply.
 ## Out of scope
 
 - Bumping `REMOTE_PROTOCOL_VERSION` (slice 3 owns the feature's single bump).
-- The near side's `RemoteFileSystemPort.webSearch`, the long-running deadline (`LONG_RUNNING` in `src/file-navigator/remote/port-requests.ts`), and passing the merged tokens from provisioning in `src/remote/serve-provision.ts` (`./product/plans/ready/web-search-8-remote-port.md`).
+- The near side's `RemoteFileSystemPort.webSearch`, the long-running deadline (`LONG_RUNNING` in `src/file-navigator/remote/port-requests.ts`), and passing the merged tokens from provisioning in `src/remote/serve-provision.ts` (`./product/plans/complete/web-search-8-remote-port.md`).
 - The typed command that sends the operation (`./product/plans/ready/web-search-10-typed-command.md`).
 - The far-side ACP loop's own search route (`./product/plans/ready/web-search-11-workspace-routes.md`), which calls `webSearch` directly and does not use this operation.
 - Cancelling a typed search (user decision).

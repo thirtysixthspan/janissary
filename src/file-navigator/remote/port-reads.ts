@@ -5,6 +5,7 @@ import { failureResult, type FileOperationResult } from '../file-operation-resul
 import { NO_MATCHING_TEXT_REASON, type FileEditValue, type FileWritePolicy } from '../../file-write/types.js';
 import type { FileGlobArgs } from '../../file-glob/command.js';
 import type { FileGrepArgs } from '../../file-grep/command.js';
+import type { WebSearchCommand } from '../../web-search/command.js';
 
 // `RemoteFileSystemPort`'s line read, glob, write and text edit, extracted so that file stays under the size limit — the same
 // split `port-moves.ts` uses. It takes the port's bound request sender and its path mapper as
@@ -71,6 +72,17 @@ export async function remoteGrepFiles(
     limit: args.limit,
   });
   return { text: result.text, path: sent };
+}
+
+export async function remoteWebSearch(request: RemoteRequest, args: WebSearchCommand): Promise<string> {
+  const result = await request('web-search', {
+    query: args.query,
+    numResults: args.numResults,
+    maxChars: args.maxChars,
+    depth: args.depth,
+    provider: args.provider,
+  });
+  return result.text;
 }
 
 // Content crosses as one base64 copy. Under the tool policy an absolute path is refused here with the

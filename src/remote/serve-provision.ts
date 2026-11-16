@@ -1,4 +1,5 @@
 import { homedir } from 'node:os';
+import { LocalFileSystemPort } from '../file-navigator/filesystem-port.js';
 import { getProjectTokens, type ProjectTokens } from '../project/tokens.js';
 import { setGitIdentity, type GitIdentity } from '../git/identity.js';
 import { sandboxNotice } from '../sandbox/index.js';
@@ -96,7 +97,7 @@ export async function provisionRemoteWorkspace(
   context.provisioned({
     dir: result.dir,
     processes: new RemoteProcesses(emit, result.dir, label, tokens),
-    files: new RemoteFileNavigators(emit, result.dir),
+    files: new RemoteFileNavigators(emit, result.dir, new LocalFileSystemPort(), tokens),
     acp: new RemoteAcp(emit, result.dir, tokens),
   });
   emit({

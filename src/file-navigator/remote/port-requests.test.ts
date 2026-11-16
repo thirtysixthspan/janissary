@@ -47,6 +47,7 @@ describe('RemotePortRequests deadlines', () => {
     expect(requestDeadline('search')).toBe(LONG_REQUEST_DEADLINE_MS);
     expect(requestDeadline('edit-file')).toBe(LONG_REQUEST_DEADLINE_MS);
     expect(requestDeadline('search-text')).toBe(LONG_REQUEST_DEADLINE_MS);
+    expect(requestDeadline('web-search')).toBe(LONG_REQUEST_DEADLINE_MS);
     expect(requestDeadline('read-directory')).toBe(REQUEST_DEADLINE_MS);
     expect(requestDeadline('read-lines')).toBe(REQUEST_DEADLINE_MS);
     expect(requestDeadline('glob-paths')).toBe(REQUEST_DEADLINE_MS);
