@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Make a cancelled workspace clone remove only the temporary directory it owns, so the cleanup cannot delete a newer launch's clone under the same name.
-
-Existing Issue: `provisionWorkspace` in `src/workspace/index.ts` sets a cancellation flag and, when the killed clone rejects, unconditionally removes the name-derived `target` path with `rmSync`, even though `WorkspaceManager` drops its pending attempt on cancel and a new launch can reuse that name; a delayed rejection can therefore delete the new attempt's clone, or a pre-existing directory at that path, contradicting the lifecycle promise in `product/specs/workspaced-agent.md` that an earlier attempt cannot clear a new tab's provisioning state. Severity: 5/10
-
-Existing Risk: 4/10 - Closing a tab and immediately relaunching a workspace under the same name can make the second clone disappear or fail during provisioning, forcing a retry, and a directory that already occupied the target can be deleted.
-
-Proposal Risk: 2/10 - Cleanup becomes owner-scoped, but the temporary sibling must be removed on every failure path and renamed atomically into place, so a missed path can leave a new leftover or a failed rename, both of which tests must pin.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "make workspace cancellation cleanup remove only the attempt's own directory". In `src/workspace/index.ts`, stop having `startGitClone` write directly into the final `target`. Create a unique provisioning sibling under the workspace base (for example `<name>.clone-<random>`), pass that path to `startGitClone`, and after a successful `ready` rename it onto `target` before `finishProvisioning(target, remoteUrl)`; if `target` already exists at rename time, fail with a clear error and do not delete it. In the rejection path, when `cancelled` is set, remove only the unique provisioning sibling, and clean that sibling on non-cancellation failures too so a failed clone leaves no new folder. Keep `ProvisionHandle.dir` as the final `target` so every caller and `WorkspaceManager` keeps its current path. Add a regression test in `src/workspace/index.test.ts` using the existing slow-git fixture: cancel attempt A after its partial directory exists, start attempt B under the same name and let it create its target before A's rejection settles, then assert B's target survives and B's `ready` resolves; also assert a pre-existing non-empty target is untouched by a cancelled attempt. The existing cancellation test, `src/workspace/manager.test.ts` pending and reuse cases, and `src/workspace/discard.test.ts` must keep passing, and the public `provisionWorkspace` signature must not change.
-
-
 * Correct the pull request title and description so they identify the delivered web search feature and the workspace cancellation fix the branch also carries.
 
 Existing Issue: The title still says the pull request decomposes the web search plan into fourteen subplans, and the body's What and How to verify sections describe only web search and never the workspace clone-cancellation change in the diff, so a reader cannot tell what else is being approved. Severity: 4/10
