@@ -10,7 +10,7 @@ The query is everything after `web search` up to the first word that starts with
 
 - `--results` is the number of results to keep, from 1 to 20, and defaults to 10. A provider may return fewer.
 - `--max-chars` is the character budget for the printed list, from 200 to 100000, and defaults to 10000.
-- `--depth` is `basic` or `advanced` and defaults to `basic`. `advanced` costs more on Tavily and is ignored by TinyFish.
+- `--depth` is `basic` or `advanced`, matched case-insensitively, and defaults to `basic`. `advanced` costs more on Tavily and is ignored by TinyFish.
 - `--provider` names the provider to use and defaults to `auto`. Names are matched case-insensitively.
 
 **Output**
