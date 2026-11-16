@@ -83,7 +83,7 @@ Vitest `server` project, colocated.
 ## Verification
 
 - `$janissary/scripts/run.mjs check-diff`
-- No manual end-to-end check: this slice registers nothing and changes no user-visible behavior. The first manual check is in `./product/plans/ready/web-search-10-typed-command.md`.
+- No manual end-to-end check: this slice registers nothing and changes no user-visible behavior. The first manual check is in `./product/plans/complete/web-search-10-typed-command.md`.
 
 ## Out of scope
 

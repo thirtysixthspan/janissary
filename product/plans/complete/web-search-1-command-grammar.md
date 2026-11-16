@@ -2,7 +2,7 @@
 
 **Complexity: 6/10** — ~115 added lines, 16 requirements, 26 test scenarios, no existing files edited (p=5.90)
 
-The first slice of the `web search` feature (source plan: `./product/plans/complete/web-search.md`). It adds the pure text layer every later slice reads: the predicate that claims every `web` line, the stricter predicate that recognizes an agent's reply line, the exact usage line and primer text, the flag ranges and defaults as exported constants, and `parseWebSearch`, which turns one line into a parsed request or the usage line. Nothing runs a search, registers a command, or touches ACP here. Later slices import these names: the `web` command (`./product/plans/ready/web-search-10-typed-command.md`), the agent-run refusal (`./product/plans/complete/web-search-9-agent-run-refusal.md`), the remote operation's argument check (`./product/plans/complete/web-search-7-remote-operation.md`), the ACP workspace routes (`./product/plans/ready/web-search-11-workspace-routes.md`), and the ACP tool entry (`./product/plans/ready/web-search-12-acp-tool.md`).
+The first slice of the `web search` feature (source plan: `./product/plans/complete/web-search.md`). It adds the pure text layer every later slice reads: the predicate that claims every `web` line, the stricter predicate that recognizes an agent's reply line, the exact usage line and primer text, the flag ranges and defaults as exported constants, and `parseWebSearch`, which turns one line into a parsed request or the usage line. Nothing runs a search, registers a command, or touches ACP here. Later slices import these names: the `web` command (`./product/plans/complete/web-search-10-typed-command.md`), the agent-run refusal (`./product/plans/complete/web-search-9-agent-run-refusal.md`), the remote operation's argument check (`./product/plans/complete/web-search-7-remote-operation.md`), the ACP workspace routes (`./product/plans/ready/web-search-11-workspace-routes.md`), and the ACP tool entry (`./product/plans/ready/web-search-12-acp-tool.md`).
 
 ## Dependencies
 
@@ -82,7 +82,7 @@ New feature directory `src/web-search/` with one module:
 ## Verification
 
 - `$janissary/scripts/run.mjs check-diff`
-- No manual end-to-end check: this slice registers nothing and changes no user-visible behavior. The first manual check is in `./product/plans/ready/web-search-10-typed-command.md`.
+- No manual end-to-end check: this slice registers nothing and changes no user-visible behavior. The first manual check is in `./product/plans/complete/web-search-10-typed-command.md`.
 
 ## Out of scope
 

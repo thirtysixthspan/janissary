@@ -2,7 +2,7 @@
 
 **Complexity: 2/10** — ~4 added lines in 2 files, 4 requirements, 5 test scenarios, no new units (p=4.20)
 
-The ninth slice of the `web search` feature (source plan: `./product/plans/complete/web-search.md`). It makes an `agent` run refuse any `janissary web …` line with `Agent: command not permitted: <command>.`, even when a skill grants `web`, the way it refuses `file glob` and the file mutations today. It lands before the typed `web` command (`./product/plans/ready/web-search-10-typed-command.md`) on purpose: once a `web` entry exists in the command registry, `runGrantedAgentCommand` would find it by `match` and, with a `web` grant, run it in the caller's tab. Landing the refusal first means that path never opens, not even for one release.
+The ninth slice of the `web search` feature (source plan: `./product/plans/complete/web-search.md`). It makes an `agent` run refuse any `janissary web …` line with `Agent: command not permitted: <command>.`, even when a skill grants `web`, the way it refuses `file glob` and the file mutations today. It lands before the typed `web` command (`./product/plans/complete/web-search-10-typed-command.md`) on purpose: once a `web` entry exists in the command registry, `runGrantedAgentCommand` would find it by `match` and, with a `web` grant, run it in the caller's tab. Landing the refusal first means that path never opens, not even for one release.
 
 Today a `web` line already ends in the same refusal, by accident rather than by rule: `gateAgentCommand` sends it to the caller side, and `runGrantedAgentCommand` finds no `commands` entry for it. This slice makes the refusal explicit so it survives slice 10 registering `web`. The observable output does not change in this slice, so every test below passes against today's behavior too and keeps passing after slice 10.
 
@@ -10,7 +10,7 @@ Today a `web` line already ends in the same refusal, by accident rather than by 
 
 - `./product/plans/complete/web-search-1-command-grammar.md` — `isWebCommandLine` in `src/web-search/command.ts` (`/^web(\s|$)/i`, no trimming). That module must exist before this slice lands. It imports only `positiveInteger`, so importing it from `src/acp/tool-table.ts` and `src/agent/command-tools.ts` pulls in no `Managers` or host code.
 
-Later slices rely on this one: `./product/plans/ready/web-search-10-typed-command.md` (registers `web`) and `./product/plans/ready/web-search-12-acp-tool.md` (adds the `web` ACP tool) both list it as a dependency.
+Later slices rely on this one: `./product/plans/complete/web-search-10-typed-command.md` (registers `web`) and `./product/plans/ready/web-search-12-acp-tool.md` (adds the `web` ACP tool) both list it as a dependency.
 
 ## Design decisions
 
@@ -58,5 +58,5 @@ Land in this order within the one change: the two source edits, then their tests
 
 - `web search` in `agent` runs, monitor personas, conversations, and editor persona queries (user decision).
 - Monitor personas' `web_search` opt-in (`SUPPORTED_PERSONA_TOOLS` in `src/persona-parsing.ts`), which stays unchanged.
-- Registering the `web` command (`./product/plans/ready/web-search-10-typed-command.md`) and the `web` ACP tool and its core-session gate (`./product/plans/ready/web-search-12-acp-tool.md`).
+- Registering the `web` command (`./product/plans/complete/web-search-10-typed-command.md`) and the `web` ACP tool and its core-session gate (`./product/plans/ready/web-search-12-acp-tool.md`).
 - A remote protocol version bump; the refusal needs none.

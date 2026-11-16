@@ -22,7 +22,7 @@ Carried verbatim from the source plan where they apply.
 - **Provider names (user decision).** `--provider` names match case-insensitively, and `auto` is reserved for auto-selection. An unknown name prints `Web search: unknown provider "<name>" (available: auto, tavily, tinyfish).`, listing `auto` and then every registered provider in registry order, and sends nothing. The unknown name is echoed as typed.
 - **No provider configured (user decision).** With no token file for any provider, an auto search prints `Web search: no provider configured.`; an explicit `--provider <name>` whose token file is missing prints `Web search: provider "<name>" is not configured.`. Nothing is sent.
 - **Plugin failure (user decision).** When a provider module fails to import, requires a different provider API version, or its `search` throws anything other than a normal HTTP, timeout, network, or decoding failure, that attempt fails with reason `provider failed: <first line of the error>` (or `requires provider API <n>` for a version mismatch), so an auto search falls back as usual. The provider is then disabled for the rest of that server process: auto skips it, an explicit `--provider <name>` prints `Web search failed (<name>): <reason>.` without sending anything, and one notification, `Web search provider "<name>" disabled: <reason>.`, appears in the notifications tab, as editor plugin failures do. A disabled provider stays disabled until the server restarts; there is no re-enable command, since a bundled provider only breaks with a bad build.
-- **Who shows the notification.** The registry calls the caller's `reportDisabled(name, reason)` exactly once per disabled provider; the caller decides how to show it. The local typed path posts the notification (`./product/plans/ready/web-search-10-typed-command.md`). On a remote machine no `reportDisabled` is passed, so the reason appears only in failure lines, since the far side has no notifications tab.
+- **Who shows the notification.** The registry calls the caller's `reportDisabled(name, reason)` exactly once per disabled provider; the caller decides how to show it. The local typed path posts the notification (`./product/plans/complete/web-search-10-typed-command.md`). On a remote machine no `reportDisabled` is passed, so the reason appears only in failure lines, since the far side has no notifications tab.
 - **Registry ownership.** `registry.ts` exports `createProviderRegistry(manifests)`, which returns an object that owns the disabled set (and each disabled provider's reason), so a test builds its own registry over a fixture catalog instead of resetting shared state. Creating it does no I/O and imports no provider.
 - **Registry methods.** `providerNames()` (manifest ids, catalog order); `resolveAttempts(name, tokens)` returning the ordered providers to try (one for an explicit name, every configured, non-disabled provider for `auto`) or the unknown-provider, not-configured, disabled-provider failure, or no-provider line; `runAttempt(manifest, request, capability, reportDisabled?)` which checks the manifest's `apiVersion` against `WEB_SEARCH_PROVIDER_API_VERSION` first (a mismatch is a plugin failure with reason `requires provider API <n>`, and nothing is imported), then activates the module, calls `search` inside a guard, and classifies the outcome as results, an expected failure (a `ProviderRequestError`), an abort, or a plugin failure. A plugin failure adds the manifest id to the disabled set and calls the caller's `reportDisabled(name, reason)` once.
 - **What `<n>` is.** In `requires provider API <n>`, `<n>` is the version the manifest names.
@@ -95,13 +95,13 @@ Vitest `server` project, colocated; no test touches the network. Fake manifests 
 
 - `$janissary/scripts/run.mjs check-diff`
 - `npm run docs:dev` and open the new reference page from the Developer Docs sidebar and from the Overview page's bullet to confirm both links and the page render.
-- No manual app check: nothing reaches the registry from a command until `./product/plans/ready/web-search-10-typed-command.md`.
+- No manual app check: nothing reaches the registry from a command until `./product/plans/complete/web-search-10-typed-command.md`.
 
 ## Out of scope
 
 - Running attempts in sequence, fallback, deciding when the failure lines print (this slice only supplies `formatFailures`), and the process-wide registry instance (`./product/plans/complete/web-search-6-search-core.md`).
 - Building the capability from tokens (`deps.tokens[manifest.token]`) — the core does that.
-- The behavior spec `product/specs/web-search.md` (`./product/plans/ready/web-search-10-typed-command.md`).
-- Posting the notification (`./product/plans/ready/web-search-10-typed-command.md`).
+- The behavior spec `product/specs/web-search.md` (`./product/plans/complete/web-search-10-typed-command.md`).
+- Posting the notification (`./product/plans/complete/web-search-10-typed-command.md`).
 - Provider plugins from outside the build: filesystem discovery, npm packages, third-party loading (user decision).
 - A re-enable command (user decision).

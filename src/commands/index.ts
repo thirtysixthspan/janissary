@@ -30,6 +30,7 @@ import { command as rename } from './rename.js';
 import { command as search } from './search.js';
 import { command as file } from './file.js';
 import { command as files } from './files.js';
+import { command as web } from './web.js';
 import { command as notifications } from './notifications.js';
 import { command as notify } from './notify.js';
 import { command as syntax } from './syntax.js';
@@ -77,6 +78,7 @@ export const coreCommands: Command[] = [
   search,
   file,
   files,
+  web,
   notifications,
   notify,
   syntax,

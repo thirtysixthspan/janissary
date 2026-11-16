@@ -58,7 +58,7 @@ Carried verbatim from the source plan where they apply.
 
 ## Out of scope
 
-- The typed `web` command and `searchWebInTab`, which call this port (`./product/plans/ready/web-search-10-typed-command.md`).
+- The typed `web` command and `searchWebInTab`, which call this port (`./product/plans/complete/web-search-10-typed-command.md`).
 - Adding `webSearch` to the `FileSystemPort` interface (source decision).
 - Any cancellation message over the wire (a typed search is not cancellable).
 - Bumping `REMOTE_PROTOCOL_VERSION` (slice 3 owns the feature's single bump) and the far-side `web-search` operation itself (slice 7).

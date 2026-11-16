@@ -102,4 +102,11 @@ describe('application command inventory', () => {
       .toMatchObject({ name: 'file read', kind: 'native', forms: ['file read'] });
     expect(resolveApplicationCommand('file')).toMatchObject({ name: 'file', kind: 'builtin', forms: ['file'] });
   });
+
+  it('lists the web command as a parentless builtin', () => {
+    const web = rows.find((row) => row.kind === 'builtin' && row.name === 'web');
+    expect(web?.forms).toEqual(['web']);
+    expect(web?.parent).toBeUndefined();
+    expect(resolveApplicationCommand('web')).toMatchObject({ name: 'web', kind: 'builtin', forms: ['web'] });
+  });
 });

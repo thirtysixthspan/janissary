@@ -76,7 +76,7 @@ Vitest `server` project, colocated, each with a fake `fetch` as in `src/models/p
 ## Verification
 
 - `$janissary/scripts/run.mjs check-diff`
-- No manual end-to-end check: nothing reaches these modules from a command until `./product/plans/ready/web-search-10-typed-command.md`, whose manual check exercises a live Tavily search.
+- No manual end-to-end check: nothing reaches these modules from a command until `./product/plans/complete/web-search-10-typed-command.md`, whose manual check exercises a live Tavily search.
 
 ## Out of scope
 

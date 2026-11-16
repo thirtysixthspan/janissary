@@ -7,7 +7,7 @@ The thirteenth slice of the `web search` feature (source plan: `./product/plans/
 ## Dependencies
 
 - `./product/plans/ready/web-search-12-acp-tool.md` — `'web search'` is already the last entry of `NATIVE_ACP_COMMANDS` (`src/plugins/roles/shared.ts`), with a `web` tool-table entry, so granting it has an effect. Slice 12 also already rewrote `product/specs/roles.md`: its default-roles paragraph reads "The `tell` role grants thirteen of the fourteen native commands, every one except `web search`: those eight plus …", and its Roles-tab paragraph already reads "hidden when all fourteen native commands are present". It added a `### Web search` subsection to `product/specs/acp.md` that says no built-in role grants it yet, and left `acp.md`'s grant-count sentence alone. This slice rewrites exactly those leftovers.
-- `./product/plans/ready/web-search-10-typed-command.md` — `help web` exists for the help pages to point at, and `product/specs/web-search.md` exists (slice 12 added its "Agent tool" section).
+- `./product/plans/complete/web-search-10-typed-command.md` — `help web` exists for the help pages to point at, and `product/specs/web-search.md` exists (slice 12 added its "Agent tool" section).
 - `./product/plans/complete/web-search-3-provider-tokens.md` — the `tavily-token` and `tinyfish-token` rows and the token page `documentation/user-documentation/advanced-agents/tokens.md`, which the ACP user doc links to.
 
 All 14 web-search slices ship on one pull request; this slice lands after 1–12. Nothing in slice 14 (completion) depends on it.
@@ -78,6 +78,6 @@ Suites that pass unchanged: `src/plugins/roles/activate.test.ts` (compares again
 
 - Migrating saved roles files (user decision).
 - Any change to the vocabulary, tool table, primer, or routing (`./product/plans/ready/web-search-12-acp-tool.md`, `./product/plans/ready/web-search-11-workspace-routes.md`).
-- `help web` and `help/commands.md` (`./product/plans/ready/web-search-10-typed-command.md`); the tokens page (`./product/plans/complete/web-search-3-provider-tokens.md`).
+- `help web` and `help/commands.md` (`./product/plans/complete/web-search-10-typed-command.md`); the tokens page (`./product/plans/complete/web-search-3-provider-tokens.md`).
 - Completion (`./product/plans/draft/web-search-14-completion.md`).
 - Granting `web search` to any other built-in role (they start with no grants).
