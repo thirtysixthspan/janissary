@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the web-search behavior spec's claim that a search provider key never enters any spawned environment, which the delivered security boundary does not cover.
-
-Existing Issue: The Tokens section of `product/specs/web-search.md` says the search key "never enters a spawned shell, harness, or ACP agent's environment", while the delivered rule drops or skips the two keys only for workspaced and ACP spawns and deliberately leaves a plain non-workspaced spawn with the user's own ambient environment. Severity: 4/10
-
-Existing Risk: 4/10 - A reader treats the stronger guarantee as delivered, so the real ambient exposure on a plain non-workspaced tab stays hidden behind a spec that says it cannot happen, and the workspaced and ACP coverage the security repair did deliver reads as uncertain rather than exact.
-
-Proposal Risk: 2/10 - The prose would match the delivered boundary and the repair plan's scoped goal, but the plain non-workspaced exposure itself remains by design and is still recorded only in the repair plan's Out of scope section.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "scope the web-search spec's search-key claim to workspaced and ACP spawns". Rewrite the last sentence of the Tokens section of `product/specs/web-search.md` so it says the search runs in the Janissary process, which reads the key itself, so neither key is injected into a workspaced shell, harness, or ACP agent, and add that a plain non-workspaced spawn keeps the user's own environment. Match `product/specs/sandbox.md` ("neither key is set in a workspaced spawn's environment ... on the confined or pass-through path") and the scoped Goal of `product/plans/complete/keep-search-keys-out-of-spawned-environments.md`; the same paragraph's remote merged-token sentence stays. Also correct the "Spec and docs" sentence of `product/plans/complete/correct-search-key-exposure-claims.md` that says no functional spec change is needed, or add `product/specs/web-search.md` to its Verification list, so the repair record stops claiming the spec already agreed. No code, test, or other spec change. Verify by grepping the spec for "never enters" and reading the revised sentence beside `src/sandbox/environment.ts` (`withWorkspaceCredentials`), `src/sandbox/index.ts` (`sandboxSpawn`), and the existing cases in `src/sandbox/environment.test.ts`, `src/sandbox/index.test.ts`, and `src/project/tokens.test.ts`, which already pin the workspaced, ACP, and table behavior.
-
-
 * Correct the truncation note's unconditional wording in the description, plan, spec, and help page, which the delivered first-result budget rule contradicts.
 
 Existing Issue: The description, `product/specs/web-search.md`, `help/web.md`, and the Truncation decision in `product/plans/complete/web-search.md` all say that when results are left out the list ends with the `(showing <k> of <n> results; raise --max-chars for more)` line, while the same paragraphs, and `cutFirstResult` in `src/web-search/render.ts`, drop that line when the first result's link line and the note cannot share `--max-chars`. Severity: 3/10

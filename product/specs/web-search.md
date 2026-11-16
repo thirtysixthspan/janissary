@@ -60,7 +60,7 @@ A successful search that kept no results prints `No results for "<query>".`, wit
 
 ### Tokens
 
-Tavily reads its key from `.janissary/tavily-token` and TinyFish from `.janissary/tinyfish-token`. For each, the project's own file is read first and `~/.janissary/` second. A file holding only whitespace counts as absent. A token file added while Janissary runs takes effect after a restart, because tokens are read once at startup. The search runs in the Janissary process, which reads the key itself, so the key never enters a spawned shell, harness, or ACP agent's environment.
+Tavily reads its key from `.janissary/tavily-token` and TinyFish from `.janissary/tinyfish-token`. For each, the project's own file is read first and `~/.janissary/` second. A file holding only whitespace counts as absent. A token file added while Janissary runs takes effect after a restart, because tokens are read once at startup. The search runs in the Janissary process, which reads the key itself, so neither key is set in a workspaced shell, harness, or ACP agent's environment, whether it came from a token file or the machine's own environment. A plain spawn outside a workspace keeps the user's own environment, so an exported copy of either key stays.
 
 On a remote tab, the search uses the workspace's merged tokens: a token forwarded from the local machine wins over the remote machine's own file, which is the fallback.
 

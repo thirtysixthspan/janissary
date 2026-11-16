@@ -45,7 +45,7 @@ None, and none possible: the artifacts are prose in a pull request body and a us
 
 ## Spec and docs
 
-No functional spec change: the specs already describe the delivered boundary correctly, and this fix only corrects user documentation and the pull request description.
+`product/specs/sandbox.md`, `product/specs/workspaced-agent.md`, and `product/specs/acp.md` already describe the delivered boundary correctly, so this fix changes no spec for its own part and only corrects user documentation and the pull request description. `product/specs/web-search.md` did not agree: its Tokens section said the key never enters any spawned environment, which overclaimed the boundary for a plain non-workspaced spawn. That sentence is scoped to workspaced and ACP spawns by `product/plans/complete/scope-search-key-claim-to-workspaced-spawns.md`.
 
 No help page change: `help/` does not describe token injection or either search token file.
 
