@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's success-output rule for a Move onto a destination that existed before the patch, which the runner reports as the destination's own `M` or `D` row and the origin's `D` rather than an `R` row.
-
-Existing Issue: The canonical plan's Success output decision and the help page both say `R <old> -> <new>` is printed for a file that existed before the patch and was renamed by a surviving move, while `showsRename` in `src/file-patch/move-chains.ts` reserves `R` for a move whose destination did not exist before the patch and otherwise prints the destination's net row (`M` when it still exists, `D` when it does not) plus the origin's `D`, as the delete-then-move case in `src/file-patch/sections.test.ts` demonstrates. Severity: 4/10
-
-Existing Risk: 3/10 - A reader or agent that relies on the help for the row shape misreads a move onto a deleted or vacated path as a delete plus a modify, and a future contributor may change `showsRename` to match the unqualified rule and silently change the net-change output every other row depends on.
-
-Proposal Risk: 1/10 - The plan, help page, and tests then state the same destination-new condition, so the only remaining question is the design choice itself, which stays explicit.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2011 "record the destination-new condition in the plan and help rename-row rule". In product/plans/complete/file-patch.md, amend the Success output design decision so the `R` clause says `R` is reported only when the move's destination did not exist before the patch, and that a destination that existed before the patch (including one deleted or moved away earlier in the same patch) keeps its own net row — `M` when it exists at the end, `D` when it does not — while the origin reports `D`; keep the "each path listed once with its net change" sentence as the reason. In help/file.md, change the output-row bullet from `R <old> -> <new>` for a file that existed before the patch and was renamed to the same destination-new wording, and add one short example or sentence for a move onto a path deleted earlier in the same patch showing `M <destination>` and `D <origin>`. In src/file-patch/sections.test.ts, keep the existing derives rows, deletes and writes for overwritten and vacated paths case as the pin and add a second case for a destination that existed before the patch but was moved away earlier (`*** Update File: b`, `*** Move to: c`, `*** Update File: a`, `*** Move to: b`) asserting `M b`, `A c`, `D a` in that order and no `R`; name that case in the plan's Tests list for sections.test.ts. Do not change showsRename, rows.ts, or any row output: the net-change rule the code implements is the one the description's "each path listed once with its net change" already promises, and the existing sections.test.ts and apply.test.ts row expectations must keep passing untouched.
-
-
 * Cover the branch that unlinks a deleted symbolic link re-added as a regular file and then moved, whose behavior has no colocated test.
 
 Existing Issue: The `replacedLink` flag in `src/file-patch/moves.ts` forces the move chain's `onDisk` value to false when a patch deletes a symbolic link, adds a regular file at the same path, and moves it, so the original link is unlinked and the new file is written at the destination; neither `src/file-patch/sections.test.ts` nor `src/file-patch/commit.test.ts` combines a delete-then-add of a link with a later move, so this state transition is verified only by reading the code. Severity: 4/10

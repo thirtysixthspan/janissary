@@ -68,6 +68,13 @@ describe('patch sections', () => {
     expect(readded.changes.writes).toMatchObject([{ text: 'new\n', place: { requested: 'a' } }]);
   });
 
+  it('derives a net row for a destination that was moved away earlier', () => {
+    write('a', 'a\n'); write('b', 'b\n');
+    const vacated = success('*** Update File: b\n*** Move to: c\n*** Update File: a\n*** Move to: b');
+    expect(vacated.rows).toEqual([{ letter: 'M', path: 'b' }, { letter: 'A', path: 'c' }, { letter: 'D', path: 'a' }]);
+    expect(vacated.rows.some((row) => row.letter === 'R')).toBe(false);
+  });
+
   it('preserves ordered hops, chains and net changes', () => {
     write('a', 'a\n'); write('b', 'b\n');
     const chain = success('*** Update File: a\n*** Move to: t\n*** Update File: t\n*** Move to: dir/c');
