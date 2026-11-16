@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Add typed web search to the ACP spec's list of untagged typed outputs.
-
-Existing Issue: The ACP spec's tag paragraph enumerates the typed outputs that carry no `[<host>] ` tag as `file read`, `file glob`, `file grep`, `file write`, and `file edit`, omitting typed `web search`, while the user documentation already lists `web search` among the untagged typed outputs and `searchWebInTab` returns a remote tab's typed result through `withRemoteTabPort` with no tag. Severity: 3/10
-
-Existing Risk: 2/10 - a reader of the spec could expect a typed remote web result to be tagged or distrust the tag rule, and the two documents disagree on an observable transcript detail.
-
-Proposal Risk: 1/10 - the spec list matches the user documentation and the routing code; no behavior changes.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "add typed web search to the ACP spec's untagged typed-output list". In `product/specs/acp.md`, the tag paragraph, change "the output of typed `file read`, `file glob`, `file grep`, `file write`, and `file edit` are untagged" to include `web search` after `file grep`, matching the order in `documentation/user-documentation/advanced-agents/acp-agent.md`. Leave the Web search section and every other sentence unchanged. Verify against `src/acp/run-prompt.ts` (`tagged` applies only to a remote session's workspace step) and `src/web-search/tab-search.ts`; no code or test change.
-
-
 * Fix and test the first-result truncation when the note cannot fit alongside the link line.
 
 Existing Issue: In `src/web-search/render.ts`, `cutFirstResult` returns the link line and the truncation note whenever `room = maxChars - link.length - 3 - note.length` is at most 1, so with the 200-character minimum, a 150-character link and a two-result note can produce about 203 characters and omit the snippet even though the link line alone fits; no render test covers that boundary. Severity: 3/10
