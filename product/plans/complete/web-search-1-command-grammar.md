@@ -88,5 +88,5 @@ New feature directory `src/web-search/` with one module:
 
 - Running a search, providers, rendering, registering the `web` command, and any ACP wiring (later subplans of `./product/plans/complete/web-search.md`).
 - Validating the provider name (`./product/plans/complete/web-search-5-provider-registry.md`).
-- Completion (`./product/plans/ready/web-search-14-completion.md`).
+- Completion (`./product/plans/complete/web-search-14-completion.md`).
 - A JSON argument form (user decision).

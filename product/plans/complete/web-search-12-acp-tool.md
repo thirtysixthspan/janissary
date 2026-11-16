@@ -100,4 +100,4 @@ Suites that read `NATIVE_ACP_COMMANDS` or `APPLICATION_COMMAND_NATIVE_TOOLS` and
 - A JSON argument form, a harness function-calling tool, or an MCP server (user decision).
 - Enabling any harness's built-in web search tool (from precedent).
 - A remote protocol version change (slice 3 owns the feature's single bump).
-- Completion (`./product/plans/ready/web-search-14-completion.md`).
+- Completion (`./product/plans/complete/web-search-14-completion.md`).

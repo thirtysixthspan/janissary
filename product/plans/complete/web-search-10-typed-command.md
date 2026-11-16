@@ -30,7 +30,7 @@ Carried verbatim from the source plan where they apply.
 - **Cancellation (user decision).** A typed search has no cancellation and runs until it answers or times out.
 - **Output (user decision).** The typed command and the agent's tool result print the same text.
 - **No provider configured (user decision).** `help web` documents where the token files go.
-- **Behavior spec.** `product/specs/web-search.md` (new) is the behavior spec for the whole feature: grammar, pipeline, output, every message, providers, tokens, where a search runs. The ACP sections it needs are added by `./product/plans/ready/web-search-12-acp-tool.md`, and a completion section by `./product/plans/ready/web-search-14-completion.md`; this slice writes the typed-command sections only and links `[[acp]]`, `[[remote-server]]`, and `[[workspaced-agent]]` where those specs own the detail.
+- **Behavior spec.** `product/specs/web-search.md` (new) is the behavior spec for the whole feature: grammar, pipeline, output, every message, providers, tokens, where a search runs. The ACP sections it needs are added by `./product/plans/ready/web-search-12-acp-tool.md`, and a completion section by `./product/plans/complete/web-search-14-completion.md`; this slice writes the typed-command sections only and links `[[acp]]`, `[[remote-server]]`, and `[[workspaced-agent]]` where those specs own the detail.
 
 ## What already exists (reuse, don't rebuild)
 
@@ -94,6 +94,6 @@ All relative imports carry `.js`; type-only imports use `import type`.
 - The ACP workspace routes that pass a signal to `searchWebInTab` (`./product/plans/complete/web-search-11-workspace-routes.md`).
 - The ACP tool, vocabulary, and native `web search` row (`./product/plans/ready/web-search-12-acp-tool.md`).
 - Default grants and the ask/tell/roles help and user docs (`./product/plans/ready/web-search-13-default-grants.md`).
-- Completion (`./product/plans/ready/web-search-14-completion.md`).
+- Completion (`./product/plans/complete/web-search-14-completion.md`).
 - The provider plugin reference page (slice 5) and the token-file documentation page (slice 3).
 - Cancelling a typed search (user decision).
