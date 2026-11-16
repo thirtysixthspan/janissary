@@ -748,8 +748,51 @@ describe('EditorTab', () => {
     await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
     const actions = container.querySelector('.editor-actions')!;
 
-    expect(actions.querySelectorAll('button')).toHaveLength(5);
+    expect(actions.querySelectorAll('button')).toHaveLength(6);
     expect(container.querySelector('.editor-meta')?.querySelectorAll(':scope > button')).toHaveLength(0);
+  });
+
+  it('renders the reveal button first in the actions group, ahead of the sync icon', async () => {
+    const { client } = makeClient();
+    const view = makeView({ sync: 'synced' });
+    const { container } = await renderLoaded(client, view);
+    const actions = container.querySelector('.editor-actions')!;
+    const first = actions.querySelector('button')!;
+
+    expect(first.className).toBe('editor-reveal-button');
+    expect(first.compareDocumentPosition(actions.querySelector('.editor-sync-icon')!)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it('a full press on the reveal button sends the reveal and leaves the textarea unfocused', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    outside.focus();
+
+    const button = container.querySelector('.editor-reveal-button')!;
+    fireEvent.mouseDown(button);
+    fireEvent.mouseUp(button);
+    fireEvent.click(button);
+
+    expect(client.send).toHaveBeenCalledWith({ method: 'revealInFileNavigator', params: { label: 'notes' } });
+    expect(document.activeElement).not.toBe(textarea());
+    outside.remove();
+  });
+
+  it('renders a disabled reveal button for a blocked file and a full press sends nothing', async () => {
+    const { client } = makeClient();
+    const view = makeView({ revealBlocked: 'unsaved' });
+    const { container } = await renderLoaded(client, view);
+    const button = container.querySelector<HTMLButtonElement>('.editor-reveal-button')!;
+
+    expect(button).toBeDisabled();
+    fireEvent.mouseDown(button);
+    fireEvent.mouseUp(button);
+    fireEvent.click(button);
+    expect(client.send).not.toHaveBeenCalled();
   });
 
   it('committing via the metadata icon saves first, then commits the file with a generated message', async () => {

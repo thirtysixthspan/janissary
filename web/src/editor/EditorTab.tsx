@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { EditorView, TabView } from '@shared/protocol';
 import type { JanusClient } from '../shared/ws/ws';
 import { useEditor } from './useEditor';
@@ -23,7 +23,7 @@ import { EditorLines } from './EditorLines';
 import { PendingSuggestPanel } from './PendingSuggestPanel';
 import { OverwriteConflictDialog } from './OverwriteConflictDialog';
 import { EditorMetaRow } from './EditorMetaRow';
-import { commitAfterSave, renameAndRefocus, sendResync } from './editor-file-commands';
+import { commitAfterSave, renameAndRefocus, sendResync, sendRevealInFileNavigator } from './editor-file-commands';
 import { useEditorDrop } from './useEditorDrop';
 import { opensRenameSession } from './new-file-rename';
 import type { DirtyTabHandle } from '../shared/tab/handles';
@@ -84,6 +84,10 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   const ownHost = useMemo(() => createEditorPluginHost(() => {}), []);
   const pluginKey = useEditorPlugins(
     client, editor.url, api, editor.name, pluginHost ?? ownHost, pluginReports,
+  );
+  const revealInFileNavigator = useCallback(
+    () => { sendRevealInFileNavigator(client, tab.label, editor.revealBlocked); },
+    [client, tab.label, editor.revealBlocked],
   );
   const interactions = useEditorInteractions({ bodyRef, caretRef, textareaRef, api, suggest, find, pluginKey, overlayOpen });
 
@@ -162,6 +166,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
         onRenameCancel={focusBuffer}
         onRenameEditingChange={setRenaming}
         onCommitOrigin={commitOrigin}
+        onReveal={revealInFileNavigator}
       />
       <PendingSuggestPanel pending={suggest.pending} />
       <div

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { commitAfterSave, renameAndRefocus, sendResync } from './editor-file-commands';
+import { commitAfterSave, renameAndRefocus, sendResync, sendRevealInFileNavigator } from './editor-file-commands';
 
 describe('commitAfterSave', () => {
   it('arms the commit only after the save resolves, with a sync message naming the file', async () => {
@@ -35,5 +35,25 @@ describe('sendResync', () => {
     const send = vi.fn();
     sendResync({ send }, '/open/1');
     expect(send).toHaveBeenCalledWith({ method: 'resyncEditorTab', params: { url: '/open/1' } });
+  });
+});
+
+describe('sendRevealInFileNavigator', () => {
+  it('sends revealInFileNavigator with the editor label', () => {
+    const send = vi.fn();
+    sendRevealInFileNavigator({ send }, 'editor', undefined);
+    expect(send).toHaveBeenCalledWith({ method: 'revealInFileNavigator', params: { label: 'editor' } });
+  });
+
+  it('sends nothing while an unsaved file is blocked', () => {
+    const send = vi.fn();
+    sendRevealInFileNavigator({ send }, 'editor', 'unsaved');
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('sends nothing while an orphaned remote file is blocked', () => {
+    const send = vi.fn();
+    sendRevealInFileNavigator({ send }, 'editor', 'no-route');
+    expect(send).not.toHaveBeenCalled();
   });
 });

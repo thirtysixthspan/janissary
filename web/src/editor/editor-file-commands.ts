@@ -1,3 +1,4 @@
+import type { EditorView } from '@shared/protocol';
 import type { JanusClient } from '../shared/ws/ws';
 
 // The metadata row's commit-to-origin icon: the save lands first (its failure is already on
@@ -31,4 +32,13 @@ export function renameAndRefocus(
 
 export function sendResync(client: Pick<JanusClient, 'send'>, url: string): void {
   client.send({ method: 'resyncEditorTab', params: { url } });
+}
+
+export function sendRevealInFileNavigator(
+  client: Pick<JanusClient, 'send'>,
+  label: string,
+  revealBlocked: EditorView['revealBlocked'],
+): void {
+  if (revealBlocked !== undefined) return;
+  client.send({ method: 'revealInFileNavigator', params: { label } });
 }
