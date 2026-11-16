@@ -165,10 +165,13 @@ describe('getOutput help pages', () => {
     expect(text).not.toMatch(/^`--limit` is the number of lines to print/m);
   });
 
-  it('documents the file patch section and usage line', () => {
+  it('documents the file patch section, usage line, and open-ended failure reasons', () => {
     const text = outputText('help file');
     expect(text).toContain('**Patching several files**');
     expect(text).toContain('`file patch <JSON>`');
+    expect(text).toContain('Any other filesystem failure also appears as the reason');
+    expect(text).toContain('Permission denied; check file and folder permissions, then try again');
+    expect(text).toContain('The source or destination no longer exists; refresh the file navigator, then try again');
   });
 
   it('keeps the tab command page examples and usage aligned with the parser', () => {
