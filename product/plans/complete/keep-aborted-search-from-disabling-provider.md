@@ -4,7 +4,7 @@
 
 ## Goal
 
-An aborted web search must not disable a provider or call `reportDisabled`, including when the provider module resolves without a `search` function or when `search` resolves a non-array. In `src/web-search/registry.ts`, `runAttempt` currently consults `capability.signal?.aborted` only inside the thrown-error classifications (`classifyActivationFailure` and `classifySearchFailure`). The two non-throwing failure branches — the missing-provider branch and the non-array-result branch — disable the provider and report it even when the signal is already aborted, contradicting the rule already recorded in `product/specs/web-search.md`: an abort is rethrown unchanged and nothing is disabled or reported.
+An aborted web search must not disable a provider or call `reportDisabled`, including when the provider module resolves without a `search` function or when `search` resolves a non-array. In `src/web-search/registry.ts`, `runAttempt` currently consults `capability.signal?.aborted` only inside the thrown-error classifications (`classifyActivationFailure` and `classifySearchFailure`). The two non-throwing failure branches — the missing-provider branch and the non-array-result branch — disable the provider and report it even when the signal is already aborted, contradicting the rule recorded in the aggregate plan's guarded-activation decision in `product/plans/complete/web-search.md` and in `documentation/developer-documentation/web-search-providers.md`: an abort is rethrown unchanged and nothing is disabled or reported. `product/specs/web-search.md` now records it under Cancellation.
 
 After the fix, both branches return `{ kind: 'aborted', error: capability.signal.reason }` when the signal is aborted, so `runWebSearch` in `src/web-search/search.ts` rethrows that reason at its existing `outcome.kind === 'aborted'` check before any failure line is formatted. A provider that is genuinely broken on a non-aborted search still disables and reports exactly as before.
 
@@ -26,7 +26,7 @@ After the fix, both branches return `{ kind: 'aborted', error: capability.signal
 
 2. **Two inline guards over a shared helper.** The file already states the abort check inline in each classification function; matching that shape keeps the diff to two lines and adds no new unit. `registry.ts` is 173 lines, so the addition stays well under the 200-line limit.
 
-3. **No spec change.** `product/specs/web-search.md` already states that "the abort check runs before every classification: when the capability's signal is aborted, the original rejection is rethrown unchanged and nothing is disabled or reported." The implementation is what diverges; the spec already describes the corrected behavior. No `help/` page or user documentation describes this internal boundary, so none changes.
+3. **No spec change in this repair.** The rule this repair enforces was recorded in the aggregate plan's guarded-activation decision in `product/plans/complete/web-search.md` and in `documentation/developer-documentation/web-search-providers.md`: when the capability's signal is aborted, the original rejection is rethrown unchanged and nothing is disabled or reported. `product/specs/web-search.md` gained that rule under Cancellation afterwards. The implementation is what diverged. No `help/` page or user documentation describes this internal boundary, so none changes.
 
 ## Implementation steps
 
@@ -52,5 +52,5 @@ Existing coverage that must keep passing: `treats a ProviderRequestError rejecti
 - The synchronous API-version mismatch branch, which stays a disable-then-report path exactly as it is today.
 - `classifyActivationFailure`, `classifySearchFailure`, `loadProvider`, and the registry's resolution functions.
 - `src/web-search/search.ts`, whose abort rethrow already precedes failure formatting.
-- Specs, help pages, and user documentation — the spec already describes this behavior.
+- Specs, help pages, and user documentation — this repair changed none; the aggregate plan and the developer page already recorded the rule, and the behavior spec states it under Cancellation.
 - Other providers, the ACP wiring, remote search, and the remaining pull-request backlog.

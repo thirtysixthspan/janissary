@@ -24,6 +24,14 @@ A remote tab with no live connection, or whose workspace is still being prepared
 
 A typed search has no cancellation. It runs until it answers or every provider it tries times out.
 
+### Cancellation
+
+An agent search that runs in the same process as its prompt — a local tab's search, or a remote-hosted run's own search — is tied to that prompt's signal. Cancelling the prompt, or aborting the run, aborts the search and tries no further provider. A search the tab forwards to its remote machine has no cancellation on the caller's side; [[acp]] gives the agent cases.
+
+An aborted search rejects with the abort instead of printing a result or a failure line. That covers an abort that lands before any provider is resolved, between two attempts, after a provider has answered, and before the final failure lines would print. An attempt already under way that sees the abort is a cancellation, not a plugin failure: it disables no provider and reports nothing, even when the loaded module has no search function or answered with something other than a list.
+
+The provider API-version check is not a cancellation path. It happens before a module is imported, so a provider written for a different API version disables and reports as the failures section describes, while the search's own signal check runs before each attempt starts.
+
 ### Provider selection
 
 Provider names are matched case-insensitively, and `auto` is reserved for auto-selection. `auto`, the default, walks the providers in order — Tavily, then TinyFish — skipping any without a token and using the first one that has one.
