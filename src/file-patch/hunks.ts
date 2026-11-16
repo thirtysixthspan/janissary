@@ -63,11 +63,14 @@ export function applyHunks(text: string, hunks: PatchHunk[]): ApplyHunksResult {
     replacements.push({ start, count: old.length, lines: replacementLines(hunk.lines, source.lines, start) });
     position = start + old.length;
   }
-  const result = [...source.lines];
-  for (let index = replacements.length - 1; index >= 0; index -= 1) {
-    const replacement = replacements[index];
-    result.splice(replacement.start, replacement.count, ...replacement.lines);
+  const result: string[] = [];
+  let cursor = 0;
+  for (const replacement of replacements) {
+    while (cursor < replacement.start) result.push(source.lines[cursor++]);
+    for (const line of replacement.lines) result.push(line);
+    cursor = replacement.start + replacement.count;
   }
+  while (cursor < source.lines.length) result.push(source.lines[cursor++]);
   const joined = result.join(source.ending);
   return { ok: true, text: result.length > 0 && source.finalNewline ? joined + source.ending : joined };
 }

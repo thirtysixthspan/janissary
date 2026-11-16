@@ -65,6 +65,12 @@ describe('applyHunks', () => {
     expect(applyHunks('a\n', [hunk([add('x')]), hunk([remove('x')])])).toEqual(failure('x'));
   });
 
+  it('applies a large replacement without exceeding the argument limit', () => {
+    const lines = Array.from({ length: 200_000 }, () => add('x'));
+    expect(applyHunks('before\nafter\n', [hunk([remove('before'), ...lines])]))
+      .toEqual(success(`${'x\n'.repeat(200_000)}after\n`));
+  });
+
   it('preserves the chosen line ending and handles mixed endings', () => {
     const edit = [hunk([remove('two'), add('three')])];
     expect(applyHunks('one\r\ntwo\r\n', edit)).toEqual(success('one\r\nthree\r\n'));
