@@ -26,10 +26,10 @@ export function moveSection(view: PatchView, source: PatchPlace, section: Extrac
     source.content.current = result.text;
     recordWrite(record, source, false);
   }
-  target.exists = true;
+  view.setExists(target, true);
   target.linkText = source.linkText;
   target.content = source.content;
-  source.exists = false;
+  view.setExists(source, false);
   source.linkText = undefined;
   source.content = freshContent(source);
   return undefined;

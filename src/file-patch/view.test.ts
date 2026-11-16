@@ -1,7 +1,7 @@
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, truncateSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FILE_POLICY_MAX_BYTES } from '../file-read/policy.js';
 import { createPatchView } from './view.js';
 import type { PatchView } from './view.js';
@@ -53,12 +53,35 @@ describe('patch view', () => {
     expect(first).toMatchObject({ existed: false, exists: false, missingFolders: [path.join(root, 'a'), path.join(root, 'a/b')] });
     expect(first.content).toMatchObject({ original: undefined, current: undefined, hadBom: false });
     expect(view.plannedFolders()).toEqual([]);
-    first.exists = true;
-    second.exists = true;
+    view.setExists(first, true);
+    view.setExists(second, true);
     expect(view.plannedFolders()).toEqual([path.join(root, 'a'), path.join(root, 'a/b')]);
     expect(view.places()).toEqual([first, second, absent]);
-    first.exists = false;
+    view.setExists(first, false);
     expect(view.plannedFolders()).toEqual([path.join(root, 'a')]);
+  });
+
+  it('does not rebuild planned folders for each resolved path or existence change', () => {
+    const sorted = vi.spyOn(Array.prototype, 'toSorted');
+    for (let index = 0; index < 200; index += 1) resolve(`missing-${index}/file`);
+    for (let index = 0; index < 200; index += 1) view.setExists(resolve(`added-${index}/file`), true);
+    expect(sorted).not.toHaveBeenCalled();
+    expect(view.plannedFolders()).toHaveLength(200);
+    expect(sorted).toHaveBeenCalledTimes(1);
+    sorted.mockRestore();
+  });
+
+  it('keeps planned-folder membership through add, move away and re-add', () => {
+    const place = resolve('dir/file');
+    view.setExists(place, true);
+    view.setExists(place, true);
+    expect(view.resolve('dir')).toEqual({ ok: false, reason: 'Is a directory' });
+    view.setExists(place, false);
+    expect(resolve('dir').exists).toBe(false);
+    view.setExists(place, true);
+    expect(view.resolve('dir')).toEqual({ ok: false, reason: 'Is a directory' });
+    view.setExists(place, false);
+    expect(resolve('dir').exists).toBe(false);
   });
 
   it('refuses invalid paths and contents without recording them', () => {
@@ -103,12 +126,12 @@ describe('patch view', () => {
 
   it('prevents planned files and folders from occupying the same location', () => {
     const child = resolve('a/b/file');
-    child.exists = true;
+    view.setExists(child, true);
     expect(view.resolve('a/b')).toEqual({ ok: false, reason: 'Is a directory' });
     const file = resolve('file');
-    file.exists = true;
+    view.setExists(file, true);
     expect(view.resolve('file/sub')).toEqual({ ok: false, reason: 'Filesystem error ENOTDIR; check the item and destination, then try again' });
-    file.exists = false;
+    view.setExists(file, false);
     expect(resolve('file/sub').exists).toBe(false);
   });
 

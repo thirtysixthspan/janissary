@@ -13,7 +13,7 @@ export type ApplySectionsResult =
   | { ok: false; section: number; marker: string; reason: string; hunkLine?: never }
   | { ok: false; section: number; marker: string; hunkLine: string; reason?: never };
 
-function add(place: PatchPlace, section: Extract<PatchSection, { kind: 'add' }>, record: PatchRecord): SectionFailure | undefined {
+function add(view: PatchView, place: PatchPlace, section: Extract<PatchSection, { kind: 'add' }>, record: PatchRecord): SectionFailure | undefined {
   if (place.exists) return { reason: 'File already exists' };
   const text = section.lines.length === 0 ? '' : `${section.lines.join('\n')}\n`;
   const error = checkText(text, false);
@@ -22,17 +22,17 @@ function add(place: PatchPlace, section: Extract<PatchSection, { kind: 'add' }>,
     place.content = freshContent(place);
     place.linkText = undefined;
   }
-  place.exists = true;
+  view.setExists(place, true);
   place.content.current = text;
   recordWrite(record, place, true);
   return undefined;
 }
 
-function remove(place: PatchPlace, record: PatchRecord): SectionFailure | undefined {
+function remove(view: PatchView, place: PatchPlace, record: PatchRecord): SectionFailure | undefined {
   if (!place.exists) return { reason: 'File not found' };
   if (!record.deletes.has(place)) record.deletes.set(place, { place, linkText: place.linkText, content: place.content });
   record.removedByDelete.add(place);
-  place.exists = false;
+  view.setExists(place, false);
   return undefined;
 }
 
@@ -57,8 +57,8 @@ function applyOne(view: PatchView, section: PatchSection, record: PatchRecord): 
   const linkError = entryOnly && movedLink ? undefined : followLink(view, place, record);
   if (linkError) return { reason: linkError };
   switch (section.kind) {
-    case 'add': { return add(place, section, record); }
-    case 'delete': { return remove(place, record); }
+    case 'add': { return add(view, place, section, record); }
+    case 'delete': { return remove(view, place, record); }
     case 'update': { return section.moveTo === undefined ? update(place, section, record) : moveSection(view, place, section, record); }
   }
 }

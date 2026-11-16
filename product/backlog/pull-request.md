@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Avoid quadratic planned-folder work when validating a large patch.
-
-Existing Issue: The view's `checkFolders` rebuilds and sorts the full planned-folder list on every path it resolves, so a patch with many short Add, Update, Delete, or Move sections spends time that grows with the square of the section count before it touches disk. Severity: 5/10
-
-Existing Risk: 6/10 - A valid patch within the 5 MB argument cap that touches many small files can monopolize the synchronous server for a long time, stalling every other session and the tab that issued it.
-
-Proposal Risk: 2/10 - A cached derivation removes the repeated scan, but a stale cache could plan a folder whose place was deleted or moved; invalidating on every existence change and covering the Add-then-Delete and Move-then-Add transitions keeps the existing folder and ENOTDIR behavior.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2011 "avoid quadratic planned-folder work when validating a large patch". In src/file-patch/view.ts, keep plannedFolders derived from the places but memoize its shallowest-first result and invalidate the memo whenever a place's exists flag changes, instead of rebuilding the list in checkFolders on every resolve. Add a PatchView.setExists(place, value) method (or an equivalent invalidation hook) and route the place.exists assignments in src/file-patch/sections.ts (add, remove, and section application) and src/file-patch/moves.ts (moveSection) through it; update the direct place.exists writes in src/file-patch/view.test.ts fixtures to the same method. Keep checkFolders' two rules unchanged: a resolved location that is a planned folder fails Is a directory, and a missing folder whose place exists fails with the ENOTDIR reason. Add a focused view or sections case with many resolves that counts plannedFolders rebuilds (for example by spying on the array sort the current build performs) and asserts the count does not grow per resolve, while the existing planned-folder, ENOTDIR, add-then-delete, and commit folder tests keep passing. The derivation contract stays the same; no plan change is needed unless the implementation chooses to expose a new method.
-
-
 * Remove the patch record's unused link-target bookkeeping.
 
 Existing Issue: The patch record's `linkTargets` map is written by `followLink` with each followed link target, but no code ever reads it, so it is dead state beside the link logic. Severity: 2/10

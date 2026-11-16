@@ -4,9 +4,11 @@ import { resolveMutationTarget } from '../file-write/target.js';
 import { placeKeys, readPatchContent, type PatchContent, type PatchPlace, type PlaceKeys } from './view-entry.js';
 
 // Only section application may change place existence, link text, content references, or current text.
+// Existence changes go through setExists so the planned-folder index stays current.
 export interface PatchView {
   resolve(requested: string): FileOperationResult<PatchPlace>;
   resolveLink(place: PatchPlace): FileOperationResult<PatchPlace>;
+  setExists(place: PatchPlace, value: boolean): void;
   places(): readonly PatchPlace[];
   contents(): readonly PatchContent[];
   plannedFolders(): readonly string[];
@@ -16,8 +18,25 @@ export function createPatchView(root: string): PatchView {
   const places = new Map<string, PatchPlace>();
   const contents = new Map<string, PatchContent>();
   const links = new Map<string, PatchPlace>();
+  const planned = new Map<string, number>();
+  let plannedList: readonly string[] | undefined;
 
-  function plannedFolders(): string[] {
+  function contribute(place: PatchPlace, delta: 1 | -1): void {
+    for (const folder of place.missingFolders) {
+      const count = (planned.get(folder) ?? 0) + delta;
+      if (count === 0) planned.delete(folder);
+      else planned.set(folder, count);
+    }
+  }
+
+  function setExists(place: PatchPlace, value: boolean): void {
+    if (place.exists === value) return;
+    place.exists = value;
+    contribute(place, value ? 1 : -1);
+    plannedList = undefined;
+  }
+
+  function derivePlannedFolders(): readonly string[] {
     const folders = new Set<string>();
     for (const place of places.values()) {
       if (place.exists) for (const folder of place.missingFolders) folders.add(folder);
@@ -25,8 +44,13 @@ export function createPatchView(root: string): PatchView {
     return [...folders].toSorted((a, b) => a.split(path.sep).length - b.split(path.sep).length);
   }
 
+  function plannedFolders(): readonly string[] {
+    plannedList ??= derivePlannedFolders();
+    return plannedList;
+  }
+
   function checkFolders(keys: PlaceKeys): string | undefined {
-    if (plannedFolders().includes(keys.location)) return 'Is a directory';
+    if (planned.has(keys.location)) return 'Is a directory';
     if (keys.missingFolders.some((folder) => places.get(folder)?.exists)) return fileOperationReason({ code: 'ENOTDIR' });
     return undefined;
   }
@@ -68,5 +92,5 @@ export function createPatchView(root: string): PatchView {
     return resolvePath(path.relative(root, target), true);
   }
 
-  return { resolve, resolveLink, places: () => [...places.values()], contents: () => [...contents.values()], plannedFolders };
+  return { resolve, resolveLink, setExists, places: () => [...places.values()], contents: () => [...contents.values()], plannedFolders };
 }
