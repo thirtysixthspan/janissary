@@ -19,6 +19,7 @@ import { useFileNavigatorIntents } from './useFileNavigatorIntents';
 import { useFileNavigatorCommit } from './useFileNavigatorCommit';
 import { defaultCommitMessageForCount } from './file/navigator-commit-message';
 import { nextLocation } from './file/navigator-location';
+import { useFileNavigatorRevealFocus } from './useFileNavigatorRevealFocus';
 import { FileNavigatorRows } from './FileNavigatorRows';
 
 export function FileNavigatorTab({
@@ -29,6 +30,7 @@ export function FileNavigatorTab({
   const selection = useFileNavigatorSelection(files.rows, files.absoluteRoot, label, files.restore);
   const [pendingNewDir, setPendingNewDir] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  useFileNavigatorRevealFocus(client, label, selection.focusHint, containerRef);
   const treeId = useId();
   const drag = useFileNavigatorDrag(files.rows, client, label, {
     absoluteRoot: files.absoluteRoot,

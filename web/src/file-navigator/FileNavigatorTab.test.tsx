@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
-import type { FileNavigatorView, TabView } from '@shared/protocol';
+import type { FileNavigatorRestoreHint, FileNavigatorView, TabView } from '@shared/protocol';
 import type { JanusClient, RequestResult } from '../shared/ws/ws';
 import { FileNavigatorTab } from './FileNavigatorTab';
 import { Sidebar } from '../Sidebar';
@@ -729,6 +729,197 @@ describe('FileNavigatorTab', () => {
     render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
     expect(focusSpy).toHaveBeenCalled();
     focusSpy.mockRestore();
+  });
+
+  describe('reveal focus', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    const revealAcknowledgements = (send: ReturnType<typeof vi.fn>) => send.mock.calls
+      .map(([call]) => call as { method: string; params: { label: string; revision: number } })
+      .filter((call) => call.method === 'fileNavigatorRevealApplied')
+      .map((call) => call.params);
+
+    it('focuses a sidebar-mounted tree and acknowledges the reveal once', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
+      render(<FileNavigatorTab
+        files={makeFiles({
+          restore: { revision: 101, focus: true, cursor: 'src/index.ts', anchor: 'src/index.ts', selected: ['src/index.ts'] },
+        })}
+        client={client}
+        index={0}
+        label="reveal-mount"
+        autoFocus={false}
+      />);
+
+      expect(focusSpy).toHaveBeenCalled();
+      expect(revealAcknowledgements(send)).toEqual([{ label: 'reveal-mount', revision: 101 }]);
+    });
+
+    it('focuses before the revealed row arrives and acknowledges only once it lands', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
+      const restore: FileNavigatorRestoreHint = {
+        revision: 102, focus: true, cursor: 'later.ts', anchor: 'later.ts', selected: ['later.ts'],
+      };
+      const { rerender } = render(<FileNavigatorTab
+        files={makeFiles({ restore })}
+        client={client}
+        index={0}
+        label="reveal-pending"
+        autoFocus={false}
+      />);
+
+      expect(focusSpy).toHaveBeenCalled();
+      const focusCallsBeforeRow = focusSpy.mock.calls.length;
+      expect(revealAcknowledgements(send)).toEqual([]);
+
+      rerender(<FileNavigatorTab
+        files={makeFiles({
+          rows: [...makeFiles().rows, { path: 'later.ts', name: 'later.ts', depth: 0, dir: false }],
+          restore,
+        })}
+        client={client}
+        index={0}
+        label="reveal-pending"
+        autoFocus={false}
+      />);
+
+      expect(focusSpy).toHaveBeenCalledTimes(focusCallsBeforeRow);
+      expect(revealAcknowledgements(send)).toEqual([{ label: 'reveal-pending', revision: 102 }]);
+    });
+
+    it('does not focus or acknowledge an ordinary restore hint', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
+      render(<FileNavigatorTab
+        files={makeFiles({ restore: { revision: 103, cursor: 'src/index.ts' } })}
+        client={client}
+        index={0}
+        label="reveal-ordinary"
+        autoFocus={false}
+      />);
+
+      expect(focusSpy).not.toHaveBeenCalled();
+      expect(revealAcknowledgements(send)).toEqual([]);
+    });
+
+    it('does not refocus or acknowledge an already-acknowledged revision after a remount', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
+      const files = makeFiles({
+        restore: { revision: 104, focus: true, cursor: 'README.md', anchor: 'README.md', selected: ['README.md'] },
+      });
+      const first = render(
+        <FileNavigatorTab files={files} client={client} index={0} label="reveal-remount" autoFocus={false} />,
+      );
+      expect(revealAcknowledgements(send)).toEqual([{ label: 'reveal-remount', revision: 104 }]);
+
+      focusSpy.mockClear();
+      first.unmount();
+      render(<FileNavigatorTab files={files} client={client} index={0} label="reveal-remount" autoFocus={false} />);
+
+      expect(focusSpy).not.toHaveBeenCalled();
+      expect(revealAcknowledgements(send)).toEqual([{ label: 'reveal-remount', revision: 104 }]);
+    });
+
+    it('focuses and acknowledges a later reveal whose revision is higher', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
+      const { rerender } = render(<FileNavigatorTab
+        files={makeFiles({
+          restore: { revision: 105, focus: true, cursor: 'README.md', anchor: 'README.md', selected: ['README.md'] },
+        })}
+        client={client}
+        index={0}
+        label="reveal-newer"
+        autoFocus={false}
+      />);
+      expect(revealAcknowledgements(send)).toEqual([{ label: 'reveal-newer', revision: 105 }]);
+
+      focusSpy.mockClear();
+      rerender(<FileNavigatorTab
+        files={makeFiles({
+          restore: { revision: 106, focus: true, cursor: 'src/index.ts', anchor: 'src/index.ts', selected: ['src/index.ts'] },
+        })}
+        client={client}
+        index={0}
+        label="reveal-newer"
+        autoFocus={false}
+      />);
+
+      expect(focusSpy).toHaveBeenCalledTimes(1);
+      expect(revealAcknowledgements(send)).toEqual([
+        { label: 'reveal-newer', revision: 105 },
+        { label: 'reveal-newer', revision: 106 },
+      ]);
+    });
+
+    it('acknowledges a hint the user drops before its row arrives and keeps the user selection', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const { rerender } = render(<FileNavigatorTab
+        files={makeFiles({
+          restore: { revision: 107, focus: true, cursor: 'later.ts', anchor: 'later.ts', selected: ['later.ts'] },
+        })}
+        client={client}
+        index={0}
+        label="reveal-dropped"
+        autoFocus={false}
+      />);
+
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0 });
+
+      expect(revealAcknowledgements(send)).toEqual([{ label: 'reveal-dropped', revision: 107 }]);
+
+      rerender(<FileNavigatorTab
+        files={makeFiles({
+          rows: [...makeFiles().rows, { path: 'later.ts', name: 'later.ts', depth: 0, dir: false }],
+          restore: { revision: 107, focus: true, cursor: 'later.ts', anchor: 'later.ts', selected: ['later.ts'] },
+        })}
+        client={client}
+        index={0}
+        label="reveal-dropped"
+        autoFocus={false}
+      />);
+
+      expect(revealAcknowledgements(send)).toEqual([{ label: 'reveal-dropped', revision: 107 }]);
+      expect(screen.getByText('README.md').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByText('later.ts').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'false');
+    });
+
+    it('acknowledges two navigators with different labels independently', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
+      const restore = (revision: number): FileNavigatorRestoreHint => ({
+        revision, focus: true, cursor: 'README.md', anchor: 'README.md', selected: ['README.md'],
+      });
+
+      render(
+        <>
+          <FileNavigatorTab
+            files={makeFiles({ restore: restore(108) })} client={client} index={0} label="reveal-first" autoFocus={false}
+          />
+          <FileNavigatorTab
+            files={makeFiles({ restore: restore(109) })} client={client} index={1} label="reveal-second" autoFocus={false}
+          />
+        </>,
+      );
+
+      expect(focusSpy).toHaveBeenCalledTimes(2);
+      expect(revealAcknowledgements(send)).toEqual([
+        { label: 'reveal-first', revision: 108 },
+        { label: 'reveal-second', revision: 109 },
+      ]);
+    });
   });
 
   describe('delete', () => {
