@@ -1088,7 +1088,9 @@ async function expectHostileTimeout(include: string, exclude: string): Promise<v
   clearTimeout(heartbeatTimer);
 
   expect(text).toBe(TIMEOUT_RESULT);
-  expect(Date.now()).toBeGreaterThanOrEqual(deadline);
+  // Node timers run on a monotonic clock whose millisecond phase can place the
+  // callback one millisecond before the wall-clock deadline used to arm it.
+  expect(Date.now()).toBeGreaterThanOrEqual(deadline - 1);
   expect(terminate).toHaveBeenCalledOnce();
   expect(vi.mocked(createCandidateReader)).not.toHaveBeenCalled();
   expect(vi.mocked(createMatcherWorker)).not.toHaveBeenCalled();
