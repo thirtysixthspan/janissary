@@ -27,13 +27,14 @@ export interface PatchRecord {
 
 export function buildPatchChanges(view: PatchView, record: PatchRecord): PatchChanges {
   const places = view.places();
+  const removedLocations = new Set(places.filter((place) => !place.exists).map((place) => place.location));
   const deletes = places.flatMap((place) => {
     const entry = record.deletes.get(place);
     return place.existed && entry ? [entry] : [];
   });
   const writes: PatchWrite[] = [];
   for (const [content, entry] of record.writes) {
-    if (places.some((place) => place.location === content.realPath && !place.exists)) continue;
+    if (removedLocations.has(content.realPath)) continue;
     if (content.current === undefined) continue;
     writes.push({ content, text: content.current, bom: content.hadBom && !entry.fromAdd, place: entry.place });
   }

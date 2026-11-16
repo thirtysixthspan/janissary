@@ -3,8 +3,10 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { FILE_POLICY_MAX_BYTES } from '../file-read/policy.js';
+import { buildPatchChanges, type PatchRecord } from './changes.js';
 import { parsePatchText } from './parse.js';
 import { applySections } from './sections.js';
+import type { PatchContent, PatchPlace } from './view-entry.js';
 import { createPatchView } from './view.js';
 
 let root: string;
@@ -96,5 +98,26 @@ describe('patch sections', () => {
       expect(apply(`*** Delete File: target\n${section}`)).toMatchObject({ ok: false, section: 2, reason: 'Not a text file' });
     }
     expect(success('*** Delete File: target\n*** Add File: target\n+one\n*** Update File: link\n@@\n-one\n+two').changes.writes[0].text).toBe('two\n');
+    const linkDeleted = success('*** Update File: link\n@@\n-old\n+new\n*** Delete File: link');
+    expect(linkDeleted.changes.writes.map((item) => item.text)).toEqual(['new\n']);
+    expect(linkDeleted.changes.deletes.map((item) => item.place.requested)).toEqual(['link']);
+  });
+
+  it('indexes removed locations once when deriving many writes', () => {
+    let reads = 0;
+    const places: PatchPlace[] = [];
+    const record: PatchRecord = { deletes: new Map(), writes: new Map() };
+    for (let i = 0; i < 1000; i += 1) {
+      const name = `file-${i}`;
+      const content: PatchContent = { realPath: name, original: undefined, mode: undefined, hadBom: false, current: name };
+      const place: PatchPlace = { requested: name, get location() { reads += 1; return name; }, existed: true,
+        exists: i % 2 === 0, linkText: undefined, missingFolders: [], content };
+      places.push(place);
+      record.writes.set(content, { place, fromAdd: false });
+    }
+    const changes = buildPatchChanges({ places: () => places, contents: () => [], plannedFolders: () => [],
+      resolve: () => { throw new Error('unexpected resolve'); } }, record);
+    expect(changes.writes.map((item) => item.text)).toEqual(places.filter((place) => place.exists).map((place) => place.requested));
+    expect(reads).toBe(500);
   });
 });
