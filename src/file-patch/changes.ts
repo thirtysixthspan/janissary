@@ -1,5 +1,6 @@
 import type { PatchContent, PatchPlace } from './view-entry.js';
 import type { PatchView } from './view.js';
+import { survives, type MoveChain, type MoveHop } from './move-chains.js';
 
 export interface PatchDelete {
   place: PatchPlace;
@@ -12,31 +13,44 @@ export interface PatchWrite {
   text: string;
   bom: boolean;
   place: PatchPlace;
+  finalPlace?: PatchPlace;
 }
 
 export interface PatchChanges {
   folders: readonly string[];
   deletes: PatchDelete[];
   writes: PatchWrite[];
+  moves: (MoveHop & { link: boolean })[];
 }
 
 export interface PatchRecord {
   deletes: Map<PatchPlace, PatchDelete>;
   writes: Map<PatchContent, { place: PatchPlace; fromAdd: boolean }>;
+  chains: MoveChain[];
+  linkTargets: Map<PatchPlace, string>;
+  removedByDelete: Set<PatchPlace>;
 }
 
 export function buildPatchChanges(view: PatchView, record: PatchRecord): PatchChanges {
   const places = view.places();
-  const removedLocations = new Set(places.filter((place) => !place.exists).map((place) => place.location));
+  const locationMap = new Map(places.map((place) => [place.location, place]));
+  const active = record.chains.filter((chain) => chain.onDisk && survives(chain) && chain.current !== chain.origin);
+  const moves = active.flatMap((chain) => chain.hops.map((hop) => ({ ...hop, link: chain.link }))).toSorted((a, b) => a.order - b.order);
+  const origins = new Set(active.map((chain) => chain.origin));
   const deletes = places.flatMap((place) => {
     const entry = record.deletes.get(place);
-    return place.existed && entry ? [entry] : [];
+    return place.existed && entry && !origins.has(place) && (!place.exists || record.removedByDelete.has(place)) ? [entry] : [];
   });
   const writes: PatchWrite[] = [];
   for (const [content, entry] of record.writes) {
-    if (removedLocations.has(content.realPath)) continue;
+    const chain = record.chains.find((item) => !item.link && item.content === content && item.current !== item.origin && survives(item));
+    const location = locationMap.get(content.realPath);
+    if (!chain && location && (!location.exists || location.content !== content)) continue;
     if (content.current === undefined) continue;
-    writes.push({ content, text: content.current, bom: content.hadBom && !entry.fromAdd, place: entry.place });
+    const place = chain?.current ?? entry.place;
+    writes.push({ content, text: content.current, bom: content.hadBom && !entry.fromAdd, place, ...(chain && { finalPlace: place }) });
   }
-  return { folders: view.plannedFolders(), deletes, writes };
+  const folders = [...new Set([...view.plannedFolders(), ...moves.flatMap((move) => move.to.missingFolders)])];
+  folders.sort((a, b) => a.split('/').length - b.split('/').length);
+  return { folders, deletes, writes, moves };
 }
