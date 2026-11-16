@@ -29,6 +29,7 @@ import * as fileGrepScan from '../file-grep/scan.js';
 import { commandProtocolPrimer } from './command-protocol.js';
 import { CORE_MAX_STEPS } from './drive-loop.js';
 import { deferred } from '../deferred.js';
+import { WEB_SEARCH_PRIMER } from '../web-search/command.js';
 
 const mocks = vi.hoisted(() => ({
   runAcpToolLoop: vi.fn(), notify: vi.fn(), readFileInTab: vi.fn(), mutateFileInTab: vi.fn(),
@@ -313,6 +314,37 @@ describe('runCorePrompt tool runner', () => {
       managers, 'command-disabled', 'shell', 'Command is disabled: db sqlite query.',
     );
     expect(dispatchNativeLine).not.toHaveBeenCalled();
+  });
+
+  it('runs a granted web search through the tab search with the prompt signal', async () => {
+    mocks.searchWebInTab.mockResolvedValue('search results');
+    const { start, dispatchNativeLine, managers } = harness({ settings: settingsWith({}) });
+    const { deps, request } = start('ask', ['web search']);
+    await expect(deps.runCommand('web search x')).resolves.toBe('search results');
+    expect(mocks.searchWebInTab).toHaveBeenCalledWith(managers, 'shell', 'web search x', request.abort.signal);
+    expect(dispatchNativeLine).not.toHaveBeenCalled();
+    expect(mocks.readFileInTab).not.toHaveBeenCalled();
+    expect(deps.primer).toContain(WEB_SEARCH_PRIMER);
+    expect(deps.primer).toContain('Only these commands are allowed: web search.');
+  });
+
+  it('treats a web search line as prose when the role does not grant it', () => {
+    const { start } = harness({ settings: settingsWith({}) });
+    const { deps } = start('ask', ['file read']);
+    expect(deps.extractCommand('web search x')).toBeNull();
+    expect(mocks.searchWebInTab).not.toHaveBeenCalled();
+  });
+
+  it('refuses a disabled web search synchronously and raises the disabled notification', () => {
+    const { start, managers } = harness({ settings: settingsWith({ 'web search': { effectiveEnabled: false } }) });
+    const { deps, handlers } = start('ask', ['web search']);
+    const command = 'web search x';
+    const refusal = deps.runCommand(command);
+    expect(refusal).toBe('Command is disabled: web search.');
+    expect(mocks.notify).not.toHaveBeenCalledWith(expect.anything(), 'command-disabled', expect.anything(), expect.anything());
+    handlers.ranCommand(command, refusal as string);
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'command-disabled', 'shell', 'Command is disabled: web search.');
+    expect(mocks.searchWebInTab).not.toHaveBeenCalled();
   });
 
   it('caps the loop at eight tool steps', () => {

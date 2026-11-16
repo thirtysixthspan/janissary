@@ -31,6 +31,7 @@ describe('application command inventory', () => {
     expect(rows.find((row) => row.name === 'file edit')).toMatchObject({ kind: 'native', parent: 'file', nativeTool: 'file' });
     expect(resolveApplicationCommand('file grep')?.name).toBe('file grep');
     expect(resolveApplicationCommand('file grep --literal TODO')?.name).toBe('file grep');
+    expect(rows.find((row) => row.name === 'web search')).toMatchObject({ kind: 'native', parent: 'web', nativeTool: 'web' });
     expect(resolveApplicationCommand('file glob *.ts')?.name).toBe('file glob');
     expect(resolveApplicationCommand('file write {"path":"a.md"}')?.name).toBe('file write');
     expect(resolveApplicationCommand('file edit {')?.name).toBe('file edit');

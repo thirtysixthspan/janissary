@@ -176,6 +176,20 @@ describe('startRemoteLoop workspace steps', () => {
     expect(sent[1]).toContain('1\tone\n2\ttwo');
   });
 
+  it('runs a granted web search against the workspace and reports the result as a workspace step', async () => {
+    const tokens = { tavily: 'tvly-far' };
+    const { frames } = start([['web search x'], ['Done.']], coreSnapshot('tell', ['web search']), tokens);
+
+    await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
+    expect(mocks.webSearch).toHaveBeenCalledOnce();
+    const [request, deps] = mocks.webSearch.mock.calls[0] as [WebSearchCommand, WebSearchDeps];
+    expect(request).toEqual(parseWebSearch('web search x'));
+    expect(deps.tokens).toBe(tokens);
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([{
+      type: 'acp-tool-step', id: RUN_ID, command: 'web search x', result: 'search results', workspace: true,
+    }]);
+  });
+
   it('caps a core run at eight workspace steps without sending a step count', () => {
     writeFileSync(path.join(workspace, 'a.md'), 'one\n');
 

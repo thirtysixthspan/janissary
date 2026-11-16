@@ -196,6 +196,16 @@ describe('driveToolLoop', () => {
     ]);
   });
 
+  it('routes a web search to runWorkspace and reports it as a workspace step', () => {
+    const { events, host } = drive(coreSnapshot('tell', ['web search']), ['web search x', 'Done.']);
+    expect(host.runWorkspace).toHaveBeenCalledExactlyOnceWith('web search x');
+    expect(host.runCaller).not.toHaveBeenCalled();
+    expect(ofKind(events, 'startCommand')).toEqual([['startCommand', 'web search x', true]]);
+    expect(ofKind(events, 'ranCommand')).toEqual([
+      ['ranCommand', 'web search x', 'workspace output', true, undefined],
+    ]);
+  });
+
   it('returns a disabled refusal as one step without calling the host', () => {
     const snapshot = coreSnapshot('tell', ['db sqlite query'], [
       { name: 'db sqlite query', effectiveEnabled: true, effectiveAgentAccess: false },
