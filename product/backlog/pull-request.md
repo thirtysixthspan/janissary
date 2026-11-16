@@ -1,3 +1,13 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
+
+* Deliver the token-row plan's remote protocol bump unconditionally, because provisioning forwards the GitHub row the plan calls unforwarded.
+
+Existing Issue: The token-row fix plan's design decision says the GitHub row is workspace-only and not forwarded, and the page's "Token rows" section follows it by making the `REMOTE_PROTOCOL_VERSION` bump conditional, while `getProjectTokens()` in `src/project/tokens.ts` supplies every configured row to the provisioning frame sent by `src/remote/entry-factory.ts` and `src/remote/serve-provision.ts` merges `tokens.github` for the clone, the processes, and ACP, so a provider author adding a row is never told the bump always applies. Severity: 4/10
+
+Existing Risk: 4/10 - A provider author adding a row may skip the `REMOTE_PROTOCOL_VERSION` bump, and a remote running the old token table then rejects the whole provisioning request for an unknown token name.
+
+Proposal Risk: 2/10 - The page would state the forwarding rule unconditionally; if a future row is deliberately excluded from forwarding, the page would need an update, but the current table-driven provisioning forwards every configured row including `github`.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "state that every new token row is forwarded and always moves the remote protocol version". In `documentation/developer-documentation/web-search-providers.md`, replace the conditional sentence in "Token rows" with an unconditional one: every `PROJECT_TOKENS` row loaded by `getProjectTokens()` in `src/project/tokens.ts` is sent on the remote `provision` frame by `src/remote/entry-factory.ts`, and `src/remote/serve-provision.ts` merges it for the clone, the processes, and ACP, so a new row always moves `REMOTE_PROTOCOL_VERSION` in `src/remote/protocol.ts`. Because `src/remote/frame/decode-provision.ts` rejects an unknown token name and fails the whole frame, the page must not imply that only some rows are forwarded. Correct the design decision in `product/plans/complete/web-search-provider-page-token-row.md` that calls the GitHub row unforwarded—`product/specs/remote-server.md` records the scoped GitHub token as forwarded, and `src/project/tokens.ts` loads it like every other row. Do not change code or protocol; verify by reading `getProjectTokens`, `entry-factory.ts`, `serve-provision.ts`, and `decode-provision.ts`, and by re-reading the page's "Token rows" section.
