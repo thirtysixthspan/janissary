@@ -298,7 +298,13 @@ Protocol version 43 adds `grep-files`, the read-only filesystem operation behind
 Protocol version 44 adds the `tavily` and `tinyfish` names to the provisioning token map. A version-43
 remote refuses any name outside its own credential list, so forwarding a Tavily or TinyFish key to one
 would fail the whole provisioning request as malformed rather than provisioning a workspace without the
-key. Exact-version refusal at the handshake reports the mismatch before a tab is provisioned.
+key. Exact-version refusal at the handshake reports the mismatch before a tab is provisioned. The same
+version adds `web-search`, the read-only, path-free filesystem operation behind a typed `web search` on
+a remote tab; it carries `query` (non-empty), `numResults` (1–20), `maxChars` (200–100000), `depth`
+(`basic` or `advanced`), and `provider`, and answers `{ text }` holding the rendered results or failure
+line; any other argument shape is an invalid request. The far side runs it with the merged token set of
+the workspace it serves, forwarded tokens winning over the remote's own files, and a provider failure
+there is reported only in the failure lines.
 
 Unavailable sends, explicit disconnect, transport loss, protocol failure, and channel finish settle and detach ACP listeners, including before readiness. Late frames for detached ids are ignored. A lost core ACP session is closed locally and replaced by a later request once its channel is ready; autonomous runs retain their transport-loss termination. Durable activity capture belongs only to the initiating project's recorder. The sessions tab's existing shell/harness restoration policy is unchanged.
 

@@ -1,10 +1,12 @@
 import type { FileSystemPort, GitMetadata } from '../../file-navigator/filesystem-port.js';
 import type { MaybePromise } from '../../maybe-promise.js';
+import type { ProjectTokens } from '../../project/tokens.js';
 import type { RemoteFilesystemArgumentsByOperation, RemoteFilesystemOperation } from '../protocol-frames.js';
 
 export type OperationContext = {
   root: string;
   filesystem: FileSystemPort;
+  tokens: ProjectTokens;
   watch: (relPath: string) => MaybePromise<Record<string, never>>;
   unwatch: (relPath: string) => Record<string, never>;
   git: () => Promise<GitMetadata>;

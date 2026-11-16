@@ -93,7 +93,7 @@ All relative imports carry `.js`; type-only imports use `import type`.
 
 ## Out of scope
 
-- Calling `webSearch` from a tab, the remote operation, or either ACP loop (`./product/plans/ready/web-search-7-remote-operation.md`, `./product/plans/ready/web-search-10-typed-command.md`, `./product/plans/ready/web-search-11-workspace-routes.md`).
+- Calling `webSearch` from a tab, the remote operation, or either ACP loop (`./product/plans/complete/web-search-7-remote-operation.md`, `./product/plans/ready/web-search-10-typed-command.md`, `./product/plans/ready/web-search-11-workspace-routes.md`).
 - Posting the disabled-provider notification (slice 10); the core only passes `reportDisabled` through.
 - Resolution, the disabled set, and failure-line text (slice 5); the request timeout and abort classification inside a provider (slice 4).
 - A core query-length cap; paging a provider to reach `--results` (user decisions).

@@ -9,7 +9,7 @@ The tenth slice of the `web search` feature (source plan: `./product/plans/compl
 - `./product/plans/complete/web-search-1-command-grammar.md` — `isWebCommandLine`, `parseWebSearch` (returns `WebSearchCommand | { error }`, the error always `WEB_SEARCH_USAGE`), `WEB_SEARCH_USAGE`, from `src/web-search/command.ts`.
 - `./product/plans/complete/web-search-5-provider-registry.md` — the registry calls `reportDisabled(name, reason)` exactly once per disabled provider, with `name` the manifest id and `reason` already formatted (`provider failed: <first line>` or `requires provider API <n>`).
 - `./product/plans/complete/web-search-6-search-core.md` — `webSearch(request, deps)` and `WebSearchDeps` (`tokens`, `fetch`, optional `signal`, optional `reportDisabled`) from `src/web-search/search.ts`, resolving to `Promise<string>`. Without a signal it does not reject; failures come back as lines.
-- `./product/plans/ready/web-search-7-remote-operation.md` — the far-side `web-search` operation, run with the far side's merged tokens and no `reportDisabled`.
+- `./product/plans/complete/web-search-7-remote-operation.md` — the far-side `web-search` operation, run with the far side's merged tokens and no `reportDisabled`.
 - `./product/plans/ready/web-search-8-remote-port.md` — `RemoteFileSystemPort.webSearch(args: WebSearchCommand): Promise<string>`, `web-search` in `LONG_RUNNING`, and real tokens on the far side's operation context.
 - `./product/plans/ready/web-search-9-agent-run-refusal.md` — agent runs already refuse `web` lines, so registering the command opens no agent path (a skill's `web` grant becomes possible once `web` is registered here, and is still refused).
 

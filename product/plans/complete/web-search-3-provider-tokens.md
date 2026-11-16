@@ -60,6 +60,6 @@ Land code, tests, and docs in one commit; the code is two files and nothing comp
 - Reading tokens on each search (the named upgrade path, not built).
 - Any provider, registry, or command code that reads the tokens (`./product/plans/complete/web-search-4-bundled-providers.md` onward).
 - Passing the merged tokens to the remote file-navigator operation context (`./product/plans/ready/web-search-8-remote-port.md`) and to the far-side ACP loop (`./product/plans/ready/web-search-11-workspace-routes.md`).
-- The `web-search` operation's own protocol bump (`./product/plans/ready/web-search-7-remote-operation.md`).
+- The `web-search` operation's own protocol bump (`./product/plans/complete/web-search-7-remote-operation.md`).
 - `help web`'s token setup section (`./product/plans/ready/web-search-10-typed-command.md`).
 - Keeping the two keys out of harness and agent environments (user decision: they reach every process the table reaches).

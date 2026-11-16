@@ -7,12 +7,15 @@ import type { RemoteFilesystemArgumentsByOperation, RemoteFilesystemOperation } 
 import { FILE_READ_MAX_LIMIT } from '../../file-read/command.js';
 import { FILE_GLOB_MAX_LIMIT } from '../../file-glob/command.js';
 import { SEARCH_MAX_RESULTS } from '../../search/types.js';
+import {
+  WEB_SEARCH_MAX_CHARS, WEB_SEARCH_MAX_RESULTS, WEB_SEARCH_MIN_CHARS, WEB_SEARCH_MIN_RESULTS,
+} from '../../web-search/command.js';
 
 // Written out rather than derived from the table, so an operation dropped from both the union and
 // the table is still caught here. Adding one to the protocol means adding it in both places.
 const ALL_OPERATIONS: RemoteFilesystemOperation[] = [
   'read-directory', 'stat', 'watch', 'unwatch', 'git', 'git-pull', 'git-commit', 'search',
-  'search-text', 'read-file', 'read-lines', 'glob-paths', 'grep-files', 'write-file', 'edit-file', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
+  'search-text', 'read-file', 'read-lines', 'glob-paths', 'grep-files', 'web-search', 'write-file', 'edit-file', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
   'create-file', 'create-directory', 'replay', 'change-set',
 ];
 
@@ -50,6 +53,7 @@ const PATH_CASES: PathCase[] = [
   ['grep-files', {
     pattern: 'TODO', include: 'src/**', exclude: '**/*.test.ts', literal: true, word: true, caseSensitive: true, limit: 250, path: 'src',
   }, ['src']],
+  ['web-search', { query: 'vitest', numResults: 10, maxChars: 10_000, depth: 'basic', provider: 'auto' }, []],
   ['write-file', { path: 'a.txt', content: '', expectedHash: 'baseline' }, ['a.txt']],
   ['write-file', { path: 'a.txt', content: '', policy: 'tool-text' }, ['a.txt']],
   ['edit-file', { path: 'a.txt', oldString: 'b2xk', newString: '', replaceAll: false }, ['a.txt']],
@@ -116,6 +120,19 @@ const INVALID_CASES: [RemoteFilesystemOperation, Record<string, unknown>][] = [
   ['grep-files', { pattern: 'TODO', include: '', exclude: '', literal: 'no', word: false, caseSensitive: false, limit: 100 }],
   ['grep-files', { pattern: 'TODO', include: '', exclude: '', literal: false, word: false, caseSensitive: false, limit: 0 }],
   ['grep-files', { pattern: 'TODO', include: '', exclude: '', literal: false, word: false, caseSensitive: false, limit: SEARCH_MAX_RESULTS + 1 }],
+  ['web-search', { numResults: 10, maxChars: 10_000, depth: 'basic', provider: 'auto' }],
+  ['web-search', { query: '', numResults: 10, maxChars: 10_000, depth: 'basic', provider: 'auto' }],
+  ['web-search', { query: 3, numResults: 10, maxChars: 10_000, depth: 'basic', provider: 'auto' }],
+  ['web-search', { query: 'vitest', numResults: WEB_SEARCH_MIN_RESULTS - 1, maxChars: 10_000, depth: 'basic', provider: 'auto' }],
+  ['web-search', { query: 'vitest', numResults: WEB_SEARCH_MAX_RESULTS + 1, maxChars: 10_000, depth: 'basic', provider: 'auto' }],
+  ['web-search', { query: 'vitest', numResults: 1.5, maxChars: 10_000, depth: 'basic', provider: 'auto' }],
+  ['web-search', { query: 'vitest', numResults: '5', maxChars: 10_000, depth: 'basic', provider: 'auto' }],
+  ['web-search', { query: 'vitest', numResults: 10, maxChars: WEB_SEARCH_MIN_CHARS - 1, depth: 'basic', provider: 'auto' }],
+  ['web-search', { query: 'vitest', numResults: 10, maxChars: WEB_SEARCH_MAX_CHARS + 1, depth: 'basic', provider: 'auto' }],
+  ['web-search', { query: 'vitest', numResults: 10, maxChars: 10_000, depth: 'deep', provider: 'auto' }],
+  ['web-search', { query: 'vitest', numResults: 10, maxChars: 10_000, depth: 'Advanced', provider: 'auto' }],
+  ['web-search', { query: 'vitest', numResults: 10, maxChars: 10_000, depth: 'basic' }],
+  ['web-search', { query: 'vitest', numResults: 10, maxChars: 10_000, depth: 'basic', provider: 3 }],
   ['write-file', { path: 'a.txt' }],
   ['write-file', { path: 'a.txt', content: '', expectedHash: null }],
   ['write-file', { path: 'a.txt', content: '', expectedHash: 7 }],
@@ -157,6 +174,7 @@ const VALID_RESULTS: { [K in RemoteFilesystemOperation]: RemoteFilesystemOperati
   'read-lines': { text: '1\ta' },
   'glob-paths': { text: 'src/a.ts' },
   'grep-files': { text: 'src/a.ts:1: TODO' },
+  'web-search': { text: '1. [Vitest](https://vitest.dev)' },
   'write-file': { ok: false, reason: 'denied' },
   'edit-file': { ok: true, value: { replacements: 2 } },
   move: { ok: true, value: { from: 'a.txt', to: 'dest/a.txt' } },
@@ -345,6 +363,29 @@ describe('FILESYSTEM_OPERATIONS', () => {
   it('treats grep-files as a root destination with no refusal callback', () => {
     expect(operationDescriptor('grep-files').rootDestination).toBe(true);
     expect(operationDescriptor('grep-files').refusal).toBeUndefined();
+  });
+
+  it('accepts both web-search range edges and decodes only its five fields', () => {
+    const webSearch = operationDescriptor('web-search');
+    const args = { query: 'vitest', numResults: 10, maxChars: 10_000, depth: 'basic', provider: 'auto' };
+
+    for (const numResults of [WEB_SEARCH_MIN_RESULTS, WEB_SEARCH_MAX_RESULTS]) {
+      expect(webSearch.valid({ ...args, numResults })).toBe(true);
+    }
+    for (const maxChars of [WEB_SEARCH_MIN_CHARS, WEB_SEARCH_MAX_CHARS]) {
+      expect(webSearch.valid({ ...args, maxChars })).toBe(true);
+    }
+    expect(webSearch.decode({ ...args, extra: 'ignored' })).toEqual(args);
+    expect(() => webSearch.decode({ ...args, numResults: WEB_SEARCH_MIN_RESULTS - 1 }))
+      .toThrow('Invalid remote filesystem operation arguments.');
+  });
+
+  it('accepts a web-search result only with non-empty text', () => {
+    expect(decodeFilesystemResult('web-search', { text: '1. [Vitest](https://vitest.dev)' }))
+      .toEqual({ text: '1. [Vitest](https://vitest.dev)' });
+    for (const bad of [{}, { text: 3 }, { text: '' }]) {
+      expect(() => decodeFilesystemResult('web-search', bad)).toThrow('Invalid remote filesystem operation result.');
+    }
   });
 
   it('decodes edit-file arguments to plain text', () => {

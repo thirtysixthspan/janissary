@@ -14,6 +14,7 @@ import { operationDescriptor } from './filesystem/operations.js';
 import type * as grepModule from '../file-grep/grep.js';
 import { grepWorkspace } from '../file-grep/grep.js';
 import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
+import { webSearch } from '../web-search/search.js';
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof fileSystemPromises>();
@@ -24,6 +25,8 @@ vi.mock('../file-grep/grep.js', async (importOriginal) => {
   const actual = await importOriginal<typeof grepModule>();
   return { ...actual, grepWorkspace: vi.fn(actual.grepWorkspace) };
 });
+
+vi.mock('../web-search/search.js', () => ({ webSearch: vi.fn() }));
 
 type Request = Extract<ClientFrame, { type: 'filesystem-request' }>;
 
@@ -801,6 +804,52 @@ describe('RemoteFileNavigators', () => {
       expect(reply).toMatchObject({ result: { mutated: true, pairs: expect.any(Array) } });
       expect(readFileSync(path.join(root, 'dest', 'a.txt'), 'utf8')).toBe('a');
       expect(readFileSync(path.join(root, 'dest', 'b.txt'), 'utf8')).toBe('b');
+    });
+  });
+
+  describe('a typed web search', () => {
+    const command = { query: 'vitest 2026', numResults: 5, maxChars: 2000, depth: 'advanced', provider: 'tavily' } as const;
+
+    beforeEach(() => {
+      vi.mocked(webSearch).mockReset();
+    });
+
+    it('runs the search with the tokens it was given and answers its text', async () => {
+      vi.mocked(webSearch).mockResolvedValue('1. [Vitest](https://vitest.dev)');
+      const tokens = { tavily: 'tvly-key' };
+      const holder = new RemoteFileNavigators((frame) => { frames.push(frame); }, root, undefined, tokens);
+      holder.open('files2');
+
+      const reply = await replyOn(holder, 'files2', 'web-search', command);
+
+      expect(reply).toEqual({
+        type: 'filesystem-reply', session: 'files2', request: expect.any(String),
+        result: { text: '1. [Vitest](https://vitest.dev)' },
+      });
+      expect(webSearch).toHaveBeenCalledOnce();
+      expect(webSearch).toHaveBeenCalledWith(command, { tokens, fetch: globalThis.fetch });
+      const deps = vi.mocked(webSearch).mock.calls[0][1];
+      expect(Object.hasOwn(deps, 'signal')).toBe(false);
+      expect(Object.hasOwn(deps, 'reportDisabled')).toBe(false);
+      holder.dispose();
+    });
+
+    it('passes an empty token set when the navigator was built without one', async () => {
+      vi.mocked(webSearch).mockResolvedValue('No results for "vitest 2026".');
+
+      expect(await request('web-search', command)).toMatchObject({ result: { text: 'No results for "vitest 2026".' } });
+      expect(webSearch).toHaveBeenCalledWith(command, { tokens: {}, fetch: globalThis.fetch });
+    });
+
+    it('answers a rejected search as an error reply', async () => {
+      vi.mocked(webSearch).mockRejectedValue(new Error('the web is closed'));
+      const holder = overPort({});
+
+      const reply = await replyOn(holder, 'files2', 'web-search', command);
+
+      expect(reply).toMatchObject({ error: 'the web is closed' });
+      expect(reply).not.toHaveProperty('result');
+      holder.dispose();
     });
   });
 });
