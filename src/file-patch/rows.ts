@@ -8,10 +8,16 @@ export type PatchRow = {
 
 export function patchRows(places: readonly PatchPlace[], chains: readonly MoveChain[]): PatchRow[] {
   const renames = chains.filter(showsRename);
+  const origins = new Map<PatchPlace, MoveChain>();
+  const destinations = new Set<PatchPlace>();
+  for (const chain of renames) {
+    if (!origins.has(chain.origin)) origins.set(chain.origin, chain);
+    destinations.add(chain.current);
+  }
   return places.flatMap((place): PatchRow[] => {
-    const rename = renames.find((chain) => chain.origin === place);
+    const rename = origins.get(place);
     if (rename) return [{ letter: 'R', path: place.requested, target: rename.current.requested }];
-    if (renames.some((chain) => chain.current === place)) return [];
+    if (destinations.has(place)) return [];
     if (!place.existed && !place.exists) return [];
     const letter = place.existed ? (place.exists ? 'M' : 'D') : 'A';
     return [{ letter, path: place.requested }];

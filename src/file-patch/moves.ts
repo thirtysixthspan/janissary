@@ -19,7 +19,7 @@ export function moveSection(view: PatchView, source: PatchPlace, section: Extrac
   const error = checkText(result.text, source.content.hadBom && !fromAdd);
   if (error) return error;
   const replacedLink = record.deletes.get(source)?.linkText !== undefined && source.linkText === undefined;
-  recordMove(record.chains, source, target, replacedLink);
+  recordMove(record.moves, source, target, replacedLink);
   if (!record.deletes.has(source)) record.deletes.set(source, { place: source, linkText: source.linkText, content: source.content });
   if (section.hunks.length > 0) {
     source.content.current = result.text;

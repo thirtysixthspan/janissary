@@ -1,6 +1,7 @@
 import { buildPatchChanges, type PatchChanges, type PatchRecord } from './changes.js';
 import { applyHunks } from './hunks.js';
 import { moveSection } from './moves.js';
+import { createMoveRegistry } from './move-chains.js';
 import type { PatchSection } from './parse.js';
 import { patchRows, type PatchRow } from './rows.js';
 import { checkText, followLink, freshContent, recordWrite, type SectionFailure } from './section-steps.js';
@@ -60,7 +61,7 @@ function applyOne(view: PatchView, section: PatchSection, record: PatchRecord): 
 }
 
 export function applySections(view: PatchView, sections: readonly PatchSection[]): ApplySectionsResult {
-  const record: PatchRecord = { deletes: new Map(), writes: new Map(), chains: [], linkTargets: new Map(), removedByDelete: new Set() };
+  const record: PatchRecord = { deletes: new Map(), writes: new Map(), moves: createMoveRegistry(), linkTargets: new Map(), removedByDelete: new Set() };
   for (const [index, section] of sections.entries()) {
     const failure = applyOne(view, section, record);
     if (failure) {
@@ -68,5 +69,5 @@ export function applySections(view: PatchView, sections: readonly PatchSection[]
       return { ok: false, section: index + 1, marker: `${labels[section.kind]} File: ${section.path}`, ...failure };
     }
   }
-  return { ok: true, changes: buildPatchChanges(view, record), rows: patchRows(view.places(), record.chains) };
+  return { ok: true, changes: buildPatchChanges(view, record), rows: patchRows(view.places(), record.moves.chains) };
 }

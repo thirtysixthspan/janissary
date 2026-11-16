@@ -4,7 +4,9 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { FILE_POLICY_MAX_BYTES } from '../file-read/policy.js';
 import { buildPatchChanges, type PatchRecord } from './changes.js';
+import { createMoveRegistry, recordMove } from './move-chains.js';
 import { parsePatchText } from './parse.js';
+import { patchRows } from './rows.js';
 import { applySections } from './sections.js';
 import type { PatchContent, PatchPlace } from './view-entry.js';
 import { createPatchView } from './view.js';
@@ -185,7 +187,7 @@ describe('patch sections', () => {
   it('indexes removed locations once when deriving many writes', () => {
     let reads = 0;
     const places: PatchPlace[] = [];
-    const record: PatchRecord = { deletes: new Map(), writes: new Map(), chains: [], linkTargets: new Map(), removedByDelete: new Set() };
+    const record: PatchRecord = { deletes: new Map(), writes: new Map(), moves: createMoveRegistry(), linkTargets: new Map(), removedByDelete: new Set() };
     for (let i = 0; i < 1000; i += 1) {
       const name = `file-${i}`;
       const content: PatchContent = { realPath: name, original: undefined, mode: undefined, hadBom: false, current: name };
@@ -198,5 +200,54 @@ describe('patch sections', () => {
       resolve: () => { throw new Error('unexpected resolve'); } }, record);
     expect(changes.writes.map((item) => item.text)).toEqual(places.filter((place) => place.exists).map((place) => place.requested));
     expect(reads).toBe(1000);
+  });
+
+  it('tracks and reports many moves without repeatedly scanning chains', () => {
+    const record: PatchRecord = { deletes: new Map(), writes: new Map(), moves: createMoveRegistry(), linkTargets: new Map(), removedByDelete: new Set() };
+    const places: PatchPlace[] = [];
+    let reads = 0;
+    record.moves.chains = new Proxy(record.moves.chains, {
+      get(target, property, receiver) {
+        if (typeof property === 'string' && /^\d+$/.test(property)) reads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    for (let i = 0; i < 1000; i += 1) {
+      const content: PatchContent = { realPath: `from-${i}`, original: undefined, mode: undefined, hadBom: false, current: String(i) };
+      const from: PatchPlace = { requested: `from-${i}`, location: `from-${i}`, existed: true, exists: true, linkText: undefined, missingFolders: [], content };
+      const to: PatchPlace = { requested: `to-${i}`, location: `to-${i}`, existed: false, exists: false, linkText: undefined, missingFolders: [], content };
+      recordMove(record.moves, from, to, false);
+      from.exists = false;
+      to.exists = true;
+      places.push(from, to);
+      record.writes.set(content, { place: from, fromAdd: false });
+    }
+    expect(reads).toBeLessThan(3000);
+    reads = 0;
+    record.moves.chains = record.moves.chains.map((chain) => new Proxy(chain, {
+      get(target, property, receiver) { reads += 1; return Reflect.get(target, property, receiver); },
+    }));
+    const view = { places: () => places, contents: () => [], plannedFolders: () => [], resolve: () => { throw new Error('unexpected resolve'); } };
+    const changes = buildPatchChanges(view, record);
+    const rows = patchRows(places, record.moves.chains);
+    expect(changes.moves.map((move) => move.order)).toEqual(Array.from({ length: 1000 }, (_, i) => i));
+    expect(changes.writes.map((write) => write.text)).toEqual(Array.from({ length: 1000 }, (_, i) => String(i)));
+    expect(rows).toHaveLength(1000);
+    expect(rows[999]).toEqual({ letter: 'R', path: 'from-999', target: 'to-999' });
+    expect(reads).toBeLessThan(40_000);
+  });
+
+  it('selects the earliest chain when shared content returns to a place', () => {
+    const content: PatchContent = { realPath: 'target', original: undefined, mode: undefined, hadBom: false, current: 'x' };
+    const place = (name: string): PatchPlace => ({ requested: name, location: name, existed: true, exists: true, linkText: 'target', missingFolders: [], content });
+    const [a, b, x, y, z] = ['a', 'b', 'x', 'y', 'z'].map((name) => place(name));
+    const registry = createMoveRegistry();
+    recordMove(registry, a, x, false);
+    recordMove(registry, b, x, false);
+    recordMove(registry, x, y, false);
+    recordMove(registry, y, x, false);
+    recordMove(registry, x, z, false);
+    expect(registry.chains[0].hops.map((hop) => hop.to.requested)).toEqual(['x', 'y', 'x', 'z']);
+    expect(registry.chains[1].hops.map((hop) => hop.to.requested)).toEqual(['x']);
   });
 });

@@ -1,6 +1,6 @@
 import type { PatchContent, PatchPlace } from './view-entry.js';
 import type { PatchView } from './view.js';
-import { survives, type MoveChain, type MoveHop } from './move-chains.js';
+import { survives, type MoveRegistry, type MoveHop } from './move-chains.js';
 
 export interface PatchDelete {
   place: PatchPlace;
@@ -26,7 +26,7 @@ export interface PatchChanges {
 export interface PatchRecord {
   deletes: Map<PatchPlace, PatchDelete>;
   writes: Map<PatchContent, { place: PatchPlace; fromAdd: boolean }>;
-  chains: MoveChain[];
+  moves: MoveRegistry;
   linkTargets: Map<PatchPlace, string>;
   removedByDelete: Set<PatchPlace>;
 }
@@ -34,7 +34,7 @@ export interface PatchRecord {
 export function buildPatchChanges(view: PatchView, record: PatchRecord): PatchChanges {
   const places = view.places();
   const locationMap = new Map(places.map((place) => [place.location, place]));
-  const active = record.chains.filter((chain) => chain.onDisk && survives(chain) && chain.current !== chain.origin);
+  const active = record.moves.chains.filter((chain) => chain.onDisk && survives(chain) && chain.current !== chain.origin);
   const moves = active.flatMap((chain) => chain.hops.map((hop) => ({ ...hop, link: chain.link }))).toSorted((a, b) => a.order - b.order);
   const origins = new Set(active.map((chain) => chain.origin));
   const deletes = places.flatMap((place) => {
@@ -42,8 +42,12 @@ export function buildPatchChanges(view: PatchView, record: PatchRecord): PatchCh
     return place.existed && entry && !origins.has(place) && (!place.exists || record.removedByDelete.has(place)) ? [entry] : [];
   });
   const writes: PatchWrite[] = [];
+  const byContent = new Map<PatchContent, (typeof record.moves.chains)[number]>();
+  for (const chain of record.moves.chains) {
+    if (!chain.link && chain.current !== chain.origin && survives(chain) && !byContent.has(chain.content)) byContent.set(chain.content, chain);
+  }
   for (const [content, entry] of record.writes) {
-    const chain = record.chains.find((item) => !item.link && item.content === content && item.current !== item.origin && survives(item));
+    const chain = byContent.get(content);
     const location = locationMap.get(content.realPath);
     if (!chain && location && (!location.exists || location.content !== content)) continue;
     if (content.current === undefined) continue;

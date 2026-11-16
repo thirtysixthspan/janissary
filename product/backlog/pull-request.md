@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Avoid quadratic work when tracking and reporting many moves.
-
-Existing Issue: Move recording repeatedly scans all chains and prior hops, and change and row derivation scan chains for each write or place, making a patch with many moves quadratic. Severity: 6/10
-
-Existing Risk: 6/10 - A valid patch containing many short move sections can monopolize the synchronous server as its move count grows.
-
-Proposal Risk: 2/10 - Large patches still require work proportional to their sections, but indexes avoid repeatedly traversing the accumulated move history.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2011 "avoid quadratic work when tracking and reporting many moves". In src/file-patch/move-chains.ts and its callers maintain indexed chain lookup, vacated-place membership, and a monotonic hop order without rescanning prior chains or hops; in src/file-patch/changes.ts and src/file-patch/rows.ts index surviving chains by content and by origin and destination before deriving writes and rows. Preserve chain survival, ordering, exchange, link, and net-row semantics, and add regression coverage in src/file-patch/sections.test.ts or focused tests that verifies large collections do not trigger a full chain scan for each move, write, or row. Run the diff-scoped checks.
-
-
 * Follow a moved relative symbolic link from its new directory.
 
 Existing Issue: A moved symbolic link keeps its old resolved content target even when its unchanged relative link text resolves to a different path at the destination. Severity: 8/10
