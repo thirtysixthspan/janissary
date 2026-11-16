@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the description's claim that a remote search reports a provider disabled during a successful fallback, which it reports nowhere.
-
-Existing Issue: The body says a provider disabled on a remote search "reports the reason only in its failure lines", but the remote path passes no `reportDisabled` and prints only the answering provider's results, so a provider disabled before a later provider succeeds produces no line at all; the plan, web-search spec, help page, and developer page all state it is reported nowhere. Severity: 6/10
-
-Existing Risk: 5/10 - A reviewer or operator trusts the description and expects a remote disable to be visible in output, so a provider silently staying disabled for the rest of the server process goes unnoticed and a later search can degrade or fail without the promised diagnostic.
-
-Proposal Risk: 2/10 - The description and the code agree, but the remote silence itself remains by design, so operators still have no notification and must rely on an explicit search of the disabled provider or an all-disabled auto failure to learn the reason.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "correct the description's claim that a remote search reports a disabled provider in its failure lines". In the What section, rewrite the sentence ending "while a remote search reports the reason only in its failure lines" to say a remote search passes no disabled-provider reporter: its output prints only the provider that answered, so a provider disabled during a successful fallback is reported nowhere, and its stored reason appears only when an explicit `--provider` names it or `auto` finds every configured provider already disabled. Point to `src/web-search/tab-search.ts`, `src/remote/filesystem/web-search-operation.ts`, and `src/remote/serve-acp-loop.ts` as the paths that pass no reporter, and to `product/specs/web-search.md` and `help/web.md` for the precise wording. Do not change code; this is a description correction. Verify by reading the rewritten paragraph against those three code paths and the two docs, and confirm no other body sentence repeats the claim.
-
-
 * Make a cancelled workspace clone remove only the temporary directory it owns, so the cleanup cannot delete a newer launch's clone under the same name.
 
 Existing Issue: `provisionWorkspace` in `src/workspace/index.ts` sets a cancellation flag and, when the killed clone rejects, unconditionally removes the name-derived `target` path with `rmSync`, even though `WorkspaceManager` drops its pending attempt on cancel and a new launch can reuse that name; a delayed rejection can therefore delete the new attempt's clone, or a pre-existing directory at that path, contradicting the lifecycle promise in `product/specs/workspaced-agent.md` that an earlier attempt cannot clear a new tab's provisioning state. Severity: 5/10
