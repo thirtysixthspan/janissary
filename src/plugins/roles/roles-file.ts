@@ -82,7 +82,7 @@ export const DEFAULT_ROLES: readonly Role[] = [
     commands: [
       'db sqlite create', 'db sqlite delete', 'db sqlite query', 'db sqlite list',
       'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve', 'file read',
-      'file glob', 'file grep', 'file write', 'file edit', 'web search',
+      'file glob', 'file grep', 'file write', 'file edit', 'file patch', 'web search',
     ],
   },
 ];

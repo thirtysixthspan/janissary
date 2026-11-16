@@ -482,6 +482,7 @@ describe('startRemoteLoop cancellation', () => {
 
 const WRITE = `file write ${JSON.stringify({ path: 'b.md', content: 'hello\n' })}`;
 const EDIT = `file edit ${JSON.stringify({ path: 'a.md', oldString: 'one', newString: 'uno' })}`;
+const PATCH = `file patch ${JSON.stringify({ patchText: '*** Update File: a.md\n@@\n one\n-two\n+uno\n*** End Patch' })}`;
 
 describe('startRemoteLoop workspace mutations', () => {
   it('runs a granted file write on the workspace as a workspace step', async () => {
@@ -596,6 +597,30 @@ describe('startRemoteLoop workspace mutations', () => {
     expect(existsSync(path.join(parent, 'escape.md'))).toBe(false);
     expect(existsSync(path.join(workspace, '.env'))).toBe(false);
     expect(readdirSync(workspace)).toEqual([]);
+  });
+
+  it('runs a granted file patch on the workspace as a workspace step', async () => {
+    writeFileSync(path.join(workspace, 'a.md'), 'one\ntwo\n');
+    const { frames } = start([[PATCH], ['Done.']], coreSnapshot('tell', ['file patch']));
+    await flush();
+
+    expect(readFileSync(path.join(workspace, 'a.md'), 'utf8')).toBe('one\nuno\n');
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([
+      { type: 'acp-tool-step', id: RUN_ID, command: PATCH, result: 'Patched 1 file:\nM a.md', workspace: true },
+    ]);
+    expect(framesOf(frames, 'acp-tool-request')).toEqual([]);
+  });
+
+  it('refuses an ungranted file patch and changes nothing', async () => {
+    writeFileSync(path.join(workspace, 'a.md'), 'one\ntwo\n');
+    const { frames } = start([[PATCH], ['Done.']], coreSnapshot('tell', ['file read']));
+    await flush();
+
+    expect(readFileSync(path.join(workspace, 'a.md'), 'utf8')).toBe('one\ntwo\n');
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([{
+      type: 'acp-tool-step', id: RUN_ID, command: PATCH,
+      result: 'Command not allowed for role "tell": file patch.', workspace: false,
+    }]);
   });
 });
 

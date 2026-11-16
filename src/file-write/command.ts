@@ -1,7 +1,7 @@
 import type { FileEditRequest, FileMutationRequest, FileWriteRequest } from './types.js';
 import { displayPath } from './messages.js';
 import { FILE_POLICY_MAX_BYTES } from '../file-read/policy.js';
-import { isFilePatchCommandLine } from '../file-patch/command.js';
+import { describePatchCommand, isFilePatchCommandLine } from '../file-patch/command.js';
 import { isRecord } from '../value-guards.js';
 
 export const FILE_MUTATION_PRIMER = [
@@ -126,6 +126,7 @@ export function parseFileMutation(input: string): FileMutationRequest | { error:
 }
 
 export function describeLoopCommand(command: string): string {
+  if (isFilePatchCommandLine(command)) return describePatchCommand(command);
   const extracted = extractArgument(command);
   if (!extracted) return command;
   const label = `file ${extracted.subcommand}`;

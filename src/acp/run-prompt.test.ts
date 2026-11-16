@@ -752,7 +752,8 @@ describe('runCorePrompt file mutations', () => {
   afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
 
   const WRITE = 'file write {"path":"notes/b.md","content":"hello"}';
-  const GRANTS = ['file read', 'file write', 'file edit'];
+  const PATCH = `file patch ${JSON.stringify({ patchText: '*** Add File: notes/c.md\n+patched\n*** End Patch' })}`;
+  const GRANTS = ['file read', 'file write', 'file edit', 'file patch'];
 
   it('runs a granted file write through the tab runner and changes the file on disk', async () => {
     const { start, dispatchNativeLine } = harness({ tab: { workspaceDir: dir } });
@@ -829,6 +830,41 @@ describe('runCorePrompt file mutations', () => {
     handlers.ranCommand(WRITE, result);
     expect(managers.acpRecords.activity).toHaveBeenCalledWith('record-1', 'tool', WRITE);
     expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: WRITE, output: result, acp: true });
+  });
+
+  it('runs a granted file patch through the tab runner and creates the file', async () => {
+    const { start, dispatchNativeLine } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+    await expect(deps.runCommand(PATCH)).resolves.toBe('Patched 1 file:\nA notes/c.md');
+    expect(readFileSync(path.join(dir, 'notes/c.md'), 'utf8')).toBe('patched\n');
+    expect(mocks.mutateFileInTab).toHaveBeenCalledWith(expect.anything(), 'shell', PATCH);
+    expect(dispatchNativeLine).not.toHaveBeenCalled();
+  });
+
+  it('throws and writes nothing when the prompt is cancelled before a patch runs', () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps, request } = start('tell', GRANTS);
+    request.abort.abort();
+    expect(() => deps.runCommand(PATCH)).toThrow('ACP: prompt cancelled.');
+    expect(existsSync(path.join(dir, 'notes/c.md'))).toBe(false);
+    expect(mocks.mutateFileInTab).not.toHaveBeenCalled();
+  });
+
+  it('refuses a patch the role does not grant without touching the file', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', ['file read']);
+    expect(await deps.runCommand(PATCH)).toBe('Command not allowed for role "tell": file patch.');
+    expect(existsSync(path.join(dir, 'notes/c.md'))).toBe(false);
+    expect(mocks.mutateFileInTab).not.toHaveBeenCalled();
+  });
+
+  it('refuses a patch disabled in settings without touching the file', async () => {
+    const settings = settingsWith({ 'file patch': { effectiveEnabled: false, effectiveAgentAccess: false } });
+    const { start } = harness({ tab: { workspaceDir: dir }, settings });
+    const { deps } = start('tell', GRANTS);
+    expect(await deps.runCommand(PATCH)).toBe('Command is disabled: file patch.');
+    expect(existsSync(path.join(dir, 'notes/c.md'))).toBe(false);
+    expect(mocks.mutateFileInTab).not.toHaveBeenCalled();
   });
 });
 

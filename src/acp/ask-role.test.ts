@@ -94,10 +94,12 @@ describe('readRoleSettings', () => {
       name: 'ask', entries: [OPENCODE, CLAUDE, CODEX], commands: ASK_COMMANDS,
     });
     const tell = readRoleSettings(root, 'tell', home).commands;
-    expect(tell).toHaveLength(15);
+    expect(tell).toHaveLength(16);
     expect(tell).toEqual(expect.arrayContaining([
-      'file glob', 'file grep', 'file write', 'file edit', 'web search',
+      'file glob', 'file grep', 'file write', 'file edit', 'file patch', 'web search',
     ]));
+    expect(tell).toContain('file patch');
+    expect(ASK_COMMANDS).not.toContain('file patch');
     expect(readFileSync(file, 'utf8')).toBe(before);
   });
 

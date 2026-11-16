@@ -15,6 +15,7 @@ export const NATIVE_ACP_COMMANDS = [
   'file grep',
   'file write',
   'file edit',
+  'file patch',
   'web search',
 ] as const;
 

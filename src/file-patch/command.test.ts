@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { FILE_POLICY_MAX_BYTES } from '../file-read/policy.js';
-import { describePatchCommand, isFilePatchCommandLine, parseFilePatchCommand } from './command.js';
+import {
+  describePatchCommand, FILE_PATCH_PRIMER, isFilePatchCommandLine, parseFilePatchCommand,
+} from './command.js';
+import { parsePatchText } from './parse.js';
 
 function patchArgument(totalBytes: number, filler = 'a'): string {
   const prefix = '{"patchText":"';
@@ -51,6 +54,28 @@ describe('file patch command', () => {
     expect(parseFilePatchCommand(`file patch ${argument}`)).toEqual({ error: 'Patch too large (>5 MB). No files were changed.' });
     expect(parseFilePatchCommand(`file patch {"patchText":"${'x'.repeat(FILE_POLICY_MAX_BYTES)}"`))
       .toEqual({ error: 'Usage: file patch <JSON>' });
+  });
+});
+
+describe('FILE_PATCH_PRIMER', () => {
+  it('shows the command form and the reply summary on five lines', () => {
+    expect(FILE_PATCH_PRIMER.split('\n')).toHaveLength(5);
+    expect(FILE_PATCH_PRIMER).toContain('file patch {"patchText":"<patch>"}');
+    expect(FILE_PATCH_PRIMER).toContain('`Patched <n> files:`');
+  });
+
+  it('gives an example line that parses as an update and a delete', () => {
+    const example = FILE_PATCH_PRIMER.split('\n').find((line) => line.startsWith('Example'))!;
+    const command = example.slice(example.indexOf('file patch'));
+    const parsedCommand = parseFilePatchCommand(command);
+    if ('error' in parsedCommand) throw new Error('expected the example to parse');
+    expect(parsePatchText(parsedCommand.patchText)).toMatchObject({
+      sections: [
+        { kind: 'update', path: 'src/a.ts' },
+        { kind: 'delete', path: 'old.txt' },
+      ],
+    });
+    expect(describePatchCommand(command)).toBe('file patch src/a.ts, old.txt');
   });
 });
 

@@ -18,6 +18,7 @@ import { FILE_READ_PRIMER } from '../file-read/command.js';
 import { FILE_MUTATION_PRIMER } from '../file-write/command.js';
 import { FILE_GLOB_PRIMER } from '../file-glob/command.js';
 import { FILE_GREP_PRIMER } from '../file-grep/command.js';
+import { FILE_PATCH_PRIMER } from '../file-patch/command.js';
 import { WEB_SEARCH_PRIMER } from '../web-search/command.js';
 
 const setup = (grants: readonly string[] = NATIVE_ACP_COMMANDS) => ({ tools: createAcpToolTable(grants) });
@@ -33,7 +34,7 @@ describe('createAcpToolTable', () => {
     expect(toolPrimer(tools, NATIVE_ACP_COMMANDS)).toBe([
       'browser primer text',
       'question primer text',
-      `${FILE_READ_PRIMER}\n\n${FILE_GLOB_PRIMER}\n\n${FILE_GREP_PRIMER}\n\n${FILE_MUTATION_PRIMER}`,
+      `${FILE_READ_PRIMER}\n\n${FILE_GLOB_PRIMER}\n\n${FILE_GREP_PRIMER}\n\n${FILE_MUTATION_PRIMER}\n\n${FILE_PATCH_PRIMER}`,
       WEB_SEARCH_PRIMER,
       DB_PRIMER,
       `Only these commands are allowed: ${NATIVE_ACP_COMMANDS.join(', ')}.`,
@@ -432,7 +433,7 @@ describe('file mutation tools', () => {
   const fileTool = (grants: readonly string[]) => createAcpToolTable(grants).find((tool) => tool.runsOn === 'workspace');
 
   it('selects the file tool for any file grant', () => {
-    for (const grant of ['file read', 'file glob', 'file write', 'file edit']) expect(fileTool([grant])).toBeDefined();
+    for (const grant of ['file read', 'file glob', 'file write', 'file edit', 'file patch']) expect(fileTool([grant])).toBeDefined();
     expect(fileTool(['browser goto'])).toBeUndefined();
   });
 
@@ -459,6 +460,31 @@ describe('file mutation tools', () => {
     const extract = toolExtractor(createAcpToolTable(['file write', 'file edit']));
     expect(extract('Writing.\nfile write {"path":"a.md","content":"x"}')).toBe('file write {"path":"a.md","content":"x"}');
     expect(extract('Editing.\nfile edit {')).toBe('file edit {');
+  });
+
+  it('gives a patch-only grant the file owner with exactly the patch primer', () => {
+    const tool = fileTool(['file patch']);
+    expect(tool).toBeDefined();
+    expect(tool!.primer).toBe(FILE_PATCH_PRIMER);
+    expect(tool!.primer).not.toContain(FILE_MUTATION_PRIMER);
+  });
+
+  it('appends the patch primer after the mutation primer with one mutation fragment', () => {
+    const primer = fileTool(['file read', 'file glob', 'file grep', 'file write', 'file edit', 'file patch'])!.primer;
+    expect(primer).toBe([
+      FILE_READ_PRIMER, FILE_GLOB_PRIMER, FILE_GREP_PRIMER, FILE_MUTATION_PRIMER, FILE_PATCH_PRIMER,
+    ].join('\n\n'));
+    expect(primer.split(FILE_MUTATION_PRIMER)).toHaveLength(2);
+  });
+
+  it('follows the grep primer with the patch primer when only a patch mutation is granted', () => {
+    const primer = fileTool(['file read', 'file glob', 'file grep', 'file patch'])!.primer;
+    expect(primer).toBe(`${FILE_READ_PRIMER}\n\n${FILE_GLOB_PRIMER}\n\n${FILE_GREP_PRIMER}\n\n${FILE_PATCH_PRIMER}`);
+    expect(primer).not.toContain(FILE_MUTATION_PRIMER);
+  });
+
+  it('omits the patch primer when only write and edit are granted', () => {
+    expect(fileTool(['file write', 'file edit'])!.primer).not.toContain(FILE_PATCH_PRIMER);
   });
 
   const coreSnapshot = (grants: readonly string[], rows: AcpRunSnapshotRow[] = []): AcpRunSnapshot => ({
@@ -538,6 +564,35 @@ describe('file mutation tools', () => {
     expect(gateCommand(coreSnapshot(['file read']), createAcpToolTable(['web search']), 'web search x')).toStrictEqual({
       refusal: 'Command not allowed for role "writer": web search.',
     });
+  });
+
+  const patch = 'file patch {"patchText":"*** Delete File: old.txt"}';
+
+  it('refuses a disabled file patch before the role check, granted or not', () => {
+    const tools = createAcpToolTable(['file patch']);
+    const rows = [{ name: 'file patch', effectiveEnabled: false, effectiveAgentAccess: true }];
+    expect(gateCommand(coreSnapshot(['file patch'], rows), tools, patch)).toStrictEqual({
+      refusal: 'Command is disabled: file patch.', refused: 'disabled',
+    });
+    expect(gateCommand(coreSnapshot(['file read'], rows), tools, patch)).toStrictEqual({
+      refusal: 'Command is disabled: file patch.', refused: 'disabled',
+    });
+  });
+
+  it('refuses an ungranted file patch and routes a granted one to the workspace', () => {
+    expect(gateCommand(coreSnapshot(['file read']), createAcpToolTable(['file read']), patch)).toStrictEqual({
+      refusal: 'Command not allowed for role "writer": file patch.',
+    });
+    expect(gateCommand(coreSnapshot(['file patch']), createAcpToolTable(['file patch']), patch))
+      .toStrictEqual({ runsOn: 'workspace' });
+  });
+
+  it('extracts a trailing and a malformed patch line, but not without a file grant', () => {
+    const extract = toolExtractor(createAcpToolTable(['file patch']));
+    expect(extract('Patching.\nfile patch {"patchText":"*** Delete File: old.txt"}'))
+      .toBe('file patch {"patchText":"*** Delete File: old.txt"}');
+    expect(extract('Patching.\nfile patch {')).toBe('file patch {');
+    expect(toolExtractor(createAcpToolTable(['db sqlite list']))('Patching.\nfile patch {"patchText":"x"}')).toBeNull();
   });
 });
 

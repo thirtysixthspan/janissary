@@ -7,6 +7,7 @@ import {
   isFileWriteCommandLine,
   parseFileMutation,
 } from './command.js';
+import { describePatchCommand } from '../file-patch/command.js';
 
 describe('mutation command line recognition', () => {
   it('recognizes write and edit lines whether or not their JSON is valid', () => {
@@ -46,6 +47,25 @@ describe('describeLoopCommand', () => {
   it('falls back to the bare subcommand when the JSON is malformed', () => {
     expect(describeLoopCommand('file write {"path":"a.md","content":')).toBe('file write');
     expect(describeLoopCommand('file edit')).toBe('file edit');
+  });
+
+  it('describes a patch by its section paths and moves without its content', () => {
+    const patch = [
+      '*** Add File: a.md', '+SECRET ADD',
+      '*** Update File: src/a.ts', '@@', '-old', '+SECRET LINE',
+      '*** Update File: src/x.ts', '*** Move to: src/y.ts', '@@', '-old', '+SECRET MOVE',
+      '*** Delete File: old.txt',
+    ].join('\n');
+    const line = `file patch ${JSON.stringify({ patchText: patch })}`;
+
+    expect(describeLoopCommand(line)).toBe(describePatchCommand(line));
+    expect(describeLoopCommand(line)).toBe('file patch a.md, src/a.ts, src/x.ts -> src/y.ts, old.txt');
+    expect(describeLoopCommand(line)).not.toContain('+');
+    expect(describeLoopCommand(line)).not.toContain('SECRET');
+  });
+
+  it('falls back to the bare patch command when the patch line is malformed', () => {
+    expect(describeLoopCommand('file patch {')).toBe('file patch');
   });
 
   it('escapes control characters in the path', () => {
