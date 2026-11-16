@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FILE_POLICY_MAX_BYTES } from '../file-read/policy.js';
 import { createPatchView } from './view.js';
+import { volumeIgnoresCase } from './volume-case.js';
 import type { PatchView } from './view.js';
 
 let root: string;
@@ -30,6 +31,10 @@ function resolve(requested: string) {
   const result = view.resolve(requested);
   if (!result.ok) throw new Error(result.reason);
   return result.value;
+}
+function caseInsensitiveVolume(): boolean {
+  write('CaseProbe');
+  return existsSync(path.join(root, 'caseprobe'));
 }
 
 describe('patch view', () => {
@@ -142,5 +147,76 @@ describe('patch view', () => {
     symlinkSync('A.txt', path.join(root, 'Link'));
     expect(resolve('A.txt')).toBe(resolve('a.txt'));
     expect(resolve('Link')).toBe(resolve('link'));
+  });
+
+  it('shares one pending place between case-only add spellings on a case-insensitive volume', (context) => {
+    if (!caseInsensitiveVolume()) context.skip();
+    const added = resolve('a.txt');
+    view.setExists(added, true);
+    expect(resolve('A.txt')).toBe(added);
+    expect(view.places()).toEqual([added]);
+    expect(added).toMatchObject({ requested: 'a.txt', existed: false, exists: true });
+  });
+
+  it('applies an update through the other case of a pending path on a case-insensitive volume', (context) => {
+    if (!caseInsensitiveVolume()) context.skip();
+    const added = resolve('notes/Todo.md');
+    view.setExists(added, true);
+    added.content.current = 'first\n';
+    const updated = resolve('notes/todo.md');
+    expect(updated).toBe(added);
+    expect(updated.content).toBe(added.content);
+    expect(updated.content.current).toBe('first\n');
+    expect(view.contents()).toEqual([added.content]);
+  });
+
+  it('applies a delete through the other case of a pending path on a case-insensitive volume', (context) => {
+    if (!caseInsensitiveVolume()) context.skip();
+    const added = resolve('a.txt');
+    view.setExists(added, true);
+    const removed = resolve('A.TXT');
+    expect(removed).toBe(added);
+    view.setExists(removed, false);
+    expect(view.places()).toEqual([added]);
+    expect(added.exists).toBe(false);
+    expect(view.plannedFolders()).toEqual([]);
+  });
+
+  it('shares one nested pending place and its planned folders across case-only spellings', (context) => {
+    if (!caseInsensitiveVolume()) context.skip();
+    const added = resolve('a/b/file');
+    view.setExists(added, true);
+    expect(resolve('A/B/FILE')).toBe(added);
+    expect(view.resolve('A/b')).toEqual({ ok: false, reason: 'Is a directory' });
+    expect(view.places()).toEqual([added]);
+    expect(view.plannedFolders()).toEqual([path.join(root, 'a'), path.join(root, 'a/b')]);
+  });
+
+  it('folds pending case-only spellings when the volume check is pinned insensitive', () => {
+    view = createPatchView(root, true);
+    const added = resolve('a.txt');
+    view.setExists(added, true);
+    expect(resolve('A.txt')).toBe(added);
+    const nested = resolve('a/b/file');
+    expect(resolve('A/B/FILE')).toBe(nested);
+  });
+
+  it('keeps case-distinct pending paths separate when the volume check is pinned sensitive', () => {
+    view = createPatchView(root, false);
+    const lower = resolve('a.txt');
+    const upper = resolve('A.txt');
+    expect(upper).not.toBe(lower);
+    const nested = resolve('a/b/file');
+    const nestedUpper = resolve('A/b/file');
+    expect(nestedUpper).not.toBe(nested);
+    view.setExists(nested, true);
+    const separateFolder = resolve('A/b');
+    expect(separateFolder.exists).toBe(false);
+    expect(view.places()).toEqual([lower, upper, nested, nestedUpper, separateFolder]);
+  });
+
+  it('reports the case behavior the existing case toggle observes', () => {
+    write('CaseProbe');
+    expect(volumeIgnoresCase(root)).toBe(existsSync(path.join(root, 'caseprobe')));
   });
 });

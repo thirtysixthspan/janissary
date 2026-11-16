@@ -16,6 +16,10 @@ describe('applyPatchText', () => {
   }
   function read(name: string): string { return readFileSync(path.join(root, name), 'utf8'); }
   function apply(text: string): string { return applyPatchText(root, text); }
+  function caseInsensitiveVolume(): boolean {
+    write('CaseProbe', '');
+    return existsSync(path.join(root, 'caseprobe'));
+  }
 
   it('applies the mixed example and reports its rows in order', () => {
     write('src/a.ts', 'const a = 1;\nconst b = 2;\n'); write('src/x.ts', 'export const x = 1;\n'); write('old.txt', 'old\n');
@@ -88,5 +92,18 @@ describe('applyPatchText', () => {
     expect(result.startsWith('Patch failed while applying: ')).toBe(true);
     expect(result.endsWith(': x. No files were changed.')).toBe(true);
     expect(read('a')).toBe('old\n');
+  });
+
+  it('shares case-only spellings of a path the patch creates on a case-insensitive volume', (context) => {
+    if (!caseInsensitiveVolume()) context.skip();
+    expect(apply('*** Begin Patch\n*** Add File: notes/Todo.md\n+first\n*** Update File: notes/todo.md\n@@\n-first\n+second\n*** End Patch'))
+      .toBe('Patched 1 file:\nA notes/Todo.md');
+    expect(read('notes/Todo.md')).toBe('second\n');
+    expect(apply('*** Add File: gone.txt\n+x\n*** Delete File: GONE.TXT')).toBe('Patched 0 files:');
+    expect(existsSync(path.join(root, 'gone.txt'))).toBe(false);
+    expect(apply('*** Begin Patch\n*** Add File: a.txt\n+first\n*** Add File: A.txt\n+second\n*** End Patch'))
+      .toBe('Patch failed at section 2 (Add File: A.txt): File already exists. No files were changed.');
+    expect(existsSync(path.join(root, 'a.txt'))).toBe(false);
+    expect(existsSync(path.join(root, 'A.txt'))).toBe(false);
   });
 });

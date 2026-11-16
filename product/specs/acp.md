@@ -255,6 +255,8 @@ A patch answers `Patched <n> files:` followed by one `A`/`M`/`D`/`R` row per fil
 
 A successful patch prints `Patched <n> files:` and one row per path in order of first appearance, each path once with its net change. `R` is reported only when the move's destination did not exist before the patch. A destination that existed before the patch, including one deleted or moved away earlier in the same patch, keeps its own net row (`M` when it exists at the end, `D` when it does not) while the origin reports `D`.
 
+On a volume that ignores letter case, sections naming the same path the patch itself creates in different case act on one file: a second Add of that path fails `File already exists` with nothing changed, and an Update or Delete through either spelling changes the one place the first spelling created, so the reported rows match the tree. On a volume that distinguishes case, the same spellings remain separate files.
+
 A patch that fails while writing puts back every path it changed, including one it vacated and later re-created, restoring the original bytes, permissions, and symbolic links.
 
 A patch is authorized by its native command name, like `file write` and `file edit`: a disabled or agent-inaccessible `file patch` row refuses with `Command is disabled: file patch.` before the role check, and a role that does not grant it refuses with `Command not allowed for role "<role>": file patch.`. An absent settings row permits it, a bare or malformed patch line is recognized, gated, and, when granted, answers with the usage line rather than becoming the final answer, and one patch is one step toward the eight-step cap.

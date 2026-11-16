@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { failureResult, fileOperationReason, runFileOperation, type FileOperationResult } from '../file-navigator/file-operation-result.js';
 import { resolveMutationTarget } from '../file-write/target.js';
+import { volumeIgnoresCase } from './volume-case.js';
 import { placeKeys, readPatchContent, type PatchContent, type PatchPlace, type PlaceKeys } from './view-entry.js';
 
 // Only section application may change place existence, link text, content references, or current text.
@@ -14,18 +15,32 @@ export interface PatchView {
   plannedFolders(): readonly string[];
 }
 
-export function createPatchView(root: string): PatchView {
+export function createPatchView(root: string, caseInsensitive = volumeIgnoresCase(root)): PatchView {
   const places = new Map<string, PatchPlace>();
+  const folded = new Map<string, PatchPlace>();
   const contents = new Map<string, PatchContent>();
   const links = new Map<string, PatchPlace>();
   const planned = new Map<string, number>();
   let plannedList: readonly string[] | undefined;
 
+  function foldedPlace(location: string): PatchPlace | undefined {
+    return caseInsensitive ? folded.get(location.toLowerCase()) : undefined;
+  }
+
+  function placeAt(location: string): PatchPlace | undefined {
+    return places.get(location) ?? foldedPlace(location);
+  }
+
+  function planKey(folder: string): string {
+    return caseInsensitive ? folder.toLowerCase() : folder;
+  }
+
   function contribute(place: PatchPlace, delta: 1 | -1): void {
     for (const folder of place.missingFolders) {
-      const count = (planned.get(folder) ?? 0) + delta;
-      if (count === 0) planned.delete(folder);
-      else planned.set(folder, count);
+      const key = planKey(folder);
+      const count = (planned.get(key) ?? 0) + delta;
+      if (count === 0) planned.delete(key);
+      else planned.set(key, count);
     }
   }
 
@@ -50,8 +65,8 @@ export function createPatchView(root: string): PatchView {
   }
 
   function checkFolders(keys: PlaceKeys): string | undefined {
-    if (planned.has(keys.location)) return 'Is a directory';
-    if (keys.missingFolders.some((folder) => places.get(folder)?.exists)) return fileOperationReason({ code: 'ENOTDIR' });
+    if (planned.has(planKey(keys.location))) return 'Is a directory';
+    if (keys.missingFolders.some((folder) => placeAt(folder)?.exists)) return fileOperationReason({ code: 'ENOTDIR' });
     return undefined;
   }
 
@@ -62,7 +77,9 @@ export function createPatchView(root: string): PatchView {
       const keys = placeKeys(root, requested, target.value);
       const refusal = checkFolders(keys);
       if (refusal !== undefined) return failureResult(refusal);
-      const existing = places.get(keys.location) ?? (keys.linkIdentity === undefined ? undefined : links.get(keys.linkIdentity));
+      const existing = places.get(keys.location)
+        ?? (keys.linkIdentity === undefined ? undefined : links.get(keys.linkIdentity))
+        ?? foldedPlace(keys.location);
       if (existing !== undefined) {
         if (!implicit) existing.implicit = false;
         return { ok: true, value: existing };
@@ -77,6 +94,7 @@ export function createPatchView(root: string): PatchView {
       const place: PatchPlace = { requested, location: keys.location, existed: target.value.exists, exists: target.value.exists,
         linkText: keys.linkText, missingFolders: keys.missingFolders, content, implicit };
       places.set(keys.location, place);
+      if (caseInsensitive) folded.set(keys.location.toLowerCase(), place);
       if (keys.linkIdentity !== undefined) links.set(keys.linkIdentity, place);
       return { ok: true, value: place };
     });
