@@ -75,6 +75,31 @@ describe('metadata theme', () => {
     expect(disabledRule).toContain('opacity: 0.45');
   });
 
+  it('draws the editor reveal button flat and muted, including while disabled', () => {
+    const buttonRule = theme.match(/^\.editor-reveal-button \{[^}]+\}/m)?.[0];
+    const hoverRule = theme.match(/^\.editor-reveal-button:hover \{[^}]+\}/m)?.[0];
+    const disabledRule = theme.match(/^\.editor-reveal-button:disabled \{[^}]+\}/m)?.[0];
+    const disabledHoverRule = theme.match(/^\.editor-reveal-button:disabled:hover \{[^}]+\}/m)?.[0];
+
+    expect(buttonRule).toBeDefined();
+    expect(buttonRule).toContain('background: transparent');
+    expect(buttonRule).toContain('border: none');
+    expect(buttonRule).toContain('color: var(--muted)');
+    expect(buttonRule).toContain('font-size: 13px');
+    expect(buttonRule).toContain('cursor: pointer');
+    expect(hoverRule).toContain('color: var(--fg)');
+    expect(disabledRule).toContain('color: var(--faint)');
+    expect(disabledRule).toContain('cursor: default');
+    expect(disabledHoverRule).toContain('color: var(--faint)');
+    // After the hover rule, so a blocked button does not brighten under the cursor.
+    expect(theme.indexOf('.editor-reveal-button:disabled {')).toBeGreaterThan(
+      theme.indexOf('.editor-reveal-button:hover {'),
+    );
+    expect(theme.indexOf('.editor-reveal-button:disabled:hover {')).toBeGreaterThan(
+      theme.indexOf('.editor-reveal-button:disabled {'),
+    );
+  });
+
   // The recording flag is the one flag in this row that is also a control, so it is a `<button>` and
   // carries a class the plain flags do not. That class sits *after* `.tab-flag--active` in this file,
   // which is the whole hazard: two single-class rules, and whichever comes last wins. So the rule that

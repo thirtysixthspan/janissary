@@ -70,6 +70,16 @@ const CASES: Array<[
   ['undoFileNavigatorItem', { label: 'files', overwrite: true }, [{ label: 'files', skipConflicts: 'yes' }, { index: 0 }]],
   ['redoFileNavigatorItem', { label: 'files' }, [{ label: 'files', overwrite: 1 }, { index: 0 }]],
   ['openFileNavigatorFor', { label: 'files' }, [{}]],
+  ['revealInFileNavigator', { label: 'editor', requestOrder: 9 }, [
+    {}, { label: 2 }, { label: null }, { label: 'editor', requestOrder: '9' }, { label: 'editor', requestOrder: 9.5 },
+  ]],
+  ['fileNavigatorRevealApplied', { label: 'files', revision: 4 }, [
+    { revision: 4 },
+    { label: 2, revision: 4 },
+    { label: 'files' },
+    { label: 'files', revision: '4' },
+    { label: 'files', revision: 4.5 },
+  ]],
 ];
 
 describe('file navigator RPC params decoders', () => {
@@ -79,5 +89,9 @@ describe('file navigator RPC params decoders', () => {
 
   it.each(CASES)('rejects malformed %s params', (method, _valid, invalid) => {
     for (const params of invalid) expect(FILE_NAVIGATOR_PARAMS[method](params)).toBe(false);
+  });
+
+  it('accepts a reveal that omits its request order', () => {
+    expect(FILE_NAVIGATOR_PARAMS.revealInFileNavigator({ label: 'editor' })).toBe(true);
   });
 });

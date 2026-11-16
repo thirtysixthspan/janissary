@@ -164,6 +164,10 @@ export type EditorView = {
   // icon's tooltip pushes to, the same way `FileNavigatorView.branch` names it for the navigator's
   // own commit button.
   branch?: string;
+  // Projection-only, set by `buildTabView` on every broadcast and never stored on the tab record:
+  // why this editor cannot be revealed in a file navigator, absent when it can. Derived at view
+  // time so it cannot go stale when the route behind a cached remote file changes.
+  revealBlocked?: 'unsaved' | 'no-route';
 };
 
 // Which per-row detail a file navigator shows to the right of each name: none, a human-readable
@@ -177,6 +181,14 @@ export type FileNavigatorRestoreHint = {
   anchor?: string | null;
   anchorToCursor?: boolean;
   selected?: string[] | null;
+  // Set on a reveal's hint. The client holds it until the cursor row exists, moves focus once, then
+  // reports it applied or dropped through `fileNavigatorRevealApplied`; the server removes this member
+  // when that report arrives. Absent on an ordinary `files` hint, whose payload is unchanged.
+  focus?: true;
+  // The client's monotonic order for the request that produced this focus hint, echoed so the
+  // navigator can drop the hint when the user pressed a row after asking for the reveal. Absent on
+  // hints the server originates without a client request.
+  requestOrder?: number;
 };
 
 // A single visible row in a file navigator tab (opened via `files [path]`). `path` is relative to the

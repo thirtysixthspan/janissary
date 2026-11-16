@@ -12,6 +12,7 @@ import {
   replayMutation, type MutationContext,
 } from './manager/mutations.js';
 import { toggleDir, collapseAllDirs, rerootTree, revealPath, type NavPort } from './navigation.js';
+import { clearRevealFocus, revealEditorFile, type RevealPort } from './reveal-editor.js';
 import { detailOfTab, expandedPathsOf, setTabDetail } from './manager/profile.js';
 import { makeNavigationPort, makeOpenPort } from './manager/ports.js';
 import { WatchedFilesTabs } from './watched-tabs.js';
@@ -85,6 +86,12 @@ export class FileNavigatorManager extends WatchedFilesTabs {
       rebuild: (label) => this.rebuild(label),
       refreshGit: (label) => this.refreshGit(label),
     };
+  }
+
+  // The narrow set of manager internals `reveal-editor.ts` operates through: the open port's
+  // managers plus the navigation port's tab checks, cwd and failure reporting.
+  private revealPort(): RevealPort {
+    return { ...this.openPort(), ...this.navPort() };
   }
 
   // The manager internals `manager/mutations.ts` operates through, passed the same way the
@@ -185,6 +192,16 @@ export class FileNavigatorManager extends WatchedFilesTabs {
   // target row exists in the client's next `rows` update for it to select and scroll to.
   reveal(label: string, relPath: string): void {
     revealPath(this.navPort(), label, relPath);
+  }
+
+  // Reveal the file an editor tab is editing in the file navigator it belongs to, expanding its
+  // ancestors and selecting its row. A blocked, vanished, or non-editor label is a silent no-op.
+  revealEditorFile(editorLabel: string, requestOrder?: number): void {
+    revealEditorFile(this.revealPort(), editorLabel, requestOrder);
+  }
+
+  clearRevealFocus(navigatorLabel: string, revision: number): void {
+    clearRevealFocus(this.revealPort(), navigatorLabel, revision);
   }
 
   openers(label: string, relPath: string, edit: boolean, all?: boolean): FileOpenerResolution {

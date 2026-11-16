@@ -14,7 +14,7 @@ For a bare valid runscript name, `edit deploy` opens the existing project script
 
 The tab shows the file's name, size, and location in a header, with the editable buffer below.
 Typing, arrow keys, `Home`/`End`, `PageUp`/`PageDown`, mouse clicks and selection, and paste all
-work as you'd expect. The save, commit, connection, sync, and Split controls that are available stay grouped at the right edge of the header. The save button is enabled when you have unsaved changes and dimmed when the buffer is clean.
+work as you'd expect. The reveal, save, commit, connection, sync, and Split controls that are available stay grouped at the right edge of the header. The save button is enabled when you have unsaved changes and dimmed when the buffer is clean.
 Long sentences wrap between words when they reach the editor's edge. A single token wider than the editor can still break so it doesn't create horizontal scrolling.
 
 You can also land in an editor by clicking a `file.ts:42`-style link in any transcript — the file opens with the cursor already on that line, centered in view — or from the [file navigator](/user-documentation/tab-types/file-navigator) with `Shift+Enter` on a file. `Shift+Enter` is the tree's edit gesture, so a Markdown file opens its rendered preview and a video or audio file goes to your system's player instead.
@@ -43,6 +43,16 @@ With text selected, press `Cmd+I` on macOS or `Ctrl+I` elsewhere to start a new 
 
 A plain click on the header (the file name, size, or location) puts focus straight back in the buffer once you release the mouse, so your cursor and typing pick up right where they were. If you drag to select header text instead, for example to copy the file's path, focus stays in the header so the selection sticks.
 
+## Reveal the file in the file navigator
+
+Click the **Reveal in file navigator** folder icon at the start of the editor's header actions to find the file you're editing in the [file navigator](/user-documentation/tab-types/file-navigator). The tree opens at the file's place, or the one already open moves there: the folders above the file expand, its row is selected, and the keyboard moves into the tree so the arrow keys work straight away. When the tree is docked, the editor stays visible beside it.
+
+A click on this icon is the one header click that doesn't put focus back in the buffer, because the tree keeps it. That's the point: the next arrow key should move through the tree, not the text. Every other click in the header behaves as it always has.
+
+The icon is dimmed and inert when it has nowhere to take you, and its tooltip says why. On a new file that hasn't been saved yet it reads `Reveal in file navigator (save the file first)`; saving the file makes the icon available again. On a remote file whose navigator has since closed it reads `Reveal in file navigator (reopen from a remote navigator)`; reopening the file from a remote navigator gives it a route again.
+
+On macOS, `Cmd+Shift+E` in the buffer does exactly what clicking the icon does. Elsewhere the icon is the only route, because `Ctrl+Shift+E` keeps its editor meaning and extends the selection to the end of the line.
+
 ## Keyboard input
 
 Typing, arrow keys, `Home`/`End`, `PageUp`/`PageDown`, and the usual editing keys all work as you'd expect, including holding a key down to repeat it. `Shift` with any arrow extends the selection, the same in both directions.
@@ -54,6 +64,7 @@ The chords you already know from other editors work too:
 | `Cmd+A` | Select the whole file |
 | `Cmd+C` / `Cmd+X` | Copy / cut the selection |
 | `Cmd+S` | Save the file |
+| `Cmd+Shift+E` | Reveal the file in the file navigator |
 | `Cmd+Z` / `Cmd+Shift+Z` | Undo / redo |
 | `Cmd+←` / `Cmd+→` | Start / end of the line |
 | `Cmd+↑` / `Cmd+↓` | Start / end of the file |

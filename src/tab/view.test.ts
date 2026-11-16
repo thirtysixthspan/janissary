@@ -1,8 +1,37 @@
-import { describe, it, expect } from 'vitest';
-import { buildTabView, buildTabViews } from './view.js';
+import { describe, it, expect, afterEach } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { buildManagedTabView, buildTabView, buildTabViews } from './view.js';
 import { makeTab } from './index.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from './types.js';
+import type { FileSystemPort } from '../file-navigator/filesystem-port.js';
+import {
+  clearRemoteFileCache, forgetRemoteFilesOf, initRemoteFileCache, materializeRemoteFile,
+} from '../file-navigator/remote/file-cache.js';
+
+let cacheProject: string | undefined;
+
+afterEach(() => {
+  if (cacheProject === undefined) return;
+  clearRemoteFileCache();
+  rmSync(cacheProject, { recursive: true, force: true });
+  cacheProject = undefined;
+});
+
+function orphanedRemoteFile(): string {
+  const filesystem = {} as FileSystemPort;
+  cacheProject = mkdtempSync(path.join(tmpdir(), 'janus-reveal-editor-'));
+  initRemoteFileCache(cacheProject);
+  const file = materializeRemoteFile(
+    { destination: 'devbox', workspaceRoot: '/remote/ws', workspaceLabel: 'claude' },
+    'notes.txt', Buffer.from('x'),
+    { filesystem, root: '/remote/ws', relPath: 'notes.txt', label: 'files' },
+  );
+  forgetRemoteFilesOf(filesystem);
+  return file;
+}
 
 describe('buildTabView', () => {
   it('keeps the tab ACP projection on the ask session when both roles exist', () => {
@@ -586,6 +615,34 @@ describe('buildTabView', () => {
     expect(view.editor?.name).toBe('notes.txt');
   });
 
+  it('marks a new file unsaved for the reveal button while still shortening its path', () => {
+    const tab = makeTab('agent-1', '#fff');
+    tab.editor = { name: 'notes.txt', path: '/Users/derrick/project/notes.txt', size: '8 B', url: '/open/1', newFile: true };
+    const shorten = (p: string) => (p === tab.editor?.path ? '$root/notes.txt' : p);
+    const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], shorten);
+    expect(view.editor?.revealBlocked).toBe('unsaved');
+    expect(view.editor?.path).toBe('$root/notes.txt');
+  });
+
+  it('carries no revealBlocked field at all for an ordinary editor', () => {
+    const tab = makeTab('agent-1', '#fff');
+    tab.editor = { name: 'notes.txt', path: '/tmp/notes.txt', size: '8 B', url: '/open/1' };
+    const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p);
+    expect(view.editor && 'revealBlocked' in view.editor).toBe(false);
+  });
+
+  // The helper must see the absolute path, not the shortened one: a path rewritten by `shorten`
+  // would no longer sit under the cache root, so the projection would silently lose its reason.
+  it('reports no route for an orphaned remote cache file while shorten still rewrites its path', () => {
+    const file = orphanedRemoteFile();
+    const tab = makeTab('agent-1', '#fff');
+    tab.editor = { name: 'notes.txt', path: file, size: '8 B', url: '/open/1' };
+    const shorten = (p: string) => (p === file ? '$remote/notes.txt' : p);
+    const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], shorten);
+    expect(view.editor?.revealBlocked).toBe('no-route');
+    expect(view.editor?.path).toBe('$remote/notes.txt');
+  });
+
   it('exposes the tab pending question', () => {
     const tab = makeTab('agent-1', '#fff');
     const pending = { id: 'question-1', tab: 'agent-1', kind: 'ask' as const, question: 'What port?' };
@@ -635,6 +692,17 @@ describe('buildTabViews', () => {
   it('maps every tab in strip order', () => {
     const tabs = [makeTab('janus', '#fff'), makeTab('notes', '#fff')];
     expect(build(tabs, remoteManagers()).map((view) => view.label)).toEqual(['janus', 'notes']);
+  });
+
+  it('projects the same editor reveal state in the snapshot and the single-tab update', () => {
+    const tab = makeTab('notes', '#fff');
+    tab.editor = { name: 'notes.txt', path: '/tmp/notes.txt', size: '8 B', url: '/open/1', newFile: true };
+    const managers = remoteManagers();
+    const single = buildManagedTabView(tab, managers, () => [], noAcp, () => [], (p) => p);
+    const snapshot = build([tab], managers)[0]!;
+
+    expect(snapshot.editor).toEqual(single.editor);
+    expect(snapshot.editor?.revealBlocked).toBe('unsaved');
   });
 
   it('reads each tab\'s workspace from the channel rather than the tab', () => {

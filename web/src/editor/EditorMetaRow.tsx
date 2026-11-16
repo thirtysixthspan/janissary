@@ -8,6 +8,7 @@ import { EditorSyncIcon } from './EditorSyncIcon';
 import { SplitTabButton } from '../shared/SplitTabButton';
 import { EditorMetaName } from './EditorMetaName';
 import { EditorCommitButton } from './EditorCommitButton';
+import { EditorRevealButton } from './EditorRevealButton';
 
 type Properties = {
   editor: EditorView;
@@ -23,13 +24,14 @@ type Properties = {
   onRenameCancel: () => void;
   onRenameEditingChange: (editing: boolean) => void;
   onCommitOrigin: () => void;
+  onReveal: () => void;
 };
 
 // The editor tab's single metadata row: name/size/path, save state, and the connections button.
 // Split out so EditorTab.tsx stays under the 200-line file cap.
 export function EditorMetaRow({
   editor, dirty, savedFlash, error, onSave, onMouseUp, connectionsButton, onSyncClick, onSplit,
-  onRename, onRenameCancel, onRenameEditingChange, onCommitOrigin,
+  onRename, onRenameCancel, onRenameEditingChange, onCommitOrigin, onReveal,
 }: Properties) {
   return (
     <div className="editor-meta" onMouseUp={onMouseUp}>
@@ -42,6 +44,7 @@ export function EditorMetaRow({
       {savedFlash && <span className="editor-saved">Saved</span>}
       {error && <span className="editor-error">{error}</span>}
       <span className="editor-actions">
+        <EditorRevealButton revealBlocked={editor.revealBlocked} onReveal={onReveal} />
         <EditorSyncIcon sync={editor.sync} onClick={onSyncClick} />
         <EditorSaveButton dirty={dirty} onSave={onSave} />
         <EditorCommitButton commit={editor.commit} branch={editor.branch} onClick={onCommitOrigin} />

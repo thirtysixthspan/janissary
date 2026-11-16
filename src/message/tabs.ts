@@ -6,7 +6,7 @@ type TabMessage = Extract<ClientMessage, {
   method: 'command' | 'setActiveTab' | 'focusTab' | 'closeTab' | 'renameTab'
     | 'editQueuedCommand' | 'deleteQueuedCommand' | 'moveTab' | 'moveTabToOtherPane'
     | 'reorderTab' | 'reorderTabTo' | 'resetAcp' | 'revealNotifications'
-    | 'setDock' | 'openFileNavigatorFor' | 'launchShellFor' | 'openDiffFor'
+    | 'setDock' | 'openFileNavigatorFor' | 'revealInFileNavigator' | 'fileNavigatorRevealApplied' | 'launchShellFor' | 'openDiffFor'
     | 'openTranscriptFileFor' | 'openAcpTranscript' | 'openConnectionRecord' | 'openRecordingFor';
 }>;
 
@@ -51,6 +51,12 @@ export function dispatchTabMessage(controller: Controller, message: TabMessage):
     case 'setDock': { controller.setDock(message.params.index, message.params.dock); break;
     }
     case 'openFileNavigatorFor': { controller.openFileNavigatorFor(message.params.label); break;
+    }
+    case 'revealInFileNavigator': {
+      controller.revealInFileNavigator(message.params.label, message.params.requestOrder); break;
+    }
+    case 'fileNavigatorRevealApplied': {
+      controller.fileNavigatorRevealApplied(message.params.label, message.params.revision); break;
     }
 
     case 'launchShellFor': { controller.launchShellFor(message.params.label); break;

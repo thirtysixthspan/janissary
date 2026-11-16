@@ -77,6 +77,8 @@ export const CLIENT_METHOD_CONTRACTS = {
   resize: 'ack',
   resyncEditorTab: 'ack',
   revealFileNavigatorItem: 'ack',
+  revealInFileNavigator: 'ack',
+  fileNavigatorRevealApplied: 'ack',
   revealNotifications: 'ack',
   runDefaultMenuSelectionAction: 'ack',
   runFileNavigatorSelectionAction: 'ack',

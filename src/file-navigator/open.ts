@@ -19,7 +19,7 @@ export function openOrRetarget(port: OpenPort, label: string): void {
   const cwd = port.managers.tab.workingDirOf(label);
   const existing = port.managers.tab.mostRecentFileNavigatorLabel();
   if (source.remote) openRemote(port, label, source.remote, cwd, existing);
-  else if (localDirectory(cwd)) openLocal(port, cwd, existing);
+  else openOrRetargetLocalAt(port, cwd);
   port.managers.tab.setActiveTab(port.managers.tab.findIndex(label));
 }
 
@@ -27,16 +27,20 @@ function localDirectory(root: string): boolean {
   try { return statSync(root).isDirectory(); } catch { return false; }
 }
 
-function openLocal(port: OpenPort, root: string, existing?: string): void {
+export function openOrRetargetLocalAt(port: OpenPort, root: string): string | undefined {
+  if (!localDirectory(root)) return undefined;
+  const existing = port.managers.tab.mostRecentFileNavigatorLabel();
   if (existing) {
+    if (!port.states.get(existing)) return undefined;
     releaseRemote(port, existing);
     retarget(port, existing, root, new LocalFileSystemPort());
-    return;
+    return existing;
   }
   const state = freshFileNavigatorState(root, new LocalFileSystemPort());
   port.managers.tab.openFilesTab({ root, absoluteRoot: root, rows: buildCachedRows(state, () => {}) });
   const label = port.managers.tab.cur().label;
   registerOpenedTab(port, label, root, state);
+  return label;
 }
 
 function openRemote(

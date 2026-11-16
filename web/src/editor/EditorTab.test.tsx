@@ -748,8 +748,103 @@ describe('EditorTab', () => {
     await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
     const actions = container.querySelector('.editor-actions')!;
 
-    expect(actions.querySelectorAll('button')).toHaveLength(5);
+    expect(actions.querySelectorAll('button')).toHaveLength(6);
     expect(container.querySelector('.editor-meta')?.querySelectorAll(':scope > button')).toHaveLength(0);
+  });
+
+  it('renders the reveal button first in the actions group, ahead of the sync icon', async () => {
+    const { client } = makeClient();
+    const view = makeView({ sync: 'synced' });
+    const { container } = await renderLoaded(client, view);
+    const actions = container.querySelector('.editor-actions')!;
+    const first = actions.querySelector('button')!;
+
+    expect(first.className).toBe('editor-reveal-button');
+    expect(first.compareDocumentPosition(actions.querySelector('.editor-sync-icon')!)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it('a full press on the reveal button sends the reveal and leaves the textarea unfocused', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    outside.focus();
+
+    const button = container.querySelector('.editor-reveal-button')!;
+    fireEvent.mouseDown(button);
+    fireEvent.mouseUp(button);
+    fireEvent.click(button);
+
+    expect(client.send).toHaveBeenCalledWith({
+      method: 'revealInFileNavigator',
+      params: { label: 'notes', requestOrder: expect.any(Number) },
+    });
+    expect(document.activeElement).not.toBe(textarea());
+    outside.remove();
+  });
+
+  it('renders a disabled reveal button for a blocked file and a full press sends nothing', async () => {
+    const { client } = makeClient();
+    const view = makeView({ revealBlocked: 'unsaved' });
+    const { container } = await renderLoaded(client, view);
+    const button = container.querySelector<HTMLButtonElement>('.editor-reveal-button')!;
+
+    expect(button).toBeDisabled();
+    fireEvent.mouseDown(button);
+    fireEvent.mouseUp(button);
+    fireEvent.click(button);
+    expect(client.send).not.toHaveBeenCalled();
+  });
+
+  it('sends the reveal on Cmd+Shift+E, exactly as the metadata button does', async () => {
+    const { client } = makeClient();
+    await renderLoaded(client);
+
+    fireEvent.keyDown(textarea(), { key: 'e', metaKey: true, shiftKey: true });
+
+    expect(client.send).toHaveBeenCalledWith({
+      method: 'revealInFileNavigator',
+      params: { label: 'notes', requestOrder: expect.any(Number) },
+    });
+  });
+
+  it('adds no undo step and seals no typing group on Cmd+Shift+E', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    const rowText = () => container.querySelector('.editor-content')?.textContent ?? '';
+
+    type('x');
+    fireEvent.keyDown(textarea(), { key: 'e', metaKey: true, shiftKey: true });
+    expect(rowText()).toBe('xline one');
+    type('y');
+    expect(rowText()).toBe('xyline one');
+    fireEvent.keyDown(textarea(), { key: 'z', metaKey: true });
+
+    await waitFor(() => expect(screen.queryByText('xyline one')).not.toBeInTheDocument());
+    expect(screen.getByText('line one')).toBeInTheDocument();
+  });
+
+  it('sends nothing on Cmd+Shift+E for a blocked file and types no e', async () => {
+    const { client } = makeClient();
+    const view = makeView({ revealBlocked: 'unsaved' });
+    const { container } = await renderLoaded(client, view);
+
+    fireEvent.keyDown(textarea(), { key: 'e', metaKey: true, shiftKey: true });
+
+    expect(client.send).not.toHaveBeenCalled();
+    expect(container.querySelector('.editor-content')?.textContent).toBe('line one');
+  });
+
+  it('extends the selection to the line end on Ctrl+Shift+E and sends no reveal', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+
+    fireEvent.keyDown(textarea(), { key: 'e', ctrlKey: true, shiftKey: true });
+
+    expect(container.querySelector('.editor-body')).toHaveAttribute('data-editor-selection', 'line one');
+    expect(client.send).not.toHaveBeenCalled();
   });
 
   it('committing via the metadata icon saves first, then commits the file with a generated message', async () => {
@@ -1149,6 +1244,18 @@ describe('EditorTab', () => {
 
       fireEvent.keyDown(textarea(), { key: 'Escape' });
       expect(hasEnabledSaveButton(container)).toBe(false);
+    });
+
+    it('leaves Cmd+Shift+E inert while the query line holds focus', async () => {
+      const { client } = makeClient();
+      stubRequestFileContent('line one\n');
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
+
+      openAndType(' summarizer rewrite this');
+      fireEvent.keyDown(textarea(), { key: 'e', metaKey: true, shiftKey: true });
+
+      expect(client.send).not.toHaveBeenCalled();
+      expect(queryRowText(container)).toBe('> summarizer rewrite this');
     });
 
     it('fires an editorSuggest query on Ctrl/Cmd+Enter from the query text and previews the single hunk without the multi-change banner', async () => {

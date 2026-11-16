@@ -61,6 +61,8 @@ const makeController = () =>
     undoFileNavigatorItem: vi.fn(() => ({})),
     redoFileNavigatorItem: vi.fn(() => ({})),
     openFileNavigatorFor: vi.fn(),
+    revealInFileNavigator: vi.fn(),
+    fileNavigatorRevealApplied: vi.fn(),
     moveFileNavigatorItems: vi.fn(() => ({ total: 0, failedPaths: [] })),
     pasteFileNavigatorItems: vi.fn(() => ({ total: 0, failedPaths: [] })),
     deleteFileNavigatorItems: vi.fn(() => ({ total: 0, failedPaths: [] })),
@@ -484,6 +486,24 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 27, { method: 'openFileNavigatorFor', params: { label: 'janus' } });
     expect(controller.openFileNavigatorFor).toHaveBeenCalledWith('janus');
+  });
+
+  it('routes revealInFileNavigator', () => {
+    const controller = makeController();
+    const replies = dispatchCall(controller, 28, {
+      method: 'revealInFileNavigator', params: { label: 'editor', requestOrder: 9 },
+    });
+    expect(controller.revealInFileNavigator).toHaveBeenCalledWith('editor', 9);
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 28, result: 'ok' }]);
+  });
+
+  it('routes fileNavigatorRevealApplied', () => {
+    const controller = makeController();
+    const replies = dispatchCall(controller, 32, {
+      method: 'fileNavigatorRevealApplied', params: { label: 'files', revision: 4 },
+    });
+    expect(controller.fileNavigatorRevealApplied).toHaveBeenCalledWith('files', 4);
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 32, result: 'ok' }]);
   });
 
   it('routes answerQuestion through the controller façade', () => {

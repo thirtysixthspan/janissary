@@ -961,6 +961,13 @@ button.tab-recording { cursor: pointer; }
 .editor-commit-button--committed { color: var(--success); }
 .editor-commit-button--error { color: var(--error); }
 .editor-commit-button--committing svg { animation: icon-spin 1s linear infinite; }
+.editor-reveal-button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 0 4px; line-height: 1;
+}
+.editor-reveal-button:hover { color: var(--fg); }
+.editor-reveal-button:disabled { color: var(--faint); cursor: default; }
+.editor-reveal-button:disabled:hover { color: var(--faint); }
 /* The tree's Search files pop-up: a small card over the top-right of the header. The commit-message
    field is docked to the bottom instead, via the shared `.picker` class it now carries — see
    `.files-commit-popup` below, which styles only its input, not its position. */

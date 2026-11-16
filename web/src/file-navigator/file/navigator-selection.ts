@@ -124,3 +124,17 @@ export function selectionFromRestore(
     selected,
   };
 }
+
+export function focusHintStatus(
+  hint: FileNavigatorRestoreHint,
+  rows: FileNavigatorRow[],
+  currentRoot: string,
+  firstSeenRoot: string,
+  lastActedRevision: number | undefined,
+  userMoved: boolean,
+): 'none' | 'pending' | 'ready' | 'dropped' {
+  if (hint.focus !== true || lastActedRevision === hint.revision) return 'none';
+  if (userMoved || firstSeenRoot !== currentRoot) return 'dropped';
+  if (hint.cursor === undefined || hint.cursor === null) return 'dropped';
+  return rows.some((row) => row.path === hint.cursor) ? 'ready' : 'pending';
+}

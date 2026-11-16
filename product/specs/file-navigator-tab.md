@@ -140,6 +140,14 @@ closes when that tab closes. Retargeting it to a local root removes the tie; ret
 navigator to a remote root transfers the tie to that remote tab. A navigator opened from a local
 tab keeps its independent lifetime.
 
+The editor tab's metadata row carries its own folder icon button, but its route differs: it
+reveals the edited file rather than the tab's working directory, expanding the directories above
+it, selecting the file's row, and moving keyboard focus into the tree. It is the one metadata-row
+route that moves focus and selects a file. For a local file it follows the same open-or-retarget
+rule described above; for a remote cached file it reveals it in the source navigator without
+retargeting anything. The root rule, the blocked states, and the timing of the selection are in
+`editor-tab.md`.
+
 ### Remote trees
 
 A tree rooted in a remote workspace has the same rows, detail modes, branch and git-status metadata,
