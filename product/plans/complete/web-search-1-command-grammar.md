@@ -36,7 +36,7 @@ Carried verbatim from the source plan where they apply.
 - **Whole numbers (decision).** `--results` and `--max-chars` values go through `positiveInteger` (`src/positive-integer.ts`), which accepts only `/^\d+$/` digits that make a safe integer ≥ 1 (so `1.5`, `abc`, `-3`, `+5`, and `1e3` are refused and `007` is 7), then the range check against the exported constants.
 - **Provider value kept as typed (decision).** The parser stores the `--provider` value exactly as typed, case included, because the registry matches case-insensitively and the unknown-provider line quotes the name as typed. The parser does not reject `auto` or any other name.
 - **Reply-line predicate shape (decision).** `isWebSearchReplyLine` is `isFileGlobCommandLine`'s rule (`/^file\s+glob(\s|$)/i`) for `web` and `search` without the `i` flag: lowercase `web`, one or more whitespace characters, lowercase `search`, then whitespace or the end of the line. `web  search x` is a reply line; `Web search …`, `WEB SEARCH x`, and `web searching` are not.
-- **No host dependencies.** `command.ts` imports only `positiveInteger` at runtime. It loads no `Managers` and touches no tab or channel, because the ACP tool table (loaded on both hosts), the remote operation, and the type-only import from `contract.ts` (`./product/plans/ready/web-search-2-result-rendering.md`) all read it.
+- **No host dependencies.** `command.ts` imports only `positiveInteger` at runtime. It loads no `Managers` and touches no tab or channel, because the ACP tool table (loaded on both hosts), the remote operation, and the type-only import from `contract.ts` (`./product/plans/complete/web-search-2-result-rendering.md`) all read it.
 
 ## What already exists (reuse, don't rebuild)
 

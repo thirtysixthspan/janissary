@@ -2,11 +2,11 @@
 
 **Complexity: 6/10** — ~120 added lines, 15 requirements, 24 test scenarios across four new modules, no existing files edited (p=5.81)
 
-The fourth slice of the `web search` feature (source plan: `./product/plans/complete/web-search.md`). It adds the two bundled provider modules and the request and decoding steps they share. Each provider implements the `WebSearchProvider` contract from `./product/plans/ready/web-search-2-result-rendering.md`: it receives the normalized request and a narrow capability (`apiKey`, `fetch`, optional `signal`), sends exactly one HTTP request, and returns a flat `{ title, url, snippet }` list in the provider's own order, or throws a `ProviderRequestError` carrying the failure reason. The modules are not yet listed in a catalog or reachable from any command; the registry (`./product/plans/ready/web-search-5-provider-registry.md`) imports them lazily.
+The fourth slice of the `web search` feature (source plan: `./product/plans/complete/web-search.md`). It adds the two bundled provider modules and the request and decoding steps they share. Each provider implements the `WebSearchProvider` contract from `./product/plans/complete/web-search-2-result-rendering.md`: it receives the normalized request and a narrow capability (`apiKey`, `fetch`, optional `signal`), sends exactly one HTTP request, and returns a flat `{ title, url, snippet }` list in the provider's own order, or throws a `ProviderRequestError` carrying the failure reason. The modules are not yet listed in a catalog or reachable from any command; the registry (`./product/plans/ready/web-search-5-provider-registry.md`) imports them lazily.
 
 ## Dependencies
 
-- `./product/plans/ready/web-search-2-result-rendering.md` — `WebSearchProvider`, `WebSearchProviderModule`, `WebSearchRequest`, `WebSearchResult`, `WebSearchCapability`, `ProviderRequestError`, all from `src/web-search/contract.ts`. That slice (and slice 1, which creates `src/web-search/command.ts` with `WebSearchDepth`, which the contract imports as a type) must land first.
+- `./product/plans/complete/web-search-2-result-rendering.md` — `WebSearchProvider`, `WebSearchProviderModule`, `WebSearchRequest`, `WebSearchResult`, `WebSearchCapability`, `ProviderRequestError`, all from `src/web-search/contract.ts`. That slice (and slice 1, which creates `src/web-search/command.ts` with `WebSearchDepth`, which the contract imports as a type) must land first.
 - No dependency on slice 3: providers receive their key through the capability and never name a token row.
 
 ## Design decisions
@@ -82,5 +82,5 @@ Vitest `server` project, colocated, each with a fake `fetch` as in `src/models/p
 
 - The catalog, manifests, lazy activation, version checks, and disabling (`./product/plans/ready/web-search-5-provider-registry.md`).
 - Fallback between providers, failure-line formatting, and cutting to `--results` (`./product/plans/ready/web-search-6-search-core.md`).
-- Normalizing, deduping, and rendering results (`./product/plans/ready/web-search-2-result-rendering.md`).
+- Normalizing, deduping, and rendering results (`./product/plans/complete/web-search-2-result-rendering.md`).
 - Paging a provider to reach `--results`; provider options beyond `--depth` (topics, locations, languages, dates, answers, raw content, images); configured domain filtering (user decisions).

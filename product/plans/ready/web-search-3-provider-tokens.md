@@ -6,7 +6,7 @@ The third slice of the `web search` feature (source plan: `./product/plans/compl
 
 ## Dependencies
 
-None in code. Ordered after `./product/plans/ready/web-search-2-result-rendering.md` only so the feature lands in one sequence; it does not import anything from earlier subplans. Later slices depend on it: `web-search-5` (manifest `token` fields), `web-search-7` (its protocol bump is one past the value this slice sets).
+None in code. Ordered after `./product/plans/complete/web-search-2-result-rendering.md` only so the feature lands in one sequence; it does not import anything from earlier subplans. Later slices depend on it: `web-search-5` (manifest `token` fields), `web-search-7` (its protocol bump is one past the value this slice sets).
 
 ## Design decisions
 
