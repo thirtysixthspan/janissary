@@ -255,6 +255,8 @@ A patch answers `Patched <n> files:` followed by one `A`/`M`/`D`/`R` row per fil
 
 A successful patch prints `Patched <n> files:` and one row per path in order of first appearance, each path once with its net change. `R` is reported only when the move's destination did not exist before the patch. A destination that existed before the patch, including one deleted or moved away earlier in the same patch, keeps its own net row (`M` when it exists at the end, `D` when it does not) while the origin reports `D`.
 
+A patch that fails while writing puts back every path it changed, including one it vacated and later re-created, restoring the original bytes, permissions, and symbolic links.
+
 A patch is authorized by its native command name, like `file write` and `file edit`: a disabled or agent-inaccessible `file patch` row refuses with `Command is disabled: file patch.` before the role check, and a role that does not grant it refuses with `Command not allowed for role "<role>": file patch.`. An absent settings row permits it, a bare or malformed patch line is recognized, gated, and, when granted, answers with the usage line rather than becoming the final answer, and one patch is one step toward the eight-step cap.
 
 The loop's workspace step runs against the workspace of the host running the loop through the same runner as the typed command. A local tab uses its workspace directory, or its launch or project directory when it has no workspace; a local fallback session on a remote tab uses the tab's remote transport. A remote-hosted loop applies the patch on the remote machine against its workspace through its local filesystem, is reported as a workspace step, so it carries the `[<host>] ` tag, and never crosses to the caller.

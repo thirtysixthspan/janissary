@@ -262,6 +262,19 @@ describe('patch sections', () => {
     expect(result.rows).toEqual([{ letter: 'D', path: 'link' }, { letter: 'A', path: 'moved' }]);
   });
 
+  it('keeps the original bytes of a vacated path that is re-created later', () => {
+    write('a', 'first\n');
+    const renamed = success('*** Update File: a\n*** Move to: b\n*** Delete File: b\n*** Add File: a\n+new');
+    expect(renamed.rows).toEqual([{ letter: 'M', path: 'a' }]);
+    expect(renamed.changes.deletes.map((item) => item.place.requested)).toEqual(['a']);
+    expect(renamed.changes.deletes[0].content.original).toEqual(Buffer.from('first\n'));
+    write('b', 'second\n');
+    const recreated = success('*** Update File: b\n*** Move to: c\n*** Delete File: c\n*** Add File: b\n+new');
+    expect(recreated.rows).toEqual([{ letter: 'M', path: 'b' }]);
+    expect(recreated.changes.deletes.map((item) => item.place.requested)).toEqual(['b']);
+    expect(recreated.changes.deletes[0].content.original).toEqual(Buffer.from('second\n'));
+  });
+
   it('indexes removed locations once when deriving many writes', () => {
     let reads = 0;
     const places: PatchPlace[] = [];

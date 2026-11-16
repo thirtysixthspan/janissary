@@ -36,9 +36,12 @@ export function buildPatchChanges(view: PatchView, record: PatchRecord): PatchCh
   const active = record.moves.chains.filter((chain) => chain.onDisk && survives(chain) && chain.current !== chain.origin);
   const moves = active.flatMap((chain) => chain.hops.map((hop) => ({ ...hop, link: chain.link }))).toSorted((a, b) => a.order - b.order);
   const origins = new Set(active.map((chain) => chain.origin));
+  const returned = new Set(record.moves.chains.filter((chain) => chain.current === chain.origin).map((chain) => chain.origin));
+  // A kept entry is the only holder of the place's original bytes, mode, and link text for restore.
+  // A chain that ends where it started leaves its path untouched, so it needs no unlink or undo.
   const deletes = places.flatMap((place) => {
     const entry = record.deletes.get(place);
-    return place.existed && entry && !origins.has(place) && (!place.exists || record.removedByDelete.has(place)) ? [entry] : [];
+    return place.existed && entry && !origins.has(place) && (!place.exists || record.removedByDelete.has(place) || !returned.has(place)) ? [entry] : [];
   });
   const writes: PatchWrite[] = [];
   const byContent = new Map<PatchContent, (typeof record.moves.chains)[number]>();

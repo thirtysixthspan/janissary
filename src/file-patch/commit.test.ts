@@ -81,6 +81,42 @@ it('restores prior writes, moves, deleted links and modes after a write failure'
   expect(readlinkSync(file('link'))).toBe('target'); expect(existsSync(file('moved'))).toBe(false); expect(existsSync(file('nested'))).toBe(false);
 });
 
+it('restores a vacated path that a later section re-creates', () => {
+  const patch = '*** Update File: b\n*** Move to: c\n*** Delete File: c\n*** Add File: b\n+new\n*** Add File: later\n+x';
+  write('b', 'original\n', 0o640);
+  let writes = 0;
+  const operations: CommitOperations = { ...defaultCommitOperations, writeFile(name, bytes) { writes += 1; if (writes === 2) throw fail(); defaultCommitOperations.writeFile(name, bytes); } };
+  expect(run(patch, operations)).toMatchObject({ ok: false, restored: true, path: 'later' });
+  expect(readFileSync(file('b'))).toEqual(Buffer.from('original\n'));
+  expect(mode('b')).toBe(0o640);
+  expect(existsSync(file('c'))).toBe(false);
+  expect(existsSync(file('later'))).toBe(false);
+  rmSync(file('b'));
+  write('target', 'linked\n');
+  symlinkSync('target', file('b'));
+  let linkWrites = 0;
+  const linkOperations: CommitOperations = { ...defaultCommitOperations, writeFile(name, bytes) { linkWrites += 1; if (linkWrites === 2) throw fail(); defaultCommitOperations.writeFile(name, bytes); } };
+  expect(run(patch, linkOperations)).toMatchObject({ ok: false, restored: true, path: 'later' });
+  expect(lstatSync(file('b')).isSymbolicLink()).toBe(true);
+  expect(readlinkSync(file('b'))).toBe('target');
+  expect(read('target')).toBe('linked\n');
+  expect(existsSync(file('c'))).toBe(false);
+  expect(existsSync(file('later'))).toBe(false);
+});
+
+it('restores a vacated path when a rename into it fails', () => {
+  write('b', 'original\n', 0o640); write('d', 'other\n');
+  const patch = '*** Update File: b\n*** Move to: c\n*** Delete File: c\n*** Update File: d\n*** Move to: b\n*** Add File: later\n+x';
+  let writes = 0;
+  const operations: CommitOperations = { ...defaultCommitOperations, writeFile(name, bytes) { writes += 1; if (writes === 1) throw fail(); defaultCommitOperations.writeFile(name, bytes); } };
+  expect(run(patch, operations)).toMatchObject({ ok: false, restored: true, path: 'later' });
+  expect(readFileSync(file('b'))).toEqual(Buffer.from('original\n'));
+  expect(mode('b')).toBe(0o640);
+  expect(read('d')).toBe('other\n');
+  expect(existsSync(file('c'))).toBe(false);
+  expect(existsSync(file('later'))).toBe(false);
+});
+
 it('restores after rename and folder failures with the reported section path', () => {
   write('a', 'a'); write('delete', 'd');
   let renames = 0;
