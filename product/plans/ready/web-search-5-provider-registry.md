@@ -8,7 +8,7 @@ The fifth slice of the `web search` feature (source plan: `./product/plans/compl
 
 - `./product/plans/complete/web-search-2-result-rendering.md` — the contract types and `WEB_SEARCH_PROVIDER_API_VERSION`.
 - `./product/plans/complete/web-search-3-provider-tokens.md` — the `tavily` and `tinyfish` `ProjectTokenName`s the manifests name.
-- `./product/plans/ready/web-search-4-bundled-providers.md` — the provider modules `activate` imports (`src/web-search/providers/tavily.ts` and `tinyfish.ts`, each exporting `provider`), and the abort rule this slice relies on: `requestJson` rethrows a prompt abort unchanged, so the registry tells an abort apart by the capability's `signal.aborted`, never by the error's shape.
+- `./product/plans/complete/web-search-4-bundled-providers.md` — the provider modules `activate` imports (`src/web-search/providers/tavily.ts` and `tinyfish.ts`, each exporting `provider`), and the abort rule this slice relies on: `requestJson` rethrows a prompt abort unchanged, so the registry tells an abort apart by the capability's `signal.aborted`, never by the error's shape.
 - Slices 1–4 must all have landed; `src/web-search/` does not exist in the repo today. This slice edits no existing source file.
 
 ## Design decisions
