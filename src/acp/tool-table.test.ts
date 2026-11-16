@@ -252,6 +252,17 @@ describe('gateCommand', () => {
   it.each([
     ['granted', ['file']],
     ['ungranted', []],
+  ])('refuses agent file patches when %s', (_label, grants) => {
+    for (const command of ['file patch {"patchText":"x"}', 'file patch', 'FILE PATCH {', '/file patch {}']) {
+      expect(gateCommand(agent({ grants }), [], command)).toStrictEqual({
+        refusal: `Agent: command not permitted: ${command}.`,
+      });
+    }
+  });
+
+  it.each([
+    ['granted', ['file']],
+    ['ungranted', []],
   ])('refuses agent file globs when %s', (_label, grants) => {
     for (const command of ['file glob **/*', 'file glob', 'FILE GLOB x', '/file glob x']) {
       expect(gateCommand(agent({ grants }), [], command)).toStrictEqual({
@@ -316,6 +327,7 @@ describe('gateCommand', () => {
       refusal: 'Agent: command not permitted: file read a.md.',
     });
     expect(gateCommand(agent({ grants: ['file'] }), [], 'file writer x')).toStrictEqual({ runsOn: 'caller' });
+    expect(gateCommand(agent({ grants: ['file'] }), [], 'file patching x')).toStrictEqual({ runsOn: 'caller' });
     expect(gateCommand(agent({ grants: ['file'] }), [], 'file globs x')).toStrictEqual({ runsOn: 'caller' });
     expect(gateCommand(agent({ grants: ['file'] }), [], 'db sqlite list')).toStrictEqual({ runsOn: 'caller' });
   });

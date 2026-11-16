@@ -27,6 +27,14 @@ describe('mutation command line recognition', () => {
     expect(isFileMutationCommandLine('file edit {}')).toBe(true);
     expect(isFileWriteCommandLine('file edit {}')).toBe(false);
   });
+
+  it('accepts a patch line and rejects its lookalikes', () => {
+    expect(isFileMutationCommandLine('file patch {"patchText":"x"}')).toBe(true);
+    expect(isFileMutationCommandLine('FILE PATCH {"patchText":"x"}')).toBe(true);
+    expect(isFileMutationCommandLine('file patch')).toBe(true);
+    expect(isFileMutationCommandLine('file patching x')).toBe(false);
+    expect(isFileMutationCommandLine('/file patch {}')).toBe(false);
+  });
 });
 
 describe('describeLoopCommand', () => {

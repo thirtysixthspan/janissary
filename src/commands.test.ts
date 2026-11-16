@@ -165,6 +165,12 @@ describe('getOutput help pages', () => {
     expect(text).not.toMatch(/^`--limit` is the number of lines to print/m);
   });
 
+  it('documents the file patch section and usage line', () => {
+    const text = outputText('help file');
+    expect(text).toContain('**Patching several files**');
+    expect(text).toContain('`file patch <JSON>`');
+  });
+
   it('keeps the tab command page examples and usage aligned with the parser', () => {
     const text = outputText('help tab');
     const examples = [
