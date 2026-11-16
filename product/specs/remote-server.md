@@ -303,8 +303,10 @@ version adds `web-search`, the read-only, path-free filesystem operation behind 
 a remote tab; it carries `query` (non-empty), `numResults` (1–20), `maxChars` (200–100000), `depth`
 (`basic` or `advanced`), and `provider`, and answers `{ text }` holding the rendered results or failure
 line; any other argument shape is an invalid request. The far side runs it with the merged token set of
-the workspace it serves, forwarded tokens winning over the remote's own files, and a provider failure
-there is reported only in the failure lines.
+the workspace it serves, forwarded tokens winning over the remote's own files. A search that ends in
+failure answers with the single-failure line or the every-provider-failed lines, while a provider that
+fails before a later provider succeeds leaves no failure line and no notification: a remote search
+posts none, and its output prints only the provider that answered, so that failure is reported nowhere.
 
 Unavailable sends, explicit disconnect, transport loss, protocol failure, and channel finish settle and detach ACP listeners, including before readiness. Late frames for detached ids are ignored. A lost core ACP session is closed locally and replaced by a later request once its channel is ready; autonomous runs retain their transport-loss termination. Durable activity capture belongs only to the initiating project's recorder. The sessions tab's existing shell/harness restoration policy is unchanged.
 

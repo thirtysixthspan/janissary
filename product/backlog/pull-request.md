@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the remote-server spec's claim that a failed provider is always reported in the failure lines, which omits the silent successful-fallback case.
-
-Existing Issue: The version-44 paragraph in `product/specs/remote-server.md` says a provider failure on the far side "is reported only in the failure lines", but a remote search that falls back to a later provider prints only the winner's results; the precise behavior in `product/specs/web-search.md` and `help/web.md` is that a provider disabled or failed before a successful fallback is reported nowhere. Severity: 3/10
-
-Existing Risk: 3/10 - A reader implementing or troubleshooting the far-side operation relies on a failure line that never appears, so a silent provider failure looks like a working search and the reason is lost.
-
-Proposal Risk: 1/10 - The spec states the silent case explicitly; the only residual ambiguity is how a whole-search failure is phrased, which already has an exact formatter in `src/web-search/failure-lines.ts`.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "correct the remote-server spec's provider-failure reporting claim". Rewrite that sentence in `product/specs/remote-server.md` to distinguish the two outcomes: a search that ends in failure returns the `formatFailures` single-failure or every-provider-failed lines, while a provider that fails before a later provider succeeds leaves no failure line and no notification, because the far side passes no `reportDisabled`. Cross-check the wording against the Disabled providers section of `product/specs/web-search.md`, the Providers section of `help/web.md`, and the reporter-less calls in `src/remote/serve-acp-loop.ts` and `src/remote/filesystem/web-search-operation.ts`. Leave the paragraph's argument-shape and long-running-deadline sentences untouched; no code or test change is needed.
-
-
 * Correct the web help page's absolute "no cancellation" claim, which is true only for typed searches and not for agent searches.
 
 Existing Issue: `help/web.md` says "A search has no cancellation: it runs until it answers or every provider it tries times out", but a search an `ask` or `tell` agent runs is tied to the prompt's abort signal, is aborted at once when the prompt is cancelled or reset, starts no further provider, and has its late result suppressed, as `product/specs/acp.md` and `product/specs/web-search.md` state. Severity: 3/10
