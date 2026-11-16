@@ -78,13 +78,7 @@ export function revealEditorFile(port: RevealPort, editorLabel: string): void {
 export function clearRevealFocus(port: RevealPort, navigatorLabel: string, revision: number): void {
   const state = port.states.get(navigatorLabel);
   if (!state?.restore || state.restore.revision !== revision || !state.restore.focus) return;
-  state.restore = {
-    revision: state.restore.revision,
-    cursor: state.restore.cursor,
-    anchor: state.restore.anchor,
-    anchorToCursor: state.restore.anchorToCursor,
-    selected: state.restore.selected,
-  };
+  delete state.restore.focus;
   port.rebuild(navigatorLabel);
 }
 
