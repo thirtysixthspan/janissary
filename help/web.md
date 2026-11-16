@@ -43,7 +43,7 @@ On a remote tab, `Remote connection unavailable.` appears when the tab has no li
 
 `auto`, the default, walks the providers in order — Tavily, then TinyFish — skipping any without a token and using the first one that has one. When that provider fails, the search falls back to the next configured provider and prints only the eventual results. The search fails only after every configured provider has been tried. An explicit `--provider` uses only that provider and never falls back.
 
-A provider that breaks is disabled for the rest of the server process. An explicit search of a disabled provider prints `Web search failed (<name>): <reason>.` without sending anything, and `auto` skips it. On a local tab one notification, `Web search provider "<name>" disabled: <reason>.`, appears in the notifications tab. A remote search reports the reason only in its failure lines.
+A provider that breaks is disabled for the rest of the server process. An explicit search of a disabled provider prints `Web search failed (<name>): <reason>.` without sending anything, and `auto` skips it. On a local tab one notification, `Web search provider "<name>" disabled: <reason>.`, appears in the notifications tab even when a later provider succeeds, and the search output prints only the provider that answered, so that notification is the only report of the disable when it happens. A remote tab posts no notification and also prints only the answering provider, so a provider disabled before a successful fallback is reported nowhere; a later failure line names it only in an explicit search of it, or in `auto` once every configured provider is disabled.
 
 **Tokens**
 
