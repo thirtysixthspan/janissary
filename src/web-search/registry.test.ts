@@ -350,6 +350,46 @@ describe('createProviderRegistry', () => {
     expect(ids(registry.resolveAttempts('tavily', TOKENS))).toEqual(['tavily']);
   });
 
+  it('treats a module without a search function during an abort as an abort', async () => {
+    const controller = new AbortController();
+    const error = new Error('cancelled before the module resolved');
+    controller.abort(error);
+    const reportDisabled = vi.fn();
+    const manifest = fakeManifest('tavily', {
+      module: { provider: { search: undefined as never } },
+    });
+    const registry = createProviderRegistry([manifest]);
+
+    const outcome = await registry.runAttempt(
+      manifest, REQUEST, capability(controller.signal), reportDisabled,
+    );
+
+    expect(outcome.kind).toBe('aborted');
+    expect(abortedError(outcome)).toBe(error);
+    expect(reportDisabled).not.toHaveBeenCalled();
+    expect(ids(registry.resolveAttempts('tavily', TOKENS))).toEqual(['tavily']);
+  });
+
+  it('treats a non-array search result during an abort as an abort', async () => {
+    const controller = new AbortController();
+    const error = new Error('cancelled during the search');
+    controller.abort(error);
+    const reportDisabled = vi.fn();
+    const manifest = fakeManifest('tavily', {
+      module: moduleFor(async () => 'not an array' as unknown as WebSearchResult[]),
+    });
+    const registry = createProviderRegistry([manifest]);
+
+    const outcome = await registry.runAttempt(
+      manifest, REQUEST, capability(controller.signal), reportDisabled,
+    );
+
+    expect(outcome.kind).toBe('aborted');
+    expect(abortedError(outcome)).toBe(error);
+    expect(reportDisabled).not.toHaveBeenCalled();
+    expect(ids(registry.resolveAttempts('tavily', TOKENS))).toEqual(['tavily']);
+  });
+
   it('returns results unchanged, including an empty array', async () => {
     const results: WebSearchResult[] = [
       { title: 'Node.js', url: 'https://nodejs.org/', snippet: 'A JavaScript runtime.' },

@@ -156,11 +156,17 @@ export function createProviderRegistry(
       return classifyActivationFailure(manifest, error, capability, reportDisabled);
     }
     if (provider === undefined) {
+      if (capability.signal?.aborted === true) {
+        return { kind: 'aborted', error: capability.signal.reason };
+      }
       return disable(manifest, 'provider failed: module has no provider', reportDisabled);
     }
     try {
       const results: WebSearchResult[] = await provider.search(request, capability);
       if (!Array.isArray(results)) {
+        if (capability.signal?.aborted === true) {
+          return { kind: 'aborted', error: capability.signal.reason };
+        }
         return disable(manifest, 'provider failed: search did not return an array', reportDisabled);
       }
       return { kind: 'results', results };
