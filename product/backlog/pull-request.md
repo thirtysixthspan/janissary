@@ -1,13 +1,3 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
-
-* Correct the fix plan's verification step, whose own quoted grep pattern matches the instruction itself, so the check can never report clean.
-
-Existing Issue: Implementation step 6 of `product/plans/complete/repoint-promoted-result-rendering-plan-references.md` searches `product/` for the stale path's shorter prefix, expects the backlog entry to be its only match, and asserts that plan files never spell the literal search string, while that paragraph is itself the remaining match once the entry is removed. Severity: 2/10
-
-Existing Risk: 3/10 - A reader who re-runs the documented check finds a hit the plan cannot explain, and the same self-matching instruction gets copied into the next repoint plan so each copy keeps a small, permanent false signal alive.
-
-Proposal Risk: 1/10 - The step states a property a reader can check without quoting the pattern, but the plan graph still has no automated link check, so a later promotion can break it again silently.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "correct the fix plan's self-matching verification grep". In `product/plans/complete/repoint-promoted-result-rendering-plan-references.md`, rewrite Implementation step 6 to keep the re-read of each edited sentence and replace the grep-and-expect-clean clause with the property that check was meant to prove: every reference to the result-rendering plan under `product/plans/` names it under `complete/`, and none routes it through a `ready/` segment. Delete the sentence claiming plan files never spell the literal search string, and do not reintroduce the stale path literal anywhere in the plan, because the resolved entry's verification depends on `grep -rn` for that exact path under `product` returning no matches. Leave the occurrence table, the Tests section, the four out-of-scope bullets, and every other file untouched; the repair itself is correct and needs no rework. Verify by re-reading each of the seven repointed references in `product/plans/ready/web-search-3-provider-tokens.md`, `product/plans/ready/web-search-4-bundled-providers.md`, `product/plans/ready/web-search-5-provider-registry.md`, `product/plans/ready/web-search-6-search-core.md`, and `product/plans/complete/web-search-1-command-grammar.md`, confirming each target is `./product/plans/complete/web-search-2-result-rendering.md`, and by running the recorded stale-path grep once more to confirm it still returns no matches. No test command is needed; the change is plan text only.

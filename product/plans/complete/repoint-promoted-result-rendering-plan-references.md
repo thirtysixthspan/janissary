@@ -31,7 +31,7 @@ The occurrences were verified against the checked-out branch:
 3. In `product/plans/ready/web-search-5-provider-registry.md`, repoint the first dependency bullet.
 4. In `product/plans/ready/web-search-6-search-core.md`, repoint the rendering dependency bullet.
 5. In `product/plans/complete/web-search-1-command-grammar.md`, repoint the type-only import clause.
-6. Re-read each edited sentence to confirm it still names the same types and functions, then run `grep -rn "plans/ready/web-search-2" product` and confirm it matches only the backlog entry until that entry is removed in the plan-promotion step. The plan files spell the stale path only as prose descriptions, never as the literal search string, so the check stays clean.
+6. Re-read each edited sentence to confirm it still names the same types and functions, then check that every reference to the result-rendering plan under `product/plans/` names it under `complete/` and none routes it through a `ready/` segment.
 
 ## Tests
 
