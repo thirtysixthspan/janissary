@@ -86,8 +86,7 @@ remains pending on the server in that case, because the missing row is never app
 a later reveal or an ordinary `files` hint replaces it. A resolved root that is no longer a directory
 changes nothing: no navigator opens and no open one is retargeted.
 
-The tree takes keyboard focus as soon as the click is handled, unless the user has already overtaken
-the reveal with a press of their own. The file's row becomes the cursor,
+The tree takes keyboard focus when the reveal's focus hint arrives, unless the user has already overtaken the reveal with a press of their own. The file's row becomes the cursor,
 the anchor, and the only selected row as soon as that row exists in the tree, which on a remote
 tree or a large local one can be a moment later, and the tree scrolls it into view. A pending
 selection is dropped if the user moves the tree's cursor or presses any row after asking for the
