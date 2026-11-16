@@ -12,6 +12,10 @@ const PASS_THROUGH_MESSAGES: ReadonlySet<string> = new Set([
   CLOSED_REASON,
 ]);
 
+export function isPassThroughMessage(message: string): boolean {
+  return PASS_THROUGH_MESSAGES.has(message);
+}
+
 function reasonLine(reason: string, path: string): string {
   return `${displayPath(reason)}: ${displayPath(path)}.`;
 }

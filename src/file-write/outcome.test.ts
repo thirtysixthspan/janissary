@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { SAVE_CONFLICT_ERROR } from '../editor/save-conflict.js';
 import { fileOperationReason, OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
 import { CLOSED_REASON, ENDED_REASON, TIMED_OUT_REASON } from '../file-navigator/remote/port-requests.js';
-import { mutationFailureLine, mutationRejectionLine } from './outcome.js';
+import { REMOTE_UNAVAILABLE } from '../file-read/remote-tab-port.js';
+import { isPassThroughMessage, mutationFailureLine, mutationRejectionLine } from './outcome.js';
 import { MULTIPLE_MATCHES_REASON, NO_MATCHING_TEXT_REASON } from './types.js';
 
 describe('mutationFailureLine', () => {
@@ -30,6 +31,15 @@ describe('mutationFailureLine', () => {
 
   it('escapes a reason and path containing newlines', () => {
     expect(mutationFailureLine('bad\nthing', 'a\nb')).toBe(String.raw`bad\nthing: a\nb.`);
+  });
+});
+
+describe('isPassThroughMessage', () => {
+  it('recognizes the connection messages and nothing else', () => {
+    for (const message of [REMOTE_UNAVAILABLE, ENDED_REASON, TIMED_OUT_REASON, CLOSED_REASON]) {
+      expect(isPassThroughMessage(message)).toBe(true);
+    }
+    expect(isPassThroughMessage('Invalid remote filesystem operation result.')).toBe(false);
   });
 });
 

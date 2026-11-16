@@ -1,4 +1,4 @@
-import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
+import { fileOperationReason, OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
 import { displayPath } from '../file-write/messages.js';
 import type { CommitOutcome } from './commit.js';
 import type { PatchParseError } from './parse.js';
@@ -14,6 +14,11 @@ export function withFinalPeriod(text: string): string {
 
 function escapedReason(reason: string): string {
   return displayPath(reason === OUTSIDE_ROOT_REASON ? 'Outside the workspace' : reason);
+}
+
+export function patchRejectionLine(error: unknown): string {
+  const reason = error instanceof Error && error.message !== '' ? error.message : fileOperationReason(error);
+  return withFinalPeriod(`Patch failed: ${displayPath(reason)}`);
 }
 
 export function patchSuccessText(rows: readonly PatchRow[]): string {
