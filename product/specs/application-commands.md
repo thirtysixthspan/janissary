@@ -10,7 +10,7 @@ The native `file read`, `file glob`, `file grep`, `file write`, and `file edit` 
 
 The builtin `web` command has its own parentless row, and disabling it refuses every typed `web` line.
 
-The native `web search` row has the parent `web` and its own Enabled and Agent access settings. Disabling `web search` refuses the agent tool, and disabling `web` disables both. Typed `web search` lines are claimed by the `web` builtin, so disabling only the native `web search` row does not refuse a typed search.
+The native `web search` row has the parent `web` and its own Enabled and Agent access settings. Disabling `web search` disables only that row, and refuses the typed `web search` command as well as the agent tool; disabling `web` disables both. A typed `web search` line resolves to the native row exactly as a typed `file write` line does.
 
 The command inventory lists a bundled plugin's command and aliases only when the host accepted those claims. A plugin whose command or alias claims a name already reserved by a built-in command, or already claimed by another plugin, contributes no row and no alias for that claim, even though the built-in keeps the name.
 
