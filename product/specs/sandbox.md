@@ -231,7 +231,18 @@ from either, but the request itself loads the key from `GOOGLE_GENERATIVE_AI_API
 workspace given only the first saw the provider accepted and then the first prompt fail. The token
 exists at all because the Google provider's key lives in opencode's own credential store, which is a
 denied secret path, so without it that provider has no route into a workspace other than the ambient
-environment. Four more variables are added for every workspaced spawn, carrying the git name and email of the user
+environment.
+
+A Tavily API key configured at `.janissary/tavily-token` and a TinyFish API key configured at
+`.janissary/tinyfish-token` (both read by `loadProjectTokens` in `src/project/tokens.ts`, with the
+project's `.janissary/` consulted before `~/.janissary/`) are set as `TAVILY_API_KEY` and
+`TINYFISH_API_KEY` for every workspaced spawn, on the confined and pass-through paths alike. The
+search itself runs in the janissary process rather than in the spawned one, so the two variables
+reach a spawned environment only because every non-GitHub row in that table does. Neither variable is
+matched by `ENV_SCRUB_PATTERNS` in `src/sandbox/paths.ts`, so an ambient value survives the scrub and
+a configured token file takes precedence over it in `workspaceCredentialEnv`.
+
+Four more variables are added for every workspaced spawn, carrying the git name and email of the user
 who opened janissary: `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME`, and
 `GIT_COMMITTER_EMAIL`. Git reads these in preference to `user.name`/`user.email`, so they are what a
 commit made inside a workspace is attributed to. The identity is read once at startup, by asking git
