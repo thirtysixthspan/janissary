@@ -53,4 +53,5 @@ export const FILE_NAVIGATOR_PARAMS: Record<FileNavigatorRpcCall['method'], Param
   undoFileNavigatorItem: (p) => isString(p.label) && optionalBoolean(p.overwrite) && optionalBoolean(p.skipConflicts),
   redoFileNavigatorItem: (p) => isString(p.label) && optionalBoolean(p.overwrite) && optionalBoolean(p.skipConflicts),
   openFileNavigatorFor: (p) => isString(p.label),
+  revealInFileNavigator: (p) => isString(p.label),
 };

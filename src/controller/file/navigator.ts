@@ -171,6 +171,10 @@ export function openFileNavigatorFor(managers: Managers, label: string): void {
   managers.fileNavigator.openOrRetarget(label);
 }
 
+export function revealInFileNavigator(managers: Managers, label: string): void {
+  managers.fileNavigator.revealEditorFile(label);
+}
+
 export async function fileNavigatorSearch(managers: Managers, index: number): Promise<string[]> {
   const label = managers.tab.tabs[index]?.label;
   return label ? managers.fileNavigator.search(label) : [];

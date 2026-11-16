@@ -158,4 +158,9 @@ export type FileNavigatorRpcCall =
   // harness/tab's metadata row. If a file navigator tab is already open, its root is retargeted
   // to that cwd in place; otherwise a fresh one opens docked in the left sidebar. Either way the
   // resulting file navigator tab is focused. `label` is the requesting tab's own label.
-  | { method: 'openFileNavigatorFor'; params: { label: string } };
+  | { method: 'openFileNavigatorFor'; params: { label: string } }
+  // Reveal an edited file in its own file navigator, triggered by the folder button in an editor
+  // tab: the server resolves the edited file's navigator, expands its ancestors, and selects it.
+  // `label` is the editor tab's label, not a navigator label. Fire-and-forget: a blocked, vanished,
+  // or non-editor label is a silent no-op whose only signal is the next state broadcast.
+  | { method: 'revealInFileNavigator'; params: { label: string } };

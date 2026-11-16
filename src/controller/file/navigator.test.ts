@@ -3,7 +3,7 @@ import {
   fileNavigatorToggle, fileNavigatorCollapseAll, fileNavigatorPull, fileNavigatorReroot,
   moveFileNavigatorItem, moveFileNavigatorItems, pasteFileNavigatorItems, deleteFileNavigatorItem,
   deleteFileNavigatorItems, undoFileNavigatorItem, redoFileNavigatorItem, openFileNavigatorFor,
-  fileNavigatorSearch, revealFileNavigatorItem, renameFileNavigatorItem, fileNavigatorOpeners,
+  revealInFileNavigator, fileNavigatorSearch, revealFileNavigatorItem, renameFileNavigatorItem, fileNavigatorOpeners,
   fileNavigatorCreateFile, fileNavigatorCreateDirectory,
 } from './navigator.js';
 import { fileNavigatorCommit, fileNavigatorNothingToCommit } from './navigator-commit.js';
@@ -223,6 +223,13 @@ describe('controller-file-navigator', () => {
     const managers = makeManagers('agent', { openOrRetarget: (...args: unknown[]) => { calls.push(args); } });
     openFileNavigatorFor(managers, 'agent');
     expect(calls).toEqual([['agent']]);
+  });
+
+  it('revealInFileNavigator delegates to FileNavigatorManager.revealEditorFile with the label', () => {
+    const calls: unknown[] = [];
+    const managers = makeManagers('editor', { revealEditorFile: (...args: unknown[]) => { calls.push(args); } });
+    revealInFileNavigator(managers, 'editor');
+    expect(calls).toEqual([['editor']]);
   });
 
   it('fileNavigatorSearch resolves the manager result when the tab exists', async () => {

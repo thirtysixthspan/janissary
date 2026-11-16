@@ -33,6 +33,7 @@ export type FileNavigatorControllerAdapter = {
   redoFileNavigatorItem(label: string, overwrite?: boolean, skipConflicts?: boolean): ReturnType<typeof fileNavigatorRpc.redoFileNavigatorItem>;
   setDock(index: number, dock: 'left' | 'right' | null): void;
   openFileNavigatorFor(label: string): void;
+  revealInFileNavigator(label: string): void;
   launchShellFor(label: string): void;
   openDiffFor(label: string): void;
 };
@@ -66,6 +67,7 @@ export function createFileNavigatorControllerAdapter(managers: Managers): FileNa
     redoFileNavigatorItem: (label, overwrite, skipConflicts) => fileNavigatorRpc.redoFileNavigatorItem(managers, label, overwrite, skipConflicts),
     setDock: (index, dock) => managers.tab.setDock(index, dock),
     openFileNavigatorFor: (label) => fileNavigatorRpc.openFileNavigatorFor(managers, label),
+    revealInFileNavigator: (label) => fileNavigatorRpc.revealInFileNavigator(managers, label),
     launchShellFor: (label) => {
       void managers.plugins.openSibling('shell', { label, command: 'shell' });
     },

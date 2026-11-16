@@ -70,6 +70,7 @@ const CASES: Array<[
   ['undoFileNavigatorItem', { label: 'files', overwrite: true }, [{ label: 'files', skipConflicts: 'yes' }, { index: 0 }]],
   ['redoFileNavigatorItem', { label: 'files' }, [{ label: 'files', overwrite: 1 }, { index: 0 }]],
   ['openFileNavigatorFor', { label: 'files' }, [{}]],
+  ['revealInFileNavigator', { label: 'editor' }, [{}, { label: 2 }, { label: null }]],
 ];
 
 describe('file navigator RPC params decoders', () => {
