@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Stop exposing the two search provider keys to spawned processes that never read them.
-
-Existing Issue: The Tavily and TinyFish token rows are declared with environment variables, so `src/sandbox/environment.ts` copies `TAVILY_API_KEY` and `TINYFISH_API_KEY` into every workspaced shell, harness, and ACP agent as well as every ACP agent outside a workspace, although the search reads its keys only from `getProjectTokens()` and the far-side token map, and the row comments admit the variables are set only because every non-GitHub row's are. Severity: 6/10
-
-Existing Risk: 5/10 - a compromised or prompt-injected harness can read and exfiltrate search credentials it has no use for, burning the user's Tavily or TinyFish quota or reaching the provider account, and an ambient value survives the environment scrub on every workspaced spawn.
-
-Proposal Risk: 2/10 - the keys remain in the Janissary process and in the forwarded provisioning map, so a compromised server process can still use them, but the unnecessary copies in every spawned environment are gone.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "keep the search provider keys out of spawned process environments". Add an opt-out to the `PROJECT_TOKENS` row shape, for example `spawn: false` with a default of true, and set it on the `tavily` and `tinyfish` rows in `src/project/tokens.ts`; make `tokenVariables` in `src/sandbox/environment.ts` skip a row whose `spawn` is false so `workspaceCredentialEnv` and `agentCredentialEnv` no longer set `TAVILY_API_KEY` or `TINYFISH_API_KEY`. Add both names to `ENV_SCRUB_PATTERNS` in `src/sandbox/paths.ts` so an ambient value is removed on the confined and pass-through paths. Keep `loadProjectTokens`, the provisioning forwarding in `src/remote/serve-provision.ts` and `src/remote/frame/decode-provision.ts`, the `RemoteFileNavigators` and `RemoteAcp` token maps, and the provider capability unchanged: the far-side Janissary process still searches with the forwarded token or its own file. Update `product/specs/sandbox.md`, `product/specs/workspaced-agent.md`, `product/specs/remote-server.md`, `product/specs/acp.md`, `documentation/user-documentation/advanced-agents/tokens.md`, and `documentation/developer-documentation/web-search-providers.md` so they say the search keys are read by the server process and are not injected into spawned processes, and remove the "six harness credentials" references to the search keys. Update the expectations in `src/sandbox/environment.test.ts`, `src/sandbox/harness-spawn.test.ts`, and `src/sandbox/index.test.ts`, and add a test that both variables are absent from a workspaced and an outside-workspace spawn while a configured token still reaches `webSearch` through the far-side operation; `src/remote/serve-provision.test.ts` and the search suites must keep passing untouched.
-
-
 * Correct the web-search plan's stale dispatch claim that a granted search runs on the host running the loop.
 
 Existing Issue: The plan's "What already exists" table says a `runsOn: 'workspace'` command runs on the host running the loop through `searchWebInTab`, while the same plan's design decision says a granted search runs on the side that owns the tab and `searchWebInTab` actually chooses the local or remote side from the tab's `remote` field, so the table describes the old routing the repaired ACP spec sentence just corrected. Severity: 3/10

@@ -80,22 +80,25 @@ to the project's copy too, so an empty project file falls through to the home fi
 suppressing it. There is no way to opt one project out of a credential configured in home other than
 giving that project a file with a different value in it.
 
-Nothing about the rest of the credential's journey depends on which of the two files supplied it. It
-is trimmed, injected into the workspaced tab's environment, and forwarded to a remote identically.
-The remote end resolves its own two locations the same way when nothing is forwarded to it, so the
+Nothing about the rest of a credential's journey depends on which of the two files supplied it. It
+is trimmed and forwarded to a remote identically. Whether it is also set in a spawned environment
+depends on the credential: the harness credentials are, and the two search keys are not. The remote
+end resolves its own two locations the same way when nothing is forwarded to it, so the
 fallback described under [[remote-server]] is the remote machine's home directory as well as the
 remote project's file.
 
-The six harness credentials — `claude-token`, `opencode-token`, `kilo-token`, `gemini-token`,
-`tavily-token`, and `tinyfish-token` — also reach an ACP agent that runs outside any workspace, under
-the same variables; the GitHub token does not (see [[acp]]).
+The four harness credentials — `claude-token`, `opencode-token`, `kilo-token`, and `gemini-token` —
+also reach an ACP agent that runs outside any workspace, under the same variables; neither the
+GitHub token nor the two search keys does (see [[acp]]).
 
 `tavily-token` and `tinyfish-token` hold the Tavily and TinyFish API keys the `web search` command
-uses. The search runs in the Janissary process itself, and the keys reach a workspaced tab's
-environment as `TAVILY_API_KEY` and `TINYFISH_API_KEY` like every other non-GitHub credential. They
-are read from the project's `.janissary/` first and then `~/.janissary/`, so a project file takes
-precedence over the home copy, and a file added while Janissary is running takes effect at the next
-restart.
+uses. The search runs in the Janissary process itself, which reads the keys through
+`getProjectTokens`, and no spawned process reads them: neither key is set in a workspaced tab's
+environment, and neither reaches an ACP agent inside or outside a workspace. They are read from the
+project's `.janissary/` first and then `~/.janissary/`, so a project file takes precedence over the
+home copy, and a file added while Janissary is running takes effect at the next restart. A remote
+tab's search still uses the key: it is forwarded in the provisioning map and read by the remote
+Janissary process, not by the tab's processes (see [[remote-server]]).
 
 Both locations are read by the janissary process itself, never from inside a workspace. `~/.janissary`
 is not carved into the sandbox's read allow-list, so a workspaced process cannot open the home copy

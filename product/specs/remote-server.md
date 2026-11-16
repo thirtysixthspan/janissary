@@ -757,15 +757,19 @@ token, or an `origin` on another host, a clone uses whatever transport the remot
 its credential helper or ssh keys, are never used.
 
 The local project's `.janissary/claude-token`, `.janissary/opencode-token`,
-`.janissary/kilo-token`, `.janissary/gemini-token`, `.janissary/tavily-token`, and
-`.janissary/tinyfish-token` travel the same way, in the same map on the same
-frame, and are injected as `CLAUDE_CODE_OAUTH_TOKEN`, `OPENCODE_API_KEY`, `KILO_API_KEY`,
-`TAVILY_API_KEY`, `TINYFISH_API_KEY`, and — for the Gemini key, both variables opencode reads —
-`GEMINI_API_KEY` and `GOOGLE_GENERATIVE_AI_API_KEY` into the same processes, each
+`.janissary/kilo-token`, and `.janissary/gemini-token` travel the same way, in the same map on the
+same frame, and are injected as `CLAUDE_CODE_OAUTH_TOKEN`, `OPENCODE_API_KEY`, `KILO_API_KEY`, and —
+for the Gemini key, both variables opencode reads — `GEMINI_API_KEY` and
+`GOOGLE_GENERATIVE_AI_API_KEY` into the same processes, each
 with the remote's own matching file as the same fallback, resolved the same two ways. It matters most on exactly the hosts the GitHub
 token's isolation-independence describes: a Keychain and the sandbox both need macOS, so on a Linux
 remote the harness has no credential store to fall back on and its own credentials file is denied,
 which without a forwarded token leaves it reporting itself logged out.
+
+`.janissary/tavily-token` and `.janissary/tinyfish-token` travel in that map too, with the same
+fallback to the remote's own matching file. They are not injected into the tab's processes: the
+far-side Janissary process reads them for `web search`, because no spawned process reads either key
+(see [[web-search]] and [[sandbox]]).
 
 The git name and email of the user who opened janissary ride on the same provisioning frame, and are
 injected as `GIT_AUTHOR_NAME`/`GIT_AUTHOR_EMAIL` and `GIT_COMMITTER_NAME`/`GIT_COMMITTER_EMAIL` into

@@ -87,14 +87,21 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('leaves the rest of an unconfined environment alone rather than scrubbing it', () => {
+  // The pass-through path scrubs nothing else, which is deliberate, but a credential only the
+  // janissary process reads does not belong in a spawn even as an ambient copy.
+  it('drops an ambient search key from an unconfined workspace spawn and scrubs nothing else', () => {
     configureUnconfined();
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
-    const env = { PATH: '/usr/bin', SSH_AUTH_SOCK: '/tmp/agent.sock', NPM_TOKEN: 'ambient' };
+    const env = {
+      PATH: '/usr/bin', SSH_AUTH_SOCK: '/tmp/agent.sock', NPM_TOKEN: 'ambient',
+      TAVILY_API_KEY: 'ambient', TINYFISH_API_KEY: 'ambient',
+    };
     const result = sandboxSpawn({ workspaceDir, tokens: { github: 'scoped-token' } }, 'bash', [], env);
     expect(result.env.SSH_AUTH_SOCK).toBe('/tmp/agent.sock');
     expect(result.env.NPM_TOKEN).toBe('ambient');
     expect(result.env.PATH).toBe('/usr/bin');
+    expect(result.env.TAVILY_API_KEY).toBeUndefined();
+    expect(result.env.TINYFISH_API_KEY).toBeUndefined();
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
@@ -168,14 +175,16 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('still injects both web search credentials for a workspaced spawn when nothing is confined', () => {
+  // The search runs in the janissary process, so the unconfined path injects neither search key
+  // even when both token files are configured, just as the confined path does.
+  it('injects neither web search credential for a workspaced spawn when nothing is confined', () => {
     configureUnconfined();
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const tokens = { tavily: 'tvly_live_key', tinyfish: 'tinyfish_live_key' };
     const result = sandboxSpawn({ workspaceDir, tokens }, 'bash', [], { PATH: '/usr/bin' });
     expect(result.command).toBe('bash');
-    expect(result.env.TAVILY_API_KEY).toBe('tvly_live_key');
-    expect(result.env.TINYFISH_API_KEY).toBe('tinyfish_live_key');
+    expect(result.env.TAVILY_API_KEY).toBeUndefined();
+    expect(result.env.TINYFISH_API_KEY).toBeUndefined();
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 

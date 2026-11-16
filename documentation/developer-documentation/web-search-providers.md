@@ -86,7 +86,9 @@ export const webSearchProviderCatalog = [
 
 ## Token rows
 
-`token` names a row in `PROJECT_TOKENS` in `src/project/tokens.ts`. The row's `file` is the `.janissary/` file read for the value, and its `env` lists the variables that value is set under. A new provider needs a new row, never an existing one: `token: 'tavily'` in a provider of your own would hand it Tavily's key, and `auto` would treat that provider as configured whenever the Tavily token file exists.
+`token` names a row in `PROJECT_TOKENS` in `src/project/tokens.ts`. The row's `file` is the `.janissary/` file read for the value, and its `env` lists the variables the value would be set under in a spawned process. A new provider needs a new row, never an existing one: `token: 'tavily'` in a provider of your own would hand it Tavily's key, and `auto` would treat that provider as configured whenever the Tavily token file exists.
+
+A search provider's key is read by the Janissary process, which runs the search. No spawned process reads it, so the row sets `spawn: false`: the key is still loaded at startup and still forwarded to a remote machine, but no workspaced shell, harness, or ACP agent is handed it, and an ambient copy is scrubbed. A row that omits `spawn` defaults to true, which is right for a credential a spawned process needs.
 
 Add the `example` row beside the others:
 
@@ -95,10 +97,11 @@ Add the `example` row beside the others:
   name: 'example',
   file: 'example-token',
   env: ['EXAMPLE_API_KEY'],
+  spawn: false,
 },
 ```
 
-`name` must be unique in the table and is the value `token` carries, `file` must be a file no other row reads, and `env` names every variable the provider's consumer reads. The `'example'` value in the snippets on this page is a placeholder for this row; it is not a `ProjectTokenName` until the row exists.
+`name` must be unique in the table and is the value `token` carries, and `file` must be a file no other row reads. `env` lists the environment variables the credential would be set under for a spawned process; a search row keeps the list even though `spawn: false` keeps it out of every spawn. The `'example'` value in the snippets on this page is a placeholder for this row; it is not a `ProjectTokenName` until the row exists.
 
 Adding a row is not only this table. The specs that enumerate the token files — `product/specs/workspaced-agent.md`, `product/specs/sandbox.md`, `product/specs/remote-server.md`, and `product/specs/acp.md` today — need the new file wherever they list the existing ones, as does the user documentation table in `documentation/user-documentation/advanced-agents/tokens.md`. Every new row also moves `REMOTE_PROTOCOL_VERSION` in `src/remote/protocol.ts`, with no row exempt: `getProjectTokens()` in `src/project/tokens.ts` supplies every configured row to the remote `provision` frame that `src/remote/entry-factory.ts` sends, and `src/remote/serve-provision.ts` merges the forwarded map for the workspace clone, the processes, and ACP. A remote decodes that map against its own `PROJECT_TOKENS` table, and `src/remote/frame/decode-provision.ts` rejects an unknown name by failing the whole provisioning request, so a row a peer does not know breaks provisioning rather than merely going unused.
 
