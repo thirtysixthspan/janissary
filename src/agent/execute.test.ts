@@ -15,6 +15,7 @@ import { AcpSessionRecords } from '../acp-records/manager.js';
 import { AgentRecordFeed } from './record-feed.js';
 import type { AcpLoopDeps, AcpLoopHandlers } from '../acp/types.js';
 import * as commandTools from './command-tools.js';
+import * as fileRead from '../file-read/read.js';
 
 const { connectAcp, runAcpToolLoop, sandboxWillConfine } = vi.hoisted(() => ({
   connectAcp: vi.fn(), runAcpToolLoop: vi.fn(), sandboxWillConfine: vi.fn(() => true),
@@ -172,8 +173,8 @@ describe('agent shared driver host', () => {
   });
   afterEach(async () => { await run.finish('completed'); rmSync(root, { recursive: true, force: true }); vi.restoreAllMocks(); });
 
-  function start(remote = false) {
-    const execution = executeAgentRun(run, invocation, OPENCODE_MODELS[0], undefined, '', modelManagers() as never, remote ? { channel, host: 'build-box' } : undefined);
+  function start(remote = false, managers = modelManagers()) {
+    const execution = executeAgentRun(run, invocation, OPENCODE_MODELS[0], undefined, '', managers as never, remote ? { channel, host: 'build-box' } : undefined);
     return execution;
   }
 
@@ -290,6 +291,40 @@ describe('agent shared driver host', () => {
     listener!.onRunEnd('answered');
     await execution;
     run.record = undefined;
+  });
+
+  it.each([
+    ['granted', ['file', 'db', 'question']],
+    ['ungranted', []],
+  ])('refuses a caller-delivered file grep without dispatch or a workspace read when %s', async (_label, grants) => {
+    run.setSnapshot({ ...run.snapshot, grants });
+    const dispatch = vi.fn();
+    const managers = { ...modelManagers(), command: { dispatchLineInInvocation: dispatch } };
+    const execution = start(true, managers);
+    listener!.onReady(true);
+    await vi.waitFor(() => expect(sent.some((frame) => frame.type === 'acp-run')).toBe(true));
+    const activity = vi.fn();
+    run.record = { activity } as unknown as AgentRecordFeed;
+    const read = vi.spyOn(fileRead, 'readWorkspaceCommand');
+    try {
+      const command = '  /FiLe   GrEp   TODO  ';
+      const refusal = `Agent: command not permitted: ${command}.`;
+      listener!.onToolRequest({ type: 'acp-tool-request', id: 'agent', request: 4, command });
+      await vi.waitFor(() => expect(sent.at(-1)).toStrictEqual({
+        type: 'acp-tool-result', id: 'agent', request: 4, output: refusal,
+      }));
+      expect(dispatch).not.toHaveBeenCalled();
+      expect(read).not.toHaveBeenCalled();
+      expect(activity.mock.calls).toEqual([['tool', command], ['tool', refusal]]);
+
+      listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'start', first: true });
+      listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'end', display: 'Done' });
+      listener!.onRunEnd('answered');
+      await execution;
+    } finally {
+      read.mockRestore();
+      run.record = undefined;
+    }
   });
 
   it('drops tool records and workspace work after termination', async () => {

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type * as FileSystem from 'node:fs';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { DEFAULT_ROLES, readRolesFile, writeRolesFile } from './roles-file.js';
@@ -11,10 +11,18 @@ vi.mock('node:fs', async (importOriginal) => {
   return { ...actual, writeFileSync: vi.fn(actual.writeFileSync), renameSync: vi.fn(actual.renameSync) };
 });
 
-afterEach(() => { vi.mocked(writeFileSync).mockClear(); vi.mocked(renameSync).mockClear(); });
+const roots: string[] = [];
+
+afterEach(() => {
+  vi.mocked(writeFileSync).mockClear();
+  vi.mocked(renameSync).mockClear();
+  for (const root of roots) rmSync(root, { recursive: true, force: true });
+  roots.length = 0;
+});
 
 function directories(): { home: string; root: string } {
   const base = mkdtempSync(path.join(tmpdir(), 'janus-roles-file-'));
+  roots.push(base);
   const home = path.join(base, 'home');
   const root = path.join(base, 'project');
   mkdirSync(home, { recursive: true });
@@ -66,7 +74,7 @@ describe('reading the roles in effect', () => {
       ],
       commands: [
         'db sqlite list', 'db sqlite query', 'browser goto', 'browser content',
-        'question ask', 'question approve', 'file read', 'file glob',
+        'question ask', 'question approve', 'file read', 'file glob', 'file grep',
       ],
     });
     expect(file['tell']).toEqual({
@@ -75,9 +83,11 @@ describe('reading the roles in effect', () => {
       commands: [
         'db sqlite create', 'db sqlite delete', 'db sqlite query', 'db sqlite list',
         'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve', 'file read',
-        'file glob', 'file write', 'file edit',
+        'file glob', 'file grep', 'file write', 'file edit',
       ],
     });
+    expect(file['ask'].commands).toHaveLength(9);
+    expect(file['tell'].commands).toHaveLength(14);
     expect(DEFAULT_ROLES.slice(0, 5).every((role) => role.commands.length === 0)).toBe(true);
   });
 
@@ -88,6 +98,8 @@ describe('reading the roles in effect', () => {
     expect(read.source).toBe('default');
     expect(read.problem).toBeUndefined();
     expect(read.roles).toEqual(DEFAULT_ROLES);
+    expect(read.roles.find((role) => role.name === 'ask')?.commands).toHaveLength(9);
+    expect(read.roles.find((role) => role.name === 'tell')?.commands).toHaveLength(14);
     expect(existsSync(homeFile(home))).toBe(false);
   });
 
@@ -125,6 +137,31 @@ describe('reading the roles in effect', () => {
     const read = readRolesFile(home, root);
 
     expect(read.roles.map((role) => role.commands)).toEqual([ask, tell]);
+    expect(readFileSync(homeFile(home), 'utf8')).toBe(before);
+  });
+
+  it('leaves a saved ask and tell role with the previous default grants untouched on disk', () => {
+    const { home, root } = directories();
+    const ask = [
+      'db sqlite list', 'db sqlite query', 'browser goto', 'browser content',
+      'question ask', 'question approve', 'file read', 'file glob',
+    ];
+    const tell = [
+      'db sqlite create', 'db sqlite delete', 'db sqlite query', 'db sqlite list',
+      'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve', 'file read',
+      'file glob', 'file write', 'file edit',
+    ];
+    writeJson(homeFile(home), {
+      ask: { description: 'Questions.', entries: [], commands: ask },
+      tell: { description: 'Tasks.', entries: [], commands: tell },
+    });
+    const before = readFileSync(homeFile(home), 'utf8');
+
+    const read = readRolesFile(home, root);
+
+    expect(read.roles.map((role) => role.commands)).toEqual([ask, tell]);
+    expect(read.roles[0]?.commands).not.toContain('file grep');
+    expect(read.roles[1]?.commands).not.toContain('file grep');
     expect(readFileSync(homeFile(home), 'utf8')).toBe(before);
   });
 
@@ -174,6 +211,36 @@ describe('reading the roles in effect', () => {
     expect(emptied.source).toBe('project');
     expect(emptied.roles).toEqual([]);
     expect(emptied.problem).toBeUndefined();
+  });
+
+  it('keeps a saved project file in effect and preserves both files byte for byte', () => {
+    const { home, root } = directories();
+    const homeAsk = [
+      'db sqlite list', 'db sqlite query', 'browser goto', 'browser content',
+      'question ask', 'question approve', 'file read', 'file glob', 'file grep',
+    ];
+    const projectTell = [
+      'db sqlite create', 'db sqlite delete', 'db sqlite query', 'db sqlite list',
+      'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve', 'file read',
+      'file glob', 'file grep', 'file write', 'file edit',
+    ];
+    writeJson(homeFile(home), {
+      ask: { description: 'Home questions.', entries: [], commands: homeAsk },
+    });
+    writeJson(projectFile(root), {
+      ask: { description: 'Project questions.', entries: [], commands: ['question ask'] },
+      tell: { description: 'Project tasks.', entries: [], commands: projectTell },
+    });
+    const homeBefore = readFileSync(homeFile(home), 'utf8');
+    const projectBefore = readFileSync(projectFile(root), 'utf8');
+
+    const read = readRolesFile(home, root);
+
+    expect(read.source).toBe('project');
+    expect(read.path).toBe(projectFile(root));
+    expect(read.roles.map((role) => role.commands)).toEqual([['question ask'], projectTell]);
+    expect(readFileSync(homeFile(home), 'utf8')).toBe(homeBefore);
+    expect(readFileSync(projectFile(root), 'utf8')).toBe(projectBefore);
   });
 
   it('keeps the roles that decode and reports the ones that do not', () => {

@@ -3,12 +3,15 @@ import type { Managers } from '../managers.js';
 import { appendCommandOutput } from '../command/append.js';
 import { isFileGlobCommandLine } from '../file-glob/command.js';
 import { globFilesInTab } from '../file-glob/tab-glob.js';
+import { isFileGrepCommandLine } from '../file-grep/command.js';
+import { grepFilesInTab } from '../file-grep/tab-grep.js';
 import { readFileInTab } from '../file-read/tab-read.js';
 import { isFileMutationCommandLine } from '../file-write/command.js';
 import { mutateFileInTab } from '../file-write/tab-write.js';
 
 function fileOutput(managers: Managers, label: string, line: string): Promise<string> {
   if (isFileGlobCommandLine(line)) return globFilesInTab(managers, label, line);
+  if (isFileGrepCommandLine(line)) return grepFilesInTab(managers, label, line);
   if (isFileMutationCommandLine(line)) return mutateFileInTab(managers, label, line);
   return readFileInTab(managers, label, line);
 }
@@ -22,6 +25,8 @@ export const command: Command = {
     'file read src/a.ts --offset 10 --limit 5',
     'file glob **/*.ts',
     'file glob *.md --path product --limit 20',
+    'file grep TODO',
+    'file grep --literal --include *.md request timed out',
     String.raw`file write {"path":"notes.txt","content":"hello\n"}`,
     'file edit {"path":"notes.txt","oldString":"hello","newString":"hi"}',
   ],

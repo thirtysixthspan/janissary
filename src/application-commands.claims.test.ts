@@ -46,5 +46,10 @@ describe('application command inventory plugin claims', () => {
     for (const name of NATIVE_ACP_COMMANDS) {
       expect(rows.filter((row) => row.kind === 'native' && row.name === name), name).toHaveLength(1);
     }
+    const grepRows = rows.filter((row) => row.name === 'file grep');
+    expect(grepRows).toHaveLength(1);
+    expect(grepRows[0].kind).toBe('native');
+    expect(rows.map((row) => row.name))
+      .toEqual(rows.map((row) => row.name).toSorted((left, right) => left.localeCompare(right)));
   });
 });

@@ -3,7 +3,9 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, symlinkSync, tr
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { checkLexicalPath, checkProtectedPath, checkRealTarget, classifyStats, createRealTargetCheck, FILE_POLICY_MAX_BYTES } from './policy.js';
+import {
+  checkLexicalPath, checkProtectedPath, checkRealTarget, classifyStats, createRealTargetCheck, FILE_POLICY_MAX_BYTES, isSecretPath,
+} from './policy.js';
 
 let root: string;
 let outside: string;
@@ -24,6 +26,21 @@ function writeAt(base: string, relative: string, content = 'text\n'): string {
   writeFileSync(target, content);
   return target;
 }
+
+describe('isSecretPath', () => {
+  it.each([
+    ['src/a.ts', false],
+    ['', false],
+    ['.ENV', true],
+    [path.join('nested', '.env.local'), true],
+    [path.join('nested', '.config', 'gh', 'hosts.yml'), true],
+    [path.join('.config', 'gh', 'other.yml'), false],
+    ['.environment', false],
+    [path.join('.env', 'config'), false],
+  ])('classifies %j as secret %s', (relative, expected) => {
+    expect(isSecretPath(relative)).toBe(expected);
+  });
+});
 
 describe('checkLexicalPath', () => {
   it('refuses an absolute path as outside the workspace', () => {

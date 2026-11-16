@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { afterEach, describe, expect, it } from 'vitest';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
@@ -8,8 +8,16 @@ import {
 } from './ask-role.js';
 import type { AcpPromptResult } from './types.js';
 
+const roots: string[] = [];
+
+afterEach(() => {
+  for (const root of roots) rmSync(root, { recursive: true, force: true });
+  roots.length = 0;
+});
+
 function directories(): { home: string; root: string } {
   const base = mkdtempSync(path.join(tmpdir(), 'janus-ask-role-'));
+  roots.push(base);
   const home = path.join(base, 'home');
   const root = path.join(base, 'project');
   mkdirSync(home, { recursive: true });
@@ -26,7 +34,7 @@ const CLAUDE = { harness: 'claude', model: 'claude-haiku-4-5', effort: 'high' };
 const OPENCODE = { harness: 'opencode', model: 'opencode-go/deepseek-v4.1-flash', effort: 'medium' };
 const CODEX = { harness: 'codex', model: 'gpt-6-luna', effort: 'high' };
 const ASK_COMMANDS = [
-  'db sqlite list', 'db sqlite query', 'browser goto', 'browser content', 'question ask', 'question approve', 'file read', 'file glob',
+  'db sqlite list', 'db sqlite query', 'browser goto', 'browser content', 'question ask', 'question approve', 'file read', 'file glob', 'file grep',
 ];
 
 describe('askRoleEntries', () => {
@@ -78,13 +86,16 @@ describe('readRoleSettings', () => {
   it('uses built-in entries and command grants when the requested role is absent', () => {
     const { home, root } = directories();
     writeRoles(home, { planning: { description: 'Plans.', entries: [], commands: [] } });
+    const file = path.join(home, '.janissary', 'roles.json');
+    const before = readFileSync(file, 'utf8');
 
     expect(readRoleSettings(root, 'ask', home)).toEqual({
       name: 'ask', entries: [OPENCODE, CLAUDE, CODEX], commands: ASK_COMMANDS,
     });
     const tell = readRoleSettings(root, 'tell', home).commands;
-    expect(tell).toHaveLength(13);
-    expect(tell).toEqual(expect.arrayContaining(['file glob', 'file write', 'file edit']));
+    expect(tell).toHaveLength(14);
+    expect(tell).toEqual(expect.arrayContaining(['file glob', 'file grep', 'file write', 'file edit']));
+    expect(readFileSync(file, 'utf8')).toBe(before);
   });
 
   it('keeps an existing role grant list empty while falling back from empty model entries', () => {

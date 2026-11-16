@@ -16,6 +16,7 @@ describe('native ACP commands', () => {
       'question approve',
       'file read',
       'file glob',
+      'file grep',
       'file write',
       'file edit',
     ]);
@@ -33,6 +34,8 @@ describe('native ACP commands', () => {
     ['question approve 123', 'question'],
     ['file read notes/a.md', 'file'],
     ['file glob **/*.ts', 'file'],
+    ['file grep', 'file'],
+    ['file grep --literal TODO', 'file'],
   ] as const)('assigns %s to %s, including trailing arguments', (command, tool) => {
     expect(nativeCommandTool(command)).toBe(tool);
     expect(isNativeCommand(command)).toBe(true);
@@ -42,6 +45,14 @@ describe('native ACP commands', () => {
   it('matches command words case-insensitively and returns the canonical vocabulary value', () => {
     expect(nativeCommandName('  BROWSER GOTO https://example.test  ')).toBe('browser goto');
     expect(nativeCommandTool('DB SQLITE QUERY store SELECT 1')).toBe('database');
+    expect(nativeCommandName('  FILE   GREP\t--literal TODO  ')).toBe('file grep');
+    expect(nativeCommandTool('FILE GREP')).toBe('file');
+  });
+
+  it('classifies malformed grep arguments by the command name', () => {
+    expect(nativeCommandName('file grep [unclosed')).toBe('file grep');
+    expect(nativeCommandTool('file grep --path')).toBe('file');
+    expect(isNativeCommand('FILE grep --literal --')).toBe(true);
   });
 
   it('rejects unknown commands and words that only start with a native command', () => {
@@ -52,6 +63,8 @@ describe('native ACP commands', () => {
     expect(nativeCommandName('file')).toBeUndefined();
     expect(nativeCommandName('file readme x')).toBeUndefined();
     expect(nativeCommandName('file globs x')).toBeUndefined();
+    expect(nativeCommandName('file greps x')).toBeUndefined();
+    expect(nativeCommandName('file grep-x x')).toBeUndefined();
     expect(nativeCommandName('files x')).toBeUndefined();
   });
 });

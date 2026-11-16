@@ -1,6 +1,6 @@
 ### file
 
-Read a text file from the workspace and print it as numbered lines in the current tab, find files there by path, or write or edit a text file there. A local tab reads from its workspace, or from the project directory when the tab has no workspace. Paths are relative to that root. A remote tab reads from its remote workspace clone on the remote machine, never from the local disk, with paths relative to that workspace. The output carries no host tag.
+Read a text file from the workspace and print it as numbered lines in the current tab, find files there by path, search those files for text, or write or edit a text file there. A local tab reads from its workspace, or from the project directory when the tab has no workspace. Paths are relative to that root. A remote tab reads from its remote workspace clone on the remote machine, never from the local disk, with paths relative to that workspace. The output carries no host tag.
 
 **Usage**
 
@@ -8,11 +8,13 @@ Read a text file from the workspace and print it as numbered lines in the curren
 
 `file glob <pattern> [--path <dir>] [--hidden] [--dirs] [--limit <n>]`
 
+`file grep [--literal] [--word] [--case-sensitive] [--path <path>] [--include <globs>] [--exclude <globs>] [--limit <n>] [--] <pattern>`
+
 `file write <JSON>`
 
 `file edit <JSON>`
 
-For `file read`, `--offset` is the first line to print and defaults to 1, and `--limit` is the number of lines to print and defaults to 2000. One read prints at most 2000 lines, and files over 5 MB are refused. The **Output** and **Errors** notes below cover `file read` too. `file glob` has its own flags and defaults under **Finding files**. `file write` and `file edit` are under **Writing and editing**.
+For `file read`, `--offset` is the first line to print and defaults to 1, and `--limit` is the number of lines to print and defaults to 2000. One read prints at most 2000 lines, and files over 5 MB are refused. The **Output** and **Errors** notes below cover `file read` too. `file glob` has its own flags and defaults under **Finding files**. `file grep` has its own flags and defaults under **Searching contents**. `file write` and `file edit` are under **Writing and editing**.
 
 **Output**
 
@@ -77,6 +79,37 @@ A `--path` naming a secret folder, such as `.aws`, prints `(no matches)`.
 On a remote tab, `Remote connection unavailable.` is printed when the tab has no live connection or its workspace is still being prepared. A connection that drops or stops answering mid-search prints `The remote connection ended.` or `The remote machine did not answer in time.`.
 
 A missing pattern, a second pattern, an unknown or repeated flag, a `--path` with no value or followed by another flag, and a `--limit` that is not a positive whole number or is above 1000 all print the usage line `Usage: file glob <pattern> [--path <dir>] [--hidden] [--dirs] [--limit <n>]`. A pattern longer than 1024 characters, whose `{a,b}` choices combine into more than 64 patterns, with more than three `*` wildcards in one name, or with three in one name when its `{a,b}` choices make more than two patterns is refused with `Pattern too complex: use at most 1024 characters, 64 {a,b} combinations, and three * wildcards in one name, or two when {a,b} choices make more than two patterns.`, because matching it could take minutes. So `*-*-*.{ts,js}` is allowed but `*-*-*.{ts,js,md}` is not. A `**` folder wildcard does not count as a `*`. A pattern with a `..` folder in it, in any of its `{a,b}` choices and with `\` read as `/`, is refused with `Pattern cannot contain a .. folder: file glob only lists paths inside --path.`, because every result lies inside `--path`. Names that only contain dots, such as `..a` or `.env`, are allowed.
+
+**Searching contents**
+
+`file grep <pattern>` prints one line per matching line, `<path>:<line>: <preview>`, such as `src/file-read/command.ts:9: export const FILE_READ_USAGE = …`. It searches the same root as `file read`: the tab's workspace, or the project directory when the tab has none. A remote tab searches only its remote workspace on the remote machine, never the local disk.
+
+Flags come first, in any order, and each may appear once. The first token that is not one of these flags starts the pattern, and the rest of the line, including internal spaces, is the pattern. A `--` ends the flags, so `file grep --literal -- --limit` searches for `--limit`. Without `--`, an unknown flag before the pattern prints the usage line. Flag values are single tokens with no whitespace.
+
+- `--literal` matches the pattern as fixed text, so regular-expression punctuation searches for itself.
+- `--word` requires the match to sit on a word boundary.
+- `--case-sensitive` turns on case sensitivity; matching is case-insensitive by default.
+- `--path <path>` searches only that folder, or that single file. `.`, `./src`, and `src/` are accepted.
+- `--include <globs>` and `--exclude <globs>` filter by comma-separated globs such as `*.ts,*.tsx`. A glob without a slash matches a name at any depth; one with a slash is anchored to `--path`. A plain name selects a whole folder, exclude wins over include, and the comma always separates patterns, so write `*.js,*.jsx` rather than `*.{js,jsx}`.
+- `--limit <n>` prints at most `n` rows, from 1 to 250, and defaults to 100.
+
+The pattern is a JavaScript regular expression, matched one line at a time: `^` and `$` anchor to that line, and no pattern spans two lines. A malformed pattern prints the engine's message plus `Use --literal to search for the text as typed.`. A pattern that can match empty text prints `Pattern matches empty text, so it would match every line: <pattern>.` and searches nothing.
+
+Output paths are root-relative with forward slashes, even when `--path` narrows the search, so a path can go straight to `file read`. Rows come in path order, then line order. The preview trims leading whitespace, shows a window of 200 UTF-16 code units around the first match with `…` at a cut end, and drops a trailing carriage return. Lines are split on a newline only, so a `$` pattern does not match a line that ends in a carriage return. When nothing matches, the output is `(no matches)`.
+
+When more lines match than the limit, the output ends with `(showing the first <n> matches; narrow the pattern or raise --limit)`. A search stops after 30 seconds and ends with `(search stopped after 30 seconds; narrow the pattern or --path)`. A pattern that takes too long on one file ends the search with `(search stopped: the pattern took too long on <path>; simplify it or use --literal)`. Only the ending that happens first is printed.
+
+Searches use the same file set as Quick Open: tracked and untracked files git does not ignore, so a tracked dotfile such as `.github/workflows/ci.yml` is searched. Outside a git repository, every file is searched except those under `.git`, `.svn`, and `.hg` and the `.DS_Store` and `Thumbs.db` files, so `node_modules` is searched too. Files over 2 MB and binary files are skipped without a message. Secret files and symbolic links are skipped and never searched. There is no `--hidden` flag.
+
+A bad `--path` prints one line naming it as you typed it: `Path not found: <path>.` when nothing exists there, and `Outside the workspace: <path>.` for an absolute path, a path that leaves the root, or a path whose real location is outside the root. A `--path` naming a single file is filtered like a directory search: when that file is git-ignored, secret, binary, over 2 MB, or excluded by `--include` or `--exclude`, the output is `(no matches)` with no reason. A symbolic link named as `--path` is skipped the same way when it is dangling or resolves inside the root, while one that resolves outside the root is refused as `Outside the workspace: <path>.`.
+
+Malformed arguments print `Usage: file grep [--literal] [--word] [--case-sensitive] [--path <path>] [--include <globs>] [--exclude <globs>] [--limit <n>] [--] <pattern>`. A missing pattern, an unknown flag before the pattern, a repeated flag, a flag with no value, and a `--limit` that is not a whole number from 1 to 250 all print it.
+
+On a remote tab, `Remote connection unavailable.` is printed when the tab has no live connection or its workspace is still being prepared. A connection that drops or stops answering mid-search prints `The remote connection ended.` or `The remote machine did not answer in time.`.
+
+- `file grep TODO` finds every line containing `TODO`.
+- `file grep --literal --include *.md request timed out` searches Markdown files for that exact phrase.
+- `file grep --path src --include commands/*.ts --limit 20 FILE_READ_USAGE` searches TypeScript files directly inside `src/commands/`.
 
 **Writing and editing**
 

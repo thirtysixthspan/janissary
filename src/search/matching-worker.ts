@@ -7,6 +7,8 @@ import type { SearchMatch } from './types.js';
 
 export const MATCHING_JOB_DEADLINE_MS = 1000;
 
+export class MatcherDeadlineError extends Error {}
+
 type WorkerPort = {
   on(event: 'message', listener: (message: unknown) => void): unknown;
   on(event: 'error', listener: (error: Error) => void): unknown;
@@ -95,7 +97,7 @@ export function createMatcherWorker(
     }
     const id = ++nextId;
     const timer = setTimeout(() => {
-      terminate(new Error(`Search matching exceeded its ${deadline} ms deadline`));
+      terminate(new MatcherDeadlineError(`Search matching exceeded its ${deadline} ms deadline`));
     }, deadline);
     pending.set(id, { resolve, reject, timer });
     worker.postMessage(build(id));

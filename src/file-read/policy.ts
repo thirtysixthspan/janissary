@@ -20,7 +20,7 @@ function containsRun(segments: string[], run: string[]): boolean {
   return false;
 }
 
-function isSecretPath(relative: string): boolean {
+export function isSecretPath(relative: string): boolean {
   const segments = relative.toLowerCase().split(path.sep);
   const last = segments.at(-1) ?? '';
   if (last === '.env' || last.startsWith('.env.')) return true;

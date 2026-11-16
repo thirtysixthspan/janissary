@@ -57,6 +57,71 @@ describe('agent command tools', () => {
     expect(dispatch).toHaveBeenCalledTimes(1);
   });
 
+  const GREP_FORMS = [
+    'file grep TODO',
+    'file grep',
+    'file grep --limit',
+    'file grep [unclosed',
+    'FILE GREP TODO',
+    '  file\tgrep TODO  ',
+    '/file grep TODO',
+    '  /FiLe   GrEp   TODO  ',
+  ];
+
+  it.each([
+    ['granted', ['file']],
+    ['ungranted', []],
+  ])('refuses file grep lines with or without the file grant when %s', async (_label, grants) => {
+    const dispatch = vi.fn();
+    const managers = { command: { dispatchLineInInvocation: dispatch } } as unknown as Managers;
+
+    for (const command of GREP_FORMS) {
+      await expect(runGrantedAgentCommand(command, { ...snapshot, grants }, managers, invocation('grep')))
+        .resolves.toBe(`Agent: command not permitted: ${command}.`);
+    }
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['granted', ['file']],
+    ['ungranted', []],
+  ])('leaves file greps and file grep-x to the ordinary grant check when %s', async (_label, grants) => {
+    const dispatch = vi.fn(async (_label: string, input: string) => ({ dispatched: true, output: `ran ${input}` }));
+    const managers = { command: { dispatchLineInInvocation: dispatch } } as unknown as Managers;
+
+    for (const command of ['file greps x', 'file grep-x x']) {
+      const result = await runGrantedAgentCommand(command, { ...snapshot, grants }, managers, invocation('neighbor'));
+      expect(result).toBe(grants.length > 0 ? `ran ${command}` : `Agent: command not permitted: ${command}.`);
+    }
+    if (grants.length > 0) {
+      expect(dispatch.mock.calls.map((call) => call.slice(0, 2)))
+        .toEqual([['janus', 'file greps x'], ['janus', 'file grep-x x']]);
+    } else {
+      expect(dispatch).not.toHaveBeenCalled();
+    }
+  });
+
+  it.each([
+    ['granted', ['file'], 'read'],
+    ['ungranted', [], 'Agent: command not permitted: /FILE READ a.md.'],
+  ])('keeps a caller file read to dispatch and its grant check when %s', async (_label, grants, expected) => {
+    const dispatch = vi.fn(async (_label: string, _input: string, _context: CommandInvocationContext) => ({
+      dispatched: true,
+      output: 'read',
+    }));
+    const managers = { command: { dispatchLineInInvocation: dispatch } } as unknown as Managers;
+
+    await expect(runGrantedAgentCommand('/FILE READ a.md', { ...snapshot, grants }, managers, invocation('read')))
+      .resolves.toBe(expected);
+    if (grants.length > 0) {
+      expect(dispatch).toHaveBeenCalledExactlyOnceWith(
+        'janus', 'FILE READ a.md', expect.objectContaining({ runId: 'read', awaitResult: true }),
+      );
+    } else {
+      expect(dispatch).not.toHaveBeenCalled();
+    }
+  });
+
   it('does not treat file globs as a glob line, leaving it to the grant check', async () => {
     const dispatch = vi.fn(async () => ({ dispatched: true, output: 'not a glob' }));
     const managers = { command: { dispatchLineInInvocation: dispatch } } as unknown as Managers;

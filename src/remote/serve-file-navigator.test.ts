@@ -1,14 +1,29 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
+import type * as fileSystemPromises from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { RemoteFileNavigators } from './serve-file-navigator.js';
 import type { FileSystemPort, WatchHandle } from '../file-navigator/filesystem-port.js';
-import type { ClientFrame, ServerFrame } from './protocol-frames.js';
+import type { ClientFrame, RemoteFilesystemArgumentsByOperation, ServerFrame } from './protocol-frames.js';
 import { contentHash, SAVE_CONFLICT_ERROR } from '../editor/save-conflict.js';
 import { readWorkspaceLines } from '../file-read/read.js';
 import { FILE_READ_MAX_LIMIT } from '../file-read/command.js';
 import { operationDescriptor } from './filesystem/operations.js';
+import type * as grepModule from '../file-grep/grep.js';
+import { grepWorkspace } from '../file-grep/grep.js';
+import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof fileSystemPromises>();
+  return { ...actual, readFile: vi.fn(actual.readFile) };
+});
+
+vi.mock('../file-grep/grep.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof grepModule>();
+  return { ...actual, grepWorkspace: vi.fn(actual.grepWorkspace) };
+});
 
 type Request = Extract<ClientFrame, { type: 'filesystem-request' }>;
 
@@ -16,10 +31,14 @@ describe('RemoteFileNavigators', () => {
   let root: string;
   let frames: ServerFrame[];
   let files: RemoteFileNavigators;
+  let outsideRoots: string[];
 
   beforeEach(() => {
     root = mkdtempSync(path.join(tmpdir(), 'janus-remote-files-'));
     frames = [];
+    outsideRoots = [];
+    vi.mocked(grepWorkspace).mockClear();
+    vi.mocked(readFile).mockClear();
     files = new RemoteFileNavigators((frame) => { frames.push(frame); }, root);
     files.open('files1');
   });
@@ -27,6 +46,7 @@ describe('RemoteFileNavigators', () => {
   afterEach(() => {
     files.dispose();
     rmSync(root, { recursive: true, force: true });
+    for (const outside of outsideRoots) rmSync(outside, { recursive: true, force: true });
   });
 
   async function request(operation: Request['operation'], args: Request['args']): Promise<ServerFrame> {
@@ -316,6 +336,186 @@ describe('RemoteFileNavigators', () => {
 
     expect(await request('glob-paths', { pattern: '*', dir: 'missing' })).toMatchObject({ result: { text: 'Directory not found: missing.' } });
     expect(await request('glob-paths', { pattern: '*', dir: '.aws' })).toMatchObject({ result: { text: '(no matches)' } });
+  });
+
+  describe('grep-files', () => {
+    function args(overrides: Partial<RemoteFilesystemArgumentsByOperation['grep-files']> = {}) {
+      return {
+        pattern: 'TODO', include: '', exclude: '',
+        literal: false, word: false, caseSensitive: false, limit: 100, ...overrides,
+      };
+    }
+
+    function writeFixture(): void {
+      mkdirSync(path.join(root, 'src', 'nested'), { recursive: true });
+      writeFileSync(path.join(root, 'b.txt'), 'TODO at root');
+      writeFileSync(path.join(root, 'src', 'a.txt'), 'TODO in src');
+      writeFileSync(path.join(root, 'src', 'nested', 'c.txt'), 'TODO deep');
+    }
+
+    function outsideDirectory(): string {
+      const outside = mkdtempSync(path.join(tmpdir(), 'janus-remote-outside-'));
+      outsideRoots.push(outside);
+      writeFileSync(path.join(outside, 'outside.txt'), 'TODO outside');
+      return outside;
+    }
+
+    function linkOutside(name: string, outside = outsideDirectory()): string {
+      symlinkSync(outside, path.join(root, name));
+      return outside;
+    }
+
+    function regexMessage(pattern: string): string {
+      try {
+        new RegExp(pattern, 'i');
+      } catch (error) {
+        return error instanceof Error ? error.message : String(error);
+      }
+      throw new Error(`Expected a malformed regular expression: ${pattern}`);
+    }
+
+    function expectText(reply: ServerFrame, text: string): void {
+      expect(reply).toMatchObject({ result: { text } });
+      expect(reply).not.toHaveProperty('error');
+    }
+
+    function expectOutsideRefusal(reply: ServerFrame): void {
+      expect(reply).toEqual({
+        type: 'filesystem-reply', session: 'files1', request: expect.any(String), error: OUTSIDE_ROOT_REASON,
+      });
+    }
+
+    it('greps the root for an omitted path and keeps rows workspace-relative', async () => {
+      writeFixture();
+
+      expectText(await request('grep-files', args()), [
+        'b.txt:1: TODO at root',
+        'src/a.txt:1: TODO in src',
+        'src/nested/c.txt:1: TODO deep',
+      ].join('\n'));
+    });
+
+    it('treats an empty path as the root', async () => {
+      writeFixture();
+
+      expectText(await request('grep-files', args({ path: '' })), [
+        'b.txt:1: TODO at root',
+        'src/a.txt:1: TODO in src',
+        'src/nested/c.txt:1: TODO deep',
+      ].join('\n'));
+    });
+
+    it('prefixes rows for a nested directory with the path relative to the workspace root', async () => {
+      writeFixture();
+
+      expectText(await request('grep-files', args({ path: 'src' })),
+        'src/a.txt:1: TODO in src\nsrc/nested/c.txt:1: TODO deep');
+    });
+
+    it('searches only a named file, excluding its siblings', async () => {
+      writeFixture();
+
+      expectText(await request('grep-files', args({ path: 'src/a.txt' })), 'src/a.txt:1: TODO in src');
+    });
+
+    it('answers no matches as successful text', async () => {
+      writeFixture();
+
+      expectText(await request('grep-files', args({ pattern: 'absent' })), '(no matches)');
+    });
+
+    it('answers a missing path as successful text', async () => {
+      expectText(await request('grep-files', args({ path: 'missing' })), 'Path not found: missing.');
+    });
+
+    it('answers a contained secret as no matches without reading its contents', async () => {
+      mkdirSync(path.join(root, '.aws'));
+      writeFileSync(path.join(root, '.aws', 'credentials'), 'AWS_SECRET=hidden');
+
+      expectText(await request('grep-files', args({ path: '.aws' })), '(no matches)');
+      expect(vi.mocked(grepWorkspace)).toHaveBeenCalledOnce();
+      expect(vi.mocked(readFile)).not.toHaveBeenCalled();
+    });
+
+    it('refuses a parent escape before running grep', async () => {
+      expectOutsideRefusal(await request('grep-files', args({ path: '../x' })));
+      expect(vi.mocked(grepWorkspace)).not.toHaveBeenCalled();
+      expect(vi.mocked(readFile)).not.toHaveBeenCalled();
+    });
+
+    it('refuses an ordinary link resolving outside the workspace before running grep', async () => {
+      linkOutside('outlink');
+
+      expectOutsideRefusal(await request('grep-files', args({ path: 'outlink' })));
+      expect(vi.mocked(grepWorkspace)).not.toHaveBeenCalled();
+      expect(vi.mocked(readFile)).not.toHaveBeenCalled();
+    });
+
+    it('refuses a literal dot or the absolute root as an error', async () => {
+      for (const requested of ['.', root]) {
+        expectOutsideRefusal(await request('grep-files', args({ path: requested })));
+      }
+      expect(vi.mocked(grepWorkspace)).not.toHaveBeenCalled();
+      expect(vi.mocked(readFile)).not.toHaveBeenCalled();
+    });
+
+    it('refuses an outside absolute path before running grep', async () => {
+      const outside = outsideDirectory();
+
+      expectOutsideRefusal(await request('grep-files', args({ path: outside })));
+      expect(vi.mocked(grepWorkspace)).not.toHaveBeenCalled();
+      expect(vi.mocked(readFile)).not.toHaveBeenCalled();
+    });
+
+    it('answers a contained absolute child with the workspace outside-the-workspace text', async () => {
+      writeFixture();
+      const child = path.join(root, 'src');
+
+      expectText(await request('grep-files', args({ path: child })), `Outside the workspace: ${child}.`);
+      expect(vi.mocked(grepWorkspace)).toHaveBeenCalledOnce();
+      expect(vi.mocked(readFile)).not.toHaveBeenCalled();
+    });
+
+    it('refuses a secret spelling resolving through an outside link', async () => {
+      linkOutside('.aws');
+
+      expectOutsideRefusal(await request('grep-files', args({ path: '.aws' })));
+      expect(vi.mocked(grepWorkspace)).not.toHaveBeenCalled();
+      expect(vi.mocked(readFile)).not.toHaveBeenCalled();
+    });
+
+    it('reports a malformed regex before a contained secret', async () => {
+      mkdirSync(path.join(root, '.aws'));
+      writeFileSync(path.join(root, '.aws', 'credentials'), 'AWS_SECRET=hidden');
+
+      expectText(await request('grep-files', args({ pattern: '[unclosed(', path: '.aws' })),
+        `${regexMessage('[unclosed(')}\nUse --literal to search for the text as typed.`);
+      expect(vi.mocked(grepWorkspace)).toHaveBeenCalledOnce();
+      expect(vi.mocked(readFile)).not.toHaveBeenCalled();
+    });
+
+    it('reports an empty-matching regex before a missing path', async () => {
+      expectText(await request('grep-files', args({ pattern: 'x*', path: 'missing' })),
+        'Pattern matches empty text, so it would match every line: x*.');
+      expect(vi.mocked(grepWorkspace)).toHaveBeenCalledOnce();
+      expect(vi.mocked(readFile)).not.toHaveBeenCalled();
+    });
+
+    it('refuses an outside-resolving link before a malformed regex reaches the workspace', async () => {
+      linkOutside('outlink');
+
+      expectOutsideRefusal(await request('grep-files', args({ pattern: '[unclosed(', path: 'outlink' })));
+      expect(vi.mocked(grepWorkspace)).not.toHaveBeenCalled();
+      expect(vi.mocked(readFile)).not.toHaveBeenCalled();
+    });
+
+    it('refuses an outside-resolving secret spelling before an empty-matching regex reaches the workspace', async () => {
+      linkOutside('.aws');
+
+      expectOutsideRefusal(await request('grep-files', args({ pattern: 'x*', path: '.aws' })));
+      expect(vi.mocked(grepWorkspace)).not.toHaveBeenCalled();
+      expect(vi.mocked(readFile)).not.toHaveBeenCalled();
+    });
   });
 
   it.each([

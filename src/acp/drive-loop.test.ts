@@ -343,6 +343,20 @@ describe('driveToolLoop agent runs', () => {
     expect(ofKind(events, 'ranCommand')).toEqual([['ranCommand', 'file read a.md', refusal, false, undefined]]);
   });
 
+  it.each([
+    ['granted', ['file']],
+    ['ungranted', []],
+  ])('refuses an extracted file grep before either host side when %s', (_label, grants) => {
+    const { sent, events, host } = drive({ kind: 'agent', grants, askUser: false }, ['janissary file grep TODO', 'Done.']);
+    const refusal = 'Agent: command not permitted: file grep TODO.';
+    expect(host.runWorkspace).not.toHaveBeenCalled();
+    expect(host.runCaller).not.toHaveBeenCalled();
+    expect(sent[1]).toContain(`Output of \`file grep TODO\`:\n${refusal}`);
+    expect(ofKind(events, 'startCommand')).toEqual([['startCommand', 'file grep TODO', false]]);
+    expect(ofKind(events, 'ranCommand')).toEqual([['ranCommand', 'file grep TODO', refusal, false, undefined]]);
+    expect(events.at(-1)).toEqual(['finished', 'answered', Infinity]);
+  });
+
   it.each([false, true])('extracts a bare question only with askUser enabled (%s)', (askUser) => {
     const command = 'question ask "x"';
     const { sent, host } = drive({ kind: 'agent', grants: ['question'], askUser }, [command, 'Done.']);

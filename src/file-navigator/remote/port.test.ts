@@ -4,11 +4,12 @@ import type { NavigatorListener } from '../../remote/channel/types.js';
 import type { ClientFrame } from '../../remote/protocol-frames.js';
 import type { SearchMatch } from '../../protocol.js';
 import type { FileGlobArgs } from '../../file-glob/command.js';
+import type { FileGrepArgs } from '../../file-grep/command.js';
 import { OUTSIDE_ROOT_REASON } from '../file-operation-result.js';
 import { RemoteFileSystemPort } from './port.js';
-import { CLOSED_REASON, ENDED_REASON, LONG_REQUEST_DEADLINE_MS } from './port-requests.js';
+import { CLOSED_REASON, ENDED_REASON, LONG_REQUEST_DEADLINE_MS, REQUEST_DEADLINE_MS, TIMED_OUT_REASON } from './port-requests.js';
 
-function harness() {
+function harness(ready: Promise<unknown> = Promise.resolve('/remote/ws')) {
   const sent: ClientFrame[] = [];
   let listener: NavigatorListener | undefined;
   const channel = {
@@ -16,7 +17,7 @@ function harness() {
     detachNavigator: vi.fn(),
     send: (frame: ClientFrame) => { sent.push(frame); },
   } as unknown as RemoteChannel;
-  const port = new RemoteFileSystemPort(channel, 'files-1', Promise.resolve('/remote/ws'));
+  const port = new RemoteFileSystemPort(channel, 'files-1', ready);
   const reply = (result: unknown, error?: string) => {
     const request = sent.findLast((frame) => frame.type === 'filesystem-request');
     if (request?.type !== 'filesystem-request') throw new Error('No request was sent.');
@@ -479,6 +480,94 @@ describe('RemoteFileSystemPort remaining operations', () => {
     await expect(pending).resolves.toEqual({ ok: false, reason: 'a file already holds that name' });
   });
 
+  it('creates a file at the workspace root and maps its path back unchanged', async () => {
+    const h = harness();
+    const pending = h.port.createFile('/remote/ws', 'new.ts');
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    expect(lastRequest(h.sent)).toMatchObject({
+      operation: 'create-file', args: { destination: 'new.ts' },
+    });
+    h.reply({ ok: true, value: { path: 'new.ts' } });
+    await expect(pending).resolves.toEqual({ ok: true, value: { path: 'new.ts' } });
+  });
+
+  it('creates a directory at the workspace root and maps its path back unchanged', async () => {
+    const h = harness();
+    const pending = h.port.createDirectory('/remote/ws', 'sub');
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    expect(lastRequest(h.sent)).toMatchObject({
+      operation: 'create-directory', args: { destination: 'sub' },
+    });
+    h.reply({ ok: true, value: { path: 'sub' } });
+    await expect(pending).resolves.toEqual({ ok: true, value: { path: 'sub' } });
+  });
+
+  it('returns a directory-create refusal as it stands, with no path to map', async () => {
+    const h = harness();
+    const pending = h.port.createDirectory('/remote/ws/src', 'sub');
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    h.reply({ ok: false, reason: 'a directory already holds that name' });
+    await expect(pending).resolves.toEqual({ ok: false, reason: 'a directory already holds that name' });
+  });
+
+  it('reports an error reply to a creation as a failure value', async () => {
+    const h = harness();
+    const pending = h.port.createFile('/remote/ws', 'new.ts');
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    h.reply(undefined, 'The remote file navigator session is not open.');
+    await expect(pending).resolves.toEqual({
+      ok: false, reason: 'The remote file navigator session is not open.',
+    });
+  });
+
+  it('reports a creation requested after disposal without sending it', async () => {
+    const h = harness();
+    await vi.waitFor(() => expect(h.sent).toHaveLength(1));
+    h.port.dispose();
+    await expect(h.port.createFile('/remote/ws', 'new.ts'))
+      .resolves.toEqual({ ok: false, reason: CLOSED_REASON });
+    expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(false);
+  });
+
+  it('reports an in-flight creation as ended when the connection closes', async () => {
+    const h = harness();
+    const pending = h.port.createDirectory('/remote/ws/src', 'sub');
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    h.listener()?.onClose?.();
+    await expect(pending).resolves.toEqual({ ok: false, reason: ENDED_REASON });
+  });
+
+  it('settles a creation as unanswered after its deadline', async () => {
+    vi.useFakeTimers();
+    try {
+      const h = harness();
+      const pending = h.port.createFile('/remote/ws', 'new.ts');
+      await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+      await vi.advanceTimersByTimeAsync(REQUEST_DEADLINE_MS + 1);
+      await expect(pending).resolves.toEqual({ ok: false, reason: TIMED_OUT_REASON });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('rejects a creation whose successful reply carries no path', async () => {
+    const h = harness();
+    const pending = h.port.createDirectory('/remote/ws/src', 'sub');
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    h.reply({ ok: true, value: {} });
+    await expect(pending).rejects.toThrow('Invalid remote filesystem operation result.');
+  });
+
+  it('rejects a creation whose workspace cannot be resolved', async () => {
+    const { promise, reject } = Promise.withResolvers<string>();
+    const h = harness(promise);
+    const pending = h.port.createFile('/remote/ws', 'new.ts');
+    reject(new Error('The remote workspace is unavailable.'));
+    h.port.dispose();
+    await expect(pending).rejects.toThrow('The remote workspace is unavailable.');
+    expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(false);
+  });
+
   // The far side keeps watching while any listener remains on the path, so stopping one of two
   // handles must not tell it to stop — the other would go deaf with nothing to say so. Only the last
   // handle to stop takes the watch down.
@@ -645,5 +734,186 @@ describe('RemoteFileSystemPort.globPaths', () => {
     expect(lastRequest(h.sent)).toMatchObject({ operation: 'glob-paths', args: { dir: '../x' } });
     h.reply(undefined, OUTSIDE_ROOT_REASON);
     await expect(pending).rejects.toThrow(new Error(OUTSIDE_ROOT_REASON));
+  });
+});
+
+describe('RemoteFileSystemPort.grepFiles', () => {
+  const hasRequest = (sent: ClientFrame[]) => sent.some((frame) => frame.type === 'filesystem-request');
+  const defaults = {
+    pattern: 'TODO', include: '', exclude: '', literal: false, word: false, caseSensitive: false, limit: 100,
+  };
+  const args = (overrides: Partial<FileGrepArgs> = {}): FileGrepArgs => ({
+    ...defaults, path: undefined, ...overrides,
+  });
+  const frame = (wireArgs: Record<string, unknown>) => ({
+    type: 'filesystem-request' as const, session: 'files-1', request: 'files-1:1', operation: 'grep-files' as const,
+    args: wireArgs,
+  });
+
+  it('omits an undefined path and resolves with an own undefined path property', async () => {
+    const h = harness();
+    const pending = h.port.grepFiles('/remote/ws', args());
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    expect(h.sent).toEqual([{ type: 'filesystem-open', session: 'files-1' }, frame(defaults)]);
+    h.reply({ text: '(no matches)' });
+    const result = await pending;
+    expect(result).toEqual({ text: '(no matches)', path: undefined });
+    expect(Object.hasOwn(result, 'path')).toBe(true);
+  });
+
+  it('sends every default false or empty required field', async () => {
+    const h = harness();
+    const pending = h.port.grepFiles('/remote/ws', args());
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    expect(h.sent).toEqual([{ type: 'filesystem-open', session: 'files-1' }, frame(defaults)]);
+    h.reply({ text: '(no matches)' });
+    await expect(pending).resolves.toEqual({ text: '(no matches)', path: undefined });
+  });
+
+  it('sends an explicit empty path as the root', async () => {
+    const h = harness();
+    const pending = h.port.grepFiles('/remote/ws', args({ path: '' }));
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    expect(h.sent).toEqual([{ type: 'filesystem-open', session: 'files-1' }, frame({ ...defaults, path: '' })]);
+    h.reply({ text: 'a.ts:1: TODO' });
+    await expect(pending).resolves.toEqual({ text: 'a.ts:1: TODO', path: '' });
+  });
+
+  it.each(['.', 'src/..'])('maps %s to the root', async (spelling) => {
+    const h = harness();
+    const pending = h.port.grepFiles('/remote/ws', args({ path: spelling }));
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    expect(h.sent).toEqual([{ type: 'filesystem-open', session: 'files-1' }, frame({ ...defaults, path: '' })]);
+    h.reply({ text: '(no matches)' });
+    await expect(pending).resolves.toEqual({ text: '(no matches)', path: '' });
+  });
+
+  it('normalizes ./src/ to src', async () => {
+    const h = harness();
+    const pending = h.port.grepFiles('/remote/ws', args({ path: './src/' }));
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    expect(h.sent).toEqual([{ type: 'filesystem-open', session: 'files-1' }, frame({ ...defaults, path: 'src' })]);
+    h.reply({ text: 'src/a.ts:1: TODO' });
+    await expect(pending).resolves.toEqual({ text: 'src/a.ts:1: TODO', path: 'src' });
+  });
+
+  it('maps a dot at a nested root to that directory', async () => {
+    const h = harness();
+    const pending = h.port.grepFiles('/remote/ws/sub', args({ path: '.' }));
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    expect(h.sent).toEqual([{ type: 'filesystem-open', session: 'files-1' }, frame({ ...defaults, path: 'sub' })]);
+    h.reply({ text: 'sub/a.ts:1: TODO' });
+    await expect(pending).resolves.toEqual({ text: 'sub/a.ts:1: TODO', path: 'sub' });
+  });
+
+  it('forwards every nondefault field', async () => {
+    const h = harness();
+    const pending = h.port.grepFiles('/remote/ws', args({
+      pattern: 'a.*b', include: '*.ts', exclude: '*.test.ts', literal: true, word: true, caseSensitive: true,
+      limit: 7, path: './src/',
+    }));
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    expect(h.sent).toEqual([{ type: 'filesystem-open', session: 'files-1' }, frame({
+      pattern: 'a.*b', include: '*.ts', exclude: '*.test.ts', literal: true, word: true, caseSensitive: true,
+      path: 'src', limit: 7,
+    })]);
+    h.reply({ text: 'src/a.ts:4: aXb' });
+    await expect(pending).resolves.toEqual({ text: 'src/a.ts:4: aXb', path: 'src' });
+  });
+
+  it('returns formatted rows and partial-result trailers unchanged', async () => {
+    const h = harness();
+    const text = 'src/a.ts:9: export const FILE_READ_USAGE = …\n(src/a.ts:10: another)\n(showing the first 2 matches; narrow the pattern or raise --limit)';
+    const pending = h.port.grepFiles('/remote/ws', args());
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    expect(h.sent).toEqual([{ type: 'filesystem-open', session: 'files-1' }, frame(defaults)]);
+    h.reply({ text });
+    await expect(pending).resolves.toEqual({ text, path: undefined });
+  });
+
+  it.each(['/remote/ws/src', '/etc'])('answers the absolute path %s without a request', async (absolute) => {
+    const h = harness();
+    await expect(h.port.grepFiles('/remote/ws', args({ path: absolute })))
+      .resolves.toEqual({ text: `Outside the workspace: ${absolute}.`, path: absolute });
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-open')).toBe(true));
+    expect(h.sent).toEqual([{ type: 'filesystem-open', session: 'files-1' }]);
+    expect(hasRequest(h.sent)).toBe(false);
+  });
+
+  it('answers an absolute path before an unresolved workspace readiness', async () => {
+    const { promise, resolve } = Promise.withResolvers<string>();
+    const h = harness(promise);
+    await expect(h.port.grepFiles('/remote/ws', args({ path: '/remote/ws/src' })))
+      .resolves.toEqual({ text: 'Outside the workspace: /remote/ws/src.', path: '/remote/ws/src' });
+    expect(h.sent).toEqual([]);
+    h.port.dispose();
+    resolve('/remote/ws');
+  });
+
+  it('rejects with the outside-root reason when the far side refuses the path', async () => {
+    const h = harness();
+    const pending = h.port.grepFiles('/remote/ws', args({ path: '../x' }));
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    expect(h.sent).toEqual([{ type: 'filesystem-open', session: 'files-1' }, frame({ ...defaults, path: '../x' })]);
+    const assertion = expect(pending).rejects.toThrow(new Error(OUTSIDE_ROOT_REASON));
+    h.reply(undefined, OUTSIDE_ROOT_REASON);
+    await assertion;
+  });
+
+  it('rejects with a generic far-side error', async () => {
+    const h = harness();
+    const pending = h.port.grepFiles('/remote/ws', args());
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    expect(h.sent).toEqual([{ type: 'filesystem-open', session: 'files-1' }, frame(defaults)]);
+    const assertion = expect(pending).rejects.toThrow('boom');
+    h.reply(undefined, 'boom');
+    await assertion;
+  });
+
+  it('rejects in-flight work when the channel closes', async () => {
+    const h = harness();
+    const pending = h.port.grepFiles('/remote/ws', args());
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    expect(h.sent).toEqual([{ type: 'filesystem-open', session: 'files-1' }, frame(defaults)]);
+    const assertion = expect(pending).rejects.toThrow('connection ended');
+    h.listener()?.onClose?.();
+    await assertion;
+  });
+
+  it('rejects after the ordinary 60-second request deadline', async () => {
+    vi.useFakeTimers();
+    try {
+      const h = harness();
+      const pending = h.port.grepFiles('/remote/ws', args());
+      await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+      expect(h.sent).toEqual([{ type: 'filesystem-open', session: 'files-1' }, frame(defaults)]);
+      const assertion = expect(pending).rejects.toThrow(TIMED_OUT_REASON);
+      await vi.advanceTimersByTimeAsync(REQUEST_DEADLINE_MS + 1);
+      await assertion;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('rejects a malformed successful reply', async () => {
+    const h = harness();
+    const pending = h.port.grepFiles('/remote/ws', args());
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    expect(h.sent).toEqual([{ type: 'filesystem-open', session: 'files-1' }, frame(defaults)]);
+    const assertion = expect(pending).rejects.toThrow('Invalid remote filesystem operation result.');
+    h.reply({ text: 7 });
+    await assertion;
+  });
+
+  it('rejects when the workspace readiness rejects while mapping the path', async () => {
+    const { promise, reject } = Promise.withResolvers<string>();
+    const h = harness(promise);
+    const pending = h.port.grepFiles('/remote/ws', args({ path: 'src' }));
+    const failure = new Error('The remote workspace is unavailable.');
+    const assertion = expect(pending).rejects.toBe(failure);
+    reject(failure);
+    h.port.dispose();
+    await assertion;
+    expect(h.sent).toEqual([]);
   });
 });
