@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the ask and tell help pages' claim that the agent's web access is only the granted `web search` command, which their own browser grants contradict.
-
-Existing Issue: Both `help/ask.md` and `help/tell.md` say "Its web access is the granted `web search` command", while the same page's default-grant list includes `browser goto` and `browser content`, so the sentence tells a reader that the agent's browser tools are not web access. Severity: 2/10
-
-Existing Risk: 2/10 - A user reading the help page may conclude the granted browser commands cannot reach the web, undermining the grant model the page is explaining.
-
-Proposal Risk: 1/10 - The wording and the grant list agree after the edit; no behavior changes.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "correct the ask and tell help pages' web-access sentence". In `help/ask.md` and `help/tell.md`, change the note's last sentence from "Its web access is the granted `web search` command, which needs a provider token." to "Its web search is the granted `web search` command, which needs a provider token.", leaving the rest of each note byte-for-byte. Verify against the default grants in `src/plugins/roles/roles-file.ts` (`ask` and `tell` both grant `browser goto` and `browser content`, and both grant `web search`) and against `src/plugins/roles/shared.ts`; the agent's browser access is already described in the same page's previous bullet. Change no code, test, spec, plan, or other help page; run the markdown check-diff after the edit and confirm it exits 0.
-
-
 * Correct the plan's test inventory, which places the cut-to-result-count assertion in the render tests although the cut happens in the search core and its own test covers it.
 
 Existing Issue: The Tests section of `product/plans/complete/web-search.md` says `src/web-search/render.test.ts` covers "cut to `numResults`", but `renderResults` in `src/web-search/render.ts` has no result-count parameter and `render.test.ts` contains no such test; the assertion lives in `src/web-search/search.test.ts` ("dedupes before cutting to numResults"), which the plan's next bullet describes without it. Severity: 2/10
