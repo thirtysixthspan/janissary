@@ -251,6 +251,17 @@ describe('patch sections', () => {
     expect(linkDeleted.changes.deletes.map((item) => item.place.requested)).toEqual(['link']);
   });
 
+  it('unlinks a deleted link re-added as a regular file and then moved', () => {
+    write('target', 'old\n'); symlinkSync('target', path.join(root, 'link'));
+    const result = success('*** Delete File: link\n*** Add File: link\n+new\n*** Update File: link\n*** Move to: moved');
+    expect(result.changes.moves).toEqual([]);
+    expect(result.changes.deletes).toMatchObject([{ place: { requested: 'link' }, linkText: 'target' }]);
+    expect(result.changes.deletes).toHaveLength(1);
+    expect(result.changes.writes).toMatchObject([{ text: 'new\n', finalPlace: { requested: 'moved' } }]);
+    expect(result.changes.writes).toHaveLength(1);
+    expect(result.rows).toEqual([{ letter: 'D', path: 'link' }, { letter: 'A', path: 'moved' }]);
+  });
+
   it('indexes removed locations once when deriving many writes', () => {
     let reads = 0;
     const places: PatchPlace[] = [];

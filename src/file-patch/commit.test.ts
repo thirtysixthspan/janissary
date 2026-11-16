@@ -48,6 +48,18 @@ it('deletes, moves and updates links without replacing their targets', () => {
   expect(lstatSync(file('moved')).isSymbolicLink()).toBe(true); expect(readlinkSync(file('moved'))).toBe('target');
 });
 
+it('commits a deleted link re-added as a regular file and moved', () => {
+  const patch = '*** Delete File: link\n*** Add File: link\n+new\n*** Update File: link\n*** Move to: moved';
+  write('target', 'old\n'); symlinkSync('target', file('link'));
+  expect(run(patch)).toEqual({ ok: true });
+  expect(lstatSync(file('moved')).isFile()).toBe(true); expect(read('moved')).toBe('new\n');
+  expect(existsSync(file('link'))).toBe(false); expect(read('target')).toBe('old\n');
+  rmSync(file('moved')); symlinkSync('target', file('link'));
+  const operations: CommitOperations = { ...defaultCommitOperations, writeFile() { throw fail(); } };
+  expect(run(patch, operations)).toMatchObject({ ok: false, restored: true, path: 'moved' });
+  expect(existsSync(file('moved'))).toBe(false); expect(readlinkSync(file('link'))).toBe('target'); expect(read('target')).toBe('old\n');
+});
+
 it('handles replacement, vacated paths, exchanges and intermediate folders', () => {
   write('a', 'a\n'); write('b', 'b\n'); write('bom', '\u{FEFF}old\n', 0o600); write('target', 'target'); symlinkSync('target', file('link'));
   expect(run('*** Update File: a\n*** Move to: temp\n*** Update File: b\n*** Move to: a\n*** Update File: temp\n*** Move to: b\n*** Delete File: bom\n*** Add File: bom\n+new\n*** Delete File: link\n*** Add File: link\n+new')).toEqual({ ok: true });
