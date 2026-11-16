@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's and token user page's claim that the search provider keys reach spawned processes.
-
-Existing Issue: The pull request body's What section still says the new token rows get "exposed as `TAVILY_API_KEY` and `TINYFISH_API_KEY` like every other harness credential", and the "How a token reaches a workspace" section of `documentation/user-documentation/advanced-agents/tokens.md` still says Janissary "hands the values to each workspaced tab's processes" and that "A token reaches the tab", although the security repair sets `spawn: false`, so neither key enters a workspaced, harness, or ACP process. Severity: 5/10
-
-Existing Risk: 4/10 - a reviewer reads the description as evidence that the search keys still reach every spawned process, and a user reading the token page cannot tell that the two search rows behave differently from the five harness rows, so the repaired boundary is easy to misread and easy to undo.
-
-Proposal Risk: 1/10 - the description and the page agree with the code and the specs, and no runtime behavior changes; an ambient key in a plain non-workspaced shell still remains the user's own environment, which the repair plan's Out of scope deliberately leaves alone.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "correct the description's and token page's search-key exposure claim". Rewrite the sentence in the pull request body's What section that begins "Tokens are read from" so it says the keys are read by the Janissary process that runs the search, travel to a remote in the provisioning map, and neither is injected into a spawned shell, harness, or ACP agent; leave the rest of that paragraph and every other description paragraph unchanged. In `documentation/user-documentation/advanced-agents/tokens.md`, qualify the "How a token reaches a workspace" paragraph so "hands the values to each workspaced tab's processes" and "A token reaches the tab" name the harness tokens, and state that the two search keys stay in the Janissary process that runs the search; keep the page's opening caveat that the two search tokens configure the process rather than a tab, and keep the "How tokens reach a remote" paragraph unchanged. Verify both revisions against `src/sandbox/environment.ts` (`tokenVariables`, `agentCredentialEnv`, `withWorkspaceCredentials`), `src/sandbox/paths.ts` (`ENV_SCRUB_PATTERNS`), `src/remote/serve-provision.ts` (the merged map), and the token sections of `product/specs/sandbox.md`, `product/specs/workspaced-agent.md`, and `product/specs/acp.md`. No code, test, spec, or help-page change.
-
-
 * Scope the security repair plan's goal to the spawns that actually take a workspace or ACP credential.
 
 Existing Issue: `product/plans/complete/keep-search-keys-out-of-spawned-environments.md` opens by promising that neither search key may appear "in the environment of any process Janissary spawns, whether the value came from a token file or from the server's own ambient environment", while its own Out of scope deliberately leaves plain non-workspaced shells and other spawns that take no workspace credential with the user's own environment, and `withWorkspaceCredentials` returns that environment untouched when `workspaceDir` is absent. Severity: 2/10

@@ -100,9 +100,9 @@ Google Vertex is the one that can't work. It authenticates with `GOOGLE_APPLICAT
 
 <img class="agent-float left" src="/agents/idris-south-west.png" alt="" />
 
-Janissary reads your token files once when it starts, project first and home second, then hands the values to each workspaced tab's processes as they launch. Nothing is copied into the workspace itself, so a token never lands in a clone you might push, and a workspaced tab can't read either file directly. Editing a token file takes effect on the next launch of Janissary, not on the next tab.
+Janissary reads your token files once when it starts, project first and home second, then hands the GitHub token and the four harness tokens to each workspaced tab's processes as they launch. The two search keys stay in the Janissary process that runs `web search` instead. Nothing is copied into the workspace itself, so a token never lands in a clone you might push, and a workspaced tab can't read either file directly. Editing a token file takes effect on the next launch of Janissary, not on the next tab.
 
-A token reaches the tab whether or not isolation is actually active on that machine. Isolation needs macOS, so a Linux host runs without it, and the credential arrives the same way either way.
+Those tokens reach the tab whether or not isolation is actually active on that machine. Isolation needs macOS, so a Linux host runs without it, and the credential arrives the same way either way.
 
 ACP agents that run outside a workspace get the four harness tokens too. That covers monitors and `ask` from a tab with no workspace. They get `claude-token`, `opencode-token`, `kilo-token`, and `gemini-token`, under the same variables, so an `opencode` you never ran `opencode auth login` for still signs in. They don't get `github-token`, which stays workspace-only, or the two search tokens, which stay in the Janissary process that runs the search.
 
