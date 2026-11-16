@@ -90,7 +90,7 @@ function setup(remote = false, farLoop = false) {
         break;
       }
       case 'acp-run': {
-        farHandle = startRemoteLoop(farSession, decoded, farRoot, sendServer);
+        farHandle = startRemoteLoop(farSession, decoded, farRoot, {}, sendServer);
         break;
       }
       case 'acp-tool-result': {

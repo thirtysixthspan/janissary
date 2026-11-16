@@ -172,3 +172,5 @@ Colocated vitest files in the `server` project, mirroring `src/models/providers/
   5. Run `web search node.js permission model --max-chars 200`. Expect fewer results and the `(showing <k> of <n> results; raise --max-chars for more)` line.
   6. Run `tell find the current Node.js LTS version on the web` and confirm the connection tab shows a `web search …` tool step and the answer cites a result.
   7. Run `help web` and confirm the page.
+
+**Rebase adaptation.** `master` landed the workspace `file grep` feature first, taking `REMOTE_PROTOCOL_VERSION` from 42 to 43 and adding the `grep-files` remote operation. This feature's single bump is therefore 43 → 44, and the branch adds `web-search` beside `grep-files`; the version-44 comment in `src/remote/protocol.ts` and the version-44 paragraph in `product/specs/remote-server.md` name both the two token names and the new operation. The near-side port gained `webSearch` without moving master's `pasteRemote` or the `remoteCreateItem` master already keeps in `port-mapped.ts`.

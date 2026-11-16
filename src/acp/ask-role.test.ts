@@ -94,7 +94,7 @@ describe('readRoleSettings', () => {
       name: 'ask', entries: [OPENCODE, CLAUDE, CODEX], commands: ASK_COMMANDS,
     });
     const tell = readRoleSettings(root, 'tell', home).commands;
-    expect(tell).toHaveLength(14);
+    expect(tell).toHaveLength(15);
     expect(tell).toEqual(expect.arrayContaining([
       'file glob', 'file grep', 'file write', 'file edit', 'web search',
     ]));

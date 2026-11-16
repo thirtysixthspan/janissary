@@ -170,8 +170,9 @@ describe('RolesTab', () => {
     });
     renderTab(payload);
 
-    expect(NATIVE_ACP_COMMANDS).toHaveLength(14);
+    expect(NATIVE_ACP_COMMANDS).toHaveLength(15);
     expect(NATIVE_ACP_COMMANDS).toContain('file grep');
+    expect(NATIVE_ACP_COMMANDS).toContain('web search');
     expect(screen.queryByRole('button', { name: 'Add command' })).toBeNull();
     expect(screen.getByText('future command').closest('.roles-command-entry'))
       .toHaveAttribute('title', 'Not a native command');
