@@ -183,6 +183,161 @@ describe('restoring a saved tree selection', () => {
   });
 });
 
+type RootChangeProps = {
+  root: string;
+  visible: FileNavigatorRow[];
+  restore?: FileNavigatorRestoreHint;
+};
+
+describe('holding a focus hint until its row arrives', () => {
+  it('selects the row only when it appears and reports the outcome applied then', () => {
+    const hint: FileNavigatorRestoreHint = {
+      revision: 2, focus: true, cursor: 'c', anchor: 'c', selected: ['c'],
+    };
+    const { result, rerender } = renderHook(
+      ({ visible }) => useFileNavigatorSelection(visible, '/root', 'navigator', hint),
+      { initialProps: { visible: rows(['a', 'b']) } },
+    );
+
+    expect(result.current.cursor).toBeNull();
+    expect(result.current.focusHint).toEqual({ revision: 2, outcome: 'pending' });
+
+    rerender({ visible: rows(['a', 'b', 'c']) });
+
+    expect(result.current.cursor).toBe('c');
+    expect(result.current.focusHint).toEqual({ revision: 2, outcome: 'applied' });
+  });
+
+  it('never applies a focus hint the user overtook and reports it dropped', () => {
+    const hint: FileNavigatorRestoreHint = {
+      revision: 3, focus: true, cursor: 'c', anchor: 'c', selected: ['c'],
+    };
+    const { result, rerender } = renderHook(
+      ({ visible }) => useFileNavigatorSelection(visible, '/root', 'navigator', hint),
+      { initialProps: { visible: rows(['a', 'b']) } },
+    );
+
+    act(() => { result.current.replace('a'); });
+
+    expect(result.current.focusHint).toEqual({ revision: 3, outcome: 'dropped' });
+
+    rerender({ visible: rows(['a', 'b', 'c']) });
+
+    expect(result.current.cursor).toBe('a');
+    expect(result.current.focusHint).toEqual({ revision: 3, outcome: 'dropped' });
+  });
+
+  it('applies an ordinary hint at once and reports no focus outcome', () => {
+    const visible = rows(['a', 'b']);
+    const { result } = renderHook(() => useFileNavigatorSelection(visible, '/root', 'navigator', {
+      revision: 4, cursor: 'b', anchor: 'b', selected: ['b'],
+    }));
+
+    expect(result.current.cursor).toBe('b');
+    expect(result.current.focusHint).toBeUndefined();
+  });
+
+  it('applies a focus hint that arrives with a root change when its row exists', () => {
+    const hint: FileNavigatorRestoreHint = {
+      revision: 5, focus: true, cursor: 'b', anchor: 'b', selected: ['b'],
+    };
+    const { result, rerender } = renderHook<ReturnType<typeof useFileNavigatorSelection>, RootChangeProps>(
+      ({ root, visible, restore }) => useFileNavigatorSelection(visible, root, 'navigator', restore),
+      { initialProps: { root: '/one', visible: rows(['a']), restore: undefined } },
+    );
+
+    rerender({ root: '/two', visible: rows(['a', 'b']), restore: hint });
+
+    expect(result.current.cursor).toBe('b');
+    expect(result.current.focusHint).toEqual({ revision: 5, outcome: 'applied' });
+  });
+
+  it('applies a focus hint that arrives with a root change once its row arrives', () => {
+    const hint: FileNavigatorRestoreHint = {
+      revision: 5, focus: true, cursor: 'b', anchor: 'b', selected: ['b'],
+    };
+    const { result, rerender } = renderHook<ReturnType<typeof useFileNavigatorSelection>, RootChangeProps>(
+      ({ root, visible, restore }) => useFileNavigatorSelection(visible, root, 'navigator', restore),
+      { initialProps: { root: '/one', visible: rows(['a']), restore: undefined } },
+    );
+
+    rerender({ root: '/two', visible: rows(['a']), restore: hint });
+
+    expect(result.current.focusHint).toEqual({ revision: 5, outcome: 'pending' });
+
+    rerender({ root: '/two', visible: rows(['a', 'b']), restore: hint });
+
+    expect(result.current.cursor).toBe('b');
+    expect(result.current.focusHint).toEqual({ revision: 5, outcome: 'applied' });
+  });
+
+  it('drops a pending focus hint when the root changes in a later update', () => {
+    const hint: FileNavigatorRestoreHint = {
+      revision: 6, focus: true, cursor: 'c', anchor: 'c', selected: ['c'],
+    };
+    const visible = rows(['a', 'b']);
+    const { result, rerender } = renderHook(
+      ({ root }) => useFileNavigatorSelection(visible, root, 'navigator', hint),
+      { initialProps: { root: '/one' } },
+    );
+
+    expect(result.current.focusHint).toEqual({ revision: 6, outcome: 'pending' });
+
+    rerender({ root: '/two' });
+
+    expect(result.current.focusHint).toEqual({ revision: 6, outcome: 'dropped' });
+    expect(result.current.cursor).toBeNull();
+  });
+
+  it('does not re-apply a focus hint revision on a later broadcast', () => {
+    const hint: FileNavigatorRestoreHint = {
+      revision: 7, focus: true, cursor: 'b', anchor: 'b', selected: ['b'],
+    };
+    const visible = rows(['a', 'b']);
+    const { result, rerender } = renderHook(
+      ({ restore }) => useFileNavigatorSelection(visible, '/root', 'navigator', restore),
+      { initialProps: { restore: hint } },
+    );
+
+    act(() => { result.current.replace('a'); });
+    rerender({ restore: { ...hint } });
+
+    expect(result.current.cursor).toBe('a');
+    expect(result.current.focusHint).toEqual({ revision: 7, outcome: 'applied' });
+  });
+
+  it('reconciles the cursor while pending before applying the hint over it', () => {
+    const restored: FileNavigatorRestoreHint = {
+      revision: 1, cursor: 'dir/a.txt', anchor: 'dir/a.txt', selected: ['dir/a.txt'],
+    };
+    const focusHint: FileNavigatorRestoreHint = {
+      revision: 2, focus: true, cursor: 'later', anchor: 'later', selected: ['later'],
+    };
+    const { result, rerender } = renderHook(
+      ({ visible, restore }: { visible: FileNavigatorRow[]; restore: FileNavigatorRestoreHint }) =>
+        useFileNavigatorSelection(visible, '/root', 'navigator', restore),
+      { initialProps: { visible: rows(['dir', 'dir/a.txt', 'b']), restore: restored } },
+    );
+
+    expect(result.current.cursor).toBe('dir/a.txt');
+
+    rerender({ visible: rows(['dir', 'dir/a.txt', 'b']), restore: focusHint });
+
+    expect(result.current.cursor).toBe('dir/a.txt');
+    expect(result.current.focusHint).toEqual({ revision: 2, outcome: 'pending' });
+
+    rerender({ visible: rows(['dir', 'b']), restore: focusHint });
+
+    expect(result.current.cursor).toBe('dir');
+    expect(result.current.focusHint).toEqual({ revision: 2, outcome: 'pending' });
+
+    rerender({ visible: rows(['dir', 'b', 'later']), restore: focusHint });
+
+    expect(result.current.cursor).toBe('later');
+    expect(result.current.focusHint).toEqual({ revision: 2, outcome: 'applied' });
+  });
+});
+
 describe('publishing a navigator selection for profile save', () => {
   it('publishes under its tab label and clears the entry on unmount', () => {
     const visible = rows(['a', 'b']);

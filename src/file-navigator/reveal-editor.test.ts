@@ -208,6 +208,7 @@ describe('revealEditorFile', () => {
       anchor: 'src/deep/a.ts',
       selected: ['src/deep/a.ts'],
     });
+    expect(state.restore?.focus).toBe(true);
     expect(state.restore?.revision).toBeGreaterThan(before);
   });
 

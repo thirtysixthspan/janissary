@@ -181,6 +181,10 @@ export type FileNavigatorRestoreHint = {
   anchor?: string | null;
   anchorToCursor?: boolean;
   selected?: string[] | null;
+  // Set on a reveal's hint. The client holds it until the cursor row exists, moves focus once, then
+  // reports it applied or dropped through `fileNavigatorRevealApplied`; the server removes this member
+  // when that report arrives. Absent on an ordinary `files` hint, whose payload is unchanged.
+  focus?: true;
 };
 
 // A single visible row in a file navigator tab (opened via `files [path]`). `path` is relative to the
