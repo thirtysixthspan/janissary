@@ -2,8 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './shared/ws/ws';
 import { sidebarSelectionFor } from './sidebar-selection-coordinator';
+import { isFilesTabView, type FilesTabView } from './shared/tab/view-guards';
 
 type SidebarEntry = { tab: TabView; index: number };
+
+function carriesFocusHint(entry: SidebarEntry): entry is SidebarEntry & { tab: FilesTabView } {
+  return isFilesTabView(entry.tab) && entry.tab.files.restore?.focus === true;
+}
 
 export function useSidebarSelection(
   tabs: TabView[], side: 'left' | 'right', focusView: 'files' | 'notifications' | undefined, client: JanusClient,
@@ -25,6 +30,16 @@ export function useSidebarSelection(
     const focused = focusView && entries.find((entry) => entry.tab.view === focusView);
     if (focused) setSelectedLabel(focused.tab.label);
   }, [entries, focusView]);
+
+  const revealedRevisionRef = useRef<number | null>(null);
+  useEffect(() => {
+    const revealed = entries.find(carriesFocusHint);
+    if (!revealed) return;
+    const revision = revealed.tab.files.restore?.revision;
+    if (revision === undefined || revision === revealedRevisionRef.current) return;
+    revealedRevisionRef.current = revision;
+    setSelectedLabel(revealed.tab.label);
+  }, [entries]);
 
   const entriesRef = useRef(entries);
   entriesRef.current = entries;
