@@ -18,7 +18,7 @@ Carried verbatim from the source plan where they apply.
 - **Result count (user decision).** `--results` takes a whole number from 1 to 20 and defaults to 10.
 - **Character budget (user decision).** `--max-chars` takes a whole number from 200 to 100000 and defaults to 10000.
 - **Search depth (user decision).** A `--depth basic|advanced` flag, default `basic`. A value other than `basic` or `advanced` (matched case-insensitively) is a usage error. The parsed request carries the lowercase value.
-- **Provider flag.** `--provider <name>` defaults to `auto`. The parser only requires a value; whether the name is known is decided by the registry (`./product/plans/ready/web-search-5-provider-registry.md`), which matches names case-insensitively and reserves `auto`.
+- **Provider flag.** `--provider <name>` defaults to `auto`. The parser only requires a value; whether the name is known is decided by the registry (`./product/plans/complete/web-search-5-provider-registry.md`), which matches names case-insensitively and reserves `auto`.
 - **Two predicates for two kinds of text.** As `AcpTool` separates `match` from `isCommandLine`: `isWebCommandLine(line)` (`/^web(\s|$)/i`, any line whose first word is `web`), which the `web` command and both `runWorkspace` routes use so a malformed `web` line is still answered with usage; and `isWebSearchReplyLine(line)`, which recognizes an agent's reply line only when it starts with lowercase `web search` followed by whitespace or the end of the line. The reply-line rule is deliberately case-sensitive, unlike the file and browser predicates, because a model's final answer often begins a sentence with "Web search …" and the extractor reads the reply's last recognized line as a command; the primer always shows the lowercase form.
 - **Primer (user decision).** The web tool's primer is exactly these lines, joined with newlines, exported as `WEB_SEARCH_PRIMER`:
   - `To search the web, end your reply with one line:`
@@ -87,6 +87,6 @@ New feature directory `src/web-search/` with one module:
 ## Out of scope
 
 - Running a search, providers, rendering, registering the `web` command, and any ACP wiring (later subplans of `./product/plans/complete/web-search.md`).
-- Validating the provider name (`./product/plans/ready/web-search-5-provider-registry.md`).
+- Validating the provider name (`./product/plans/complete/web-search-5-provider-registry.md`).
 - Completion (`./product/plans/ready/web-search-14-completion.md`).
 - A JSON argument form (user decision).

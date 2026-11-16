@@ -10,7 +10,7 @@ The sixth slice of the `web search` feature (source plan: `./product/plans/compl
 - `./product/plans/complete/web-search-2-result-rendering.md` — `normalizeResults`, `dedupeResults`, `renderResults(results, total, maxChars)` from `src/web-search/render.ts`; `WebSearchRequest`, `WebSearchCapability`, `WebSearchResult` from `src/web-search/contract.ts`.
 - `./product/plans/complete/web-search-3-provider-tokens.md` — the `tavily` and `tinyfish` rows of `ProjectTokens`.
 - `./product/plans/complete/web-search-4-bundled-providers.md` — the 30-second per-attempt budget and the abort rule (`requestJson` rethrows a prompt abort unchanged), both inside the providers, not here.
-- `./product/plans/ready/web-search-5-provider-registry.md` — `createProviderRegistry`, `webSearchProviderCatalog` (`src/web-search/providers/catalog.ts`), `resolveAttempts` returning `AttemptResolution`, `runAttempt(manifest, request, capability, reportDisabled?)` returning `AttemptOutcome`, the `ProviderRegistry` type, and `formatFailures` (`src/web-search/failure-lines.ts`).
+- `./product/plans/complete/web-search-5-provider-registry.md` — `createProviderRegistry`, `webSearchProviderCatalog` (`src/web-search/providers/catalog.ts`), `resolveAttempts` returning `AttemptResolution`, `runAttempt(manifest, request, capability, reportDisabled?)` returning `AttemptOutcome`, the `ProviderRegistry` type, and `formatFailures` (`src/web-search/failure-lines.ts`).
 - Slices 1–5 must all have landed. This slice edits no existing file.
 
 ## Design decisions

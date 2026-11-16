@@ -165,6 +165,7 @@ export default defineConfig({
             { text: "Tab plugins", link: "/developer-documentation/tab-plugins" },
             { text: "Editor plugins", link: "/developer-documentation/editor-plugins" },
             { text: "Overlay plugins", link: "/developer-documentation/overlay-plugins" },
+            { text: "Web search providers", link: "/developer-documentation/web-search-providers" },
             { text: "Documentation", link: "/developer-documentation/documentation" },
             { text: "Release process", link: "/developer-documentation/release-process" },
             { text: "Testing", link: "/developer-documentation/testing" },
