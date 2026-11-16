@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the description's remote-tab verification claim that results come from the remote's own provider token, which the merged-token rule contradicts.
-
-Existing Issue: The closing "Cannot be exercised in a browser" paragraph of the description says a remote-tab search's "results [are] served by the remote's own `tavily-token`", while `searchWebInTab` sends the near side's merged tokens and `provisionRemoteWorkspace` builds `{ ...own, ...forwarded }`, so with the Setup's local `~/.janissary/tavily-token` the forwarded value wins and the remote's own file is only the fallback. Severity: 3/10
-
-Existing Risk: 3/10 - A reviewer repeating the remote check with the documented setup cannot tell which credential answered and may conclude the remote's own token was used, or that forwarding failed, while the plan's manual check explicitly requires no local token file to demonstrate the remote's own key.
-
-Proposal Risk: 1/10 - The description would state the merged-token rule the help page and remote-server spec already state, but the remote check still needs a remote host and a deliberate choice about whether the local token is present.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "correct the description's remote-token verification note". Rewrite that parenthetical to say the remote search uses the workspace's merged tokens, where a token forwarded from this machine wins over the remote's own `tavily-token` (which is the fallback when no local token file exists), matching `help/web.md`'s Tokens paragraph, `product/specs/remote-server.md`'s version-44 paragraph, and the manual remote check in `product/plans/complete/web-search.md` ("even with no local token file"). Leave every other description paragraph, the title, and all source, test, spec, and help files unchanged. Verify by reading the revised paragraph against `src/web-search/tab-search.ts` (`searchRemote`), `src/remote/serve-provision.ts` (the merged token map), and `src/remote/filesystem/web-search-operation.ts`, and by confirming the sentence no longer claims the remote's own file supplies the results in the documented setup.
-
-
 * Deliver the registry test inventory the plan promises for disable-and-report and tokenless disabled-provider resolution.
 
 Existing Issue: The canonical plan's `src/web-search/registry.test.ts` bullet says a missing provider export and a non-array result each disable and report once, and that an explicit disabled name prints its stored line even without a token, but the suite asserts only the two failure reasons for the first pair and always passes a token when it checks a disabled name. Severity: 2/10
