@@ -61,7 +61,7 @@ disk yet, and `Reveal in file navigator (reopen from a remote navigator)` for a 
 whose source navigator has closed or been retargeted. The button is dimmed and inert in both
 blocked states.
 
-A local file takes the shell and harness buttons' root rule. The tree roots at the workspace clone
+For a local file, the reveal roots the tree at the file's own place. The tree roots at the workspace clone
 that contains the file when there is one, otherwise at the project root when the file sits
 strictly inside it, otherwise at the file's own directory, where the file is a single row with
 nothing to expand. A click opens a fresh navigator docked in the left sidebar when none is open,

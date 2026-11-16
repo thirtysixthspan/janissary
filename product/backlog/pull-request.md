@@ -1,13 +1,3 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
-
-* Correct the editor spec's claim that a local reveal takes the shell and harness buttons' root rule, which roots at the clicked tab's working directory rather than at the file's own place.
-
-Existing Issue: The new editor spec says a local reveal takes the shell and harness buttons' root rule, while those buttons open a navigator rooted at the clicked tab's working directory and the reveal roots at the file's enclosing workspace clone, the project root strictly containing it, or the file's own directory, as the same subsection and the new file-navigator spec paragraph both say. Severity: 3/10
-
-Existing Risk: 3/10 - A contributor or test author reading the editor spec in isolation can implement or assert a working-directory-rooted reveal and reproduce the wrong root for a file below the project root.
-
-Proposal Risk: 1/10 - The change is wording only and leaves the shipped root resolution and its tests untouched, so the only exposure is another edit reintroducing the same comparison.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2009 "correct the editor spec's claim that a local reveal follows the shell and harness buttons' root rule". In `product/specs/editor-tab.md`, in the `### Revealing in the file navigator` subsection, replace the sentence `A local file takes the shell and harness buttons' root rule.` with a lead-in that states the reveal's own rule, such as `For a local file, the reveal roots the tree at the file's own place.` Keep the sentence that follows unchanged, which already gives the workspace-clone, strict-project-root, and own-directory cases, and keep the open-or-retarget and retarget-clearing sentences. Do not change the new paragraph in `product/specs/file-navigator-tab.md`, which already says the editor route reveals the edited file rather than the tab's working directory. Verify the wording against `src/file-navigator/reveal-editor.ts` (`revealTargetFor`) and `src/file-navigator/open.ts` (`openOrRetargetLocalAt` for the editor path and `openOrRetarget` for the shell and harness buttons), and against the existing metadata-row section of `product/specs/file-navigator-tab.md`; the behavior itself is covered by `src/file-navigator/reveal-editor.test.ts` and must not move. Run `$janissary/scripts/run.mjs check-diff`; a `product/specs/` change runs no lint, typecheck, or test, and `npm run docs:build` is the check that would catch a bad page.
