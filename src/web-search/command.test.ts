@@ -24,6 +24,21 @@ const defaults = {
   provider: WEB_SEARCH_DEFAULT_PROVIDER,
 };
 
+describe('exported defaults', () => {
+  it('pins the promised default values', () => {
+    expect({
+      numResults: WEB_SEARCH_DEFAULT_RESULTS,
+      maxChars: WEB_SEARCH_DEFAULT_MAX_CHARS,
+      depth: WEB_SEARCH_DEFAULT_DEPTH,
+      provider: WEB_SEARCH_DEFAULT_PROVIDER,
+    }).toEqual({ numResults: 10, maxChars: 10_000, depth: 'basic', provider: 'auto' });
+  });
+
+  it('states the default result count in the primer', () => {
+    expect(WEB_SEARCH_PRIMER).toContain(`up to ${String(WEB_SEARCH_DEFAULT_RESULTS)} results by default`);
+  });
+});
+
 describe('parseWebSearch', () => {
   it('fills in the defaults for the query alone', () => {
     expect(parseWebSearch('web search node.js')).toEqual({ query: 'node.js', ...defaults });
