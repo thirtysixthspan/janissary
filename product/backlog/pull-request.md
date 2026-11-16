@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request title and description so they identify the delivered web search feature and the workspace cancellation fix the branch also carries.
-
-Existing Issue: The title still says the pull request decomposes the web search plan into fourteen subplans, and the body's What and How to verify sections describe only web search and never the workspace clone-cancellation change in the diff, so a reader cannot tell what else is being approved. Severity: 4/10
-
-Existing Risk: 4/10 - A reviewer, release-notes reader, or future bisect treats the pull request as a documentation-only plan split, so the workspace provisioning behavior change ships under a misleading label and gets less scrutiny than a code change.
-
-Proposal Risk: 1/10 - Both artifacts would describe the diff accurately; the only residual risk is a later commit changing one without the other, which the same edit pass can prevent by making both edits together.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "correct the pull request title and description to cover the delivered feature and workspace fix". Retitle the pull request as a feature change, for example `feat(web-search): add a provider-backed web search command and ACP tool`, replacing the current title that describes a plan decomposition. Keep the existing web search sections of the body and add a short paragraph under What naming the workspace cancellation fix: a cancelled workspace clone now removes its partial target so a later launch under the same name is not blocked, as `product/specs/workspaced-agent.md` and `src/workspace/index.ts` describe. Do not rewrite the behavior examples or verification steps beyond that addition. Verify with `gh pr view 2010 --json title,body` that both the title and the added paragraph are present and that no existing web search claim was lost.
-
-
 * Correct the remote-server spec's claim that a failed provider is always reported in the failure lines, which omits the silent successful-fallback case.
 
 Existing Issue: The version-44 paragraph in `product/specs/remote-server.md` says a provider failure on the far side "is reported only in the failure lines", but a remote search that falls back to a later provider prints only the winner's results; the precise behavior in `product/specs/web-search.md` and `help/web.md` is that a provider disabled or failed before a successful fallback is reported nowhere. Severity: 3/10
