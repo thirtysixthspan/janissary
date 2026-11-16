@@ -42,10 +42,73 @@ up/down, etc.) are not.
   abbreviated using the `$root` and `~` shortcuts (see `root-path.md`), the same as elsewhere the
   application displays a path. A git-synced file lives in the shared git-sync clone, so its location
   reads as `$git-sync/<rest>` rather than `$root/workspace/git-sync/<rest>`.
-- The metadata header groups every action at the right edge of that same row: the sync-status icon when present, save, commit to origin, connections status, and Split when available. The save button is enabled when the buffer has unsaved changes and
-  disabled and dimmed when the buffer is clean. The connections-status button opens the tab's
-  connections window (see [[connection]]) and is dimmed and inert when no persona connection is
-  open.
+- The metadata header groups every action at the right edge of that same row: the
+  reveal-in-file-navigator icon, the sync-status icon when present, save, commit to origin,
+  connections status, and Split when available. The save button is enabled when the buffer has
+  unsaved changes and disabled and dimmed when the buffer is clean. The connections-status button
+  opens the tab's connections window (see [[connection]]) and is dimmed and inert when no persona
+  connection is open.
+
+### Revealing in the file navigator
+
+The metadata row's first action is a folder icon button that reveals the edited file in a file
+navigator. It is the same icon the shell and harness metadata rows use for their own
+file-navigator button. Its enabled tooltip and accessible name are both
+`Reveal in file navigator`. A blocked button appends its reason to that same text in parentheses,
+for the tooltip and the accessible name alike:
+`Reveal in file navigator (save the file first)` for a new file whose target does not exist on
+disk yet, and `Reveal in file navigator (reopen from a remote navigator)` for a remote cached file
+whose source navigator has closed or been retargeted. The button is dimmed and inert in both
+blocked states.
+
+A local file takes the shell and harness buttons' root rule. The tree roots at the workspace clone
+that contains the file when there is one, otherwise at the project root when the file sits
+strictly inside it, otherwise at the file's own directory, where the file is a single row with
+nothing to expand. A click opens a fresh navigator docked in the left sidebar when none is open,
+and otherwise retargets the most recently focused navigator to that root, exactly as those buttons
+do (see `file-navigator-tab.md`). A retarget clears the navigator's expanded directories and its
+move undo/redo history, even when it was already on that root; the navigator keeps its identity,
+its position, and its dock placement.
+
+A remote file is a cached copy opened from a remote navigator. It is revealed in that source
+navigator at the navigator's current root, and no navigator is retargeted, because the source
+navigator is the file's only live route back to the remote host. When a re-root inside the
+workspace has left the file outside the current root, the navigator re-roots to its workspace root
+first and the file is selected there. A source navigator that has closed or been retargeted leaves
+the cached copy with no route back, which is the blocked state above. A file synced with GitHub is
+revealed inside the shared git-sync clone that holds it, under the same local root rule, with no
+mapping back to the main checkout.
+
+When the file, or a directory above it, has gone from disk since the editor opened it, the click
+still opens or retargets the navigator as usual. Ancestors that no longer exist collapse on the
+next rebuild, the missing file selects nothing, and nothing is reported. A resolved root that is
+no longer a directory changes nothing: no navigator opens and no open one is retargeted.
+
+The tree takes keyboard focus as soon as the click is handled. The file's row becomes the cursor,
+the anchor, and the only selected row as soon as that row exists in the tree, which on a remote
+tree or a large local one can be a moment later, and the tree scrolls it into view. A pending
+selection is dropped if the user moves the tree's cursor or clicks a row first, or if the
+navigator is re-rooted or retargeted before the row arrives. A click on this button is the one
+metadata-header click exempt from the header's focus-restoring mouse-up, so the tree keeps the
+focus the editor would otherwise take back. Otherwise the button is ordinary: Tab reaches it,
+Enter or Space activates it, and it opens nothing of its own. On a narrow pane the whole actions
+group moves to its own line rather than being clipped.
+
+A docked navigator becomes the sidebar's selected entry, and the editor stays visible beside it. A
+navigator in the center strip becomes the active tab, so the editor goes behind it. A fresh
+navigator opens docked left, so the editor stays visible.
+
+While the editor buffer has focus, Cmd+Shift+E on macOS does exactly what a click does, and it
+does nothing while the button is blocked. Ctrl+Shift+E keeps its editor meaning everywhere: it
+extends the selection to the end of the line. Outside macOS the button is the only route. There is
+no command and no context-menu entry for this action.
+
+The blocked state is recomputed from the current state on every tab broadcast rather than stored,
+so a source navigator closing dims the button without the editor being reopened. No outcome is
+reported as a notification: every result is either a visible tree change or silence. The server
+resolves the file's root, chooses the navigator, expands the ancestors, and writes the selection
+and the focus hint; the client renders the result, forwards the click, and reports that the focus
+hint was used.
 
 ### Committing to origin
 
