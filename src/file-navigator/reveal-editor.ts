@@ -75,6 +75,19 @@ export function revealEditorFile(port: RevealPort, editorLabel: string): void {
   if (port.managers.tab.tabs[index]?.dock === undefined) port.managers.tab.setActiveTab(index);
 }
 
+export function clearRevealFocus(port: RevealPort, navigatorLabel: string, revision: number): void {
+  const state = port.states.get(navigatorLabel);
+  if (!state?.restore || state.restore.revision !== revision || !state.restore.focus) return;
+  state.restore = {
+    revision: state.restore.revision,
+    cursor: state.restore.cursor,
+    anchor: state.restore.anchor,
+    anchorToCursor: state.restore.anchorToCursor,
+    selected: state.restore.selected,
+  };
+  port.rebuild(navigatorLabel);
+}
+
 function remoteReveal(port: RevealPort, file: string): { label: string; relPath: string } | undefined {
   const record = remoteFileFor(file);
   if (!record) return;

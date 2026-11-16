@@ -11,7 +11,7 @@ import { freshFileNavigatorState, type FilesTabState } from './state.js';
 import {
   clearRemoteFileCache, forgetRemoteFilesOf, initRemoteFileCache, materializeRemoteFile, remoteFileFor,
 } from './remote/file-cache.js';
-import { editorRevealBlocked, revealEditorFile, revealTargetFor, type RevealPort } from './reveal-editor.js';
+import { clearRevealFocus, editorRevealBlocked, revealEditorFile, revealTargetFor, type RevealPort } from './reveal-editor.js';
 
 const root = '/repo';
 const workspace = '/repo/.janissary/workspace';
@@ -286,6 +286,72 @@ describe('revealEditorFile', () => {
     expect(docked.tabs[1]?.dock).toBe('left');
     expect(docked.state.expanded).toEqual(new Set(['src', 'src/deep']));
     expect(docked.state.restore?.cursor).toBe('src/deep/a.ts');
+  });
+});
+
+describe('clearRevealFocus', () => {
+  it('drops focus from a hint whose revision matches and keeps every other member', () => {
+    const { state, port } = revealFixture();
+    state.restore = {
+      revision: 4, cursor: null, anchor: 'src/deep/a.ts', anchorToCursor: false, selected: null, focus: true,
+    };
+
+    clearRevealFocus(port, 'files', 4);
+
+    expect(state.restore).toEqual({
+      revision: 4, cursor: null, anchor: 'src/deep/a.ts', anchorToCursor: false, selected: null,
+    });
+    expect(state.restore).not.toHaveProperty('focus');
+    expect(port.rebuild).toHaveBeenCalledExactlyOnceWith('files');
+  });
+
+  it('keeps a hint whose cursor and selection are absent free of those members', () => {
+    const { state, port } = revealFixture();
+    state.restore = { revision: 7, focus: true };
+
+    clearRevealFocus(port, 'files', 7);
+
+    expect(state.restore).toEqual({ revision: 7 });
+    expect(state.restore).not.toHaveProperty('focus');
+    expect(port.rebuild).toHaveBeenCalledExactlyOnceWith('files');
+  });
+
+  it('leaves the hint alone when the revision does not match', () => {
+    const { state, port } = revealFixture();
+    state.restore = { revision: 5, cursor: 'src/deep/a.ts', focus: true };
+
+    clearRevealFocus(port, 'files', 4);
+
+    expect(state.restore).toEqual({ revision: 5, cursor: 'src/deep/a.ts', focus: true });
+    expect(port.rebuild).not.toHaveBeenCalled();
+  });
+
+  it('does nothing for a hint that carries no focus', () => {
+    const { state, port } = revealFixture();
+    state.restore = { revision: 4, cursor: 'src/deep/a.ts' };
+
+    clearRevealFocus(port, 'files', 4);
+
+    expect(state.restore).toEqual({ revision: 4, cursor: 'src/deep/a.ts' });
+    expect(port.rebuild).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when the navigator holds no hint', () => {
+    const { state, port } = revealFixture();
+
+    clearRevealFocus(port, 'files', 4);
+
+    expect(state.restore).toBeUndefined();
+    expect(port.rebuild).not.toHaveBeenCalled();
+  });
+
+  it('does nothing for a label with no navigator state', () => {
+    const { port } = revealFixture();
+
+    clearRevealFocus(port, 'gone', 4);
+
+    expect(port.states.has('gone')).toBe(false);
+    expect(port.rebuild).not.toHaveBeenCalled();
   });
 });
 

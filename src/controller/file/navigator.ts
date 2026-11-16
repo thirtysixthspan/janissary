@@ -175,6 +175,10 @@ export function revealInFileNavigator(managers: Managers, label: string): void {
   managers.fileNavigator.revealEditorFile(label);
 }
 
+export function fileNavigatorRevealApplied(managers: Managers, label: string, revision: number): void {
+  if (isOpenTab(managers, label)) managers.fileNavigator.clearRevealFocus(label, revision);
+}
+
 export async function fileNavigatorSearch(managers: Managers, index: number): Promise<string[]> {
   const label = managers.tab.tabs[index]?.label;
   return label ? managers.fileNavigator.search(label) : [];

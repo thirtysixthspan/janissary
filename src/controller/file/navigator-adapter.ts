@@ -34,6 +34,7 @@ export type FileNavigatorControllerAdapter = {
   setDock(index: number, dock: 'left' | 'right' | null): void;
   openFileNavigatorFor(label: string): void;
   revealInFileNavigator(label: string): void;
+  fileNavigatorRevealApplied(label: string, revision: number): void;
   launchShellFor(label: string): void;
   openDiffFor(label: string): void;
 };
@@ -68,6 +69,7 @@ export function createFileNavigatorControllerAdapter(managers: Managers): FileNa
     setDock: (index, dock) => managers.tab.setDock(index, dock),
     openFileNavigatorFor: (label) => fileNavigatorRpc.openFileNavigatorFor(managers, label),
     revealInFileNavigator: (label) => fileNavigatorRpc.revealInFileNavigator(managers, label),
+    fileNavigatorRevealApplied: (label, revision) => fileNavigatorRpc.fileNavigatorRevealApplied(managers, label, revision),
     launchShellFor: (label) => {
       void managers.plugins.openSibling('shell', { label, command: 'shell' });
     },

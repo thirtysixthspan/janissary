@@ -3,7 +3,7 @@ import {
   fileNavigatorToggle, fileNavigatorCollapseAll, fileNavigatorPull, fileNavigatorReroot,
   moveFileNavigatorItem, moveFileNavigatorItems, pasteFileNavigatorItems, deleteFileNavigatorItem,
   deleteFileNavigatorItems, undoFileNavigatorItem, redoFileNavigatorItem, openFileNavigatorFor,
-  revealInFileNavigator, fileNavigatorSearch, revealFileNavigatorItem, renameFileNavigatorItem, fileNavigatorOpeners,
+  revealInFileNavigator, fileNavigatorRevealApplied, fileNavigatorSearch, revealFileNavigatorItem, renameFileNavigatorItem, fileNavigatorOpeners,
   fileNavigatorCreateFile, fileNavigatorCreateDirectory,
 } from './navigator.js';
 import { fileNavigatorCommit, fileNavigatorNothingToCommit } from './navigator-commit.js';
@@ -230,6 +230,20 @@ describe('controller-file-navigator', () => {
     const managers = makeManagers('editor', { revealEditorFile: (...args: unknown[]) => { calls.push(args); } });
     revealInFileNavigator(managers, 'editor');
     expect(calls).toEqual([['editor']]);
+  });
+
+  it('fileNavigatorRevealApplied delegates to FileNavigatorManager.clearRevealFocus with the label and revision', () => {
+    const calls: unknown[] = [];
+    const managers = makeManagers('files', { clearRevealFocus: (...args: unknown[]) => { calls.push(args); } });
+    fileNavigatorRevealApplied(managers, 'files', 4);
+    expect(calls).toEqual([['files', 4]]);
+  });
+
+  it('fileNavigatorRevealApplied is a no-op when no open tab carries the label', () => {
+    const calls: unknown[] = [];
+    const managers = makeManagers(undefined, { clearRevealFocus: (...args: unknown[]) => { calls.push(args); } });
+    fileNavigatorRevealApplied(managers, 'gone', 4);
+    expect(calls).toHaveLength(0);
   });
 
   it('fileNavigatorSearch resolves the manager result when the tab exists', async () => {

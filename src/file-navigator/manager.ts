@@ -12,7 +12,7 @@ import {
   replayMutation, type MutationContext,
 } from './manager/mutations.js';
 import { toggleDir, collapseAllDirs, rerootTree, revealPath, type NavPort } from './navigation.js';
-import { revealEditorFile, type RevealPort } from './reveal-editor.js';
+import { clearRevealFocus, revealEditorFile, type RevealPort } from './reveal-editor.js';
 import { detailOfTab, expandedPathsOf, setTabDetail } from './manager/profile.js';
 import { makeNavigationPort, makeOpenPort } from './manager/ports.js';
 import { WatchedFilesTabs } from './watched-tabs.js';
@@ -198,6 +198,10 @@ export class FileNavigatorManager extends WatchedFilesTabs {
   // ancestors and selecting its row. A blocked, vanished, or non-editor label is a silent no-op.
   revealEditorFile(editorLabel: string): void {
     revealEditorFile(this.revealPort(), editorLabel);
+  }
+
+  clearRevealFocus(navigatorLabel: string, revision: number): void {
+    clearRevealFocus(this.revealPort(), navigatorLabel, revision);
   }
 
   openers(label: string, relPath: string, edit: boolean, all?: boolean): FileOpenerResolution {

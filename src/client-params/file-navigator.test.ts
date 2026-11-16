@@ -71,6 +71,13 @@ const CASES: Array<[
   ['redoFileNavigatorItem', { label: 'files' }, [{ label: 'files', overwrite: 1 }, { index: 0 }]],
   ['openFileNavigatorFor', { label: 'files' }, [{}]],
   ['revealInFileNavigator', { label: 'editor' }, [{}, { label: 2 }, { label: null }]],
+  ['fileNavigatorRevealApplied', { label: 'files', revision: 4 }, [
+    { revision: 4 },
+    { label: 2, revision: 4 },
+    { label: 'files' },
+    { label: 'files', revision: '4' },
+    { label: 'files', revision: 4.5 },
+  ]],
 ];
 
 describe('file navigator RPC params decoders', () => {

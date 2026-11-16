@@ -39,6 +39,7 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'setDock':
     case 'openFileNavigatorFor':
     case 'revealInFileNavigator':
+    case 'fileNavigatorRevealApplied':
     case 'launchShellFor':
     case 'openDiffFor':
     case 'openTranscriptFileFor':

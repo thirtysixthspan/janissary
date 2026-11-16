@@ -163,4 +163,8 @@ export type FileNavigatorRpcCall =
   // tab: the server resolves the edited file's navigator, expands its ancestors, and selects it.
   // `label` is the editor tab's label, not a navigator label. Fire-and-forget: a blocked, vanished,
   // or non-editor label is a silent no-op whose only signal is the next state broadcast.
-  | { method: 'revealInFileNavigator'; params: { label: string } };
+  | { method: 'revealInFileNavigator'; params: { label: string } }
+  // Reports that a reveal's focus hint has been consumed — applied or dropped — so the server can
+  // stop broadcasting it to a client that remounts later. `label` is the navigator tab's label, not
+  // the editor label `revealInFileNavigator` names. Fire-and-forget.
+  | { method: 'fileNavigatorRevealApplied'; params: { label: string; revision: number } };
