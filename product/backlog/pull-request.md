@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the web help page's absolute "no cancellation" claim, which is true only for typed searches and not for agent searches.
-
-Existing Issue: `help/web.md` says "A search has no cancellation: it runs until it answers or every provider it tries times out", but a search an `ask` or `tell` agent runs is tied to the prompt's abort signal, is aborted at once when the prompt is cancelled or reset, starts no further provider, and has its late result suppressed, as `product/specs/acp.md` and `product/specs/web-search.md` state. Severity: 3/10
-
-Existing Risk: 2/10 - A person reading the help page believes an agent's search cannot be stopped and waits for a slow provider, or assumes the page's statement covers the agent tool when only typed searches are uncancellable.
-
-Proposal Risk: 1/10 - The page will distinguish the two cases; the only residual risk is describing the local-fallback remote session too tersely, which the ACP spec's cancellation wording can be quoted for.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "correct help web's no-cancellation claim to distinguish typed and agent searches". Rewrite the opening paragraph of `help/web.md` so the no-cancellation sentence begins "A typed search has no cancellation"; add one sentence that a search run by an agent is cancelled with its prompt, aborts the in-flight provider request, starts no further provider, and has its late result suppressed, noting that a local-fallback session's remote search has no cancel message and only its late result is suppressed. Keep the rest of the page's remote-routing and provider behavior unchanged. Verify against the typed-search and agent-tool sections of `product/specs/web-search.md`, the Cancellation paragraph of `product/specs/acp.md`, and the signal handoff in `src/acp/run-prompt.ts` and `src/remote/serve-acp-loop.ts`; no code or test change is needed.
-
-
 * Correct the ACP spec's statement that disabling the file row disables its four commands, when the vocabulary has five.
 
 Existing Issue: `product/specs/acp.md` says disabling the parent `file` row disables its four commands, but `NATIVE_ACP_COMMANDS` in `src/plugins/roles/shared.ts` lists five file commands (file read, file glob, file grep, file write, file edit), and `product/specs/application-commands.md` already says disabling `file` disables all five. Severity: 2/10

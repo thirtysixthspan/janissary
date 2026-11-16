@@ -1,6 +1,6 @@
 ### web
 
-Search the web through a configured provider and print the results as a Markdown list. A local tab searches on the machine running Janissary. A remote tab searches on the remote machine, in that tab's workspace, and never falls back to the local machine. A search has no cancellation: it runs until it answers or every provider it tries times out.
+Search the web through a configured provider and print the results as a Markdown list. A local tab searches on the machine running Janissary. A remote tab searches on the remote machine, in that tab's workspace, and never falls back to the local machine. A typed search has no cancellation: it runs until it answers or every provider it tries times out. A search run by an `ask` or `tell` agent is cancelled with its prompt: the in-flight provider request is aborted, no further provider is tried, and its late result is suppressed; a local-fallback session's remote search has no cancel message, so only the late result is suppressed.
 
 **Usage**
 
