@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the ACP spec's claim that an agent's web search runs on the host running the loop, which the tab-based routing and the same spec's later paragraph contradict.
-
-Existing Issue: The tool-dispatch paragraph in `product/specs/acp.md` says a `web` line goes to the same search as the typed command "on the host running the loop", while `src/acp/run-prompt.ts` hands the tab label to `searchWebInTab` and `src/web-search/tab-search.ts` sends a local-fallback session on a remote tab through `withRemoteTabPort` to the remote host, and both the plan's design decision and the spec's own Web search section say the search runs on the side that owns the tab. Severity: 4/10
-
-Existing Risk: 4/10 - A reader implementing or troubleshooting a local-fallback session on a remote tab would look for the search on the loop's local host and misdiagnose the remote failure, and the spec contradicts itself.
-
-Proposal Risk: 1/10 - The sentence and the implemented routing agree after the edit; the imprecise pre-existing "host running the loop" shorthand in the file-read dispatch paragraph is outside this entry's scope and unchanged.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "correct the ACP spec's web-search routing sentence". In `product/specs/acp.md`, in the tool-dispatch paragraph that begins "`browser …`, `question …`, and `db sqlite …` commands are caller-side", replace "on the host running the loop" in the sentence "A `web` line likewise goes to the same search as the typed command on the host running the loop" with "on the side that owns the tab", leaving the rest of the sentence and paragraph byte-for-byte. The resulting sentence must agree with the plan's design decision in `product/plans/complete/web-search.md` ("A granted search runs on the side that owns the tab, not on the host running the ACP loop") and with the later Web search section's "searches on the side that owns the tab". Verify against `src/acp/run-prompt.ts` (`runWorkspace` passes the tab label to `searchWebInTab`) and `src/web-search/tab-search.ts` (`localReadRoot` sends a remote tab through `withRemoteTabPort`), and read the repaired paragraph against `product/specs/web-search.md` and `documentation/user-documentation/advanced-agents/acp-agent.md`. Change no code, test, help page, plan, or other spec; run the markdown check-diff after the edit and confirm it exits 0.
-
-
 * Correct the ask and tell help pages' claim that the agent's web access is only the granted `web search` command, which their own browser grants contradict.
 
 Existing Issue: Both `help/ask.md` and `help/tell.md` say "Its web access is the granted `web search` command", while the same page's default-grant list includes `browser goto` and `browser content`, so the sentence tells a reader that the agent's browser tools are not web access. Severity: 2/10
