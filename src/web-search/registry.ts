@@ -69,7 +69,17 @@ export function createProviderRegistry(
     return { kind: 'plugin-failed', reason };
   }
 
-  function classifyFailure(
+  function classifyActivationFailure(
+    manifest: WebSearchProviderManifest,
+    error: unknown,
+    capability: WebSearchCapability,
+    reportDisabled?: ReportDisabled,
+  ): AttemptOutcome {
+    if (capability.signal?.aborted === true) return { kind: 'aborted', error };
+    return disable(manifest, `provider failed: ${errorFirstLine(error)}`, reportDisabled);
+  }
+
+  function classifySearchFailure(
     manifest: WebSearchProviderManifest,
     error: unknown,
     capability: WebSearchCapability,
@@ -143,7 +153,7 @@ export function createProviderRegistry(
     try {
       provider = await loadProvider(manifest);
     } catch (error) {
-      return classifyFailure(manifest, error, capability, reportDisabled);
+      return classifyActivationFailure(manifest, error, capability, reportDisabled);
     }
     if (provider === undefined) {
       return disable(manifest, 'provider failed: module has no provider', reportDisabled);
@@ -155,7 +165,7 @@ export function createProviderRegistry(
       }
       return { kind: 'results', results };
     } catch (error) {
-      return classifyFailure(manifest, error, capability, reportDisabled);
+      return classifySearchFailure(manifest, error, capability, reportDisabled);
     }
   }
 

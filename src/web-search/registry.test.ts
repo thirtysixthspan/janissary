@@ -139,6 +139,22 @@ describe('createProviderRegistry', () => {
       .resolves.toEqual({ kind: 'plugin-failed', reason: 'provider failed: Cannot find module' });
   });
 
+  it('classifies a ProviderRequestError from activate as a plugin failure', async () => {
+    const reportDisabled = vi.fn();
+    const broken = fakeManifest('tavily', {
+      activate: async () => {
+        throw new ProviderRequestError('import failed');
+      },
+    });
+    const registry = createProviderRegistry([broken, fakeManifest('tinyfish')]);
+
+    await expect(registry.runAttempt(broken, REQUEST, capability(), reportDisabled))
+      .resolves.toEqual({ kind: 'plugin-failed', reason: 'provider failed: import failed' });
+    expect(reportDisabled).toHaveBeenCalledOnce();
+    expect(reportDisabled).toHaveBeenCalledWith('tavily', 'provider failed: import failed');
+    expect(ids(registry.resolveAttempts('auto', TOKENS))).toEqual(['tinyfish']);
+  });
+
   it('classifies a thrown search error as a plugin failure with the error first line', async () => {
     const asyncManifest = fakeManifest('tavily', {
       module: moduleFor(async () => {
@@ -299,6 +315,28 @@ describe('createProviderRegistry', () => {
       module: moduleFor(async () => {
         throw error;
       }),
+    });
+    const registry = createProviderRegistry([manifest]);
+
+    const outcome = await registry.runAttempt(
+      manifest, REQUEST, capability(controller.signal), reportDisabled,
+    );
+
+    expect(outcome.kind).toBe('aborted');
+    expect(abortedError(outcome)).toBe(error);
+    expect(reportDisabled).not.toHaveBeenCalled();
+    expect(ids(registry.resolveAttempts('tavily', TOKENS))).toEqual(['tavily']);
+  });
+
+  it('treats a ProviderRequestError from activate during an abort as an abort', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const error = new ProviderRequestError('import failed');
+    const reportDisabled = vi.fn();
+    const manifest = fakeManifest('tavily', {
+      activate: async () => {
+        throw error;
+      },
     });
     const registry = createProviderRegistry([manifest]);
 

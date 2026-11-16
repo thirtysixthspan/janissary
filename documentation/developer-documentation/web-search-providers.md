@@ -165,14 +165,14 @@ A manifest's API version is checked before `activate` runs. A mismatch is a plug
 
 Every call across the boundary is guarded. These are plugin failures:
 
-- `activate` rejects or throws.
+- `activate` rejects or throws, whatever the error type. An activation failure always disables, including one that throws a `ProviderRequestError`: a module that cannot import has not made a request, so there is no expected answer to report.
 - The module has no `provider.search` function.
 - `search` throws or rejects with anything other than a `ProviderRequestError`.
 - `search` resolves to something that is not an array.
 
 A plugin failure uses the reason `provider failed: <first line of the error>`, or one of the fixed reasons `provider failed: module has no provider` and `provider failed: search did not return an array`. The provider is disabled for the rest of the server process. A local search that supplies `reportDisabled` posts one notification: `Web search provider "<id>" disabled: <reason>.` Repeat failures keep the first reason and post no second notification. A search on a remote machine passes no `reportDisabled`, so no notification appears there and the reason reaches the reader only in the failure lines. Nothing re-enables a provider except a server restart.
 
-An expected failure is a thrown `ProviderRequestError`. Its message is the reason the host prints, and it never disables the provider. Use it for an HTTP status, a timeout, a network error, a response that doesn't decode, or anything else the provider's API can answer normally. An `auto` search records the failure and moves on to the next configured provider, while an explicit `--provider` tries only that provider, so its expected failure prints a single `Web search failed (<id>): <reason>.` line. An abort never disables either: when `capability.signal.aborted` is true, whatever the rejection is, the attempt is a cancellation and the search stops rather than falling back to the next provider.
+A `search` that throws a `ProviderRequestError` is an expected failure. Its message is the reason the host prints, and it never disables the provider. Use it for an HTTP status, a timeout, a network error, a response that doesn't decode, or anything else the provider's API can answer normally. An `auto` search records the failure and moves on to the next configured provider, while an explicit `--provider` tries only that provider, so its expected failure prints a single `Web search failed (<id>): <reason>.` line. An abort never disables either: when `capability.signal.aborted` is true, whatever the rejection is, the attempt is a cancellation and the search stops rather than falling back to the next provider.
 
 The 30-second budget is per attempt. The shared `requestJson` step in `src/web-search/providers/http.ts` joins `capability.signal` with a 30-second timeout, turns a non-2xx status into `HTTP <status> <status text>`, a timeout into `timed out after 30 s`, an undecodable body into `invalid response`, and a network failure into its first line. Use it unless a provider needs a request shape it cannot express. An `auto` search that falls back can take up to 30 seconds per configured provider.
 
