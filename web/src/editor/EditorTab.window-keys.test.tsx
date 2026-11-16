@@ -76,6 +76,7 @@ describe('EditorTab window shortcuts', () => {
   it.each<[string, Chord]>([
     ['Shift+Left', { key: 'ArrowLeft', shiftKey: true }],
     ['Ctrl+E', { key: 'e', ctrlKey: true }],
+    ['Cmd+Shift+E', { key: 'e', metaKey: true, shiftKey: true }],
     ['Ctrl+P', { key: 'p', ctrlKey: true }],
     ['Escape', { key: 'Escape' }],
     ['Cmd+F', { key: 'f', metaKey: true }],

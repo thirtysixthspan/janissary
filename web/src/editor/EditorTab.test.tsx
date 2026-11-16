@@ -795,6 +795,52 @@ describe('EditorTab', () => {
     expect(client.send).not.toHaveBeenCalled();
   });
 
+  it('sends the reveal on Cmd+Shift+E, exactly as the metadata button does', async () => {
+    const { client } = makeClient();
+    await renderLoaded(client);
+
+    fireEvent.keyDown(textarea(), { key: 'e', metaKey: true, shiftKey: true });
+
+    expect(client.send).toHaveBeenCalledWith({ method: 'revealInFileNavigator', params: { label: 'notes' } });
+  });
+
+  it('adds no undo step and seals no typing group on Cmd+Shift+E', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    const rowText = () => container.querySelector('.editor-content')?.textContent ?? '';
+
+    type('x');
+    fireEvent.keyDown(textarea(), { key: 'e', metaKey: true, shiftKey: true });
+    expect(rowText()).toBe('xline one');
+    type('y');
+    expect(rowText()).toBe('xyline one');
+    fireEvent.keyDown(textarea(), { key: 'z', metaKey: true });
+
+    await waitFor(() => expect(screen.queryByText('xyline one')).not.toBeInTheDocument());
+    expect(screen.getByText('line one')).toBeInTheDocument();
+  });
+
+  it('sends nothing on Cmd+Shift+E for a blocked file and types no e', async () => {
+    const { client } = makeClient();
+    const view = makeView({ revealBlocked: 'unsaved' });
+    const { container } = await renderLoaded(client, view);
+
+    fireEvent.keyDown(textarea(), { key: 'e', metaKey: true, shiftKey: true });
+
+    expect(client.send).not.toHaveBeenCalled();
+    expect(container.querySelector('.editor-content')?.textContent).toBe('line one');
+  });
+
+  it('extends the selection to the line end on Ctrl+Shift+E and sends no reveal', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+
+    fireEvent.keyDown(textarea(), { key: 'e', ctrlKey: true, shiftKey: true });
+
+    expect(container.querySelector('.editor-body')).toHaveAttribute('data-editor-selection', 'line one');
+    expect(client.send).not.toHaveBeenCalled();
+  });
+
   it('committing via the metadata icon saves first, then commits the file with a generated message', async () => {
     const { client, saveFile, commitEditorFile } = makeClient();
     const { container } = await renderLoaded(client);
@@ -1192,6 +1238,18 @@ describe('EditorTab', () => {
 
       fireEvent.keyDown(textarea(), { key: 'Escape' });
       expect(hasEnabledSaveButton(container)).toBe(false);
+    });
+
+    it('leaves Cmd+Shift+E inert while the query line holds focus', async () => {
+      const { client } = makeClient();
+      stubRequestFileContent('line one\n');
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
+
+      openAndType(' summarizer rewrite this');
+      fireEvent.keyDown(textarea(), { key: 'e', metaKey: true, shiftKey: true });
+
+      expect(client.send).not.toHaveBeenCalled();
+      expect(queryRowText(container)).toBe('> summarizer rewrite this');
     });
 
     it('fires an editorSuggest query on Ctrl/Cmd+Enter from the query text and previews the single hunk without the multi-change banner', async () => {

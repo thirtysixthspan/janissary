@@ -20,6 +20,7 @@ type InteractionApis = {
   find: LineFindApi;
   suggest: EditorSuggestApi;
   pluginKey: (event: KeyLike) => boolean;
+  reveal: () => void;
   overlayOpen: boolean;
 };
 
@@ -56,7 +57,7 @@ function verticalResolver(body: HTMLDivElement | null, caret: HTMLSpanElement | 
 }
 
 export function useEditorInteractions({
-  bodyRef, caretRef, textareaRef, api, suggest, find, pluginKey, overlayOpen,
+  bodyRef, caretRef, textareaRef, api, suggest, find, pluginKey, reveal, overlayOpen,
 }: InteractionRefs & InteractionApis): EditorInteractions {
   const composingRef = useRef(false);
   const measuredPageLines = () => pageLines(bodyRef.current);
@@ -94,6 +95,10 @@ export function useEditorInteractions({
         api.setState(collapseSelection(state));
       }
       find.open();
+      return true;
+    }
+    if (action.kind === 'revealInNavigator') {
+      reveal();
       return true;
     }
     api.apply(action, measuredPageLines(), verticalResolver(bodyRef.current, caretRef.current));

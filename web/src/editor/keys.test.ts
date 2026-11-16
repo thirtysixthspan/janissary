@@ -22,6 +22,7 @@ describe('actionForKey', () => {
   it('maps the Emacs-style Ctrl subset', () => {
     expect(actionForKey(key('a', { ctrlKey: true }))).toEqual({ kind: 'lineEdge', edge: 'home', extend: false });
     expect(actionForKey(key('e', { ctrlKey: true }))).toEqual({ kind: 'lineEdge', edge: 'end', extend: false });
+    expect(actionForKey(key('e', { ctrlKey: true, shiftKey: true }))).toEqual({ kind: 'lineEdge', edge: 'end', extend: true });
     expect(actionForKey(key('f', { ctrlKey: true }))).toEqual({ kind: 'move', dir: 'right', extend: false });
     expect(actionForKey(key('b', { ctrlKey: true }))).toEqual({ kind: 'move', dir: 'left', extend: false });
     expect(actionForKey(key('n', { ctrlKey: true }))).toEqual({ kind: 'move', dir: 'down', extend: false });
@@ -44,6 +45,8 @@ describe('actionForKey', () => {
     expect(actionForKey(key('c', { metaKey: true }))).toEqual({ kind: 'copy' });
     expect(actionForKey(key('x', { metaKey: true }))).toEqual({ kind: 'cut' });
     expect(actionForKey(key('f', { metaKey: true }))).toEqual({ kind: 'find' });
+    expect(actionForKey(key('e', { metaKey: true, shiftKey: true }))).toEqual({ kind: 'revealInNavigator' });
+    expect(actionForKey(key('e', { metaKey: true }))).toBeNull();
     expect(actionForKey(key('ArrowLeft', { metaKey: true }))).toEqual({ kind: 'lineEdge', edge: 'home', extend: false });
     expect(actionForKey(key('ArrowUp', { metaKey: true }))).toEqual({ kind: 'docEdge', edge: 'start', extend: false });
   });
@@ -57,6 +60,7 @@ describe('actionForKey', () => {
     expect(actionForKey(key('v', { metaKey: true }))).toBeNull();
     // Alt+letter is suppressed — the altKey guard in actionForKey returns null before plainAction.
     expect(actionForKey(key('x', { altKey: true }))).toBeNull();
+    expect(actionForKey(key('e', { altKey: true, shiftKey: true }))).toBeNull();
     // Cmd+F opens the find overlay without shadowing the Emacs-style Ctrl+F, and Alt+F is nothing.
     expect(actionForKey(key('f', { ctrlKey: true }))).toEqual({ kind: 'move', dir: 'right', extend: false });
     expect(actionForKey(key('f', { altKey: true }))).toBeNull();
@@ -91,6 +95,7 @@ describe('yieldsToPlugins', () => {
     for (const spans of [true, false]) {
       expect(yieldsToPlugins(key('s', { metaKey: true }), context(spans, true))).toBe(false);
       expect(yieldsToPlugins(key('z', { metaKey: true }), context(spans, true))).toBe(false);
+      expect(yieldsToPlugins(key('e', { metaKey: true, shiftKey: true }), context(spans, true))).toBe(false);
       expect(yieldsToPlugins(key('Enter'), context(spans, true))).toBe(false);
       expect(yieldsToPlugins(key('a'), context(spans, true))).toBe(false);
     }

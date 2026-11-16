@@ -89,7 +89,10 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
     () => { sendRevealInFileNavigator(client, tab.label, editor.revealBlocked); },
     [client, tab.label, editor.revealBlocked],
   );
-  const interactions = useEditorInteractions({ bodyRef, caretRef, textareaRef, api, suggest, find, pluginKey, overlayOpen });
+  const interactions = useEditorInteractions({
+    bodyRef, caretRef, textareaRef, api, suggest, find, pluginKey, reveal: revealInFileNavigator,
+    overlayOpen,
+  });
 
   useEditorDrop(tab.label, visible, textareaRef, api.insert, api.paste);
 
