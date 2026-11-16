@@ -330,7 +330,7 @@ describe('confinedHarnessSpawn', () => {
     expect(result.env.GOOGLE_GENERATIVE_AI_API_KEY).toBe('ambient-key');
   });
 
-  it('injects every credential when all five tokens are given', () => {
+  it('injects every configured credential', () => {
     mkdirSync(`${workspaceDir}.tmp`, { recursive: true });
     const result = build(
       {
@@ -340,6 +340,8 @@ describe('confinedHarnessSpawn', () => {
           opencode: 'oc_live_key',
           kilo: 'kilo_live_key',
           gemini: 'AIzaSyExample',
+          tavily: 'tvly_live_key',
+          tinyfish: 'tinyfish_live_key',
         },
       },
       { PATH: '/usr/bin' },
@@ -351,6 +353,8 @@ describe('confinedHarnessSpawn', () => {
     expect(result.env.KILO_API_KEY).toBe('kilo_live_key');
     expect(result.env.GEMINI_API_KEY).toBe('AIzaSyExample');
     expect(result.env.GOOGLE_GENERATIVE_AI_API_KEY).toBe('AIzaSyExample');
+    expect(result.env.TAVILY_API_KEY).toBe('tvly_live_key');
+    expect(result.env.TINYFISH_API_KEY).toBe('tinyfish_live_key');
   });
 
   it('sets TMPDIR to the workspace-adjacent temp dir', () => {
