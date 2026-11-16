@@ -6,8 +6,8 @@ The eighth slice of the `web search` feature (source plan: `./product/plans/comp
 
 ## Dependencies
 
-- `./product/plans/ready/web-search-1-command-grammar.md` — the `WebSearchCommand` type (`query`, `numResults`, `maxChars`, `depth: WebSearchDepth`, `provider`, all required) exported from `src/web-search/command.ts`.
-- `./product/plans/ready/web-search-3-provider-tokens.md` — the `tavily` and `tinyfish` rows in `PROJECT_TOKENS` that the merged token set now carries. The feature's single protocol bump (42 → 43) is that slice's; this slice changes no protocol version.
+- `./product/plans/complete/web-search-1-command-grammar.md` — the `WebSearchCommand` type (`query`, `numResults`, `maxChars`, `depth: WebSearchDepth`, `provider`, all required) exported from `src/web-search/command.ts`.
+- `./product/plans/complete/web-search-3-provider-tokens.md` — the `tavily` and `tinyfish` rows in `PROJECT_TOKENS` that the merged token set now carries. The feature's single protocol bump (42 → 43) is that slice's; this slice changes no protocol version.
 - `./product/plans/ready/web-search-7-remote-operation.md` — the `'web-search'` member of `RemoteFilesystemOperation`, its argument type `WebSearchCommand` in `RemoteFilesystemArgumentsByOperation` and its `{ text }` result (`src/remote/protocol-frames.ts`, `src/remote/filesystem/result-decoders.ts`), and the fourth `RemoteFileNavigators` constructor parameter `tokens: ProjectTokens = {}`. Without slice 7, `LONG_RUNNING` (typed `ReadonlySet<RemoteFilesystemOperation>`) and the `request('web-search', …)` call do not typecheck, so this slice lands after it.
 
 All 14 web-search slices ship on one pull request; the ordering above is the order the implementer applies them in so typecheck and tests stay green at each checkpoint.

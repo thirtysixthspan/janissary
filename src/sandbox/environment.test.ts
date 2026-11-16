@@ -7,12 +7,16 @@ import { workspaceDirectories } from '../workspace/directories.js';
 
 describe('agentCredentialEnv', () => {
   it('maps every harness token to each variable its row names', () => {
-    expect(agentCredentialEnv({ claude: 'c', opencode: 'o', kilo: 'k', gemini: 'g' })).toEqual({
+    expect(agentCredentialEnv({
+      claude: 'c', opencode: 'o', kilo: 'k', gemini: 'g', tavily: 't', tinyfish: 'tf',
+    })).toEqual({
       CLAUDE_CODE_OAUTH_TOKEN: 'c',
       OPENCODE_API_KEY: 'o',
       KILO_API_KEY: 'k',
       GEMINI_API_KEY: 'g',
       GOOGLE_GENERATIVE_AI_API_KEY: 'g',
+      TAVILY_API_KEY: 't',
+      TINYFISH_API_KEY: 'tf',
     });
   });
 

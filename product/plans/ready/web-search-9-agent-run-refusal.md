@@ -8,7 +8,7 @@ Today a `web` line already ends in the same refusal, by accident rather than by 
 
 ## Dependencies
 
-- `./product/plans/ready/web-search-1-command-grammar.md` — `isWebCommandLine` in `src/web-search/command.ts` (`/^web(\s|$)/i`, no trimming). That module must exist before this slice lands. It imports only `positiveInteger`, so importing it from `src/acp/tool-table.ts` and `src/agent/command-tools.ts` pulls in no `Managers` or host code.
+- `./product/plans/complete/web-search-1-command-grammar.md` — `isWebCommandLine` in `src/web-search/command.ts` (`/^web(\s|$)/i`, no trimming). That module must exist before this slice lands. It imports only `positiveInteger`, so importing it from `src/acp/tool-table.ts` and `src/agent/command-tools.ts` pulls in no `Managers` or host code.
 
 Later slices rely on this one: `./product/plans/ready/web-search-10-typed-command.md` (registers `web`) and `./product/plans/ready/web-search-12-acp-tool.md` (adds the `web` ACP tool) both list it as a dependency.
 

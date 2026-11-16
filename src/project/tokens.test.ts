@@ -6,6 +6,8 @@ import { PROJECT_TOKENS, loadProjectTokens, getProjectTokens } from './tokens.js
 
 const GITHUB_FILE = 'github-token';
 const GEMINI_FILE = 'gemini-token';
+const TAVILY_FILE = 'tavily-token';
+const TINYFISH_FILE = 'tinyfish-token';
 
 function project(): string {
   const dir = mkdtempSync(path.join(tmpdir(), 'project-tokens-'));
@@ -106,6 +108,20 @@ describe('loadProjectTokens with a home directory', () => {
     write(dir, GITHUB_FILE, 'ghp_project\n');
     write(homeDir, GEMINI_FILE, 'AIzaSyHome\n');
     expect(loadProjectTokens(dir, homeDir)).toEqual({ github: 'ghp_project', gemini: 'AIzaSyHome' });
+  });
+
+  // The two search keys follow the same per-file rule as every other row, including the whitespace
+  // fallback: one load can take one from the project and the other from home.
+  it('resolves the web search keys across both places, falling back on a whitespace project file', () => {
+    const dir = project();
+    const homeDir = home();
+    write(dir, TAVILY_FILE, 'tvly_project\n');
+    write(homeDir, TAVILY_FILE, 'tvly_home\n');
+    write(homeDir, TINYFISH_FILE, 'tinyfish_home\n');
+    expect(loadProjectTokens(dir, homeDir)).toEqual({ tavily: 'tvly_project', tinyfish: 'tinyfish_home' });
+
+    write(dir, TAVILY_FILE, '  \n');
+    expect(loadProjectTokens(dir, homeDir)).toEqual({ tavily: 'tvly_home', tinyfish: 'tinyfish_home' });
   });
 
   // The cache must be replaced by what the second project resolves to, and a home credential is

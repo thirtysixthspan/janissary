@@ -61,6 +61,22 @@ export const PROJECT_TOKENS = [
     // request. All three pass the environment scrub, so anyone exporting one is still unaffected.
     env: ['GEMINI_API_KEY', 'GOOGLE_GENERATIVE_AI_API_KEY'],
   },
+  {
+    name: 'tavily',
+    file: 'tavily-token',
+    // A Tavily API key for the bundled `web search` provider. The search runs in the janissary
+    // process, not in a spawned process; the variable is set for spawned processes only because
+    // every non-GitHub row's is.
+    env: ['TAVILY_API_KEY'],
+  },
+  {
+    name: 'tinyfish',
+    file: 'tinyfish-token',
+    // A TinyFish API key for the bundled `web search` provider. Same reach as the Tavily row: the
+    // search runs in the janissary process, and the variable reaches spawned processes because
+    // every non-GitHub row's does.
+    env: ['TINYFISH_API_KEY'],
+  },
 ] as const;
 
 export type ProjectTokenName = (typeof PROJECT_TOKENS)[number]['name'];

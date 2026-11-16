@@ -168,6 +168,17 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
+  it('still injects both web search credentials for a workspaced spawn when nothing is confined', () => {
+    configureUnconfined();
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const tokens = { tavily: 'tvly_live_key', tinyfish: 'tinyfish_live_key' };
+    const result = sandboxSpawn({ workspaceDir, tokens }, 'bash', [], { PATH: '/usr/bin' });
+    expect(result.command).toBe('bash');
+    expect(result.env.TAVILY_API_KEY).toBe('tvly_live_key');
+    expect(result.env.TINYFISH_API_KEY).toBe('tinyfish_live_key');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
   it('still injects both Gemini variables for a workspaced spawn when nothing is confined', () => {
     configureUnconfined();
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));

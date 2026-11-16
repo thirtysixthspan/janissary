@@ -295,6 +295,11 @@ Protocol version 42 adds `glob-paths`, the read-only filesystem operation behind
 
 Protocol version 43 adds `grep-files`, the read-only filesystem operation behind a content search on a remote workspace, so the search reads the remote clone and never the local disk. It carries a `pattern`, `include`, `exclude`, `literal`, `word`, `caseSensitive`, and `limit` (a whole number from 1 to the search maximum), plus an optional `path`; every field is required except `path`, and any other argument shape, including a numeric limit outside that range, is an invalid request. The far side answers `{ text }` holding the search's formatted result lines, including diagnostics, `(no matches)`, and its partial-result trailers. An omitted or empty `path` searches the root; a `path` of `.` or an absolute path naming the root itself is refused as an error, so a sender names the root with an empty `path`. The far side checks the path against its root before searching: a parent escape, an outside absolute path, or a path resolving through a link outside the root is refused as an error before the workspace is reached, while a contained absolute child is refused in the text. A contained secret path answers `(no matches)` without reading file contents, and a missing target answers `Path not found: <path>.` in the text. Inside the workspace, a malformed or empty-matching regular expression is reported before path policy and disk work, so its diagnostic wins over a secret or missing path; the central containment check still runs first, so an outside-resolving spelling is refused before that diagnostic. The search stops itself after 30 seconds, so the request keeps the normal request deadline. A version-42 peer would refuse the unknown operation only after connecting, so the handshake refuses it first.
 
+Protocol version 44 adds the `tavily` and `tinyfish` names to the provisioning token map. A version-43
+remote refuses any name outside its own credential list, so forwarding a Tavily or TinyFish key to one
+would fail the whole provisioning request as malformed rather than provisioning a workspace without the
+key. Exact-version refusal at the handshake reports the mismatch before a tab is provisioned.
+
 Unavailable sends, explicit disconnect, transport loss, protocol failure, and channel finish settle and detach ACP listeners, including before readiness. Late frames for detached ids are ignored. A lost core ACP session is closed locally and replaced by a later request once its channel is ready; autonomous runs retain their transport-loss termination. Durable activity capture belongs only to the initiating project's recorder. The sessions tab's existing shell/harness restoration policy is unchanged.
 
 The handshake check is narrower for an attach than for a launch. An attach is answered by the
@@ -743,10 +748,12 @@ token, or an `origin` on another host, a clone uses whatever transport the remot
 `origin` already has, with the host's own git access. This machine's other git credentials, such as
 its credential helper or ssh keys, are never used.
 
-The local project's `.janissary/claude-token`, `.janissary/opencode-token`, and
-`.janissary/kilo-token`, and `.janissary/gemini-token` travel the same way, in the same map on the same
-frame, and are injected as `CLAUDE_CODE_OAUTH_TOKEN`, `OPENCODE_API_KEY`, `KILO_API_KEY`, and — for the
-Gemini key, both variables opencode reads — `GEMINI_API_KEY` and `GOOGLE_GENERATIVE_AI_API_KEY` into the same processes, each
+The local project's `.janissary/claude-token`, `.janissary/opencode-token`,
+`.janissary/kilo-token`, `.janissary/gemini-token`, `.janissary/tavily-token`, and
+`.janissary/tinyfish-token` travel the same way, in the same map on the same
+frame, and are injected as `CLAUDE_CODE_OAUTH_TOKEN`, `OPENCODE_API_KEY`, `KILO_API_KEY`,
+`TAVILY_API_KEY`, `TINYFISH_API_KEY`, and — for the Gemini key, both variables opencode reads —
+`GEMINI_API_KEY` and `GOOGLE_GENERATIVE_AI_API_KEY` into the same processes, each
 with the remote's own matching file as the same fallback, resolved the same two ways. It matters most on exactly the hosts the GitHub
 token's isolation-independence describes: a Keychain and the sandbox both need macOS, so on a Linux
 remote the harness has no credential store to fall back on and its own credentials file is denied,

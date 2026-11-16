@@ -49,7 +49,7 @@ is governed entirely by that host: its sandbox policy (so isolation is active wh
 macOS and inactive otherwise, and the notice shown in the tab is the remote's) and its own
 repository's `origin` transport. The clone's depth is the exception to that, because the launch sends it: a remote shell's clone holds the newest commit of each branch and a remote harness's the newest ten, exactly as on this machine. The credentials are the other exception: this project's
 `.janissary/github-token`, `.janissary/claude-token`, `.janissary/opencode-token`, `.janissary/kilo-token`,
-and `.janissary/gemini-token` are all forwarded on the provisioning frame, each falling back to the
+`.janissary/gemini-token`, `.janissary/tavily-token`, and `.janissary/tinyfish-token` are all forwarded on the provisioning frame, each falling back to the
 remote project's own file when nothing is sent. A remote tab records
 no local workspace directory, so closing it deletes nothing locally; the remote server removes the
 clone when its ssh session ends. An autonomous agent run borrowing this workspace holds a separate,
@@ -68,8 +68,8 @@ transcript. `--offline` additionally denies network access for the tab.
 
 ### Where token files are read from
 
-Each of the five credential files described below — `github-token`, `claude-token`, `opencode-token`,
-`kilo-token`, `gemini-token` — is looked for in two places, and the first one holding a value wins: the project's
+Each of the seven credential files described below — `github-token`, `claude-token`, `opencode-token`,
+`kilo-token`, `gemini-token`, `tavily-token`, `tinyfish-token` — is looked for in two places, and the first one holding a value wins: the project's
 own `.janissary/` directory, then the user's `~/.janissary/`. A credential put in the home directory
 therefore serves every project on the machine, and a project that needs a different one says so by
 keeping its own file. `loadProjectTokens` in `src/project/tokens.ts` resolves both, once at startup,
@@ -86,9 +86,16 @@ The remote end resolves its own two locations the same way when nothing is forwa
 fallback described under [[remote-server]] is the remote machine's home directory as well as the
 remote project's file.
 
-The four harness credentials — `claude-token`, `opencode-token`, `kilo-token`, and `gemini-token` — also
-reach an ACP agent that runs outside any workspace, under the same variables; the GitHub token does not
-(see [[acp]]).
+The six harness credentials — `claude-token`, `opencode-token`, `kilo-token`, `gemini-token`,
+`tavily-token`, and `tinyfish-token` — also reach an ACP agent that runs outside any workspace, under
+the same variables; the GitHub token does not (see [[acp]]).
+
+`tavily-token` and `tinyfish-token` hold the Tavily and TinyFish API keys the `web search` command
+uses. The search runs in the Janissary process itself, and the keys reach a workspaced tab's
+environment as `TAVILY_API_KEY` and `TINYFISH_API_KEY` like every other non-GitHub credential. They
+are read from the project's `.janissary/` first and then `~/.janissary/`, so a project file takes
+precedence over the home copy, and a file added while Janissary is running takes effect at the next
+restart.
 
 Both locations are read by the janissary process itself, never from inside a workspace. `~/.janissary`
 is not carved into the sandbox's read allow-list, so a workspaced process cannot open the home copy

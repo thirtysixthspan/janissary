@@ -1,6 +1,6 @@
 # Tokens for agents
 
-Janissary reads five optional token files from a `.janissary/` directory. Each is a plain text file holding just the token value. Janissary only ever reads them, never writes to them. If you keep a token in a project, add that file to your Git ignore rules so you don't commit it.
+Janissary reads seven optional token files from a `.janissary/` directory. Each is a plain text file holding just the token value. Janissary only ever reads them, never writes to them. If you keep a token in a project, add that file to your Git ignore rules so you don't commit it.
 
 | File | What it gives a workspaced tab | Set it up when |
 | --- | --- | --- |
@@ -9,6 +9,8 @@ Janissary reads five optional token files from a `.janissary/` directory. Each i
 | `opencode-token` | access to OpenCode Zen and OpenCode Go | your harness uses either of those providers |
 | `kilo-token` | access to the Kilo gateway as `KILO_API_KEY` | your opencode harness routes through Kilo |
 | `gemini-token` | a working Google provider | your harness talks to Gemini |
+| `tavily-token` | web search through Tavily | you want `web search` to use Tavily |
+| `tinyfish-token` | web search through TinyFish | you want `web search` to use TinyFish |
 
 None of them is required. Without them, workspaces still clone, run, commit, fetch, and pull.
 
@@ -100,13 +102,13 @@ Janissary reads your token files once when it starts, project first and home sec
 
 A token reaches the tab whether or not isolation is actually active on that machine. Isolation needs macOS, so a Linux host runs without it, and the credential arrives the same way either way.
 
-ACP agents that run outside a workspace get the four harness tokens too. That covers monitors and `ask` from a tab with no workspace. They get `claude-token`, `opencode-token`, `kilo-token`, and `gemini-token`, under the same variables, so an `opencode` you never ran `opencode auth login` for still signs in. They don't get `github-token`, which stays workspace-only.
+ACP agents that run outside a workspace get the six harness tokens too. That covers monitors and `ask` from a tab with no workspace. They get `claude-token`, `opencode-token`, `kilo-token`, `gemini-token`, `tavily-token`, and `tinyfish-token`, under the same variables, so an `opencode` you never ran `opencode auth login` for still signs in. They don't get `github-token`, which stays workspace-only.
 
 ## How tokens reach a remote
 
 <img class="agent-float" src="/agents/hakim-south.png" alt="" />
 
-All five token files travel to a [remote shell or harness](/user-documentation/advanced-agents/remote-agents) the same way. Janissary sends them through the encrypted SSH connection when it asks the remote for a workspace, and injects them only into that workspace's processes. None is written to the remote filesystem, so you don't need to copy any of these files to the other machine. If you have no token to send, the remote falls back to its own copy, looked up in the same two places on that machine. The one exception is cloning your project onto a host that has no copy of it. That clone uses only the GitHub token you send, and only when your `origin` is on `github.com`. See [When the host has no clone of the project](/user-documentation/advanced-agents/remote-agents#when-the-host-has-no-clone-of-the-project).
+All seven token files travel to a [remote shell or harness](/user-documentation/advanced-agents/remote-agents) the same way. Janissary sends them through the encrypted SSH connection when it asks the remote for a workspace, and injects them only into that workspace's processes. None is written to the remote filesystem, so you don't need to copy any of these files to the other machine. If you have no token to send, the remote falls back to its own copy, looked up in the same two places on that machine. The one exception is cloning your project onto a host that has no copy of it. That clone uses only the GitHub token you send, and only when your `origin` is on `github.com`. See [When the host has no clone of the project](/user-documentation/advanced-agents/remote-agents#when-the-host-has-no-clone-of-the-project).
 
 Your saved ChatGPT login is separate from these token files. Janissary does not forward it: OpenCode uses the Codex login saved on the machine running the workspace. A remote workspace therefore uses the remote machine's login, if it has one.
 

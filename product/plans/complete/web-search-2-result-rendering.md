@@ -6,8 +6,8 @@ The second slice of the `web search` feature (source plan: `./product/plans/comp
 
 ## Dependencies
 
-- `./product/plans/ready/web-search-1-command-grammar.md` — `WebSearchDepth` (`'basic' | 'advanced'`), exported from `src/web-search/command.ts`, for the request type. That slice must land first; `src/web-search/` does not exist yet.
-- `src/project/tokens.ts` (`ProjectTokenName`, line 66) already exists. The `tavily` and `tinyfish` rows arrive in `./product/plans/ready/web-search-3-provider-tokens.md`; this slice only uses the type, so it does not wait for them.
+- `./product/plans/complete/web-search-1-command-grammar.md` — `WebSearchDepth` (`'basic' | 'advanced'`), exported from `src/web-search/command.ts`, for the request type. That slice must land first; `src/web-search/` does not exist yet.
+- `src/project/tokens.ts` (`ProjectTokenName`, line 66) already exists. The `tavily` and `tinyfish` rows arrive in `./product/plans/complete/web-search-3-provider-tokens.md`; this slice only uses the type, so it does not wait for them.
 
 ## Design decisions
 
@@ -40,7 +40,7 @@ Carried verbatim from the source plan where they apply.
 | --- | --- | --- |
 | URL parsing | WHATWG `URL` (Node global) | The http/https check, and the dedupe key: `URL` already lowercases scheme and host, percent-encodes spaces, and exposes `hash` and `pathname` to rewrite. |
 | Project token names | `src/project/tokens.ts:66` (`export type ProjectTokenName`) | The manifest's `token` field type, imported with `import type`. |
-| Search depth | `src/web-search/command.ts` (`WebSearchDepth`, from `./product/plans/ready/web-search-1-command-grammar.md`) | `WebSearchRequest.depth`, imported with `import type`. |
+| Search depth | `src/web-search/command.ts` (`WebSearchDepth`, from `./product/plans/complete/web-search-1-command-grammar.md`) | `WebSearchRequest.depth`, imported with `import type`. |
 | Plugin contract precedent | `src/plugins/api.ts`, `src/plugins/api-capabilities.ts` (`TAB_PLUGIN_API_VERSION`, `TabPluginRejection`) | Shape of a versioned contract module with its header documenting the extension point; `TabPluginRejection` is the model for `ProviderRequestError`. |
 
 ## Proposed changes

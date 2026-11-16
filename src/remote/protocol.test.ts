@@ -381,6 +381,8 @@ describe('frame codec', () => {
           claude: 'sk-ant-oat01-scoped',
           opencode: 'oc_live_scoped',
           gemini: 'AIzaSyScoped',
+          tavily: 'tvly_scoped',
+          tinyfish: 'tinyfish_scoped',
         },
         identity: { name: 'Ada Lovelace', email: 'ada@example.com' },
       },
@@ -1013,8 +1015,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 43', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(43);
+  it('is 44', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(44);
   });
 });
 
