@@ -7,9 +7,10 @@ function parse(...lines: string[]) {
 
 describe('parseHunks', () => {
   it('parses consecutive hunks and preserves whitespace and end-of-file', () => {
-    expect(parse('@@ foo  ', '  context \t', '-\told ', '+', '*** End of File', '@@', '+new')).toEqual({ hunks: [
+    expect(parse('@@ foo  ', '  context \t', '-\told ', '+', '+ \tnew\t ', '*** End of File', '@@', '+new')).toEqual({ hunks: [
       { anchor: 'foo  ', lines: [
         { kind: 'context', text: ' context \t' }, { kind: 'remove', text: '\told ' }, { kind: 'add', text: '' },
+        { kind: 'add', text: ' \tnew\t ' },
       ], endOfFile: true },
       { lines: [{ kind: 'add', text: 'new' }], endOfFile: false },
     ] });
