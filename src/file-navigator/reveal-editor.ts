@@ -68,5 +68,6 @@ export function revealEditorFile(port: RevealPort, editorLabel: string): void {
     selected: [relPath],
   };
   port.rebuild(label);
-  port.managers.tab.setActiveTab(port.managers.tab.findIndex(label));
+  const index = port.managers.tab.findIndex(label);
+  if (port.managers.tab.tabs[index]?.dock === undefined) port.managers.tab.setActiveTab(index);
 }

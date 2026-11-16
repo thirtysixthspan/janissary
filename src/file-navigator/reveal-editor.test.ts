@@ -146,7 +146,10 @@ function revealFixture(options: {
   ];
   const states = options.existing === false ? new Map<string, FilesTabState>() : new Map([['files', state]]);
   const opened: { root: string }[] = [];
-  const setActiveTab = vi.fn();
+  const setActiveTab = vi.fn((index: number) => {
+    const tab = tabs[index];
+    if (tab) delete tab.dock;
+  });
   const port = {
     states,
     managers: {
@@ -178,7 +181,7 @@ function revealFixture(options: {
     setCwd: vi.fn(),
     hasTab: () => true,
   } as unknown as RevealPort;
-  return { root, state, states, port, opened, setActiveTab };
+  return { root, state, states, port, opened, tabs, setActiveTab };
 }
 
 describe('revealEditorFile', () => {
@@ -260,13 +263,16 @@ describe('revealEditorFile', () => {
     expect(setActiveTab).not.toHaveBeenCalled();
   });
 
-  it('activates the navigator index in the centre strip and when it is docked', () => {
+  it('activates a centre-strip navigator and leaves a docked one in its sidebar', () => {
     const centre = revealFixture();
     revealEditorFile(centre.port, 'edit');
     expect(centre.setActiveTab).toHaveBeenCalledExactlyOnceWith(1);
 
     const docked = revealFixture({ dock: 'left' });
     revealEditorFile(docked.port, 'edit');
-    expect(docked.setActiveTab).toHaveBeenCalledExactlyOnceWith(1);
+    expect(docked.setActiveTab).not.toHaveBeenCalled();
+    expect(docked.tabs[1]?.dock).toBe('left');
+    expect(docked.state.expanded).toEqual(new Set(['src', 'src/deep']));
+    expect(docked.state.restore?.cursor).toBe('src/deep/a.ts');
   });
 });
