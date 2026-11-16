@@ -6,12 +6,13 @@ import {
 import type { RemoteFilesystemArgumentsByOperation, RemoteFilesystemOperation } from '../protocol-frames.js';
 import { FILE_READ_MAX_LIMIT } from '../../file-read/command.js';
 import { FILE_GLOB_MAX_LIMIT } from '../../file-glob/command.js';
+import { SEARCH_MAX_RESULTS } from '../../search/types.js';
 
 // Written out rather than derived from the table, so an operation dropped from both the union and
 // the table is still caught here. Adding one to the protocol means adding it in both places.
 const ALL_OPERATIONS: RemoteFilesystemOperation[] = [
   'read-directory', 'stat', 'watch', 'unwatch', 'git', 'git-pull', 'git-commit', 'search',
-  'search-text', 'read-file', 'read-lines', 'glob-paths', 'write-file', 'edit-file', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
+  'search-text', 'read-file', 'read-lines', 'glob-paths', 'grep-files', 'write-file', 'edit-file', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
   'create-file', 'create-directory', 'replay', 'change-set',
 ];
 
@@ -40,6 +41,15 @@ const PATH_CASES: PathCase[] = [
   ['read-lines', { path: 'a.txt', offset: 3, limit: 10 }, ['a.txt']],
   ['glob-paths', { pattern: '**/*.ts' }, []],
   ['glob-paths', { pattern: '*.ts', dir: 'src', hidden: true, dirs: true, limit: 20 }, ['src']],
+  ['grep-files', {
+    pattern: 'TODO', include: '', exclude: '', literal: false, word: false, caseSensitive: false, limit: 100, path: undefined,
+  }, []],
+  ['grep-files', {
+    pattern: 'TODO', include: '', exclude: '', literal: false, word: false, caseSensitive: false, limit: 100, path: '',
+  }, ['']],
+  ['grep-files', {
+    pattern: 'TODO', include: 'src/**', exclude: '**/*.test.ts', literal: true, word: true, caseSensitive: true, limit: 250, path: 'src',
+  }, ['src']],
   ['write-file', { path: 'a.txt', content: '', expectedHash: 'baseline' }, ['a.txt']],
   ['write-file', { path: 'a.txt', content: '', policy: 'tool-text' }, ['a.txt']],
   ['edit-file', { path: 'a.txt', oldString: 'b2xk', newString: '', replaceAll: false }, ['a.txt']],
@@ -101,6 +111,11 @@ const INVALID_CASES: [RemoteFilesystemOperation, Record<string, unknown>][] = [
   ['glob-paths', { pattern: '**/../a/b/'.repeat(13) + 'c' }],
   ['glob-paths', { pattern: '{..,x}/a' }],
   ['glob-paths', { pattern: String.raw`a\..\b` }],
+  ['grep-files', { pattern: 'TODO', include: '', exclude: '', literal: false, word: false, caseSensitive: false }],
+  ['grep-files', { pattern: 'TODO', include: '', exclude: '', literal: false, word: false, caseSensitive: false, limit: 100, path: 3 }],
+  ['grep-files', { pattern: 'TODO', include: '', exclude: '', literal: 'no', word: false, caseSensitive: false, limit: 100 }],
+  ['grep-files', { pattern: 'TODO', include: '', exclude: '', literal: false, word: false, caseSensitive: false, limit: 0 }],
+  ['grep-files', { pattern: 'TODO', include: '', exclude: '', literal: false, word: false, caseSensitive: false, limit: SEARCH_MAX_RESULTS + 1 }],
   ['write-file', { path: 'a.txt' }],
   ['write-file', { path: 'a.txt', content: '', expectedHash: null }],
   ['write-file', { path: 'a.txt', content: '', expectedHash: 7 }],
@@ -141,6 +156,7 @@ const VALID_RESULTS: { [K in RemoteFilesystemOperation]: RemoteFilesystemOperati
   'read-file': { content: 'YQ==' },
   'read-lines': { text: '1\ta' },
   'glob-paths': { text: 'src/a.ts' },
+  'grep-files': { text: 'src/a.ts:1: TODO' },
   'write-file': { ok: false, reason: 'denied' },
   'edit-file': { ok: true, value: { replacements: 2 } },
   move: { ok: true, value: { from: 'a.txt', to: 'dest/a.txt' } },
@@ -282,6 +298,55 @@ describe('FILESYSTEM_OPERATIONS', () => {
     expect(() => decodeFilesystemResult('glob-paths', { text: 3 })).toThrow('Invalid remote filesystem operation result.');
   });
 
+  it('extracts no grep-files path when the request omits one', () => {
+    const grepFiles = operationDescriptor('grep-files');
+
+    expect(grepFiles.valid({
+      pattern: 'TODO', include: '', exclude: '', literal: false, word: false, caseSensitive: false, limit: 100,
+    })).toBe(true);
+    expect(grepFiles.paths({
+      pattern: 'TODO', include: '', exclude: '', literal: false, word: false, caseSensitive: false, limit: 100,
+    })).toEqual([]);
+  });
+
+  it('materializes a present undefined grep-files path and drops extra keys', () => {
+    const base = { pattern: 'TODO', include: '', exclude: '', literal: false, word: false, caseSensitive: false, limit: 100 };
+    const decoded = operationDescriptor('grep-files').decode({ ...base, extra: 'drop' });
+
+    expect(Object.hasOwn(decoded, 'path')).toBe(true);
+    expect(decoded.path).toBeUndefined();
+    expect(Object.keys(decoded).toSorted((a, b) => a.localeCompare(b)))
+      .toEqual(['caseSensitive', 'exclude', 'include', 'limit', 'literal', 'path', 'pattern', 'word']);
+  });
+
+  it('rejects malformed grep-files arguments when the decoder is called without its validator', () => {
+    const base = { pattern: 'TODO', include: '', exclude: '', literal: false, word: false, caseSensitive: false };
+
+    expect(() => operationDescriptor('grep-files').decode({ ...base, limit: '100' }))
+      .toThrow('Invalid remote filesystem operation arguments.');
+  });
+
+  it('keeps formatted grep-files text verbatim, including a diagnostic trailer', () => {
+    const text = 'src/a.ts:1: TODO\n(no matches)\n(search stopped after 30 seconds; narrow the pattern or --path)';
+
+    expect(decodeFilesystemResult('grep-files', { text })).toEqual({ text });
+  });
+
+  it('accepts empty grep-files text', () => {
+    expect(decodeFilesystemResult('grep-files', { text: '' })).toEqual({ text: '' });
+  });
+
+  it('rejects a grep-files result without string text', () => {
+    for (const bad of [{}, { text: 3 }, null, []]) {
+      expect(() => decodeFilesystemResult('grep-files', bad)).toThrow('Invalid remote filesystem operation result.');
+    }
+  });
+
+  it('treats grep-files as a root destination with no refusal callback', () => {
+    expect(operationDescriptor('grep-files').rootDestination).toBe(true);
+    expect(operationDescriptor('grep-files').refusal).toBeUndefined();
+  });
+
   it('decodes edit-file arguments to plain text', () => {
     expect(operationDescriptor('edit-file').decode({
       path: 'a.txt', oldString: Buffer.from('old é').toString('base64'), newString: '', replaceAll: true,
@@ -319,8 +384,8 @@ describe('FILESYSTEM_OPERATIONS', () => {
     const rootDestination = ALL_OPERATIONS.filter((operation) => operationDescriptor(operation).rootDestination);
 
     expect(alphabetical(rootDestination)).toEqual([
-      'create-directory', 'create-file', 'git-commit', 'glob-paths', 'move', 'move-many', 'paste', 'read-directory',
-      'read-lines', 'search-text', 'unwatch', 'watch',
+      'create-directory', 'create-file', 'git-commit', 'glob-paths', 'grep-files', 'move', 'move-many', 'paste',
+      'read-directory', 'read-lines', 'search-text', 'unwatch', 'watch',
     ]);
   });
 });

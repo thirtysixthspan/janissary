@@ -64,7 +64,35 @@ describe('command restrictions from the commands snapshot', () => {
 
   it('follows a disabled file parent into every file command', () => {
     expect(commandRestrictionsFrom(snapshotWith({ file: { enabled: false } })))
-      .toEqual({ 'file read': 'application-wide', 'file glob': 'application-wide', 'file write': 'application-wide', 'file edit': 'application-wide' });
+      .toEqual({ 'file read': 'application-wide', 'file glob': 'application-wide', 'file grep': 'application-wide', 'file write': 'application-wide', 'file edit': 'application-wide' });
+  });
+
+  it('maps a disabled file grep row to application-wide', () => {
+    expect(commandRestrictionsFrom(snapshotWith({ 'file grep': { enabled: false } })))
+      .toEqual({ 'file grep': 'application-wide' });
+  });
+
+  it('maps an agent-access-only grep restriction to agents', () => {
+    expect(commandRestrictionsFrom(snapshotWith({ 'file grep': { agentAccess: false } })))
+      .toEqual({ 'file grep': 'agents' });
+  });
+
+  it('prefers application-wide for grep when both controls are off', () => {
+    expect(commandRestrictionsFrom(snapshotWith({
+      'file grep': { enabled: false, agentAccess: false },
+    }))).toEqual({ 'file grep': 'application-wide' });
+  });
+
+  it('keeps a saved enabled grep child restricted when the file parent is disabled', () => {
+    const snapshot = snapshotWith({ file: { enabled: false }, 'file grep': { enabled: true, agentAccess: true } });
+
+    expect(commandRestrictionsFrom(snapshot)).toMatchObject({ 'file grep': 'application-wide' });
+    expect(snapshot.commands.find(({ name }) => name === 'file grep'))
+      .toMatchObject({ enabled: true, agentAccess: true, effectiveEnabled: false });
+  });
+
+  it('does not restrict native file children when only the file parent denies agent access', () => {
+    expect(commandRestrictionsFrom(snapshotWith({ file: { agentAccess: false } }))).toEqual({});
   });
 
   it('omits a disabled non-native command', () => {

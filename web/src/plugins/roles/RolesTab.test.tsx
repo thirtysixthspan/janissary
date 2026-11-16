@@ -170,9 +170,81 @@ describe('RolesTab', () => {
     });
     renderTab(payload);
 
+    expect(NATIVE_ACP_COMMANDS).toHaveLength(14);
+    expect(NATIVE_ACP_COMMANDS).toContain('file grep');
     expect(screen.queryByRole('button', { name: 'Add command' })).toBeNull();
     expect(screen.getByText('future command').closest('.roles-command-entry'))
       .toHaveAttribute('title', 'Not a native command');
+  });
+
+  it('offers grep in vocabulary order, adds it, and drops it from the picker after publication', () => {
+    const payload = makePayload({
+      roles: [{
+        name: 'research', description: 'Research.', entries: [],
+        commands: ['browser goto', 'file glob'],
+      }],
+    });
+    const { intent, publish } = renderTab(payload);
+
+    expect(NATIVE_ACP_COMMANDS.indexOf('file grep')).toBe(NATIVE_ACP_COMMANDS.indexOf('file glob') + 1);
+    fireEvent.click(screen.getByRole('button', { name: 'Add command' }));
+    const picker = screen.getByLabelText('Command to add to role research') as HTMLSelectElement;
+    expect([...picker.options].map(({ value }) => value).slice(1))
+      .toEqual(NATIVE_ACP_COMMANDS.filter((command) => !payload.roles[0].commands.includes(command)));
+    fireEvent.change(picker, { target: { value: 'file grep' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(intent).toHaveBeenCalledWith('add-command', { role: 'research', command: 'file grep' });
+
+    publish({
+      ...payload,
+      roles: [{ ...payload.roles[0], commands: [...payload.roles[0].commands, 'file grep'] }],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Add command' }));
+    const offered = [...(screen.getByLabelText('Command to add to role research') as HTMLSelectElement).options]
+      .map(({ value }) => value);
+    expect(offered).not.toContain('file grep');
+  });
+
+  it('keeps an application-wide disabled grep available to grant and stored with its reason', () => {
+    const payload = makePayload({
+      roles: [{ name: 'research', description: 'Research.', entries: [], commands: ['file glob'] }],
+      commandRestrictions: { 'file grep': 'application-wide' },
+    });
+    const { publish } = renderTab(payload);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add command' }));
+    const picker = screen.getByLabelText('Command to add to role research') as HTMLSelectElement;
+    expect([...picker.options].map(({ value }) => value)).toContain('file grep');
+    publish({
+      ...payload,
+      roles: [{ ...payload.roles[0], commands: ['file glob', 'file grep'] }],
+    });
+    const row = [...screen.getByRole('list', { name: 'Commands of role research' })
+      .querySelectorAll('.roles-command-entry')]
+      .find((candidate) => candidate.textContent?.trim() === 'file grep');
+    expect(row).toHaveClass('roles-entry-restricted');
+    expect(row).toHaveAttribute('title', 'Disabled application-wide');
+  });
+
+  it('keeps an agent-only disabled grep available to grant and stored with its reason', () => {
+    const payload = makePayload({
+      roles: [{ name: 'research', description: 'Research.', entries: [], commands: ['file glob'] }],
+      commandRestrictions: { 'file grep': 'agents' },
+    });
+    const { publish } = renderTab(payload);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add command' }));
+    const picker = screen.getByLabelText('Command to add to role research') as HTMLSelectElement;
+    expect([...picker.options].map(({ value }) => value)).toContain('file grep');
+    publish({
+      ...payload,
+      roles: [{ ...payload.roles[0], commands: ['file glob', 'file grep'] }],
+    });
+    const row = [...screen.getByRole('list', { name: 'Commands of role research' })
+      .querySelectorAll('.roles-command-entry')]
+      .find((candidate) => candidate.textContent?.trim() === 'file grep');
+    expect(row).toHaveClass('roles-entry-restricted');
+    expect(row).toHaveAttribute('title', 'Disabled for agents');
   });
 
   it('focuses each picker, cancels on Escape, and restores focus after Add, Cancel, and Escape', () => {

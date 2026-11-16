@@ -50,6 +50,7 @@ describe('RemotePortRequests deadlines', () => {
     expect(requestDeadline('read-directory')).toBe(REQUEST_DEADLINE_MS);
     expect(requestDeadline('read-lines')).toBe(REQUEST_DEADLINE_MS);
     expect(requestDeadline('glob-paths')).toBe(REQUEST_DEADLINE_MS);
+    expect(requestDeadline('grep-files')).toBe(REQUEST_DEADLINE_MS);
     const requests = new RemotePortRequests();
     const { reject } = track(requests, 'r1', 'git-pull');
 

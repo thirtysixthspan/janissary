@@ -45,16 +45,16 @@ afterAll(() => {
 describe('completeFileReadCommand', () => {
   it('completes the read subcommand', () => {
     expect(completeFileReadCommand(at('file r'), root)?.newInput).toBe('file read ');
-    expect(completeFileReadCommand(at('file '), root)?.matches).toEqual(['glob', 'read']);
+    expect(completeFileReadCommand(at('file '), root)?.matches).toEqual(['glob', 'grep', 'read']);
   });
 
   it('completes the glob subcommand', () => {
-    expect(completeFileReadCommand(at('file g'), root)?.newInput).toBe('file glob ');
+    expect(completeFileReadCommand(at('file gl'), root)?.newInput).toBe('file glob ');
   });
 
   it('does not offer a disabled file glob subcommand', () => {
     const policy = policyWith({ 'file glob': { enabled: false } });
-    expect(completeFileReadCommand(at('file '), root, policy)?.matches).toEqual(['read']);
+    expect(completeFileReadCommand(at('file '), root, policy)?.matches).toEqual(['grep', 'read']);
   });
 
   it('returns null for another command', () => {

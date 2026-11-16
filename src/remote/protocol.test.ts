@@ -291,6 +291,54 @@ describe('frame codec', () => {
     void mismatched;
   });
 
+  describe('grep-files', () => {
+    const args = {
+      pattern: 'TODO', include: 'src/**', exclude: '**/*.test.ts',
+      literal: false, word: false, caseSensitive: false, limit: 100,
+    };
+    const request = (extra: Record<string, unknown> = {}): ClientFrame => ({
+      type: 'filesystem-request', session: 'files1', request: 'q1', operation: 'grep-files',
+      args: { ...args, ...extra },
+    });
+    const decodedArgs = (argsValue: Record<string, unknown>) => {
+      const decoded = decodeFrame(JSON.stringify({
+        type: 'filesystem-request', session: 'files1', request: 'q1', operation: 'grep-files', args: argsValue,
+      }));
+      expect(decoded).toMatchObject({ type: 'filesystem-request', operation: 'grep-files' });
+      return (decoded as Extract<ClientFrame, { type: 'filesystem-request' }>).args;
+    };
+
+    it('decodes an omitted path as a present undefined property', () => {
+      const decoded = decodedArgs(args);
+
+      expect(decoded).toMatchObject(args);
+      expect(Object.hasOwn(decoded, 'path')).toBe(true);
+      expect((decoded as { path?: string }).path).toBeUndefined();
+    });
+
+    it('keeps an empty path and every string field unchanged', () => {
+      expect(roundTrip(request({ path: '' }))).toEqual(request({ path: '' }));
+      expect(decodedArgs({ ...args, path: '' })).toMatchObject({ ...args, path: '' });
+    });
+
+    it('keeps an ordinary path and explicit false switches', () => {
+      const frame = request({ path: 'src/file-grep' });
+      expect(roundTrip(frame)).toEqual(frame);
+      expect(decodedArgs({ ...args, path: 'src/file-grep' }))
+        .toMatchObject({ ...args, path: 'src/file-grep', literal: false, word: false, caseSensitive: false });
+    });
+
+    it.each([
+      ['a missing required switch', (() => { const copy: Record<string, unknown> = { ...args }; delete copy.word; return copy; })()],
+      ['a nonstring path', { ...args, path: 3 }],
+      ['an invalid numeric limit', { ...args, limit: 0 }],
+    ])('refuses %s', (_label, value) => {
+      expect(decodeFrame(JSON.stringify({
+        type: 'filesystem-request', session: 'files1', request: 'q1', operation: 'grep-files', args: value,
+      }))).toEqual({ error: 'Malformed remote frame "filesystem-request".' });
+    });
+  });
+
   it.each([
     { type: 'attach', session: '12345678-1234-1234-1234-123456789abc' },
     { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: true },
@@ -965,8 +1013,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 42', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(42);
+  it('is 43', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(43);
   });
 });
 

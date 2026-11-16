@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import type * as nodeOs from 'node:os';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { parseFileRead, type FileReadArgs } from '../file-read/command.js';
@@ -16,17 +17,28 @@ import type { RemoteAcpSession } from '../remote/acp-session.js';
 import type { NativeCommandSettingsManager } from '../native-commands/manager.js';
 import type * as TabRead from '../file-read/tab-read.js';
 import type * as TabGlob from '../file-glob/tab-glob.js';
+import type * as TabGrep from '../file-grep/tab-grep.js';
+import type * as Loop from './loop.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { BROWSER_PRIMER } from '../browser/command.js';
 import { DB_PRIMER } from '../database/primer.js';
+import { FILE_GREP_PRIMER, FILE_GREP_USAGE } from '../file-grep/command.js';
+import * as fileGrepCandidates from '../file-grep/candidates.js';
+import * as fileGrepScan from '../file-grep/scan.js';
 import { commandProtocolPrimer } from './command-protocol.js';
 import { CORE_MAX_STEPS } from './drive-loop.js';
+import { deferred } from '../deferred.js';
 
 const mocks = vi.hoisted(() => ({
   runAcpToolLoop: vi.fn(), notify: vi.fn(), readFileInTab: vi.fn(), mutateFileInTab: vi.fn(),
-  globFilesInTab: vi.fn(),
+  globFilesInTab: vi.fn(), grepFilesInTab: vi.fn(),
 }));
+const home = vi.hoisted(() => ({ dir: '' }));
 
+vi.mock('node:os', async (importOriginal) => ({
+  ...await importOriginal<typeof nodeOs>(),
+  homedir: vi.fn(() => home.dir),
+}));
 vi.mock('./loop.js', () => ({ runAcpToolLoop: mocks.runAcpToolLoop }));
 vi.mock('../notifications/index.js', () => ({ notify: mocks.notify }));
 vi.mock('../file-read/tab-read.js', async (importOriginal) => {
@@ -44,8 +56,24 @@ vi.mock('../file-glob/tab-glob.js', async (importOriginal) => {
   mocks.globFilesInTab.mockImplementation(actual.globFilesInTab);
   return { ...actual, globFilesInTab: mocks.globFilesInTab };
 });
+vi.mock('../file-grep/tab-grep.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof TabGrep>();
+  mocks.grepFilesInTab.mockImplementation(actual.grepFilesInTab);
+  return { ...actual, grepFilesInTab: mocks.grepFilesInTab };
+});
 
 import { runCorePrompt } from './run-prompt.js';
+
+const homeRoots: string[] = [];
+beforeEach(() => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'acp-run-prompt-home-'));
+  home.dir = dir;
+  homeRoots.push(dir);
+});
+afterEach(() => {
+  for (const dir of homeRoots) rmSync(dir, { recursive: true, force: true });
+  homeRoots.length = 0;
+});
 
 const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
 const NO_BUILTIN_TOOLS_LINE = 'You have no built-in tools; use only the commands listed here.';
@@ -89,16 +117,19 @@ type StartOptions = {
 function harness(options: Omit<StartOptions, 'commands' | 'roleName'> = {}) {
   const dispatchNativeLine = vi.fn(async () => ({ dispatched: true, output: 'dispatched output' }));
   const runtime = { acpWithoutTools: options.withoutTools ?? false, acpRoles: {} } as unknown as TabRuntime;
+  const tab = {
+    runtime, ...options.tab, cmdHistory: ['git status'], cmdHistoryIdx: -1,
+  };
   const managers = {
     tab: {
       updateRunning: vi.fn(),
       deleteBusy: vi.fn(),
       append: vi.fn(),
-      byLabel: vi.fn(() => ({ runtime, ...options.tab })),
+      byLabel: vi.fn(() => tab),
       workingDirOf: vi.fn(() => '/project'),
       launchDir: options.launchDir ?? '/launch',
     },
-    acpRecords: { activity: vi.fn() },
+    acpRecords: { activity: vi.fn(), answer: vi.fn() },
     command: { dispatchNativeLine },
     ...(options.settings && { nativeCommandSettings: options.settings }),
   } as unknown as Managers;
@@ -131,7 +162,22 @@ function harness(options: Omit<StartOptions, 'commands' | 'roleName'> = {}) {
     const loopSession = call?.[0] as AcpLoopSession;
     return { deps, request, handlers, session: loopSession, run };
   };
-  return { managers, dispatchNativeLine, providerPrompt, start, run };
+  return { managers, dispatchNativeLine, providerPrompt, start, run, tab };
+}
+
+async function withRealLoop(run: () => Promise<void>): Promise<void> {
+  const actual = await vi.importActual<typeof Loop>('./loop.js');
+  await mocks.runAcpToolLoop.withImplementation(actual.runAcpToolLoop, run);
+}
+
+function latestPrompt(providerPrompt: ReturnType<typeof vi.fn>): AcpPromptHandlers {
+  return providerPrompt.mock.calls.at(-1)![1] as AcpPromptHandlers;
+}
+
+function reply(providerPrompt: ReturnType<typeof vi.fn>, text: string): void {
+  const handlers = latestPrompt(providerPrompt);
+  handlers.onChunk(text);
+  handlers.onEnd('end_turn');
 }
 
 type RemoteCall = [string, AcpRunSnapshot, AcpToolHost['runCaller'], AcpLoopHandlers];
@@ -191,6 +237,16 @@ describe('runCorePrompt role primer', () => {
     expect(result).not.toContain('browser goto,');
     expect(result).toContain(NO_BUILTIN_TOOLS_LINE);
     expect(result).not.toContain(NO_TOOLS_LINE);
+  });
+
+  it('keeps the grep owner and primer while an agent-off grep leaves the no-tools line', () => {
+    const result = primer('ask', {
+      commands: ['file grep'],
+      settings: settingsWith({ 'file grep': { effectiveAgentAccess: false } }),
+    });
+    expect(result).toBe([FILE_GREP_PRIMER, NO_TOOLS_LINE, MARKDOWN_INSTRUCTION].join('\n\n'));
+    expect(result).not.toContain('Only these commands are allowed');
+    expect(result).not.toContain(NO_BUILTIN_TOOLS_LINE);
   });
 
   it.each([
@@ -542,6 +598,109 @@ describe('runCorePrompt remote session', () => {
   });
 });
 
+describe('runCorePrompt grep recording', () => {
+  let dir: string;
+  beforeEach(() => {
+    vi.clearAllMocks();
+    dir = mkdtempSync(path.join(tmpdir(), 'acp-run-prompt-grep-record-'));
+    writeFileSync(path.join(dir, 'a.txt'), 'TODO\n');
+  });
+  afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+
+  const GREP = 'file grep TODO';
+  const RESULT = 'a.txt:1: TODO';
+  const GRANTS = ['file read', 'file glob', 'file grep', 'file write', 'file edit'];
+
+  it('records a local grep step untagged and leaves command history unchanged', async () => {
+    const { start, managers, tab } = harness({ tab: { workspaceDir: dir } });
+    const { deps, handlers } = start('tell', GRANTS, 'tell', 'record-1');
+    const result = await deps.runCommand(GREP);
+    handlers.ranCommand(GREP, result);
+
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', GREP);
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', result);
+    expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: GREP, output: result, acp: true });
+    expect(tab.cmdHistory).toEqual(['git status']);
+  });
+
+  it('tags both activity lines and the transcript input while leaving the output raw on a remote session', () => {
+    const { start, managers, run } = harness({
+      remoteSession: true, tab: { workspaceDir: dir, remote: { host: 'far' } }, launchDir: dir,
+    });
+    start('tell', GRANTS, 'tell', 'record-1');
+    const events = remoteCall(run)[3];
+
+    events.startCommand?.(GREP, true);
+    events.ranCommand(GREP, RESULT, true);
+
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', `[far] ${GREP}`);
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', `[far] ${RESULT}`);
+    expect(managers.tab.append).toHaveBeenCalledWith('shell', {
+      input: `[far] ${GREP}`, output: RESULT, acp: true,
+    });
+  });
+
+  it('leaves a local fallback session on a remote tab untagged and searches no local disk', async () => {
+    const { start, managers } = harness({
+      tab: { workspaceDir: dir, remote: { host: 'far' } }, launchDir: dir,
+    });
+    const { deps, handlers } = start('tell', GRANTS, 'tell', 'record-1');
+    const result = await deps.runCommand(GREP);
+    handlers.ranCommand(GREP, result);
+
+    expect(result).toBe('Remote connection unavailable.');
+    expect(result).not.toContain('a.txt');
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', GREP);
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', result);
+    expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: GREP, output: result, acp: true });
+  });
+
+  it('leaves a remote caller-side step untagged', () => {
+    const { start, managers, run } = harness({ remoteSession: true, tab: { remote: { host: 'far' } } });
+    start('ask', ['db sqlite query'], 'ask', 'record-1');
+    const events = remoteCall(run)[3];
+    const command = 'db sqlite query shop SELECT 1';
+
+    events.startCommand?.(command, false);
+    events.ranCommand(command, 'dispatched output', false);
+
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', command);
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', 'dispatched output');
+    expect(managers.tab.append).toHaveBeenCalledWith('shell', {
+      input: command, output: 'dispatched output', acp: true,
+    });
+  });
+
+  it('leaves a disabled grep refusal untagged', () => {
+    const { start, managers, run } = harness({ remoteSession: true, tab: { remote: { host: 'far' } } });
+    start('tell', GRANTS, 'tell', 'record-1');
+    const events = remoteCall(run)[3];
+    const refusal = 'Command is disabled: file grep.';
+
+    events.startCommand?.(GREP, false);
+    events.ranCommand(GREP, refusal, false, 'disabled');
+
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', GREP);
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', refusal);
+    expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: GREP, output: refusal, acp: true });
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'command-disabled', 'shell', refusal);
+  });
+
+  it('leaves a role refusal untagged and runs no grep', () => {
+    const { start, managers } = harness({ tab: { workspaceDir: dir } });
+    const { deps, handlers } = start('tell', ['file read'], 'Writer', 'record-1');
+    const refusal = deps.runCommand(GREP);
+
+    expect(refusal).toBe('Command not allowed for role "Writer": file grep.');
+    handlers.ranCommand(GREP, refusal as string);
+    expect(mocks.grepFilesInTab).not.toHaveBeenCalled();
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', GREP);
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', refusal);
+    expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: GREP, output: refusal, acp: true });
+    expect(mocks.notify).not.toHaveBeenCalledWith(expect.anything(), 'command-disabled', expect.anything(), expect.anything());
+  });
+});
+
 describe('runCorePrompt file mutations', () => {
   let dir: string;
   beforeEach(() => {
@@ -709,5 +868,329 @@ describe('runCorePrompt file glob routing', () => {
       input: '[far] file glob *.md', output: 'a.md', acp: true,
     });
     expect(mocks.globFilesInTab).not.toHaveBeenCalled();
+  });
+});
+
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+function regexMessage(pattern: string): string {
+  try {
+    new RegExp(pattern, 'i');
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  throw new Error(`Expected ${pattern} to be an invalid regular expression`);
+}
+
+describe('runCorePrompt file grep routing', () => {
+  let dir: string;
+  let launch: string;
+  beforeEach(() => {
+    vi.clearAllMocks();
+    dir = mkdtempSync(path.join(tmpdir(), 'acp-run-prompt-grep-'));
+    launch = mkdtempSync(path.join(tmpdir(), 'acp-run-prompt-grep-launch-'));
+    writeFileSync(path.join(dir, 'a.txt'), 'workspace TODO\nalpha\n');
+    writeFileSync(path.join(dir, 'spaces.txt'), 'hello   world\n');
+    writeFileSync(path.join(dir, '.env'), 'TODO=secret\n');
+    writeFileSync(path.join(launch, 'launch.txt'), 'launch TODO\n');
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(launch, { recursive: true, force: true });
+  });
+
+  const GREP = 'file grep TODO';
+  const GRANTS = ['file read', 'file glob', 'file grep', 'file write', 'file edit'];
+
+  it('searches the workspace rather than a conflicting launch fixture', async () => {
+    const { start, dispatchNativeLine } = harness({ tab: { workspaceDir: dir }, launchDir: launch });
+    const { deps } = start('tell', GRANTS);
+
+    await expect(deps.runCommand(GREP)).resolves.toBe('a.txt:1: workspace TODO');
+    expect(mocks.grepFilesInTab).toHaveBeenCalledWith(expect.anything(), 'shell', GREP);
+    expect(mocks.readFileInTab).not.toHaveBeenCalled();
+    expect(dispatchNativeLine).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the launch directory when the tab has no workspace', async () => {
+    const { start } = harness({ tab: {}, launchDir: launch });
+    const { deps } = start('tell', GRANTS);
+
+    await expect(deps.runCommand(GREP)).resolves.toBe('launch.txt:1: launch TODO');
+  });
+
+  it('forwards a complete flags-first command intact and keeps the full command in feedback', async () => {
+    await withRealLoop(async () => {
+      const command = 'file grep --literal --path . --include *.txt --limit 5 hello   world';
+      mocks.grepFilesInTab.mockImplementationOnce(() => Promise.resolve('spaces.txt:1: hello   world'));
+      const { start, providerPrompt, managers } = harness({ tab: { workspaceDir: dir } });
+      const { request } = start('tell', ['file grep'], 'tell', 'record-1');
+
+      reply(providerPrompt, command);
+      await vi.waitFor(() => expect(providerPrompt).toHaveBeenCalledTimes(2));
+
+      expect(mocks.grepFilesInTab).toHaveBeenCalledWith(expect.anything(), 'shell', command);
+      expect(mocks.grepFilesInTab.mock.calls[0]).toHaveLength(3);
+      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', command);
+      expect(providerPrompt.mock.calls[1]?.[0]).toContain(`Output of \`${command}\`:\nspaces.txt:1: hello   world`);
+
+      reply(providerPrompt, 'Done.');
+      await vi.waitFor(() => expect(request.finish).toHaveBeenCalled());
+      expect(request.finish).toHaveBeenCalledWith(expect.objectContaining({ answered: true, reply: 'Done.' }));
+    });
+  });
+
+  it('returns the grep usage line for a bare command', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+
+    await expect(deps.runCommand('file grep')).resolves.toBe(FILE_GREP_USAGE);
+    expect(mocks.grepFilesInTab).toHaveBeenCalledWith(expect.anything(), 'shell', 'file grep');
+  });
+
+  it('returns the grep usage line for a malformed flag line', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+
+    await expect(deps.runCommand('file grep --limit')).resolves.toBe(FILE_GREP_USAGE);
+    expect(mocks.readFileInTab).not.toHaveBeenCalled();
+  });
+
+  it('reports the typed missing-path diagnostic', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+
+    await expect(deps.runCommand('file grep --path missing TODO')).resolves.toBe('Path not found: missing.');
+  });
+
+  it('reports a malformed regex before reading a contained secret', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+    const discover = vi.spyOn(fileGrepCandidates, 'discoverGrepCandidates');
+    const scan = vi.spyOn(fileGrepScan, 'scanFiles');
+    try {
+      await expect(deps.runCommand('file grep [unclosed'))
+        .resolves.toBe(`${regexMessage('[unclosed')}\nUse --literal to search for the text as typed.`);
+      expect(discover).not.toHaveBeenCalled();
+      expect(scan).not.toHaveBeenCalled();
+      expect(mocks.readFileInTab).not.toHaveBeenCalled();
+    } finally {
+      discover.mockRestore();
+      scan.mockRestore();
+    }
+  });
+
+  it('reports an empty-matching regex before a missing path', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+
+    await expect(deps.runCommand('file grep --path missing x*'))
+      .resolves.toBe('Pattern matches empty text, so it would match every line: x*.');
+  });
+
+  it('answers no matches rather than falling through to read', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+
+    await expect(deps.runCommand('file grep absent a.txt')).resolves.toBe('(no matches)');
+    expect(mocks.readFileInTab).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unexpected grep failure by identity and reports the ACP error through the real loop', async () => {
+    const failure = new Error('grep worker stopped');
+    mocks.grepFilesInTab.mockImplementationOnce(() => Promise.reject(failure));
+    const seam = harness({ tab: { workspaceDir: dir } });
+    const first = seam.start('tell', ['file grep']);
+    await expect(first.deps.runCommand(GREP)).rejects.toBe(failure);
+    expect(mocks.readFileInTab).not.toHaveBeenCalled();
+
+    await withRealLoop(async () => {
+      mocks.grepFilesInTab.mockImplementationOnce(() => Promise.reject(failure));
+      const { start, providerPrompt, managers } = harness({ tab: { workspaceDir: dir } });
+      const { request } = start('tell', ['file grep'], 'tell', 'record-1');
+      reply(providerPrompt, GREP);
+      await vi.waitFor(() => expect(request.finish).toHaveBeenCalled());
+
+      expect(request.finish).toHaveBeenCalledWith(expect.objectContaining({
+        answered: false, error: `ACP error: ${failure.message}`,
+      }));
+      expect(managers.tab.append).not.toHaveBeenCalledWith('shell', expect.objectContaining({ acp: true }));
+      expect(providerPrompt).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('still routes a read to readFileInTab beside the grep branch', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+
+    await deps.runCommand('file read a.txt');
+    expect(mocks.readFileInTab).toHaveBeenCalledWith(expect.anything(), 'shell', 'file read a.txt');
+    expect(mocks.grepFilesInTab).not.toHaveBeenCalled();
+  });
+
+  it('still routes a glob to globFilesInTab beside the grep branch', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+
+    await deps.runCommand('file glob *.txt');
+    expect(mocks.globFilesInTab).toHaveBeenCalledWith(expect.anything(), 'shell', 'file glob *.txt', expect.any(AbortSignal));
+    expect(mocks.grepFilesInTab).not.toHaveBeenCalled();
+  });
+
+  it('still routes a write to mutateFileInTab beside the grep branch', async () => {
+    const write = 'file write {"path":"b.md","content":"x"}';
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+
+    await deps.runCommand(write);
+    expect(mocks.mutateFileInTab).toHaveBeenCalledWith(expect.anything(), 'shell', write);
+    expect(mocks.grepFilesInTab).not.toHaveBeenCalled();
+  });
+
+  it('still routes an edit to mutateFileInTab beside the grep branch', async () => {
+    const edit = 'file edit {"path":"a.txt","oldString":"alpha","newString":"beta"}';
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+
+    await deps.runCommand(edit);
+    expect(mocks.mutateFileInTab).toHaveBeenCalledWith(expect.anything(), 'shell', edit);
+    expect(mocks.grepFilesInTab).not.toHaveBeenCalled();
+  });
+
+  it('greps, reads the returned location, and answers through the real loop', async () => {
+    writeFileSync(path.join(dir, 'module.ts'), 'export const first = 1;\nexport const FILE_READ_USAGE = 2;\n');
+    const grep = 'file grep --literal --path . FILE_READ_USAGE';
+    const grepResult = 'module.ts:2: export const FILE_READ_USAGE = 2;';
+    const read = 'file read module.ts --offset 2 --limit 1';
+    const readResult = '2\texport const FILE_READ_USAGE = 2;';
+
+    await withRealLoop(async () => {
+      const { start, providerPrompt, managers, dispatchNativeLine, tab } = harness({ tab: { workspaceDir: dir } });
+      const { request } = start('tell', ['file read', 'file grep'], 'tell', 'record-1');
+
+      reply(providerPrompt, grep);
+      await vi.waitFor(() => expect(providerPrompt).toHaveBeenCalledTimes(2));
+
+      expect(providerPrompt.mock.calls[0]?.[0]).toContain(FILE_GREP_PRIMER);
+      expect(providerPrompt.mock.calls[1]?.[0]).toContain(`Output of \`${grep}\`:\n${grepResult}`);
+      expect(mocks.grepFilesInTab).toHaveBeenCalledWith(expect.anything(), 'shell', grep);
+      expect(mocks.grepFilesInTab.mock.calls[0]).toHaveLength(3);
+
+      reply(providerPrompt, read);
+      await vi.waitFor(() => expect(providerPrompt).toHaveBeenCalledTimes(3));
+
+      expect(providerPrompt.mock.calls[2]?.[0]).toContain(`Output of \`${read}\`:\n${readResult}`);
+      expect(mocks.readFileInTab).toHaveBeenCalledWith(expect.anything(), 'shell', read);
+      expect(mocks.mutateFileInTab).not.toHaveBeenCalled();
+      expect(mocks.globFilesInTab).not.toHaveBeenCalled();
+
+      reply(providerPrompt, 'Found FILE_READ_USAGE.');
+      await vi.waitFor(() => expect(request.finish).toHaveBeenCalled());
+
+      expect(request.finish).toHaveBeenCalledWith(expect.objectContaining({
+        answered: true, reply: 'Found FILE_READ_USAGE.', session: 'session',
+      }));
+      expect(dispatchNativeLine).not.toHaveBeenCalled();
+      expect(tab.cmdHistory).toEqual(['git status']);
+      const appended = vi.mocked(managers.tab.append).mock.calls
+        .map(([, entry]) => entry).filter((entry) => entry.acp === true);
+      expect(appended).toEqual([
+        { input: grep, output: grepResult, acp: true },
+        { input: read, output: readResult, acp: true },
+      ]);
+      expect(vi.mocked(managers.acpRecords.activity).mock.calls).toEqual([
+        ['record-1', 'tool', grep],
+        ['record-1', 'tool', grepResult],
+        ['record-1', 'tool', read],
+        ['record-1', 'tool', readResult],
+      ]);
+    });
+  });
+});
+
+describe('runCorePrompt file grep loop preservation', () => {
+  let dir: string;
+  beforeEach(() => {
+    vi.clearAllMocks();
+    dir = mkdtempSync(path.join(tmpdir(), 'acp-run-prompt-grep-loop-'));
+    writeFileSync(path.join(dir, 'a.txt'), 'TODO\n');
+  });
+  afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+
+  const GREP = 'file grep TODO';
+  const RESULT = 'a.txt:1: TODO';
+
+  it('extracts no grep on a without-tools tab even with the grant', async () => {
+    await withRealLoop(async () => {
+      const { start, providerPrompt } = harness({ withoutTools: true, tab: { workspaceDir: dir } });
+      const { request } = start('tell', ['file grep'], 'tell', 'record-1');
+      reply(providerPrompt, GREP);
+      await vi.waitFor(() => expect(request.finish).toHaveBeenCalled());
+
+      expect(mocks.grepFilesInTab).not.toHaveBeenCalled();
+      expect(providerPrompt).toHaveBeenCalledTimes(1);
+      expect(request.finish).toHaveBeenCalledWith(expect.objectContaining({ answered: true, reply: GREP }));
+    });
+  });
+
+  it('caps eight repeated grep steps and makes a ninth provider turn', async () => {
+    const previous = mocks.grepFilesInTab.getMockImplementation();
+    mocks.grepFilesInTab.mockImplementation(() => Promise.resolve(RESULT));
+    try {
+      await withRealLoop(async () => {
+        const { start, providerPrompt } = harness({ tab: { workspaceDir: dir } });
+        const { request } = start('tell', ['file grep'], 'tell', 'record-1');
+        for (let step = 0; step < 8; step += 1) {
+          reply(providerPrompt, GREP);
+          await vi.waitFor(() => expect(providerPrompt).toHaveBeenCalledTimes(step + 2));
+        }
+        reply(providerPrompt, GREP);
+        await vi.waitFor(() => expect(request.finish).toHaveBeenCalled());
+
+        expect(mocks.grepFilesInTab).toHaveBeenCalledTimes(8);
+        expect(providerPrompt).toHaveBeenCalledTimes(9);
+        expect(request.finish).toHaveBeenCalledWith(expect.objectContaining({
+          answered: true, reply: '(stopped after 8 tool steps)',
+        }));
+      });
+    } finally {
+      if (previous) mocks.grepFilesInTab.mockImplementation(previous);
+    }
+  });
+
+  it('runs no grep when the prompt is aborted before execution', async () => {
+    await withRealLoop(async () => {
+      const { start, providerPrompt, managers } = harness({ tab: { workspaceDir: dir } });
+      const { request } = start('tell', ['file grep'], 'tell', 'record-1');
+      const handlers = latestPrompt(providerPrompt);
+      handlers.onChunk(GREP);
+      request.abort.abort();
+      handlers.onEnd('end_turn');
+
+      expect(mocks.grepFilesInTab).not.toHaveBeenCalled();
+      expect(managers.tab.append).not.toHaveBeenCalledWith('shell', expect.objectContaining({ acp: true }));
+      expect(providerPrompt).toHaveBeenCalledTimes(1);
+      expect(request.finish).not.toHaveBeenCalled();
+    });
+  });
+
+  it('suppresses a late grep result and the next turn after an abort', async () => {
+    const pending = deferred<string>();
+    mocks.grepFilesInTab.mockImplementationOnce(() => pending.promise);
+    await withRealLoop(async () => {
+      const { start, providerPrompt, managers } = harness({ tab: { workspaceDir: dir } });
+      const { request } = start('tell', ['file grep'], 'tell', 'record-1');
+      reply(providerPrompt, GREP);
+      await vi.waitFor(() => expect(mocks.grepFilesInTab).toHaveBeenCalledOnce());
+
+      request.abort.abort();
+      pending.resolve(RESULT);
+      await flush();
+
+      expect(providerPrompt).toHaveBeenCalledTimes(1);
+      expect(managers.tab.append).not.toHaveBeenCalledWith('shell', expect.objectContaining({ acp: true }));
+      expect(managers.acpRecords.activity).not.toHaveBeenCalledWith('record-1', 'tool', RESULT);
+      expect(request.finish).not.toHaveBeenCalled();
+    });
   });
 });

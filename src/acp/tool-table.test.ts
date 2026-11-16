@@ -17,6 +17,7 @@ import { DB_PRIMER } from '../database/primer.js';
 import { FILE_READ_PRIMER } from '../file-read/command.js';
 import { FILE_MUTATION_PRIMER } from '../file-write/command.js';
 import { FILE_GLOB_PRIMER } from '../file-glob/command.js';
+import { FILE_GREP_PRIMER } from '../file-grep/command.js';
 
 const setup = (grants: readonly string[] = NATIVE_ACP_COMMANDS) => ({ tools: createAcpToolTable(grants) });
 
@@ -31,7 +32,7 @@ describe('createAcpToolTable', () => {
     expect(toolPrimer(tools, NATIVE_ACP_COMMANDS)).toBe([
       'browser primer text',
       'question primer text',
-      `${FILE_READ_PRIMER}\n\n${FILE_GLOB_PRIMER}\n\n${FILE_MUTATION_PRIMER}`,
+      `${FILE_READ_PRIMER}\n\n${FILE_GLOB_PRIMER}\n\n${FILE_GREP_PRIMER}\n\n${FILE_MUTATION_PRIMER}`,
       DB_PRIMER,
       `Only these commands are allowed: ${NATIVE_ACP_COMMANDS.join(', ')}.`,
     ].join('\n\n'));
@@ -232,6 +233,44 @@ describe('gateCommand', () => {
     }
   });
 
+  const GREP_FORMS = [
+    'file grep TODO',
+    'file grep',
+    'file grep --limit',
+    'file grep [unclosed',
+    'FILE GREP TODO',
+    '  file\tgrep TODO  ',
+    '/file grep TODO',
+    '  /FiLe   GrEp   TODO  ',
+  ];
+
+  it.each([
+    ['granted', ['file']],
+    ['ungranted', []],
+  ])('refuses agent file grep commands when %s', (_label, grants) => {
+    for (const command of GREP_FORMS) {
+      expect(gateCommand(agent({ grants }), [], command)).toStrictEqual({
+        refusal: `Agent: command not permitted: ${command}.`,
+      });
+    }
+  });
+
+  it.each([
+    ['granted', ['file']],
+    ['ungranted', []],
+  ])('routes file greps and file grep-x to the caller when %s', (_label, grants) => {
+    for (const command of ['file greps x', 'file grep-x x']) {
+      expect(gateCommand(agent({ grants }), [], command)).toStrictEqual({ runsOn: 'caller' });
+    }
+  });
+
+  it.each([
+    ['granted', ['file'], { runsOn: 'workspace' }],
+    ['ungranted', [], { refusal: 'Agent: command not permitted: /FILE READ a.md.' }],
+  ] as const)('keeps the read boundary beside the grep refusal when %s', (_label, grants, expected) => {
+    expect(gateCommand(agent({ grants }), [], '/FILE READ a.md')).toStrictEqual(expected);
+  });
+
   it('keeps file read and non-mutation routing beside the mutation refusal', () => {
     expect(gateCommand(agent({ grants: ['file'] }), [], 'file read a.md')).toStrictEqual({ runsOn: 'workspace' });
     expect(gateCommand(agent(), [], 'file read a.md')).toStrictEqual({
@@ -404,5 +443,130 @@ describe('file mutation tools', () => {
   it('routes a granted file glob to the workspace', () => {
     const grants = ['file glob'];
     expect(gateCommand(coreSnapshot(grants), createAcpToolTable(grants), 'file glob x')).toStrictEqual({ runsOn: 'workspace' });
+  });
+});
+
+describe('file grep tools', () => {
+  const fileTool = (grants: readonly string[]) => createAcpToolTable(grants).find((tool) => tool.runsOn === 'workspace');
+
+  it('adds no file tool without a file grant', () => {
+    expect(fileTool(['browser goto', 'db sqlite list'])).toBeUndefined();
+  });
+
+  it('gives a grep-only grant the file owner with only the grep primer', () => {
+    const tool = fileTool(['file grep']);
+    expect(tool).toBeDefined();
+    expect(tool!.primer).toBe(FILE_GREP_PRIMER);
+    expect(tool!.primer).not.toContain(FILE_READ_PRIMER);
+    expect(tool!.primer).not.toContain(FILE_GLOB_PRIMER);
+    expect(tool!.primer).not.toContain(FILE_MUTATION_PRIMER);
+  });
+
+  it.each([
+    ['read only', ['file read'], FILE_READ_PRIMER],
+    ['glob only', ['file glob'], FILE_GLOB_PRIMER],
+    ['write only', ['file write'], FILE_MUTATION_PRIMER],
+    ['edit only', ['file edit'], FILE_MUTATION_PRIMER],
+  ])('keeps the %s primer unchanged', (_label, grants, primer) => {
+    expect(fileTool(grants)!.primer).toBe(primer);
+  });
+
+  it('joins read and grep with exactly two newlines and omits the others', () => {
+    const primer = fileTool(['file read', 'file grep'])!.primer;
+    expect(primer).toBe(`${FILE_READ_PRIMER}\n\n${FILE_GREP_PRIMER}`);
+    expect(primer).not.toContain(FILE_GLOB_PRIMER);
+    expect(primer).not.toContain(FILE_MUTATION_PRIMER);
+  });
+
+  it('places grep after glob with exactly two newlines between them', () => {
+    expect(fileTool(['file glob', 'file grep'])!.primer).toBe(`${FILE_GLOB_PRIMER}\n\n${FILE_GREP_PRIMER}`);
+  });
+
+  it('places grep before a single mutation fragment when a mutation is granted beside it', () => {
+    expect(fileTool(['file grep', 'file write'])!.primer).toBe(`${FILE_GREP_PRIMER}\n\n${FILE_MUTATION_PRIMER}`);
+    expect(fileTool(['file grep', 'file edit'])!.primer).toBe(`${FILE_GREP_PRIMER}\n\n${FILE_MUTATION_PRIMER}`);
+  });
+
+  it('keeps one mutation fragment and the canonical file order for all five grants', () => {
+    const primer = fileTool(['file read', 'file glob', 'file grep', 'file write', 'file edit'])!.primer;
+    expect(primer).toBe([
+      FILE_READ_PRIMER, FILE_GLOB_PRIMER, FILE_GREP_PRIMER, FILE_MUTATION_PRIMER,
+    ].join('\n\n'));
+    expect(primer.indexOf(FILE_GREP_PRIMER)).toBeGreaterThan(primer.indexOf(FILE_GLOB_PRIMER));
+    expect(primer.indexOf(FILE_GREP_PRIMER)).toBeLessThan(primer.indexOf(FILE_MUTATION_PRIMER));
+    expect(primer.split(FILE_MUTATION_PRIMER)).toHaveLength(2);
+  });
+});
+
+describe('file grep extraction', () => {
+  const extract = (grants: readonly string[]) => toolExtractor(createAcpToolTable(grants));
+
+  it('extracts a valid flags-first grep through a file-read-only owner', () => {
+    expect(extract(['file read'])('Looking.\nfile grep --literal --path src TODO'))
+      .toBe('file grep --literal --path src TODO');
+  });
+
+  it('extracts a bare grep and a malformed flags line', () => {
+    expect(extract(['file grep'])('Checking.\nfile grep')).toBe('file grep');
+    expect(extract(['file grep'])('Checking.\nfile grep --limit')).toBe('file grep --limit');
+  });
+
+  it('keeps case and repeated inter-keyword whitespace while preserving pattern spacing', () => {
+    expect(extract(['file grep'])('Looking.\n  FiLe \t  GrEp   two   words  ')).toBe('FiLe \t  GrEp   two   words');
+  });
+
+  it('cleans fences and common prompt prefixes before extracting grep', () => {
+    expect(extract(['file grep'])('Looking.\n```\n> file grep TODO\n```')).toBe('file grep TODO');
+  });
+
+  it('picks the last recognized command line', () => {
+    expect(extract(['file glob', 'file grep'])('file grep one\nnotes\nfile glob *.ts')).toBe('file glob *.ts');
+  });
+
+  it('does not extract file greps or file grep-x', () => {
+    expect(extract(['file read'])('file greps x')).toBeNull();
+    expect(extract(['file read'])('file grep-x x')).toBeNull();
+  });
+
+  it('does not extract grep when the file owner is omitted', () => {
+    expect(extract(['browser goto', 'db sqlite list'])('file grep TODO')).toBeNull();
+  });
+});
+
+describe('file grep gate', () => {
+  const snapshot = (grants: readonly string[], rows: AcpRunSnapshotRow[] = []): AcpRunSnapshot => ({
+    kind: 'core', role: 'tell', roleName: 'writer', grants, rows, withoutTools: false,
+  });
+  const GREP = 'file grep TODO';
+  const toolsFor = (grants: readonly string[]) => createAcpToolTable(grants);
+
+  it('allows a granted grep with no settings row', () => {
+    const grants = ['file grep'];
+    expect(gateCommand(snapshot(grants), toolsFor(grants), GREP)).toStrictEqual({ runsOn: 'workspace' });
+  });
+
+  it('allows a granted grep whose row is enabled with agent access', () => {
+    const grants = ['file grep'];
+    const rows = [{ name: 'file grep', effectiveEnabled: true, effectiveAgentAccess: true }];
+    expect(gateCommand(snapshot(grants, rows), toolsFor(grants), GREP)).toStrictEqual({ runsOn: 'workspace' });
+  });
+
+  it('refuses an enabled ungranted grep beside a file-read-only owner', () => {
+    const grants = ['file read'];
+    expect(gateCommand(snapshot(grants), toolsFor(grants), GREP)).toStrictEqual({
+      refusal: 'Command not allowed for role "writer": file grep.',
+    });
+  });
+
+  it.each([
+    ['disabled granted', ['file grep'], { effectiveEnabled: false, effectiveAgentAccess: true }],
+    ['agent-off granted', ['file grep'], { effectiveEnabled: true, effectiveAgentAccess: false }],
+    ['disabled ungranted', ['file read'], { effectiveEnabled: false, effectiveAgentAccess: true }],
+    ['agent-off ungranted', ['file read'], { effectiveEnabled: true, effectiveAgentAccess: false }],
+  ] as const)('refuses %s grep before the role check', (_label, grants, setting) => {
+    const rows = [{ name: 'file grep', ...setting }];
+    expect(gateCommand(snapshot(grants, rows), toolsFor(grants), GREP)).toStrictEqual({
+      refusal: 'Command is disabled: file grep.', refused: 'disabled',
+    });
   });
 });
