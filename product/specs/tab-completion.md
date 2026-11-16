@@ -92,7 +92,7 @@ The shell uses the following rules, in order of precedence:
 ### Web command (`web search`)
 
 - **Context:** The arguments of the `web` command.
-- **Candidates:** The first argument offers `search` while the `web search` row is enabled. After `web search`, a word starting with `-` offers the flags not already used: `--results`, `--max-chars`, `--depth`, and `--provider`. After `--depth`, it offers `basic` and `advanced`; after `--provider`, it offers `auto` and every registered provider name.
+- **Candidates:** The first argument offers `search` while the `web search` row is enabled. After `web search`, a word starting with `-` offers the flags not already used — `--results`, `--max-chars`, `--depth`, and `--provider` — but only after the query: the dash must not be the first word after `web search`, so `web search -` leaves the line unchanged with no candidates. After `--depth`, it offers `basic` and `advanced`; after `--provider`, it offers `auto` and every registered provider name.
 - **Behavior:** The query, the values of `--results` and `--max-chars`, and any argument of another `web` subcommand get no candidates and do not fall back to filesystem completion. With the `web` row or the `web search` row disabled, nothing under `web` completes. Candidate matching is case-sensitive, like every other completion.
 
 ### 5. Filesystem Path Completion
