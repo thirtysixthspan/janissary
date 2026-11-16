@@ -6,20 +6,33 @@ import { restoreChanges, type UndoRecord } from './restore.js';
 
 export type CommitOutcome = { ok: true } | { ok: false; restored: boolean; reason: string; path: string };
 
-function folderPath(folder: string, changes: PatchChanges): string {
-  const places = [...changes.moves.map((move) => move.to), ...changes.writes.map((write) => write.finalPlace ?? write.place)];
-  return places.find((place) => {
-    const relative = path.relative(folder, place.location);
-    return relative !== '' && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
-  })?.requested ?? '';
+function folderPaths(changes: PatchChanges): Map<string, string> {
+  const folders = new Set(changes.folders.map((folder) => path.resolve(folder)));
+  const paths = new Map<string, string>();
+  function add(location: string, requested: string): void {
+    let folder = path.dirname(path.resolve(location));
+    while (true) {
+      if (folders.has(folder) && !paths.has(folder)) paths.set(folder, requested);
+      const parent = path.dirname(folder);
+      if (parent === folder) break;
+      folder = parent;
+    }
+  }
+  for (const move of changes.moves) add(move.to.location, move.to.requested);
+  for (const write of changes.writes) {
+    const place = write.finalPlace ?? write.place;
+    add(place.location, place.requested);
+  }
+  return paths;
 }
 
 export function commitChanges(changes: PatchChanges, operations: CommitOperations = defaultCommitOperations): CommitOutcome {
   const records: UndoRecord[] = [];
   let reported = '';
   try {
+    const paths = folderPaths(changes);
     for (const folder of changes.folders) {
-      reported = folderPath(folder, changes);
+      reported = paths.get(path.resolve(folder)) ?? '';
       operations.mkdir(folder);
       records.push({ kind: 'folder', path: folder });
     }

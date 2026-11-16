@@ -103,3 +103,31 @@ it('keeps folders emptied by deletes and moves', () => {
   expect(run('*** Delete File: deleted/file\n*** Update File: moved/file\n*** Move to: destination')).toEqual({ ok: true });
   expect(readdirSync(file('deleted'))).toEqual([]); expect(readdirSync(file('moved'))).toEqual([]);
 });
+
+it('reports the first rename destination for shared and nested folders before writes', () => {
+  write('source', 'old');
+  const patch = '*** Add File: shared/nested/first\n+x\n*** Update File: source\n*** Move to: shared/nested/moved\n*** Add File: shared/other/last\n+y';
+  for (const target of ['shared', 'shared/nested', 'shared/other']) {
+    const operations: CommitOperations = { ...defaultCommitOperations, mkdir(name) { if (name === file(target)) throw fail(); defaultCommitOperations.mkdir(name); } };
+    const expected = target === 'shared/other' ? 'shared/other/last' : 'shared/nested/moved';
+    expect(run(patch, operations)).toMatchObject({ ok: false, restored: true, path: expected });
+    expect(existsSync(file('shared'))).toBe(false);
+  }
+});
+
+it('indexes folder reports without scanning every write for each folder', () => {
+  const initial = changes('*** Add File: sample/file\n+x');
+  const template = initial.writes[0];
+  let reads = 0;
+  const writes = Array.from({ length: 1000 }, (_, index) => ({
+    ...template,
+    get place() {
+      reads += 1;
+      return { ...template.place, location: file(`folder-${index}/file`), requested: `folder-${index}/file` };
+    },
+  }));
+  const folders = [...writes.map((_, index) => file(`folder-${index}`)), file('unmatched')];
+  const operations: CommitOperations = { ...defaultCommitOperations, mkdir(name) { if (name === file('unmatched')) throw fail(); }, rmdir() {} };
+  expect(commitChanges({ ...initial, folders, writes }, operations)).toMatchObject({ ok: false, restored: true, path: '' });
+  expect(reads).toBeLessThanOrEqual(1000);
+});
