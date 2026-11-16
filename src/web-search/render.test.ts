@@ -174,6 +174,49 @@ describe('renderResults', () => {
     expect(rendered.length).toBe(maxChars);
   });
 
+  it('prints the link line alone when the note cannot fit alongside it', () => {
+    const url = `https://example.com/${'a'.repeat(120)}`;
+    const link = `- [Long](${url})`;
+    const note = '(showing 1 of 2 results; raise --max-chars for more)';
+    expect(link.length).toBe(150);
+    expect(link.length + 1 + note.length).toBe(203);
+    const rendered = renderResults(
+      [result('Long', url, 'short'), result('Other', 'https://example.com/other', 'other')],
+      2,
+      200,
+    );
+    expect(rendered).toBe(link);
+    expect(rendered.length).toBeLessThanOrEqual(200);
+  });
+
+  it('keeps the note without a snippet when the link line and note fill the budget', () => {
+    const url = `https://example.com/${'a'.repeat(117)}`;
+    const link = `- [Long](${url})`;
+    const note = '(showing 1 of 2 results; raise --max-chars for more)';
+    expect(link.length).toBe(147);
+    expect(link.length + 1 + note.length).toBe(200);
+    const rendered = renderResults(
+      [result('Long', url, 'short'), result('Other', 'https://example.com/other', 'y'.repeat(100))],
+      2,
+      200,
+    );
+    expect(rendered).toBe(`${link}\n${note}`);
+  });
+
+  it('prints an ellipsis-only snippet when one character of snippet room remains', () => {
+    const url = `https://example.com/${'a'.repeat(113)}`;
+    const link = `- [Long](${url})`;
+    const note = '(showing 1 of 2 results; raise --max-chars for more)';
+    expect(link.length).toBe(143);
+    const rendered = renderResults(
+      [result('Long', url, 'short'), result('Other', 'https://example.com/other', 'y'.repeat(100))],
+      2,
+      200,
+    );
+    expect(rendered).toBe(`${link}\n  …\n${note}`);
+    expect(rendered.length).toBe(200);
+  });
+
   it('does not leave a lone high surrogate at the end of a cut snippet', () => {
     const link = '- [Emoji](https://e.com/emoji)';
     const maxChars = link.length + 3 + 6;

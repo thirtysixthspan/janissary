@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Fix and test the first-result truncation when the note cannot fit alongside the link line.
-
-Existing Issue: In `src/web-search/render.ts`, `cutFirstResult` returns the link line and the truncation note whenever `room = maxChars - link.length - 3 - note.length` is at most 1, so with the 200-character minimum, a 150-character link and a two-result note can produce about 203 characters and omit the snippet even though the link line alone fits; no render test covers that boundary. Severity: 3/10
-
-Existing Risk: 2/10 - a long URL with a short snippet can exceed the user's `--max-chars` and drop the snippet, contrary to the plan's budget rule, and the untested branch can regress unnoticed.
-
-Proposal Risk: 1/10 - the output becomes deterministic and stays within the budget; only the over-budget edge changes.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "cover and correct the first-result truncation boundary". Add a case to `src/web-search/render.test.ts` with `maxChars: 200`, two results, a first link line between `maxChars - note.length - 3` and `maxChars`, and a short snippet. Decide the precedence the plan implies — the budget includes the note, so when the note cannot fit with the link line the link line is printed alone within budget — and implement it in `cutFirstResult` in `src/web-search/render.ts`: return the link line alone when `link.length + note.length` exceeds `maxChars`; when `room === 1`, print the link line plus an indented `…` and the note, which fits exactly; when `room <= 0`, print the link line and note without a snippet; otherwise keep the existing cut. Update the Truncation paragraph of `product/specs/web-search.md` and the output paragraph of `help/web.md` to state that the note is dropped when it cannot fit with the link line, and add the new test at the boundary. Keep the existing whole-result, over-budget-link, and empty-list cases passing.
-
-
 * Record the abort rule in the web-search behavior spec and correct the repair plan's claim that it is already there.
 
 Existing Issue: The aborted-search repair plan says `product/specs/web-search.md` already records that an aborted capability's original rejection is rethrown and nothing is disabled or reported, but that spec contains no abort or cancellation rule beyond "A typed search has no cancellation"; the rule exists in the aggregate plan's design decision and in `documentation/developer-documentation/web-search-providers.md`. Severity: 2/10

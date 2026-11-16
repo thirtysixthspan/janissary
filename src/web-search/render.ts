@@ -105,8 +105,9 @@ function cutSnippet(snippet: string, room: number): string {
 function cutFirstResult(result: WebSearchResult, total: number, maxChars: number): string {
   const link = linkLine(result);
   const note = total > 1 ? `\n${truncationNote(1, total)}` : '';
+  if (link.length + note.length > maxChars) return link;
   const room = maxChars - link.length - 3 - note.length;
-  if (room <= 1) return `${link}${note}`;
+  if (room <= 0) return `${link}${note}`;
   return `${link}\n  ${cutSnippet(result.snippet, room)}${note}`;
 }
 
