@@ -52,7 +52,9 @@ function applyOne(view: PatchView, section: PatchSection, record: PatchRecord): 
   const resolved = view.resolve(section.path);
   if (!resolved.ok) return { reason: resolved.reason };
   const place = resolved.value;
-  const linkError = followLink(view, place, record);
+  const entryOnly = section.kind === 'delete' || (section.kind === 'update' && section.moveTo !== undefined && section.hunks.length === 0);
+  const movedLink = place.linkText !== undefined && record.moves.byPlace.get(place)?.get(place.content)?.some((chain) => chain.link);
+  const linkError = entryOnly && movedLink ? undefined : followLink(view, place, record);
   if (linkError) return { reason: linkError };
   switch (section.kind) {
     case 'add': { return add(place, section, record); }

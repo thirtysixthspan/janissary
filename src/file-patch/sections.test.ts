@@ -142,6 +142,26 @@ describe('patch sections', () => {
     symlinkSync('target', path.join(root, 'safe/link'));
     expect(apply('*** Update File: safe/link\n*** Move to: .git/link')).toMatchObject({ ok: false, section: 1, reason: 'Protected file' });
   });
+  it('allows entry operations on a moved link with a missing target', () => {
+    write('old/target', 'old\n');
+    symlinkSync('target', path.join(root, 'old/link'));
+    const prefix = '*** Update File: old/link\n*** Move to: missing/link';
+    const deleted = success(`${prefix}\n*** Delete File: missing/link`);
+    expect(deleted.rows).toEqual([{ letter: 'D', path: 'old/link' }]);
+    expect(deleted.changes.moves).toEqual([]);
+    expect(deleted.changes.deletes).toMatchObject([{ place: { requested: 'old/link' }, linkText: 'target' }]);
+    const moved = success(`${prefix}\n*** Update File: missing/link\n*** Move to: next/link`);
+    expect(moved.rows).toEqual([{ letter: 'R', path: 'old/link', target: 'next/link' }]);
+    expect(moved.changes.moves).toHaveLength(2);
+    for (const suffix of [
+      '*** Update File: missing/link\n@@\n-old\n+new',
+      '*** Update File: missing/link\n*** Move to: next/link\n@@\n-old\n+new',
+    ]) expect(apply(`${prefix}\n${suffix}`)).toMatchObject({ ok: false, section: 2, reason: 'Not a text file' });
+    symlinkSync('absent', path.join(root, 'old/dangling'));
+    for (const suffix of ['*** Delete File: old/dangling', '*** Update File: old/dangling\n*** Move to: next/link']) {
+      expect(apply(suffix)).toMatchObject({ ok: false, section: 1, reason: 'Not a text file' });
+    }
+  });
   it('derives ordered changes and leaves disk untouched', () => {
     write('edit', 'old\n'); write('delete', 'keep');
     const result = success('*** Add File: a/b/new\n+new\n*** Update File: edit\n@@\n-old\n+updated\n*** Delete File: delete');

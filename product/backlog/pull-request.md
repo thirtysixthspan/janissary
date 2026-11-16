@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Allow a moved symbolic link to be deleted or moved again when its new target is missing.
-
-Existing Issue: Every section follows a moved link before selecting the operation, so a link moved into a directory where its relative target is absent cannot subsequently be deleted or renamed. Severity: 6/10
-
-Existing Risk: 5/10 - A valid sequence that removes or relocates a link fails even though those operations act on the link itself and do not require its destination to exist.
-
-Proposal Risk: 2/10 - Link path validation remains necessary, but operation-specific following can preserve containment while allowing link-entry operations and rejecting unsafe content updates.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2011 "allow deleting or moving a moved dangling symbolic link". Update src/file-patch/sections.ts and src/file-patch/moves.ts to distinguish operations that follow content from Delete and move-only operations on an already validated link entry, preserving existing rejection of initially dangling links and validating destination paths; keep following for updates and move hunks. Add cases in src/file-patch/sections.test.ts that move a relative link to a directory with a missing target and then delete it or move it to another location, alongside a case that still rejects an update through the dangling link. Preserve existing move-chain and containment coverage and run the diff-scoped checks.
-
-
 * Cover the moved link's protected target policy.
 
 Existing Issue: The moved-link fix plan requires a protected target case, but the test checks a protected move destination instead of following a moved link into a protected target. Severity: 4/10
