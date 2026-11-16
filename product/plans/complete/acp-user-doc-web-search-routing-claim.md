@@ -26,7 +26,7 @@ Verified against the code:
 - `src/acp/run-prompt.test.ts`'s `routes a local fallback session on a remote tab through the tab search` pins the remote search, and `leaves a remote tab's fallback local workspace step untagged` pins the untagged step. `src/acp/run-prompt.test.ts`'s `tags a remote tab's web step with the host on the transcript and record lines` pins the remote-hosted tag.
 - `product/specs/web-search.md`'s Agent tool section and `product/specs/acp.md`'s Web search subsection already state the tab-based route and the local-fallback case correctly.
 
-The completed subplan `product/plans/complete/web-search-13-default-grants.md` records the older, incorrect user-doc wording. It is kept byte-for-byte as history; this plan records the correction.
+The completed subplan `product/plans/complete/web-search-13-default-grants.md` records the older, incorrect user-doc wording. That recorded wording is kept byte-for-byte as history; this plan records the correction. A separate repair, recorded in `product/plans/complete/web-search-saved-tell-verification-expectation.md`, rewrote the subplan's Verification step 3 in place, so that one step is current while the subplan's recorded user-doc wording remains historical.
 
 ## Approach
 
