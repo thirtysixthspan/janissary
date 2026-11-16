@@ -9,7 +9,7 @@ import { pruneAndBuildRows } from './rebuild.js';
 import { nextRestoreRevision } from './restore.js';
 import { freshFileNavigatorState, type FilesTabState } from './state.js';
 import {
-  clearRemoteFileCache, forgetRemoteFilesOf, initRemoteFileCache, materializeRemoteFile,
+  clearRemoteFileCache, forgetRemoteFilesOf, initRemoteFileCache, materializeRemoteFile, remoteFileFor,
 } from './remote/file-cache.js';
 import { editorRevealBlocked, revealEditorFile, revealTargetFor, type RevealPort } from './reveal-editor.js';
 
@@ -71,13 +71,24 @@ afterEach(() => {
   project = undefined;
 });
 
-function cachedFile(): string {
+function cachedFile(options: {
+  root?: string;
+  relPath?: string;
+  label?: string;
+  filesystem?: FileSystemPort;
+} = {}): string {
   project = mkdtempSync(path.join(tmpdir(), 'janus-reveal-editor-'));
   initRemoteFileCache(project);
+  const relPath = options.relPath ?? 'notes.txt';
   return materializeRemoteFile(
     { destination: 'devbox', workspaceRoot: '/remote/ws', workspaceLabel: 'claude' },
-    'notes.txt', Buffer.from('x'),
-    { filesystem: cacheFilesystem, root: '/remote/ws', relPath: 'notes.txt', label: 'files' },
+    relPath, Buffer.from('x'),
+    {
+      filesystem: options.filesystem ?? cacheFilesystem,
+      root: options.root ?? '/remote/ws',
+      relPath,
+      label: options.label ?? 'files',
+    },
   );
 }
 
@@ -274,5 +285,160 @@ describe('revealEditorFile', () => {
     expect(docked.tabs[1]?.dock).toBe('left');
     expect(docked.state.expanded).toEqual(new Set(['src', 'src/deep']));
     expect(docked.state.restore?.cursor).toBe('src/deep/a.ts');
+  });
+});
+
+const remoteWorkspace = '/remote/ws';
+
+function remoteFixture(options: {
+  root?: string;
+  remoteRoot?: string;
+  recordRoot?: string;
+  relPath?: string;
+  label?: string;
+  expanded?: string[];
+} = {}) {
+  const filesystem = { dispose: vi.fn() } as unknown as FileSystemPort;
+  const file = cachedFile({
+    root: options.recordRoot,
+    relPath: options.relPath,
+    label: options.label,
+    filesystem,
+  });
+  const state = freshFileNavigatorState(
+    options.root ?? remoteWorkspace, filesystem, 'name', { host: 'devbox', address: 'devbox' }, 'shell',
+  );
+  state.remoteRoot = options.remoteRoot ?? remoteWorkspace;
+  const expanded = options.expanded ?? [];
+  for (const relPath of expanded) state.expanded.add(relPath);
+  const tabs: Record<string, unknown>[] = [
+    {
+      label: 'edit',
+      view: 'editor',
+      editor: { name: path.basename(file), path: file, size: '1 B', url: '/open/1' },
+    },
+    { label: 'files' },
+  ];
+  const openFilesTab = vi.fn();
+  const setActiveTab = vi.fn();
+  const port = {
+    states: new Map([['files', state]]),
+    managers: {
+      tab: {
+        launchDir: process.cwd(),
+        tabs,
+        byLabel: (label: string) => tabs.find((tab) => tab.label === label),
+        mostRecentFileNavigatorLabel: () => 'files',
+        findIndex: (label: string) => tabs.findIndex((tab) => tab.label === label),
+        openFilesTab,
+        cur: () => tabs.at(-1),
+        setCwd: vi.fn(),
+        setActiveTab,
+        setDock: vi.fn(),
+      },
+    },
+    watchDir: vi.fn(),
+    unwatchDir: vi.fn(),
+    rebuild: vi.fn(),
+    refreshGit: vi.fn(),
+    reportFailure: vi.fn(),
+    setCwd: vi.fn(),
+    hasTab: () => true,
+  } as unknown as RevealPort;
+  return { file, state, port, openFilesTab, setActiveTab };
+}
+
+describe('revealEditorFile for a remote cached file', () => {
+  it('reveals it in the navigator named by its record without retargeting anything', () => {
+    const { file, state, port, openFilesTab, setActiveTab } = remoteFixture({ relPath: 'src/notes.txt' });
+    const before = nextRestoreRevision();
+
+    revealEditorFile(port, 'edit');
+
+    expect(state.root).toBe(remoteWorkspace);
+    expect(state.expanded).toEqual(new Set(['src']));
+    expect(state.restore).toMatchObject({
+      cursor: 'src/notes.txt',
+      anchor: 'src/notes.txt',
+      selected: ['src/notes.txt'],
+    });
+    expect(state.restore?.revision).toBeGreaterThan(before);
+    expect(port.refreshGit).not.toHaveBeenCalled();
+    expect(openFilesTab).not.toHaveBeenCalled();
+    expect(setActiveTab).toHaveBeenCalledExactlyOnceWith(1);
+    expect(remoteFileFor(file)).toBeDefined();
+  });
+
+  it('reveals in the current root when the navigator re-rooted to an ancestor of the record root', () => {
+    const { state, port, openFilesTab } = remoteFixture({
+      root: '/remote/ws', recordRoot: '/remote/ws/clone', relPath: 'src/a.ts', expanded: ['clone'],
+    });
+    const before = nextRestoreRevision();
+
+    revealEditorFile(port, 'edit');
+
+    expect(state.root).toBe('/remote/ws');
+    expect(state.expanded).toEqual(new Set(['clone', 'clone/src']));
+    expect(state.restore).toMatchObject({
+      cursor: 'clone/src/a.ts',
+      anchor: 'clone/src/a.ts',
+      selected: ['clone/src/a.ts'],
+    });
+    expect(state.restore?.revision).toBeGreaterThan(before);
+    expect(port.refreshGit).not.toHaveBeenCalled();
+    expect(port.setCwd).not.toHaveBeenCalled();
+    expect(openFilesTab).not.toHaveBeenCalled();
+  });
+
+  it('re-roots to the workspace root when the file is outside the navigator current root', () => {
+    const { file, state, port } = remoteFixture({
+      root: '/remote/ws/other', recordRoot: '/remote/ws/app', relPath: 'src/a.ts', expanded: ['lib', 'lib/deep'],
+    });
+
+    revealEditorFile(port, 'edit');
+
+    expect(state.root).toBe(remoteWorkspace);
+    expect(state.expanded).toEqual(new Set(['app', 'app/src']));
+    expect(state.restore).toMatchObject({
+      cursor: 'app/src/a.ts',
+      anchor: 'app/src/a.ts',
+      selected: ['app/src/a.ts'],
+    });
+    expect(port.setCwd).toHaveBeenCalledExactlyOnceWith('files', remoteWorkspace);
+    expect(port.refreshGit).toHaveBeenCalledExactlyOnceWith('files');
+    expect(port.unwatchDir).toHaveBeenCalledWith(state, 'lib');
+    expect(port.unwatchDir).toHaveBeenCalledWith(state, 'lib/deep');
+    expect(port.unwatchDir).toHaveBeenCalledWith(state, '');
+    expect(state.expanded.has('lib')).toBe(false);
+    expect(remoteFileFor(file)).toBeDefined();
+  });
+
+  it('changes nothing when the record names no navigator state', () => {
+    const { state, port, openFilesTab, setActiveTab } = remoteFixture({ label: 'diff' });
+
+    revealEditorFile(port, 'edit');
+
+    expect(state.root).toBe(remoteWorkspace);
+    expect(state.expanded.size).toBe(0);
+    expect(state.restore).toBeUndefined();
+    expect(port.rebuild).not.toHaveBeenCalled();
+    expect(openFilesTab).not.toHaveBeenCalled();
+    expect(setActiveTab).not.toHaveBeenCalled();
+  });
+
+  it('changes nothing when the record is outside the navigator workspace root', () => {
+    const { state, port, openFilesTab, setActiveTab } = remoteFixture({
+      root: '/remote/ws/other', remoteRoot: '/remote/ws/other', recordRoot: '/remote/ws/app', relPath: 'notes.txt',
+    });
+
+    revealEditorFile(port, 'edit');
+
+    expect(state.root).toBe('/remote/ws/other');
+    expect(state.expanded.size).toBe(0);
+    expect(state.restore).toBeUndefined();
+    expect(port.rebuild).not.toHaveBeenCalled();
+    expect(port.refreshGit).not.toHaveBeenCalled();
+    expect(openFilesTab).not.toHaveBeenCalled();
+    expect(setActiveTab).not.toHaveBeenCalled();
   });
 });

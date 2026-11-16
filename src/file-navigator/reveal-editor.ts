@@ -1,6 +1,6 @@
 import path from 'node:path';
-import { containedStrictly } from '../path-containment.js';
-import { revealPath } from './navigation.js';
+import { containedAbsolute, containedStrictly } from '../path-containment.js';
+import { reRootTree, revealPath } from './navigation.js';
 import { openOrRetargetLocalAt, type OpenPort } from './open.js';
 import { localCloneOf } from '../plugins/origin-workspace-records.js';
 import { nextRestoreRevision } from './restore.js';
@@ -36,6 +36,10 @@ function targetUnder(navigatorRoot: string, file: string): { navigatorRoot: stri
   };
 }
 
+function posixRelative(from: string, to: string): string {
+  return path.relative(from, to).split(path.sep).join(path.posix.sep);
+}
+
 // Why an editor cannot be revealed in a file navigator, or nothing when it can. `'unsaved'` wins
 // over `'no-route'`: a new file has no path any navigator could find. A cached remote copy whose
 // record is gone has no route back to its remote — the same predicate pair `saveFile` refuses an
@@ -51,13 +55,11 @@ export type RevealPort = OpenPort & Pick<NavigationPort, 'setCwd' | 'hasTab' | '
 export function revealEditorFile(port: RevealPort, editorLabel: string): void {
   const editor = port.managers.tab.byLabel(editorLabel)?.editor;
   if (!editor || editorRevealBlocked(editor) !== undefined) return;
-  if (isRemoteCacheFile(editor.path) && remoteFileFor(editor.path)) return;
-  const { navigatorRoot, relPath } = revealTargetFor(editor.path, {
-    clone: localCloneOf(editor.path),
-    root: port.managers.tab.launchDir,
-  });
-  const label = openOrRetargetLocalAt(port, navigatorRoot);
-  if (label === undefined) return;
+  const target = isRemoteCacheFile(editor.path)
+    ? remoteReveal(port, editor.path)
+    : localReveal(port, editor.path);
+  if (!target) return;
+  const { label, relPath } = target;
   revealPath(port, label, relPath);
   const state = port.states.get(label);
   if (!state) return;
@@ -70,4 +72,29 @@ export function revealEditorFile(port: RevealPort, editorLabel: string): void {
   port.rebuild(label);
   const index = port.managers.tab.findIndex(label);
   if (port.managers.tab.tabs[index]?.dock === undefined) port.managers.tab.setActiveTab(index);
+}
+
+function remoteReveal(port: RevealPort, file: string): { label: string; relPath: string } | undefined {
+  const record = remoteFileFor(file);
+  if (!record) return;
+  const state = port.states.get(record.label);
+  if (!state) return;
+  const target = path.posix.join(record.root, record.relPath);
+  if (containedAbsolute(state.root, target)) {
+    return { label: record.label, relPath: posixRelative(state.root, target) };
+  }
+  const remoteRoot = state.remoteRoot;
+  if (!remoteRoot || !containedAbsolute(remoteRoot, target)) return;
+  reRootTree(port, record.label, state, remoteRoot);
+  return { label: record.label, relPath: posixRelative(remoteRoot, target) };
+}
+
+function localReveal(port: RevealPort, file: string): { label: string; relPath: string } | undefined {
+  const { navigatorRoot, relPath } = revealTargetFor(file, {
+    clone: localCloneOf(file),
+    root: port.managers.tab.launchDir,
+  });
+  const label = openOrRetargetLocalAt(port, navigatorRoot);
+  if (label === undefined) return;
+  return { label, relPath };
 }
