@@ -20,7 +20,6 @@ export function followLink(view: PatchView, place: PatchPlace, record: PatchReco
   if (current !== place) {
     retargetLink(record.moves, place, current.content);
     place.content = current.content;
-    record.linkTargets.set(place, current.location);
   }
   return undefined;
 }

@@ -27,7 +27,6 @@ export interface PatchRecord {
   deletes: Map<PatchPlace, PatchDelete>;
   writes: Map<PatchContent, { place: PatchPlace; fromAdd: boolean }>;
   moves: MoveRegistry;
-  linkTargets: Map<PatchPlace, string>;
   removedByDelete: Set<PatchPlace>;
 }
 

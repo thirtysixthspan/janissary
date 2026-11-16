@@ -64,7 +64,7 @@ function applyOne(view: PatchView, section: PatchSection, record: PatchRecord): 
 }
 
 export function applySections(view: PatchView, sections: readonly PatchSection[]): ApplySectionsResult {
-  const record: PatchRecord = { deletes: new Map(), writes: new Map(), moves: createMoveRegistry(), linkTargets: new Map(), removedByDelete: new Set() };
+  const record: PatchRecord = { deletes: new Map(), writes: new Map(), moves: createMoveRegistry(), removedByDelete: new Set() };
   for (const [index, section] of sections.entries()) {
     const failure = applyOne(view, section, record);
     if (failure) {

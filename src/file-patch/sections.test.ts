@@ -265,7 +265,7 @@ describe('patch sections', () => {
   it('indexes removed locations once when deriving many writes', () => {
     let reads = 0;
     const places: PatchPlace[] = [];
-    const record: PatchRecord = { deletes: new Map(), writes: new Map(), moves: createMoveRegistry(), linkTargets: new Map(), removedByDelete: new Set() };
+    const record: PatchRecord = { deletes: new Map(), writes: new Map(), moves: createMoveRegistry(), removedByDelete: new Set() };
     for (let i = 0; i < 1000; i += 1) {
       const name = `file-${i}`;
       const content: PatchContent = { realPath: name, original: undefined, mode: undefined, hadBom: false, current: name };
@@ -281,7 +281,7 @@ describe('patch sections', () => {
   });
 
   it('tracks and reports many moves without repeatedly scanning chains', () => {
-    const record: PatchRecord = { deletes: new Map(), writes: new Map(), moves: createMoveRegistry(), linkTargets: new Map(), removedByDelete: new Set() };
+    const record: PatchRecord = { deletes: new Map(), writes: new Map(), moves: createMoveRegistry(), removedByDelete: new Set() };
     const places: PatchPlace[] = [];
     let reads = 0;
     record.moves.chains = new Proxy(record.moves.chains, {

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Remove the patch record's unused link-target bookkeeping.
-
-Existing Issue: The patch record's `linkTargets` map is written by `followLink` with each followed link target, but no code ever reads it, so it is dead state beside the link logic. Severity: 2/10
-
-Existing Risk: 2/10 - A later reader or change can mistake the recorded target for live bookkeeping and either rely on a value nothing maintains or leave a needed link-target consumer unwritten.
-
-Proposal Risk: 1/10 - Removing the map cannot change runtime behavior because the content reassignment and move-chain retargeting it sits beside stay in place, and the existing link cases cover that behavior.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2011 "remove the unused link-target bookkeeping from the patch record". In src/file-patch/changes.ts remove the linkTargets field from PatchRecord; in src/file-patch/sections.ts remove its Map initializer; in src/file-patch/section-steps.ts remove the record.linkTargets.set(place, current.location) line from followLink while keeping retargetLink(record.moves, place, current.content), place.content = current.content, and the missing-target and cycle checks untouched. No behavior or test expectation changes; the existing sections.test.ts link cases (in-root update, delete, delete-then-add, moved link, moved dangling link, and the deleted-link re-added-then-moved case) and commit.test.ts link cases must keep passing. If a future link-target consumer is intended, it belongs in a separate change with its own test.
-
-
 * Update the ready web-search plan's stale reference to the file patch plan this change moved to complete.
 
 Existing Issue: The ready web-search plan still points at the file patch plan in its old ready-folder location, which this pull request deleted, and still describes the remote port extraction it depends on as pending even though this pull request already moved the paste body into the port-mapped helper and the create-item helper already existed. Severity: 2/10
