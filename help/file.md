@@ -165,7 +165,7 @@ Sections apply in order, and a later section sees what earlier ones did, so one 
 A successful patch prints a header and one row per path in order of first appearance:
 
 - `Patched <n> files:`, or `Patched 1 file:`, or `Patched 0 files:` when the sections cancel out
-- `A <path>` for an added path, `M <path>` for a modified path, `D <path>` for a deleted path, and `R <old> -> <new>` for a rename, each path once with its net change
+- `A <path>` for an added path, `M <path>` for a modified path, `D <path>` for a deleted path, and `R <old> -> <new>` for a file that existed before the patch and was renamed, each path once with its net change
 
 Paths are as typed, with control characters escaped. File content never appears.
 
