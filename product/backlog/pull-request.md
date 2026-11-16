@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's provider-names test by making its no-activation assertion able to fail.
-
-Existing Issue: The test calls `mockRestore()` on every `activate` spy before asserting it was never called, and Vitest's `mockRestore()` resets call history, so the assertion passes even if `webSearchProviderNames()` activated a provider. Severity: 4/10
-
-Existing Risk: 4/10 - A later change that makes the module registry activate a provider while building completion names would pass this test unnoticed.
-
-Proposal Risk: 2/10 - The assertion can now catch activation during `webSearchProviderNames()`, but an activation performed while the module registry is created at import time would still be invisible to this test.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "make the provider-names test's no-activation assertion real". In `src/web-search/search.test.ts`, move the final loop of `expect(activation).not.toHaveBeenCalled()` assertions into the `try` block before the `finally` restores the spies, or remove the manual `mockRestore()` calls and assert in the test body while an `afterEach` calls `vi.restoreAllMocks()`. Keep the `expect(webSearchProviderNames()).toEqual(['tavily', 'tinyfish'])` assertion and the catalog spy setup. Verify the assertion can fail by temporarily making `webSearchProviderNames()` call the catalog's `activate` for one manifest and confirming the test fails, then revert that probe; the provider-names test in `product/plans/complete/web-search-6-search-core.md` requires the real catalog's names with no provider module activation.
-
-
 * Finish the plan promotion by repointing the two remaining search-core links from the ready path to the complete path.
 
 Existing Issue: The commit moves the search-core plan to `product/plans/complete/web-search-6-search-core.md`, but `product/plans/complete/web-search-provider-page-expected-failure-fallback.md` still links to `./product/plans/ready/web-search-6-search-core.md` in its dependency bullet and its final verification sentence. Severity: 3/10

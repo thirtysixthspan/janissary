@@ -440,10 +440,10 @@ describe('the module registry', () => {
     );
     try {
       expect(webSearchProviderNames()).toEqual(['tavily', 'tinyfish']);
+      for (const activation of activations) expect(activation).not.toHaveBeenCalled();
     } finally {
       for (const activation of activations) activation.mockRestore();
     }
-    for (const activation of activations) expect(activation).not.toHaveBeenCalled();
   });
 
   it('runs webSearch against the bundled registry without sending a request', async () => {
