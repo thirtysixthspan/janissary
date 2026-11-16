@@ -40,9 +40,11 @@ describe('parsePatchText', () => {
     });
   });
 
+  it.each(['', '*** Begin Patch\n*** End Patch'])('reports no sections for %j', (text) => {
+    expect(parsePatchText(text)).toEqual({ error: { line: 1, problem: 'no file sections' } });
+  });
+
   it.each([
-    ['', 1, 'no file sections'],
-    ['*** Begin Patch\n*** End Patch', 1, 'no file sections'],
     ['\n', 1, 'unknown marker ""'],
     ['*** Rename File: x', 1, 'unknown marker "*** Rename File: x"'],
     ['hello', 1, 'unknown marker "hello"'],
@@ -67,18 +69,6 @@ describe('parsePatchText', () => {
     ['*** Add File: x\n*** End Patch\n\n', 2, 'unknown marker "*** End Patch"'],
   ])('reports first error for %j', (text, line, problem) => {
     expect(parsePatchText(text)).toEqual({ error: { line, problem } });
-  });
-
-  it.each([
-    ['*** Add File:', 'missing path'],
-    ['*** Move to: x', 'Move to must follow Update File'],
-    ['*** Add File: x\nbad', 'Add File lines must start with "+"'],
-    ['*** Other', 'unknown marker "*** Other"'],
-  ])('counts the leading envelope for %s', (text, problem) => {
-    const plain = parsePatchText(text);
-    const wrapped = parsePatchText(`*** Begin Patch\n${text}`);
-    expect('error' in plain && 'error' in wrapped && wrapped.error).toEqual({
-      line: ('error' in plain ? plain.error.line : 0) + 1, problem,
-    });
+    expect(parsePatchText(`*** Begin Patch\n${text}`)).toEqual({ error: { line: line + 1, problem } });
   });
 });
