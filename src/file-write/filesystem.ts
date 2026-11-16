@@ -5,7 +5,7 @@ import { FILE_POLICY_MAX_BYTES } from '../file-read/policy.js';
 import { readBoundedRegularFile } from './bounded-read.js';
 import { createTargetParents, resolveMutationTarget, type WriteTarget } from './target.js';
 
-function encodeToolText(content: string): FileOperationResult<Buffer> {
+export function encodeToolText(content: string): FileOperationResult<Buffer> {
   if (content.includes('\0')) return failureResult<Buffer>('Not a text file');
   if (!content.isWellFormed()) return failureResult<Buffer>('Not a text file');
   const encoded = Buffer.from(content, 'utf8');
