@@ -1,18 +1,28 @@
 import { encodeToolText } from '../file-write/filesystem.js';
 import type { PatchRecord } from './changes.js';
+import { retargetLink } from './move-chains.js';
 import type { PatchContent, PatchPlace } from './view-entry.js';
 import type { PatchView } from './view.js';
 
 export type SectionFailure = { reason: string; hunkLine?: never } | { hunkLine: string; reason?: never };
 
-export function followLink(view: PatchView, place: PatchPlace, record: PatchRecord): boolean {
-  if (place.linkText === undefined) return false;
-  const location = record.linkTargets.get(place) ?? place.content.realPath;
-  record.linkTargets.set(place, location);
-  const target = view.places().find((other) => other.location === location);
-  if (place.exists && target && !target.exists) return true;
-  if (target?.exists) place.content = target.content;
-  return false;
+export function followLink(view: PatchView, place: PatchPlace, record: PatchRecord): string | undefined {
+  const seen = new Set<PatchPlace>();
+  let current = place;
+  while (current.linkText !== undefined && current.exists) {
+    if (seen.has(current)) return 'Not a text file';
+    seen.add(current);
+    const result = view.resolveLink(current);
+    if (!result.ok) return result.reason;
+    if (!result.value.exists) return 'Not a text file';
+    current = result.value;
+  }
+  if (current !== place) {
+    retargetLink(record.moves, place, current.content);
+    place.content = current.content;
+    record.linkTargets.set(place, current.location);
+  }
+  return undefined;
 }
 
 export function freshContent(place: PatchPlace): PatchContent {

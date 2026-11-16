@@ -15,6 +15,7 @@ export function patchRows(places: readonly PatchPlace[], chains: readonly MoveCh
     destinations.add(chain.current);
   }
   return places.flatMap((place): PatchRow[] => {
+    if (place.implicit) return [];
     const rename = origins.get(place);
     if (rename) return [{ letter: 'R', path: place.requested, target: rename.current.requested }];
     if (destinations.has(place)) return [];

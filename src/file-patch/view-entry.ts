@@ -14,6 +14,7 @@ export interface PatchContent {
 }
 
 export interface PatchPlace {
+  implicit?: boolean;
   readonly requested: string;
   readonly location: string;
   readonly existed: boolean;

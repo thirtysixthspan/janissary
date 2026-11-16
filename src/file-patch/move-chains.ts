@@ -73,6 +73,21 @@ export function recordMove(registry: MoveRegistry, from: PatchPlace, to: PatchPl
   registry.vacated.add(from);
 }
 
+export function retargetLink(registry: MoveRegistry, place: PatchPlace, content: PatchContent): void {
+  const previous = registry.byPlace.get(place)?.get(place.content);
+  if (!previous || place.content === content) return;
+  const retained: MoveChain[] = [];
+  let chain = take(previous);
+  while (chain) {
+    if (chain.link) {
+      chain.content = content;
+      insert(chainsAt(registry, place, content), chain);
+    } else retained.push(chain);
+    chain = take(previous);
+  }
+  for (const item of retained) insert(previous, item);
+}
+
 export function survives(chain: MoveChain): boolean {
   return chain.current.exists && chain.current.content === chain.content && (!chain.link || chain.current.linkText !== undefined);
 }

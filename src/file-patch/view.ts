@@ -6,6 +6,7 @@ import { placeKeys, readPatchContent, type PatchContent, type PatchPlace, type P
 // Only section application may change place existence, link text, content references, or current text.
 export interface PatchView {
   resolve(requested: string): FileOperationResult<PatchPlace>;
+  resolveLink(place: PatchPlace): FileOperationResult<PatchPlace>;
   places(): readonly PatchPlace[];
   contents(): readonly PatchContent[];
   plannedFolders(): readonly string[];
@@ -30,7 +31,7 @@ export function createPatchView(root: string): PatchView {
     return undefined;
   }
 
-  function resolve(requested: string): FileOperationResult<PatchPlace> {
+  function resolvePath(requested: string, implicit: boolean): FileOperationResult<PatchPlace> {
     const target = resolveMutationTarget(root, requested);
     if (!target.ok) return target;
     const result = runFileOperation((): FileOperationResult<PatchPlace> => {
@@ -38,7 +39,10 @@ export function createPatchView(root: string): PatchView {
       const refusal = checkFolders(keys);
       if (refusal !== undefined) return failureResult(refusal);
       const existing = places.get(keys.location) ?? (keys.linkIdentity === undefined ? undefined : links.get(keys.linkIdentity));
-      if (existing !== undefined) return { ok: true, value: existing };
+      if (existing !== undefined) {
+        if (!implicit) existing.implicit = false;
+        return { ok: true, value: existing };
+      }
       let content = contents.get(keys.realPath);
       if (content === undefined) {
         const read = readPatchContent(keys.realPath, target.value.exists);
@@ -47,7 +51,7 @@ export function createPatchView(root: string): PatchView {
         contents.set(keys.realPath, content);
       }
       const place: PatchPlace = { requested, location: keys.location, existed: target.value.exists, exists: target.value.exists,
-        linkText: keys.linkText, missingFolders: keys.missingFolders, content };
+        linkText: keys.linkText, missingFolders: keys.missingFolders, content, implicit };
       places.set(keys.location, place);
       if (keys.linkIdentity !== undefined) links.set(keys.linkIdentity, place);
       return { ok: true, value: place };
@@ -55,5 +59,14 @@ export function createPatchView(root: string): PatchView {
     return result.ok ? result.value : result;
   }
 
-  return { resolve, places: () => [...places.values()], contents: () => [...contents.values()], plannedFolders };
+  function resolve(requested: string): FileOperationResult<PatchPlace> {
+    return resolvePath(requested, false);
+  }
+
+  function resolveLink(place: PatchPlace): FileOperationResult<PatchPlace> {
+    const target = path.resolve(path.dirname(place.location), place.linkText ?? '');
+    return resolvePath(path.relative(root, target), true);
+  }
+
+  return { resolve, resolveLink, places: () => [...places.values()], contents: () => [...contents.values()], plannedFolders };
 }

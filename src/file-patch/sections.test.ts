@@ -111,6 +111,37 @@ describe('patch sections', () => {
     const twice = success('*** Delete File: b\n*** Update File: a\n*** Move to: b\n*** Update File: link-b\n@@\n-old\n+one\n*** Update File: link-b\n@@\n-one\n+two');
     expect(twice.changes.writes).toMatchObject([{ text: 'two\n', finalPlace: { requested: 'b' } }]);
   });
+
+  it('follows a moved relative link from its destination directory', () => {
+    write('old/target', 'old\n');
+    write('new/target', 'destination\n');
+    symlinkSync('target', path.join(root, 'old/link'));
+    const moved = success('*** Update File: old/link\n*** Move to: new/link\n*** Update File: new/link\n@@\n-destination\n+changed');
+    expect(moved.changes.moves).toMatchObject([{ link: true, to: { linkText: 'target' } }]);
+    expect(moved.rows).toEqual([{ letter: 'R', path: 'old/link', target: 'new/link' }]);
+    expect(moved.changes.writes).toMatchObject([{ text: 'changed\n', content: { realPath: path.join(root, 'new/target') } }]);
+    expect(moved.changes.writes.some((item) => item.content.realPath === path.join(root, 'old/target'))).toBe(false);
+    write('third/target', 'third\n');
+    const chained = success('*** Update File: old/link\n*** Move to: new/link\n*** Update File: new/link\n*** Move to: third/link\n*** Update File: third/link\n@@\n-third\n+changed');
+    expect(chained.changes.moves).toHaveLength(2);
+    expect(chained.rows).toContainEqual({ letter: 'R', path: 'old/link', target: 'third/link' });
+    expect(chained.changes.writes).toMatchObject([{ text: 'changed\n', content: { realPath: path.join(root, 'third/target') } }]);
+    const missingTarget = 'fourth/target';
+    const added = success(`*** Add File: ${missingTarget}\n+added\n*** Update File: old/link\n*** Move to: fourth/link\n*** Update File: fourth/link\n@@\n-added\n+changed`);
+    expect(added.changes.writes).toMatchObject([{ text: 'changed\n', content: { realPath: path.join(root, missingTarget) } }]);
+    const named = success('*** Update File: old/link\n*** Move to: new/link\n*** Update File: new/link\n@@\n-destination\n+changed\n*** Update File: new/target\n@@\n-changed\n+again');
+    expect(named.rows).toEqual([{ letter: 'R', path: 'old/link', target: 'new/link' }, { letter: 'M', path: 'new/target' }]);
+    expect(apply('*** Update File: old/link\n*** Move to: missing/link\n*** Update File: missing/link\n@@\n-old\n+changed')).toMatchObject({ ok: false, section: 2, reason: 'Not a text file' });
+  });
+
+  it('refuses moved links that resolve outside or into protected paths', () => {
+    write('inside/target', 'old\n');
+    symlinkSync('../inside/target', path.join(root, 'inside/link'));
+    expect(apply('*** Update File: inside/link\n*** Move to: link\n*** Update File: link\n@@\n-old\n+changed')).toMatchObject({ ok: false, section: 2, reason: 'Outside the workspace' });
+    write('safe/target', 'old\n');
+    symlinkSync('target', path.join(root, 'safe/link'));
+    expect(apply('*** Update File: safe/link\n*** Move to: .git/link')).toMatchObject({ ok: false, section: 1, reason: 'Protected file' });
+  });
   it('derives ordered changes and leaves disk untouched', () => {
     write('edit', 'old\n'); write('delete', 'keep');
     const result = success('*** Add File: a/b/new\n+new\n*** Update File: edit\n@@\n-old\n+updated\n*** Delete File: delete');

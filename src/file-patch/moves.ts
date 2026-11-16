@@ -13,7 +13,8 @@ export function moveSection(view: PatchView, source: PatchPlace, section: Extrac
   const resolved = view.resolve(section.moveTo ?? '');
   if (!resolved.ok) return { reason: resolved.reason };
   const target = resolved.value;
-  if (followLink(view, target, record)) return { reason: 'Not a text file' };
+  const linkError = followLink(view, target, record);
+  if (linkError) return { reason: linkError };
   if (target.exists) return { reason: 'File already exists' };
   const fromAdd = record.writes.get(source.content)?.fromAdd ?? false;
   const error = checkText(result.text, source.content.hadBom && !fromAdd);
@@ -28,8 +29,6 @@ export function moveSection(view: PatchView, source: PatchPlace, section: Extrac
   target.exists = true;
   target.linkText = source.linkText;
   target.content = source.content;
-  const linkTarget = record.linkTargets.get(source);
-  if (linkTarget !== undefined) record.linkTargets.set(target, linkTarget);
   source.exists = false;
   source.linkText = undefined;
   source.content = freshContent(source);
