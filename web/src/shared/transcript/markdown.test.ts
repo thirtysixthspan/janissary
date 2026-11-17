@@ -110,6 +110,15 @@ describe('renderMarkdown', () => {
     expect(host.textContent).toBe('Usage: notify <message>.\n');
   });
 
+  it('renders a prefixed usage reply with its placeholders literal', async () => {
+    await withRealParse();
+    const { renderMarkdown } = await import('./markdown');
+    const text = 'Unknown option "--bogus". Usage: shell [name] [-w|--workspace|--no-workspace] [--offline] [on <address>] [in group <name|id>]';
+    const host = document.createElement('div');
+    host.innerHTML = renderMarkdown(text) ?? '';
+    expect(host.textContent).toBe(`${text}\n`);
+  });
+
   it('leaves a single-line Markdown reply on the Markdown path', async () => {
     await withRealParse();
     const { renderMarkdown } = await import('./markdown');
