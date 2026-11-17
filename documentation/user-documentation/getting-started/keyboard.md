@@ -47,6 +47,10 @@ The command-backed shortcuts `Ctrl+R`, `Ctrl+A`, `Ctrl+E`, `Cmd+Shift+F`, and `C
 
 `Shift+↑`, `Shift+↓`, `Ctrl+↑`, and `Ctrl+↓` start with a one-line step (22 px), double the distance every second you hold an arrow key, and stop at 10 lines (220 px). Releasing the key or changing direction resets the step. Use `Ctrl+P` or `Ctrl+N` for a steady one-line scroll.
 
+Starting a command returns a transcript you've scrolled up back to the bottom, so you see its output as it arrives.
+
+While an inline terminal card in a transcript has focus, plain keys and `Ctrl+T` go to the program running in the card. Every other `Ctrl` or `Shift` chord reaches Janissary instead, so shortcuts such as switching tabs still work with the card focused.
+
 ## Move focus between application sections
 
 The window can contain four application sections: a left sidebar, the center action area, a right sidebar, and the reporting section. The center is always present. A sidebar appears only when it contains a docked tab, and reporting appears only when it contains a monitor.
