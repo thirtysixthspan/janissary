@@ -51,6 +51,10 @@ Tavily reads its key from `tavily-token` and TinyFish from `tinyfish-token`. Put
 
 A remote tab uses its workspace's tokens, where a token forwarded from the local machine wins over a file on the remote machine.
 
+**Agent tool**
+
+An `ask` or `tell` agent can run this search when its role grants `web search`; the built-in roles grant it. The agent asks for a search by ending its reply with one lowercase `web search …` line. Only a lowercase line counts, so an answer that begins a sentence with `Web search …` stays prose. A bare `web search` line answers with the usage line. If the granted row is disabled or agent-off, the tool refuses with `Command is disabled: web search.`. Disabling the parent `web` row does the same. An `agent` run refuses every `web` line, so this tool is available only to `ask` and `tell` sessions.
+
 **Use cases**
 
 - Look something up without leaving the tab.

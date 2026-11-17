@@ -16,7 +16,6 @@
 
 
 
-* web-search (3/10) — 22 of 25 facts are correct with three missing and none wrong. The gaps are the agent-tool invocation rules: an agent triggers search by ending its reply with a single lowercase-only `web search …` line (bare line returns usage, capitalized sentence stays prose), a disabled or agent-off granted search refuses with `Command is disabled: web search.` (disabling the parent `web` cascades), and `agent` runs refuse every `web` line so the tool is ask/tell-only. Fix by adding an agent-tool paragraph to `help/web.md` and mirroring it in `documentation/user-documentation/advanced-agents/acp-agent.md`. Ground truth is `product/specs/web-search.md`, `src/web-search/command.ts`, `src/acp/tool-table.ts` and `src/commands/web.ts`.
 
 * workspaced-agent (3/10) — 41 of 42 facts are correct with one missing and none wrong. The provisioning ready notification `Prepared workspace $workspace/<name> in <duration>.` (with ` on <host>` for remote, attributed to the owning tab, no time for failed, cancelled or abandoned clones) is absent from all docs. Add it to the Lifecycle/ready section of `documentation/user-documentation/advanced-agents/workspaced-agent.md` and list the workspace-ready event in `documentation/user-documentation/tab-types/notifications.md`. Ground truth is `product/specs/workspaced-agent.md`, `src/workspace/ready-notice.ts`, `src/controller/create-managers.ts` and `src/remote/manager-reports.ts`.
 
@@ -26,6 +25,7 @@
 
 ## resolved
 
+* web-search — documented in documentation/user-documentation/advanced-agents/acp-agent.md, help/web.md (removed 2026-11-17)
 * video-tab — documented in documentation/user-documentation/tab-types/video-player.md, help/video.md (removed 2026-11-17)
 * transcript — documented in documentation/user-documentation/getting-started/keyboard.md, documentation/user-documentation/command-bar/shell.md (removed 2026-11-17)
 * tabs — documented in documentation/user-documentation/getting-started/tabs.md, documentation/user-documentation/getting-started/groups.md (removed 2026-11-17)

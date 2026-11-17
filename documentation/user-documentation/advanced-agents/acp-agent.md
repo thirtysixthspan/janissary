@@ -46,6 +46,13 @@ only run the native commands its role grants. It can still search the web throug
 `tinyfish-token` file, described on [the tokens page](/user-documentation/advanced-agents/tokens), and
 without one the step reports `Web search: no provider configured.`.
 
+To search the web, the agent ends its reply with one lowercase `web search …` line. Only a lowercase
+line counts, so an answer that begins a sentence with `Web search …` stays prose. A bare
+`web search` line answers with the usage line. If the granted `web search` row is disabled or
+agent-off, the tool refuses with `Command is disabled: web search.`, and disabling the parent `web`
+row does the same. An `agent` run refuses every `web` line, so web search is available only to `ask`
+and `tell` sessions.
+
 ## Separate ask and tell conversations
 
 The first prompt for each role starts its own connection in the shell's working directory. Later
