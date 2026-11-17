@@ -1,4 +1,5 @@
 import { positiveInteger } from '../../positive-integer.js';
+import { flagValue, scanFlagArguments } from '../flag-scan.js';
 
 export type WebSearchDepth = 'basic' | 'advanced';
 
@@ -39,11 +40,6 @@ export const WEB_SEARCH_PRIMER = [
 ].join('\n');
 
 type ScannedArgs = Partial<Pick<WebSearchCommand, 'numResults' | 'maxChars' | 'depth' | 'provider'>>;
-
-function flagValue(value: string | undefined): string | undefined {
-  if (value === undefined || value.startsWith('--')) return undefined;
-  return value;
-}
 
 function scanResults(scanned: ScannedArgs, value: string | undefined): number | undefined {
   const results = positiveInteger(value);
@@ -95,26 +91,13 @@ function scanFlag(scanned: ScannedArgs, flag: string, value: string | undefined)
   }
 }
 
-function scanArguments(tokens: string[]): ScannedArgs | undefined {
-  const scanned: ScannedArgs = {};
-  let index = 0;
-  while (index < tokens.length) {
-    const token = tokens[index];
-    if (!token.startsWith('--')) return undefined;
-    const consumed = scanFlag(scanned, token, tokens[index + 1]);
-    if (consumed === undefined) return undefined;
-    index += consumed;
-  }
-  return scanned;
-}
-
 export function parseWebSearch(input: string): WebSearchCommand | { error: string } {
   const [command, subcommand, ...rest] = input.trim().split(/\s+/);
   if (command.toLowerCase() !== 'web' || subcommand?.toLowerCase() !== 'search') return { error: WEB_SEARCH_USAGE };
   const flagStart = rest.findIndex((token) => token.startsWith('--'));
   const query = (flagStart === -1 ? rest : rest.slice(0, flagStart)).join(' ');
   if (query === '') return { error: WEB_SEARCH_USAGE };
-  const scanned = scanArguments(flagStart === -1 ? [] : rest.slice(flagStart));
+  const scanned = scanFlagArguments<ScannedArgs>(flagStart === -1 ? [] : rest.slice(flagStart), {}, scanFlag);
   if (scanned === undefined) return { error: WEB_SEARCH_USAGE };
   return {
     query,
