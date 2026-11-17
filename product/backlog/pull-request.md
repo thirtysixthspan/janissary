@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Share the disabled-provider and refusal logic between search and fetch attempt resolution, removing duplication the pull request introduces.
-
-Existing Issue: `src/web/providers/fetch-resolution.ts` copies the all-disabled block (filter enabled, map to stored reasons with an `Unknown failure` fallback, `formatFailures`) and the explicit disabled and not-configured branches from `src/web/providers/search-resolution.ts`, and imports the shared `AttemptResolution` and `DisabledReason` types from that search-specific module. Severity: 3/10
-
-Existing Risk: 3/10 - A later change to how disabled or unconfigured providers are reported lands in one resolver and not the other, so `web search` and `web fetch` drift apart on the same provider state with no test comparing them.
-
-Proposal Risk: 1/10 - One helper owns the shared rules, and the remaining risk is a wording slip in a heading, which the byte-for-byte line tests in both resolution suites would catch.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2049 "share disabled-provider and refusal logic between search and fetch resolution". Add a neutral `src/web/providers/resolution.ts` that owns the `AttemptResolution` and `DisabledReason` types and two small helpers: one that, given eligible manifests, a disabled-reason lookup, and the command's `FailureHeadings` from `src/web/providers/failure-lines.ts`, returns either the enabled attempts or the formatted stored-failure line; and one that returns the single-provider disabled line for an explicit request. Use both from `autoAttempts` and `explicitAttempts` in `search-resolution.ts` and from `autoFetchAttempts` and `explicitFetchAttempts` in `fetch-resolution.ts`, keeping each module's own unknown, not-configured, no-provider, and unsupported-format lines and their order. Repoint the type imports in `fetch-resolution.ts` and `src/web/providers/registry.ts` to the new module. `search-resolution.test.ts`, `fetch-resolution.test.ts`, and `registry.test.ts` pin every output line and must pass unchanged; add a short `resolution.test.ts` for the helpers.
-
-
 * Extract one local-or-remote runner for the web tab adapters, removing the line-for-line copy the fetch adapter adds beside the search adapter.
 
 Existing Issue: `fetchWebInTab` and `fetchRemote` in `src/web/fetch/tab-fetch.ts` duplicate `searchWebInTab` and `searchRemote` in `src/web/search/tab-search.ts`, differing only in the parser, remote operation name, port method, and core function, so the local-versus-remote routing, the remote error handling, and the local dependency wiring now live in two copies. Severity: 3/10

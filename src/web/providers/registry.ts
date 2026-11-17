@@ -15,8 +15,8 @@ import type {
 import { decodeFetchResult } from './fetch-result.js';
 import type { FetchAnswer } from './fetch-result.js';
 import { resolveFetchAttempts } from './fetch-resolution.js';
+import type { AttemptResolution } from './resolution.js';
 import { resolveSearchAttempts } from './search-resolution.js';
-import type { AttemptResolution } from './search-resolution.js';
 
 export type AttemptOutcome =
   | AttemptFailure

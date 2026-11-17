@@ -14,7 +14,7 @@ import type {
 import { localManifest, webProviderCatalog } from './catalog.js';
 import { createProviderRegistry } from './registry.js';
 import type { AttemptOutcome, FetchAttemptOutcome } from './registry.js';
-import type { AttemptResolution } from './search-resolution.js';
+import type { AttemptResolution } from './resolution.js';
 
 const REQUEST: WebSearchRequest = { query: 'node.js', numResults: 5, depth: 'basic' };
 

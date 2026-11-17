@@ -7,7 +7,7 @@ import type {
   WebSearchProviderModule,
 } from './contract.js';
 import { resolveFetchAttempts } from './fetch-resolution.js';
-import type { AttemptResolution, DisabledReason } from './search-resolution.js';
+import type { AttemptResolution, DisabledReason } from './resolution.js';
 
 const TOKENS: ProjectTokens = { tavily: 'tavily-key', tinyfish: 'tinyfish-key' };
 const ALL_FORMATS: readonly WebFetchFormat[] = ['markdown', 'text', 'html'];

@@ -1,13 +1,9 @@
 import type { ProjectTokens } from '../../project/tokens.js';
 import { isConfigured, searchesWeb } from './capabilities.js';
 import type { WebSearchProviderManifest } from './contract.js';
-import { formatFailures, WEB_SEARCH_FAILURE_HEADINGS } from './failure-lines.js';
-
-export type AttemptResolution =
-  | { kind: 'attempts'; manifests: WebSearchProviderManifest[] }
-  | { kind: 'line'; line: string };
-
-export type DisabledReason = (id: string) => string | undefined;
+import { WEB_SEARCH_FAILURE_HEADINGS } from './failure-lines.js';
+import type { AttemptResolution, DisabledReason } from './resolution.js';
+import { resolveDisabledAttempt, resolveEnabledAttempts } from './resolution.js';
 
 function explicitAttempts(
   manifests: readonly WebSearchProviderManifest[],
@@ -24,13 +20,8 @@ function explicitAttempts(
       line: `Web search: unknown provider "${typedName}" (available: ${available}).`,
     };
   }
-  const reason = disabledReason(manifest.id);
-  if (reason !== undefined) {
-    return {
-      kind: 'line',
-      line: formatFailures([{ name: manifest.id, reason }], WEB_SEARCH_FAILURE_HEADINGS),
-    };
-  }
+  const disabled = resolveDisabledAttempt(manifest, disabledReason, WEB_SEARCH_FAILURE_HEADINGS);
+  if (disabled !== undefined) return disabled;
   if (!isConfigured(manifest, tokens)) {
     return {
       kind: 'line',
@@ -49,15 +40,7 @@ function autoAttempts(
   if (configuredManifests.length === 0) {
     return { kind: 'line', line: 'Web search: no provider configured.' };
   }
-  const enabled = configuredManifests.filter(
-    (manifest) => disabledReason(manifest.id) === undefined,
-  );
-  if (enabled.length > 0) return { kind: 'attempts', manifests: enabled };
-  const failures = configuredManifests.map((manifest) => ({
-    name: manifest.id,
-    reason: disabledReason(manifest.id) ?? 'Unknown failure',
-  }));
-  return { kind: 'line', line: formatFailures(failures, WEB_SEARCH_FAILURE_HEADINGS) };
+  return resolveEnabledAttempts(configuredManifests, disabledReason, WEB_SEARCH_FAILURE_HEADINGS);
 }
 
 export function resolveSearchAttempts(

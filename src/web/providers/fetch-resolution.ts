@@ -1,8 +1,9 @@
 import type { ProjectTokens } from '../../project/tokens.js';
 import { fetchesWeb, isConfigured, servesFetchFormat } from './capabilities.js';
 import type { WebFetchFormat, WebSearchProviderManifest } from './contract.js';
-import { formatFailures, WEB_FETCH_FAILURE_HEADINGS } from './failure-lines.js';
-import type { AttemptResolution, DisabledReason } from './search-resolution.js';
+import { WEB_FETCH_FAILURE_HEADINGS } from './failure-lines.js';
+import type { AttemptResolution, DisabledReason } from './resolution.js';
+import { resolveDisabledAttempt, resolveEnabledAttempts } from './resolution.js';
 
 function unknownProvider(
   manifests: readonly WebSearchProviderManifest[],
@@ -27,13 +28,7 @@ function autoFetchAttempts(
   if (eligible.length === 0) {
     return { kind: 'line', line: 'Web fetch: no provider configured.' };
   }
-  const enabled = eligible.filter((manifest) => disabledReason(manifest.id) === undefined);
-  if (enabled.length > 0) return { kind: 'attempts', manifests: enabled };
-  const failures = eligible.map((manifest) => ({
-    name: manifest.id,
-    reason: disabledReason(manifest.id) ?? 'Unknown failure',
-  }));
-  return { kind: 'line', line: formatFailures(failures, WEB_FETCH_FAILURE_HEADINGS) };
+  return resolveEnabledAttempts(eligible, disabledReason, WEB_FETCH_FAILURE_HEADINGS);
 }
 
 function explicitFetchAttempts(
@@ -46,13 +41,8 @@ function explicitFetchAttempts(
 ): AttemptResolution {
   const manifest = manifests.find((candidate) => candidate.id === requested);
   if (manifest === undefined) return unknownProvider(manifests, typedName);
-  const reason = disabledReason(manifest.id);
-  if (reason !== undefined) {
-    return {
-      kind: 'line',
-      line: formatFailures([{ name: manifest.id, reason }], WEB_FETCH_FAILURE_HEADINGS),
-    };
-  }
+  const disabled = resolveDisabledAttempt(manifest, disabledReason, WEB_FETCH_FAILURE_HEADINGS);
+  if (disabled !== undefined) return disabled;
   if (!isConfigured(manifest, tokens)) {
     return {
       kind: 'line',

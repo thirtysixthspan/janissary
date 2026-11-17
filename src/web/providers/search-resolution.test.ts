@@ -3,7 +3,7 @@ import type { ProjectTokenName, ProjectTokens } from '../../project/tokens.js';
 import { WEB_PROVIDER_API_VERSION } from './contract.js';
 import type { WebSearchProviderManifest, WebSearchProviderModule } from './contract.js';
 import { resolveSearchAttempts } from './search-resolution.js';
-import type { AttemptResolution, DisabledReason } from './search-resolution.js';
+import type { AttemptResolution, DisabledReason } from './resolution.js';
 
 const TOKENS: ProjectTokens = { tavily: 'tavily-key', tinyfish: 'tinyfish-key' };
 
