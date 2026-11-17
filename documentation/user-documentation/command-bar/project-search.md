@@ -80,9 +80,13 @@ Each match gets its own entry. The entry has a dimmed header with the file's pat
 
 Results stack upward. The first match sits at the bottom of the window, just above the search bar, and later matches build up above it. Local rows appear while the search is still running; remote rows appear together when the scan completes. The window stays on the first match so nothing scrolls away while you read.
 
+The results sit in their own framed window that scrolls inside the tab, so a long list never pushes the search bar out of view. The frame looks the same whether or not the window has focus. The selected entry gets a colored left border only while the results have focus. Move focus to the search bar and the border fades, but your selection stays; focus the results again and the border returns.
+
 A search stops after 250 matches. There's no count of matches or files anywhere in the tab. The body shows `Searching…` while a search runs, and `No matches found for "<query>".` when one finishes with nothing.
 
 If one matching step takes longer than one second, the search ends with the error `Search matching exceeded its 1000 ms deadline`. When no rows were found yet, the window shows that reason. When rows were already found, they stay on screen and the reason is not shown, so a short list can mean the search stopped early. Either way, you can run another query normally.
+
+Starting another search or closing the tab ends the current one quietly, with no cancellation message. A search is reported as cancelled only when it actually was cancelled.
 
 ## Open a match
 
@@ -91,6 +95,8 @@ If one matching step takes longer than one second, the search ends with the erro
 `Tab` moves focus from the search bar to the results, and `Tab` again moves it back. `Shift+Tab` still moves focus out of the tab as usual. Clicking an entry selects it and focuses the results.
 
 With the results focused, `↑` moves up the window to a later match and `↓` moves down to an earlier one. They stop at the ends rather than wrapping. `Home` and `End` jump to the first and last match. Press `Return` to open the selected match, or double-click any entry.
+
+Rows that arrive while a search is still running never move a match you picked with the keyboard, and they never scroll the window. Highlight a result early and it stays the highlighted one as more rows land, so the window scrolls only when you move it yourself with the arrow keys.
 
 Opening a match puts the file in an [editor tab](/user-documentation/tab-types/editor) with the matching line centered. A file that's already open is focused rather than opened twice. The search tab stays open with its query and results, so you can open the next match without searching again.
 
