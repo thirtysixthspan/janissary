@@ -4,8 +4,6 @@
 
 ## development
 
-* pull-request-testing (3/10) — 19 of 20 facts are accurate with one missing and none wrong. The absent behavior is that a generated step whose expected result no plan, spec or description states fails only on plainly broken behavior and otherwise reports `unspecified — <observed>` without filing anything. Add one or two sentences to the 'Failures and reruns' section of `documentation/user-documentation/workflows/testing-a-pull-request.md`. Ground truth is `product/specs/pull-request-testing.md` and `ai/tasks/feature/test-pull-request.md`.
-
 * pull-request-updating (4/10) — 32 of 36 facts are correct with four missing and none wrong. The page omits that the description should leave out change-set statistics such as counts and SHAs (removing stated figures), that a complex feature's subplan plans are folded into the canonical plan and deleted, that delegated merge-blocker handoffs run one at a time, and that a PR with no configured checks proceeds directly to description work. Fix in the Description, One plan per pull request and Merge blockers come first sections of `documentation/user-documentation/workflows/updating-a-pull-request.md`. Ground truth is `product/specs/pull-request-updating.md`, `ai/tasks/feature/update-pull-request.md` and `ai/tasks/feature/build-a-complex-feature.md`.
 
 * quit-confirmation (3/10) — 23 of 30 facts are fully correct with seven gaps and none wrong, all behavioral nuances. Missing: the exact dialog title `Do you want to save changes to <name>?` with file-to-title-to-label resolution and disappeared-tab fallback, that hidden tabs are named but not shown, that another sidebar selection does not drop a docked tab's work, that a tab gone before its turn is skipped, that there is no progress line or "Don't Save All", the normal-exit teardown detail, and that focus may return to the command line after Cancel or a failed save. Fix in the quit sections of `documentation/user-documentation/command-bar/commands.md`. Ground truth is `product/specs/quit-confirmation.md`, `web/src/QuitDialog/QuitDialog.tsx` and `web/src/unsaved-work/useQuitWalk.ts`.
@@ -44,6 +42,7 @@
 
 ## resolved
 
+* pull-request-testing — documented in documentation/user-documentation/workflows/testing-a-pull-request.md (removed 2026-11-17)
 * pull-request-review — documented in documentation/user-documentation/workflows/pull-request-review.md (removed 2026-11-17)
 * profiles — documented in documentation/user-documentation/automation/profiles.md, help/profile.md (removed 2026-11-17)
 * notifications — documented in documentation/user-documentation/tab-types/notifications.md (removed 2026-11-17)
