@@ -19,7 +19,7 @@ A bare `connections` or `connection` opens or focuses the connections tab. Runni
 |---|---|---|
 | `sqlite` | database name | Global, shared across every tab |
 | `shell` | shell program name (`bash`, `zsh`, …), taken from your `SHELL` environment variable; `bash` when it isn't set | Current tab |
-| `acp` | a supported tab's ACP provider and model (`opencode/big-pickle`); a monitor's name; a persona's name on an [editor tab](/user-documentation/tab-types/editor-persona-query) | Current tab |
+| `acp` | a supported tab's role and provider/model (`ask:opencode/big-pickle` or `tell:opencode/big-pickle`); a monitor's name; a persona's name on an [editor tab](/user-documentation/tab-types/editor-persona-query) | Current tab |
 | `browser` | window id (`w1`, `w2`, …) | Current tab |
 | `ssh` | the ssh tab's label, or its destination as typed | Global; an ssh tab has no command bar of its own |
 | `terminal` | the program the terminal runs (`vim`, `claude`, …) | Current tab |
@@ -28,9 +28,11 @@ Non-ACP connections appear in the connections tab only while they are live. Trac
 
 ## List live connections
 
-`connections list` prints one line per open connection, in a shell tab as well as anywhere else you type it. The current tab's own come first: its shell (`shell:bash`), its ACP connection when supported (`acp:opencode/big-pickle`), its monitors and editor personas (`acp:<name>`), its browser windows (`browser:w1`), its terminals (`terminal:vim`), and the SQLite databases it has used. After those come every other ssh tab and every other open SQLite connection, since those are global. A database you've opened in the [SQL database browser](/user-documentation/tab-types/sql-browser) is one of these: it's listed as `sqlite:<name>` and offered by tab completion, but it isn't credited to the browser tab, so it never shows in that tab's own panel. An ssh connection shows its tab's label with the destination in parentheses, like `ssh:devbox (admin@devbox)`. A monitor and an editor persona are listed as `acp:` connections too, under the name you address them by; the model behind a monitor, and the `monitor:` prefix, belong to the [connections window](#the-connections-window), not to this list. A [remote](/user-documentation/advanced-agents/remote-agents) agent or harness started with `on <address>` is listed here too, under the label of the tab that runs it with its address in parentheses, the same shape as a local ssh tab. Every name on the list is one you can pass straight to `connections close`. With nothing open it prints `No open connections.`
+`connections list` prints one line per open connection, in a shell tab as well as anywhere else you type it. The current tab's own come first: its shell (`shell:bash`), its ACP sessions when supported (`acp:ask:opencode/big-pickle` and `acp:tell:opencode/big-pickle`), its monitors and editor personas (`acp:<name>`), its browser windows (`browser:w1`), its terminals (`terminal:vim`), and the SQLite databases it has used. After those come every other ssh tab and every other open SQLite connection, since those are global. A database you've opened in the [SQL database browser](/user-documentation/tab-types/sql-browser) is one of these: it's listed as `sqlite:<name>` and offered by tab completion, but it isn't credited to the browser tab, so it never shows in that tab's own panel. An ssh connection shows its tab's label with the destination in parentheses, like `ssh:devbox (admin@devbox)`. A monitor and an editor persona are listed as `acp:` connections too, under the name you address them by; the model behind a monitor, and the `monitor:` prefix, belong to the [connections window](#the-connections-window), not to this list. A [remote](/user-documentation/advanced-agents/remote-agents) agent or harness started with `on <address>` is listed here too, under the label of the tab that runs it with its address in parentheses, the same shape as a local ssh tab. Every name on the list is one you can pass straight to `connections close`. With nothing open it prints `No open connections.`
 
 The tab's own ACP agent only appears once its handshake has named it, so a session you have just started with an `ask` prompt can be missing from the list for a moment.
+
+Core ACP sessions carry their role in the name: `acp:ask:<provider/model>` and `acp:tell:<provider/model>`. The `ask` or `tell` part selects the role, so closing one leaves the other running.
 
 <img class="agent-float left" src="/agents/orhan-south-east.png" alt="" />
 
@@ -39,7 +41,7 @@ The tab's own ACP agent only appears once its handshake has named it, so a sessi
 A bare `connections` or `connection` opens the list. Any other text is looked up as a connection reference, in this order:
 
 1. The exact UUID of a retained ACP or agent record.
-2. The invoking tab's own ACP session, written `acp:<provider/model>`.
+2. The invoking tab's own ACP session, written `acp:ask:<provider/model>` or `acp:tell:<provider/model>`.
 3. A live `<kind>:<id>` connection, which focuses the tab that owns it.
 4. The complete title of a retained ACP or agent record, newest first.
 5. The name the list shows for a retained record, `acp:<tab name>` or `agent:<tab name>`, ignoring letter case, newest first.
@@ -93,6 +95,8 @@ An active connection tab follows new output while you are at or near the bottom,
 
 Each case reports `Closed connection <kind>:<id>.` on success. When nothing matched you get an error notification reading `No open connection <kind>:<id>.`, and when closing fails partway it reads `Could not close connection <kind>:<id>: <reason>.` There are two exceptions worth knowing. A successful `shell` close names the shell it actually killed, so `connections close shell:zsh` on a bash machine reports `Closed connection shell:bash.`. And closing an ACP session that is still connecting, before it has a name, works, with nothing to name it in the reply it echoes the id you typed, so `connections close acp:agent` reports `Closed connection acp:agent.` Press `Tab` at the close target to complete against the same names `connections list` prints; see [Tab completion](/user-documentation/command-bar/tab-completion). Only `connections close` completes. `connection close` accepts the same targets but offers no completion. Closing a browser window takes a moment, so its notification arrives once the window has closed.
 
+Extra words after `connections list` or `connections close <kind>:<id>` are ignored. Adding them changes neither the list you see nor the one connection that closes.
+
 ## When a close target is malformed
 
 `connections close` needs a `<kind>:<id>` pair, and a half-typed one is refused before anything is closed:
@@ -111,7 +115,7 @@ Those are the whole list, and none of them closes anything on the way.
 A `connections` panel floats at the top right of a shell tab or an editor tab and lists that tab's live connections. The rows read like the entries in `connections list`, with a little more detail:
 
 - Its shell and working directory, such as `bash:~/dir`.
-- Its ACP agent, as `acp:<provider/model>`.
+- Its ACP agents, as `acp:ask:<provider/model>` and `acp:tell:<provider/model>`.
 - Each [monitor](/user-documentation/automation/monitoring) it started, as `monitor:<persona> (<provider/model>)`. The persona name is also the monitor's name for `unmonitor` and `monitor ask`. The provider and model appear once the session has connected.
 - Each browser window with its mode, such as `browser:w1 (headless)`.
 - Each terminal the tab runs, as `terminal:<program>`.
@@ -132,7 +136,7 @@ The panel also shows itself for a moment. Switching to a tab with live connectio
 
 ## Read a session as plain text
 
-A plain-text snapshot is not a connection tab and not a live view. It is a point-in-time copy of one session's exchange, opened in an editor tab from a snapshot button. Only an editor tab's connections panel draws those buttons: a `monitor:<name>` row, a `<persona> (acp)` row, and the editor tab's own `acp:<provider/model>` row when it has one. Shell and harness rows have no snapshot button, because their full view is the connection tab and, for a shell, a separate terminal transcript file.
+A plain-text snapshot is not a connection tab and not a live view. It is a point-in-time copy of one session's exchange, opened in an editor tab from a snapshot button. Only an editor tab's connections panel draws those buttons: a `monitor:<name>` row, a `<persona> (acp)` row, and the editor tab's own `acp:ask:<provider/model>` or `acp:tell:<provider/model>` row when it has one. Shell and harness rows have no snapshot button, because their full view is the connection tab and, for a shell, a separate terminal transcript file.
 
 Click the clipboard button to open the snapshot. What you get depends on the row:
 
