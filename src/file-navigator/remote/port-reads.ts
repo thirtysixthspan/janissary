@@ -6,6 +6,7 @@ import { NO_MATCHING_TEXT_REASON, type FileEditValue, type FileWritePolicy } fro
 import type { FileGlobArgs } from '../../file-glob/command.js';
 import type { FileGrepArgs } from '../../file-grep/command.js';
 import type { WebSearchCommand } from '../../web/search/command.js';
+import type { WebFetchCommand } from '../../web/fetch/command.js';
 
 // `RemoteFileSystemPort`'s line read, glob, write, text edit and patch, extracted so that file stays under the size limit — the same
 // split `port-moves.ts` uses. It takes the port's bound request sender and its path mapper as
@@ -80,6 +81,18 @@ export async function remoteWebSearch(request: RemoteRequest, args: WebSearchCom
     numResults: args.numResults,
     maxChars: args.maxChars,
     depth: args.depth,
+    provider: args.provider,
+  });
+  return result.text;
+}
+
+export async function remoteWebFetch(request: RemoteRequest, args: WebFetchCommand): Promise<string> {
+  const result = await request('web-fetch', {
+    url: args.url,
+    format: args.format,
+    timeoutSeconds: args.timeoutSeconds,
+    maxChars: args.maxChars,
+    offset: args.offset,
     provider: args.provider,
   });
   return result.text;

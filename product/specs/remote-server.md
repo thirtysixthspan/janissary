@@ -310,6 +310,8 @@ posts none, and its output prints only the provider that answered, so that failu
 
 Protocol version 45 adds `apply-patch`, the mutation behind applying a whole patch on a remote workspace. It carries exactly one argument, `patchText`, holding the patch text as one base64 layer of UTF-8 decoded strictly on the far side with a leading byte order mark kept as text; any other argument shape, including an extra key, is an invalid request. The far side applies the whole patch in its own workspace with the same parser, path and content rules, and output as a local patch, and checks every section path itself rather than receiving a path list, so a section naming an escaping or protected path is answered in the text as a local failure with nothing changed. It answers `{ text }` holding the runner's success or failure lines; an empty or otherwise malformed reply is rejected as an invalid result. Because the operation names no refusal shape, a connection failure rejects with its reason instead of being reported as a failed patch. A patch is long-running, so its request keeps the long request deadline. A version-44 peer would refuse the unknown operation only after connecting, so the handshake refuses it first.
 
+Protocol version 46 adds `web-fetch`, the read-only, path-free filesystem operation behind `web fetch` on a remote tab, typed or agent. It carries `url` (an absolute `http:` or `https:` URL, kept as typed), `format` (`markdown`, `text`, or `html`), `timeoutSeconds` (1–120), `maxChars` (200–100000), `offset` (a whole number of 0 or more), and `provider` (any string; an unknown name gets resolution's refusal line), and answers `{ text }` holding the rendered page, the redirected-to line, a refusal, or the failure lines; any other argument shape is an invalid request. The far side runs the fetch with the merged token set of the workspace it serves, forwarded tokens winning over the remote's own files. Its `local` provider reaches the remote host's network and never falls back to the machine running Janissary. It posts no notification, and a provider it disables stays disabled in the remote process until that process restarts; that process keeps its own fetch cache. A version-45 peer would refuse the unknown operation only after connecting, so the handshake refuses it first.
+
 Unavailable sends, explicit disconnect, transport loss, protocol failure, and channel finish settle and detach ACP listeners, including before readiness. Late frames for detached ids are ignored. A lost core ACP session is closed locally and replaced by a later request once its channel is ready; autonomous runs retain their transport-loss termination. Durable activity capture belongs only to the initiating project's recorder. The sessions tab's existing shell/harness restoration policy is unchanged.
 
 The handshake check is narrower for an attach than for a launch. An attach is answered by the
@@ -684,7 +686,7 @@ request in it and the session reconnects, or the reply is among the oldest outpu
 remote discards once its replay buffer is full. A request is therefore never left waiting forever:
 one that has no reply within a minute is reported as failed the same way, with the reason that the
 remote machine did not answer in time. Work that really runs on the remote — a pull, a commit, a
-search, a web search that may fall back across providers, a batch move, delete, or paste, an undo or redo replay, a whole-file read or write, and a text edit — is
+search, a web search that may fall back across providers, a web fetch that may try several providers, a batch move, delete, or paste, an undo or redo replay, a whole-file read or write, and a text edit — is
 given ten minutes. A request still waiting when the session reconnects is not failed early, since
 the remote replays its queued replies on reattach; a reply that arrives after its request has
 already been reported as failed is ignored.
@@ -770,7 +772,7 @@ which without a forwarded token leaves it reporting itself logged out.
 
 `.janissary/tavily-token` and `.janissary/tinyfish-token` travel in that map too, with the same
 fallback to the remote's own matching file. They are not injected into the tab's processes: the
-far-side Janissary process reads them for `web search`, because no spawned process reads either key
+far-side Janissary process reads them for `web search` and `web fetch`, because no spawned process reads either key
 (see [[web-search]] and [[sandbox]]).
 
 The git name and email of the user who opened janissary ride on the same provisioning frame, and are

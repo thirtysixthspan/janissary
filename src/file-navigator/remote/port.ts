@@ -18,11 +18,12 @@ import type { DiffSource } from '../../plugins/diff/shared.js';
 import { remoteGitCommit, remoteGitMetadata, remoteGitPull, type RemoteRequest } from './port-git.js';
 import { remoteMove, remoteMoveMany } from './port-moves.js';
 import {
-  remoteApplyPatch, remoteEditFile, remoteGlobPaths, remoteGrepFiles, remoteReadLines, remoteWebSearch, remoteWriteFile,
+  remoteApplyPatch, remoteEditFile, remoteGlobPaths, remoteGrepFiles, remoteReadLines, remoteWebFetch, remoteWebSearch, remoteWriteFile,
 } from './port-reads.js';
 import type { FileGlobArgs } from '../../file-glob/command.js';
 import type { FileGrepArgs } from '../../file-grep/command.js';
 import type { WebSearchCommand } from '../../web/search/command.js';
+import type { WebFetchCommand } from '../../web/fetch/command.js';
 import type { FileEditValue, FileWritePolicy } from '../../file-write/types.js';
 import { remoteCreateItem, remoteDeleteMany, remotePaste, remoteReadFile, remoteReplay, remoteRename, remoteSearch, remoteStatRows } from './port-mapped.js';
 import type { CommitResult } from '../../git/commit.js';
@@ -136,6 +137,10 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
 
   webSearch(args: WebSearchCommand): Promise<string> {
     return remoteWebSearch(this.requester(), args);
+  }
+
+  webFetch(args: WebFetchCommand): Promise<string> {
+    return remoteWebFetch(this.requester(), args);
   }
 
   writeFile(
