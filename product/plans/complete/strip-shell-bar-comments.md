@@ -44,3 +44,5 @@ Live E2E: start a scratch instance, open a shell tab, submit `## note ## notify 
 - Changing the comment grammar itself. Quoted `##` and mid-line text follow the existing helper exactly, and its unit tests stay authoritative.
 - Stripping in every server dispatch entry point. This bug is the shell bar; lines from other plugin or queued sources are not changed.
 - Changing how queued receipts are drained. A drained line is already stripped when it is first submitted; stripping again is idempotent.
+
+Implementation note: `stripComments` lives in the existing import-free shared contract `src/plugins/shell/shared.ts` rather than the new `src/comments.ts` named in step 1, because that is the module channel client tab plugins are permitted to import through `@shared`. The helper body and grammar are unchanged; `src/tab/utils.ts` no longer exports it, and both server importers plus the web submit path import it from the shared contract. The rebase onto `master` applied cleanly and left the plan's goal and tests intact.
