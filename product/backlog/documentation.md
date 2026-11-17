@@ -4,8 +4,6 @@
 
 ## development
 
-* launcher (4/10) — 49 of 61 facts are correct with 12 missing and none wrong. The page does not say that docking a launcher displaces the previous one back to the center strip, that an unrecognized icon is reported to the Notifications feed, that the launcher has no text command bar, or that a summarizer prompt the core cannot answer is reported to Notifications and retried; it also omits cosmetic row details and that several built-in command destinations and the Harness dialog entry are described only on other pages. Fix in `documentation/user-documentation/tab-types/launcher.md`. Ground truth is `product/specs/launcher.md`, `src/plugins/launcher/commands-file.ts`, `src/plugins/launcher/activate.ts` and `web/src/plugins/launcher/CommandRail.tsx`.
-
 * models-tab (3/10) — 13 of 16 facts are correct with three missing and none wrong. The gaps are the friendly group headings and cosmetic list details, that duplicate ids are accepted and Delete targets only the first matching record, and the `<harness> skipped: <binary> is not installed.` message plus the first-line-of-error rule for other failures. Fix in `documentation/user-documentation/tab-types/models.md` with matching additions in `help/models.md`. Ground truth is `product/specs/models-tab.md`, `src/models/groups.ts`, `src/models/catalog-file.ts`, `src/models/manager.ts` and `web/src/plugins/models/ModelsTab.tsx`.
 
 * notifications (7/10) — 32 of 39 facts are accurate but three are wrong and four are missing, all centred on the config example in `documentation/user-documentation/tab-types/notifications.md`: it labels `question` default sound `error` (source default `warning`), `file-operation` default `desktop:false/sound:none` (source `desktop:true/sound:error`), and `state-change` default `desktop:true` (source `desktop:false`). Correct that example to match the shipped defaults. Also missing, but minor: the per-type default MP3 cue mapping is only delegated to generated config, the bundled `sounds/` assets and rebuild requirement are undocumented, and the toast stack's placement beneath the connection indicator/metadata/status panels is not described. Ground truth is `product/specs/notifications.md`, `src/notifications/alert-defaults.ts` and `src/config.ts`.
@@ -54,6 +52,7 @@
 
 ## resolved
 
+* launcher — documented in documentation/user-documentation/tab-types/launcher.md (removed 2026-11-17)
 * diff-tab — documented in documentation/user-documentation/tab-types/diff-tab.md, documentation/user-documentation/tab-types/diff.md, help/diff.md (removed 2026-11-17)
 * conversations — documented in documentation/user-documentation/tab-types/conversations.md, help/conversations.md (removed 2026-11-17)
 * connections-tab — documented in documentation/user-documentation/command-bar/connections.md, help/connections.md, help/connection.md (removed 2026-11-17)
