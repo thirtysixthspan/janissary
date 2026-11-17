@@ -2,9 +2,6 @@
 
 ## ready
 
-
-## development
-
 * Drive the remote frame encoder's base64 fields from one declared table so a new frame with a binary payload cannot silently bypass encoding.
 
 Existing Debt: The remote frame union and its admitted-type maps are compile-checked, but the encoder that base64-encodes payload bytes is a hand-written chain of frame-type checks that nothing ties back to the union. Severity: 6/10
@@ -420,6 +417,7 @@ Proposal: `src/database/row-keys.ts` `RowKeyStore.beginPage` pushes a new bucket
 
 * Reduce the cognitive complexity of `intent()` in `src/plugins/connections/activate.ts` (line 52), reported at 17 against the allowed 15 in a file scoring 48.50 FTA across 90 lines. The function dispatches a connections tab request by testing each intent name in turn and validating its payload branch by branch before delegating, so every new intent adds another guarded arm to the chain. Flatten the chain into a local per-intent lookup or lift the payload validation into a helper; the function is private to the activation module. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against `intent()` in `src/plugins/connections/activate.ts`. Severity: **low**.
 
+## development
 
 ## deferred
 
