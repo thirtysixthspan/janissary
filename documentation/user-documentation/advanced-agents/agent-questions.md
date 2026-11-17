@@ -22,7 +22,13 @@ Usage: question ask "<question>"
 
 The panel opens on the tab that asked the question and stays tied to that tab as you switch away and back. Its title names the asking tab, such as `Question from bilal`, and the question appears under it word for word. It doesn't block the rest of the app: it's non-modal, so you can keep typing in other tabs, switch away, or use any other control while it's still waiting for you.
 
+In the centre strip, only the current tab's question appears, and it appears just once. A docked plugin tab behaves differently: its selected body shows its own question, even before the agent has replied. That body needs no terminal and no command bar to show the panel.
+
 <img class="agent-float left" src="/agents/mahir-south-east.png" alt="" />
+
+Switch to a different entry in the sidebar and the old body's question disappears. Select the original entry again and a question that is still pending comes back. Answer or cancel a question and it goes away for good.
+
+Your answer and **Cancel** always go to the tab and question that asked, not to whichever tab is in the centre.
 
 Both kinds of panel — text field and option buttons — include a **Cancel** button.
 
