@@ -52,6 +52,8 @@ The agent runs every failing step a second time on a freshly started app. A step
 
 Each failure is traced to a likely cause. When the app does what the plan says and the step expects something else, the step is wrong, and the agent records a correction to the description instead.
 
+When the agent writes a step of its own, it runs it even when no plan, spec, or description says what should happen. That step fails only on plainly broken behavior, such as an uncaught error, a hang, a crash, or lost data; anything else is reported as `unspecified — <observed>`, and nothing is filed.
+
 ## Where the failures go
 
 Failures go into `product/backlog/pull-request.md` on the pull request's own branch, in the same list that a [pull request review](/user-documentation/workflows/pull-request-review) writes to. The agent commits and pushes that one file and leaves the pull request open. A run with nothing to record commits nothing.
