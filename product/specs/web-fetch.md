@@ -10,7 +10,7 @@ The URL is exactly one word, an absolute `http:` or `https:` URL kept as typed, 
 
 Every malformed form prints exactly `Usage: web fetch <url> [--format markdown|text|html] [--timeout <1-120>] [--max-chars <200-100000>] [--offset <n>] [--provider <name>]` and sends nothing: bare `web fetch`, a missing or non-`http(s)` URL, a flag before the URL, an unknown flag (`--prompt` and `--mode` included) or a flag in the wrong case, a repeated flag, a flag with no value, an out-of-range or non-whole number, a `--format` outside its three values, and any extra word, a second URL included. The `web` command claims every line starting with `web`: bare `web` and any `web <word>` other than `search` or `fetch` print the `web search` usage line and then the `web fetch` usage line, one per line, and send nothing.
 
-`parseWebFetch` parses the line as a pure step; `webFetch` runs the parsed request, and `fetchWebInTab` chooses the side it runs on.
+`parseWebFetch` parses the line as a pure step; `webFetch` runs the parsed request, and `fetchWebInTab` hands both to the shared local-or-remote runner that chooses the side it runs on.
 
 ### Completion
 

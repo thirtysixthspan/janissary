@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Extract one local-or-remote runner for the web tab adapters, removing the line-for-line copy the fetch adapter adds beside the search adapter.
-
-Existing Issue: `fetchWebInTab` and `fetchRemote` in `src/web/fetch/tab-fetch.ts` duplicate `searchWebInTab` and `searchRemote` in `src/web/search/tab-search.ts`, differing only in the parser, remote operation name, port method, and core function, so the local-versus-remote routing, the remote error handling, and the local dependency wiring now live in two copies. Severity: 3/10
-
-Existing Risk: 3/10 - A later fix to remote routing, such as forwarding the abort signal to the port or changing how a remote error is rendered, lands in one adapter only, and the end-of-work duplication check may also flag the pair.
-
-Proposal Risk: 1/10 - Both subcommands route through one function, and what remains is the per-subcommand parser and core, each still covered by its own adapter tests.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2049 "extract one local-or-remote runner for the web tab adapters". Add a generic helper in `src/web/`, for example `src/web/tab-run.ts` exporting `runWebSubcommandInTab(managers, label, input, signal, spec)`, where `spec` carries the parse function, the remote operation name passed to `withRemoteTabPort` from `src/file-read/remote-tab-port.ts`, the port call, and the local core. It parses, returns the usage error unchanged, chooses the side with `localReadRoot` from `src/file-read/tab-read.ts`, runs the remote call through `withRemoteTabPort` with the existing `errorText` catch, and otherwise calls the core with `getProjectTokens()`, `globalThis.fetch`, the signal, and `reportProviderDisabled(managers, label)` from `src/web/disabled-notice.ts`. Reduce `searchWebInTab` and `fetchWebInTab` to one call each with their spec, keeping their exported names and signatures so `src/web/tab-web.ts` is unchanged. `src/web/search/tab-search.test.ts`, `src/web/fetch/tab-fetch.test.ts`, and `src/web/tab-web.test.ts` cover local, remote, unavailable, and notification behavior and must pass unchanged.
-
-
 * Bring the web provider developer documentation up to date with fetch, so its token-row checklist names the new web fetch spec and its search-only wording covers both commands.
 
 Existing Issue: The "Adding a row" checklist in `documentation/developer-documentation/web-search-providers.md` lists the specs that enumerate the token files but omits the new `product/specs/web-fetch.md`, which lists them in its Tokens section, and several passages still describe only search: the key paragraph, the `signal` row of the capability table, the remote `reportDisabled` sentence, and the `product/specs/workspaced-agent.md` sentence that says "The search runs in the Janissary process". Severity: 3/10
