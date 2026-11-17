@@ -193,6 +193,7 @@ describe('TabPluginHost commands', () => {
     expect(Object.keys(capabilities ?? {})).not.toContain('runId');
     expect(runAs).toHaveBeenCalledWith(
       'open ~/clips/*.fixture', 'fixture  ~/clips/*.fixture', 'janus', 'fixture', 'run-1', expect.any(Function),
+      { invocationId: 'private-invocation' },
     );
     expect(host.statusFor('fixture')?.state).toBe('active');
   });
