@@ -10,7 +10,8 @@ import type {
 } from './contract.js';
 import { webSearchProviderCatalog } from './catalog.js';
 import { createProviderRegistry } from './registry.js';
-import type { AttemptOutcome, AttemptResolution } from './registry.js';
+import type { AttemptOutcome } from './registry.js';
+import type { AttemptResolution } from './search-resolution.js';
 
 const REQUEST: WebSearchRequest = { query: 'node.js', numResults: 5, depth: 'basic' };
 
@@ -32,6 +33,7 @@ type FakeManifestOptions = {
   token?: ProjectTokenName;
   module?: WebSearchProviderModule;
   activate?: () => Promise<WebSearchProviderModule>;
+  search?: boolean;
 };
 
 type FakeManifest = WebSearchProviderManifest & {
@@ -45,6 +47,7 @@ function fakeManifest(id: 'tavily' | 'tinyfish', options: FakeManifestOptions = 
     id,
     apiVersion: options.apiVersion ?? WEB_PROVIDER_API_VERSION,
     token: options.token ?? id,
+    ...(options.search !== undefined && { search: options.search }),
     activate: vi.fn(activate),
   };
 }
@@ -67,14 +70,14 @@ function abortedError(outcome: AttemptOutcome): unknown {
 describe('createProviderRegistry', () => {
   it('lists provider names in catalog order', () => {
     const registry = createProviderRegistry([fakeManifest('tinyfish'), fakeManifest('tavily')]);
-    expect(registry.providerNames()).toEqual(['tinyfish', 'tavily']);
+    expect(registry.searchProviderNames()).toEqual(['tinyfish', 'tavily']);
   });
 
   it('never activates a provider until an attempt runs', async () => {
     const tavily = fakeManifest('tavily');
     const registry = createProviderRegistry([tavily]);
 
-    expect(registry.providerNames()).toEqual(['tavily']);
+    expect(registry.searchProviderNames()).toEqual(['tavily']);
     expect(ids(registry.resolveAttempts('auto', TOKENS))).toEqual(['tavily']);
     expect(tavily.activate).not.toHaveBeenCalled();
 
@@ -82,40 +85,12 @@ describe('createProviderRegistry', () => {
     expect(tavily.activate).toHaveBeenCalledOnce();
   });
 
-  it('lists configured providers in catalog order for auto', () => {
-    const registry = createProviderRegistry([fakeManifest('tavily'), fakeManifest('tinyfish')]);
+  it('omits a search-incapable manifest from names and auto resolution', () => {
+    const searchless = fakeManifest('tinyfish', { search: false });
+    const registry = createProviderRegistry([fakeManifest('tavily'), searchless]);
 
-    expect(ids(registry.resolveAttempts('auto', TOKENS))).toEqual(['tavily', 'tinyfish']);
-    expect(ids(registry.resolveAttempts('auto', { tavily: 'key' }))).toEqual(['tavily']);
-    expect(ids(registry.resolveAttempts('auto', { tavily: '', tinyfish: 'key' }))).toEqual(['tinyfish']);
-  });
-
-  it('treats AUTO as auto and reports no provider when none is configured', () => {
-    const registry = createProviderRegistry([fakeManifest('tavily'), fakeManifest('tinyfish')]);
-
-    expect(ids(registry.resolveAttempts('AUTO', TOKENS))).toEqual(['tavily', 'tinyfish']);
-    expect(line(registry.resolveAttempts('auto', {}))).toBe('Web search: no provider configured.');
-    expect(line(registry.resolveAttempts('Auto', {}))).toBe('Web search: no provider configured.');
-  });
-
-  it('matches an explicit provider name case-insensitively', () => {
-    const registry = createProviderRegistry([fakeManifest('tavily'), fakeManifest('tinyfish')]);
-
-    expect(ids(registry.resolveAttempts('Tavily', TOKENS))).toEqual(['tavily']);
-  });
-
-  it('reports an unknown provider with the name as typed', () => {
-    const registry = createProviderRegistry([fakeManifest('tavily'), fakeManifest('tinyfish')]);
-
-    expect(line(registry.resolveAttempts('Bing', TOKENS)))
-      .toBe('Web search: unknown provider "Bing" (available: auto, tavily, tinyfish).');
-  });
-
-  it('reports a known but unconfigured provider by its manifest id', () => {
-    const registry = createProviderRegistry([fakeManifest('tavily'), fakeManifest('tinyfish')]);
-
-    expect(line(registry.resolveAttempts('TinyFish', { tavily: 'key' })))
-      .toBe('Web search: provider "tinyfish" is not configured.');
+    expect(registry.searchProviderNames()).toEqual(['tavily']);
+    expect(ids(registry.resolveAttempts('auto', TOKENS))).toEqual(['tavily']);
   });
 
   it('refuses a manifest written for another API version without activating it', async () => {
@@ -439,7 +414,7 @@ describe('createProviderRegistry', () => {
     await registry.runAttempt(tavily, REQUEST, capability());
     await registry.runAttempt(tinyfish, REQUEST, capability());
 
-    expect(registry.providerNames()).toEqual(['tavily', 'tinyfish']);
+    expect(registry.searchProviderNames()).toEqual(['tavily', 'tinyfish']);
     expect(line(registry.resolveAttempts('auto', TOKENS))).toBe([
       'Web search: every provider failed.',
       '- tavily: provider failed: broken',

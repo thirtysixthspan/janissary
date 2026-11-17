@@ -1,6 +1,6 @@
 import { errorFirstLine } from '../../error-text.js';
 import type { ProjectTokens } from '../../project/tokens.js';
-import { isConfigured } from './capabilities.js';
+import { searchesWeb } from './capabilities.js';
 import {
   ProviderRequestError,
   WEB_PROVIDER_API_VERSION,
@@ -12,11 +12,8 @@ import type {
   WebSearchRequest,
   WebSearchResult,
 } from './contract.js';
-import { formatFailures } from './failure-lines.js';
-
-export type AttemptResolution =
-  | { kind: 'attempts'; manifests: WebSearchProviderManifest[] }
-  | { kind: 'line'; line: string };
+import { resolveSearchAttempts } from './search-resolution.js';
+import type { AttemptResolution } from './search-resolution.js';
 
 export type AttemptOutcome =
   | { kind: 'results'; results: WebSearchResult[] }
@@ -25,7 +22,7 @@ export type AttemptOutcome =
   | { kind: 'plugin-failed'; reason: string };
 
 export type ProviderRegistry = {
-  providerNames: () => string[];
+  searchProviderNames: () => string[];
   resolveAttempts: (name: string, tokens: ProjectTokens) => AttemptResolution;
   runAttempt: (
     manifest: WebSearchProviderManifest,
@@ -58,8 +55,10 @@ export function createProviderRegistry(
 ): ProviderRegistry {
   const disabled = new Map<string, string>();
 
-  function providerNames(): string[] {
-    return manifests.map((manifest) => manifest.id);
+  function searchProviderNames(): string[] {
+    return manifests
+      .filter((manifest) => searchesWeb(manifest))
+      .map((manifest) => manifest.id);
   }
 
   function disable(
@@ -95,50 +94,8 @@ export function createProviderRegistry(
     return disable(manifest, `provider failed: ${errorFirstLine(error)}`, reportDisabled);
   }
 
-  function explicitAttempts(
-    requested: string,
-    typedName: string,
-    tokens: ProjectTokens,
-  ): AttemptResolution {
-    const manifest = manifests.find((candidate) => candidate.id === requested);
-    if (manifest === undefined) {
-      const available = ['auto', ...providerNames()].join(', ');
-      return {
-        kind: 'line',
-        line: `Web search: unknown provider "${typedName}" (available: ${available}).`,
-      };
-    }
-    const reason = disabled.get(manifest.id);
-    if (reason !== undefined) {
-      return { kind: 'line', line: formatFailures([{ name: manifest.id, reason }]) };
-    }
-    if (!isConfigured(manifest, tokens)) {
-      return {
-        kind: 'line',
-        line: `Web search: provider "${manifest.id}" is not configured.`,
-      };
-    }
-    return { kind: 'attempts', manifests: [manifest] };
-  }
-
-  function autoAttempts(tokens: ProjectTokens): AttemptResolution {
-    const configuredManifests = manifests.filter((manifest) => isConfigured(manifest, tokens));
-    if (configuredManifests.length === 0) {
-      return { kind: 'line', line: 'Web search: no provider configured.' };
-    }
-    const enabled = configuredManifests.filter((manifest) => !disabled.has(manifest.id));
-    if (enabled.length > 0) return { kind: 'attempts', manifests: enabled };
-    const failures = configuredManifests.map((manifest) => ({
-      name: manifest.id,
-      reason: disabled.get(manifest.id) ?? 'Unknown failure',
-    }));
-    return { kind: 'line', line: formatFailures(failures) };
-  }
-
   function resolveAttempts(name: string, tokens: ProjectTokens): AttemptResolution {
-    const requested = name.toLowerCase();
-    if (requested === 'auto') return autoAttempts(tokens);
-    return explicitAttempts(requested, name, tokens);
+    return resolveSearchAttempts(manifests, (id) => disabled.get(id), tokens, name);
   }
 
   async function runAttempt(
@@ -180,5 +137,5 @@ export function createProviderRegistry(
     }
   }
 
-  return { providerNames, resolveAttempts, runAttempt };
+  return { searchProviderNames, resolveAttempts, runAttempt };
 }

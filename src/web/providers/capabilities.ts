@@ -1,6 +1,10 @@
 import type { ProjectTokens } from '../../project/tokens.js';
 import type { WebSearchProviderManifest } from './contract.js';
 
+export function searchesWeb(manifest: WebSearchProviderManifest): boolean {
+  return manifest.search !== false;
+}
+
 export function isConfigured(manifest: WebSearchProviderManifest, tokens: ProjectTokens): boolean {
   const { token } = manifest;
   if (token === undefined) return true;

@@ -9,8 +9,8 @@
 // empty does not fetch; and one with no `token` is always configured, with an empty `apiKey`.
 //
 // Extension point rules (`ai/guidelines/plugins.md` §5):
-// - Search resolution: an explicit `--provider` chooses that one by its id; `auto` picks the first
-//   configured provider in catalog order.
+// - Search resolution: an explicit `--provider` and `auto` consider only search-capable providers;
+//   an explicit one chooses by id, and `auto` picks the first configured provider in catalog order.
 // - Search ordering and async: attempts run sequentially in resolution order, each awaited before
 //   the next starts; they never run concurrently.
 // - Search returning nothing: an empty array is a successful search with no results — an answer,

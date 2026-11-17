@@ -2,7 +2,7 @@ import type { ProjectTokens } from '../../project/tokens.js';
 import type { WebSearchCommand } from './command.js';
 import type { WebSearchCapability, WebSearchRequest, WebSearchResult } from '../providers/contract.js';
 import { providerApiKey } from '../providers/capabilities.js';
-import { formatFailures } from '../providers/failure-lines.js';
+import { formatFailures, WEB_SEARCH_FAILURE_HEADINGS } from '../providers/failure-lines.js';
 import type { ProviderFailure } from '../providers/failure-lines.js';
 import { webSearchProviderCatalog } from '../providers/catalog.js';
 import { createProviderRegistry } from '../providers/registry.js';
@@ -19,7 +19,7 @@ export type WebSearchDeps = {
 const providerRegistry = createProviderRegistry(webSearchProviderCatalog);
 
 export function webSearchProviderNames(): string[] {
-  return providerRegistry.providerNames();
+  return providerRegistry.searchProviderNames();
 }
 
 function renderSearch(results: WebSearchResult[], request: WebSearchCommand): string {
@@ -64,7 +64,7 @@ export async function runWebSearch(
     failures.push({ name: manifest.id, reason: outcome.reason });
   }
   deps.signal?.throwIfAborted();
-  return formatFailures(failures);
+  return formatFailures(failures, WEB_SEARCH_FAILURE_HEADINGS);
 }
 
 export function webSearch(request: WebSearchCommand, deps: WebSearchDeps): Promise<string> {

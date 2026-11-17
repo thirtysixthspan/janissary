@@ -150,7 +150,7 @@ That is the whole vocabulary. A provider never reads token files, `Managers`, a 
 
 ## Resolution and ordering
 
-An explicit `--provider <name>` selects that one provider, checked in the order unknown, then disabled, then not configured. `--provider auto`, the default, walks the catalog in order and skips any provider that names a token with no token file, then skips any provider already disabled. Names match case-insensitively, and `auto` is reserved.
+An explicit `--provider <name>` selects that one search-capable provider, checked in the order unknown, then disabled, then not configured. `--provider auto`, the default, walks the search-capable providers in catalog order and skips any provider that names a token with no token file, then skips any provider already disabled. A provider whose manifest sets `search: false` is unknown to `web search`, even when named explicitly or already disabled, and is absent from the `available:` list. Names match case-insensitively, and `auto` is reserved.
 
 The lines a provider author will see from resolution are:
 
@@ -160,7 +160,7 @@ The lines a provider author will see from resolution are:
 - `Web search failed (<id>): <reason>.`, for an explicit `--provider` naming a disabled provider, and for `auto` when its one configured provider is disabled. `<reason>` is the stored reason from the failure that disabled it.
 - `Web search: every provider failed.` followed by one `- <id>: <reason>` line for each provider, in catalog order, when `auto` has two or more configured providers and all of them are disabled.
 
-Both disabled-provider forms come from `formatFailures` in `src/web/providers/failure-lines.ts`, the one function every web search failure line goes through, so a disabled provider and one that just failed read identically. The registry's `resolveAttempts` in `src/web/providers/registry.ts` decides which line a search starts with; read it for the exact conditions.
+Both disabled-provider forms come from `formatFailures` in `src/web/providers/failure-lines.ts`, the one function every web search and web fetch failure line goes through, so a disabled provider and one that just failed read identically. It takes the command's headings, which is how the same function prints `Web search failed ...` and `Web fetch failed ...` lines. `resolveSearchAttempts` in `src/web/providers/search-resolution.ts` decides which line a search starts with; read it for the exact conditions.
 
 Attempts run sequentially, each awaited before the next starts. There is no concurrency between providers. A provider that resolves results ends the search, including when it resolves an empty array.
 

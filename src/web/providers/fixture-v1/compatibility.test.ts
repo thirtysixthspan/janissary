@@ -26,7 +26,7 @@ describe('web search provider API v1 compatibility', () => {
 
     const registry = createProviderRegistry([fixtureV1Manifest]);
 
-    expect(registry.providerNames()).toEqual(['fixture-v1']);
+    expect(registry.searchProviderNames()).toEqual(['fixture-v1']);
     expect(registry.resolveAttempts('fixture-v1', { tavily: 'k' }))
       .toEqual({ kind: 'attempts', manifests: [fixtureV1Manifest] });
   });

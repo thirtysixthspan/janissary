@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ProjectTokenName } from '../../project/tokens.js';
-import { isConfigured, providerApiKey } from './capabilities.js';
+import { isConfigured, providerApiKey, searchesWeb } from './capabilities.js';
 import type { WebSearchProviderManifest } from './contract.js';
 
 function manifest(token?: ProjectTokenName): WebSearchProviderManifest {
@@ -27,6 +27,20 @@ describe('isConfigured', () => {
 
   it('is true when the manifest names no token', () => {
     expect(isConfigured(manifest(), {})).toBe(true);
+  });
+});
+
+describe('searchesWeb', () => {
+  it('is true when search is absent', () => {
+    expect(searchesWeb(manifest())).toBe(true);
+  });
+
+  it('is true when search is true', () => {
+    expect(searchesWeb({ ...manifest(), search: true })).toBe(true);
+  });
+
+  it('is false when search is false', () => {
+    expect(searchesWeb({ ...manifest(), search: false })).toBe(false);
   });
 });
 
