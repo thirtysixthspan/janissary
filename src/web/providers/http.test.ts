@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { PROVIDER_TIMEOUT_MS } from '../../models/providers/result.js';
 import { ProviderRequestError, type WebSearchCapability } from './contract.js';
 import { requestJson } from './http.js';
 
@@ -23,7 +24,7 @@ describe('requestJson', () => {
       return Response.json({ results: [{ url: 'https://example.com/' }] });
     });
 
-    await expect(requestJson(capability(fetcher), SEARCH_URL, REQUEST)).resolves.toEqual({
+    await expect(requestJson(capability(fetcher), SEARCH_URL, REQUEST, PROVIDER_TIMEOUT_MS)).resolves.toEqual({
       results: [{ url: 'https://example.com/' }],
     });
     expect(requests[0]?.url).toBe(SEARCH_URL);
@@ -41,10 +42,10 @@ describe('requestJson', () => {
     } as unknown as Response;
     const fetcher: typeof fetch = async () => response;
 
-    await expect(requestJson(capability(fetcher), SEARCH_URL, REQUEST)).rejects.toThrow(
+    await expect(requestJson(capability(fetcher), SEARCH_URL, REQUEST, PROVIDER_TIMEOUT_MS)).rejects.toThrow(
       'HTTP 429 Too Many Requests',
     );
-    await expect(requestJson(capability(fetcher), SEARCH_URL, REQUEST)).rejects.toBeInstanceOf(
+    await expect(requestJson(capability(fetcher), SEARCH_URL, REQUEST, PROVIDER_TIMEOUT_MS)).rejects.toBeInstanceOf(
       ProviderRequestError,
     );
     expect(text).not.toHaveBeenCalled();
@@ -53,7 +54,7 @@ describe('requestJson', () => {
   it('omits an empty status text', async () => {
     const fetcher: typeof fetch = async () => new Response(null, { status: 500 });
 
-    await expect(requestJson(capability(fetcher), SEARCH_URL, REQUEST)).rejects.toThrow(
+    await expect(requestJson(capability(fetcher), SEARCH_URL, REQUEST, PROVIDER_TIMEOUT_MS)).rejects.toThrow(
       'HTTP 500',
     );
   });
@@ -63,7 +64,7 @@ describe('requestJson', () => {
       throw new DOMException('deadline', 'TimeoutError');
     };
 
-    await expect(requestJson(capability(fetcher), SEARCH_URL, REQUEST)).rejects.toThrow(
+    await expect(requestJson(capability(fetcher), SEARCH_URL, REQUEST, PROVIDER_TIMEOUT_MS)).rejects.toThrow(
       'timed out after 30 s',
     );
   });
@@ -73,7 +74,7 @@ describe('requestJson', () => {
       throw new TypeError('fetch failed\ncause: ECONNRESET');
     };
 
-    await expect(requestJson(capability(fetcher), SEARCH_URL, REQUEST)).rejects.toThrow(
+    await expect(requestJson(capability(fetcher), SEARCH_URL, REQUEST, PROVIDER_TIMEOUT_MS)).rejects.toThrow(
       'fetch failed',
     );
   });
@@ -82,10 +83,10 @@ describe('requestJson', () => {
     const notJson: typeof fetch = async () => new Response('not json');
     const empty: typeof fetch = async () => new Response('');
 
-    await expect(requestJson(capability(notJson), SEARCH_URL, REQUEST)).rejects.toThrow(
+    await expect(requestJson(capability(notJson), SEARCH_URL, REQUEST, PROVIDER_TIMEOUT_MS)).rejects.toThrow(
       'invalid response',
     );
-    await expect(requestJson(capability(empty), SEARCH_URL, REQUEST)).rejects.toThrow(
+    await expect(requestJson(capability(empty), SEARCH_URL, REQUEST, PROVIDER_TIMEOUT_MS)).rejects.toThrow(
       'invalid response',
     );
   });
@@ -99,7 +100,7 @@ describe('requestJson', () => {
     } as unknown as Response;
     const fetcher: typeof fetch = async () => response;
 
-    await expect(requestJson(capability(fetcher), SEARCH_URL, REQUEST)).rejects.toThrow(
+    await expect(requestJson(capability(fetcher), SEARCH_URL, REQUEST, PROVIDER_TIMEOUT_MS)).rejects.toThrow(
       'timed out after 30 s',
     );
   });
@@ -113,7 +114,7 @@ describe('requestJson', () => {
     };
 
     await expect(
-      requestJson(capability(fetcher, controller.signal), SEARCH_URL, REQUEST),
+      requestJson(capability(fetcher, controller.signal), SEARCH_URL, REQUEST, PROVIDER_TIMEOUT_MS),
     ).rejects.toBe(reason);
   });
 
@@ -126,7 +127,7 @@ describe('requestJson', () => {
     };
 
     await expect(
-      requestJson(capability(fetcher, controller.signal), SEARCH_URL, REQUEST),
+      requestJson(capability(fetcher, controller.signal), SEARCH_URL, REQUEST, PROVIDER_TIMEOUT_MS),
     ).rejects.toBe(timeout);
   });
 
@@ -138,7 +139,7 @@ describe('requestJson', () => {
       return Response.json({});
     };
 
-    await requestJson(capability(fetcher, controller.signal), SEARCH_URL, REQUEST);
+    await requestJson(capability(fetcher, controller.signal), SEARCH_URL, REQUEST, PROVIDER_TIMEOUT_MS);
     expect(received?.aborted).toBe(false);
     controller.abort();
     expect(received?.aborted).toBe(true);
@@ -151,7 +152,60 @@ describe('requestJson', () => {
       return Response.json({});
     };
 
-    await requestJson(capability(fetcher), SEARCH_URL, REQUEST);
+    await requestJson(capability(fetcher), SEARCH_URL, REQUEST, PROVIDER_TIMEOUT_MS);
     expect(received).toBeInstanceOf(AbortSignal);
+  });
+
+  it('reports the given timeout duration for a timeout rejection', async () => {
+    const fetcher: typeof fetch = async () => {
+      throw new DOMException('deadline', 'TimeoutError');
+    };
+
+    await expect(requestJson(capability(fetcher), SEARCH_URL, REQUEST, 45_000)).rejects.toThrow(
+      'timed out after 45 s',
+    );
+  });
+
+  it('reports the given timeout duration for a body read timeout', async () => {
+    const response = {
+      ok: true,
+      text: async () => {
+        throw new DOMException('deadline', 'TimeoutError');
+      },
+    } as unknown as Response;
+    const fetcher: typeof fetch = async () => response;
+
+    await expect(requestJson(capability(fetcher), SEARCH_URL, REQUEST, 45_000)).rejects.toThrow(
+      'timed out after 45 s',
+    );
+  });
+
+  it('rejects with the real timeout reason when a capability signal never aborts', async () => {
+    const controller = new AbortController();
+    const fetcher: typeof fetch = (_input, init) =>
+      new Promise<Response>((_resolve, reject) => {
+        const signal = init?.signal;
+        signal?.addEventListener('abort', () => {
+          reject(signal.reason);
+        });
+      });
+
+    const result = requestJson(capability(fetcher, controller.signal), SEARCH_URL, REQUEST, 10);
+    await expect(result).rejects.toBeInstanceOf(ProviderRequestError);
+    await expect(result).rejects.toThrow('timed out after 0.01 s');
+  });
+
+  it('rejects with the real timeout reason when there is no capability signal', async () => {
+    const fetcher: typeof fetch = (_input, init) =>
+      new Promise<Response>((_resolve, reject) => {
+        const signal = init?.signal;
+        signal?.addEventListener('abort', () => {
+          reject(signal.reason);
+        });
+      });
+
+    const result = requestJson(capability(fetcher), SEARCH_URL, REQUEST, 10);
+    await expect(result).rejects.toBeInstanceOf(ProviderRequestError);
+    await expect(result).rejects.toThrow('timed out after 0.01 s');
   });
 });

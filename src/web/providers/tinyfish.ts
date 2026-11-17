@@ -1,3 +1,4 @@
+import { PROVIDER_TIMEOUT_MS } from '../../models/providers/result.js';
 import type { WebSearchProvider } from './contract.js';
 import { decodeResults } from './decode.js';
 import { requestJson } from './http.js';
@@ -8,10 +9,15 @@ export const provider = {
   async search(request, capability) {
     const url = new URL(SEARCH_URL);
     url.searchParams.set('query', request.query);
-    const body = await requestJson(capability, url, {
-      method: 'GET',
-      headers: { 'X-API-Key': capability.apiKey },
-    });
+    const body = await requestJson(
+      capability,
+      url,
+      {
+        method: 'GET',
+        headers: { 'X-API-Key': capability.apiKey },
+      },
+      PROVIDER_TIMEOUT_MS,
+    );
     return decodeResults(body, 'snippet');
   },
 } satisfies WebSearchProvider;
