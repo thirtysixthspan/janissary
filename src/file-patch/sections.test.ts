@@ -213,6 +213,14 @@ describe('patch sections', () => {
     expect(deleted.changes.deletes).toHaveLength(1);
   });
 
+  it('keeps the deleted text in the delete record when a regular file is re-added', () => {
+    write('a', 'old\n');
+    const replaced = success('*** Delete File: a\n*** Add File: a\n+new');
+    expect(replaced.changes.deletes).toHaveLength(1);
+    expect(replaced.changes.deletes[0].content.current).toBe('old\n');
+    expect(replaced.changes.writes[0].text).toBe('new\n');
+  });
+
   it('reports existence, path, and hunk errors in section order', () => {
     write('a', 'old\n');
     for (const [text, reason] of [

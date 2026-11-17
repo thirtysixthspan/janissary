@@ -30,7 +30,7 @@ function add(view: PatchView, place: PatchPlace, section: Extract<PatchSection, 
 
 function remove(view: PatchView, place: PatchPlace, record: PatchRecord): SectionFailure | undefined {
   if (!place.exists) return { reason: 'File not found' };
-  if (!record.deletes.has(place)) record.deletes.set(place, { place, linkText: place.linkText, content: place.content });
+  if (!record.deletes.has(place)) record.deletes.set(place, { place, linkText: place.linkText, content: { ...place.content } });
   record.removedByDelete.add(place);
   view.setExists(place, false);
   return undefined;
