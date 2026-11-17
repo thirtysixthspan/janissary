@@ -241,7 +241,10 @@ These event types can produce a notification line:
   receives no refusal line. The event has no toggle and bypasses focus suppression.
 - **`plugin-failure`** — a tab plugin is disabled after a fatal failure (see [[tab-plugins]]). The
   line is `Tab plugin "<id>" disabled: <reason>.`, attributed to the tab that invoked it when one
-  exists. It is queued and delivered through the ordinary feed, toast, and burst-escalation rules.
+  exists. A local web search that disables a provider also reports through this event as
+  `Web search provider "<name>" disabled: <reason>.`, attributed to the tab the search ran in (see
+  [[web-search]]). It is queued and delivered through the ordinary feed, toast, and burst-escalation
+  rules.
 - **`plugin-note`** — a tab plugin reports one line of its own, through the narrow capability the
   host grants for it (see [[tab-plugins]]). The line is the plugin's own text; the plugin chooses
   neither the event type, nor any tab to jump to, and it may attribute the line to no tab but one of

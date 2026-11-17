@@ -8,6 +8,7 @@ import { parseTabCommand } from './commands/parse-tab.js';
 import { findPriorityConflicts } from './commands/priority.js';
 import { listHelpPages } from './help-pages.js';
 import { resolveCommand } from './resolve.js';
+import { WEB_SEARCH_USAGE } from './web-search/command.js';
 
 function helpText(): string {
   const result = getOutput('help');
@@ -146,6 +147,12 @@ describe('getOutput help pages', () => {
     expect(outputText('help shell').startsWith('### shell')).toBe(true);
     expect(outputText('help Profile')).toContain('### profile');
     expect(outputText('help /quit')).toContain('### quit');
+  });
+
+  it('prints the web command page with its usage line', () => {
+    const text = outputText('help web');
+    expect(text.startsWith('### web')).toBe(true);
+    expect(text).toContain(WEB_SEARCH_USAGE);
   });
 
   it('scopes the file page read notes to file read and leaves glob its own limit', () => {

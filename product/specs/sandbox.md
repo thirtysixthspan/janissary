@@ -178,7 +178,7 @@ the spawned process's environment before wrapping it — vectors that would othe
 file-read denies above entirely (e.g. `SSH_AUTH_SOCK` lets a process use the user's SSH keys without
 ever reading `~/.ssh`): `AWS_*`, `GITHUB_TOKEN`, `GH_TOKEN`, `NPM_TOKEN`, `DOCKER_*`, `KUBECONFIG`,
 anything ending `_SECRET`/`_PASSWORD`, `SSH_AUTH_SOCK`, `GPG_AGENT_INFO`, `GNUPGHOME`,
-`GIT_ASKPASS`, `GIT_CREDENTIAL_HELPER`, `KRB5CCNAME`. LLM provider keys are deliberately **not**
+`GIT_ASKPASS`, `GIT_CREDENTIAL_HELPER`, `KRB5CCNAME`, and the two search provider keys, `TAVILY_API_KEY` and `TINYFISH_API_KEY`. LLM provider keys are deliberately **not**
 matched — the harnesses and the ACP agent need their own credentials to function, and since
 `.local/share/opencode/auth.json` became a denied secret path this is the API-key route a non-OpenCode
 opencode provider has into a workspace. ChatGPT OAuth has the separate private authentication route described in [[workspaced-agent]]. The keys that matter are `ANTHROPIC_API_KEY`,
@@ -191,7 +191,10 @@ the scrub like any other variable — so a Vertex setup looks configured from th
 but the file it names is unreadable inside the sandbox whenever it sits under `$HOME` outside a
 carve-in, and its default location under `~/.config/gcloud` is an explicit secret deny. Widening that
 deny to fix it would hand a workspaced tab a Google credential file, which is what the list exists
-to prevent, so a Vertex-configured harness has no working route into a workspace. If a scoped GitHub token is configured for the project
+to prevent, so a Vertex-configured harness has no working route into a workspace. The two search keys
+are matched for the opposite reason: no spawned process reads either one, because `web search` runs
+in the Janissary process itself (see [[web-search]]), so an ambient copy is a secret a workspace
+cannot use. If a scoped GitHub token is configured for the project
 (`.janissary/github-token`, loaded by `src/project-tokens.ts`), `GH_TOKEN` is re-added after the scrub
 with that value — the one deliberate exception to "a scrubbed var never comes back": it's not the
 ambient value just stripped, it's a fresh, narrowly-scoped one chosen for this workspaced spawn (see
@@ -202,10 +205,11 @@ treats the sandbox's deny on that file (`SECRET_DENY_PATHS` above) as a fatal er
 falling back to `GH_TOKEN` — `gh auth status`/`gh api`/etc. refuse to run at all otherwise.
 Redirecting `GH_CONFIG_DIR` gives `gh` a directory with a genuinely absent `hosts.yml` (real ENOENT,
 no denial involved), which it handles by falling through to `GH_TOKEN` normally. Those two variables
-are the one part of this section that is *not* conditional on isolation being active: a workspaced
+are the only additions in this section that do not depend on isolation being active: a workspaced
 tab needs its scoped credential to push whether or not the machine can confine it (see
 [[workspaced-agent]]), so `GH_TOKEN` and `GH_CONFIG_DIR` are added on the pass-through path too —
-where nothing else about the environment is changed and nothing is scrubbed. (Seatbelt's
+where no other variable is scrubbed and nothing else about the environment is changed, apart from
+the two search keys below. (Seatbelt's
 `(with errno ...)` deny qualifier looks like a more surgical fix, but only takes effect when it's the
 *sole* matching deny for that operation+path — any other unqualified deny or allow on the same path,
 in either direction, wins over it regardless of rule ordering, and `hosts.yml` already falls under
@@ -231,7 +235,20 @@ from either, but the request itself loads the key from `GOOGLE_GENERATIVE_AI_API
 workspace given only the first saw the provider accepted and then the first prompt fail. The token
 exists at all because the Google provider's key lives in opencode's own credential store, which is a
 denied secret path, so without it that provider has no route into a workspace other than the ambient
-environment. Four more variables are added for every workspaced spawn, carrying the git name and email of the user
+environment.
+
+A Tavily API key configured at `.janissary/tavily-token` and a TinyFish API key configured at
+`.janissary/tinyfish-token` (both read by `loadProjectTokens` in `src/project/tokens.ts`, with the
+project's `.janissary/` consulted before `~/.janissary/`) belong to the Janissary process alone. The
+search runs there rather than in a spawned process, so neither key is set in a workspaced spawn's
+environment on the confined or pass-through path, and neither reaches an ACP agent inside or outside
+a workspace. Both names are matched by `ENV_SCRUB_PATTERNS` in `src/sandbox/paths.ts`, so an ambient
+value is removed on the confined path, and the pass-through path drops an ambient copy too even
+though it scrubs nothing else. A remote tab still searches with the key: it travels in the
+provisioning map and is read by the far-side Janissary process (see [[remote-server]] and
+[[workspaced-agent]]).
+
+Four more variables are added for every workspaced spawn, carrying the git name and email of the user
 who opened janissary: `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME`, and
 `GIT_COMMITTER_EMAIL`. Git reads these in preference to `user.name`/`user.email`, so they are what a
 commit made inside a workspace is attributed to. The identity is read once at startup, by asking git

@@ -917,3 +917,41 @@ describe('RemoteFileSystemPort.grepFiles', () => {
     expect(h.sent).toEqual([]);
   });
 });
+
+describe('RemoteFileSystemPort.webSearch', () => {
+  const hasRequest = (sent: ClientFrame[]) => sent.some((frame) => frame.type === 'filesystem-request');
+  const lastRequest = (sent: ClientFrame[]) => sent.findLast((frame) => frame.type === 'filesystem-request');
+  const command = {
+    query: 'vitest 2026', numResults: 5, maxChars: 2000, depth: 'advanced', provider: 'tavily',
+  } as const;
+
+  it('sends exactly the five command fields and resolves to the reply text', async () => {
+    const h = harness();
+    const args = { ...command, extra: 'ignored' };
+    const pending = h.port.webSearch(args);
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    const request = lastRequest(h.sent);
+    expect(request).toMatchObject({ operation: 'web-search', args: command });
+    expect(request?.type === 'filesystem-request' && Object.keys(request.args))
+      .toEqual(['query', 'numResults', 'maxChars', 'depth', 'provider']);
+    h.reply({ text: '1. [Vitest](https://vitest.dev)' });
+    await expect(pending).resolves.toBe('1. [Vitest](https://vitest.dev)');
+  });
+
+  it('rejects in-flight work when the channel closes', async () => {
+    const h = harness();
+    const pending = h.port.webSearch(command);
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    h.listener()?.onClose?.();
+    await expect(pending).rejects.toThrow(new Error(ENDED_REASON));
+  });
+
+  it('reports a request made after disposal without ever sending it', async () => {
+    const h = harness();
+    await vi.waitFor(() => expect(h.sent).toHaveLength(1));
+    h.port.dispose();
+
+    await expect(h.port.webSearch(command)).rejects.toThrow(new Error(CLOSED_REASON));
+    expect(hasRequest(h.sent)).toBe(false);
+  });
+});

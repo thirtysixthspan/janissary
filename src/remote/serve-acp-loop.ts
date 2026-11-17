@@ -9,10 +9,19 @@ import { isFileGrepCommandLine } from '../file-grep/command.js';
 import { readWorkspaceCommand } from '../file-read/read.js';
 import { isFileMutationCommandLine } from '../file-write/command.js';
 import { runFileMutation } from '../file-write/tab-write.js';
+import { isWebCommandLine, parseWebSearch } from '../web-search/command.js';
+import { webSearch } from '../web-search/search.js';
+import type { ProjectTokens } from '../project/tokens.js';
 import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 
 type AcpRunFrame = Extract<ClientFrame, { type: 'acp-run' }>;
 type AcpToolResultFrame = Extract<ClientFrame, { type: 'acp-tool-result' }>;
+
+function searchWorkspaceCommand(line: string, tokens: ProjectTokens, signal: AbortSignal): string | Promise<string> {
+  const parsed = parseWebSearch(line);
+  if ('error' in parsed) return parsed.error;
+  return webSearch(parsed, { tokens, fetch: globalThis.fetch, signal });
+}
 
 export type RemoteLoopHandle = {
   toolResult: (frame: AcpToolResultFrame) => void;
@@ -24,6 +33,7 @@ export function startRemoteLoop(
   session: AcpSession,
   frame: AcpRunFrame,
   workspaceDir: string,
+  tokens: ProjectTokens,
   send: (frame: ServerFrame) => void,
 ): RemoteLoopHandle {
   const controller = new AbortController();
@@ -44,6 +54,7 @@ export function startRemoteLoop(
   const host: AcpToolHost = {
     runWorkspace: (command) => {
       const normalized = command.trim().replace(/^\//, '');
+      if (isWebCommandLine(normalized)) return searchWorkspaceCommand(normalized, tokens, controller.signal);
       if (isFileMutationCommandLine(normalized)) {
         return runFileMutation(new LocalFileSystemPort(), workspaceDir, normalized);
       }

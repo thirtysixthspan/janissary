@@ -82,6 +82,19 @@ describe('agent command tools', () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
+  it('refuses web lines with or without the web grant, before dispatch', async () => {
+    const dispatch = vi.fn(async () => ({ dispatched: true, output: 'read' }));
+    const managers = { command: { dispatchLineInInvocation: dispatch } } as unknown as Managers;
+
+    for (const grants of [['web'], []]) {
+      for (const command of ['web search x', 'web', '/web search x']) {
+        await expect(runGrantedAgentCommand(command, { ...snapshot, grants }, managers, invocation('w')))
+          .resolves.toBe(`Agent: command not permitted: ${command}.`);
+      }
+    }
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['granted', ['file']],
     ['ungranted', []],

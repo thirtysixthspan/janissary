@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { janissaryRoot, JANISSARY_HOME_ENV } from '../janissary-root.js';
 import { getGitIdentity, gitIdentityEnv } from '../git/identity.js';
-import { PROJECT_TOKENS, type ProjectTokenName, type ProjectTokens } from '../project/tokens.js';
+import { PROJECT_TOKENS, isSpawnedCredential, type ProjectTokenName, type ProjectTokens } from '../project/tokens.js';
 import { ENV_SCRUB_PATTERNS } from './paths.js';
 import { resolvePath } from './resolve.js';
 import { opencodeDataHome, workspaceOpencodeDataHome } from './opencode-data.js';
@@ -26,14 +26,15 @@ export function scrubEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return scrubbed;
 }
 
-// Every credential this spawn is deliberately handed: each configured token under every variable its
-// row in `PROJECT_TOKENS` names. Most rows name one; the gemini row names two, because opencode
-// detects its Google provider from one variable and loads the key from another. `GH_TOKEN` is the
-// one deliberate exception to "a scrubbed env var never comes back" — it isn't the ambient value
-// `scrubEnv` just stripped, it's a fresh one chosen for this spawn. The provider keys are not on
-// `ENV_SCRUB_PATTERNS` at all (the scrub deliberately exempts LLM provider credentials, see
-// paths.ts), so an ambient value survives and a configured token simply takes precedence over it
-// here.
+// Every credential this spawn is deliberately handed: each configured token whose row allows it,
+// under every variable that row names. Most rows name one; the gemini row names two, because
+// opencode detects its Google provider from one variable and loads the key from another. A row with
+// `spawn: false` is left out entirely — the search keys belong to the janissary process, which is
+// their only reader (see `src/project/tokens.ts`). `GH_TOKEN` is the one deliberate exception to "a
+// scrubbed env var never comes back" — it isn't the ambient value `scrubEnv` just stripped, it's a
+// fresh one chosen for this spawn. The LLM provider keys are not on `ENV_SCRUB_PATTERNS` at all (the
+// scrub deliberately exempts them, see paths.ts), so an ambient value survives and a configured
+// token simply takes precedence over it here.
 //
 // `GH_CONFIG_DIR` stays a guarded line rather than a fifth entry in the GitHub row's list, because
 // the list is the same credential under other names and this carries a path instead. It points at an
@@ -51,19 +52,37 @@ function workspaceCredentialEnv(tmpDir: string, tokens: ProjectTokens): NodeJS.P
 
 function tokenVariables(tokens: ProjectTokens, include: (name: ProjectTokenName) => boolean): Record<string, string> {
   const variables: Record<string, string> = {};
-  for (const { name, env } of PROJECT_TOKENS) {
-    const value = tokens[name];
-    if (!value || !include(name)) continue;
-    for (const variable of env) variables[variable] = value;
+  for (const row of PROJECT_TOKENS) {
+    const value = tokens[row.name];
+    if (!value || !include(row.name) || !isSpawnedCredential(row)) continue;
+    for (const variable of row.env) variables[variable] = value;
   }
   return variables;
 }
 
-// The credentials an ACP agent outside any workspace is handed: every harness token, none of
-// GitHub's. Such an agent is unconfined and has no private `gh` config directory to redirect to, so a
-// `GH_TOKEN` would only replace the user's own `gh` login for a process that never asked for one.
+// The credentials an ACP agent outside any workspace is handed: every harness token a spawned process
+// reads, none of GitHub's, and never the search keys. Such an agent is unconfined and has no private
+// `gh` config directory to redirect to, so a `GH_TOKEN` would only replace the user's own `gh` login
+// for a process that never asked for one; the search keys are read by the janissary process, which
+// runs the search itself, so a spawned agent has no use for them either.
 export function agentCredentialEnv(tokens: ProjectTokens): Record<string, string> {
   return tokenVariables(tokens, (name) => name !== 'github');
+}
+
+// The variables named by the rows no spawned process is handed. They are credentials the janissary
+// process reads alone, so a spawn's environment must not carry one even as an ambient value. A
+// confined spawn already loses them to `ENV_SCRUB_PATTERNS`; a pass-through spawn is not scrubbed at
+// all, so this is where that path drops them.
+function serverOnlyVariableNames(): string[] {
+  return PROJECT_TOKENS.flatMap((row) => (isSpawnedCredential(row) ? [] : [...row.env]));
+}
+
+function withoutServerOnlyCredentials(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const variables = serverOnlyVariableNames();
+  if (variables.every((variable) => env[variable] === undefined)) return env;
+  const kept = { ...env };
+  for (const variable of variables) delete kept[variable];
+  return kept;
 }
 
 // Everything a workspaced spawn's environment gains regardless of whether this machine can confine
@@ -85,13 +104,16 @@ export function workspaceEnv(tmpDir: string, tokens: ProjectTokens, workspaceDir
 // is confining the process, and a harness needs its own token on exactly the same terms. This is the
 // unconfined path's share of that — a non-darwin remote, or a host with `sandboxWorkspaces` off,
 // would otherwise get a workspace it cannot push from, authenticate a harness in, or attribute a
-// commit from. Without a token and without an identity, or outside a workspace, the caller's own
-// environment object is returned untouched.
+// commit from. The one thing it removes is a server-only credential's ambient copy, because this
+// path scrubs nothing else (see `withoutServerOnlyCredentials`). Without a token and without an
+// identity, the environment loses only those variables; outside a workspace it is returned
+// untouched.
 export function withWorkspaceCredentials(env: NodeJS.ProcessEnv, options: WorkspacedSpawn): NodeJS.ProcessEnv {
   if (!options.workspaceDir) return env;
   const tmpDir = resolvePath(options.tmpDir ?? `${options.workspaceDir}.tmp`);
+  const base = withoutServerOnlyCredentials(env);
   const added = workspaceEnv(tmpDir, options.tokens ?? {});
-  return Object.keys(added).length === 0 ? env : { ...env, ...added };
+  return Object.keys(added).length === 0 ? base : { ...base, ...added };
 }
 
 // The install root of the running janissary, under the one name a command line can spell: the task

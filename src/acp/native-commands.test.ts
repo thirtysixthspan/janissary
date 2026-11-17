@@ -19,6 +19,7 @@ describe('native ACP commands', () => {
       'file grep',
       'file write',
       'file edit',
+      'web search',
     ]);
   });
 
@@ -36,6 +37,8 @@ describe('native ACP commands', () => {
     ['file glob **/*.ts', 'file'],
     ['file grep', 'file'],
     ['file grep --literal TODO', 'file'],
+    ['web search node.js lts', 'web'],
+    ['Web Search x', 'web'],
   ] as const)('assigns %s to %s, including trailing arguments', (command, tool) => {
     expect(nativeCommandTool(command)).toBe(tool);
     expect(isNativeCommand(command)).toBe(true);
@@ -66,5 +69,8 @@ describe('native ACP commands', () => {
     expect(nativeCommandName('file greps x')).toBeUndefined();
     expect(nativeCommandName('file grep-x x')).toBeUndefined();
     expect(nativeCommandName('files x')).toBeUndefined();
+    expect(nativeCommandName('web')).toBeUndefined();
+    expect(nativeCommandName('web searching x')).toBeUndefined();
+    expect(nativeCommandName('websearch x')).toBeUndefined();
   });
 });

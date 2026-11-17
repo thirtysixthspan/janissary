@@ -87,22 +87,22 @@ describe('effectiveCommandSetting', () => {
   });
 });
 
+const roots: string[] = [];
+afterEach(() => {
+  for (const root of roots) rmSync(root, { recursive: true, force: true });
+  roots.length = 0;
+});
+
+function current(values: Record<string, { enabled?: boolean; agentAccess?: boolean }>): CommandSettingsSnapshot {
+  const base = mkdtempSync(path.join(os.tmpdir(), 'native-command-policy-'));
+  roots.push(base);
+  mkdirSync(path.join(base, 'project'));
+  mkdirSync(path.join(base, 'home', '.janissary'), { recursive: true });
+  writeFileSync(path.join(base, 'home', '.janissary', 'commands.json'), JSON.stringify(values));
+  return new NativeCommandSettingsManager(path.join(base, 'project'), path.join(base, 'home')).current();
+}
+
 describe('file mutation rows', () => {
-  const roots: string[] = [];
-  afterEach(() => {
-    for (const root of roots) rmSync(root, { recursive: true, force: true });
-    roots.length = 0;
-  });
-
-  function current(values: Record<string, { enabled?: boolean; agentAccess?: boolean }>): CommandSettingsSnapshot {
-    const base = mkdtempSync(path.join(os.tmpdir(), 'native-command-policy-'));
-    roots.push(base);
-    mkdirSync(path.join(base, 'project'));
-    mkdirSync(path.join(base, 'home', '.janissary'), { recursive: true });
-    writeFileSync(path.join(base, 'home', '.janissary', 'commands.json'), JSON.stringify(values));
-    return new NativeCommandSettingsManager(path.join(base, 'project'), path.join(base, 'home')).current();
-  }
-
   it('allows grep for both uses with its default setting', () => {
     const settings = current({});
     expect(effectiveCommandSetting(settings, 'file grep'))
@@ -161,5 +161,20 @@ describe('file mutation rows', () => {
     const settings = current({ 'file write': { enabled: false } });
     expect(disabledApplicationCommand('file write {"path":"a.md","content":"x"}', settings)?.name).toBe('file write');
     expect(disabledApplicationCommand('file edit {"path":"a.md"}', settings)).toBeUndefined();
+  });
+});
+
+describe('web search rows', () => {
+  it('refuses a typed web search through its disabled native row', () => {
+    const settings = current({ 'web search': { enabled: false } });
+    expect(disabledApplicationCommand('web search x', settings)?.name).toBe('web search');
+    expect(disabledApplicationCommand('web', settings)).toBeUndefined();
+  });
+
+  it('refuses a typed web search when its web parent is disabled', () => {
+    const settings = current({ web: { enabled: false } });
+    expect(effectiveCommandSetting(settings, 'web search').effectiveEnabled).toBe(false);
+    expect(disabledApplicationCommand('web search x', settings)?.name).toBe('web search');
+    expect(disabledApplicationCommand('web', settings)?.name).toBe('web');
   });
 });

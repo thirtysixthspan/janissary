@@ -15,6 +15,7 @@ export function nativeCommandTool(command: string): NativeCommandTool | undefine
   if (native.startsWith('db ')) return 'database';
   if (native.startsWith('browser ')) return 'browser';
   if (native.startsWith('file ')) return 'file';
+  if (native.startsWith('web ')) return 'web';
   return 'question';
 }
 

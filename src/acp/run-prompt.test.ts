@@ -19,6 +19,7 @@ import type * as TabRead from '../file-read/tab-read.js';
 import type * as TabGlob from '../file-glob/tab-glob.js';
 import type * as TabGrep from '../file-grep/tab-grep.js';
 import type * as Loop from './loop.js';
+import type * as DriveLoop from './drive-loop.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { BROWSER_PRIMER } from '../browser/command.js';
 import { DB_PRIMER } from '../database/primer.js';
@@ -28,10 +29,11 @@ import * as fileGrepScan from '../file-grep/scan.js';
 import { commandProtocolPrimer } from './command-protocol.js';
 import { CORE_MAX_STEPS } from './drive-loop.js';
 import { deferred } from '../deferred.js';
+import { WEB_SEARCH_PRIMER } from '../web-search/command.js';
 
 const mocks = vi.hoisted(() => ({
   runAcpToolLoop: vi.fn(), notify: vi.fn(), readFileInTab: vi.fn(), mutateFileInTab: vi.fn(),
-  globFilesInTab: vi.fn(), grepFilesInTab: vi.fn(),
+  globFilesInTab: vi.fn(), grepFilesInTab: vi.fn(), searchWebInTab: vi.fn(), runToolLoop: vi.fn(),
 }));
 const home = vi.hoisted(() => ({ dir: '' }));
 
@@ -60,6 +62,12 @@ vi.mock('../file-grep/tab-grep.js', async (importOriginal) => {
   const actual = await importOriginal<typeof TabGrep>();
   mocks.grepFilesInTab.mockImplementation(actual.grepFilesInTab);
   return { ...actual, grepFilesInTab: mocks.grepFilesInTab };
+});
+vi.mock('../web-search/tab-search.js', () => ({ searchWebInTab: mocks.searchWebInTab }));
+vi.mock('./drive-loop.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof DriveLoop>();
+  mocks.runToolLoop.mockImplementation(actual.runToolLoop);
+  return { ...actual, runToolLoop: mocks.runToolLoop };
 });
 
 import { runCorePrompt } from './run-prompt.js';
@@ -153,6 +161,7 @@ function harness(options: Omit<StartOptions, 'commands' | 'roleName'> = {}) {
       prompt: request, ...(recordId !== undefined && { recordId }),
     };
     mocks.runAcpToolLoop.mockClear();
+    mocks.runToolLoop.mockClear();
     if (aborted) request.abort.abort();
     const nativeSettings = options.settings?.current();
     runCorePrompt(managers, 'shell', runtime, request, nativeSettings, session, 'session', () => true);
@@ -160,7 +169,8 @@ function harness(options: Omit<StartOptions, 'commands' | 'roleName'> = {}) {
     const deps = call?.[2] as AcpLoopDeps;
     const handlers = call?.[3] as AcpLoopHandlers;
     const loopSession = call?.[0] as AcpLoopSession;
-    return { deps, request, handlers, session: loopSession, run };
+    const host = mocks.runToolLoop.mock.calls.at(-1)?.[3] as AcpToolHost;
+    return { deps, request, handlers, session: loopSession, host, run };
   };
   return { managers, dispatchNativeLine, providerPrompt, start, run, tab };
 }
@@ -304,6 +314,37 @@ describe('runCorePrompt tool runner', () => {
       managers, 'command-disabled', 'shell', 'Command is disabled: db sqlite query.',
     );
     expect(dispatchNativeLine).not.toHaveBeenCalled();
+  });
+
+  it('runs a granted web search through the tab search with the prompt signal', async () => {
+    mocks.searchWebInTab.mockResolvedValue('search results');
+    const { start, dispatchNativeLine, managers } = harness({ settings: settingsWith({}) });
+    const { deps, request } = start('ask', ['web search']);
+    await expect(deps.runCommand('web search x')).resolves.toBe('search results');
+    expect(mocks.searchWebInTab).toHaveBeenCalledWith(managers, 'shell', 'web search x', request.abort.signal);
+    expect(dispatchNativeLine).not.toHaveBeenCalled();
+    expect(mocks.readFileInTab).not.toHaveBeenCalled();
+    expect(deps.primer).toContain(WEB_SEARCH_PRIMER);
+    expect(deps.primer).toContain('Only these commands are allowed: web search.');
+  });
+
+  it('treats a web search line as prose when the role does not grant it', () => {
+    const { start } = harness({ settings: settingsWith({}) });
+    const { deps } = start('ask', ['file read']);
+    expect(deps.extractCommand('web search x')).toBeNull();
+    expect(mocks.searchWebInTab).not.toHaveBeenCalled();
+  });
+
+  it('refuses a disabled web search synchronously and raises the disabled notification', () => {
+    const { start, managers } = harness({ settings: settingsWith({ 'web search': { effectiveEnabled: false } }) });
+    const { deps, handlers } = start('ask', ['web search']);
+    const command = 'web search x';
+    const refusal = deps.runCommand(command);
+    expect(refusal).toBe('Command is disabled: web search.');
+    expect(mocks.notify).not.toHaveBeenCalledWith(expect.anything(), 'command-disabled', expect.anything(), expect.anything());
+    handlers.ranCommand(command, refusal as string);
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'command-disabled', 'shell', 'Command is disabled: web search.');
+    expect(mocks.searchWebInTab).not.toHaveBeenCalled();
   });
 
   it('caps the loop at eight tool steps', () => {
@@ -1192,5 +1233,92 @@ describe('runCorePrompt file grep loop preservation', () => {
       expect(managers.acpRecords.activity).not.toHaveBeenCalledWith('record-1', 'tool', RESULT);
       expect(request.finish).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('runCorePrompt web routing', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.searchWebInTab.mockResolvedValue('search results');
+  });
+
+  it('runs a web line through the tab search with the prompt signal', async () => {
+    const { start, dispatchNativeLine, managers } = harness({ tab: { workspaceDir: '/project' } });
+    const { host, request } = start('tell', ['web search']);
+
+    await expect(host.runWorkspace('web search x')).resolves.toBe('search results');
+
+    expect(mocks.searchWebInTab).toHaveBeenCalledWith(managers, 'shell', 'web search x', request.abort.signal);
+    expect(mocks.readFileInTab).not.toHaveBeenCalled();
+    expect(mocks.globFilesInTab).not.toHaveBeenCalled();
+    expect(mocks.mutateFileInTab).not.toHaveBeenCalled();
+    expect(dispatchNativeLine).not.toHaveBeenCalled();
+  });
+
+  it('hands the search the prompt signal so a later abort reaches it', async () => {
+    const { start } = harness();
+    const { host, request } = start('tell', ['web search']);
+
+    await host.runWorkspace('web search x');
+    const received = mocks.searchWebInTab.mock.calls[0]?.[3] as AbortSignal;
+    expect(received.aborted).toBe(false);
+
+    request.abort.abort();
+
+    expect(received.aborted).toBe(true);
+  });
+
+  it('throws before searching when the prompt is already aborted', () => {
+    const { start } = harness();
+    const { host } = start('tell', ['web search'], 'tell', undefined, true);
+
+    expect(() => host.runWorkspace('web search x')).toThrow('ACP: prompt cancelled.');
+    expect(mocks.searchWebInTab).not.toHaveBeenCalled();
+  });
+
+  it('routes a local fallback session on a remote tab through the tab search', async () => {
+    const { start, managers } = harness({ tab: { remote: { host: 'far' } } });
+    const { host } = start('tell', ['web search']);
+
+    await expect(host.runWorkspace('web search x')).resolves.toBe('search results');
+
+    expect(mocks.searchWebInTab).toHaveBeenCalledWith(managers, 'shell', 'web search x', expect.any(AbortSignal));
+    expect(mocks.readFileInTab).not.toHaveBeenCalled();
+  });
+
+  it.each(['web', 'web foo'])('sends %s to the tab search rather than the file reader', async (line) => {
+    const { start } = harness();
+    const { host } = start('tell', ['web search']);
+
+    await host.runWorkspace(line);
+
+    expect(mocks.searchWebInTab).toHaveBeenCalledWith(expect.anything(), 'shell', line, expect.any(AbortSignal));
+    expect(mocks.readFileInTab).not.toHaveBeenCalled();
+  });
+
+  it('still sends a file read to readFileInTab', async () => {
+    const { start } = harness();
+    const { host } = start('tell', ['file read']);
+
+    await host.runWorkspace('file read a.txt');
+
+    expect(mocks.readFileInTab).toHaveBeenCalledWith(expect.anything(), 'shell', 'file read a.txt');
+    expect(mocks.searchWebInTab).not.toHaveBeenCalled();
+  });
+
+  it('tags a remote tab\'s web step with the host on the transcript and record lines', () => {
+    const { start, managers, run } = harness({ remoteSession: true, tab: { remote: { host: 'far' } } });
+    start('tell', ['web search'], 'tell', 'record-1');
+    const events = remoteCall(run)[3];
+
+    events.startCommand?.('web search x', true);
+    events.ranCommand('web search x', 'result', true);
+
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', '[far] web search x');
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', '[far] result');
+    expect(managers.tab.append).toHaveBeenCalledWith('shell', {
+      input: '[far] web search x', output: 'result', acp: true,
+    });
+    expect(mocks.searchWebInTab).not.toHaveBeenCalled();
   });
 });

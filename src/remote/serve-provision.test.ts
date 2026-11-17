@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { provisionRemoteWorkspace, type ProvisionContext, type ProvisionedWorkspace } from './serve-provision.js';
@@ -7,6 +7,10 @@ import { initWorkspaceDir, workspacePath } from '../workspace/index.js';
 import type { WorkspaceManager } from '../workspace/manager.js';
 import type { ServerFrame } from './protocol-frames.js';
 import { OPENCODE_OAUTH_FAILURE_NOTICE } from '../sandbox/opencode-data.js';
+import { loadProjectTokens } from '../project/tokens.js';
+import { webSearch } from '../web-search/search.js';
+
+vi.mock('../web-search/search.js', () => ({ webSearch: vi.fn() }));
 
 // The clone itself is `WorkspaceManager`'s and is exercised against a real repository in
 // serve.test.ts. What is untested here is the sequence around it: the four points at which a
@@ -23,6 +27,14 @@ let root: string;
 
 function cloned(dir: string, ready: Promise<unknown>): unknown {
   return { dir, ready, label: 'alpha' };
+}
+
+function requestWebSearch(workspace: ProvisionedWorkspace): void {
+  workspace.files.open('files1');
+  workspace.files.request({
+    type: 'filesystem-request', session: 'files1', request: 'q1', operation: 'web-search',
+    args: { query: 'vitest 2026', numResults: 5, maxChars: 2000, depth: 'advanced', provider: 'auto' },
+  });
 }
 
 function harness(overrides: { workspaces?: Partial<Workspaces>; idle?: () => boolean; stopping?: () => boolean } = {}) {
@@ -47,6 +59,8 @@ function harness(overrides: { workspaces?: Partial<Workspaces>; idle?: () => boo
 beforeEach(() => {
   root = realpathSync(mkdtempSync(path.join(tmpdir(), 'serve-provision-')));
   initWorkspaceDir(root, path.join(root, '.claude.json'));
+  vi.mocked(webSearch).mockReset();
+  vi.mocked(webSearch).mockResolvedValue('1. [Vitest](https://vitest.dev)');
 });
 
 afterEach(() => {
@@ -153,5 +167,48 @@ describe('provisionRemoteWorkspace', () => {
 
     expect(setLabel).toHaveBeenCalledWith('alpha');
     expect(setLabel.mock.invocationCallOrder[0]).toBeLessThan(workspaces.create.mock.invocationCallOrder[0]!);
+  });
+
+  it('gives a far-side web search the merged tokens, forwarded winning over the remote file', async () => {
+    const home = path.join(root, 'home');
+    const tavilyPath = path.join(root, '.janissary', 'tavily-token');
+    const tinyfishPath = path.join(root, '.janissary', 'tinyfish-token');
+    mkdirSync(path.dirname(tavilyPath), { recursive: true });
+    writeFileSync(tavilyPath, 'tvly-own\n');
+    writeFileSync(tinyfishPath, 'tfish-own\n');
+    loadProjectTokens(root, home);
+    try {
+      const { context, provisioned } = harness();
+
+      await provisionRemoteWorkspace(context, 'alpha', { tavily: 'tvly-forwarded' }, {});
+      requestWebSearch(provisioned.mock.calls[0]![0]);
+
+      await vi.waitFor(() => expect(webSearch).toHaveBeenCalledOnce());
+      expect(vi.mocked(webSearch).mock.calls[0]?.[1].tokens).toEqual({
+        tavily: 'tvly-forwarded', tinyfish: 'tfish-own',
+      });
+    } finally {
+      rmSync(tavilyPath, { force: true });
+      rmSync(tinyfishPath, { force: true });
+      loadProjectTokens(root, home);
+    }
+  });
+
+  it('gives a far-side web search no provider token when neither side has one', async () => {
+    const home = path.join(root, 'home');
+    loadProjectTokens(root, home);
+    try {
+      const { context, provisioned } = harness();
+
+      await provisionRemoteWorkspace(context, 'alpha', {}, {});
+      requestWebSearch(provisioned.mock.calls[0]![0]);
+
+      await vi.waitFor(() => expect(webSearch).toHaveBeenCalledOnce());
+      const tokens = vi.mocked(webSearch).mock.calls[0]?.[1].tokens;
+      expect(tokens).not.toHaveProperty('tavily');
+      expect(tokens).not.toHaveProperty('tinyfish');
+    } finally {
+      loadProjectTokens(root, home);
+    }
   });
 });

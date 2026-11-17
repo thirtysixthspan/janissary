@@ -9,6 +9,7 @@ import type { AcpActivityKind } from '../acp/activity.js';
 import type { AcpRunSnapshot } from '../acp/types.js';
 import type { SearchRequest } from '../protocol.js';
 import type { DiffSource } from '../plugins/diff/shared.js';
+import type { WebSearchCommand } from '../web-search/command.js';
 
 // The frame shapes of the remote protocol, split out of `protocol.ts` so the wire *codec* and the
 // wire *grammar* are two files: this one says what a frame may carry, `protocol.ts` says how one is
@@ -17,7 +18,7 @@ import type { DiffSource } from '../plugins/diff/shared.js';
 
 export type RemoteFilesystemOperation =
   | 'read-directory' | 'stat' | 'watch' | 'unwatch' | 'git' | 'git-pull' | 'git-commit' | 'search'
-  | 'search-text' | 'read-file' | 'read-lines' | 'glob-paths' | 'grep-files' | 'write-file' | 'edit-file' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
+  | 'search-text' | 'read-file' | 'read-lines' | 'glob-paths' | 'grep-files' | 'web-search' | 'write-file' | 'edit-file' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
   | 'create-file' | 'create-directory' | 'replay' | 'change-set';
 
 // The five activity kinds the ACP mapping produces (`../acp/activity.ts`), which is what travels.
@@ -39,6 +40,7 @@ export type RemoteFilesystemArgumentsByOperation = {
     pattern: string; include: string; exclude: string;
     literal: boolean; word: boolean; caseSensitive: boolean; limit: number; path?: string;
   };
+  'web-search': WebSearchCommand;
   'write-file': { path: string; content: string; expectedHash?: string; policy?: FileWritePolicy };
   'edit-file': { path: string; oldString: string; newString: string; replaceAll: boolean };
   move: { from: string; to: string; overwrite?: boolean };

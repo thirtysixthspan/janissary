@@ -16,6 +16,8 @@ import { globFilesInTab } from '../file-glob/tab-glob.js';
 import { isFileGlobCommandLine } from '../file-glob/command.js';
 import { grepFilesInTab } from '../file-grep/tab-grep.js';
 import { isFileGrepCommandLine } from '../file-grep/command.js';
+import { isWebCommandLine } from '../web-search/command.js';
+import { searchWebInTab } from '../web-search/tab-search.js';
 import { coreActivity } from './record-feed.js';
 import { acpRoleRuntime } from './role-state.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
@@ -93,6 +95,7 @@ export function runCorePrompt(
     runWorkspace: (command) => {
       if (!active()) throw new Error('ACP: prompt cancelled.');
       const normalized = command.trim().replace(/^\//, '');
+      if (isWebCommandLine(normalized)) return searchWebInTab(managers, label, command, request.abort.signal);
       if (isFileMutationCommandLine(normalized)) return mutateFileInTab(managers, label, command);
       if (isFileGlobCommandLine(normalized)) return globFilesInTab(managers, label, command, request.abort.signal);
       if (isFileGrepCommandLine(normalized)) return grepFilesInTab(managers, label, command);

@@ -406,3 +406,20 @@ describe('completeCommandLine — disabled command guard', () => {
     }
   });
 });
+
+describe('completeCommandLine — web command', () => {
+  it('does not fall back to filesystem paths for a query word', () => {
+    const line = 'web search rep';
+    const result = completeCommandLine(line, line.length, dir);
+
+    expect(result.matches).toEqual([]);
+    expect(result.newInput).toBe(line);
+  });
+
+  it('offers nothing under a disabled web row', () => {
+    const result = completeCommandLine('web ', 4, dir, [], [], undefined, undefined, undefined, undefined, policyWith(['web']));
+
+    expect(result.matches).toEqual([]);
+    expect(result.newInput).toBe('web ');
+  });
+});

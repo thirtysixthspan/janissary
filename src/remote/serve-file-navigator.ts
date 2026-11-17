@@ -8,6 +8,7 @@ import {
   type WatchHandle,
 } from '../file-navigator/filesystem-port.js';
 import type { MaybePromise } from '../maybe-promise.js';
+import type { ProjectTokens } from '../project/tokens.js';
 import { refusalFor, refusedPaths } from './filesystem/refusal.js';
 import { operationDescriptor } from './filesystem/operations.js';
 import type { OperationContext } from './filesystem/operation-types.js';
@@ -23,6 +24,7 @@ export class RemoteFileNavigators {
     private emit: (frame: ServerFrame) => void,
     private root: string,
     private filesystem: FileSystemPort = new LocalFileSystemPort(),
+    private tokens: ProjectTokens = {},
   ) {}
 
   open(session: string): void {
@@ -67,6 +69,7 @@ export class RemoteFileNavigators {
     return {
       root: this.root,
       filesystem: this.filesystem,
+      tokens: this.tokens,
       watch: (relPath) => this.watch(session, relPath),
       unwatch: (relPath) => this.unwatch(session, relPath),
       git: () => this.git(),

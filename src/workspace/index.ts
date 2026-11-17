@@ -108,6 +108,13 @@ export function workspaceTempPath(name: string): string {
   return `${workspacePath(name)}.tmp`;
 }
 
+// Where an attempt clones into before it is moved into place. A sibling of the final directory
+// under the same workspace base, unique to the attempt, so cancelling one attempt can only remove
+// its own partial clone and never one a newer launch under the same name has already made.
+function provisioningPath(target: string): string {
+  return `${target}.clone-${randomUUID()}`;
+}
+
 export function getRemoteUrl(repoPath: string): string {
   // Intentional: user-driven workspace creation; only local-user commands reach this sink.
   const url = execSync('git remote get-url origin', { cwd: repoPath, stdio: 'pipe' }).toString().trim();
@@ -144,15 +151,43 @@ export function provisionWorkspace(
 ): ProvisionHandle {
   ensureWorkspaceDir();
   const target = workspacePath(name);
-  const clone = startGitClone(remoteUrl, target, { ...cloneOptions, githubToken });
+  const staging = provisioningPath(target);
+  const clone = startGitClone(remoteUrl, staging, { ...cloneOptions, githubToken });
   let oauthNotice: string | undefined;
 
+  function discardStaging(): void {
+    try { rmSync(staging, { recursive: true, force: true }); } catch { /* keep the clone error */ }
+  }
+
   async function run(): Promise<void> {
-    await clone.ready;
+    try {
+      await clone.ready;
+    } catch (error) {
+      // The kill can land after git has created its staging directory, and git leaves a partial
+      // clone behind. Remove only this attempt's own directory: a newer launch under the same name
+      // may already own the target, and a folder that was there before this attempt is not ours.
+      discardStaging();
+      throw error;
+    }
+    try {
+      // Move the finished clone into place in one step, so the named directory only ever appears
+      // complete. Never replace something already there: a newer launch, or a folder that predates
+      // this attempt, is not ours to delete.
+      if (existsSync(target)) throw new Error(`A workspace folder already exists at ${target}.`);
+      renameSync(staging, target);
+    } catch (error) {
+      discardStaging();
+      throw error;
+    }
     oauthNotice = await finishProvisioning(target, remoteUrl);
   }
 
-  return { dir: target, ready: run(), cancel: clone.cancel, get oauthNotice() { return oauthNotice; } };
+  return {
+    dir: target,
+    ready: run(),
+    cancel: () => clone.cancel(),
+    get oauthNotice() { return oauthNotice; },
+  };
 }
 
 async function finishProvisioning(target: string, remoteUrl: string): Promise<string | undefined> {

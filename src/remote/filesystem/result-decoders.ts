@@ -57,6 +57,8 @@ export const resultDecoders = {
   'read-lines': decodeResult<{ text: string }>((value): value is { text: string } => record(value) && typeof value.text === 'string'),
   'glob-paths': decodeResult<{ text: string }>((value): value is { text: string } => record(value) && typeof value.text === 'string'),
   'grep-files': decodeResult<{ text: string }>((value): value is { text: string } => record(value) && typeof value.text === 'string'),
+  'web-search': decodeResult<{ text: string }>((value): value is { text: string } => record(value)
+    && typeof value.text === 'string' && value.text.length > 0),
   'write-file': decodeResult<FileOperationResult>((value): value is FileOperationResult => result(value)
     && (value.ok ? !Object.hasOwn(value, 'value') || value.value === undefined : typeof value.reason === 'string')),
   move: decodeResult<MoveOneResult>((value): value is MoveOneResult => result(value)

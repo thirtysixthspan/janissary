@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
-import { findRepoRoot, initWorkspaceDir, provisionWorkspace, removeWorkspace, clearWorkspaceDir, workspaceTempPath, getRemoteUrl, trustWorkspace, untrustWorkspace } from './index.js';
+import { findRepoRoot, initWorkspaceDir, provisionWorkspace, removeWorkspace, clearWorkspaceDir, workspacePath, workspaceTempPath, getRemoteUrl, trustWorkspace, untrustWorkspace } from './index.js';
 import { toHttpsUrl } from '../git/repository-url.js';
 import { loadOpencodeOauth } from '../project/opencode-oauth.js';
 import * as scratch from './scratch.js';
@@ -18,6 +18,35 @@ async function createWorkspace(name: string, repoPath: string): Promise<string> 
   const handle = provisionWorkspace(name, getRemoteUrl(repoPath));
   await handle.ready;
   return handle.dir;
+}
+
+// An in-flight attempt clones into a unique sibling beside the final directory — `<name>.clone-`
+// followed by a UUID — and moves it into place only once it finishes. The final directory stays
+// absent while the clone runs, so tests watch these siblings to see its progress.
+function stagingSiblings(name: string): string[] {
+  const base = path.dirname(workspacePath(name));
+  return readdirSync(base)
+    .filter((entry) => entry.startsWith(`${name}.clone-`))
+    .map((entry) => path.join(base, entry));
+}
+
+// Put a stand-in `git` first on PATH for one test. The workspace base is per-test, so nothing else
+// in the suite runs the stand-in.
+function installStandInGit(folder: string, script: string): string {
+  const bin = path.join(tmpDir, folder);
+  mkdirSync(bin, { recursive: true });
+  writeFileSync(path.join(bin, 'git'), script);
+  chmodSync(path.join(bin, 'git'), 0o755);
+  return bin;
+}
+
+// Wait until the attempt's staging clone holds `marker`, then return that staging directory.
+async function waitForStaging(name: string, marker: string): Promise<string> {
+  return vi.waitFor(() => {
+    const found = stagingSiblings(name).find((dir) => existsSync(path.join(dir, marker)));
+    if (found === undefined) throw new Error(`staging clone for ${name} has no ${marker} yet`);
+    return found;
+  });
 }
 
 beforeAll(() => {
@@ -210,10 +239,115 @@ describe('createWorkspace', () => {
   });
 
   it('can be cancelled mid-clone, leaving no partial target directory', async () => {
-    const handle = provisionWorkspace('test-agent-cancel', getRemoteUrl(repoDir));
-    handle.cancel();
-    await expect(handle.ready).rejects.toThrow();
-    expect(existsSync(handle.dir)).toBe(false);
+    // A real local clone can finish, or be killed before git creates its target, so drive the
+    // cancellation through a git that is guaranteed to have created a partial directory first.
+    // That is the state a loaded CI runner reaches: the kill lands after git has made the folder.
+    const bin = installStandInGit('slow-git', '#!/bin/sh\nfor last; do :; done\nmkdir -p "$last"\nprintf partial > "$last/partial"\nexec sleep 30\n');
+    const remoteUrl = getRemoteUrl(repoDir);
+    const originalPath = process.env['PATH'] ?? '';
+    process.env['PATH'] = `${bin}:${originalPath}`;
+    try {
+      const handle = provisionWorkspace('test-agent-cancel', remoteUrl);
+      await waitForStaging('test-agent-cancel', 'partial');
+      handle.cancel();
+      await expect(handle.ready).rejects.toThrow();
+      expect(existsSync(handle.dir)).toBe(false);
+      expect(stagingSiblings('test-agent-cancel')).toEqual([]);
+    } finally {
+      process.env['PATH'] = originalPath;
+    }
+  });
+
+  it('does not let a cancelled attempt remove a newer clone under the same name', async () => {
+    // Hold the first attempt's rejection open so the second attempt can land its clone first: the
+    // exact ordering that let the old cleanup delete a newer launch's directory.
+    const release = path.join(tmpDir, 'release-cancelled-attempt');
+    const bin = installStandInGit('race-git', [
+      '#!/bin/sh',
+      "trap '' TERM",
+      'for last; do :; done',
+      'mkdir -p "$last"',
+      'printf partial > "$last/partial"',
+      `while [ ! -e "${release}" ]; do sleep 0.05; done`,
+      'exit 1',
+    ].join('\n'));
+    const name = 'test-agent-cancel-race';
+    const remoteUrl = getRemoteUrl(repoDir);
+    const originalPath = process.env['PATH'] ?? '';
+    process.env['PATH'] = `${bin}:${originalPath}`;
+    try {
+      const first = provisionWorkspace(name, remoteUrl);
+      await waitForStaging(name, 'partial');
+      first.cancel();
+      process.env['PATH'] = originalPath;
+
+      const second = provisionWorkspace(name, remoteUrl);
+      await expect(second.ready).resolves.toBeUndefined();
+      expect(existsSync(path.join(second.dir, 'README.md'))).toBe(true);
+
+      writeFileSync(release, 'release');
+      await expect(first.ready).rejects.toThrow();
+      expect(existsSync(path.join(second.dir, 'README.md'))).toBe(true);
+      expect(stagingSiblings(name)).toEqual([]);
+      removeWorkspace(second.dir);
+    } finally {
+      process.env['PATH'] = originalPath;
+      writeFileSync(release, 'release');
+    }
+  });
+
+  it('leaves a folder already at the target untouched when an attempt is cancelled', async () => {
+    const name = 'test-agent-preexisting-target';
+    const target = workspacePath(name);
+    mkdirSync(target, { recursive: true });
+    writeFileSync(path.join(target, 'keep.txt'), 'keep');
+    const bin = installStandInGit('preexisting-git', '#!/bin/sh\nfor last; do :; done\nmkdir -p "$last"\nprintf partial > "$last/partial"\nexec sleep 30\n');
+    const remoteUrl = getRemoteUrl(repoDir);
+    const originalPath = process.env['PATH'] ?? '';
+    process.env['PATH'] = `${bin}:${originalPath}`;
+    try {
+      const handle = provisionWorkspace(name, remoteUrl);
+      expect(handle.dir).toBe(target);
+      await waitForStaging(name, 'partial');
+      handle.cancel();
+      await expect(handle.ready).rejects.toThrow();
+      expect(readFileSync(path.join(target, 'keep.txt'), 'utf8')).toBe('keep');
+      expect(stagingSiblings(name)).toEqual([]);
+    } finally {
+      process.env['PATH'] = originalPath;
+      rmSync(target, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a folder that appeared at the target while the clone finished', async () => {
+    const release = path.join(tmpDir, 'release-completed-attempt');
+    const name = 'test-agent-target-appeared';
+    const bin = installStandInGit('appeared-git', [
+      '#!/bin/sh',
+      'for last; do :; done',
+      'mkdir -p "$last"',
+      'printf clone > "$last/clone"',
+      `while [ ! -e "${release}" ]; do sleep 0.05; done`,
+      'exit 0',
+    ].join('\n'));
+    const target = workspacePath(name);
+    const remoteUrl = getRemoteUrl(repoDir);
+    const originalPath = process.env['PATH'] ?? '';
+    process.env['PATH'] = `${bin}:${originalPath}`;
+    try {
+      const handle = provisionWorkspace(name, remoteUrl);
+      await waitForStaging(name, 'clone');
+      mkdirSync(target, { recursive: true });
+      writeFileSync(path.join(target, 'keep.txt'), 'keep');
+      writeFileSync(release, 'release');
+      await expect(handle.ready).rejects.toThrow(`A workspace folder already exists at ${target}.`);
+      expect(readFileSync(path.join(target, 'keep.txt'), 'utf8')).toBe('keep');
+      expect(stagingSiblings(name)).toEqual([]);
+    } finally {
+      process.env['PATH'] = originalPath;
+      writeFileSync(release, 'release');
+      rmSync(target, { recursive: true, force: true });
+    }
   });
 });
 

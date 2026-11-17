@@ -31,6 +31,7 @@ describe('application command inventory', () => {
     expect(rows.find((row) => row.name === 'file edit')).toMatchObject({ kind: 'native', parent: 'file', nativeTool: 'file' });
     expect(resolveApplicationCommand('file grep')?.name).toBe('file grep');
     expect(resolveApplicationCommand('file grep --literal TODO')?.name).toBe('file grep');
+    expect(rows.find((row) => row.name === 'web search')).toMatchObject({ kind: 'native', parent: 'web', nativeTool: 'web' });
     expect(resolveApplicationCommand('file glob *.ts')?.name).toBe('file glob');
     expect(resolveApplicationCommand('file write {"path":"a.md"}')?.name).toBe('file write');
     expect(resolveApplicationCommand('file edit {')?.name).toBe('file edit');
@@ -101,5 +102,12 @@ describe('application command inventory', () => {
     expect(resolveApplicationCommand('file read a.md'))
       .toMatchObject({ name: 'file read', kind: 'native', forms: ['file read'] });
     expect(resolveApplicationCommand('file')).toMatchObject({ name: 'file', kind: 'builtin', forms: ['file'] });
+  });
+
+  it('lists the web command as a parentless builtin', () => {
+    const web = rows.find((row) => row.kind === 'builtin' && row.name === 'web');
+    expect(web?.forms).toEqual(['web']);
+    expect(web?.parent).toBeUndefined();
+    expect(resolveApplicationCommand('web')).toMatchObject({ name: 'web', kind: 'builtin', forms: ['web'] });
   });
 });

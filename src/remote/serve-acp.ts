@@ -104,7 +104,7 @@ export class RemoteAcp {
       return;
     }
     let terminal = false;
-    const handle = startRemoteLoop(record.session, frame, this.workspaceDir, (sent) => {
+    const handle = startRemoteLoop(record.session, frame, this.workspaceDir, this.tokens, (sent) => {
       this.send(sent);
       if (sent.type !== 'acp-run-end' && !(sent.type === 'acp-error' && !sent.fatal)) return;
       terminal = true;

@@ -229,7 +229,14 @@
 // Version 43 adds the read-only `grep-files` operation, so a typed `file grep` on a remote tab searches
 // the remote clone rather than the local disk. A version-42 remote would refuse it as unknown after
 // the handshake had already passed, so the exact-version handshake refuses that pairing first.
-export const REMOTE_PROTOCOL_VERSION = 43;
+// Version 44 adds the `tavily` and `tinyfish` names to the `provision` token map. A version-43 remote
+// decodes that map against its own table, refuses an unknown name, and so rejects the whole frame as
+// malformed the moment a Tavily or TinyFish key is forwarded, which fails the provisioning instead of
+// leaving the key out. The same version adds the read-only, path-free `web-search` operation, so a
+// typed `web search` on a remote tab runs on the remote machine with that workspace's tokens, which
+// now travel on the far side's operation context. A version-43 remote would refuse it as unknown
+// after the handshake had already passed, so the exact-version handshake refuses that pairing first.
+export const REMOTE_PROTOCOL_VERSION = 44;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.

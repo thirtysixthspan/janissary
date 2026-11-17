@@ -13,6 +13,12 @@ import { loadOpencodeOauth } from './opencode-oauth.js';
 // `env` is a list because a credential is set under every variable its consumer reads, not under one
 // canonical name — see the gemini row, where the difference is the whole reason the column is a list.
 //
+// `spawn` is the one opt-out: it defaults to true, and a row that sets it false names a credential
+// only the janissary process reads. Such a row is still loaded at startup and still forwarded to a
+// remote, but no spawned shell, harness, or ACP agent is handed it. The two search provider keys are
+// the only rows that use it: `web search` runs in the janissary process and reads them through
+// `getProjectTokens`, so a spawn has no use for either variable.
+//
 // Every file is user-provisioned and read-only to janissary: absent by default, and absent means no
 // injection and a workspace that behaves exactly as it did before the file existed.
 export const PROJECT_TOKENS = [
@@ -61,7 +67,31 @@ export const PROJECT_TOKENS = [
     // request. All three pass the environment scrub, so anyone exporting one is still unaffected.
     env: ['GEMINI_API_KEY', 'GOOGLE_GENERATIVE_AI_API_KEY'],
   },
+  {
+    name: 'tavily',
+    file: 'tavily-token',
+    // A Tavily API key for the bundled `web search` provider. The search runs in the janissary
+    // process, which reads the key through `getProjectTokens`; no spawned process reads it, so the
+    // row opts out of the spawn environment.
+    env: ['TAVILY_API_KEY'],
+    spawn: false,
+  },
+  {
+    name: 'tinyfish',
+    file: 'tinyfish-token',
+    // A TinyFish API key for the bundled `web search` provider, on the same terms as the Tavily row.
+    env: ['TINYFISH_API_KEY'],
+    spawn: false,
+  },
 ] as const;
+
+export type ProjectTokenRow = (typeof PROJECT_TOKENS)[number];
+
+// Whether a spawned process is handed this row's credential. True unless the row opts out, which
+// only the two search rows do.
+export function isSpawnedCredential(row: ProjectTokenRow): boolean {
+  return 'spawn' in row ? row.spawn : true;
+}
 
 export type ProjectTokenName = (typeof PROJECT_TOKENS)[number]['name'];
 

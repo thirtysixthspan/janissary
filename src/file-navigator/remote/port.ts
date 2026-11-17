@@ -17,9 +17,12 @@ import type { HistoryStep } from '../moves.js';
 import type { DiffSource } from '../../plugins/diff/shared.js';
 import { remoteGitCommit, remoteGitMetadata, remoteGitPull, type RemoteRequest } from './port-git.js';
 import { remoteMove, remoteMoveMany } from './port-moves.js';
-import { remoteEditFile, remoteGlobPaths, remoteGrepFiles, remoteReadLines, remoteWriteFile } from './port-reads.js';
+import {
+  remoteEditFile, remoteGlobPaths, remoteGrepFiles, remoteReadLines, remoteWebSearch, remoteWriteFile,
+} from './port-reads.js';
 import type { FileGlobArgs } from '../../file-glob/command.js';
 import type { FileGrepArgs } from '../../file-grep/command.js';
+import type { WebSearchCommand } from '../../web-search/command.js';
 import type { FileEditValue, FileWritePolicy } from '../../file-write/types.js';
 import { remoteCreateItem, remoteDeleteMany, remoteReplay, remoteSearch, remoteStatRows } from './port-mapped.js';
 import type { CommitResult } from '../../git/commit.js';
@@ -130,6 +133,10 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
 
   grepFiles(root: string, args: FileGrepArgs): Promise<{ text: string; path: string | undefined }> {
     return remoteGrepFiles(this.requester(), this.paths, root, args);
+  }
+
+  webSearch(args: WebSearchCommand): Promise<string> {
+    return remoteWebSearch(this.requester(), args);
   }
 
   writeFile(

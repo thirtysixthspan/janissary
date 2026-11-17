@@ -5,7 +5,12 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NO_TOOLS_LINE } from '../acp/internal-tools.js';
 import { MARKDOWN_INSTRUCTION } from '../acp/launch.js';
-import type { AcpRunSnapshot, AcpRunSnapshotRow, AcpSession, PromptHandlers } from '../acp/types.js';
+import type { AcpRunSnapshot, AcpRunSnapshotRow, AcpSession, AcpToolHost, PromptHandlers } from '../acp/types.js';
+import type * as DriveLoop from '../acp/drive-loop.js';
+import { parseWebSearch, WEB_SEARCH_USAGE } from '../web-search/command.js';
+import type { WebSearchCommand } from '../web-search/command.js';
+import type { WebSearchDeps } from '../web-search/search.js';
+import type { ProjectTokens } from '../project/tokens.js';
 import { deferred } from '../deferred.js';
 import type * as Glob from '../file-glob/glob.js';
 import type * as Grep from '../file-grep/grep.js';
@@ -15,7 +20,9 @@ import * as fileGrepScan from '../file-grep/scan.js';
 import * as fileRead from '../file-read/read.js';
 import type { ServerFrame } from './protocol-frames.js';
 
-const mocks = vi.hoisted(() => ({ globWorkspaceCommand: vi.fn(), grepWorkspaceCommand: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  globWorkspaceCommand: vi.fn(), grepWorkspaceCommand: vi.fn(), webSearch: vi.fn(), driveToolLoop: vi.fn(),
+}));
 const home = vi.hoisted(() => ({ dir: '' }));
 
 vi.mock('node:os', async (importOriginal) => ({
@@ -27,6 +34,12 @@ vi.mock('../file-glob/glob.js', async (importOriginal) => {
   const actual = await importOriginal<typeof Glob>();
   mocks.globWorkspaceCommand.mockImplementation(actual.globWorkspaceCommand);
   return { ...actual, globWorkspaceCommand: mocks.globWorkspaceCommand };
+});
+vi.mock('../web-search/search.js', () => ({ webSearch: mocks.webSearch }));
+vi.mock('../acp/drive-loop.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof DriveLoop>();
+  mocks.driveToolLoop.mockImplementation(actual.driveToolLoop);
+  return { ...actual, driveToolLoop: mocks.driveToolLoop };
 });
 
 vi.mock('../file-grep/grep.js', async (importOriginal) => {
@@ -78,6 +91,9 @@ beforeEach(() => {
   homeDir = mkdtempSync(path.join(tmpdir(), 'janus-serve-acp-loop-home-'));
   home.dir = homeDir;
   mocks.grepWorkspaceCommand.mockClear();
+  mocks.driveToolLoop.mockClear();
+  mocks.webSearch.mockReset();
+  mocks.webSearch.mockResolvedValue('search results');
 });
 
 afterEach(() => {
@@ -85,13 +101,14 @@ afterEach(() => {
   rmSync(homeDir, { recursive: true, force: true });
 });
 
-function start(turns: string[][], snapshot: AcpRunSnapshot) {
+function start(turns: string[][], snapshot: AcpRunSnapshot, tokens: ProjectTokens = {}) {
   const { session, sent } = makeSession(turns);
   const frames: ServerFrame[] = [];
   const handle = startRemoteLoop(
     session,
     { type: 'acp-run', id: RUN_ID, text: 'do it', snapshot },
     workspace,
+    tokens,
     (frame) => { frames.push(frame); },
   );
   return { frames, sent, handle };
@@ -117,16 +134,21 @@ function heldSession() {
   return { session, sent, handlers, cancellation, cancels: () => cancels };
 }
 
-function startHeld(snapshot: AcpRunSnapshot) {
+function startHeld(snapshot: AcpRunSnapshot, tokens: ProjectTokens = {}) {
   const held = heldSession();
   const frames: ServerFrame[] = [];
   const handle = startRemoteLoop(
     held.session,
     { type: 'acp-run', id: RUN_ID, text: 'do it', snapshot },
     workspace,
+    tokens,
     (frame) => { frames.push(frame); },
   );
   return { ...held, frames, handle, last: () => held.handlers.at(-1)! };
+}
+
+function lastHost(): AcpToolHost {
+  return mocks.driveToolLoop.mock.calls.at(-1)?.[3] as AcpToolHost;
 }
 
 function framesOf<T extends ServerFrame['type']>(frames: ServerFrame[], type: T) {
@@ -152,6 +174,20 @@ describe('startRemoteLoop workspace steps', () => {
       { type: 'acp-run-end', id: RUN_ID, reason: 'answered' },
     ]);
     expect(sent[1]).toContain('1\tone\n2\ttwo');
+  });
+
+  it('runs a granted web search against the workspace and reports the result as a workspace step', async () => {
+    const tokens = { tavily: 'tvly-far' };
+    const { frames } = start([['web search x'], ['Done.']], coreSnapshot('tell', ['web search']), tokens);
+
+    await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
+    expect(mocks.webSearch).toHaveBeenCalledOnce();
+    const [request, deps] = mocks.webSearch.mock.calls[0] as [WebSearchCommand, WebSearchDeps];
+    expect(request).toEqual(parseWebSearch('web search x'));
+    expect(deps.tokens).toBe(tokens);
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([{
+      type: 'acp-tool-step', id: RUN_ID, command: 'web search x', result: 'search results', workspace: true,
+    }]);
   });
 
   it('caps a core run at eight workspace steps without sending a step count', () => {
@@ -789,5 +825,66 @@ describe('startRemoteLoop grep loop preservation', () => {
     expect(framesOf(run.frames, 'acp-tool-step')).toEqual([]);
     expect(run.sent).toHaveLength(1);
     expect(framesOf(run.frames, 'acp-run-end')).toEqual([]);
+  });
+});
+
+describe('startRemoteLoop web routing', () => {
+  it('runs a web line with the workspace tokens and the run signal', async () => {
+    start([['Done.']], coreSnapshot('tell', ['web search']), { tavily: 'tvly-far' });
+    const host = lastHost();
+
+    await expect(host.runWorkspace('web search x')).resolves.toBe('search results');
+
+    expect(mocks.webSearch).toHaveBeenCalledOnce();
+    const [request, deps] = mocks.webSearch.mock.calls[0] as [WebSearchCommand, WebSearchDeps];
+    expect(request).toEqual(parseWebSearch('web search x'));
+    expect(deps.tokens).toEqual({ tavily: 'tvly-far' });
+    expect(deps.fetch).toBe(globalThis.fetch);
+    expect(deps.signal?.aborted).toBe(false);
+    expect(deps).not.toHaveProperty('reportDisabled');
+  });
+
+  it('normalizes a leading slash and space before parsing', async () => {
+    start([['Done.']], coreSnapshot('tell', ['web search']));
+    const host = lastHost();
+
+    await expect(host.runWorkspace(' /web search x')).resolves.toBe('search results');
+
+    const [request] = mocks.webSearch.mock.calls[0] as [WebSearchCommand];
+    expect(request).toEqual(parseWebSearch('web search x'));
+  });
+
+  it.each(['web', 'web search x --results 30'])('answers %s with the usage line without searching', (line) => {
+    start([['Done.']], coreSnapshot('tell', ['web search']));
+    const host = lastHost();
+
+    expect(host.runWorkspace(line)).toBe(WEB_SEARCH_USAGE);
+    expect(mocks.webSearch).not.toHaveBeenCalled();
+  });
+
+  it('aborts the signal passed to the search when the run is aborted', async () => {
+    const run = startHeld(coreSnapshot('tell', ['web search']));
+    const host = lastHost();
+
+    await host.runWorkspace('web search x');
+    const signal = (mocks.webSearch.mock.calls[0] as [WebSearchCommand, WebSearchDeps])[1].signal;
+    expect(signal?.aborted).toBe(false);
+
+    run.handle.abort();
+
+    expect(signal?.aborted).toBe(true);
+  });
+
+  it('aborts the signal passed to the search when the run is cancelled', async () => {
+    const run = startHeld(coreSnapshot('tell', ['web search']));
+    const host = lastHost();
+
+    await host.runWorkspace('web search x');
+    const signal = (mocks.webSearch.mock.calls[0] as [WebSearchCommand, WebSearchDeps])[1].signal;
+
+    const cancelled = run.handle.cancel();
+    expect(signal?.aborted).toBe(true);
+    run.cancellation.resolve();
+    await cancelled;
   });
 });

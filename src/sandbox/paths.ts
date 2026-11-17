@@ -186,11 +186,17 @@ export const SECRET_DENY_PATHS = [
 // location, `~/.config/gcloud/…`, is an explicit SECRET_DENY_PATHS entry above. Widening that deny
 // to fix it would hand a workspaced agent a Google credential file, which is the thing the list
 // exists to prevent, so a vertex-configured harness has no working route into a workspace.
+//
+// The two search provider keys are the exception among provider credentials: they are matched. No
+// spawned process reads either one — `web search` runs in the janissary process, which reads them
+// from `getProjectTokens()` — so an ambient copy is a secret a spawn cannot use. See
+// `src/project/tokens.ts`.
 export const ENV_SCRUB_PATTERNS: RegExp[] = [
   /^AWS_/, /^GITHUB_TOKEN$/, /^GH_TOKEN$/, /^NPM_TOKEN$/, /^DOCKER_/, /^KUBECONFIG$/,
   /_SECRET$/, /_PASSWORD$/,
   /^SSH_AUTH_SOCK$/, /^GPG_AGENT_INFO$/, /^GNUPGHOME$/,
   /^GIT_ASKPASS$/, /^GIT_CREDENTIAL_HELPER$/, /^KRB5CCNAME$/,
+  /^TAVILY_API_KEY$/, /^TINYFISH_API_KEY$/,
 ];
 
 // The e2e browser child's entire environment, by name — an allowlist, where every other spawn here

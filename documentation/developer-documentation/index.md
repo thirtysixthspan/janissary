@@ -16,3 +16,4 @@ Start with `npm start` to run the app and `npm test` to run the test suite. From
 - [Linting](/developer-documentation/linting) — ESLint over the full tree or just your changes
 - [Commit conventions](/developer-documentation/commit-conventions) — the Conventional Commits format this repo requires
 - [Workspace sandbox](/developer-documentation/workspace-sandbox) — how workspaced shell and harness tabs are confined on macOS
+- [Web search providers](/developer-documentation/web-search-providers) — writing a search provider plugin

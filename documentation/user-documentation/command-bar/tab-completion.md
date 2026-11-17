@@ -27,6 +27,7 @@ Type `help s`, then press `Tab` to see matching help pages.
 | Later target arguments of `monitor` or `unmonitor` | Labels of other action tabs, then `group:<n>` for each action-tab group |
 | The target of [`connections close`](/user-documentation/command-bar/connections) | Open connection strings, the same ones `connections list` prints (`sqlite:my-db`, `shell:bash`, `acp:opencode/big-pickle`, `browser:w1`, `ssh:devbox`, `terminal:vim`) |
 | After `browser` | Browser subcommands; after `browser use` or `browser window close`, the current tab's open window IDs |
+| After `web` | `search`; after the query, the flags not yet used; after `--depth`, `basic` and `advanced`; after `--provider`, `auto` and the provider names |
 | After `harness <name>`, at `--model` | That harness's known model names; `--model` may appear anywhere after its name |
 | After `syntax` or `search` | `theme` then theme names, or `transcript` |
 | After `help` | Markdown help page names, including `commands` and `keys` |

@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { AcpOptions, AcpRunSnapshot, AcpRunSnapshotRow, PromptHandlers } from '../acp/types.js';
+import type * as ServeAcpLoop from './serve-acp-loop.js';
 import type { ServerFrame } from './protocol-frames.js';
 import * as confinement from '../sandbox/confinement.js';
 
@@ -21,6 +22,15 @@ vi.mock('../acp/index.js', () => ({
     return { prompt: acpMock.prompt, kill: acpMock.kill, shutdown: acpMock.shutdown, cancel: acpMock.cancel };
   }),
 }));
+
+// The far-side loop is spied through so a case can read what `run` handed it while the real loop
+// keeps driving every other case.
+const loopMock = vi.hoisted(() => ({ startRemoteLoop: vi.fn() }));
+vi.mock('./serve-acp-loop.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof ServeAcpLoop>();
+  loopMock.startRemoteLoop.mockImplementation(actual.startRemoteLoop);
+  return { ...actual, startRemoteLoop: loopMock.startRemoteLoop };
+});
 
 import { RemoteAcp } from './serve-acp.js';
 
@@ -67,6 +77,7 @@ beforeEach(() => {
   acpMock.kill.mockReset();
   acpMock.shutdown.mockReset().mockResolvedValue(undefined);
   acpMock.cancel.mockReset().mockResolvedValue(undefined);
+  loopMock.startRemoteLoop.mockClear();
 });
 
 afterEach(() => {
@@ -213,6 +224,16 @@ describe('RemoteAcp — prompting', () => {
 });
 
 describe('RemoteAcp — running', () => {
+  it('starts the far-side loop with the merged tokens', () => {
+    const { acp } = makeAcp({ tavily: 'tvly-x' });
+    acp.open(OPEN);
+
+    acp.run(RUN_FRAME);
+
+    expect(loopMock.startRemoteLoop).toHaveBeenCalledOnce();
+    expect(loopMock.startRemoteLoop.mock.calls[0]?.[3]).toEqual({ tavily: 'tvly-x' });
+  });
+
   it('runs a live session end to end and feeds a caller result into the next prompt', async () => {
     writeFileSync(path.join(workspace, 'a.md'), 'one\ntwo\n');
     const { acp, frames } = makeAcp({}, workspace);

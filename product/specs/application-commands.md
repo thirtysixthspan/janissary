@@ -8,6 +8,10 @@ Each named fixed subcommand form of a built-in command, such as `tab dock`, `fil
 
 The native `file read`, `file glob`, `file grep`, `file write`, and `file edit` rows have the parent `file` and each has its own Enabled and Agent access settings. Disabling `file write` disables only that row, and refuses the typed `file write` command as well as the agent tool; disabling `file glob` likewise refuses the typed `file glob` as well as the agent tool; disabling `file` disables all five. They appear as ordinary rows in the Commands table and as ordinary entries in the Roles command picker.
 
+The builtin `web` command has its own parentless row, and disabling it refuses every typed `web` line.
+
+The native `web search` row has the parent `web` and its own Enabled and Agent access settings. Disabling `web search` disables only that row, and refuses the typed `web search` command as well as the agent tool; disabling `web` disables both. A typed `web search` line resolves to the native row exactly as a typed `file write` line does.
+
 The command inventory lists a bundled plugin's command and aliases only when the host accepted those claims. A plugin whose command or alias claims a name already reserved by a built-in command, or already claimed by another plugin, contributes no row and no alias for that claim, even though the built-in keeps the name.
 
 The inventory's row kinds, native tool groups, and settings sources are one fixed set of values shared by the server and the Commands and Roles tabs, so every row the server can report is accepted by those tabs and a value outside the set is rejected as invalid topic data.

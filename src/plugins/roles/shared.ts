@@ -15,6 +15,7 @@ export const NATIVE_ACP_COMMANDS = [
   'file grep',
   'file write',
   'file edit',
+  'web search',
 ] as const;
 
 // One harness/model/effort choice inside a role. `effort` is absent for the default (no effort

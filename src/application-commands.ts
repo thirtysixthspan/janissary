@@ -33,6 +33,7 @@ const BUILTIN_FORMS: Readonly<Record<string, ApplicationCommandDeclaration>> = {
   monitor: { name: 'monitor', forms: ['monitor'] },
   unmonitor: { name: 'unmonitor', forms: ['unmonitor', 'unmonitor --all'] },
   monitors: { name: 'monitors', forms: ['monitors'] },
+  web: { name: 'web', forms: ['web'] },
 };
 
 function builtinRows(declaration: ApplicationCommandDeclaration): ApplicationCommandRow[] {

@@ -34,7 +34,8 @@ const CLAUDE = { harness: 'claude', model: 'claude-haiku-4-5', effort: 'high' };
 const OPENCODE = { harness: 'opencode', model: 'opencode-go/deepseek-v4.1-flash', effort: 'medium' };
 const CODEX = { harness: 'codex', model: 'gpt-6-luna', effort: 'high' };
 const ASK_COMMANDS = [
-  'db sqlite list', 'db sqlite query', 'browser goto', 'browser content', 'question ask', 'question approve', 'file read', 'file glob', 'file grep',
+  'db sqlite list', 'db sqlite query', 'browser goto', 'browser content', 'question ask', 'question approve',
+  'file read', 'file glob', 'file grep', 'web search',
 ];
 
 describe('askRoleEntries', () => {
@@ -93,8 +94,10 @@ describe('readRoleSettings', () => {
       name: 'ask', entries: [OPENCODE, CLAUDE, CODEX], commands: ASK_COMMANDS,
     });
     const tell = readRoleSettings(root, 'tell', home).commands;
-    expect(tell).toHaveLength(14);
-    expect(tell).toEqual(expect.arrayContaining(['file glob', 'file grep', 'file write', 'file edit']));
+    expect(tell).toHaveLength(15);
+    expect(tell).toEqual(expect.arrayContaining([
+      'file glob', 'file grep', 'file write', 'file edit', 'web search',
+    ]));
     expect(readFileSync(file, 'utf8')).toBe(before);
   });
 

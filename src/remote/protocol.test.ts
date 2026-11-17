@@ -381,6 +381,8 @@ describe('frame codec', () => {
           claude: 'sk-ant-oat01-scoped',
           opencode: 'oc_live_scoped',
           gemini: 'AIzaSyScoped',
+          tavily: 'tvly_scoped',
+          tinyfish: 'tinyfish_scoped',
         },
         identity: { name: 'Ada Lovelace', email: 'ada@example.com' },
       },
@@ -402,6 +404,10 @@ describe('frame codec', () => {
           undoStack: [{ entries: [{ from: 'a', to: 'dest/a' }] }], redoStack: [],
           direction: 'undo', overwrite: false, skipConflicts: false,
         },
+      },
+      {
+        type: 'filesystem-request', session: 'files1', request: 'q4', operation: 'web-search',
+        args: { query: 'vitest', numResults: 10, maxChars: 10_000, depth: 'basic', provider: 'auto' },
       },
       {
         type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp'],
@@ -611,6 +617,7 @@ describe('frame codec', () => {
     ['filesystem request without a request id', { type: 'filesystem-request', session: 'f1', operation: 'search', args: {} }],
     ['filesystem request with malformed arguments', { type: 'filesystem-request', session: 'f1', request: 'q1', operation: 'rename', args: { path: 'a' } }],
     ['filesystem request with malformed write precondition', { type: 'filesystem-request', session: 'f1', request: 'q1', operation: 'write-file', args: { path: 'a', content: '', expectedHash: null } }],
+    ['filesystem request with out-of-range web search arguments', { type: 'filesystem-request', session: 'f1', request: 'q1', operation: 'web-search', args: { query: 'x', numResults: 0, maxChars: 10_000, depth: 'basic', provider: 'auto' } }],
     ['acp-open without an id', { type: 'acp-open', command: 'opencode', args: [] }],
     ['acp-open with an empty id', { type: 'acp-open', id: '', command: 'opencode', args: [] }],
     ['acp-open with an empty command', { type: 'acp-open', id: 'racp1', command: '', args: [] }],
@@ -1013,8 +1020,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 43', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(43);
+  it('is 44', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(44);
   });
 });
 

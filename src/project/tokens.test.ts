@@ -2,10 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { PROJECT_TOKENS, loadProjectTokens, getProjectTokens } from './tokens.js';
+import { PROJECT_TOKENS, isSpawnedCredential, loadProjectTokens, getProjectTokens } from './tokens.js';
 
 const GITHUB_FILE = 'github-token';
 const GEMINI_FILE = 'gemini-token';
+const TAVILY_FILE = 'tavily-token';
+const TINYFISH_FILE = 'tinyfish-token';
 
 function project(): string {
   const dir = mkdtempSync(path.join(tmpdir(), 'project-tokens-'));
@@ -108,6 +110,20 @@ describe('loadProjectTokens with a home directory', () => {
     expect(loadProjectTokens(dir, homeDir)).toEqual({ github: 'ghp_project', gemini: 'AIzaSyHome' });
   });
 
+  // The two search keys follow the same per-file rule as every other row, including the whitespace
+  // fallback: one load can take one from the project and the other from home.
+  it('resolves the web search keys across both places, falling back on a whitespace project file', () => {
+    const dir = project();
+    const homeDir = home();
+    write(dir, TAVILY_FILE, 'tvly_project\n');
+    write(homeDir, TAVILY_FILE, 'tvly_home\n');
+    write(homeDir, TINYFISH_FILE, 'tinyfish_home\n');
+    expect(loadProjectTokens(dir, homeDir)).toEqual({ tavily: 'tvly_project', tinyfish: 'tinyfish_home' });
+
+    write(dir, TAVILY_FILE, '  \n');
+    expect(loadProjectTokens(dir, homeDir)).toEqual({ tavily: 'tvly_home', tinyfish: 'tinyfish_home' });
+  });
+
   // The cache must be replaced by what the second project resolves to, and a home credential is
   // resolved the same way a project one is — not carried over from the load before it.
   it('replaces a cached home credential when the next project overrides it', () => {
@@ -134,5 +150,13 @@ describe('PROJECT_TOKENS', () => {
   it('names each environment variable on exactly one row', () => {
     const variables = PROJECT_TOKENS.flatMap(({ env }) => [...env]);
     expect(new Set(variables).size).toBe(variables.length);
+  });
+
+  // The two search keys are the only credentials no spawned process reads: `web search` runs in the
+  // janissary process. A row that lost its opt-out would put the key back in every workspaced
+  // environment.
+  it('marks exactly the two search rows as not handed to a spawn', () => {
+    const serverOnly = PROJECT_TOKENS.filter((row) => !isSpawnedCredential(row)).map(({ name }) => name);
+    expect(serverOnly).toEqual(['tavily', 'tinyfish']);
   });
 });

@@ -233,12 +233,13 @@ describe('confinedHarnessSpawn', () => {
       ANTHROPIC_API_KEY: 'keep-me', OPENAI_API_KEY: 'keep-me', GOOGLE_API_KEY: 'keep-me',
       GEMINI_API_KEY: 'keep-me', GOOGLE_GENERATIVE_AI_API_KEY: 'keep-me', GOOGLE_VERTEX_PROJECT: 'keep-me',
       GOOGLE_APPLICATION_CREDENTIALS: 'keep-me', KILO_API_KEY: 'keep-me',
+      TAVILY_API_KEY: 'x', TINYFISH_API_KEY: 'x',
     };
     const result = build({}, env);
     for (const dropped of [
       'AWS_SECRET_ACCESS_KEY', 'GITHUB_TOKEN', 'GH_TOKEN', 'NPM_TOKEN', 'DOCKER_HOST', 'KUBECONFIG',
       'SOME_SECRET', 'SOME_PASSWORD', 'SSH_AUTH_SOCK', 'GPG_AGENT_INFO', 'GIT_ASKPASS',
-      'GIT_CREDENTIAL_HELPER', 'KRB5CCNAME',
+      'GIT_CREDENTIAL_HELPER', 'KRB5CCNAME', 'TAVILY_API_KEY', 'TINYFISH_API_KEY',
     ]) {
       expect(result.env[dropped]).toBeUndefined();
     }
@@ -246,7 +247,9 @@ describe('confinedHarnessSpawn', () => {
     // non-OpenCode provider has into a workspace, so a future scrub pattern swallowing one would
     // break authentication silently. GOOGLE_APPLICATION_CREDENTIALS is asserted for the opposite
     // reason: it survives too, which is exactly why a vertex setup looks configured and still
-    // cannot authenticate — the file it names stays denied (see paths.ts).
+    // cannot authenticate — the file it names stays denied (see paths.ts). The two search keys are
+    // dropped with the credentials: their only reader is the janissary process, which runs the
+    // search itself.
     for (const kept of [
       'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GOOGLE_API_KEY',
       'GEMINI_API_KEY', 'GOOGLE_GENERATIVE_AI_API_KEY', 'GOOGLE_VERTEX_PROJECT',
@@ -330,7 +333,15 @@ describe('confinedHarnessSpawn', () => {
     expect(result.env.GOOGLE_GENERATIVE_AI_API_KEY).toBe('ambient-key');
   });
 
-  it('injects every credential when all five tokens are given', () => {
+  // The search runs in the janissary process, so a workspaced spawn is handed neither search key
+  // even when both token files are configured.
+  it('leaves both web search keys out of a configured spawn', () => {
+    const result = build({ tokens: { tavily: 'tvly_live_key', tinyfish: 'tinyfish_live_key' } }, { PATH: '/usr/bin' });
+    expect(result.env.TAVILY_API_KEY).toBeUndefined();
+    expect(result.env.TINYFISH_API_KEY).toBeUndefined();
+  });
+
+  it('injects every configured credential a spawned process reads', () => {
     mkdirSync(`${workspaceDir}.tmp`, { recursive: true });
     const result = build(
       {
@@ -340,6 +351,8 @@ describe('confinedHarnessSpawn', () => {
           opencode: 'oc_live_key',
           kilo: 'kilo_live_key',
           gemini: 'AIzaSyExample',
+          tavily: 'tvly_live_key',
+          tinyfish: 'tinyfish_live_key',
         },
       },
       { PATH: '/usr/bin' },
@@ -351,6 +364,8 @@ describe('confinedHarnessSpawn', () => {
     expect(result.env.KILO_API_KEY).toBe('kilo_live_key');
     expect(result.env.GEMINI_API_KEY).toBe('AIzaSyExample');
     expect(result.env.GOOGLE_GENERATIVE_AI_API_KEY).toBe('AIzaSyExample');
+    expect(result.env.TAVILY_API_KEY).toBeUndefined();
+    expect(result.env.TINYFISH_API_KEY).toBeUndefined();
   });
 
   it('sets TMPDIR to the workspace-adjacent temp dir', () => {
