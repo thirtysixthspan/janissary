@@ -65,6 +65,8 @@ Names are lowercased, and extra spaces around and between words are ignored. One
 
 If the help files can't be read, `help` falls back to a single summary line naming the built-in commands and reminding you that `!` runs something in the shell, `/` runs a built-in, and `Ctrl+R` or `hist` opens command history.
 
+If `help` is disabled in the [Commands tab](/user-documentation/tab-types/commands), it stops answering with help text. Bare `help` and `help <command>` both return `Command is disabled: help.` instead of a list, a page, or an unknown-command reply.
+
 Every command's page is also on this site, under **Command Reference** in the sidebar.
 
 ## `commands`
@@ -73,7 +75,13 @@ Every command's page is also on this site, under **Command Reference** in the si
 
 A disabled command is refused wherever it is dispatched. Its picker, theme dialog, quit confirmation, or save guard does not open from a command bar, and a command-backed shortcut for it does nothing. An ordinary command-bar line is offered to the server and refused there with `Command is disabled: <command>.`; a disabled `quit` or `close` line is consumed instead and reported to the server, whose existing `command-disabled` notification is its only feedback when the ambient toggle and focus rules allow it. Closing the last tab from `Cmd+W`/`Ctrl+W` or the tab strip still opens the quit confirmation first; confirming dispatches `quit`, which the server refuses when `quit` is disabled.
 
+A setting is checked when a line runs, not when you queue or schedule it. A command queued or scheduled while it was enabled is refused if you disable it before its turn. A command already running isn't interrupted.
+
 `commands enable [agent|global] <command>` and `commands disable [agent|global] <command>` change one setting without opening the tab. Leave out the selector to change whether the command is enabled; use `agent` to change whether agents may use a native command. Names match canonical names, aliases, and fixed forms exactly, ignoring case and repeated spaces, so trailing words are not ignored. A malformed form prints `Usage: commands [enable|disable [agent|global] <command>].`; an unknown name prints `Unknown application command: <command>.`; and agent access on a command that is not native prints `Not a native ACP command: <canonical>.`
+
+The selector is read only when a command name follows it. `commands disable agent` disables the `agent` command, but `commands disable agent agent` is read as an agent-access change for `agent` and is refused with `Not a native ACP command: agent.` Trailing words are never ignored, so a name with extra text prints `Unknown application command: <command>.` and changes nothing.
+
+These commands write to the same `commands.json` the tab edits. If no usable file is available, they're refused with `commands.json at <path> is unusable — fix the file before editing commands.` A write that fails replies `Could not write commands.json at <path>.` and leaves the setting as it was. [The file](/user-documentation/tab-types/commands#the-file) explains what happens when a file is damaged.
 
 The tab never docks itself, but `tab dock` can dock it like any bundled plugin tab. `commands` is an ordinary setting, so it can disable itself and be re-enabled from its open tab. Once that tab is closed, a disabled `commands` is refused like any other command until you edit the effective `commands.json` by hand.
 

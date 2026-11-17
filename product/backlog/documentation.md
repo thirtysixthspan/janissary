@@ -4,8 +4,6 @@
 
 ## development
 
-* application-commands (4/10) — 31 of 41 facts are correct across the commands pages and detailed help pages with none wrong; 10 edge cases are missing. Missing messages users actually see include `commands.json at <path> is unusable — fix the file before editing commands.`, `Could not write commands.json at <path>.`, and the fallback reports `commands.json <problem> at <path> — showing the home commands file.` and `— showing default commands.`; also missing are the separately-disableable native `file read`/`file glob`/`file grep`/`file write`/`file edit`/`file patch` rows and the parentless `web`/child `web search` rows with their typed-command refusals, the `commands disable agent agent` selector edge case, dispatch-time settings checks, and disabled `help` returning `Command is disabled: <command>.`. Fix in `documentation/user-documentation/command-bar/commands.md` and `documentation/user-documentation/tab-types/commands.md`, with edge notes in `help/commands.md` and `help/help.md`. Ground truth is `product/specs/application-commands.md`, `src/native-commands/settings-file.ts`, `src/native-commands/manager.ts` and `src/native-commands/dispatch-policy.ts`.
-
 * application-config (3/10) — 31 of 32 facts are correct across the configuration page and per-feature pages with none wrong; the only gap is the backward-compatibility note that removed `terminalBellMuteSuccess`/`Warning`/`Error` keys are silently ignored, which appears only in the spec and tests. Add one sentence to the 'Editing and validation' section of `documentation/user-documentation/getting-started/configuration.md` stating that stale `terminalBellMute*` keys are ignored, and that setting a type's sound to `none` is the replacement. Ground truth is `product/specs/application-config.md`, `src/config.ts`, `src/config-decode.ts` and `src/config.test.ts`.
 
 * connection (6/10) — 30 of 32 facts are documented with one wrong and one missing. Wrong: `documentation/user-documentation/command-bar/connections.md` renders core ACP connection strings as `acp:<provider/model>` in several places, but the app emits role-qualified `acp:ask:<model>` and `acp:tell:<model>` (`src/connection/catalog.ts`) and `help/connections.md` already shows the correct form; update those spots and note that `ask`/`tell` select the role. Missing: trailing arguments after `connections list` and `connections close <kind>:<id>` are ignored, so add a short note to `documentation/user-documentation/command-bar/connections.md`. Ground truth is `product/specs/connection.md`, `src/connection/catalog.ts`, `src/connection/close.ts` and `src/connection/manager.ts`.
@@ -66,6 +64,7 @@
 
 ## resolved
 
+* application-commands — documented in documentation/user-documentation/command-bar/commands.md, documentation/user-documentation/tab-types/commands.md, help/commands.md, help/help.md (removed 2026-11-17)
 * agent-questions — documented in documentation/user-documentation/advanced-agents/agent-questions.md (removed 2026-11-17)
 * agent-command — documented in documentation/user-documentation/advanced-agents/agent-command.md (removed 2026-11-17)
 * acp-records — documented in documentation/user-documentation/command-bar/connections.md, documentation/user-documentation/advanced-agents/agent-command.md, help/connections.md (removed 2026-11-17)
