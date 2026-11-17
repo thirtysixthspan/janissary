@@ -48,9 +48,9 @@ export function runOpenCommand(
   requireOpener?: string,
 ): void | Promise<void> {
   const parsed = parseOpen(parsedCommand);
-  if ('error' in parsed) { managers.tab.append(label, { input: displayCommand, output: parsed.error }); return; }
-  const cwd = managers.tab.workingDirOf(label);
   const context = buildContext(displayCommand, label);
+  if ('error' in parsed) { context.note(parsed.error); return; }
+  const cwd = managers.tab.workingDirOf(label);
   const target = expandUserPath(parsed.target, { root: managers.tab.launchDir });
 
   // The web branch resolves ahead of the opener registry, so a pinned command has to be refused here
@@ -60,11 +60,11 @@ export function runOpenCommand(
   // job, deciding what one means is the plugin's.
   if (parsed.web) {
     if (requireOpener !== undefined) {
-      managers.tab.append(label, { input: displayCommand, output: pinnedOpenerRefusal(requireOpener, target) });
+      context.note(pinnedOpenerRefusal(requireOpener, target));
       return;
     }
     if (!webClaimPluginId) {
-      managers.tab.append(label, { input: displayCommand, output: 'open: no viewer for web addresses' });
+      context.note('open: no viewer for web addresses');
       return;
     }
     return context.runPluginOpener(webClaimPluginId, parsed.external ? 'external' : 'inline', target);
@@ -72,10 +72,10 @@ export function runOpenCommand(
 
   if (isGlobPattern(target)) {
     const matches = expandGlob(target, cwd);
-    if (matches.length === 0) { managers.tab.append(label, { input: displayCommand, output: `open: ${target}: no matching files` }); return; }
+    if (matches.length === 0) { context.note(`open: ${target}: no matching files`); return; }
     const files = matches.slice(0, TabManager.OPEN_MAX_FILES);
     if (matches.length > files.length) {
-      managers.tab.append(label, { input: displayCommand, output: `Opening the first ${files.length} of ${matches.length} matching files.` });
+      context.note(`Opening the first ${files.length} of ${matches.length} matching files.`);
     }
     return runSequential(
       files,

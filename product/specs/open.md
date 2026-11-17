@@ -60,7 +60,7 @@ Error handling, surfaced before any opener runs — in the active tab, except wh
 - **Unviewable or malformed web address** — a message reporting the address is invalid (for example, a non-`http`/`https` scheme).
 - **File does not exist** — a not-found message. Existence is checked before dispatch, so every file opener may assume the file is present.
 
-The dispatcher resolves the opener and surfaces these errors; the opener owns everything past that point.
+The dispatcher resolves the opener and surfaces these errors; the opener owns everything past that point. Each message is written to the issuing tab's transcript and returned as that command's reply, so a shell tab shows it beneath the echoed line while a transcript-style tab still has the appended entry.
 
 An inline view or editor fetches a file through its authenticated registered reference. If that file
 is deleted or becomes unreadable after the tab opens, the reference answers with an HTTP error
