@@ -14,7 +14,7 @@ export function ShellCompletionPicker({ items, selected, onPick }: Properties) {
   }, [selected]);
 
   return (
-    <div className="picker shell-completions" ref={containerReference}>
+    <div className="picker shell-completions" ref={containerReference} data-doc-shot="completions">
       <div className="picker-title">completions</div>
       {items.map((item, index) => (
         <div

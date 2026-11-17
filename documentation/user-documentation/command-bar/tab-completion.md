@@ -32,12 +32,15 @@ Type `help s`, then press `Tab` to see matching help pages.
 | After `syntax` or `search` | `theme` then theme names, or `transcript` |
 | After `help` | Markdown help page names, including `commands` and `keys` |
 | At the first name after `execute`, or a bare `edit` target | Project runscript names; a bare `edit` target also offers matching paths |
+| After `file` | `glob`, `grep`, and `read`; then the flags and paths for the chosen subcommand |
 | In a `files` command | Matching clause words before paths, tab labels and display titles, detail modes, sidebar sides, and open navigator labels |
 | Anywhere else | Filesystem paths relative to the tab's working directory |
 
 Target completion offers both labels and display titles, including hidden tabs. Names that differ only by case appear once, keeping the first spelling in tab order. A `tab` target with spaces is quoted. The other target suggestions are not, so a spaced alias works with `close`, which reads the full target remainder, but not with `send`, `queue`, or `schedule … in <tab>`, which read one whitespace-delimited target token. Use the tab's label with those commands. Monitor target suggestions include hidden action tabs, exclude the current tab and display titles, and list group selectors in ascending order. You can still type a display title as a monitor target.
 
-At the first word, Tab offers enabled command names and aliases before matching paths, so `bro` can become `browser`. A disabled command or subcommand is left out, and Tab offers no argument or path suggestions under a disabled command. A line starting with `!` runs in the shell and keeps ordinary path completion. While `help` is enabled, its pages still list and complete disabled commands.
+At the first word, Tab offers enabled command names and aliases before matching paths, so `bro` can become `browser`. It offers names only for a non-empty word that holds no `/`, `\`, or quote, so an empty word and a token starting with `!` or `/` keep ordinary path completion. Matching is case-sensitive, so `bro` completes but `BRO` offers nothing. A disabled command or subcommand is left out, and Tab offers no argument or path suggestions under a disabled command. Some commands are different forms of the same feature and share one on/off setting, so turning that feature off hides every form and alias of it. A line starting with `!` runs in the shell with ordinary path completion and is never filtered. While `help` is enabled, its pages still list and complete disabled commands.
+
+For `web search`, flags appear only once the query is on the line, so `web search -` on its own leaves the line unchanged. After the query, Tab offers the flags you haven't used: `--results`, `--max-chars`, `--depth`, and `--provider`. The query and the values of `--results` and `--max-chars` get no suggestions. After `--depth` you get `basic` and `advanced`; after `--provider`, `auto` and the provider names. Command names and flags match case-sensitively here too.
 
 ## Complete paths and clauses
 
@@ -49,6 +52,20 @@ After a view clause, paths complete relative to the local working directory name
 
 `help` completes page names only as its first argument. An unmatched prefix or a leading `/` gives no help-page candidates and does not fall through to filesystem completion. Later arguments use the ordinary completion chain. While `help` is enabled, disabled commands keep their pages and complete normally.
 
-Run `execute <name>` to execute a project runscript. It offers runscript names only in its first name slot. A bare `edit <name>` combines runscript names with matching paths; a path, file extension, or `:line` target uses filesystem completion, and an exact file target takes precedence over a runscript name.
+Run `execute <name>` to execute a project runscript. It offers runscript names only in its first name slot. A bare `edit <name>` combines runscript names with matching paths; a path, file extension, or `:line` target uses filesystem completion, and an exact file target takes precedence over a runscript name. Both read the current project's runscript catalog. If that catalog is missing or can't be read safely, no runscript names are offered; `edit` still offers matching paths.
 
 Path completion lists your home directory for `~` and keeps the tilde in the completed token. A bare `~` works like `~/`, so `ls ~` can complete to `ls ~/projects/`. Dotfiles stay hidden unless the partial name starts with `.`.
+
+## Complete `file` arguments
+
+<img class="agent-float" src="/agents/demir-south.png" alt="" />
+
+Type `file g` and press `Tab` to pick between `glob` and `grep`. What comes next depends on the subcommand: `read` completes paths and two flags, `glob` completes directories after `--path`, and `grep` offers seven flags before the pattern.
+
+For `file read`, paths complete against the root the command reads from: your workspace, or the project directory when the tab has no workspace. That is not the shell's current directory, so a completed path names the file the command actually reads. After `--`, Tab offers `--offset` and `--limit`. The value after either flag gets no suggestion.
+
+For `file glob`, Tab after `--` offers `--dirs`, `--hidden`, `--limit`, and `--path`. The word after `--path` completes directory names only. The pattern and the `--limit` value get nothing.
+
+For `file grep`, Tab after `--` offers the seven flags `--case-sensitive`, `--exclude`, `--include`, `--limit`, `--literal`, `--path`, and `--word`. After `--path`, it completes files and directories. The pattern, and the values after `--include`, `--exclude`, and `--limit`, get no suggestions. Flags are lowercase only, so a capitalized word starts the pattern instead.
+
+On a remote tab, the `file` subcommands and their flags still complete, but no paths or directory names are offered.
