@@ -5,7 +5,10 @@ import { webProviderRegistry } from '../providers/default-registry.js';
 import { formatFailures, WEB_FETCH_FAILURE_HEADINGS } from '../providers/failure-lines.js';
 import type { ProviderFailure } from '../providers/failure-lines.js';
 import type { ProviderRegistry } from '../providers/registry.js';
+import { createFetchCache, fetchCacheKey } from './cache.js';
+import type { FetchCache } from './cache.js';
 import type { WebFetchCommand } from './command.js';
+import type { FetchedPage } from './render.js';
 import { renderFetched, renderRedirect } from './render.js';
 
 export type WebFetchDeps = {
@@ -16,16 +19,33 @@ export type WebFetchDeps = {
   now?: () => number;
 };
 
+const fetchCache = createFetchCache();
+
+function cachedPage(
+  cache: FetchCache,
+  key: string,
+  request: WebFetchCommand,
+  now: () => number,
+): FetchedPage | undefined {
+  if (request.offset === 0) return undefined;
+  return cache.get(key, now());
+}
+
 export function webFetchProviderNames(): string[] {
   return webProviderRegistry.fetchProviderNames();
 }
 
 export async function runWebFetch(
   registry: ProviderRegistry,
+  cache: FetchCache,
   request: WebFetchCommand,
   deps: WebFetchDeps,
 ): Promise<string> {
+  const now = deps.now ?? Date.now;
   deps.signal?.throwIfAborted();
+  const key = fetchCacheKey(request.url, request.format, request.provider);
+  const hit = cachedPage(cache, key, request, now);
+  if (hit !== undefined) return renderFetched(hit, request.offset, request.maxChars);
   const resolution = registry.resolveFetchAttempts(request.provider, request.format, deps.tokens);
   if (resolution.kind === 'line') return resolution.line;
   const failures: ProviderFailure[] = [];
@@ -49,11 +69,13 @@ export async function runWebFetch(
     );
     if (outcome.kind === 'fetched') {
       deps.signal?.throwIfAborted();
-      return renderFetched(
-        { url: outcome.url, source: manifest.id, content: outcome.content },
-        request.offset,
-        request.maxChars,
-      );
+      const page: FetchedPage = {
+        url: outcome.url,
+        source: manifest.id,
+        content: outcome.content,
+      };
+      cache.set(key, page, now());
+      return renderFetched(page, request.offset, request.maxChars);
     }
     if (outcome.kind === 'redirected') {
       deps.signal?.throwIfAborted();
@@ -67,5 +89,5 @@ export async function runWebFetch(
 }
 
 export function webFetch(request: WebFetchCommand, deps: WebFetchDeps): Promise<string> {
-  return runWebFetch(webProviderRegistry, request, deps);
+  return runWebFetch(webProviderRegistry, fetchCache, request, deps);
 }

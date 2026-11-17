@@ -10,10 +10,11 @@ import type {
   WebSearchProviderManifest,
   WebSearchProviderModule,
 } from '../providers/contract.js';
-import { webProviderCatalog } from '../providers/catalog.js';
+import { localManifest, webProviderCatalog } from '../providers/catalog.js';
 import { createProviderRegistry } from '../providers/registry.js';
 import type { ProviderRegistry } from '../providers/registry.js';
 import { runWebFetch, webFetch, webFetchProviderNames } from './fetch.js';
+import { createFetchCache } from './cache.js';
 
 const PAGE_URL = 'https://example.com/page';
 const ANSWER_URL = 'https://example.com/';
@@ -103,6 +104,7 @@ describe('runWebFetch', () => {
 
     const text = await runWebFetch(
       registryWith(tavily, tinyfish, local),
+      createFetchCache(),
       command(),
       deps(),
     );
@@ -120,6 +122,7 @@ describe('runWebFetch', () => {
 
     const text = await runWebFetch(
       registryWith(tavily, tinyfish, local),
+      createFetchCache(),
       command({ provider: 'tavily' }),
       deps(),
     );
@@ -134,7 +137,7 @@ describe('runWebFetch', () => {
     const tinyfish = fakeFetchProvider('tinyfish', requestError('could not fetch: bot_blocked'));
     const local = fakeFetchProvider('local', requestError('not found'), { tokenless: true });
 
-    const text = await runWebFetch(registryWith(tavily, tinyfish, local), command(), deps());
+    const text = await runWebFetch(registryWith(tavily, tinyfish, local), createFetchCache(), command(), deps());
 
     expect(text).toBe([
       'Web fetch: every attempt failed.',
@@ -151,6 +154,7 @@ describe('runWebFetch', () => {
 
     const text = await runWebFetch(
       registryWith(tavily, tinyfish, local),
+      createFetchCache(),
       command({ provider: 'tinyfish' }),
       deps(),
     );
@@ -168,6 +172,7 @@ describe('runWebFetch', () => {
 
     const text = await runWebFetch(
       registryWith(tavily, tinyfish, local),
+      createFetchCache(),
       command({ provider: 'bing' }),
       { tokens: TOKENS, fetch: fetchStub },
     );
@@ -183,7 +188,7 @@ describe('runWebFetch', () => {
     const tavily = fakeFetchProvider('tavily', async () => redirect('https://www.example.com/'));
     const tinyfish = fakeFetchProvider('tinyfish');
 
-    const text = await runWebFetch(registryWith(tavily, tinyfish), command(), deps());
+    const text = await runWebFetch(registryWith(tavily, tinyfish), createFetchCache(), command(), deps());
 
     expect(text).toBe('Web fetch: redirected to https://www.example.com/.');
     expect(tinyfish.manifest.activate).not.toHaveBeenCalled();
@@ -193,7 +198,7 @@ describe('runWebFetch', () => {
     const tavily = fakeFetchProvider('tavily', async () => page(PAGE_URL, ''));
     const tinyfish = fakeFetchProvider('tinyfish');
 
-    const text = await runWebFetch(registryWith(tavily, tinyfish), command(), deps());
+    const text = await runWebFetch(registryWith(tavily, tinyfish), createFetchCache(), command(), deps());
 
     expect(text).toBe(`Fetched ${PAGE_URL} (tavily).\n\n(empty page)`);
     expect(tinyfish.manifest.activate).not.toHaveBeenCalled();
@@ -203,7 +208,7 @@ describe('runWebFetch', () => {
     const tavily = fakeFetchProvider('tavily', async () => page(PAGE_URL, 'hello'));
     const tinyfish = fakeFetchProvider('tinyfish');
 
-    const text = await runWebFetch(registryWith(tavily, tinyfish), command({ offset: 10 }), deps());
+    const text = await runWebFetch(registryWith(tavily, tinyfish), createFetchCache(), command({ offset: 10 }), deps());
 
     expect(text).toBe(
       `Fetched ${PAGE_URL} (tavily).\n\n(offset 10 is past the end; the page has 5 characters)`,
@@ -218,6 +223,7 @@ describe('runWebFetch', () => {
 
     await runWebFetch(
       registryWith(tavily, tinyfish, local),
+      createFetchCache(),
       command({ timeoutSeconds: 45, format: 'text' }),
       deps(),
     );
@@ -233,7 +239,7 @@ describe('runWebFetch', () => {
     const fetchStub = fakeFetch();
     const controller = new AbortController();
 
-    await runWebFetch(registryWith(tavily, local), command(), {
+    await runWebFetch(registryWith(tavily, local), createFetchCache(), command(), {
       tokens: TOKENS,
       fetch: fetchStub,
       signal: controller.signal,
@@ -255,7 +261,7 @@ describe('runWebFetch', () => {
     });
     const second = fakeFetchProvider('tinyfish');
 
-    await runWebFetch(registryWith(first, second), command(), deps());
+    await runWebFetch(registryWith(first, second), createFetchCache(), command(), deps());
 
     expect(second.fetch.mock.calls[0]?.[0]).toStrictEqual({
       url: PAGE_URL,
@@ -269,7 +275,7 @@ describe('runWebFetch', () => {
     const first = fakeFetchProvider('tavily', pluginError('boom.'));
     const second = fakeFetchProvider('tinyfish');
 
-    const text = await runWebFetch(registryWith(first, second), command(), deps(undefined, reportDisabled));
+    const text = await runWebFetch(registryWith(first, second), createFetchCache(), command(), deps(undefined, reportDisabled));
 
     expect(text).toBe(`Fetched ${ANSWER_URL} (tinyfish).\n\nhello`);
     expect(reportDisabled).toHaveBeenCalledOnce();
@@ -277,7 +283,7 @@ describe('runWebFetch', () => {
 
     const silentFirst = fakeFetchProvider('tavily', pluginError('boom.'));
     const silentSecond = fakeFetchProvider('tinyfish');
-    await expect(runWebFetch(registryWith(silentFirst, silentSecond), command(), deps()))
+    await expect(runWebFetch(registryWith(silentFirst, silentSecond), createFetchCache(), command(), deps()))
       .resolves.toBe(`Fetched ${ANSWER_URL} (tinyfish).\n\nhello`);
   });
 
@@ -288,7 +294,7 @@ describe('runWebFetch', () => {
     const tavily = fakeFetchProvider('tavily');
     const fetchStub = fakeFetch();
 
-    await expect(runWebFetch(registryWith(tavily), command({ provider: 'bing' }), {
+    await expect(runWebFetch(registryWith(tavily), createFetchCache(), command({ provider: 'bing' }), {
       tokens: TOKENS,
       fetch: fetchStub,
       signal: controller.signal,
@@ -303,7 +309,7 @@ describe('runWebFetch', () => {
     controller.abort(abortError);
     const tavily = fakeFetchProvider('tavily');
 
-    await expect(runWebFetch(registryWith(tavily), command(), {
+    await expect(runWebFetch(registryWith(tavily), createFetchCache(), command(), {
       tokens: TOKENS,
       fetch: fakeFetch(),
       signal: controller.signal,
@@ -320,7 +326,7 @@ describe('runWebFetch', () => {
       controller.abort(abortError);
     });
 
-    await expect(runWebFetch(registryWith(first, second), command(), deps(controller.signal, reportDisabled)))
+    await expect(runWebFetch(registryWith(first, second), createFetchCache(), command(), deps(controller.signal, reportDisabled)))
       .rejects.toBe(abortError);
     expect(reportDisabled).toHaveBeenCalledWith('tavily', 'provider failed: boom');
     expect(second.manifest.activate).not.toHaveBeenCalled();
@@ -334,7 +340,7 @@ describe('runWebFetch', () => {
       return page();
     });
 
-    await expect(runWebFetch(registryWith(tavily), command(), {
+    await expect(runWebFetch(registryWith(tavily), createFetchCache(), command(), {
       tokens: TOKENS,
       fetch: fakeFetch(),
       signal: controller.signal,
@@ -349,7 +355,7 @@ describe('runWebFetch', () => {
       return redirect('https://www.example.com/');
     });
 
-    await expect(runWebFetch(registryWith(tavily), command(), {
+    await expect(runWebFetch(registryWith(tavily), createFetchCache(), command(), {
       tokens: TOKENS,
       fetch: fakeFetch(),
       signal: controller.signal,
@@ -366,7 +372,7 @@ describe('runWebFetch', () => {
     });
     const second = fakeFetchProvider('tinyfish');
 
-    await expect(runWebFetch(registryWith(first, second), command(), {
+    await expect(runWebFetch(registryWith(first, second), createFetchCache(), command(), {
       tokens: TOKENS,
       fetch: fakeFetch(),
       signal: controller.signal,
@@ -382,9 +388,267 @@ describe('runWebFetch', () => {
       controller.abort(abortError);
     });
 
-    await expect(runWebFetch(registryWith(only), command(), deps(controller.signal, reportDisabled)))
+    await expect(runWebFetch(registryWith(only), createFetchCache(), command(), deps(controller.signal, reportDisabled)))
       .rejects.toBe(abortError);
     expect(reportDisabled).toHaveBeenCalledWith('tavily', 'provider failed: boom');
+  });
+});
+
+const SLICE_CONTENT = 'abcdefghijklmnopqrstuvwxyzabcd';
+const SLICE_HEADER = `Fetched ${ANSWER_URL} (local).\n\n`;
+
+function cacheCase(fetch: FetchFn) {
+  const clock = { value: 0 };
+  const cache = createFetchCache();
+  const local = fakeFetchProvider('local', fetch, { tokenless: true });
+  const registry = registryWith(local);
+  const localDeps = { tokens: TOKENS, fetch: fakeFetch(), now: () => clock.value };
+  return { clock, cache, local, registry, localDeps };
+}
+
+describe('runWebFetch cache', () => {
+  it('refetches on offset 0 and replaces the stored page', async () => {
+    let call = 0;
+    const { cache, local, registry, localDeps } = cacheCase(async () => {
+      call += 1;
+      return page(ANSWER_URL, (call === 1 ? 'a' : 'b').repeat(30));
+    });
+    const second = 'b'.repeat(30);
+
+    const first = await runWebFetch(registry, cache, command(), localDeps);
+    const replaced = await runWebFetch(registry, cache, command(), localDeps);
+    const sliced = await runWebFetch(registry, cache, command({ offset: 5 }), localDeps);
+
+    expect(first).toBe(SLICE_HEADER + 'a'.repeat(30));
+    expect(replaced).toBe(SLICE_HEADER + second);
+    expect(sliced).toBe(SLICE_HEADER + second.slice(5));
+    expect(local.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('serves a live entry from a later offset without fetching or activating', async () => {
+    const { cache, local, registry, localDeps } = cacheCase(async () => page(ANSWER_URL, SLICE_CONTENT));
+    await runWebFetch(registry, cache, command(), localDeps);
+
+    const hit = await runWebFetch(registry, cache, command({ offset: 5 }), localDeps);
+
+    expect(hit).toBe(SLICE_HEADER + SLICE_CONTENT.slice(5));
+    expect(local.fetch).toHaveBeenCalledOnce();
+    expect(local.manifest.activate).toHaveBeenCalledOnce();
+
+    const fresh = cacheCase(async () => page(ANSWER_URL, SLICE_CONTENT));
+    const freshHit = await runWebFetch(fresh.registry, fresh.cache, command({ offset: 5 }), fresh.localDeps);
+    expect(freshHit).toBe(hit);
+    expect(fresh.local.fetch).toHaveBeenCalledOnce();
+  });
+
+  it('stores a page first fetched at a positive offset', async () => {
+    const { cache, local, registry, localDeps } = cacheCase(async () => page(ANSWER_URL, SLICE_CONTENT));
+    const first = await runWebFetch(registry, cache, command({ offset: 5 }), localDeps);
+    const second = await runWebFetch(registry, cache, command({ offset: 6 }), localDeps);
+
+    expect(first).toBe(SLICE_HEADER + SLICE_CONTENT.slice(5));
+    expect(second).toBe(SLICE_HEADER + SLICE_CONTENT.slice(6));
+    expect(local.fetch).toHaveBeenCalledOnce();
+  });
+
+  it('refetches when the entry reaches the TTL', async () => {
+    const { clock, cache, local, registry, localDeps } = cacheCase(async () => page(ANSWER_URL, SLICE_CONTENT));
+    await runWebFetch(registry, cache, command(), localDeps);
+    clock.value = 15 * 60_000;
+
+    const text = await runWebFetch(registry, cache, command({ offset: 5 }), localDeps);
+
+    expect(text).toBe(SLICE_HEADER + SLICE_CONTENT.slice(5));
+    expect(local.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('counts the TTL from when the page was stored', async () => {
+    const { clock, cache, local, registry, localDeps } = cacheCase(async () => {
+      clock.value += 10 * 60_000;
+      return page(ANSWER_URL, SLICE_CONTENT);
+    });
+    await runWebFetch(registry, cache, command(), localDeps);
+    clock.value = 20 * 60_000;
+
+    const text = await runWebFetch(registry, cache, command({ offset: 5 }), localDeps);
+
+    expect(text).toBe(SLICE_HEADER + SLICE_CONTENT.slice(5));
+    expect(local.fetch).toHaveBeenCalledOnce();
+  });
+
+  it('serves an empty stored page as the empty-page answer', async () => {
+    const { cache, local, registry, localDeps } = cacheCase(async () => page(ANSWER_URL, ''));
+    await runWebFetch(registry, cache, command(), localDeps);
+
+    const text = await runWebFetch(registry, cache, command({ offset: 3 }), localDeps);
+
+    expect(text).toBe(SLICE_HEADER + '(empty page)');
+    expect(local.fetch).toHaveBeenCalledOnce();
+  });
+
+  it('stores nothing when an offset 0 fetch fails', async () => {
+    const { cache, local, registry, localDeps } = cacheCase(requestError('HTTP 500'));
+    await runWebFetch(registry, cache, command(), localDeps);
+
+    const text = await runWebFetch(registry, cache, command({ offset: 5 }), localDeps);
+
+    expect(text).toBe('Web fetch failed (local): HTTP 500.');
+    expect(local.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('stores nothing when an offset 0 fetch redirects', async () => {
+    const { cache, local, registry, localDeps } = cacheCase(async () => redirect('https://www.example.com/'));
+    await runWebFetch(registry, cache, command(), localDeps);
+
+    const text = await runWebFetch(registry, cache, command({ offset: 5 }), localDeps);
+
+    expect(text).toBe('Web fetch: redirected to https://www.example.com/.');
+    expect(local.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('stores nothing when the explicit provider is not configured', async () => {
+    const clock = { value: 0 };
+    const cache = createFetchCache();
+    const tavily = fakeFetchProvider('tavily', async () => page(ANSWER_URL, SLICE_CONTENT));
+    const registry = registryWith(tavily);
+    const withoutToken = { tokens: {}, fetch: fakeFetch(), now: () => clock.value };
+    const withToken = { tokens: TOKENS, fetch: fakeFetch(), now: () => clock.value };
+
+    const refused = await runWebFetch(registry, cache, command({ provider: 'tavily' }), withoutToken);
+    expect(refused).toBe('Web fetch: provider "tavily" is not configured.');
+    expect(tavily.fetch).not.toHaveBeenCalled();
+
+    const text = await runWebFetch(registry, cache, command({ provider: 'tavily', offset: 5 }), withToken);
+    expect(text).toBe(`Fetched ${ANSWER_URL} (tavily).\n\n${SLICE_CONTENT.slice(5)}`);
+    expect(tavily.fetch).toHaveBeenCalledOnce();
+  });
+
+  it('keeps an earlier entry when a later offset 0 fetch fails', async () => {
+    const cache = createFetchCache();
+    let call = 0;
+    const local = fakeFetchProvider('local', async () => {
+      if (call++ === 0) return page(ANSWER_URL, SLICE_CONTENT);
+      throw new ProviderRequestError('HTTP 500');
+    }, { tokenless: true });
+    const registry = registryWith(local);
+    const localDeps = { tokens: TOKENS, fetch: fakeFetch(), now: () => 0 };
+
+    await runWebFetch(registry, cache, command(), localDeps);
+    await runWebFetch(registry, cache, command(), localDeps);
+    const text = await runWebFetch(registry, cache, command({ offset: 5 }), localDeps);
+
+    expect(text).toBe(SLICE_HEADER + SLICE_CONTENT.slice(5));
+    expect(local.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('keys on url, format, and provider but ignores max-chars and timeout', async () => {
+    const { cache, local, registry, localDeps } = cacheCase(async () => page(ANSWER_URL, SLICE_CONTENT));
+    await runWebFetch(registry, cache, command(), localDeps);
+
+    const sameKey = await runWebFetch(
+      registry,
+      cache,
+      command({ maxChars: 500, timeoutSeconds: 45, offset: 5 }),
+      localDeps,
+    );
+    const upperAuto = await runWebFetch(registry, cache, command({ provider: 'AUTO', offset: 5 }), localDeps);
+    expect(sameKey).toBe(SLICE_HEADER + SLICE_CONTENT.slice(5));
+    expect(upperAuto).toBe(sameKey);
+    expect(local.fetch).toHaveBeenCalledOnce();
+
+    await runWebFetch(registry, cache, command({ format: 'text', offset: 5 }), localDeps);
+    expect(local.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps auto and tavily entries separate', async () => {
+    const cache = createFetchCache();
+    const local = fakeFetchProvider('local', async () => page(ANSWER_URL, SLICE_CONTENT), { tokenless: true });
+    const tavily = fakeFetchProvider('tavily', async () => page(ANSWER_URL, SLICE_CONTENT));
+    const registry = registryWith(local, tavily);
+    const localDeps = { tokens: TOKENS, fetch: fakeFetch(), now: () => 0 };
+
+    await runWebFetch(registry, cache, command(), localDeps);
+    const tavilyFetch = await runWebFetch(registry, cache, command({ provider: 'tavily', offset: 5 }), localDeps);
+    expect(tavilyFetch).toBe(`Fetched ${ANSWER_URL} (tavily).\n\n${SLICE_CONTENT.slice(5)}`);
+    expect(tavily.fetch).toHaveBeenCalledOnce();
+
+    const upperTavily = await runWebFetch(registry, cache, command({ provider: 'TAVILY', offset: 5 }), localDeps);
+    expect(upperTavily).toBe(tavilyFetch);
+    expect(tavily.fetch).toHaveBeenCalledOnce();
+  });
+
+  it('serves a cached page even after its provider was disabled', async () => {
+    let fail = false;
+    const fetch: FetchFn = async () => {
+      if (fail) throw new Error('plugin broke');
+      return page(ANSWER_URL, SLICE_CONTENT);
+    };
+    const { cache, local, registry, localDeps } = cacheCase(fetch);
+    await runWebFetch(registry, cache, command({ provider: 'local' }), localDeps);
+    fail = true;
+
+    const failed = await runWebFetch(registry, cache, command({ provider: 'local' }), localDeps);
+    expect(failed).toBe('Web fetch failed (local): provider failed: plugin broke.');
+
+    const hit = await runWebFetch(registry, cache, command({ provider: 'local', offset: 5 }), localDeps);
+    expect(hit).toBe(SLICE_HEADER + SLICE_CONTENT.slice(5));
+    expect(local.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects an aborted call before reading a live entry', async () => {
+    const { cache, local, registry, localDeps } = cacheCase(async () => page(ANSWER_URL, SLICE_CONTENT));
+    await runWebFetch(registry, cache, command(), localDeps);
+    const controller = new AbortController();
+    const abortError = new Error('cancelled before the slice');
+    controller.abort(abortError);
+
+    await expect(runWebFetch(registry, cache, command({ offset: 5 }), {
+      tokens: TOKENS,
+      fetch: fakeFetch(),
+      signal: controller.signal,
+      now: () => 0,
+    })).rejects.toBe(abortError);
+    expect(local.fetch).toHaveBeenCalledOnce();
+  });
+
+  it('stores nothing when a provider aborts during the fetch', async () => {
+    const cache = createFetchCache();
+    const controller = new AbortController();
+    const abortError = new Error('cancelled during the fetch');
+    const local = fakeFetchProvider('local', async () => {
+      controller.abort(abortError);
+      return page(ANSWER_URL, SLICE_CONTENT);
+    }, { tokenless: true });
+    const registry = registryWith(local);
+
+    await expect(runWebFetch(registry, cache, command(), {
+      tokens: TOKENS,
+      fetch: fakeFetch(),
+      signal: controller.signal,
+      now: () => 0,
+    })).rejects.toBe(abortError);
+
+    await runWebFetch(registry, cache, command({ offset: 5 }), {
+      tokens: TOKENS,
+      fetch: fakeFetch(),
+      now: () => 0,
+    });
+    expect(local.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('uses Date.now when no clock is injected', async () => {
+    const cache = createFetchCache();
+    const local = fakeFetchProvider('local', async () => page(ANSWER_URL, SLICE_CONTENT), { tokenless: true });
+    const registry = registryWith(local);
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(0);
+    try {
+      await runWebFetch(registry, cache, command(), { tokens: TOKENS, fetch: fakeFetch() });
+      nowSpy.mockReturnValue(15 * 60_000);
+      await runWebFetch(registry, cache, command({ offset: 5 }), { tokens: TOKENS, fetch: fakeFetch() });
+      expect(local.fetch).toHaveBeenCalledTimes(2);
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 });
 
@@ -409,6 +673,21 @@ describe('the module registry', () => {
       expect(fetchStub).not.toHaveBeenCalled();
     } finally {
       for (const activation of activations) activation.mockRestore();
+    }
+  });
+
+  it('keeps one module cache across webFetch calls', async () => {
+    const fetchSpy = vi.fn<FetchFn>(async () => page(ANSWER_URL, SLICE_CONTENT));
+    const module: WebSearchProviderModule = { provider: { fetch: fetchSpy } };
+    const activation = vi.spyOn(localManifest, 'activate').mockResolvedValue(module);
+    try {
+      const first = await webFetch(command({ provider: 'local' }), { tokens: {}, fetch: fakeFetch() });
+      const second = await webFetch(command({ provider: 'local', offset: 5 }), { tokens: {}, fetch: fakeFetch() });
+      expect(first).toBe(SLICE_HEADER + SLICE_CONTENT);
+      expect(second).toBe(SLICE_HEADER + SLICE_CONTENT.slice(5));
+      expect(fetchSpy).toHaveBeenCalledOnce();
+    } finally {
+      activation.mockRestore();
     }
   });
 });
