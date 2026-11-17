@@ -11,7 +11,6 @@
 
 
 
-* tab-completion (6/10) — 39 of 52 facts are correct with 13 missing and none wrong. The largest gap is the entire `file` command completion family (glob/grep/read subcommands, `file read` flags, `file glob` flags, `file grep`'s seven flags, paths against the command root, no paths on remote tabs). Web completion is only partly documented, and several per-command nuances are absent (runscript suggestions vanish with a bad catalog, name completion only for a non-empty bare word, case-sensitive matching, canonical-name settings sharing). Fix in `documentation/user-documentation/command-bar/tab-completion.md`. Ground truth is `product/specs/tab-completion.md`, `src/completion/index.ts`, `src/completion/web.ts` and `src/completion/file-grep.ts`.
 
 * tab-plugins (5/10) — 10 of 11 facts are correct with one wrong. The example `plugins` output in `documentation/user-documentation/command-bar/plugins.md` omits the `commands` and `connections` bundled plugins that the app prints, and the "What a plugin gives you" view/command list omits those two. Add their status lines and views to that page only. Ground truth is `product/specs/tab-plugins.md`, `src/commands/plugins.ts`, `src/plugins/catalog.ts` and `src/plugins/failure.ts`.
 
@@ -31,6 +30,7 @@
 
 ## resolved
 
+* tab-completion — documented in documentation/user-documentation/command-bar/tab-completion.md (removed 2026-11-17)
 * state-directory — documented in documentation/user-documentation/tab-types/sessions.md, help/sessions.md (removed 2026-11-17)
 * sql-database — documented in documentation/user-documentation/tab-types/sql-browser.md (removed 2026-11-17)
 * shell-tab — documented in documentation/user-documentation/command-bar/shell.md, documentation/user-documentation/getting-started/tabs.md (removed 2026-11-17)
