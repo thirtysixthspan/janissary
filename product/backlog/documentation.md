@@ -12,7 +12,6 @@
 
 
 
-* tab-plugins (5/10) — 10 of 11 facts are correct with one wrong. The example `plugins` output in `documentation/user-documentation/command-bar/plugins.md` omits the `commands` and `connections` bundled plugins that the app prints, and the "What a plugin gives you" view/command list omits those two. Add their status lines and views to that page only. Ground truth is `product/specs/tab-plugins.md`, `src/commands/plugins.ts`, `src/plugins/catalog.ts` and `src/plugins/failure.ts`.
 
 * tabs (6/10) — 89 of 107 facts are correct with 17 missing and one wrong. Wrong: `documentation/user-documentation/getting-started/tabs.md` says shell tabs lack the file-navigator button, but shell tabs do render it. Missing nuances include detailed focus rules for `tab pane`/`tab split`, the full unread-badge dwell activation-path set and that a badge raised on a hidden tab survives a glance, the most-recently-focused replacement when a pane's selected tab closes or docks, provisioning failure and remote-attach indicator behavior, per-resource release-failure reporting, and drag commit/abort rules. Fix in `documentation/user-documentation/getting-started/tabs.md` and `documentation/user-documentation/getting-started/groups.md`. Ground truth is `product/specs/tabs.md`, `src/tab/view.ts` and `web/src/plugins/shell/ShellTabMeta.tsx`.
 
@@ -30,6 +29,7 @@
 
 ## resolved
 
+* tab-plugins — documented in documentation/user-documentation/command-bar/plugins.md (removed 2026-11-17)
 * tab-completion — documented in documentation/user-documentation/command-bar/tab-completion.md (removed 2026-11-17)
 * state-directory — documented in documentation/user-documentation/tab-types/sessions.md, help/sessions.md (removed 2026-11-17)
 * sql-database — documented in documentation/user-documentation/tab-types/sql-browser.md (removed 2026-11-17)
