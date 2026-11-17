@@ -160,6 +160,10 @@ Hunks are searched in order, each after the previous match, and the first match 
 
 `*** Move to: <new>` directly after `*** Update File: <old>` renames the file, leaving a link a link, with optional hunks. The new path follows the same rule as an Add.
 
+A patch applied through a root that is itself a symbolic link behaves as it does through the real directory: an Update through a link inside the root changes its target, a Delete removes the link, and a Move moves the link. A link whose target lies outside the root is still refused.
+
+On a volume that ignores letter case, sections naming the same path the patch itself creates in different case act on one file, so a second Add of that path fails `File already exists` and an Update or Delete through either spelling changes that file. Differently cased spellings of one missing folder are one folder, created once under the first spelling. On a case-sensitive volume the spellings stay separate.
+
 Sections apply in order, and a later section sees what earlier ones did, so one path may appear in several sections. Every section is checked against the in-memory view before anything is written, so a failed check changes nothing. If a disk write fails while applying the patch, the files already changed are put back, leaving nothing changed. Only a failed restore can leave some files changed, and the `Patch failed while applying` bullet below names which result you got.
 
 A successful patch prints a header and one row per path in the order a section first names it:
