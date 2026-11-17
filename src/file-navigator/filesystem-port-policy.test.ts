@@ -127,3 +127,19 @@ describe('LocalFileSystemPort.editFile', () => {
     expect(readFileSync(path.join(root, 'notes.txt'), 'utf8')).toBe('notes');
   });
 });
+
+describe('LocalFileSystemPort.applyPatch', () => {
+  it('applies an add patch synchronously and creates the file under the root', () => {
+    const root = tree();
+    const result = port.applyPatch(root, '*** Add File: a.md\n+hi');
+    expect(result).not.toBeInstanceOf(Promise);
+    expect(result).toBe('Patched 1 file:\nA a.md');
+    expect(readFileSync(path.join(root, 'a.md'), 'utf8')).toBe('hi\n');
+  });
+
+  it('reports a missing delete target as a section failure', () => {
+    const root = tree();
+    expect(port.applyPatch(root, '*** Delete File: missing.txt'))
+      .toBe('Patch failed at section 1 (Delete File: missing.txt): File not found. No files were changed.');
+  });
+});

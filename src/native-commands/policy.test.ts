@@ -157,6 +157,24 @@ describe('file mutation rows', () => {
     expect(effectiveCommandSetting(settings, 'file edit').effectiveEnabled).toBe(false);
   });
 
+  it('disables only file patch when file patch is disabled', () => {
+    const settings = current({ 'file patch': { enabled: false } });
+    expect(effectiveCommandSetting(settings, 'file patch').effectiveEnabled).toBe(false);
+    expect(effectiveCommandSetting(settings, 'file read').effectiveEnabled).toBe(true);
+    expect(effectiveCommandSetting(settings, 'file glob').effectiveEnabled).toBe(true);
+    expect(effectiveCommandSetting(settings, 'file grep').effectiveEnabled).toBe(true);
+    expect(effectiveCommandSetting(settings, 'file write').effectiveEnabled).toBe(true);
+    expect(effectiveCommandSetting(settings, 'file edit').effectiveEnabled).toBe(true);
+    expect(disabledApplicationCommand('file patch {"patchText":"x"}', settings)?.name).toBe('file patch');
+    expect(disabledApplicationCommand('file patching x', settings)).toBeUndefined();
+    expect(disabledApplicationCommand('file', settings)).toBeUndefined();
+  });
+
+  it('disables file patch when the file parent is disabled', () => {
+    const settings = current({ file: { enabled: false } });
+    expect(effectiveCommandSetting(settings, 'file patch').effectiveEnabled).toBe(false);
+  });
+
   it('refuses the typed file write through ordinary dispatch when its row is disabled', () => {
     const settings = current({ 'file write': { enabled: false } });
     expect(disabledApplicationCommand('file write {"path":"a.md","content":"x"}', settings)?.name).toBe('file write');

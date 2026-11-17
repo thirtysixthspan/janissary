@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
 import { FILE_GREP_USAGE, parseFileGrep } from '../file-grep/command.js';
+import { FILE_PATCH_USAGE, parseFilePatchCommand } from '../file-patch/command.js';
 import { FILE_READ_USAGE } from '../file-read/command.js';
 import { decodeFileGrepArgs } from '../remote/filesystem/grep-files-arguments.js';
 import type { NavigatorListener } from '../remote/channel/types.js';
@@ -184,6 +185,29 @@ describe('file command run', () => {
     appended = [];
     expect(await run('file edit {"path":"new/a.txt","oldString":"b","newString":"c"}')).toBe('Edited new/a.txt (1 replacements).');
     expect(readFileSync(path.join(root, 'new', 'a.txt'), 'utf8')).toBe('a\nc\n');
+  });
+
+  it('applies a patch under the project directory', async () => {
+    tabs = [{ label: 'janus' }];
+    expect(await run(String.raw`file patch {"patchText":"*** Add File: a.md\n+x"}`)).toBe('Patched 1 file:\nA a.md');
+    expect(readFileSync(path.join(root, 'a.md'), 'utf8')).toBe('x\n');
+  });
+
+  it('creates nothing for a malformed patch argument', async () => {
+    tabs = [{ label: 'janus' }];
+    expect(await run('file patch {"patchText":1}')).toBe(FILE_PATCH_USAGE);
+    expect(existsSync(path.join(root, 'a.md'))).toBe(false);
+  });
+
+  it('keeps the read usage line for file patch lookalikes', async () => {
+    expect(await run('file patching x')).toBe(FILE_READ_USAGE);
+  });
+
+  it('declares a patch sample that parses as intended', () => {
+    const sample = command.samples.find((value) => value.startsWith('file patch'));
+    if (!sample) throw new Error('file patch sample is missing');
+    expect(sample).toBe('file patch {"patchText":"*** Delete File: old.txt"}');
+    expect(parseFilePatchCommand(sample)).toEqual({ patchText: '*** Delete File: old.txt' });
   });
 
   it('creates nothing for malformed JSON or unknown fields', async () => {

@@ -7,6 +7,7 @@ import { nativeCommandName, nativeCommandTool, type NativeCommandTool } from './
 import type { AcpRunSnapshot } from './types.js';
 import { FILE_READ_PRIMER, isFileReadCommandLine } from '../file-read/command.js';
 import { FILE_MUTATION_PRIMER, isFileMutationCommandLine } from '../file-write/command.js';
+import { FILE_PATCH_PRIMER } from '../file-patch/command.js';
 import { FILE_GLOB_PRIMER, isFileGlobCommandLine } from '../file-glob/command.js';
 import { FILE_GREP_PRIMER, isFileGrepCommandLine } from '../file-grep/command.js';
 import { isWebCommandLine, isWebSearchReplyLine, WEB_SEARCH_PRIMER } from '../web-search/command.js';
@@ -95,6 +96,7 @@ function filePrimer(allowed: readonly string[]): string {
     ...(allowed.includes('file glob') ? [FILE_GLOB_PRIMER] : []),
     ...(allowed.includes('file grep') ? [FILE_GREP_PRIMER] : []),
     ...(allowed.includes('file write') || allowed.includes('file edit') ? [FILE_MUTATION_PRIMER] : []),
+    ...(allowed.includes('file patch') ? [FILE_PATCH_PRIMER] : []),
   ].join('\n\n');
 }
 

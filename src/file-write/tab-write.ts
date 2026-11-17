@@ -2,6 +2,8 @@ import type { Managers } from '../managers.js';
 import { LocalFileSystemPort, type FileSystemPort } from '../file-navigator/filesystem-port.js';
 import { localReadRoot } from '../file-read/tab-read.js';
 import { withRemoteTabPort } from '../file-read/remote-tab-port.js';
+import { isFilePatchCommandLine, parseFilePatchCommand } from '../file-patch/command.js';
+import { runFilePatch } from '../file-patch/tab-patch.js';
 import { NO_MATCHING_TEXT_REASON, type FileMutationRequest } from './types.js';
 import { parseFileMutation } from './command.js';
 import { editSuccessLine, writeSuccessLine } from './messages.js';
@@ -30,6 +32,7 @@ async function applyMutation(port: FileSystemPort, root: string, request: FileMu
 }
 
 export async function runFileMutation(port: FileSystemPort, root: string, input: string): Promise<string> {
+  if (isFilePatchCommandLine(input)) return runFilePatch(port, root, input);
   const request = parseFileMutation(input);
   if ('error' in request) return request.error;
   try {
@@ -44,7 +47,7 @@ function mutateRemoteFile(managers: Managers, label: string, input: string): Pro
 }
 
 export async function mutateFileInTab(managers: Managers, label: string, input: string): Promise<string> {
-  const parsed = parseFileMutation(input);
+  const parsed = isFilePatchCommandLine(input) ? parseFilePatchCommand(input) : parseFileMutation(input);
   if ('error' in parsed) return parsed.error;
   const root = localReadRoot(managers, label);
   if (root === undefined) return mutateRemoteFile(managers, label, input);

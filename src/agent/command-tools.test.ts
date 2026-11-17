@@ -41,6 +41,20 @@ describe('agent command tools', () => {
     expect(dispatch).toHaveBeenCalledTimes(1);
   });
 
+  it.each([
+    ['granted', ['file']],
+    ['ungranted', []],
+  ])('refuses file patch forms with or without the file grant when %s', async (_label, grants) => {
+    const dispatch = vi.fn();
+    const managers = { command: { dispatchLineInInvocation: dispatch } } as unknown as Managers;
+
+    for (const command of ['file patch {"patchText":"x"}', 'file patch', 'FILE PATCH {', '/file patch {}']) {
+      await expect(runGrantedAgentCommand(command, { ...snapshot, grants }, managers, invocation('patch')))
+        .resolves.toBe(`Agent: command not permitted: ${command}.`);
+    }
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
   it('refuses file glob lines with or without the file grant, before dispatch', async () => {
     const dispatch = vi.fn(async () => ({ dispatched: true, output: 'read' }));
     const managers = { command: { dispatchLineInInvocation: dispatch } } as unknown as Managers;

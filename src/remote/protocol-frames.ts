@@ -18,7 +18,7 @@ import type { WebSearchCommand } from '../web-search/command.js';
 
 export type RemoteFilesystemOperation =
   | 'read-directory' | 'stat' | 'watch' | 'unwatch' | 'git' | 'git-pull' | 'git-commit' | 'search'
-  | 'search-text' | 'read-file' | 'read-lines' | 'glob-paths' | 'grep-files' | 'web-search' | 'write-file' | 'edit-file' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
+  | 'search-text' | 'read-file' | 'read-lines' | 'glob-paths' | 'grep-files' | 'web-search' | 'write-file' | 'edit-file' | 'apply-patch' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
   | 'create-file' | 'create-directory' | 'replay' | 'change-set';
 
 // The five activity kinds the ACP mapping produces (`../acp/activity.ts`), which is what travels.
@@ -43,6 +43,7 @@ export type RemoteFilesystemArgumentsByOperation = {
   'web-search': WebSearchCommand;
   'write-file': { path: string; content: string; expectedHash?: string; policy?: FileWritePolicy };
   'edit-file': { path: string; oldString: string; newString: string; replaceAll: boolean };
+  'apply-patch': { patchText: string };
   move: { from: string; to: string; overwrite?: boolean };
   'move-many': { sources: string[]; destination: string; policy?: 'overwrite-all' | 'skip-conflicts' };
   delete: { path: string };

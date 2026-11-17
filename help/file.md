@@ -1,6 +1,6 @@
 ### file
 
-Read a text file from the workspace and print it as numbered lines in the current tab, find files there by path, search those files for text, or write or edit a text file there. A local tab reads from its workspace, or from the project directory when the tab has no workspace. Paths are relative to that root. A remote tab reads from its remote workspace clone on the remote machine, never from the local disk, with paths relative to that workspace. The output carries no host tag.
+Read a text file from the workspace and print it as numbered lines in the current tab, find files there by path, search those files for text, write or edit a text file there, or apply a patch that changes several files. A local tab reads from its workspace, or from the project directory when the tab has no workspace. Paths are relative to that root. A remote tab reads from its remote workspace clone on the remote machine, never from the local disk, with paths relative to that workspace. The output carries no host tag.
 
 **Usage**
 
@@ -14,7 +14,9 @@ Read a text file from the workspace and print it as numbered lines in the curren
 
 `file edit <JSON>`
 
-For `file read`, `--offset` is the first line to print and defaults to 1, and `--limit` is the number of lines to print and defaults to 2000. One read prints at most 2000 lines, and files over 5 MB are refused. The **Output** and **Errors** notes below cover `file read` too. `file glob` has its own flags and defaults under **Finding files**. `file grep` has its own flags and defaults under **Searching contents**. `file write` and `file edit` are under **Writing and editing**.
+`file patch <JSON>`
+
+For `file read`, `--offset` is the first line to print and defaults to 1, and `--limit` is the number of lines to print and defaults to 2000. One read prints at most 2000 lines, and files over 5 MB are refused. The **Output** and **Errors** notes below cover `file read` too. `file glob` has its own flags and defaults under **Finding files**. `file grep` has its own flags and defaults under **Searching contents**. `file write` and `file edit` are under **Writing and editing**. `file patch` is under **Patching several files**.
 
 **Output**
 
@@ -139,3 +141,49 @@ Missing or invalid JSON, a missing required field, an empty `path` or `oldString
 - `file write {"path":"notes/todo list.md","content":"first\nsecond\n"}` writes a two-line file, creating `notes/` if needed.
 - `file edit {"path":"notes/todo list.md","oldString":"second","newString":"done"}` prints `Edited notes/todo list.md (1 replacements).`.
 - `file edit {"path":"src/a.ts","oldString":"foo","newString":"bar","replaceAll":true}` replaces every `foo`.
+
+**Patching several files**
+
+`file patch <JSON>` applies a patch that adds, deletes, updates, and moves several text files. The JSON object has exactly one key, `patchText`, a string. Keep it on one line and write the patch's newlines as `\n`. Any other key, a missing key, a non-string value, or bad JSON prints `Usage: file patch <JSON>`. An argument over 5 MB, counted in its UTF-8 bytes as typed, prints `Patch too large (>5 MB). No files were changed.`, while a malformed argument of that size prints the usage line.
+
+It uses the same root as `file write`: the tab's workspace, or the project directory when the tab has none. A remote tab applies its patch only in the remote workspace on the remote machine, never on the local disk. Paths are relative to that root.
+
+`*** Begin Patch` as the first line and `*** End Patch` as the last are optional. The markers are `*** Add File: <path>`, `*** Delete File: <path>`, `*** Update File: <path>`, and `*** Move to: <path>`, spelled exactly, in that case. The path after the colon is trimmed. A patch typed with CRLF line endings parses like one typed with LF.
+
+`*** Add File: <path>` creates a file, and every content line starts with `+`; an Add with no content lines creates an empty file. The file is written with LF line endings and a final newline, with no byte-order mark, with default permissions, and missing parent folders are created. Adding a path that exists fails `File already exists`, unless an earlier section deleted it or moved it away, which is how a patch overwrites a file.
+
+`*** Delete File: <path>` removes a file and takes no body lines. A missing path fails `File not found`. A symbolic link is removed, never its target. A folder left empty by the delete stays.
+
+`*** Update File: <path>` changes a file through hunks. A hunk starts with `@@`, optionally `@@ <line>` to move the search to the next line equal to it; the first hunk may omit `@@`. Hunk lines start with a space for context, `-` for a removed line, or `+` for an added line. An empty context line is a single space, while a blank line is an error. `*** End of File` ends a hunk that must match at the end of the file.
+
+Hunks are searched in order, each after the previous match, and the first match wins. A match is tried exactly first, then ignoring trailing whitespace. A hunk with only `+` lines inserts at the current search position. The file keeps its line ending, judged from its first line, its final-newline state, its byte-order mark, and its permissions, and an Update through a link inside the root changes the link's target. There is no `\ No newline at end of file` marker.
+
+`*** Move to: <new>` directly after `*** Update File: <old>` renames the file, leaving a link a link, with optional hunks. The new path follows the same rule as an Add.
+
+A patch applied through a root that is itself a symbolic link behaves as it does through the real directory: an Update through a link inside the root changes its target, a Delete removes the link, and a Move moves the link. A link whose target lies outside the root is still refused.
+
+On a volume that ignores letter case, sections naming the same path the patch itself creates in different case act on one file, so a second Add of that path fails `File already exists` and an Update or Delete through either spelling changes that file. Differently cased spellings of one missing folder are one folder, created once under the first spelling. On a case-sensitive volume the spellings stay separate.
+
+Sections apply in order, and a later section sees what earlier ones did, so one path may appear in several sections. Every section is checked against the in-memory view before anything is written, so a failed check changes nothing. If a disk write fails while applying the patch, the files already changed are put back, leaving nothing changed. Only a failed restore can leave some files changed, and the `Patch failed while applying` bullet below names which result you got.
+
+A successful patch prints a header and one row per path in the order a section first names it:
+
+- `Patched <n> files:`, or `Patched 1 file:`, or `Patched 0 files:` when the sections cancel out
+- `A <path>` for an added path, `M <path>` for a modified path, `D <path>` for a deleted path, and `R <old> -> <new>` for a file that existed before the patch and was renamed to a path that did not exist before the patch, each path once with its net change
+
+A move onto a path that existed before the patch, including one deleted or moved away earlier in the same patch, keeps that path's own net row instead of an `R`: it prints `M <destination>` when the path exists at the end or `D <destination>` when it does not, while the origin reports `D`. Deleting `b` and then moving `a` to `b`, for example, prints `M b` and `D a`.
+
+Paths are as typed, with control characters escaped. File content never appears.
+
+Failures print one line:
+
+- `Malformed patch at line <n>: <problem>. No files were changed.`, where `<problem>` is one of `unknown marker "<line>"`, `missing path`, `no file sections`, `Add File lines must start with "+"`, `Move to must follow Update File`, `hunk lines must start with " ", "-", or "+"`, and `Update File needs a hunk or Move to`
+- `Patch failed at section <k> (<marker>): <reason>. No files were changed.`, where `<k>` counts sections from 1 and `<marker>` is `Add File: <path>`, `Delete File: <path>`, or `Update File: <path>`; a Move section names its Update marker
+- `Patch failed while applying: <reason>: <path>. No files were changed.` when a disk write fails and everything is put back, and the same with `Some files may have been changed.` when putting it back fails too
+- On a remote tab, `Remote connection unavailable.`, `The remote connection ended.`, or `The remote machine did not answer in time.`, and `Patch failed: <reason>.` for any other remote failure, which makes no promise about the remote files
+
+The `<reason>` in a section failure names either the patch rule that refused the section or the filesystem failure behind it. The reasons include `Outside the workspace`, `Protected file` for `.git` and `.janissary`, as for `file write`, `Secret file`, `Is a directory`, `Not a text file` for a dangling link, a link whose target an earlier section deleted, or a result holding NUL or an unpaired surrogate, `File too large (>5 MB)` for a file read or a result over 5 MB, `File not found`, `File already exists`, `No matching text for hunk starting "<line>"` naming the hunk's first context or `-` line, or its `@@` anchor text when the anchor is not found, and `Filesystem error ENOTDIR; check the item and destination, then try again` for a path under a file. Any other filesystem failure also appears as the reason, such as `Permission denied; check file and folder permissions, then try again` when a path cannot be read or written, or `The source or destination no longer exists; refresh the file navigator, then try again` when a path vanishes while the patch runs.
+
+- `file patch {"patchText":"*** Begin Patch\n*** Add File: notes/new/todo.md\n+# Todo\n*** Update File: src/a.ts\n@@\n const a = 1;\n-const b = 2;\n+const b = 3;\n*** Update File: src/x.ts\n*** Move to: src/y.ts\n*** Delete File: old.txt\n*** End Patch"}` prints `Patched 4 files:` with `A notes/new/todo.md`, `M src/a.ts`, `R src/x.ts -> src/y.ts`, and `D old.txt` in that order.
+- `file patch {"patchText":"*** Delete File: old.txt"}` prints `Patched 1 file:` and then `D old.txt`.
+- `file patch {"patchText":"*** Add File: z.md\n+z\n*** Update File: src/a.ts\n@@\n const a = 1;\n-const b = 99;\n+const b = 4;"}` prints `Patch failed at section 2 (Update File: src/a.ts): No matching text for hunk starting "const a = 1;". No files were changed.` and leaves `z.md` out.

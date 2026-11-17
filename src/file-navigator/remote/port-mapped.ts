@@ -6,6 +6,8 @@ import type { RemoteRequest } from './port-git.js';
 import { mapRemoteHistory } from './port-history.js';
 import type { RemotePortPaths } from './port-paths.js';
 import type { RowStat } from '../stats.js';
+import type { BulkConflictPolicy } from '../../protocol.js';
+import type { PasteManyResult } from '../paste.js';
 
 // `RemoteFileSystemPort`'s path-mapping operations, extracted on the same split as
 // `port-git.ts` and `port-moves.ts`: each takes the port's bound request sender and its
@@ -72,4 +74,13 @@ export async function remoteCreateItem(
     : await request('create-directory', { destination: remoteDestination });
   if (!result.ok) return result;
   return { ok: true, value: { path: await paths.from(root, result.value.path) } };
+}
+
+// Only the destination is mapped: a clipboard source is absolute and can cross roots, so it travels as
+// it arrived, and so do `mode` and `policy`.
+export async function remotePaste(
+  request: RemoteRequest, paths: RemotePortPaths, root: string,
+  sources: string[], destination: string, mode: 'copy' | 'cut', policy?: BulkConflictPolicy,
+): Promise<PasteManyResult> {
+  return request('paste', { sources, destination: await paths.to(root, destination), mode, policy });
 }

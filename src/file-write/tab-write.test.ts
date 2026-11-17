@@ -6,6 +6,7 @@ import type { Managers } from '../managers.js';
 import type { NavigatorListener } from '../remote/channel/types.js';
 import type { ClientFrame } from '../remote/protocol-frames.js';
 import { LONG_REQUEST_DEADLINE_MS } from '../file-navigator/remote/port-requests.js';
+import { FILE_POLICY_MAX_BYTES } from '../file-read/policy.js';
 import { mutateFileInTab } from './tab-write.js';
 
 type FakeTab = { label: string; workspaceDir?: string; remote?: unknown };
@@ -29,6 +30,14 @@ function fakeChannel() {
   };
   return { channel, requests, reply, close: () => listener?.onClose?.() };
 }
+
+function patchArgument(totalBytes: number): string {
+  const prefix = JSON.stringify({ patchText: '' }).slice(0, -2);
+  const remaining = totalBytes - Buffer.byteLength(prefix, 'utf8') - 2;
+  return `${prefix}${'a'.repeat(remaining)}"}`;
+}
+
+const patchLine = String.raw`file patch {"patchText":"*** Add File: a.md\n+x"}`;
 
 describe('mutateFileInTab', () => {
   let root: string;
@@ -131,6 +140,24 @@ describe('mutateFileInTab', () => {
     expect(readFileSync(path.join(root, 'a.txt'), 'utf8')).toBe('one');
   });
 
+  it('applies a patch under the workspace clone of a local tab', async () => {
+    tabs = [{ label: 'janus', workspaceDir: workspace }];
+    expect(await run(patchLine)).toBe('Patched 1 file:\nA a.md');
+    expect(readFileSync(path.join(workspace, 'a.md'), 'utf8')).toBe('x\n');
+    expect(existsSync(path.join(root, 'a.md'))).toBe(false);
+  });
+
+  it('applies a patch under the launch directory without a workspace clone', async () => {
+    tabs = [{ label: 'janus' }];
+    expect(await run(patchLine)).toBe('Patched 1 file:\nA a.md');
+    expect(readFileSync(path.join(root, 'a.md'), 'utf8')).toBe('x\n');
+  });
+
+  it('prints the patch usage line and creates nothing for a malformed patch argument', async () => {
+    expect(await run('file patch {"patchText":1}')).toBe('Usage: file patch <JSON>');
+    expect(readdirSync(root)).toEqual([]);
+  });
+
   describe('on a remote tab', () => {
     beforeEach(() => {
       tabs = [{ label: 'janus', remote: { host: 'box' } }];
@@ -210,6 +237,68 @@ describe('mutateFileInTab', () => {
       } finally {
         vi.useRealTimers();
       }
+    });
+
+    it.each([
+      ['usage', 'file patch {"patchText":1}', 'Usage: file patch <JSON>'],
+      ['too-large', `file patch ${patchArgument(FILE_POLICY_MAX_BYTES + 1)}`, 'Patch too large (>5 MB). No files were changed.'],
+    ])('returns the %s line without opening a port', async (_label, line, expected) => {
+      expect(await run(line)).toBe(expected);
+      expect(remote.requests()).toHaveLength(0);
+      expect(remote.channel.attachNavigator).not.toHaveBeenCalled();
+    });
+
+    it('sends apply-patch and returns the reply unchanged without writing locally', async () => {
+      expect(await withReply(patchLine, { text: 'Patched 1 file:\nA a.md' })).toBe('Patched 1 file:\nA a.md');
+      const request = remote.requests()[0];
+      expect(request).toMatchObject({ operation: 'apply-patch' });
+      const args = request?.type === 'filesystem-request' ? request.args as Record<string, unknown> : {};
+      expect(Buffer.from(String(args.patchText), 'base64').toString('utf8')).toBe('*** Add File: a.md\n+x');
+      expect(remote.channel.detachNavigator).toHaveBeenCalledOnce();
+      expect(readdirSync(root)).toEqual([]);
+      expect(readdirSync(workspace)).toEqual([]);
+    });
+
+    it('prints the unavailable line for a patch without a channel', async () => {
+      hasChannel = false;
+      expect(await run(patchLine)).toBe('Remote connection unavailable.');
+    });
+
+    it('prints the ended line when the connection closes mid-patch', async () => {
+      const pending = run(patchLine);
+      await vi.waitFor(() => expect(remote.requests()).toHaveLength(1));
+      remote.close();
+      expect(await pending).toBe('The remote connection ended.');
+    });
+
+    it('reports a timed-out patch once and does not resend it', async () => {
+      vi.useFakeTimers();
+      try {
+        const pending = run(patchLine);
+        await vi.waitFor(() => expect(remote.requests()).toHaveLength(1));
+        await vi.advanceTimersByTimeAsync(LONG_REQUEST_DEADLINE_MS + 1);
+        expect(await pending).toBe('The remote machine did not answer in time.');
+        remote.reply({ text: 'Patched 1 file:\nA a.md' });
+        expect(remote.requests()).toHaveLength(1);
+        expect(remote.channel.detachNavigator).toHaveBeenCalledOnce();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('prints the failure line for an empty patch result', async () => {
+      expect(await withReply(patchLine, { text: '' })).toBe('Patch failed: Invalid remote filesystem operation result.');
+      expect(remote.channel.detachNavigator).toHaveBeenCalledOnce();
+    });
+
+    it('prints the failure line for a patch error reply', async () => {
+      expect(await withReply(patchLine, undefined, 'boom')).toBe('Patch failed: boom.');
+      expect(remote.channel.detachNavigator).toHaveBeenCalledOnce();
+    });
+
+    it('refuses a lone-surrogate patch without sending a request', async () => {
+      expect(await run(String.raw`file patch {"patchText":"*** Add File: a.md\n+x\ud800"}`)).toBe('Patch failed: Not a text file.');
+      expect(remote.requests()).toHaveLength(0);
     });
   });
 });

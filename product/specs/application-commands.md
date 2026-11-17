@@ -6,7 +6,7 @@ Application commands use `~/.janissary/commands.json`, with a project-level `.ja
 
 Each named fixed subcommand form of a built-in command, such as `tab dock`, `files expand`, `layout window`, `notifications clear`, `schedule cancel`, `open external`, and `db sqlite`, has its own row whose name is the full form and whose parent is the command. Disabling one form leaves the command's other forms enabled, while disabling the parent command disables every form. The `ask reset`, `tell reset`, and `search transcript` rows keep sharing their command's name.
 
-The native `file read`, `file glob`, `file grep`, `file write`, and `file edit` rows have the parent `file` and each has its own Enabled and Agent access settings. Disabling `file write` disables only that row, and refuses the typed `file write` command as well as the agent tool; disabling `file glob` likewise refuses the typed `file glob` as well as the agent tool; disabling `file` disables all five. They appear as ordinary rows in the Commands table and as ordinary entries in the Roles command picker.
+The native `file read`, `file glob`, `file grep`, `file write`, `file edit`, and `file patch` rows have the parent `file` and each has its own Enabled and Agent access settings. Disabling `file write` disables only that row, and refuses the typed `file write` command as well as the agent tool; disabling `file glob` likewise refuses the typed `file glob` as well as the agent tool; disabling `file patch` likewise refuses the typed `file patch` as well as the agent tool; disabling `file` disables all six. They appear as ordinary rows in the Commands table and as ordinary entries in the Roles command picker.
 
 The builtin `web` command has its own parentless row, and disabling it refuses every typed `web` line.
 
@@ -73,6 +73,8 @@ The documentation site's **Command Reference** sidebar and generated page headin
 The `help schedule` page documents tab and project-owned schedule creation, tab targeting, and the list, cancel, and clear forms for both schedule owners.
 
 The `help db` page lists `db sqlite list`, `db sqlite create <name>`, `db sqlite delete <name>`, and `db sqlite query <name> <sql>` as supported forms; its examples use the same `sqlite` engine token.
+
+The `help file` page's **Patching several files** section gives the patch-specific section-failure reasons as examples and says any other filesystem failure, such as a permission error or a path that vanishes while the patch runs, also appears as the reason.
 
 The page name must be present in the `help/` directory listing; a query such as `../package` or `a/b` cannot read outside it. Only regular Markdown files inside the help directory are served or published. Symbolic links are never served or published, including links to files elsewhere on disk. Help pages are read when requested and are not cached. The required `commands.md` index must be readable for every page request, even when the requested page itself is readable. If the directory or index cannot be read, or the requested page cannot be read, `help` returns the generated summary listing built-in commands and the `!` / `/` prefixes and `Ctrl+R` history shortcut. Every reply is rendered as markdown, and from a shell tab's command bar it is answered by the application rather than sent to zsh. `helper` remains an unknown command.
 

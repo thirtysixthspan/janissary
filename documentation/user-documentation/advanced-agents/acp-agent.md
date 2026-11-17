@@ -34,7 +34,7 @@ The connections window shows the model the session started with. That choice is 
 
 The `tell` command uses the matching `tell` role. With the built-in roles, ask can read a file from
 the workspace, find workspace files by path, find text inside workspace files, list and query databases, browse to a page and read its content, search the web, and ask or approve a
-question. Tell starts with those same commands plus database create/delete, browser eval, and writing and editing workspace files. If you
+question. Tell starts with those same commands plus database create/delete, browser eval, writing and editing workspace files, and applying a patch that changes several files at once. If you
 add or remove a grant, the next prompt reads the updated role. A missing ask or tell role uses its
 built-in model and command defaults; an existing role with no grants has no native tools.
 
@@ -73,7 +73,7 @@ Closing the shell also closes its ask and tell sessions. Reset cancels a questio
 
 The agent can use the file, database, browser, question, and web tools granted to its role. By default, ask
 can read a file from the workspace, find workspace files by path, find text inside workspace files, list and query databases, open a page, read its content, search the web, and ask or
-approve a question. Tell has those commands plus database create/delete, browser eval, and writing and editing workspace files. If the model
+approve a question. Tell has those commands plus database create/delete, browser eval, writing and editing workspace files, and applying a multi-file patch. If the model
 tries a known command its role doesn't allow, it receives `Command not allowed for role "<role>": <subcommand>.` and can choose another action. The result of each allowed tool step goes back to the model,
 up to eight tool steps per prompt. If a prompt reaches that cap, the settled shell reply and the record's final answer in
 the connection tab end with a `(stopped after 8 tool steps)` paragraph, so you can tell the answer was
@@ -111,11 +111,11 @@ those files for text. A granted `web search` follows the tab rather than the hos
 runs on the side that owns the tab, so a remote tab searches on the remote machine, in that workspace,
 with that workspace's merged tokens (a forwarded token wins). Only a remote-hosted ACP session's
 workspace step carries the `[<host>] ` tag; a local-fallback session on a remote tab still searches
-remotely, but its workspace step is untagged. Granted `file write` and `file edit` run there too, so on a remote tab they change only the remote
+remotely, but its workspace step is untagged. Granted `file write`, `file edit`, and `file patch` run there too, so on a remote tab they change only the remote
 clone, never your local copy. The database, browser, and question tools continue to act on the machine running Janissary; a
 remote ACP query uses your local database and browser for those tools. A remote workspace step shows
 `[<host>] ` at the start of its transcript line and of both activity lines in the connection record. A
-typed `file read`, `file glob`, `file grep`, `web search`, `file write`, or `file edit` and a caller-side step carry no tag.
+typed `file read`, `file glob`, `file grep`, `web search`, `file write`, `file edit`, or `file patch` and a caller-side step carry no tag.
 If your tab falls back to a session running on your own machine, its steps are untagged too.
 
 Before SSH has finished connecting, a prompt reports `ACP: the remote session is still connecting.`. Finish connecting and retry. See [Shell tabs](/user-documentation/command-bar/shell) for local and remote launches.

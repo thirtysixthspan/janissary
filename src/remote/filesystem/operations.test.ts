@@ -15,7 +15,7 @@ import {
 // the table is still caught here. Adding one to the protocol means adding it in both places.
 const ALL_OPERATIONS: RemoteFilesystemOperation[] = [
   'read-directory', 'stat', 'watch', 'unwatch', 'git', 'git-pull', 'git-commit', 'search',
-  'search-text', 'read-file', 'read-lines', 'glob-paths', 'grep-files', 'web-search', 'write-file', 'edit-file', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
+  'search-text', 'read-file', 'read-lines', 'glob-paths', 'grep-files', 'web-search', 'write-file', 'edit-file', 'apply-patch', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
   'create-file', 'create-directory', 'replay', 'change-set',
 ];
 
@@ -57,6 +57,7 @@ const PATH_CASES: PathCase[] = [
   ['write-file', { path: 'a.txt', content: '', expectedHash: 'baseline' }, ['a.txt']],
   ['write-file', { path: 'a.txt', content: '', policy: 'tool-text' }, ['a.txt']],
   ['edit-file', { path: 'a.txt', oldString: 'b2xk', newString: '', replaceAll: false }, ['a.txt']],
+  ['apply-patch', { patchText: Buffer.from('*** Add File: a.md\n+hi\n*** End Patch').toString('base64') }, []],
   ['move', { from: 'a.txt', to: 'dest' }, ['a.txt', 'dest']],
   ['move', { from: 'a.txt', to: 'dest', overwrite: true }, ['a.txt', 'dest']],
   ['move-many', { sources: ['a.txt', 'b.txt'], destination: 'dest' }, ['a.txt', 'b.txt', 'dest']],
@@ -144,6 +145,11 @@ const INVALID_CASES: [RemoteFilesystemOperation, Record<string, unknown>][] = [
   ['edit-file', { path: 'a.txt', oldString: 'b2xk', newString: '', replaceAll: 'true' }],
   ['edit-file', { path: 'a.txt', oldString: '!!', newString: '', replaceAll: false }],
   ['edit-file', { path: 'a.txt', oldString: Buffer.from([0xff]).toString('base64'), newString: '', replaceAll: false }],
+  ['apply-patch', {}],
+  ['apply-patch', { patchText: 3 }],
+  ['apply-patch', { patchText: Buffer.from('*** Add File: a.md\n+hi').toString('base64'), extra: true }],
+  ['apply-patch', { patchText: '!!' }],
+  ['apply-patch', { patchText: Buffer.from([0xff]).toString('base64') }],
   ['move', { from: 'a.txt' }],
   ['move', { from: 'a.txt', to: 'dest', overwrite: 'yes' }],
   ['move-many', { sources: ['a.txt'], destination: 'dest', policy: 'nonsense' }],
@@ -177,6 +183,7 @@ const VALID_RESULTS: { [K in RemoteFilesystemOperation]: RemoteFilesystemOperati
   'web-search': { text: '1. [Vitest](https://vitest.dev)' },
   'write-file': { ok: false, reason: 'denied' },
   'edit-file': { ok: true, value: { replacements: 2 } },
+  'apply-patch': { text: 'Patched 1 file:\nA a.md' },
   move: { ok: true, value: { from: 'a.txt', to: 'dest/a.txt' } },
   'move-many': { total: 1, failedPaths: [], moved: [{ from: 'a.txt', to: 'dest/a.txt' }], mutated: true },
   delete: { ok: false, reason: 'denied' },
@@ -409,6 +416,29 @@ describe('FILESYSTEM_OPERATIONS', () => {
     expect(decodeFilesystemResult('edit-file', { ok: false, reason: 'No matching text' })).toEqual({ ok: false, reason: 'No matching text' });
     for (const bad of [{ ok: true, value: { replacements: 0 } }, { ok: true, value: { replacements: 1.5 } }, { ok: true, value: {} }, { ok: false, reason: 3 }]) {
       expect(() => decodeFilesystemResult('edit-file', bad)).toThrow('Invalid remote filesystem operation result.');
+    }
+  });
+
+  it('decodes apply-patch arguments to plain text', () => {
+    expect(operationDescriptor('apply-patch').decode({
+      patchText: Buffer.from('*** Add File: é.md\n+hi').toString('base64'),
+    })).toEqual({ patchText: '*** Add File: é.md\n+hi' });
+    expect(() => operationDescriptor('apply-patch').decode({ patchText: '!!' }))
+      .toThrow('Invalid remote filesystem operation arguments.');
+  });
+
+  it('keeps a leading byte order mark in decoded apply-patch text', () => {
+    const bom = String.fromCodePoint(0xFE_FF);
+    expect(operationDescriptor('apply-patch').decode({
+      patchText: Buffer.from(`${bom}*** Add File: a.md\n+hi`).toString('base64'),
+    })).toEqual({ patchText: `${bom}*** Add File: a.md\n+hi` });
+  });
+
+  it('accepts non-empty apply-patch text and rejects anything else', () => {
+    expect(decodeFilesystemResult('apply-patch', { text: 'Patched 1 file:\nA a.md' }))
+      .toEqual({ text: 'Patched 1 file:\nA a.md' });
+    for (const bad of [{ text: '' }, {}, { text: 3 }, null, []]) {
+      expect(() => decodeFilesystemResult('apply-patch', bad)).toThrow('Invalid remote filesystem operation result.');
     }
   });
 

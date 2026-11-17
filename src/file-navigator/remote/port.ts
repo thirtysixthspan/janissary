@@ -18,13 +18,13 @@ import type { DiffSource } from '../../plugins/diff/shared.js';
 import { remoteGitCommit, remoteGitMetadata, remoteGitPull, type RemoteRequest } from './port-git.js';
 import { remoteMove, remoteMoveMany } from './port-moves.js';
 import {
-  remoteEditFile, remoteGlobPaths, remoteGrepFiles, remoteReadLines, remoteWebSearch, remoteWriteFile,
+  remoteApplyPatch, remoteEditFile, remoteGlobPaths, remoteGrepFiles, remoteReadLines, remoteWebSearch, remoteWriteFile,
 } from './port-reads.js';
 import type { FileGlobArgs } from '../../file-glob/command.js';
 import type { FileGrepArgs } from '../../file-grep/command.js';
 import type { WebSearchCommand } from '../../web-search/command.js';
 import type { FileEditValue, FileWritePolicy } from '../../file-write/types.js';
-import { remoteCreateItem, remoteDeleteMany, remoteReplay, remoteSearch, remoteStatRows } from './port-mapped.js';
+import { remoteCreateItem, remoteDeleteMany, remotePaste, remoteReplay, remoteSearch, remoteStatRows } from './port-mapped.js';
 import type { CommitResult } from '../../git/commit.js';
 import type { SearchMatch, SearchRequest } from '../../search/types.js';
 import { RemotePortPaths, resolveRemoteWorkspace } from './port-paths.js';
@@ -151,6 +151,10 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
     return remoteEditFile(this.requester(), this.paths, root, relPath, oldString, newString, replaceAll);
   }
 
+  applyPatch(root: string, patchText: string): Promise<string> {
+    return remoteApplyPatch(this.requester(), root, patchText);
+  }
+
   move(root: string, from: string, to: string, overwrite?: boolean): Promise<MoveOneResult> {
     return remoteMove(this.requester(), this.paths, root, from, to, overwrite);
   }
@@ -176,7 +180,7 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
   paste(
     root: string, sources: string[], destination: string, mode: 'copy' | 'cut', policy?: BulkConflictPolicy,
   ): Promise<PasteManyResult> {
-    return this.pasteRemote(root, sources, destination, mode, policy);
+    return remotePaste(this.requester(), this.paths, root, sources, destination, mode, policy);
   }
 
   async createFile(root: string, destination: string): Promise<FileOperationResult<{ path: string }>> {
@@ -219,14 +223,6 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
         try { resolve(decodeFilesystemResult(operation, value)); } catch (error) { reject(error); }
       }, reject });
       this.channel.send({ type: 'filesystem-request', session: this.session, request, operation, args } as RemoteFilesystemRequest);
-    });
-  }
-
-  private async pasteRemote(
-    root: string, sources: string[], destination: string, mode: 'copy' | 'cut', policy?: BulkConflictPolicy,
-  ): Promise<PasteManyResult> {
-    return this.request('paste', {
-      sources, destination: await this.paths.to(root, destination), mode, policy,
     });
   }
 

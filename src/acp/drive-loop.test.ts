@@ -76,6 +76,12 @@ describe('corePrimer', () => {
     ]));
     expect(result).not.toContain('How commands work:');
   });
+
+  it('ends the allow-list with file patch after file write', () => {
+    const result = primerFor(coreSnapshot('tell', ['file write', 'file patch']));
+    const allowList = result.split('\n').find((line) => line.startsWith('Only these commands are allowed:'))!;
+    expect(allowList.endsWith('file write, file patch.')).toBe(true);
+  });
 });
 
 const QUERY = 'db sqlite query movies SELECT 1';
@@ -171,6 +177,23 @@ describe('driveToolLoop', () => {
     expect(sent[1]).toContain('Output of `file edit a.md`:');
     expect(sent[1]).not.toContain('OLD TEXT');
     expect(sent[1]).not.toContain('NEW TEXT');
+  });
+
+  it('names a file patch by its paths and moves in the follow-up but records the full command', () => {
+    const patch = [
+      '*** Update File: src/x.ts', '*** Move to: src/y.ts', '@@', '-old', '+SECRET MOVE',
+      '*** Update File: src/a.ts', '@@', '-old', '+SECRET LINE',
+    ].join('\n');
+    const command = `file patch ${JSON.stringify({ patchText: patch })}`;
+    const { sent, events } = drive(coreSnapshot('tell', ['file patch']), [command, 'Done.']);
+    expect(sent[1]).toContain('Output of `file patch src/x.ts -> src/y.ts, src/a.ts`:\nworkspace output');
+    expect(sent[1]).not.toContain('SECRET LINE');
+    expect(ofKind(events, 'ranCommand')).toEqual([['ranCommand', command, 'workspace output', true, undefined]]);
+  });
+
+  it('names a malformed file patch by the bare command in the follow-up', () => {
+    const { sent } = drive(coreSnapshot('tell', ['file patch']), ['file patch {', 'Done.']);
+    expect(sent[1]).toContain('Output of `file patch`:');
   });
 
   it('fires events in order for one caller step and a plain answer', () => {

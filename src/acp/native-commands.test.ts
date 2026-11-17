@@ -19,6 +19,7 @@ describe('native ACP commands', () => {
       'file grep',
       'file write',
       'file edit',
+      'file patch',
       'web search',
     ]);
   });
@@ -37,6 +38,7 @@ describe('native ACP commands', () => {
     ['file glob **/*.ts', 'file'],
     ['file grep', 'file'],
     ['file grep --literal TODO', 'file'],
+    ['file patch {"patchText":"x"}', 'file'],
     ['web search node.js lts', 'web'],
     ['Web Search x', 'web'],
   ] as const)('assigns %s to %s, including trailing arguments', (command, tool) => {
@@ -56,6 +58,11 @@ describe('native ACP commands', () => {
     expect(nativeCommandName('file grep [unclosed')).toBe('file grep');
     expect(nativeCommandTool('file grep --path')).toBe('file');
     expect(isNativeCommand('FILE grep --literal --')).toBe(true);
+  });
+
+  it('resolves a patch line with arguments in any case', () => {
+    expect(nativeCommandName('file patch {"patchText":"x"}')).toBe('file patch');
+    expect(nativeCommandName('  FILE  PATCH {…}')).toBe('file patch');
   });
 
   it('rejects unknown commands and words that only start with a native command', () => {

@@ -29,6 +29,7 @@ export const command: Command = {
     'file grep --literal --include *.md request timed out',
     String.raw`file write {"path":"notes.txt","content":"hello\n"}`,
     'file edit {"path":"notes.txt","oldString":"hello","newString":"hi"}',
+    'file patch {"patchText":"*** Delete File: old.txt"}',
   ],
   run: async (command_, tab, managers, invocation) => {
     const output = await fileOutput(managers, tab.label, command_);

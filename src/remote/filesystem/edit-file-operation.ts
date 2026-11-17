@@ -1,27 +1,8 @@
-import { requireBoolean, requireString, stringValue } from './argument-checks.js';
+import { decodeBase64Text, requireBase64Text, requireBoolean, requireString, stringValue } from './argument-checks.js';
 import { refusedItem } from './refusal-shapes.js';
 import { descriptorFor } from './operation-types.js';
 import { resultDecoders } from './result-decoders.js';
 import { editToolTextFile } from '../../file-write/edit.js';
-
-const INVALID_ARGUMENTS = 'Invalid remote filesystem operation arguments.';
-
-function decodeBase64Text(value: unknown): string | undefined {
-  if (!stringValue(value)) return undefined;
-  const bytes = Buffer.from(value, 'base64');
-  if (bytes.toString('base64') !== value) return undefined;
-  try {
-    return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
-  } catch {
-    return undefined;
-  }
-}
-
-function requireBase64Text(value: unknown): string {
-  const text = decodeBase64Text(value);
-  if (text === undefined) throw new Error(INVALID_ARGUMENTS);
-  return text;
-}
 
 export const editFileOperation = descriptorFor<'edit-file'>()({
   valid: (args) => stringValue(args.path) && decodeBase64Text(args.oldString) !== undefined

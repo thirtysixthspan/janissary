@@ -955,3 +955,93 @@ describe('RemoteFileSystemPort.webSearch', () => {
     expect(hasRequest(h.sent)).toBe(false);
   });
 });
+
+describe('RemoteFileSystemPort.applyPatch', () => {
+  const lastRequest = (sent: ClientFrame[]) => sent.findLast((frame) => frame.type === 'filesystem-request');
+  const patchText = '*** Begin Patch\n*** Add File: ../x.md\n+héllo\n*** End Patch';
+
+  it('sends one apply-patch frame carrying the whole patch as base64 UTF-8', async () => {
+    const h = harness();
+    const pending = h.port.applyPatch('/remote/ws', patchText);
+    await vi.waitFor(() => expect(lastRequest(h.sent)).toBeDefined());
+    expect(h.sent.filter((frame) => frame.type === 'filesystem-request')).toHaveLength(1);
+    const request = lastRequest(h.sent);
+    expect(request).toMatchObject({ type: 'filesystem-request', session: 'files-1', operation: 'apply-patch' });
+    const args = request?.type === 'filesystem-request' ? request.args as Record<string, unknown> : {};
+    expect(Object.keys(args)).toEqual(['patchText']);
+    expect(Buffer.from(String(args.patchText), 'base64').toString('utf8')).toBe(patchText);
+    h.reply({ text: 'Patched 1 file:\nA a.md' });
+    await pending;
+  });
+
+  it('resolves to the reply\'s text unchanged', async () => {
+    const h = harness();
+    const pending = h.port.applyPatch('/remote/ws', patchText);
+    await vi.waitFor(() => expect(lastRequest(h.sent)).toBeDefined());
+    h.reply({ text: 'Patched 1 file:\nA a.md' });
+    await expect(pending).resolves.toBe('Patched 1 file:\nA a.md');
+  });
+
+  it('rejects in flight with the closed reason on dispose and the ended reason on close', async () => {
+    const disposed = harness();
+    const onDispose = disposed.port.applyPatch('/remote/ws', patchText);
+    await vi.waitFor(() => expect(lastRequest(disposed.sent)).toBeDefined());
+    disposed.port.dispose();
+    await expect(onDispose).rejects.toThrow(CLOSED_REASON);
+
+    const ended = harness();
+    const onEnd = ended.port.applyPatch('/remote/ws', patchText);
+    await vi.waitFor(() => expect(lastRequest(ended.sent)).toBeDefined());
+    ended.listener()?.onClose?.();
+    await expect(onEnd).rejects.toThrow(ENDED_REASON);
+  });
+
+  it('rejects with the closed reason without sending a frame when called after disposal', async () => {
+    const h = harness();
+    await vi.waitFor(() => expect(h.sent).toHaveLength(1));
+    h.port.dispose();
+    await expect(h.port.applyPatch('/remote/ws', patchText)).rejects.toThrow(CLOSED_REASON);
+    expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(false);
+  });
+
+  it('rejects as unanswered only after the long deadline', async () => {
+    vi.useFakeTimers();
+    try {
+      const h = harness();
+      const pending = h.port.applyPatch('/remote/ws', patchText);
+      await vi.waitFor(() => expect(lastRequest(h.sent)).toBeDefined());
+      const assertion = expect(pending).rejects.toThrow(TIMED_OUT_REASON);
+      let settled = false;
+      void pending.catch(() => { settled = true; });
+      await vi.advanceTimersByTimeAsync(REQUEST_DEADLINE_MS + 1);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(LONG_REQUEST_DEADLINE_MS - REQUEST_DEADLINE_MS);
+      await assertion;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('rejects with the far side\'s message on an error reply', async () => {
+    const h = harness();
+    const pending = h.port.applyPatch('/remote/ws', patchText);
+    await vi.waitFor(() => expect(lastRequest(h.sent)).toBeDefined());
+    h.reply(undefined, 'boom');
+    await expect(pending).rejects.toThrow('boom');
+  });
+
+  it('rejects a reply whose output text is empty', async () => {
+    const h = harness();
+    const pending = h.port.applyPatch('/remote/ws', patchText);
+    await vi.waitFor(() => expect(lastRequest(h.sent)).toBeDefined());
+    h.reply({ text: '' });
+    await expect(pending).rejects.toThrow('Invalid remote filesystem operation result.');
+  });
+
+  it('refuses lone-surrogate patch text without sending a frame', async () => {
+    const h = harness();
+    await expect(h.port.applyPatch('/remote/ws', '\u{D800}')).rejects.toThrow(new Error('Not a text file'));
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-open')).toBe(true));
+    expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(false);
+  });
+});
