@@ -233,4 +233,20 @@ describe('patch view', () => {
     write('CaseProbe');
     expect(volumeIgnoresCase(root)).toBe(existsSync(path.join(root, 'caseprobe')));
   });
+
+  it('skips a broken root link when probing the volume case behavior', () => {
+    write('CaseProbe');
+    const ignoresCase = existsSync(path.join(root, 'caseprobe'));
+    rmSync(path.join(root, 'CaseProbe'));
+    symlinkSync('missing', path.join(root, 'Broken'));
+    expect(volumeIgnoresCase(root)).toBe(ignoresCase);
+  });
+
+  it('probes ancestor entries for an empty root name with no ASCII letter on a case-insensitive volume', (context) => {
+    if (!caseInsensitiveVolume()) context.skip();
+    rmSync(path.join(root, 'CaseProbe'));
+    const empty = path.join(root, '日本語');
+    mkdirSync(empty);
+    expect(volumeIgnoresCase(empty)).toBe(true);
+  });
 });
