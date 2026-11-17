@@ -18,6 +18,21 @@ export type CatalogRead = {
   overridePath: string;
 };
 
+function decodeModelRecord(value: unknown): ModelRecord | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  if (typeof record.id !== 'string' || record.id.length === 0) return undefined;
+  if (record.name !== undefined && typeof record.name !== 'string') return undefined;
+  if (record.disabled !== undefined && typeof record.disabled !== 'boolean') return undefined;
+  if (record.hidden !== undefined && typeof record.hidden !== 'boolean') return undefined;
+  return {
+    id: record.id,
+    ...(record.name !== undefined && { name: record.name }),
+    ...(record.disabled !== undefined && { disabled: record.disabled }),
+    ...(record.hidden !== undefined && { hidden: record.hidden }),
+  };
+}
+
 export function decodeModelCatalog(value: unknown): ModelCatalog | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
   const decoded: ModelCatalog = {};
@@ -25,20 +40,9 @@ export function decodeModelCatalog(value: unknown): ModelCatalog | undefined {
     if (!Array.isArray(valueForHarness)) return undefined;
     const records: ModelRecord[] = [];
     for (const valueForRecord of valueForHarness) {
-      if (typeof valueForRecord !== 'object' || valueForRecord === null || Array.isArray(valueForRecord)) {
-        return undefined;
-      }
-      const record = valueForRecord as Record<string, unknown>;
-      if (typeof record.id !== 'string' || record.id.length === 0) return undefined;
-      if (record.name !== undefined && typeof record.name !== 'string') return undefined;
-      if (record.disabled !== undefined && typeof record.disabled !== 'boolean') return undefined;
-      if (record.hidden !== undefined && typeof record.hidden !== 'boolean') return undefined;
-      records.push({
-        id: record.id,
-        ...(record.name !== undefined && { name: record.name }),
-        ...(record.disabled !== undefined && { disabled: record.disabled }),
-        ...(record.hidden !== undefined && { hidden: record.hidden }),
-      });
+      const record = decodeModelRecord(valueForRecord);
+      if (record === undefined) return undefined;
+      records.push(record);
     }
     decoded[harness] = records;
   }
