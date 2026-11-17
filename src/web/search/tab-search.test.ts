@@ -106,7 +106,7 @@ describe('searchWebInTab', () => {
       managers,
       'plugin-failure',
       'janus',
-      'Web search provider "tavily" disabled: provider failed: boom.',
+      'Web provider "tavily" disabled: provider failed: boom.',
     );
   });
 

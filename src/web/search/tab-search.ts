@@ -2,7 +2,7 @@ import type { Managers } from '../../managers.js';
 import { localReadRoot } from '../../file-read/tab-read.js';
 import { withRemoteTabPort } from '../../file-read/remote-tab-port.js';
 import { getProjectTokens } from '../../project/tokens.js';
-import { notify } from '../../notifications/index.js';
+import { reportProviderDisabled } from '../disabled-notice.js';
 import { errorText } from '../../error-text.js';
 import { parseWebSearch } from './command.js';
 import type { WebSearchCommand } from './command.js';
@@ -27,8 +27,6 @@ export async function searchWebInTab(managers: Managers, label: string, input: s
     tokens: getProjectTokens(),
     fetch: globalThis.fetch,
     signal,
-    reportDisabled: (name, reason) => {
-      notify(managers, 'plugin-failure', label, `Web search provider "${name}" disabled: ${reason}.`);
-    },
+    reportDisabled: reportProviderDisabled(managers, label),
   });
 }

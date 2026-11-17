@@ -1,7 +1,7 @@
 import type { Command } from './types.js';
 import { appendCommandOutput } from '../command/append.js';
 import { isWebCommandLine } from '../web/command-line.js';
-import { searchWebInTab } from '../web/search/tab-search.js';
+import { runWebInTab } from '../web/tab-web.js';
 
 export const command: Command = {
   name: 'web',
@@ -12,7 +12,7 @@ export const command: Command = {
     'web search rust async --results 5 --depth advanced',
   ],
   run: async (command_, tab, managers, invocation) => {
-    const output = await searchWebInTab(managers, tab.label, command_);
+    const output = await runWebInTab(managers, tab.label, command_);
     appendCommandOutput(managers, tab.label, { input: command_, output }, invocation);
   },
 };

@@ -25,13 +25,13 @@ A successful search that kept no results prints `No results for "<query>".`, wit
 
 **Errors**
 
-Every malformed line prints `Usage: web search <query> [--results <1-20>] [--max-chars <200-100000>] [--depth basic|advanced] [--provider <name>]` and sends nothing. That covers bare `web`, bare `web search`, an empty query, an unknown or repeated flag, a flag with no value, a `--results` or `--max-chars` outside its range or not a whole number, a `--depth` other than `basic` or `advanced`, and a word after the flags that is not a flag's value.
+Bare `web`, and any `web <word>` whose word is neither `search` nor `fetch`, print `Usage: web search <query> [--results <1-20>] [--max-chars <200-100000>] [--depth basic|advanced] [--provider <name>]` followed by `Usage: web fetch <url> [--format markdown|text|html] [--timeout <1-120>] [--max-chars <200-100000>] [--offset <n>] [--provider <name>]`, one per line, and send nothing. Every other malformed `web search` line prints only the `web search` usage line and sends nothing. That covers bare `web search`, an empty query, an unknown or repeated flag, a flag with no value, a `--results` or `--max-chars` outside its range or not a whole number, a `--depth` other than `basic` or `advanced`, and a word after the flags that is not a flag's value.
 
 A search prints one of these lines when it cannot answer:
 
 - `Web search: no provider configured.` when no provider has a token.
 - `Web search: provider "<name>" is not configured.` when the named provider has no token.
-- `Web search: unknown provider "<name>" (available: auto, tavily, tinyfish).` when the name is not a registered provider.
+- `Web search: unknown provider "<name>" (available: auto, tavily, tinyfish).` when the name is not a search provider; `local` fetches only, so `--provider local` prints this line too.
 - `Web search failed (<name>): <reason>.` when exactly one provider was tried and failed.
 - `Web search: every provider failed.` followed by one `- <name>: <reason>` line per attempt, when more than one provider was tried and all failed.
 
@@ -43,7 +43,7 @@ On a remote tab, `Remote connection unavailable.` appears when the tab has no li
 
 `auto`, the default, walks the providers in order — Tavily, then TinyFish — skipping any without a token and using the first one that has one. When that provider fails, the search falls back to the next configured provider and prints only the eventual results. The search fails only after every configured provider has been tried. An explicit `--provider` uses only that provider and never falls back.
 
-A provider that breaks is disabled for the rest of the server process. An explicit search of a disabled provider prints `Web search failed (<name>): <reason>.` without sending anything, and `auto` skips it. On a local tab one notification, `Web search provider "<name>" disabled: <reason>.`, appears in the notifications tab even when a later provider succeeds, and the search output prints only the provider that answered, so that notification is the only report of the disable when it happens. A remote tab posts no notification and also prints only the answering provider, so a provider disabled before a successful fallback is reported nowhere; a later failure line names it only in an explicit search of it, or in `auto` once every configured provider is disabled.
+A provider that breaks is disabled for the rest of the server process, for both `web search` and `web fetch`: a provider disabled by either command is disabled for both. An explicit search of a disabled provider prints `Web search failed (<name>): <reason>.` without sending anything, and `auto` skips it. On a local tab one notification, `Web provider "<name>" disabled: <reason>.`, appears in the notifications tab even when a later provider succeeds, and the search output prints only the provider that answered, so that notification is the only report of the disable when it happens. A remote tab posts no notification and also prints only the answering provider, so a provider disabled before a successful fallback is reported nowhere; a later failure line names it only in an explicit search of it, or in `auto` once every configured provider is disabled.
 
 **Tokens**
 
