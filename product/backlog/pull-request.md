@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Add a frozen fetch fixture provider so the new fetch half of the provider contract is pinned the way the plugin guideline requires.
-
-Existing Issue: The pull request adds fetch as a new extension point on the version-1 provider contract (`fetchFormats`, `fetch(request, capability)`, the `{ url, content }` and `{ redirectedTo }` results), but the only frozen fixture, `src/web/providers/fixture-v1/`, exercises search alone, so no compatibility test fails if a later change breaks the fetch contract while keeping API version 1. Severity: 4/10
-
-Existing Risk: 4/10 - A later edit renames `timeoutMs`, changes what `redirectedTo` means, or tightens `decodeFetchResult`, and a breaking change ships labelled as compatible because nothing written against the original fetch contract is loaded in CI.
-
-Proposal Risk: 1/10 - The fetch contract is pinned by a fixture that declares the literal version and round-trips through the real registry, so the only remaining gap is a contract field the fixture does not exercise.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2049 "add a frozen fetch fixture provider for the version-1 provider contract". `ai/guidelines/plugins.md` §11 says every extension point ships with a fixture plugin and a failure test in the change that introduces it. Add `src/web/providers/fixture-v1-fetch/manifest.ts` and `provider.ts`, written like `src/web/providers/fixture-v1/` but declaring the literal `apiVersion: 1`, `search: false`, `fetchFormats: ['markdown', 'text', 'html']`, and no token, with a provider whose `fetch` returns a fixed `{ url, content }` for one URL and `{ redirectedTo }` for another; do not import `WEB_PROVIDER_API_VERSION` into either file, so the fixture stays frozen. Extend `src/web/providers/fixture-v1/compatibility.test.ts`, or add a sibling test beside the new fixture, to build a registry from the fixture manifest with `createProviderRegistry`, assert `resolveFetchAttempts` picks it for `auto` and by name, and round-trip both results through `runFetchAttempt` from `src/web/providers/registry.ts`. Leave the existing search fixture byte-identical. Mention the new fixture in the compatibility section of `documentation/developer-documentation/web-search-providers.md`.
-
-
 * Make a provider manifest that declares fetch formats but omits `search` count as fetch-only, closing a functionality gap where one search attempt disables the provider for fetch too.
 
 Existing Issue: `searchesWeb` in `src/web/providers/capabilities.ts` returns `manifest.search !== false`, so a manifest that declares `fetchFormats` and leaves `search` out is treated as searching; the first `auto` web search then activates a module with no `search`, fails with `provider failed: module has no provider`, and through the shared disabled set also removes that provider from `web fetch` until restart, behavior `src/web/providers/registry.test.ts` pins. Severity: 3/10

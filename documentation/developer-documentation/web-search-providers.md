@@ -4,7 +4,7 @@ Janissary's web-search provider API is for trusted providers bundled in this rep
 
 This is a separate family from [tab plugins](./tab-plugins.md), [editor plugins](./editor-plugins.md), and [overlay plugins](./overlay-plugins.md). Providers run on the server inside the Janissary process and share no catalog or API version with those families.
 
-The authoritative types are `src/web/providers/contract.ts`. The frozen `fixture-v1` provider and its compatibility test pin API version 1, so a change that breaks them is a breaking change by definition.
+The authoritative types are `src/web/providers/contract.ts`. The frozen `fixture-v1` and `fixture-v1-fetch` providers and their compatibility tests pin API version 1, so a change that breaks them is a breaking change by definition.
 
 ## Smallest working example
 
@@ -240,6 +240,6 @@ A provider may make network requests and read its own key. It has no file access
 
 ## API version 1
 
-`WEB_PROVIDER_API_VERSION` is 1. The frozen `fixture-v1` provider under `src/web/providers/fixture-v1/` declares the literal `1` rather than the constant, so bumping the constant makes `src/web/providers/fixture-v1/compatibility.test.ts` fail. That failure is the definition of a breaking change.
+`WEB_PROVIDER_API_VERSION` is 1. The frozen `fixture-v1` search provider under `src/web/providers/fixture-v1/` and the frozen `fixture-v1-fetch` fetch provider under `src/web/providers/fixture-v1-fetch/` each declare the literal `1` rather than the constant, so bumping the constant makes `src/web/providers/fixture-v1/compatibility.test.ts` and `src/web/providers/fixture-v1-fetch/compatibility.test.ts` fail. Those failures are the definition of a breaking change.
 
 Additive changes that leave the fixture working are minor. Removing or changing anything the fixture exercises is a major bump: add a new fixture for the new version and keep the v1 fixture until version 1 is formally removed.
