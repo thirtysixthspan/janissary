@@ -5,7 +5,6 @@
 ## development
 
 
-* search-tab (3/10) — 41 of 44 facts are correct with three missing and none wrong. The missing facts are the framed self-scrolling result window whose accent left border shows only while the result window is focused with selection preserved when focus leaves, that rows arriving during a running search never move a keyboard-picked highlight or scroll the window, and that a search is never reported as cancelled unless actually cancelled. Add a brief note to the 'Read the results' and 'Open a match' sections of `documentation/user-documentation/command-bar/project-search.md`. Ground truth is `product/specs/search-tab.md`, `src/search/types.ts`, `web/src/plugins/search/ModeToggles.tsx` and `web/src/shared/app-chords.ts`.
 
 * sessions-tab (3/10) — 19 of 22 facts are correct with three missing and none wrong. A parked session created before a remote-installation upgrade cannot be attached (failure recorded, auto-reconnect retries, row stays parked), a session whose channel lifecycle ends has its record dropped so closing a harness reads as one termination, and a legacy record naming only removed agent processes is listed detached but skipped on launch. Fix in `documentation/user-documentation/tab-types/sessions.md`. Ground truth is `product/specs/sessions-tab.md`, `web/src/plugins/sessions/SessionList.tsx`, `web/src/plugins/sessions/SessionRowActions.tsx` and `src/plugins/sessions/shared.ts`.
 
@@ -35,6 +34,7 @@
 
 ## resolved
 
+* search-tab — documented in documentation/user-documentation/command-bar/project-search.md (removed 2026-11-17)
 * root-path — documented in documentation/user-documentation/getting-started/tabs.md (removed 2026-11-17)
 * roles — documented in documentation/user-documentation/tab-types/roles.md, help/roles.md (removed 2026-11-17)
 * quit-confirmation — documented in documentation/user-documentation/command-bar/commands.md (removed 2026-11-17)
