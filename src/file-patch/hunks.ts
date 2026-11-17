@@ -1,4 +1,5 @@
 import type { PatchHunk, PatchHunkLine } from './parse-hunks.js';
+import { createLineSearch } from './hunk-search.js';
 
 export type ApplyHunksResult = { ok: true; text: string } | { ok: false; line: string };
 
@@ -15,24 +16,6 @@ function splitText(text: string): TextLines {
   return { lines, ending, finalNewline };
 }
 
-function findBlock(lines: string[], block: string[], from: number, endOfFile: boolean): number {
-  if (block.length === 0) return endOfFile ? lines.length : from;
-  const last = lines.length - block.length;
-  const first = endOfFile ? last : from;
-  if (first < from) return -1;
-  for (const relaxed of [false, true]) {
-    for (let index = first; index <= last; index += 1) {
-      const matches = block.every((value, offset) => {
-        const actual = lines[index + offset];
-        return relaxed ? actual.trimEnd() === value.trimEnd() : actual === value;
-      });
-      if (matches) return index;
-      if (endOfFile) break;
-    }
-  }
-  return -1;
-}
-
 function replacementLines(hunkLines: PatchHunkLine[], lines: string[], start: number): string[] {
   const result: string[] = [];
   let offset = 0;
@@ -46,23 +29,7 @@ function replacementLines(hunkLines: PatchHunkLine[], lines: string[], start: nu
   return result;
 }
 
-export function applyHunks(text: string, hunks: PatchHunk[]): ApplyHunksResult {
-  if (hunks.length === 0) return { ok: true, text };
-  const source = splitText(text);
-  const replacements: Replacement[] = [];
-  let position = 0;
-  for (const hunk of hunks) {
-    if (hunk.anchor !== undefined) {
-      const anchor = findBlock(source.lines, [hunk.anchor], position, false);
-      if (anchor < 0) return { ok: false, line: hunk.anchor };
-      position = anchor + 1;
-    }
-    const old = hunk.lines.filter((line) => line.kind !== 'add').map((line) => line.text);
-    const start = findBlock(source.lines, old, position, hunk.endOfFile);
-    if (start < 0) return { ok: false, line: old[0] };
-    replacements.push({ start, count: old.length, lines: replacementLines(hunk.lines, source.lines, start) });
-    position = start + old.length;
-  }
+function assembleText(source: TextLines, replacements: Replacement[]): string {
   const result: string[] = [];
   let cursor = 0;
   for (const replacement of replacements) {
@@ -72,5 +39,26 @@ export function applyHunks(text: string, hunks: PatchHunk[]): ApplyHunksResult {
   }
   while (cursor < source.lines.length) result.push(source.lines[cursor++]);
   const joined = result.join(source.ending);
-  return { ok: true, text: result.length > 0 && source.finalNewline ? joined + source.ending : joined };
+  return result.length > 0 && source.finalNewline ? joined + source.ending : joined;
+}
+
+export function applyHunks(text: string, hunks: PatchHunk[]): ApplyHunksResult {
+  if (hunks.length === 0) return { ok: true, text };
+  const source = splitText(text);
+  const search = createLineSearch(source.lines);
+  const replacements: Replacement[] = [];
+  let position = 0;
+  for (const hunk of hunks) {
+    if (hunk.anchor !== undefined) {
+      const anchor = search.findLine(hunk.anchor, position);
+      if (anchor < 0) return { ok: false, line: hunk.anchor };
+      position = anchor + 1;
+    }
+    const old = hunk.lines.filter((line) => line.kind !== 'add').map((line) => line.text);
+    const start = search.findBlock(old, position, hunk.endOfFile);
+    if (start < 0) return { ok: false, line: old[0] };
+    replacements.push({ start, count: old.length, lines: replacementLines(hunk.lines, source.lines, start) });
+    position = start + old.length;
+  }
+  return { ok: true, text: assembleText(source, replacements) };
 }

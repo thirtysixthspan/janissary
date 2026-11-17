@@ -71,6 +71,26 @@ describe('applyHunks', () => {
       .toEqual(success(`${'x\n'.repeat(200_000)}after\n`));
   });
 
+  it('fails a long block that differs only on its last line without scanning every start', () => {
+    const file = 'x\n'.repeat(200_000);
+    const block = [...Array.from({ length: 99_999 }, () => context('x')), remove('y')];
+    expect(applyHunks(file, [hunk([...block, add('z')])])).toEqual(failure('x'));
+  });
+
+  it('applies hundreds of anchored insertions across a large file', () => {
+    const lines = Array.from({ length: 200_000 }, (_, index) => `line ${index}`);
+    const anchors = Array.from({ length: 500 }, (_, index) => 199_000 + index * 2);
+    const edits = anchors.map((anchor, index) => hunk([add(`inserted ${index}`)], { anchor: lines[anchor] }));
+    const insertions = new Map(anchors.map((anchor, index) => [anchor, `inserted ${index}`]));
+    const expected: string[] = [];
+    for (const [index, line] of lines.entries()) {
+      expected.push(line);
+      const insertion = insertions.get(index);
+      if (insertion) expected.push(insertion);
+    }
+    expect(applyHunks(`${lines.join('\n')}\n`, edits)).toEqual(success(`${expected.join('\n')}\n`));
+  });
+
   it('preserves the chosen line ending and handles mixed endings', () => {
     const edit = [hunk([remove('two'), add('three')])];
     expect(applyHunks('one\r\ntwo\r\n', edit)).toEqual(success('one\r\nthree\r\n'));

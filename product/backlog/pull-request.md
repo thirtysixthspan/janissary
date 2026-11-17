@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Bound the patch hunk and anchor search so a large patch cannot spend quadratic time on the server.
-
-Existing Issue: The hunk applier in src/file-patch/hunks.ts scans every remaining start position and compares the whole hunk block for each one, and every @@ anchor linearly scans to its next match, so a 5 MB patch with many late-matched anchors or a long non-matching block on a multi-megabyte file can force billions of line comparisons inside the synchronous patch runner. Severity: 7/10
-
-Existing Risk: 7/10 - An agent or typed user can hold the server's event loop, and a remote tab's far-side loop, for minutes or hours with one allowed patch, so every other session and the remote host stop responding; running the runner in a worker would protect the main loop but would not shorten the run.
-
-Proposal Risk: 3/10 - An indexed or rolling-hash search has to preserve the exact-first-then-trailing-whitespace ordering, the @@ anchor rule, first-match semantics, and `*** End of File`, so a wrong implementation could choose a different match; the existing hunk tests would catch most orderings but not every one.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2011 "bound the patch hunk and anchor search". Replace the nested scan in findBlock and applyHunks in src/file-patch/hunks.ts with a search whose cost is bounded by the file and patch sizes rather than their product: index each file's lines once per PatchContent (for example a Map from line text to sorted positions cached beside current and invalidated whenever the content changes), use a binary search for the next @@ anchor position, and use the same index plus a rolling hash of the block, or an explicit comparison budget, for the context-and-removed block. Preserve exact matching before trailing-whitespace matching, first-match-wins and sequential search, and end-of-file anchoring. Add a src/file-patch/hunks.test.ts case with a 200000-line file and several hundred anchored insertion hunks, or one hunk whose block differs only on its last line, and assert it completes within the test timeout; keep the existing large-replacement and matching cases in that file passing. If a comparison budget is chosen instead of an index, give its refusal a plan, spec, and help/file.md entry, because the current No matching text and Patch too large vocabulary cannot express it. The mixed example in src/file-patch/apply.test.ts and the hunk cases in src/file-patch/sections.test.ts must keep passing unchanged.
-
-
 * Share one planned folder between case-only spellings so a patch under differently cased folders succeeds on a case-insensitive volume.
 
 Existing Issue: derivePlannedFolders in src/file-patch/view.ts and the folder merge in buildPatchChanges in src/file-patch/changes.ts deduplicate by exact string, so on a case-insensitive volume a patch that adds one file under A/ and another under a/ plans both spellings, and commitChanges runs mkdir for each, failing the whole patch with EEXIST while applying. Severity: 4/10
