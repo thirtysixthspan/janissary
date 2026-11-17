@@ -301,6 +301,117 @@ Proposal Risk: 2/10 - The graph check fails on real runtime cycles; the residual
 
 Proposal: Add `scripts/import-cycles.mjs`, run through `$janissary/scripts/run.mjs` and wired into the `check` script in `package.json` and the `check-diff` orchestrator in `scripts/check-diff.mjs` when `src/` or `web/src/` changed, that walks `src/**/*.ts` and `web/src/**/*.{ts,tsx}`, parses static `import`/`export ... from` specifiers, records whether each statement is type-only, resolves relative `.js`/extensionless specifiers to files, and reports every cycle containing at least one runtime edge. Add `scripts/import-cycles.test.mjs` with synthetic trees covering a two-file runtime cycle (fails), an all-`import type` cycle (passes, because TypeScript erases it), a cycle through `export ... from` (fails), and a self-import (fails), following the fixture style in `scripts/help-doc-changes.test.mjs`. Run the check against the current tree before enabling the gate; if it finds a pre-existing runtime cycle, fix it in the same change rather than adding a silent allowlist. The completed `product/plans/complete/split-types-by-domain.md` records that a manual madge run reported many type-only edges, which is why the runtime-only rule matters. Remove the `import-x/no-cycle` entry and its note from `eslint.config.mjs`; `src/eslint-plugin-boundaries.test.ts` and `src/eslint-feature-boundaries.test.ts` stay as they are because they test rules that do fire.
 
+
+* Use the shared path-containment rule for static assets instead of a string prefix so a sibling directory can never be served.
+
+Existing Debt: The static server clamps requested paths with a string `startsWith` check while the project's containment rule is shared across the other file-serving paths, so the asset boundary is defined twice. Severity: 7/10
+
+Existing Risk: 8/10 - A directory whose name shares the bundle directory's prefix lets a crafted URL select a path outside the bundle, because the check compares characters rather than path components.
+
+Proposal Risk: 2/10 - The clamp becomes component-aware and falls back to the SPA shell, but the separate allow-list behind `/open/` remains a second guard that must stay intact.
+
+Proposal: `src/serve-static.ts` `staticFileServer` normalizes the URL path and checks `if (!file.startsWith(options.webDir))`, falling back to `index.html`. `src/path-containment.ts` exports `containedAbsolute`/`containedPath`, and its header comment already names the serve process as a consumer, but this module imports none of it. Replace the prefix test with `containedAbsolute` on the resolved bundle directory, computing the absolute directory once when the server is built, and keep the SPA fallback for rejected paths. There is no `serve-static.test.ts`; `src/index.test.ts` covers origin rejection, SPA fallback, `/open/` token handling and malformed URLs but no traversal or prefix-sibling case. Add cases where the bundle directory has a sibling sharing its prefix and where the URL contains `../` segments, asserting the shell is served and no file outside the bundle directory is read.
+
+
+* Refuse to create or overwrite a conversation written by a newer schema version instead of treating it as absent.
+
+Existing Debt: The conversation store treats an exact schema-version match as the only valid document, so a record from a newer build is indistinguishable from a malformed one and can be replaced by a fresh conversation under the same id. Severity: 6/10
+
+Existing Risk: 8/10 - After switching to an older build, a newer conversation is read as absent, a new one is created under the same id, and the next save overwrites the file, losing its turns with no warning.
+
+Proposal Risk: 2/10 - A newer-version file is preserved and reported, but there is still no migration path, so those conversations stay unavailable until a build that understands their version runs.
+
+Proposal: `src/conversations/store.ts` `isConversation` requires `value.schemaVersion === CONVERSATION_SCHEMA_VERSION`, and `read`/`scan` classify a mismatch as malformed. `src/conversations/manager.ts` `create` starts with `if (this.conversations.has(id) || this.store.read(id)) return false;`, so a version-mismatched file passes as absent and a replacement conversation is created and later written over it. Follow the pattern already in `src/schedule/system/store-decode.ts`, which returns `kind: 'unsupported-version'` for a future version: add a distinct decode outcome for a recognized-but-newer version, have `scan` report it without the malformed-file warning, and make `create` and the write paths refuse to overwrite such a record. `src/conversations/store.test.ts` exercises only version-1 and broken JSON documents; add a test writing a v2 document and asserting it is preserved and that `create` does not replace it.
+
+
+* Make the ACP session handshake an explicit state so an early error cannot permanently suppress the connection.
+
+Existing Debt: The connection handshake is tracked by three independent flags whose ordering is the protocol, and the error flag is never cleared, so an error recorded before connecting silently blocks the publish that follows a successful connect. Severity: 6/10
+
+Existing Risk: 6/10 - An early transient error followed by a successful connect leaves the session with no core record and no connect hook, so the tab shows no agent even though the process is running; post-connect errors can also fire repeatedly.
+
+Proposal Risk: 2/10 - An explicit state makes each transition total, but the hooks still have side effects, so a transition that fires twice would still be visible.
+
+Proposal: `src/acp/session-manager.ts` `AcpSessionManager.session()` declares `connecting`, `connected` and a write-once `failure`; `publish()` returns early when `failure !== undefined`, `onError` records it without clearing it, and the post-connect branch calls `hooks.onError(failure)` whenever one was recorded, even when `connected` is true. Replace the three flags with one state such as `'connecting' | 'connected' | 'failed'`, move the "record now versus call the hook now" decision into a single `onError` transition, and let `publish` refuse only in the failed state after the connection has settled. `AcpManager.acquire` in `src/acp/manager.ts` is the hook consumer that settles the prompt and closes the tab, so keep exactly one error delivery. There is no `session-manager.test.ts`; indirect coverage lives in `src/acp/record-feed.test.ts` and `src/acp/manager.test.ts`; add a colocated test for early-error-then-connect and for two post-connect errors asserting one publish and one settle.
+
+
+* Emit the ACP tool loop's terminal event when a native command throws so the prompt settles and state refreshes.
+
+Existing Debt: The tool loop's error path ends the run without its finished event, so the cleanup that only the terminal handler performs is skipped. Severity: 6/10
+
+Existing Risk: 6/10 - A command that rejects leaves the prompt unsettled with no state-change notification and no dirty broadcast, so the transcript keeps looking busy and the connection row never updates.
+
+Proposal Risk: 2/10 - Both paths end with a terminal event, but the handler still distinguishes outcomes by the event reason, so a wrong reason changes row state.
+
+Proposal: `src/acp/loop.ts` `runAcpToolLoop` catches a throwing or rejecting `dependencies.runCommand`, calls `h.error(errorText(error))` and returns, while the normal end emits `h.finished(command ? 'capped' : 'answered', maxSteps)`. The `finished` handler in `src/acp/run-prompt.ts` performs the state-change notification, rate-limit check, dirty broadcast and `answered: true` settle that the error handler does not. Emit a terminal event on the catch path too, with a reason that conveys failure, and have the `run-prompt.ts` handler map that reason to the same cleanup while preserving the error line. `src/acp/loop.test.ts` covers `session.onError` but not a throwing command, and `src/acp/drive-loop.test.ts` asserts only the error line for a rejecting host; add an assertion there that a terminal event follows and the prompt settles.
+
+
+* Report a failed cleanup of the OAuth staging file instead of leaving a second plaintext credential on disk.
+
+Existing Debt: The OAuth seeding step silently ignores a failure to remove its temporary file, so a successful result can leave a duplicate copy of the credential behind. Severity: 6/10
+
+Existing Risk: 7/10 - A stale `.auth-seed` holding the full OAuth token remains in the sandbox data home, outliving the linked auth file and invisible to the caller that reported the preparation available.
+
+Proposal Risk: 2/10 - The failure surfaces as a preparation failure, but the link has already been made by then, so cleanup must also remove that link to leave no copy at all.
+
+Proposal: `src/sandbox/opencode-data.ts` `writeOauth` creates `<dataHome>/opencode/.auth-seed` with mode 0o600, hard-links it to `auth.json`, then runs `try { unlinkSync(staging); } catch { return; }`, swallowing the error and returning success. Remove the silent catch so the failure propagates to `prepareOpencodeData`, which already maps storage errors to `{ type: 'failed', reason: 'storage' }`, and remove the linked file when the staging removal fails so no duplicate remains. `src/sandbox/opencode-data-failures.test.ts` forces a partial write failure and checks the staging file is gone, and `src/sandbox/opencode-data.test.ts` checks the seeded auth file and its mode but not staging after a successful link; add a case that makes `unlinkSync` throw and asserts a storage-failure result with no lingering credential file.
+
+
+* Re-check the lock file at deletion time so shutdown cannot remove a lock another instance just took over.
+
+Existing Debt: Lock release reads the pid and then deletes unconditionally, while acquisition treats a changed lock as a reason to refuse, so the two sides apply different rules to the same race. Severity: 6/10
+
+Existing Risk: 6/10 - If the lock is judged stale and replaced between the read and the delete, shutdown removes the new owner's lock and a third process is admitted into the same directory.
+
+Proposal Risk: 2/10 - The delete becomes conditional on the content, but the read and delete remain separate syscalls, so a narrow race survives unless an atomic compare-and-delete is available.
+
+Proposal: `src/instance-lock.ts` `releaseLock` calls `readLockPid(projectDir)` and then `rmSync(lockPath(projectDir), { force: true })`. `acquireLock` in the same file uses `clearIfStale(file, content)` from `src/pid-lock-file.ts`, which deletes only when the file still holds the content it judged stale. Reuse that guarded removal in `releaseLock`: read the exact file content, re-read immediately before removal, and delete only if unchanged and still naming this process. `src/instance-lock.test.ts` covers only sequential release cases for matching, foreign and invalid pids; add a case where the lock content changes between the first read and the removal and assert the new content survives.
+
+
+* Recognize native ACP commands from one vocabulary so gating and extraction cannot disagree about what a command is.
+
+Existing Debt: The same native-command vocabulary is recognized by two independent mechanisms whose rules are kept in sync by hand. Severity: 5/10
+
+Existing Risk: 5/10 - Adding or rewording a native command in one place narrows gating or extraction on the same path, so a command the model is told it may run is refused or never extracted from its reply.
+
+Proposal Risk: 2/10 - One recognizer feeds both paths, but the per-tool line matchers still have their own predicates, so a reply-line form one of them misses remains invisible.
+
+Proposal: `src/acp/native-commands.ts` `nativeCommandName` recognizes commands by splitting `NATIVE_ACP_COMMANDS` and matching token prefixes, while `src/acp/tool-table.ts` `createAcpToolTable` gives each tool its own `match` predicate: regexes for browser, question and file, `isWebCommandLine` for web, and a `match: () => true` database fall-through. `gateCoreCommand` and `toolExtractor` in `tool-table.ts` call both recognizers on the same command. Export one predicate over `NATIVE_ACP_COMMANDS` that both the tool-table entries and `nativeCommandName` consume, keeping the database fall-through explicit. `src/acp/native-commands.test.ts` and `src/acp/tool-table.test.ts` test each recognizer alone; add a parity test walking every `NATIVE_ACP_COMMANDS` entry through both and asserting identical recognition.
+
+
+* Share one recurrence validator between the schedule parser and the stored-entry decoder so persisted entries keep the parser's rules.
+
+Existing Debt: The grammar of a valid schedule entry is spelled out twice, once while parsing user input and again while decoding persisted entries, with the second copy relying on casts to narrow `unknown`. Severity: 5/10
+
+Existing Risk: 5/10 - A change to accepted time, interval or weekday rules on the parser side leaves stored entries validated by the old rules, so a schedule can be created one way and silently accepted or dropped differently after a reload.
+
+Proposal Risk: 2/10 - One validator is used at both boundaries, but the stored snapshot still has its own version gate and command-string check, so those can drift independently.
+
+Proposal: `src/schedule/parsing.ts` `parseTimeOfDay` and `parseInterval`, together with `src/schedule/every-schedule.ts` `parseEverySchedule`, define the accepted clock, interval and weekday shapes; `src/schedule/system/store-decode.ts` `validClock`, `validEntry` and `hasNoRecurrenceFields` re-derive the same rules with casts such as `(time.hour as number)` and re-check `value.command !== \`script ${value.script}\``. Extract a shared guard module, for example `src/schedule/validity.ts`, exporting the clock, interval and recurrence validators, and call it from both the parser and the store decoder, leaving the version gate in `store-decode.ts`. `src/schedule/system/store-decode.test.ts` checks hand-picked invalid cases and `src/schedule/index.test.ts` covers the parser; add a round-trip test feeding parsed entries through the decoder plus a case where a stored entry violates a parser rule.
+
+
+* Reject non-positive or non-integer terminal dimensions in asciicast headers before they reach the terminal emulator.
+
+Existing Debt: The header parser validates only the JavaScript type of the terminal dimensions while its sibling resize parser validates their numeric shape, so the same value is trusted at one boundary and checked at the other. Severity: 5/10
+
+Existing Risk: 5/10 - A recording whose header carries `Infinity`, a negative number or a fraction creates a terminal with a nonsensical size, so the tab renders blank, allocates an oversized grid, or throws during first render.
+
+Proposal Risk: 2/10 - Dimensions are now safe integers, but very large finite values are still accepted, so a hostile recording can still request an expensive grid.
+
+Proposal: `web/src/plugins/asciicast/cast-stream.ts` `parseCastHeader` checks only `typeof cols !== 'number' || typeof rows !== 'number'` and returns the header with those values; `createAppTerminal` in `web/src/plugins/asciicast/useAsciicastTerminal.ts` receives them directly. The same file's `parseResize` already requires `/^\d+$/u` on both parts. Require `Number.isSafeInteger` and a positive value for both dimensions in the header guard, reusing a shared positive-dimension predicate if the resize parser can use it too. `web/src/plugins/asciicast/cast-stream.test.ts` covers only the missing-size case; add cases for `Infinity`, a negative value and a fraction asserting the header is refused, and keep the resize parser cases passing.
+
+
+* Trim resolved row-key buckets when a page begins, not only when a key is minted, so empty pages cannot grow the store without bound.
+
+Existing Debt: The store's page buckets are created by one method and evicted by another, so the documented bound applies only when a page actually mints a key. Severity: 5/10
+
+Existing Risk: 4/10 - Repeated queries that return no rows or keyless results push an empty bucket per page for the life of the browser, so a long session paging through empty results grows memory without eviction.
+
+Proposal Risk: 2/10 - Empty buckets are evicted, but a page that mints keys and is then superseded still relies on eviction during a later mint, so a long idle gap can retain extra keys.
+
+Proposal: `src/database/row-keys.ts` `RowKeyStore.beginPage` pushes a new bucket while only `mint` calls `trim`, and the comment above `RESOLVED_PAGES` claims the bound keeps the map from growing with use. Call `trim()` at the end of `beginPage` as well, so the bucket array stays bounded whether or not a page yields keys. `src/database/grid.ts` `runGrid` calls `beginPage` for every page including empty ones and should keep doing so. `src/database/write.test.ts` tests eviction only for pages that minted keys; add a case that begins more than `RESOLVED_PAGES` empty pages and asserts that buckets from the earlier pages were discarded before any later mint.
+
+
 ## deferred
 
 ## declined
