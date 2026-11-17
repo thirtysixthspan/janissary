@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Bound the web fetch cache by total content size so a run of large direct fetches cannot exhaust the server's memory, closing a security gap the fifty-entry ceiling leaves open.
-
-Existing Issue: The fetch cache evicts only by entry count (50) and caches every successful page whole, while the `local` provider accepts bodies up to 50 MiB, so the process-wide cache can hold roughly 2.5 GB of UTF-8 text, which becomes up to 5 GB of UTF-16 strings, on the main Janissary server heap. Severity: 5/10
-
-Existing Risk: 5/10 - An agent fetching a few dozen large text or JSON URLs within fifteen minutes, whether by accident or because injected page content steered it, can push the server past the V8 heap limit and crash every tab at once.
-
-Proposal Risk: 2/10 - Memory use is capped, but an oversized page that is no longer cached is fetched again on every `--offset` read, which costs time and bandwidth and could look like a cache bug if the size rule is not documented.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2049 "bound the web fetch cache by total content size". In `src/web/fetch/cache.ts`, track the summed `content.length` of all entries beside the existing `Map` and add an exported `FETCH_CACHE_MAX_CHARS` budget (for example 20 million UTF-16 units). In `set`, skip caching any page whose content alone exceeds a per-entry ceiling (for example a quarter of the budget), and after inserting, evict least-recently-used keys from the front of the `Map` until both the entry count and the character total are within their limits; keep the running total correct when `get` deletes an expired entry and when `set` replaces an existing key. Leave `src/web/fetch/fetch.ts` unchanged apart from any import, so an uncached oversized page simply refetches on a later offset. Extend `src/web/fetch/cache.test.ts` with cases for character-budget eviction, the oversized-page skip, and total bookkeeping across replacement and expiry, and keep the existing LRU, TTL, and key tests and the cache-behavior cases in `src/web/fetch/fetch.test.ts` passing unchanged. Update the Cache section of `product/specs/web-fetch.md`, the cache paragraph of `help/web.md`, the cache comment at the top of `cache.ts`, and the Cache design decision in `product/plans/complete/web-fetch.md` to state the size bound and that an oversized page is never cached.
-
-
 * Add a frozen fetch fixture provider so the new fetch half of the provider contract is pinned the way the plugin guideline requires.
 
 Existing Issue: The pull request adds fetch as a new extension point on the version-1 provider contract (`fetchFormats`, `fetch(request, capability)`, the `{ url, content }` and `{ redirectedTo }` results), but the only frozen fixture, `src/web/providers/fixture-v1/`, exercises search alone, so no compatibility test fails if a later change breaks the fetch contract while keeping API version 1. Severity: 4/10

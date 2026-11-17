@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   createFetchCache,
+  FETCH_CACHE_MAX_CHARS,
   FETCH_CACHE_MAX_ENTRIES,
+  FETCH_CACHE_MAX_ENTRY_CHARS,
   FETCH_CACHE_TTL_MS,
   fetchCacheKey,
 } from './cache.js';
@@ -12,6 +14,12 @@ const PAGE: FetchedPage = {
   source: 'tavily',
   content: 'hello',
 };
+
+const BIG_CONTENT = 'x'.repeat(FETCH_CACHE_MAX_ENTRY_CHARS);
+
+function bigPage(source: string): FetchedPage {
+  return { url: `https://example.com/${source}`, source, content: BIG_CONTENT };
+}
 
 describe('fetchCacheKey', () => {
   it('keeps the URL as given and lowercases the format and provider', () => {
@@ -103,5 +111,93 @@ describe('createFetchCache', () => {
     evicting.set('key-50', PAGE, 0);
     expect(evicting.get('key-0', 1)).toBe(replacement);
     expect(evicting.get('key-1', 1)).toBeUndefined();
+  });
+
+  it('does not store a page whose content exceeds the per-entry ceiling', () => {
+    const cache = createFetchCache();
+    const oversized: FetchedPage = {
+      ...PAGE,
+      content: 'x'.repeat(FETCH_CACHE_MAX_ENTRY_CHARS + 1),
+    };
+    cache.set('oversized', oversized, 0);
+    expect(cache.get('oversized', 1)).toBeUndefined();
+  });
+
+  it('leaves an existing entry in place when an oversized page is set', () => {
+    const cache = createFetchCache();
+    const oversized: FetchedPage = {
+      ...PAGE,
+      content: 'x'.repeat(FETCH_CACHE_MAX_ENTRY_CHARS + 1),
+    };
+    cache.set('keep', bigPage('keep'), 0);
+    cache.set('oversized', oversized, 0);
+    for (let index = 0; index < 3; index++) {
+      cache.set(`fill-${String(index)}`, bigPage(`fill-${String(index)}`), 0);
+    }
+    expect(cache.get('keep', 1)).toBeDefined();
+    expect(cache.get('oversized', 1)).toBeUndefined();
+    for (let index = 0; index < 3; index++) {
+      expect(cache.get(`fill-${String(index)}`, 1)).toBeDefined();
+    }
+  });
+
+  it('evicts the least recently used page when the character budget is exceeded', () => {
+    expect(FETCH_CACHE_MAX_CHARS).toBe(FETCH_CACHE_MAX_ENTRY_CHARS * 4);
+    const cache = createFetchCache();
+    const pages = ['0', '1', '2', '3', '4'].map((source) => bigPage(source));
+    for (const [index, page] of pages.entries()) {
+      cache.set(`key-${String(index)}`, page, 0);
+    }
+    expect(cache.get('key-0', 1)).toBeUndefined();
+    for (let index = 1; index < pages.length; index++) {
+      expect(cache.get(`key-${String(index)}`, 1)).toBe(pages[index]);
+    }
+  });
+
+  it('keeps a recently read page when the character budget forces eviction', () => {
+    const cache = createFetchCache();
+    const pages = ['0', '1', '2', '3'].map((source) => bigPage(source));
+    for (const [index, page] of pages.entries()) {
+      cache.set(`key-${String(index)}`, page, 0);
+    }
+    expect(cache.get('key-0', 1)).toBe(pages[0]);
+    const newest = bigPage('4');
+    cache.set('key-4', newest, 0);
+    expect(cache.get('key-0', 1)).toBe(pages[0]);
+    expect(cache.get('key-1', 1)).toBeUndefined();
+    for (let index = 2; index < pages.length; index++) {
+      expect(cache.get(`key-${String(index)}`, 1)).toBe(pages[index]);
+    }
+    expect(cache.get('key-4', 1)).toBe(newest);
+  });
+
+  it('frees characters when a key is replaced by a smaller page', () => {
+    const cache = createFetchCache();
+    const small: FetchedPage = { ...PAGE, content: 'tiny' };
+    cache.set('key', bigPage('key'), 0);
+    cache.set('key', small, 0);
+    for (let index = 0; index < 3; index++) {
+      cache.set(`fill-${String(index)}`, bigPage(`fill-${String(index)}`), 0);
+    }
+    expect(cache.get('key', 1)).toBe(small);
+    for (let index = 0; index < 3; index++) {
+      expect(cache.get(`fill-${String(index)}`, 1)).toBeDefined();
+    }
+  });
+
+  it('frees characters when an expired entry is read', () => {
+    const cache = createFetchCache();
+    const pages = ['0', '1', '2', '3'].map((source) => bigPage(source));
+    for (const [index, page] of pages.entries()) {
+      cache.set(`key-${String(index)}`, page, 0);
+    }
+    expect(cache.get('key-0', FETCH_CACHE_TTL_MS)).toBeUndefined();
+    const newest = bigPage('4');
+    cache.set('key-4', newest, 0);
+    const stillLive = FETCH_CACHE_TTL_MS - 1;
+    for (let index = 1; index < pages.length; index++) {
+      expect(cache.get(`key-${String(index)}`, stillLive)).toBe(pages[index]);
+    }
+    expect(cache.get('key-4', stillLive)).toBe(newest);
   });
 });
