@@ -14,7 +14,7 @@ The list shows this project's conversations in order of most recent activity, ea
 
 Sending a query moves a conversation to the top. Renaming it or changing its model doesn't. A conversation you created but haven't asked anything yet shows in the list while the app runs, but it isn't saved, so it's gone after a restart. A saved conversation whose record is missing or unreadable doesn't appear.
 
-The first row is selected when the list opens. `↑` and `↓` move the selection without wrapping; `Home` and `End` select the first and last rows. Press `Enter` to open the selected conversation. With the mouse, click the same row twice: the first click selects it, and the next opens it. This also applies to a row already selected by the keyboard. Opening a conversation focuses its existing tab if one is open.
+The first row is selected when the list opens, marked by a bar along its left edge that stays visible even when you hover another row. `↑` and `↓` move the selection without wrapping; `Home` and `End` select the first and last rows. Press `Enter` to open the selected conversation. With the mouse, click the same row twice: the first click selects it, and the next opens it. This also applies to a row already selected by the keyboard. Clicking a different row starts the count over, so you need two clicks on that row to open it. Opening a conversation focuses its existing tab if one is open.
 
 You can also open a conversation by its full title:
 
@@ -54,11 +54,13 @@ A new tab starts as `New conversation`. Your first query names it from that quer
 
 Double-click the title in the header to rename it. Press `Enter` or click away to save, or `Escape` to cancel. Names are trimmed and limited to 60 characters; a blank name leaves the old title unchanged. A title you choose before the first query is preserved, unless you name it `New conversation` again.
 
+Renaming a conversation you haven't asked anything yet leaves it unsaved, and a rename never creates its saved files on its own. The conversation saves the first time you send a query or use a workspace button.
+
 ## Choose a model
 
 The **Model** selector in the header groups enabled models under `claude` and `opencode`. Choose a pair for your next query. Changing it starts a fresh session; earlier turns keep the pair that answered them. The selector is disabled while a reply streams. It uses the same catalog as the [Models tab](/user-documentation/tab-types/models), so a catalog change updates the choices without restarting Janissary. If a saved model is disabled or removed, the next query uses the first available pair.
 
-The last pair you chose is remembered for this project: it crosses between conversations and survives a restart, and every new conversation starts on it. Another project has its own remembered pair. A conversation you reopen keeps the pair it was saved with. Sending a query does not change that memory — only picking a different pair does. So a conversation started from the list and one started from **Chat about this** begin identically.
+The last pair you chose is remembered for this project: it crosses between conversations and survives a restart, and every new conversation starts on it. Another project has its own remembered pair. A conversation you reopen keeps the pair it was saved with. Sending a query doesn't change that memory. Choosing a pair does, even when you pick the one that's already selected. A choice the app doesn't accept, such as a model that has been disabled or removed, leaves the remembered pair as it was. So a conversation started from the list and one started from **Chat about this** begin identically.
 
 A conversation runs one agent session at a time. Restarting the app, cancelling a reply, changing the model, a failed connection, or closing the tab all end that session; the next query starts another and replays the 20 most recent turns into it first, so a conversation picks up its context rather than starting cold. A turn that failed is replayed too, error text and all. Older history remains available to read in the tab.
 
@@ -89,5 +91,7 @@ An earlier version kept conversations and the remembered model for the whole mac
 ## Delete a conversation
 
 Use the trash button on a row in the conversation list. It asks `Delete conversation "<title>"?` before touching anything. Confirming deletes its saved history, private workspace, and everything inside that workspace. Cancelling leaves them intact.
+
+If that conversation's tab is open, it shows `This conversation was deleted.` and its controls stop working. You can no longer rename it, change its model, open its workspace, launch a shell in that workspace, or send another query.
 
 The saved record stays with its project through restarts and workspace cleanup, and only deleting the conversation removes it.

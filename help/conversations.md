@@ -25,3 +25,5 @@ Open the conversation list, dock it to a sidebar, or open a saved conversation b
 - `conversations Weekend plans` opens the saved conversation with that title. If none matches, it replies `No conversation matching "Weekend plans".`
 
 The model selector offers enabled Claude and OpenCode models. If a conversation's saved model becomes disabled or leaves the catalog and another enabled choice exists, its next query uses the first enabled choice. If no enabled choice exists, the next query retains the saved pair. Creating a new conversation requires an enabled pair.
+
+The pair you choose is remembered for the project and used by new conversations. Choosing a pair remembers it again, even when it's the pair already selected; a choice the app refuses leaves the remembered pair unchanged.
