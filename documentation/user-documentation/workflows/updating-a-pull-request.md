@@ -16,9 +16,9 @@ This task suits the end of a pull request's life, after it has been [reviewed](/
 
 The agent checks out the pull request's branch and makes sure it can merge before reading anything. A repair changes the code, and the description has to match the code that merges.
 
-It checks for conflicts with `master` first. If there are any, it hands the pull request to a fresh agent running `resolve-conflicts`. Then it waits for the CI checks to finish. If one fails, a fresh agent running `fix-build` diagnoses and repairs it. Each one pushes to the pull request's own branch and leaves it open. The agent tells you when it hands work off and what came back.
+It checks for conflicts with `master` first. If there are any, it hands the pull request to a fresh agent running `resolve-conflicts`. Then it waits for the CI checks to finish. If one fails, a fresh agent running `fix-build` diagnoses and repairs it. Each one pushes to the pull request's own branch and leaves it open. The handoffs run one at a time, and the agent tells you when it hands work off and what came back.
 
-It checks again after a repair, up to three times. If a conflict or a failing build still can't be cleared, the agent stops there. Its report names the blocker and marks the rest of the update as not run.
+It checks again after a repair, up to three times. If a conflict or a failing build still can't be cleared, the agent stops there. Its report names the blocker and marks the rest of the update as not run. When there are no conflicts and the checks pass, or no checks are configured, the agent goes straight to the description work with nothing handed off.
 
 ## What gets updated
 
@@ -37,6 +37,8 @@ The agent leaves the user documentation pages alone. Those belong to the documen
 
 The description keeps the author's section headings and their order. Text that is already accurate stays as written. Behavior examples and verification steps that no longer match are rewritten from the code, its tests, and the specs. The agent doesn't start the app to produce them.
 
+The description leaves out anything a reader can see in the change set, such as commit, file, or line counts and commit SHAs. A figure that is already there is removed rather than updated, because the change set shows the current numbers and a copy in the prose goes stale with the next push.
+
 Two parts never change. The title has to match the commit subject, so the agent leaves it alone. The **Additional test cases** section belongs to the testing workflow, which dates it to the commit it tested.
 
 The agent edits the description only after it has pushed the branch, so the description never describes work that isn't there.
@@ -45,7 +47,7 @@ The agent edits the description only after it has pushed the branch, so the desc
 
 <img class="agent-float" src="/agents/dogan-south-east.png" alt="" />
 
-A pull request that has been revised carries its own plan plus one fix plan for each repair made with `work-pull-request-issue`. The agent folds what those fix plans record into the pull request's own plan, rewrites the plan to describe what was built, and deletes the fix plans. The plan keeps its name, title, sections, and complexity rating. It carries no revision markers, because git history keeps the original wording.
+A pull request that has been revised carries its own plan plus one fix plan for each repair made with `work-pull-request-issue`. The agent folds what those fix plans record into the pull request's own plan, rewrites the plan to describe what was built, and deletes the fix plans. A complex feature's subplan plans are folded in and deleted the same way. The plan keeps its name, title, sections, and complexity rating. It carries no revision markers, because git history keeps the original wording.
 
 The pull request's own plan is the one its first commit adds. If that commit adds no plan, or more than one, the agent doesn't guess. It leaves every plan as it is and names what it found in its report.
 
