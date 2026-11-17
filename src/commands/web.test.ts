@@ -20,9 +20,10 @@ function managersWith(appended: Appended[]) {
 }
 
 describe('web command match', () => {
-  it('claims web and web search lines and rejects a longer word', () => {
+  it('claims web, web search, and web fetch lines and rejects a longer word', () => {
     expect(command.match('web')).toBe(true);
     expect(command.match('Web search x')).toBe(true);
+    expect(command.match('web fetch https://x')).toBe(true);
     expect(command.match('webby')).toBe(false);
   });
 });
@@ -41,6 +42,14 @@ describe('web command run', () => {
     await command.run('web search x', { label: 'janus', index: 0 }, managers);
     expect(mocks.runWebInTab.mock.calls[0]).toEqual([managers, 'janus', 'web search x']);
     expect(appended).toEqual([{ label: 'janus', entry: { input: 'web search x', output: 'search results' } }]);
+  });
+
+  it('runs a fetch line through the entry point and appends its output once', async () => {
+    const managers = managersWith(appended);
+    mocks.runWebInTab.mockResolvedValue('fetched page');
+    await command.run('web fetch https://x', { label: 'janus', index: 0 }, managers);
+    expect(mocks.runWebInTab.mock.calls[0]).toEqual([managers, 'janus', 'web fetch https://x']);
+    expect(appended).toEqual([{ label: 'janus', entry: { input: 'web fetch https://x', output: 'fetched page' } }]);
   });
 
   it('passes a bare web line through unchanged and appends its output', async () => {

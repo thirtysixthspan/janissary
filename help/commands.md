@@ -61,7 +61,7 @@
 | `theme` | Set the application UI theme (`theme <name>`); `theme` alone opens a theme-picker modal; `theme sync` sets the syntax theme to match the app theme name |
 | `unmonitor` | Stop a monitor by name, remove one target (`unmonitor <name> <target>`), or stop all monitors started from this tab (`--all`) |
 | `video` | `video <path>` opens a video tab, with the same paths and wildcards as `open`; `video snapshot <video> at <time> <file>` saves one frame as an image |
-| `web` | `web search <query>` searches the web through a configured provider (Tavily or TinyFish) and prints a Markdown list of results; see `help web` |
+| `web` | `web search <query>` searches the web through a configured provider (Tavily or TinyFish) and prints a Markdown list of results; `web fetch <url>` reads one page by its URL; see `help web` |
 
 Both `shell` and `harness` launches accept `in group <name\|id>` to join an existing group by its case-insensitive name or numeric ID. An unknown name creates a group; an unknown positive ID creates that numbered group. Without the clause, the new tab joins the issuing tab's group.
 

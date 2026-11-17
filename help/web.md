@@ -1,6 +1,6 @@
 ### web
 
-Search the web through a configured provider and print the results as a Markdown list. A local tab searches on the machine running Janissary. A remote tab searches on the remote machine, in that tab's workspace, and never falls back to the local machine. A typed search has no cancellation: it runs until it answers or every provider it tries times out. A search run by an `ask` or `tell` agent is cancelled with its prompt: the in-flight provider request is aborted, no further provider is tried, and its late result is suppressed; a local-fallback session's remote search has no cancel message, so only the late result is suppressed.
+Search the web through a configured provider and print the results as a Markdown list, or fetch one page by its URL and print its contents. A local tab runs on the machine running Janissary. A remote tab runs on the remote machine, in that tab's workspace, and never falls back to the local machine. A typed search or fetch has no cancellation: it runs until it answers or every attempt it tries times out. A search run by an `ask` or `tell` agent is cancelled with its prompt: the in-flight provider request is aborted, no further provider is tried, and its late result is suppressed; a local-fallback session's remote search has no cancel message, so only the late result is suppressed.
 
 **Usage**
 
@@ -47,7 +47,7 @@ A provider that breaks is disabled for the rest of the server process, for both 
 
 **Tokens**
 
-Tavily reads its key from `tavily-token` and TinyFish from `tinyfish-token`. Put the file in the project's `.janissary/` or in `~/.janissary/`; the project's file wins. A file holding only whitespace counts as absent. Token files are read once at startup, so a new file takes effect after a restart.
+Tavily reads its key from `tavily-token` and TinyFish from `tinyfish-token`. The same files serve `web fetch`; the `local` provider needs no token. Put the file in the project's `.janissary/` or in `~/.janissary/`; the project's file wins. A file holding only whitespace counts as absent. Token files are read once at startup, so a new file takes effect after a restart.
 
 A remote tab uses its workspace's tokens, where a token forwarded from the local machine wins over a file on the remote machine.
 
@@ -60,9 +60,64 @@ An `ask` or `tell` agent can run this search when its role grants `web search`; 
 - Look something up without leaving the tab.
 - Gather current results for a question whose answer changes over time.
 - Compare what two providers return for the same query.
+- Read the page a search found.
 
 **Examples**
 
 - `web search node.js permission model 2026` searches with the default provider.
 - `web search rust async --results 5 --depth advanced` asks for five deeper results.
 - `web search "exact phrase" --provider tinyfish` uses only TinyFish.
+
+**Fetching a page**
+
+`Usage: web fetch <url> [--format markdown|text|html] [--timeout <1-120>] [--max-chars <200-100000>] [--offset <n>] [--provider <name>]`
+
+The URL is exactly one word, an absolute HTTP or HTTPS URL kept as typed, and comes first; the flags follow in any order, each once. Flag names match only in lowercase.
+
+- `--format` is `markdown`, `text`, or `html`, matched without regard to case, and defaults to `markdown`.
+- `--timeout` is whole seconds from 1 to 120 and defaults to 30.
+- `--max-chars` is 200 to 100000 and defaults to 10000.
+- `--offset` is a whole number of 0 or more and defaults to 0.
+- `--provider` defaults to `auto`, matched without regard to case.
+
+A leading zero on a non-zero number is accepted, but `--offset 00` is refused. One call takes one URL, returns one result, writes no files, and follows no multi-step navigation.
+
+The output is `Fetched <final url> (<source>).`, one blank line, then the content slice starting at `--offset`. `--max-chars` covers the whole output. When content remains, a last line reads `(showing characters <a>-<b> of <n>; continue with --offset <b>)`; use that offset to read the next slice. Offsets and counts are in UTF-16 code units, a slice never splits a surrogate pair, and at least one unit always prints. Empty content prints the source line, a blank line, and `(empty page)`. An offset at or past the end prints the source line, a blank line, and `(offset <o> is past the end; the page has <n> characters)`. A redirect to another host prints `Web fetch: redirected to <url>.` instead. Long pages are read in slices; nothing is summarized.
+
+**Fetch errors**
+
+Every malformed form prints only `Usage: web fetch <url> [--format markdown|text|html] [--timeout <1-120>] [--max-chars <200-100000>] [--offset <n>] [--provider <name>]` and sends nothing. That covers bare `web fetch`, a missing or non-HTTP(S) URL, a flag before the URL, an unknown flag (`--prompt` and `--mode` included) or a flag in the wrong case, a repeated flag, a flag with no value, a number outside its range or not whole, a `--format` outside its three values, and any extra word, a second URL included.
+
+A fetch prints one of these refusals and sends nothing: `Web fetch: unknown provider "<name>" (available: auto, tavily, tinyfish, local).` with the name as you typed it, `Web fetch: provider "<name>" is not configured.`, `Web fetch: provider "<name>" does not support --format <format>.`, and the stored failure line of a disabled provider.
+
+A failed attempt prints `Web fetch failed (<name>): <reason>.`. When several are tried and all fail, it prints `Web fetch: every attempt failed.` followed by one `- <name>: <reason>` line per attempt, in order; a successful fallback prints only the attempt that answered. A reason is `HTTP <status> <status text>` (just `HTTP <status>` when the text is empty), `timed out after <s> s`, `invalid response`, `too many redirects`, `unsupported content type <type>`, `response larger than 50 MB`, `could not fetch: <provider error>`, the first line of a network error, `provider failed: <first line>`, or `requires provider API <n>`.
+
+**Fetch providers**
+
+Tavily, TinyFish, and `local`, in that order, are the fetch providers; one provider serves both search and fetch. Tavily returns `markdown` and `text`, TinyFish returns `markdown` and `html`, and `local` returns all three raw. `auto`, the default, tries every fetch-capable provider in order, skipping one with no token, one that cannot serve `--format`, and one that is disabled, and falls back from each failed attempt. Because `local` needs no token and serves every format, `auto` always ends at `local` unless it is disabled. An explicit `--provider` tries only that provider and never falls back; `--provider local` is a direct fetch only. `--timeout` applies to each attempt separately, so a chain of three attempts can take three times the timeout. Tavily is sent the smaller of `--timeout` and 60 seconds while you still wait the full `--timeout`.
+
+A provider broken by a fetch or a search is disabled for both commands until the server restarts. `auto` skips a disabled provider, and an explicit one prints its stored failure line. On a local tab one notification, `Web provider "<name>" disabled: <reason>.`, appears in the notifications tab even when a later provider succeeds. A remote tab posts none.
+
+**The local provider**
+
+`local` makes a direct GET from the machine that owns the tab, through that machine's network, firewall, VPN, and proxy. It exposes that machine's IP and cannot solve bot challenges. It can reach any host that machine can reach, public, loopback, LAN, and link-local alike, with no address checks before connecting or on redirects; the role grant is the trust boundary.
+
+The body is returned exactly as received, decoded to text, whatever `--format` says, with no conversion; the `(local)` source tells you it is raw. `text/*` (HTML included), `application/xhtml+xml`, `application/json`, `application/xml`, and any `+json` or `+xml` suffix are returned. Anything else, a missing header included (read as `application/octet-stream`), fails with `unsupported content type <type>`. At most 50 MB is read, streamed and counted in bytes; a larger declared size or body fails with `response larger than 50 MB`.
+
+The body is decoded using the `charset` in `Content-Type`, or UTF-8 when it is absent or unknown, with invalid bytes replaced. A non-2xx final status fails with `HTTP <status> <status text>`, as does a 3xx with no usable `Location`. An `http:` URL becomes `https:` unless its host is `localhost` or a `.localhost` name, an IP literal in `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`, `::1/128`, `fc00::/7`, or `fe80::/10` (an IPv4-mapped IPv6 literal counts by its IPv4 address), or a single label with no dot. That is decided from the URL alone, with no lookup. Each fetch uses a fresh desktop Chrome profile: `User-Agent`, a quoted `Sec-CH-UA-Platform`, `Accept-Language`, and a browser-style `Accept` preferring HTML, the same on every hop, with no cookies kept.
+
+A same-host redirect, compared without regard to case and with scheme and port free to change, is followed with the upgrade rule applied, for at most 5 hops; a sixth fails with `too many redirects`. A redirect to a different host, or to a non-HTTP(S) URL, is not followed and prints `Web fetch: redirected to <url>.`, which is an answer rather than a failure, so `auto` does not fall back. Tavily and TinyFish handle their own redirects.
+
+**Fetch cache**
+
+A successful fetch's full content, final URL, and source are kept in memory for 15 minutes in the process that ran it, keyed by the URL as typed, `--format`, and `--provider`, but not by `--timeout`, `--offset`, or `--max-chars`. At most 50 entries are kept, the least recently used one evicted; a hit counts as a use without extending its expiry. `--offset 0` never reads the cache and replaces the entry on success. An offset above 0 slices from a live entry, even one whose provider has since been disabled, and otherwise fetches and stores. Failures, redirected-to lines, and refusals are never stored and leave an existing entry alone; the empty-page answer is stored. A hit prints exactly what a fresh fetch prints, with no marker. There is no bypass flag, and the cache is lost on restart. A remote host keeps its own cache, shared by every workspace it serves.
+
+**Where a fetch runs**
+
+A local tab's fetch runs on the machine running Janissary, with that machine's tokens. A remote tab's fetch runs on the remote host, in that tab's workspace, with that workspace's merged tokens, where a token forwarded from the local machine wins over the remote machine's own file. Its `local` provider sees the remote host's network, and it never falls back to the local machine. A remote tab with no live connection, or whose workspace is still being prepared, prints `Remote connection unavailable.`. A connection that drops or stops answering prints `The remote connection ended.` or `The remote machine did not answer in time.`. Anything the remote side answers prints unchanged. A typed fetch has no cancellation, and neither does a fetch sent to a remote host.
+
+**Fetch examples**
+
+- `web fetch https://nodejs.org/api/permissions.html --max-chars 5000` reads a page a search found, with a larger budget.
+- `web fetch https://example.com --provider local --format html` fetches the raw body directly.
+- `web fetch https://example.com --offset 4200` continues from the offset named in an earlier slice.

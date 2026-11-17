@@ -10,6 +10,7 @@ export const command: Command = {
     'web',
     'web search node.js permission model 2026',
     'web search rust async --results 5 --depth advanced',
+    'web fetch https://nodejs.org/api/permissions.html --max-chars 5000',
   ],
   run: async (command_, tab, managers, invocation) => {
     const output = await runWebInTab(managers, tab.label, command_);
