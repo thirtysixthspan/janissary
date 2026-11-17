@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's remote-protocol bump at a version master has not already claimed, so `apply-patch` does not share version 44 with `web search`.
-
-Existing Issue: The plan's Remote tabs decision, the new `apply-patch` paragraph in the remote-server spec, `REMOTE_PROTOCOL_VERSION`, and its pinned test all make `apply-patch` protocol version 44, while master's `web search` change already assigns version 44 to the token names and the `web-search` operation, so the two features cannot both keep it. Severity: 8/10
-
-Existing Risk: 7/10 - A build carrying both features under version 44 passes the exact-version handshake against a peer that has only one of the two operations, so the mismatch appears as an unknown-operation failure after connecting instead of being refused at the handshake that the version check exists to enforce.
-
-Proposal Risk: 1/10 - The version names one operation set again and the plan, spec, comment, and test agree, leaving only the intended refusal of a peer built from the old branch tip.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2011 "renumber the apply-patch protocol bump to 45 after rebasing onto master". Rebase the branch onto current `origin/master`, which added `web search` and took protocol version 44 in `src/remote/protocol.ts` and `product/specs/remote-server.md`; keep master's version-44 comment and paragraph for the token names and `web-search`, and move this pull request's bump to 45. In `src/remote/protocol.ts`, set `REMOTE_PROTOCOL_VERSION` to 45 with a comment that names `apply-patch` and says a version-44 peer is refused at the handshake; in `src/remote/protocol.test.ts`, pin 45. In `product/specs/remote-server.md`, keep master's version-44 paragraph and rewrite this pull request's paragraph to "Protocol version 45 adds `apply-patch` ... A version-44 peer would refuse the unknown operation only after connecting, so the handshake refuses it first.". Amend `product/plans/complete/file-patch.md`'s Remote tabs design decision and its `src/remote/protocol.test.ts` test entry so the completed plan records 44 to 45, matching master's completed web-search plan's record of 43 to 44. Keep both `web-search` and `apply-patch` in `src/remote/filesystem/operations.ts`, `src/remote/protocol-frames.ts`, `src/remote/filesystem/result-decoders.ts`, and `src/file-navigator/remote/port-requests.ts`, and make `src/remote/filesystem/operations.test.ts` and `src/file-navigator/remote/port-requests.test.ts` list both operations. The existing handshake tests in `src/remote/protocol.test.ts` cover the version pairing and must keep passing with the new number.
-
-
 * Drop the fix plan's correction to the ready web-search plan, which master has since moved to the completed plans.
 
 Existing Issue: The fix plan that repoints `product/plans/ready/web-search.md` at the completed file-patch plan edits a path master deleted when its `web search` change moved that plan to `product/plans/complete/web-search.md`, so the repair was undone by a later change and the branch now carries a modify/delete conflict on a file it no longer needs to touch. Severity: 6/10
