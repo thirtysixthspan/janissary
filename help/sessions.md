@@ -19,3 +19,7 @@ Open the remote sessions list, showing hosts you are connected to or parked on. 
 
 - `sessions` opens the remote sessions list.
 - `sessions left` docks the list on the left.
+
+**Notes**
+
+When two accounts run Janissary against the same project directory, each keeps its own session record, named `remote-sessions.<account-hash>.json` in `.janissary/`, and the list merges them into one. Records named `remote-sessions.json` from before records were keyed per account are read the same way, so sessions parked before an upgrade still appear.

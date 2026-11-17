@@ -111,3 +111,5 @@ Two things about that control are worth knowing. **Detach** acts on the whole sh
 ## Scope
 
 The list is specific to the project you have open — launching a remote session from a different project shows only that project's sessions. It's also separate from the connections surface: `connections list` and the [connections](/user-documentation/command-bar/connections) panel describe connections that are open right now, so a parked session shows up in neither. See [Remote agents and harnesses](/user-documentation/advanced-agents/remote-agents) for how a remote session is created in the first place.
+
+Sessions are also kept apart by account. If two accounts run Janissary against the same project directory, each writes its own record, named `remote-sessions.<account-hash>.json` in `.janissary/`. Loading the list merges every account's record into the one list you see here, so a shared directory still shows all of its sessions. Records from before Janissary keyed them per account are named `remote-sessions.json` and are read the same way, so a session parked before an upgrade still turns up.

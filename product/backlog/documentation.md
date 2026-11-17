@@ -10,7 +10,6 @@
 
 
 
-* state-directory (3/10) — nine of 11 facts are correct with two missing and none wrong. Missing: the remote-sessions record file is keyed per account (`remote-sessions.<account-hash>.json`), each instance writes only its own file while a load merges every account's file into one Sessions list, and a pre-keying `remote-sessions.json` is read the same way so a parked session survives the upgrade. Add a short note to `documentation/user-documentation/tab-types/sessions.md` and `help/sessions.md`. Ground truth is `product/specs/state-directory.md`, `documentation/user-documentation/getting-started/startup.md` and the files under `src/state/`.
 
 * tab-completion (6/10) — 39 of 52 facts are correct with 13 missing and none wrong. The largest gap is the entire `file` command completion family (glob/grep/read subcommands, `file read` flags, `file glob` flags, `file grep`'s seven flags, paths against the command root, no paths on remote tabs). Web completion is only partly documented, and several per-command nuances are absent (runscript suggestions vanish with a bad catalog, name completion only for a non-empty bare word, case-sensitive matching, canonical-name settings sharing). Fix in `documentation/user-documentation/command-bar/tab-completion.md`. Ground truth is `product/specs/tab-completion.md`, `src/completion/index.ts`, `src/completion/web.ts` and `src/completion/file-grep.ts`.
 
@@ -32,6 +31,7 @@
 
 ## resolved
 
+* state-directory — documented in documentation/user-documentation/tab-types/sessions.md, help/sessions.md (removed 2026-11-17)
 * sql-database — documented in documentation/user-documentation/tab-types/sql-browser.md (removed 2026-11-17)
 * shell-tab — documented in documentation/user-documentation/command-bar/shell.md, documentation/user-documentation/getting-started/tabs.md (removed 2026-11-17)
 * sessions-tab — documented in documentation/user-documentation/tab-types/sessions.md (removed 2026-11-17)
