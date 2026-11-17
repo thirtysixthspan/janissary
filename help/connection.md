@@ -33,3 +33,5 @@ Open the connections tab, or open a live connection or retained ACP/agent sessio
 - `connections` is the only name that docks. `connection left` and `connection right` are lookup text. Run `help connections` for docking and the full command grammar.
 - `connection close` completes no target, unlike plural `connections close`.
 - Lookup also accepts a retained record's exact UUID, a live `<kind>:<id>` connection, and, last of all, the name the connections list shows for a record, such as `acp:<tab name>`, ignoring letter case. A failed lookup reports exactly `No connection matching "<text>".`
+- The connections list header holds **Refresh** and **Split** at its right edge, where **Split** moves the list into the other pane. Refresh with arguments is refused with `invalid refresh payload`, and Refresh sent from a connection tab is refused with `refresh applies only to the connections list`.
+- In a connection tab, **Focus tab** is refused with `The owning tab is no longer open.` once the tab that started the record has closed, and with `invalid focus payload` when it carries anything but a record id.
