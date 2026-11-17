@@ -4,8 +4,6 @@
 
 ## development
 
-* pull-request-review (6/10) — 24 of 45 facts are covered and none wrong; roughly 21 are missing or only implied, concentrated in the complex-feature tail. Concrete gaps: wrong change-set statistics are proposed for removal not correction, staged-review mechanics (1–10 complexity acceptance, 1–5 plans kept whole, 6–10 decomposed once into 1–4 subplans, above-4 rating blocked, 7+ implementation cutoff, publishing all subplans to one PR before work), resolution reviews and next-subplan gating, the entire behavioral-testing cycle, and the final recovery cycle with conflict/CI checks and a three-sequence bound. Fix in `documentation/user-documentation/workflows/pull-request-review.md`, cross-referencing `documentation/user-documentation/workflows/testing-a-pull-request.md` and `documentation/user-documentation/workflows/updating-a-pull-request.md`. Ground truth is `product/specs/pull-request-review.md`, `ai/tasks/feature/review-pull-request.md` and `ai/tasks/feature/work-pull-request-issue.md`.
-
 * pull-request-testing (3/10) — 19 of 20 facts are accurate with one missing and none wrong. The absent behavior is that a generated step whose expected result no plan, spec or description states fails only on plainly broken behavior and otherwise reports `unspecified — <observed>` without filing anything. Add one or two sentences to the 'Failures and reruns' section of `documentation/user-documentation/workflows/testing-a-pull-request.md`. Ground truth is `product/specs/pull-request-testing.md` and `ai/tasks/feature/test-pull-request.md`.
 
 * pull-request-updating (4/10) — 32 of 36 facts are correct with four missing and none wrong. The page omits that the description should leave out change-set statistics such as counts and SHAs (removing stated figures), that a complex feature's subplan plans are folded into the canonical plan and deleted, that delegated merge-blocker handoffs run one at a time, and that a PR with no configured checks proceeds directly to description work. Fix in the Description, One plan per pull request and Merge blockers come first sections of `documentation/user-documentation/workflows/updating-a-pull-request.md`. Ground truth is `product/specs/pull-request-updating.md`, `ai/tasks/feature/update-pull-request.md` and `ai/tasks/feature/build-a-complex-feature.md`.
@@ -46,6 +44,7 @@
 
 ## resolved
 
+* pull-request-review — documented in documentation/user-documentation/workflows/pull-request-review.md (removed 2026-11-17)
 * profiles — documented in documentation/user-documentation/automation/profiles.md, help/profile.md (removed 2026-11-17)
 * notifications — documented in documentation/user-documentation/tab-types/notifications.md (removed 2026-11-17)
 * models-tab — documented in documentation/user-documentation/tab-types/models.md, help/models.md (removed 2026-11-17)
