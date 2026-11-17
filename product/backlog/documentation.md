@@ -4,8 +4,6 @@
 
 ## development
 
-* diff-tab (6/10) — 35 of 49 facts are documented with 13 missing and one wrong. Wrong: `documentation/user-documentation/tab-types/diff-tab.md` says pointing the tab at another directory is the one case that clears the body first, but switching the change source also clears it. Missing minor UI nuances include the `@@` hunk-range header, `+`/`−` signs and colored numbers, character-mark length limits, rename extensions per side, immediate syntax-theme updates, comments on removed lines and original-vs-modified separation, and the no-commits "all files added" case. Fix in `documentation/user-documentation/tab-types/diff-tab.md`, mirroring in `documentation/user-documentation/tab-types/diff.md` and `help/diff.md`. Ground truth is `product/specs/diff-tab.md`, `src/plugins/diff/tab-state.ts`, `web/src/plugins/diff/DiffTab.tsx` and `web/src/plugins/diff/SourceControl.tsx`.
-
 * launcher (4/10) — 49 of 61 facts are correct with 12 missing and none wrong. The page does not say that docking a launcher displaces the previous one back to the center strip, that an unrecognized icon is reported to the Notifications feed, that the launcher has no text command bar, or that a summarizer prompt the core cannot answer is reported to Notifications and retried; it also omits cosmetic row details and that several built-in command destinations and the Harness dialog entry are described only on other pages. Fix in `documentation/user-documentation/tab-types/launcher.md`. Ground truth is `product/specs/launcher.md`, `src/plugins/launcher/commands-file.ts`, `src/plugins/launcher/activate.ts` and `web/src/plugins/launcher/CommandRail.tsx`.
 
 * models-tab (3/10) — 13 of 16 facts are correct with three missing and none wrong. The gaps are the friendly group headings and cosmetic list details, that duplicate ids are accepted and Delete targets only the first matching record, and the `<harness> skipped: <binary> is not installed.` message plus the first-line-of-error rule for other failures. Fix in `documentation/user-documentation/tab-types/models.md` with matching additions in `help/models.md`. Ground truth is `product/specs/models-tab.md`, `src/models/groups.ts`, `src/models/catalog-file.ts`, `src/models/manager.ts` and `web/src/plugins/models/ModelsTab.tsx`.
@@ -56,6 +54,7 @@
 
 ## resolved
 
+* diff-tab — documented in documentation/user-documentation/tab-types/diff-tab.md, documentation/user-documentation/tab-types/diff.md, help/diff.md (removed 2026-11-17)
 * conversations — documented in documentation/user-documentation/tab-types/conversations.md, help/conversations.md (removed 2026-11-17)
 * connections-tab — documented in documentation/user-documentation/command-bar/connections.md, help/connections.md, help/connection.md (removed 2026-11-17)
 * connection — documented in documentation/user-documentation/command-bar/connections.md (removed 2026-11-17)

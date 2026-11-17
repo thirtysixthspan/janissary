@@ -24,7 +24,11 @@ The change source button in the header, beside the plus-minus control, cycles th
 
 The status is one of **added**, **modified**, **deleted**, **renamed**, **binary**, or **mode**. **added** means the file did not exist before, so a file you only appended to reads **modified**. **mode** is a change to the file's permissions alone and has no code lines. A rename shows the old path, an arrow, and the new path. A binary file appears without a text diff.
 
-Added lines are green and removed lines are red. Each line has its old and new line numbers. A replacement may highlight the characters that changed. Long lines wrap in the unified view; the split view keeps both sides aligned and can scroll horizontally in a narrow pane.
+Each hunk starts with a header in the form `@@ -start,length +start,length @@`. It tells you where the change begins on each side, and that the lines between two hunks were skipped.
+
+Added lines are green with a `+` beside their number. Removed lines are red with a `−`. The number takes the line's color, green on an addition and red on a removal, and an unchanged line has no sign. Two narrow gutters show the original and new line numbers. The original number is blank on an added line and the new number is blank on a removed one.
+
+Where a line was replaced, the characters that changed carry a stronger tint of the line's color. Character marks need a long stretch of unchanged text to align against, so unrelated long replacements keep only their line colors and a very long line gets no marks. Long lines wrap in the unified view; the split view keeps both sides aligned and can scroll horizontally in a narrow pane.
 
 ## Open a changed file
 
@@ -40,7 +44,9 @@ Two kinds of change start collapsed. One is a file added, deleted, or rewritten 
 
 Use the plus-minus control in the header to switch between unified and split layouts. The app remembers your choice when you close and reopen the tab, and a change in one diff tab applies to every open diff tab. In split layout, the original text is on the left and the changed text is on the right, and replaced lines sit side by side. When one side has fewer lines, shaded empty cells fill the gap. In unified layout, a replacement shows all its removed lines before all its added lines. In both layouts, double-click an added or unchanged line to open the file there.
 
-Syntax highlighting supports Markdown, JavaScript, TypeScript, and JSON files. Other file types appear as plain text. A side with more than 10,000 lines or 1 MB of visible text also appears as plain text.
+Syntax highlighting supports Markdown, JavaScript, TypeScript, and JSON files. Other file types appear as plain text. A renamed file uses its old extension on the old side and its new extension on the new side. A side with more than 10,000 lines or 1 MB of visible text also appears as plain text.
+
+Colors follow the active [syntax theme](/user-documentation/command-bar/commands#syntax-theme). Switching themes updates every open diff tab right away, in both layouts.
 
 ## Navigate with the keyboard
 
@@ -59,15 +65,19 @@ The walk stops at the first and last hunk or file instead of wrapping. `←` col
 
 In unified layout, use the **+** beside a line to write a note about it. `Return` starts a new line in the note and `Escape` cancels it. **Save comment** keeps the note, and it stays disabled until you type something. **Cancel** discards the edit. A saved note offers **Edit comment** and **Delete comment**. If the line changes after you wrote the note, the note shows `Line changed since this comment:` followed by the earlier text.
 
+You can comment on a removed line too, even though the line has no file position to open. Notes on the original and modified sides of the same line number stay separate, so a note on the old text does not appear on the new text.
+
 Comments are temporary. They stay in the diff tab, are not sent anywhere, and are not written to your files. They survive a refresh, collapsing a file, the full-file view, and a layout change. Split layout hides them until you switch back to unified. They are forgotten when you close the tab, change its directory, or the file's entry disappears.
 
 <img class="agent-float" src="/agents/ekrem-south-west.png" alt="" />
 
 ## Refresh and errors
 
-The tab refreshes automatically about once a second, so it follows your edits, including a change that only adds or removes whitespace. A refresh leaves what is on screen alone until the new result arrives, so the body never blanks and **No changes** doesn't flicker. Running `diff` again refreshes too. Pointing the tab at another directory is the one case that clears the body first.
+The tab refreshes automatically about once a second, so it follows your edits, including a change that only adds or removes whitespace. A refresh leaves what is on screen alone until the new result arrives, so the body never blanks and **No changes** doesn't flicker. Running `diff` again refreshes too. Pointing the tab at another directory or switching the change source clears the body first, because what it held belongs to the directory or source it left.
 
 A directory outside a Git repository shows **This directory is not a git repository**; a repository with no changes shows **No changes**. A Git failure appears in the tab, which continues working and tries again on a later refresh. A read that takes longer than 30 seconds stops and shows `Git diff read timed out after 30000 ms`.
+
+In a repository with no commits yet, all changes and staged changes show every file as added. The last commit view shows **No changes**.
 
 In a remote workspace, if the host does not provide a usable change set, the tab shows **The remote host did not answer with a change set.**
 

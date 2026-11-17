@@ -30,15 +30,19 @@ Click a file's name to open it in an editor tab. Double-click an added or unchan
 
 Each file's header carries a status word: **added**, **modified**, **deleted**, **renamed**, **binary**, or **mode** for a permissions-only change. A file you only appended to reads **modified**, because **added** means it didn't exist before. Files your `.gitignore` excludes are not listed.
 
-The tab recomputes every second, so the change set stays live while files are edited around it, and a recompute never blanks what is on screen. A change set with no files reads `No changes`, and a directory that isn't in a git repository says so by name.
+Each hunk opens with a `@@ -start,length +start,length @@` header showing where the change begins on each side. Added lines are green with a `+` and a green line number. Removed lines are red with a `−` and a red line number.
+
+The tab recomputes every second, so the change set stays live while files are edited around it, and a recompute never blanks what is on screen. A change set with no files reads `No changes`, and a directory that isn't in a git repository says so by name. In a repository with no commits yet, all changes and staged changes show every file as added, and the last commit view reads `No changes`.
 
 The header names the directory being diffed in the app's own shorthand — `$root` for the project's own directory, `$workspace/<name>` for a clone, `$git-sync` for the shared clone [git-synced files](/user-documentation/tab-types/editor-git-sync) live in, `~` for a path under your home directory. A workspace on another host is named after that host, so it's never ambiguous which machine the changes came from.
 
-The arrows-up-down button in a file's header cycles that file through closed, a compact diff, and the whole file. A file that was added, deleted, or rewritten line for line starts closed, and so does any change of more than 400 added and removed lines combined. In a replacement, only the characters that changed carry the stronger tint. The header's plus-minus control switches between a unified layout, one column per line, and a split layout, old and new content in separate columns; the choice is remembered for the next diff tab you open. The change source button beside it cycles the tab through all changes, only the staged changes, and only the last commit's changes; every diff tab starts on all changes.
+The arrows-up-down button in a file's header cycles that file through closed, a compact diff, and the whole file. A file that was added, deleted, or rewritten line for line starts closed, and so does any change of more than 400 added and removed lines combined. In a replacement, only the characters that changed carry the stronger tint. That needs a long unchanged run to align against, so unrelated long replacements and very long lines keep only their line colors. The header's plus-minus control switches between a unified layout, one column per line, and a split layout, old and new content in separate columns; the choice is remembered for the next diff tab you open. The change source button beside it cycles the tab through all changes, only the staged changes, and only the last commit's changes; every diff tab starts on all changes. Switching the source clears what the tab shows, as does pointing it at another directory.
+
+Syntax colors follow the active syntax theme, and switching themes updates every open diff tab right away. A renamed file uses its old extension on the old side and its new extension on the new side.
 
 The body takes the keyboard while it has focus: `↓` and `↑` walk the changed hunks across every file, `j` and `k` move between files, `←` collapses the file you're in, `→` cycles its view, and `Return` opens the file at the first added line of the hunk you're on, or at its first line when the hunk only removes lines.
 
-In the unified layout each line carries a **+** comment control for a local note about it. Comments stay in the tab, are never sent anywhere, and survive refreshes and layout changes. They are forgotten when the tab closes or changes directory.
+In the unified layout each line carries a **+** comment control for a local note about it, including a removed line. Notes on the original and modified sides of the same line number stay separate. Comments stay in the tab, are never sent anywhere, and survive refreshes and layout changes. They are forgotten when the tab closes or changes directory.
 
 ## A workspace on another host
 
