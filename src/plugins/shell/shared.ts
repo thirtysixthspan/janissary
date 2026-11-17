@@ -1,5 +1,9 @@
 export const SHELL_PAYLOAD_SCHEMA_VERSION = 5;
 
+export function stripComments(command: string): string {
+  return command.replaceAll(/\s*##(?:[\s\S]*?##\s*|[\s\S]*)/g, ' ').trim();
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

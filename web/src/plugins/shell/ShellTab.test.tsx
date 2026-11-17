@@ -1049,6 +1049,28 @@ describe('ShellTab', () => {
     });
   });
 
+  it('strips hash comments before dispatching and recording a shell-bar line', async () => {
+    const { capabilities, releaseDispatch } = renderTab({ dispatched: true });
+
+    fireEvent.change(bar(), { target: { value: '## note ## notify stripped-test' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+
+    expect(capabilities.intent).toHaveBeenCalledWith('dispatch', 'notify stripped-test');
+    expect(capabilities.intent).toHaveBeenCalledWith('remember', 'notify stripped-test');
+  });
+
+  it('drops a comment-only line without dispatching or running it', async () => {
+    const { capabilities, releaseDispatch, written } = renderTab({ dispatched: false });
+
+    fireEvent.change(bar(), { target: { value: '## only comment ##' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+
+    expect(capabilities.intent).not.toHaveBeenCalledWith('dispatch', expect.anything());
+    expect(written).toEqual([]);
+  });
+
   it('does not put a line the application claimed into the shell', async () => {
     const { releaseDispatch, written } = renderTab({ dispatched: true });
 
