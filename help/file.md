@@ -162,7 +162,7 @@ Hunks are searched in order, each after the previous match, and the first match 
 
 Sections apply in order, and a later section sees what earlier ones did, so one path may appear in several sections. Every check runs before anything is written; any failure leaves every file as it was.
 
-A successful patch prints a header and one row per path in order of first appearance:
+A successful patch prints a header and one row per path in the order a section first names it:
 
 - `Patched <n> files:`, or `Patched 1 file:`, or `Patched 0 files:` when the sections cancel out
 - `A <path>` for an added path, `M <path>` for a modified path, `D <path>` for a deleted path, and `R <old> -> <new>` for a file that existed before the patch and was renamed to a path that did not exist before the patch, each path once with its net change

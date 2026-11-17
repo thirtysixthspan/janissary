@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Report patch rows in the order each path is first named rather than the order an implicit link target is resolved.
-
-Existing Issue: patchRows in src/file-patch/rows.ts walks view.places() in resolution order, and a link's target place is created implicitly while following the link, so a target named in a later section sorts ahead of paths named earlier, and the success rows contradict the plan's and help's order of first appearance. Severity: 2/10
-
-Existing Risk: 2/10 - A transcript can order a later path before an earlier one, which makes the patch harder to review and contradicts the documented output; file content and the tree are unchanged.
-
-Proposal Risk: 1/10 - A first-named ordinal must be assigned once, when a place is first resolved non-implicitly, including an implicit place that is later named; a mistake would reorder every row.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2011 "report patch rows in first-named order". Add a firstNamed ordinal to PatchPlace in src/file-patch/view-entry.ts and assign it in resolvePath in src/file-patch/view.ts when implicit is false and the place has no ordinal yet, so an implicit link target takes its position when a section names it; keep the field optional or defaulted so the handwritten PatchPlace fixtures in sections.test.ts stay valid. Have patchRows in src/file-patch/rows.ts sort the emitted rows by that ordinal while keeping the existing R-origin and destination-skip rules. Add a sections.test.ts case with target and link present, sections that update link, delete old, and then update target, asserting rows appear as link, old, target; keep the existing named-link row case, the destination-new row case, and every other row test passing unchanged.
-
-
 * Qualify the patch help and spec's unconditional restore promise so the failed-restore case is visible.
 
 Existing Issue: help/file.md says every check runs before anything is written and any failure leaves every file as it was, and product/specs/acp.md says a patch that fails while writing puts back every path it changed, while product/plans/complete/file-patch.md's failure-while-applying decision and help/file.md's own applying-failure bullet allow a failed restore to leave some files changed. Severity: 2/10

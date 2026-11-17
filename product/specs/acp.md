@@ -253,7 +253,7 @@ Example: file patch {"patchText":"*** Begin Patch\n*** Update File: src/a.ts\n@@
 A patch answers `Patched <n> files:` followed by one `A`/`M`/`D`/`R` row per file.
 ```
 
-A successful patch prints `Patched <n> files:` and one row per path in order of first appearance, each path once with its net change. `R` is reported only when the move's destination did not exist before the patch. A destination that existed before the patch, including one deleted or moved away earlier in the same patch, keeps its own net row (`M` when it exists at the end, `D` when it does not) while the origin reports `D`.
+A successful patch prints `Patched <n> files:` and one row per path in the order a section first names it, each path once with its net change; a target reached through a link takes the position of the section that names it, not the section that followed the link. `R` is reported only when the move's destination did not exist before the patch. A destination that existed before the patch, including one deleted or moved away earlier in the same patch, keeps its own net row (`M` when it exists at the end, `D` when it does not) while the origin reports `D`.
 
 Hunk and anchor matching is bounded by the size of the file and the patch together rather than their product, so a large patch on a large file does not stall other sessions while it searches.
 

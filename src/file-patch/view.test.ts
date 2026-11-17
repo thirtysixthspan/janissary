@@ -119,6 +119,21 @@ describe('patch view', () => {
     expect(view.contents()).toEqual([link.content]);
   });
 
+  it('records first-naming order only when a place is named', () => {
+    write('target', 'original');
+    symlinkSync('target', path.join(root, 'link'));
+    const link = resolve('link');
+    const followed = view.resolveLink(link);
+    if (!followed.ok) throw new Error(followed.reason);
+    expect(link.firstNamed).toBe(0);
+    expect(followed.value.firstNamed).toBeUndefined();
+    const named = resolve('target');
+    expect(named).toBe(followed.value);
+    expect(named.firstNamed).toBe(1);
+    expect(resolve('link').firstNamed).toBe(0);
+    expect(resolve('target').firstNamed).toBe(1);
+  });
+
   it('refuses dangling and outside links', () => {
     symlinkSync(path.join(root, 'missing'), path.join(root, 'dangling'));
     writeFileSync(path.join(outside, 'file'), 'outside');

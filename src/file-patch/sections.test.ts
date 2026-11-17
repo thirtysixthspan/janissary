@@ -141,6 +141,12 @@ describe('patch sections', () => {
     expect(apply('*** Update File: old/link\n*** Move to: missing/link\n*** Update File: missing/link\n@@\n-old\n+changed')).toMatchObject({ ok: false, section: 2, reason: 'Not a text file' });
   });
 
+  it('orders rows by the first section naming each path', () => {
+    write('target', 'old\n'); write('old', 'gone\n'); symlinkSync('target', path.join(root, 'link'));
+    const result = success('*** Update File: link\n@@\n-old\n+changed\n*** Delete File: old\n*** Update File: target\n@@\n-changed\n+again');
+    expect(result.rows).toEqual([{ letter: 'M', path: 'link' }, { letter: 'D', path: 'old' }, { letter: 'M', path: 'target' }]);
+  });
+
   it('refuses moved links that resolve outside or into protected paths', () => {
     write('inside/target', 'old\n');
     symlinkSync('../inside/target', path.join(root, 'inside/link'));

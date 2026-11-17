@@ -26,6 +26,7 @@ export function createPatchView(root: string, caseInsensitive = volumeIgnoresCas
   const links = new Map<string, PatchPlace>();
   const planned = new Map<string, number>();
   let plannedList: readonly string[] | undefined;
+  let namedCount = 0;
 
   function foldedPlace(location: string): PatchPlace | undefined {
     return caseInsensitive ? folded.get(location.toLowerCase()) : undefined;
@@ -77,6 +78,12 @@ export function createPatchView(root: string, caseInsensitive = volumeIgnoresCas
     return undefined;
   }
 
+  function namePlace(place: PatchPlace): void {
+    if (place.firstNamed !== undefined) return;
+    place.firstNamed = namedCount;
+    namedCount += 1;
+  }
+
   function resolvePath(requested: string, implicit: boolean): FileOperationResult<PatchPlace> {
     const target = resolveMutationTarget(root, requested);
     if (!target.ok) return target;
@@ -88,7 +95,10 @@ export function createPatchView(root: string, caseInsensitive = volumeIgnoresCas
         ?? (keys.linkIdentity === undefined ? undefined : links.get(keys.linkIdentity))
         ?? foldedPlace(keys.location);
       if (existing !== undefined) {
-        if (!implicit) existing.implicit = false;
+        if (!implicit) {
+          existing.implicit = false;
+          namePlace(existing);
+        }
         return { ok: true, value: existing };
       }
       let content = contents.get(keys.realPath);
@@ -100,6 +110,7 @@ export function createPatchView(root: string, caseInsensitive = volumeIgnoresCas
       }
       const place: PatchPlace = { requested, location: keys.location, existed: target.value.exists, exists: target.value.exists,
         linkText: keys.linkText, missingFolders: keys.missingFolders, content, implicit };
+      if (!implicit) namePlace(place);
       places.set(keys.location, place);
       if (caseInsensitive) folded.set(keys.location.toLowerCase(), place);
       if (keys.linkIdentity !== undefined) links.set(keys.linkIdentity, place);
