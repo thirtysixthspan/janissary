@@ -2,6 +2,7 @@ import type { DeleteManyResult } from '../batch.js';
 import type { FileOperationResult } from '../file-operation-result.js';
 import type { ReplayResult } from '../filesystem-port.js';
 import type { HistoryStep } from '../moves.js';
+import type { RenameItemResult } from '../filesystem.js';
 import type { RemoteRequest } from './port-git.js';
 import { mapRemoteHistory } from './port-history.js';
 import type { RemotePortPaths } from './port-paths.js';
@@ -83,4 +84,19 @@ export async function remotePaste(
   sources: string[], destination: string, mode: 'copy' | 'cut', policy?: BulkConflictPolicy,
 ): Promise<PasteManyResult> {
   return request('paste', { sources, destination: await paths.to(root, destination), mode, policy });
+}
+
+export async function remoteRename(
+  request: RemoteRequest, paths: RemotePortPaths, root: string, relPath: string, name: string, overwrite?: boolean,
+): Promise<RenameItemResult> {
+  return request('rename', {
+    path: await paths.to(root, relPath), name, ...(overwrite !== undefined && { overwrite }),
+  });
+}
+
+export async function remoteReadFile(
+  request: RemoteRequest, paths: RemotePortPaths, root: string, relPath: string,
+): Promise<Uint8Array> {
+  const result = await request('read-file', { path: await paths.to(root, relPath) });
+  return Buffer.from(result.content, 'base64');
 }
