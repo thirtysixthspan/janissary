@@ -20,6 +20,8 @@ Select a skill with `with skill <name>`. Its instructions are included with the 
 
 Only listed canonical command names are allowed. The agent asks to run one by ending a reply with `janissary <command>`. Questions require the `ask-user` skill and its `question` grant; the task waits until you answer or cancel.
 
+Some commands are refused in this version even when a skill grants them. `file write`, `file edit`, `file patch`, `file glob`, `file grep`, and `web` (including `web search`) all return `Agent: command not permitted: <command>.` The agent receives that line as tool output and can't turn the refusal into permission for another command. Among the file commands, only `file read` runs; it needs a `file` grant and returns the same refusal without one.
+
 The command returns `Status: completed`, `failed`, or `terminated`, followed by the task response. Cleanup issues appear on separate `Cleanup warning:` lines. When you type the command in a command bar, such as a shell tab's, those same lines appear beneath the command line as its reply. Closing the caller tab terminates its run.
 
 Your caller tab stays in its original directory; the agent's files and ACP session use the execution workspace. `file read` reads from the execution workspace. The `db`, `browser`, and `question` commands still use your caller tab's directory and context as they were when the run started, not the execution workspace's. If the execution host cannot confine the agent because workspace sandboxing is disabled or unavailable, the notifications feed shows `Agent: sandboxing is disabled.`. For a remote run, this reflects the remote host's confinement state.
@@ -83,6 +85,8 @@ The task receives the parameter text after its filename unchanged, including lea
 The agent can request a granted command on the final nonempty reply line as `janissary <command>`. The command must be explicitly granted by a selected skill. A denial is returned to the agent and does not grant another command. Autonomous providers use the least expansive available tool-approval option. If the provider fails or returns an empty final answer, the run is marked failed.
 
 Closing the tab that launched the task terminates its run. Closing the monitor only closes the view; execution continues. A parent run owns nested runs it starts. Ending the parent stops its active children and waits for them to finish cleanup before the parent's own cleanup completes; a child that already finished needs no second cleanup. Tabs created by a run's granted commands close during cleanup. A tab that was already open, or one the command only focused, stays open. Cleanup releases the run's workspace reference and attempts each owned cleanup even if another one fails. Cleanup warnings appear after the result without changing its status.
+
+Once a run has ended, it refuses late attachments with `Agent run has already ended.` A late cleanup still runs once, and any failure in it doesn't change the result the run already recorded.
 
 ### Remote task cleanup
 
