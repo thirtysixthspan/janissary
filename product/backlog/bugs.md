@@ -2,16 +2,6 @@
 
 ## ready
 
-* Show `open` errors in the active shell tab when a file is missing or an address is invalid
-
-Existing Bug: Commands routed through the file opener report their errors only into the transcript log, so `open missing.txt`, `open javascript:alert(1)`, and `video notes.md` produce no visible reply at all in a shell tab. Severity: 6/10
-
-Existing Risk: 5/10 - A mistyped path, an unsupported URL scheme, or a wrong media type fails silently, so the user has no explanation and can only guess whether the command ran.
-
-Proposal Risk: 3/10 - Routing these messages through the command reply could duplicate lines in transcript-style tabs that already render appended log entries; a regression check should cover both a shell tab and a transcript view.
-
-Proposal: The spec promises in `product/specs/open.md` that errors are "surfaced before any opener runs — in the active tab," including "Unviewable or malformed web address — a message reporting the address is invalid" and "File does not exist — a not-found message", and `product/specs/open.md`'s video section says a non-video file "is reported rather than opened". Reproduce on a built app started against scratch state holding `notes.md`: from the launch shell type `open missing.txt`, then `open javascript:alert(1)`, then `video notes.md`. Expected: a message under each echoed line naming the missing path, the invalid URL, and the non-video file. Observed: the echo and prompt only; the phrase appears nowhere in the page body, the notifications feed is empty, and no tab opens. A captured WebSocket trace shows the server does produce the text: a `tab-view-updated` frame carries a buffer line `open: <abs path>/missing.txt: no such file`, while the matching `rpc-reply` is `{"dispatched":true,"output":""}`. As a control, `play notes.md` renders `play: notes.md: not a playable file` correctly in the same build. The `note` callback in `buildContext` and the missing-file and pinned-opener refusals in `openOne` in `src/open/file-manager.ts` append transcript entries with `managers.tab.append` and no invocation id; `executeAndCapture` in `src/capture/execute-and-capture.ts` filters `entry:appended` events by invocation id, so `dispatchInTab` in `src/command/manager.ts` returns an empty `output`. The shell tab's submit path in `web/src/plugins/shell/useShellSubmit.ts` renders that RPC output through `writeShellReply` in `web/src/plugins/shell/write-shell-reply.ts` and does not render the tab's `bufferLines` in its PTY, so the appended error is invisible. The invalid-URL error reaches the same dead end through `capabilities.note` in `src/plugins/page/activate.ts`. Carry the invocation id through these error appends, using the same command-output path that makes `play` visible, or return the error text as the command's output so `executeAndCapture` collects it; do not substitute a notification, since the spec keeps only the unsupported-extension error there. `src/controller.test.ts` already asserts these messages exist in tab text server-side; a regression test should assert the visible terminal reply in a shell tab for at least a missing file and an invalid URL.
-
 * Suppress consecutive duplicate commands in a shell tab's own history picker
 
 Existing Bug: Running the same command twice in a row in a shell tab lists it twice in that tab's Ctrl+R history picker. Severity: 2/10

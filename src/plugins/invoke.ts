@@ -32,9 +32,13 @@ async function runOpenRequests(
       if (origin.runId) {
         await managers.openFile.runAs(
           `open ${target}`, origin.command, origin.label, declaration.id, origin.runId, registerTab,
+          { invocationId: origin.invocationId },
         );
       } else {
-        await managers.openFile.runAs(`open ${target}`, origin.command, origin.label, declaration.id);
+        await managers.openFile.runAs(
+          `open ${target}`, origin.command, origin.label, declaration.id, undefined, undefined,
+          { invocationId: origin.invocationId },
+        );
       }
     });
   }
