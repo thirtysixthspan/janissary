@@ -15,7 +15,6 @@
 
 
 
-* video-tab (3/10) — 23 of 26 facts are correct with three missing and none wrong, all about `video snapshot`: minutes and seconds after the first field must be below 60, a leading `~` expands to home and paths may contain spaces split at the first valid `at`, and a command typed in a tab whose session runs on another machine is refused. Fix in the snapshot paragraph of `documentation/user-documentation/tab-types/video-player.md`, with optional lines in `help/video.md`. Ground truth is `product/specs/video-tab.md`, `src/plugins/video/snapshot-parse.ts` and `src/plugins/video/snapshot.ts`.
 
 * web-search (3/10) — 22 of 25 facts are correct with three missing and none wrong. The gaps are the agent-tool invocation rules: an agent triggers search by ending its reply with a single lowercase-only `web search …` line (bare line returns usage, capitalized sentence stays prose), a disabled or agent-off granted search refuses with `Command is disabled: web search.` (disabling the parent `web` cascades), and `agent` runs refuse every `web` line so the tool is ask/tell-only. Fix by adding an agent-tool paragraph to `help/web.md` and mirroring it in `documentation/user-documentation/advanced-agents/acp-agent.md`. Ground truth is `product/specs/web-search.md`, `src/web-search/command.ts`, `src/acp/tool-table.ts` and `src/commands/web.ts`.
 
@@ -27,6 +26,7 @@
 
 ## resolved
 
+* video-tab — documented in documentation/user-documentation/tab-types/video-player.md, help/video.md (removed 2026-11-17)
 * transcript — documented in documentation/user-documentation/getting-started/keyboard.md, documentation/user-documentation/command-bar/shell.md (removed 2026-11-17)
 * tabs — documented in documentation/user-documentation/getting-started/tabs.md, documentation/user-documentation/getting-started/groups.md (removed 2026-11-17)
 * tab-plugins — documented in documentation/user-documentation/command-bar/plugins.md (removed 2026-11-17)
