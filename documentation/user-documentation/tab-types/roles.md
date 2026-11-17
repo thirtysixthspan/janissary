@@ -20,11 +20,21 @@ If neither your project nor your home folder has a `roles.json` file, opening th
 
 Each card has **Models** and **Commands** sections. Click **Add model** in the Models section, pick the harness, model, and effort, and press **Add**. The picker offers enabled models only. The effort picker starts on `default` and returns to it when you change the harness or reopen the picker, so a choice never carries over to an entry you did not make it for.
 
+The **Models** list has the accessible name `Models of role <name>` for screen readers. When a role has no model choices, the section shows a muted `No models` row.
+
+Both the model and command pickers focus their first control when they open and close on `Escape`. Adding, canceling, or pressing `Escape` returns focus to the button you opened them from.
+
 Each choice row carries an effort dropdown: `default`, `low`, `medium`, `high`, `xhigh`, or `max`. `default` stores no effort at all for that choice; the other levels are the same ones the **New harness** dialog offers. If a hand-written role has another effort value, that value stays visible as an option in its dropdown. Change it whenever you like: the tab saves as you go. If saving fails, it shows `Could not write roles.json at <path>.` and preserves your previous file and the choices on screen.
 
 ## Grant commands to a role
 
-In the **Commands** section, choose **Add command**, select a native command, and press **Add**. The picker only offers commands the role does not already have. Remove a command with its **Remove `<command>`** control; removing a command removes every duplicate copy from the file. When all sixteen native commands are granted, **Add command** is hidden. A granted command that is currently disabled is dimmed and carries the tooltip `Disabled application-wide` when it is off everywhere or `Disabled for agents` when only its agent access is off; the grant stays in your roles file and the picker still offers the command.
+In the **Commands** section, choose **Add command**, select a native command, and press **Add**. The picker only offers commands the role does not already have. Remove a command with its **Remove `<command>`** control; removing a command removes every duplicate copy from the file. When all sixteen native commands are granted, **Add command** is hidden.
+
+A granted command that is currently disabled is dimmed and carries the tooltip `Disabled application-wide` when it is off everywhere or `Disabled for agents` when only its agent access is off. A disabled parent command is off everywhere for every command beneath it, so those commands also read `Disabled application-wide`. The grant stays in your roles file, and the picker still offers the command.
+
+Grants appear in the native command order, with duplicate grants kept side by side and any unknown hand-written values last. An unknown command is dimmed with the tooltip `Not a native command`, and you can still remove it. The **Commands** list has the accessible name `Commands of role <name>` for screen readers, and a role with no grants shows a muted `No commands` row.
+
+If an update leaves no commands left to add while the picker is open, or removes the focused **Add command** button, focus moves to the **Commands** heading. In a narrow pane, command text wraps so the remove control stays in view.
 
 The built-in **ask** role can read a file from the workspace, find workspace files by path, find text inside workspace files, read and query databases, browse to a page and read its content, search the web, and ask or approve a question. Ask can read files but not change them. **Tell** inherits those commands, including reading a file, and can also create or delete databases, evaluate browser pages, write and edit workspace files, and apply a patch that changes several files at once. You can adjust either list for your workflow. A role with an empty command list gives its prompts no native tools.
 
@@ -79,6 +89,8 @@ Whenever the tab saves, it keeps the file's existing permissions. If a save fail
 If the file in effect cannot be read, is not valid JSON, or is not an object of roles, the tab falls back — from a project file to your home file, and from a home file to the built-in defaults. It tells you in one line which file broke and what you are looking at instead, such as `roles.json is not valid JSON at <path> — showing default roles.` The other two openings are `roles.json could not be read at <path>` and `roles.json is not a set of roles at <path>`. The broken file is left exactly as it is. When the defaults are all you are looking at, the line above the cards reads `No roles file in effect`, and the tab refuses every edit with `roles.json at <path> is unusable — fix the file before editing roles.` so a fix you have not made yet is never overwritten. Once it has fallen back to a file that is whole, that file is the one you are editing: keep editing it, and the broken one still stays exactly as it is.
 
 If only part of a file is damaged — one role, or one model entry — the rest opens and the line says how much was dropped, for example `roles.json dropped 2 malformed roles or entries at <path> — showing the rest of this file.` That file is still the one being edited, so edits are refused there too, with the same `is unusable` message, until you repair it by hand.
+
+If the app cannot read the command restrictions when you open the tab, it reports `invalid commands topic data` and opens nothing. If they become unreadable later, the tab ignores the bad update and keeps the restrictions it last showed.
 
 If no file exists and the tab can't create `~/.janissary/roles.json`, it shows the default roles with `roles.json could not be created at <path> — showing default roles.` Edits are refused the same way.
 

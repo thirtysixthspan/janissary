@@ -4,8 +4,6 @@
 
 ## development
 
-* roles (3/10) — 43 of 52 facts are correct with nine missing and none wrong, all minor user-visible details: unknown hand-written commands are dimmed with tooltip `Not a native command`, empty sections show `No models`/`No commands`, accessible names `Models of role <name>`/`Commands of role <name>`, grants in native vocabulary order with adjacent duplicates, a disabled parent reading `Disabled application-wide`, `invalid commands topic data` on an unreadable snapshot, picker focus/Escape handling, and narrow-pane wrapping. Fix in `documentation/user-documentation/tab-types/roles.md` with a short note in `help/roles.md`. Ground truth is `product/specs/roles.md`, `src/plugins/roles/roles-file.ts`, `src/plugins/roles/shared.ts` and `web/src/plugins/roles/RoleCommands.tsx`.
-
 * root-path (3/10) — 13 of 16 facts are fully correct; three are only partially documented. Absent nuances: injected path vars replace inherited values from another session, the working directory supplies the root before a project is initialized, the dedicated test browser does not receive these vars, env-var presence does not alter filesystem permissions, and status messages naming a path are missing from the 'where it applies' list. Fix in the 'How paths are shown: $root' section of `documentation/user-documentation/getting-started/tabs.md`. Ground truth is `product/specs/root-path.md`, `src/paths.ts`, `src/workspace/directories.ts`, `src/sandbox/environment.ts` and `.codex/config.toml`.
 
 * search-tab (3/10) — 41 of 44 facts are correct with three missing and none wrong. The missing facts are the framed self-scrolling result window whose accent left border shows only while the result window is focused with selection preserved when focus leaves, that rows arriving during a running search never move a keyboard-picked highlight or scroll the window, and that a search is never reported as cancelled unless actually cancelled. Add a brief note to the 'Read the results' and 'Open a match' sections of `documentation/user-documentation/command-bar/project-search.md`. Ground truth is `product/specs/search-tab.md`, `src/search/types.ts`, `web/src/plugins/search/ModeToggles.tsx` and `web/src/shared/app-chords.ts`.
@@ -38,6 +36,7 @@
 
 ## resolved
 
+* roles — documented in documentation/user-documentation/tab-types/roles.md, help/roles.md (removed 2026-11-17)
 * quit-confirmation — documented in documentation/user-documentation/command-bar/commands.md (removed 2026-11-17)
 * pull-request-updating — documented in documentation/user-documentation/workflows/updating-a-pull-request.md (removed 2026-11-17)
 * pull-request-testing — documented in documentation/user-documentation/workflows/testing-a-pull-request.md (removed 2026-11-17)
