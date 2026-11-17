@@ -213,3 +213,90 @@ describe('resolveFetchAttempts', () => {
     }
   });
 });
+
+describe('resolveFetchAttempts with an explicit --provider', () => {
+  it('resolves a mixed-case name to that provider alone', () => {
+    const manifests = bundledLike();
+
+    expect(ids(resolveFetchAttempts(manifests, disabledReason(), TOKENS, 'TinyFish', 'markdown')))
+      .toEqual(['tinyfish']);
+  });
+
+  it('resolves local alone even when both remote providers are configured', () => {
+    const manifests = bundledLike();
+
+    expect(ids(resolveFetchAttempts(manifests, disabledReason(), TOKENS, 'local', 'markdown')))
+      .toEqual(['local']);
+    expect(ids(resolveFetchAttempts(manifests, disabledReason(), TOKENS, 'LOCAL', 'markdown')))
+      .toEqual(['local']);
+  });
+
+  it('counts a tokenless provider as configured with empty tokens', () => {
+    const manifests = bundledLike();
+
+    expect(ids(resolveFetchAttempts(manifests, disabledReason(), {}, 'local', 'markdown')))
+      .toEqual(['local']);
+  });
+
+  it('prints the unknown line with the name as typed and only fetch-capable ids available', () => {
+    const manifests = bundledLike();
+
+    expect(line(resolveFetchAttempts(manifests, disabledReason(), TOKENS, 'Bing', 'markdown')))
+      .toBe('Web fetch: unknown provider "Bing" (available: auto, tavily, tinyfish, local).');
+  });
+
+  it('treats a search-only provider as unknown even when disabled', () => {
+    const manifests = bundledLike();
+    const disabled = disabledReason([['searchonly', 'provider failed: searchonly boom']]);
+
+    expect(line(resolveFetchAttempts(manifests, disabled, TOKENS, 'searchonly', 'markdown')))
+      .toBe('Web fetch: unknown provider "searchonly" (available: auto, tavily, tinyfish, local).');
+  });
+
+  it('prints the not-configured line for a missing or empty token', () => {
+    const manifests = bundledLike();
+
+    expect(line(resolveFetchAttempts(manifests, disabledReason(), {}, 'tavily', 'markdown')))
+      .toBe('Web fetch: provider "tavily" is not configured.');
+    expect(line(resolveFetchAttempts(manifests, disabledReason(), { tavily: '' }, 'tavily', 'markdown')))
+      .toBe('Web fetch: provider "tavily" is not configured.');
+  });
+
+  it('prints the unsupported-format line for a configured provider', () => {
+    const manifests = bundledLike();
+
+    expect(line(resolveFetchAttempts(manifests, disabledReason(), TOKENS, 'tavily', 'html')))
+      .toBe('Web fetch: provider "tavily" does not support --format html.');
+  });
+
+  it('prints the disabled line and lets it win over not configured and unsupported format', () => {
+    const manifests = bundledLike();
+    const disabled = disabledReason([['tavily', 'provider failed: tavily boom']]);
+
+    expect(line(resolveFetchAttempts(manifests, disabled, TOKENS, 'tavily', 'markdown')))
+      .toBe('Web fetch failed (tavily): provider failed: tavily boom.');
+    expect(line(resolveFetchAttempts(manifests, disabled, {}, 'tavily', 'markdown')))
+      .toBe('Web fetch failed (tavily): provider failed: tavily boom.');
+    expect(line(resolveFetchAttempts(manifests, disabled, TOKENS, 'tavily', 'html')))
+      .toBe('Web fetch failed (tavily): provider failed: tavily boom.');
+  });
+
+  it('lets not configured win over an unsupported format', () => {
+    const manifests = bundledLike();
+
+    expect(line(resolveFetchAttempts(manifests, disabledReason(), {}, 'tavily', 'html')))
+      .toBe('Web fetch: provider "tavily" is not configured.');
+  });
+
+  it('never activates a manifest during any explicit resolution', () => {
+    const manifests = bundledLike();
+
+    resolveFetchAttempts(manifests, disabledReason(), TOKENS, 'tinyfish', 'markdown');
+    resolveFetchAttempts(manifests, disabledReason(), TOKENS, 'local', 'markdown');
+    resolveFetchAttempts(manifests, disabledReason(), TOKENS, 'Bing', 'markdown');
+
+    for (const manifest of manifests) {
+      expect(manifest.activate).not.toHaveBeenCalled();
+    }
+  });
+});
