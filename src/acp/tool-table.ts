@@ -12,6 +12,7 @@ import { FILE_GLOB_PRIMER, isFileGlobCommandLine } from '../file-glob/command.js
 import { FILE_GREP_PRIMER, isFileGrepCommandLine } from '../file-grep/command.js';
 import { isWebCommandLine } from '../web/command-line.js';
 import { isWebSearchReplyLine, WEB_SEARCH_PRIMER } from '../web/search/command.js';
+import { isWebFetchReplyLine, WEB_FETCH_PRIMER } from '../web/fetch/command.js';
 
 // One tool on the ACP run path. The three loop options the agent sees — what it is told the tools
 // are, which side runs a command it emitted, and what pulls a command out of its reply — are all
@@ -70,9 +71,9 @@ export function createAcpToolTable(grants: readonly string[]): AcpTool[] {
     {
       owner: 'web',
       tool: {
-        primer: WEB_SEARCH_PRIMER,
+        primer: webPrimer(allowed),
         match: (command) => isWebCommandLine(command),
-        isCommandLine: (line) => isWebSearchReplyLine(line),
+        isCommandLine: (line) => isWebSearchReplyLine(line) || isWebFetchReplyLine(line),
         runsOn: 'workspace',
       },
     },
@@ -98,6 +99,13 @@ function filePrimer(allowed: readonly string[]): string {
     ...(allowed.includes('file grep') ? [FILE_GREP_PRIMER] : []),
     ...(allowed.includes('file write') || allowed.includes('file edit') ? [FILE_MUTATION_PRIMER] : []),
     ...(allowed.includes('file patch') ? [FILE_PATCH_PRIMER] : []),
+  ].join('\n\n');
+}
+
+function webPrimer(allowed: readonly string[]): string {
+  return [
+    ...(allowed.includes('web search') ? [WEB_SEARCH_PRIMER] : []),
+    ...(allowed.includes('web fetch') ? [WEB_FETCH_PRIMER] : []),
   ].join('\n\n');
 }
 

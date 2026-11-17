@@ -20,6 +20,7 @@ import { FILE_GLOB_PRIMER } from '../file-glob/command.js';
 import { FILE_GREP_PRIMER } from '../file-grep/command.js';
 import { FILE_PATCH_PRIMER } from '../file-patch/command.js';
 import { WEB_SEARCH_PRIMER } from '../web/search/command.js';
+import { WEB_FETCH_PRIMER } from '../web/fetch/command.js';
 
 const setup = (grants: readonly string[] = NATIVE_ACP_COMMANDS) => ({ tools: createAcpToolTable(grants) });
 
@@ -35,7 +36,7 @@ describe('createAcpToolTable', () => {
       'browser primer text',
       'question primer text',
       `${FILE_READ_PRIMER}\n\n${FILE_GLOB_PRIMER}\n\n${FILE_GREP_PRIMER}\n\n${FILE_MUTATION_PRIMER}\n\n${FILE_PATCH_PRIMER}`,
-      WEB_SEARCH_PRIMER,
+      `${WEB_SEARCH_PRIMER}\n\n${WEB_FETCH_PRIMER}`,
       DB_PRIMER,
       `Only these commands are allowed: ${NATIVE_ACP_COMMANDS.join(', ')}.`,
     ].join('\n\n'));
@@ -61,11 +62,33 @@ describe('createAcpToolTable', () => {
     );
   });
 
-  it('omits the web tool and its primer unless web search is granted', () => {
-    const without = NATIVE_ACP_COMMANDS.filter((command) => command !== 'web search');
+  it('builds one workspace web tool from a web fetch grant', () => {
+    const tools = createAcpToolTable(['web fetch']);
+    expect(tools).toHaveLength(1);
+    expect(tools[0].runsOn).toBe('workspace');
+    expect(tools[0].primer).toBe(WEB_FETCH_PRIMER);
+    expect(toolPrimer(tools, ['web fetch'])).toBe(
+      `${WEB_FETCH_PRIMER}\n\nOnly these commands are allowed: web fetch.`,
+    );
+  });
+
+  it.each([
+    ['web search', 'web fetch'],
+    ['web fetch', 'web search'],
+  ])('joins both web primers in search-then-fetch order for grants %j', (first, second) => {
+    const tools = createAcpToolTable([first, second]);
+    expect(tools).toHaveLength(1);
+    expect(tools[0].primer).toBe(`${WEB_SEARCH_PRIMER}\n\n${WEB_FETCH_PRIMER}`);
+  });
+
+  it('omits the web tool and its primer unless a web command is granted', () => {
+    const without = NATIVE_ACP_COMMANDS.filter((command) => command !== 'web search' && command !== 'web fetch');
     const tools = createAcpToolTable(without);
-    expect(tools.some((tool) => tool.primer === WEB_SEARCH_PRIMER)).toBe(false);
-    expect(toolPrimer(tools, without)).not.toContain(WEB_SEARCH_PRIMER.split('\n', 1)[0]);
+    for (const primer of [WEB_SEARCH_PRIMER, WEB_FETCH_PRIMER]) {
+      const firstLine = primer.split('\n', 1)[0];
+      expect(tools.some((tool) => tool.primer.includes(firstLine))).toBe(false);
+      expect(toolPrimer(tools, without)).not.toContain(firstLine);
+    }
   });
 
   it('orders the file, web, and database primers between the caller-side entries', () => {
@@ -103,7 +126,7 @@ describe('createAcpToolTable', () => {
     const file = tools.find((tool) => tool.runsOn === 'workspace')!;
     expect(file.match('anything at all')).toBe(false);
     expect(file.match('db sqlite list')).toBe(false);
-    const web = tools.find((tool) => tool.primer === WEB_SEARCH_PRIMER)!;
+    const web = tools.find((tool) => tool.primer === `${WEB_SEARCH_PRIMER}\n\n${WEB_FETCH_PRIMER}`)!;
     expect(web.match('anything at all')).toBe(false);
     expect(web.match('db sqlite list')).toBe(false);
   });
@@ -299,7 +322,10 @@ describe('gateCommand', () => {
     ['file granted', ['file']],
     ['ungranted', []],
   ])('refuses agent web lines when %s', (_label, grants) => {
-    for (const command of ['web search node.js', 'web', 'web foo', 'WEB SEARCH x', '/web search x']) {
+    for (const command of [
+      'web search node.js', 'web', 'web foo', 'WEB SEARCH x', '/web search x',
+      'web fetch https://x', 'WEB FETCH x', '/web fetch https://x',
+    ]) {
       expect(gateCommand(agent({ grants }), [], command)).toStrictEqual({
         refusal: `Agent: command not permitted: ${command}.`,
       });
@@ -415,6 +441,31 @@ describe('toolExtractor', () => {
   it('returns null for a trailing web search line on a table without the web entry', () => {
     const { tools } = setup(['file read']);
     expect(toolExtractor(tools)('web search x')).toBeNull();
+  });
+
+  it('extracts a web fetch line from a reply when only web search is granted', () => {
+    const { tools } = setup(['web search']);
+    expect(toolExtractor(tools)('Let me read it.\nweb fetch https://example.com')).toBe('web fetch https://example.com');
+    expect(toolExtractor(tools)('web fetch')).toBe('web fetch');
+  });
+
+  it('extracts a web search line from a reply when only web fetch is granted', () => {
+    const { tools } = setup(['web fetch']);
+    expect(toolExtractor(tools)('Let me look.\nweb search x')).toBe('web search x');
+  });
+
+  it('does not extract a capitalized, uppercased, or near-miss web fetch sentence', () => {
+    const { tools } = setup(['web fetch']);
+    const extract = toolExtractor(tools);
+    expect(extract('Web fetch returned the page.')).toBeNull();
+    expect(extract('WEB FETCH https://x')).toBeNull();
+    expect(extract('web fetcher x')).toBeNull();
+    expect(extract('web fetch https://x\nWeb fetch returned the page.')).toBe('web fetch https://x');
+  });
+
+  it('returns null for a trailing web fetch line on a table without a web command', () => {
+    const { tools } = setup(['file read']);
+    expect(toolExtractor(tools)('web fetch https://x')).toBeNull();
   });
 
   it('returns a granted command, since the table reads no settings', () => {
@@ -564,6 +615,34 @@ describe('file mutation tools', () => {
     expect(gateCommand(coreSnapshot(['file read']), createAcpToolTable(['web search']), 'web search x')).toStrictEqual({
       refusal: 'Command not allowed for role "writer": web search.',
     });
+  });
+
+  it('routes a granted web fetch to the workspace', () => {
+    const grants = ['web fetch'];
+    expect(gateCommand(coreSnapshot(grants), createAcpToolTable(grants), 'web fetch https://x')).toStrictEqual({ runsOn: 'workspace' });
+  });
+
+  it('refuses a web fetch the role did not grant and a web search it did not grant', () => {
+    expect(gateCommand(coreSnapshot(['web search']), createAcpToolTable(['web search']), 'web fetch https://x')).toStrictEqual({
+      refusal: 'Command not allowed for role "writer": web fetch.',
+    });
+    expect(gateCommand(coreSnapshot(['web fetch']), createAcpToolTable(['web fetch']), 'web search x')).toStrictEqual({
+      refusal: 'Command not allowed for role "writer": web search.',
+    });
+  });
+
+  it('refuses a disabled or agent-inaccessible web fetch before the role check', () => {
+    const tools = createAcpToolTable(['web fetch', 'web search']);
+    const disabled = [{ name: 'web fetch', effectiveEnabled: false, effectiveAgentAccess: true }];
+    const agentOff = [{ name: 'web fetch', effectiveEnabled: true, effectiveAgentAccess: false }];
+    for (const rows of [disabled, agentOff]) {
+      expect(gateCommand(coreSnapshot(['web fetch'], rows), tools, 'web fetch https://x')).toStrictEqual({
+        refusal: 'Command is disabled: web fetch.', refused: 'disabled',
+      });
+      expect(gateCommand(coreSnapshot(['web search'], rows), tools, 'web fetch https://x')).toStrictEqual({
+        refusal: 'Command is disabled: web fetch.', refused: 'disabled',
+      });
+    }
   });
 
   const patch = 'file patch {"patchText":"*** Delete File: old.txt"}';

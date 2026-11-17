@@ -30,6 +30,7 @@ import { commandProtocolPrimer } from './command-protocol.js';
 import { CORE_MAX_STEPS } from './drive-loop.js';
 import { deferred } from '../deferred.js';
 import { WEB_SEARCH_PRIMER } from '../web/search/command.js';
+import { WEB_FETCH_PRIMER } from '../web/fetch/command.js';
 
 const mocks = vi.hoisted(() => ({
   runAcpToolLoop: vi.fn(), notify: vi.fn(), readFileInTab: vi.fn(), mutateFileInTab: vi.fn(),
@@ -344,6 +345,32 @@ describe('runCorePrompt tool runner', () => {
     expect(mocks.notify).not.toHaveBeenCalledWith(expect.anything(), 'command-disabled', expect.anything(), expect.anything());
     handlers.ranCommand(command, refusal as string);
     expect(mocks.notify).toHaveBeenCalledWith(managers, 'command-disabled', 'shell', 'Command is disabled: web search.');
+    expect(mocks.runWebInTab).not.toHaveBeenCalled();
+  });
+
+  it('runs a granted web fetch through the tab runner with the prompt signal', async () => {
+    mocks.runWebInTab.mockResolvedValue('the page');
+    const { start, dispatchNativeLine, managers } = harness({ settings: settingsWith({}) });
+    const { deps, request } = start('ask', ['web fetch']);
+    await expect(deps.runCommand('web fetch https://x')).resolves.toBe('the page');
+    expect(mocks.runWebInTab).toHaveBeenCalledWith(managers, 'shell', 'web fetch https://x', request.abort.signal);
+    expect(dispatchNativeLine).not.toHaveBeenCalled();
+    expect(deps.primer).toContain(WEB_FETCH_PRIMER);
+    expect(deps.primer).toContain('Only these commands are allowed: web fetch.');
+    expect(deps.primer).not.toContain(WEB_SEARCH_PRIMER);
+  });
+
+  it('treats a web fetch line as prose when the role does not grant it', () => {
+    const { start } = harness({ settings: settingsWith({}) });
+    const { deps } = start('ask', ['file read']);
+    expect(deps.extractCommand('web fetch https://x')).toBeNull();
+    expect(mocks.runWebInTab).not.toHaveBeenCalled();
+  });
+
+  it('refuses a disabled web fetch synchronously without calling the tab runner', () => {
+    const { start } = harness({ settings: settingsWith({ 'web fetch': { effectiveEnabled: false } }) });
+    const { deps } = start('ask', ['web fetch']);
+    expect(deps.runCommand('web fetch https://x')).toBe('Command is disabled: web fetch.');
     expect(mocks.runWebInTab).not.toHaveBeenCalled();
   });
 

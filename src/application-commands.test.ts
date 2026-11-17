@@ -35,6 +35,11 @@ describe('application command inventory', () => {
     expect(resolveApplicationCommand('file grep')?.name).toBe('file grep');
     expect(resolveApplicationCommand('file grep --literal TODO')?.name).toBe('file grep');
     expect(rows.find((row) => row.name === 'web search')).toMatchObject({ kind: 'native', parent: 'web', nativeTool: 'web' });
+    expect(rows.find((row) => row.name === 'web fetch')).toEqual({
+      name: 'web fetch', kind: 'native', aliases: [], forms: ['web fetch'], parent: 'web', nativeTool: 'web',
+    });
+    expect(resolveApplicationCommand('web fetch https://example.com')?.name).toBe('web fetch');
+    expect(resolveApplicationCommand('WEB FETCH x')?.name).toBe('web fetch');
     expect(resolveApplicationCommand('file glob *.ts')?.name).toBe('file glob');
     expect(resolveApplicationCommand('file write {"path":"a.md"}')?.name).toBe('file write');
     expect(resolveApplicationCommand('file edit {')?.name).toBe('file edit');
@@ -46,6 +51,11 @@ describe('application command inventory', () => {
       .toMatchObject({ name: 'file', kind: 'builtin', forms: ['file'] });
     expect(resolveApplicationCommand('file grep-x x'))
       .toMatchObject({ name: 'file', kind: 'builtin', forms: ['file'] });
+  });
+
+  it('falls back to the web command for words that only start with web fetch', () => {
+    expect(resolveApplicationCommand('web fetcher x'))
+      .toMatchObject({ name: 'web', kind: 'builtin', forms: ['web'] });
   });
 
   it('gives each built-in fixed subcommand form its own row linked to its parent', () => {

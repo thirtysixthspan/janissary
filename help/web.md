@@ -116,6 +116,10 @@ A successful fetch's full content, final URL, and source are kept in memory for 
 
 A local tab's fetch runs on the machine running Janissary, with that machine's tokens. A remote tab's fetch runs on the remote host, in that tab's workspace, with that workspace's merged tokens, where a token forwarded from the local machine wins over the remote machine's own file. Its `local` provider sees the remote host's network, and it never falls back to the local machine. A remote tab with no live connection, or whose workspace is still being prepared, prints `Remote connection unavailable.`. A connection that drops or stops answering prints `The remote connection ended.` or `The remote machine did not answer in time.`. Anything the remote side answers prints unchanged. A typed fetch has no cancellation, and neither does a fetch sent to a remote host.
 
+**Fetch agent tool**
+
+An `ask` or `tell` agent can read a page when its role grants `web fetch`; the built-in `ask` and `tell` roles grant it. The agent asks for a fetch by ending its reply with one lowercase `web fetch …` line, and a bare `web fetch` line answers with the usage line. Only a lowercase line counts, so an answer that begins a sentence with `Web fetch …` stays prose, and neither `WEB FETCH …` nor `web fetcher …` is a command. A role granting either web command has both web reply lines recognised, so a role that grants `web search` but not `web fetch` gets the fetch line extracted and refused with `Command not allowed for role "<role>": web fetch.` rather than kept as prose. If the granted `web fetch` row is disabled or agent-off, the tool refuses with `Command is disabled: web fetch.`; disabling the parent `web` row does the same. On a local tab the fetch runs on the machine running Janissary, and cancelling the prompt aborts the in-flight attempt and starts no further one. An `agent` run refuses every `web` line, so this tool is available only to `ask` and `tell` sessions.
+
 **Fetch examples**
 
 - `web fetch https://nodejs.org/api/permissions.html --max-chars 5000` reads a page a search found, with a larger budget.

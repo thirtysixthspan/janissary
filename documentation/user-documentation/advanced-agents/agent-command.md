@@ -20,7 +20,7 @@ Select a skill with `with skill <name>`. Its instructions are included with the 
 
 Only listed canonical command names are allowed. The agent asks to run one by ending a reply with `janissary <command>`. Questions require the `ask-user` skill and its `question` grant; the task waits until you answer or cancel.
 
-Some commands are refused in this version even when a skill grants them. `file write`, `file edit`, `file patch`, `file glob`, `file grep`, and `web` (including `web search`) all return `Agent: command not permitted: <command>.` The agent receives that line as tool output and can't turn the refusal into permission for another command. Among the file commands, only `file read` runs; it needs a `file` grant and returns the same refusal without one.
+Some commands are refused in this version even when a skill grants them. `file write`, `file edit`, `file patch`, `file glob`, `file grep`, and `web` (including `web search` and `web fetch`) all return `Agent: command not permitted: <command>.` The agent receives that line as tool output and can't turn the refusal into permission for another command. Among the file commands, only `file read` runs; it needs a `file` grant and returns the same refusal without one.
 
 The command returns `Status: completed`, `failed`, or `terminated`, followed by the task response. Cleanup issues appear on separate `Cleanup warning:` lines. When you type the command in a command bar, such as a shell tab's, those same lines appear beneath the command line as its reply. Closing the caller tab terminates its run.
 

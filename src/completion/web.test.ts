@@ -66,6 +66,17 @@ describe('completeWebCommand', () => {
       .toEqual(['--depth', '--max-chars', '--provider', '--results']);
   });
 
+  it('completes only search through a disabled web fetch settings row', () => {
+    const policy = policyWith({ 'web fetch': { enabled: false } });
+
+    expect(completeWebCommand(at('web '), policy)?.matches).toEqual(['search']);
+
+    const fetchLine = 'web fetch https://x -';
+    const fetchResult = completeWebCommand(at(fetchLine), policy);
+    expect(fetchResult?.matches).toEqual([]);
+    expect(fetchResult?.newInput).toBe(fetchLine);
+  });
+
   it('completes nothing when the web row is disabled', () => {
     const policy = policyWith({ web: { enabled: false } });
 

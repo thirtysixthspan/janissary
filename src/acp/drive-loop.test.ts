@@ -229,6 +229,16 @@ describe('driveToolLoop', () => {
     ]);
   });
 
+  it('routes a web fetch to runWorkspace and reports it as a workspace step', () => {
+    const { events, host } = drive(coreSnapshot('tell', ['web fetch']), ['web fetch https://x', 'Done.']);
+    expect(host.runWorkspace).toHaveBeenCalledExactlyOnceWith('web fetch https://x');
+    expect(host.runCaller).not.toHaveBeenCalled();
+    expect(ofKind(events, 'startCommand')).toEqual([['startCommand', 'web fetch https://x', true]]);
+    expect(ofKind(events, 'ranCommand')).toEqual([
+      ['ranCommand', 'web fetch https://x', 'workspace output', true, undefined],
+    ]);
+  });
+
   it('returns a disabled refusal as one step without calling the host', () => {
     const snapshot = coreSnapshot('tell', ['db sqlite query'], [
       { name: 'db sqlite query', effectiveEnabled: true, effectiveAgentAccess: false },
