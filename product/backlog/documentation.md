@@ -4,8 +4,6 @@
 
 ## development
 
-* models-tab (3/10) — 13 of 16 facts are correct with three missing and none wrong. The gaps are the friendly group headings and cosmetic list details, that duplicate ids are accepted and Delete targets only the first matching record, and the `<harness> skipped: <binary> is not installed.` message plus the first-line-of-error rule for other failures. Fix in `documentation/user-documentation/tab-types/models.md` with matching additions in `help/models.md`. Ground truth is `product/specs/models-tab.md`, `src/models/groups.ts`, `src/models/catalog-file.ts`, `src/models/manager.ts` and `web/src/plugins/models/ModelsTab.tsx`.
-
 * notifications (7/10) — 32 of 39 facts are accurate but three are wrong and four are missing, all centred on the config example in `documentation/user-documentation/tab-types/notifications.md`: it labels `question` default sound `error` (source default `warning`), `file-operation` default `desktop:false/sound:none` (source `desktop:true/sound:error`), and `state-change` default `desktop:true` (source `desktop:false`). Correct that example to match the shipped defaults. Also missing, but minor: the per-type default MP3 cue mapping is only delegated to generated config, the bundled `sounds/` assets and rebuild requirement are undocumented, and the toast stack's placement beneath the connection indicator/metadata/status panels is not described. Ground truth is `product/specs/notifications.md`, `src/notifications/alert-defaults.ts` and `src/config.ts`.
 
 * profiles (3/10) — 29 of 32 facts are correct with three missing and none wrong, all edge cases: an empty `.rs` runscript queues and prints nothing, a runscript deleted between discovery and read produces `No profile named "<name>".`, and `profile list` issued from a shell command bar is answered as a reply rather than forwarded to zsh. Fix in `documentation/user-documentation/automation/profiles.md` with parity notes in `help/profile.md`. Ground truth is `product/specs/profiles.md`, `src/profiles.ts`, `src/commands/profile.ts`, `src/profile/runscript.ts` and `web/src/shared/command-bar/bare-openers.ts`.
@@ -52,6 +50,7 @@
 
 ## resolved
 
+* models-tab — documented in documentation/user-documentation/tab-types/models.md, help/models.md (removed 2026-11-17)
 * launcher — documented in documentation/user-documentation/tab-types/launcher.md (removed 2026-11-17)
 * diff-tab — documented in documentation/user-documentation/tab-types/diff-tab.md, documentation/user-documentation/tab-types/diff.md, help/diff.md (removed 2026-11-17)
 * conversations — documented in documentation/user-documentation/tab-types/conversations.md, help/conversations.md (removed 2026-11-17)
