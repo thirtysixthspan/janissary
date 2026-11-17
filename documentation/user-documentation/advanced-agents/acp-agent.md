@@ -22,6 +22,8 @@ Use `tell <prompt>` when you want a model to carry out a task with the commands 
 `tell` role. The [roles tab](/user-documentation/tab-types/roles) lets you choose separate models and
 command grants for `ask` and `tell`.
 
+The `acp` name was retired. `acp <prompt>` and `acp reset` are no longer commands, so use `ask <prompt>` and `ask reset` instead.
+
 ## Which model it runs
 
 The models come from the `ask` role in your roles file, in the order the role lists them. That's your project's `.janissary/roles.json` when it has one, otherwise `~/.janissary/roles.json`. Edit the role in the [roles tab](/user-documentation/tab-types/roles) to change which models answer and in what order. If the file has no `ask` role, or the role lists no models, the app uses the default one: `opencode-go/deepseek-v4.1-flash` on `opencode` at `medium`, then `claude-haiku-4-5` on `claude` at `high`, then `gpt-6-luna` on `codex` at `high`. Asking never creates a roles file.
