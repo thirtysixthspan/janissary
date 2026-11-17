@@ -14,7 +14,6 @@
 
 
 
-* transcript (5/10) — 14 of 21 facts are correct with six missing and one wrong. Wrong: the docs say ACP tool steps and thinking appear only in the connection tab, but auto-run ACP steps render as `+ <command>` prompt lines with response lines in the transcript. Missing: the prompt-bar scrollbar with faint `│`/`·` segments and percentage, mouse-wheel scrolling one line per tick, starting a command resetting a scrolled-up transcript to the bottom, the inline terminal card's key routing, the running command's "open in terminal" action and `(ran in terminal)` marker, and interleaved runs keeping separate output. Fix in `documentation/user-documentation/getting-started/keyboard.md` and `documentation/user-documentation/command-bar/shell.md`. Ground truth is `product/specs/transcript.md`, `src/tab/formatting.ts`, `web/src/shared/transcript/useTranscriptScroll.ts` and `web/src/shared/transcript/TerminalCard.tsx`.
 
 * video-tab (3/10) — 23 of 26 facts are correct with three missing and none wrong, all about `video snapshot`: minutes and seconds after the first field must be below 60, a leading `~` expands to home and paths may contain spaces split at the first valid `at`, and a command typed in a tab whose session runs on another machine is refused. Fix in the snapshot paragraph of `documentation/user-documentation/tab-types/video-player.md`, with optional lines in `help/video.md`. Ground truth is `product/specs/video-tab.md`, `src/plugins/video/snapshot-parse.ts` and `src/plugins/video/snapshot.ts`.
 
@@ -28,6 +27,7 @@
 
 ## resolved
 
+* transcript — documented in documentation/user-documentation/getting-started/keyboard.md, documentation/user-documentation/command-bar/shell.md (removed 2026-11-17)
 * tabs — documented in documentation/user-documentation/getting-started/tabs.md, documentation/user-documentation/getting-started/groups.md (removed 2026-11-17)
 * tab-plugins — documented in documentation/user-documentation/command-bar/plugins.md (removed 2026-11-17)
 * tab-completion — documented in documentation/user-documentation/command-bar/tab-completion.md (removed 2026-11-17)
