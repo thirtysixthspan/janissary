@@ -102,6 +102,14 @@ describe('renderMarkdown', () => {
     expect(host.textContent).toBe(`${FILE_READ_USAGE}\n`);
   });
 
+  it('renders a usage reply with a leading newline with its placeholders literal', async () => {
+    await withRealParse();
+    const { renderMarkdown } = await import('./markdown');
+    const host = document.createElement('div');
+    host.innerHTML = renderMarkdown('\nUsage: notify <message>.') ?? '';
+    expect(host.textContent).toBe('Usage: notify <message>.\n');
+  });
+
   it('leaves a single-line Markdown reply on the Markdown path', async () => {
     await withRealParse();
     const { renderMarkdown } = await import('./markdown');
