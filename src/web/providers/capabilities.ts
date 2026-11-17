@@ -2,7 +2,7 @@ import type { ProjectTokens } from '../../project/tokens.js';
 import type { WebFetchFormat, WebSearchProviderManifest } from './contract.js';
 
 export function searchesWeb(manifest: WebSearchProviderManifest): boolean {
-  return manifest.search !== false;
+  return manifest.search ?? !fetchesWeb(manifest);
 }
 
 export function fetchesWeb(manifest: WebSearchProviderManifest): boolean {

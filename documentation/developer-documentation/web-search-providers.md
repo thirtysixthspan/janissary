@@ -85,7 +85,7 @@ export const webProviderCatalog = [
 | `id` | yes | Stable lowercase identity, unique in the catalog and never `auto`. `--provider` matches it case-insensitively, and failure lines print it. |
 | `apiVersion` | yes | The provider API version the module was written against. It must equal `WEB_PROVIDER_API_VERSION`, or the provider is refused before its module is imported. |
 | `token` | no | The `ProjectTokenName` of the token file whose value becomes `capability.apiKey`. A provider without one is always configured and gets an empty `apiKey`. A new provider needs its own row; see [Token rows](#token-rows). |
-| `search` | no | Whether the provider searches. Absent means it does; only `search: false` opts out. |
+| `search` | no | Whether the provider searches. Absent means it searches only when the manifest declares no fetch formats; declaring fetch formats without `search` makes it fetch-only. `search: false` opts out, and `search: true` searches even with fetch formats. |
 | `fetchFormats` | no | The fetch formats the provider serves: `markdown`, `text`, or `html`. Absent or empty means no fetch. |
 | `activate` | yes | A literal dynamic import of the provider module. |
 
@@ -178,7 +178,7 @@ That is the whole vocabulary. A provider never reads token files, `Managers`, a 
 
 ## Resolution and ordering
 
-An explicit `--provider <name>` selects that one search-capable provider, checked in the order unknown, then disabled, then not configured. `--provider auto`, the default, walks the search-capable providers in catalog order and skips any provider that names a token with no token file, then skips any provider already disabled. A provider whose manifest sets `search: false` is unknown to `web search`, even when named explicitly or already disabled, and is absent from the `available:` list. Names match case-insensitively, and `auto` is reserved.
+An explicit `--provider <name>` selects that one search-capable provider, checked in the order unknown, then disabled, then not configured. `--provider auto`, the default, walks the search-capable providers in catalog order and skips any provider that names a token with no token file, then skips any provider already disabled. A provider whose manifest sets `search: false`, or declares fetch formats without `search`, is unknown to `web search`, even when named explicitly or already disabled, and is absent from the `available:` list. Names match case-insensitively, and `auto` is reserved.
 
 The lines a provider author will see from resolution are:
 

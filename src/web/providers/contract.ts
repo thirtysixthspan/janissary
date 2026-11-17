@@ -5,7 +5,8 @@
 // provider), a `fetch`, and the abort signal. It never reads token files, `Managers`, or any other
 // host state.
 //
-// Declaration rules: a manifest that omits `search` searches; one whose `fetchFormats` is absent or
+// Declaration rules: a manifest that omits `search` searches only when it declares no fetch formats
+// (declaring formats without `search` makes it fetch-only); one whose `fetchFormats` is absent or
 // empty does not fetch; and one with no `token` is always configured, with an empty `apiKey`.
 //
 // Extension point rules (`ai/guidelines/plugins.md` §5):

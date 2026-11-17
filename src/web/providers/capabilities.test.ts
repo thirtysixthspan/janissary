@@ -31,8 +31,12 @@ describe('isConfigured', () => {
 });
 
 describe('searchesWeb', () => {
-  it('is true when search is absent', () => {
+  it('is true when search and fetch formats are absent', () => {
     expect(searchesWeb(manifest())).toBe(true);
+  });
+
+  it('is false when search is absent but fetch formats are declared', () => {
+    expect(searchesWeb({ ...manifest(), fetchFormats: ['markdown'] })).toBe(false);
   });
 
   it('is true when search is true', () => {

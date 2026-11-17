@@ -34,7 +34,7 @@ The provider API-version check is not a cancellation path. It happens before a m
 
 ### Provider selection
 
-Provider names are matched case-insensitively, and `auto` is reserved for auto-selection. `auto`, the default, walks the providers in order — Tavily, then TinyFish — skipping any without a token and using the first one that has one. Search considers only providers that declare search, so the fetch-only `local` provider is never tried.
+Provider names are matched case-insensitively, and `auto` is reserved for auto-selection. `auto`, the default, walks the providers in order — Tavily, then TinyFish — skipping any without a token and using the first one that has one. Search considers only search-capable providers: one that sets `search: true`, or one that omits `search` and declares no fetch formats. A manifest that declares fetch formats without `search` is fetch-only and unknown to search, as is one with `search: false`, so the fetch-only `local` provider is never tried.
 
 An unknown name prints `Web search: unknown provider "<name>" (available: auto, tavily, tinyfish).` and sends nothing. `web search --provider local` prints that line too, because `local` fetches only. With no provider token at all, `auto` prints `Web search: no provider configured.`. An explicit `--provider <name>` without a token prints `Web search: provider "<name>" is not configured.`. Neither sends anything.
 

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Make a provider manifest that declares fetch formats but omits `search` count as fetch-only, closing a functionality gap where one search attempt disables the provider for fetch too.
-
-Existing Issue: `searchesWeb` in `src/web/providers/capabilities.ts` returns `manifest.search !== false`, so a manifest that declares `fetchFormats` and leaves `search` out is treated as searching; the first `auto` web search then activates a module with no `search`, fails with `provider failed: module has no provider`, and through the shared disabled set also removes that provider from `web fetch` until restart, behavior `src/web/providers/registry.test.ts` pins. Severity: 3/10
-
-Existing Risk: 3/10 - The next bundled fetch-only provider written without a `search: false` line silently breaks its own fetch path after the first search anyone runs, and the only signal is a plugin-failure notification that names search.
-
-Proposal Risk: 1/10 - The default follows the declaration, the version-1 search fixture still loads because it declares no fetch formats, and the only residual risk is a manifest that explicitly sets `search: true` without implementing it, which stays a plugin failure as intended.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2049 "treat a manifest with fetch formats and no search declaration as fetch-only". In `src/web/providers/capabilities.ts`, change `searchesWeb` to `manifest.search ?? !fetchesWeb(manifest)`, so an omitted `search` means searching only for manifests that declare no fetch formats, which covers every version-1 manifest written before fetch existed. Update the declaration-rules comment in `src/web/providers/contract.ts` and the matching manifest description in `documentation/developer-documentation/web-search-providers.md` to say so. In `src/web/providers/registry.test.ts`, replace the test that pins a fetch-only module being disabled by a search attempt with one asserting that such a manifest is not offered to search resolution at all, and add a `capabilities.test.ts` case for each combination (omitted with no formats, omitted with formats, explicit true, explicit false). The bundled Tavily, TinyFish, and `local` manifests in `src/web/providers/catalog.ts` declare `search` explicitly and are unaffected; `src/web/providers/fixture-v1/compatibility.test.ts` and `search-resolution.test.ts` must keep passing unchanged.
-
-
 * Share the disabled-provider and refusal logic between search and fetch attempt resolution, removing duplication the pull request introduces.
 
 Existing Issue: `src/web/providers/fetch-resolution.ts` copies the all-disabled block (filter enabled, map to stored reasons with an `Unknown failure` fallback, `formatFailures`) and the explicit disabled and not-configured branches from `src/web/providers/search-resolution.ts`, and imports the shared `AttemptResolution` and `DisabledReason` types from that search-specific module. Severity: 3/10

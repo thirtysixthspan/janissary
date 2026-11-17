@@ -750,6 +750,7 @@ describe('createProviderRegistry', () => {
 
   it('skips a provider disabled by a fetch attempt in search resolution', async () => {
     const tavily = fakeManifest('tavily', {
+      search: true,
       fetchFormats: ['markdown'],
       module: moduleFor(async () => []),
     });
@@ -765,6 +766,7 @@ describe('createProviderRegistry', () => {
   it('keeps the fetch reason when a later search also fails, reporting once', async () => {
     const reportDisabled = vi.fn();
     const manifest = fakeManifest('tavily', {
+      search: true,
       fetchFormats: ['markdown'],
       module: {
         provider: {
@@ -817,17 +819,17 @@ describe('createProviderRegistry', () => {
       .resolves.toEqual({ kind: 'fetched', url: 'https://example.com/', content: 'body' });
   });
 
-  it('disables a fetch-only module run as a search attempt', async () => {
-    const reportDisabled = vi.fn();
+  it('does not offer a fetch-only manifest without a search declaration to search resolution', () => {
     const manifest = fakeManifest('tavily', {
       fetchFormats: ['markdown'],
       module: fetchModuleFor(async () => ({ url: 'https://example.com/', content: 'body' })),
     });
-    const registry = createProviderRegistry([manifest]);
+    const registry = createProviderRegistry([manifest, fakeManifest('tinyfish')]);
 
-    await expect(registry.runAttempt(manifest, REQUEST, capability(), reportDisabled))
-      .resolves.toEqual({ kind: 'plugin-failed', reason: 'provider failed: module has no provider' });
-    expect(reportDisabled).toHaveBeenCalledWith('tavily', 'provider failed: module has no provider');
+    expect(registry.searchProviderNames()).toEqual(['tinyfish']);
+    expect(ids(registry.resolveAttempts('auto', TOKENS))).toEqual(['tinyfish']);
+    expect(line(registry.resolveAttempts('tavily', TOKENS)))
+      .toBe('Web search: unknown provider "tavily" (available: auto, tinyfish).');
   });
 });
 
