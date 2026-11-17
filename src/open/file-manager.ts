@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { openerForExtension } from '../openers/index.js';
 import type { OpenContext } from '../openers/types.js';
+import type { OpenInvocation } from './types.js';
 import { didOsOpen } from '../openers/os-open.js';
 import { openInDefaultViewer } from '../openers/external-viewer.js';
 import { openInEditor } from '../openers/editor.js';
@@ -25,8 +26,8 @@ export type EditResult = { label: string };
 export class OpenFileManager {
   constructor(private managers: Managers) {}
 
-  run(command: string, label: string, runId?: string): Promise<void> {
-    return this.runAs(command, command, label, undefined, runId);
+  run(command: string, label: string, runId?: string, invocation?: OpenInvocation): Promise<void> {
+    return this.runAs(command, command, label, undefined, runId, undefined, invocation);
   }
 
   // `requireOpener` pins dispatch to one opener by name. A tab plugin's declared command uses it so
@@ -34,11 +35,11 @@ export class OpenFileManager {
   // command is a second route into that plugin's own opener, not a second route into the registry.
   runAs(
     parsedCommand: string, displayCommand: string, label: string, requireOpener?: string, runId?: string,
-    registerTab?: (label: string) => void,
+    registerTab?: (label: string) => void, invocation?: OpenInvocation,
   ): Promise<void> {
     return Promise.resolve(runOpenCommand(
       this.managers, parsedCommand, displayCommand, label,
-      (c, l) => this.buildContext(c, l, runId, registerTab), (p, cwd) => expandGlob(p, cwd),
+      (c, l) => this.buildContext(c, l, runId, registerTab, invocation), (p, cwd) => expandGlob(p, cwd),
       (c, l, f, ext, ctx) => this.openOne(c, l, f, ext, ctx, requireOpener),
       requireOpener,
     ));
@@ -108,12 +109,21 @@ export class OpenFileManager {
     mkdirSync(resolved);
   }
 
-  private buildContext(command: string, label: string, runId?: string, registerTab?: (label: string) => void): OpenContext {
+  private note(text: string, command: string, label: string, invocation?: OpenInvocation): void {
+    if (invocation?.invocationId) {
+      this.managers.tab.appendForInvocation(label, { input: command, output: text }, invocation.invocationId);
+    } else this.managers.tab.append(label, { input: command, output: text });
+  }
+
+  private buildContext(
+    command: string, label: string, runId?: string, registerTab?: (label: string) => void,
+    invocation?: OpenInvocation,
+  ): OpenContext {
     const onTabCreated = registerTab ?? (runId
       ? (createdLabel: string) => this.managers.agent.trackCreatedTab(runId, createdLabel)
       : undefined);
     return {
-      note: (text) => this.managers.tab.append(label, { input: command, output: text }),
+      note: (text) => this.note(text, command, label, invocation),
       openEditorTab: (view) => this.managers.tab.openEditorTab(view, onTabCreated),
       registerFile: (absPath) => this.managers.tab.registerFile(absPath),
       openExternally: (absPath) => didOsOpen(absPath),
@@ -121,7 +131,7 @@ export class OpenFileManager {
         pluginId,
         presentation,
         file,
-        { label, command, ...(runId && { runId }) },
+        { label, command, ...(runId && { runId }), ...(invocation?.invocationId && { invocationId: invocation.invocationId }) },
       ),
     };
   }
@@ -130,7 +140,7 @@ export class OpenFileManager {
     command: string, label: string, file: string, external: boolean, context: OpenContext,
     requireOpener?: string,
   ): void | Promise<void> {
-    if (!existsSync(file)) { this.managers.tab.append(label, { input: command, output: `open: ${file}: no such file` }); return; }
+    if (!existsSync(file)) { context.note(`open: ${file}: no such file`); return; }
     const opener = openerForExtension(path.extname(file));
     // The external presentation does not need an opener: every one of them ends at the same OS
     // handoff, and the operating system already knows which application claims a `.pdf`. A pinned
@@ -144,7 +154,7 @@ export class OpenFileManager {
       return;
     }
     if (requireOpener !== undefined && opener.name !== requireOpener) {
-      this.managers.tab.append(label, { input: command, output: pinnedOpenerRefusal(requireOpener, file) });
+      context.note(pinnedOpenerRefusal(requireOpener, file));
       return;
     }
     if (!external && opener.name === 'editor' && this.isSyncPath(file, label)) { this.openSynced(file, context); return; }

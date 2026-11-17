@@ -80,6 +80,7 @@ describe('running a contributed selection action', () => {
 
     expect(managers.openFile.runAs).toHaveBeenCalledWith(
       'open /m/a.fixture', 'Add to playlist', managers.tab.tabs[0].label, 'fixture',
+      undefined, undefined, { invocationId: undefined },
     );
   });
 

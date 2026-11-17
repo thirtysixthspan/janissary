@@ -737,6 +737,20 @@ describe('Controller open command', () => {
     expect(c.view()).toHaveLength(1);
   });
 
+  it('returns a missing-file open error in the dispatched command output', async () => {
+    const { c } = makeController();
+    const reply = await c.managers.command.dispatchLineWithOutput('janus', 'open /no/such/pic.png');
+    expect(reply.dispatched).toBe(true);
+    expect(reply.output).toContain('no such file');
+  });
+
+  it('returns an invalid-URL open error in the dispatched command output', async () => {
+    const { c } = makeController();
+    const reply = await c.managers.command.dispatchLineWithOutput('janus', 'open javascript:alert(1)');
+    expect(reply.dispatched).toBe(true);
+    expect(reply.output).toContain('invalid URL');
+  });
+
   it('closeTab removes an image tab and unregisters its served file', async () => {
     const { c } = makeController();
     c.dispatch(`open ${temporaryImage()}`);
