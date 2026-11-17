@@ -27,6 +27,9 @@ sidebar if it doesn't exist yet, brought onto screen without changing which tab 
 Anything that brings the feed onto the screen empties that window's corner, so a click takes the
 rest of the toasts with it. A window that reloads or reconnects comes back with an empty corner:
 toasts are never re-sent, though the feed still holds everything.
+The stack starts beneath the connection indicator, the tab's metadata row, and the floating status
+panels in that corner, so a toast never hides `Cannot reach session` or covers the tab's working
+directory and action buttons.
 A toast itself is silent: it plays no sound and raises no desktop banner. Some notifications can
 also produce a desktop banner or bell sound independently of the toast; see [Desktop banners and
 bell sounds](#desktop-banners-and-bell-sounds). A toast is also the shortened form of the line: it
@@ -81,15 +84,17 @@ The config file lists every notification type with its default. For example:
 {
   "notifications": {
     "alerts": {
-      "question": { "desktop": true, "sound": "error" },
-      "file-operation": { "desktop": false, "sound": "none" },
-      "state-change": { "desktop": true, "sound": "none" }
+      "question": { "desktop": true, "sound": "warning" },
+      "file-operation": { "desktop": true, "sound": "error" },
+      "state-change": { "desktop": false, "sound": "none" }
     }
   }
 }
 ```
 
 A banner with `sound: "none"` plays no cue. A missing or invalid field uses that event's default.
+
+Each cue plays one of three bundled MP3 files. `success.mp3` is the default for `manual`, `plugin-note`, `models-refresh`, `connection-closed`, and `workspace-ready`. `warning.mp3` covers `question`, `harness-idle`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`, `schedule-late`, `layout`, the two remote-session events, `system-schedule-fire`, `tab`, the three launch events, and `remote-refused`. The remaining explicit types use `error.mp3`, and the five ambient types have no cue. Janissary writes the default cue for every type into your config, so you can check or change any one there. The MP3 files live in the app bundle's `sounds/` folder. To use your own sounds, replace the files and rebuild and reinstall the web bundle.
 
 Every notification is also appended to `.janissary/notifications.json`, one JSON line per
 notification, as a durable trail that outlives the run. `notifications clear` is what empties the
