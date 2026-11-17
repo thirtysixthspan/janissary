@@ -14,6 +14,7 @@ export const tinyfishManifest = {
   id: 'tinyfish',
   apiVersion: WEB_PROVIDER_API_VERSION,
   search: true,
+  fetchFormats: ['markdown', 'html'],
   token: 'tinyfish',
   activate: () => import('./tinyfish.js'),
 } as const satisfies WebSearchProviderManifest;

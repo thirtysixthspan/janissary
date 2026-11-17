@@ -848,9 +848,21 @@ describe('the real web search provider catalog', () => {
       .toEqual(['tavily', 'tinyfish']);
   });
 
-  it('declares search on both manifests and Tavily fetch formats', () => {
+  it('declares search on both manifests and their fetch formats', () => {
     expect(webSearchProviderCatalog.map((manifest) => manifest.search)).toEqual([true, true]);
     expect(webSearchProviderCatalog[0].fetchFormats).toEqual(['markdown', 'text']);
-    expect('fetchFormats' in webSearchProviderCatalog[1]).toBe(false);
+    expect(webSearchProviderCatalog[1].fetchFormats).toEqual(['markdown', 'html']);
+  });
+
+  it('lists both hosts as fetch providers from the real catalog', () => {
+    const registry = createProviderRegistry(webSearchProviderCatalog);
+
+    expect(registry.fetchProviderNames()).toEqual(['tavily', 'tinyfish']);
+  });
+
+  it('resolves only TinyFish for html from the real catalog', () => {
+    const registry = createProviderRegistry(webSearchProviderCatalog);
+
+    expect(ids(registry.resolveFetchAttempts('auto', 'html', TOKENS))).toEqual(['tinyfish']);
   });
 });
