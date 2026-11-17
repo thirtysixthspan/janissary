@@ -8,9 +8,9 @@ import type { WorkspaceManager } from '../workspace/manager.js';
 import type { ServerFrame } from './protocol-frames.js';
 import { OPENCODE_OAUTH_FAILURE_NOTICE } from '../sandbox/opencode-data.js';
 import { loadProjectTokens } from '../project/tokens.js';
-import { webSearch } from '../web-search/search.js';
+import { webSearch } from '../web/search/search.js';
 
-vi.mock('../web-search/search.js', () => ({ webSearch: vi.fn() }));
+vi.mock('../web/search/search.js', () => ({ webSearch: vi.fn() }));
 
 // The clone itself is `WorkspaceManager`'s and is exercised against a real repository in
 // serve.test.ts. What is untested here is the sequence around it: the four points at which a

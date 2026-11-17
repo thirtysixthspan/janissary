@@ -75,7 +75,7 @@ describe('reading the roles in effect', () => {
       ],
       commands: [
         'db sqlite list', 'db sqlite query', 'browser goto', 'browser content',
-        'question ask', 'question approve', 'file read', 'file glob', 'file grep', 'web search',
+        'question ask', 'question approve', 'file read', 'file glob', 'file grep', 'web search', 'web fetch',
       ],
     });
     expect(file['tell']).toEqual({
@@ -84,11 +84,11 @@ describe('reading the roles in effect', () => {
       commands: [
         'db sqlite create', 'db sqlite delete', 'db sqlite query', 'db sqlite list',
         'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve', 'file read',
-        'file glob', 'file grep', 'file write', 'file edit', 'file patch', 'web search',
+        'file glob', 'file grep', 'file write', 'file edit', 'file patch', 'web search', 'web fetch',
       ],
     });
-    expect(file['ask'].commands).toHaveLength(10);
-    expect(file['tell'].commands).toHaveLength(16);
+    expect(file['ask'].commands).toHaveLength(11);
+    expect(file['tell'].commands).toHaveLength(17);
     expect(file['tell'].commands).toEqual([...NATIVE_ACP_COMMANDS]);
     expect(DEFAULT_ROLES.slice(0, 5).every((role) => role.commands.length === 0)).toBe(true);
   });
@@ -100,8 +100,8 @@ describe('reading the roles in effect', () => {
     expect(read.source).toBe('default');
     expect(read.problem).toBeUndefined();
     expect(read.roles).toEqual(DEFAULT_ROLES);
-    expect(read.roles.find((role) => role.name === 'ask')?.commands).toHaveLength(10);
-    expect(read.roles.find((role) => role.name === 'tell')?.commands).toHaveLength(16);
+    expect(read.roles.find((role) => role.name === 'ask')?.commands).toHaveLength(11);
+    expect(read.roles.find((role) => role.name === 'tell')?.commands).toHaveLength(17);
     expect(existsSync(homeFile(home))).toBe(false);
   });
 
@@ -166,6 +166,8 @@ describe('reading the roles in effect', () => {
     expect(read.roles[1]?.commands).not.toContain('file grep');
     expect(read.roles[0]?.commands).not.toContain('web search');
     expect(read.roles[1]?.commands).not.toContain('web search');
+    expect(read.roles[0]?.commands).not.toContain('web fetch');
+    expect(read.roles[1]?.commands).not.toContain('web fetch');
     expect(readFileSync(homeFile(home), 'utf8')).toBe(before);
   });
 

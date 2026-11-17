@@ -27,7 +27,7 @@ Type `help s`, then press `Tab` to see matching help pages.
 | Later target arguments of `monitor` or `unmonitor` | Labels of other action tabs, then `group:<n>` for each action-tab group |
 | The target of [`connections close`](/user-documentation/command-bar/connections) | Open connection strings, the same ones `connections list` prints (`sqlite:my-db`, `shell:bash`, `acp:opencode/big-pickle`, `browser:w1`, `ssh:devbox`, `terminal:vim`) |
 | After `browser` | Browser subcommands; after `browser use` or `browser window close`, the current tab's open window IDs |
-| After `web` | `search`; after the query, the flags not yet used; after `--depth`, `basic` and `advanced`; after `--provider`, `auto` and the provider names |
+| After `web` | `search` and `fetch`; after a search query, the flags not yet used, `basic` and `advanced` after `--depth`, `auto` and the provider names after `--provider`; after a fetch URL, the flags not yet used, `markdown`, `text`, and `html` after `--format`, `auto` and the provider names after `--provider` |
 | After `harness <name>`, at `--model` | That harness's known model names; `--model` may appear anywhere after its name |
 | After `syntax` or `search` | `theme` then theme names, or `transcript` |
 | After `help` | Markdown help page names, including `commands` and `keys` |
@@ -41,6 +41,8 @@ Target completion offers both labels and display titles, including hidden tabs. 
 At the first word, Tab offers enabled command names and aliases before matching paths, so `bro` can become `browser`. It offers names only for a non-empty word that holds no `/`, `\`, or quote, so an empty word and a token starting with `!` or `/` keep ordinary path completion. Matching is case-sensitive, so `bro` completes but `BRO` offers nothing. A disabled command or subcommand is left out, and Tab offers no argument or path suggestions under a disabled command. Some commands are different forms of the same feature and share one on/off setting, so turning that feature off hides every form and alias of it. A line starting with `!` runs in the shell with ordinary path completion and is never filtered. While `help` is enabled, its pages still list and complete disabled commands.
 
 For `web search`, flags appear only once the query is on the line, so `web search -` on its own leaves the line unchanged. After the query, Tab offers the flags you haven't used: `--results`, `--max-chars`, `--depth`, and `--provider`. The query and the values of `--results` and `--max-chars` get no suggestions. After `--depth` you get `basic` and `advanced`; after `--provider`, `auto` and the provider names. Command names and flags match case-sensitively here too.
+
+For `web fetch`, flags appear only once the URL is on the line, so `web fetch -` leaves the line unchanged. After the URL, Tab offers the flags you haven't used: `--format`, `--timeout`, `--max-chars`, `--offset`, and `--provider`. The URL and the number values get no suggestions. After `--format` you get `markdown`, `text`, and `html`. After `--provider` you get `auto` and the provider names, `local` included, which `web search` never offers. A subcommand you turn off in the **Commands** tab isn't suggested, and neither are its flags, but the other one still is.
 
 ## Complete paths and clauses
 

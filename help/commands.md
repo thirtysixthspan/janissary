@@ -61,7 +61,7 @@
 | `theme` | Set the application UI theme (`theme <name>`); `theme` alone opens a theme-picker modal; `theme sync` sets the syntax theme to match the app theme name |
 | `unmonitor` | Stop a monitor by name, remove one target (`unmonitor <name> <target>`), or stop all monitors started from this tab (`--all`) |
 | `video` | `video <path>` opens a video tab, with the same paths and wildcards as `open`; `video snapshot <video> at <time> <file>` saves one frame as an image |
-| `web` | `web search <query>` searches the web through a configured provider (Tavily or TinyFish) and prints a Markdown list of results; see `help web` |
+| `web` | `web search <query>` searches the web through a configured provider (Tavily or TinyFish) and prints a Markdown list of results; `web fetch <url>` reads one page by its URL; see `help web` |
 
 Both `shell` and `harness` launches accept `in group <name\|id>` to join an existing group by its case-insensitive name or numeric ID. An unknown name creates a group; an unknown positive ID creates that numbered group. Without the clause, the new tab joins the issuing tab's group.
 
@@ -77,6 +77,6 @@ Bare `commands` opens the Commands tab, or focuses it when already open, and re-
 
 The selector is read only when a name follows it: `commands disable agent` disables the `agent` command, while `commands disable agent agent` is an agent-access change and is refused with `Not a native ACP command: agent.` A change writes to the effective `commands.json`; with no usable file it is refused with `commands.json at <path> is unusable — fix the file before editing commands.`, and a failed write replies `Could not write commands.json at <path>.` without changing the setting.
 
-The table has a row for each native file command (`file read`, `file glob`, `file grep`, `file write`, `file edit`, `file patch`), all under the `file` parent, and a row for `web search` under the parentless `web`. Disabling one of these rows refuses just that command, typed or as an agent tool, while disabling the parent refuses all of its children.
+The table has a row for each native file command (`file read`, `file glob`, `file grep`, `file write`, `file edit`, `file patch`), all under the `file` parent, and rows for `web search` and `web fetch` under the parentless `web`. Disabling one of these rows refuses just that command, typed or as an agent tool, while disabling the parent refuses all of its children.
 
 The tab never docks itself; `tab dock` can dock it. The `commands` command can disable itself, and can be re-enabled from its open tab. Once the tab is closed, a disabled `commands` is refused like any other command until the effective `commands.json` file is edited by hand.

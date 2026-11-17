@@ -55,8 +55,8 @@ and risk.`), `implementation` (`Implementation of an approved plan or a describe
 `gpt-6-luna` at `high`. The `tell` role follows `ask`, has the description `When you tell a model to
 carry out a task via ACP.`, and starts with the same three entries. The `ask` role grants `db sqlite
 list`, `db sqlite query`, `browser goto`, `browser content`, `question ask`, `question approve`,
-`file read`, `file glob`, `file grep`, and `web search`. The `tell` role grants all sixteen native
-commands: those ten plus `db sqlite create`, `db sqlite delete`, `browser eval`, `file write`,
+`file read`, `file glob`, `file grep`, `web search`, and `web fetch`. The `tell` role grants all seventeen native
+commands: those eleven plus `db sqlite create`, `db sqlite delete`, `browser eval`, `file write`,
 `file edit`, and `file patch`. An existing roles file is not changed, so its saved `ask` and `tell`
 keep the grants they list.
 `planning`, `research`, `code review`, `implementation`, and
@@ -95,7 +95,7 @@ from the live Commands topic and is not stored in the roles file, and a restrict
 be added or removed like any other. Opening the tab with an unreadable Commands snapshot reports `invalid commands topic data` and opens nothing; a later unreadable snapshot is ignored and the tab keeps the restrictions it last showed. A muted `No commands` row appears when a role has none. **Add
 command** opens a dropdown of native commands the role does not already have, followed by Add and
 Cancel; Add stays disabled until a choice is made. The button is
-hidden when all sixteen native commands are present. Add sends `add-command`; removing any duplicate
+hidden when all seventeen native commands are present. Add sends `add-command`; removing any duplicate
 row sends `remove-command`, which removes every copy. If another client changes a command while the
 picker is open, it clears a selection that is no longer available or closes when no commands remain
 to add, and the card follows the next publication. Both pickers focus their first control when

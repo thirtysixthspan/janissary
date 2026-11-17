@@ -18,13 +18,14 @@ import type { DiffSource } from '../../plugins/diff/shared.js';
 import { remoteGitCommit, remoteGitMetadata, remoteGitPull, type RemoteRequest } from './port-git.js';
 import { remoteMove, remoteMoveMany } from './port-moves.js';
 import {
-  remoteApplyPatch, remoteEditFile, remoteGlobPaths, remoteGrepFiles, remoteReadLines, remoteWebSearch, remoteWriteFile,
+  remoteApplyPatch, remoteEditFile, remoteGlobPaths, remoteGrepFiles, remoteReadLines, remoteWebFetch, remoteWebSearch, remoteWriteFile,
 } from './port-reads.js';
 import type { FileGlobArgs } from '../../file-glob/command.js';
 import type { FileGrepArgs } from '../../file-grep/command.js';
-import type { WebSearchCommand } from '../../web-search/command.js';
+import type { WebSearchCommand } from '../../web/search/command.js';
+import type { WebFetchCommand } from '../../web/fetch/command.js';
 import type { FileEditValue, FileWritePolicy } from '../../file-write/types.js';
-import { remoteCreateItem, remoteDeleteMany, remotePaste, remoteReplay, remoteSearch, remoteStatRows } from './port-mapped.js';
+import { remoteCreateItem, remoteDeleteMany, remotePaste, remoteReadFile, remoteReplay, remoteRename, remoteSearch, remoteStatRows } from './port-mapped.js';
 import type { CommitResult } from '../../git/commit.js';
 import type { SearchMatch, SearchRequest } from '../../search/types.js';
 import { RemotePortPaths, resolveRemoteWorkspace } from './port-paths.js';
@@ -118,9 +119,8 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
     return this.request('search-text', { ...request, root: await this.paths.to(root, '') });
   }
 
-  async readFile(root: string, relPath: string): Promise<Uint8Array> {
-    const result = await this.request('read-file', { path: await this.paths.to(root, relPath) });
-    return Buffer.from(result.content, 'base64');
+  readFile(root: string, relPath: string): Promise<Uint8Array> {
+    return remoteReadFile(this.requester(), this.paths, root, relPath);
   }
 
   readLines(root: string, relPath: string, offset?: number, limit?: number): Promise<{ text: string; path: string }> {
@@ -137,6 +137,10 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
 
   webSearch(args: WebSearchCommand): Promise<string> {
     return remoteWebSearch(this.requester(), args);
+  }
+
+  webFetch(args: WebFetchCommand): Promise<string> {
+    return remoteWebFetch(this.requester(), args);
   }
 
   writeFile(
@@ -171,10 +175,8 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
     return remoteDeleteMany(this.requester(), this.paths, root, paths);
   }
 
-  async rename(root: string, relPath: string, name: string, overwrite?: boolean): Promise<RenameItemResult> {
-    return this.request('rename', {
-      path: await this.paths.to(root, relPath), name, ...(overwrite !== undefined && { overwrite }),
-    });
+  rename(root: string, relPath: string, name: string, overwrite?: boolean): Promise<RenameItemResult> {
+    return remoteRename(this.requester(), this.paths, root, relPath, name, overwrite);
   }
 
   paste(

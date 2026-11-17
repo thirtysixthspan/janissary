@@ -15,9 +15,9 @@ import { loadOpencodeOauth } from './opencode-oauth.js';
 //
 // `spawn` is the one opt-out: it defaults to true, and a row that sets it false names a credential
 // only the janissary process reads. Such a row is still loaded at startup and still forwarded to a
-// remote, but no spawned shell, harness, or ACP agent is handed it. The two search provider keys are
-// the only rows that use it: `web search` runs in the janissary process and reads them through
-// `getProjectTokens`, so a spawn has no use for either variable.
+// remote, but no spawned shell, harness, or ACP agent is handed it. The two web provider keys are
+// the only rows that use it: `web search` and `web fetch` run in the janissary process and read them
+// through `getProjectTokens`, so a spawn has no use for either variable.
 //
 // Every file is user-provisioned and read-only to janissary: absent by default, and absent means no
 // injection and a workspace that behaves exactly as it did before the file existed.
@@ -70,16 +70,17 @@ export const PROJECT_TOKENS = [
   {
     name: 'tavily',
     file: 'tavily-token',
-    // A Tavily API key for the bundled `web search` provider. The search runs in the janissary
-    // process, which reads the key through `getProjectTokens`; no spawned process reads it, so the
-    // row opts out of the spawn environment.
+    // A Tavily API key for the bundled `web search` and `web fetch` providers. Both run in the
+    // janissary process, which reads the key through `getProjectTokens`; no spawned process reads it,
+    // so the row opts out of the spawn environment.
     env: ['TAVILY_API_KEY'],
     spawn: false,
   },
   {
     name: 'tinyfish',
     file: 'tinyfish-token',
-    // A TinyFish API key for the bundled `web search` provider, on the same terms as the Tavily row.
+    // A TinyFish API key for the bundled `web search` and `web fetch` providers, on the same terms as
+    // the Tavily row.
     env: ['TINYFISH_API_KEY'],
     spawn: false,
   },

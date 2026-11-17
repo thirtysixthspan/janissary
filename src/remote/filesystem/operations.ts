@@ -18,7 +18,7 @@ import { searchTextOperation } from './search-text-operation.js';
 import { readLinesOperation } from './read-lines-operation.js';
 import { globPathsOperation } from './glob-paths-operation.js';
 import { grepFilesOperation } from './grep-files-operation.js';
-import { webSearchOperation } from './web-search-operation.js';
+import { WEB_OPERATIONS } from './web-operations.js';
 import { changeSetOperation } from './change-set-operation.js';
 import { moveManyOperation, moveOperation } from './move-operations.js';
 
@@ -75,7 +75,7 @@ const READ_OPERATIONS = {
   'read-lines': readLinesOperation,
   'glob-paths': globPathsOperation,
   'grep-files': grepFilesOperation,
-  'web-search': webSearchOperation,
+  ...WEB_OPERATIONS,
 } as const satisfies Record<string, AnyOperationDescriptor>;
 
 // The operations that write. Each names the refusal shape matching its own result type.

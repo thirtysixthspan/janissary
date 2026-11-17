@@ -8,7 +8,8 @@ import { parseTabCommand } from './commands/parse-tab.js';
 import { findPriorityConflicts } from './commands/priority.js';
 import { listHelpPages } from './help-pages.js';
 import { resolveCommand } from './resolve.js';
-import { WEB_SEARCH_USAGE } from './web-search/command.js';
+import { WEB_FETCH_USAGE } from './web/fetch/command.js';
+import { WEB_SEARCH_USAGE } from './web/search/command.js';
 
 function helpText(): string {
   const result = getOutput('help');
@@ -153,6 +154,7 @@ describe('getOutput help pages', () => {
     const text = outputText('help web');
     expect(text.startsWith('### web')).toBe(true);
     expect(text).toContain(WEB_SEARCH_USAGE);
+    expect(text).toContain(WEB_FETCH_USAGE);
   });
 
   it('scopes the file page read notes to file read and leaves glob its own limit', () => {

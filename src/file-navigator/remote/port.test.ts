@@ -956,6 +956,80 @@ describe('RemoteFileSystemPort.webSearch', () => {
   });
 });
 
+describe('RemoteFileSystemPort.webFetch', () => {
+  const hasRequest = (sent: ClientFrame[]) => sent.some((frame) => frame.type === 'filesystem-request');
+  const lastRequest = (sent: ClientFrame[]) => sent.findLast((frame) => frame.type === 'filesystem-request');
+  const command = {
+    url: 'https://example.com/page', format: 'markdown', timeoutSeconds: 30, maxChars: 10_000, offset: 0, provider: 'auto',
+  } as const;
+
+  it('sends exactly the six fields and resolves to the reply text', async () => {
+    const h = harness();
+    const args = { ...command, extra: 'ignored' };
+    const pending = h.port.webFetch(args);
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    const request = lastRequest(h.sent);
+    expect(request).toMatchObject({ operation: 'web-fetch', args: command });
+    expect(request?.type === 'filesystem-request' && Object.keys(request.args))
+      .toEqual(['url', 'format', 'timeoutSeconds', 'maxChars', 'offset', 'provider']);
+    h.reply({ text: 'Fetched https://example.com/page (local).' });
+    await expect(pending).resolves.toBe('Fetched https://example.com/page (local).');
+  });
+
+  it('rejects in-flight work when the channel closes', async () => {
+    const h = harness();
+    const pending = h.port.webFetch(command);
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    h.listener()?.onClose?.();
+    await expect(pending).rejects.toThrow(new Error(ENDED_REASON));
+  });
+
+  it('reports a request made after disposal without ever sending it', async () => {
+    const h = harness();
+    await vi.waitFor(() => expect(h.sent).toHaveLength(1));
+    h.port.dispose();
+
+    await expect(h.port.webFetch(command)).rejects.toThrow(new Error(CLOSED_REASON));
+    expect(hasRequest(h.sent)).toBe(false);
+  });
+
+  it('waits for the long deadline', async () => {
+    vi.useFakeTimers();
+    try {
+      const h = harness();
+      const pending = h.port.webFetch(command);
+      let settled = false;
+      const observe = (async () => {
+        try {
+          await pending;
+        } catch {
+          // The rejection is asserted below.
+        }
+        settled = true;
+      })();
+      await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+      await vi.advanceTimersByTimeAsync(REQUEST_DEADLINE_MS + 1);
+      expect(settled).toBe(false);
+      const rejection = expect(pending).rejects.toThrow(TIMED_OUT_REASON);
+      await vi.advanceTimersByTimeAsync(LONG_REQUEST_DEADLINE_MS - REQUEST_DEADLINE_MS);
+      await rejection;
+      await observe;
+      expect(settled).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('rejects a far-side error reply with its message unchanged', async () => {
+    const h = harness();
+    const pending = h.port.webFetch(command);
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    const assertion = expect(pending).rejects.toThrow(new Error('Web fetch: boom.'));
+    h.reply(undefined, 'Web fetch: boom.');
+    await assertion;
+  });
+});
+
 describe('RemoteFileSystemPort.applyPatch', () => {
   const lastRequest = (sent: ClientFrame[]) => sent.findLast((frame) => frame.type === 'filesystem-request');
   const patchText = '*** Begin Patch\n*** Add File: ../x.md\n+héllo\n*** End Patch';

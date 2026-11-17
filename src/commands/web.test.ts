@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CommandInvocationContext } from './types.js';
 import { command } from './web.js';
 
-const mocks = vi.hoisted(() => ({ searchWebInTab: vi.fn() }));
+const mocks = vi.hoisted(() => ({ runWebInTab: vi.fn() }));
 
-vi.mock('../web-search/tab-search.js', () => ({ searchWebInTab: mocks.searchWebInTab }));
+vi.mock('../web/tab-web.js', () => ({ runWebInTab: mocks.runWebInTab }));
 
 type Appended = { label: string; entry: { input: string; output: string }; invocationId?: string };
 
@@ -20,9 +20,10 @@ function managersWith(appended: Appended[]) {
 }
 
 describe('web command match', () => {
-  it('claims web and web search lines and rejects a longer word', () => {
+  it('claims web, web search, and web fetch lines and rejects a longer word', () => {
     expect(command.match('web')).toBe(true);
     expect(command.match('Web search x')).toBe(true);
+    expect(command.match('web fetch https://x')).toBe(true);
     expect(command.match('webby')).toBe(false);
   });
 });
@@ -33,14 +34,30 @@ describe('web command run', () => {
   beforeEach(() => {
     appended = [];
     vi.resetAllMocks();
-    mocks.searchWebInTab.mockResolvedValue('search results');
+    mocks.runWebInTab.mockResolvedValue('search results');
   });
 
-  it('searches in the tab and appends the input and output once', async () => {
+  it('runs the entry point and appends the input and output once', async () => {
     const managers = managersWith(appended);
     await command.run('web search x', { label: 'janus', index: 0 }, managers);
-    expect(mocks.searchWebInTab.mock.calls[0]).toEqual([managers, 'janus', 'web search x']);
+    expect(mocks.runWebInTab.mock.calls[0]).toEqual([managers, 'janus', 'web search x']);
     expect(appended).toEqual([{ label: 'janus', entry: { input: 'web search x', output: 'search results' } }]);
+  });
+
+  it('runs a fetch line through the entry point and appends its output once', async () => {
+    const managers = managersWith(appended);
+    mocks.runWebInTab.mockResolvedValue('fetched page');
+    await command.run('web fetch https://x', { label: 'janus', index: 0 }, managers);
+    expect(mocks.runWebInTab.mock.calls[0]).toEqual([managers, 'janus', 'web fetch https://x']);
+    expect(appended).toEqual([{ label: 'janus', entry: { input: 'web fetch https://x', output: 'fetched page' } }]);
+  });
+
+  it('passes a bare web line through unchanged and appends its output', async () => {
+    const managers = managersWith(appended);
+    mocks.runWebInTab.mockResolvedValue('both usage lines');
+    await command.run('web', { label: 'janus', index: 0 }, managers);
+    expect(mocks.runWebInTab.mock.calls[0]).toEqual([managers, 'janus', 'web']);
+    expect(appended).toEqual([{ label: 'janus', entry: { input: 'web', output: 'both usage lines' } }]);
   });
 
   it('appends through the invocation when one is given', async () => {

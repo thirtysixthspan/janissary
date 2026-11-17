@@ -32,6 +32,15 @@ export function requireBoolean(value: unknown): boolean {
   return value;
 }
 
+export function boundedInteger(value: unknown, min: number, max: number): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= min && value <= max;
+}
+
+export function requireBoundedInteger(value: unknown, min: number, max: number): number {
+  if (!boundedInteger(value, min, max)) throw new Error(INVALID_ARGUMENTS);
+  return value;
+}
+
 export function decodeBase64Text(value: unknown): string | undefined {
   if (!stringValue(value)) return undefined;
   const bytes = Buffer.from(value, 'base64');

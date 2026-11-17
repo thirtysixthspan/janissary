@@ -101,7 +101,7 @@ describe('agent command tools', () => {
     const managers = { command: { dispatchLineInInvocation: dispatch } } as unknown as Managers;
 
     for (const grants of [['web'], []]) {
-      for (const command of ['web search x', 'web', '/web search x']) {
+      for (const command of ['web search x', 'web', '/web search x', 'web fetch https://x', '/web fetch https://x']) {
         await expect(runGrantedAgentCommand(command, { ...snapshot, grants }, managers, invocation('w')))
           .resolves.toBe(`Agent: command not permitted: ${command}.`);
       }

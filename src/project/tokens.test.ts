@@ -152,9 +152,9 @@ describe('PROJECT_TOKENS', () => {
     expect(new Set(variables).size).toBe(variables.length);
   });
 
-  // The two search keys are the only credentials no spawned process reads: `web search` runs in the
-  // janissary process. A row that lost its opt-out would put the key back in every workspaced
-  // environment.
+  // The two web command keys are the only credentials no spawned process reads: `web search` and
+  // `web fetch` run in the janissary process. A row that lost its opt-out would put the key back in
+  // every workspaced environment.
   it('marks exactly the two search rows as not handed to a spawn', () => {
     const serverOnly = PROJECT_TOKENS.filter((row) => !isSpawnedCredential(row)).map(({ name }) => name);
     expect(serverOnly).toEqual(['tavily', 'tinyfish']);

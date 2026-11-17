@@ -35,7 +35,7 @@ const OPENCODE = { harness: 'opencode', model: 'opencode-go/deepseek-v4.1-flash'
 const CODEX = { harness: 'codex', model: 'gpt-6-luna', effort: 'high' };
 const ASK_COMMANDS = [
   'db sqlite list', 'db sqlite query', 'browser goto', 'browser content', 'question ask', 'question approve',
-  'file read', 'file glob', 'file grep', 'web search',
+  'file read', 'file glob', 'file grep', 'web search', 'web fetch',
 ];
 
 describe('askRoleEntries', () => {
@@ -94,9 +94,9 @@ describe('readRoleSettings', () => {
       name: 'ask', entries: [OPENCODE, CLAUDE, CODEX], commands: ASK_COMMANDS,
     });
     const tell = readRoleSettings(root, 'tell', home).commands;
-    expect(tell).toHaveLength(16);
+    expect(tell).toHaveLength(17);
     expect(tell).toEqual(expect.arrayContaining([
-      'file glob', 'file grep', 'file write', 'file edit', 'file patch', 'web search',
+      'file glob', 'file grep', 'file write', 'file edit', 'file patch', 'web search', 'web fetch',
     ]));
     expect(tell).toContain('file patch');
     expect(ASK_COMMANDS).not.toContain('file patch');

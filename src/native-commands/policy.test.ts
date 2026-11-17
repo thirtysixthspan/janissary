@@ -182,7 +182,7 @@ describe('file mutation rows', () => {
   });
 });
 
-describe('web search rows', () => {
+describe('web rows', () => {
   it('refuses a typed web search through its disabled native row', () => {
     const settings = current({ 'web search': { enabled: false } });
     expect(disabledApplicationCommand('web search x', settings)?.name).toBe('web search');
@@ -194,5 +194,18 @@ describe('web search rows', () => {
     expect(effectiveCommandSetting(settings, 'web search').effectiveEnabled).toBe(false);
     expect(disabledApplicationCommand('web search x', settings)?.name).toBe('web search');
     expect(disabledApplicationCommand('web', settings)?.name).toBe('web');
+  });
+
+  it('refuses a typed web fetch through its disabled native row', () => {
+    const settings = current({ 'web fetch': { enabled: false } });
+    expect(disabledApplicationCommand('web fetch https://x', settings)?.name).toBe('web fetch');
+    expect(disabledApplicationCommand('web search x', settings)).toBeUndefined();
+    expect(disabledApplicationCommand('web', settings)).toBeUndefined();
+  });
+
+  it('refuses a typed web fetch when its web parent is disabled', () => {
+    const settings = current({ web: { enabled: false } });
+    expect(effectiveCommandSetting(settings, 'web fetch').effectiveEnabled).toBe(false);
+    expect(disabledApplicationCommand('web fetch https://x', settings)?.name).toBe('web fetch');
   });
 });

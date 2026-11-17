@@ -410,6 +410,10 @@ describe('frame codec', () => {
         args: { query: 'vitest', numResults: 10, maxChars: 10_000, depth: 'basic', provider: 'auto' },
       },
       {
+        type: 'filesystem-request', session: 'files1', request: 'q5', operation: 'web-fetch',
+        args: { url: 'https://example.com/page', format: 'markdown', timeoutSeconds: 30, maxChars: 10_000, offset: 0, provider: 'auto' },
+      },
+      {
         type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp'],
         env: { OPENCODE_CONFIG_CONTENT: '{"model":"google/gemini-3.1-flash-lite"}' }, offline: false,
       },
@@ -618,6 +622,8 @@ describe('frame codec', () => {
     ['filesystem request with malformed arguments', { type: 'filesystem-request', session: 'f1', request: 'q1', operation: 'rename', args: { path: 'a' } }],
     ['filesystem request with malformed write precondition', { type: 'filesystem-request', session: 'f1', request: 'q1', operation: 'write-file', args: { path: 'a', content: '', expectedHash: null } }],
     ['filesystem request with out-of-range web search arguments', { type: 'filesystem-request', session: 'f1', request: 'q1', operation: 'web-search', args: { query: 'x', numResults: 0, maxChars: 10_000, depth: 'basic', provider: 'auto' } }],
+    ['filesystem request with out-of-range web fetch arguments', { type: 'filesystem-request', session: 'f1', request: 'q1', operation: 'web-fetch', args: { url: 'https://example.com/page', format: 'markdown', timeoutSeconds: 0, maxChars: 10_000, offset: 0, provider: 'auto' } }],
+    ['filesystem request with an ftp web fetch URL', { type: 'filesystem-request', session: 'f1', request: 'q1', operation: 'web-fetch', args: { url: 'ftp://example.com', format: 'markdown', timeoutSeconds: 30, maxChars: 10_000, offset: 0, provider: 'auto' } }],
     ['acp-open without an id', { type: 'acp-open', command: 'opencode', args: [] }],
     ['acp-open with an empty id', { type: 'acp-open', id: '', command: 'opencode', args: [] }],
     ['acp-open with an empty command', { type: 'acp-open', id: 'racp1', command: '', args: [] }],
@@ -1020,8 +1026,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 45', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(45);
+  it('is 46', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(46);
   });
 });
 

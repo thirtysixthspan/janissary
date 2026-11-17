@@ -21,6 +21,7 @@ describe('native ACP commands', () => {
       'file edit',
       'file patch',
       'web search',
+      'web fetch',
     ]);
   });
 
@@ -41,6 +42,8 @@ describe('native ACP commands', () => {
     ['file patch {"patchText":"x"}', 'file'],
     ['web search node.js lts', 'web'],
     ['Web Search x', 'web'],
+    ['web fetch https://example.com', 'web'],
+    ['WEB FETCH x', 'web'],
   ] as const)('assigns %s to %s, including trailing arguments', (command, tool) => {
     expect(nativeCommandTool(command)).toBe(tool);
     expect(isNativeCommand(command)).toBe(true);
@@ -78,6 +81,7 @@ describe('native ACP commands', () => {
     expect(nativeCommandName('files x')).toBeUndefined();
     expect(nativeCommandName('web')).toBeUndefined();
     expect(nativeCommandName('web searching x')).toBeUndefined();
+    expect(nativeCommandName('web fetcher x')).toBeUndefined();
     expect(nativeCommandName('websearch x')).toBeUndefined();
   });
 });

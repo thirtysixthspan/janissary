@@ -91,13 +91,13 @@ The four harness credentials — `claude-token`, `opencode-token`, `kilo-token`,
 also reach an ACP agent that runs outside any workspace, under the same variables; neither the
 GitHub token nor the two search keys does (see [[acp]]).
 
-`tavily-token` and `tinyfish-token` hold the Tavily and TinyFish API keys the `web search` command
-uses. The search runs in the Janissary process itself, which reads the keys through
+`tavily-token` and `tinyfish-token` hold the Tavily and TinyFish API keys the `web search` and `web fetch` commands
+use. Both `web search` and `web fetch` run in the Janissary process itself, which reads the keys through
 `getProjectTokens`, and no spawned process reads them: neither key is set in a workspaced tab's
 environment, and neither reaches an ACP agent inside or outside a workspace. They are read from the
 project's `.janissary/` first and then `~/.janissary/`, so a project file takes precedence over the
 home copy, and a file added while Janissary is running takes effect at the next restart. A remote
-tab's search still uses the key: it is forwarded in the provisioning map and read by the remote
+tab's search or fetch still uses the key: it is forwarded in the provisioning map and read by the remote
 Janissary process, not by the tab's processes (see [[remote-server]]).
 
 Both locations are read by the janissary process itself, never from inside a workspace. `~/.janissary`

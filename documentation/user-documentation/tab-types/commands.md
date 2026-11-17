@@ -20,7 +20,7 @@ The checkboxes show what is saved, not whether the command can run right now. A 
 
 You can disable one native command without affecting the others. The six `file` commands, `file read`, `file glob`, `file grep`, `file write`, `file edit`, and `file patch`, each have their own **Enabled** and **Agent access** boxes under the `file` parent. Turn off `file write` to refuse just the `file write` command, both typed in a command bar and used as an agent tool, while the other five keep working. Turn off `file` to refuse all six. These rows appear in the Commands table and in the Roles command picker like any other row.
 
-`web` has its own row with no parent, and `web search` is a native child with its own **Enabled** and **Agent access** boxes. Turn off `web` to refuse every typed `web` line, including `web search`. Turn off `web search` alone to refuse only that command, typed or as an agent tool. A typed `web search` uses the same row as a typed `file write`, so the two follow the same rules.
+`web` has its own row with no parent, and `web search` and `web fetch` are both native children with their own **Enabled** and **Agent access** boxes. Turn off `web` to refuse every typed `web` line, including both children. Turn off `web search` or `web fetch` alone to refuse only that command, typed or as an agent tool. A typed `web search` or `web fetch` uses the same row as a typed `file write`, so the two follow the same rules.
 
 ## Saving
 

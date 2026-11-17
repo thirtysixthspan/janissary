@@ -9,12 +9,12 @@ Janissary reads seven optional token files from a `.janissary/` directory. Each 
 | `opencode-token` | access to OpenCode Zen and OpenCode Go | your harness uses either of those providers |
 | `kilo-token` | access to the Kilo gateway as `KILO_API_KEY` | your opencode harness routes through Kilo |
 | `gemini-token` | a working Google provider | your harness talks to Gemini |
-| `tavily-token` | web search through Tavily | you want `web search` to use Tavily |
-| `tinyfish-token` | web search through TinyFish | you want `web search` to use TinyFish |
+| `tavily-token` | web search and web fetch through Tavily | you want `web search` or `web fetch` to use Tavily |
+| `tinyfish-token` | web search and web fetch through TinyFish | you want `web search` or `web fetch` to use TinyFish |
 
 None of them is required. Without them, workspaces still clone, run, commit, fetch, and pull.
 
-The two search tokens configure the Janissary process rather than a tab. `web search` runs there, so neither key is handed to a workspaced tab or to an ACP agent.
+The two search tokens configure the Janissary process rather than a tab. `web search` and `web fetch` run there, so neither key is handed to a workspaced tab or to an ACP agent. `web fetch` also works with no token at all, through its direct fetch.
 
 ## Where to put a token file
 
@@ -100,7 +100,7 @@ Google Vertex is the one that can't work. It authenticates with `GOOGLE_APPLICAT
 
 <img class="agent-float left" src="/agents/idris-south-west.png" alt="" />
 
-Janissary reads your token files once when it starts, project first and home second, then hands the GitHub token and the four harness tokens to each workspaced tab's processes as they launch. The two search keys stay in the Janissary process that runs `web search` instead. Nothing is copied into the workspace itself, so a token never lands in a clone you might push, and a workspaced tab can't read either file directly. Editing a token file takes effect on the next launch of Janissary, not on the next tab.
+Janissary reads your token files once when it starts, project first and home second, then hands the GitHub token and the four harness tokens to each workspaced tab's processes as they launch. The two search keys stay in the Janissary process that runs `web search` and `web fetch` instead. Nothing is copied into the workspace itself, so a token never lands in a clone you might push, and a workspaced tab can't read either file directly. Editing a token file takes effect on the next launch of Janissary, not on the next tab.
 
 Those tokens reach the tab whether or not isolation is actually active on that machine. Isolation needs macOS, so a Linux host runs without it, and the credential arrives the same way either way.
 

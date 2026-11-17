@@ -187,9 +187,9 @@ export const SECRET_DENY_PATHS = [
 // to fix it would hand a workspaced agent a Google credential file, which is the thing the list
 // exists to prevent, so a vertex-configured harness has no working route into a workspace.
 //
-// The two search provider keys are the exception among provider credentials: they are matched. No
-// spawned process reads either one — `web search` runs in the janissary process, which reads them
-// from `getProjectTokens()` — so an ambient copy is a secret a spawn cannot use. See
+// The two web provider keys are the exception among provider credentials: they are matched. No
+// spawned process reads either one — `web search` and `web fetch` run in the janissary process, which
+// reads them from `getProjectTokens()` — so an ambient copy is a secret a spawn cannot use. See
 // `src/project/tokens.ts`.
 export const ENV_SCRUB_PATTERNS: RegExp[] = [
   /^AWS_/, /^GITHUB_TOKEN$/, /^GH_TOKEN$/, /^NPM_TOKEN$/, /^DOCKER_/, /^KUBECONFIG$/,

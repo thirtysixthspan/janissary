@@ -1,23 +1,16 @@
-import { requireString, stringValue } from './argument-checks.js';
+import {
+  boundedInteger, requireBoundedInteger, requireString, stringValue,
+} from './argument-checks.js';
 import { descriptorFor } from './operation-types.js';
 import { resultDecoders } from './result-decoders.js';
 import { nonEmptyString } from '../frame/decode-shared.js';
 import {
   WEB_SEARCH_MAX_CHARS, WEB_SEARCH_MAX_RESULTS, WEB_SEARCH_MIN_CHARS, WEB_SEARCH_MIN_RESULTS,
   type WebSearchDepth,
-} from '../../web-search/command.js';
-import { webSearch } from '../../web-search/search.js';
+} from '../../web/search/command.js';
+import { webSearch } from '../../web/search/search.js';
 
 const INVALID_ARGUMENTS = 'Invalid remote filesystem operation arguments.';
-
-function boundedInteger(value: unknown, min: number, max: number): value is number {
-  return typeof value === 'number' && Number.isSafeInteger(value) && value >= min && value <= max;
-}
-
-function requireBoundedInteger(value: unknown, min: number, max: number): number {
-  if (!boundedInteger(value, min, max)) throw new Error(INVALID_ARGUMENTS);
-  return value;
-}
 
 function depthValue(value: unknown): value is WebSearchDepth {
   return value === 'basic' || value === 'advanced';

@@ -192,8 +192,9 @@ but the file it names is unreadable inside the sandbox whenever it sits under `$
 carve-in, and its default location under `~/.config/gcloud` is an explicit secret deny. Widening that
 deny to fix it would hand a workspaced tab a Google credential file, which is what the list exists
 to prevent, so a Vertex-configured harness has no working route into a workspace. The two search keys
-are matched for the opposite reason: no spawned process reads either one, because `web search` runs
-in the Janissary process itself (see [[web-search]]), so an ambient copy is a secret a workspace
+are matched for the opposite reason: no spawned process reads either one, because `web search` and
+`web fetch` run in the Janissary process itself (see [[web-search]] and [[web-fetch]]), so an ambient
+copy is a secret a workspace
 cannot use. If a scoped GitHub token is configured for the project
 (`.janissary/github-token`, loaded by `src/project-tokens.ts`), `GH_TOKEN` is re-added after the scrub
 with that value — the one deliberate exception to "a scrubbed var never comes back": it's not the
@@ -239,12 +240,12 @@ environment.
 
 A Tavily API key configured at `.janissary/tavily-token` and a TinyFish API key configured at
 `.janissary/tinyfish-token` (both read by `loadProjectTokens` in `src/project/tokens.ts`, with the
-project's `.janissary/` consulted before `~/.janissary/`) belong to the Janissary process alone. The
-search runs there rather than in a spawned process, so neither key is set in a workspaced spawn's
+project's `.janissary/` consulted before `~/.janissary/`) belong to the Janissary process alone. Both
+web commands run there rather than in a spawned process, so neither key is set in a workspaced spawn's
 environment on the confined or pass-through path, and neither reaches an ACP agent inside or outside
 a workspace. Both names are matched by `ENV_SCRUB_PATTERNS` in `src/sandbox/paths.ts`, so an ambient
 value is removed on the confined path, and the pass-through path drops an ambient copy too even
-though it scrubs nothing else. A remote tab still searches with the key: it travels in the
+though it scrubs nothing else. A remote tab still searches and fetches with the key: it travels in the
 provisioning map and is read by the far-side Janissary process (see [[remote-server]] and
 [[workspaced-agent]]).
 

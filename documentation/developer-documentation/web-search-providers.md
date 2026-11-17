@@ -1,14 +1,14 @@
 # Web search providers
 
-Janissary's web-search provider API is for trusted providers bundled in this repository. A provider answers one search: it receives a normalized query and a narrow capability object, sends one HTTP request, and returns a flat result list. It cannot be installed at runtime and is not sandboxed.
+Janissary's web-search provider API is for trusted providers bundled in this repository. A provider answers a search, a fetch of one page, or both, as its manifest declares. It receives a narrow request and capability object, sends its own HTTP requests, and returns results. It cannot be installed at runtime and is not sandboxed.
 
 This is a separate family from [tab plugins](./tab-plugins.md), [editor plugins](./editor-plugins.md), and [overlay plugins](./overlay-plugins.md). Providers run on the server inside the Janissary process and share no catalog or API version with those families.
 
-The authoritative types are `src/web-search/contract.ts`. The frozen `fixture-v1` provider and its compatibility test pin API version 1, so a change that breaks them is a breaking change by definition.
+The authoritative types are `src/web/providers/contract.ts`. The frozen `fixture-v1` and `fixture-v1-fetch` providers and their compatibility tests pin API version 1, so a change that breaks them is a breaking change by definition.
 
 ## Smallest working example
 
-A provider is one manifest in `src/web-search/providers/catalog.ts` plus one module that exports `provider`.
+A provider is one manifest in `src/web/providers/catalog.ts` plus one module that exports `provider`.
 
 The manifest is pure data:
 
@@ -56,22 +56,25 @@ That is a complete provider: it sends the query to its own endpoint and returns 
 
 ## Files to add
 
-For provider `example`, add `src/web-search/providers/example.ts` and any modules it needs beside it. Then add a manifest to `src/web-search/providers/catalog.ts` and include it in `webSearchProviderCatalog`. Its `token` names the provider's own row in `PROJECT_TOKENS`, added as described in [Token rows](#token-rows); reusing another provider's name would hand the new provider that service's key:
+For provider `example`, add `src/web/providers/example.ts` and any modules it needs beside it. Then add a manifest to `src/web/providers/catalog.ts` and include it in `webProviderCatalog`. Its `token` names the provider's own row in `PROJECT_TOKENS`, added as described in [Token rows](#token-rows); reusing another provider's name would hand the new provider that service's key:
 
 ```ts
 export const exampleManifest = {
   id: 'example',
-  apiVersion: WEB_SEARCH_PROVIDER_API_VERSION,
+  apiVersion: WEB_PROVIDER_API_VERSION,
   token: 'example', // the placeholder row added in "Token rows"
   activate: () => import('./example.js'),
 } as const satisfies WebSearchProviderManifest;
 
-export const webSearchProviderCatalog = [
+export const webProviderCatalog = [
   tavilyManifest,
   tinyfishManifest,
   exampleManifest,
+  localManifest,
 ] as const satisfies readonly WebSearchProviderManifest[];
 ```
+
+`local` stays last because an `auto` fetch tries it as the direct fallback after every hosted provider.
 
 **Never statically import the provider module from the catalog.** The catalog is read for every resolution, including a name the user typed and a search that never runs, so a static import would load every provider just to answer `--provider`. A literal dynamic import keeps the module unloaded until the first search that uses it. Node caches the resolved module, so later activations are cheap and the registry keeps no cache of its own.
 
@@ -80,15 +83,17 @@ export const webSearchProviderCatalog = [
 | Field | Required | Meaning |
 |---|---|---|
 | `id` | yes | Stable lowercase identity, unique in the catalog and never `auto`. `--provider` matches it case-insensitively, and failure lines print it. |
-| `apiVersion` | yes | The provider API version the module was written against. It must equal `WEB_SEARCH_PROVIDER_API_VERSION`, or the provider is refused before its module is imported. |
-| `token` | yes | The `ProjectTokenName` of the token file whose value becomes `capability.apiKey`. A new provider needs its own row; see [Token rows](#token-rows). |
+| `apiVersion` | yes | The provider API version the module was written against. It must equal `WEB_PROVIDER_API_VERSION`, or the provider is refused before its module is imported. |
+| `token` | no | The `ProjectTokenName` of the token file whose value becomes `capability.apiKey`. A provider without one is always configured and gets an empty `apiKey`. A new provider needs its own row; see [Token rows](#token-rows). |
+| `search` | no | Whether the provider searches. Absent means it searches only when the manifest declares no fetch formats; declaring fetch formats without `search` makes it fetch-only. `search: false` opts out, and `search: true` searches even with fetch formats. |
+| `fetchFormats` | no | The fetch formats the provider serves: `markdown`, `text`, or `html`. Absent or empty means no fetch. |
 | `activate` | yes | A literal dynamic import of the provider module. |
 
 ## Token rows
 
 `token` names a row in `PROJECT_TOKENS` in `src/project/tokens.ts`. The row's `file` is the `.janissary/` file read for the value, and its `env` lists the variables the value would be set under in a spawned process. A new provider needs a new row, never an existing one: `token: 'tavily'` in a provider of your own would hand it Tavily's key, and `auto` would treat that provider as configured whenever the Tavily token file exists.
 
-A search provider's key is read by the Janissary process, which runs the search. No spawned process reads it, so the row sets `spawn: false`: the key is still loaded at startup and still forwarded to a remote machine, but no workspaced shell, harness, or ACP agent is handed it, and an ambient copy is scrubbed. A row that omits `spawn` defaults to true, which is right for a credential a spawned process needs.
+A provider's key is read by the Janissary process that runs the search or fetch. No spawned process reads it, so the row sets `spawn: false`: the key is still loaded at startup and still forwarded to a remote machine, but no workspaced shell, harness, or ACP agent is handed it, and an ambient copy is scrubbed. A row that omits `spawn` defaults to true, which is right for a credential a spawned process needs.
 
 Add the `example` row beside the others:
 
@@ -103,7 +108,7 @@ Add the `example` row beside the others:
 
 `name` must be unique in the table and is the value `token` carries, and `file` must be a file no other row reads. `env` lists the environment variables the credential would be set under for a spawned process; a search row keeps the list even though `spawn: false` keeps it out of every spawn. The `'example'` value in the snippets on this page is a placeholder for this row; it is not a `ProjectTokenName` until the row exists.
 
-Adding a row is not only this table. The specs that enumerate the token files — `product/specs/workspaced-agent.md`, `product/specs/sandbox.md`, `product/specs/remote-server.md`, `product/specs/acp.md`, and `product/specs/web-search.md` today — need the new file wherever they list the existing ones, as do the user documentation table in `documentation/user-documentation/advanced-agents/tokens.md`, `help/web.md`, and `documentation/user-documentation/advanced-agents/acp-agent.md`. Every new row also moves `REMOTE_PROTOCOL_VERSION` in `src/remote/protocol.ts`, with no row exempt: `getProjectTokens()` in `src/project/tokens.ts` supplies every configured row to the remote `provision` frame that `src/remote/entry-factory.ts` sends, and `src/remote/serve-provision.ts` merges the forwarded map for the workspace clone, the processes, and ACP. A remote decodes that map against its own `PROJECT_TOKENS` table, and `src/remote/frame/decode-provision.ts` rejects an unknown name by failing the whole provisioning request, so a row a peer does not know breaks provisioning rather than merely going unused.
+Adding a row is not only this table. The specs that enumerate the token files — `product/specs/workspaced-agent.md`, `product/specs/sandbox.md`, `product/specs/remote-server.md`, `product/specs/acp.md`, `product/specs/web-search.md`, and `product/specs/web-fetch.md` today — need the new file wherever they list the existing ones, as do the user documentation table in `documentation/user-documentation/advanced-agents/tokens.md`, `help/web.md`, and `documentation/user-documentation/advanced-agents/acp-agent.md`. Every new row also moves `REMOTE_PROTOCOL_VERSION` in `src/remote/protocol.ts`, with no row exempt: `getProjectTokens()` in `src/project/tokens.ts` supplies every configured row to the remote `provision` frame that `src/remote/entry-factory.ts` sends, and `src/remote/serve-provision.ts` merges the forwarded map for the workspace clone, the processes, and ACP. A remote decodes that map against its own `PROJECT_TOKENS` table, and `src/remote/frame/decode-provision.ts` rejects an unknown name by failing the whole provisioning request, so a row a peer does not know breaks provisioning rather than merely going unused.
 
 ## The provider module
 
@@ -122,33 +127,58 @@ type WebSearchResult = {
   snippet: string;
 };
 
+type WebFetchRequest = {
+  url: string;
+  format: 'markdown' | 'text' | 'html';
+  timeoutMs: number;
+};
+
+type WebFetchPage = {
+  url: string;
+  content: string;
+};
+
+type WebFetchRedirect = {
+  redirectedTo: string;
+};
+
 type WebSearchProvider = {
-  search(
+  search?(
     request: WebSearchRequest,
     capability: WebSearchCapability,
   ): Promise<WebSearchResult[]>;
+  fetch?(
+    request: WebFetchRequest,
+    capability: WebSearchCapability,
+  ): Promise<WebFetchPage | WebFetchRedirect>;
 };
 ```
 
-`search` receives the normalized request only. The character budget, the provider selection, and the fallback decision stay in the host. `numResults` is a request, not a guarantee: the host dedupes, cuts to the requested count, and renders the results after you return them.
+A provider implements `search`, `fetch`, or both, matching what its manifest declares. `search` receives the normalized request only. The character budget, the provider selection, and the fallback decision stay in the host. `numResults` is a request, not a guarantee: the host dedupes, cuts to the requested count, and renders the results after you return them.
 
 Return an empty array when the search found nothing. That is an answer, not a failure, so the host does not fall back to another provider.
 
+A page result is the final URL and the content string. An empty `content` is an answer, not a failure, so the host does not fall back.
+
+A `{ redirectedTo }` result is a cross-host redirect answer, also never a fallback. The host prints it as `Web fetch: redirected to <url>.`
+
+Fetch attempts run one at a time in catalog order. A page or a redirect ends the fetch.
+
 ## The capability
 
-`search` receives one capability object:
+`search` and `fetch` receive one capability object:
 
 | Member | Meaning |
 |---|---|
-| `apiKey` | The value of the token file named by the manifest's `token`. A provider sees only its own key. |
+| `apiKey` | The value of the token file named by the manifest's `token`. A provider sees only its own key. It is empty when the manifest names no token. |
 | `fetch` | The request function to use. It is injected so tests run without the network. Do not reach for the global `fetch`. |
-| `signal` | Optional. Aborted when the caller cancels the search. Pass it through to `fetch`. It is absent for a typed search, which has no cancellation. |
+| `signal` | Optional. Aborted when the caller cancels the search or fetch. Pass it through to `fetch`. It is absent for a typed command, which has no cancellation. |
 
 That is the whole vocabulary. A provider never reads token files, `Managers`, a tab, the remote channel, or any other host state. Each attempt gets its own request object and a fresh capability built from that provider's token, so a provider that mutates what it receives changes only its own copy and never what a later fallback provider gets.
 
 ## Resolution and ordering
 
-An explicit `--provider <name>` selects that one provider, checked in the order unknown, then disabled, then not configured. `--provider auto`, the default, walks the catalog in order and skips any provider without a token file, then skips any provider already disabled. Names match case-insensitively, and `auto` is reserved.
+An explicit `--provider <name>` selects that one search-capable provider, checked in the order unknown, then disabled, then not configured. `--provider auto`, the default, walks the search-capable providers in catalog order and skips any provider that names a token with no token file, then skips any provider already disabled. A provider whose manifest sets `search: false`, or declares fetch formats without `search`, is unknown to `web search`, even when named explicitly or already disabled, and is absent from the `available:` list. Names match case-insensitively, and `auto` is reserved.
 
 The lines a provider author will see from resolution are:
 
@@ -158,7 +188,9 @@ The lines a provider author will see from resolution are:
 - `Web search failed (<id>): <reason>.`, for an explicit `--provider` naming a disabled provider, and for `auto` when its one configured provider is disabled. `<reason>` is the stored reason from the failure that disabled it.
 - `Web search: every provider failed.` followed by one `- <id>: <reason>` line for each provider, in catalog order, when `auto` has two or more configured providers and all of them are disabled.
 
-Both disabled-provider forms come from `formatFailures` in `src/web-search/failure-lines.ts`, the one function every web search failure line goes through, so a disabled provider and one that just failed read identically. The registry's `resolveAttempts` in `src/web-search/registry.ts` decides which line a search starts with; read it for the exact conditions.
+Both disabled-provider forms come from `formatFailures` in `src/web/providers/failure-lines.ts`, the one function every web search and web fetch failure line goes through, so a disabled provider and one that just failed read identically. It takes the command's headings, which is how the same function prints `Web search failed ...` and `Web fetch failed ...` lines. `resolveSearchAttempts` in `src/web/providers/search-resolution.ts` decides which line a search starts with; read it for the exact conditions.
+
+Fetch resolution walks the same kind of ordering over a smaller set. Only providers with a non-empty `fetchFormats` take part, so a search-only provider is never attempted, even when named explicitly or already disabled. An explicit `web fetch --provider <name>` selects that one fetch-capable provider with no fallback, checked in the order unknown, then disabled, then not configured, then unsupported format. `--provider auto` walks the fetch-capable providers in catalog order and skips any that names a token with no token file, any that does not list the requested `--format`, and any already disabled. When nothing is eligible under `auto`, the line is `Web fetch: no provider configured.`; when every eligible provider is disabled, their stored reasons print through `formatFailures` with `WEB_FETCH_FAILURE_HEADINGS` as one `Web fetch failed (<id>): <reason>.` line or a `Web fetch: every attempt failed.` block with one `- <id>: <reason>` line each in catalog order. An explicit `--provider` prints one of these lines: `Web fetch: unknown provider "<name>" (available: auto, tavily, tinyfish, local).`, `Web fetch failed (<id>): <reason>.`, `Web fetch: provider "<id>" is not configured.`, or `Web fetch: provider "<id>" does not support --format <format>.`. As with the search lines, the unknown line prints the name as typed, the other three print the manifest id, the disabled line prints the stored reason, and `<format>` is the lowercased `--format` value. `resolveFetchAttempts` in `src/web/providers/fetch-resolution.ts` has the exact conditions.
 
 Attempts run sequentially, each awaited before the next starts. There is no concurrency between providers. A provider that resolves results ends the search, including when it resolves an empty array.
 
@@ -172,12 +204,33 @@ Every call across the boundary is guarded. These are plugin failures:
 - The module has no `provider.search` function.
 - `search` throws or rejects with anything other than a `ProviderRequestError`.
 - `search` resolves to something that is not an array.
+- A manifest that declares `fetchFormats` but whose module has no `provider.fetch` function (`provider failed: module has no fetch`).
+- `fetch` throws or rejects with anything other than a `ProviderRequestError`.
+- `fetch` resolves to neither a page nor a redirect (`provider failed: fetch did not return a page`).
 
-A plugin failure uses the reason `provider failed: <first line of the error>`, or one of the fixed reasons `provider failed: module has no provider` and `provider failed: search did not return an array`. The provider is disabled for the rest of the server process. A local search that supplies `reportDisabled` posts one notification: `Web search provider "<id>" disabled: <reason>.` Repeat failures keep the first reason and post no second notification. A search on a remote machine passes no `reportDisabled`, so no notification appears there, and it prints only the provider that answered, so a provider disabled during a successful fallback is reported nowhere until a later failure line names it: an explicit search of it, or `auto` once every configured provider is disabled. Nothing re-enables a provider except a server restart.
+A plugin failure uses the reason `provider failed: <first line of the error>`, or one of the fixed reasons `provider failed: module has no provider`, `provider failed: search did not return an array`, `provider failed: module has no fetch`, and `provider failed: fetch did not return a page`. The provider is disabled for the rest of the server process. The disable covers both `web search` and `web fetch`, because both commands use one registry per process, `webProviderRegistry` in `src/web/providers/default-registry.ts`. A local search or fetch that supplies `reportDisabled` posts one notification through `reportProviderDisabled` in `src/web/disabled-notice.ts`: `Web provider "<id>" disabled: <reason>.` Repeat failures keep the first reason and post no second notification. A search or fetch on a remote machine passes no `reportDisabled`, so no notification appears there, and it prints only the provider that answered, so a provider disabled during a successful fallback is reported nowhere until a later failure line names it: an explicit search of it, or `auto` once every configured provider is disabled. Nothing re-enables a provider except a server restart.
 
 A `search` that throws a `ProviderRequestError` is an expected failure. Its message is the reason the host prints, and it never disables the provider. Use it for an HTTP status, a timeout, a network error, a response that doesn't decode, or anything else the provider's API can answer normally. An `auto` search records the failure and moves on to the next configured provider, while an explicit `--provider` tries only that provider, so its expected failure prints a single `Web search failed (<id>): <reason>.` line. An abort never disables either: when `capability.signal.aborted` is true, whatever the rejection is, the attempt is a cancellation and the search stops rather than falling back to the next provider. Once the caller's signal aborts, the search rejects with the abort instead of printing a failure or resolution line, including when the abort lands before any attempt starts or on the final provider's failure.
 
-The 30-second budget is per attempt. The shared `requestJson` step in `src/web-search/providers/http.ts` joins `capability.signal` with a 30-second timeout, turns a non-2xx status into `HTTP <status> <status text>`, a timeout into `timed out after 30 s`, an undecodable body into `invalid response`, and a network failure into its first line. Use it unless a provider needs a request shape it cannot express. An `auto` search that falls back can take up to 30 seconds per configured provider.
+The expected-failure and abort rules apply to `fetch` as they do to `search`.
+
+The 30-second budget is per attempt. The shared `requestJson` step in `src/web/providers/http.ts` joins `capability.signal` with the timeout its caller passes in milliseconds, turns a non-2xx status into `HTTP <status> <status text>`, a timeout into `timed out after <s> s` naming that timeout in seconds, an undecodable body into `invalid response`, and a network failure into its first line. Search passes `PROVIDER_TIMEOUT_MS`, 30 seconds, so a search timeout reads `timed out after 30 s`. Use it unless a provider needs a request shape it cannot express. An `auto` search that falls back can take up to 30 seconds per configured provider.
+
+Each fetch attempt gets the full `--timeout` (1 to 120 seconds) as `request.timeoutMs`, which a provider passes to `requestJson` as its timeout. A provider whose API caps its own timeout sends the smaller value but still lets the helper wait the full timeout. An `auto` fetch of three attempts can take three times the timeout.
+
+## The bundled `local` provider
+
+`local` is tokenless, fetch-only (`search: false`), serves every format, and sits last in the catalog. It is always configured and is the direct `auto` fallback after every hosted provider.
+
+It connects directly from the machine running the fetch using the injected `fetch`, presenting browser headers from `randomBrowserProfile` and no cookies. It returns the body raw, whatever `--format` says.
+
+It accepts only `text/*`, `application/xhtml+xml`, JSON, XML, and `+json` or `+xml` media types, and refuses others with `unsupported content type <type>`. It caps the body at 50 MB with `response larger than 50 MB`, and decodes with the response's `charset` parameter, falling back to UTF-8. A non-2xx final status fails with `HTTP <status> <status text>`.
+
+It upgrades a public `http:` URL to `https:`. Hosts that keep `http:` are loopback, private, and link-local IP addresses, `localhost` and its subdomains, and any host name with no dot.
+
+It follows a redirect only while it stays on the same host, up to 5 hops; a sixth redirect fails with `too many redirects`. A cross-host target, or one whose scheme is not `http:` or `https:`, is not fetched: it is returned as the redirect answer for the caller to fetch explicitly. There are no address checks on redirects or the initial URL, so a role granted `web fetch` reaches the operator's private network.
+
+Every expected failure is a `ProviderRequestError`, so it falls back like any other and never disables `local`.
 
 ## Trust and limits
 
@@ -187,6 +240,6 @@ A provider may make network requests and read its own key. It has no file access
 
 ## API version 1
 
-`WEB_SEARCH_PROVIDER_API_VERSION` is 1. The frozen `fixture-v1` provider under `src/web-search/fixture-v1/` declares the literal `1` rather than the constant, so bumping the constant makes `src/web-search/fixture-v1/compatibility.test.ts` fail. That failure is the definition of a breaking change.
+`WEB_PROVIDER_API_VERSION` is 1. The frozen `fixture-v1` search provider under `src/web/providers/fixture-v1/` and the frozen `fixture-v1-fetch` fetch provider under `src/web/providers/fixture-v1-fetch/` each declare the literal `1` rather than the constant, so bumping the constant makes `src/web/providers/fixture-v1/compatibility.test.ts` and `src/web/providers/fixture-v1-fetch/compatibility.test.ts` fail. Those failures are the definition of a breaking change.
 
 Additive changes that leave the fixture working are minor. Removing or changing anything the fixture exercises is a major bump: add a new fixture for the new version and keep the v1 fixture until version 1 is formally removed.
