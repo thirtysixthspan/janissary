@@ -101,7 +101,7 @@ describe('reading the roles in effect', () => {
     expect(read.problem).toBeUndefined();
     expect(read.roles).toEqual(DEFAULT_ROLES);
     expect(read.roles.find((role) => role.name === 'ask')?.commands).toHaveLength(10);
-    expect(read.roles.find((role) => role.name === 'tell')?.commands).toHaveLength(15);
+    expect(read.roles.find((role) => role.name === 'tell')?.commands).toHaveLength(16);
     expect(existsSync(homeFile(home))).toBe(false);
   });
 
