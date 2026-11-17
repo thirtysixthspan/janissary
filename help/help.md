@@ -30,3 +30,5 @@ Bare `help` lists commands only. The key bindings appear only in `help keys`. Pr
 Page names are lowercased, extra spaces are ignored, and one leading slash is dropped. Only an exact page name works. A name with no page prints `No help for "<name>". Type "help" for available commands.`, with `<name>` in that cleaned-up form. So `help //quit` prints `No help for "/quit". Type "help" for available commands.`, and `help tab focus` reports a missing page instead of showing `tab`. `helper` is not `help` and stays an unknown command.
 
 If the help files can't be read, `help` prints a short summary of the built-in commands instead.
+
+If `help` is disabled in the Commands tab, it stops serving help: bare `help`, `help <command>`, and `help keys` all return `Command is disabled: help.` instead of a list or page.
