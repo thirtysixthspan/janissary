@@ -11,6 +11,8 @@ profile list
 
 `profile launch <name>` runs the profile's commands one after another, the way [`execute`](/user-documentation/automation/scheduling#run-a-runscript-now) runs a runscript. `profile list` prints the names of the profiles you have, one per line, in the transcript of the tab you typed it in. Your project's profiles come first, then the built-in ones, and each group is sorted alphabetically. With none to show, it prints `No profiles.` A name that doesn't exist gets `No profile named "<name>".`
 
+If you type `profile list` in a shell's command bar, the list comes back as a reply below the command rather than being passed on to the shell.
+
 A mistyped command prints its usage line instead. `profile` on its own, or with a subcommand other than `launch` or `list`, prints `Usage: profile launch <name> | profile list`. Only the first word after `launch` is the name, so anything after it is ignored.
 
 ![The tab strip after profile launch demo: the two editor tabs its runscript opened, beside the launch shell.](/screenshots/profile-group.png)
@@ -43,7 +45,7 @@ layout sidebar left 270
 tab focus builder
 ```
 
-The lines run in the project's managed system shell, in order, and each command finishes before the next one starts. Nothing is printed when the profile starts. A line's output goes to the system shell rather than the tab you launched from, and a failing line doesn't stop the lines after it.
+The lines run in the project's managed system shell, in order, and each command finishes before the next one starts. Nothing is printed when the profile starts. An empty `.rs` file, with no commands in it, queues nothing and prints nothing. A line's output goes to the system shell rather than the tab you launched from, and a failing line doesn't stop the lines after it.
 
 Only `.rs` files are profiles. Any other file in `profiles/` is ignored, so it never shows up in `profile list` or the picker. The same goes for folders, and for a `.rs` file that is really a symlink. Launching a symlinked profile by name still finds it, and it still takes the place of a built-in profile with that name, but Janissary refuses to read it and reports `Could not read runscript for profile "<name>".` rather than falling back to the built-in copy.
 
@@ -57,7 +59,7 @@ If the system shell can't start, nothing from the profile runs, and the [notific
 
 A profile can launch other profiles, itself included. Nothing checks for a loop, so a profile with the line `profile launch <its own name>` keeps queuing itself again.
 
-A runscript that can't be read safely, such as a symlink, reports `Could not read runscript for profile "<name>".`. If a launch fails partway, the tab you launched it from gets `Profile command failed: <reason>.` so the command does not appear unfinished.
+A runscript that can't be read safely, such as a symlink, reports `Could not read runscript for profile "<name>".`. If the `.rs` file disappears after the app finds the profile but before it reads the file, the launch reports `No profile named "<name>".` just as it does for a name with no profile. If a launch fails partway, the tab you launched it from gets `Profile command failed: <reason>.` so the command does not appear unfinished.
 
 ## A worked example
 
