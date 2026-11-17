@@ -4,8 +4,6 @@
 
 ## development
 
-* acp (3/10) — 45 of 46 user-visible ACP facts are documented accurately with none wrong; the sole omission is that the deprecated `acp` command name is now unknown (`acp <prompt>` and `acp reset` no longer work) and is not mentioned anywhere in the docs. Add a one-line note in `documentation/user-documentation/advanced-agents/acp-agent.md` near the `ask`/`tell` introduction and optionally in `help/ask.md` that `acp` is a retired name and `ask` should be used. Ground truth for command registration is `product/specs/acp.md`, `src/application-commands.ts`, `src/commands/ask.ts`, `src/commands/tell.ts`, `src/commands/ask-reset.ts` and `src/commands/tell-reset.ts`.
-
 * acp-records (3/10) — 16 of 19 user-visible facts are accurate across the connections and agent pages with none wrong; three edge cases are undocumented. They are the 60-character cap on the ACP record title (including the `ACP: ` prefix) with empty-first-line fallback to `ACP`, the agent record's terminal answer strings `Agent terminated.` / `Agent failed.`, and the storage-error stderr line `warning: ACP record "<id>" <operation> failed: <reason>`. The title cap belongs in `documentation/user-documentation/command-bar/connections.md`, the agent outcome strings in `documentation/user-documentation/advanced-agents/agent-command.md`, and the storage diagnostic in `help/connections.md`. Ground truth is `product/specs/acp-records.md`, `src/acp-records/manager.ts`, `src/acp-records/model.ts` and `src/acp-records/store.ts`.
 
 * agent-command (3/10) — 60 of 63 user-visible facts are covered correctly across the dedicated user page and help page with none wrong; three edge cases are missing. The notable gap is the runtime refusal `Agent: command not permitted: <command>.`: the docs document `file read` and show `question` as a grant example, implying other granted commands run, but never state that `file write`, `file edit`, `file patch`, `file glob`, `file grep` and `web` are refused even when granted; the other two omissions are the exact strings `Agent failed.` and `Agent run has already ended.`. Fix in `documentation/user-documentation/advanced-agents/agent-command.md` with an optional matching note in `help/agent.md`. Ground truth is `product/specs/agent-command.md`, `src/agent/command-parser.ts`, `src/commands/agent.ts` and `src/acp/tool-table.ts`.
@@ -74,6 +72,7 @@
 
 ## resolved
 
+* acp — documented in documentation/user-documentation/advanced-agents/acp-agent.md, help/ask.md (removed 2026-11-17)
 * workspaced-agent — documented in documentation/user-documentation/advanced-agents/workspaced-agent.md, documentation/user-documentation/advanced-agents/remote-agents.md, documentation/user-documentation/advanced-agents/tokens.md (removed 2026-10-30)
 * websocket-rpc — documented in documentation/user-documentation/tab-types/file-navigator.md, documentation/user-documentation/command-bar/quick-open.md, documentation/user-documentation/command-bar/tab-completion.md, help/files.md (removed 2026-10-30)
 * video-tab — documented in documentation/user-documentation/tab-types/video-player.md (removed 2026-10-30)
