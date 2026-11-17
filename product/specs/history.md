@@ -28,7 +28,7 @@ Each row shows one line, exactly as the clipboard-history popup shows a copy: th
 
 ### Consecutive duplicate suppression
 
-If a command matches the last entry in the tab's history, it is not appended again.
+If a command matches the last entry in the tab's history, it is not appended again. The shell tab's `Ctrl+R` popup reads that tab's own command list and follows the same rule, so an immediate repeat shows once while a repeat separated by another command keeps both entries.
 
 ### History cap
 
