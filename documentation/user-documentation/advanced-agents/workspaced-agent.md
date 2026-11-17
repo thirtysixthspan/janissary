@@ -68,6 +68,7 @@ A folder nothing holds is a leftover from an earlier run. It is removed before t
 A workspace lasts exactly as long as the tabs sharing it:
 
 - **Created** when the tab opens — always a fresh clone.
+- **Ready** when the clone finishes provisioning. The [notifications](/user-documentation/tab-types/notifications) feed reports how long it took, on the tab that launched it. The line reads `Prepared workspace $workspace/emrah in 4.2s.` Times under a minute show tenths of a second; a minute or more shows minutes and seconds, such as `1m 05s`. A clone on another machine names that machine after the folder instead: `Prepared workspace $workspace/emrah on devbox in 4.2s.`, and the time is measured there. A shell tab also posts `Shell "emrah" ready. ($workspace/emrah)`. Failed, cancelled, and abandoned clones report no time.
 - **Cancelled** if you close the tab, or quit the app, while the clone is still running — it stops right away instead of finishing in the background.
 - **Shared** when you use a workspaced tab's ➕ button; every joined tab works in the same directory.
 - **Kept** when one sharing tab closes and another still uses it.
