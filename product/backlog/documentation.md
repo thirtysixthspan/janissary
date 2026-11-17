@@ -4,8 +4,6 @@
 
 ## development
 
-* notifications (7/10) — 32 of 39 facts are accurate but three are wrong and four are missing, all centred on the config example in `documentation/user-documentation/tab-types/notifications.md`: it labels `question` default sound `error` (source default `warning`), `file-operation` default `desktop:false/sound:none` (source `desktop:true/sound:error`), and `state-change` default `desktop:true` (source `desktop:false`). Correct that example to match the shipped defaults. Also missing, but minor: the per-type default MP3 cue mapping is only delegated to generated config, the bundled `sounds/` assets and rebuild requirement are undocumented, and the toast stack's placement beneath the connection indicator/metadata/status panels is not described. Ground truth is `product/specs/notifications.md`, `src/notifications/alert-defaults.ts` and `src/config.ts`.
-
 * profiles (3/10) — 29 of 32 facts are correct with three missing and none wrong, all edge cases: an empty `.rs` runscript queues and prints nothing, a runscript deleted between discovery and read produces `No profile named "<name>".`, and `profile list` issued from a shell command bar is answered as a reply rather than forwarded to zsh. Fix in `documentation/user-documentation/automation/profiles.md` with parity notes in `help/profile.md`. Ground truth is `product/specs/profiles.md`, `src/profiles.ts`, `src/commands/profile.ts`, `src/profile/runscript.ts` and `web/src/shared/command-bar/bare-openers.ts`.
 
 * pull-request-review (6/10) — 24 of 45 facts are covered and none wrong; roughly 21 are missing or only implied, concentrated in the complex-feature tail. Concrete gaps: wrong change-set statistics are proposed for removal not correction, staged-review mechanics (1–10 complexity acceptance, 1–5 plans kept whole, 6–10 decomposed once into 1–4 subplans, above-4 rating blocked, 7+ implementation cutoff, publishing all subplans to one PR before work), resolution reviews and next-subplan gating, the entire behavioral-testing cycle, and the final recovery cycle with conflict/CI checks and a three-sequence bound. Fix in `documentation/user-documentation/workflows/pull-request-review.md`, cross-referencing `documentation/user-documentation/workflows/testing-a-pull-request.md` and `documentation/user-documentation/workflows/updating-a-pull-request.md`. Ground truth is `product/specs/pull-request-review.md`, `ai/tasks/feature/review-pull-request.md` and `ai/tasks/feature/work-pull-request-issue.md`.
@@ -50,6 +48,7 @@
 
 ## resolved
 
+* notifications — documented in documentation/user-documentation/tab-types/notifications.md (removed 2026-11-17)
 * models-tab — documented in documentation/user-documentation/tab-types/models.md, help/models.md (removed 2026-11-17)
 * launcher — documented in documentation/user-documentation/tab-types/launcher.md (removed 2026-11-17)
 * diff-tab — documented in documentation/user-documentation/tab-types/diff-tab.md, documentation/user-documentation/tab-types/diff.md, help/diff.md (removed 2026-11-17)
