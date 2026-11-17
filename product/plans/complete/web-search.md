@@ -172,7 +172,7 @@ Colocated vitest files in the `server` project, mirroring `src/models/providers/
   2. Run `web search node.js --provider tinyfish`. Expect `Web search: provider "tinyfish" is not configured.`.
   3. Run `web search node.js --provider bing`. Expect `Web search: unknown provider "bing" (available: auto, tavily, tinyfish).`.
   4. Run `web search node.js --results 30`, and bare `web`. Expect the usage line for both.
-  5. Run `web search node.js permission model --max-chars 200`. Expect fewer results and the `(showing <k> of <n> results; raise --max-chars for more)` line.
+  5. Run `web search node.js permission model --max-chars 200`. Expect fewer than ten results, ending with the `(showing <k> of <n> results; raise --max-chars for more)` line when the first result's link line leaves room for it; a link line that cannot share the budget with the note prints alone.
   6. Run `help web` and confirm the page; run `commands` and confirm a `web` row with `web search` under it.
   7. Open the Roles tab and confirm the `tell` card lists fifteen commands ending in `web search` with no **Add command**, and the `ask` card lists ten ending in `web search` with its picker not offering `web search`.
   8. Run `tell find the current Node.js LTS version on the web` and confirm the connection tab shows a `web search …` tool step and the answer cites a result.

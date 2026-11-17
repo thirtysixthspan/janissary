@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Finish the truncation-note repair by making the plan's manual verification step state the note's condition instead of promising it unconditionally.
-
-Existing Issue: The Verification section of `product/plans/complete/web-search.md` tells a verifier to run `web search node.js permission model --max-chars 200` and expect the `(showing <k> of <n> results; raise --max-chars for more)` line without a condition, while the same plan's Truncation decision, `product/specs/web-search.md`, `help/web.md`, and the pull request body all say the note is dropped when the first result's link line and the note cannot share the budget, so the plan's own verification step and its rule disagree. Severity: 2/10
-
-Existing Risk: 2/10 - A verifier who follows the step on a result with a long URL sees the note missing and reads it as a truncation regression, or reports that the plan's Truncation decision was not implemented.
-
-Proposal Risk: 1/10 - The step remains a manual expectation whose note depends on the live first result's link length, but it will no longer contradict the rule every other artifact states.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2010 "make the plan's web-search verification step state the truncation note's condition". Reword Verification step 5 of `product/plans/complete/web-search.md` so its expected result carries the same condition as the Truncation decision and the Output sections of `product/specs/web-search.md` and `help/web.md`: fewer than ten results, ending with the note when the first result's link line leaves room for it, and a link line that cannot share the budget with the note printed alone. Keep the rest of the step, the manual remote check, and every design decision byte-for-byte, and leave the pull request body alone because its own truncation verification step already states the condition. Do not change `src/web-search/render.ts` or `src/web-search/render.test.ts`: `cutFirstResult` already drops the note when the link line plus the note exceeds the budget, and the render suite pins the 150-, 147-, and 143-character boundaries. Verify by reading the reworded step beside the Truncation decision, the two Output sections, and those three cases, and confirm no other line of the plan changed.
-
-
 * Correct the description's and plan's claim that a role agent can only answer from what it knows or what is in the workspace, which the granted browser commands contradict.
 
 Existing Issue: The pull request body's What section and the Goal paragraph of `product/plans/complete/web-search.md` both justify the feature by saying a role session has no way to look anything up and that an agent can only answer from what it already knows or what is in the workspace, while the built-in `ask` role grants `browser goto` and `browser content` and the built-in `tell` role adds `browser eval`, so a role agent can already open a page and read its content. Severity: 2/10
