@@ -89,6 +89,7 @@ export function ConnectionList({
       ref={selection.listRef}
       tabIndex={0}
       onKeyDown={onKeyDown}
+      data-doc-shot="connections-list"
     >
       <PluginActionsHeader className="plugin-meta connections-list-header">
         <span className="plugin-actions">
