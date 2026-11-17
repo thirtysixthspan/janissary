@@ -168,11 +168,11 @@ Colocated vitest files in the `server` project, mirroring `src/models/providers/
 
 - `$janissary/scripts/run.mjs check-diff` while iterating, and `$janissary/scripts/run.mjs pr-check-gate` before publishing.
 - Manual, in a scratch project started with `node bin/janus.mjs --no-open <project>`, with `~/.janissary/tavily-token` present and no TinyFish token:
-  1. Run `web search node.js permission model 2026 --results 3`. Expect three `- [<title>](<url>)` lines, each with an indented snippet line.
+  1. Run `web search node.js permission model 2026 --results 3`. Expect up to three `- [<title>](<url>)` lines, each followed by an indented snippet line when the provider supplied one and only the link line otherwise.
   2. Run `web search node.js --provider tinyfish`. Expect `Web search: provider "tinyfish" is not configured.`.
   3. Run `web search node.js --provider bing`. Expect `Web search: unknown provider "bing" (available: auto, tavily, tinyfish).`.
   4. Run `web search node.js --results 30`, and bare `web`. Expect the usage line for both.
-  5. Run `web search node.js permission model --max-chars 200`. Expect fewer than ten results, ending with the `(showing <k> of <n> results; raise --max-chars for more)` line when the first result's link line leaves room for it; a link line that cannot share the budget with the note prints alone.
+  5. Run `web search node.js permission model --max-chars 200`. Expect fewer than ten results, ending with the `(showing <k> of <n> results; raise --max-chars for more)` line when results were left out and the first result's link line leaves room for it; a link line that cannot share the budget with the note prints alone.
   6. Run `help web` and confirm the page; run `commands` and confirm a `web` row with `web search` under it.
   7. Open the Roles tab and confirm the `tell` card lists fifteen commands ending in `web search` with no **Add command**, and the `ask` card lists ten ending in `web search` with its picker not offering `web search`.
   8. Run `tell find the current Node.js LTS version on the web` and confirm the connection tab shows a `web search …` tool step and the answer cites a result.
