@@ -59,6 +59,8 @@ export const resultDecoders = {
   'grep-files': decodeResult<{ text: string }>((value): value is { text: string } => record(value) && typeof value.text === 'string'),
   'web-search': decodeResult<{ text: string }>((value): value is { text: string } => record(value)
     && typeof value.text === 'string' && value.text.length > 0),
+  'web-fetch': decodeResult<{ text: string }>((value): value is { text: string } => record(value)
+    && typeof value.text === 'string' && value.text.length > 0),
   'apply-patch': decodeResult<{ text: string }>((value): value is { text: string } => record(value)
     && typeof value.text === 'string' && value.text.length > 0),
   'write-file': decodeResult<FileOperationResult>((value): value is FileOperationResult => result(value)

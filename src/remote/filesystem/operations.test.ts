@@ -10,12 +10,16 @@ import { SEARCH_MAX_RESULTS } from '../../search/types.js';
 import {
   WEB_SEARCH_MAX_CHARS, WEB_SEARCH_MAX_RESULTS, WEB_SEARCH_MIN_CHARS, WEB_SEARCH_MIN_RESULTS,
 } from '../../web/search/command.js';
+import {
+  WEB_FETCH_MAX_CHARS, WEB_FETCH_MAX_TIMEOUT_SECONDS, WEB_FETCH_MIN_CHARS, WEB_FETCH_MIN_OFFSET,
+  WEB_FETCH_MIN_TIMEOUT_SECONDS,
+} from '../../web/fetch/command.js';
 
 // Written out rather than derived from the table, so an operation dropped from both the union and
 // the table is still caught here. Adding one to the protocol means adding it in both places.
 const ALL_OPERATIONS: RemoteFilesystemOperation[] = [
   'read-directory', 'stat', 'watch', 'unwatch', 'git', 'git-pull', 'git-commit', 'search',
-  'search-text', 'read-file', 'read-lines', 'glob-paths', 'grep-files', 'web-search', 'write-file', 'edit-file', 'apply-patch', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
+  'search-text', 'read-file', 'read-lines', 'glob-paths', 'grep-files', 'web-search', 'web-fetch', 'write-file', 'edit-file', 'apply-patch', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
   'create-file', 'create-directory', 'replay', 'change-set',
 ];
 
@@ -54,6 +58,7 @@ const PATH_CASES: PathCase[] = [
     pattern: 'TODO', include: 'src/**', exclude: '**/*.test.ts', literal: true, word: true, caseSensitive: true, limit: 250, path: 'src',
   }, ['src']],
   ['web-search', { query: 'vitest', numResults: 10, maxChars: 10_000, depth: 'basic', provider: 'auto' }, []],
+  ['web-fetch', { url: 'https://example.com/page', format: 'markdown', timeoutSeconds: 30, maxChars: 10_000, offset: 0, provider: 'auto' }, []],
   ['write-file', { path: 'a.txt', content: '', expectedHash: 'baseline' }, ['a.txt']],
   ['write-file', { path: 'a.txt', content: '', policy: 'tool-text' }, ['a.txt']],
   ['edit-file', { path: 'a.txt', oldString: 'b2xk', newString: '', replaceAll: false }, ['a.txt']],
@@ -134,6 +139,24 @@ const INVALID_CASES: [RemoteFilesystemOperation, Record<string, unknown>][] = [
   ['web-search', { query: 'vitest', numResults: 10, maxChars: 10_000, depth: 'Advanced', provider: 'auto' }],
   ['web-search', { query: 'vitest', numResults: 10, maxChars: 10_000, depth: 'basic' }],
   ['web-search', { query: 'vitest', numResults: 10, maxChars: 10_000, depth: 'basic', provider: 3 }],
+  ['web-fetch', { format: 'markdown', timeoutSeconds: 30, maxChars: 10_000, offset: 0, provider: 'auto' }],
+  ['web-fetch', { url: '', format: 'markdown', timeoutSeconds: 30, maxChars: 10_000, offset: 0, provider: 'auto' }],
+  ['web-fetch', { url: 3, format: 'markdown', timeoutSeconds: 30, maxChars: 10_000, offset: 0, provider: 'auto' }],
+  ['web-fetch', { url: 'ftp://example.com', format: 'markdown', timeoutSeconds: 30, maxChars: 10_000, offset: 0, provider: 'auto' }],
+  ['web-fetch', { url: 'not a url', format: 'markdown', timeoutSeconds: 30, maxChars: 10_000, offset: 0, provider: 'auto' }],
+  ['web-fetch', { url: 'https://example.com/page', format: 'Markdown', timeoutSeconds: 30, maxChars: 10_000, offset: 0, provider: 'auto' }],
+  ['web-fetch', { url: 'https://example.com/page', format: 'pdf', timeoutSeconds: 30, maxChars: 10_000, offset: 0, provider: 'auto' }],
+  ['web-fetch', { url: 'https://example.com/page', format: 'markdown', timeoutSeconds: 0, maxChars: 10_000, offset: 0, provider: 'auto' }],
+  ['web-fetch', { url: 'https://example.com/page', format: 'markdown', timeoutSeconds: 121, maxChars: 10_000, offset: 0, provider: 'auto' }],
+  ['web-fetch', { url: 'https://example.com/page', format: 'markdown', timeoutSeconds: 1.5, maxChars: 10_000, offset: 0, provider: 'auto' }],
+  ['web-fetch', { url: 'https://example.com/page', format: 'markdown', timeoutSeconds: '30', maxChars: 10_000, offset: 0, provider: 'auto' }],
+  ['web-fetch', { url: 'https://example.com/page', format: 'markdown', timeoutSeconds: 30, maxChars: 199, offset: 0, provider: 'auto' }],
+  ['web-fetch', { url: 'https://example.com/page', format: 'markdown', timeoutSeconds: 30, maxChars: 100_001, offset: 0, provider: 'auto' }],
+  ['web-fetch', { url: 'https://example.com/page', format: 'markdown', timeoutSeconds: 30, maxChars: 10_000, offset: -1, provider: 'auto' }],
+  ['web-fetch', { url: 'https://example.com/page', format: 'markdown', timeoutSeconds: 30, maxChars: 10_000, offset: 1.5, provider: 'auto' }],
+  ['web-fetch', { url: 'https://example.com/page', format: 'markdown', timeoutSeconds: 30, maxChars: 10_000, offset: Number.MAX_SAFE_INTEGER + 1, provider: 'auto' }],
+  ['web-fetch', { url: 'https://example.com/page', format: 'markdown', timeoutSeconds: 30, maxChars: 10_000, offset: 0 }],
+  ['web-fetch', { url: 'https://example.com/page', format: 'markdown', timeoutSeconds: 30, maxChars: 10_000, offset: 0, provider: 3 }],
   ['write-file', { path: 'a.txt' }],
   ['write-file', { path: 'a.txt', content: '', expectedHash: null }],
   ['write-file', { path: 'a.txt', content: '', expectedHash: 7 }],
@@ -181,6 +204,7 @@ const VALID_RESULTS: { [K in RemoteFilesystemOperation]: RemoteFilesystemOperati
   'glob-paths': { text: 'src/a.ts' },
   'grep-files': { text: 'src/a.ts:1: TODO' },
   'web-search': { text: '1. [Vitest](https://vitest.dev)' },
+  'web-fetch': { text: 'Source: https://example.com/page' },
   'write-file': { ok: false, reason: 'denied' },
   'edit-file': { ok: true, value: { replacements: 2 } },
   'apply-patch': { text: 'Patched 1 file:\nA a.md' },
@@ -392,6 +416,36 @@ describe('FILESYSTEM_OPERATIONS', () => {
       .toEqual({ text: '1. [Vitest](https://vitest.dev)' });
     for (const bad of [{}, { text: 3 }, { text: '' }]) {
       expect(() => decodeFilesystemResult('web-search', bad)).toThrow('Invalid remote filesystem operation result.');
+    }
+  });
+
+  it('accepts web-fetch range edges and URLs and decodes only its six fields', () => {
+    const webFetch = operationDescriptor('web-fetch');
+    const args = { url: 'https://example.com/page', format: 'markdown', timeoutSeconds: 30, maxChars: 10_000, offset: 0, provider: 'auto' };
+
+    for (const timeoutSeconds of [WEB_FETCH_MIN_TIMEOUT_SECONDS, WEB_FETCH_MAX_TIMEOUT_SECONDS]) {
+      expect(webFetch.valid({ ...args, timeoutSeconds })).toBe(true);
+    }
+    for (const maxChars of [WEB_FETCH_MIN_CHARS, WEB_FETCH_MAX_CHARS]) {
+      expect(webFetch.valid({ ...args, maxChars })).toBe(true);
+    }
+    for (const offset of [WEB_FETCH_MIN_OFFSET, Number.MAX_SAFE_INTEGER]) {
+      expect(webFetch.valid({ ...args, offset })).toBe(true);
+    }
+    for (const url of ['HTTPS://Example.com/A', 'http://localhost:3000/x']) {
+      expect(webFetch.valid({ ...args, url })).toBe(true);
+      expect(webFetch.decode({ ...args, url })).toMatchObject({ url });
+    }
+    expect(webFetch.decode({ ...args, extra: 'ignored' })).toEqual(args);
+    expect(() => webFetch.decode({ ...args, timeoutSeconds: 0 }))
+      .toThrow('Invalid remote filesystem operation arguments.');
+  });
+
+  it('accepts a web-fetch result only with non-empty text', () => {
+    expect(decodeFilesystemResult('web-fetch', { text: 'Source: https://example.com/page' }))
+      .toEqual({ text: 'Source: https://example.com/page' });
+    for (const bad of [{}, { text: 3 }, { text: '' }]) {
+      expect(() => decodeFilesystemResult('web-fetch', bad)).toThrow('Invalid remote filesystem operation result.');
     }
   });
 

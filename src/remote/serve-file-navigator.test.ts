@@ -15,6 +15,7 @@ import type * as grepModule from '../file-grep/grep.js';
 import { grepWorkspace } from '../file-grep/grep.js';
 import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
 import { webSearch } from '../web/search/search.js';
+import { webFetch } from '../web/fetch/fetch.js';
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof fileSystemPromises>();
@@ -27,6 +28,8 @@ vi.mock('../file-grep/grep.js', async (importOriginal) => {
 });
 
 vi.mock('../web/search/search.js', () => ({ webSearch: vi.fn() }));
+
+vi.mock('../web/fetch/fetch.js', () => ({ webFetch: vi.fn() }));
 
 type Request = Extract<ClientFrame, { type: 'filesystem-request' }>;
 
@@ -869,6 +872,56 @@ describe('RemoteFileNavigators', () => {
       const reply = await replyOn(holder, 'files2', 'web-search', command);
 
       expect(reply).toMatchObject({ error: 'the web is closed' });
+      expect(reply).not.toHaveProperty('result');
+      holder.dispose();
+    });
+  });
+
+  describe('a web fetch', () => {
+    const command = {
+      url: 'https://example.com/page', format: 'markdown',
+      timeoutSeconds: 30, maxChars: 10_000, offset: 0, provider: 'auto',
+    } as const;
+
+    beforeEach(() => {
+      vi.mocked(webFetch).mockReset();
+    });
+
+    it('runs the fetch with the tokens it was given and answers its text', async () => {
+      vi.mocked(webFetch).mockResolvedValue('Source: https://example.com/page');
+      const tokens = { openai: 'sk-key' };
+      const holder = new RemoteFileNavigators((frame) => { frames.push(frame); }, root, undefined, tokens);
+      holder.open('files2');
+
+      const reply = await replyOn(holder, 'files2', 'web-fetch', command);
+
+      expect(reply).toEqual({
+        type: 'filesystem-reply', session: 'files2', request: expect.any(String),
+        result: { text: 'Source: https://example.com/page' },
+      });
+      expect(webFetch).toHaveBeenCalledOnce();
+      expect(webFetch).toHaveBeenCalledWith(command, { tokens, fetch: globalThis.fetch });
+      const deps = vi.mocked(webFetch).mock.calls[0][1];
+      expect(Object.hasOwn(deps, 'signal')).toBe(false);
+      expect(Object.hasOwn(deps, 'reportDisabled')).toBe(false);
+      expect(Object.hasOwn(deps, 'now')).toBe(false);
+      holder.dispose();
+    });
+
+    it('passes an empty token set when the navigator was built without one', async () => {
+      vi.mocked(webFetch).mockResolvedValue('No page.');
+
+      expect(await request('web-fetch', command)).toMatchObject({ result: { text: 'No page.' } });
+      expect(webFetch).toHaveBeenCalledWith(command, { tokens: {}, fetch: globalThis.fetch });
+    });
+
+    it('answers a rejected fetch as an error reply', async () => {
+      vi.mocked(webFetch).mockRejectedValue(new Error('the fetch is closed'));
+      const holder = overPort({});
+
+      const reply = await replyOn(holder, 'files2', 'web-fetch', command);
+
+      expect(reply).toMatchObject({ error: 'the fetch is closed' });
       expect(reply).not.toHaveProperty('result');
       holder.dispose();
     });
