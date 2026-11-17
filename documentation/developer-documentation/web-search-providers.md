@@ -1,6 +1,6 @@
 # Web search providers
 
-Janissary's web-search provider API is for trusted providers bundled in this repository. A provider answers one search: it receives a normalized query and a narrow capability object, sends one HTTP request, and returns a flat result list. It cannot be installed at runtime and is not sandboxed.
+Janissary's web-search provider API is for trusted providers bundled in this repository. A provider answers a search, a fetch of one page, or both, as its manifest declares. It receives a narrow request and capability object, sends its own HTTP requests, and returns results. It cannot be installed at runtime and is not sandboxed.
 
 This is a separate family from [tab plugins](./tab-plugins.md), [editor plugins](./editor-plugins.md), and [overlay plugins](./overlay-plugins.md). Providers run on the server inside the Janissary process and share no catalog or API version with those families.
 
@@ -56,7 +56,7 @@ That is a complete provider: it sends the query to its own endpoint and returns 
 
 ## Files to add
 
-For provider `example`, add `src/web/providers/example.ts` and any modules it needs beside it. Then add a manifest to `src/web/providers/catalog.ts` and include it in `webSearchProviderCatalog`. Its `token` names the provider's own row in `PROJECT_TOKENS`, added as described in [Token rows](#token-rows); reusing another provider's name would hand the new provider that service's key:
+For provider `example`, add `src/web/providers/example.ts` and any modules it needs beside it. Then add a manifest to `src/web/providers/catalog.ts` and include it in `webProviderCatalog`. Its `token` names the provider's own row in `PROJECT_TOKENS`, added as described in [Token rows](#token-rows); reusing another provider's name would hand the new provider that service's key:
 
 ```ts
 export const exampleManifest = {
@@ -66,12 +66,15 @@ export const exampleManifest = {
   activate: () => import('./example.js'),
 } as const satisfies WebSearchProviderManifest;
 
-export const webSearchProviderCatalog = [
+export const webProviderCatalog = [
   tavilyManifest,
   tinyfishManifest,
   exampleManifest,
+  localManifest,
 ] as const satisfies readonly WebSearchProviderManifest[];
 ```
+
+`local` stays last because an `auto` fetch tries it as the direct fallback after every hosted provider.
 
 **Never statically import the provider module from the catalog.** The catalog is read for every resolution, including a name the user typed and a search that never runs, so a static import would load every provider just to answer `--provider`. A literal dynamic import keeps the module unloaded until the first search that uses it. Node caches the resolved module, so later activations are cheap and the registry keeps no cache of its own.
 
@@ -124,11 +127,30 @@ type WebSearchResult = {
   snippet: string;
 };
 
+type WebFetchRequest = {
+  url: string;
+  format: 'markdown' | 'text' | 'html';
+  timeoutMs: number;
+};
+
+type WebFetchPage = {
+  url: string;
+  content: string;
+};
+
+type WebFetchRedirect = {
+  redirectedTo: string;
+};
+
 type WebSearchProvider = {
   search?(
     request: WebSearchRequest,
     capability: WebSearchCapability,
   ): Promise<WebSearchResult[]>;
+  fetch?(
+    request: WebFetchRequest,
+    capability: WebSearchCapability,
+  ): Promise<WebFetchPage | WebFetchRedirect>;
 };
 ```
 
@@ -136,9 +158,15 @@ A provider implements `search`, `fetch`, or both, matching what its manifest dec
 
 Return an empty array when the search found nothing. That is an answer, not a failure, so the host does not fall back to another provider.
 
+A page result is the final URL and the content string. An empty `content` is an answer, not a failure, so the host does not fall back.
+
+A `{ redirectedTo }` result is a cross-host redirect answer, also never a fallback. The host prints it as `Web fetch: redirected to <url>.`
+
+Fetch attempts run one at a time in catalog order. A page or a redirect ends the fetch.
+
 ## The capability
 
-`search` receives one capability object:
+`search` and `fetch` receive one capability object:
 
 | Member | Meaning |
 |---|---|
@@ -176,12 +204,33 @@ Every call across the boundary is guarded. These are plugin failures:
 - The module has no `provider.search` function.
 - `search` throws or rejects with anything other than a `ProviderRequestError`.
 - `search` resolves to something that is not an array.
+- A manifest that declares `fetchFormats` but whose module has no `provider.fetch` function (`provider failed: module has no fetch`).
+- `fetch` throws or rejects with anything other than a `ProviderRequestError`.
+- `fetch` resolves to neither a page nor a redirect (`provider failed: fetch did not return a page`).
 
-A plugin failure uses the reason `provider failed: <first line of the error>`, or one of the fixed reasons `provider failed: module has no provider` and `provider failed: search did not return an array`. The provider is disabled for the rest of the server process. A local search that supplies `reportDisabled` posts one notification: `Web search provider "<id>" disabled: <reason>.` Repeat failures keep the first reason and post no second notification. A search on a remote machine passes no `reportDisabled`, so no notification appears there, and it prints only the provider that answered, so a provider disabled during a successful fallback is reported nowhere until a later failure line names it: an explicit search of it, or `auto` once every configured provider is disabled. Nothing re-enables a provider except a server restart.
+A plugin failure uses the reason `provider failed: <first line of the error>`, or one of the fixed reasons `provider failed: module has no provider`, `provider failed: search did not return an array`, `provider failed: module has no fetch`, and `provider failed: fetch did not return a page`. The provider is disabled for the rest of the server process. A local search that supplies `reportDisabled` posts one notification: `Web search provider "<id>" disabled: <reason>.` Repeat failures keep the first reason and post no second notification. A search on a remote machine passes no `reportDisabled`, so no notification appears there, and it prints only the provider that answered, so a provider disabled during a successful fallback is reported nowhere until a later failure line names it: an explicit search of it, or `auto` once every configured provider is disabled. Nothing re-enables a provider except a server restart.
 
 A `search` that throws a `ProviderRequestError` is an expected failure. Its message is the reason the host prints, and it never disables the provider. Use it for an HTTP status, a timeout, a network error, a response that doesn't decode, or anything else the provider's API can answer normally. An `auto` search records the failure and moves on to the next configured provider, while an explicit `--provider` tries only that provider, so its expected failure prints a single `Web search failed (<id>): <reason>.` line. An abort never disables either: when `capability.signal.aborted` is true, whatever the rejection is, the attempt is a cancellation and the search stops rather than falling back to the next provider. Once the caller's signal aborts, the search rejects with the abort instead of printing a failure or resolution line, including when the abort lands before any attempt starts or on the final provider's failure.
 
+The expected-failure and abort rules apply to `fetch` as they do to `search`.
+
 The 30-second budget is per attempt. The shared `requestJson` step in `src/web/providers/http.ts` joins `capability.signal` with the timeout its caller passes in milliseconds, turns a non-2xx status into `HTTP <status> <status text>`, a timeout into `timed out after <s> s` naming that timeout in seconds, an undecodable body into `invalid response`, and a network failure into its first line. Search passes `PROVIDER_TIMEOUT_MS`, 30 seconds, so a search timeout reads `timed out after 30 s`. Use it unless a provider needs a request shape it cannot express. An `auto` search that falls back can take up to 30 seconds per configured provider.
+
+Each fetch attempt gets the full `--timeout` (1 to 120 seconds) as `request.timeoutMs`, which a provider passes to `requestJson` as its timeout. A provider whose API caps its own timeout sends the smaller value but still lets the helper wait the full timeout. An `auto` fetch of three attempts can take three times the timeout.
+
+## The bundled `local` provider
+
+`local` is tokenless, fetch-only (`search: false`), serves every format, and sits last in the catalog. It is always configured and is the direct `auto` fallback after every hosted provider.
+
+It connects directly from the machine running the fetch using the injected `fetch`, presenting browser headers from `randomBrowserProfile` and no cookies. It returns the body raw, whatever `--format` says.
+
+It accepts only `text/*`, `application/xhtml+xml`, JSON, XML, and `+json` or `+xml` media types, and refuses others with `unsupported content type <type>`. It caps the body at 50 MB with `response larger than 50 MB`, and decodes with the response's `charset` parameter, falling back to UTF-8. A non-2xx final status fails with `HTTP <status> <status text>`.
+
+It upgrades a public `http:` URL to `https:`. Hosts that keep `http:` are loopback, private, and link-local IP addresses, `localhost` and its subdomains, and any host name with no dot.
+
+It follows a redirect only while it stays on the same host, up to 5 hops; a sixth redirect fails with `too many redirects`. A cross-host target, or one whose scheme is not `http:` or `https:`, is not fetched: it is returned as the redirect answer for the caller to fetch explicitly. There are no address checks on redirects or the initial URL, so a role granted `web fetch` reaches the operator's private network.
+
+Every expected failure is a `ProviderRequestError`, so it falls back like any other and never disables `local`.
 
 ## Trust and limits
 

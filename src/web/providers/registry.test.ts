@@ -11,7 +11,7 @@ import type {
   WebSearchRequest,
   WebSearchResult,
 } from './contract.js';
-import { webSearchProviderCatalog } from './catalog.js';
+import { localManifest, webProviderCatalog } from './catalog.js';
 import { createProviderRegistry } from './registry.js';
 import type { AttemptOutcome, FetchAttemptOutcome } from './registry.js';
 import type { AttemptResolution } from './search-resolution.js';
@@ -833,36 +833,75 @@ describe('createProviderRegistry', () => {
 
 describe('the real web search provider catalog', () => {
   it('lists the bundled providers with compatible versions and tokens', () => {
-    const providerIds = webSearchProviderCatalog.map((manifest) => manifest.id);
+    const providerIds = webProviderCatalog.map((manifest) => manifest.id);
 
-    expect(providerIds).toEqual(['tavily', 'tinyfish']);
+    expect(providerIds).toEqual(['tavily', 'tinyfish', 'local']);
     expect(new Set(providerIds).size).toBe(providerIds.length);
     for (const id of providerIds) {
       expect(id).toBe(id.toLowerCase());
       expect(id).not.toBe('auto');
     }
-    for (const manifest of webSearchProviderCatalog) {
+    for (const manifest of webProviderCatalog) {
       expect(manifest.apiVersion).toBe(WEB_PROVIDER_API_VERSION);
     }
-    expect(webSearchProviderCatalog.map((manifest) => manifest.token))
-      .toEqual(['tavily', 'tinyfish']);
+    expect(webProviderCatalog.map((manifest) => manifest.token))
+      .toEqual(['tavily', 'tinyfish', undefined]);
   });
 
-  it('declares search on both manifests and their fetch formats', () => {
-    expect(webSearchProviderCatalog.map((manifest) => manifest.search)).toEqual([true, true]);
-    expect(webSearchProviderCatalog[0].fetchFormats).toEqual(['markdown', 'text']);
-    expect(webSearchProviderCatalog[1].fetchFormats).toEqual(['markdown', 'html']);
+  it('declares search and fetch formats on each manifest', () => {
+    expect(webProviderCatalog.map((manifest) => manifest.search)).toEqual([true, true, false]);
+    expect(webProviderCatalog[0].fetchFormats).toEqual(['markdown', 'text']);
+    expect(webProviderCatalog[1].fetchFormats).toEqual(['markdown', 'html']);
+    expect(localManifest.token).toBeUndefined();
+    expect(localManifest.search).toBe(false);
+    expect(localManifest.fetchFormats).toEqual(['markdown', 'text', 'html']);
   });
 
-  it('lists both hosts as fetch providers from the real catalog', () => {
-    const registry = createProviderRegistry(webSearchProviderCatalog);
+  it('lists every fetch provider from the real catalog', () => {
+    const registry = createProviderRegistry(webProviderCatalog);
 
-    expect(registry.fetchProviderNames()).toEqual(['tavily', 'tinyfish']);
+    expect(registry.fetchProviderNames()).toEqual(['tavily', 'tinyfish', 'local']);
   });
 
-  it('resolves only TinyFish for html from the real catalog', () => {
-    const registry = createProviderRegistry(webSearchProviderCatalog);
+  it('keeps local out of search from the real catalog', () => {
+    const registry = createProviderRegistry(webProviderCatalog);
 
-    expect(ids(registry.resolveFetchAttempts('auto', 'html', TOKENS))).toEqual(['tinyfish']);
+    expect(registry.searchProviderNames()).toEqual(['tavily', 'tinyfish']);
+  });
+
+  it('resolves TinyFish then local for html from the real catalog', () => {
+    const registry = createProviderRegistry(webProviderCatalog);
+
+    expect(ids(registry.resolveFetchAttempts('auto', 'html', TOKENS))).toEqual(['tinyfish', 'local']);
+  });
+
+  it('resolves local alone for markdown with no tokens', () => {
+    const registry = createProviderRegistry(webProviderCatalog);
+
+    expect(ids(registry.resolveFetchAttempts('auto', 'markdown', {}))).toEqual(['local']);
+  });
+
+  it('fetches a page through the real local module', async () => {
+    const fetchStub: typeof fetch = async () =>
+      new Response('local body', { headers: { 'content-type': 'text/plain' } });
+    const registry = createProviderRegistry(webProviderCatalog);
+
+    await expect(registry.runFetchAttempt(
+      localManifest, FETCH_REQUEST, { apiKey: '', fetch: fetchStub },
+    )).resolves.toEqual({ kind: 'fetched', url: FETCH_REQUEST.url, content: 'local body' });
+  });
+
+  it('reports a cross-host redirect through the real local module', async () => {
+    const fetchStub: typeof fetch = async () =>
+      new Response(null, {
+        status: 302,
+        statusText: 'Found',
+        headers: { location: 'https://other.example/page' },
+      });
+    const registry = createProviderRegistry(webProviderCatalog);
+
+    await expect(registry.runFetchAttempt(
+      localManifest, FETCH_REQUEST, { apiKey: '', fetch: fetchStub },
+    )).resolves.toEqual({ kind: 'redirected', url: 'https://other.example/page' });
   });
 });

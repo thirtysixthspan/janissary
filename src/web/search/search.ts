@@ -4,7 +4,7 @@ import type { WebSearchCapability, WebSearchRequest, WebSearchResult } from '../
 import { providerApiKey } from '../providers/capabilities.js';
 import { formatFailures, WEB_SEARCH_FAILURE_HEADINGS } from '../providers/failure-lines.js';
 import type { ProviderFailure } from '../providers/failure-lines.js';
-import { webSearchProviderCatalog } from '../providers/catalog.js';
+import { webProviderCatalog } from '../providers/catalog.js';
 import { createProviderRegistry } from '../providers/registry.js';
 import type { ProviderRegistry } from '../providers/registry.js';
 import { dedupeResults, normalizeResults, renderResults } from './render.js';
@@ -16,7 +16,7 @@ export type WebSearchDeps = {
   reportDisabled?: (name: string, reason: string) => void;
 };
 
-const providerRegistry = createProviderRegistry(webSearchProviderCatalog);
+const providerRegistry = createProviderRegistry(webProviderCatalog);
 
 export function webSearchProviderNames(): string[] {
   return providerRegistry.searchProviderNames();

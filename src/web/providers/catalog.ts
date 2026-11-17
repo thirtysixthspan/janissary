@@ -19,7 +19,16 @@ export const tinyfishManifest = {
   activate: () => import('./tinyfish.js'),
 } as const satisfies WebSearchProviderManifest;
 
-export const webSearchProviderCatalog = [
+export const localManifest = {
+  id: 'local',
+  apiVersion: WEB_PROVIDER_API_VERSION,
+  search: false,
+  fetchFormats: ['markdown', 'text', 'html'],
+  activate: () => import('./local.js'),
+} as const satisfies WebSearchProviderManifest;
+
+export const webProviderCatalog = [
   tavilyManifest,
   tinyfishManifest,
+  localManifest,
 ] as const satisfies readonly WebSearchProviderManifest[];

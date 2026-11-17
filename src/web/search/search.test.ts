@@ -9,7 +9,7 @@ import type {
   WebSearchRequest,
   WebSearchResult,
 } from '../providers/contract.js';
-import { webSearchProviderCatalog } from '../providers/catalog.js';
+import { webProviderCatalog } from '../providers/catalog.js';
 import { createProviderRegistry } from '../providers/registry.js';
 import type { ProviderRegistry } from '../providers/registry.js';
 import { runWebSearch, webSearch, webSearchProviderNames } from './search.js';
@@ -513,7 +513,7 @@ describe('runWebSearch', () => {
 
 describe('the module registry', () => {
   it('exposes the bundled provider names in catalog order without activating a provider', () => {
-    const activations = webSearchProviderCatalog.map((manifest) =>
+    const activations = webProviderCatalog.map((manifest) =>
       vi.spyOn(manifest, 'activate'),
     );
     try {
