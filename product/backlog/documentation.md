@@ -6,7 +6,6 @@
 
 
 
-* sessions-tab (3/10) — 19 of 22 facts are correct with three missing and none wrong. A parked session created before a remote-installation upgrade cannot be attached (failure recorded, auto-reconnect retries, row stays parked), a session whose channel lifecycle ends has its record dropped so closing a harness reads as one termination, and a legacy record naming only removed agent processes is listed detached but skipped on launch. Fix in `documentation/user-documentation/tab-types/sessions.md`. Ground truth is `product/specs/sessions-tab.md`, `web/src/plugins/sessions/SessionList.tsx`, `web/src/plugins/sessions/SessionRowActions.tsx` and `src/plugins/sessions/shared.ts`.
 
 * shell-tab (7/10) — 43 of 47 facts are correct with two wrong and two missing. Wrong: `documentation/user-documentation/command-bar/shell.md` and `documentation/user-documentation/getting-started/tabs.md` say shell badges do not raise the 30-second "Agent is waiting" notification, but the shell plugin's `setUnread` arms escalation, and shell.md says starting another command does not clear a badge while a running state calls `setUnread(false)`. Missing: shell-owned pickers for docked/hidden shells and dragging file-navigator rows into the bar plus bracketed-paste/control-character stripping. Fix both wrong paragraphs and add the missing behaviors to `documentation/user-documentation/command-bar/shell.md`. Ground truth is `product/specs/shell-tab.md`, `src/plugins/shell/activate.ts`, `src/harness/idle-notification.ts` and `src/tab/transcript/events.ts`.
 
@@ -34,6 +33,7 @@
 
 ## resolved
 
+* sessions-tab — documented in documentation/user-documentation/tab-types/sessions.md (removed 2026-11-17)
 * search-tab — documented in documentation/user-documentation/command-bar/project-search.md (removed 2026-11-17)
 * root-path — documented in documentation/user-documentation/getting-started/tabs.md (removed 2026-11-17)
 * roles — documented in documentation/user-documentation/tab-types/roles.md, help/roles.md (removed 2026-11-17)
