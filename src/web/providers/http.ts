@@ -20,7 +20,7 @@ export async function requestJson(
   }
 }
 
-function attemptSignal(capability: WebSearchCapability, timeoutMs: number): AbortSignal {
+export function attemptSignal(capability: WebSearchCapability, timeoutMs: number): AbortSignal {
   const timeout = AbortSignal.timeout(timeoutMs);
   return capability.signal ? AbortSignal.any([capability.signal, timeout]) : timeout;
 }
@@ -51,7 +51,7 @@ async function readText(
   }
 }
 
-function classifyRequestError(
+export function classifyRequestError(
   signal: AbortSignal | undefined,
   error: unknown,
   timeoutMs: number,
