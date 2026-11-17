@@ -1,4 +1,4 @@
-import type { WebSearchProvider } from '../contract.js';
+import type { WebSearchProvider } from './contract.js';
 import { decodeResults } from './decode.js';
 import { requestJson } from './http.js';
 

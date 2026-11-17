@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { WebSearchCapability, WebSearchRequest } from '../contract.js';
+import type { WebSearchCapability, WebSearchRequest } from './contract.js';
 import { provider } from './tavily.js';
 
 const REQUEST: WebSearchRequest = { query: 'node.js', numResults: 5, depth: 'basic' };

@@ -1,5 +1,5 @@
 import { firstLine, isTimeout, PROVIDER_TIMEOUT_MS } from '../../models/providers/result.js';
-import { ProviderRequestError, type WebSearchCapability } from '../contract.js';
+import { ProviderRequestError, type WebSearchCapability } from './contract.js';
 
 const TIMEOUT_REASON = 'timed out after 30 s';
 

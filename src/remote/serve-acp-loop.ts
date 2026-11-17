@@ -9,8 +9,9 @@ import { isFileGrepCommandLine } from '../file-grep/command.js';
 import { readWorkspaceCommand } from '../file-read/read.js';
 import { isFileMutationCommandLine } from '../file-write/command.js';
 import { runFileMutation } from '../file-write/tab-write.js';
-import { isWebCommandLine, parseWebSearch } from '../web-search/command.js';
-import { webSearch } from '../web-search/search.js';
+import { isWebCommandLine } from '../web/command-line.js';
+import { parseWebSearch } from '../web/search/command.js';
+import { webSearch } from '../web/search/search.js';
 import type { ProjectTokens } from '../project/tokens.js';
 import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 

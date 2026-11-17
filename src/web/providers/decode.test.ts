@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ProviderRequestError } from '../contract.js';
+import { ProviderRequestError } from './contract.js';
 import { decodeResults } from './decode.js';
 
 describe('decodeResults', () => {

@@ -9,7 +9,7 @@ import type { AcpActivityKind } from '../acp/activity.js';
 import type { AcpRunSnapshot } from '../acp/types.js';
 import type { SearchRequest } from '../protocol.js';
 import type { DiffSource } from '../plugins/diff/shared.js';
-import type { WebSearchCommand } from '../web-search/command.js';
+import type { WebSearchCommand } from '../web/search/command.js';
 
 // The frame shapes of the remote protocol, split out of `protocol.ts` so the wire *codec* and the
 // wire *grammar* are two files: this one says what a frame may carry, `protocol.ts` says how one is

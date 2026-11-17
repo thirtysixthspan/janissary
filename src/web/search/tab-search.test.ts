@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Managers } from '../managers.js';
+import type { Managers } from '../../managers.js';
 import type { WebSearchCommand } from './command.js';
 import { WEB_SEARCH_USAGE } from './command.js';
 import type { WebSearchDeps } from './search.js';
@@ -13,12 +13,12 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('./search.js', () => ({ webSearch: mocks.webSearch }));
-vi.mock('../file-read/remote-tab-port.js', () => ({
+vi.mock('../../file-read/remote-tab-port.js', () => ({
   REMOTE_UNAVAILABLE: 'Remote connection unavailable.',
   withRemoteTabPort: mocks.withRemoteTabPort,
 }));
-vi.mock('../notifications/index.js', () => ({ notify: mocks.notify }));
-vi.mock('../project/tokens.js', () => ({ getProjectTokens: mocks.getProjectTokens }));
+vi.mock('../../notifications/index.js', () => ({ notify: mocks.notify }));
+vi.mock('../../project/tokens.js', () => ({ getProjectTokens: mocks.getProjectTokens }));
 
 const TOKENS = { tavily: 'tavily-key' };
 

@@ -1,8 +1,8 @@
-import { errorFirstLine } from '../error-text.js';
-import type { ProjectTokens } from '../project/tokens.js';
+import { errorFirstLine } from '../../error-text.js';
+import type { ProjectTokens } from '../../project/tokens.js';
 import {
   ProviderRequestError,
-  WEB_SEARCH_PROVIDER_API_VERSION,
+  WEB_PROVIDER_API_VERSION,
 } from './contract.js';
 import type {
   WebSearchCapability,
@@ -142,7 +142,7 @@ export function createProviderRegistry(
     capability: WebSearchCapability,
     reportDisabled?: ReportDisabled,
   ): Promise<AttemptOutcome> {
-    if (manifest.apiVersion !== WEB_SEARCH_PROVIDER_API_VERSION) {
+    if (manifest.apiVersion !== WEB_PROVIDER_API_VERSION) {
       return disable(
         manifest,
         `requires provider API ${String(manifest.apiVersion)}`,

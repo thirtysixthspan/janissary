@@ -1,11 +1,11 @@
-import type { ProjectTokens } from '../project/tokens.js';
+import type { ProjectTokens } from '../../project/tokens.js';
 import type { WebSearchCommand } from './command.js';
-import type { WebSearchCapability, WebSearchRequest, WebSearchResult } from './contract.js';
-import { formatFailures } from './failure-lines.js';
-import type { ProviderFailure } from './failure-lines.js';
-import { webSearchProviderCatalog } from './providers/catalog.js';
-import { createProviderRegistry } from './registry.js';
-import type { ProviderRegistry } from './registry.js';
+import type { WebSearchCapability, WebSearchRequest, WebSearchResult } from '../providers/contract.js';
+import { formatFailures } from '../providers/failure-lines.js';
+import type { ProviderFailure } from '../providers/failure-lines.js';
+import { webSearchProviderCatalog } from '../providers/catalog.js';
+import { createProviderRegistry } from '../providers/registry.js';
+import type { ProviderRegistry } from '../providers/registry.js';
 import { dedupeResults, normalizeResults, renderResults } from './render.js';
 
 export type WebSearchDeps = {

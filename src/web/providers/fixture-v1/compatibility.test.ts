@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { WEB_SEARCH_PROVIDER_API_VERSION } from '../contract.js';
+import { WEB_PROVIDER_API_VERSION } from '../contract.js';
 import type { WebSearchCapability, WebSearchRequest, WebSearchResult } from '../contract.js';
 import { createProviderRegistry } from '../registry.js';
 import { fixtureV1Manifest } from './manifest.js';
@@ -21,7 +21,7 @@ const EXPECTED_RESULTS: WebSearchResult[] = [
 
 describe('web search provider API v1 compatibility', () => {
   it('registers the frozen fixture manifest', () => {
-    expect(WEB_SEARCH_PROVIDER_API_VERSION).toBe(1);
+    expect(WEB_PROVIDER_API_VERSION).toBe(1);
     expect(fixtureV1Manifest.apiVersion).toBe(1);
 
     const registry = createProviderRegistry([fixtureV1Manifest]);

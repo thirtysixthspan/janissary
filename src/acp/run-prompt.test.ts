@@ -29,7 +29,7 @@ import * as fileGrepScan from '../file-grep/scan.js';
 import { commandProtocolPrimer } from './command-protocol.js';
 import { CORE_MAX_STEPS } from './drive-loop.js';
 import { deferred } from '../deferred.js';
-import { WEB_SEARCH_PRIMER } from '../web-search/command.js';
+import { WEB_SEARCH_PRIMER } from '../web/search/command.js';
 
 const mocks = vi.hoisted(() => ({
   runAcpToolLoop: vi.fn(), notify: vi.fn(), readFileInTab: vi.fn(), mutateFileInTab: vi.fn(),
@@ -63,7 +63,7 @@ vi.mock('../file-grep/tab-grep.js', async (importOriginal) => {
   mocks.grepFilesInTab.mockImplementation(actual.grepFilesInTab);
   return { ...actual, grepFilesInTab: mocks.grepFilesInTab };
 });
-vi.mock('../web-search/tab-search.js', () => ({ searchWebInTab: mocks.searchWebInTab }));
+vi.mock('../web/search/tab-search.js', () => ({ searchWebInTab: mocks.searchWebInTab }));
 vi.mock('./drive-loop.js', async (importOriginal) => {
   const actual = await importOriginal<typeof DriveLoop>();
   mocks.runToolLoop.mockImplementation(actual.runToolLoop);

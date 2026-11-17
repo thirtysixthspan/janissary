@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ProviderRequestError, type WebSearchCapability } from '../contract.js';
+import { ProviderRequestError, type WebSearchCapability } from './contract.js';
 import { requestJson } from './http.js';
 
 const SEARCH_URL = 'https://api.example.com/search';

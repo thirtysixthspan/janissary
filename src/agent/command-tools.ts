@@ -5,7 +5,7 @@ import type { AgentSnapshot } from './types.js';
 import { isFileMutationCommandLine } from '../file-write/command.js';
 import { isFileGlobCommandLine } from '../file-glob/command.js';
 import { isFileGrepCommandLine } from '../file-grep/command.js';
-import { isWebCommandLine } from '../web-search/command.js';
+import { isWebCommandLine } from '../web/command-line.js';
 
 export function agentPrimer(snapshot: AgentSnapshot): string {
   const skills = snapshot.skills.map(({ name, instructions }) => `## ${name}\n${instructions}`).join('\n\n');

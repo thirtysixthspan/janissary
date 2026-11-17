@@ -10,7 +10,6 @@ import {
   WEB_SEARCH_MIN_RESULTS,
   WEB_SEARCH_PRIMER,
   WEB_SEARCH_USAGE,
-  isWebCommandLine,
   isWebSearchReplyLine,
   parseWebSearch,
 } from './command.js';
@@ -178,21 +177,6 @@ describe('WEB_SEARCH_USAGE', () => {
   it('matches the results and character constants', () => {
     expect(WEB_SEARCH_USAGE).toContain(`<${String(WEB_SEARCH_MIN_RESULTS)}-${String(WEB_SEARCH_MAX_RESULTS)}>`);
     expect(WEB_SEARCH_USAGE).toContain(`<${String(WEB_SEARCH_MIN_CHARS)}-${String(WEB_SEARCH_MAX_CHARS)}>`);
-  });
-});
-
-describe('isWebCommandLine', () => {
-  it('claims every line whose first word is web', () => {
-    expect(isWebCommandLine('web')).toBe(true);
-    expect(isWebCommandLine('Web search x')).toBe(true);
-    expect(isWebCommandLine('web foo')).toBe(true);
-    expect(isWebCommandLine('web search x')).toBe(true);
-  });
-
-  it('rejects lines whose first word merely starts with web', () => {
-    expect(isWebCommandLine('webby')).toBe(false);
-    expect(isWebCommandLine('websearch')).toBe(false);
-    expect(isWebCommandLine('file web')).toBe(false);
   });
 });
 

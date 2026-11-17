@@ -22,7 +22,7 @@ import {
 } from './port-reads.js';
 import type { FileGlobArgs } from '../../file-glob/command.js';
 import type { FileGrepArgs } from '../../file-grep/command.js';
-import type { WebSearchCommand } from '../../web-search/command.js';
+import type { WebSearchCommand } from '../../web/search/command.js';
 import type { FileEditValue, FileWritePolicy } from '../../file-write/types.js';
 import { remoteCreateItem, remoteDeleteMany, remotePaste, remoteReplay, remoteSearch, remoteStatRows } from './port-mapped.js';
 import type { CommitResult } from '../../git/commit.js';

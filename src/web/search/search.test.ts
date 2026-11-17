@@ -1,17 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ProjectTokens } from '../project/tokens.js';
+import type { ProjectTokens } from '../../project/tokens.js';
 import type { WebSearchCommand } from './command.js';
-import { ProviderRequestError, WEB_SEARCH_PROVIDER_API_VERSION } from './contract.js';
+import { ProviderRequestError, WEB_PROVIDER_API_VERSION } from '../providers/contract.js';
 import type {
   WebSearchCapability,
   WebSearchProviderManifest,
   WebSearchProviderModule,
   WebSearchRequest,
   WebSearchResult,
-} from './contract.js';
-import { webSearchProviderCatalog } from './providers/catalog.js';
-import { createProviderRegistry } from './registry.js';
-import type { ProviderRegistry } from './registry.js';
+} from '../providers/contract.js';
+import { webSearchProviderCatalog } from '../providers/catalog.js';
+import { createProviderRegistry } from '../providers/registry.js';
+import type { ProviderRegistry } from '../providers/registry.js';
 import { runWebSearch, webSearch, webSearchProviderNames } from './search.js';
 
 const QUERY = 'node.js permission model';
@@ -47,7 +47,7 @@ function fakeProvider(id: 'tavily' | 'tinyfish', search: Search = async () => []
   const module: WebSearchProviderModule = { provider: { search: searchSpy } };
   const manifest = {
     id,
-    apiVersion: WEB_SEARCH_PROVIDER_API_VERSION,
+    apiVersion: WEB_PROVIDER_API_VERSION,
     token: id,
     activate: vi.fn(async () => module),
   } satisfies WebSearchProviderManifest;

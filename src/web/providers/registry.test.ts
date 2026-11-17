@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, type Mock } from 'vitest';
-import type { ProjectTokenName, ProjectTokens } from '../project/tokens.js';
-import { ProviderRequestError, WEB_SEARCH_PROVIDER_API_VERSION } from './contract.js';
+import type { ProjectTokenName, ProjectTokens } from '../../project/tokens.js';
+import { ProviderRequestError, WEB_PROVIDER_API_VERSION } from './contract.js';
 import type {
   WebSearchCapability,
   WebSearchProviderManifest,
@@ -8,7 +8,7 @@ import type {
   WebSearchRequest,
   WebSearchResult,
 } from './contract.js';
-import { webSearchProviderCatalog } from './providers/catalog.js';
+import { webSearchProviderCatalog } from './catalog.js';
 import { createProviderRegistry } from './registry.js';
 import type { AttemptOutcome, AttemptResolution } from './registry.js';
 
@@ -43,7 +43,7 @@ function fakeManifest(id: 'tavily' | 'tinyfish', options: FakeManifestOptions = 
   const activate = options.activate ?? (async () => module);
   return {
     id,
-    apiVersion: options.apiVersion ?? WEB_SEARCH_PROVIDER_API_VERSION,
+    apiVersion: options.apiVersion ?? WEB_PROVIDER_API_VERSION,
     token: options.token ?? id,
     activate: vi.fn(activate),
   };
@@ -459,7 +459,7 @@ describe('the real web search provider catalog', () => {
       expect(id).not.toBe('auto');
     }
     for (const manifest of webSearchProviderCatalog) {
-      expect(manifest.apiVersion).toBe(WEB_SEARCH_PROVIDER_API_VERSION);
+      expect(manifest.apiVersion).toBe(WEB_PROVIDER_API_VERSION);
     }
     expect(webSearchProviderCatalog.map((manifest) => manifest.token))
       .toEqual(['tavily', 'tinyfish']);

@@ -5,8 +5,8 @@ import { nonEmptyString } from '../frame/decode-shared.js';
 import {
   WEB_SEARCH_MAX_CHARS, WEB_SEARCH_MAX_RESULTS, WEB_SEARCH_MIN_CHARS, WEB_SEARCH_MIN_RESULTS,
   type WebSearchDepth,
-} from '../../web-search/command.js';
-import { webSearch } from '../../web-search/search.js';
+} from '../../web/search/command.js';
+import { webSearch } from '../../web/search/search.js';
 
 const INVALID_ARGUMENTS = 'Invalid remote filesystem operation arguments.';
 

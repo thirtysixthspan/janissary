@@ -1,4 +1,4 @@
-import type { WebSearchResult } from './contract.js';
+import type { WebSearchResult } from '../providers/contract.js';
 
 const WHITESPACE_RUN = /\s+/g;
 

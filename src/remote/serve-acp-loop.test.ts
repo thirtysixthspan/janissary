@@ -7,9 +7,9 @@ import { NO_TOOLS_LINE } from '../acp/internal-tools.js';
 import { MARKDOWN_INSTRUCTION } from '../acp/launch.js';
 import type { AcpRunSnapshot, AcpRunSnapshotRow, AcpSession, AcpToolHost, PromptHandlers } from '../acp/types.js';
 import type * as DriveLoop from '../acp/drive-loop.js';
-import { parseWebSearch, WEB_SEARCH_USAGE } from '../web-search/command.js';
-import type { WebSearchCommand } from '../web-search/command.js';
-import type { WebSearchDeps } from '../web-search/search.js';
+import { parseWebSearch, WEB_SEARCH_USAGE } from '../web/search/command.js';
+import type { WebSearchCommand } from '../web/search/command.js';
+import type { WebSearchDeps } from '../web/search/search.js';
 import type { ProjectTokens } from '../project/tokens.js';
 import { deferred } from '../deferred.js';
 import type * as Glob from '../file-glob/glob.js';
@@ -35,7 +35,7 @@ vi.mock('../file-glob/glob.js', async (importOriginal) => {
   mocks.globWorkspaceCommand.mockImplementation(actual.globWorkspaceCommand);
   return { ...actual, globWorkspaceCommand: mocks.globWorkspaceCommand };
 });
-vi.mock('../web-search/search.js', () => ({ webSearch: mocks.webSearch }));
+vi.mock('../web/search/search.js', () => ({ webSearch: mocks.webSearch }));
 vi.mock('../acp/drive-loop.js', async (importOriginal) => {
   const actual = await importOriginal<typeof DriveLoop>();
   mocks.driveToolLoop.mockImplementation(actual.driveToolLoop);

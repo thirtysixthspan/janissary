@@ -9,7 +9,7 @@ import { FILE_GLOB_MAX_LIMIT } from '../../file-glob/command.js';
 import { SEARCH_MAX_RESULTS } from '../../search/types.js';
 import {
   WEB_SEARCH_MAX_CHARS, WEB_SEARCH_MAX_RESULTS, WEB_SEARCH_MIN_CHARS, WEB_SEARCH_MIN_RESULTS,
-} from '../../web-search/command.js';
+} from '../../web/search/command.js';
 
 // Written out rather than derived from the table, so an operation dropped from both the union and
 // the table is still caught here. Adding one to the protocol means adding it in both places.

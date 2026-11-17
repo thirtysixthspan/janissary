@@ -15,14 +15,14 @@
 //   error, undecodable response) and carries the reason to print. Any other throw is a plugin
 //   failure: the provider is disabled and the search moves on.
 //
-// `WEB_SEARCH_PROVIDER_API_VERSION` is the compatibility contract. It lives on the manifest and is
+// `WEB_PROVIDER_API_VERSION` is the compatibility contract. It lives on the manifest and is
 // checked before `activate` runs, so a provider written against another version is refused without
 // its module being imported.
 
-import type { ProjectTokenName } from '../project/tokens.js';
-import type { WebSearchDepth } from './command.js';
+import type { ProjectTokenName } from '../../project/tokens.js';
+import type { WebSearchDepth } from '../search/command.js';
 
-export const WEB_SEARCH_PROVIDER_API_VERSION = 1;
+export const WEB_PROVIDER_API_VERSION = 1;
 
 export type WebSearchRequest = {
   query: string;

@@ -1,5 +1,5 @@
 import { isRecord } from '../../value-guards.js';
-import { ProviderRequestError, type WebSearchResult } from '../contract.js';
+import { ProviderRequestError, type WebSearchResult } from './contract.js';
 
 export function decodeResults(body: unknown, snippetKey: 'content' | 'snippet'): WebSearchResult[] {
   if (!isRecord(body) || !Array.isArray(body.results)) {

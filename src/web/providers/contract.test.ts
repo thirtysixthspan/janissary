@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ProviderRequestError, WEB_SEARCH_PROVIDER_API_VERSION } from './contract.js';
+import { ProviderRequestError, WEB_PROVIDER_API_VERSION } from './contract.js';
 import type {
   WebSearchCapability,
   WebSearchProvider,
@@ -29,14 +29,14 @@ const providerModule: WebSearchProviderModule = { provider };
 
 const manifest: WebSearchProviderManifest = {
   id: 'fixture',
-  apiVersion: WEB_SEARCH_PROVIDER_API_VERSION,
+  apiVersion: WEB_PROVIDER_API_VERSION,
   token: 'github',
   activate: async () => providerModule,
 };
 
-describe('WEB_SEARCH_PROVIDER_API_VERSION', () => {
+describe('WEB_PROVIDER_API_VERSION', () => {
   it('is 1', () => {
-    expect(WEB_SEARCH_PROVIDER_API_VERSION).toBe(1);
+    expect(WEB_PROVIDER_API_VERSION).toBe(1);
   });
 });
 
@@ -70,7 +70,7 @@ describe('the provider contract', () => {
       { apiKey: 'test-key', fetch: fakeFetch },
     );
 
-    expect(manifest.apiVersion).toBe(WEB_SEARCH_PROVIDER_API_VERSION);
+    expect(manifest.apiVersion).toBe(WEB_PROVIDER_API_VERSION);
     expect(manifest.token).toBe('github');
     expect(requested).toHaveLength(1);
     expect(results).toEqual([

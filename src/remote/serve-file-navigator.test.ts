@@ -14,7 +14,7 @@ import { operationDescriptor } from './filesystem/operations.js';
 import type * as grepModule from '../file-grep/grep.js';
 import { grepWorkspace } from '../file-grep/grep.js';
 import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
-import { webSearch } from '../web-search/search.js';
+import { webSearch } from '../web/search/search.js';
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof fileSystemPromises>();
@@ -26,7 +26,7 @@ vi.mock('../file-grep/grep.js', async (importOriginal) => {
   return { ...actual, grepWorkspace: vi.fn(actual.grepWorkspace) };
 });
 
-vi.mock('../web-search/search.js', () => ({ webSearch: vi.fn() }));
+vi.mock('../web/search/search.js', () => ({ webSearch: vi.fn() }));
 
 type Request = Extract<ClientFrame, { type: 'filesystem-request' }>;
 

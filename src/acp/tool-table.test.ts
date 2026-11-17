@@ -19,7 +19,7 @@ import { FILE_MUTATION_PRIMER } from '../file-write/command.js';
 import { FILE_GLOB_PRIMER } from '../file-glob/command.js';
 import { FILE_GREP_PRIMER } from '../file-grep/command.js';
 import { FILE_PATCH_PRIMER } from '../file-patch/command.js';
-import { WEB_SEARCH_PRIMER } from '../web-search/command.js';
+import { WEB_SEARCH_PRIMER } from '../web/search/command.js';
 
 const setup = (grants: readonly string[] = NATIVE_ACP_COMMANDS) => ({ tools: createAcpToolTable(grants) });
 

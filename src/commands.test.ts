@@ -8,7 +8,7 @@ import { parseTabCommand } from './commands/parse-tab.js';
 import { findPriorityConflicts } from './commands/priority.js';
 import { listHelpPages } from './help-pages.js';
 import { resolveCommand } from './resolve.js';
-import { WEB_SEARCH_USAGE } from './web-search/command.js';
+import { WEB_SEARCH_USAGE } from './web/search/command.js';
 
 function helpText(): string {
   const result = getOutput('help');

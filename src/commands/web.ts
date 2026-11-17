@@ -1,7 +1,7 @@
 import type { Command } from './types.js';
 import { appendCommandOutput } from '../command/append.js';
-import { isWebCommandLine } from '../web-search/command.js';
-import { searchWebInTab } from '../web-search/tab-search.js';
+import { isWebCommandLine } from '../web/command-line.js';
+import { searchWebInTab } from '../web/search/tab-search.js';
 
 export const command: Command = {
   name: 'web',

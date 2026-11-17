@@ -6,7 +6,7 @@ import { completeWebCommand } from './web.js';
 import { readCompletionCursor } from './cursor.js';
 import { completionPolicy, type CompletionPolicy } from './command-policy.js';
 import { NativeCommandSettingsManager } from '../native-commands/manager.js';
-import { tavilyManifest, tinyfishManifest } from '../web-search/providers/catalog.js';
+import { tavilyManifest, tinyfishManifest } from '../web/providers/catalog.js';
 
 const at = (line: string) => readCompletionCursor(line, line.length);
 

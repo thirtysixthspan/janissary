@@ -2,7 +2,7 @@ import type { CompletionCursor, CompletionResult } from './types.js';
 import { completeWord } from './helpers.js';
 import { unchanged } from './candidates.js';
 import { ALL_ENABLED_POLICY, type CompletionPolicy } from './command-policy.js';
-import { webSearchProviderNames } from '../web-search/search.js';
+import { webSearchProviderNames } from '../web/search/search.js';
 
 const WEB_SUBCOMMANDS = ['search'];
 const WEB_FLAGS = ['--results', '--max-chars', '--depth', '--provider'];

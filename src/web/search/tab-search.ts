@@ -1,9 +1,9 @@
-import type { Managers } from '../managers.js';
-import { localReadRoot } from '../file-read/tab-read.js';
-import { withRemoteTabPort } from '../file-read/remote-tab-port.js';
-import { getProjectTokens } from '../project/tokens.js';
-import { notify } from '../notifications/index.js';
-import { errorText } from '../error-text.js';
+import type { Managers } from '../../managers.js';
+import { localReadRoot } from '../../file-read/tab-read.js';
+import { withRemoteTabPort } from '../../file-read/remote-tab-port.js';
+import { getProjectTokens } from '../../project/tokens.js';
+import { notify } from '../../notifications/index.js';
+import { errorText } from '../../error-text.js';
 import { parseWebSearch } from './command.js';
 import type { WebSearchCommand } from './command.js';
 import { webSearch } from './search.js';

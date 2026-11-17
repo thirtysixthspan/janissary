@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { WebSearchResult } from './contract.js';
+import type { WebSearchResult } from '../providers/contract.js';
 import { dedupeResults, normalizeResults, renderResults } from './render.js';
 
 function result(title: string, url: string, snippet = ''): WebSearchResult {

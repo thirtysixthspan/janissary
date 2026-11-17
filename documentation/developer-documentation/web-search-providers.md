@@ -4,11 +4,11 @@ Janissary's web-search provider API is for trusted providers bundled in this rep
 
 This is a separate family from [tab plugins](./tab-plugins.md), [editor plugins](./editor-plugins.md), and [overlay plugins](./overlay-plugins.md). Providers run on the server inside the Janissary process and share no catalog or API version with those families.
 
-The authoritative types are `src/web-search/contract.ts`. The frozen `fixture-v1` provider and its compatibility test pin API version 1, so a change that breaks them is a breaking change by definition.
+The authoritative types are `src/web/providers/contract.ts`. The frozen `fixture-v1` provider and its compatibility test pin API version 1, so a change that breaks them is a breaking change by definition.
 
 ## Smallest working example
 
-A provider is one manifest in `src/web-search/providers/catalog.ts` plus one module that exports `provider`.
+A provider is one manifest in `src/web/providers/catalog.ts` plus one module that exports `provider`.
 
 The manifest is pure data:
 
@@ -56,12 +56,12 @@ That is a complete provider: it sends the query to its own endpoint and returns 
 
 ## Files to add
 
-For provider `example`, add `src/web-search/providers/example.ts` and any modules it needs beside it. Then add a manifest to `src/web-search/providers/catalog.ts` and include it in `webSearchProviderCatalog`. Its `token` names the provider's own row in `PROJECT_TOKENS`, added as described in [Token rows](#token-rows); reusing another provider's name would hand the new provider that service's key:
+For provider `example`, add `src/web/providers/example.ts` and any modules it needs beside it. Then add a manifest to `src/web/providers/catalog.ts` and include it in `webSearchProviderCatalog`. Its `token` names the provider's own row in `PROJECT_TOKENS`, added as described in [Token rows](#token-rows); reusing another provider's name would hand the new provider that service's key:
 
 ```ts
 export const exampleManifest = {
   id: 'example',
-  apiVersion: WEB_SEARCH_PROVIDER_API_VERSION,
+  apiVersion: WEB_PROVIDER_API_VERSION,
   token: 'example', // the placeholder row added in "Token rows"
   activate: () => import('./example.js'),
 } as const satisfies WebSearchProviderManifest;
@@ -80,7 +80,7 @@ export const webSearchProviderCatalog = [
 | Field | Required | Meaning |
 |---|---|---|
 | `id` | yes | Stable lowercase identity, unique in the catalog and never `auto`. `--provider` matches it case-insensitively, and failure lines print it. |
-| `apiVersion` | yes | The provider API version the module was written against. It must equal `WEB_SEARCH_PROVIDER_API_VERSION`, or the provider is refused before its module is imported. |
+| `apiVersion` | yes | The provider API version the module was written against. It must equal `WEB_PROVIDER_API_VERSION`, or the provider is refused before its module is imported. |
 | `token` | yes | The `ProjectTokenName` of the token file whose value becomes `capability.apiKey`. A new provider needs its own row; see [Token rows](#token-rows). |
 | `activate` | yes | A literal dynamic import of the provider module. |
 
@@ -158,7 +158,7 @@ The lines a provider author will see from resolution are:
 - `Web search failed (<id>): <reason>.`, for an explicit `--provider` naming a disabled provider, and for `auto` when its one configured provider is disabled. `<reason>` is the stored reason from the failure that disabled it.
 - `Web search: every provider failed.` followed by one `- <id>: <reason>` line for each provider, in catalog order, when `auto` has two or more configured providers and all of them are disabled.
 
-Both disabled-provider forms come from `formatFailures` in `src/web-search/failure-lines.ts`, the one function every web search failure line goes through, so a disabled provider and one that just failed read identically. The registry's `resolveAttempts` in `src/web-search/registry.ts` decides which line a search starts with; read it for the exact conditions.
+Both disabled-provider forms come from `formatFailures` in `src/web/providers/failure-lines.ts`, the one function every web search failure line goes through, so a disabled provider and one that just failed read identically. The registry's `resolveAttempts` in `src/web/providers/registry.ts` decides which line a search starts with; read it for the exact conditions.
 
 Attempts run sequentially, each awaited before the next starts. There is no concurrency between providers. A provider that resolves results ends the search, including when it resolves an empty array.
 
@@ -177,7 +177,7 @@ A plugin failure uses the reason `provider failed: <first line of the error>`, o
 
 A `search` that throws a `ProviderRequestError` is an expected failure. Its message is the reason the host prints, and it never disables the provider. Use it for an HTTP status, a timeout, a network error, a response that doesn't decode, or anything else the provider's API can answer normally. An `auto` search records the failure and moves on to the next configured provider, while an explicit `--provider` tries only that provider, so its expected failure prints a single `Web search failed (<id>): <reason>.` line. An abort never disables either: when `capability.signal.aborted` is true, whatever the rejection is, the attempt is a cancellation and the search stops rather than falling back to the next provider. Once the caller's signal aborts, the search rejects with the abort instead of printing a failure or resolution line, including when the abort lands before any attempt starts or on the final provider's failure.
 
-The 30-second budget is per attempt. The shared `requestJson` step in `src/web-search/providers/http.ts` joins `capability.signal` with a 30-second timeout, turns a non-2xx status into `HTTP <status> <status text>`, a timeout into `timed out after 30 s`, an undecodable body into `invalid response`, and a network failure into its first line. Use it unless a provider needs a request shape it cannot express. An `auto` search that falls back can take up to 30 seconds per configured provider.
+The 30-second budget is per attempt. The shared `requestJson` step in `src/web/providers/http.ts` joins `capability.signal` with a 30-second timeout, turns a non-2xx status into `HTTP <status> <status text>`, a timeout into `timed out after 30 s`, an undecodable body into `invalid response`, and a network failure into its first line. Use it unless a provider needs a request shape it cannot express. An `auto` search that falls back can take up to 30 seconds per configured provider.
 
 ## Trust and limits
 
@@ -187,6 +187,6 @@ A provider may make network requests and read its own key. It has no file access
 
 ## API version 1
 
-`WEB_SEARCH_PROVIDER_API_VERSION` is 1. The frozen `fixture-v1` provider under `src/web-search/fixture-v1/` declares the literal `1` rather than the constant, so bumping the constant makes `src/web-search/fixture-v1/compatibility.test.ts` fail. That failure is the definition of a breaking change.
+`WEB_PROVIDER_API_VERSION` is 1. The frozen `fixture-v1` provider under `src/web/providers/fixture-v1/` declares the literal `1` rather than the constant, so bumping the constant makes `src/web/providers/fixture-v1/compatibility.test.ts` fail. That failure is the definition of a breaking change.
 
 Additive changes that leave the fixture working are minor. Removing or changing anything the fixture exercises is a major bump: add a new fixture for the new version and keep the v1 fixture until version 1 is formally removed.

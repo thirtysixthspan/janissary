@@ -1,4 +1,4 @@
-import { positiveInteger } from '../positive-integer.js';
+import { positiveInteger } from '../../positive-integer.js';
 
 export type WebSearchDepth = 'basic' | 'advanced';
 
@@ -123,10 +123,6 @@ export function parseWebSearch(input: string): WebSearchCommand | { error: strin
     depth: scanned.depth ?? WEB_SEARCH_DEFAULT_DEPTH,
     provider: scanned.provider ?? WEB_SEARCH_DEFAULT_PROVIDER,
   };
-}
-
-export function isWebCommandLine(line: string): boolean {
-  return /^web(\s|$)/i.test(line);
 }
 
 export function isWebSearchReplyLine(line: string): boolean {

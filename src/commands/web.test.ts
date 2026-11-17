@@ -4,7 +4,7 @@ import { command } from './web.js';
 
 const mocks = vi.hoisted(() => ({ searchWebInTab: vi.fn() }));
 
-vi.mock('../web-search/tab-search.js', () => ({ searchWebInTab: mocks.searchWebInTab }));
+vi.mock('../web/search/tab-search.js', () => ({ searchWebInTab: mocks.searchWebInTab }));
 
 type Appended = { label: string; entry: { input: string; output: string }; invocationId?: string };
 

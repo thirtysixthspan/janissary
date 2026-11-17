@@ -5,7 +5,7 @@ import { failureResult, type FileOperationResult } from '../file-operation-resul
 import { NO_MATCHING_TEXT_REASON, type FileEditValue, type FileWritePolicy } from '../../file-write/types.js';
 import type { FileGlobArgs } from '../../file-glob/command.js';
 import type { FileGrepArgs } from '../../file-grep/command.js';
-import type { WebSearchCommand } from '../../web-search/command.js';
+import type { WebSearchCommand } from '../../web/search/command.js';
 
 // `RemoteFileSystemPort`'s line read, glob, write, text edit and patch, extracted so that file stays under the size limit — the same
 // split `port-moves.ts` uses. It takes the port's bound request sender and its path mapper as

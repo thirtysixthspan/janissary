@@ -10,7 +10,8 @@ import { FILE_MUTATION_PRIMER, isFileMutationCommandLine } from '../file-write/c
 import { FILE_PATCH_PRIMER } from '../file-patch/command.js';
 import { FILE_GLOB_PRIMER, isFileGlobCommandLine } from '../file-glob/command.js';
 import { FILE_GREP_PRIMER, isFileGrepCommandLine } from '../file-grep/command.js';
-import { isWebCommandLine, isWebSearchReplyLine, WEB_SEARCH_PRIMER } from '../web-search/command.js';
+import { isWebCommandLine } from '../web/command-line.js';
+import { isWebSearchReplyLine, WEB_SEARCH_PRIMER } from '../web/search/command.js';
 
 // One tool on the ACP run path. The three loop options the agent sees — what it is told the tools
 // are, which side runs a command it emitted, and what pulls a command out of its reply — are all
