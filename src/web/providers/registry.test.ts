@@ -2,6 +2,7 @@ import { describe, expect, it, vi, type Mock } from 'vitest';
 import type { ProjectTokenName, ProjectTokens } from '../../project/tokens.js';
 import { ProviderRequestError, WEB_PROVIDER_API_VERSION } from './contract.js';
 import type {
+  WebFetchFormat,
   WebSearchCapability,
   WebSearchProviderManifest,
   WebSearchProviderModule,
@@ -34,6 +35,7 @@ type FakeManifestOptions = {
   module?: WebSearchProviderModule;
   activate?: () => Promise<WebSearchProviderModule>;
   search?: boolean;
+  fetchFormats?: readonly WebFetchFormat[];
 };
 
 type FakeManifest = WebSearchProviderManifest & {
@@ -48,6 +50,7 @@ function fakeManifest(id: 'tavily' | 'tinyfish', options: FakeManifestOptions = 
     apiVersion: options.apiVersion ?? WEB_PROVIDER_API_VERSION,
     token: options.token ?? id,
     ...(options.search !== undefined && { search: options.search }),
+    ...(options.fetchFormats !== undefined && { fetchFormats: options.fetchFormats }),
     activate: vi.fn(activate),
   };
 }
@@ -71,6 +74,55 @@ describe('createProviderRegistry', () => {
   it('lists provider names in catalog order', () => {
     const registry = createProviderRegistry([fakeManifest('tinyfish'), fakeManifest('tavily')]);
     expect(registry.searchProviderNames()).toEqual(['tinyfish', 'tavily']);
+  });
+
+  it('lists only fetch-capable provider names in catalog order', () => {
+    const tavily = fakeManifest('tavily', { fetchFormats: ['markdown', 'text'] });
+    const tinyfish = fakeManifest('tinyfish', { fetchFormats: ['markdown', 'html'] });
+    const registry = createProviderRegistry([tinyfish, tavily]);
+
+    expect(registry.fetchProviderNames()).toEqual(['tinyfish', 'tavily']);
+  });
+
+  it('leaves out manifests with no fetch formats or an empty list', () => {
+    const tavily = fakeManifest('tavily', { fetchFormats: ['markdown'] });
+
+    expect(createProviderRegistry([fakeManifest('tinyfish'), tavily]).fetchProviderNames())
+      .toEqual(['tavily']);
+    expect(createProviderRegistry([
+      fakeManifest('tinyfish', { fetchFormats: [] }),
+      tavily,
+    ]).fetchProviderNames()).toEqual(['tavily']);
+  });
+
+  it('skips a provider disabled by a search attempt in fetch resolution', async () => {
+    const tavily = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      module: moduleFor(async () => {
+        throw new Error('boom.');
+      }),
+    });
+    const tinyfish = fakeManifest('tinyfish', { fetchFormats: ['markdown'] });
+    const registry = createProviderRegistry([tavily, tinyfish]);
+
+    await registry.runAttempt(tavily, REQUEST, capability());
+
+    expect(ids(registry.resolveFetchAttempts('auto', 'markdown', TOKENS))).toEqual(['tinyfish']);
+  });
+
+  it('reads the registry disabled map when a disabled provider is the only fetch provider', async () => {
+    const tavily = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      module: moduleFor(async () => {
+        throw new Error('boom.');
+      }),
+    });
+    const registry = createProviderRegistry([tavily]);
+
+    await registry.runAttempt(tavily, REQUEST, capability());
+
+    expect(line(registry.resolveFetchAttempts('auto', 'markdown', TOKENS)))
+      .toBe('Web fetch failed (tavily): provider failed: boom.');
   });
 
   it('never activates a provider until an attempt runs', async () => {

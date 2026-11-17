@@ -1,17 +1,19 @@
 import { errorFirstLine } from '../../error-text.js';
 import type { ProjectTokens } from '../../project/tokens.js';
-import { searchesWeb } from './capabilities.js';
+import { fetchesWeb, searchesWeb } from './capabilities.js';
 import {
   ProviderRequestError,
   WEB_PROVIDER_API_VERSION,
 } from './contract.js';
 import type {
+  WebFetchFormat,
   WebSearchCapability,
   WebSearchProvider,
   WebSearchProviderManifest,
   WebSearchRequest,
   WebSearchResult,
 } from './contract.js';
+import { resolveFetchAttempts } from './fetch-resolution.js';
 import { resolveSearchAttempts } from './search-resolution.js';
 import type { AttemptResolution } from './search-resolution.js';
 
@@ -24,6 +26,12 @@ export type AttemptOutcome =
 export type ProviderRegistry = {
   searchProviderNames: () => string[];
   resolveAttempts: (name: string, tokens: ProjectTokens) => AttemptResolution;
+  fetchProviderNames: () => string[];
+  resolveFetchAttempts: (
+    name: string,
+    format: WebFetchFormat,
+    tokens: ProjectTokens,
+  ) => AttemptResolution;
   runAttempt: (
     manifest: WebSearchProviderManifest,
     request: WebSearchRequest,
@@ -58,6 +66,12 @@ export function createProviderRegistry(
   function searchProviderNames(): string[] {
     return manifests
       .filter((manifest) => searchesWeb(manifest))
+      .map((manifest) => manifest.id);
+  }
+
+  function fetchProviderNames(): string[] {
+    return manifests
+      .filter((manifest) => fetchesWeb(manifest))
       .map((manifest) => manifest.id);
   }
 
@@ -96,6 +110,14 @@ export function createProviderRegistry(
 
   function resolveAttempts(name: string, tokens: ProjectTokens): AttemptResolution {
     return resolveSearchAttempts(manifests, (id) => disabled.get(id), tokens, name);
+  }
+
+  function resolveFetch(
+    name: string,
+    format: WebFetchFormat,
+    tokens: ProjectTokens,
+  ): AttemptResolution {
+    return resolveFetchAttempts(manifests, (id) => disabled.get(id), tokens, name, format);
   }
 
   async function runAttempt(
@@ -137,5 +159,11 @@ export function createProviderRegistry(
     }
   }
 
-  return { searchProviderNames, resolveAttempts, runAttempt };
+  return {
+    searchProviderNames,
+    resolveAttempts,
+    resolveFetchAttempts: resolveFetch,
+    fetchProviderNames,
+    runAttempt,
+  };
 }

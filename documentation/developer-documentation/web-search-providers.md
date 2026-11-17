@@ -162,6 +162,8 @@ The lines a provider author will see from resolution are:
 
 Both disabled-provider forms come from `formatFailures` in `src/web/providers/failure-lines.ts`, the one function every web search and web fetch failure line goes through, so a disabled provider and one that just failed read identically. It takes the command's headings, which is how the same function prints `Web search failed ...` and `Web fetch failed ...` lines. `resolveSearchAttempts` in `src/web/providers/search-resolution.ts` decides which line a search starts with; read it for the exact conditions.
 
+Fetch resolution walks the same kind of ordering over a smaller set. Only providers with a non-empty `fetchFormats` take part, so a search-only provider is never attempted. `--provider auto` walks the fetch-capable providers in catalog order and skips any that names a token with no token file, any that does not list the requested `--format`, and any already disabled. When every provider left is disabled, their stored reasons print through `formatFailures` with `WEB_FETCH_FAILURE_HEADINGS`: one provider gives `Web fetch failed (<id>): <reason>.`, and several give `Web fetch: every attempt failed.` followed by one `- <id>: <reason>` line each in catalog order. When nothing is eligible, the line is `Web fetch: no provider configured.`. `resolveFetchAttempts` in `src/web/providers/fetch-resolution.ts` has the exact conditions.
+
 Attempts run sequentially, each awaited before the next starts. There is no concurrency between providers. A provider that resolves results ends the search, including when it resolves an empty array.
 
 ## Validation and failure

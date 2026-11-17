@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ProjectTokenName } from '../../project/tokens.js';
-import { isConfigured, providerApiKey, searchesWeb } from './capabilities.js';
+import { fetchesWeb, isConfigured, providerApiKey, searchesWeb, servesFetchFormat } from './capabilities.js';
 import type { WebSearchProviderManifest } from './contract.js';
 
 function manifest(token?: ProjectTokenName): WebSearchProviderManifest {
@@ -41,6 +41,36 @@ describe('searchesWeb', () => {
 
   it('is false when search is false', () => {
     expect(searchesWeb({ ...manifest(), search: false })).toBe(false);
+  });
+});
+
+describe('fetchesWeb', () => {
+  it('is false when fetchFormats is absent', () => {
+    expect(fetchesWeb(manifest())).toBe(false);
+  });
+
+  it('is false when fetchFormats is empty', () => {
+    expect(fetchesWeb({ ...manifest(), fetchFormats: [] })).toBe(false);
+  });
+
+  it('is true when fetchFormats is non-empty', () => {
+    expect(fetchesWeb({ ...manifest(), fetchFormats: ['markdown'] })).toBe(true);
+  });
+});
+
+describe('servesFetchFormat', () => {
+  it('is true for a listed format', () => {
+    expect(servesFetchFormat({ ...manifest(), fetchFormats: ['markdown', 'text'] }, 'text'))
+      .toBe(true);
+  });
+
+  it('is false for an unlisted format', () => {
+    expect(servesFetchFormat({ ...manifest(), fetchFormats: ['markdown'] }, 'html'))
+      .toBe(false);
+  });
+
+  it('is false when fetchFormats is absent', () => {
+    expect(servesFetchFormat(manifest(), 'markdown')).toBe(false);
   });
 });
 

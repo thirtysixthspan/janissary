@@ -1,8 +1,19 @@
 import type { ProjectTokens } from '../../project/tokens.js';
-import type { WebSearchProviderManifest } from './contract.js';
+import type { WebFetchFormat, WebSearchProviderManifest } from './contract.js';
 
 export function searchesWeb(manifest: WebSearchProviderManifest): boolean {
   return manifest.search !== false;
+}
+
+export function fetchesWeb(manifest: WebSearchProviderManifest): boolean {
+  return manifest.fetchFormats !== undefined && manifest.fetchFormats.length > 0;
+}
+
+export function servesFetchFormat(
+  manifest: WebSearchProviderManifest,
+  format: WebFetchFormat,
+): boolean {
+  return manifest.fetchFormats?.includes(format) ?? false;
 }
 
 export function isConfigured(manifest: WebSearchProviderManifest, tokens: ProjectTokens): boolean {
