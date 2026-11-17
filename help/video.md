@@ -13,6 +13,7 @@ Open a video in the bundled video tab. It accepts the same paths and wildcards a
 - Watch a video file in its own tab.
 - Open matching video files from a wildcard.
 - Save the frame at a given time as a `.png` or `.jpg`. The time is seconds (`12.5`), `m:ss`, or `h:mm:ss`. The destination's directory must exist and the file must not. Needs `ffmpeg` on the `PATH`.
+- In `m:ss` and `h:mm:ss`, minutes and seconds after the first field must be below 60. Paths resolve from the tab you type in; `~` means home, and either path may contain spaces split at the first `at` followed by a valid time. A tab whose session runs on another machine is refused.
 
 **Examples**
 
