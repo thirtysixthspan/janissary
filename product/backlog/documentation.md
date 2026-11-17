@@ -4,8 +4,6 @@
 
 ## development
 
-* conversations (3/10) — 36 of 44 facts are correct with eight missing and none wrong; the primary page is a thorough dedicated topic page. Substantive omissions: a failed or unsuccessful model selection leaves the remembered model unchanged (re-selecting the current pair re-remembers it), workspace/row controls are disabled after a conversation is deleted, the two-click mouse count resets when clicking a different row, and a rename keeps an unsaved conversation unsaved without creating the directory; the remaining gaps are cosmetic styling details. Fix in `documentation/user-documentation/tab-types/conversations.md`, with an optional model-selection note in `help/conversations.md`. Ground truth is `product/specs/conversations.md`, `src/plugins/conversations/activate.ts`, `src/plugins/conversations/manifest.ts` and `src/conversations/view.ts`.
-
 * diff-tab (6/10) — 35 of 49 facts are documented with 13 missing and one wrong. Wrong: `documentation/user-documentation/tab-types/diff-tab.md` says pointing the tab at another directory is the one case that clears the body first, but switching the change source also clears it. Missing minor UI nuances include the `@@` hunk-range header, `+`/`−` signs and colored numbers, character-mark length limits, rename extensions per side, immediate syntax-theme updates, comments on removed lines and original-vs-modified separation, and the no-commits "all files added" case. Fix in `documentation/user-documentation/tab-types/diff-tab.md`, mirroring in `documentation/user-documentation/tab-types/diff.md` and `help/diff.md`. Ground truth is `product/specs/diff-tab.md`, `src/plugins/diff/tab-state.ts`, `web/src/plugins/diff/DiffTab.tsx` and `web/src/plugins/diff/SourceControl.tsx`.
 
 * launcher (4/10) — 49 of 61 facts are correct with 12 missing and none wrong. The page does not say that docking a launcher displaces the previous one back to the center strip, that an unrecognized icon is reported to the Notifications feed, that the launcher has no text command bar, or that a summarizer prompt the core cannot answer is reported to Notifications and retried; it also omits cosmetic row details and that several built-in command destinations and the Harness dialog entry are described only on other pages. Fix in `documentation/user-documentation/tab-types/launcher.md`. Ground truth is `product/specs/launcher.md`, `src/plugins/launcher/commands-file.ts`, `src/plugins/launcher/activate.ts` and `web/src/plugins/launcher/CommandRail.tsx`.
@@ -58,6 +56,7 @@
 
 ## resolved
 
+* conversations — documented in documentation/user-documentation/tab-types/conversations.md, help/conversations.md (removed 2026-11-17)
 * connections-tab — documented in documentation/user-documentation/command-bar/connections.md, help/connections.md, help/connection.md (removed 2026-11-17)
 * connection — documented in documentation/user-documentation/command-bar/connections.md (removed 2026-11-17)
 * application-config — documented in documentation/user-documentation/getting-started/configuration.md (removed 2026-11-17)
