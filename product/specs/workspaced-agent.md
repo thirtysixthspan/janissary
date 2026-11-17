@@ -92,7 +92,7 @@ also reach an ACP agent that runs outside any workspace, under the same variable
 GitHub token nor the two search keys does (see [[acp]]).
 
 `tavily-token` and `tinyfish-token` hold the Tavily and TinyFish API keys the `web search` and `web fetch` commands
-use. The search runs in the Janissary process itself, which reads the keys through
+use. Both `web search` and `web fetch` run in the Janissary process itself, which reads the keys through
 `getProjectTokens`, and no spawned process reads them: neither key is set in a workspaced tab's
 environment, and neither reaches an ACP agent inside or outside a workspace. They are read from the
 project's `.janissary/` first and then `~/.janissary/`, so a project file takes precedence over the
