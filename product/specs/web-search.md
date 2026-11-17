@@ -14,7 +14,7 @@ The command claims every line that starts with the word `web`, so bare `web` and
 
 ### Completion
 
-The command bar completes `web` to `web search`, the flags not yet used after the query, and the values of `--depth` and `--provider`, but never the query or a numeric value; see [[tab-completion]] for the detail.
+The command bar completes `web` to `search` and `fetch`, the flags not yet used after the query, and the values of `--depth` and `--provider`, but never the query or a numeric value. `--provider` lists only search-capable providers, so it never offers `local`. Search completion depends only on the `web search` row and its `web` parent, so a disabled fetch never hides it; see [[tab-completion]] for the detail.
 
 ### Where a typed search runs
 

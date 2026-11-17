@@ -12,6 +12,10 @@ Every malformed form prints exactly `Usage: web fetch <url> [--format markdown|t
 
 `parseWebFetch` parses the line as a pure step; `webFetch` runs the parsed request, and `fetchWebInTab` chooses the side it runs on.
 
+### Completion
+
+The command bar completes `web` to `fetch` while the row the `web fetch` line resolves to is enabled. After the URL it completes the flags not yet used, then the values of `--format` (`markdown`, `text`, `html`) and `--provider` (`auto` and the fetch-capable provider ids, `local` included). It never completes the URL or a numeric value, and nothing under `web fetch` falls back to path completion. `completeWebCommand` in `src/completion/web.ts` owns this; see [[tab-completion]] for the detail.
+
 ### Settings
 
 A typed `web fetch` line resolves to the most specific Commands-tab row whose form it starts with ([[application-commands]]); disabling `web` refuses it with `Command is disabled: web.`.

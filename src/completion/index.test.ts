@@ -416,6 +416,14 @@ describe('completeCommandLine — web command', () => {
     expect(result.newInput).toBe(line);
   });
 
+  it('does not fall back to filesystem paths for a fetch URL word', () => {
+    const line = 'web fetch rep';
+    const result = completeCommandLine(line, line.length, dir);
+
+    expect(result.matches).toEqual([]);
+    expect(result.newInput).toBe(line);
+  });
+
   it('offers nothing under a disabled web row', () => {
     const result = completeCommandLine('web ', 4, dir, [], [], undefined, undefined, undefined, undefined, policyWith(['web']));
 

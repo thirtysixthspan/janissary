@@ -44,9 +44,10 @@ const HELP_DIRECTORY = path.join(path.dirname(fileURLToPath(import.meta.url)), '
  *   names after `--path` against `fileReadRoot`, all before the pattern starts; with no root (a
  *   remote tab) it offers no paths. The include, exclude, and limit values, and every word once
  *   the pattern or a `--` terminator starts, get nothing.
- * - For `web search`, completes the subcommand, the flags not yet used after the query, and the
- *   values of `--depth` and `--provider`; the query and numeric values get no candidates and no
- *   path fallback.
+ * - For `web`, completes the `search` and `fetch` subcommands the policy allows. For `web search`,
+ *   completes the flags not yet used after the query and the values of `--depth` and `--provider`;
+ *   for `web fetch`, the flags not yet used after the URL and the values of `--format` and
+ *   `--provider`. The query, the URL, and numeric values get no candidates and no path fallback.
  * - Otherwise completes a filesystem path relative to `cwd`.
  *
  * A single match is filled in fully; multiple matches fill in their longest common prefix
