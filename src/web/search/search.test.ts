@@ -54,7 +54,18 @@ function fakeProvider(id: 'tavily' | 'tinyfish', search: Search = async () => []
   return { manifest, search: searchSpy };
 }
 
-function registryWith(...providers: ReturnType<typeof fakeProvider>[]): ProviderRegistry {
+function tokenlessProvider(search: Search = async () => []) {
+  const searchSpy = vi.fn(search);
+  const module: WebSearchProviderModule = { provider: { search: searchSpy } };
+  const manifest = {
+    id: 'local',
+    apiVersion: WEB_PROVIDER_API_VERSION,
+    activate: vi.fn(async () => module),
+  } satisfies WebSearchProviderManifest;
+  return { manifest, search: searchSpy };
+}
+
+function registryWith(...providers: { manifest: WebSearchProviderManifest }[]): ProviderRegistry {
   return createProviderRegistry(providers.map(({ manifest }) => manifest));
 }
 
@@ -95,6 +106,37 @@ describe('runWebSearch', () => {
     expect(call?.[1]?.fetch).toBe(fetchStub);
     expect(call?.[1]?.signal).toBe(controller.signal);
     expect(Object.keys(call?.[1] ?? {})).toEqual(['apiKey', 'fetch', 'signal']);
+  });
+
+  it('auto attempts a tokenless provider with an empty apiKey and prints its results', async () => {
+    const local = tokenlessProvider(async () => [
+      result('Local result', 'https://local.example/one'),
+    ]);
+
+    const text = await runWebSearch(registryWith(local), command(), {
+      tokens: {},
+      fetch: fakeFetch(),
+    });
+
+    expect(text).toBe('- [Local result](https://local.example/one)');
+    expect(local.manifest.activate).toHaveBeenCalledOnce();
+    expect(local.search).toHaveBeenCalledOnce();
+    expect(local.search.mock.calls[0]?.[1]?.apiKey).toBe('');
+  });
+
+  it('attempts a tokenless provider named explicitly rather than refusing it as not configured', async () => {
+    const local = tokenlessProvider(async () => [
+      result('Local result', 'https://local.example/one'),
+    ]);
+
+    const text = await runWebSearch(registryWith(local), command({ provider: 'local' }), {
+      tokens: {},
+      fetch: fakeFetch(),
+    });
+
+    expect(text).toBe('- [Local result](https://local.example/one)');
+    expect(local.manifest.activate).toHaveBeenCalledOnce();
+    expect(local.search).toHaveBeenCalledOnce();
   });
 
   it('gives each attempt its own request when a provider mutates what it receives', async () => {

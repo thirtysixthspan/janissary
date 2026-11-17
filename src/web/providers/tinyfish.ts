@@ -4,7 +4,7 @@ import { requestJson } from './http.js';
 
 const SEARCH_URL = 'https://api.search.tinyfish.ai';
 
-export const provider: WebSearchProvider = {
+export const provider = {
   async search(request, capability) {
     const url = new URL(SEARCH_URL);
     url.searchParams.set('query', request.query);
@@ -14,4 +14,4 @@ export const provider: WebSearchProvider = {
     });
     return decodeResults(body, 'snippet');
   },
-};
+} satisfies WebSearchProvider;

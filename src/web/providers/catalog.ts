@@ -4,6 +4,7 @@ import type { WebSearchProviderManifest } from './contract.js';
 export const tavilyManifest = {
   id: 'tavily',
   apiVersion: WEB_PROVIDER_API_VERSION,
+  search: true,
   token: 'tavily',
   activate: () => import('./tavily.js'),
 } as const satisfies WebSearchProviderManifest;
@@ -11,6 +12,7 @@ export const tavilyManifest = {
 export const tinyfishManifest = {
   id: 'tinyfish',
   apiVersion: WEB_PROVIDER_API_VERSION,
+  search: true,
   token: 'tinyfish',
   activate: () => import('./tinyfish.js'),
 } as const satisfies WebSearchProviderManifest;

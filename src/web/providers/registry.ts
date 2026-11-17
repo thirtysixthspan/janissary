@@ -1,5 +1,6 @@
 import { errorFirstLine } from '../../error-text.js';
 import type { ProjectTokens } from '../../project/tokens.js';
+import { isConfigured } from './capabilities.js';
 import {
   ProviderRequestError,
   WEB_PROVIDER_API_VERSION,
@@ -36,16 +37,20 @@ export type ProviderRegistry = {
 
 type ReportDisabled = (name: string, reason: string) => void;
 
-function isConfigured(manifest: WebSearchProviderManifest, tokens: ProjectTokens): boolean {
-  const value = tokens[manifest.token];
-  return typeof value === 'string' && value !== '';
+type SearchingProvider = WebSearchProvider & Required<Pick<WebSearchProvider, 'search'>>;
+
+function isSearchingProvider(
+  provider: WebSearchProvider | undefined,
+): provider is SearchingProvider {
+  return typeof provider?.search === 'function';
 }
 
 async function loadProvider(
   manifest: WebSearchProviderManifest,
-): Promise<WebSearchProvider | undefined> {
+): Promise<SearchingProvider | undefined> {
   const module = await manifest.activate();
-  return typeof module.provider?.search === 'function' ? module.provider : undefined;
+  const { provider } = module;
+  return isSearchingProvider(provider) ? provider : undefined;
 }
 
 export function createProviderRegistry(
@@ -149,7 +154,7 @@ export function createProviderRegistry(
         reportDisabled,
       );
     }
-    let provider: WebSearchProvider | undefined;
+    let provider: SearchingProvider | undefined;
     try {
       provider = await loadProvider(manifest);
     } catch (error) {

@@ -464,4 +464,11 @@ describe('the real web search provider catalog', () => {
     expect(webSearchProviderCatalog.map((manifest) => manifest.token))
       .toEqual(['tavily', 'tinyfish']);
   });
+
+  it('declares search on both bundled manifests and no fetch formats yet', () => {
+    expect(webSearchProviderCatalog.map((manifest) => manifest.search)).toEqual([true, true]);
+    for (const manifest of webSearchProviderCatalog) {
+      expect('fetchFormats' in manifest).toBe(false);
+    }
+  });
 });

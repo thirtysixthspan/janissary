@@ -4,7 +4,7 @@ import { requestJson } from './http.js';
 
 const SEARCH_URL = 'https://api.tavily.com/search';
 
-export const provider: WebSearchProvider = {
+export const provider = {
   async search(request, capability) {
     const body = await requestJson(capability, SEARCH_URL, {
       method: 'POST',
@@ -21,4 +21,4 @@ export const provider: WebSearchProvider = {
     });
     return decodeResults(body, 'content');
   },
-};
+} satisfies WebSearchProvider;

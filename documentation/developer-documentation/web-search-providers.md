@@ -81,7 +81,9 @@ export const webSearchProviderCatalog = [
 |---|---|---|
 | `id` | yes | Stable lowercase identity, unique in the catalog and never `auto`. `--provider` matches it case-insensitively, and failure lines print it. |
 | `apiVersion` | yes | The provider API version the module was written against. It must equal `WEB_PROVIDER_API_VERSION`, or the provider is refused before its module is imported. |
-| `token` | yes | The `ProjectTokenName` of the token file whose value becomes `capability.apiKey`. A new provider needs its own row; see [Token rows](#token-rows). |
+| `token` | no | The `ProjectTokenName` of the token file whose value becomes `capability.apiKey`. A provider without one is always configured and gets an empty `apiKey`. A new provider needs its own row; see [Token rows](#token-rows). |
+| `search` | no | Whether the provider searches. Absent means it does; only `search: false` opts out. |
+| `fetchFormats` | no | The fetch formats the provider serves: `markdown`, `text`, or `html`. Absent or empty means no fetch. |
 | `activate` | yes | A literal dynamic import of the provider module. |
 
 ## Token rows
@@ -123,14 +125,14 @@ type WebSearchResult = {
 };
 
 type WebSearchProvider = {
-  search(
+  search?(
     request: WebSearchRequest,
     capability: WebSearchCapability,
   ): Promise<WebSearchResult[]>;
 };
 ```
 
-`search` receives the normalized request only. The character budget, the provider selection, and the fallback decision stay in the host. `numResults` is a request, not a guarantee: the host dedupes, cuts to the requested count, and renders the results after you return them.
+A provider implements `search`, `fetch`, or both, matching what its manifest declares. `search` receives the normalized request only. The character budget, the provider selection, and the fallback decision stay in the host. `numResults` is a request, not a guarantee: the host dedupes, cuts to the requested count, and renders the results after you return them.
 
 Return an empty array when the search found nothing. That is an answer, not a failure, so the host does not fall back to another provider.
 
@@ -140,7 +142,7 @@ Return an empty array when the search found nothing. That is an answer, not a fa
 
 | Member | Meaning |
 |---|---|
-| `apiKey` | The value of the token file named by the manifest's `token`. A provider sees only its own key. |
+| `apiKey` | The value of the token file named by the manifest's `token`. A provider sees only its own key. It is empty when the manifest names no token. |
 | `fetch` | The request function to use. It is injected so tests run without the network. Do not reach for the global `fetch`. |
 | `signal` | Optional. Aborted when the caller cancels the search. Pass it through to `fetch`. It is absent for a typed search, which has no cancellation. |
 
@@ -148,7 +150,7 @@ That is the whole vocabulary. A provider never reads token files, `Managers`, a 
 
 ## Resolution and ordering
 
-An explicit `--provider <name>` selects that one provider, checked in the order unknown, then disabled, then not configured. `--provider auto`, the default, walks the catalog in order and skips any provider without a token file, then skips any provider already disabled. Names match case-insensitively, and `auto` is reserved.
+An explicit `--provider <name>` selects that one provider, checked in the order unknown, then disabled, then not configured. `--provider auto`, the default, walks the catalog in order and skips any provider that names a token with no token file, then skips any provider already disabled. Names match case-insensitively, and `auto` is reserved.
 
 The lines a provider author will see from resolution are:
 

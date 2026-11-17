@@ -1,6 +1,7 @@
 import type { ProjectTokens } from '../../project/tokens.js';
 import type { WebSearchCommand } from './command.js';
 import type { WebSearchCapability, WebSearchRequest, WebSearchResult } from '../providers/contract.js';
+import { providerApiKey } from '../providers/capabilities.js';
 import { formatFailures } from '../providers/failure-lines.js';
 import type { ProviderFailure } from '../providers/failure-lines.js';
 import { webSearchProviderCatalog } from '../providers/catalog.js';
@@ -45,7 +46,7 @@ export async function runWebSearch(
       depth: request.depth,
     };
     const capability: WebSearchCapability = {
-      apiKey: deps.tokens[manifest.token] ?? '',
+      apiKey: providerApiKey(manifest, deps.tokens),
       fetch: deps.fetch,
       signal: deps.signal,
     };

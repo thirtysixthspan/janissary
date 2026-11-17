@@ -65,7 +65,7 @@ describe('the provider contract', () => {
     };
 
     const activated = await manifest.activate();
-    const results = await activated.provider.search(
+    const results = await activated.provider.search?.(
       { query: 'node.js', numResults: 3, depth: 'advanced' },
       { apiKey: 'test-key', fetch: fakeFetch },
     );
