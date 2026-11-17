@@ -2,7 +2,7 @@
 
 **Complexity: 8/10** — fourteen feature slices, with the completed subplans and repair plans folded in
 
-`web search` gives a person in a shell tab, and an `ask` or `tell` agent in Janissary's autonomous tool loop, one provider-agnostic way to search the web: a query goes in, and a single relevance-ordered, truncated plain-text context comes out, listing each result's title, URL, and snippet. Search backends are plugins behind one normalized `search()` contract, with Tavily and TinyFish bundled, so another backend can be added by registering a plugin without changing the core. Today a role session has no way to look anything up: every harness built-in tool, web search included, is denied (`product/specs/acp.md`, Provider and model), so an agent can only answer from what it already knows or what is in the workspace.
+`web search` gives a person in a shell tab, and an `ask` or `tell` agent in Janissary's autonomous tool loop, one provider-agnostic way to search the web: a query goes in, and a single relevance-ordered, truncated plain-text context comes out, listing each result's title, URL, and snippet. Search backends are plugins behind one normalized `search()` contract, with Tavily and TinyFish bundled, so another backend can be added by registering a plugin without changing the core. Today a role session has no way to search the web: every harness built-in tool, web search included, is denied (`product/specs/acp.md`, Provider and model), so the only web access a granted role already has is browsing a page whose address the agent knows.
 
 ## Design decisions
 
