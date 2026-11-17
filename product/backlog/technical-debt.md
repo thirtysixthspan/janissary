@@ -225,6 +225,28 @@ Proposal Risk: 2/10 - A single tuple makes the pair indivisible, but hunk indice
 Proposal: `web/src/editor/useEditorSuggest.ts` defines `PendingSuggest` with `hunks: SuggestHunk[]` and a parallel `resolved: boolean[]`; `resolveHunk`, `acceptHunk` and `declineHunk` index both arrays, and `web/src/editor/editor-rows.ts` `buildEditorRows` takes them as two arguments and re-pairs by index. Change `PendingSuggest` to hold `hunks: { hunk: SuggestHunk; resolved: boolean }[]`, update the three handlers to operate on one entry with an explicit `index >= 0 && index < hunks.length` guard, and change `buildEditorRows` to take the single array so every `hunkIndex` it emits is in range. `web/src/editor/EditorLines.tsx` passes `row.hunkIndex` back into the handlers and needs no signature change. `web/src/editor/useEditorSuggest.test.ts` and `web/src/editor/editor-rows.test.ts` cover accept and decline with valid indices; add a stale-index case asserting the handler is a no-op rather than throwing.
 
 
+* Replace the client prop on the shared dock-cycle header with a callback so the header renders markup instead of sending a protocol call.
+
+Existing Debt: The shared dock-cycle header takes a `JanusClient` and sends the `setDock` intent from its button's click handler, violating §5 (components render; they do not decide) by putting a protocol call inside a presentational component's JSX. Severity: 5/10
+
+Existing Risk: 4/10 - A header that can reach the whole client is untestable without a transport fake, and every new docked surface that needs a header copies the service prop instead of supplying its own intent.
+
+Proposal Risk: 2/10 - The two callers still have to send `setDock` with the right tab index, but that call becomes visible in a container where a wrong index is reviewable rather than buried in shared markup.
+
+Proposal: `web/src/shared/DockCycleHeader.tsx` accepts `client` and `index` and calls `client.send({ method: 'setDock', params: { index, dock: nextDock(dock) } })` in the button's `onClick`. Replace those two props with `onCycle(next: 'left' | 'right'): void` and keep `dock`, `classPrefix`, `children` and the `nextDock`/`dockTooltip` helpers as they are. Update the two callers, `web/src/notifications/NotificationsTab.tsx` and `web/src/plugins/DockedPluginBody.tsx`, to pass `onCycle={(next) => client.send({ method: 'setDock', params: { index, dock: next } })}`; both already hold `client` and `index`, so their own props do not change. There is no dedicated header test; `web/src/notifications/NotificationsTab.test.tsx` and `web/src/plugins/DockedPluginBody.test.tsx` render the two callers and pin the surrounding behavior, so add a click assertion for the new `onCycle` seam to one of them and keep both passing. The same service-prop pattern also sits in `web/src/shared/questions/QuestionPanel.tsx` and `web/src/toasts/ToastStack.tsx`; leave those for a separate entry so this stays a three-file change.
+
+
+* Make the editor tab take its plugin host from the session hook instead of constructing a fallback host of its own.
+
+Existing Debt: The editor tab builds `createEditorPluginHost(() => {})` in a `useMemo` whenever no host is injected, violating §7 (services are injected, never constructed by a component) and duplicating `web/src/useEditorPluginHost.ts`, the hook that owns the session host and its disabled-plugin report queue. Severity: 4/10
+
+Existing Risk: 4/10 - The fallback host's no-op callback throws away every disabled-plugin report, so a standalone render can run with a broken plugin and show no sign of it.
+
+Proposal Risk: 2/10 - Requiring the host at every mount means a caller can still pass the wrong host or an empty reports queue, but that is now an explicit prop at the call site instead of an invisible default inside the component.
+
+Proposal: `web/src/editor/EditorTab.tsx` imports `createEditorPluginHost` and creates `ownHost` in a `useMemo`, using it when the optional `pluginHost` prop is absent and passing it to `useEditorPlugins`; `web/src/useEditorPluginHost.ts` is the hook that creates the one session host and its `reports` array, and `web/src/MountedViewLayers.tsx` already injects both. Make `pluginHost` and `pluginReports` required props, delete `ownHost`, the `createEditorPluginHost` import and the `?? ownHost` fallback from the component, and pass `pluginHost` straight to `useEditorPlugins`. Update the renders that relied on the fallback to supply a host: `web/src/editor/EditorTab.test.tsx`, `web/src/editor/EditorTab.window-keys.test.tsx` and `web/src/useSectionNav.editor.test.tsx` can build one with `createEditorPluginHost` in each fixture. Blast radius is one production call site plus those three test files; the imperative `DirtyTabHandle` and all other props stay unchanged.
+
+
 ## deferred
 
 ## declined
