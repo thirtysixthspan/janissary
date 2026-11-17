@@ -1,6 +1,6 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import { fireIntent, type TabPluginClientCapabilities } from '../api';
-import { isShellAcpReceipt } from '@shared/plugins/shell/shared';
+import { isShellAcpReceipt, stripComments } from '@shared/plugins/shell/shared';
 import type { ShellAcpReceipt, ShellDispatchResult } from '@shared/plugins/shell/shared';
 import { opensShellHistory, routeFor, shellLine, transcriptSearchQuery } from './command-line-rules';
 import { appendShellHistory } from './shell-history';
@@ -42,6 +42,7 @@ export function useShellSubmit(input: {
 }) {
   const { appBar, capabilities, displayReply, echoCommand, expectCommand, openFind, openHistory, setMatches, setSent, write } = input;
   return useCallback(async (text: string, record = true, receipt?: string): Promise<boolean> => {
+    const stripped = stripComments(text);
     setMatches([]);
     // A line the bar records in its own history enters the application's global history too, which
     // is what ghost text completes from in every tab.
@@ -58,20 +59,24 @@ export function useShellSubmit(input: {
     const discard = async () => {
       if (receipt) await capabilities.intent('dispatch-command', { receipt, discard: true });
     };
-    if (routeFor(text) === 'shell') {
-      const line = shellLine(text);
+    if (stripped === '') {
+      await discard();
+      return false;
+    }
+    if (routeFor(stripped) === 'shell') {
+      const line = shellLine(stripped);
       if (!line) {
         await discard();
         return false;
       }
       await discard();
       runInShell(line);
-      remember(text);
+      remember(stripped);
       return true;
     }
     // Not recorded, so the list it opens is the same one `Ctrl+R` opens rather than one with `hist`
     // newly at the bottom.
-    const local = localRoute(text, appBar);
+    const local = localRoute(stripped, appBar);
     if (local === 'history') {
       await discard();
       openHistory();
@@ -79,30 +84,30 @@ export function useShellSubmit(input: {
     }
     if (local !== undefined) {
       await discard();
-      remember(text);
+      remember(stripped);
       openFind(local.find);
       return false;
     }
-    if (appBar.intercept(text)) {
+    if (appBar.intercept(stripped)) {
       await discard();
-      remember(text);
+      remember(stripped);
       return false;
     }
     try {
       const result = receipt
         ? await capabilities.intent<ShellDispatchResult>('dispatch-command', { receipt })
-        : await capabilities.intent<ShellDispatchResult>('dispatch', text);
-      remember(text);
+        : await capabilities.intent<ShellDispatchResult>('dispatch', stripped);
+      remember(stripped);
       if (result.dispatched) {
         // A core-response command answers later, beneath this echo of its line.
         if (result.coreResponse) {
           const acpReceipt = isShellAcpReceipt(result.result) ? result.result : undefined;
-          echoCommand(text, acpReceipt);
+          echoCommand(stripped, acpReceipt);
         }
-        else displayReply(text, result.output);
+        else displayReply(stripped, result.output);
         return false;
       }
-      runInShell(text);
+      runInShell(stripped);
       return true;
     } catch (error: unknown) {
       await discard();

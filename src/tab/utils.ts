@@ -1,9 +1,5 @@
 import type { Tab } from './types.js';
 
-export function stripComments(command: string): string {
-  return command.replaceAll(/\s*##(?:[\s\S]*?##\s*|[\s\S]*)/g, ' ').trim();
-}
-
 export function renumberTabs(tabs: Tab[]): Tab[] {
   return tabs.map((t, index) => ({ ...t, number: index + 1 }));
 }

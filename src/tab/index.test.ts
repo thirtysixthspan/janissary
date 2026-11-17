@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { makeTab } from './index.js';
 import { dotColors, distinctColor } from './colors.js';
-import { canMoveTab, insertTabInGroup, swapTabsLeft, swapTabsRight, renumberTabs, stripComments } from './utils.js';
+import { canMoveTab, insertTabInGroup, swapTabsLeft, swapTabsRight, renumberTabs } from './utils.js';
+import { stripComments } from '../plugins/shell/shared.js';
 import { expandTabs } from './expand-tabs.js';
 import { flattenBuffer } from './formatting.js';
 import { wordWrap } from '../word-wrapping.js';
