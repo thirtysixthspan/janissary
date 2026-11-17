@@ -3,6 +3,8 @@ import type { ProjectTokenName, ProjectTokens } from '../../project/tokens.js';
 import { ProviderRequestError, WEB_PROVIDER_API_VERSION } from './contract.js';
 import type {
   WebFetchFormat,
+  WebFetchRequest,
+  WebFetchResult,
   WebSearchCapability,
   WebSearchProviderManifest,
   WebSearchProviderModule,
@@ -11,10 +13,16 @@ import type {
 } from './contract.js';
 import { webSearchProviderCatalog } from './catalog.js';
 import { createProviderRegistry } from './registry.js';
-import type { AttemptOutcome } from './registry.js';
+import type { AttemptOutcome, FetchAttemptOutcome } from './registry.js';
 import type { AttemptResolution } from './search-resolution.js';
 
 const REQUEST: WebSearchRequest = { query: 'node.js', numResults: 5, depth: 'basic' };
+
+const FETCH_REQUEST: WebFetchRequest = {
+  url: 'https://example.com/',
+  format: 'markdown',
+  timeoutMs: 30_000,
+};
 
 const TOKENS: ProjectTokens = { tavily: 'tavily-key', tinyfish: 'tinyfish-key' };
 
@@ -27,6 +35,12 @@ function capability(signal?: AbortSignal): WebSearchCapability {
 
 function moduleFor(search: WebSearchProviderModule['provider']['search']): WebSearchProviderModule {
   return { provider: { search } };
+}
+
+function fetchModuleFor(
+  fetch: WebSearchProviderModule['provider']['fetch'],
+): WebSearchProviderModule {
+  return { provider: { fetch } };
 }
 
 type FakeManifestOptions = {
@@ -65,7 +79,7 @@ function line(resolution: AttemptResolution): string {
   return resolution.line;
 }
 
-function abortedError(outcome: AttemptOutcome): unknown {
+function abortedError(outcome: AttemptOutcome | FetchAttemptOutcome): unknown {
   if (outcome.kind !== 'aborted') throw new Error('expected an abort');
   return outcome.error;
 }
@@ -472,6 +486,348 @@ describe('createProviderRegistry', () => {
       '- tavily: provider failed: broken',
       '- tinyfish: provider failed: broken',
     ].join('\n'));
+  });
+
+  it('returns a fetched page with its url and content', async () => {
+    const manifest = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      module: fetchModuleFor(async () => ({
+        url: 'https://example.com/final',
+        content: 'page body',
+      })),
+    });
+
+    await expect(createProviderRegistry([manifest]).runFetchAttempt(
+      manifest, FETCH_REQUEST, capability(),
+    )).resolves.toEqual({ kind: 'fetched', url: 'https://example.com/final', content: 'page body' });
+  });
+
+  it('returns an empty-content page as fetched', async () => {
+    const manifest = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      module: fetchModuleFor(async () => ({ url: 'https://example.com/final', content: '' })),
+    });
+
+    await expect(createProviderRegistry([manifest]).runFetchAttempt(
+      manifest, FETCH_REQUEST, capability(),
+    )).resolves.toEqual({ kind: 'fetched', url: 'https://example.com/final', content: '' });
+  });
+
+  it('returns a cross-host redirect as redirected', async () => {
+    const manifest = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      module: fetchModuleFor(async () => ({ redirectedTo: 'https://other.example/page' })),
+    });
+
+    await expect(createProviderRegistry([manifest]).runFetchAttempt(
+      manifest, FETCH_REQUEST, capability(),
+    )).resolves.toEqual({ kind: 'redirected', url: 'https://other.example/page' });
+  });
+
+  it('refuses a fetch manifest written for another API version without activating it', async () => {
+    const future = fakeManifest('tavily', { apiVersion: 2, fetchFormats: ['markdown'] });
+    const registry = createProviderRegistry([future]);
+
+    await expect(registry.runFetchAttempt(future, FETCH_REQUEST, capability()))
+      .resolves.toEqual({ kind: 'plugin-failed', reason: 'requires provider API 2' });
+    expect(future.activate).not.toHaveBeenCalled();
+  });
+
+  it('classifies a fetch import failure as a plugin failure with the error first line', async () => {
+    const broken = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      activate: async () => {
+        throw new Error('Cannot find module.\nat /tmp/tavily.js');
+      },
+    });
+    const registry = createProviderRegistry([broken]);
+
+    await expect(registry.runFetchAttempt(broken, FETCH_REQUEST, capability()))
+      .resolves.toEqual({ kind: 'plugin-failed', reason: 'provider failed: Cannot find module' });
+  });
+
+  it('disables and reports a module without a fetch function', async () => {
+    const reportDisabled = vi.fn();
+    const manifest = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      module: moduleFor(async () => []),
+    });
+    const registry = createProviderRegistry([
+      manifest,
+      fakeManifest('tinyfish', { fetchFormats: ['markdown'] }),
+    ]);
+
+    await expect(registry.runFetchAttempt(manifest, FETCH_REQUEST, capability(), reportDisabled))
+      .resolves.toEqual({ kind: 'plugin-failed', reason: 'provider failed: module has no fetch' });
+    expect(reportDisabled).toHaveBeenCalledOnce();
+    expect(reportDisabled).toHaveBeenCalledWith('tavily', 'provider failed: module has no fetch');
+    expect(ids(registry.resolveFetchAttempts('auto', 'markdown', TOKENS))).toEqual(['tinyfish']);
+  });
+
+  it('disables and reports a fetch that does not return a page', async () => {
+    const reportDisabled = vi.fn();
+    const manifest = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      module: fetchModuleFor(async () => 42 as unknown as WebFetchResult),
+    });
+    const registry = createProviderRegistry([
+      manifest,
+      fakeManifest('tinyfish', { fetchFormats: ['markdown'] }),
+    ]);
+
+    await expect(registry.runFetchAttempt(manifest, FETCH_REQUEST, capability(), reportDisabled))
+      .resolves.toEqual({
+        kind: 'plugin-failed',
+        reason: 'provider failed: fetch did not return a page',
+      });
+    expect(reportDisabled).toHaveBeenCalledOnce();
+    expect(reportDisabled)
+      .toHaveBeenCalledWith('tavily', 'provider failed: fetch did not return a page');
+    expect(ids(registry.resolveFetchAttempts('auto', 'markdown', TOKENS))).toEqual(['tinyfish']);
+  });
+
+  it('reports a ProviderRequestError from fetch as an expected failure without disabling', async () => {
+    const manifest = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      module: fetchModuleFor(async () => {
+        throw new ProviderRequestError('HTTP 429 Too Many Requests');
+      }),
+    });
+    const registry = createProviderRegistry([manifest]);
+
+    await expect(registry.runFetchAttempt(manifest, FETCH_REQUEST, capability()))
+      .resolves.toEqual({ kind: 'failed', reason: 'HTTP 429 Too Many Requests' });
+    expect(ids(registry.resolveFetchAttempts('tavily', 'markdown', TOKENS))).toEqual(['tavily']);
+  });
+
+  it('classifies a thrown fetch error as a plugin failure with the error first line', async () => {
+    const asyncManifest = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      module: fetchModuleFor(async () => {
+        throw new Error('fetch exploded.');
+      }),
+    });
+    const syncManifest = fakeManifest('tinyfish', {
+      fetchFormats: ['markdown'],
+      module: fetchModuleFor(() => {
+        throw new Error('sync exploded!');
+      }),
+    });
+    const registry = createProviderRegistry([asyncManifest, syncManifest]);
+
+    await expect(registry.runFetchAttempt(asyncManifest, FETCH_REQUEST, capability()))
+      .resolves.toEqual({ kind: 'plugin-failed', reason: 'provider failed: fetch exploded' });
+    await expect(registry.runFetchAttempt(syncManifest, FETCH_REQUEST, capability()))
+      .resolves.toEqual({ kind: 'plugin-failed', reason: 'provider failed: sync exploded' });
+  });
+
+  it('treats a ProviderRequestError rejection from fetch during an abort as an abort', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const error = new ProviderRequestError('HTTP 429 Too Many Requests');
+    const reportDisabled = vi.fn();
+    const manifest = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      module: fetchModuleFor(async () => {
+        throw error;
+      }),
+    });
+    const registry = createProviderRegistry([manifest]);
+
+    const outcome = await registry.runFetchAttempt(
+      manifest, FETCH_REQUEST, capability(controller.signal), reportDisabled,
+    );
+
+    expect(outcome.kind).toBe('aborted');
+    expect(abortedError(outcome)).toBe(error);
+    expect(reportDisabled).not.toHaveBeenCalled();
+    expect(ids(registry.resolveFetchAttempts('tavily', 'markdown', TOKENS))).toEqual(['tavily']);
+  });
+
+  it('treats a plain rejection from fetch during an abort as an abort', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const error = new Error('cancelled.');
+    const reportDisabled = vi.fn();
+    const manifest = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      module: fetchModuleFor(async () => {
+        throw error;
+      }),
+    });
+    const registry = createProviderRegistry([manifest]);
+
+    const outcome = await registry.runFetchAttempt(
+      manifest, FETCH_REQUEST, capability(controller.signal), reportDisabled,
+    );
+
+    expect(outcome.kind).toBe('aborted');
+    expect(abortedError(outcome)).toBe(error);
+    expect(reportDisabled).not.toHaveBeenCalled();
+    expect(ids(registry.resolveFetchAttempts('tavily', 'markdown', TOKENS))).toEqual(['tavily']);
+  });
+
+  it('treats a ProviderRequestError from activate during a fetch abort as an abort', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const error = new ProviderRequestError('import failed');
+    const reportDisabled = vi.fn();
+    const manifest = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      activate: async () => {
+        throw error;
+      },
+    });
+    const registry = createProviderRegistry([manifest]);
+
+    const outcome = await registry.runFetchAttempt(
+      manifest, FETCH_REQUEST, capability(controller.signal), reportDisabled,
+    );
+
+    expect(outcome.kind).toBe('aborted');
+    expect(abortedError(outcome)).toBe(error);
+    expect(reportDisabled).not.toHaveBeenCalled();
+    expect(ids(registry.resolveFetchAttempts('tavily', 'markdown', TOKENS))).toEqual(['tavily']);
+  });
+
+  it('treats a module without fetch during an abort as an abort', async () => {
+    const controller = new AbortController();
+    const error = new Error('cancelled before the module resolved');
+    controller.abort(error);
+    const reportDisabled = vi.fn();
+    const manifest = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      module: moduleFor(async () => []),
+    });
+    const registry = createProviderRegistry([manifest]);
+
+    const outcome = await registry.runFetchAttempt(
+      manifest, FETCH_REQUEST, capability(controller.signal), reportDisabled,
+    );
+
+    expect(outcome.kind).toBe('aborted');
+    expect(abortedError(outcome)).toBe(error);
+    expect(reportDisabled).not.toHaveBeenCalled();
+    expect(ids(registry.resolveFetchAttempts('tavily', 'markdown', TOKENS))).toEqual(['tavily']);
+  });
+
+  it('treats an invalid fetch result during an abort as an abort', async () => {
+    const controller = new AbortController();
+    const error = new Error('cancelled during the fetch');
+    controller.abort(error);
+    const reportDisabled = vi.fn();
+    const manifest = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      module: fetchModuleFor(async () => 42 as unknown as WebFetchResult),
+    });
+    const registry = createProviderRegistry([manifest]);
+
+    const outcome = await registry.runFetchAttempt(
+      manifest, FETCH_REQUEST, capability(controller.signal), reportDisabled,
+    );
+
+    expect(outcome.kind).toBe('aborted');
+    expect(abortedError(outcome)).toBe(error);
+    expect(reportDisabled).not.toHaveBeenCalled();
+    expect(ids(registry.resolveFetchAttempts('tavily', 'markdown', TOKENS))).toEqual(['tavily']);
+  });
+
+  it('returns a fetched page even when the signal is already aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const manifest = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      module: fetchModuleFor(async () => ({
+        url: 'https://example.com/final',
+        content: 'body',
+      })),
+    });
+
+    await expect(createProviderRegistry([manifest]).runFetchAttempt(
+      manifest, FETCH_REQUEST, capability(controller.signal),
+    )).resolves.toEqual({ kind: 'fetched', url: 'https://example.com/final', content: 'body' });
+  });
+
+  it('skips a provider disabled by a fetch attempt in search resolution', async () => {
+    const tavily = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      module: moduleFor(async () => []),
+    });
+    const registry = createProviderRegistry([tavily, fakeManifest('tinyfish')]);
+
+    await registry.runFetchAttempt(tavily, FETCH_REQUEST, capability());
+
+    expect(ids(registry.resolveAttempts('auto', TOKENS))).toEqual(['tinyfish']);
+    expect(line(registry.resolveAttempts('tavily', TOKENS)))
+      .toBe('Web search failed (tavily): provider failed: module has no fetch.');
+  });
+
+  it('keeps the fetch reason when a later search also fails, reporting once', async () => {
+    const reportDisabled = vi.fn();
+    const manifest = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      module: {
+        provider: {
+          fetch: async () => {
+            throw new Error('fetch broke.');
+          },
+          search: async () => {
+            throw new Error('search broke.');
+          },
+        },
+      },
+    });
+    const registry = createProviderRegistry([
+      manifest,
+      fakeManifest('tinyfish', { fetchFormats: ['markdown'] }),
+    ]);
+
+    await expect(registry.runFetchAttempt(manifest, FETCH_REQUEST, capability(), reportDisabled))
+      .resolves.toEqual({ kind: 'plugin-failed', reason: 'provider failed: fetch broke' });
+    await expect(registry.runAttempt(manifest, REQUEST, capability(), reportDisabled))
+      .resolves.toEqual({ kind: 'plugin-failed', reason: 'provider failed: search broke' });
+
+    expect(reportDisabled).toHaveBeenCalledOnce();
+    expect(reportDisabled).toHaveBeenCalledWith('tavily', 'provider failed: fetch broke');
+    expect(ids(registry.resolveFetchAttempts('auto', 'markdown', TOKENS))).toEqual(['tinyfish']);
+    expect(line(registry.resolveFetchAttempts('tavily', 'markdown', TOKENS)))
+      .toBe('Web fetch failed (tavily): provider failed: fetch broke.');
+    expect(line(registry.resolveAttempts('tavily', TOKENS)))
+      .toBe('Web search failed (tavily): provider failed: fetch broke.');
+  });
+
+  it('serves both runners from one module implementing search and fetch', async () => {
+    const results: WebSearchResult[] = [
+      { title: 'T', url: 'https://example.com/', snippet: 's' },
+    ];
+    const manifest = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      module: {
+        provider: {
+          search: async () => results,
+          fetch: async () => ({ url: 'https://example.com/', content: 'body' }),
+        },
+      },
+    });
+    const registry = createProviderRegistry([manifest]);
+
+    await expect(registry.runAttempt(manifest, REQUEST, capability()))
+      .resolves.toEqual({ kind: 'results', results });
+    await expect(registry.runFetchAttempt(manifest, FETCH_REQUEST, capability()))
+      .resolves.toEqual({ kind: 'fetched', url: 'https://example.com/', content: 'body' });
+  });
+
+  it('disables a fetch-only module run as a search attempt', async () => {
+    const reportDisabled = vi.fn();
+    const manifest = fakeManifest('tavily', {
+      fetchFormats: ['markdown'],
+      module: fetchModuleFor(async () => ({ url: 'https://example.com/', content: 'body' })),
+    });
+    const registry = createProviderRegistry([manifest]);
+
+    await expect(registry.runAttempt(manifest, REQUEST, capability(), reportDisabled))
+      .resolves.toEqual({ kind: 'plugin-failed', reason: 'provider failed: module has no provider' });
+    expect(reportDisabled).toHaveBeenCalledWith('tavily', 'provider failed: module has no provider');
   });
 });
 
