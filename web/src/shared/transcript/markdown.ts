@@ -4,8 +4,10 @@ import DOMPurify from 'dompurify';
 // A single-line `Usage:` reply is command text, not Markdown: its angle-bracket placeholders name
 // arguments and must print literally rather than being read as raw HTML and dropped by the sanitizer.
 function literalUsage(text: string): string {
-  if (!/^Usage: [^\n]*\n?$/.test(text)) return text;
-  return text.replaceAll(/(?<!\\)[<>]/g, (bracket) => `\\${bracket}`);
+  const match = /^(\s*)(Usage: [^\n]*?)(\s*)$/.exec(text);
+  if (!match) return text;
+  const [, leading, usage, trailing] = match;
+  return `${leading}${usage.replaceAll(/(?<!\\)[<>]/g, (bracket) => `\\${bracket}`)}${trailing}`;
 }
 
 // Render Markdown text to a sanitized HTML string. Returns undefined on parse failure.
