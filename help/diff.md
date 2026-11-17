@@ -28,3 +28,5 @@ Open the diff tab to review project changes, changes under one directory, or a s
 
 - A missing path or a file prints `Cannot diff <notes.txt>: no such directory.`
 - A path combined with `on`, or `on` with no name, prints `Usage: diff [path] [on <tab name>]`.
+- Each hunk opens with a `@@ -start,length +start,length @@` header. Added lines carry a green `+` and removed lines a red `−`, each beside its line number.
+- In a repository with no commits yet, all changes and staged changes show every file as added, rather than an error.
