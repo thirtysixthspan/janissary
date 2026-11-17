@@ -188,8 +188,9 @@ as `$root/...`, a path under your home directory reads as `~/...`, and any other
 includes most paths on another host, appears in full.
 
 The shortcut appears in the working directory beside a command prompt, the connections panel, an
-editor tab's metadata header, a file navigator's root, and the launch lines the notifications feed
-posts. A launch's refusal lines name the workspace the same way — a folder a launch's leftovers and
+editor tab's metadata header, a file navigator's root, the application's own status messages that
+name a path, and the launch lines the notifications feed posts.
+A launch's refusal lines name the workspace the same way — a folder a launch's leftovers and
 refusals name *is* the workspace of that name, so `$workspace/<name>` is exact rather than a
 shortening. One line is the exception: a directory a remote host was asked to use as its project root
 and could not — a missing path, a folder with no `origin`, an occupied home-directory target — keeps
@@ -198,6 +199,8 @@ fix. See [Remote agents](/user-documentation/advanced-agents/remote-agents#when-
 The display abbreviations leave underlying absolute paths unchanged, and the raw output of your shell commands is never rewritten.
 
 Shells and harnesses also receive `$root` as the project directory, `$workspace` as the directory containing its workspace clones, and `$janissary` as the running Janissary installation. In a shell command, `"$workspace/emrah"` expands to that clone's full path, including the hidden state directory. On a remote host these variables name directories on that host. The variables remain available when workspace isolation is off, and the standard Codex configuration preserves them for commands the harness runs.
+
+Janissary sets these values on every process it starts, replacing any values inherited from another session. Before a project is initialized, your current working directory supplies the root. The dedicated test browser does not receive these variables. Setting these variables does not change which files a process can access.
 
 You can also type `$root` or `~` at the start of a path passed to `open`, `edit`, `newfile`, `newdir`, or `files`:
 
