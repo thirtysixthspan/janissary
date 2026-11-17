@@ -160,7 +160,7 @@ Hunks are searched in order, each after the previous match, and the first match 
 
 `*** Move to: <new>` directly after `*** Update File: <old>` renames the file, leaving a link a link, with optional hunks. The new path follows the same rule as an Add.
 
-Sections apply in order, and a later section sees what earlier ones did, so one path may appear in several sections. Every check runs before anything is written; any failure leaves every file as it was.
+Sections apply in order, and a later section sees what earlier ones did, so one path may appear in several sections. Every section is checked against the in-memory view before anything is written, so a failed check changes nothing. If a disk write fails while applying the patch, the files already changed are put back, leaving nothing changed. Only a failed restore can leave some files changed, and the `Patch failed while applying` bullet below names which result you got.
 
 A successful patch prints a header and one row per path in the order a section first names it:
 
