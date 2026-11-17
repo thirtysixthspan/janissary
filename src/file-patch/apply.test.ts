@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -78,6 +78,22 @@ describe('applyPatchText', () => {
     expect(existsSync(path.join(root, 'link'))).toBe(false);
     expect(apply('*** Delete File: dir/a')).toBe('Patched 1 file:\nD dir/a');
     expect(lstatSync(path.join(root, 'dir')).isDirectory()).toBe(true);
+  });
+
+  it('applies link sections when the root is a symbolic link', () => {
+    write('real/target', 'old\n'); symlinkSync('target', path.join(root, 'real/link'));
+    symlinkSync(path.join(root, 'real'), path.join(root, 'alias'));
+    const alias = path.join(root, 'alias');
+    expect(applyPatchText(alias, '*** Update File: link\n@@\n-old\n+new')).toBe('Patched 1 file:\nM link');
+    expect(read('real/target')).toBe('new\n');
+    expect(applyPatchText(alias, '*** Delete File: link')).toBe('Patched 1 file:\nD link');
+    expect(existsSync(path.join(root, 'real/link'))).toBe(false);
+    expect(read('real/target')).toBe('new\n');
+    symlinkSync('target', path.join(root, 'real/link'));
+    expect(applyPatchText(alias, '*** Update File: link\n*** Move to: moved')).toBe('Patched 1 file:\nR link -> moved');
+    expect(lstatSync(path.join(root, 'real/moved')).isSymbolicLink()).toBe(true);
+    expect(readlinkSync(path.join(root, 'real/moved'))).toBe('target');
+    expect(read('real/target')).toBe('new\n');
   });
 
   it('escapes a path and a mismatch line in failure output', () => {

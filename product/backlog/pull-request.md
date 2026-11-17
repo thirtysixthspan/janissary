@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Handle patches over symbolic links when the tab's root path is itself a symlink, where every in-root link section currently fails `Outside the workspace`.
-
-Existing Issue: A patch that follows an in-root symbolic link — an Update through it, a Delete of it, or a Move of it — is refused as `Outside the workspace` when the tab's root was opened through a symlinked path, because the link's target is converted to a root-relative path against the lexical root while the target path is canonical. Severity: 5/10
-
-Existing Risk: 5/10 - A user who opens the project through a symlinked path cannot update, move, or delete any symbolic link with a patch, and the refusal reads as a containment failure rather than a limitation, so the same patch that works in a canonical checkout fails unpredictably in a symlinked one.
-
-Proposal Risk: 2/10 - The fix changes only the root that the link's relative path is computed against, but a fix that canonicalizes one location comparison while leaving another lexical could still refuse a link whose target traverses a symlinked directory.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2011 "make patch link resolution work under a symlinked root". In `src/file-patch/view.ts`, resolve the root once at view creation with `realpathSync.native` (falling back to the given root when it throws) and have `resolveLink` compute its target-relative path with `path.relative(canonicalRoot, target)` instead of `path.relative(root, target)`; `place.location` is already canonical because `placeKeys` canonicalizes the link's parent, and `resolvePath` still runs the derived path through `resolveMutationTarget`, so every containment, protected, secret, and type check stays in place. Do not change `resolveMutationTarget`, the failure wording, or any other path computation. Add a case to `src/file-patch/apply.test.ts` that creates a real directory holding `target` and a `link` symbolic link to it, creates a sibling symbolic link `alias` to that directory, and calls `applyPatchText` with the alias path as the root: an `*** Update File: link` hunk must change the real `target`, `*** Delete File: link` must remove the link and leave `target`, and a `*** Move to:` of the link must leave it a link. The existing canonical-root link cases in `src/file-patch/sections.test.ts` (`moves links and follows changed targets`, `handles links, shared content, and recreation`, `allows entry operations on a moved link with a missing target`) and in `src/file-patch/commit.test.ts` (`deletes, moves and updates links without replacing their targets`, `commits a deleted link re-added as a regular file and moved`) must keep passing unchanged, and the view and apply suites must keep passing with a symlinked root on the platforms where the existing symlink fixtures run.
-
-
 * Keep the patch delete record's content a true snapshot when a regular file is deleted and then re-added, rather than letting the add overwrite the recorded text.
 
 Existing Issue: A Delete-then-Add of a regular file writes the new text into the `PatchContent` object the delete record holds, so `changes.deletes[].content.current` reports the new text instead of the deleted file's text, while the link variant replaces its content first and keeps the original. Severity: 3/10

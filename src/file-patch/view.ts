@@ -1,3 +1,4 @@
+import { realpathSync } from 'node:fs';
 import path from 'node:path';
 import { failureResult, fileOperationReason, runFileOperation, type FileOperationResult } from '../file-navigator/file-operation-result.js';
 import { resolveMutationTarget } from '../file-write/target.js';
@@ -19,7 +20,16 @@ export interface PatchView extends PatchViewReads {
   contents(): readonly PatchContent[];
 }
 
+function resolveCanonicalRoot(root: string): string {
+  try {
+    return realpathSync.native(root);
+  } catch {
+    return root;
+  }
+}
+
 export function createPatchView(root: string, caseInsensitive = volumeIgnoresCase(root)): PatchView {
+  const canonicalRoot = resolveCanonicalRoot(root);
   const places = new Map<string, PatchPlace>();
   const folded = new Map<string, PatchPlace>();
   const contents = new Map<string, PatchContent>();
@@ -125,7 +135,7 @@ export function createPatchView(root: string, caseInsensitive = volumeIgnoresCas
 
   function resolveLink(place: PatchPlace): FileOperationResult<PatchPlace> {
     const target = path.resolve(path.dirname(place.location), place.linkText ?? '');
-    return resolvePath(path.relative(root, target), true);
+    return resolvePath(path.relative(canonicalRoot, target), true);
   }
 
   return { resolve, resolveLink, setExists, places: () => [...places.values()], contents: () => [...contents.values()], plannedFolders, folderKey: planKey };
