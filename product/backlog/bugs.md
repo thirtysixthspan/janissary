@@ -2,16 +2,6 @@
 
 ## ready
 
-* Suppress consecutive duplicate commands in a shell tab's own history picker
-
-Existing Bug: Running the same command twice in a row in a shell tab lists it twice in that tab's Ctrl+R history picker. Severity: 2/10
-
-Existing Risk: 2/10 - A repeated command takes two rows in the picker and reads as two distinct invocations, but nothing is lost and the command itself still works.
-
-Proposal Risk: 2/10 - Deduping the shell's client-side history could hide a deliberate repeat a user expects to recall; a test with both immediate repeats and repeats separated by another command keeps the change to consecutive duplicates only.
-
-Proposal: The spec states in `product/specs/history.md` that "If a command matches the last entry in the tab's history, it is not appended again." Reproduce on a freshly built app started against scratch state: from the launch shell type `notify dupcmd`, press Enter, type the same line again and press Enter, then type `notify othercmd` and press Enter; press Ctrl+R and read the rows. Expected: `notify dupcmd` once, then `notify othercmd`. Observed: `notify dupcmd`, `notify dupcmd`, `notify othercmd`. A captured trace confirms the server's tab state is not the source of the extra row: `cmdHistory` arrives empty in the state frames, because the shell tab's Ctrl+R is claimed by the shell plugin and opens `ShellHistoryPopup` (`web/src/plugins/shell/ShellHistoryPopup.tsx`) over the client-side `sent` list, not the generic picker fed by `getRecentHistory` in `web/src/pickers/recent-history.ts` (which does dedupe globally). `ShellTab.tsx` adds command-bar lines through `appendShellHistory` in `web/src/plugins/shell/shell-history.ts`, and `useTerminalCommandHistory.ts` uses the same helper for terminal commands; that helper currently only trims the line and appends it, so it never compares against the previous entry. The server-side equivalent, `recordHistory` in `src/tab/history.ts`, already skips a repeat with `tab.cmdHistory.at(-1) !== trimmed`. Make `appendShellHistory` return `previous` unchanged when `entry === previous.at(-1)`, preserving its existing empty-line handling, so the shell's own history follows the same rule as the tab history. `web/src/plugins/shell/shell-history.test.ts` already covers trimming and empty lines; extend it with an immediate-repeat case and add a shell-tab check that two submissions of one line produce a single picker row, plus a separated-repeat case that keeps both rows.
-
 * Strip `##` command comments before a shell-bar line is recorded or run
 
 Existing Bug: A shell tab's command bar sends `##` comments through verbatim, so `## note ## notify x` produces `zsh: command not found: ##` instead of running `notify x`. Severity: 5/10
