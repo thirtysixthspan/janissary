@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Drop the fix plan's correction to the ready web-search plan, which master has since moved to the completed plans.
-
-Existing Issue: The fix plan that repoints `product/plans/ready/web-search.md` at the completed file-patch plan edits a path master deleted when its `web search` change moved that plan to `product/plans/complete/web-search.md`, so the repair was undone by a later change and the branch now carries a modify/delete conflict on a file it no longer needs to touch. Severity: 6/10
-
-Existing Risk: 5/10 - Resolving that conflict can resurrect a stale `ready/web-search.md` beside the completed plan, or drop the edit while the fix plan's record still claims a correction that never landed.
-
-Proposal Risk: 1/10 - Nothing is left to correct, because the completed web-search plan already records that `remoteCreateItem` lived in `port-mapped.ts` and that `pasteRemote` stayed private in `port.ts`, so the branch's opposite claim would have been wrong had it landed.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2011 "drop the correction to the retired ready web-search plan". Rebase onto current `origin/master` and accept master's deletion of `product/plans/ready/web-search.md` instead of this branch's modification. The plan moved to `product/plans/complete/web-search.md` when `web search` landed, and that completed plan already says `remoteCreateItem` lived in `port-mapped.ts` while `pasteRemote` stayed private in `port.ts`, so it contains no `product/plans/ready/file-patch.md` reference and needs no re-pointing. Keep this pull request's own plan move from `product/plans/ready/file-patch.md` to `product/plans/complete/file-patch.md` unchanged, keep the branch's `port-mapped.ts` `remotePaste` extraction and the `port.ts` delegation that master's plan did not perform, and leave `product/plans/complete/refresh-web-search-plan-file-patch-reference.md` in place as the historical record of a repair a later master change made unnecessary. After the rebase the branch must not contain `product/plans/ready/web-search.md` at all.
-
-
 * Correct the description's native-command counts and grant lists to include master's `web search` grant.
 
 Existing Issue: The description, the plan's Default grants decision, the help pages, the specs, the user docs, and the pinned tests say the built-in `tell` role reaches fifteen native commands and `ask` grants nine, while master's `web search` change already gives tell fifteen and ask ten, so the merged vocabulary has sixteen commands with tell at sixteen and ask at ten, and the branch rewrites the same tool-order, grant, and refusal sentences that master changed. Severity: 6/10
