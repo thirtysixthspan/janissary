@@ -56,7 +56,12 @@ export function buildPatchChanges(view: PatchViewReads, record: PatchRecord): Pa
     const place = chain?.current ?? entry.place;
     writes.push({ content, text: content.current, bom: content.hadBom && !entry.fromAdd, place, ...(chain && { finalPlace: place }) });
   }
-  const folders = [...new Set([...view.plannedFolders(), ...moves.flatMap((move) => move.to.missingFolders)])];
-  folders.sort((a, b) => a.split('/').length - b.split('/').length);
-  return { folders, deletes, writes, moves };
+  const folders = new Map<string, string>();
+  for (const folder of [...view.plannedFolders(), ...moves.flatMap((move) => move.to.missingFolders)]) {
+    const key = view.folderKey(folder);
+    if (!folders.has(key)) folders.set(key, folder);
+  }
+  const merged = [...folders.values()];
+  merged.sort((a, b) => a.split('/').length - b.split('/').length);
+  return { folders: merged, deletes, writes, moves };
 }

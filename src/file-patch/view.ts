@@ -7,6 +7,7 @@ import { placeKeys, readPatchContent, type PatchContent, type PatchPlace, type P
 export interface PatchViewReads {
   places(): readonly PatchPlace[];
   plannedFolders(): readonly string[];
+  folderKey(folder: string): string;
 }
 
 // Only section application may change place existence, link text, content references, or current text.
@@ -55,11 +56,14 @@ export function createPatchView(root: string, caseInsensitive = volumeIgnoresCas
   }
 
   function derivePlannedFolders(): readonly string[] {
-    const folders = new Set<string>();
+    const folders = new Map<string, string>();
     for (const place of places.values()) {
-      if (place.exists) for (const folder of place.missingFolders) folders.add(folder);
+      if (place.exists) for (const folder of place.missingFolders) {
+        const key = planKey(folder);
+        if (!folders.has(key)) folders.set(key, folder);
+      }
     }
-    return [...folders].toSorted((a, b) => a.split(path.sep).length - b.split(path.sep).length);
+    return [...folders.values()].toSorted((a, b) => a.split(path.sep).length - b.split(path.sep).length);
   }
 
   function plannedFolders(): readonly string[] {
@@ -113,5 +117,5 @@ export function createPatchView(root: string, caseInsensitive = volumeIgnoresCas
     return resolvePath(path.relative(root, target), true);
   }
 
-  return { resolve, resolveLink, setExists, places: () => [...places.values()], contents: () => [...contents.values()], plannedFolders };
+  return { resolve, resolveLink, setExists, places: () => [...places.values()], contents: () => [...contents.values()], plannedFolders, folderKey: planKey };
 }

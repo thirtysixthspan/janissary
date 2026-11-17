@@ -106,4 +106,21 @@ describe('applyPatchText', () => {
     expect(existsSync(path.join(root, 'a.txt'))).toBe(false);
     expect(existsSync(path.join(root, 'A.txt'))).toBe(false);
   });
+
+  it('shares planned folders between case-only spellings on a case-insensitive volume', (context) => {
+    if (!caseInsensitiveVolume()) context.skip();
+    expect(apply('*** Begin Patch\n*** Add File: A/b/first\n+first\n*** Add File: a/c/second\n+second\n*** End Patch'))
+      .toBe('Patched 2 files:\nA A/b/first\nA a/c/second');
+    expect(read('A/b/first')).toBe('first\n');
+    expect(read('a/c/second')).toBe('second\n');
+  });
+
+  it('shares a planned folder with an intermediate move hop under the other case on a case-insensitive volume', (context) => {
+    if (!caseInsensitiveVolume()) context.skip();
+    write('source', 'old\n');
+    expect(apply('*** Add File: A/b/first\n+first\n*** Update File: source\n*** Move to: a/c/mid\n*** Update File: a/c/mid\n*** Move to: done'))
+      .toBe('Patched 2 files:\nA A/b/first\nR source -> done');
+    expect(read('done')).toBe('old\n');
+    expect(existsSync(path.join(root, 'source'))).toBe(false);
+  });
 });

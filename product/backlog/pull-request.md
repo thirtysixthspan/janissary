@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Share one planned folder between case-only spellings so a patch under differently cased folders succeeds on a case-insensitive volume.
-
-Existing Issue: derivePlannedFolders in src/file-patch/view.ts and the folder merge in buildPatchChanges in src/file-patch/changes.ts deduplicate by exact string, so on a case-insensitive volume a patch that adds one file under A/ and another under a/ plans both spellings, and commitChanges runs mkdir for each, failing the whole patch with EEXIST while applying. Severity: 4/10
-
-Existing Risk: 4/10 - A valid multi-file refactor under case-variant folders fails on macOS and Windows with a filesystem-looking applying error and no changes, so the user must discover the case inconsistency and rename folders before the feature works.
-
-Proposal Risk: 2/10 - Folding the folder list changes only which mkdir and rmdir entries run and which first spelling is reported; a wrong key could merge genuinely distinct folders on a case-sensitive volume, so the fold must use the same cached volume decision and must not fold on a case-sensitive volume.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2011 "share one planned folder between case-only spellings". In src/file-patch/view.ts, make derivePlannedFolders deduplicate by the same planKey used by the planned-folder counter, keeping the first spelling it sees, and expose the view's case decision, or a folderKey helper, through PatchViewReads. In src/file-patch/changes.ts, merge view.plannedFolders() with the move destinations' missingFolders through that key as well, keeping the first spelling and the existing shallowest-first order, so a folder from an intermediate move hop is folded with a planned folder of the other case. Add a view.test.ts case with createPatchView(root, true) adding A/b/first and a/c/second that asserts one planned list carries the first folder once and still includes the children; add a guarded apply.test.ts case on a case-insensitive volume that applies two Adds under A/b and a/c and expects Patched 2 files: with both rows. Keep the existing case-only view and apply cases, the planned-folder derivation case, and the commit folder cases passing unchanged.
-
-
 * Make the case-insensitivity probe skip entries it cannot canonicalize so a broken root link does not disable case folding.
 
 Existing Issue: volumeIgnoresCase in src/file-patch/volume-case.ts returns the first lettered entry's verdict from sameEntry, which catches a realpathSync.native failure and reports case-sensitive, so a root whose first lettered entry is a broken symlink, or an empty root whose basename has no ASCII letter, is misdetected on a case-insensitive volume and the view keeps case-only patch paths as distinct places. Severity: 3/10

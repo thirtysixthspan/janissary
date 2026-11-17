@@ -201,6 +201,20 @@ describe('patch view', () => {
     expect(resolve('A/B/FILE')).toBe(nested);
   });
 
+  it('shares one planned folder between case-only spellings when the volume check is pinned insensitive', () => {
+    view = createPatchView(root, true);
+    view.setExists(resolve('A/b/first'), true);
+    view.setExists(resolve('a/c/second'), true);
+    expect(view.plannedFolders()).toEqual([path.join(root, 'A'), path.join(root, 'A/b'), path.join(root, 'a/c')]);
+  });
+
+  it('keeps case-distinct planned folders separate when the volume check is pinned sensitive', () => {
+    view = createPatchView(root, false);
+    view.setExists(resolve('A/b/first'), true);
+    view.setExists(resolve('a/c/second'), true);
+    expect(view.plannedFolders()).toEqual([path.join(root, 'A'), path.join(root, 'a'), path.join(root, 'A/b'), path.join(root, 'a/c')]);
+  });
+
   it('keeps case-distinct pending paths separate when the volume check is pinned sensitive', () => {
     view = createPatchView(root, false);
     const lower = resolve('a.txt');
