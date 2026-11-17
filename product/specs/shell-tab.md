@@ -403,7 +403,8 @@ notifications-feed messages for each. Without a name the shell is named as descr
 An address after `on` is checked before any connection opens. A missing or invalid address reports
 the address usage or validation error. A word starting with `-` that is not one of the four flags is
 refused with `Unknown option "<word>". Usage: shell [name] [-w|--workspace|--no-workspace] [--offline]
-[on <address>]` and nothing opens; such a word never becomes part of the name.
+[on <address>]` and nothing opens; such a word never becomes part of the name. The angle-bracket
+placeholders in that reply display as literal text, even though the usage follows the refusal prefix.
 
 A workspaced shell's tab opens at once, while the clone runs, and zsh starts confined to the clone, at
 its root, when the clone finishes. With no git repository, or no readable `origin` remote, a typed `shell`
