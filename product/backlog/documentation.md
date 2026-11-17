@@ -7,7 +7,7 @@
 
 
 
-* shell-tab (7/10) — 43 of 47 facts are correct with two wrong and two missing. Wrong: `documentation/user-documentation/command-bar/shell.md` and `documentation/user-documentation/getting-started/tabs.md` say shell badges do not raise the 30-second "Agent is waiting" notification, but the shell plugin's `setUnread` arms escalation, and shell.md says starting another command does not clear a badge while a running state calls `setUnread(false)`. Missing: shell-owned pickers for docked/hidden shells and dragging file-navigator rows into the bar plus bracketed-paste/control-character stripping. Fix both wrong paragraphs and add the missing behaviors to `documentation/user-documentation/command-bar/shell.md`. Ground truth is `product/specs/shell-tab.md`, `src/plugins/shell/activate.ts`, `src/harness/idle-notification.ts` and `src/tab/transcript/events.ts`.
+
 
 * sql-database (3/10) — 41 of 45 facts are correct with four missing and none wrong. The gaps are the exact "last eight pages" row-identity validity window described only as "long ago", behavior for a locked, corrupt or unreadable database file (object list, pages and exports fail while other SQL tabs continue), the console-prompt busy dot, and the deliberate absence of a statistics panel/join builder. Fix in `documentation/user-documentation/tab-types/sql-browser.md`. Ground truth is `product/specs/sql-database.md`, `src/plugins/sql/activate.ts`, `src/database/write.ts` and `web/src/plugins/sql/SqlTab.tsx`.
 
@@ -33,6 +33,7 @@
 
 ## resolved
 
+* shell-tab — documented in documentation/user-documentation/command-bar/shell.md, documentation/user-documentation/getting-started/tabs.md (removed 2026-11-17)
 * sessions-tab — documented in documentation/user-documentation/tab-types/sessions.md (removed 2026-11-17)
 * search-tab — documented in documentation/user-documentation/command-bar/project-search.md (removed 2026-11-17)
 * root-path — documented in documentation/user-documentation/getting-started/tabs.md (removed 2026-11-17)
