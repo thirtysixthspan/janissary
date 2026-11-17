@@ -4,8 +4,7 @@ import type { WebSearchCapability, WebSearchRequest, WebSearchResult } from '../
 import { providerApiKey } from '../providers/capabilities.js';
 import { formatFailures, WEB_SEARCH_FAILURE_HEADINGS } from '../providers/failure-lines.js';
 import type { ProviderFailure } from '../providers/failure-lines.js';
-import { webProviderCatalog } from '../providers/catalog.js';
-import { createProviderRegistry } from '../providers/registry.js';
+import { webProviderRegistry } from '../providers/default-registry.js';
 import type { ProviderRegistry } from '../providers/registry.js';
 import { dedupeResults, normalizeResults, renderResults } from './render.js';
 
@@ -16,10 +15,8 @@ export type WebSearchDeps = {
   reportDisabled?: (name: string, reason: string) => void;
 };
 
-const providerRegistry = createProviderRegistry(webProviderCatalog);
-
 export function webSearchProviderNames(): string[] {
-  return providerRegistry.searchProviderNames();
+  return webProviderRegistry.searchProviderNames();
 }
 
 function renderSearch(results: WebSearchResult[], request: WebSearchCommand): string {
@@ -68,5 +65,5 @@ export async function runWebSearch(
 }
 
 export function webSearch(request: WebSearchCommand, deps: WebSearchDeps): Promise<string> {
-  return runWebSearch(providerRegistry, request, deps);
+  return runWebSearch(webProviderRegistry, request, deps);
 }
