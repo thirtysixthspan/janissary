@@ -10,6 +10,10 @@ import type * as DriveLoop from '../acp/drive-loop.js';
 import { parseWebSearch, WEB_SEARCH_USAGE } from '../web/search/command.js';
 import type { WebSearchCommand } from '../web/search/command.js';
 import type { WebSearchDeps } from '../web/search/search.js';
+import { WEB_USAGE } from '../web/command-line.js';
+import { parseWebFetch, WEB_FETCH_USAGE } from '../web/fetch/command.js';
+import type { WebFetchCommand } from '../web/fetch/command.js';
+import type { WebFetchDeps } from '../web/fetch/fetch.js';
 import type { ProjectTokens } from '../project/tokens.js';
 import { deferred } from '../deferred.js';
 import type * as Glob from '../file-glob/glob.js';
@@ -21,7 +25,7 @@ import * as fileRead from '../file-read/read.js';
 import type { ServerFrame } from './protocol-frames.js';
 
 const mocks = vi.hoisted(() => ({
-  globWorkspaceCommand: vi.fn(), grepWorkspaceCommand: vi.fn(), webSearch: vi.fn(), driveToolLoop: vi.fn(),
+  globWorkspaceCommand: vi.fn(), grepWorkspaceCommand: vi.fn(), webSearch: vi.fn(), webFetch: vi.fn(), driveToolLoop: vi.fn(),
 }));
 const home = vi.hoisted(() => ({ dir: '' }));
 
@@ -36,6 +40,7 @@ vi.mock('../file-glob/glob.js', async (importOriginal) => {
   return { ...actual, globWorkspaceCommand: mocks.globWorkspaceCommand };
 });
 vi.mock('../web/search/search.js', () => ({ webSearch: mocks.webSearch }));
+vi.mock('../web/fetch/fetch.js', () => ({ webFetch: mocks.webFetch }));
 vi.mock('../acp/drive-loop.js', async (importOriginal) => {
   const actual = await importOriginal<typeof DriveLoop>();
   mocks.driveToolLoop.mockImplementation(actual.driveToolLoop);
@@ -94,6 +99,8 @@ beforeEach(() => {
   mocks.driveToolLoop.mockClear();
   mocks.webSearch.mockReset();
   mocks.webSearch.mockResolvedValue('search results');
+  mocks.webFetch.mockReset();
+  mocks.webFetch.mockResolvedValue('fetched page');
 });
 
 afterEach(() => {
@@ -188,6 +195,23 @@ describe('startRemoteLoop workspace steps', () => {
     expect(framesOf(frames, 'acp-tool-step')).toEqual([{
       type: 'acp-tool-step', id: RUN_ID, command: 'web search x', result: 'search results', workspace: true,
     }]);
+  });
+
+  it('runs a granted web fetch against the workspace and reports the result as a workspace step', async () => {
+    const tokens = { tavily: 'tvly-far' };
+    const command = 'web fetch https://example.com/page';
+    const { frames } = start([[command], ['Done.']], coreSnapshot('tell', ['web fetch']), tokens);
+
+    await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
+    expect(mocks.webFetch).toHaveBeenCalledOnce();
+    const [request, deps] = mocks.webFetch.mock.calls[0] as [WebFetchCommand, WebFetchDeps];
+    expect(request).toEqual(parseWebFetch(command));
+    expect(deps.tokens).toBe(tokens);
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([{
+      type: 'acp-tool-step', id: RUN_ID, command, result: 'fetched page', workspace: true,
+    }]);
+    expect(mocks.webSearch).not.toHaveBeenCalled();
+    expect(framesOf(frames, 'acp-tool-request')).toEqual([]);
   });
 
   it('caps a core run at eight workspace steps without sending a step count', () => {
@@ -867,6 +891,24 @@ describe('startRemoteLoop web routing', () => {
     expect(deps.fetch).toBe(globalThis.fetch);
     expect(deps.signal?.aborted).toBe(false);
     expect(deps).not.toHaveProperty('reportDisabled');
+    expect(mocks.webFetch).not.toHaveBeenCalled();
+  });
+
+  it('runs a fetch with the workspace tokens and the run signal', async () => {
+    start([['Done.']], coreSnapshot('tell', ['web fetch']), { tavily: 'tvly-far' });
+    const host = lastHost();
+
+    await expect(host.runWorkspace('web fetch https://example.com/page')).resolves.toBe('fetched page');
+
+    expect(mocks.webFetch).toHaveBeenCalledOnce();
+    const [request, deps] = mocks.webFetch.mock.calls[0] as [WebFetchCommand, WebFetchDeps];
+    expect(request).toEqual(parseWebFetch('web fetch https://example.com/page'));
+    expect(deps.tokens).toEqual({ tavily: 'tvly-far' });
+    expect(deps.fetch).toBe(globalThis.fetch);
+    expect(deps.signal?.aborted).toBe(false);
+    expect(deps).not.toHaveProperty('reportDisabled');
+    expect(deps).not.toHaveProperty('now');
+    expect(mocks.webSearch).not.toHaveBeenCalled();
   });
 
   it('normalizes a leading slash and space before parsing', async () => {
@@ -879,12 +921,43 @@ describe('startRemoteLoop web routing', () => {
     expect(request).toEqual(parseWebSearch('web search x'));
   });
 
-  it.each(['web', 'web search x --results 30'])('answers %s with the usage line without searching', (line) => {
+  it('normalizes a leading slash and space before parsing a fetch', async () => {
+    start([['Done.']], coreSnapshot('tell', ['web fetch']));
+    const host = lastHost();
+
+    await expect(host.runWorkspace(' /web fetch https://example.com/page')).resolves.toBe('fetched page');
+
+    const [request] = mocks.webFetch.mock.calls[0] as [WebFetchCommand];
+    expect(request).toEqual(parseWebFetch('web fetch https://example.com/page'));
+  });
+
+  it.each(['web', 'web foo'])('answers %s with both usage lines without calling a core', (line) => {
+    start([['Done.']], coreSnapshot('tell', ['web search']));
+    const host = lastHost();
+
+    expect(host.runWorkspace(line)).toBe(WEB_USAGE);
+    expect(mocks.webSearch).not.toHaveBeenCalled();
+    expect(mocks.webFetch).not.toHaveBeenCalled();
+  });
+
+  it.each(['web search', 'web search x --results 30'])('answers %s with the search usage line without searching', (line) => {
     start([['Done.']], coreSnapshot('tell', ['web search']));
     const host = lastHost();
 
     expect(host.runWorkspace(line)).toBe(WEB_SEARCH_USAGE);
     expect(mocks.webSearch).not.toHaveBeenCalled();
+    expect(mocks.webFetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'web fetch', 'web fetch example.com', 'web fetch https://example.com/page --bogus 1',
+  ])('answers %s with the fetch usage line without fetching', (line) => {
+    start([['Done.']], coreSnapshot('tell', ['web fetch']));
+    const host = lastHost();
+
+    expect(host.runWorkspace(line)).toBe(WEB_FETCH_USAGE);
+    expect(mocks.webSearch).not.toHaveBeenCalled();
+    expect(mocks.webFetch).not.toHaveBeenCalled();
   });
 
   it('aborts the signal passed to the search when the run is aborted', async () => {
@@ -911,5 +984,50 @@ describe('startRemoteLoop web routing', () => {
     expect(signal?.aborted).toBe(true);
     run.cancellation.resolve();
     await cancelled;
+  });
+
+  it('aborts the signal passed to the fetch when the run is aborted', async () => {
+    const run = startHeld(coreSnapshot('tell', ['web fetch']));
+    const host = lastHost();
+
+    await host.runWorkspace('web fetch https://example.com/page');
+    const signal = (mocks.webFetch.mock.calls[0] as [WebFetchCommand, WebFetchDeps])[1].signal;
+    expect(signal?.aborted).toBe(false);
+
+    run.handle.abort();
+
+    expect(signal?.aborted).toBe(true);
+  });
+
+  it('aborts the signal passed to the fetch when the run is cancelled', async () => {
+    const run = startHeld(coreSnapshot('tell', ['web fetch']));
+    const host = lastHost();
+
+    await host.runWorkspace('web fetch https://example.com/page');
+    const signal = (mocks.webFetch.mock.calls[0] as [WebFetchCommand, WebFetchDeps])[1].signal;
+
+    const cancelled = run.handle.cancel();
+    expect(signal?.aborted).toBe(true);
+    run.cancellation.resolve();
+    await cancelled;
+  });
+
+  it('suppresses a late fetch rejection and the next turn after an abort', async () => {
+    mocks.webFetch.mockImplementationOnce((_request: WebFetchCommand, deps: WebFetchDeps) => new Promise<string>((_resolve, reject) => {
+      deps.signal?.addEventListener('abort', () => reject(deps.signal?.reason));
+    }));
+    const run = startHeld(coreSnapshot('tell', ['web fetch']));
+    run.last().onChunk('web fetch https://example.com/page');
+    run.last().onEnd('end_turn');
+    await vi.waitFor(() => expect(mocks.webFetch).toHaveBeenCalledOnce());
+    const before = run.frames.length;
+
+    run.handle.abort();
+    await flush();
+
+    expect(run.frames).toHaveLength(before);
+    expect(framesOf(run.frames, 'acp-tool-step')).toEqual([]);
+    expect(framesOf(run.frames, 'acp-error')).toEqual([]);
+    expect(run.sent).toHaveLength(1);
   });
 });

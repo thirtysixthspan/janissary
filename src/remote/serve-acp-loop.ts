@@ -9,7 +9,9 @@ import { isFileGrepCommandLine } from '../file-grep/command.js';
 import { readWorkspaceCommand } from '../file-read/read.js';
 import { isFileMutationCommandLine } from '../file-write/command.js';
 import { runFileMutation } from '../file-write/tab-write.js';
-import { isWebCommandLine } from '../web/command-line.js';
+import { isWebCommandLine, webSubcommand, WEB_USAGE } from '../web/command-line.js';
+import { parseWebFetch } from '../web/fetch/command.js';
+import { webFetch } from '../web/fetch/fetch.js';
 import { parseWebSearch } from '../web/search/command.js';
 import { webSearch } from '../web/search/search.js';
 import type { ProjectTokens } from '../project/tokens.js';
@@ -18,10 +20,19 @@ import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 type AcpRunFrame = Extract<ClientFrame, { type: 'acp-run' }>;
 type AcpToolResultFrame = Extract<ClientFrame, { type: 'acp-tool-result' }>;
 
-function searchWorkspaceCommand(line: string, tokens: ProjectTokens, signal: AbortSignal): string | Promise<string> {
-  const parsed = parseWebSearch(line);
-  if ('error' in parsed) return parsed.error;
-  return webSearch(parsed, { tokens, fetch: globalThis.fetch, signal });
+function webWorkspaceCommand(line: string, tokens: ProjectTokens, signal: AbortSignal): string | Promise<string> {
+  const subcommand = webSubcommand(line);
+  if (subcommand === 'fetch') {
+    const parsed = parseWebFetch(line);
+    if ('error' in parsed) return parsed.error;
+    return webFetch(parsed, { tokens, fetch: globalThis.fetch, signal });
+  }
+  if (subcommand === 'search') {
+    const parsed = parseWebSearch(line);
+    if ('error' in parsed) return parsed.error;
+    return webSearch(parsed, { tokens, fetch: globalThis.fetch, signal });
+  }
+  return WEB_USAGE;
 }
 
 export type RemoteLoopHandle = {
@@ -55,7 +66,7 @@ export function startRemoteLoop(
   const host: AcpToolHost = {
     runWorkspace: (command) => {
       const normalized = command.trim().replace(/^\//, '');
-      if (isWebCommandLine(normalized)) return searchWorkspaceCommand(normalized, tokens, controller.signal);
+      if (isWebCommandLine(normalized)) return webWorkspaceCommand(normalized, tokens, controller.signal);
       if (isFileMutationCommandLine(normalized)) {
         return runFileMutation(new LocalFileSystemPort(), workspaceDir, normalized);
       }
