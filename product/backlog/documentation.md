@@ -4,8 +4,6 @@
 
 ## development
 
-* application-config (3/10) — 31 of 32 facts are correct across the configuration page and per-feature pages with none wrong; the only gap is the backward-compatibility note that removed `terminalBellMuteSuccess`/`Warning`/`Error` keys are silently ignored, which appears only in the spec and tests. Add one sentence to the 'Editing and validation' section of `documentation/user-documentation/getting-started/configuration.md` stating that stale `terminalBellMute*` keys are ignored, and that setting a type's sound to `none` is the replacement. Ground truth is `product/specs/application-config.md`, `src/config.ts`, `src/config-decode.ts` and `src/config.test.ts`.
-
 * connection (6/10) — 30 of 32 facts are documented with one wrong and one missing. Wrong: `documentation/user-documentation/command-bar/connections.md` renders core ACP connection strings as `acp:<provider/model>` in several places, but the app emits role-qualified `acp:ask:<model>` and `acp:tell:<model>` (`src/connection/catalog.ts`) and `help/connections.md` already shows the correct form; update those spots and note that `ask`/`tell` select the role. Missing: trailing arguments after `connections list` and `connections close <kind>:<id>` are ignored, so add a short note to `documentation/user-documentation/command-bar/connections.md`. Ground truth is `product/specs/connection.md`, `src/connection/catalog.ts`, `src/connection/close.ts` and `src/connection/manager.ts`.
 
 * connections-tab (6/10) — 47 of 73 facts are documented, 25 missing and one wrong. The Refresh and Split header controls are entirely undocumented, including the exact errors `invalid refresh payload` and `refresh applies only to the connections list`, the focus errors `The owning tab is no longer open.` and `invalid focus payload`, owner-based row identity and stale-action refusals, the `ACP:` 60-character/first-line title cap, JSON activity rendering, web links opening page tabs, and durable-id opening after a run ends. Wrong: the connections page states thought and tool entries both start collapsed, whereas tool entries start expanded and thought entries collapsed. Fix in `documentation/user-documentation/command-bar/connections.md` with notes in `help/connections.md` and `help/connection.md`. Ground truth is `product/specs/connections-tab.md`, `web/src/plugins/connections/ConnectionHistory.tsx`, `src/plugins/connections/activate.ts` and `src/plugins/connections-topic-actions.ts`.
@@ -64,6 +62,7 @@
 
 ## resolved
 
+* application-config — documented in documentation/user-documentation/getting-started/configuration.md (removed 2026-11-17)
 * application-commands — documented in documentation/user-documentation/command-bar/commands.md, documentation/user-documentation/tab-types/commands.md, help/commands.md, help/help.md (removed 2026-11-17)
 * agent-questions — documented in documentation/user-documentation/advanced-agents/agent-questions.md (removed 2026-11-17)
 * agent-command — documented in documentation/user-documentation/advanced-agents/agent-command.md (removed 2026-11-17)
