@@ -4,7 +4,6 @@
 
 ## development
 
-* root-path (3/10) — 13 of 16 facts are fully correct; three are only partially documented. Absent nuances: injected path vars replace inherited values from another session, the working directory supplies the root before a project is initialized, the dedicated test browser does not receive these vars, env-var presence does not alter filesystem permissions, and status messages naming a path are missing from the 'where it applies' list. Fix in the 'How paths are shown: $root' section of `documentation/user-documentation/getting-started/tabs.md`. Ground truth is `product/specs/root-path.md`, `src/paths.ts`, `src/workspace/directories.ts`, `src/sandbox/environment.ts` and `.codex/config.toml`.
 
 * search-tab (3/10) — 41 of 44 facts are correct with three missing and none wrong. The missing facts are the framed self-scrolling result window whose accent left border shows only while the result window is focused with selection preserved when focus leaves, that rows arriving during a running search never move a keyboard-picked highlight or scroll the window, and that a search is never reported as cancelled unless actually cancelled. Add a brief note to the 'Read the results' and 'Open a match' sections of `documentation/user-documentation/command-bar/project-search.md`. Ground truth is `product/specs/search-tab.md`, `src/search/types.ts`, `web/src/plugins/search/ModeToggles.tsx` and `web/src/shared/app-chords.ts`.
 
@@ -36,6 +35,7 @@
 
 ## resolved
 
+* root-path — documented in documentation/user-documentation/getting-started/tabs.md (removed 2026-11-17)
 * roles — documented in documentation/user-documentation/tab-types/roles.md, help/roles.md (removed 2026-11-17)
 * quit-confirmation — documented in documentation/user-documentation/command-bar/commands.md (removed 2026-11-17)
 * pull-request-updating — documented in documentation/user-documentation/workflows/updating-a-pull-request.md (removed 2026-11-17)
