@@ -36,7 +36,7 @@ Because `left` and `right` are read as dock words when they come last, in any ca
 
 The row across the top has two dropdowns. The database dropdown lists every database in the project, and marks the ones with an open connection with `•`. Choosing another database opens or focuses that database's own tab and leaves this one alone. The table dropdown lists the database's tables, views, indexes, and triggers under those four headings. You can choose a table or a view. Indexes and triggers are listed so you can see them, but you can't choose them.
 
-Below the row, the grid header names what's on screen, or shows `—` when nothing is selected, and says how much of it there is, such as `Rows 1–100 of 4,213 rows`. It reads `Loading…` until the first page arrives, and `No tables.` for an empty database.
+Below the row, the grid header names what's on screen, or shows `—` when nothing is selected, and says how much of it there is, such as `Rows 1–100 of 4,213 rows`. It reads `Loading…` until the first page arrives, and `No tables.` for an empty database. While a read is still running, the header keeps the last range line and a dot at the console's prompt shows the tab is waiting.
 
 When the columns don't all fit across the tab, the widest values are cut off with an ellipsis so the table fits instead of scrolling sideways. A column whose values are all short keeps its width, and hovering a cut-off value shows it whole. A column never shrinks past its own name, so a table with more columns than the tab has room to name still scrolls sideways. The fit is worked out again when you resize or dock the tab, and the cell you're editing is never cut off.
 
@@ -74,7 +74,7 @@ While **Save** is pending, the form is disabled and another submission is ignore
 
 Each row has a **Delete row** button in its first column. It asks `Delete row from "<table>"?` before it deletes anything.
 
-An edit to a row from a page the tab loaded long ago is refused with `That row is no longer loaded. Refresh and try again.` Press **Refresh** and make the change again.
+A row you can edit stays valid for the last eight pages you've read from that database. An edit to a row from an older page is refused with `That row is no longer loaded. Refresh and try again.` Press **Refresh** and make the change again.
 
 ### Read-only tables
 
@@ -122,6 +122,14 @@ Both buttons are unavailable while the tab is waiting on another request, and wh
 
 If you delete a database with `db sqlite delete` while its tab is open, the grid empties and the header reads `Database "<name>" does not exist. Create it to start.` Deleting also closes the database's connection, so it leaves `connections list` right away. **Refresh** gives you the same message. It doesn't bring the empty file back. Run `db sqlite create <name>` to make the database again.
 
+## When a file can't be read
+
+If a database file isn't a valid SQLite database, or another program holds it locked, the browser can't read it. Its object list, pages, and exports each fail with the SQLite error, reported in [Notifications](/user-documentation/tab-types/notifications) like any other failure. Other SQL tabs keep working.
+
 ## Close a database's connection
 
 `connections close sqlite:<name>` closes the connection but leaves the database file alone. An open tab keeps showing what it last read. The next time the tab reads from the database, for example when you press **Refresh**, the connection opens again. Until then the database is missing from `connections list`. The browser doesn't add a row to the tab's own connections panel, even while the connection is open. See [Connections](/user-documentation/command-bar/connections).
+
+## What the browser doesn't do
+
+The grid works with one table or view at a time. It has no join builder and no statistics panel. To combine tables or work out a per-column distribution, type a statement in the [console](#run-your-own-sql).

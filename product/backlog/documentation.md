@@ -9,7 +9,6 @@
 
 
 
-* sql-database (3/10) — 41 of 45 facts are correct with four missing and none wrong. The gaps are the exact "last eight pages" row-identity validity window described only as "long ago", behavior for a locked, corrupt or unreadable database file (object list, pages and exports fail while other SQL tabs continue), the console-prompt busy dot, and the deliberate absence of a statistics panel/join builder. Fix in `documentation/user-documentation/tab-types/sql-browser.md`. Ground truth is `product/specs/sql-database.md`, `src/plugins/sql/activate.ts`, `src/database/write.ts` and `web/src/plugins/sql/SqlTab.tsx`.
 
 * state-directory (3/10) — nine of 11 facts are correct with two missing and none wrong. Missing: the remote-sessions record file is keyed per account (`remote-sessions.<account-hash>.json`), each instance writes only its own file while a load merges every account's file into one Sessions list, and a pre-keying `remote-sessions.json` is read the same way so a parked session survives the upgrade. Add a short note to `documentation/user-documentation/tab-types/sessions.md` and `help/sessions.md`. Ground truth is `product/specs/state-directory.md`, `documentation/user-documentation/getting-started/startup.md` and the files under `src/state/`.
 
@@ -33,6 +32,7 @@
 
 ## resolved
 
+* sql-database — documented in documentation/user-documentation/tab-types/sql-browser.md (removed 2026-11-17)
 * shell-tab — documented in documentation/user-documentation/command-bar/shell.md, documentation/user-documentation/getting-started/tabs.md (removed 2026-11-17)
 * sessions-tab — documented in documentation/user-documentation/tab-types/sessions.md (removed 2026-11-17)
 * search-tab — documented in documentation/user-documentation/command-bar/project-search.md (removed 2026-11-17)
