@@ -339,6 +339,45 @@ describe('agent shared driver host', () => {
     await expect(execution).resolves.toMatchObject({ status: 'terminated', response: 'Agent terminated.' });
     run.record = undefined;
   });
+
+  it.each([
+    ['with a granting skill', [{ name: 'subagent-skill', path: '/skill.md', instructions: 'subagent' }], ['subagent']],
+    ['without a granting skill', [], []],
+  ])('refuses a local subagent command through the real delegate %s', async (_label, skills, grants) => {
+    run.setSnapshot({ ...run.snapshot, skills, grants });
+    const dispatch = vi.fn();
+    const managers = { ...modelManagers(), command: { dispatchLineInInvocation: dispatch } };
+    const execution = start(false, managers);
+    const command = 'subagent --role research --task task.md';
+    const refusal = `Agent: command not permitted: ${command}.`;
+    await expect(dependencies.runCommand(command)).resolves.toBe(refusal);
+    expect(dispatch).not.toHaveBeenCalled();
+    finish();
+    await execution;
+  });
+
+  it.each([
+    ['with a granting skill', [{ name: 'subagent-skill', path: '/skill.md', instructions: 'subagent' }], ['subagent']],
+    ['without a granting skill', [], []],
+  ])('refuses a remote subagent callback through the real delegate %s', async (_label, skills, grants) => {
+    run.setSnapshot({ ...run.snapshot, skills, grants });
+    const dispatch = vi.fn();
+    const managers = { ...modelManagers(), command: { dispatchLineInInvocation: dispatch } };
+    const execution = start(true, managers);
+    listener!.onReady(true);
+    await vi.waitFor(() => expect(sent.some((frame) => frame.type === 'acp-run')).toBe(true));
+    const command = '  /SuBaGeNt   --role research  ';
+    const refusal = `Agent: command not permitted: ${command}.`;
+    listener!.onToolRequest({ type: 'acp-tool-request', id: 'agent', request: 11, command });
+    await vi.waitFor(() => expect(sent.at(-1)).toStrictEqual({
+      type: 'acp-tool-result', id: 'agent', request: 11, output: refusal,
+    }));
+    expect(dispatch).not.toHaveBeenCalled();
+    listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'start', first: true });
+    listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'end', display: 'Done' });
+    listener!.onRunEnd('answered');
+    await execution;
+  });
 });
 
 describe('executeAgentRun', () => {

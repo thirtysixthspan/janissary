@@ -10,7 +10,15 @@ Only `role`, `task`, and `context` are accepted. Unknown or removed fields and f
 
 ### Usage errors
 
-Bare `subagent` and every flag-form failure return exactly `Usage: subagent --role <role> --task <file.md> [--context <text>]`. Every JSON-form failure returns exactly `Usage: subagent {"role":"<role>","task":"<file.md>","context":"<text>"}`. Which form a caller must use, and how a refusal reaches it, is decided by command dispatch.
+Bare `subagent` and every flag-form failure return exactly `Usage: subagent --role <role> --task <file.md> [--context <text>]`. Every JSON-form failure returns exactly `Usage: subagent {"role":"<role>","task":"<file.md>","context":"<text>"}`. Which form a caller must use, and how a refusal reaches it, is decided by the caller policy below.
+
+### Caller policy and immediate refusals
+
+An invocation is an ACP caller only when its `acpTool` marker is exactly true; every other caller — typed, scheduled, queued, plugin command, system schedule, or a role marker without that true marker — is a person. The caller kind decides the required form regardless of the tab's view: an ACP caller must use the JSON form and a person the flag form. A missing, malformed or wrong-form argument returns that caller's own usage line and starts nothing, even when the text looked like the other form. Stopping there precedes role lookup and launch.
+
+For a valid caller and form, the role is read fresh, by trimmed case-insensitive name, from the roles file at the tab's launch root with built-in roles as fallback. An unknown role returns `Subagent: unknown role "<trimmed input>".`; the decoded role is trimmed only for that message. A role with no enabled entries returns `Subagent: the <canonical role> role lists no models.`, using the canonical spelling. Enabled entries keep their stored order, duplicates and effort from any harness, and the role's settings object and saved command grants are left unchanged.
+
+A person receives a refusal as one background reply under the original line — the invocation's echo line when present, otherwise the resolved command — with a fresh background id, no record and no receipt. An ACP caller receives the refusal text directly and no human reply. The same handling applies to any synchronous launch error, reported in the source's exact words with no added prefix or punctuation, including an unavailable ACP session, a missing, closing or stale caller, and a disposed run manager. A caller whose tab is missing, closing, or from an earlier incarnation gets no human reply and no run. A successful launch returns its record receipt to a person and an empty string to an ACP caller; failures after that receipt belong only to the run's later completion, never a second immediate refusal.
 
 ### Command primer
 
@@ -98,4 +106,4 @@ A ready clone is released only after the execution it admitted finishes independ
 
 ### Boundaries
 
-The grammar, messages, human wording, pending queue, and task prompt are pure. They neither register the command nor check grants, roles, models, caller kind, workspaces, launch, delivery, or I/O. Caller-kind enforcement and response handling belong to command dispatch.
+The grammar, messages, human wording, pending queue, and task prompt are pure. They neither register the command nor check grants, workspaces or command vocabulary. Caller kind, form, role and enabled-model policy, immediate refusals and the launch call are owned by the command-policy helper that the command's run delegates to. The registry, vocabulary, global disabled gate and public help remain outside it.
