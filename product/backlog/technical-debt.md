@@ -2,17 +2,6 @@
 
 ## ready
 
-* Make the editor tab take its plugin host from the session hook instead of constructing a fallback host of its own.
-
-Existing Debt: The editor tab builds `createEditorPluginHost(() => {})` in a `useMemo` whenever no host is injected, violating §7 (services are injected, never constructed by a component) and duplicating `web/src/useEditorPluginHost.ts`, the hook that owns the session host and its disabled-plugin report queue. Severity: 4/10
-
-Existing Risk: 4/10 - The fallback host's no-op callback throws away every disabled-plugin report, so a standalone render can run with a broken plugin and show no sign of it.
-
-Proposal Risk: 2/10 - Requiring the host at every mount means a caller can still pass the wrong host or an empty reports queue, but that is now an explicit prop at the call site instead of an invisible default inside the component.
-
-Proposal: `web/src/editor/EditorTab.tsx` imports `createEditorPluginHost` and creates `ownHost` in a `useMemo`, using it when the optional `pluginHost` prop is absent and passing it to `useEditorPlugins`; `web/src/useEditorPluginHost.ts` is the hook that creates the one session host and its `reports` array, and `web/src/MountedViewLayers.tsx` already injects both. Make `pluginHost` and `pluginReports` required props, delete `ownHost`, the `createEditorPluginHost` import and the `?? ownHost` fallback from the component, and pass `pluginHost` straight to `useEditorPlugins`. Update the renders that relied on the fallback to supply a host: `web/src/editor/EditorTab.test.tsx`, `web/src/editor/EditorTab.window-keys.test.tsx` and `web/src/useSectionNav.editor.test.tsx` can build one with `createEditorPluginHost` in each fixture. Blast radius is one production call site plus those three test files; the imperative `DirtyTabHandle` and all other props stay unchanged.
-
-
 * Move the file-safety policy, refusal vocabulary, and remote-tab helpers out of the read and navigator features into one shared file-operations module.
 
 Existing Debt: Workspace containment, secret-path, protected-path, and size policy live in `src/file-read/policy.ts`, the shared result type and reason vocabulary live in `src/file-navigator/file-operation-result.ts`, and the remote-tab bridge and its typed-output helpers live in `src/file-read/remote-tab-port.ts` and `src/file-read/tab-read.ts`, so write, patch, glob, grep, web-search, ACP, and controller modules all import across a feature boundary for rules none of those features owns. Severity: 6/10

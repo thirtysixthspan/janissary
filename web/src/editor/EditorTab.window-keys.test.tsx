@@ -3,6 +3,8 @@ import { render, screen, waitFor, fireEvent, createEvent } from '@testing-librar
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { EditorView, TabView } from '@shared/protocol';
 import { EditorTab } from './EditorTab';
+import { createEditorPluginHost } from './plugins/host';
+import type { PluginReport } from './plugins/useEditorPlugins';
 import type { JanusClient } from '../shared/ws/ws';
 
 function makeView(): EditorView {
@@ -29,8 +31,11 @@ function makeClient(): JanusClient {
   } as unknown as JanusClient;
 }
 
+const testPluginHost = createEditorPluginHost(() => {});
+const testPluginReports: PluginReport[] = [];
+
 function ui(overlayOpen: boolean) {
-  return <EditorTab editor={makeView()} tab={makeTab()} client={makeClient()} active overlayOpen={overlayOpen} />;
+  return <EditorTab editor={makeView()} tab={makeTab()} client={makeClient()} active overlayOpen={overlayOpen} pluginHost={testPluginHost} pluginReports={testPluginReports} />;
 }
 
 async function renderLoaded(overlayOpen = false) {
