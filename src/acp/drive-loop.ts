@@ -2,7 +2,7 @@ import type { AcpLoopHandlers, AcpLoopSession, AcpRunSnapshot, AcpToolHost } fro
 import type { RemoteAcpSession } from '../remote/acp-session.js';
 import { createAcpToolTable, gateCommand, toolExtractor, toolPrimer, type AcpTool } from './tool-table.js';
 import { runAcpToolLoop } from './loop.js';
-import { NO_BUILTIN_TOOLS_LINE, NO_TOOLS_LINE } from './internal-tools.js';
+import { DISABLED_HARNESS_TOOLS_LINE, NO_BUILTIN_TOOLS_LINE, NO_TOOLS_LINE } from './internal-tools.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { extractAgentCommand } from '../agent/command-extract.js';
@@ -20,6 +20,7 @@ export function corePrimer(snapshot: Extract<AcpRunSnapshot, { kind: 'core' }>, 
   return [
     toolPrimer(tools, allowList),
     toolsAvailable ? NO_BUILTIN_TOOLS_LINE : NO_TOOLS_LINE,
+    toolsAvailable ? DISABLED_HARNESS_TOOLS_LINE : '',
     toolsAvailable ? commandProtocolPrimer(CORE_MAX_STEPS) : '',
     snapshot.role === 'tell' ? TELL_INSTRUCTION : '',
     MARKDOWN_INSTRUCTION,

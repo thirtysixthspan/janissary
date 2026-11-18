@@ -40,6 +40,12 @@ const CODEX_DISABLED_TOOLS = {
 export const NO_BUILTIN_TOOLS_LINE = 'You have no built-in tools; use only the commands listed here.';
 export const NO_TOOLS_LINE = 'You have no tools; answer in prose.';
 
+// A model used to a harness's own tools may try one and spend a turn on a denial. Naming the standard
+// tools that are disabled keeps it on the native commands in the primer; this is guidance only, the
+// two config layers above are what actually switch the tools off.
+export const DISABLED_HARNESS_TOOLS_LINE =
+  'Standard harness tools such as bash and shell are not enabled in this session; do not call them. Use only the commands listed above.';
+
 function parseRecord(json: string | undefined): Record<string, unknown> {
   if (json === undefined) return {};
   const parsed: unknown = JSON.parse(json);

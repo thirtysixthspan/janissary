@@ -11,17 +11,18 @@ import { getConfig } from '../config.js';
 let root: string;
 let records: AcpSessionRecords;
 const metadata = { model: 'provider/model', taskPath: 'ai/tasks/original.md', ownerLabel: 'caller', ownerName: 'Original caller' };
+const subagentMetadata = { ...metadata, subagentRole: 'research' };
 beforeEach(() => {
   root = mkdtempSync(path.join(tmpdir(), 'agent-record-feed-'));
   records = new AcpSessionRecords({ projectDir: root });
 });
 afterEach(() => { records.dispose(); rmSync(root, { recursive: true, force: true }); });
 
-function runFixture() {
+function runFixture(feedMetadata: typeof metadata | typeof subagentMetadata = metadata) {
   const run = new AgentRun({ label: 'caller', incarnation: 'one', cwd: root, context: [] }, {
     taskPath: metadata.taskPath, taskText: 'Task', skills: [], grants: [],
   });
-  run.record = new AgentRecordFeed(records, metadata, run.id);
+  run.record = new AgentRecordFeed(records, feedMetadata, run.id);
   return run;
 }
 
@@ -47,13 +48,16 @@ describe('agent run durable feed', () => {
   });
 
   it.each([
-    ['completed', 'exact\nanswer', 'Completed', 'exact\nanswer'],
-    ['completed', '', 'Completed', ''],
-    ['failed', 'exact error', 'Failed', 'exact error'],
-    ['failed', undefined, 'Failed', 'Agent failed.'],
-    ['terminated', 'late completion', 'Terminated', 'Agent terminated.'],
-  ] as const)('settles %s once with %j', async (outcome, response, status, answer) => {
-    const run = runFixture();
+    ['completed', 'exact\nanswer', 'Completed', 'exact\nanswer', false],
+    ['completed', '', 'Completed', '', false],
+    ['failed', 'exact error', 'Failed', 'exact error', false],
+    ['failed', undefined, 'Failed', 'Agent failed.', false],
+    ['terminated', 'late completion', 'Terminated', 'Agent terminated.', false],
+    ['terminated', 'late completion', 'Terminated', 'Subagent terminated.', true],
+    ['partial', 'partial answer', 'Partial', 'partial answer', false],
+    ['partial', '', 'Partial', '', false],
+  ] as const)('settles %s once with %j', async (outcome, response, status, answer, subagent) => {
+    const run = runFixture(subagent ? subagentMetadata : metadata);
     run.record!.prompt('task\n\nskill instructions\nparameters ');
     run.reportActivity('thought', ' ');
     run.reportActivity('message', 'exact ');
@@ -90,5 +94,77 @@ describe('agent run durable feed', () => {
     });
     await expect(run.finish('completed')).rejects.toThrow('cleanup failed');
     expect(records.window(run.recordId!)).toMatchObject({ status: 'Completed', blocks: [{ answer: 'answer' }] });
+  });
+
+  it('projects the subagent role onto the row and window source with the original task title', () => {
+    const run = runFixture(subagentMetadata);
+    run.setSnapshot({ taskPath: '/resolved/other.md', taskText: 'resolved', skills: [], grants: [] });
+    expect(records.window(run.recordId!)).toMatchObject({
+      title: 'Subagent: original.md',
+      source: { ...subagentMetadata, kind: 'agent', runId: run.id },
+    });
+    expect(records.rows().find((row) => row.id === run.recordId)).toMatchObject({
+      title: 'Subagent: original.md', subagentRole: 'research',
+    });
+  });
+
+  it('reloads stored subagent provenance and keeps legacy records loadable without migration', () => {
+    const subagent = runFixture(subagentMetadata);
+    const legacy = runFixture();
+    const coreId = records.begin({ kind: 'acp', model: 'model', ownerLabel: 'owner', ownerName: 'Owner' });
+    const store = new AcpRecordStore({ projectDir: root });
+
+    expect(store.read(subagent.recordId!)).toMatchObject({
+      title: 'Subagent: original.md',
+      source: { ...subagentMetadata, kind: 'agent', runId: subagent.id },
+    });
+    expect(store.read(legacy.recordId!)).toMatchObject({
+      title: 'Agent: original.md',
+      source: { ...metadata, kind: 'agent', runId: legacy.id },
+    });
+    expect(store.read(legacy.recordId!)?.source).not.toHaveProperty('subagentRole');
+    expect(store.read(coreId)?.source).not.toHaveProperty('subagentRole');
+  });
+
+  it('fixes a first partial outcome even when a synchronous listener finishes again', async () => {
+    const run = runFixture();
+    run.record!.prompt('task');
+    run.setStatus('Cleaning up', 'partial answer');
+    let reentrant: Promise<void> | undefined;
+    run.subscribe(() => { reentrant = run.finish('terminated'); });
+    const partial = run.finish('partial');
+    expect(reentrant).toBe(partial);
+    await partial;
+    expect(run.outcome).toBe('partial');
+    expect(run.currentStatus).toBe('Partial');
+    expect(records.window(run.recordId!)).toMatchObject({ status: 'Partial', blocks: [{ answer: 'partial answer' }] });
+  });
+
+  it('locks the terminal Partial status against later status changes', async () => {
+    const run = runFixture();
+    run.record!.prompt('task');
+    await run.finish('partial');
+    run.setStatus('Running', 'overwritten');
+    expect(run.currentStatus).toBe('Partial');
+    expect(run.view().response).toBeUndefined();
+    expect(records.window(run.recordId!)).toMatchObject({ status: 'Partial' });
+  });
+
+  it('closes a partial record before rejecting cleanup and preserves its answer', async () => {
+    const run = runFixture();
+    run.record!.prompt('task');
+    run.setStatus('Cleaning up', 'partial answer');
+    run.addResource('broken', () => {
+      expect(records.window(run.recordId!)?.status).toBe('Partial');
+      throw new Error('cleanup failed');
+    });
+    await expect(run.finish('partial')).rejects.toThrow('cleanup failed');
+    expect(records.window(run.recordId!)).toMatchObject({ status: 'Partial', blocks: [{ answer: 'partial answer' }] });
+  });
+
+  it('leaves a terminal header with no fabricated block when a subagent terminates before a prompt', async () => {
+    const run = runFixture(subagentMetadata);
+    await run.finish('terminated');
+    expect(records.window(run.recordId!)).toMatchObject({ status: 'Terminated', blocks: [] });
   });
 });

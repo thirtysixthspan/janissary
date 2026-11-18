@@ -10,7 +10,9 @@ import { answerCoreRecord } from './record-feed.js';
 import { acpRoleRuntime } from './role-state.js';
 import { DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
 
-export type AcpDispatchReceipt = { replyId: string; role: AcpRole; name: string };
+export type AcpDispatchReceipt =
+  | { replyId: string; role: AcpRole; name: string; echo?: string }
+  | { replyId: string; kind: 'record'; recordId: string; name: string };
 
 export function appendAcp(managers: Managers, label: string, entry: LogEntry): void {
   const tab = managers.tab.byLabel(label);

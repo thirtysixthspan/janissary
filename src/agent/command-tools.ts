@@ -6,6 +6,7 @@ import { isFileMutationCommandLine } from '../file-write/command.js';
 import { isFileGlobCommandLine } from '../file-glob/command.js';
 import { isFileGrepCommandLine } from '../file-grep/command.js';
 import { isWebCommandLine } from '../web/command-line.js';
+import { isSubagentCommandLine } from '../subagent/primer.js';
 
 export function agentPrimer(snapshot: AgentSnapshot): string {
   const skills = snapshot.skills.map(({ name, instructions }) => `## ${name}\n${instructions}`).join('\n\n');
@@ -25,7 +26,7 @@ export async function runGrantedAgentCommand(
   invocation: CommandInvocationContext,
 ): Promise<string> {
   const input = command.trim().replace(/^\//, '');
-  if (isFileMutationCommandLine(input) || isFileGlobCommandLine(input)
+  if (isSubagentCommandLine(input) || isFileMutationCommandLine(input) || isFileGlobCommandLine(input)
     || isFileGrepCommandLine(input) || isWebCommandLine(input)) {
     return `Agent: command not permitted: ${command}.`;
   }

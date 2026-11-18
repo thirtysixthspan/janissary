@@ -13,7 +13,8 @@ import { holdFocusOffSinglePress } from './press-focus';
 import { holdReplySelection, shellSelectionText, type ReplySelection } from './reply-selection';
 import { ReplyPlacement } from './reply-placement';
 import type { TranscriptLines } from './transcript-lines';
-import { createReplyMarkers, useShellReplyWriters, type ShellReplyOutcome } from './useShellReplyWriters';
+import { createReplyMarkers } from './reply-markers';
+import { useShellReplyWriters, type ShellReplyOutcome } from './useShellReplyWriters';
 import { useShellTerminalView } from './useShellTerminalView';
 
 export type AttachTerminal = (

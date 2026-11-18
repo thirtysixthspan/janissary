@@ -1,14 +1,7 @@
 import { driveToolLoop } from '../acp/drive-loop.js';
 import type { AcpLoopHandlers, AcpLoopSession, AcpSession, AcpToolHost } from '../acp/types.js';
+import { runWorkspaceCommandIn } from '../acp/workspace-runner.js';
 import { deferred, type Deferred } from '../deferred.js';
-import { LocalFileSystemPort } from '../file-navigator/filesystem-port.js';
-import { globWorkspaceCommand } from '../file-glob/glob.js';
-import { isFileGlobCommandLine } from '../file-glob/command.js';
-import { grepWorkspaceCommand } from '../file-grep/grep.js';
-import { isFileGrepCommandLine } from '../file-grep/command.js';
-import { readWorkspaceCommand } from '../file-read/read.js';
-import { isFileMutationCommandLine } from '../file-write/command.js';
-import { runFileMutation } from '../file-write/tab-write.js';
 import { isWebCommandLine, webSubcommand, WEB_USAGE } from '../web/command-line.js';
 import { parseWebFetch } from '../web/fetch/command.js';
 import { webFetch } from '../web/fetch/fetch.js';
@@ -67,12 +60,7 @@ export function startRemoteLoop(
     runWorkspace: (command) => {
       const normalized = command.trim().replace(/^\//, '');
       if (isWebCommandLine(normalized)) return webWorkspaceCommand(normalized, tokens, controller.signal);
-      if (isFileMutationCommandLine(normalized)) {
-        return runFileMutation(new LocalFileSystemPort(), workspaceDir, normalized);
-      }
-      if (isFileGlobCommandLine(normalized)) return globWorkspaceCommand(workspaceDir, normalized, controller.signal);
-      if (isFileGrepCommandLine(normalized)) return grepWorkspaceCommand(workspaceDir, normalized);
-      return readWorkspaceCommand(workspaceDir, normalized);
+      return runWorkspaceCommandIn(workspaceDir, normalized, controller.signal);
     },
     runCaller: (command) => {
       if (aborted()) return '';

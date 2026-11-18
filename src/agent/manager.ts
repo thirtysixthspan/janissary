@@ -42,6 +42,7 @@ export class AgentRunManager {
       model, taskPath: options.snapshot.taskPath, ownerLabel: options.caller.label,
       ownerName: options.caller.ownerName ?? callerTab.title ?? callerTab.label,
       ...(options.executionHost !== undefined && { host: options.executionHost }),
+      ...(options.subagentRole !== undefined && { subagentRole: options.subagentRole }),
     });
     const releaseWorkspace = options.releaseWorkspace ?? (options.workspaceDir === undefined
       ? undefined
@@ -52,7 +53,7 @@ export class AgentRunManager {
       effort: options.effort ?? 'medium',
       host: options.executionHost ?? 'Local',
       workspace: options.executionWorkspace ?? options.executionDir ?? options.caller.cwd,
-    }, options.executionDir ?? options.caller.cwd);
+    }, options.executionDir ?? options.caller.cwd, options.acpCaller);
     run.record = new AgentRecordFeed(this.managers.acpRecords, metadata, run.id);
     ownRecord(tabRuntime(callerTab), run.record.id);
     this.runs.set(run.id, run);
@@ -132,6 +133,10 @@ export class AgentRunManager {
 
   isAgentRun(runId: string): boolean {
     return this.knownRunIds.has(runId);
+  }
+
+  get disposing(): boolean {
+    return this.disposed;
   }
 
   dispose(): void | Promise<void> {

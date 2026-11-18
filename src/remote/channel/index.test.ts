@@ -4,10 +4,10 @@ import type { ChannelTransport, ChannelFrame } from './types.js';
 import { REMOTE_SHUTDOWN_DRAIN_MS } from '../shutdown-drain.js';
 import { encodeFrame, encodeHandshake, HANDSHAKE_SENTINEL, REMOTE_PROTOCOL_VERSION } from '../protocol.js';
 
-function harness() {
+function harness(write?: (data: string) => void) {
   const written: string[] = [];
   const kill = vi.fn();
-  const transport: ChannelTransport = { id: 'pty1', write: (d) => { written.push(d); }, kill };
+  const transport: ChannelTransport = { id: 'pty1', write: write ?? ((d) => { written.push(d); }), kill };
   const terminal: string[] = [];
   const frames: ChannelFrame[] = [];
   const errors: string[] = [];
@@ -356,7 +356,7 @@ describe('RemoteChannel — ACP session routing', () => {
     const h = harness();
     h.channel.receive(`${encodeHandshake()}\n`);
     const listener = {
-      onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(),
+      onReady: vi.fn(), onSessionStarted: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(),
       onRunEnd: vi.fn(), onActivity: vi.fn(), onClosed: vi.fn(), onError: vi.fn(),
     };
     return { ...h, listener };
@@ -374,6 +374,51 @@ describe('RemoteChannel — ACP session routing', () => {
     expect(h.listener.onChunk).toHaveBeenCalledWith('partial');
     expect(h.listener.onRunEnd).toHaveBeenCalledWith('answered');
     expect(h.frames).toEqual([]);
+  });
+
+  it('routes the provider id and both ready arguments only to the owning ACP listener', () => {
+    const h = acpHarness();
+    const other = { ...h.listener, onReady: vi.fn(), onSessionStarted: vi.fn() };
+    h.channel.attachAcp('racp1', h.listener);
+    h.channel.attachAcp('racp2', other);
+
+    h.channel.receive(`${encodeFrame({ type: 'acp-session-started', id: 'racp1', sessionId: 'provider-abc' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-ready', id: 'racp1', sandboxed: true, sessionId: 'provider-abc' })}\n`);
+
+    expect(h.listener.onSessionStarted).toHaveBeenCalledExactlyOnceWith('provider-abc');
+    expect(h.listener.onReady).toHaveBeenCalledExactlyOnceWith(true, 'provider-abc');
+    expect(other.onSessionStarted).not.toHaveBeenCalled();
+    expect(other.onReady).not.toHaveBeenCalled();
+    expect(h.frames).toEqual([]);
+    expect(h.errors).toEqual([]);
+  });
+
+  it('delivers an id-bearing frame to no listener for an unknown or detached address', () => {
+    const h = acpHarness();
+    h.channel.attachAcp('racp1', h.listener);
+    h.channel.detachAcp('racp1');
+
+    h.channel.receive(`${encodeFrame({ type: 'acp-session-started', id: 'racp1', sessionId: 'stale' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-session-started', id: 'racp9', sessionId: 'unknown' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-ready', id: 'racp9', sandboxed: false, sessionId: 'unknown' })}\n`);
+
+    expect(h.listener.onSessionStarted).not.toHaveBeenCalled();
+    expect(h.listener.onReady).not.toHaveBeenCalled();
+    expect(h.errors).toEqual([]);
+    expect(h.kill).not.toHaveBeenCalled();
+  });
+
+  it('accepts an ACP listener that omits the optional session-started hook', () => {
+    const h = acpHarness();
+    const listener = {
+      onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(),
+      onRunEnd: vi.fn(), onActivity: vi.fn(), onClosed: vi.fn(), onError: vi.fn(),
+    };
+    h.channel.attachAcp('racp1', listener);
+
+    h.channel.receive(`${encodeFrame({ type: 'acp-session-started', id: 'racp1', sessionId: 'provider-abc' })}\n`);
+
+    expect(h.errors).toEqual([]);
   });
 
   it('routes activity and release acknowledgments to the owning ACP session', () => {
@@ -503,6 +548,237 @@ describe('RemoteChannel — agent snapshot resolution', () => {
     h.channel.receive(`${encodeFrame({ type: 'agent-resolve-result', id: request.id, snapshot })}\n`);
 
     await expect(pending).resolves.toEqual(snapshot);
+  });
+
+  it('forwards a selected workspace through the facade', async () => {
+    const h = harness();
+    h.channel.receive(`${encodeHandshake()}\n`);
+    const pending = h.channel.resolveAgentSnapshot('ai/tasks/fix.md', ['review'], 'agent-run1');
+    const request = JSON.parse(h.written[0] ?? '{}') as { type: string; id: string; workspace?: string };
+    expect(request).toMatchObject({ type: 'agent-resolve', workspace: 'agent-run1' });
+
+    const snapshot = { taskPath: '/remote/clone/ai/tasks/fix.md', taskText: 'Fix it.', skills: [], grants: [] };
+    h.channel.receive(`${encodeFrame({ type: 'agent-resolve-result', id: request.id, snapshot })}\n`);
+
+    await expect(pending).resolves.toEqual(snapshot);
+  });
+
+  it('leaves the frame unchanged through the facade when no workspace is selected', () => {
+    const h = harness();
+    h.channel.receive(`${encodeHandshake()}\n`);
+    void h.channel.resolveAgentSnapshot('ai/tasks/fix.md', ['review']);
+    const request = JSON.parse(h.written[0] ?? '{}') as { workspace?: string };
+    expect(request).not.toHaveProperty('workspace');
+  });
+
+  it.each(['authentication', 'closed', 'reconnecting', 'attaching'] as const)(
+    'rejects a selected resolution with no write while %s', async (state) => {
+      const h = harness();
+      if (state !== 'authentication') {
+        if (state === 'reconnecting') {
+          h.channel.sessionId = '12345678-1234-1234-1234-123456789abc';
+          h.channel.receive(`${encodeHandshake(h.channel.sessionId)}\n`);
+          h.channel.closed();
+        } else if (state === 'attaching') {
+          h.channel.sessionId = '12345678-1234-1234-1234-123456789abc';
+          h.channel.receive(`${encodeHandshake(h.channel.sessionId)}\n`);
+        } else {
+          h.channel.closed();
+        }
+      }
+      expect(h.channel.attached).toBe(false);
+
+      await expect(h.channel.resolveAgentSnapshot('ai/tasks/fix.md', [], 'agent-run1'))
+        .rejects.toThrow('Remote connection unavailable.');
+      expect(h.written).toEqual([]);
+    },
+  );
+});
+
+describe('RemoteChannel — run clones', () => {
+  type CloneFrame = { type: 'run-clone'; id: string; action: string; label: string };
+
+  function attached() {
+    const h = harness();
+    h.channel.receive(`${encodeHandshake()}\n`);
+    return h;
+  }
+
+  function request(written: string[]): CloneFrame {
+    const frame = JSON.parse(written.at(-1) ?? '{}') as CloneFrame;
+    if (frame.type !== 'run-clone') throw new Error('Expected an encoded run-clone request.');
+    return frame;
+  }
+
+  function answer(h: ReturnType<typeof harness>, id: string, result: Record<string, unknown> = {}) {
+    h.channel.receive(`${encodeFrame({ type: 'run-clone-result', id, ...result })}\n`);
+  }
+
+  it('writes one encoded frame per call and routes the result to its request without a notification', async () => {
+    const h = attached();
+    const create = h.channel.runClone('create', 'subagent-run1');
+    const release = h.channel.runClone('release', 'subagent-run1');
+    const frames = h.written.map((line) => request([line]));
+    expect(frames).toMatchObject([
+      { type: 'run-clone', action: 'create', label: 'subagent-run1' },
+      { type: 'run-clone', action: 'release', label: 'subagent-run1' },
+    ]);
+    expect(frames[0]!.id).not.toBe(frames[1]!.id);
+
+    answer(h, frames[1]!.id);
+    answer(h, frames[0]!.id, { dir: '/srv/ws/subagent-run1' });
+
+    await expect(create).resolves.toBe('/srv/ws/subagent-run1');
+    await expect(release).resolves.toBeUndefined();
+    expect(h.frames).toEqual([]);
+    expect(h.errors).toEqual([]);
+    expect(h.kill).not.toHaveBeenCalled();
+  });
+
+  it.each(['authentication', 'closed', 'reconnecting', 'attaching'] as const)(
+    'rejects a call with no write while %s', async (state) => {
+      const h = harness();
+      if (state !== 'authentication') {
+        if (state === 'reconnecting') {
+          h.channel.sessionId = '12345678-1234-1234-1234-123456789abc';
+          h.channel.receive(`${encodeHandshake(h.channel.sessionId)}\n`);
+          h.channel.closed();
+        } else if (state === 'attaching') {
+          h.channel.sessionId = '12345678-1234-1234-1234-123456789abc';
+          h.channel.receive(`${encodeHandshake(h.channel.sessionId)}\n`);
+        } else {
+          h.channel.closed();
+        }
+      }
+      expect(h.channel.attached).toBe(false);
+
+      await expect(h.channel.runClone('create', 'run1')).rejects.toThrow('Remote connection unavailable.');
+      expect(h.written).toEqual([]);
+    },
+  );
+
+  it('settles a pending create and release on disconnect', async () => {
+    const h = attached();
+    const create = h.channel.runClone('create', 'run-a');
+    const release = h.channel.runClone('release', 'run-b');
+
+    h.channel.disconnect();
+
+    await expect(create).rejects.toThrow('Remote session detached.');
+    await expect(release).rejects.toThrow('Remote session detached.');
+    expect(h.kill).toHaveBeenCalledOnce();
+  });
+
+  it('settles a pending create on finish even when the shutdown write throws', async () => {
+    const h = harness((data) => {
+      if (data.includes('"type":"shutdown"')) throw new Error('shutdown write refused');
+    });
+    h.channel.receive(`${encodeHandshake()}\n`);
+    const pending = h.channel.runClone('create', 'run1');
+    const expectation = expect(pending).rejects.toThrow('Remote session ended.');
+
+    expect(() => h.channel.finish()).toThrow('shutdown write refused');
+    await expectation;
+  });
+
+  it.each([true, false] as const)('settles pending requests on transport loss with session id: %s', async (withSession) => {
+    const h = harness();
+    if (withSession) h.channel.receive(`${encodeHandshake('12345678-1234-1234-1234-123456789abc')}\n`);
+    else h.channel.receive(`${encodeHandshake()}\n`);
+    const create = h.channel.runClone('create', 'run-a');
+    const release = h.channel.runClone('release', 'run-b');
+    const expectation = Promise.all([
+      expect(create).rejects.toThrow('Remote connection lost.'),
+      expect(release).rejects.toThrow('Remote connection lost.'),
+    ]);
+
+    h.channel.closed();
+
+    await expectation;
+  });
+
+  it('settles pending requests immediately on a direct close', async () => {
+    const h = attached();
+    const pending = h.channel.runClone('create', 'run1');
+    const expectation = expect(pending).rejects.toThrow('Remote connection lost.');
+
+    h.channel.close();
+
+    await expectation;
+    expect(h.kill).toHaveBeenCalledOnce();
+  });
+
+  it('settles pending requests on a malformed clone result without a later closed callback', async () => {
+    const h = attached();
+    const pending = h.channel.runClone('create', 'run1');
+    const id = request(h.written).id;
+    const expectation = expect(pending).rejects.toThrow('Malformed remote frame "run-clone-result".');
+
+    h.channel.receive(`${JSON.stringify({ type: 'run-clone-result', id, dir: '', error: 'both' })}\n`);
+
+    await expectation;
+    expect(h.errors).toEqual(['Malformed remote frame "run-clone-result".']);
+    expect(h.kill).toHaveBeenCalledOnce();
+    expect(h.closes).not.toHaveBeenCalled();
+  });
+
+  it('rejects a request whose write throws without waiting for a PTY exit', async () => {
+    const h = harness(() => { throw new Error('write refused'); });
+    h.channel.receive(`${encodeHandshake()}\n`);
+
+    await expect(h.channel.runClone('create', 'run1')).rejects.toThrow('write refused');
+    expect(h.kill).not.toHaveBeenCalled();
+    expect(h.errors).toEqual([]);
+  });
+
+  it('does not resend an old request after a reconnect and lets a fresh call succeed', async () => {
+    const h = attached();
+    const old = h.channel.runClone('create', 'run-old');
+    const oldExpectation = expect(old).rejects.toThrow('Remote connection lost.');
+    h.channel.closed();
+    await oldExpectation;
+    expect(h.written).toHaveLength(1);
+
+    const transport = { id: 'new', write: (data: string) => { h.written.push(data); }, kill: vi.fn() };
+    h.channel.replaceTransport(transport);
+    h.channel.receive(`${encodeHandshake('12345678-1234-1234-1234-123456789abc')}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'attach-result', accepted: true })}\n`);
+    expect(h.channel.attached).toBe(true);
+    expect(h.written).toHaveLength(1);
+
+    const fresh = h.channel.runClone('create', 'run-new');
+    const id = request(h.written.slice(1)).id;
+    answer(h, id, { dir: '/srv/ws/run-new' });
+    await expect(fresh).resolves.toBe('/srv/ws/run-new');
+    expect(request(h.written.slice(1))).toMatchObject({ action: 'create', label: 'run-new' });
+  });
+
+  it('keeps navigator reply and event routing through the extracted dispatcher', () => {
+    const h = attached();
+    const onReply = vi.fn();
+    const onEvent = vi.fn();
+    h.channel.attachNavigator('files1', { onReply, onEvent });
+    h.channel.receive(`${encodeFrame({ type: 'filesystem-reply', session: 'files1', request: 'q1', result: [] })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'filesystem-event', session: 'files1', path: 'src' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'filesystem-reply', session: 'unknown', request: 'q2', error: 'gone' })}\n`);
+
+    expect(onReply).toHaveBeenCalledExactlyOnceWith({ type: 'filesystem-reply', session: 'files1', request: 'q1', result: [] });
+    expect(onEvent).toHaveBeenCalledExactlyOnceWith('src');
+    expect(h.frames).toEqual([]);
+    expect(h.errors).toEqual([]);
+    expect(h.kill).not.toHaveBeenCalled();
+  });
+
+  it('fails the channel on a client-only run-clone and settles its pending request', async () => {
+    const h = attached();
+    const pending = h.channel.runClone('create', 'run1');
+    const expectation = expect(pending).rejects.toThrow('Unexpected remote frame "run-clone".');
+
+    h.channel.receive(`${encodeFrame({ type: 'run-clone', id: 'far', action: 'create', label: 'run1' })}\n`);
+
+    await expectation;
+    expect(h.errors).toEqual(['Unexpected remote frame "run-clone".']);
+    expect(h.kill).toHaveBeenCalledOnce();
   });
 });
 

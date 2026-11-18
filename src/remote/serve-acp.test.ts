@@ -6,6 +6,9 @@ import type { AcpOptions, AcpRunSnapshot, AcpRunSnapshotRow, PromptHandlers } fr
 import type * as ServeAcpLoop from './serve-acp-loop.js';
 import type { ServerFrame } from './protocol-frames.js';
 import * as confinement from '../sandbox/confinement.js';
+import { initWorkspaceDir } from '../workspace/index.js';
+import type { WorkspaceManager } from '../workspace/manager.js';
+import { RemoteRunClones } from './serve-run-clones.js';
 
 // `connectAcp` is faked at the module boundary: what this class owns is the frame translation, not
 // the ACP client itself (that is exercised end to end in `src/acp/index.test.ts`).
@@ -41,10 +44,45 @@ const OPEN = {
   env: { OPENCODE_CONFIG_CONTENT: '{"model":"google/gemini-3.1-flash-lite"}' }, offline: false,
 } as const;
 
-function makeAcp(tokens = {}, workspace = WORKSPACE) {
+function makeAcp(tokens = {}, workspace = WORKSPACE, lookup?: RemoteRunClones['lookup']) {
   const frames: ServerFrame[] = [];
-  const acp = new RemoteAcp((frame) => { frames.push(frame); }, workspace, tokens);
+  const acp = new RemoteAcp((frame) => { frames.push(frame); }, workspace, tokens, lookup);
   return { acp, frames };
+}
+
+function cloneService() {
+  initWorkspaceDir(WORKSPACE);
+  const tracked = new Set<string>();
+  const handles: PromiseWithResolvers<void>[] = [];
+  const manager = {
+    create: vi.fn((label: string) => {
+      const settle = Promise.withResolvers<void>();
+      handles.push(settle);
+      const dir = path.join(WORKSPACE, label);
+      tracked.add(dir);
+      return { dir, ready: settle.promise, cancel: vi.fn() };
+    }),
+    tracks: vi.fn((dir: string) => tracked.has(dir)),
+    remove: vi.fn((dir: string) => { tracked.delete(dir); }),
+    cancel: vi.fn(),
+  } as unknown as WorkspaceManager;
+  return { service: new RemoteRunClones(manager, {}, 'main'), handles };
+}
+
+async function stateLookup(state: 'pending' | 'releasing' | 'released' | 'stopping'): Promise<RemoteRunClones['lookup']> {
+  const { service, handles } = cloneService();
+  if (state === 'stopping') {
+    service.stop();
+    return (label) => service.lookup(label);
+  }
+  const created = service.create('the-clone');
+  await vi.waitFor(() => expect(handles).toHaveLength(1));
+  if (state === 'pending') return (label) => service.lookup(label);
+  handles[0]!.resolve();
+  await created;
+  if (state === 'releasing') void service.release('the-clone');
+  else await service.release('the-clone');
+  return (label) => service.lookup(label);
 }
 
 type CoreSnapshot = Extract<AcpRunSnapshot, { kind: 'core' }>;
@@ -68,9 +106,11 @@ function lastHandlers(): PromptHandlers {
 }
 
 let workspace: string;
+let clone: string;
 
 beforeEach(() => {
   workspace = mkdtempSync(path.join(tmpdir(), 'janus-serve-acp-'));
+  clone = mkdtempSync(path.join(tmpdir(), 'janus-serve-acp-clone-'));
   vi.spyOn(confinement, 'sandboxWillConfine').mockReturnValue(true);
   acpMock.options.length = 0;
   acpMock.prompt.mockReset();
@@ -82,6 +122,7 @@ beforeEach(() => {
 
 afterEach(() => {
   rmSync(workspace, { recursive: true, force: true });
+  rmSync(clone, { recursive: true, force: true });
   vi.useRealTimers();
 });
 
@@ -104,6 +145,52 @@ describe('RemoteAcp — opening a session', () => {
 
     expect(frames).toEqual([{ type: 'acp-ready', id: 'racp1', sandboxed }]);
     expect(confinement.sandboxWillConfine).toHaveBeenCalledWith(WORKSPACE);
+  });
+
+  // The provider id arrives before effort setup, so it is its own frame rather than waiting for
+  // readiness. A no-ID open keeps the original ready shape.
+  it.each([false, true])('reports the provider id immediately, then carries it on ready: %s', (sandboxed) => {
+    vi.spyOn(confinement, 'sandboxWillConfine').mockReturnValue(sandboxed);
+    const { acp, frames } = makeAcp();
+
+    acp.open(OPEN);
+    acpMock.options[0].onSessionStarted?.('session-exact-id');
+
+    expect(frames).toEqual([{ type: 'acp-session-started', id: 'racp1', sessionId: 'session-exact-id' }]);
+
+    acpMock.options[0].onConnect?.({ provider: 'opencode', model: 'Build' });
+
+    expect(frames).toEqual([
+      { type: 'acp-session-started', id: 'racp1', sessionId: 'session-exact-id' },
+      { type: 'acp-ready', id: 'racp1', sandboxed, sessionId: 'session-exact-id' },
+    ]);
+  });
+
+  it('keeps an already-emitted id when effort setup fails without inventing readiness', () => {
+    const { acp, frames } = makeAcp();
+
+    acp.open(OPEN);
+    acpMock.options[0].onSessionStarted?.('session-exact-id');
+    acpMock.options[0].onError('unsupported effort "absent"');
+
+    expect(frames).toContainEqual({ type: 'acp-session-started', id: 'racp1', sessionId: 'session-exact-id' });
+    expect(frames.filter((frame) => frame.type === 'acp-ready')).toEqual([]);
+  });
+
+  it('keeps the captured id separate across two simultaneous opens', () => {
+    const { acp, frames } = makeAcp();
+
+    acp.open(OPEN);
+    acp.open({ ...OPEN, id: 'racp2' });
+    acpMock.options[0].onSessionStarted?.('first-provider');
+    acpMock.options[1].onSessionStarted?.('second-provider');
+    acpMock.options[1].onConnect?.({ provider: 'opencode', model: 'Build' });
+
+    expect(frames).toEqual([
+      { type: 'acp-session-started', id: 'racp1', sessionId: 'first-provider' },
+      { type: 'acp-session-started', id: 'racp2', sessionId: 'second-provider' },
+      { type: 'acp-ready', id: 'racp2', sandboxed: true, sessionId: 'second-provider' },
+    ]);
   });
 
   it('applies autonomous policy and forwards typed activity to the run id', () => {
@@ -194,6 +281,157 @@ describe('RemoteAcp — opening a session', () => {
 
     expect(acpMock.options).toHaveLength(2);
     expect(frames).toEqual([{ type: 'acp-ready', id: 'racp2', sandboxed: true }]);
+  });
+});
+
+describe('RemoteAcp — workspace selectors', () => {
+  it.each([false, true])('opens a selected clone as cwd, workspace root and confinement root: %s', (sandboxed) => {
+    vi.spyOn(confinement, 'sandboxWillConfine').mockReturnValue(sandboxed);
+    const { acp, frames } = makeAcp({}, WORKSPACE, (label) => label === 'agent-run1' ? clone : undefined);
+
+    acp.open({ ...OPEN, workspace: 'agent-run1' });
+    acpMock.options[0].onConnect?.({ provider: 'opencode', model: 'Build' });
+
+    expect(acpMock.options[0]).toMatchObject({ cwd: clone, workspaceDir: clone });
+    expect(confinement.sandboxWillConfine).toHaveBeenCalledWith(clone);
+    expect(frames).toEqual([{ type: 'acp-ready', id: 'racp1', sandboxed }]);
+  });
+
+  it('uses the main directory when the selector is absent even with a lookup available', () => {
+    const lookup = vi.fn(() => clone);
+    const { acp } = makeAcp({}, WORKSPACE, lookup);
+
+    acp.open(OPEN);
+
+    expect(acpMock.options[0]).toMatchObject({ cwd: WORKSPACE, workspaceDir: WORKSPACE });
+    expect(lookup).not.toHaveBeenCalled();
+    expect(confinement.sandboxWillConfine).toHaveBeenCalledWith(WORKSPACE);
+  });
+
+  it('keeps two transport ids on their own selected clones', () => {
+    const other = path.join(WORKSPACE, 'other');
+    const { acp } = makeAcp({}, WORKSPACE, (label) => label === 'first' ? clone : label === 'second' ? other : undefined);
+
+    acp.open({ ...OPEN, id: 'first', workspace: 'first' });
+    acp.open({ ...OPEN, id: 'second', workspace: 'second' });
+
+    expect(acpMock.options[0]).toMatchObject({ cwd: clone });
+    expect(acpMock.options[1]).toMatchObject({ cwd: other });
+  });
+
+  it('keeps a live session on its original clone after the lookup changes', async () => {
+    writeFileSync(path.join(clone, 'which.md'), 'from clone');
+    writeFileSync(path.join(workspace, 'which.md'), 'from other');
+    let selected = clone;
+    const { acp, frames } = makeAcp({}, WORKSPACE, () => selected);
+
+    acp.open({ ...OPEN, workspace: 'sel' });
+    acp.run(RUN_FRAME);
+    lastHandlers().onChunk('file read which.md');
+    lastHandlers().onEnd('end_turn');
+    await flush();
+    expect(frames.filter((frame) => frame.type === 'acp-tool-step')).toEqual([
+      { type: 'acp-tool-step', id: 'racp1', command: 'file read which.md', result: '1\tfrom clone', workspace: true },
+    ]);
+
+    selected = workspace;
+    acp.run(RUN_FRAME);
+    lastHandlers().onChunk('file read which.md');
+    lastHandlers().onEnd('end_turn');
+    await flush();
+    expect(frames.filter((frame) => frame.type === 'acp-tool-step')).toEqual([
+      { type: 'acp-tool-step', id: 'racp1', command: 'file read which.md', result: '1\tfrom clone', workspace: true },
+      { type: 'acp-tool-step', id: 'racp1', command: 'file read which.md', result: '1\tfrom clone', workspace: true },
+    ]);
+  });
+
+  it('refuses an unknown or path-shaped selector before confinement or connect', () => {
+    const { service } = cloneService();
+    for (const label of ['nope', '../escape']) {
+      vi.mocked(confinement.sandboxWillConfine).mockClear();
+      acpMock.options.length = 0;
+      const { acp, frames } = makeAcp({}, WORKSPACE, (candidate) => service.lookup(candidate));
+
+      acp.open({ ...OPEN, workspace: label });
+
+      expect(frames).toEqual([{
+        type: 'acp-error', id: 'racp1', message: `Unknown remote run clone "${label}".`, fatal: true,
+      }]);
+      expect(acpMock.options).toHaveLength(0);
+      expect(confinement.sandboxWillConfine).not.toHaveBeenCalled();
+    }
+  });
+
+  it('refuses a selector when no lookup callback was injected', () => {
+    vi.mocked(confinement.sandboxWillConfine).mockClear();
+    const { acp, frames } = makeAcp();
+
+    acp.open({ ...OPEN, workspace: 'agent-run1' });
+
+    expect(frames).toEqual([{
+      type: 'acp-error', id: 'racp1', message: 'Unknown remote run clone "agent-run1".', fatal: true,
+    }]);
+    expect(acpMock.options).toHaveLength(0);
+    expect(confinement.sandboxWillConfine).not.toHaveBeenCalled();
+  });
+
+  it.each(['pending', 'releasing', 'released', 'stopping'] as const)(
+    'refuses a %s clone through the real lookup contract before confinement or connect', async (state) => {
+      const lookup = await stateLookup(state);
+      vi.mocked(confinement.sandboxWillConfine).mockClear();
+      const { acp, frames } = makeAcp({}, WORKSPACE, lookup);
+
+      acp.open({ ...OPEN, workspace: 'the-clone' });
+
+      expect(frames).toEqual([{
+        type: 'acp-error', id: 'racp1', message: 'Unknown remote run clone "the-clone".', fatal: true,
+      }]);
+      expect(acpMock.options).toHaveLength(0);
+      expect(confinement.sandboxWillConfine).not.toHaveBeenCalled();
+    },
+  );
+
+  it('ignores a duplicate open that carries another selector', () => {
+    const { acp } = makeAcp({}, WORKSPACE, (label) => label === 'agent-run1' ? clone : undefined);
+
+    acp.open({ ...OPEN, workspace: 'agent-run1' });
+    acp.open({ ...OPEN, workspace: 'other' });
+
+    expect(acpMock.options).toHaveLength(1);
+  });
+
+  it('lets a refused id open successfully later', () => {
+    const { acp, frames } = makeAcp({}, WORKSPACE, (label) => label === 'agent-run1' ? clone : undefined);
+
+    acp.open({ ...OPEN, workspace: 'nope' });
+    frames.length = 0;
+    acp.open({ ...OPEN, workspace: 'agent-run1' });
+
+    expect(frames).toEqual([]);
+    expect(acpMock.options).toHaveLength(1);
+  });
+
+  it('lets a closed id select a new directory', async () => {
+    const { acp } = makeAcp({}, WORKSPACE, (label) => label === 'first' ? clone : label === 'second' ? workspace : undefined);
+
+    acp.open({ ...OPEN, workspace: 'first' });
+    await acp.close('racp1');
+    acp.open({ ...OPEN, workspace: 'second' });
+
+    expect(acpMock.options[0]).toMatchObject({ cwd: clone });
+    expect(acpMock.options[1]).toMatchObject({ cwd: workspace });
+  });
+
+  it('reports the provider id then readiness on a selected session without autonomous mode', () => {
+    const { acp, frames } = makeAcp({}, WORKSPACE, (label) => label === 'agent-run1' ? clone : undefined);
+
+    acp.open({ ...OPEN, workspace: 'agent-run1' });
+    acpMock.options[0].onSessionStarted?.('provider-id');
+    expect(frames).toEqual([{ type: 'acp-session-started', id: 'racp1', sessionId: 'provider-id' }]);
+
+    acpMock.options[0].onConnect?.({ provider: 'opencode', model: 'Build' });
+    expect(frames.at(-1)).toEqual({ type: 'acp-ready', id: 'racp1', sandboxed: true, sessionId: 'provider-id' });
+    expect(acpMock.options[0].autonomous).toBeUndefined();
   });
 });
 

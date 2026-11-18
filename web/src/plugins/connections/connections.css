@@ -33,7 +33,7 @@
 .connections-row:hover { background: var(--border); }
 .connections-row.selected { background: var(--bg-soft); }
 .connections-row:is([data-status='Open'], [data-status='Running'], [data-status='Idle']) +
-.connections-row:is([data-status='Closed'], [data-status='Completed'], [data-status='Failed'], [data-status='Terminated']) {
+.connections-row:is([data-status='Closed'], [data-status='Completed'], [data-status='Failed'], [data-status='Partial'], [data-status='Terminated']) {
   margin-top: 24px;
 }
 .connections-row-host, .connections-row-owner, .connections-row-id, .connections-row-title {
@@ -47,6 +47,7 @@
 .connections-row[data-status='Closed'],
 .connections-row[data-status='Completed'],
 .connections-row[data-status='Failed'],
+.connections-row[data-status='Partial'],
 .connections-row[data-status='Terminated'] { color: var(--muted); }
 .connections-row-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
 .connections-row-actions button {
@@ -62,8 +63,17 @@
 .connections-prompt, .connections-answer { padding: 10px; border-radius: 4px; background: var(--bg-soft); white-space: pre-wrap; }
 .connections-activity { padding-left: 10px; border-left: 2px solid var(--border); }
 .connections-activity-label, .connections-activity summary { color: var(--muted); font-size: 12px; }
+/* A tool's command and reply share one collapsible section, each part labelled and wrapping long text. */
+.connections-tool-part { margin: 4px 0; }
+.connections-tool-part-label { color: var(--muted); font-size: 12px; }
+.connections-tool-part .connections-activity-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 /* JSON activity keeps its indentation and wraps long values instead of widening the tab. */
 .connections-activity-json { margin: 0; font-size: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
+.connections-tool-calls { display: flex; flex-direction: column; gap: 6px; margin: 4px 0; }
+.connections-tool-call { border-left: 2px solid var(--border); padding-left: 8px; }
+.connections-tool-call-name { color: var(--muted); font-size: 12px; font-weight: 600; }
+.connections-tool-call-parameter { white-space: pre-wrap; overflow-wrap: anywhere; }
+.connections-tool-call-parameter-name { color: var(--muted); margin-right: 6px; }
 .connections-list-error, .connections-record-error { color: var(--error); padding: 8px 12px; }
 
 /* Docked, each row stacks onto two lines the way a docked sessions row does: the connection's name

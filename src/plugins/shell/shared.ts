@@ -105,7 +105,9 @@ export type ShellQueuedCommandRequest = { receipt: string; discard?: true };
 // A core-response reply may carry a `ShellAcpReceipt` as `result`.
 export type ShellDispatchResult = { dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown };
 
-export type ShellAcpReceipt = { replyId: string; role: 'ask' | 'tell'; name: string };
+export type ShellAcpReceipt =
+  | { replyId: string; role: 'ask' | 'tell'; name: string; echo?: string }
+  | { replyId: string; kind: 'record'; recordId: string; name: string };
 
 // The completion the application's command bar would show. Carried by the same intent rather than a
 // second one, so a plugin holding a ptyId and a command line needs exactly one wire route.
@@ -231,10 +233,16 @@ export function isShellCommandState(value: unknown): value is ShellCommandState 
 }
 
 export function isShellAcpReceipt(value: unknown): value is ShellAcpReceipt {
-  return isRecord(value)
-    && typeof value.replyId === 'string'
-    && typeof value.name === 'string'
-    && (value.role === 'ask' || value.role === 'tell');
+  if (!isRecord(value)) return false;
+  if (typeof value.replyId !== 'string' || typeof value.name !== 'string') return false;
+  const role = value.role === 'ask' || value.role === 'tell';
+  const record = value.kind === 'record';
+  if (role === record) return false;
+  if (record) {
+    return value.role === undefined && value.echo === undefined && typeof value.recordId === 'string';
+  }
+  return value.kind === undefined && value.recordId === undefined
+    && (value.echo === undefined || typeof value.echo === 'string');
 }
 
 export function isRestartTerminalRequest(value: unknown): value is RestartTerminalRequest {

@@ -28,7 +28,7 @@ export type AgentRunView = Readonly<{
   effort: string;
   host: string;
   workspace: string;
-  status: 'Provisioning' | 'Running' | 'Waiting for answer' | 'Cleaning up' | 'Completed' | 'Failed' | 'Terminated';
+  status: 'Provisioning' | 'Running' | 'Waiting for answer' | 'Cleaning up' | 'Completed' | 'Failed' | 'Partial' | 'Terminated';
   activity: readonly Readonly<{ id: number; kind: AcpActivityKind; text: string }>[];
   response?: string;
 }>;

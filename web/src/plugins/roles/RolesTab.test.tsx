@@ -170,11 +170,12 @@ describe('RolesTab', () => {
     });
     renderTab(payload);
 
-    expect(NATIVE_ACP_COMMANDS).toHaveLength(17);
+    expect(NATIVE_ACP_COMMANDS).toHaveLength(18);
     expect(NATIVE_ACP_COMMANDS).toContain('file grep');
     expect(NATIVE_ACP_COMMANDS).toContain('file patch');
     expect(NATIVE_ACP_COMMANDS).toContain('web search');
     expect(NATIVE_ACP_COMMANDS).toContain('web fetch');
+    expect(NATIVE_ACP_COMMANDS).toContain('subagent');
     expect(screen.queryByRole('button', { name: 'Add command' })).toBeNull();
     expect(screen.getByText('future command').closest('.roles-command-entry'))
       .toHaveAttribute('title', 'Not a native command');
@@ -759,6 +760,32 @@ describe('RolesTab', () => {
       expect(await screen.findByText('No role named "research".')).toHaveClass('roles-refusal');
       expect(screen.getByText(/showing the rest of this file\./)).toHaveClass('roles-problem');
     });
+  });
+
+  it('offers subagent in appended vocabulary order and drops it from the picker after publication', () => {
+    const payload = makePayload({
+      roles: [{ name: 'research', description: 'Research.', entries: [], commands: ['browser goto'] }],
+    });
+    const { intent, publish } = renderTab(payload);
+
+    expect(NATIVE_ACP_COMMANDS.indexOf('subagent')).toBe(NATIVE_ACP_COMMANDS.length - 1);
+    fireEvent.click(screen.getByRole('button', { name: 'Add command' }));
+    const picker = screen.getByLabelText('Command to add to role research') as HTMLSelectElement;
+    expect([...picker.options].map(({ value }) => value).slice(1)).toEqual(
+      NATIVE_ACP_COMMANDS.filter((command) => !payload.roles[0].commands.includes(command)),
+    );
+    fireEvent.change(picker, { target: { value: 'subagent' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(intent).toHaveBeenCalledWith('add-command', { role: 'research', command: 'subagent' });
+
+    publish({
+      ...payload,
+      roles: [{ ...payload.roles[0], commands: [...payload.roles[0].commands, 'subagent'] }],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Add command' }));
+    const offered = [...(screen.getByLabelText('Command to add to role research') as HTMLSelectElement).options]
+      .map(({ value }) => value);
+    expect(offered).not.toContain('subagent');
   });
 
   it('offers file write and file edit as ordinary picker entries with remove buttons and restriction indicators', () => {

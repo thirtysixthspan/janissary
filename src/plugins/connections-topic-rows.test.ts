@@ -256,6 +256,17 @@ describe('connections topic rows', () => {
     ]);
   });
 
+  it('sorts a Partial agent row below live, Running, and Idle rows', () => {
+    const { managers, recordRows } = fixture();
+    recordRows.push(
+      { id: 'idle-record', kind: 'acp', title: 'ACP: idle', model: 'model-a', ownerLabel: 'closed-owner', ownerName: 'Idle owner', startedAt: 3, updatedAt: 50, status: 'Idle' },
+      { id: 'partial-record', kind: 'agent', title: 'Subagent: task', model: 'model-b', ownerLabel: 'closed-owner', ownerName: 'Captured name', runId: 'run-2', startedAt: 4, updatedAt: 300, status: 'Partial' },
+    );
+    const statuses = composeConnectionsTopicData(managers, new Map()).rows.map((row) => row.status);
+    const lastOpen = statuses.findLastIndex((status) => ['Open', 'Running', 'Idle'].includes(status));
+    expect(statuses.indexOf('Partial')).toBeGreaterThan(lastOpen);
+  });
+
   it('keeps the SQLite owner display global while focus follows strip order independently', () => {
     const { managers, tabs } = fixture();
     tabs[0]!.title = 'Renamed first';
@@ -320,5 +331,17 @@ describe('connections topic rows', () => {
     ]);
     for (const row of owned('first')) expect(row).not.toHaveProperty('permanent');
     expect(owned('first').map((row) => row.kind)).toEqual(expect.arrayContaining(['shell', 'terminal']));
+  });
+
+  it('preserves subagent row fields through composition, including a loaded window', () => {
+    const { managers, recordRows, tabs } = fixture();
+    Object.assign(recordRows[1]!, { subagentRole: 'research', title: 'Subagent: task.md' });
+    tabs[2]!.plugin!.instanceKey = 'agent-record';
+    const data = composeConnectionsTopicData(managers, new Map([['agent-record', 10]]));
+    const row = data.rows.find((entry) => entry.id === 'agent-record');
+    expect(row).toMatchObject({
+      type: 'record', kind: 'agent', subagentRole: 'research', title: 'Subagent: task.md', runId: 'run-1',
+      window: { id: 'agent-record', count: 10 },
+    });
   });
 });

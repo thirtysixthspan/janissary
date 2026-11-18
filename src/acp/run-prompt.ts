@@ -1,7 +1,8 @@
 import type { Managers } from '../managers.js';
-import type { AcpLoopSession, AcpRunSnapshot, AcpSession, AcpToolHost } from './types.js';
+import type { AcpLoopSession, AcpRunSnapshot, AcpRunSnapshotRow, AcpSession, AcpToolHost } from './types.js';
 import type { RemoteAcpSession } from '../remote/acp-session.js';
 import type { AcpPendingPrompt } from './prompt-state.js';
+import type { AcpRole } from './role.js';
 import type { LogEntry, TabRuntime } from '../tab/types.js';
 import { guardAcpHandlers } from './guard-handlers.js';
 import { appendAcp, settleAcpPrompt } from './response.js';
@@ -25,19 +26,23 @@ import { effectiveCommandSetting } from '../native-commands/policy.js';
 import type { CommandSettingsSnapshot } from '../native-commands/settings-types.js';
 import { runToolLoop } from './drive-loop.js';
 
-function coreSnapshot(
-  runtime: TabRuntime, request: AcpPendingPrompt, settings: CommandSettingsSnapshot | undefined,
-): Extract<AcpRunSnapshot, { kind: 'core' }> {
-  const rows = settings === undefined ? [] : NATIVE_ACP_COMMANDS.map((name) => {
+export function coreSnapshotRows(settings: CommandSettingsSnapshot | undefined): AcpRunSnapshotRow[] {
+  if (settings === undefined) return [];
+  return NATIVE_ACP_COMMANDS.map((name) => {
     const setting = effectiveCommandSetting(settings, name);
     return { name, effectiveEnabled: setting.effectiveEnabled, effectiveAgentAccess: setting.effectiveAgentAccess };
   });
+}
+
+function coreSnapshot(
+  runtime: TabRuntime, request: AcpPendingPrompt, settings: CommandSettingsSnapshot | undefined,
+): Extract<AcpRunSnapshot, { kind: 'core' }> {
   return {
     kind: 'core',
     role: request.role,
     roleName: request.roleName,
     grants: request.commands,
-    rows,
+    rows: coreSnapshotRows(settings),
     withoutTools: runtime.acpWithoutTools === true,
   };
 }
@@ -46,20 +51,21 @@ async function dispatchNative(
   managers: Managers,
   label: string,
   command: string,
+  role: AcpRole,
   signal?: AbortSignal,
 ): Promise<string> {
   const invocation = createInvocationContext(managers, label, command, {
     ...(signal !== undefined && { signal }),
     awaitResult: true,
     acpTool: true,
+    acpRole: role,
   });
   const result = await managers.command.dispatchNativeLine(label, command, invocation);
   if (!result.dispatched) throw new Error(`No ACP tool matched command: ${command}`);
+  if (typeof result.result === 'string') return result.result;
   if (result.coreResponse) return result.output;
   if (result.result === undefined) return result.output;
-  return typeof result.result === 'string'
-    ? result.result
-    : JSON.stringify(result.result) ?? String(result.result);
+  return JSON.stringify(result.result) ?? String(result.result);
 }
 
 function guardedSession(session: AcpSession, active: () => boolean): AcpLoopSession {
@@ -90,7 +96,7 @@ export function runCorePrompt(
   const host: AcpToolHost = {
     runCaller: (command) => {
       if (!active()) throw new Error('ACP: prompt cancelled.');
-      return dispatchNative(managers, label, command, request.abort.signal);
+      return dispatchNative(managers, label, command, request.role, request.abort.signal);
     },
     runWorkspace: (command) => {
       if (!active()) throw new Error('ACP: prompt cancelled.');

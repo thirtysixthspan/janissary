@@ -30,7 +30,7 @@ export type ConnectionView = {
 // absent for a refusal, a reset confirmation, and a monitor reply.
 export type BackgroundReplyView = { id: string; output: string; line?: string; record?: { id: string; name: string } };
 
-export type PendingAcpReplyNameView = { id: string; name: string };
+export type PendingAcpReplyNameView = { id: string; name: string; role?: AcpRole; echo?: string };
 
 /**
  * A remote tab's target as the client sees it: everything stored on the tab, plus the facts only

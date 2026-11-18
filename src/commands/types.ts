@@ -1,5 +1,6 @@
 import type { Managers } from '../managers.js';
 import type { SystemScheduleOrigin } from '../command-queue/entry.js';
+import type { AcpRole } from '../acp/role.js';
 
 export type CommandManagers = Managers;
 
@@ -18,6 +19,7 @@ export type CommandInvocationContext = Readonly<{
   line?: string;
   awaitResult?: true;
   acpTool?: true;
+  acpRole?: AcpRole;
   systemSchedule?: Readonly<SystemScheduleOrigin>;
 }>;
 

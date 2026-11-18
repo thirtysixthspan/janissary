@@ -32,4 +32,13 @@ describe('agent monitor view', () => {
 
     expect(screen.getByRole('button', { name: 'Terminate' })).toBeDisabled();
   });
+
+  it('renders a Partial shared terminal projection with termination disabled', () => {
+    const intent = vi.fn(async () => null);
+    render(<AgentMonitor run={{ ...run, status: 'Partial' }} capabilities={capabilities(intent)} />);
+
+    expect(screen.getByText('Partial')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Terminate' })).toBeDisabled();
+    expect(intent).not.toHaveBeenCalled();
+  });
 });

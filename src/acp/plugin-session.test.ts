@@ -12,6 +12,8 @@ import { isShellAcpReceipt, type ShellAcpReceipt } from '../plugins/shell/shared
 import { TabManager } from '../tab/manager.js';
 import { backgroundRepliesFor, pendingAcpReplyNamesFor } from '../tab/background-replies.js';
 import { makeTab } from '../tab/index.js';
+import { tabRuntime } from '../tab/runtime.js';
+import type { SubagentDelivery } from '../subagent/messages.js';
 import { messageBus } from '../bus.js';
 import { acpCapabilities } from '../plugins/acp-capabilities.js';
 import { guardPluginCall } from '../plugins/guard.js';
@@ -401,6 +403,7 @@ describe('core ACP for plugin tabs', () => {
     expect(receipt.name).toBe('acp:ask:consumer');
     expect(tab.runtime?.acpRoles?.ask?.recordId).toBe(recordId);
 
+    if (!('role' in receipt)) throw new Error('expected a role receipt');
     const dispatch = vi.spyOn(managers.command, 'dispatchTo');
     openConnectionRecord(managers, {
       tab: 'consumer', acpRef: { scope: 'tab', label: 'consumer', role: receipt.role },
@@ -448,6 +451,52 @@ describe('core ACP for plugin tabs', () => {
         record: expect.objectContaining({ name: 'acp:ask:Renamed shell' }),
       }));
     });
+    managers.acp.closeAll();
+  });
+
+  it('carries a supplied echo and role through fallback while keeping the id and answering record', async () => {
+    const echo = 'tell ← subagent:research completed';
+    const { managers, handlers, session } = setup(() => ({
+      name: 'ask',
+      entries: [
+        { harness: 'opencode', model: 'first/model' },
+        { harness: 'opencode', model: 'fallback/model' },
+      ],
+      commands: [...NATIVE_ACP_COMMANDS],
+    }));
+    const pending = managers.acp.promptResult('consumer', 'ask first', 'ask', {
+      replyId: 'delivered-1', echo,
+    });
+    const tab = managers.tab.byLabel('consumer')!;
+    await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalled(); });
+
+    expect(tab.runtime?.acpRoles?.ask?.prompt?.echo).toBe(echo);
+    await vi.waitFor(() => {
+      expect(pendingAcpReplyNamesFor(tab)).toContainEqual({
+        id: 'delivered-1', name: 'acp:ask:consumer', role: 'ask', echo,
+      });
+    });
+    const firstRecordId = tab.runtime?.acpRoles?.ask?.recordId;
+
+    tab.title = 'Renamed shell';
+    handlers().onError('first model failed');
+
+    await vi.waitFor(() => {
+      expect(tab.runtime?.acpRoles?.ask?.recordId).not.toBe(firstRecordId);
+      expect(pendingAcpReplyNamesFor(tab)).toContainEqual({
+        id: 'delivered-1', name: 'acp:ask:Renamed shell', role: 'ask', echo,
+      });
+      expect(session.prompt).toHaveBeenCalledTimes(2);
+    });
+    const fallbackHandlers = handlers();
+    fallbackHandlers.onChunk('Fallback answer');
+    fallbackHandlers.onEnd('end_turn');
+
+    const result = await pending;
+    const answeringRecordId = tab.runtime?.acpRoles?.ask?.recordId;
+    expect(result).toMatchObject({ answered: true, recordId: answeringRecordId });
+    const answeringRecord = managers.acpRecords.rows().find((row) => row.id === answeringRecordId)!;
+    expect(recordConnectionName(answeringRecord)).toBe('acp:ask:Renamed shell');
     managers.acp.closeAll();
   });
 
@@ -718,6 +767,33 @@ describe('core ACP for plugin tabs', () => {
     expect(session.kill).toHaveBeenCalledTimes(1);
   });
 
+  it('delivers a plugin-owned ask message and settles it once when its session is reset', async () => {
+    const { managers, session } = setup();
+    const tab = managers.tab.byLabel('consumer')!;
+    const incarnation = tabRuntime(tab).incarnation ??= 'plugin-inc';
+    const identity = managers.acp.start('consumer').session!;
+    const envelope: SubagentDelivery = {
+      runId: 'plugin-run',
+      callerIncarnation: incarnation,
+      callerRole: 'ask',
+      callerSessionIdentity: identity,
+      subagentRole: 'research',
+      message: { status: 'started', role: 'research', sessionId: 'provider-1', callerId: 'caller-1' },
+    };
+
+    managers.acp.deliver('consumer', 'ask', envelope);
+    await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalledOnce(); });
+
+    managers.acp.close('consumer');
+    await vi.waitFor(() => {
+      expect(backgroundRepliesFor(tab)).toContainEqual(expect.objectContaining({
+        line: 'ask ← subagent:research started', output: 'ACP session closed.',
+      }));
+    });
+    expect(backgroundRepliesFor(tab).filter((entry) => entry.line === 'ask ← subagent:research started')).toHaveLength(1);
+    managers.acp.closeAll();
+  });
+
   it('does not register an already cancelled question', async () => {
     const { managers } = setup();
     const abort = new AbortController();
@@ -826,5 +902,54 @@ describe('core ACP for plugin tabs', () => {
     handlers().onEnd('end_turn');
 
     await expect(answered).resolves.toMatchObject({ answered: true, session: second.session });
+  });
+
+  // A plugin ask session is an ordinary ACP caller: its subagent tool line carries ask identity,
+  // returns no immediate output, and its later delivered message becomes a background reply under
+  // the caller-role echo rather than a human Markdown reply.
+  it('runs a plugin ask subagent line with ask identity and empty output, then delivers a caller-ask reply', async () => {
+    const { managers, handlers, session } = setup();
+    const declaration = managers.plugins.declarations[0];
+    const capabilities = acpCapabilities({
+      managers, declaration, origin: { label: 'agent' }, answeringLabel: 'consumer', isEnabled: () => true,
+    });
+    capabilities.startAcp();
+    const dispatch = vi.spyOn(managers.command, 'dispatchNativeLine')
+      .mockResolvedValue({ dispatched: true, output: '' });
+
+    const answer = capabilities.promptAcpResult('delegate the research');
+    handlers().onChunk('subagent {"role":"research","task":"task.md"}');
+    handlers().onEnd('end_turn');
+
+    await vi.waitFor(() => { expect(dispatch).toHaveBeenCalled(); });
+    const [label, command, invocation] = dispatch.mock.calls[0]!;
+    expect(label).toBe('consumer');
+    expect(command).toBe('subagent {"role":"research","task":"task.md"}');
+    expect(invocation).toMatchObject({ acpTool: true, acpRole: 'ask', awaitResult: true });
+
+    await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalledTimes(2); });
+    handlers().onChunk('Delegated.');
+    handlers().onEnd('end_turn');
+    await expect(answer).resolves.toMatchObject({ answered: true });
+
+    const consumer = managers.tab.byLabel('consumer')!;
+    const delivery: SubagentDelivery = {
+      runId: 'sub-1',
+      callerIncarnation: tabRuntime(consumer).incarnation!,
+      callerRole: 'ask',
+      callerSessionIdentity: managers.acp.sessionIdentity('consumer', 'ask') ?? '',
+      subagentRole: 'research',
+      message: { status: 'started', role: 'research', sessionId: 'provider-1', callerId: 'caller-1' },
+    };
+    managers.acp.deliver('consumer', 'ask', delivery);
+    await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalledTimes(3); });
+    handlers().onChunk('ack');
+    handlers().onEnd('end_turn');
+    await vi.waitFor(() => {
+      expect(backgroundRepliesFor(consumer)).toEqual(
+        expect.arrayContaining([expect.objectContaining({ line: 'ask ← subagent:research started' })]),
+      );
+    });
+    managers.acp.closeAll();
   });
 });

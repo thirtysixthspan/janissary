@@ -15,7 +15,9 @@ import { readCommandsTopic, runCommandsTopicAction } from '../plugins/commands-t
 import { commandRestrictionsFrom } from '../plugins/roles/command-policy.js';
 import { commandNameCandidates, completionPolicy } from '../completion/command-policy.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
-import { createAcpToolTable, toolExtractor, toolPrimer } from '../acp/tool-table.js';
+import { createAcpToolTable, gateCommand, toolExtractor, toolPrimer } from '../acp/tool-table.js';
+import type { AcpRunSnapshot } from '../acp/types.js';
+import { command as subagentCommand } from '../commands/subagent.js';
 import * as fileGrepCandidates from '../file-grep/candidates.js';
 import * as fileGrepScan from '../file-grep/scan.js';
 
@@ -31,6 +33,7 @@ const roots: string[] = [];
 afterEach(() => {
   for (const root of roots) rmSync(root, { recursive: true, force: true });
   roots.length = 0;
+  vi.restoreAllMocks();
 });
 
 function fixture(): {
@@ -286,5 +289,101 @@ describe('native command settings across the feature seams', () => {
       discover.mockRestore();
       scan.mockRestore();
     }
+  });
+});
+
+describe('subagent native settings and typed dispatch', () => {
+  const INPUT = 'subagent --role research --task t.md';
+  const RECEIPT = {
+    replyId: 'reply-1', kind: 'record' as const, recordId: 'record-1', name: 'subagent:Research',
+  };
+
+  function granting() {
+    const seam = fixture();
+    const tab = seam.managers.tab.byLabel('janus')!;
+    tab.view = 'plugin';
+    (tab as unknown as { plugin: { id: string } }).plugin = { id: 'shell' };
+    seam.managers.plugins = {
+      declarations: [{ id: 'shell', capabilities: ['promptAcp'] }],
+    } as unknown as Managers['plugins'];
+    return seam;
+  }
+
+  async function set(managers: Managers, setting: 'enabled' | 'agentAccess', value: boolean) {
+    await expect(runCommandsTopicAction(managers, {
+      topic: 'commands', action: 'set', name: 'subagent', setting, value,
+    })).resolves.toBeUndefined();
+  }
+
+  it('persists Enabled off under subagent and refuses typed dispatch before run', async () => {
+    const { home, managers } = granting();
+    await set(managers, 'enabled', false);
+
+    expect(persisted(home)).toHaveProperty('subagent', { enabled: false, agentAccess: true });
+    const snapshot = readCommandsTopic(managers);
+    const row = snapshot.commands.find(({ name }) => name === 'subagent');
+    expect(row).toMatchObject({
+      name: 'subagent', kind: 'native', aliases: [], forms: ['subagent'], nativeTool: 'subagent',
+      enabled: false, agentAccess: true, effectiveEnabled: false,
+    });
+    expect(row).not.toHaveProperty('parent');
+    expect(projectDisabledApplicationCommands(snapshot).map(({ name }) => name)).toContain('subagent');
+    expect(commandRestrictionsFrom(snapshot)).toMatchObject({ subagent: 'application-wide' });
+
+    const run = vi.spyOn(subagentCommand, 'run');
+    await expect(managers.command.dispatchLineWithOutput('janus', INPUT)).resolves.toEqual({
+      dispatched: true, output: 'Command is disabled: subagent.',
+    });
+    expect(run).not.toHaveBeenCalled();
+    expect(managers.tab.cur().log.at(-1)).toEqual({
+      input: INPUT, output: 'Command is disabled: subagent.',
+    });
+  });
+
+  it('persists Agent access off under subagent and agrees with restriction and gate', async () => {
+    const { home, managers } = granting();
+    await set(managers, 'agentAccess', false);
+
+    expect(persisted(home)).toHaveProperty('subagent', { enabled: true, agentAccess: false });
+    const snapshot = readCommandsTopic(managers);
+    expect(snapshot.commands.find(({ name }) => name === 'subagent')).toMatchObject({
+      name: 'subagent', kind: 'native', forms: ['subagent'], effectiveEnabled: true,
+      effectiveAgentAccess: false,
+    });
+    expect(projectDisabledApplicationCommands(snapshot).map(({ name }) => name)).not.toContain('subagent');
+    expect(commandRestrictionsFrom(snapshot)).toMatchObject({ subagent: 'agents' });
+    const gateSnapshot: AcpRunSnapshot = {
+      kind: 'core', role: 'tell', roleName: 'writer', grants: ['subagent'],
+      rows: [{ name: 'subagent', effectiveEnabled: true, effectiveAgentAccess: false }],
+      withoutTools: false,
+    };
+    expect(gateCommand(gateSnapshot, createAcpToolTable(['subagent']), INPUT)).toStrictEqual({
+      refusal: 'Command is disabled: subagent.', refused: 'disabled',
+    });
+  });
+
+  it('still runs a typed subagent for the human when only Agent access is off', async () => {
+    const { managers } = granting();
+    await set(managers, 'agentAccess', false);
+    const run = vi.spyOn(subagentCommand, 'run').mockReturnValue(RECEIPT);
+
+    await expect(managers.command.dispatchLineWithOutput('janus', INPUT)).resolves.toEqual({
+      dispatched: true, output: '', coreResponse: true, result: RECEIPT,
+    });
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(managers.tab.cur().log.at(-1)).not.toEqual({
+      input: INPUT, output: 'Command is disabled: subagent.',
+    });
+  });
+
+  it('restores the one subagent settings row without duplicating it', async () => {
+    const { home, managers } = granting();
+    await set(managers, 'enabled', false);
+    await set(managers, 'enabled', true);
+
+    expect(persisted(home)).toHaveProperty('subagent', { enabled: true, agentAccess: true });
+    const rows = readCommandsTopic(managers).commands.filter(({ name }) => name === 'subagent');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ effectiveEnabled: true, effectiveAgentAccess: true });
   });
 });

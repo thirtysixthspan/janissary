@@ -6,33 +6,13 @@ import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 import { startRemoteLoop, type RemoteLoopHandle } from './serve-acp-loop.js';
 import { sandboxWillConfine } from '../sandbox/confinement.js';
 import { errorText } from '../error-text.js';
-
-const ACP_SHUTDOWN_TIMEOUT_MS = 5000;
+import { stopSession } from './serve-acp-shutdown.js';
+import type { RemoteRunClones } from './serve-run-clones.js';
 
 type RemoteAcpRecord =
-  | { state: 'live'; session: AcpSession; runOnly: boolean; run?: RemoteLoopHandle }
+  | { state: 'live'; session: AcpSession; readonly workspaceDir: string; runOnly: boolean; run?: RemoteLoopHandle }
   | { state: 'closing'; session: AcpSession; pending: Promise<boolean> }
   | { state: 'settled'; released: boolean; session?: AcpSession };
-
-async function stopSession(session: AcpSession): Promise<boolean> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<false>((resolve) => {
-    timer = setTimeout(() => { resolve(false); }, ACP_SHUTDOWN_TIMEOUT_MS);
-  });
-  const stopped = (async () => {
-    try {
-      await session.shutdown();
-      return true;
-    } catch {
-      return false;
-    }
-  })();
-  try {
-    return await Promise.race([stopped, timeout]);
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-}
 
 // The remote server's ACP holder: one live agent session per session id, driven by the ACP frames.
 // The JSON-RPC never leaves this machine — the local side sends runs and gets turn, tool, and reply
@@ -53,20 +33,29 @@ export class RemoteAcp {
     private send: (frame: ServerFrame) => void,
     private workspaceDir: string,
     private tokens: ProjectTokens = {},
+    private lookupWorkspace?: RemoteRunClones['lookup'],
   ) {}
 
   open(frame: Extract<ClientFrame, { type: 'acp-open' }>): void {
     const id = frame.id;
     const existing = this.records.get(id);
     if (existing && (existing.state !== 'settled' || existing.session)) return;
-    const sandboxed = sandboxWillConfine(this.workspaceDir);
+    const workspaceDir = frame.workspace === undefined
+      ? this.workspaceDir
+      : this.lookupWorkspace?.(frame.workspace);
+    if (workspaceDir === undefined) {
+      this.send({ type: 'acp-error', id, message: `Unknown remote run clone "${frame.workspace}".`, fatal: true });
+      return;
+    }
+    const sandboxed = sandboxWillConfine(workspaceDir);
+    let sessionId: string | undefined;
     const session = connectAcp({
       command: frame.command,
       args: frame.args,
       // Both, so the subprocess is confined to the clone exactly as this server's other workspaced
       // processes are, and so the agent sees the files the tab is actually working on.
-      cwd: this.workspaceDir,
-      workspaceDir: this.workspaceDir,
+      cwd: workspaceDir,
+      workspaceDir,
       offline: frame.offline,
       env: frame.env,
       tokens: this.tokens,
@@ -87,9 +76,17 @@ export class RemoteAcp {
         record.run = undefined;
         run.abort();
       },
-      onConnect: () => { this.send({ type: 'acp-ready', id, sandboxed }); },
+      // The provider id lands before effort configuration, so report it now rather than waiting for
+      // readiness — a failed effort setup must not discard an id that was already reported.
+      onSessionStarted: (providerId) => {
+        sessionId = providerId;
+        this.send({ type: 'acp-session-started', id, sessionId: providerId });
+      },
+      onConnect: () => {
+        this.send({ type: 'acp-ready', id, sandboxed, ...(sessionId !== undefined && { sessionId }) });
+      },
     });
-    this.records.set(id, { state: 'live', session, runOnly: frame.autonomous === true });
+    this.records.set(id, { state: 'live', session, workspaceDir, runOnly: frame.autonomous === true });
   }
 
   run(frame: Extract<ClientFrame, { type: 'acp-run' }>): void {
@@ -104,7 +101,7 @@ export class RemoteAcp {
       return;
     }
     let terminal = false;
-    const handle = startRemoteLoop(record.session, frame, this.workspaceDir, this.tokens, (sent) => {
+    const handle = startRemoteLoop(record.session, frame, record.workspaceDir, this.tokens, (sent) => {
       this.send(sent);
       if (sent.type !== 'acp-run-end' && !(sent.type === 'acp-error' && !sent.fatal)) return;
       terminal = true;

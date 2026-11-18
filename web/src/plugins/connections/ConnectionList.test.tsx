@@ -23,11 +23,12 @@ function live(id: string, kind: ConnectionKind, display: string, ownerName = 'Ow
 }
 
 function record(
-  id: string, kind: ConnectionKind | 'agent', status: ConnectionStatus, title = id,
+  id: string, kind: ConnectionKind | 'agent', status: ConnectionStatus, title = id, subagentRole?: string,
 ): ConnectionRow {
   return {
     type: 'record', id, kind, title, model: 'model', host: 'Local', ownerLabel: 'owner', ownerName: 'Owner',
     startedAt: 1, updatedAt: 2, status, orderingTimestamp: 2,
+    ...(subagentRole !== undefined && { subagentRole }),
   };
 }
 
@@ -43,7 +44,7 @@ beforeEach(() => {
 });
 
 describe('ConnectionList', () => {
-  it.each(['Closed', 'Completed', 'Failed', 'Terminated'] as const)(
+  it.each(['Closed', 'Completed', 'Failed', 'Partial', 'Terminated'] as const)(
     'separates the %s group in wide and docked lists without adding selectable rows', (status) => {
       const styles = readFileSync('web/src/plugins/connections/connections.css', 'utf8');
       for (const dock of [null, 'left'] as const) {
@@ -128,6 +129,17 @@ describe('ConnectionList', () => {
     const { container } = render(<ConnectionList rows={[row]} capabilities={capabilities().value} />);
     const cells = [...container.querySelector('.connections-row')!.children];
     expect(cells.slice(2, 4).map((node) => node.textContent)).toEqual([id, 'acp:build']);
+  });
+
+  it('names a subagent row by its role and keeps its own title in the tooltip', () => {
+    const { container } = render(<ConnectionList
+      rows={[record('sub', 'agent', 'Running', 'Subagent: research-task.md', 'research')]}
+      capabilities={capabilities().value}
+    />);
+    expect(container.querySelector('.connections-row-title')?.textContent).toBe('subagent:research');
+    expect(container.querySelector('.connections-row')).toHaveAttribute(
+      'title', 'subagent:research\nSubagent: research-task.md\nagent',
+    );
   });
 
   it('leaves the last activity empty when the host knows no activity', () => {

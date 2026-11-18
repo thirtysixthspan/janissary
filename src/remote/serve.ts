@@ -4,16 +4,13 @@ import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 import { drainFrames } from './frame/lines.js';
 import type { RootOfferRun } from './serve-root-offer.js';
 import { rootForProvision, rootForRelay, settleRoot, startPeer, type SettledRoot } from './serve-root-settle.js';
-import type { RemoteProcesses } from './serve-processes.js';
-import type { RemoteAcp } from './serve-acp.js';
-import type { RemoteFileNavigators } from './serve-file-navigator.js';
-import { provisionRemoteWorkspace } from './serve-provision.js';
+import { provisionRemoteWorkspace, type ProvisionedWorkspace } from './serve-provision.js';
 import { randomUUID } from 'node:crypto';
 import type { Socket } from 'node:net';
 import { relayPeer, type DetachedPeer } from './serve-detach.js';
 import { answerCaptureRequest } from './serve-detach-query.js';
 import { RemoteTranscriptFollow } from './serve-transcript.js';
-import { resolveRemoteAgentRequest } from './serve-agent-resolution.js';
+import { dispatchAcpFrame } from './serve-acp-frames.js';
 
 // `janus remote-serve [<project-dir>]`: the far end of a remote janissary session. It runs attached
 // inside an ordinary ssh session, takes no instance lock, starts no HTTP server, opens no window,
@@ -38,10 +35,9 @@ function writeFrame(frame: ServerFrame): void {
 export class RemoteServer {
   private root: string | undefined;
   private workspaces: WorkspaceManager | undefined;
-  private processes: RemoteProcesses | undefined;
-  private files: RemoteFileNavigators | undefined;
-  private acp: RemoteAcp | undefined;
-  private workspaceDir: string | undefined;
+  // The provisioned far-side workspace owns its processes, navigators, ACP holder and run clones
+  // together, so every consumer reads one owner rather than four fields that could drift apart.
+  private provisioned: ProvisionedWorkspace | undefined;
   private transcripts = new RemoteTranscriptFollow((frame) => this.emit(frame));
   private buffer = '';
   private stopping = false;
@@ -91,19 +87,25 @@ export class RemoteServer {
     this.peer?.dispose();
     this.relay?.destroy();
     this.transcripts.dispose();
-    this.files?.dispose();
-    this.processes?.killAll();
+    this.provisioned?.files.dispose();
+    this.provisioned?.processes.killAll();
     const finish = (released: boolean) => {
       if (released) this.workspaces?.removeAll();
       this.exit(code);
     };
-    // Before the clone goes, so it is never removed out from under a live agent.
-    const disposed = this.acp?.dispose() ?? true;
-    if (typeof disposed === 'boolean') {
+    // Before the clone goes, so it is never removed out from under a live agent. Drain pending run
+    // clones through the same owner, then await both before the guarded removeAll.
+    const drained = this.provisioned?.runClones.stop();
+    const disposed = this.provisioned?.acp.dispose() ?? true;
+    if (typeof disposed === 'boolean' && drained === undefined) {
       finish(disposed);
       return Promise.resolve();
     }
-    return (async () => { finish(await disposed); })();
+    return (async () => {
+      const released = await disposed;
+      await drained;
+      finish(released);
+    })();
   }
 
   // Every way this server can refuse or fail reaches the local side the same way: the placeholder
@@ -115,12 +117,13 @@ export class RemoteServer {
   private dispatch(line: string): void {
     const frame = decodeFrame(line);
     if (!('type' in frame)) { this.refuse(frame.error); return; }
+    if (dispatchAcpFrame(frame, this.provisioned, (f) => this.emit(f))) return;
     switch (frame.type) {
     case 'attach': { this.attach(frame); return; }
     // Answered before the workspace exists too, with an empty list: a peer that has not provisioned
     // is holding nothing, which is a fact worth stating rather than a refusal to explain.
     case 'session-state': {
-      this.emit({ type: 'session-state-result', processes: this.processes?.states() ?? [] });
+      this.emit({ type: 'session-state-result', processes: this.provisioned?.processes.states() ?? [] });
       return;
     }
     case 'shutdown': { this.shutdown(0); return; }
@@ -129,31 +132,22 @@ export class RemoteServer {
     case 'spawn': { this.spawn(frame); return; }
     // Retained before it is delivered, so what the peer replays is in the order it saw the two
     // directions — which is what pairs a command with the output it produced.
-    case 'input': { this.peer?.input(frame); this.processes?.input(frame.id, frame.data); return; }
-    case 'resize': { this.processes?.resize(frame.id, frame.cols, frame.rows); return; }
-    case 'kill': { this.processes?.kill(frame.id); return; }
-    case 'resume-ack': { this.processes?.resumeDelivered(frame.id); return; }
-    case 'capture-request': { answerCaptureRequest(frame, this.processes, this.lookupRoot(frame.origin), (f) => this.emit(f)); return; }
+    case 'input': { this.peer?.input(frame); this.provisioned?.processes.input(frame.id, frame.data); return; }
+    case 'resize': { this.provisioned?.processes.resize(frame.id, frame.cols, frame.rows); return; }
+    case 'kill': { this.provisioned?.processes.kill(frame.id); return; }
+    case 'resume-ack': { this.provisioned?.processes.resumeDelivered(frame.id); return; }
+    case 'capture-request': { answerCaptureRequest(frame, this.provisioned?.processes, this.lookupRoot(frame.origin), (f) => this.emit(f)); return; }
     case 'filesystem-open': {
-      if (!this.files) { this.refuse('No remote workspace has been provisioned.'); return; }
-      this.files.open(frame.session);
+      if (!this.provisioned) { this.refuse('No remote workspace has been provisioned.'); return; }
+      this.provisioned.files.open(frame.session);
       return;
     }
-    case 'filesystem-close': { this.files?.close(frame.session); return; }
+    case 'filesystem-close': { this.provisioned?.files.close(frame.session); return; }
     case 'filesystem-request': {
-      if (!this.files) { this.refuse('No remote workspace has been provisioned.'); return; }
-      this.files.request(frame);
+      if (!this.provisioned) { this.refuse('No remote workspace has been provisioned.'); return; }
+      this.provisioned.files.request(frame);
       return;
     }
-    case 'agent-resolve': {
-      if (this.requireWorkspace() && this.workspaceDir) resolveRemoteAgentRequest(frame, this.workspaceDir, this.emit);
-      return;
-    }
-    case 'acp-open': { if (this.requireWorkspace()) this.acp?.open(frame); return; }
-    case 'acp-run': { if (this.requireWorkspace()) this.acp?.run(frame); return; }
-    case 'acp-tool-result': { this.acp?.toolResult(frame); return; }
-    case 'acp-close': { this.acp?.close(frame.id); return; }
-    case 'acp-cancel': { this.acp?.cancel(frame.id); return; }
     default: { this.refuse(`Unexpected remote frame "${frame.type}".`); }
     }
   }
@@ -166,7 +160,7 @@ export class RemoteServer {
 
   // A parked peer's record cannot exist without a root, so no root answers as a missing session does.
   private attach(frame: Extract<ClientFrame, { type: 'attach' }>): void {
-    const root = this.workspaceDir ? undefined : this.lookupRoot(frame.origin);
+    const root = this.provisioned ? undefined : this.lookupRoot(frame.origin);
     if (root === undefined) { this.emit({ type: 'attach-result', accepted: false }); return; }
     this.terminating = frame.terminate === true;
     this.relay = relayPeer(root, frame.session, (data) => { process.stdout.write(data); }, (terminated) => {
@@ -194,14 +188,9 @@ export class RemoteServer {
       emit: (f) => this.emit(f),
       workspaces,
       peer: this.peer,
-      idle: () => !this.processes && !this.stopping,
+      idle: () => !this.provisioned && !this.stopping,
       stopping: () => this.stopping,
-      provisioned: ({ dir, processes, files, acp }) => {
-        this.workspaceDir = dir;
-        this.processes = processes;
-        this.files = files;
-        this.acp = acp;
-      },
+      provisioned: (workspace) => { this.provisioned = workspace; },
     }, frame.label, frame.tokens ?? {}, frame.identity ?? {}, cloned, frame.depth);
   }
 
@@ -212,7 +201,7 @@ export class RemoteServer {
     this.workspaces = (this.options.settle ?? settleRoot)(root);
     if (!this.listening) return true;
     this.peer = await startPeer(root, this.sessionId, (data) => this.receive(data), () => this.shutdown(0),
-      (id) => this.processes?.latestCapture(id), () => this.processes?.busyStates() ?? []);
+      (id) => this.provisioned?.processes.latestCapture(id), () => this.provisioned?.processes.busyStates() ?? []);
     if (!this.peer) { this.shutdown(1); return false; }
     this.emit = (frame) => this.peer?.emit(frame);
     return true;
@@ -224,12 +213,12 @@ export class RemoteServer {
     // A process that will not start is that process's failure, not the session's: it answers as an
     // exit, which also drops what the peer tracked a line above, and every other frame keeps working.
     try {
-      this.processes?.spawn(frame);
+      this.provisioned?.processes.spawn(frame);
     } catch {
       this.emit({ type: 'exit', id: frame.id, exitCode: 1 });
       return;
     }
-    if (frame.harness !== undefined) this.transcripts.follow(frame.harness, this.workspaceDir);
+    if (frame.harness !== undefined) this.transcripts.follow(frame.harness, this.provisioned?.dir);
   }
 
   // Give up the transport while leaving the session running: the peer holds its workspace and its
@@ -242,14 +231,14 @@ export class RemoteServer {
   detach(): void {
     if (this.relay || this.root === undefined) { this.shutdown(0); return; }
     this.buffer = '';
-    this.acp?.detachRuns();
+    this.provisioned?.acp.detachRuns();
     this.peer?.detach();
   }
 
   // Nothing this server runs exists outside the clone it provisioned, so every frame that starts
   // work shares one refusal rather than inventing a second wording for the same fault.
   private requireWorkspace(): boolean {
-    if (this.processes) return true;
+    if (this.provisioned) return true;
     this.refuse('No remote workspace has been provisioned.');
     return false;
   }

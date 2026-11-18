@@ -4,7 +4,7 @@ The backend automatically retains project-scoped records for every core tab ACP 
 
 ### Identity and provenance
 
-Each accepted begin creates a fresh UUID, independent of the transient ACP session identity or agent run id. Sources distinguish core ACP from agent runs. Both supply a nonempty model, original owner label, and copied owner display name. An agent additionally supplies a nonempty run id and task path. A core session on a remote tab, or an agent run executing on a remote host, also supplies that host, so the record keeps it after its tab closes; a local source supplies none, and a supplied host must be nonempty. Invalid metadata throws `Invalid ACP record source.` without creating a record.
+Each accepted begin creates a fresh UUID, independent of the transient ACP session identity or agent run id. Sources distinguish core ACP from agent runs. Both supply a nonempty model, original owner label, and copied owner display name. An agent additionally supplies a nonempty run id and task path. An agent run launched for a subagent also carries the subagent's canonical role name, which must be nonempty when present and is stored exactly as supplied; an ordinary agent run carries no such name. A core session on a remote tab, or an agent run executing on a remote host, also supplies that host, so the record keeps it after its tab closes; a local source supplies none, and a supplied host must be nonempty. Invalid metadata, including an empty or non-string subagent role, throws `Invalid ACP record source.` without creating a record.
 
 Owner metadata is a snapshot. Closing a tab or reusing its label cannot replace the retained owner name. Records contain only tracked ACP and agent history; conversations, monitors, editor persona sessions, and other connection kinds are not recorded here.
 
@@ -16,13 +16,13 @@ All core prompt entry points share admission. Usage, readiness, model, and overl
 
 Each agent record begins at run creation before execution, with the original task selector, selected model, copied caller name, and run linkage. Later task resolution does not change that provenance. The run's single block begins before opening its ACP transport or awaiting readiness and contains the exact task, skill instructions, and parameter text, excluding the separate Markdown primer. Failures or termination before execution leave a terminal header without a fabricated prompt. Whitespace and activity beyond the monitor's bounded projection are retained.
 
-Settlement saves the exact answer or error text. Core cancellation saves `ACP: prompt cancelled.` after provider drain; reset or close saves `ACP session closed.`. Prompt errors settle their block but keep a viable record open. Fatal connection failure settles the request and closes the record. Agent completion, failure, and termination settle an existing block and close once before cleanup. Termination saves `Agent terminated.`; low-level failure without captured text uses `Agent failed.`. The first outcome wins, and cleanup warnings do not replace it or the task answer. Closing or disabling a monitor only detaches observation.
+Settlement saves the exact answer or error text. Core cancellation saves `ACP: prompt cancelled.` after provider drain; reset or close saves `ACP session closed.`. Prompt errors settle their block but keep a viable record open. Fatal connection failure settles the request and closes the record. Agent completion, partial, failure, and termination settle an existing block and close once before cleanup. A partial outcome saves the supplied answer verbatim, including an empty string, with no added suffix. Termination saves `Agent terminated.` for an ordinary agent and `Subagent terminated.` for a subagent run; low-level failure without captured text uses `Agent failed.`. The first outcome wins, and cleanup warnings do not replace it or the task answer. Closing or disabling a monitor only detaches observation.
 
 ### Titles and statuses
 
-A core record starts as `ACP`. Its first accepted prompt fixes the title to `ACP: <first line>`, capped at 60 JavaScript string characters including the prefix. The first line is trimmed, including a CR line terminator. An empty first line keeps `ACP`, even when later lines contain text. Subsequent prompts do not retitle it. An agent title is `Agent: <task filename>` without that cap. Original prompt and activity text remain intact.
+A core record starts as `ACP`. Its first accepted prompt fixes the title to `ACP: <first line>`, capped at 60 JavaScript string characters including the prefix. The first line is trimmed, including a CR line terminator. An empty first line keeps `ACP`, even when later lines contain text. Subsequent prompts do not retitle it. An agent title is `Agent: <task filename>` without that cap. A subagent run's title is `Subagent: <task filename>` from the task selector captured at launch, also without that cap; later task resolution, a task snapshot replacement, and caller renames never retitle it. Original prompt and activity text remain intact.
 
-Status is derived. An open core record is `Idle` before its first prompt and between settled prompts, and `Running` while its newest block is unanswered. An open agent record is always `Running`, including after an answer, until closed. Terminal status is the recorded outcome: `Closed`, `Completed`, `Failed`, or `Terminated`.
+Status is derived. An open core record is `Idle` before its first prompt and between settled prompts, and `Running` while its newest block is unanswered. An open agent record is always `Running`, including after an answer, until closed. Terminal status is the recorded outcome: `Closed`, `Completed`, `Failed`, `Partial`, or `Terminated`.
 
 ### Prompt blocks and activity
 
@@ -34,7 +34,7 @@ An answer settles only the current unanswered block. An empty string is a valid 
 
 ### Close and delete
 
-First close wins and fixes the outcome and closure time. Core records accept only `Closed`; agent records accept `Completed`, `Failed`, `Terminated`, and the disposal fallback `Closed`. Incompatible outcomes are rejected. Closing preserves unanswered partial activity without inventing an answer.
+First close wins and fixes the outcome and closure time. Core records accept only `Closed`; agent records accept `Completed`, `Failed`, `Partial`, `Terminated`, and the disposal fallback `Closed`. Incompatible outcomes are rejected, so a core record cannot close as `Partial`. Closing preserves unanswered partial activity without inventing an answer.
 
 Deleting a missing or open record returns false. A closed record's durable file is removed before its in-memory row disappears. An absent file counts as successful removal, including when all earlier saves failed. A different removal failure returns false and leaves the row available for retry.
 
@@ -44,15 +44,15 @@ Successful prompt, activity, answer, close, and delete operations return true. U
 
 Every accepted begin, prompt, activity, answer, and close uses the clock. Mutation times are clamped to at least the record's previous update time, so a backwards clock cannot reorder history. The same mutation time supplies its update, block, entry, or end timestamp. Times are finite nonnegative epoch milliseconds. Start time never changes.
 
-Rows are detached summaries sorted by descending update time, then ascending id for ties. They include identity, source kind, title, model, owner label/name, optional remote host, optional agent run id, start/update/end times, and derived status. They expose no prompt or activity text.
+Rows are detached summaries sorted by descending update time, then ascending id for ties. They include identity, source kind, title, model, owner label/name, optional remote host, optional agent run id, optional subagent role on an agent run, start/update/end times, and derived status. They expose no prompt or activity text.
 
-A window returns detached metadata, source provenance, and the newest chronological suffix of blocks, including a running block. Its default size is 20. A supplied count must be a positive safe integer or the read throws `Invalid ACP record window count.`. Counts beyond the total return all blocks. The result includes total block count, zero-based offset, and `hasOlder`, which is true exactly when offset is positive. Missing or invalid ids return no window for a valid count.
+A window returns detached metadata, source provenance — including an agent run's optional subagent role — and the newest chronological suffix of blocks, including a running block. Its default size is 20. A supplied count must be a positive safe integer or the read throws `Invalid ACP record window count.`. Counts beyond the total return all blocks. The result includes total block count, zero-based offset, and `hasOlder`, which is true exactly when offset is positive. Missing or invalid ids return no window for a valid count.
 
 Reads do not publish changes or remember requested window sizes. Mutating a returned row, source, block, or entry cannot alter stored state. Later loaded windows and their 20-block paging increments follow the same rules.
 
 ### Durability and loss boundaries
 
-Records are stored separately per project as versioned JSON documents with UUID identities. Schema version 1 retains source metadata, title, start/update times, paired closure time/outcome, and chronological blocks. Completed blocks pair their answer and end time; only the newest block may remain unanswered.
+Records are stored separately per project as versioned JSON documents with UUID identities. Schema version 1 retains source metadata, title, start/update times, paired closure time/outcome, and chronological blocks. The `Partial` agent outcome uses that same version 1, so records saved before it existed stay valid without migration. Completed blocks pair their answer and end time; only the newest block may remain unanswered.
 
 Durability boundaries are begin, prompt metadata, answer, and close. Begin saves an empty header immediately. Starting a prompt saves its title and metadata plus already-completed history, but excludes the new in-flight block. Streaming activity performs no writes. An answer saves the completed block. Ordinary close and disposal also save an unanswered block's current activity.
 

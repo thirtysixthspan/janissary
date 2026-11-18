@@ -17,12 +17,16 @@ function setup(record: RecordConnectionRow, impl?: (name: string, payload: unkno
   return { intent, openLink, capabilities, view: render(<ConnectionTab record={record} capabilities={capabilities} />) };
 }
 
-function record(kind: 'acp' | 'agent' = 'acp', status: RecordConnectionRow['status'] = 'Running'): RecordConnectionRow {
+function record(
+  kind: 'acp' | 'agent' = 'acp', status: RecordConnectionRow['status'] = 'Running', subagentRole?: string,
+): RecordConnectionRow {
   return { type: 'record', id: 'uuid', kind, title: 'Authoritative title', model: 'model-x', status,
     host: 'Local', ownerLabel: 'other-label', ownerName: 'Captured owner', startedAt: 0, updatedAt: 2, endedAt: 3,
     runId: 'run-id', orderingTimestamp: 4,
+    ...(subagentRole !== undefined && { subagentRole }),
     window: { id: 'uuid', source: kind === 'agent'
-      ? { kind: 'agent', model: 'model-x', ownerLabel: 'other-label', ownerName: 'Captured owner', runId: 'run-id', taskPath: '/task' }
+      ? { kind: 'agent', model: 'model-x', ownerLabel: 'other-label', ownerName: 'Captured owner', runId: 'run-id', taskPath: '/task',
+        ...(subagentRole !== undefined && { subagentRole }) }
       : { kind: 'acp', model: 'model-x', ownerLabel: 'other-label', ownerName: 'Captured owner' },
       offset: 0, totalBlocks: 1, hasOlder: false, blocks: [{ prompt: 'prompt', startedAt: 1,
         entries: (['message', 'thought', 'tool', 'plan', 'permission'] as const).map((kind, timestamp) => ({ kind, text: kind, timestamp })),
@@ -55,6 +59,36 @@ describe('ConnectionTab', () => {
     expect(screen.getByText('db query select 1').tagName).toBe('DIV');
   });
 
+  it('renders a tool call embedded mid-line in an activity entry and keeps the prose', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [
+      { kind: 'message', timestamp: 1,
+        text: 'I will explore. <function_calls> <invoke name="bash"> <parameter name="command">find . -type f</parameter> </invoke> </function_calls> Done.' },
+    ];
+    setup(value);
+    expect(screen.getByText(/I will explore\./)).toBeInTheDocument();
+    expect(screen.getByText('bash')).toHaveClass('connections-tool-call-name');
+    expect(screen.getByText('command')).toHaveClass('connections-tool-call-parameter-name');
+    expect(screen.getByText('find . -type f')).toBeInTheDocument();
+    expect(screen.getByText(/Done\./)).toBeInTheDocument();
+    expect(screen.queryByText(/<function_calls>/)).toBeNull();
+  });
+
+  it('renders every embedded invoke with its own parameters', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [
+      { kind: 'tool', timestamp: 1,
+        text: '<function_calls><invoke name="file read"><parameter name="path">a.ts</parameter></invoke>'
+          + '<invoke name="file glob"><parameter name="pattern">**/*.ts</parameter></invoke></function_calls>' },
+    ];
+    setup(value);
+    expect(document.querySelectorAll('.connections-tool-call')).toHaveLength(2);
+    expect([...document.querySelectorAll('.connections-tool-call-name')].map((element) => element.textContent))
+      .toEqual(['file read', 'file glob']);
+    expect(screen.getByText('a.ts')).toBeInTheDocument();
+    expect(screen.getByText('**/*.ts')).toBeInTheDocument();
+  });
+
   it('keeps a tool entry the reader collapsed closed through a streamed update', () => {
     const value = record();
     const { view, capabilities } = setup(value);
@@ -66,6 +100,66 @@ describe('ConnectionTab', () => {
       blocks: [{ ...value.window!.blocks[0]!, entries }] } }} capabilities={capabilities} />);
     expect(screen.getByText('tool output').closest('details')).toBe(details);
     expect(details).not.toHaveAttribute('open');
+  });
+
+  it('groups a tool command and its reply into one labelled collapsible section', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [
+      { kind: 'tool', text: 'grep foo', timestamp: 1 },
+      { kind: 'tool', text: '3 matches', timestamp: 2 },
+    ];
+    setup(value);
+    const summaries = screen.getAllByText('tool', { selector: 'summary' });
+    expect(summaries).toHaveLength(1);
+    const details = summaries[0].closest('details');
+    expect(details).toHaveAttribute('open');
+    expect([...details!.querySelectorAll('.connections-tool-part-label')].map((el) => el.textContent))
+      .toEqual(['command', 'reply']);
+    expect(screen.getByText('grep foo')).toBeInTheDocument();
+    expect(screen.getByText('3 matches')).toBeInTheDocument();
+  });
+
+  it('renders only the command part while a tool has no reply yet', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [{ kind: 'tool', text: 'running command', timestamp: 1 }];
+    setup(value);
+    expect(document.querySelectorAll('.connections-tool-part')).toHaveLength(1);
+    expect([...document.querySelectorAll('.connections-tool-part-label')].map((el) => el.textContent))
+      .toEqual(['command']);
+    expect(screen.getByText('running command')).toBeInTheDocument();
+  });
+
+  it('renders a JSON command and a reply with inline tool calls inside their parts', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [
+      { kind: 'tool', text: '{"query":"select 1"}', timestamp: 1 },
+      { kind: 'tool', text: 'Done. <function_calls><invoke name="bash"><parameter name="command">pwd</parameter></invoke></function_calls>', timestamp: 2 },
+    ];
+    setup(value);
+    expect(document.querySelectorAll('pre.connections-activity-json')).toHaveLength(1);
+    expect(screen.getByText('bash')).toHaveClass('connections-tool-call-name');
+    expect(screen.getByText('pwd')).toBeInTheDocument();
+    expect([...document.querySelectorAll('.connections-tool-part-label')].map((el) => el.textContent))
+      .toEqual(['command', 'reply']);
+  });
+
+  it('keeps a grouped tool section collapsed when its reply streams in', () => {
+    const value = record();
+    const { view, capabilities } = setup(value);
+    const details = screen.getByText('tool', { selector: 'summary' }).closest('details')!;
+    details.open = false;
+    const original = value.window!.blocks[0]!.entries;
+    const entries = [
+      ...original.slice(0, 3),
+      { kind: 'tool' as const, text: 'the reply', timestamp: 5 },
+      ...original.slice(3),
+    ];
+    view.rerender(<ConnectionTab record={{ ...value, window: { ...value.window!,
+      blocks: [{ ...value.window!.blocks[0]!, entries }] } }} capabilities={capabilities} />);
+    expect(screen.getByText('the reply').closest('details')).toBe(details);
+    expect(details).not.toHaveAttribute('open');
+    expect([...details.querySelectorAll('.connections-tool-part-label')].map((el) => el.textContent))
+      .toEqual(['command', 'reply']);
   });
 
   it('keeps expanded entries and block order when older blocks are prepended', () => {
@@ -232,13 +326,48 @@ describe('ConnectionTab', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Terminate' }));
       expect(intent).toHaveBeenCalledWith('terminate', { id: 'uuid' });
     });
+
+    it('names a subagent tab by its role and keeps the Subagent title in the name tooltip', () => {
+      const value = record('agent', 'Running', 'research');
+      value.title = 'Subagent: research-task.md';
+      setup(value);
+      expect(fields().map((element) => element.textContent)).toContain('subagent:research');
+      expect(fields().map((element) => element.getAttribute('title')))
+        .toContain('Connection Name: subagent:research\nSubagent: research-task.md');
+    });
+
+    it('offers the usual Terminate and Focus tab actions for a subagent run', () => {
+      const { intent } = setup({ ...record('agent', 'Running', 'research'), focusTarget: 'caller-label' });
+      expect(actions().map((action) => action.label)).toEqual(['Focus tab', 'Terminate']);
+      fireEvent.click(screen.getByRole('button', { name: 'Terminate' }));
+      expect(intent).toHaveBeenCalledWith('terminate', { id: 'uuid' });
+      fireEvent.click(screen.getByRole('button', { name: 'Focus tab' }));
+      expect(intent).toHaveBeenCalledWith('focus', { id: 'uuid' });
+    });
   });
 
-  it('offers no Terminate for terminal agent statuses and renders activity text plainly', () => {
-    const value = record('agent', 'Completed');
-    value.window!.blocks[0]!.entries = [{ kind: 'message', text: '<b>plain</b>', timestamp: 1 } satisfies ConnectionActivity];
-    setup(value);
+  it.each(['Completed', 'Failed', 'Partial', 'Terminated'] as const)(
+    'offers no Terminate for a %s agent record and renders activity text plainly', (status) => {
+      const value = record('agent', status);
+      value.window!.blocks[0]!.entries = [{ kind: 'message', text: '<b>plain</b>', timestamp: 1 } satisfies ConnectionActivity];
+      setup(value);
+      expect(screen.queryByRole('button', { name: 'Terminate' })).toBeNull();
+      expect(screen.getByText('<b>plain</b>')).toBeInTheDocument();
+    },
+  );
+
+  it('clears a pending termination when the record ends Partial, keeping Focus tab and dropping Terminate', () => {
+    const running = { ...record('agent', 'Running', 'research'), focusTarget: 'caller-label' };
+    const { capabilities, view } = setup(running, () => new Promise(() => {}));
+    fireEvent.click(screen.getByRole('button', { name: 'Terminate' }));
+    expect(screen.getByRole('button', { name: 'Terminate' })).toBeDisabled();
+
+    view.rerender(<ConnectionTab record={{ ...running, status: 'Partial' }} capabilities={capabilities} />);
+    expect(screen.getByText('Partial')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Terminate' })).toBeNull();
-    expect(screen.getByText('<b>plain</b>')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Focus tab' })).toBeInTheDocument();
+
+    view.rerender(<ConnectionTab record={running} capabilities={capabilities} />);
+    expect(screen.getByRole('button', { name: 'Terminate' })).not.toBeDisabled();
   });
 });

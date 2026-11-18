@@ -7,7 +7,10 @@ export const ACP_RECORD_WINDOW_SIZE = 20;
 export const ACP_RECORD_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
 export function recordTitle(source: AcpRecordSource, prompt?: string): string {
-  if (source.kind === 'agent') return `Agent: ${path.basename(source.taskPath)}`;
+  if (source.kind === 'agent') {
+    const name = path.basename(source.taskPath);
+    return source.subagentRole === undefined ? `Agent: ${name}` : `Subagent: ${name}`;
+  }
   const line = prompt?.split('\n', 1)[0].trim();
   return line ? `ACP: ${line}`.slice(0, ACP_RECORD_TITLE_CAP) : 'ACP';
 }
@@ -46,6 +49,7 @@ export function recordRow(record: AcpRecord): AcpRecordRow {
     ...(source.host !== undefined && { host: source.host }),
     ...(source.kind === 'acp' && source.role !== undefined && { role: source.role }),
     ...(source.kind === 'agent' && { runId: source.runId }),
+    ...(source.kind === 'agent' && source.subagentRole !== undefined && { subagentRole: source.subagentRole }),
     ...(endedAt !== undefined && { endedAt }),
     status: recordStatus(record),
   };

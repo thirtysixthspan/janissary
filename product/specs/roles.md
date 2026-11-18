@@ -55,11 +55,9 @@ and risk.`), `implementation` (`Implementation of an approved plan or a describe
 `gpt-6-luna` at `high`. The `tell` role follows `ask`, has the description `When you tell a model to
 carry out a task via ACP.`, and starts with the same three entries. The `ask` role grants `db sqlite
 list`, `db sqlite query`, `browser goto`, `browser content`, `question ask`, `question approve`,
-`file read`, `file glob`, `file grep`, `web search`, and `web fetch`. The `tell` role grants all seventeen native
+`file read`, `file glob`, `file grep`, `web search`, and `web fetch`. The `tell` role grants all eighteen native
 commands: those eleven plus `db sqlite create`, `db sqlite delete`, `browser eval`, `file write`,
-`file edit`, and `file patch`. An existing roles file is not changed, so its saved `ask` and `tell`
-keep the grants they list.
-`planning`, `research`, `code review`, `implementation`, and
+`file edit`, `file patch`, and `subagent`. The published native vocabulary has eighteen entries, the same commands, so the default `tell` grants every native command. An existing roles file is not changed, so its saved `tell` keeps the grants it lists, including a list without `subagent`. `planning`, `research`, `code review`, `implementation`, and
 `documentation` start with no command grants. Only `planning`, `ask`, and `tell` start with entries.
 
 ### What the tab shows
@@ -97,7 +95,7 @@ from the live Commands topic and is not stored in the roles file, and a restrict
 be added or removed like any other. Opening the tab with an unreadable Commands snapshot reports `invalid commands topic data` and opens nothing; a later unreadable snapshot is ignored and the tab keeps the restrictions it last showed. A muted `No commands` row appears when a role has none. **Add
 command** opens a dropdown of native commands the role does not already have, followed by Add and
 Cancel; Add stays disabled until a choice is made. The button is
-hidden when all seventeen native commands are present. Add sends `add-command`; removing any duplicate
+hidden when all eighteen native commands, including `subagent`, are present. Add sends `add-command`; removing any duplicate
 row sends `remove-command`, which removes every copy. If another client changes a command while the
 picker is open, it clears a selection that is no longer available or closes when no commands remain
 to add, and the card follows the next publication. Both pickers focus their first control when
@@ -211,3 +209,13 @@ Role connections deny all of their harness's internal tools, so a role grants on
 the agent can run the granted commands that are enabled for agents and nothing else.
 Keyboard reordering is not provided — adding and removing entries and roles are pointer-free, but
 order rides the drag.
+
+### Resolving a role by name
+
+A role name is matched ignoring surrounding whitespace and case, and the name reported back is the
+spelling the file in effect stores, not the text the caller supplied. A name resolves when it is one
+of the built-in roles or is present in the file in effect. Because a project file replaces the home
+file wholesale, a custom role that exists only in the home file does not resolve while a project file
+is present unless that name is also built in. An unrecognized name is reported as unknown with its
+trimmed text; a recognized name returns the same entries and grants, read fresh with no file creation,
+that the ask and tell readers use.

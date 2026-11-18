@@ -127,7 +127,7 @@ describe('AcpSessionRecords transitions', () => {
     expect(records.window(agentId)?.status).toBe('Completed');
   });
 
-  it.each(['Closed', 'Completed', 'Failed', 'Terminated'] as const)('accepts agent outcome %s without replacing its first closure', (outcome) => {
+  it.each(['Closed', 'Completed', 'Failed', 'Partial', 'Terminated'] as const)('accepts agent outcome %s without replacing its first closure', (outcome) => {
     const records = create();
     const id = records.begin(agent);
     records.prompt(id, 'running');
@@ -139,6 +139,7 @@ describe('AcpSessionRecords transitions', () => {
     expect(read(id)).toMatchObject({ outcome, endedAt: 200, updatedAt: 200,
       blocks: [{ prompt: 'running', entries: [{ kind: 'thought', text: 'partial' }] }] });
     expect(records.window(id)?.status).toBe(outcome);
+    expect(records.rows().find((row) => row.id === id)?.status).toBe(outcome);
     expect(changes).toHaveBeenCalledTimes(4);
   });
 
@@ -159,6 +160,7 @@ describe('AcpSessionRecords transitions', () => {
     expect(records.activity(id, 'message', 'early')).toBe(false);
     expect(records.delete(id)).toBe(false);
     expect(records.close(id, 'Completed')).toBe(false);
+    expect(records.close(id, 'Partial')).toBe(false);
     expect(records.close(id, 'invalid' as never)).toBe(false);
     expect(records.prompt(id, 'prompt')).toBe(true);
     expect(records.prompt(id, 'overlap')).toBe(false);
@@ -248,6 +250,14 @@ describe('startup and retention', () => {
     const records = create({ now: clock });
     expect(clock).toHaveBeenCalledTimes(1);
     expect(records.window(value.id)).toMatchObject({ startedAt: 1, updatedAt: 300, endedAt: 300 });
+  });
+
+  it('reloads a stored Partial outcome without recovering it to Terminated', () => {
+    const partial = seed(agent, { outcome: 'Partial', endedAt: 100, updatedAt: 100 });
+    const records = create();
+    expect(records.window(partial.id)).toMatchObject({ status: 'Partial', kind: 'agent' });
+    expect(read(partial.id).outcome).toBe('Partial');
+    expect(changes).not.toHaveBeenCalled();
   });
 
   it.each(['Closed', 'Completed', 'Failed', 'Terminated'] as const)('prunes %s strictly beyond 30 days by closure, not start time', (outcome) => {

@@ -11,10 +11,10 @@ type SourceMetadata = {
 
 export type AcpRecordSource = SourceMetadata & (
   | { kind: 'acp'; role?: AcpRole }
-  | { kind: 'agent'; runId: string; taskPath: string }
+  | { kind: 'agent'; runId: string; taskPath: string; subagentRole?: string }
 );
 
-export type AcpRecordOutcome = 'Closed' | 'Completed' | 'Failed' | 'Terminated';
+export type AcpRecordOutcome = 'Closed' | 'Completed' | 'Failed' | 'Partial' | 'Terminated';
 
 export type AcpRecordEntry = {
   kind: AcpActivityKind;
@@ -52,6 +52,7 @@ export type AcpRecordRow = {
   host?: string;
   role?: AcpRole;
   runId?: string;
+  subagentRole?: string;
   startedAt: number;
   updatedAt: number;
   endedAt?: number;

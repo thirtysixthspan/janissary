@@ -18,6 +18,15 @@ import type { AnyRemoteFilesystemOperationResult } from './filesystem/operations
 // encoded, split and decoded. Every symbol here is re-exported from `protocol.ts`, so the protocol
 // is still imported from one module.
 
+export type RemoteRunCloneAction = 'create' | 'release';
+
+// Three mutually exclusive answers: a directory for a create, nothing for a release, or an error.
+// Spelling the alternatives in the type keeps a directory-plus-error reply unrepresentable.
+export type RemoteRunCloneResult =
+  | { dir: string; error?: never }
+  | { error: string; dir?: never }
+  | { dir?: never; error?: never };
+
 export type RemoteFilesystemOperation =
   | 'read-directory' | 'stat' | 'watch' | 'unwatch' | 'git' | 'git-pull' | 'git-commit' | 'search'
   | 'search-text' | 'read-file' | 'read-lines' | 'glob-paths' | 'grep-files' | 'web-search' | 'web-fetch' | 'write-file' | 'edit-file' | 'apply-patch' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
@@ -157,7 +166,11 @@ export type ClientFrame =
   | { type: 'capture-request'; session: string; id: string; request: string; origin?: string }
   | { type: 'filesystem-open'; session: string }
   | { type: 'filesystem-close'; session: string }
-  | { type: 'agent-resolve'; id: string; task: string; skills: string[] }
+  | { type: 'agent-resolve'; id: string; task: string; skills: string[]; workspace?: string }
+  // Ask the far side to create or release a run clone under a supplied label. A create waits for the
+  // clone's readiness and answers with its directory; a release answers without one. Neither the
+  // action nor the label is repeated on the reply: the request id selects the one being answered.
+  | { type: 'run-clone'; id: string; action: RemoteRunCloneAction; label: string }
   // The ACP family: a remote tab's ACP client is hosted by the far side, so what crosses here is
   // runs, their turn and tool traffic, and reply text, never JSON-RPC. The local side still chooses
   // which agent and model run, which is why the open frame names the command rather than the remote
@@ -167,6 +180,7 @@ export type ClientFrame =
     env?: Record<string, string>; offline?: boolean;
     autonomous?: true; effort?: { level: string; model: string };
     sessionMeta?: Record<string, unknown>;
+    workspace?: string;
   }
   | { type: 'acp-run'; id: string; text: string; snapshot: AcpRunSnapshot }
   | { type: 'acp-tool-result'; id: string; request: number; output?: string; error?: string }
@@ -262,9 +276,17 @@ export type ServerFrame =
   | { type: 'filesystem-reply'; session: string; request: string; result?: AnyRemoteFilesystemOperationResult; error?: string }
   | { type: 'filesystem-event'; session: string; path: string }
   | { type: 'agent-resolve-result'; id: string; snapshot?: AgentSnapshot; error?: string }
+  // The answer to a `run-clone`. A create answers with a directory, a release with no fields beyond
+  // the id, and a failure with an error; a directory and an error cannot travel together.
+  | ({ type: 'run-clone-result'; id: string } & RemoteRunCloneResult)
   // Readiness includes the confinement result because only the host that spawned the ACP process
-  // knows whether its workspace was actually confined.
-  | { type: 'acp-ready'; id: string; sandboxed: boolean }
+  // knows whether its workspace was actually confined. `sessionId` is the provider's id when the
+  // handshake supplied one; a peer that never reported one omits it.
+  | { type: 'acp-ready'; id: string; sandboxed: boolean; sessionId?: string }
+  // Sent the moment the far side's `newSession` succeeds, before effort configuration. `id` is the
+  // transport address and `sessionId` the provider's id. It travels ahead of readiness so a failed
+  // effort setup cannot lose an id that was already reported successfully.
+  | { type: 'acp-session-started'; id: string; sessionId: string }
   | { type: 'acp-chunk'; id: string; text: string }
   // A turn's boundaries, so the local side can open and close a transcript entry. `first` is true
   // only for a run's opening turn. `display` is the turn's final text with the extracted command
@@ -326,7 +348,7 @@ export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
   attach: true, 'session-state': true, shutdown: true,
   provision: true, 'clone-answer': true, spawn: true, input: true, resize: true, kill: true, 'capture-request': true, 'resume-ack': true,
   'filesystem-open': true, 'filesystem-close': true, 'filesystem-request': true,
-  'agent-resolve': true,
+  'agent-resolve': true, 'run-clone': true,
   'acp-open': true, 'acp-run': true, 'acp-tool-result': true, 'acp-cancel': true, 'acp-close': true,
 };
 export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
@@ -335,8 +357,8 @@ export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'shell-history': true, 'browser-exited': true, 'browser-started': true, 'gate-event': true, 'busy-transition': true, 'capture-reply': true, 'resume-event': true,
   'resume-cancel': true,
   'filesystem-reply': true, 'filesystem-event': true,
-  'agent-resolve-result': true,
-  'acp-ready': true, 'acp-chunk': true, 'acp-turn': true, 'acp-tool-request': true, 'acp-tool-step': true,
+  'agent-resolve-result': true, 'run-clone-result': true,
+  'acp-ready': true, 'acp-session-started': true, 'acp-chunk': true, 'acp-turn': true, 'acp-tool-request': true, 'acp-tool-step': true,
   'acp-run-end': true,
   'acp-activity': true, 'acp-closed': true, 'acp-error': true,
 };

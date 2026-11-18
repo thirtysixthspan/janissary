@@ -4,7 +4,9 @@ import {
 } from './decode-acp-run.js';
 import { malformed, type DecodeResult } from './decode-shared.js';
 import { decodeFilesystemFrame } from './decode-filesystem.js';
-import { decodeAgentResolve, decodeAgentResolveResult } from './decode-agent.js';
+import {
+  decodeAgentResolve, decodeAgentResolveResult, decodeRunClone, decodeRunCloneResult,
+} from './decode-agent.js';
 import { decodeSessionStateResult } from './decode-sessions.js';
 import { decodeShellHistory } from './decode-history.js';
 import {
@@ -77,6 +79,8 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'filesystem-event': { return decodeFilesystemFrame(type, record); }
   case 'agent-resolve': { return decodeAgentResolve(record); }
   case 'agent-resolve-result': { return decodeAgentResolveResult(record); }
+  case 'run-clone': { return decodeRunClone(record); }
+  case 'run-clone-result': { return decodeRunCloneResult(record); }
   case 'acp-open': { return decodeAcpOpen(record); }
   case 'acp-run': { return decodeAcpRun(record); }
   case 'acp-tool-result': { return decodeAcpToolResult(record); }
@@ -87,7 +91,8 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'acp-chunk': { return decodeAcpText(type, record); }
   case 'acp-close':
   case 'acp-cancel':
-  case 'acp-ready': { return decodeAcpAddressed(type, record); }
+  case 'acp-ready':
+  case 'acp-session-started': { return decodeAcpAddressed(type, record); }
   case 'acp-error': { return decodeAcpError(record); }
   case 'acp-activity': { return decodeAcpActivity(record); }
   case 'acp-closed': { return decodeAcpClosed(record); }

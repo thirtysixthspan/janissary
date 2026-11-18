@@ -20,6 +20,7 @@ export type RemoteAcpOptions = {
   autonomous?: true;
   effort?: { level: string; model: string };
   sessionMeta?: Record<string, unknown>;
+  workspace?: string;
 };
 
 // Hooks the owner supplies, matching `AcpManager`'s own `ConnectHooks`: `onError` is the
@@ -28,6 +29,7 @@ export type RemoteAcpOptions = {
 export type RemoteAcpHooks = {
   onError: (message: string) => void;
   onConnect: (sandboxed: boolean) => void;
+  onSessionStarted?: (sessionId: string) => void;
   onActivity?: (kind: RemoteAcpActivityKind, text: string) => void;
   onTransportLost?: () => void;
 };
@@ -63,10 +65,17 @@ export function createRemoteAcpSession(
   options: RemoteAcpOptions,
   hooks: RemoteAcpHooks,
 ): RemoteAcpSession {
-  const { id, command, args, env, offline, autonomous, effort, sessionMeta } = options;
+  const { id, command, args, env, offline, autonomous, effort, sessionMeta, workspace } = options;
   // The one in-flight run, matching the discipline `connectAcp` keeps with its own `current`.
   const control = new AcpPromptControl();
   let live = true;
+  let providerReported = false;
+  const reportProvider = (providerId: string | undefined) => {
+    if (!live || providerReported || providerId === undefined) return;
+    providerReported = true;
+    hooks.onSessionStarted?.(providerId);
+  };
+  let readinessReceived = false;
   const { promise: ready, resolve: resolveReady, reject: rejectReady } = deferred<boolean>();
   void ready.catch(() => {});
   let resolveRelease: (released: boolean) => void = () => {};
@@ -95,7 +104,11 @@ export function createRemoteAcpSession(
   const run = createRemoteAcpRun(control, send);
 
   channel.attachAcp(id, {
-    onReady: (sandboxed) => {
+    onSessionStarted: (providerId) => { reportProvider(providerId); },
+    onReady: (sandboxed, providerId) => {
+      if (!live || readinessReceived) return;
+      readinessReceived = true;
+      reportProvider(providerId);
       if (!live) return;
       resolveReady(sandboxed);
       hooks.onConnect(sandboxed);
@@ -137,6 +150,7 @@ export function createRemoteAcpSession(
     ...(env !== undefined && { env }), ...(offline !== undefined && { offline }),
     ...(autonomous !== undefined && { autonomous }), ...(effort !== undefined && { effort }),
     ...(sessionMeta !== undefined && { sessionMeta }),
+    ...(workspace !== undefined && { workspace }),
   });
 
   const release = (): Promise<boolean> => {

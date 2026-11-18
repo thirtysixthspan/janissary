@@ -18,6 +18,7 @@ import type { ProjectTokens } from '../project/tokens.js';
 import { deferred } from '../deferred.js';
 import type * as Glob from '../file-glob/glob.js';
 import type * as Grep from '../file-grep/grep.js';
+import type * as WorkspaceRunner from '../acp/workspace-runner.js';
 import { FILE_GREP_USAGE } from '../file-grep/command.js';
 import * as fileGrepCandidates from '../file-grep/candidates.js';
 import * as fileGrepScan from '../file-grep/scan.js';
@@ -25,7 +26,7 @@ import * as fileRead from '../file-read/read.js';
 import type { ServerFrame } from './protocol-frames.js';
 
 const mocks = vi.hoisted(() => ({
-  globWorkspaceCommand: vi.fn(), grepWorkspaceCommand: vi.fn(), webSearch: vi.fn(), webFetch: vi.fn(), driveToolLoop: vi.fn(),
+  globWorkspaceCommand: vi.fn(), grepWorkspaceCommand: vi.fn(), webSearch: vi.fn(), webFetch: vi.fn(), driveToolLoop: vi.fn(), runWorkspaceCommandIn: vi.fn(),
 }));
 const home = vi.hoisted(() => ({ dir: '' }));
 
@@ -51,6 +52,12 @@ vi.mock('../file-grep/grep.js', async (importOriginal) => {
   const actual = await importOriginal<typeof Grep>();
   mocks.grepWorkspaceCommand.mockImplementation(actual.grepWorkspaceCommand);
   return { ...actual, grepWorkspaceCommand: mocks.grepWorkspaceCommand };
+});
+
+vi.mock('../acp/workspace-runner.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof WorkspaceRunner>();
+  mocks.runWorkspaceCommandIn.mockImplementation(actual.runWorkspaceCommandIn);
+  return { ...actual, runWorkspaceCommandIn: mocks.runWorkspaceCommandIn };
 });
 
 import { startRemoteLoop } from './serve-acp-loop.js';
@@ -101,6 +108,7 @@ beforeEach(() => {
   mocks.webSearch.mockResolvedValue('search results');
   mocks.webFetch.mockReset();
   mocks.webFetch.mockResolvedValue('fetched page');
+  mocks.runWorkspaceCommandIn.mockClear();
 });
 
 afterEach(() => {
@@ -212,6 +220,19 @@ describe('startRemoteLoop workspace steps', () => {
     }]);
     expect(mocks.webSearch).not.toHaveBeenCalled();
     expect(framesOf(frames, 'acp-tool-request')).toEqual([]);
+  });
+
+  it('delegates a workspace step to the shared runner with the workspace directory and run signal', async () => {
+    writeFileSync(path.join(workspace, 'a.md'), 'one\n');
+
+    const { handle } = start([['file read a.md'], ['Done.']], coreSnapshot('tell', ['file read']));
+
+    expect(mocks.runWorkspaceCommandIn).toHaveBeenCalledWith(workspace, 'file read a.md', expect.any(AbortSignal));
+    const signal = mocks.runWorkspaceCommandIn.mock.calls[0]?.[2] as AbortSignal;
+    expect(signal.aborted).toBe(false);
+    handle.abort();
+    expect(signal.aborted).toBe(true);
+    await flush();
   });
 
   it('caps a core run at eight workspace steps without sending a step count', () => {

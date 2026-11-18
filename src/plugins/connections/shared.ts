@@ -3,7 +3,7 @@ export const CONNECTIONS_PAYLOAD_SCHEMA_VERSION = 2;
 export type AcpRole = 'ask' | 'tell';
 
 export type ConnectionKind = 'sqlite' | 'shell' | 'acp' | 'browser' | 'ssh' | 'terminal';
-export type ConnectionStatus = 'Idle' | 'Running' | 'Closed' | 'Completed' | 'Failed' | 'Terminated';
+export type ConnectionStatus = 'Idle' | 'Running' | 'Closed' | 'Completed' | 'Failed' | 'Partial' | 'Terminated';
 export type ConnectionActivity = { kind: 'message' | 'thought' | 'tool' | 'plan' | 'permission'; text: string; timestamp: number };
 export type ConnectionBlock = {
   prompt: string;
@@ -14,7 +14,7 @@ export type ConnectionBlock = {
 };
 export type ConnectionSource =
   | { kind: 'acp'; model: string; ownerLabel: string; ownerName: string; role?: AcpRole }
-  | { kind: 'agent'; model: string; ownerLabel: string; ownerName: string; runId: string; taskPath: string };
+  | { kind: 'agent'; model: string; ownerLabel: string; ownerName: string; runId: string; taskPath: string; subagentRole?: string };
 
 export type ConnectionWindow = {
   id: string;
@@ -41,11 +41,12 @@ export type LiveConnectionRow = ConnectionRowBase & {
 };
 export type RecordConnectionRow = ConnectionRowBase & {
   type: 'record'; kind: ConnectionKind | 'agent'; title: string; model: string; role?: AcpRole;
-  status: ConnectionStatus; runId?: string; startedAt: number; updatedAt: number; endedAt?: number; window?: ConnectionWindow;
+  status: ConnectionStatus; runId?: string; subagentRole?: string; startedAt: number; updatedAt: number; endedAt?: number; window?: ConnectionWindow;
 };
 export type ConnectionRow = LiveConnectionRow | RecordConnectionRow;
 
-export function recordConnectionName(row: Pick<RecordConnectionRow, 'kind' | 'ownerName' | 'role'>): string {
+export function recordConnectionName(row: Pick<RecordConnectionRow, 'kind' | 'ownerName' | 'role' | 'subagentRole'>): string {
+  if (row.kind === 'agent' && row.subagentRole !== undefined) return `subagent:${row.subagentRole}`;
   return row.kind === 'acp' && row.role !== undefined
     ? `acp:${row.role}:${row.ownerName}`
     : `${row.kind}:${row.ownerName}`;
@@ -62,7 +63,7 @@ export type ConnectionsIntent =
   | { intent: 'cancel' | 'close-session' | 'terminate' | 'delete' | 'focus' | 'load-older'; payload: { id: string } };
 
 const kinds = ['sqlite', 'shell', 'acp', 'browser', 'ssh', 'terminal'] as const;
-const statuses = ['Idle', 'Running', 'Closed', 'Completed', 'Failed', 'Terminated'] as const;
+const statuses = ['Idle', 'Running', 'Closed', 'Completed', 'Failed', 'Partial', 'Terminated'] as const;
 const hasOwn = (value: object, key: string): boolean => Object.hasOwn(value, key);
 
 function object(value: unknown): value is Record<string, unknown> {
@@ -75,6 +76,12 @@ function isAcpRole(value: unknown): value is AcpRole {
 
 function optionalString(row: Record<string, unknown>, key: string): boolean {
   return !hasOwn(row, key) || typeof row[key] === 'string';
+}
+
+function optionalNonemptyString(row: Record<string, unknown>, key: string): boolean {
+  if (!hasOwn(row, key)) return true;
+  const value = row[key];
+  return typeof value === 'string' && value.trim().length > 0;
 }
 
 function optionalNumber(row: Record<string, unknown>, key: string): boolean {
@@ -96,9 +103,11 @@ function isBlock(value: unknown): value is ConnectionBlock {
 function isSource(value: unknown): value is ConnectionSource {
   if (!object(value) || typeof value.model !== 'string' || typeof value.ownerLabel !== 'string'
     || typeof value.ownerName !== 'string') return false;
-  if (value.kind === 'acp') return !hasOwn(value, 'role') || isAcpRole(value.role);
+  if (value.kind === 'acp') return !hasOwn(value, 'subagentRole')
+    && (!hasOwn(value, 'role') || isAcpRole(value.role));
   return value.kind === 'agent' && !hasOwn(value, 'role')
-    && typeof value.runId === 'string' && typeof value.taskPath === 'string';
+    && typeof value.runId === 'string' && typeof value.taskPath === 'string'
+    && optionalNonemptyString(value, 'subagentRole');
 }
 
 function isWindow(value: unknown): value is ConnectionWindow {
@@ -131,8 +140,8 @@ export function isConnectionRow(value: unknown): value is ConnectionRow {
   }
   return value.type === 'record' && (kinds.includes(value.kind as typeof kinds[number]) || value.kind === 'agent')
     && (value.kind === 'acp'
-      ? !hasOwn(value, 'role') || isAcpRole(value.role)
-      : !hasOwn(value, 'role'))
+      ? !hasOwn(value, 'subagentRole') && (!hasOwn(value, 'role') || isAcpRole(value.role))
+      : !hasOwn(value, 'role') && optionalNonemptyString(value, 'subagentRole'))
     && typeof value.title === 'string' && typeof value.model === 'string'
     && statuses.includes(value.status as typeof statuses[number])
     && typeof value.startedAt === 'number' && typeof value.updatedAt === 'number';

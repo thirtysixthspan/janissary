@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import type * as nodeOs from 'node:os';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -15,6 +15,9 @@ import type {
 } from './types.js';
 import type { RemoteAcpSession } from '../remote/acp-session.js';
 import type { NativeCommandSettingsManager } from '../native-commands/manager.js';
+import type { CommandSettingsSnapshot } from '../native-commands/settings-types.js';
+import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
+import { DISABLED_HARNESS_TOOLS_LINE } from './internal-tools.js';
 import type * as TabRead from '../file-read/tab-read.js';
 import type * as TabGlob from '../file-glob/tab-glob.js';
 import type * as TabGrep from '../file-grep/tab-grep.js';
@@ -31,6 +34,15 @@ import { CORE_MAX_STEPS } from './drive-loop.js';
 import { deferred } from '../deferred.js';
 import { WEB_SEARCH_PRIMER } from '../web/search/command.js';
 import { WEB_FETCH_PRIMER } from '../web/fetch/command.js';
+import { CommandManager } from '../command/manager.js';
+import { SUBAGENT_JSON_USAGE } from '../subagent/parse.js';
+import type * as LaunchModule from '../subagent/launch.js';
+
+const subagentMock = vi.hoisted(() => ({ launch: vi.fn() }));
+vi.mock('../subagent/launch.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof LaunchModule>();
+  return { ...actual, launchSubagent: subagentMock.launch };
+});
 
 const mocks = vi.hoisted(() => ({
   runAcpToolLoop: vi.fn(), notify: vi.fn(), readFileInTab: vi.fn(), mutateFileInTab: vi.fn(),
@@ -71,9 +83,10 @@ vi.mock('./drive-loop.js', async (importOriginal) => {
   return { ...actual, runToolLoop: mocks.runToolLoop };
 });
 
-import { runCorePrompt } from './run-prompt.js';
+import { coreSnapshotRows, runCorePrompt } from './run-prompt.js';
 
 const homeRoots: string[] = [];
+const launchRoots: string[] = [];
 beforeEach(() => {
   const dir = mkdtempSync(path.join(tmpdir(), 'acp-run-prompt-home-'));
   home.dir = dir;
@@ -82,7 +95,24 @@ beforeEach(() => {
 afterEach(() => {
   for (const dir of homeRoots) rmSync(dir, { recursive: true, force: true });
   homeRoots.length = 0;
+  for (const dir of launchRoots) rmSync(dir, { recursive: true, force: true });
+  launchRoots.length = 0;
+  subagentMock.launch.mockReset();
 });
+
+function subagentLaunchDir(): string {
+  const dir = mkdtempSync(path.join(tmpdir(), 'acp-run-prompt-subagent-'));
+  launchRoots.push(dir);
+  mkdirSync(path.join(dir, '.janissary'));
+  writeFileSync(path.join(dir, '.janissary', 'roles.json'), JSON.stringify({
+    research: {
+      description: 'Research.',
+      entries: [{ harness: 'opencode', model: 'model-a' }],
+      commands: ['subagent'],
+    },
+  }));
+  return dir;
+}
 
 const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
 const NO_BUILTIN_TOOLS_LINE = 'You have no built-in tools; use only the commands listed here.';
@@ -121,13 +151,17 @@ type StartOptions = {
   tab?: { workspaceDir?: string; remote?: unknown };
   launchDir?: string;
   remoteSession?: boolean;
+  realCommand?: boolean;
 };
 
 function harness(options: Omit<StartOptions, 'commands' | 'roleName'> = {}) {
   const dispatchNativeLine = vi.fn(async () => ({ dispatched: true, output: 'dispatched output' }));
   const runtime = { acpWithoutTools: options.withoutTools ?? false, acpRoles: {} } as unknown as TabRuntime;
   const tab = {
-    runtime, ...options.tab, cmdHistory: ['git status'], cmdHistoryIdx: -1,
+    runtime,
+    ...(options.realCommand && { view: 'plugin', plugin: { id: 'shell' } }),
+    ...options.tab,
+    cmdHistory: ['git status'], cmdHistoryIdx: -1,
   };
   const managers = {
     tab: {
@@ -135,13 +169,20 @@ function harness(options: Omit<StartOptions, 'commands' | 'roleName'> = {}) {
       deleteBusy: vi.fn(),
       append: vi.fn(),
       byLabel: vi.fn(() => tab),
+      ...(options.realCommand && { findIndex: vi.fn(() => 0), tabs: [tab] }),
       workingDirOf: vi.fn(() => '/project'),
       launchDir: options.launchDir ?? '/launch',
     },
     acpRecords: { activity: vi.fn(), answer: vi.fn() },
     command: { dispatchNativeLine },
+    ...(options.realCommand && {
+      plugins: { declarations: [{ id: 'shell', capabilities: ['promptAcp'] }] },
+      models: { isKnownModel: vi.fn(() => true) },
+      agent: { runs: new Map(), trackCreatedTab: vi.fn() },
+    }),
     ...(options.settings && { nativeCommandSettings: options.settings }),
   } as unknown as Managers;
+  if (options.realCommand) managers.command = new CommandManager(managers);
   const providerPrompt = vi.fn();
   const run = vi.fn();
   const localSession = { prompt: providerPrompt } as unknown as AcpSession;
@@ -209,6 +250,7 @@ describe('runCorePrompt role primer', () => {
       DB_PRIMER,
       'Only these commands are allowed: db sqlite query.',
       NO_BUILTIN_TOOLS_LINE,
+      DISABLED_HARNESS_TOOLS_LINE,
       commandProtocolPrimer(CORE_MAX_STEPS),
       TELL_INSTRUCTION,
       MARKDOWN_INSTRUCTION,
@@ -280,7 +322,8 @@ describe('runCorePrompt role primer', () => {
     const allowList = result.indexOf('Only these commands are allowed: db sqlite query.');
     expect(result.indexOf(BROWSER_PRIMER)).toBeLessThan(allowList);
     expect(allowList).toBeLessThan(result.indexOf(NO_BUILTIN_TOOLS_LINE));
-    expect(result.indexOf(NO_BUILTIN_TOOLS_LINE)).toBeLessThan(result.indexOf('How commands work:'));
+    expect(result.indexOf(NO_BUILTIN_TOOLS_LINE)).toBeLessThan(result.indexOf(DISABLED_HARNESS_TOOLS_LINE));
+    expect(result.indexOf(DISABLED_HARNESS_TOOLS_LINE)).toBeLessThan(result.indexOf('How commands work:'));
     expect(result.indexOf('How commands work:')).toBeLessThan(result.indexOf(TELL_INSTRUCTION));
     expect(result.indexOf(TELL_INSTRUCTION)).toBeLessThan(result.indexOf(MARKDOWN_INSTRUCTION));
   });
@@ -289,16 +332,21 @@ describe('runCorePrompt role primer', () => {
 describe('runCorePrompt tool runner', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it('dispatches a granted caller-side command with the prompt signal and resolves to its output', async () => {
-    const { start, dispatchNativeLine } = harness({ settings: settingsWith({}) });
-    const { deps, request } = start('ask', ['db sqlite query']);
-    await expect(deps.runCommand('db sqlite query shop SELECT 1')).resolves.toBe('dispatched output');
-    expect(dispatchNativeLine).toHaveBeenCalledWith(
-      'shell',
-      'db sqlite query shop SELECT 1',
-      expect.objectContaining({ acpTool: true, awaitResult: true, signal: request.abort.signal }),
-    );
-  });
+  it.each(['ask', 'tell'] as const)(
+    'dispatches a granted caller-side command with the %s role and prompt signal',
+    async (role) => {
+      const { start, dispatchNativeLine } = harness({ settings: settingsWith({}) });
+      const { deps, request } = start(role, ['db sqlite query'], 'display name');
+      await expect(deps.runCommand('db sqlite query shop SELECT 1')).resolves.toBe('dispatched output');
+      expect(dispatchNativeLine).toHaveBeenCalledWith(
+        'shell',
+        'db sqlite query shop SELECT 1',
+        expect.objectContaining({
+          acpRole: role, acpTool: true, awaitResult: true, signal: request.abort.signal,
+        }),
+      );
+    },
+  );
 
   it.each([
     ['disabled', { effectiveEnabled: false }],
@@ -572,6 +620,71 @@ describe('runCorePrompt tool runner', () => {
   });
 });
 
+describe('runCorePrompt native result mapping', () => {
+  const COMMAND = 'db sqlite query shop SELECT 1';
+  const OUTPUT = 'captured output';
+  const fallback = Symbol('fallback');
+  type NativeReply = { dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown };
+  const cases: Array<[string, NativeReply, string]> = [
+    [
+      'returns a core-response refusal string verbatim',
+      { dispatched: true, output: OUTPUT, coreResponse: true, result: 'Command refused.' },
+      'Command refused.',
+    ],
+    [
+      'keeps an empty core-response string empty despite captured output',
+      { dispatched: true, output: OUTPUT, coreResponse: true, result: '' },
+      '',
+    ],
+    [
+      'returns captured output for a core response with an object receipt',
+      { dispatched: true, output: OUTPUT, coreResponse: true, result: { receipt: 'ignored' } },
+      OUTPUT,
+    ],
+    [
+      'returns captured output for a core response with no result',
+      { dispatched: true, output: OUTPUT, coreResponse: true },
+      OUTPUT,
+    ],
+    [
+      'returns an ordinary string result before captured output',
+      { dispatched: true, output: OUTPUT, result: 'ordinary string result' },
+      'ordinary string result',
+    ],
+    [
+      'returns captured output for an ordinary response with no result',
+      { dispatched: true, output: OUTPUT },
+      OUTPUT,
+    ],
+    [
+      'serializes an ordinary structured result',
+      { dispatched: true, output: OUTPUT, result: { status: 'completed' } },
+      JSON.stringify({ status: 'completed' }),
+    ],
+    [
+      'falls back to String when JSON serialization is undefined',
+      { dispatched: true, output: OUTPUT, result: fallback },
+      String(fallback),
+    ],
+  ];
+
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it.each(cases)('%s', async (_label, reply, expected) => {
+    const { start, dispatchNativeLine } = harness({ settings: settingsWith({}) });
+    dispatchNativeLine.mockResolvedValueOnce(reply);
+    const { deps } = start('ask', ['db sqlite query']);
+    await expect(deps.runCommand(COMMAND)).resolves.toBe(expected);
+  });
+
+  it('rejects an undispatched reply carrying a string result before mapping it', async () => {
+    const { start, dispatchNativeLine } = harness({ settings: settingsWith({}) });
+    dispatchNativeLine.mockResolvedValueOnce({ dispatched: false, output: OUTPUT, result: 'mapped refusal' });
+    const { deps } = start('ask', ['db sqlite query']);
+    await expect(deps.runCommand(COMMAND)).rejects.toThrow(`No ACP tool matched command: ${COMMAND}`);
+  });
+});
+
 describe('runCorePrompt remote session', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
@@ -590,18 +703,23 @@ describe('runCorePrompt remote session', () => {
     expect(request.abort.signal.aborted).toBe(false);
   });
 
-  it('dispatches a granted caller command through the guarded runner with the prompt signal', async () => {
-    const { start, dispatchNativeLine, run } = harness({ remoteSession: true });
-    const { request } = start('ask', ['db sqlite query']);
-    const runCaller = remoteCall(run)[2];
+  it.each(['ask', 'tell'] as const)(
+    'dispatches a granted caller command through the guarded runner with the %s role',
+    async (role) => {
+      const { start, dispatchNativeLine, run } = harness({ remoteSession: true });
+      const { request } = start(role, ['db sqlite query'], 'display name');
+      const runCaller = remoteCall(run)[2];
 
-    await expect(runCaller('db sqlite query shop SELECT 1')).resolves.toBe('dispatched output');
-    expect(dispatchNativeLine).toHaveBeenCalledWith(
-      'shell',
-      'db sqlite query shop SELECT 1',
-      expect.objectContaining({ acpTool: true, awaitResult: true, signal: request.abort.signal }),
-    );
-  });
+      await expect(runCaller('db sqlite query shop SELECT 1')).resolves.toBe('dispatched output');
+      expect(dispatchNativeLine).toHaveBeenCalledWith(
+        'shell',
+        'db sqlite query shop SELECT 1',
+        expect.objectContaining({
+          acpRole: role, acpTool: true, awaitResult: true, signal: request.abort.signal,
+        }),
+      );
+    },
+  );
 
   it('raises the command-disabled notification for a far-side refused step', () => {
     const { start, managers, run } = harness({ remoteSession: true });
@@ -1383,5 +1501,172 @@ describe('runCorePrompt web routing', () => {
       input: '[far] web search x', output: 'result', acp: true,
     });
     expect(mocks.runWebInTab).not.toHaveBeenCalled();
+  });
+});
+
+type SnapshotRowInput = {
+  name: string;
+  savedEnabled?: boolean;
+  savedAgentAccess?: boolean;
+  effectiveEnabled?: boolean;
+  effectiveAgentAccess?: boolean;
+};
+
+function snapshotOf(rows: SnapshotRowInput[]): CommandSettingsSnapshot {
+  return {
+    commands: rows.map((row) => ({
+      name: row.name,
+      kind: 'native' as const,
+      aliases: [],
+      forms: [row.name],
+      enabled: row.savedEnabled ?? true,
+      agentAccess: row.savedAgentAccess ?? true,
+      effectiveEnabled: row.effectiveEnabled ?? true,
+      effectiveAgentAccess: row.effectiveAgentAccess ?? true,
+    })),
+    source: 'default',
+    path: '',
+  };
+}
+
+const permissiveRow = (name: string) => ({ name, effectiveEnabled: true, effectiveAgentAccess: true });
+
+describe('coreSnapshotRows', () => {
+  it('returns a fresh empty array for undefined settings', () => {
+    const first = coreSnapshotRows(undefined);
+    const second = coreSnapshotRows(undefined);
+    expect(first).toEqual([]);
+    expect(second).toEqual([]);
+    expect(second).not.toBe(first);
+  });
+
+  it('returns permissive rows for the whole vocabulary from a defined empty snapshot', () => {
+    expect(coreSnapshotRows(snapshotOf([]))).toEqual(NATIVE_ACP_COMMANDS.map((name) => permissiveRow(name)));
+  });
+
+  it('copies an effective-enabled-off value rather than the saved enabled value', () => {
+    const rows = coreSnapshotRows(snapshotOf([{
+      name: 'file read', savedEnabled: true, effectiveEnabled: false,
+    }]));
+    expect(rows.find((row) => row.name === 'file read')).toEqual({
+      name: 'file read', effectiveEnabled: false, effectiveAgentAccess: true,
+    });
+  });
+
+  it('copies an effective-agent-access-off value rather than the saved agent access value', () => {
+    const rows = coreSnapshotRows(snapshotOf([{
+      name: 'file grep', savedAgentAccess: true, effectiveAgentAccess: false,
+    }]));
+    expect(rows.find((row) => row.name === 'file grep')).toEqual({
+      name: 'file grep', effectiveEnabled: true, effectiveAgentAccess: false,
+    });
+  });
+
+  it('defaults missing vocabulary rows to permissive in a partial snapshot', () => {
+    const rows = coreSnapshotRows(snapshotOf([{
+      name: 'file write', effectiveEnabled: false, effectiveAgentAccess: false,
+    }]));
+    expect(rows.find((row) => row.name === 'file write')).toEqual({
+      name: 'file write', effectiveEnabled: false, effectiveAgentAccess: false,
+    });
+    expect(rows.find((row) => row.name === 'browser goto')).toEqual(permissiveRow('browser goto'));
+  });
+
+  it('omits a non-vocabulary settings row', () => {
+    const rows = coreSnapshotRows(snapshotOf([{
+      name: 'unrelated command', effectiveEnabled: false, effectiveAgentAccess: false,
+    }]));
+    expect(rows.map((row) => row.name)).toEqual([...NATIVE_ACP_COMMANDS]);
+    expect(rows.every((row) => row.effectiveEnabled && row.effectiveAgentAccess)).toBe(true);
+  });
+
+  it('keeps vocabulary order, fresh rows, and values captured at call time', () => {
+    const sourceRows = [{
+      name: 'file read', kind: 'native' as const, aliases: [], forms: ['file read'],
+      enabled: true, agentAccess: true, effectiveEnabled: false, effectiveAgentAccess: false,
+    }];
+    const settings = { commands: sourceRows, source: 'default' as const, path: '' } as CommandSettingsSnapshot;
+    const first = coreSnapshotRows(settings);
+    const second = coreSnapshotRows(settings);
+
+    const captured = () => first.find((row) => row.name === 'file read');
+    expect(first.map((row) => row.name)).toEqual([...NATIVE_ACP_COMMANDS]);
+    expect(captured()).not.toBe(second.find((row) => row.name === 'file read'));
+    expect(captured()).not.toBe(sourceRows[0]);
+    sourceRows[0] = { ...sourceRows[0], effectiveEnabled: true, effectiveAgentAccess: true };
+    expect(captured()).toEqual({ name: 'file read', effectiveEnabled: false, effectiveAgentAccess: false });
+  });
+});
+
+describe('runCorePrompt subagent through the real command', () => {
+  const RECEIPT = {
+    replyId: 'reply-1', kind: 'record' as const, recordId: 'record-1', name: 'subagent:research',
+  };
+  const GRANTS = ['subagent'];
+  beforeEach(() => {
+    vi.clearAllMocks();
+    subagentMock.launch.mockReturnValue(RECEIPT);
+  });
+
+  it('emits the JSON usage for wrong flags with no launch or later message', async () => {
+    await withRealLoop(async () => {
+      const seam = harness({ realCommand: true, launchDir: subagentLaunchDir() });
+      seam.start('tell', GRANTS, 'tell', 'record-1');
+      const line = 'subagent --role research --task t.md';
+      reply(seam.providerPrompt, line);
+      await vi.waitFor(() => expect(seam.providerPrompt).toHaveBeenCalledTimes(2));
+
+      const prompt = seam.providerPrompt.mock.calls[1]?.[0] as string;
+      expect(prompt).toContain(`Output of \`${line}\`:`);
+      expect(prompt).toContain(SUBAGENT_JSON_USAGE);
+      expect(subagentMock.launch).not.toHaveBeenCalled();
+      expect(seam.managers.tab.append).toHaveBeenCalledWith('shell', {
+        input: line, output: SUBAGENT_JSON_USAGE, acp: true,
+      });
+    });
+  });
+
+  it('emits the JSON usage for malformed JSON with no launch', async () => {
+    await withRealLoop(async () => {
+      const seam = harness({ realCommand: true, launchDir: subagentLaunchDir() });
+      const { request } = seam.start('tell', GRANTS, 'tell', 'record-1');
+      reply(seam.providerPrompt, 'subagent {"role":');
+      await vi.waitFor(() => expect(seam.providerPrompt).toHaveBeenCalledTimes(2));
+
+      const prompt = seam.providerPrompt.mock.calls[1]?.[0] as string;
+      expect(prompt).toContain(SUBAGENT_JSON_USAGE);
+      expect(subagentMock.launch).not.toHaveBeenCalled();
+      expect(request.finish).not.toHaveBeenCalled();
+    });
+  });
+
+  it('returns empty tool output for valid JSON before background work', async () => {
+    await withRealLoop(async () => {
+      const seam = harness({ realCommand: true, launchDir: subagentLaunchDir() });
+      seam.start('tell', GRANTS, 'tell', 'record-1');
+      const line = 'subagent {"role":"research","task":"t.md"}';
+      reply(seam.providerPrompt, line);
+      await vi.waitFor(() => expect(seam.providerPrompt).toHaveBeenCalledTimes(2));
+
+      expect(subagentMock.launch).toHaveBeenCalledTimes(1);
+      expect(seam.managers.tab.append).toHaveBeenCalledWith('shell', {
+        input: line, output: '', acp: true,
+      });
+      expect(seam.providerPrompt.mock.calls[1]?.[0] as string).toContain(`Output of \`${line}\`:`);
+    });
+  });
+
+  it('leaves a subagent line as prose with no dispatch on a without-tools tab', async () => {
+    await withRealLoop(async () => {
+      const seam = harness({ realCommand: true, withoutTools: true, launchDir: subagentLaunchDir() });
+      const { request } = seam.start('tell', GRANTS, 'tell', 'record-1');
+      const line = 'subagent {"role":"research","task":"t.md"}';
+      reply(seam.providerPrompt, line);
+      await vi.waitFor(() => expect(request.finish).toHaveBeenCalled());
+
+      expect(seam.providerPrompt).toHaveBeenCalledTimes(1);
+      expect(subagentMock.launch).not.toHaveBeenCalled();
+      expect(request.finish).toHaveBeenCalledWith(expect.objectContaining({ answered: true, reply: line }));
+    });
   });
 });

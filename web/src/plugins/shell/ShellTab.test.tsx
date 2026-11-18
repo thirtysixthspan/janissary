@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { act, cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
-import type { BackgroundReplyView, TabView } from '@shared/protocol';
+import type { BackgroundReplyView, PendingAcpReplyNameView, TabView } from '@shared/protocol';
 import type { PluginTerminal, TabPluginClientCapabilities } from '../api';
 import { disabledApplicationCommand } from '../../shared/command-availability';
 import { PluginChordProvider, createPluginChordRegistry, type PluginChordRegistry } from '../PluginChords';
@@ -173,6 +173,7 @@ function makeCapabilities(overrides: {
   dotColor?: string;
   recording?: string;
   onBackgroundReply?: TabPluginClientCapabilities['onBackgroundReply'];
+  onPendingAcpReplyName?: TabPluginClientCapabilities['onPendingAcpReplyName'];
 } = {}) {
   const written: Written = [];
   const resized: { cols: number; rows: number }[] = [];
@@ -233,6 +234,7 @@ function makeCapabilities(overrides: {
       openRecording: vi.fn(),
     }),
     ...(overrides.onBackgroundReply !== undefined && { onBackgroundReply: overrides.onBackgroundReply }),
+    ...(overrides.onPendingAcpReplyName !== undefined && { onPendingAcpReplyName: overrides.onPendingAcpReplyName }),
   } as unknown as TabPluginClientCapabilities;
   return {
     capabilities, closed, handle, openConnection, resized, written,
@@ -244,6 +246,10 @@ function shellReceipt(replyId: string, role: 'ask' | 'tell' = 'ask') {
   return { replyId, role, name: `acp:${role}:shell1` };
 }
 
+function recordReceipt(replyId: string, recordId: string, name: string) {
+  return { replyId, kind: 'record' as const, recordId, name };
+}
+
 function backgroundReplies() {
   let receive: (reply: BackgroundReplyView) => void = () => {};
   const subscribe = vi.fn((callback: (reply: BackgroundReplyView) => void) => {
@@ -251,6 +257,15 @@ function backgroundReplies() {
     return () => {};
   });
   return { subscribe, send: (reply: BackgroundReplyView) => { receive(reply); } };
+}
+
+function pendingNames() {
+  let receive: (update: PendingAcpReplyNameView) => void = () => {};
+  const subscribe = vi.fn((callback: (update: PendingAcpReplyNameView) => void) => {
+    receive = callback;
+    return () => {};
+  });
+  return { subscribe, send: (update: PendingAcpReplyNameView) => { receive(update); } };
 }
 
 // The application state a plugin tab's bar reaches in the running application: the interception every
@@ -1208,6 +1223,81 @@ describe('ShellTab', () => {
     expect(openConnection).toHaveBeenLastCalledWith({ text: 'acp:ask:shell1', kind: 'acp', recordId: 'record-ask-1' });
   });
 
+  it('renders a delivered echo from a pending update with no dispatch, then links its answering caller record', () => {
+    const replies = backgroundReplies();
+    const pending = pendingNames();
+    const echo = 'tell ← subagent:research completed';
+    const callerName = 'acp:tell:shell1';
+    const { capabilities, openConnection, terminal } = renderTab({
+      onBackgroundReply: replies.subscribe, onPendingAcpReplyName: pending.subscribe,
+    });
+
+    act(() => { pending.send({ id: 'delivered-1', name: callerName, role: 'tell', echo }); });
+
+    expect(terminal.written.some((text) => text.includes(echo))).toBe(true);
+    const marker = screen.getByRole('link', { name: `Open ${callerName}` });
+    expect(marker).toHaveTextContent('Thinking');
+    fireEvent.change(bar(), { target: { value: 'keep this draft' } });
+    fireEvent.click(marker);
+    expect(openConnection).toHaveBeenLastCalledWith({
+      text: callerName, kind: 'acp', acpRef: { scope: 'tab', label: 'shell1', role: 'tell' },
+    });
+    expect(bar()).toHaveValue('keep this draft');
+    expect(vi.mocked(capabilities.intent).mock.calls.filter(
+      ([name]) => name === 'dispatch' || name === 'dispatch-command',
+    )).toEqual([]);
+
+    act(() => replies.send({
+      id: 'delivered-1', line: echo, output: '## Answer',
+      record: { id: 'record-tell-caller', name: callerName },
+    }));
+    expect(marker).toHaveTextContent('see thought process');
+    fireEvent.click(marker);
+    expect(openConnection).toHaveBeenLastCalledWith({
+      text: callerName, kind: 'acp', recordId: 'record-tell-caller',
+    });
+  });
+
+  it('marks a subagent dispatch by its durable record, ignores a fresh-id start, then links on completion', async () => {
+    const replies = backgroundReplies();
+    const { openConnection, releaseDispatch, terminal } = renderTab({
+      onBackgroundReply: replies.subscribe, dispatched: true, coreResponse: true,
+      result: recordReceipt('sub-1', 'record-sub', 'subagent:research'),
+    });
+    fireEvent.change(bar(), { target: { value: 'subagent --role research --task task.md' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+
+    const marker = screen.getByRole('link', { name: 'Open subagent:research' });
+    expect(marker).toHaveTextContent('Thinking');
+    fireEvent.click(marker);
+    expect(openConnection).toHaveBeenLastCalledWith({
+      text: 'subagent:research', kind: 'acp', recordId: 'record-sub',
+    });
+    expect(openConnection.mock.calls.at(-1)?.[0]).not.toHaveProperty('acpRef');
+
+    act(() => replies.send({
+      id: 'start-1', line: 'subagent --role research --task task.md', output: 'Started',
+    }));
+    expect(marker).toHaveTextContent('Thinking');
+
+    act(() => replies.send({
+      id: 'sub-1', line: 'subagent --role research --task task.md', output: '## Answer',
+      record: { id: 'record-sub', name: 'subagent:research' },
+    }));
+    expect(marker).toHaveTextContent('see thought process');
+    expect(marker).toHaveAttribute('aria-label', 'Open subagent:research');
+    expect(marker).toHaveAttribute('title', 'Open subagent:research');
+    const links = screen.getAllByRole('link', { name: 'Open subagent:research' });
+    for (const link of links) {
+      fireEvent.click(link);
+      expect(openConnection).toHaveBeenLastCalledWith({
+        text: 'subagent:research', kind: 'acp', recordId: 'record-sub',
+      });
+    }
+    expect(terminal.written.filter((text) => text.includes('> subagent --role research --task task.md'))).toHaveLength(2);
+  });
+
   it('settles a refusal on the repeated line without removing the running marker', async () => {
     const replies = backgroundReplies();
     let dispatch = 0;
@@ -1329,6 +1419,7 @@ describe('ShellTab', () => {
   it.each([
     { label: 'missing', result: undefined },
     { label: 'malformed', result: { replyId: 'bad', role: 'unknown', name: 'acp:ask:shell1' } },
+    { label: 'malformed record', result: { replyId: 'bad', kind: 'record', name: 'subagent:research' } },
   ])('does not mark a core response with a $label receipt', async ({ result }) => {
     const { releaseDispatch } = renderTab({ dispatched: true, coreResponse: true, result });
     fireEvent.change(bar(), { target: { value: 'ask no marker' } });

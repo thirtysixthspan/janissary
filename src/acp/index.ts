@@ -133,6 +133,7 @@ export function connectAcp(options: AcpOptions): AcpSession {
       });
       if (killed) throw new Error('ACP session closed.');
       sessionId = response.sessionId;
+      options.onSessionStarted?.(response.sessionId);
       if (options.effort) {
         const selection = selectAcpEffort(response.configOptions, options.effort.level, options.effort.model);
         if ('error' in selection) throw new Error(selection.error);

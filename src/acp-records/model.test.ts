@@ -5,6 +5,7 @@ import { isRecordSource } from './validation.js';
 
 const core: AcpRecordSource = { kind: 'acp', model: 'provider/model', ownerLabel: 'bob', ownerName: 'Bob' };
 const agent: AcpRecordSource = { ...core, kind: 'agent', runId: 'run', taskPath: '/tasks/execute.md' };
+const subagent: AcpRecordSource = { ...agent, subagentRole: 'research' };
 const block = (index = 0): AcpRecordBlock => ({
   prompt: `prompt ${index}`, startedAt: index, answer: '', endedAt: index,
   entries: [{ kind: 'message', text: 'reply', timestamp: index }],
@@ -26,7 +27,7 @@ describe('record model', () => {
     expect(recordStatus(value)).toBe('Running');
     value.blocks = [];
     expect(recordStatus(value)).toBe('Running');
-    for (const outcome of ['Closed', 'Completed', 'Failed', 'Terminated'] as const) {
+    for (const outcome of ['Closed', 'Completed', 'Failed', 'Partial', 'Terminated'] as const) {
       value.outcome = outcome;
       expect(recordStatus(value)).toBe(outcome);
     }
@@ -88,6 +89,27 @@ describe('record model', () => {
     expect(isRecordSource({ ...agent, host: 'devbox' })).toBe(true);
     expect(isRecordSource({ ...core, host: ' ' })).toBe(false);
     expect(isRecordSource({ ...core, host: 7 })).toBe(false);
+  });
+
+  it('titles a subagent record from the original task filename without a cap', () => {
+    expect(recordTitle(subagent)).toBe('Subagent: execute.md');
+    expect(recordTitle(subagent, 'ignored prompt')).toBe('Subagent: execute.md');
+    expect(recordTitle({ ...subagent, taskPath: `${'x'.repeat(100)}.md` })).toHaveLength(113);
+    expect(recordTitle(agent)).toBe('Agent: execute.md');
+  });
+
+  it('copies the subagent role onto agent rows and window sources only when defined', () => {
+    const [subagentRow, agentRow, coreRow] = recordRows([
+      { ...record(), id: 'sub', source: subagent, updatedAt: 300 },
+      { ...record(), id: 'agent', source: agent, updatedAt: 200 },
+      { ...record(), id: 'core', source: core, updatedAt: 100 },
+    ]);
+    expect(subagentRow).toMatchObject({ subagentRole: 'research', kind: 'agent' });
+    expect(agentRow).not.toHaveProperty('subagentRole');
+    expect(coreRow).not.toHaveProperty('subagentRole');
+    const window = recordWindow({ ...record(), source: subagent });
+    expect(window.source).toMatchObject({ subagentRole: 'research' });
+    expect(window).toMatchObject({ subagentRole: 'research' });
   });
 
   it.each([0, 20, 21, 41])('projects the newest default suffix of %s blocks', (count) => {

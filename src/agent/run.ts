@@ -3,16 +3,22 @@ import { getConfig } from '../config.js';
 import { deferred } from '../deferred.js';
 import type { AgentRunView, AgentSnapshot } from './types.js';
 import type { AcpActivityKind } from '../acp/activity.js';
+import type { AcpRole } from '../acp/role.js';
 import type { AgentRecordFeed } from './record-feed.js';
 import { cleanupAgentRun } from './run-cleanup.js';
 
-export type AgentOutcome = 'completed' | 'failed' | 'terminated';
+export type AgentOutcome = 'completed' | 'failed' | 'terminated' | 'partial';
 export type AgentCaller = Readonly<{
   label: string;
   ownerName?: string;
   incarnation: string;
   cwd: string;
   context: readonly string[];
+}>;
+export type AgentAcpCaller = Readonly<{
+  role: AcpRole;
+  sessionIdentity: string;
+  callerId: string;
 }>;
 export type AgentRunOptions = Readonly<{
   caller: AgentCaller;
@@ -25,6 +31,8 @@ export type AgentRunOptions = Readonly<{
   command?: string;
   model?: string;
   effort?: string;
+  subagentRole?: string;
+  acpCaller?: AgentAcpCaller;
 }>;
 
 function immutableSnapshot(snapshot: AgentSnapshot): AgentSnapshot {
@@ -52,6 +60,7 @@ export class AgentRun {
   private cleanups: (() => void | Promise<void>)[] = [];
   private allocations = new Set<Promise<void>>();
   private currentSnapshot: AgentSnapshot;
+  readonly acpCaller?: AgentAcpCaller;
 
   constructor(
     readonly caller: AgentCaller,
@@ -62,8 +71,10 @@ export class AgentRun {
       model: '', effort: 'medium', host: 'Local', workspace: caller.cwd,
     },
     readonly executionDir: string = caller.cwd,
+    acpCaller?: AgentAcpCaller,
   ) {
     this.currentSnapshot = immutableSnapshot(snapshot);
+    this.acpCaller = acpCaller === undefined ? undefined : Object.freeze({ ...acpCaller });
   }
 
   get snapshot(): AgentSnapshot {
@@ -101,7 +112,8 @@ export class AgentRun {
   setStatus(status: AgentRunView['status'], response?: string): void {
     const terminalStatus = this.outcome === 'completed' ? 'Completed'
       : this.outcome === 'failed' ? 'Failed'
-        : this.outcome === 'terminated' ? 'Terminated' : undefined;
+        : this.outcome === 'terminated' ? 'Terminated'
+          : this.outcome === 'partial' ? 'Partial' : undefined;
     if (terminalStatus && status !== terminalStatus) return;
     if (this.status === status && (response === undefined || this.response === response)) return;
     this.status = status;
@@ -170,7 +182,8 @@ export class AgentRun {
     this.cleanupPromise = completion.promise;
     this.outcome = outcome;
     this.record?.finish(outcome, this.response);
-    this.setStatus(outcome === 'completed' ? 'Completed' : outcome === 'failed' ? 'Failed' : 'Terminated');
+    this.setStatus(outcome === 'completed' ? 'Completed' : outcome === 'failed' ? 'Failed'
+      : outcome === 'terminated' ? 'Terminated' : 'Partial');
     if (outcome === 'terminated') this.abortController.abort();
     void (async () => {
       try { await this.cleanup(); completion.resolve(); }

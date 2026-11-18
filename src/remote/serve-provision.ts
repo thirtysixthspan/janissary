@@ -16,6 +16,7 @@ import { RemoteAcp } from './serve-acp.js';
 import { RemoteFileNavigators } from './serve-file-navigator.js';
 import { githubTokenNotice, workspaceReadyNotice } from './serve-notice.js';
 import type { DetachedPeer } from './serve-detach.js';
+import { RemoteRunClones } from './serve-run-clones.js';
 
 // `RemoteServer.provision`, split out the way `serve-detach-query.ts` was, to keep `serve.ts` under
 // the size limit: everything a `provision` frame sets in motion, from the label check through the
@@ -26,6 +27,7 @@ export type ProvisionedWorkspace = {
   processes: RemoteProcesses;
   files: RemoteFileNavigators;
   acp: RemoteAcp;
+  runClones: RemoteRunClones;
 };
 
 export type ProvisionContext = {
@@ -94,11 +96,15 @@ export async function provisionRemoteWorkspace(
   // machine paired with an email from this one belongs to nobody, so a forwarded identity either
   // stands on its own or this machine's own stays as the fallback.
   if (Object.keys(identity).length > 0) setGitIdentity(identity);
+  // Built only after main readiness, from the already-merged tokens and the main label, so no
+  // service is published for a failed or stopped main provisioning.
+  const runClones = new RemoteRunClones(workspaces, tokens, label);
   context.provisioned({
     dir: result.dir,
     processes: new RemoteProcesses(emit, result.dir, label, tokens),
     files: new RemoteFileNavigators(emit, result.dir, new LocalFileSystemPort(), tokens),
-    acp: new RemoteAcp(emit, result.dir, tokens),
+    acp: new RemoteAcp(emit, result.dir, tokens, (selector) => runClones.lookup(selector)),
+    runClones,
   });
   emit({
     type: 'workspace-ready',

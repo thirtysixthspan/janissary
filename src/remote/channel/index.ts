@@ -1,9 +1,9 @@
 import { HANDSHAKE_SENTINEL, decodeFrame, encodeFrame, heldBackLength, parseHandshake } from '../protocol.js';
-import type { ClientFrame, RemoteProcessState } from '../protocol-frames.js';
+import type { ClientFrame, RemoteProcessState, RemoteRunCloneAction } from '../protocol-frames.js';
 import { SessionRouter, type SessionListener } from './sessions.js';
 import { drainFrames } from '../frame/lines.js';
 import { dispatchAcp, type AcpSessionListener } from './acp.js';
-import { dispatchSessionFrame } from './dispatch.js';
+import { dispatchNavigatorFrame, dispatchSessionFrame } from './dispatch.js';
 import { CaptureRequestTracker, type CaptureResult } from './capture.js';
 import { ShutdownDrain } from '../shutdown-drain.js';
 import { RemoteAgentRequests } from './agent-requests.js';
@@ -72,9 +72,14 @@ export class RemoteChannel {
     return this.captures.request(id, session, (frame) => this.send(frame), origin);
   }
 
-  resolveAgentSnapshot(task: string, skills: string[]): Promise<AgentSnapshot> {
+  resolveAgentSnapshot(task: string, skills: string[], workspace?: string): Promise<AgentSnapshot> {
     if (!this.attached) return Promise.reject(new Error('Remote connection unavailable.'));
-    return this.agentRequests.request(task, skills, (frame) => this.send(frame));
+    return this.agentRequests.request(task, skills, (frame) => this.send(frame), workspace);
+  }
+
+  runClone(action: RemoteRunCloneAction, label: string): Promise<string | undefined> {
+    if (!this.attached) return Promise.reject(new Error('Remote connection unavailable.'));
+    return this.agentRequests.runClone(action, label, (frame) => this.send(frame));
   }
 
   send(frame: ClientFrame): void {
@@ -95,7 +100,9 @@ export class RemoteChannel {
 
   close(): void {
     this.shutdownDrain.cancel();
+    this.state = 'closed';
     this.settleAcp();
+    this.agentRequests.failAll('Remote connection lost.');
     this.transport.kill();
   }
 
@@ -114,6 +121,7 @@ export class RemoteChannel {
   }
 
   finish(): void {
+    this.agentRequests.failAll('Remote session ended.');
     for (const id of this.router.spawnedIds()) this.send({ type: 'kill', id });
     for (const id of this.acpSessions.keys()) this.send({ type: 'acp-close', id });
     for (const session of this.navigators.keys()) this.send({ type: 'filesystem-close', session });
@@ -127,7 +135,6 @@ export class RemoteChannel {
     for (const listener of acpListeners) listener.onError('Remote session ended.', true);
     this.acpSessions.clear();
     this.captures.settleAll();
-    this.agentRequests.failAll('Remote session ended.');
   }
 
   // A PTY kill can discard bytes that have been written but not yet delivered to ssh. Leave the
@@ -219,24 +226,21 @@ export class RemoteChannel {
     if (!('type' in frame)) { this.fail(frame.error); return; }
     if (frame.type === 'attach-result' && frame.accepted) this.state = 'attached';
     if (dispatchSessionFrame(frame, this.router, this.captures)) return;
-    if (frame.type === 'filesystem-reply') {
-      this.navigators.get(frame.session)?.onReply(frame);
+    if (dispatchNavigatorFrame(frame, this.navigators)) return;
+    if (frame.type === 'agent-resolve-result' || frame.type === 'run-clone-result') {
+      this.agentRequests.resolve(frame);
       return;
     }
-    if (frame.type === 'filesystem-event') {
-      this.navigators.get(frame.session)?.onEvent(frame.path);
-      return;
-    }
-    if (frame.type === 'agent-resolve-result') { this.agentRequests.resolve(frame); return; }
     if (dispatchAcp(this.acpSessions, frame)) return;
     if (isChannelFrame(frame)) { this.handlers.onFrame(frame); return; }
     this.fail(`Unexpected remote frame "${frame.type}".`);
   }
 
   private fail(message: string): void {
-    this.handlers.onError(message);
     this.state = 'closed';
     this.settleAcp();
+    this.agentRequests.failAll(message);
+    this.handlers.onError(message);
     this.transport.kill();
   }
 

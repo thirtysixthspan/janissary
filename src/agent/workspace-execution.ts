@@ -4,13 +4,8 @@ import type { WorkspaceManager } from '../workspace/manager.js';
 import type { AgentCaller, AgentRun } from './run.js';
 import type { AgentSnapshot } from './types.js';
 import type { Managers } from '../managers.js';
-
-export type AgentWorkspace = Readonly<{
-  dir: string;
-  ready: Promise<void>;
-  cancel(): void;
-  release(): Promise<void>;
-}>;
+import { prepareFreshAgentWorkspace } from './fresh-workspace.js';
+import type { AgentWorkspace, LocalAgentRunOptions, LocalAgentRunStart } from './workspace-types.js';
 
 export function prepareAgentWorkspace(workspace: WorkspaceManager, callerDir: string, workspaceName?: string): AgentWorkspace {
   if (workspaceName !== undefined) {
@@ -38,28 +33,43 @@ export function prepareAgentWorkspace(workspace: WorkspaceManager, callerDir: st
   };
 }
 
-export async function startLocalAgentRun(
+function createLocalAgentRun(
   managers: Managers,
   caller: AgentCaller,
   command: string,
   task: string,
   model: string | undefined,
   effort: string | undefined,
-  workspaceName?: string,
-): Promise<{ run: AgentRun; workspace: AgentWorkspace }> {
-  const workspace = prepareAgentWorkspace(managers.workspace, caller.cwd, workspaceName);
+  workspace: AgentWorkspace,
+  options: LocalAgentRunOptions,
+): AgentRun {
   const placeholder: AgentSnapshot = { taskPath: task, taskText: '', skills: [], grants: [] };
+  return managers.agent.create({
+    caller,
+    snapshot: placeholder,
+    executionDir: workspace.dir,
+    executionWorkspace: workspace.dir,
+    releaseWorkspace: workspace.release,
+    command,
+    model,
+    effort,
+    ...(options.subagentRole !== undefined && { subagentRole: options.subagentRole }),
+    ...(options.acpCaller !== undefined && { acpCaller: options.acpCaller }),
+  });
+}
+
+async function startOrdinaryLocalAgentRun(
+  managers: Managers,
+  caller: AgentCaller,
+  command: string,
+  task: string,
+  model: string | undefined,
+  effort: string | undefined,
+  options: LocalAgentRunOptions,
+): Promise<LocalAgentRunStart> {
+  const workspace = prepareAgentWorkspace(managers.workspace, caller.cwd, options.workspaceName);
   try {
-    const run = managers.agent.create({
-      caller,
-      snapshot: placeholder,
-      executionDir: workspace.dir,
-      executionWorkspace: workspace.dir,
-      releaseWorkspace: workspace.release,
-      command,
-      model,
-      effort,
-    });
+    const run = createLocalAgentRun(managers, caller, command, task, model, effort, workspace, options);
     run.addResource('workspace-provision', async () => {
       workspace.cancel();
       try { await workspace.ready; } catch { /* provisioning errors are returned as the run result */ }
@@ -71,4 +81,55 @@ export async function startLocalAgentRun(
     try { await workspace.release(); } catch { /* provisioning failure keeps its original error */ }
     throw error;
   }
+}
+
+export function startLocalAgentRun(
+  managers: Managers,
+  caller: AgentCaller,
+  command: string,
+  task: string,
+  model: string | undefined,
+  effort: string | undefined,
+  options: LocalAgentRunOptions & { fresh: true },
+): LocalAgentRunStart;
+export function startLocalAgentRun(
+  managers: Managers,
+  caller: AgentCaller,
+  command: string,
+  task: string,
+  model: string | undefined,
+  effort: string | undefined,
+  options?: LocalAgentRunOptions & { fresh?: false },
+): Promise<LocalAgentRunStart>;
+export function startLocalAgentRun(
+  managers: Managers,
+  caller: AgentCaller,
+  command: string,
+  task: string,
+  model: string | undefined,
+  effort: string | undefined,
+  options: LocalAgentRunOptions,
+): LocalAgentRunStart | Promise<LocalAgentRunStart>;
+export function startLocalAgentRun(
+  managers: Managers,
+  caller: AgentCaller,
+  command: string,
+  task: string,
+  model: string | undefined,
+  effort: string | undefined,
+  options: LocalAgentRunOptions = {},
+): LocalAgentRunStart | Promise<LocalAgentRunStart> {
+  if (options.fresh === true) {
+    const workspace = prepareFreshAgentWorkspace(managers.workspace);
+    let run: AgentRun;
+    try {
+      run = createLocalAgentRun(managers, caller, command, task, model, effort, workspace, options);
+    } catch (error) {
+      workspace.cancel();
+      throw error;
+    }
+    workspace.start(run);
+    return { run, workspace };
+  }
+  return startOrdinaryLocalAgentRun(managers, caller, command, task, model, effort, options);
 }

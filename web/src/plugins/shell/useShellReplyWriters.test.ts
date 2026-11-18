@@ -10,7 +10,8 @@ import { ReplyPlacement } from './reply-placement';
 import { commandHead } from './shell-prompt';
 import { addThinkingMarker } from './thinking-marker-decoration';
 import { useBackgroundReplies } from './useBackgroundReplies';
-import { createReplyMarkers, useShellReplyWriters } from './useShellReplyWriters';
+import { createReplyMarkers } from './reply-markers';
+import { useShellReplyWriters } from './useShellReplyWriters';
 
 vi.mock('./markdown-block', () => ({ insertMarkdownBlock: vi.fn() }));
 vi.mock('./thinking-marker-decoration', () => ({ addThinkingMarker: vi.fn() }));
@@ -70,8 +71,14 @@ function setup(overrides: Partial<Props> = {}) {
   return { fake, placement, placementRef, markersRef, replyIds, terminalRef, props, openLink, openConnection, ...view };
 }
 
-function receipt(replyId: string, role: ShellAcpReceipt['role'] = 'ask', name = 'ask-model'): ShellAcpReceipt {
+type RoleReceipt = Extract<ShellAcpReceipt, { role: 'ask' | 'tell' }>;
+
+function receipt(replyId: string, role: RoleReceipt['role'] = 'ask', name = 'ask-model'): ShellAcpReceipt {
   return { replyId, role, name };
+}
+
+function recordReceipt(replyId: string, recordId = 'rec-1', name = 'ask-model'): ShellAcpReceipt {
+  return { replyId, kind: 'record', recordId, name };
 }
 
 function viewOf(call: number) {
@@ -284,7 +291,7 @@ describe('useShellReplyWriters pending name updates', () => {
 
     expect(markersRef.current.pendingNames).toBeUndefined();
     expect(markersRef.current.entries.get('r1')).toMatchObject({
-      name: 'acp:tell:Renamed shell', role: 'tell',
+      name: 'acp:tell:Renamed shell', target: { role: 'tell' },
     });
     expect(addMarker).toHaveBeenCalledExactlyOnceWith(
       expect.anything(), expect.anything(), expect.objectContaining({ kind: 'running', name: 'acp:tell:Renamed shell' }),
@@ -517,5 +524,459 @@ describe('useShellReplyWriters clicks and options', () => {
     expect(addMarker).not.toHaveBeenCalled();
     expect(markersRef.current.entries.size).toBe(0);
     expect(markersRef.current).not.toHaveProperty('written');
+  });
+});
+
+describe('useShellReplyWriters record targets', () => {
+  it('opens a record target by id while running, without a label and after a shell rename', () => {
+    const { openConnection, props, rerender, result } = setup({ label: undefined });
+    result.current.echoCommand(LINE, recordReceipt('r1', 'rec-9', 'record-name'));
+
+    viewOf(0).onOpen();
+    expect(openConnection).toHaveBeenCalledExactlyOnceWith({ text: 'record-name', kind: 'acp', recordId: 'rec-9' });
+
+    rerender({ ...props, label: 'shell-2' });
+    viewOf(0).onOpen();
+    expect(openConnection).toHaveBeenLastCalledWith({ text: 'record-name', kind: 'acp', recordId: 'rec-9' });
+    expect(openConnection.mock.calls[1]?.[0]).not.toHaveProperty('acpRef');
+  });
+
+  it('opens the same durable record id on the settled link of a record receipt', () => {
+    const { openConnection, result } = setup();
+    result.current.echoCommand(LINE, recordReceipt('r1', 'rec-9'));
+
+    result.current.displayReply(LINE, 'Done', { id: 'r1', record: { id: 'rec-9', name: 'ask-model' } });
+
+    expect(handles[0]?.show).toHaveBeenCalledWith(expect.objectContaining({ kind: 'link', name: 'ask-model' }));
+    const shown = handles[0]?.show.mock.calls[0]?.[0] as { onOpen: () => void };
+    shown.onOpen();
+    expect(openConnection).toHaveBeenCalledWith({ text: 'ask-model', kind: 'acp', recordId: 'rec-9' });
+  });
+
+  it('leaves the launch marker Thinking for a fresh-id start, then links on the receipt-id completion', () => {
+    const { openConnection, result } = setup();
+    result.current.echoCommand(LINE, recordReceipt('r1', 'rec-9'));
+
+    result.current.displayReply(LINE, 'Started', { id: 'start-1' });
+
+    expect(handles[0]?.show).not.toHaveBeenCalled();
+    expect(handles[0]?.remove).not.toHaveBeenCalled();
+    expect(viewOf(0)).toMatchObject({ kind: 'running' });
+
+    result.current.displayReply(LINE, 'Done', { id: 'r1', record: { id: 'rec-9', name: 'ask-model' } });
+
+    expect(handles[0]?.show).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ kind: 'link' }));
+    const shown = handles[0]?.show.mock.calls[0]?.[0] as { onOpen: () => void };
+    shown.onOpen();
+    expect(openConnection).toHaveBeenCalledWith({ text: 'ask-model', kind: 'acp', recordId: 'rec-9' });
+  });
+
+  it('links a record completion that arrives with no started reply', () => {
+    const { openConnection, result } = setup();
+    result.current.echoCommand(LINE, recordReceipt('r1', 'rec-9'));
+
+    result.current.displayReply(LINE, 'Done', { id: 'r1', record: { id: 'rec-9', name: 'ask-model' } });
+
+    expect(handles[0]?.show).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ kind: 'link', name: 'ask-model' }));
+    const shown = handles[0]?.show.mock.calls[0]?.[0] as { onOpen: () => void };
+    shown.onOpen();
+    expect(openConnection).toHaveBeenCalledWith({ text: 'ask-model', kind: 'acp', recordId: 'rec-9' });
+  });
+
+  it('settles concurrent record runs of the same line and name independently by id', () => {
+    const { openConnection, result } = setup();
+    result.current.echoCommand(LINE, recordReceipt('r1', 'rec-a', 'same-name'));
+    result.current.echoCommand(LINE, recordReceipt('r2', 'rec-b', 'same-name'));
+    expect(handles).toHaveLength(2);
+
+    result.current.displayReply(LINE, 'Done', { id: 'r1', record: { id: 'rec-a', name: 'same-name' } });
+
+    expect(handles[0]?.show).toHaveBeenCalledWith(expect.objectContaining({ kind: 'link' }));
+    expect(handles[1]?.show).not.toHaveBeenCalled();
+    expect(handles[1]?.remove).not.toHaveBeenCalled();
+
+    result.current.displayReply(LINE, 'Done', { id: 'r2', record: { id: 'rec-b', name: 'same-name' } });
+
+    expect(handles[1]?.show).toHaveBeenCalledWith(expect.objectContaining({ kind: 'link' }));
+    const shown = handles[1]?.show.mock.calls[0]?.[0] as { onOpen: () => void };
+    shown.onOpen();
+    expect(openConnection).toHaveBeenCalledWith({ text: 'same-name', kind: 'acp', recordId: 'rec-b' });
+  });
+
+  it('puts the same record link on the original echo and on the repeated line', () => {
+    const { fake, openConnection, placement, result } = setup();
+    result.current.echoCommand(LINE, recordReceipt('r1', 'rec-9'));
+    placement.wrote();
+
+    result.current.displayReply(LINE, 'Done', { id: 'r1', record: { id: 'rec-9', name: 'ask-model' } });
+
+    expect(written(fake)).toEqual([formatEchoedCommand(LINE), commandHead(LINE), BODY]);
+    expect(addMarker).toHaveBeenCalledTimes(2);
+    viewOf(1).onOpen();
+    expect(openConnection).toHaveBeenCalledWith({ text: 'ask-model', kind: 'acp', recordId: 'rec-9' });
+  });
+
+  it('removes a record receipt marker for a settled reply without a record', () => {
+    const { fake, placement, result } = setup();
+    result.current.echoCommand(LINE, recordReceipt('r1', 'rec-9'));
+    placement.wrote();
+
+    result.current.displayReply(LINE, 'Refused', { id: 'r1' });
+
+    expect(handles[0]?.remove).toHaveBeenCalledOnce();
+    expect(handles[0]?.show).not.toHaveBeenCalled();
+    expect(fake.writes.slice(1)).toEqual([{ data: formatDispatchedCommand(LINE, markdownToAnsi('Refused')), args: 1 }]);
+  });
+
+  it('changes the label on a record target name refresh without changing its record id', () => {
+    const { markersRef, openConnection, replyIds, result } = setup();
+    result.current.echoCommand(LINE, recordReceipt('r1', 'rec-9', 'old-name'));
+    let receive: (update: PendingAcpReplyNameView) => void = () => {};
+    const subscribe = (callback: typeof receive) => { receive = callback; return () => {}; };
+    renderHook(() => useBackgroundReplies(undefined, result.current.displayReply, replyIds, subscribe));
+
+    act(() => { receive({ id: 'r1', name: 'new-name' }); });
+
+    expect(markersRef.current.entries.get('r1')?.name).toBe('new-name');
+    expect(handles[0]?.show).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      kind: 'running', name: 'new-name',
+    }));
+    const shown = handles[0]?.show.mock.calls[0]?.[0] as { onOpen: () => void };
+    shown.onOpen();
+    expect(openConnection).toHaveBeenCalledWith({ text: 'new-name', kind: 'acp', recordId: 'rec-9' });
+    expect(openConnection.mock.calls[0]?.[0]).not.toHaveProperty('acpRef');
+  });
+
+  it('draws the record link directly on a marker that arrives after the reply settled', () => {
+    const { fake, openConnection, result } = setup();
+    fake.hold.on = true;
+    result.current.echoCommand(LINE, recordReceipt('r1', 'rec-9'));
+    result.current.displayReply(LINE, 'Done', { id: 'r1', record: { id: 'rec-9', name: 'ask-model' } });
+    expect(addMarker).not.toHaveBeenCalled();
+
+    fake.release();
+
+    expect(addMarker).toHaveBeenCalledExactlyOnceWith(
+      fake.terminal, fake.markers[0], expect.objectContaining({ kind: 'link', name: 'ask-model' }),
+    );
+    viewOf(0).onOpen();
+    expect(openConnection).toHaveBeenCalledWith({ text: 'ask-model', kind: 'acp', recordId: 'rec-9' });
+  });
+
+  it('draws no decoration on the alternate buffer but still settles a record reply without error', () => {
+    const { fake, result } = setup();
+    fake.active.type = 'alternate';
+
+    result.current.echoCommand(LINE, recordReceipt('r1', 'rec-9'));
+    expect(addMarker).not.toHaveBeenCalled();
+
+    expect(() => {
+      result.current.displayReply(LINE, 'Done', { id: 'r1', record: { id: 'rec-9', name: 'ask-model' } });
+    }).not.toThrow();
+    expect(addMarker).not.toHaveBeenCalled();
+    expect(handles).toHaveLength(0);
+  });
+
+  it('does not redraw a settled record marker on a reattached terminal', () => {
+    const attached = setup();
+    const reply: BackgroundReplyView = {
+      id: 'r1', line: LINE, output: 'Done', record: { id: 'rec-9', name: 'ask-model' },
+    };
+    const subscription = (receive: (reply: BackgroundReplyView) => void) => { receive(reply); return () => {}; };
+    renderHook(({ subscribe }) => useBackgroundReplies(subscribe, attached.result.current.displayReply, attached.replyIds),
+      { initialProps: { subscribe: subscription } });
+
+    const later = fakeTerminal();
+    attached.markersRef.current = createReplyMarkers();
+    attached.placementRef.current = new ReplyPlacement();
+    attached.terminalRef.current = later.terminal;
+    attached.result.current.echoCommand(LINE, recordReceipt('r1', 'rec-9'));
+
+    expect(later.markers).toHaveLength(0);
+    expect(addMarker).not.toHaveBeenCalled();
+    expect(attached.replyIds).toEqual(new Set(['r1']));
+  });
+});
+
+describe('useShellReplyWriters delivered pending echoes', () => {
+  const ECHO = 'tell ← subagent:research completed';
+  const STARTED = 'ask ← subagent:research started';
+
+  function delivered(
+    id: string, role: 'ask' | 'tell', echo: string, name = `acp:${role}:shell1`,
+  ): PendingAcpReplyNameView & { pending: true } {
+    return { id, pending: true, name, role, echo };
+  }
+
+  it('writes the exact echo once with a running marker that opens the supplied caller role', () => {
+    for (const { role, echo } of [
+      { role: 'ask' as const, echo: STARTED },
+      { role: 'tell' as const, echo: ECHO },
+    ]) {
+      addMarker.mockClear();
+      handles.length = 0;
+      const { fake, openConnection, replyIds, result } = setup();
+
+      result.current.displayReply('', '', delivered('r1', role, echo));
+
+      expect(written(fake)).toEqual([formatEchoedCommand(echo)]);
+      expect(fake.writes[0]?.args).toBe(2);
+      expect(addMarker).toHaveBeenCalledExactlyOnceWith(
+        fake.terminal, fake.markers[0], expect.objectContaining({ kind: 'running', name: `acp:${role}:shell1` }),
+      );
+      expect(replyIds).toEqual(new Set());
+      viewOf(0).onOpen();
+      expect(openConnection).toHaveBeenCalledWith({
+        text: `acp:${role}:shell1`, kind: 'acp', acpRef: { scope: 'tab', label: 'shell-1', role },
+      });
+    }
+  });
+
+  it('writes no second echo or marker for duplicate pending snapshots', () => {
+    const { fake, result } = setup();
+    result.current.displayReply('', '', delivered('r1', 'tell', ECHO));
+
+    result.current.displayReply('', '', delivered('r1', 'tell', ECHO));
+
+    expect(written(fake)).toEqual([formatEchoedCommand(ECHO)]);
+    expect(addMarker).toHaveBeenCalledTimes(1);
+    expect(handles[0]?.show).not.toHaveBeenCalled();
+  });
+
+  it('keeps a delivered caller-role echo marker distinct from the subagent record marker and links its reply to the caller record', () => {
+    const { openConnection, result } = setup();
+    const commandLine = 'subagent --role research --task task.md';
+
+    result.current.echoCommand(commandLine, recordReceipt('r1', 'rec-sub', 'subagent:research'));
+    result.current.displayReply(commandLine, 'Subagent research started.', { id: 'start-1' });
+    expect(handles[0]?.show).not.toHaveBeenCalled();
+    result.current.displayReply(commandLine, 'Subagent research completed.', {
+      id: 'r1', record: { id: 'rec-sub', name: 'subagent:research' },
+    });
+    expect(handles[0]?.show).toHaveBeenCalledWith(expect.objectContaining({ kind: 'link', name: 'subagent:research' }));
+
+    const beforeDelivered = handles.length;
+    result.current.displayReply('', '', delivered('d1', 'tell', 'tell ← subagent:research started', 'acp:tell:shell1'));
+    expect(handles.length).toBeGreaterThan(beforeDelivered);
+    viewOf(beforeDelivered).onOpen();
+    expect(openConnection).toHaveBeenCalledWith({
+      text: 'acp:tell:shell1', kind: 'acp', acpRef: { scope: 'tab', label: 'shell-1', role: 'tell' },
+    });
+
+    result.current.displayReply('', 'ack', { id: 'd1', record: { id: 'rec-caller', name: 'acp:tell:new model' } });
+    const deliveredHandle = handles[beforeDelivered]!;
+    expect(deliveredHandle.show).toHaveBeenCalledWith(expect.objectContaining({ kind: 'link', name: 'acp:tell:new model' }));
+    const shown = deliveredHandle.show.mock.calls[0]?.[0] as { onOpen: () => void };
+    shown.onOpen();
+    expect(openConnection).toHaveBeenCalledWith({ text: 'acp:tell:new model', kind: 'acp', recordId: 'rec-caller' });
+  });
+
+  it('refreshes the name of an existing entry without retargeting or echoing again', () => {
+    const { fake, markersRef, openConnection, result } = setup();
+    result.current.displayReply('', '', delivered('r1', 'tell', ECHO, 'acp:tell:original shell'));
+
+    result.current.displayReply('', '', delivered('r1', 'tell', STARTED, 'acp:tell:Renamed shell'));
+
+    expect(written(fake)).toEqual([formatEchoedCommand(ECHO)]);
+    expect(addMarker).toHaveBeenCalledTimes(1);
+    expect(markersRef.current.entries.get('r1')).toMatchObject({
+      name: 'acp:tell:Renamed shell', target: { role: 'tell' },
+    });
+    const shown = handles[0]?.show.mock.calls[0]?.[0] as { onOpen: () => void };
+    shown.onOpen();
+    expect(openConnection).toHaveBeenCalledWith({
+      text: 'acp:tell:Renamed shell', kind: 'acp', acpRef: { scope: 'tab', label: 'shell-1', role: 'tell' },
+    });
+  });
+
+  it('refreshes the name on a delayed marker callback before drawing the single marker', () => {
+    const { fake, openConnection, result } = setup();
+    fake.hold.on = true;
+    result.current.displayReply('', '', delivered('r1', 'tell', ECHO, 'acp:tell:original shell'));
+    result.current.displayReply('', '', delivered('r1', 'ask', STARTED, 'acp:tell:Renamed shell'));
+    expect(addMarker).not.toHaveBeenCalled();
+
+    fake.release();
+
+    expect(written(fake)).toEqual([formatEchoedCommand(ECHO)]);
+    expect(addMarker).toHaveBeenCalledTimes(1);
+    expect(viewOf(0)).toMatchObject({ kind: 'running', name: 'acp:tell:Renamed shell' });
+    viewOf(0).onOpen();
+    expect(openConnection).toHaveBeenCalledWith({
+      text: 'acp:tell:Renamed shell', kind: 'acp', acpRef: { scope: 'tab', label: 'shell-1', role: 'tell' },
+    });
+  });
+
+  it('only refreshes an existing typed entry, never echoing a second line or retargeting it', () => {
+    const { fake, markersRef, openConnection, result } = setup();
+    result.current.echoCommand(LINE, receipt('r1', 'ask', 'ask-model'));
+
+    result.current.displayReply('', '', delivered('r1', 'tell', ECHO, 'acp:tell:Renamed'));
+
+    expect(written(fake)).toEqual([formatEchoedCommand(LINE)]);
+    expect(addMarker).toHaveBeenCalledTimes(1);
+    expect(markersRef.current.entries.get('r1')).toMatchObject({
+      name: 'acp:tell:Renamed', target: { role: 'ask' },
+    });
+    const shown = handles[0]?.show.mock.calls[0]?.[0] as { onOpen: () => void };
+    shown.onOpen();
+    expect(openConnection).toHaveBeenCalledWith({
+      text: 'acp:tell:Renamed', kind: 'acp', acpRef: { scope: 'tab', label: 'shell-1', role: 'ask' },
+    });
+  });
+
+  it('caches the name without writing when role or echo is missing, then echoes once with the latest name', () => {
+    for (const partial of [
+      { id: 'missing-role', name: 'first', echo: ECHO },
+      { id: 'missing-echo', name: 'first', role: 'tell' as const },
+    ]) {
+      addMarker.mockClear();
+      handles.length = 0;
+      const { fake, markersRef, result } = setup();
+      result.current.displayReply('', '', { ...partial, pending: true });
+
+      expect(written(fake)).toEqual([]);
+      expect(addMarker).not.toHaveBeenCalled();
+      expect(markersRef.current.pendingNames?.get(partial.id)).toBe('first');
+
+      result.current.displayReply('', '', delivered(partial.id, 'tell', ECHO, 'latest'));
+
+      expect(written(fake)).toEqual([formatEchoedCommand(ECHO)]);
+      expect(addMarker).toHaveBeenCalledTimes(1);
+      expect(markersRef.current.entries.get(partial.id)).toMatchObject({ name: 'latest' });
+      expect(viewOf(0)).toMatchObject({ kind: 'running', name: 'latest' });
+    }
+  });
+
+  it('starts no entry before terminal attachment and echoes once on a replay after attachment', () => {
+    const { fake, markersRef, terminalRef, result } = setup();
+    terminalRef.current = null;
+
+    result.current.displayReply('', '', delivered('r1', 'tell', ECHO));
+
+    expect(written(fake)).toEqual([]);
+    expect(markersRef.current.entries.size).toBe(0);
+
+    terminalRef.current = fake.terminal;
+    result.current.displayReply('', '', delivered('r1', 'tell', ECHO));
+
+    expect(written(fake)).toEqual([formatEchoedCommand(ECHO)]);
+    expect(addMarker).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores a pending update for an id already settled by a background reply', () => {
+    const { fake, replyIds, result } = setup();
+    let receive: (reply: BackgroundReplyView) => void = () => {};
+    renderHook(() => useBackgroundReplies((callback: typeof receive) => {
+      receive = callback;
+      return () => {};
+    }, result.current.displayReply, replyIds));
+
+    act(() => { receive({ id: 'r1', line: LINE, output: 'Done', record: RECORD }); });
+    const before = written(fake).length;
+
+    act(() => { result.current.displayReply('', '', delivered('r1', 'tell', ECHO)); });
+
+    expect(written(fake)).toHaveLength(before);
+    expect(addMarker).not.toHaveBeenCalled();
+    expect(replyIds).toEqual(new Set(['r1']));
+  });
+
+  it('settles a delivered reply in place under its echo and opens the answering caller record', () => {
+    const { fake, openConnection, result } = setup();
+    result.current.displayReply('', '', delivered('r1', 'tell', ECHO));
+
+    result.current.displayReply(ECHO, 'Done', { id: 'r1', record: RECORD });
+
+    expect(written(fake)).toEqual([formatEchoedCommand(ECHO), BODY]);
+    expect(addMarker).toHaveBeenCalledTimes(1);
+    expect(handles[0]?.show).toHaveBeenCalledWith(expect.objectContaining({ kind: 'link', name: RECORD.name }));
+    const shown = handles[0]?.show.mock.calls[0]?.[0] as { onOpen: () => void };
+    shown.onOpen();
+    expect(openConnection).toHaveBeenCalledWith({ text: RECORD.name, kind: 'acp', recordId: RECORD.id });
+  });
+
+  it('draws the settled link directly on a delivered marker that arrives after the reply', () => {
+    const { fake, openConnection, result } = setup();
+    fake.hold.on = true;
+    result.current.displayReply('', '', delivered('r1', 'tell', ECHO));
+    result.current.displayReply(ECHO, 'Done', { id: 'r1', record: RECORD });
+    expect(addMarker).not.toHaveBeenCalled();
+
+    fake.release();
+
+    expect(addMarker).toHaveBeenCalledTimes(1);
+    expect(viewOf(0)).toMatchObject({ kind: 'link', name: RECORD.name });
+    viewOf(0).onOpen();
+    expect(openConnection).toHaveBeenCalledWith({ text: RECORD.name, kind: 'acp', recordId: RECORD.id });
+  });
+
+  it('repeats the exact echo after intervening output and links both markers to the answering record', () => {
+    const { fake, openConnection, placement, result } = setup();
+    result.current.displayReply('', '', delivered('r1', 'tell', ECHO));
+    placement.wrote();
+
+    result.current.displayReply(ECHO, 'Done', { id: 'r1', record: RECORD });
+
+    expect(written(fake)).toEqual([formatEchoedCommand(ECHO), commandHead(ECHO), BODY]);
+    expect(addMarker).toHaveBeenCalledTimes(2);
+    const shown = handles[0]?.show.mock.calls[0]?.[0] as { onOpen: () => void };
+    shown.onOpen();
+    expect(openConnection).toHaveBeenCalledWith({ text: RECORD.name, kind: 'acp', recordId: RECORD.id });
+    viewOf(1).onOpen();
+    expect(openConnection).toHaveBeenLastCalledWith({ text: RECORD.name, kind: 'acp', recordId: RECORD.id });
+  });
+
+  it('removes the marker for a delivered reply without a record', () => {
+    const { result } = setup();
+    result.current.displayReply('', '', delivered('r1', 'tell', ECHO));
+
+    result.current.displayReply(ECHO, 'Refused', { id: 'r1' });
+
+    expect(handles[0]?.remove).toHaveBeenCalledOnce();
+    expect(handles[0]?.show).not.toHaveBeenCalled();
+    expect(addMarker).toHaveBeenCalledTimes(1);
+  });
+
+  it('draws nothing on a late callback for a delivered reply that settled without a record', () => {
+    const { fake, result } = setup();
+    fake.hold.on = true;
+    result.current.displayReply('', '', delivered('r1', 'tell', ECHO));
+    result.current.displayReply(ECHO, 'Refused', { id: 'r1' });
+
+    fake.release();
+
+    expect(addMarker).not.toHaveBeenCalled();
+    expect(fake.markers[0]?.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('draws no decoration on the alternate buffer but settles a delivered reply without error', () => {
+    const { fake, result } = setup();
+    fake.active.type = 'alternate';
+
+    result.current.displayReply('', '', delivered('r1', 'tell', ECHO));
+    expect(addMarker).not.toHaveBeenCalled();
+
+    expect(() => { result.current.displayReply(ECHO, 'Done', { id: 'r1', record: RECORD }); }).not.toThrow();
+    expect(addMarker).not.toHaveBeenCalled();
+    expect(handles).toHaveLength(0);
+  });
+
+  it('suppresses a delivered echo for an id seen before terminal reattachment', () => {
+    const attached = setup();
+    const reply: BackgroundReplyView = { id: 'r1', line: LINE, output: 'Done', record: RECORD };
+    const subscription = (receive: (reply: BackgroundReplyView) => void) => { receive(reply); return () => {}; };
+    renderHook(({ subscribe }) => useBackgroundReplies(subscribe, attached.result.current.displayReply, attached.replyIds),
+      { initialProps: { subscribe: subscription } });
+
+    const later = fakeTerminal();
+    attached.markersRef.current = createReplyMarkers();
+    attached.placementRef.current = new ReplyPlacement();
+    attached.terminalRef.current = later.terminal;
+    attached.result.current.displayReply('', '', delivered('r1', 'tell', ECHO));
+
+    expect(later.writes).toEqual([]);
+    expect(addMarker).not.toHaveBeenCalled();
+    expect(attached.replyIds).toEqual(new Set(['r1']));
   });
 });

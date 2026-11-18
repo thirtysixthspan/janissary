@@ -23,13 +23,14 @@ export function isRecordSource(value: unknown): value is AcpRecordSource {
     return value.role === undefined || (typeof value.role === 'string'
       && validAcpRoles.includes(value.role));
   }
-  return value.kind === 'agent' && nonempty(value.runId) && nonempty(value.taskPath);
+  return value.kind === 'agent' && nonempty(value.runId) && nonempty(value.taskPath)
+    && (value.subagentRole === undefined || nonempty(value.subagentRole));
 }
 
 export function isRecordOutcome(source: AcpRecordSource, value: unknown): value is AcpRecordOutcome {
   return value === 'Closed'
     || (source.kind === 'agent' && typeof value === 'string'
-      && ['Completed', 'Failed', 'Terminated'].includes(value));
+      && ['Completed', 'Failed', 'Partial', 'Terminated'].includes(value));
 }
 
 function timestamp(value: unknown): value is number {

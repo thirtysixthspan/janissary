@@ -2,11 +2,13 @@ import { randomUUID } from 'node:crypto';
 import type { CommandInvocationContext } from '../commands/types.js';
 import type { Managers } from '../managers.js';
 import { tabRuntime } from '../tab/runtime.js';
+import type { AcpRole } from '../acp/role.js';
 
 export type InvocationOptions = Readonly<{
   signal?: AbortSignal;
   awaitResult?: true;
   acpTool?: true;
+  acpRole?: AcpRole;
 }>;
 
 export function createInvocationContext(
@@ -30,6 +32,7 @@ export function createInvocationContext(
     ...(line !== undefined && { line }),
     ...(options.awaitResult && { awaitResult: true }),
     ...(options.acpTool && { acpTool: true }),
+    ...(options.acpRole !== undefined && { acpRole: options.acpRole }),
   });
 }
 
@@ -45,6 +48,7 @@ export function childInvocationContext(
     ...(line !== undefined && { line }),
     ...(parent.awaitResult && { awaitResult: true }),
     ...(parent.acpTool && { acpTool: true }),
+    ...(parent.acpRole !== undefined && { acpRole: parent.acpRole }),
     ...(parent.systemSchedule && { systemSchedule: parent.systemSchedule }),
   });
 }

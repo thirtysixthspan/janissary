@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { commands } from '../commands/index.js';
 import type { Managers } from '../managers.js';
 import type { CommandInvocationContext } from '../commands/types.js';
 import type { AgentSnapshot } from './types.js';
@@ -213,5 +214,53 @@ describe('agent command tools', () => {
     await expect(runGrantedAgentCommand('question ask "first"', snapshot, managers, invocation('disabled')))
       .resolves.toBe('Command is disabled: question.');
     expect(dispatch).toHaveBeenCalledOnce();
+  });
+});
+
+describe('agent command tools — subagent whole-command refusal', () => {
+  const granting: AgentSnapshot = Object.freeze({
+    taskPath: '/task.md', taskText: 'task',
+    skills: [{ name: 'subagent-skill', path: '/skill.md', instructions: 'subagent' }],
+    grants: Object.freeze(['subagent']),
+  });
+  const none: AgentSnapshot = Object.freeze({ ...snapshot, skills: [], grants: [] });
+
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it.each([
+    ['with a granting skill', granting],
+    ['without skills or grants', none],
+  ])('refuses every subagent form before the registry or dispatch when %s', async (_label, selected) => {
+    const find = vi.spyOn(commands, 'find');
+    const dispatch = vi.fn();
+    const managers = { command: { dispatchLineInInvocation: dispatch } } as unknown as Managers;
+    const forms = [
+      'subagent',
+      'subagent --role research --task task.md',
+      'subagent {"role":"research","task":"task.md"}',
+      'subagent {"role":',
+      'SUBAGENT --ROLE research --task task.md',
+      '  /SuBaGeNt   --role research  ',
+    ];
+    for (const command of forms) {
+      const inv = invocation('sub');
+      inv.line = '  /a different echoed line  ';
+      await expect(runGrantedAgentCommand(command, selected, managers, inv))
+        .resolves.toBe(`Agent: command not permitted: ${command}.`);
+    }
+    expect(find).not.toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('leaves a lookalike first token on the ordinary grant path', async () => {
+    const find = vi.spyOn(commands, 'find');
+    const dispatch = vi.fn(async () => ({ dispatched: true, output: 'ran' }));
+    const managers = { command: { dispatchLineInInvocation: dispatch } } as unknown as Managers;
+    const command = 'subagents --role research';
+
+    await expect(runGrantedAgentCommand(command, granting, managers, invocation('look')))
+      .resolves.toBe(`Agent: command not permitted: ${command}.`);
+    expect(find).toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalled();
   });
 });

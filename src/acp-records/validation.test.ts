@@ -1,0 +1,58 @@
+import { describe, expect, it } from 'vitest';
+import { ACP_RECORD_SCHEMA_VERSION } from './model.js';
+import type { AcpRecord, AcpRecordSource } from './types.js';
+import { isAcpRecord, isRecordOutcome, isRecordSource } from './validation.js';
+
+const core: AcpRecordSource = { kind: 'acp', model: 'provider/model', ownerLabel: 'caller', ownerName: 'Caller' };
+const agent: AcpRecordSource = { ...core, kind: 'agent', runId: 'run', taskPath: 'task.md' };
+
+describe('ACP record source validation', () => {
+  it('accepts a defined subagent role and preserves its supplied spelling', () => {
+    expect(isRecordSource({ ...agent, subagentRole: 'research' })).toBe(true);
+    expect(isRecordSource({ ...agent, subagentRole: 'Research' })).toBe(true);
+  });
+
+  it.each(['', ' '.repeat(3), 7, null])('rejects an invalid subagent role %j', (subagentRole) => {
+    expect(isRecordSource({ ...agent, subagentRole })).toBe(false);
+  });
+
+  it('accepts legacy agent and core sources without a subagent role', () => {
+    expect(isRecordSource(agent)).toBe(true);
+    expect(isRecordSource(core)).toBe(true);
+  });
+
+  it('loads a stored subagent record without migration', () => {
+    const id = 'a0b1c2d3-0000-4000-8000-000000000000';
+    const record: AcpRecord = {
+      schemaVersion: ACP_RECORD_SCHEMA_VERSION, id,
+      source: { ...agent, subagentRole: 'research' }, title: 'Subagent: task.md',
+      startedAt: 0, updatedAt: 1, endedAt: 1, outcome: 'Completed',
+      blocks: [{ prompt: 'task', startedAt: 0, entries: [], answer: '', endedAt: 1 }],
+    };
+    expect(isAcpRecord(record, id)).toBe(true);
+    expect(isRecordOutcome(record.source, 'Completed')).toBe(true);
+  });
+
+  it('accepts Partial only for agent records and preserves every prior outcome', () => {
+    expect(isRecordOutcome(agent, 'Partial')).toBe(true);
+    expect(isRecordOutcome(core, 'Partial')).toBe(false);
+    expect(isRecordOutcome(core, 'Closed')).toBe(true);
+    for (const outcome of ['Completed', 'Failed', 'Terminated'] as const) {
+      expect(isRecordOutcome(agent, outcome)).toBe(true);
+      expect(isRecordOutcome(core, outcome)).toBe(false);
+    }
+  });
+
+  it('loads a stored Partial agent record without migration', () => {
+    const id = 'a0b1c2d3-0000-4000-8000-000000000001';
+    const record: AcpRecord = {
+      schemaVersion: ACP_RECORD_SCHEMA_VERSION, id,
+      source: { ...agent, subagentRole: 'research' }, title: 'Subagent: task.md',
+      startedAt: 0, updatedAt: 1, endedAt: 1, outcome: 'Partial',
+      blocks: [{ prompt: 'task', startedAt: 0, entries: [], answer: 'partial answer', endedAt: 1 }],
+    };
+    expect(isAcpRecord(record, id)).toBe(true);
+    expect(isRecordOutcome(record.source, 'Partial')).toBe(true);
+    expect(isRecordOutcome(core, 'Partial')).toBe(false);
+  });
+});

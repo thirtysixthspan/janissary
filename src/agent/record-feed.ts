@@ -2,7 +2,7 @@ import type { AcpSessionRecords } from '../acp-records/manager.js';
 import type { AcpActivityKind } from '../acp/activity.js';
 import type { AgentOutcome } from './run.js';
 
-type AgentRecordMetadata = { model: string; ownerLabel: string; ownerName: string; taskPath: string; host?: string };
+type AgentRecordMetadata = { model: string; ownerLabel: string; ownerName: string; taskPath: string; host?: string; subagentRole?: string };
 
 export function validateAgentRecordMetadata(source: AgentRecordMetadata): AgentRecordMetadata {
   if (Object.values(source).some((value) => typeof value !== 'string' || !value.trim())) {
@@ -14,8 +14,10 @@ export function validateAgentRecordMetadata(source: AgentRecordMetadata): AgentR
 export class AgentRecordFeed {
   readonly id: string;
   private ended = false;
+  private readonly subagent: boolean;
 
   constructor(private records: AcpSessionRecords, metadata: AgentRecordMetadata, runId: string) {
+    this.subagent = metadata.subagentRole !== undefined;
     this.id = records.begin({ ...metadata, kind: 'agent', runId });
   }
 
@@ -30,9 +32,10 @@ export class AgentRecordFeed {
   finish(outcome: AgentOutcome, response: string | undefined): void {
     if (this.ended) return;
     this.ended = true;
-    const text = outcome === 'terminated' ? 'Agent terminated.'
+    const text = outcome === 'terminated' ? (this.subagent ? 'Subagent terminated.' : 'Agent terminated.')
       : response ?? (outcome === 'failed' ? 'Agent failed.' : '');
     this.records.answer(this.id, text);
-    this.records.close(this.id, outcome === 'completed' ? 'Completed' : outcome === 'failed' ? 'Failed' : 'Terminated');
+    this.records.close(this.id, outcome === 'completed' ? 'Completed' : outcome === 'failed' ? 'Failed'
+      : outcome === 'terminated' ? 'Terminated' : 'Partial');
   }
 }

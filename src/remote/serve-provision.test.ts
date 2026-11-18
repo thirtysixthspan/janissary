@@ -7,7 +7,8 @@ import { initWorkspaceDir, workspacePath } from '../workspace/index.js';
 import type { WorkspaceManager } from '../workspace/manager.js';
 import type { ServerFrame } from './protocol-frames.js';
 import { OPENCODE_OAUTH_FAILURE_NOTICE } from '../sandbox/opencode-data.js';
-import { loadProjectTokens } from '../project/tokens.js';
+import { loadProjectTokens, type ProjectTokens } from '../project/tokens.js';
+import { AGENT_CLONE_DEPTH } from '../workspace/clone-depth.js';
 import { webSearch } from '../web/search/search.js';
 
 vi.mock('../web/search/search.js', () => ({ webSearch: vi.fn() }));
@@ -146,6 +147,7 @@ describe('provisionRemoteWorkspace', () => {
 
     expect(frames).toEqual([{ type: 'workspace-failed', message: 'remote hung up' }]);
     expect(provisioned).not.toHaveBeenCalled();
+    expect(provisioned.mock.calls.some(([workspace]) => 'runClones' in workspace)).toBe(false);
   });
 
   it('removes every workspace and says nothing when the server stopped while cloning', async () => {
@@ -156,6 +158,7 @@ describe('provisionRemoteWorkspace', () => {
     expect(workspaces.removeAll).toHaveBeenCalledOnce();
     expect(provisioned).not.toHaveBeenCalled();
     expect(frames).toEqual([]);
+    expect(provisioned.mock.calls.some(([workspace]) => 'runClones' in workspace)).toBe(false);
   });
 
   it('records the label in the peer before it waits on the clone', async () => {
@@ -210,5 +213,123 @@ describe('provisionRemoteWorkspace', () => {
     } finally {
       loadProjectTokens(root, home);
     }
+  });
+});
+
+describe('provisionRemoteWorkspace — run clone service', () => {
+  let home: string;
+
+  function ownerHarness() {
+    const tracked = new Set<string>();
+    const workspaces = {
+      create: vi.fn((label: string) => {
+        const dir = path.join(root, label);
+        tracked.add(dir);
+        return cloned(dir, Promise.resolve());
+      }),
+      tracks: vi.fn((dir: string) => tracked.has(dir)),
+      remove: vi.fn((dir: string) => { tracked.delete(dir); }),
+      cancel: vi.fn(),
+      preflight: vi.fn((): string | undefined => undefined),
+      removeAll: vi.fn(),
+    } as unknown as WorkspaceManager;
+    const frames: ServerFrame[] = [];
+    const provisioned = vi.fn<(workspace: ProvisionedWorkspace) => void>();
+    const context = {
+      emit: (frame: ServerFrame) => { frames.push(frame); },
+      workspaces,
+      peer: undefined,
+      idle: () => true,
+      stopping: () => false,
+      provisioned,
+    } satisfies ProvisionContext;
+    return { context, workspaces, provisioned, frames };
+  }
+
+  function ownGithub(value: string | undefined): void {
+    const dir = path.join(root, '.janissary');
+    mkdirSync(dir, { recursive: true });
+    if (value === undefined) rmSync(path.join(dir, 'github-token'), { force: true });
+    else writeFileSync(path.join(dir, 'github-token'), `${value}\n`);
+    loadProjectTokens(root, home);
+  }
+
+  async function provisionedOwner(forwarded: ProjectTokens, depth?: number) {
+    const h = ownerHarness();
+    await provisionRemoteWorkspace(h.context, 'alpha', forwarded, {}, undefined, depth);
+    expect(h.provisioned).toHaveBeenCalledOnce();
+    return { ...h, owner: h.provisioned.mock.calls[0][0] };
+  }
+
+  beforeEach(() => {
+    home = path.join(root, 'home');
+    mkdirSync(home, { recursive: true });
+    ownGithub(undefined);
+  });
+
+  afterEach(() => { loadProjectTokens(root, home); });
+
+  it('hands run clones the forwarded GitHub even when the far side has its own', async () => {
+    ownGithub('own-github');
+    const { owner, workspaces } = await provisionedOwner({ github: 'forwarded-github' }, 1);
+    await owner.runClones.create('run-1');
+    expect(workspaces.create.mock.calls[1][1]).toBe('forwarded-github');
+  });
+
+  it('falls back to the far side own GitHub when none is forwarded', async () => {
+    ownGithub('own-github');
+    const { owner, workspaces } = await provisionedOwner({});
+    await owner.runClones.create('run-1');
+    expect(workspaces.create.mock.calls[1][1]).toBe('own-github');
+  });
+
+  it('leaves GitHub absent on run clones when neither side has one', async () => {
+    const { owner, workspaces } = await provisionedOwner({});
+    await owner.runClones.create('run-1');
+    expect(workspaces.create.mock.calls[1][1]).toBeUndefined();
+  });
+
+  it.each([undefined, 1, 10])('clones run clones at the agent depth regardless of main depth %s', async (depth) => {
+    const { owner, workspaces } = await provisionedOwner({ github: 'forwarded-github' }, depth);
+    await owner.runClones.create('run-1');
+    expect(workspaces.create.mock.calls[1][2]).toEqual({ depth: AGENT_CLONE_DEPTH, allBranches: true });
+  });
+
+  it('creates and releases a run clone on the shared manager without changing the main owner', async () => {
+    const { owner } = await provisionedOwner({ github: 'forwarded-github' });
+    const main = { dir: owner.dir, processes: owner.processes, files: owner.files, acp: owner.acp };
+    const result = await owner.runClones.create('run-1');
+    expect(result.dir).toBe(path.join(root, 'run-1'));
+    expect(await owner.runClones.release('run-1')).toEqual({});
+    expect(owner.dir).toBe(main.dir);
+    expect(owner.processes).toBe(main.processes);
+    expect(owner.files).toBe(main.files);
+    expect(owner.acp).toBe(main.acp);
+  });
+
+  it('gives the ACP host the same clone service it publishes', async () => {
+    const { owner } = await provisionedOwner({ github: 'forwarded-github' });
+    const result = await owner.runClones.create('run-1');
+    const lookup = (owner.acp as unknown as { lookupWorkspace?: (label: string) => string | undefined }).lookupWorkspace;
+
+    expect(lookup).toBeDefined();
+    expect(lookup?.('run-1')).toBe(result.dir);
+    expect(lookup?.('missing')).toBeUndefined();
+  });
+
+  it('publishes no service when the main clone fails', async () => {
+    const h = ownerHarness();
+    h.workspaces.create = vi.fn(() => ({ error: 'no origin' })) as unknown as WorkspaceManager['create'];
+    h.context.workspaces = h.workspaces;
+    await provisionRemoteWorkspace(h.context, 'alpha', {}, {});
+    expect(h.provisioned).not.toHaveBeenCalled();
+  });
+
+  it('publishes no service when the server stops during main provisioning', async () => {
+    const h = ownerHarness();
+    h.context.stopping = () => true;
+    await provisionRemoteWorkspace(h.context, 'alpha', {}, {});
+    expect(h.provisioned).not.toHaveBeenCalled();
+    expect(h.workspaces.removeAll).toHaveBeenCalledOnce();
   });
 });

@@ -7,7 +7,7 @@ import type { RemoteAcpSession } from '../remote/acp-session.js';
 import { CORE_MAX_STEPS, corePrimer, driveToolLoop, runToolLoop } from './drive-loop.js';
 import { commandProtocolPrimer } from './command-protocol.js';
 import { createAcpToolTable } from './tool-table.js';
-import { NO_BUILTIN_TOOLS_LINE, NO_TOOLS_LINE } from './internal-tools.js';
+import { DISABLED_HARNESS_TOOLS_LINE, NO_BUILTIN_TOOLS_LINE, NO_TOOLS_LINE } from './internal-tools.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { BROWSER_PRIMER } from '../browser/command.js';
 import { DB_PRIMER } from '../database/primer.js';
@@ -34,6 +34,7 @@ describe('corePrimer', () => {
       DB_PRIMER,
       'Only these commands are allowed: db sqlite query.',
       NO_BUILTIN_TOOLS_LINE,
+      DISABLED_HARNESS_TOOLS_LINE,
       commandProtocolPrimer(CORE_MAX_STEPS),
       TELL_INSTRUCTION,
       MARKDOWN_INSTRUCTION,
@@ -59,9 +60,24 @@ describe('corePrimer', () => {
     expect(result).not.toContain(NO_TOOLS_LINE);
   });
 
+  it('names the disabled harness tools for an ask role with granted commands', () => {
+    const result = primerFor(coreSnapshot('ask', ['db sqlite query']));
+    expect(result).toContain(DISABLED_HARNESS_TOOLS_LINE);
+    expect(result.indexOf(NO_BUILTIN_TOOLS_LINE)).toBeLessThan(result.indexOf(DISABLED_HARNESS_TOOLS_LINE));
+    expect(result.indexOf(DISABLED_HARNESS_TOOLS_LINE))
+      .toBeLessThan(result.indexOf(commandProtocolPrimer(CORE_MAX_STEPS)));
+  });
+
   it('gives only the no-tools line and Markdown when the caller passes no tools', () => {
     const snapshot = coreSnapshot('ask', ['db sqlite query'], [], true);
     expect(corePrimer(snapshot, [])).toBe([NO_TOOLS_LINE, MARKDOWN_INSTRUCTION].join('\n\n'));
+  });
+
+  it('omits the disabled harness tools line when no command is available', () => {
+    const result = primerFor(coreSnapshot('ask', ['browser goto'], [
+      { name: 'browser goto', effectiveEnabled: true, effectiveAgentAccess: false },
+    ]));
+    expect(result).not.toContain(DISABLED_HARNESS_TOOLS_LINE);
   });
 
   it('states the exchange protocol with the loop step cap when commands are available', () => {

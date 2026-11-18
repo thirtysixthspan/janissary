@@ -84,12 +84,14 @@ describe('reading the roles in effect', () => {
       commands: [
         'db sqlite create', 'db sqlite delete', 'db sqlite query', 'db sqlite list',
         'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve', 'file read',
-        'file glob', 'file grep', 'file write', 'file edit', 'file patch', 'web search', 'web fetch',
+        'file glob', 'file grep', 'file write', 'file edit', 'file patch', 'web search', 'web fetch', 'subagent',
       ],
     });
     expect(file['ask'].commands).toHaveLength(11);
-    expect(file['tell'].commands).toHaveLength(17);
+    expect(file['tell'].commands).toHaveLength(18);
     expect(file['tell'].commands).toEqual([...NATIVE_ACP_COMMANDS]);
+    expect(file['tell'].commands.filter((command) => command === 'subagent')).toHaveLength(1);
+    expect(file['tell'].commands.at(-1)).toBe('subagent');
     expect(DEFAULT_ROLES.slice(0, 5).every((role) => role.commands.length === 0)).toBe(true);
   });
 
@@ -101,8 +103,13 @@ describe('reading the roles in effect', () => {
     expect(read.problem).toBeUndefined();
     expect(read.roles).toEqual(DEFAULT_ROLES);
     expect(read.roles.find((role) => role.name === 'ask')?.commands).toHaveLength(11);
-    expect(read.roles.find((role) => role.name === 'tell')?.commands).toHaveLength(17);
+    const tell = read.roles.find((role) => role.name === 'tell')?.commands;
+    expect(tell).toHaveLength(18);
+    expect(tell).toContain('subagent');
     expect(existsSync(homeFile(home))).toBe(false);
+    expect(existsSync(projectFile(root))).toBe(false);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+    expect(vi.mocked(renameSync)).not.toHaveBeenCalled();
   });
 
   it('leaves an existing ask and tell role without file read untouched on disk', () => {
@@ -210,6 +217,73 @@ describe('reading the roles in effect', () => {
     expect(readFileSync(homeFile(home), 'utf8')).toBe(before);
   });
 
+  it('keeps a saved home tell that omits subagent with its exact grants and bytes', () => {
+    const { home, root } = directories();
+    const saved = [
+      'db sqlite create', 'db sqlite delete', 'db sqlite query', 'db sqlite list',
+      'browser goto', 'browser content', 'browser eval', 'question approve', 'file read',
+      'file glob', 'file grep', 'file write', 'file edit',
+    ];
+    writeJson(homeFile(home), { tell: { description: 'Tasks.', entries: [], commands: saved } });
+    const before = readFileSync(homeFile(home), 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+    vi.mocked(renameSync).mockClear();
+
+    const read = readRolesFile(home, root);
+
+    expect(read.roles[0]?.commands).toEqual(saved);
+    expect(read.roles[0]?.commands).not.toContain('subagent');
+    expect(readFileSync(homeFile(home), 'utf8')).toBe(before);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+    expect(vi.mocked(renameSync)).not.toHaveBeenCalled();
+  });
+
+  it('prefers a saved project tell without subagent over a home tell that grants it', () => {
+    const { home, root } = directories();
+    const homeTell = [
+      'db sqlite create', 'db sqlite delete', 'db sqlite query', 'db sqlite list',
+      'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve', 'file read',
+      'file glob', 'file grep', 'file write', 'file edit', 'subagent',
+    ];
+    const projectTell = [
+      'db sqlite create', 'db sqlite delete', 'db sqlite query', 'db sqlite list',
+      'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve', 'file read',
+      'file glob', 'file grep', 'file write', 'file edit',
+    ];
+    writeJson(homeFile(home), { tell: { description: 'Home tasks.', entries: [], commands: homeTell } });
+    writeJson(projectFile(root), { tell: { description: 'Project tasks.', entries: [], commands: projectTell } });
+    const homeBefore = readFileSync(homeFile(home), 'utf8');
+    const projectBefore = readFileSync(projectFile(root), 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+    vi.mocked(renameSync).mockClear();
+
+    const read = readRolesFile(home, root);
+
+    expect(read.source).toBe('project');
+    expect(read.roles[0]?.commands).toEqual(projectTell);
+    expect(read.roles[0]?.commands).not.toContain('subagent');
+    expect(readFileSync(homeFile(home), 'utf8')).toBe(homeBefore);
+    expect(readFileSync(projectFile(root), 'utf8')).toBe(projectBefore);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+    expect(vi.mocked(renameSync)).not.toHaveBeenCalled();
+  });
+
+  it('preserves a saved tell that grants subagent with its order, duplicates and unknown strings', () => {
+    const { home, root } = directories();
+    const saved = ['subagent', 'future command', 'file read', 'subagent', 'db sqlite query'];
+    writeJson(homeFile(home), { tell: { description: 'Tasks.', entries: [], commands: saved } });
+    const before = readFileSync(homeFile(home), 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+    vi.mocked(renameSync).mockClear();
+
+    const read = readRolesFile(home, root);
+
+    expect(read.roles[0]?.commands).toEqual(saved);
+    expect(readFileSync(homeFile(home), 'utf8')).toBe(before);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+    expect(vi.mocked(renameSync)).not.toHaveBeenCalled();
+  });
+
   it('keeps file write on a saved ask role', () => {
     const { home, root } = directories();
     writeJson(homeFile(home), { ask: { description: 'Questions.', entries: [], commands: ['file write'] } });
@@ -307,7 +381,10 @@ describe('reading the roles in effect', () => {
     const defaults = readRolesFile(home, root);
     expect(defaults.source).toBe('default');
     expect(defaults.roles).toEqual(DEFAULT_ROLES);
+    expect(defaults.roles.find((role) => role.name === 'tell')?.commands).toContain('subagent');
     expect(defaults.path).toBe(homeFile(home));
+    expect(readFileSync(projectFile(root), 'utf8')).toBe('{ broken too');
+    expect(readFileSync(homeFile(home), 'utf8')).toBe('{ broken');
     expect(defaults.unusablePath).toBe(defaults.path);
     expect(defaults.problem).toBe(
       `roles.json is not valid JSON at ${projectFile(root)} — showing default roles.`,

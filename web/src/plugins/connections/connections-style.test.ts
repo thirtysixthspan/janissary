@@ -81,6 +81,27 @@ describe('connections list styles', () => {
     expect(json).toContain('overflow-wrap: anywhere');
     expect(json).toContain('margin: 0');
   });
+
+  it('lays embedded tool calls out as labelled name and parameter lines that wrap', () => {
+    const styles = readFileSync('web/src/plugins/connections/connections.css', 'utf8');
+    expect(styles).toContain('.connections-tool-calls {');
+    const call = styles.match(/\.connections-tool-call \{[^}]+\}/)?.[0];
+    expect(call).toContain('border-left: 2px solid var(--border)');
+    const name = styles.match(/\.connections-tool-call-name \{[^}]+\}/)?.[0];
+    expect(name).toContain('color: var(--muted)');
+    const parameter = styles.match(/\.connections-tool-call-parameter \{[^}]+\}/)?.[0];
+    expect(parameter).toContain('white-space: pre-wrap');
+    expect(parameter).toContain('overflow-wrap: anywhere');
+  });
+
+  it('lays a tool command and reply out as labelled parts that wrap long text', () => {
+    const styles = readFileSync('web/src/plugins/connections/connections.css', 'utf8');
+    expect(styles.match(/\.connections-tool-part \{[^}]+\}/)?.[0]).toContain('margin: 4px 0');
+    expect(styles.match(/\.connections-tool-part-label \{[^}]+\}/)?.[0]).toContain('color: var(--muted)');
+    const text = styles.match(/\.connections-tool-part \.connections-activity-text \{[^}]+\}/)?.[0];
+    expect(text).toContain('white-space: pre-wrap');
+    expect(text).toContain('overflow-wrap: anywhere');
+  });
 });
 
 describe('connections rows follow the sessions rows', () => {
@@ -136,14 +157,14 @@ describe('connections rows follow the sessions rows', () => {
   it('colours an idle row like a parked session and mutes rows that are over', () => {
     expect(styles).toContain(".connections-row[data-status='Idle'] .connections-row-status { color: var(--accent); }");
     const ended = styles.match(/\.connections-row\[data-status='Closed'\],[^{]+\{[^}]+\}/)?.[0];
-    for (const status of ['Closed', 'Completed', 'Failed', 'Terminated']) {
+    for (const status of ['Closed', 'Completed', 'Failed', 'Partial', 'Terminated']) {
       expect(ended).toContain(`.connections-row[data-status='${status}']`);
     }
     expect(ended).toContain('color: var(--muted)');
     const styled = styledParts(styles);
     expect(styled).toContain(".connections-row[data-status='Idle'] .connections-row-status");
     expect(styled).toContain(
-      ".connections-row:is([data-status='Closed'], [data-status='Completed'], [data-status='Failed'], [data-status='Terminated'])",
+      ".connections-row:is([data-status='Closed'], [data-status='Completed'], [data-status='Failed'], [data-status='Partial'], [data-status='Terminated'])",
     );
     expect(styled.filter((part) => part.includes("[data-status='Running']"))).toEqual([]);
     expect(styled.filter((part) => part.includes("[data-status='Open']"))).toEqual([]);

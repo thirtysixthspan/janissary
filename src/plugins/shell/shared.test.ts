@@ -205,6 +205,54 @@ describe('shell shared contract', () => {
     expect(isShellAcpReceipt({ replyId: '', role, name: '' })).toBe(true);
   });
 
+  it.each(['ask', 'tell'] as const)('accepts a %s role receipt with a string echo, including empty, or no echo', (role) => {
+    const receipt = { replyId: 'reply-1', role, name: `acp:${role}:janus` };
+
+    expect(isShellAcpReceipt({ ...receipt, echo: 'task.md' })).toBe(true);
+    expect(isShellAcpReceipt({ ...receipt, echo: '' })).toBe(true);
+    expect(isShellAcpReceipt({ ...receipt, echo: undefined })).toBe(true);
+    expect(isShellAcpReceipt(receipt)).toBe(true);
+  });
+
+  it('accepts a well-formed record receipt, with or without an unrelated extra field', () => {
+    const receipt = { replyId: 'reply-1', kind: 'record', recordId: 'rec-1', name: 'subagent:research' };
+
+    expect(isShellAcpReceipt(receipt)).toBe(true);
+    expect(isShellAcpReceipt({ ...receipt, extra: 1 })).toBe(true);
+    expect(isShellAcpReceipt({ replyId: '', kind: 'record', recordId: '', name: '' })).toBe(true);
+  });
+
+  it('rejects a record receipt missing or mistyping its recordId', () => {
+    const receipt = { replyId: 'reply-1', kind: 'record', name: 'subagent:research' };
+
+    expect(isShellAcpReceipt(receipt)).toBe(false);
+    expect(isShellAcpReceipt({ ...receipt, recordId: 7 })).toBe(false);
+    expect(isShellAcpReceipt({ ...receipt, recordId: null })).toBe(false);
+  });
+
+  it('rejects an unrecognized kind with no role', () => {
+    expect(isShellAcpReceipt({ replyId: 'reply-1', kind: 'bogus', name: 'n' })).toBe(false);
+    expect(isShellAcpReceipt({ replyId: 'reply-1', kind: 'record/file', recordId: 'rec-1', name: 'n' })).toBe(false);
+  });
+
+  it('rejects a non-string echo on the role arm', () => {
+    const receipt = { replyId: 'reply-1', role: 'ask', name: 'n' };
+
+    expect(isShellAcpReceipt({ ...receipt, echo: 7 })).toBe(false);
+    expect(isShellAcpReceipt({ ...receipt, echo: null })).toBe(false);
+  });
+
+  it('rejects a receipt that mixes reserved fields of the two arms', () => {
+    const role = { replyId: 'reply-1', role: 'ask', name: 'n' };
+    const record = { replyId: 'reply-1', kind: 'record', recordId: 'rec-1', name: 'n' };
+
+    expect(isShellAcpReceipt({ ...role, recordId: 'rec-1' })).toBe(false);
+    expect(isShellAcpReceipt({ ...role, kind: 'record' })).toBe(false);
+    expect(isShellAcpReceipt({ ...record, role: 'ask' })).toBe(false);
+    expect(isShellAcpReceipt({ ...record, role: 'monitor' })).toBe(false);
+    expect(isShellAcpReceipt({ ...record, echo: 'task.md' })).toBe(false);
+  });
+
   it('rejects a receipt that is null, an array, or missing or mistyping a field', () => {
     const receipt = { replyId: 'reply-1', role: 'ask', name: 'acp:ask:janus' };
 
@@ -229,6 +277,30 @@ describe('shell shared contract', () => {
 
   it.each(['ask', 'tell'] as const)('keeps its %s receipt assignable to and from the server receipt', (role) => {
     const serverReceipt: AcpDispatchReceipt = { replyId: 'reply-1', role, name: `acp:${role}:janus` };
+    const shellReceipt: ShellAcpReceipt = serverReceipt;
+    const roundTrip: AcpDispatchReceipt = shellReceipt;
+
+    expect(isShellAcpReceipt(serverReceipt)).toBe(true);
+    expect(roundTrip).toEqual(serverReceipt);
+  });
+
+  it('keeps a role receipt with echo assignable to and from the server receipt in both directions', () => {
+    const serverReceipt: AcpDispatchReceipt = { replyId: 'reply-1', role: 'ask', name: 'n', echo: 'task.md' };
+    const shellReceipt: ShellAcpReceipt = serverReceipt;
+    const fromServer: AcpDispatchReceipt = shellReceipt;
+    const shellFirst: ShellAcpReceipt = { replyId: 'reply-2', role: 'tell', name: 'n2', echo: '' };
+    const fromShell: AcpDispatchReceipt = shellFirst;
+
+    expect(isShellAcpReceipt(serverReceipt)).toBe(true);
+    expect(isShellAcpReceipt(shellFirst)).toBe(true);
+    expect(fromServer).toEqual(serverReceipt);
+    expect(fromShell).toEqual(shellFirst);
+  });
+
+  it('keeps a record receipt assignable to and from the server receipt', () => {
+    const serverReceipt: AcpDispatchReceipt = {
+      replyId: 'reply-1', kind: 'record', recordId: 'rec-1', name: 'subagent:research',
+    };
     const shellReceipt: ShellAcpReceipt = serverReceipt;
     const roundTrip: AcpDispatchReceipt = shellReceipt;
 

@@ -116,17 +116,29 @@ describe('buildTabView', () => {
   it('projects pending ACP record names separately from completed replies', () => {
     const tab = makeTab('shell', '#fff');
     tab.runtime = {
-      busy: false, context: [], queue: [], acpRoles: { ask: {
-        prompt: {
-          replyId: 'reply-1', recordName: 'acp:ask:Renamed shell', prompt: 'hello', role: 'ask',
-          roleName: 'ask', commands: [], runningEntries: new Set(), abort: new AbortController(), finish: () => {},
+      busy: false, context: [], queue: [], acpRoles: {
+        ask: {
+          prompt: {
+            replyId: 'reply-1', recordName: 'acp:ask:Renamed shell', prompt: 'hello', role: 'ask',
+            roleName: 'ask', commands: [], runningEntries: new Set(), abort: new AbortController(), finish: () => {},
+          },
         },
-      } },
+        tell: {
+          prompt: {
+            replyId: 'reply-2', recordName: 'acp:tell:Renamed shell', prompt: 'hello', role: 'tell',
+            roleName: 'configured-name', echo: 'tell ← subagent:research completed',
+            commands: [], runningEntries: new Set(), abort: new AbortController(), finish: () => {},
+          },
+        },
+      },
     };
 
     const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p);
 
-    expect(view.pendingAcpReplyNames).toEqual([{ id: 'reply-1', name: 'acp:ask:Renamed shell' }]);
+    expect(view.pendingAcpReplyNames).toEqual([
+      { id: 'reply-1', name: 'acp:ask:Renamed shell' },
+      { id: 'reply-2', name: 'acp:tell:Renamed shell', role: 'tell', echo: 'tell ← subagent:research completed' },
+    ]);
     expect(view.backgroundReplies).toEqual([]);
   });
 

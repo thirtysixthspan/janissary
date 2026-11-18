@@ -18,6 +18,13 @@ const record = {
     totalBlocks: 1, offset: 0, hasOlder: false,
   },
 };
+const subagent = {
+  ...record, id: 'sub-uuid', kind: 'agent', title: 'Subagent: task.md', runId: 'run-1', subagentRole: 'research',
+  window: {
+    ...record.window, id: 'sub-uuid',
+    source: { kind: 'agent', model: 'model', ownerLabel: 'owner', ownerName: 'Owner', runId: 'run-1', taskPath: 'task.md', subagentRole: 'research' },
+  },
+};
 
 describe('connections shared contract', () => {
   it('pins schema version and validates list and record payloads', () => {
@@ -61,6 +68,24 @@ describe('connections shared contract', () => {
     expect(recordConnectionName({ kind: 'agent', ownerName: 'release notes' })).toBe('agent:release notes');
   });
 
+  it('names a subagent record by its canonical role, leaving other names unchanged', () => {
+    expect(recordConnectionName({ kind: 'agent', ownerName: 'caller', subagentRole: 'research' })).toBe('subagent:research');
+    expect(recordConnectionName({ kind: 'agent', ownerName: 'caller' })).toBe('agent:caller');
+    expect(recordConnectionName({ kind: 'acp', ownerName: 'caller', role: 'ask' })).toBe('acp:ask:caller');
+  });
+
+  it('accepts valid subagent metadata on an agent row and window source', () => {
+    expect(isConnectionsPayload({ kind: 'list', rows: [subagent] })).toBe(true);
+    expect(isConnectionsPayload({ kind: 'connection', record: subagent })).toBe(true);
+  });
+
+  it('accepts a Partial terminal agent row while rejecting Partial on a live row', () => {
+    const partial = { ...subagent, status: 'Partial' };
+    expect(isConnectionsPayload({ kind: 'list', rows: [partial] })).toBe(true);
+    expect(isConnectionsPayload({ kind: 'connection', record: partial })).toBe(true);
+    expect(isConnectionsPayload({ kind: 'list', rows: [{ ...live, status: 'Partial' }] })).toBe(false);
+  });
+
   it.each([
     null, [], { kind: 'unknown', rows: [] }, { kind: 'list', rows: [null] },
     { kind: 'list', rows: [{ ...live, status: 'Closed' }] },
@@ -74,6 +99,12 @@ describe('connections shared contract', () => {
     { kind: 'list', rows: [{ ...record, kind: 'agent', runId: 'run-1', role: 'ask' }] },
     { kind: 'list', rows: [{ ...record, window: { ...record.window, source: { ...record.window.source, role: 'review' } } }] },
     { kind: 'list', rows: [{ ...record, window: { ...record.window, source: { kind: 'agent', model: 'model', ownerLabel: 'owner', ownerName: 'Owner', runId: 'run-1', taskPath: 'task.md', role: 'tell' } } }] },
+    { kind: 'list', rows: [{ ...subagent, subagentRole: '' }] },
+    { kind: 'list', rows: [{ ...subagent, subagentRole: ' '.repeat(3) }] },
+    { kind: 'list', rows: [{ ...subagent, subagentRole: 7 }] },
+    { kind: 'list', rows: [{ ...subagent, window: { ...subagent.window, source: { ...subagent.window.source, subagentRole: '' } } }] },
+    { kind: 'list', rows: [{ ...record, subagentRole: 'research' }] },
+    { kind: 'list', rows: [{ ...record, window: { ...record.window, source: { ...record.window.source, subagentRole: 'research' } } }] },
     { kind: 'list', rows: [{ ...live, role: 'tell' }] },
     { kind: 'connection', record: { ...record, model: undefined } },
   ])('rejects malformed payload %j', (value) => {

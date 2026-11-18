@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { listApplicationCommands, resolveApplicationCommand } from './application-commands.js';
+import { NATIVE_ACP_COMMANDS } from './plugins/roles/shared.js';
 
 describe('application command inventory', () => {
   const rows = listApplicationCommands();
@@ -107,6 +108,23 @@ describe('application command inventory', () => {
       .toMatchObject({ name: 'question ask', forms: ['question ask'] });
     expect(resolveApplicationCommand('question approve 1'))
       .toMatchObject({ name: 'question approve', forms: ['question approve'] });
+  });
+
+  it('owns subagent in one parentless native row that resolves every input form', () => {
+    const matches = rows.filter((row) => row.name === 'subagent');
+    expect(matches).toEqual([{
+      name: 'subagent', kind: 'native', aliases: [], forms: ['subagent'], nativeTool: 'subagent',
+    }]);
+    expect(rows.filter((row) => row.kind === 'native')).toHaveLength(NATIVE_ACP_COMMANDS.length);
+    for (const input of [
+      'subagent',
+      'subagent --role research --task t.md',
+      'subagent {"role":"research","task":"t.md"}',
+    ]) {
+      expect(resolveApplicationCommand(input)).toMatchObject({
+        name: 'subagent', kind: 'native', forms: ['subagent'],
+      });
+    }
   });
 
   it('lists the file command as a parentless builtin while the native row owns file read input', () => {

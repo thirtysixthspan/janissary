@@ -5,6 +5,7 @@ import { command as ask } from './ask.js';
 import { command as askReset } from './ask-reset.js';
 import { command as tell } from './tell.js';
 import { command as tellReset } from './tell-reset.js';
+import { command as subagent } from './subagent.js';
 import { command as agent } from './agent.js';
 import { command as database } from './db.js';
 import { command as browser } from './browser.js';
@@ -52,6 +53,7 @@ export const coreCommands: Command[] = [
   agent,
   ask,
   tell,
+  subagent,
   database,
   browser,
   clear,

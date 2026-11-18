@@ -130,7 +130,8 @@ export async function launchAgent(
       snapshot = await remoteTarget.channel.resolveAgentSnapshot(launch.task, [...launch.skills]);
     } else {
       const local = await startLocalAgentRun(
-        managers, capturedCaller, commandText, launch.task, launch.model, launch.effort, target.workspaceName,
+        managers, capturedCaller, commandText, launch.task, launch.model, launch.effort,
+        { workspaceName: target.workspaceName },
       );
       run = local.run;
       abortRun = linkRunToCaller(run, parent, caller.signal, managers, completion.promise);

@@ -27,12 +27,20 @@ export class ConnectionManager {
   private activeAgentRows(label: string): ConnectionView[] {
     const incarnation = this.managers.tab.byLabel(label)?.runtime?.incarnation;
     if (incarnation === undefined) return [];
+    const runs = [...this.managers.agent.runs.values()].filter(
+      (run) => run.outcome === undefined && run.caller.label === label && run.caller.incarnation === incarnation,
+    );
+    if (runs.length === 0) return [];
+    const records = new Map(this.managers.acpRecords.rows().map((row) => [row.id, row]));
     const rows: ConnectionView[] = [];
-    for (const run of this.managers.agent.runs.values()) {
-      if (run.outcome !== undefined || run.caller.label !== label || run.caller.incarnation !== incarnation) continue;
+    for (const run of runs) {
       const recordId = run.recordId;
       if (recordId === undefined) continue;
-      rows.push({ text: `Agent: ${run.view().task}`, kind: 'acp', recordId });
+      const record = records.get(recordId);
+      rows.push({
+        text: record?.subagentRole === undefined ? `Agent: ${run.view().task}` : record.title,
+        kind: 'acp', recordId,
+      });
     }
     return rows;
   }
