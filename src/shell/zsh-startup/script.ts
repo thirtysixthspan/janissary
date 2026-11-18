@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { isShellMarkerNonce } from '../../value-guards.js';
 
 // How the shell tab's status hooks reach zsh without a line typed at its prompt. zsh decides whether a
 // line enters its history before the line runs, so nothing inside a typed setup line can keep that same
@@ -14,12 +15,10 @@ export function createShellMarkerNonce(): string {
   return randomBytes(16).toString('hex');
 }
 
-// The shape `createShellMarkerNonce` mints. Its own copy of the shell plugin's `isShellMarkerNonce`
-// rather than an import of it: that check lives in a module the client imports, which must stay free
-// of host imports, and this one is the check that guards what is written into the hook functions.
-export function isZshHookNonce(value: unknown): value is string {
-  return typeof value === 'string' && /^[0-9a-f]{32}$/.test(value);
-}
+// The shape `createShellMarkerNonce` mints, named for the server callers that guard hook options and
+// remote nonce fields. The format lives in `src/value-guards.ts` so the client-imported shell plugin and
+// both remote frame decoders check one shape; this name stays for the published signature.
+export const isZshHookNonce = isShellMarkerNonce;
 
 // `%B…%b` bolds the prompt character, and `default:bold` bolds the text in zsh's line editor, which
 // stays bold in the scrollback once the line runs. The other contexts keep zsh's own defaults, since

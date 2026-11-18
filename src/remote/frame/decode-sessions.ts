@@ -2,6 +2,7 @@ import type { RemoteProcessState } from '../protocol-frames.js';
 import {
   malformed, nonEmptyString, optionalNonEmptyString, type DecodeResult,
 } from './decode-shared.js';
+import { isShellMarkerNonce } from '../../value-guards.js';
 
 // The `session-state-result` decoder, in its own module for the same reason the filesystem frames
 // have one: `decode.ts` is the dispatcher, and a frame carrying a list of records is more
@@ -17,7 +18,7 @@ function decodeProcessState(value: unknown): RemoteProcessState | undefined {
     || !optionalNonEmptyString(harness)
     || !(autoApprove === undefined || typeof autoApprove === 'boolean')
     || !(autoResume === undefined || typeof autoResume === 'boolean')
-    || !(shell === undefined || (typeof shellNonce === 'string' && /^[0-9a-f]{32}$/.test(shellNonce)))
+    || !(shell === undefined || isShellMarkerNonce(shellNonce))
     || !(offline === undefined || typeof offline === 'boolean') || !(cwd === undefined || nonEmptyString(cwd))
     || !optionalNonEmptyString(agentName)) return;
   return {

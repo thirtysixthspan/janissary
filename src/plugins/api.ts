@@ -468,6 +468,9 @@ export type TabPluginLoaders = Readonly<Record<string, TabPluginLoader>>;
 // types above are: a plugin cannot import `../value-guards.js` across the plugin import boundary, and
 // every bundled plugin's `shared.ts` had its own copy of both.
 export { isModelPair, isRecord } from '../value-guards.js';
+// The shell plugin's marker-nonce guard, published on the same route so its `shared.ts` checks the
+// same format the zsh startup script and the remote frame decoders do.
+export { isShellMarkerNonce } from '../value-guards.js';
 // Re-exported so a plugin can type a `schedules` notification handler without importing
 // `../protocol.js`, which the plugin import boundary forbids.
 export type {

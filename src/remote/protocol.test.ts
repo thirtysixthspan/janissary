@@ -811,6 +811,10 @@ describe('session-state frames', () => {
       what: 'a process that is not an object',
       record: { type: 'session-state-result', processes: ['spawn-1'] },
     },
+    {
+      what: 'a process with an invalid shell nonce',
+      record: { type: 'session-state-result', processes: [{ id: 'a', program: 'zsh', mode: 'pty', shell: { nonce: 'bad' } }] },
+    },
   ])('refuses $what by name', ({ record }) => {
     expect(decodeFrame(JSON.stringify(record))).toEqual({
       error: expect.stringContaining('Malformed remote frame "session-state-result"'),
