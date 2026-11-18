@@ -4,6 +4,7 @@
 
 ## development
 
+* move model selection in the roles tab from a selectbox to a model search input field with tab completion, candidate dropdown, clickable candidates.
 
 ## deferred
 
