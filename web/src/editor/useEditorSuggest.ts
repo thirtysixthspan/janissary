@@ -89,7 +89,7 @@ export function useEditorSuggest(
   useEffect(() => {
     void client.request<{ names: string[] }>({ method: 'editorPersonas', params: {} }).then((res) => {
       setPersonas(res.ok ? res.value.names : []);
-    });
+    }).catch(() => setPersonas([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- persona discovery is intentionally fetched once per mounted editor
   }, []);
 
@@ -149,20 +149,25 @@ export function useEditorSuggest(
     if (!request) return;
     firingRef.current = true;
     setFiringLine(queryText);
+    const settle = () => {
+      firingRef.current = false;
+      setFiringLine(null);
+      firingCancelledRef.current = false;
+    };
     void client.request<{ hunks: SuggestHunk[] }>({
       method: 'editorSuggest',
       params: { url, persona: request.persona, content: toText(bufferState), prompt: request.prompt },
     }).then((res) => {
-      firingRef.current = false;
-      setFiringLine(null);
-      if (firingCancelledRef.current) { firingCancelledRef.current = false; return; }
+      if (firingCancelledRef.current) return;
       const hunks = res.ok ? res.value.hunks : [];
       // Empty hunks/failure is already surfaced via a notification server-side (Decision 10); the
       // query line stays open with its text intact and no pending panel opens.
       if (hunks.length > 0) {
         setPendingBoth({ hunks, resolved: hunks.map(() => false), acceptedAny: false });
       } else setNoSuggestionLine(queryText);
-    });
+    }).catch(() => {
+      if (!firingCancelledRef.current) setNoSuggestionLine(queryText);
+    }).finally(settle);
   };
 
   // Marks one hunk resolved, or finalizes the whole set once no unresolved hunk remains — closing

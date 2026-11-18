@@ -40,9 +40,9 @@ A status pill at the end of the row tracks progress:
 | `query?` | Persona named, no request text yet |
 | `run` | Ready to send — click it or press `Enter` while it holds focus |
 | `running...` | Request in flight |
-| `no suggestion` | The persona proposed no change |
+| `no suggestion` | The persona proposed no change, or the request failed before a reply |
 
-Only one request can be in flight or awaiting resolution per editor tab at a time; sending another while one is pending is ignored until the first resolves.
+Only one request can be in flight or awaiting resolution per editor tab at a time; sending another while one is pending is ignored until the first resolves. A request that fails before a reply clears its in-flight state, so you can send another from the same query line.
 
 ## Reviewing proposed changes
 
