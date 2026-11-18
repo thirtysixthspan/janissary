@@ -94,4 +94,56 @@ describe('backgroundRepliesFor', () => {
 
     expect(backgroundRepliesFor(tab)).toEqual([{ id: 'former', output: 'reply' }]);
   });
+
+  it('projects the exact subagent input as a line, with or without a slash, in any case, with leading whitespace and before a hyphen', () => {
+    const tab = makeTab('shell', '#fff');
+    tab.log = [
+      { input: 'subagent --role research --task task.md', output: 'started', background: 'sub' },
+      { input: '/subagent --role research --task task.md', output: 'started', background: 'sub-slash' },
+      { input: '  /SuBaGeNt   --role research  ', output: 'started', background: 'sub-mixed' },
+      { input: 'subagent-extra', output: 'reply', background: 'sub-hyphen' },
+    ];
+
+    expect(backgroundRepliesFor(tab)).toEqual([
+      { id: 'sub', output: 'started', line: 'subagent --role research --task task.md' },
+      { id: 'sub-slash', output: 'started', line: '/subagent --role research --task task.md' },
+      { id: 'sub-mixed', output: 'started', line: '  /SuBaGeNt   --role research  ' },
+      { id: 'sub-hyphen', output: 'reply', line: 'subagent-extra' },
+    ]);
+  });
+
+  it('keeps no line for a nested or longer token that only resembles subagent', () => {
+    const tab = makeTab('shell', '#fff');
+    tab.log = [
+      { input: 'monitor subagent --role research', output: 'reply', background: 'nested' },
+      { input: 'subagents --role research', output: 'reply', background: 'longer' },
+      { input: 'subagented', output: 'reply', background: 'suffixed' },
+    ];
+
+    expect(backgroundRepliesFor(tab)).toEqual([
+      { id: 'nested', output: 'reply' },
+      { id: 'longer', output: 'reply' },
+      { id: 'suffixed', output: 'reply' },
+    ]);
+  });
+
+  it('projects a started subagent reply without a record and a completion with one', () => {
+    const tab = makeTab('shell', '#fff');
+    const backgroundRecord = { id: 'record-sub', name: 'subagent:research' };
+    tab.log = [
+      { input: 'subagent --role research --task task.md', output: 'Started', background: 'start-1' },
+      {
+        input: 'subagent --role research --task task.md', output: '## Answer',
+        background: 'sub-1', backgroundRecord,
+      },
+    ];
+
+    expect(backgroundRepliesFor(tab)).toEqual([
+      { id: 'start-1', output: 'Started', line: 'subagent --role research --task task.md' },
+      {
+        id: 'sub-1', output: '## Answer', line: 'subagent --role research --task task.md',
+        record: backgroundRecord,
+      },
+    ]);
+  });
 });

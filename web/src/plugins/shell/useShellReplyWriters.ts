@@ -19,8 +19,12 @@ type Settlement =
   | { kind: 'link'; record: ReplyRecord }
   | { kind: 'none' };
 
+type RoleReceipt = Extract<ShellAcpReceipt, { role: 'ask' | 'tell' }>;
+
+type MarkerTarget = { role: RoleReceipt['role'] } | { recordId: string };
+
 type Entry = {
-  role: ShellAcpReceipt['role'];
+  target: MarkerTarget;
   name: string;
   handle: ThinkingMarkerHandle | undefined;
   settlement: Settlement;
@@ -44,10 +48,14 @@ function runningView(entry: Entry, opening: Opening): ThinkingMarkerView {
     kind: 'running',
     name: entry.name,
     onOpen: () => {
+      if ('recordId' in entry.target) {
+        opening.openConnection.current?.({ text: entry.name, kind: 'acp', recordId: entry.target.recordId });
+        return;
+      }
       const open = opening.openConnection.current;
       const label = opening.label.current;
       if (!open || !label) return;
-      open({ text: entry.name, kind: 'acp', acpRef: { scope: 'tab', label, role: entry.role } });
+      open({ text: entry.name, kind: 'acp', acpRef: { scope: 'tab', label, role: entry.target.role } });
     },
   };
 }
@@ -78,7 +86,10 @@ function begin(state: ReplyMarkers, replyIds: Set<string>, receipt: ShellAcpRece
   if (state.entries.has(replyId) || replyIds.has(replyId)) return undefined;
   const name = state.pendingNames?.get(replyId) ?? receipt.name;
   clearPendingName(state, replyId);
-  const entry: Entry = { role: receipt.role, name, handle: undefined, settlement: { kind: 'pending' } };
+  const target: MarkerTarget = 'role' in receipt
+    ? { role: receipt.role }
+    : { recordId: receipt.recordId };
+  const entry: Entry = { target, name, handle: undefined, settlement: { kind: 'pending' } };
   state.entries.set(replyId, entry);
   return entry;
 }

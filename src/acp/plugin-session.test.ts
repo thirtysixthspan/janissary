@@ -401,6 +401,7 @@ describe('core ACP for plugin tabs', () => {
     expect(receipt.name).toBe('acp:ask:consumer');
     expect(tab.runtime?.acpRoles?.ask?.recordId).toBe(recordId);
 
+    if (!('role' in receipt)) throw new Error('expected a role receipt');
     const dispatch = vi.spyOn(managers.command, 'dispatchTo');
     openConnectionRecord(managers, {
       tab: 'consumer', acpRef: { scope: 'tab', label: 'consumer', role: receipt.role },

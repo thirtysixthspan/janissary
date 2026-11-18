@@ -4,7 +4,7 @@ import type { Tab } from './types.js';
 // The same `ask` and `tell` tokens `src/commands/ask.ts` and `src/commands/tell.ts` match, with the
 // optional leading slash the command bar strips before dispatch. A monitor reply's input starts with
 // `monitor ask`, so it keeps no line.
-const ACP_INPUT = /^\s*\/?(?:ask|tell)\b/i;
+const ACP_INPUT = /^\s*\/?(?:ask|tell|subagent)\b/i;
 
 export function backgroundRepliesFor(tab: Tab): BackgroundReplyView[] {
   return tab.log.flatMap((entry) => {
