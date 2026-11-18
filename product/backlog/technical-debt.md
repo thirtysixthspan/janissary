@@ -2,17 +2,6 @@
 
 ## ready
 
-* Re-check the lock file at deletion time so shutdown cannot remove a lock another instance just took over.
-
-Existing Debt: Lock release reads the pid and then deletes unconditionally, while acquisition treats a changed lock as a reason to refuse, so the two sides apply different rules to the same race. Severity: 6/10
-
-Existing Risk: 6/10 - If the lock is judged stale and replaced between the read and the delete, shutdown removes the new owner's lock and a third process is admitted into the same directory.
-
-Proposal Risk: 2/10 - The delete becomes conditional on the content, but the read and delete remain separate syscalls, so a narrow race survives unless an atomic compare-and-delete is available.
-
-Proposal: `src/instance-lock.ts` `releaseLock` calls `readLockPid(projectDir)` and then `rmSync(lockPath(projectDir), { force: true })`. `acquireLock` in the same file uses `clearIfStale(file, content)` from `src/pid-lock-file.ts`, which deletes only when the file still holds the content it judged stale. Reuse that guarded removal in `releaseLock`: read the exact file content, re-read immediately before removal, and delete only if unchanged and still naming this process. `src/instance-lock.test.ts` covers only sequential release cases for matching, foreign and invalid pids; add a case where the lock content changes between the first read and the removal and assert the new content survives.
-
-
 * Recognize native ACP commands from one vocabulary so gating and extraction cannot disagree about what a command is.
 
 Existing Debt: The same native-command vocabulary is recognized by two independent mechanisms whose rules are kept in sync by hand. Severity: 5/10

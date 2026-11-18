@@ -1,8 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mkdtempSync, writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
+import * as fs from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { acquireLock, releaseLock, readLockPid, isPidAlive, isOwnInstanceAlive } from './instance-lock.js';
+
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof fs>();
+  return { ...actual, readFileSync: vi.fn(actual.readFileSync) };
+});
 
 let projectDir: string;
 
@@ -146,5 +152,22 @@ describe('releaseLock', () => {
     writeFileSync(file, '');
     releaseLock(projectDir);
     expect(existsSync(file)).toBe(true);
+  });
+
+  // Another starter takes the lock over between the first read and the guarded removal: the new
+  // owner's lock must survive this instance's shutdown rather than being deleted unconditionally.
+  it('leaves a lock untouched when another instance takes it over before removal', () => {
+    const dir = path.join(projectDir, '.janissary');
+    mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, 'lock');
+    writeFileSync(file, String(process.pid));
+
+    const read = vi.mocked(fs.readFileSync);
+    read.mockClear();
+    read.mockImplementationOnce(() => String(process.pid));
+    read.mockImplementationOnce(() => '424242');
+    releaseLock(projectDir);
+
+    expect(fs.readFileSync(file, 'utf8')).toBe(String(process.pid));
   });
 });
