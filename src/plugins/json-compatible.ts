@@ -2,9 +2,8 @@
 // A plugin payload or settings object that fails this could never be broadcast or written to disk,
 // so both are checked here rather than at their destination.
 
-// Exported because two capability groups need it and neither should own it: the payload and
-// settings guards in `file-capabilities.ts`, and the tab-value guard in `context.ts`. It lives
-// apart from both so a plugin module importing it pulls nothing else in.
+// Exported so the rule can be tested and reused by any capability group that validates a plugin
+// value. It lives apart from them so a module importing it pulls nothing else in.
 export function isJsonCompatible(value: unknown, seen = new Set<object>()): boolean {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
   if (typeof value === 'number') return Number.isFinite(value);
