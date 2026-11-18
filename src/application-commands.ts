@@ -1,40 +1,11 @@
 import type { ApplicationCommandDeclaration, ApplicationCommandRow } from './shared/application-commands.js';
+import { COMMAND_FORMS } from './commands/forms.js';
 import { coreCommands, pluginCommandClaims } from './commands/index.js';
 import { tabPluginCatalog } from './plugins/catalog.js';
 import { NATIVE_ACP_COMMANDS } from './plugins/roles/shared.js';
 import { nativeCommandTool } from './acp/native-commands.js';
 import type { TabPluginDeclaration } from './plugins/api.js';
 import { atFormBoundary, normalizeCommandName, rankCommandRows } from './shared/command-matching.js';
-
-const BUILTIN_FORMS: Readonly<Record<string, ApplicationCommandDeclaration>> = {
-  agent: { name: 'agent', forms: ['agent'] }, ask: { name: 'ask', forms: ['ask'] },
-  'ask-reset': { name: 'ask', forms: ['ask reset'], parent: 'ask' },
-  browser: { name: 'browser', forms: ['browser'] }, clear: { name: 'clear', forms: ['clear'] },
-  clipboard: { name: 'clipboard', forms: ['clipboard'] }, close: { name: 'close', forms: ['close'], aliases: ['exit'] },
-  create: { name: 'create', forms: ['create'] }, db: { name: 'db', forms: ['db', 'db sqlite'] },
-  edit: { name: 'edit', forms: ['edit'] }, execute: { name: 'execute', forms: ['execute'] },
-  file: { name: 'file', forms: ['file'] },
-  files: { name: 'files', forms: ['files', 'files expand', 'files collapse', 'files cursor', 'files anchor', 'files select'] },
-  harness: { name: 'harness', forms: ['harness'] }, hist: { name: 'hist', forms: ['hist'] },
-  layout: { name: 'layout', forms: ['layout', 'layout window', 'layout sidebar', 'layout split', 'layout reporting', 'layout show'] },
-  newdir: { name: 'newdir', forms: ['newdir'] }, newfile: { name: 'newfile', forms: ['newfile'] },
-  next: { name: 'next', forms: ['next'] }, notifications: { name: 'notifications', forms: ['notifications', 'notifications left', 'notifications right', 'notifications clear'] },
-  notify: { name: 'notify', forms: ['notify'] }, open: { name: 'open', forms: ['open', 'open external', 'open page'] },
-  play: { name: 'play', forms: ['play'] }, plugins: { name: 'plugins', forms: ['plugins', 'plugins list'] },
-  profile: { name: 'profile', forms: ['profile', 'profile list'] }, queue: { name: 'queue', forms: ['queue', 'queue list'] },
-  quit: { name: 'quit', forms: ['quit'] }, rename: { name: 'rename', forms: ['rename'] },
-  schedule: { name: 'schedule', forms: ['schedule', 'schedule list', 'schedule cancel', 'schedule clear'] },
-  search: { name: 'search', forms: ['search transcript'], parent: 'search' }, send: { name: 'send', forms: ['send'] },
-  ssh: { name: 'ssh', forms: ['ssh'] },
-  syntax: { name: 'syntax', forms: ['syntax', 'syntax theme'] }, tab: { name: 'tab', forms: ['tab', 'tab focus', 'tab move', 'tab pane', 'tab split', 'tab color', 'tab group', 'tab dock', 'tab undock'] },
-  tasks: { name: 'tasks', forms: ['tasks'] }, tell: { name: 'tell', forms: ['tell'] },
-  'tell-reset': { name: 'tell', forms: ['tell reset'], parent: 'tell' },
-  theme: { name: 'theme', forms: ['theme', 'theme sync'] }, question: { name: 'question', forms: ['question ask', 'question approve'] },
-  monitor: { name: 'monitor', forms: ['monitor'] },
-  unmonitor: { name: 'unmonitor', forms: ['unmonitor', 'unmonitor --all'] },
-  monitors: { name: 'monitors', forms: ['monitors'] },
-  web: { name: 'web', forms: ['web'] },
-};
 
 function builtinRows(declaration: ApplicationCommandDeclaration): ApplicationCommandRow[] {
   const aliases = declaration.aliases ?? [];
@@ -57,7 +28,7 @@ function compare(left: ApplicationCommandRow, right: ApplicationCommandRow): num
 function buildApplicationCommands(): ApplicationCommandRow[] {
   const rows: ApplicationCommandRow[] = [];
   for (const command of coreCommands) {
-    const declaration = BUILTIN_FORMS[command.name];
+    const declaration = COMMAND_FORMS[command.name];
     if (declaration) rows.push(...builtinRows(declaration));
   }
   rows.push({ name: 'help', kind: 'help', aliases: [], forms: ['help', 'help commands', 'help keys', 'help <command>'], parent: 'help' });
