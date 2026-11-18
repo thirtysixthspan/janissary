@@ -200,6 +200,22 @@ export function operationDescriptor<K extends RemoteFilesystemOperation>(
 export type RemoteFilesystemOperationResult<K extends RemoteFilesystemOperation> =
   ReturnType<(typeof FILESYSTEM_OPERATIONS)[K]['decodeResult']>;
 
+export type AnyRemoteFilesystemOperationResult =
+  ReturnType<(typeof resultDecoders)[keyof typeof resultDecoders]>;
+
+export function isRemoteFilesystemOperationResult(
+  value: unknown,
+): value is AnyRemoteFilesystemOperationResult {
+  return Object.values(resultDecoders).some((decode) => {
+    try {
+      decode(value);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+}
+
 export function decodeFilesystemResult<K extends RemoteFilesystemOperation>(
   operation: K, value: unknown,
 ): RemoteFilesystemOperationResult<K> {

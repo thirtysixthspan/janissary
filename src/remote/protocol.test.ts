@@ -458,7 +458,7 @@ describe('frame codec', () => {
       { type: 'resume-cancel', id: 'r1' },
       { type: 'capture-reply', id: 'r1', request: 'q1', text: 'the screen text', capturedAt: 1_700_000_000_000 },
       { type: 'capture-reply', id: 'r1', request: 'q1' },
-      { type: 'filesystem-reply', session: 'files1', request: 'q1', result: { entries: [] } },
+      { type: 'filesystem-reply', session: 'files1', request: 'q1', result: [] },
       { type: 'filesystem-reply', session: 'files1', request: 'q2', result: { content: 'aMOpbGxvCndvcmxk' } },
       { type: 'filesystem-event', session: 'files1', path: 'src' },
       { type: 'acp-ready', id: 'racp1', sandboxed: true },
@@ -928,6 +928,12 @@ describe('optional frame fields', () => {
     expect(roundTrip(frame)).toEqual(frame);
   });
 
+  it('refuses a filesystem-reply whose result matches no declared operation shape', () => {
+    const raw = JSON.stringify({ type: 'filesystem-reply', session: 'files1', request: 'q1', result: { entries: [] } });
+
+    expect(decodeFrame(raw)).toEqual({ error: 'Malformed remote frame "filesystem-reply".' });
+  });
+
   it('refuses a session-state-result process whose autoApprove is not a boolean', () => {
     const record = {
       type: 'session-state-result',
@@ -1019,8 +1025,7 @@ describe('file contents on the wire', () => {
   it('carries a read-file reply\'s bytes as the port\'s single base64 layer', () => {
     const line = encodeFrame({ type: 'filesystem-reply', session: 'files1', request: 'q1', result: { content } });
     expect((JSON.parse(line) as { result: { content: string } }).result.content).toBe(content);
-    const decoded = decodeFrame(line) as { result: { content: string } };
-    expect(Buffer.from(decoded.result.content, 'base64').equals(bytes)).toBe(true);
+    expect(decodeFrame(line)).toMatchObject({ type: 'filesystem-reply', result: { content } });
   });
 });
 

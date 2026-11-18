@@ -11,6 +11,7 @@ import type { SearchRequest } from '../protocol.js';
 import type { DiffSource } from '../plugins/diff/shared.js';
 import type { WebSearchCommand } from '../web/search/command.js';
 import type { WebFetchCommand } from '../web/fetch/command.js';
+import type { AnyRemoteFilesystemOperationResult } from './filesystem/operations.js';
 
 // The frame shapes of the remote protocol, split out of `protocol.ts` so the wire *codec* and the
 // wire *grammar* are two files: this one says what a frame may carry, `protocol.ts` says how one is
@@ -258,7 +259,7 @@ export type ServerFrame =
   // The answer to `capture-request`: the process's latest screen capture, or no fields at all when
   // it has none yet — the same "nothing captured yet" a local `latestCapture()` can return.
   | { type: 'capture-reply'; id: string; request: string; text?: string; capturedAt?: number }
-  | { type: 'filesystem-reply'; session: string; request: string; result?: unknown; error?: string }
+  | { type: 'filesystem-reply'; session: string; request: string; result?: AnyRemoteFilesystemOperationResult; error?: string }
   | { type: 'filesystem-event'; session: string; path: string }
   | { type: 'agent-resolve-result'; id: string; snapshot?: AgentSnapshot; error?: string }
   // Readiness includes the confinement result because only the host that spawned the ACP process

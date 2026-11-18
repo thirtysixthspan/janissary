@@ -1,8 +1,10 @@
 import { stringValue } from '../filesystem/argument-checks.js';
-import { isFilesystemOperation, operationDescriptor } from '../filesystem/operations.js';
+import { isFilesystemOperation, isRemoteFilesystemOperationResult, operationDescriptor } from '../filesystem/operations.js';
 import type { RemoteFilesystemRequest } from '../protocol-frames.js';
 import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js';
 import { isRecord } from '../../value-guards.js';
+
+const REPLY = 'filesystem-reply';
 
 function decodeRequest(record: Record<string, unknown>): DecodeResult {
   const operation = record.operation;
@@ -20,11 +22,12 @@ function decodeReply(record: Record<string, unknown>): DecodeResult {
   const hasResult = Object.hasOwn(record, 'result');
   const hasError = Object.hasOwn(record, 'error');
   if (!nonEmptyString(record.session) || !nonEmptyString(record.request)
-    || hasResult === hasError || (hasError && !nonEmptyString(record.error))) return malformed('filesystem-reply');
+    || hasResult === hasError || (hasError && !nonEmptyString(record.error))) return malformed(REPLY);
   if (hasError) {
-    return { type: 'filesystem-reply', session: record.session, request: record.request, error: record.error as string };
+    return { type: REPLY, session: record.session, request: record.request, error: record.error as string };
   }
-  return { type: 'filesystem-reply', session: record.session, request: record.request, result: record.result };
+  if (!isRemoteFilesystemOperationResult(record.result)) return malformed(REPLY);
+  return { type: REPLY, session: record.session, request: record.request, result: record.result };
 }
 
 export function decodeFilesystemFrame(type: string, record: Record<string, unknown>): DecodeResult {
@@ -32,7 +35,7 @@ export function decodeFilesystemFrame(type: string, record: Record<string, unkno
     return nonEmptyString(record.session) ? { type, session: record.session } : malformed(type);
   }
   if (type === 'filesystem-request') return decodeRequest(record);
-  if (type === 'filesystem-reply') return decodeReply(record);
+  if (type === REPLY) return decodeReply(record);
   if (type === 'filesystem-event') {
     return nonEmptyString(record.session) && stringValue(record.path)
       ? { type, session: record.session, path: record.path }

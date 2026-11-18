@@ -673,8 +673,9 @@ put a reason — a listing, stats, a watch, git metadata, a pull, a search, a fi
 outright instead, since there is no result for it to report into.
 
 Each operation's reply is decoded against that operation's result shape before the local navigator
-receives it. A malformed reply fails the request instead of flowing into the navigator as an
-unchecked value.
+receives it. A result matching none of the declared shapes is refused as a malformed frame at the
+wire boundary; any other malformed reply fails the request instead of flowing into the navigator as
+an unchecked value.
 
 A reply lost to a dropped connection is reported as failed, and nothing is retried. Whether the
 remote had already carried out the work before the connection ended cannot be known from the local

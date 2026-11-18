@@ -2,17 +2,6 @@
 
 ## ready
 
-* Type the remote filesystem reply's result by operation instead of `unknown`, so the wire frame and its validation table are one contract.
-
-Existing Debt: The `filesystem-reply` frame declares `result?: unknown` and its decoder copies that value through untouched, while the real per-operation shape lives only in a separate hand-written decoder table. Severity: 6/10
-
-Existing Risk: 5/10 - A reply whose result disagrees with its operation, or a field renamed in one place only, reaches the operation decoder as an unchecked value and fails late with a generic error, or is silently accepted when the decoder is too loose.
-
-Proposal Risk: 2/10 - The per-operation guards still validate at runtime, but the frame type no longer admits an arbitrary result, so an operation whose result shape is never declared fails to compile.
-
-Proposal: In `src/remote/protocol-frames.ts` the `filesystem-reply` member carries `result?: unknown`, and `src/remote/frame/decode-filesystem.ts` `decodeReply` returns `record.result` with no validation. The actual shapes live in `src/remote/filesystem/result-decoders.ts` `resultDecoders`, reached through the `as RemoteFilesystemOperationResult<K>` cast in `src/remote/filesystem/operations.ts` `decodeFilesystemResult`. As a first increment, define one union type in `src/remote/filesystem/operations.ts` over every decoder's return type, declare the frame's `result` as that union instead of `unknown`, and have `decodeReply` run the value through a guard derived from `resultDecoders` before emitting the frame, dropping the cast once the frame type carries the shape. `src/remote/filesystem/operations.test.ts` already decodes a valid result for every operation and checks rejections; `src/remote/protocol.test.ts` round-trips a file-contents reply using `as { result: { content: string } }` to read the field, so replace that cast with the now-typed field and add a case where the result does not match any declared shape.
-
-
 * Validate the shell marker nonce in one shared guard used by the zsh hooks, the client shell plugin, and both remote frame decoders.
 
 Existing Debt: The same 32-hex nonce format is reimplemented in four places, three with identical code and one as an inline regex with no comment, so a format change has to be found and applied in all four. Severity: 5/10
