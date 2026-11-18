@@ -2,17 +2,6 @@
 
 ## ready
 
-* Share one algorithm for choosing the tab left visible in the source pane across the split and arrange paths.
-
-Existing Debt: Two tab-movement paths independently decide which tab remains visible in the vacated pane using different helper chains, and a third module forwards to one of them unchanged. Severity: 5/10
-
-Existing Risk: 4/10 - The two algorithms can pick different survivors for the same layout, so the same move leaves a different tab selected depending on whether it came from a split or a pane arrangement, with no test comparing them.
-
-Proposal Risk: 2/10 - One helper makes both paths agree, but the surrounding state updates still assign `activeTab`, `secondaryTabLabel` and focus separately, so divergence can reappear in those assignments.
-
-Proposal: `src/tab/split.ts` `moveToOtherPane` picks the survivor with `restorableLabel(...) ?? restorableLabel(...) ?? historyLabel(...) ?? nearestLabel(...)`, while `src/tab/arrange.ts` `movePane` re-decides with `visibleInPane(...) ?? recentLabel(...)`; `src/tab/split-selection.ts` `moveTabToOtherPaneSelection` is a one-line passthrough to `moveToOtherPane`. Extract one shared selection helper taking the post-move tab list, source pane, candidate labels and focus history and returning the survivor, call it from both `moveToOtherPane` and `movePane`, and import the canonical function directly at the passthrough's call sites. `src/tab/split.test.ts`, `src/tab/arrange.test.ts` and `src/tab/split-selection.test.ts` cover each path separately; add one case driving the same starting layout through both entry points and asserting the same `secondaryTabLabel`.
-
-
 * Read candidate files through one policy-carrying reader so search, grep, and the search plugin skip the same secret and symlinked paths.
 
 Existing Debt: Three workspace text readers independently decide which files may be read, and only one applies the project's secret-path and real-target policy, so that policy is not a property of reading a candidate file. Severity: 6/10

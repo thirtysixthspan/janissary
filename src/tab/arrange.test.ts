@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
 import { messageBus } from '../bus.js';
 import { makeTab } from './index.js';
+import { moveToOtherPane } from './split.js';
 import { TabManager } from './manager.js';
 import type { Tab } from './types.js';
 
@@ -135,6 +136,22 @@ describe('TabManager.arrangeTab pane and split', () => {
     expect(manager.tabs[manager.activeTab]?.label).toBe('active');
     expect(manager.tabs.every((entry) => entry.pane === undefined)).toBe(true);
     expect(manager.secondaryTabLabel).toBeUndefined();
+  });
+
+  it('selects the same surviving tab through the direct move and the arrange split path', () => {
+    const manager = setup([
+      tab('active'), tab('left-other'), tab('moved', 1, { pane: 'right' }), tab('survivor', 1, { pane: 'right' }),
+    ], 'active');
+    manager.secondaryTabLabel = 'survivor';
+
+    const direct = moveToOtherPane(
+      manager.tabs.map((entry) => ({ ...entry })),
+      'moved', 'active', 'survivor', manager.focusHistory,
+    );
+
+    expect(manager.arrangeTab('moved', { kind: 'split' })).toBe(true);
+    expect(direct?.secondaryLabel).toBe('survivor');
+    expect(manager.secondaryTabLabel).toBe('survivor');
   });
 
   it('refuses hidden, docked, notification, and monitor tabs and a one-tab unsplit strip', () => {
