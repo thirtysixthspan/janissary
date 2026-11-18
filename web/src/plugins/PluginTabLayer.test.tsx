@@ -326,7 +326,7 @@ describe('PluginTabLayer lazy lifecycle', () => {
   // border stay put so nothing in the split grid reflows, and no plugin is blamed for the gap.
   it('renders the host frame and nothing else for a tab with no envelope', () => {
     const fixture = client();
-    const view: TabView = { ...tab(), plugin: undefined };
+    const view: TabView = { ...tab(), view: undefined, plugin: undefined };
     const { container } = render(<PluginTabLayer {...properties(view, fixture.value)} />);
 
     const body = container.querySelector('.tab-body');

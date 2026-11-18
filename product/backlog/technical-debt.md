@@ -2,17 +2,6 @@
 
 ## ready
 
-* Make the client tab view a discriminated union so view payloads are narrowed by the discriminant instead of two hand-mirrored guard files.
-
-Existing Debt: The wire tab view and the server tab record both declare `view` and their five payloads as independent optional fields with a prose-only "present only when" invariant, so each side hand-writes the same five predicates and nothing ties the two sets together. Severity: 6/10
-
-Existing Risk: 5/10 - A payload missing for the view it claims, or a guard updated on one side only, renders an empty tab body or throws inside a component, and the duplicate guard sets can drift with no compile or test signal.
-
-Proposal Risk: 3/10 - Narrowing by the discriminant removes the hand-written client checks, but the server's internal tab record still carries optional payloads and keeps its own guards until a later change, so an internal tab can still violate the invariant.
-
-Proposal: `src/protocol/tab.ts` `TabView` declares `view?: 'plugin' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications'` alongside independent optional `plugin`, `harness`, `editor`, `monitor` and `files` fields whose comments state the invariant in prose. `web/src/shared/tab/view-guards.ts` calls itself "the client mirror" of `src/tab/view-guards.ts`, and both repeat five `view === ... && payload !== undefined` predicates. As a first increment, make `TabView` a union of one member per view kind with shared presentation fields factored into a base, update `buildTabView` in `src/tab/view.ts` to produce the narrow member, and replace the five client guards with direct narrowing on `view`, leaving the mirror reduced to helpers such as `indexedTabs`. Leave `src/tab/types.ts` `Tab` and `src/tab/view-guards.ts` for a separate change, since the server record is assembled over a tab's lifetime and cannot be built in one narrow step. `web/src/shared/tab/view-guards.test.ts` and `web/src/App.test.tsx` pin current guard behavior and must keep passing.
-
-
 * Resolve a plugin's own tabs through one helper instead of four hand-rolled scans using two different lookup idioms.
 
 Existing Debt: The "tabs owned by this plugin" scan is repeated across four capability modules, and one file resolves the same instance key two different ways, so the definition of ownership has no single owner. Severity: 5/10

@@ -135,6 +135,8 @@ export type {
   PendingQuestionView,
   RemoteTargetView,
   TabView,
+  TabViewBase,
+  MonitorView,
 } from './protocol/tab.js';
 export type {
   StateEvent,

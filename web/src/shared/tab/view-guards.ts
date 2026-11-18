@@ -1,15 +1,15 @@
 import type { TabView } from '@shared/protocol';
 
-// The client mirror of `src/tab/view-guards.ts`. The wire shape carries the same five optional
-// payloads under the same "present only for this view kind" prose invariant, and the same reason to
-// check it rather than assert it: a payload that is absent should render nothing for that layer, not
-// throw inside a render and take the tab body out.
+// The client mirror of `src/tab/view-guards.ts`. `TabView` is now a discriminated union whose members
+// require the matching payload, so the narrowed types below come from the union via `Extract` rather
+// than being hand-mirrored with `NonNullable`. The guards still check the invariant at runtime: a
+// payload that is absent renders nothing for that layer rather than throwing inside a render.
 
-export type HarnessTabView = TabView & { view: 'harness'; harness: NonNullable<TabView['harness']> };
-export type EditorTabView = TabView & { view: 'editor'; editor: NonNullable<TabView['editor']> };
-export type FilesTabView = TabView & { view: 'files'; files: NonNullable<TabView['files']> };
-export type PluginTabView = TabView & { view: 'plugin'; plugin: NonNullable<TabView['plugin']> };
-export type MonitorTabView = TabView & { view: 'monitor'; monitor: NonNullable<TabView['monitor']> };
+export type HarnessTabView = Extract<TabView, { view: 'harness' }>;
+export type EditorTabView = Extract<TabView, { view: 'editor' }>;
+export type FilesTabView = Extract<TabView, { view: 'files' }>;
+export type PluginTabView = Extract<TabView, { view: 'plugin' }>;
+export type MonitorTabView = Extract<TabView, { view: 'monitor' }>;
 
 export function isHarnessTabView(tab: TabView): tab is HarnessTabView {
   return tab.view === 'harness' && tab.harness !== undefined;

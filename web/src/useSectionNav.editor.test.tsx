@@ -18,7 +18,7 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
     label: 'notes', number: 1, dotColor: '#fff', group: 1, groupColor: '#fff', busy: false, hasUnread: false,
     cwd: '/repo', connections: [], schedule: [], bufferLines: [], cmdHistory: [], commandQueue: [],
     view: 'editor', editor: makeView(), ...overrides,
-  };
+  } as TabView;
 }
 
 function makeClient(): JanusClient {

@@ -13,7 +13,7 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
     busy: false, hasUnread: false, cwd: '/tmp', connections: [], schedule: [],
     bufferLines: [], cmdHistory: [], commandQueue: [],
     ...overrides,
-  };
+  } as TabView;
 }
 
 function renderSectionNav(tabs: TabView[], focusCenter: () => void, captured = false) {

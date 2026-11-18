@@ -11,7 +11,7 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
     cwd: '/repo', connections: [], schedule: [], bufferLines: [], cmdHistory: [], commandQueue: [],
     view: 'editor', editor: { name: 'notes.txt', path: '/repo/notes.txt', size: '1 B', url: '/open/1' },
     ...overrides,
-  };
+  } as TabView;
 }
 
 describe('useEditorConnections', () => {

@@ -16,7 +16,7 @@ function baseTab(overrides: Partial<TabView> = {}): TabView {
     label: 'test', number: 1, dotColor: '#fff', group: 1, groupColor: '#fff',
     busy: false, hasUnread: false, cwd: '/', connections: [], schedule: [], bufferLines: [], cmdHistory: [], commandQueue: [],
     ...overrides,
-  };
+  } as TabView;
 }
 
 describe('ViewTabBody', () => {

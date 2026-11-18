@@ -114,7 +114,7 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
     bufferLines: [], cmdHistory: [], commandQueue: [],
   view: 'plugin', plugin: { id: 'shell', schemaVersion: 5, hostsCommandBar: true, payload: {} },
     ...overrides,
-  };
+  } as TabView;
 }
 
 describe('App app theme picker', () => {
