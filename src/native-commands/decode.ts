@@ -6,6 +6,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function skipQuotedString(text: string, start: number): number {
+  let index = start + 1;
+  while (index < text.length) {
+    if (text[index] === '\\') index += 2;
+    else if (text[index] === '"') break;
+    else index += 1;
+  }
+  return index;
+}
+
 function orderedKeys(text: string): string[] {
   const keys: string[] = [];
   let depth = 0;
@@ -15,12 +25,7 @@ function orderedKeys(text: string): string[] {
     switch (character) {
       case '"': {
         const start = index;
-        index += 1;
-        while (index < text.length) {
-          if (text[index] === '\\') index += 2;
-          else if (text[index] === '"') break;
-          else index += 1;
-        }
+        index = skipQuotedString(text, index);
         if (depth === 1 && expectingKey) {
           const key: unknown = JSON.parse(text.slice(start, index + 1));
           if (typeof key === 'string') keys.push(key);
