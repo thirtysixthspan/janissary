@@ -36,3 +36,27 @@ port "<value>". Use digits only, from 1 to 65535.` A host with no destination is
 destination.` A saved set that is not an object, an entry that is not an object, or two names that
 differ only in case are refused rather than partly used. An empty set is valid and means there are no
 saved hosts.
+
+### Commands
+
+The `hosts` command manages the catalog from a transcript. With no operands it opens the Hosts tab.
+Every verb matches regardless of case, and all field rules above apply to what you type.
+
+`hosts list` prints the effective catalog as JSON, two spaces per indent, in name order ignoring case.
+An empty catalog and a catalog that cannot be used both print `{}`. A problem with the file is
+reported separately, the listing itself stays plain text.
+
+`hosts add <name> <[user@]host[:port]> [path]` saves a host. The destination may carry a user before
+an `@`, which is split out into the user field. If a name already exists regardless of case, only that
+entry is replaced and it takes the spelling you just typed. A new name reports `Host <name> added.`,
+a replacement reports `Host <name> updated.`
+
+`hosts remove <name>` removes the name that matches regardless of case and reports `Host <name>
+removed.` with the spelling that was stored. If nothing matches, `No host named "<name>".` is reported
+with the spelling you typed and the catalog is left alone.
+
+Malformed requests never touch the catalog. An unknown verb or a bad `list` gives `Usage: hosts
+[list|add|remove].`, a bad `add` gives `Usage: hosts add <name> <[user@]host[:port]> [path]`, and a bad
+`remove` gives `Usage: hosts remove <name>`. A bare or repeated `@`, an empty user, wrong number of
+operands, and any invalid field are refused before reading or writing. Problems reading or saving the
+file are reported without rewording.
