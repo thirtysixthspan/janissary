@@ -63,6 +63,10 @@
 .connections-prompt, .connections-answer { padding: 10px; border-radius: 4px; background: var(--bg-soft); white-space: pre-wrap; }
 .connections-activity { padding-left: 10px; border-left: 2px solid var(--border); }
 .connections-activity-label, .connections-activity summary { color: var(--muted); font-size: 12px; }
+/* A tool's command and reply share one collapsible section, each part labelled and wrapping long text. */
+.connections-tool-part { margin: 4px 0; }
+.connections-tool-part-label { color: var(--muted); font-size: 12px; }
+.connections-tool-part .connections-activity-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 /* JSON activity keeps its indentation and wraps long values instead of widening the tab. */
 .connections-activity-json { margin: 0; font-size: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
 .connections-tool-calls { display: flex; flex-direction: column; gap: 6px; margin: 4px 0; }

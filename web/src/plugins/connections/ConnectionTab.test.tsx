@@ -102,6 +102,66 @@ describe('ConnectionTab', () => {
     expect(details).not.toHaveAttribute('open');
   });
 
+  it('groups a tool command and its reply into one labelled collapsible section', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [
+      { kind: 'tool', text: 'grep foo', timestamp: 1 },
+      { kind: 'tool', text: '3 matches', timestamp: 2 },
+    ];
+    setup(value);
+    const summaries = screen.getAllByText('tool', { selector: 'summary' });
+    expect(summaries).toHaveLength(1);
+    const details = summaries[0].closest('details');
+    expect(details).toHaveAttribute('open');
+    expect([...details!.querySelectorAll('.connections-tool-part-label')].map((el) => el.textContent))
+      .toEqual(['command', 'reply']);
+    expect(screen.getByText('grep foo')).toBeInTheDocument();
+    expect(screen.getByText('3 matches')).toBeInTheDocument();
+  });
+
+  it('renders only the command part while a tool has no reply yet', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [{ kind: 'tool', text: 'running command', timestamp: 1 }];
+    setup(value);
+    expect(document.querySelectorAll('.connections-tool-part')).toHaveLength(1);
+    expect([...document.querySelectorAll('.connections-tool-part-label')].map((el) => el.textContent))
+      .toEqual(['command']);
+    expect(screen.getByText('running command')).toBeInTheDocument();
+  });
+
+  it('renders a JSON command and a reply with inline tool calls inside their parts', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [
+      { kind: 'tool', text: '{"query":"select 1"}', timestamp: 1 },
+      { kind: 'tool', text: 'Done. <function_calls><invoke name="bash"><parameter name="command">pwd</parameter></invoke></function_calls>', timestamp: 2 },
+    ];
+    setup(value);
+    expect(document.querySelectorAll('pre.connections-activity-json')).toHaveLength(1);
+    expect(screen.getByText('bash')).toHaveClass('connections-tool-call-name');
+    expect(screen.getByText('pwd')).toBeInTheDocument();
+    expect([...document.querySelectorAll('.connections-tool-part-label')].map((el) => el.textContent))
+      .toEqual(['command', 'reply']);
+  });
+
+  it('keeps a grouped tool section collapsed when its reply streams in', () => {
+    const value = record();
+    const { view, capabilities } = setup(value);
+    const details = screen.getByText('tool', { selector: 'summary' }).closest('details')!;
+    details.open = false;
+    const original = value.window!.blocks[0]!.entries;
+    const entries = [
+      ...original.slice(0, 3),
+      { kind: 'tool' as const, text: 'the reply', timestamp: 5 },
+      ...original.slice(3),
+    ];
+    view.rerender(<ConnectionTab record={{ ...value, window: { ...value.window!,
+      blocks: [{ ...value.window!.blocks[0]!, entries }] } }} capabilities={capabilities} />);
+    expect(screen.getByText('the reply').closest('details')).toBe(details);
+    expect(details).not.toHaveAttribute('open');
+    expect([...details.querySelectorAll('.connections-tool-part-label')].map((el) => el.textContent))
+      .toEqual(['command', 'reply']);
+  });
+
   it('keeps expanded entries and block order when older blocks are prepended', () => {
     const value = record();
     value.window!.offset = 2;

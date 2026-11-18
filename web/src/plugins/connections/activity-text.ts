@@ -1,3 +1,5 @@
+import type { ConnectionActivity } from '@shared/plugins/connections/shared';
+
 export function prettyJson(text: string): string | undefined {
   const trimmed = text.trim();
   if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return undefined;
@@ -13,6 +15,28 @@ export type ParsedToolCall = { name: string; parameters: ParsedToolCallParameter
 export type ActivitySegment =
   | { kind: 'text'; text: string }
   | { kind: 'tool-call'; calls: ParsedToolCall[] };
+export type ActivityRow =
+  | { kind: 'activity'; entry: ConnectionActivity; index: number }
+  | { kind: 'tool'; command: ConnectionActivity; reply?: ConnectionActivity; index: number };
+
+export function groupToolEntries(entries: readonly ConnectionActivity[]): ActivityRow[] {
+  const rows: ActivityRow[] = [];
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = entries[index];
+    if (entry.kind !== 'tool') {
+      rows.push({ kind: 'activity', entry, index });
+      continue;
+    }
+    const next = entries[index + 1];
+    if (next?.kind === 'tool') {
+      rows.push({ kind: 'tool', command: entry, reply: next, index });
+      index += 1;
+    } else {
+      rows.push({ kind: 'tool', command: entry, index });
+    }
+  }
+  return rows;
+}
 
 const FUNCTION_CALLS = /<function_calls>([\s\S]*?)<\/function_calls>/g;
 const INVOKE = /<invoke\s+name="([^"]*)">\s*([\s\S]*?)<\/invoke>/g;

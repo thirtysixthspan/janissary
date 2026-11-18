@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { parseToolCalls } from './activity-text';
+import type { ConnectionActivity } from '@shared/plugins/connections/shared';
+import { groupToolEntries, parseToolCalls } from './activity-text';
 
 describe('parseToolCalls', () => {
   it('returns one verbatim text segment when the entry has no tool calls', () => {
@@ -61,5 +62,49 @@ describe('parseToolCalls', () => {
     expect(parseToolCalls(unclosed)).toEqual([{ kind: 'text', text: unclosed }]);
     const noInvoke = 'before <function_calls>just prose</function_calls> after';
     expect(parseToolCalls(noInvoke)).toEqual([{ kind: 'text', text: noInvoke }]);
+  });
+});
+
+const activity = (kind: ConnectionActivity['kind'], text: string, timestamp: number): ConnectionActivity => ({ kind, text, timestamp });
+
+describe('groupToolEntries', () => {
+  it('passes non-tool entries through unchanged with their source index', () => {
+    const entries = [activity('message', 'hello', 1), activity('thought', 'thinking', 2), activity('plan', 'plan', 3)];
+    expect(groupToolEntries(entries)).toEqual([
+      { kind: 'activity', entry: entries[0], index: 0 },
+      { kind: 'activity', entry: entries[1], index: 1 },
+      { kind: 'activity', entry: entries[2], index: 2 },
+    ]);
+  });
+
+  it('pairs two consecutive tool entries into one command and reply row', () => {
+    const command = activity('tool', 'grep foo', 1);
+    const reply = activity('tool', '3 matches', 2);
+    expect(groupToolEntries([command, reply])).toEqual([{ kind: 'tool', command, reply, index: 0 }]);
+  });
+
+  it('leaves a lone tool entry with a command and no reply', () => {
+    const command = activity('tool', 'grep foo', 4);
+    expect(groupToolEntries([command])).toEqual([{ kind: 'tool', command, index: 0 }]);
+  });
+
+  it('starts a new pair after a non-tool entry interrupts', () => {
+    const first = activity('tool', 'first command', 1);
+    const firstReply = activity('tool', 'first reply', 2);
+    const message = activity('message', 'between', 3);
+    const second = activity('tool', 'second command', 4);
+    expect(groupToolEntries([first, firstReply, message, second])).toEqual([
+      { kind: 'tool', command: first, reply: firstReply, index: 0 },
+      { kind: 'activity', entry: message, index: 2 },
+      { kind: 'tool', command: second, index: 3 },
+    ]);
+  });
+
+  it('keeps each row anchored to the index of its first source entry', () => {
+    const entries = [
+      activity('message', 'a', 10), activity('tool', 'b', 11),
+      activity('tool', 'c', 12), activity('permission', 'd', 13),
+    ];
+    expect(groupToolEntries(entries).map((row) => row.index)).toEqual([0, 1, 3]);
   });
 });

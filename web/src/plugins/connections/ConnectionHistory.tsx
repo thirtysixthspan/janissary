@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ConnectionWindow } from '@shared/plugins/connections/shared';
 import { renderMarkdown } from '../api';
-import { parseToolCalls, prettyJson } from './activity-text';
+import { groupToolEntries, parseToolCalls, prettyJson } from './activity-text';
 import { ToolCallBlock } from './ToolCallBlock';
 
 export function ConnectionHistory({ window, openLink }: {
@@ -20,14 +20,28 @@ export function ConnectionHistory({ window, openLink }: {
       {window.blocks.map((block, index) => (
         <article className="connections-block" key={window.offset + index}>
           <div className="connections-prompt">{block.prompt}</div>
-          {block.entries.map((entry, entryIndex) => {
-            const content = <ActivityText text={entry.text} />;
-            return entry.kind === 'thought' || entry.kind === 'tool'
-              ? <details className="connections-activity" key={`${entry.timestamp}:${entryIndex}`}
-                  open={entry.kind === 'tool'}>
-                  <summary>{entry.kind}</summary>{content}
+          {groupToolEntries(block.entries).map((row) => {
+            if (row.kind === 'tool') {
+              const parts = row.reply === undefined ? [row.command] : [row.command, row.reply];
+              return (
+                <details className="connections-activity" key={`${row.command.timestamp}:${row.index}`} open>
+                  <summary>tool</summary>
+                  {parts.map((part, partIndex) => (
+                    <div className="connections-tool-part" key={partIndex}>
+                      <div className="connections-tool-part-label">{partIndex === 0 ? 'command' : 'reply'}</div>
+                      <ActivityText text={part.text} />
+                    </div>
+                  ))}
                 </details>
-              : <div className="connections-activity" key={`${entry.timestamp}:${entryIndex}`}>
+              );
+            }
+            const entry = row.entry;
+            const content = <ActivityText text={entry.text} />;
+            return entry.kind === 'thought'
+              ? <details className="connections-activity" key={`${entry.timestamp}:${row.index}`}>
+                  <summary>thought</summary>{content}
+                </details>
+              : <div className="connections-activity" key={`${entry.timestamp}:${row.index}`}>
                   <div className="connections-activity-label">{entry.kind}</div>{content}
                 </div>;
           })}

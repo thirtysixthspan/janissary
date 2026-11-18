@@ -93,6 +93,15 @@ describe('connections list styles', () => {
     expect(parameter).toContain('white-space: pre-wrap');
     expect(parameter).toContain('overflow-wrap: anywhere');
   });
+
+  it('lays a tool command and reply out as labelled parts that wrap long text', () => {
+    const styles = readFileSync('web/src/plugins/connections/connections.css', 'utf8');
+    expect(styles.match(/\.connections-tool-part \{[^}]+\}/)?.[0]).toContain('margin: 4px 0');
+    expect(styles.match(/\.connections-tool-part-label \{[^}]+\}/)?.[0]).toContain('color: var(--muted)');
+    const text = styles.match(/\.connections-tool-part \.connections-activity-text \{[^}]+\}/)?.[0];
+    expect(text).toContain('white-space: pre-wrap');
+    expect(text).toContain('overflow-wrap: anywhere');
+  });
 });
 
 describe('connections rows follow the sessions rows', () => {
