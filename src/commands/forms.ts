@@ -19,7 +19,7 @@ export const COMMAND_FORMS: Readonly<Record<string, ApplicationCommandDeclaratio
   quit: { name: 'quit', forms: ['quit'] }, rename: { name: 'rename', forms: ['rename'] },
   schedule: { name: 'schedule', forms: ['schedule', 'schedule list', 'schedule cancel', 'schedule clear'] },
   search: { name: 'search', forms: ['search transcript'], parent: 'search' }, send: { name: 'send', forms: ['send'] },
-  ssh: { name: 'ssh', forms: ['ssh'] },
+  ssh: { name: 'ssh', forms: ['ssh'] }, subagent: { name: 'subagent', forms: ['subagent'] },
   syntax: { name: 'syntax', forms: ['syntax', 'syntax theme'] }, tab: { name: 'tab', forms: ['tab', 'tab focus', 'tab move', 'tab pane', 'tab split', 'tab color', 'tab group', 'tab dock', 'tab undock'] },
   tasks: { name: 'tasks', forms: ['tasks'] }, tell: { name: 'tell', forms: ['tell'] },
   'tell-reset': { name: 'tell', forms: ['tell reset'], parent: 'tell' },

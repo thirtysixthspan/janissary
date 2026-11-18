@@ -181,7 +181,9 @@ export async function runSubagentEntry(options: SubagentAttemptOptions): Promise
         ranCommand: (_command, result, workspace) => {
           state.toolActivity(result, workspace);
         },
-        finished: (reason) => state.finish(reason),
+        // A command failure is reported through `error` (which marks the attempt failed)
+        // before the loop emits `finished('failed')`; only success reasons finish the attempt.
+        finished: (reason) => { if (reason !== 'failed') state.finish(reason); },
         error: (message) => state.fail(message),
       }, () => state.active()), signal);
     });

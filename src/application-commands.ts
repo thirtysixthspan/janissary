@@ -27,7 +27,11 @@ function compare(left: ApplicationCommandRow, right: ApplicationCommandRow): num
 
 function buildApplicationCommands(): ApplicationCommandRow[] {
   const rows: ApplicationCommandRow[] = [];
+  const nativeNames = new Set<string>(NATIVE_ACP_COMMANDS);
   for (const command of coreCommands) {
+    // A command registered as a native ACP tool owns its name through the native row below.
+    // Emitting a builtin row from its forms declaration would duplicate that name.
+    if (nativeNames.has(command.name)) continue;
     const declaration = COMMAND_FORMS[command.name];
     if (declaration) rows.push(...builtinRows(declaration));
   }
