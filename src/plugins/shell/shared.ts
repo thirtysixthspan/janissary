@@ -1,3 +1,5 @@
+import { isShellMarkerNonce as isMarkerNonce } from '../api.js';
+
 export const SHELL_PAYLOAD_SCHEMA_VERSION = 5;
 
 export function stripComments(command: string): string {
@@ -15,10 +17,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export const SHELL_PROGRAM = '/bin/zsh';
 
 // One row of a connection or schedule window, re-declared rather than imported from `@shared/protocol`
-// because this module's only import is the published `isRecord` guard through `../api.js`: the client
-// executes these guards through `@shared`, and any other import could pull NodeNext resolution into
-// the browser graph. `shared.test.ts` pins these two against the protocol's own shapes, the way the
-// sessions plugin's does.
+// because this module's only import is a published guard through `../api.js`: the client runs these
+// guards through `@shared`, and any other import could pull NodeNext resolution into the browser graph.
+// `shared.test.ts` pins these two against the protocol's own shapes, the way the sessions plugin's does.
 export type ShellConnectionKind =
   | 'shell' | 'acp' | 'ssh' | 'browser' | 'terminal' | 'sqlite';
 
@@ -161,10 +162,9 @@ function isScheduleRow(value: unknown): value is ShellScheduleRow {
 }
 
 // The shape `createShellMarkerNonce` mints: 16 random bytes as lowercase hex. Checked because the
-// nonce is written into the hook functions zsh runs, so nothing else may stand in for one.
-export function isShellMarkerNonce(value: unknown): value is string {
-  return typeof value === 'string' && /^[0-9a-f]{32}$/.test(value);
-}
+// nonce is written into the hook functions zsh runs, so nothing else may stand in for one. Published
+// under this name for the payload guard; the format itself lives in `src/value-guards.ts`.
+export const isShellMarkerNonce = isMarkerNonce;
 
 // Exactly one of the two shapes: a terminal with its id and size, or a provisioning placeholder with
 // neither. A payload mixing them is refused rather than read as either.

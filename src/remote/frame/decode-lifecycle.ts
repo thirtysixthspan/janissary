@@ -2,7 +2,7 @@ import { decodeCloned, decodeOrigin } from './decode-root.js';
 import {
   malformed, nonEmptyString, optionalNonEmptyString, positiveInteger, type DecodeResult,
 } from './decode-shared.js';
-import { isZshHookNonce } from '../../shell/zsh-startup/script.js';
+import { isShellMarkerNonce } from '../../value-guards.js';
 
 // The decoders for the frames that run and end one remote session's process — attach, spawn, the
 // addressed data and resize in between, the two ways it stops, and the workspace outcome it reports.
@@ -69,7 +69,7 @@ export function decodeSpawn(record: Record<string, unknown>): DecodeResult {
     || !(browser === undefined || typeof browser === 'boolean')
     || !(autoApprove === undefined || typeof autoApprove === 'boolean')
     || !(autoResume === undefined || typeof autoResume === 'boolean')
-    || !(shell === undefined || isZshHookNonce(shellNonce))
+    || !(shell === undefined || isShellMarkerNonce(shellNonce))
     || !(cwd === undefined || nonEmptyString(cwd)) || (shell !== undefined && mode !== 'pty')
     || launch === false || env === false || ((launch !== undefined || env !== undefined) && mode !== 'pty')
     || !optionalNonEmptyString(agentName)) return malformed('spawn');

@@ -2,17 +2,6 @@
 
 ## ready
 
-* Validate the shell marker nonce in one shared guard used by the zsh hooks, the client shell plugin, and both remote frame decoders.
-
-Existing Debt: The same 32-hex nonce format is reimplemented in four places, three with identical code and one as an inline regex with no comment, so a format change has to be found and applied in all four. Severity: 5/10
-
-Existing Risk: 5/10 - If the nonce format changes or tightens where it is minted, a decoder still accepting the old shape can admit a spoofed marker from a remote peer or reject a legitimate one, and the inline copy in `decode-sessions.ts` has no invalid-case test.
-
-Proposal Risk: 2/10 - All four call sites share one predicate, so a format change is a single edit; the remaining risk is a future call site that bypasses the guard, which the cross-module import makes visible.
-
-Proposal: `src/shell/zsh-startup/script.ts` `isZshHookNonce` and `src/plugins/shell/shared.ts` `isShellMarkerNonce` are byte-identical `/^[0-9a-f]{32}$/` checks, and the former's comment explains it keeps a copy because the latter lives in a module the client imports. `src/remote/frame/decode-lifecycle.ts` `decodeSpawn` calls `isZshHookNonce` for `shell.nonce`, but `src/remote/frame/decode-sessions.ts` `decodeProcessState` reimplements the regex inline for the same field on `session-state-result`. Extract the guard into a host-neutral pure module that both server and client may import, such as `src/value-guards.ts` where other shared guards live, and import it at all four sites, keeping thin re-exports only where a published signature needs one. `src/remote/protocol.test.ts` rejects an invalid `spawn` nonce but uses only a valid nonce for `session-state-result`; add an invalid-nonce case there so both frame paths are pinned.
-
-
 * Replace the positional argument chains through the plugin guarded-call path with one options object so optional handlers cannot be swapped between call layers.
 
 Existing Debt: `invokePlugin` and `createPluginContext` take long positional tails whose optional string and callback parameters appear in different orders and are threaded through `undefined` placeholders, so the forwarding seam has no types expressing which argument is which. Severity: 6/10

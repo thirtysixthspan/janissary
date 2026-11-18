@@ -16,3 +16,10 @@ export function isModelPair(value: unknown): value is ConversationModelPair {
     && (value.harness === 'claude' || value.harness === 'opencode')
     && typeof value.model === 'string';
 }
+
+// The 32 lowercase hex characters `createShellMarkerNonce` mints. Defined here, whose only import is a
+// type, so the server's zsh startup script, the client-imported shell plugin guard, and both remote
+// frame decoders can all check one shape through a module safe for the browser graph.
+export function isShellMarkerNonce(value: unknown): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{32}$/.test(value);
+}
