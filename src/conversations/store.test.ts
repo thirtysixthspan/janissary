@@ -22,6 +22,17 @@ function conversation(id = 'first'): Conversation {
   };
 }
 
+function writeDocument(store: ConversationStore, id: string, text: string): string {
+  const file = path.join(store.directory(id), 'conversation.json');
+  mkdirSync(store.directory(id), { recursive: true });
+  writeFileSync(file, text);
+  return file;
+}
+
+function newerDocument(id = 'first'): string {
+  return `${JSON.stringify({ ...conversation(id), schemaVersion: CONVERSATION_SCHEMA_VERSION + 1 }, null, 2)}\n`;
+}
+
 beforeEach(() => { home = mkdtempSync(path.join(tmpdir(), 'conversations-store-')); });
 afterEach(() => { rmSync(home, { recursive: true, force: true }); });
 
@@ -152,5 +163,49 @@ describe('ConversationStore', () => {
     expect(restarted.read('first')?.turns).toHaveLength(1);
     expect(readFileSync(path.join(restarted.directory('first'), 'workspace', 'marker.txt'), 'utf8'))
       .toBe('survived');
+  });
+
+  it('treats a record from a newer schema version as unavailable but leaves it intact', () => {
+    const store = new ConversationStore({ home, projectDir: home });
+    const file = writeDocument(store, 'first', newerDocument());
+    const bytes = readFileSync(file, 'utf8');
+
+    expect(store.read('first')).toBeUndefined();
+    expect(store.hasNewerRecord('first')).toBe(true);
+    expect(store.hasRecord('first')).toBe(true);
+    expect(store.list()).toEqual([]);
+    expect(readFileSync(file, 'utf8')).toBe(bytes);
+  });
+
+  it('distinguishes a newer-version record from a malformed one when scanning', () => {
+    writeDocument(new ConversationStore({ home, projectDir: home }), 'newer', newerDocument('newer'));
+    writeDocument(new ConversationStore({ home, projectDir: home }), 'broken', '{broken');
+    const warning = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const store = new ConversationStore({ home, projectDir: home });
+
+    expect(store.list()).toEqual([]);
+    expect(warning).toHaveBeenCalledTimes(2);
+    const text = warning.mock.calls.map((call) => String(call[0])).join('');
+    expect(text).toContain('conversation "newer" unavailable: written by a newer schema version (v2)');
+    expect(text).not.toContain('conversation "newer" unavailable: missing or malformed');
+    expect(text).toContain('conversation "broken" unavailable: missing or malformed conversation.json');
+    warning.mockRestore();
+  });
+
+  it('refuses to overwrite a record written by a newer schema version', () => {
+    const store = new ConversationStore({ home, projectDir: home });
+    const file = writeDocument(store, 'first', newerDocument());
+    const bytes = readFileSync(file, 'utf8');
+
+    expect(() => { store.write(conversation()); }).toThrow(/newer schema version/u);
+    expect(readFileSync(file, 'utf8')).toBe(bytes);
+  });
+
+  it('reports a v1 record as readable rather than newer', () => {
+    const store = new ConversationStore({ home, projectDir: home });
+    store.write(conversation());
+
+    expect(store.hasNewerRecord('first')).toBe(false);
+    expect(store.read('first')).toEqual(conversation());
   });
 });

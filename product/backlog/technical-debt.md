@@ -2,17 +2,6 @@
 
 ## ready
 
-* Refuse to create or overwrite a conversation written by a newer schema version instead of treating it as absent.
-
-Existing Debt: The conversation store treats an exact schema-version match as the only valid document, so a record from a newer build is indistinguishable from a malformed one and can be replaced by a fresh conversation under the same id. Severity: 6/10
-
-Existing Risk: 8/10 - After switching to an older build, a newer conversation is read as absent, a new one is created under the same id, and the next save overwrites the file, losing its turns with no warning.
-
-Proposal Risk: 2/10 - A newer-version file is preserved and reported, but there is still no migration path, so those conversations stay unavailable until a build that understands their version runs.
-
-Proposal: `src/conversations/store.ts` `isConversation` requires `value.schemaVersion === CONVERSATION_SCHEMA_VERSION`, and `read`/`scan` classify a mismatch as malformed. `src/conversations/manager.ts` `create` starts with `if (this.conversations.has(id) || this.store.read(id)) return false;`, so a version-mismatched file passes as absent and a replacement conversation is created and later written over it. Follow the pattern already in `src/schedule/system/store-decode.ts`, which returns `kind: 'unsupported-version'` for a future version: add a distinct decode outcome for a recognized-but-newer version, have `scan` report it without the malformed-file warning, and make `create` and the write paths refuse to overwrite such a record. `src/conversations/store.test.ts` exercises only version-1 and broken JSON documents; add a test writing a v2 document and asserting it is preserved and that `create` does not replace it.
-
-
 * Make the ACP session handshake an explicit state so an early error cannot permanently suppress the connection.
 
 Existing Debt: The connection handshake is tracked by three independent flags whose ordering is the protocol, and the error flag is never cleared, so an error recorded before connecting silently blocks the publish that follows a successful connect. Severity: 6/10

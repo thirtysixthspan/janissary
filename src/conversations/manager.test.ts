@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { AcpSession, PromptHandlers } from '../acp/types.js';
@@ -102,6 +102,28 @@ describe('ConversationsManager records and refusals', () => {
 
     expect(reopened.create('c2')).toBe(false);
     reopened.dispose();
+  });
+
+  it('refuses to create an id whose on-disk record is from a newer schema version', () => {
+    const f = fixture();
+    const dir = f.store.directory('c2');
+    mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, 'conversation.json');
+    const document = `${JSON.stringify({
+      schemaVersion: CONVERSATION_SCHEMA_VERSION + 1,
+      id: 'c2',
+      title: 'From a newer build',
+      createdAt: 1,
+      updatedAt: 1,
+      pair: { harness: 'claude', model: 'opus' },
+      turns: [],
+    }, null, 2)}\n`;
+    writeFileSync(file, document);
+
+    expect(f.manager.create('c2')).toBe(false);
+    expect(f.store.read('c2')).toBeUndefined();
+    expect(readFileSync(file, 'utf8')).toBe(document);
+    f.manager.dispose();
   });
 
   it('answers false for a conversation it does not hold, rather than creating one', () => {
