@@ -175,9 +175,10 @@ export async function runSubagentEntry(options: SubagentAttemptOptions): Promise
         startTurn: () => {},
         chunk: () => {},
         endTurn: (text) => state.reply(text),
-        startCommand: () => {},
-        ranCommand: (command, result, workspace) => {
+        startCommand: (command, workspace) => {
           state.toolActivity(command, workspace);
+        },
+        ranCommand: (_command, result, workspace) => {
           state.toolActivity(result, workspace);
         },
         finished: (reason) => state.finish(reason),

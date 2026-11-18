@@ -14,12 +14,13 @@ import { coreSnapshotRows } from '../acp/run-prompt.js';
 import { subagentTaskPrompt } from './primer.js';
 import type { SubagentAttemptOptions } from './attempt.js';
 
-const mocks = vi.hoisted(() => ({ connectAcp: vi.fn(), runToolLoop: vi.fn() }));
+const mocks = vi.hoisted(() => ({ connectAcp: vi.fn(), runToolLoop: vi.fn(), runWorkspaceCommandIn: vi.fn() }));
 vi.mock('../acp/index.js', () => ({ connectAcp: mocks.connectAcp }));
 vi.mock('../acp/drive-loop.js', async (importOriginal) => {
   const actual = await importOriginal<typeof DriveLoop>();
   return { ...actual, runToolLoop: mocks.runToolLoop };
 });
+vi.mock('../acp/workspace-runner.js', () => ({ runWorkspaceCommandIn: mocks.runWorkspaceCommandIn }));
 
 const { runSubagentEntry } = await import('./attempt.js');
 
@@ -126,6 +127,7 @@ function connectOptions(call = 0): ConnectOptions {
 beforeEach(() => {
   mocks.connectAcp.mockReset();
   mocks.runToolLoop.mockReset();
+  mocks.runWorkspaceCommandIn.mockReset();
   runs.length = 0;
 });
 afterEach(async () => {
@@ -216,10 +218,37 @@ describe('runSubagentEntry', () => {
     fakeSession();
     const { events } = start(options);
     events.chunk('streamed thought');
+    events.startCommand?.('file read x.md', true);
     events.ranCommand('file read x.md', 'tool output', true);
     answer(events, 'final');
     expect(record.activity.mock.calls).toEqual([['tool', 'file read x.md'], ['tool', 'tool output']]);
     expect(mocks.runToolLoop).toHaveBeenCalledTimes(1);
+  });
+
+  it('records a command in the feed when it starts, before a long-running command resolves', async () => {
+    const { options, record } = setup();
+    const gate = Promise.withResolvers<string>();
+    mocks.runWorkspaceCommandIn.mockReturnValue(gate.promise);
+    scriptedSession([['file read a.md'], ['done']]);
+    await withRealLoop(async () => {
+      const execution = runSubagentEntry(options);
+      await vi.waitFor(() => expect(record.activity.mock.calls).toEqual([['tool', 'file read a.md']]));
+      expect(mocks.runWorkspaceCommandIn).toHaveBeenCalledWith('/clone', 'file read a.md', expect.any(AbortSignal));
+      gate.resolve('1\tone');
+      expect(await execution).toMatchObject({ status: 'completed', response: 'done', reason: 'answered' });
+      expect(record.activity.mock.calls).toEqual([['tool', 'file read a.md'], ['tool', '1\tone']]);
+    });
+  });
+
+  it('still records the command text when the command throws before returning a result', async () => {
+    const { options, record } = setup();
+    mocks.runWorkspaceCommandIn.mockRejectedValue(new Error('command boom'));
+    scriptedSession([['file read a.md']]);
+    await withRealLoop(async () => {
+      const result = await runSubagentEntry(options);
+      expect(result).toMatchObject({ status: 'failed', reason: 'error' });
+      expect(record.activity.mock.calls).toEqual([['tool', 'file read a.md']]);
+    });
   });
 
   it('reports a connection failure before any endTurn as failed/error', () => {
