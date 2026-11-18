@@ -52,6 +52,10 @@ Caller-side commands still pass `refuseDisabledCommand` in `src/native-commands/
 
 `help` is subject to the same policy. While enabled it continues to list disabled commands. While disabled, both bare and named help return the canonical refusal instead of help text or an unknown-command reply.
 
+### Unavailable command dispatch
+
+A command issued directly to the command manager rather than resolved from typed input — such as the client's `resetAcp` message running `ask-reset` — is not filtered by availability before it is chosen. When the command's availability predicate is false for the target tab, the manager appends exactly `Command is unavailable in this tab: <command>.`, where `<command>` is the command's canonical name, and returns that refusal to the caller. The input is not re-dispatched, so no unknown-command line is produced. This does not change ordinary typed input, whose unavailable commands are filtered before dispatch and keep the ordinary unknown-command reply.
+
 ### Disabled command completion
 
 Tab completion omits a disabled command or fixed form from the first-word command candidates, including its aliases, and offers no argument or path completion under it. A disabled native child is omitted from its command's subcommand candidates while enabled siblings remain. Disabling a shared canonical name hides every owner and form of that name. A disabled name stays hidden even when a filesystem path with the same prefix remains. While `help` is enabled, its output and help-page completion still include disabled commands; when `help` is disabled, its command word and pages are suppressed like any other disabled command. Explicit `!` shell lines are not application commands and keep ordinary completion.

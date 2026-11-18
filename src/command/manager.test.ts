@@ -829,6 +829,18 @@ describe('CommandManager disabled command policy', () => {
     expect(managers.tab.cur().log.at(-1)).toEqual({ input: 'ask reset', output: 'Command is disabled: ask.' });
   });
 
+  it('reports an unavailable system-initiated command instead of an unknown-command line', async () => {
+    const { managers } = makeManagers();
+
+    await expect(managers.command.executeCommand('ask-reset', 'ask reset', 'janus', 0))
+      .resolves.toBe('Command is unavailable in this tab: ask-reset.');
+
+    expect(managers.tab.cur().log).toEqual([
+      { input: 'ask reset', output: 'Command is unavailable in this tab: ask-reset.' },
+    ]);
+    expect(managers.tab.cur().log.some((row) => row.output?.startsWith('Unknown command'))).toBe(false);
+  });
+
   it('returns the refusal through dispatchLineInInvocation for granted commands', async () => {
     const { managers } = makeManagers(settingsWith({ 'question ask': { enabled: false } }));
     const parent: CommandInvocationContext = {

@@ -2,17 +2,6 @@
 
 ## ready
 
-* Remove the re-dispatch fallback for unavailable commands so a system-initiated command reports why it cannot run instead of becoming an unknown command.
-
-Existing Debt: The command executor handles an unavailable command by sending the input back through the normal dispatcher, which applies the same availability filter and therefore cannot match it a second time. Severity: 6/10
-
-Existing Risk: 5/10 - The `resetAcp` client message calls `executeCommand('ask-reset', 'ask reset', ...)`, and when ACP is unavailable the user sees an unknown-command line instead of a reason, so a normal capability refusal reads like a broken client.
-
-Proposal Risk: 2/10 - The unavailable branch appends a clear refusal, but availability is still a predicate evaluated at dispatch time, so a command could become available or unavailable between the check and the run.
-
-Proposal: `src/command/manager.ts` `executeCommandWithContext` calls `findCommand`, then for `cmd.available?.(...) === false` calls `this.run(command, label, index)` and returns. `this.run` classifies through `resolveInTab` in `src/command/resolve-in-tab.ts`, which filters on the same `available` predicate, so the second pass cannot resolve the command. Replace the re-dispatch with an explicit refusal line appended through `managers.tab.appendForInvocation`, in the style of the `refuseDisabledCommand` branch just above it, naming the command and saying it is unavailable in this tab. `src/message/tabs.ts` `resetAcp` is the concrete caller and `src/commands/ask-reset.ts` supplies `available = acpAvailable`; `src/command/manager.test.ts` covers the disabled-policy refusal but not this branch, so add a test with `ask-reset` and ACP unavailable asserting the refusal text and that no unknown-command line is emitted.
-
-
 * Clear the in-flight suggestion state when a request fails so one rejected editor query cannot disable the suggestion surface for the rest of the session.
 
 Existing Debt: The suggestion hook sets a firing flag before a request and clears it only in the success callback, so a rejected request leaves the flag set and every later request is refused by the same guard. Severity: 6/10
