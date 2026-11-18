@@ -103,6 +103,22 @@ describe('AgentRunManager', () => {
     expect(manager.runs).toHaveProperty('size', 0);
   });
 
+  it('settles a partial outcome once through the manager and cleans once', async () => {
+    const { manager, captured, controller } = setup();
+    const run = manager.create({ caller: captured, snapshot });
+    const cleanup = vi.fn();
+    run.addResource('resource-1', cleanup);
+
+    const partial = manager.finish(run.id, 'partial');
+    const failed = manager.finish(run.id, 'failed');
+    await Promise.all([partial, failed]);
+
+    expect(run.outcome).toBe('partial');
+    expect(run.view().status).toBe('Partial');
+    expect(controller.managers.acpRecords.window(run.recordId!)?.status).toBe('Partial');
+    expect(cleanup).toHaveBeenCalledOnce();
+  });
+
   it('broadcasts a caller-owned run when it starts and again when it finishes', async () => {
     const { manager, captured, controller } = setup();
     const rowsAtBroadcast: string[][] = [];

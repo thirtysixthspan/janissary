@@ -3,7 +3,7 @@ export const CONNECTIONS_PAYLOAD_SCHEMA_VERSION = 2;
 export type AcpRole = 'ask' | 'tell';
 
 export type ConnectionKind = 'sqlite' | 'shell' | 'acp' | 'browser' | 'ssh' | 'terminal';
-export type ConnectionStatus = 'Idle' | 'Running' | 'Closed' | 'Completed' | 'Failed' | 'Terminated';
+export type ConnectionStatus = 'Idle' | 'Running' | 'Closed' | 'Completed' | 'Failed' | 'Partial' | 'Terminated';
 export type ConnectionActivity = { kind: 'message' | 'thought' | 'tool' | 'plan' | 'permission'; text: string; timestamp: number };
 export type ConnectionBlock = {
   prompt: string;
@@ -63,7 +63,7 @@ export type ConnectionsIntent =
   | { intent: 'cancel' | 'close-session' | 'terminate' | 'delete' | 'focus' | 'load-older'; payload: { id: string } };
 
 const kinds = ['sqlite', 'shell', 'acp', 'browser', 'ssh', 'terminal'] as const;
-const statuses = ['Idle', 'Running', 'Closed', 'Completed', 'Failed', 'Terminated'] as const;
+const statuses = ['Idle', 'Running', 'Closed', 'Completed', 'Failed', 'Partial', 'Terminated'] as const;
 const hasOwn = (value: object, key: string): boolean => Object.hasOwn(value, key);
 
 function object(value: unknown): value is Record<string, unknown> {

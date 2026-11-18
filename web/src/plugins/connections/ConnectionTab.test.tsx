@@ -256,11 +256,28 @@ describe('ConnectionTab', () => {
     });
   });
 
-  it('offers no Terminate for terminal agent statuses and renders activity text plainly', () => {
-    const value = record('agent', 'Completed');
-    value.window!.blocks[0]!.entries = [{ kind: 'message', text: '<b>plain</b>', timestamp: 1 } satisfies ConnectionActivity];
-    setup(value);
+  it.each(['Completed', 'Failed', 'Partial', 'Terminated'] as const)(
+    'offers no Terminate for a %s agent record and renders activity text plainly', (status) => {
+      const value = record('agent', status);
+      value.window!.blocks[0]!.entries = [{ kind: 'message', text: '<b>plain</b>', timestamp: 1 } satisfies ConnectionActivity];
+      setup(value);
+      expect(screen.queryByRole('button', { name: 'Terminate' })).toBeNull();
+      expect(screen.getByText('<b>plain</b>')).toBeInTheDocument();
+    },
+  );
+
+  it('clears a pending termination when the record ends Partial, keeping Focus tab and dropping Terminate', () => {
+    const running = { ...record('agent', 'Running', 'research'), focusTarget: 'caller-label' };
+    const { capabilities, view } = setup(running, () => new Promise(() => {}));
+    fireEvent.click(screen.getByRole('button', { name: 'Terminate' }));
+    expect(screen.getByRole('button', { name: 'Terminate' })).toBeDisabled();
+
+    view.rerender(<ConnectionTab record={{ ...running, status: 'Partial' }} capabilities={capabilities} />);
+    expect(screen.getByText('Partial')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Terminate' })).toBeNull();
-    expect(screen.getByText('<b>plain</b>')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Focus tab' })).toBeInTheDocument();
+
+    view.rerender(<ConnectionTab record={running} capabilities={capabilities} />);
+    expect(screen.getByRole('button', { name: 'Terminate' })).not.toBeDisabled();
   });
 });

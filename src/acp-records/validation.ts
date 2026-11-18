@@ -30,7 +30,7 @@ export function isRecordSource(value: unknown): value is AcpRecordSource {
 export function isRecordOutcome(source: AcpRecordSource, value: unknown): value is AcpRecordOutcome {
   return value === 'Closed'
     || (source.kind === 'agent' && typeof value === 'string'
-      && ['Completed', 'Failed', 'Terminated'].includes(value));
+      && ['Completed', 'Failed', 'Partial', 'Terminated'].includes(value));
 }
 
 function timestamp(value: unknown): value is number {

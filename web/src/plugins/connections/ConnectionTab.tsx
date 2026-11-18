@@ -23,7 +23,7 @@ export function ConnectionTab({ record, capabilities }: {
     window?.hasOlder ?? false, () => controller.loadOlder(record.id), contentKey);
 
   useEffect(() => {
-    recordUpdated(['Closed', 'Completed', 'Failed', 'Terminated'].includes(record.status));
+    recordUpdated(['Closed', 'Completed', 'Failed', 'Partial', 'Terminated'].includes(record.status));
   }, [record, recordUpdated]);
 
   return (

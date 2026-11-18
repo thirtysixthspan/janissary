@@ -33,7 +33,7 @@
 .connections-row:hover { background: var(--border); }
 .connections-row.selected { background: var(--bg-soft); }
 .connections-row:is([data-status='Open'], [data-status='Running'], [data-status='Idle']) +
-.connections-row:is([data-status='Closed'], [data-status='Completed'], [data-status='Failed'], [data-status='Terminated']) {
+.connections-row:is([data-status='Closed'], [data-status='Completed'], [data-status='Failed'], [data-status='Partial'], [data-status='Terminated']) {
   margin-top: 24px;
 }
 .connections-row-host, .connections-row-owner, .connections-row-id, .connections-row-title {
@@ -47,6 +47,7 @@
 .connections-row[data-status='Closed'],
 .connections-row[data-status='Completed'],
 .connections-row[data-status='Failed'],
+.connections-row[data-status='Partial'],
 .connections-row[data-status='Terminated'] { color: var(--muted); }
 .connections-row-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
 .connections-row-actions button {

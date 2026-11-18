@@ -6,7 +6,7 @@ import type { AcpActivityKind } from '../acp/activity.js';
 import type { AgentRecordFeed } from './record-feed.js';
 import { cleanupAgentRun } from './run-cleanup.js';
 
-export type AgentOutcome = 'completed' | 'failed' | 'terminated';
+export type AgentOutcome = 'completed' | 'failed' | 'terminated' | 'partial';
 export type AgentCaller = Readonly<{
   label: string;
   ownerName?: string;
@@ -102,7 +102,8 @@ export class AgentRun {
   setStatus(status: AgentRunView['status'], response?: string): void {
     const terminalStatus = this.outcome === 'completed' ? 'Completed'
       : this.outcome === 'failed' ? 'Failed'
-        : this.outcome === 'terminated' ? 'Terminated' : undefined;
+        : this.outcome === 'terminated' ? 'Terminated'
+          : this.outcome === 'partial' ? 'Partial' : undefined;
     if (terminalStatus && status !== terminalStatus) return;
     if (this.status === status && (response === undefined || this.response === response)) return;
     this.status = status;
@@ -171,7 +172,8 @@ export class AgentRun {
     this.cleanupPromise = completion.promise;
     this.outcome = outcome;
     this.record?.finish(outcome, this.response);
-    this.setStatus(outcome === 'completed' ? 'Completed' : outcome === 'failed' ? 'Failed' : 'Terminated');
+    this.setStatus(outcome === 'completed' ? 'Completed' : outcome === 'failed' ? 'Failed'
+      : outcome === 'terminated' ? 'Terminated' : 'Partial');
     if (outcome === 'terminated') this.abortController.abort();
     void (async () => {
       try { await this.cleanup(); completion.resolve(); }

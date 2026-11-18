@@ -16,13 +16,13 @@ All core prompt entry points share admission. Usage, readiness, model, and overl
 
 Each agent record begins at run creation before execution, with the original task selector, selected model, copied caller name, and run linkage. Later task resolution does not change that provenance. The run's single block begins before opening its ACP transport or awaiting readiness and contains the exact task, skill instructions, and parameter text, excluding the separate Markdown primer. Failures or termination before execution leave a terminal header without a fabricated prompt. Whitespace and activity beyond the monitor's bounded projection are retained.
 
-Settlement saves the exact answer or error text. Core cancellation saves `ACP: prompt cancelled.` after provider drain; reset or close saves `ACP session closed.`. Prompt errors settle their block but keep a viable record open. Fatal connection failure settles the request and closes the record. Agent completion, failure, and termination settle an existing block and close once before cleanup. Termination saves `Agent terminated.`; low-level failure without captured text uses `Agent failed.`. The first outcome wins, and cleanup warnings do not replace it or the task answer. Closing or disabling a monitor only detaches observation.
+Settlement saves the exact answer or error text. Core cancellation saves `ACP: prompt cancelled.` after provider drain; reset or close saves `ACP session closed.`. Prompt errors settle their block but keep a viable record open. Fatal connection failure settles the request and closes the record. Agent completion, partial, failure, and termination settle an existing block and close once before cleanup. A partial outcome saves the supplied answer verbatim, including an empty string, with no added suffix. Termination saves `Agent terminated.` for an ordinary agent and `Subagent terminated.` for a subagent run; low-level failure without captured text uses `Agent failed.`. The first outcome wins, and cleanup warnings do not replace it or the task answer. Closing or disabling a monitor only detaches observation.
 
 ### Titles and statuses
 
 A core record starts as `ACP`. Its first accepted prompt fixes the title to `ACP: <first line>`, capped at 60 JavaScript string characters including the prefix. The first line is trimmed, including a CR line terminator. An empty first line keeps `ACP`, even when later lines contain text. Subsequent prompts do not retitle it. An agent title is `Agent: <task filename>` without that cap. A subagent run's title is `Subagent: <task filename>` from the task selector captured at launch, also without that cap; later task resolution, a task snapshot replacement, and caller renames never retitle it. Original prompt and activity text remain intact.
 
-Status is derived. An open core record is `Idle` before its first prompt and between settled prompts, and `Running` while its newest block is unanswered. An open agent record is always `Running`, including after an answer, until closed. Terminal status is the recorded outcome: `Closed`, `Completed`, `Failed`, or `Terminated`.
+Status is derived. An open core record is `Idle` before its first prompt and between settled prompts, and `Running` while its newest block is unanswered. An open agent record is always `Running`, including after an answer, until closed. Terminal status is the recorded outcome: `Closed`, `Completed`, `Failed`, `Partial`, or `Terminated`.
 
 ### Prompt blocks and activity
 
@@ -34,7 +34,7 @@ An answer settles only the current unanswered block. An empty string is a valid 
 
 ### Close and delete
 
-First close wins and fixes the outcome and closure time. Core records accept only `Closed`; agent records accept `Completed`, `Failed`, `Terminated`, and the disposal fallback `Closed`. Incompatible outcomes are rejected. Closing preserves unanswered partial activity without inventing an answer.
+First close wins and fixes the outcome and closure time. Core records accept only `Closed`; agent records accept `Completed`, `Failed`, `Partial`, `Terminated`, and the disposal fallback `Closed`. Incompatible outcomes are rejected, so a core record cannot close as `Partial`. Closing preserves unanswered partial activity without inventing an answer.
 
 Deleting a missing or open record returns false. A closed record's durable file is removed before its in-memory row disappears. An absent file counts as successful removal, including when all earlier saves failed. A different removal failure returns false and leaves the row available for retry.
 
@@ -52,7 +52,7 @@ Reads do not publish changes or remember requested window sizes. Mutating a retu
 
 ### Durability and loss boundaries
 
-Records are stored separately per project as versioned JSON documents with UUID identities. Schema version 1 retains source metadata, title, start/update times, paired closure time/outcome, and chronological blocks. Completed blocks pair their answer and end time; only the newest block may remain unanswered.
+Records are stored separately per project as versioned JSON documents with UUID identities. Schema version 1 retains source metadata, title, start/update times, paired closure time/outcome, and chronological blocks. The `Partial` agent outcome uses that same version 1, so records saved before it existed stay valid without migration. Completed blocks pair their answer and end time; only the newest block may remain unanswered.
 
 Durability boundaries are begin, prompt metadata, answer, and close. Begin saves an empty header immediately. Starting a prompt saves its title and metadata plus already-completed history, but excludes the new in-flight block. Streaming activity performs no writes. An answer saves the completed block. Ordinary close and disposal also save an unanswered block's current activity.
 

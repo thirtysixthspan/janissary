@@ -24,6 +24,8 @@ A subagent is told it is a subagent and asked to finish with a self-contained fi
 
 A subagent run's durable record carries the canonical role name. Its title is `Subagent: <task filename>` from the task selector captured at launch, without the ACP title cap; later task resolution, a task snapshot replacement, and caller renames never change it. In the connections tab, and as its own connection tab's title, the record is named `subagent:<canonical role>`. In the caller's connections popup it appears as an ACP-kind row titled `Subagent: <task filename>` while the run is live, with no ACP reference, and leaves the popup when the run ends. Ordinary agent and ACP names are unchanged.
 
+A run stopped at the tool-loop limit closes its record with the `Partial` outcome, which reads `Partial` as a terminal status in the connections list, the connection tab, and the agent monitor. It owns the first outcome like `Completed` and does not abort the run's controller. A terminated subagent record saves `Subagent terminated.` as its answer, regardless of an earlier response; an ordinary agent run saves `Agent terminated.` instead.
+
 ### Boundaries
 
 The grammar, messages, and task prompt are pure. They neither register the command nor check grants, roles, models, caller kind, workspaces, launch, delivery, or I/O. Caller-kind enforcement and response handling belong to command dispatch.

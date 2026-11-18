@@ -32,4 +32,27 @@ describe('ACP record source validation', () => {
     expect(isAcpRecord(record, id)).toBe(true);
     expect(isRecordOutcome(record.source, 'Completed')).toBe(true);
   });
+
+  it('accepts Partial only for agent records and preserves every prior outcome', () => {
+    expect(isRecordOutcome(agent, 'Partial')).toBe(true);
+    expect(isRecordOutcome(core, 'Partial')).toBe(false);
+    expect(isRecordOutcome(core, 'Closed')).toBe(true);
+    for (const outcome of ['Completed', 'Failed', 'Terminated'] as const) {
+      expect(isRecordOutcome(agent, outcome)).toBe(true);
+      expect(isRecordOutcome(core, outcome)).toBe(false);
+    }
+  });
+
+  it('loads a stored Partial agent record without migration', () => {
+    const id = 'a0b1c2d3-0000-4000-8000-000000000001';
+    const record: AcpRecord = {
+      schemaVersion: ACP_RECORD_SCHEMA_VERSION, id,
+      source: { ...agent, subagentRole: 'research' }, title: 'Subagent: task.md',
+      startedAt: 0, updatedAt: 1, endedAt: 1, outcome: 'Partial',
+      blocks: [{ prompt: 'task', startedAt: 0, entries: [], answer: 'partial answer', endedAt: 1 }],
+    };
+    expect(isAcpRecord(record, id)).toBe(true);
+    expect(isRecordOutcome(record.source, 'Partial')).toBe(true);
+    expect(isRecordOutcome(core, 'Partial')).toBe(false);
+  });
 });

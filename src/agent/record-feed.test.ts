@@ -48,13 +48,16 @@ describe('agent run durable feed', () => {
   });
 
   it.each([
-    ['completed', 'exact\nanswer', 'Completed', 'exact\nanswer'],
-    ['completed', '', 'Completed', ''],
-    ['failed', 'exact error', 'Failed', 'exact error'],
-    ['failed', undefined, 'Failed', 'Agent failed.'],
-    ['terminated', 'late completion', 'Terminated', 'Agent terminated.'],
-  ] as const)('settles %s once with %j', async (outcome, response, status, answer) => {
-    const run = runFixture();
+    ['completed', 'exact\nanswer', 'Completed', 'exact\nanswer', false],
+    ['completed', '', 'Completed', '', false],
+    ['failed', 'exact error', 'Failed', 'exact error', false],
+    ['failed', undefined, 'Failed', 'Agent failed.', false],
+    ['terminated', 'late completion', 'Terminated', 'Agent terminated.', false],
+    ['terminated', 'late completion', 'Terminated', 'Subagent terminated.', true],
+    ['partial', 'partial answer', 'Partial', 'partial answer', false],
+    ['partial', '', 'Partial', '', false],
+  ] as const)('settles %s once with %j', async (outcome, response, status, answer, subagent) => {
+    const run = runFixture(subagent ? subagentMetadata : metadata);
     run.record!.prompt('task\n\nskill instructions\nparameters ');
     run.reportActivity('thought', ' ');
     run.reportActivity('message', 'exact ');
@@ -121,5 +124,47 @@ describe('agent run durable feed', () => {
     });
     expect(store.read(legacy.recordId!)?.source).not.toHaveProperty('subagentRole');
     expect(store.read(coreId)?.source).not.toHaveProperty('subagentRole');
+  });
+
+  it('fixes a first partial outcome even when a synchronous listener finishes again', async () => {
+    const run = runFixture();
+    run.record!.prompt('task');
+    run.setStatus('Cleaning up', 'partial answer');
+    let reentrant: Promise<void> | undefined;
+    run.subscribe(() => { reentrant = run.finish('terminated'); });
+    const partial = run.finish('partial');
+    expect(reentrant).toBe(partial);
+    await partial;
+    expect(run.outcome).toBe('partial');
+    expect(run.currentStatus).toBe('Partial');
+    expect(records.window(run.recordId!)).toMatchObject({ status: 'Partial', blocks: [{ answer: 'partial answer' }] });
+  });
+
+  it('locks the terminal Partial status against later status changes', async () => {
+    const run = runFixture();
+    run.record!.prompt('task');
+    await run.finish('partial');
+    run.setStatus('Running', 'overwritten');
+    expect(run.currentStatus).toBe('Partial');
+    expect(run.view().response).toBeUndefined();
+    expect(records.window(run.recordId!)).toMatchObject({ status: 'Partial' });
+  });
+
+  it('closes a partial record before rejecting cleanup and preserves its answer', async () => {
+    const run = runFixture();
+    run.record!.prompt('task');
+    run.setStatus('Cleaning up', 'partial answer');
+    run.addResource('broken', () => {
+      expect(records.window(run.recordId!)?.status).toBe('Partial');
+      throw new Error('cleanup failed');
+    });
+    await expect(run.finish('partial')).rejects.toThrow('cleanup failed');
+    expect(records.window(run.recordId!)).toMatchObject({ status: 'Partial', blocks: [{ answer: 'partial answer' }] });
+  });
+
+  it('leaves a terminal header with no fabricated block when a subagent terminates before a prompt', async () => {
+    const run = runFixture(subagentMetadata);
+    await run.finish('terminated');
+    expect(records.window(run.recordId!)).toMatchObject({ status: 'Terminated', blocks: [] });
   });
 });

@@ -23,7 +23,7 @@ function RunningMonitor({ run, capabilities }: { run: AgentRunView; capabilities
     <section className="agent-monitor" aria-label="Agent monitor">
       <header>
         <div><strong>{run.task}</strong><span>{run.command}</span><span>{run.model} · {run.effort}</span><span>{run.host} · {run.workspace}</span></div>
-        <div><b>{run.status}</b><button disabled={['Cleaning up', 'Completed', 'Failed', 'Terminated'].includes(run.status)} onClick={() => { void terminate(); }}>Terminate</button></div>
+        <div><b>{run.status}</b><button disabled={['Cleaning up', 'Completed', 'Failed', 'Partial', 'Terminated'].includes(run.status)} onClick={() => { void terminate(); }}>Terminate</button></div>
       </header>
       {error && <p role="alert">{error}</p>}
       <div className="agent-monitor-activity" aria-live="polite">

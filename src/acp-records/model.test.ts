@@ -27,7 +27,7 @@ describe('record model', () => {
     expect(recordStatus(value)).toBe('Running');
     value.blocks = [];
     expect(recordStatus(value)).toBe('Running');
-    for (const outcome of ['Closed', 'Completed', 'Failed', 'Terminated'] as const) {
+    for (const outcome of ['Closed', 'Completed', 'Failed', 'Partial', 'Terminated'] as const) {
       value.outcome = outcome;
       expect(recordStatus(value)).toBe(outcome);
     }

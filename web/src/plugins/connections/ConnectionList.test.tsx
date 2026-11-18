@@ -44,7 +44,7 @@ beforeEach(() => {
 });
 
 describe('ConnectionList', () => {
-  it.each(['Closed', 'Completed', 'Failed', 'Terminated'] as const)(
+  it.each(['Closed', 'Completed', 'Failed', 'Partial', 'Terminated'] as const)(
     'separates the %s group in wide and docked lists without adding selectable rows', (status) => {
       const styles = readFileSync('web/src/plugins/connections/connections.css', 'utf8');
       for (const dock of [null, 'left'] as const) {

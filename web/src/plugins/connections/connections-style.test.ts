@@ -136,14 +136,14 @@ describe('connections rows follow the sessions rows', () => {
   it('colours an idle row like a parked session and mutes rows that are over', () => {
     expect(styles).toContain(".connections-row[data-status='Idle'] .connections-row-status { color: var(--accent); }");
     const ended = styles.match(/\.connections-row\[data-status='Closed'\],[^{]+\{[^}]+\}/)?.[0];
-    for (const status of ['Closed', 'Completed', 'Failed', 'Terminated']) {
+    for (const status of ['Closed', 'Completed', 'Failed', 'Partial', 'Terminated']) {
       expect(ended).toContain(`.connections-row[data-status='${status}']`);
     }
     expect(ended).toContain('color: var(--muted)');
     const styled = styledParts(styles);
     expect(styled).toContain(".connections-row[data-status='Idle'] .connections-row-status");
     expect(styled).toContain(
-      ".connections-row:is([data-status='Closed'], [data-status='Completed'], [data-status='Failed'], [data-status='Terminated'])",
+      ".connections-row:is([data-status='Closed'], [data-status='Completed'], [data-status='Failed'], [data-status='Partial'], [data-status='Terminated'])",
     );
     expect(styled.filter((part) => part.includes("[data-status='Running']"))).toEqual([]);
     expect(styled.filter((part) => part.includes("[data-status='Open']"))).toEqual([]);

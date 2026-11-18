@@ -79,6 +79,13 @@ describe('connections shared contract', () => {
     expect(isConnectionsPayload({ kind: 'connection', record: subagent })).toBe(true);
   });
 
+  it('accepts a Partial terminal agent row while rejecting Partial on a live row', () => {
+    const partial = { ...subagent, status: 'Partial' };
+    expect(isConnectionsPayload({ kind: 'list', rows: [partial] })).toBe(true);
+    expect(isConnectionsPayload({ kind: 'connection', record: partial })).toBe(true);
+    expect(isConnectionsPayload({ kind: 'list', rows: [{ ...live, status: 'Partial' }] })).toBe(false);
+  });
+
   it.each([
     null, [], { kind: 'unknown', rows: [] }, { kind: 'list', rows: [null] },
     { kind: 'list', rows: [{ ...live, status: 'Closed' }] },

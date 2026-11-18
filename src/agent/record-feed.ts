@@ -14,8 +14,10 @@ export function validateAgentRecordMetadata(source: AgentRecordMetadata): AgentR
 export class AgentRecordFeed {
   readonly id: string;
   private ended = false;
+  private readonly subagent: boolean;
 
   constructor(private records: AcpSessionRecords, metadata: AgentRecordMetadata, runId: string) {
+    this.subagent = metadata.subagentRole !== undefined;
     this.id = records.begin({ ...metadata, kind: 'agent', runId });
   }
 
@@ -30,9 +32,10 @@ export class AgentRecordFeed {
   finish(outcome: AgentOutcome, response: string | undefined): void {
     if (this.ended) return;
     this.ended = true;
-    const text = outcome === 'terminated' ? 'Agent terminated.'
+    const text = outcome === 'terminated' ? (this.subagent ? 'Subagent terminated.' : 'Agent terminated.')
       : response ?? (outcome === 'failed' ? 'Agent failed.' : '');
     this.records.answer(this.id, text);
-    this.records.close(this.id, outcome === 'completed' ? 'Completed' : outcome === 'failed' ? 'Failed' : 'Terminated');
+    this.records.close(this.id, outcome === 'completed' ? 'Completed' : outcome === 'failed' ? 'Failed'
+      : outcome === 'terminated' ? 'Terminated' : 'Partial');
   }
 }
