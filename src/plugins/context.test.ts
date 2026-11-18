@@ -55,7 +55,7 @@ function makeManagers(modelCatalog: ModelCatalog = BUNDLED_MODEL_CATALOG) {
     .filter((record) => record.disabled !== true)
     .map((record) => record.id);
   const managers = {
-    models: { modelsFor },
+    models: { modelsFor, reload: vi.fn() },
     tab: {
       tabs, append, closeTab: vi.fn(), openPluginTab: vi.fn(), cur: () => tabs[0],
       launchDir: '/repo',
@@ -542,12 +542,27 @@ describe('capability revocation', () => {
     expect(capabilities.harnessLaunchCatalog().models.claude).toEqual(['after-refresh']);
   });
 
-  it('answers an empty catalog to a revoked plugin', () => {
+  it('re-reads the catalog file before answering, so a catalog fetched elsewhere is offered', () => {
+    const modelCatalog: ModelCatalog = { claude: [{ id: 'loaded-at-startup' }] };
+    const { managers } = makeManagers(modelCatalog);
+    const reload = vi.mocked(managers.models.reload);
+    reload.mockImplementation(() => { modelCatalog.claude = [{ id: 'fetched-elsewhere' }]; });
     const capabilities = createPluginContext(
-      makeManagers().managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => false,
+      managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => true,
+    );
+
+    expect(capabilities.harnessLaunchCatalog().models.claude).toEqual(['fetched-elsewhere']);
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('answers an empty catalog to a revoked plugin', () => {
+    const { managers } = makeManagers();
+    const capabilities = createPluginContext(
+      managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => false,
     );
 
     expect(capabilities.harnessLaunchCatalog()).toEqual({ models: {}, efforts: [...EFFORT_LEVELS] });
+    expect(managers.models.reload).not.toHaveBeenCalled();
   });
 
   it('reads and saves settings under the declaring plugin\'s own id', () => {

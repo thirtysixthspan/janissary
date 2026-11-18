@@ -176,14 +176,17 @@ export function createPluginContext(
       openRequests.push(target);
     },
     // The harness launch vocabulary: the model catalog the launcher dialog reads, plus the effort
-    // levels. Built fresh per call from the authoritative model manager and empty while the plugin is
+    // levels. Each call re-reads the catalog file through the authoritative model manager, so a catalog
+    // refreshed by another process or edited by hand is what the caller sees; empty while the plugin is
     // disabled, the way `projectFileList` answers its empty values.
-    harnessLaunchCatalog: () => ({
-      models: isEnabled()
-        ? Object.fromEntries(HARNESS_NAMES.map((name) => [name, managers.models.modelsFor(name)]))
-        : {},
-      efforts: [...EFFORT_LEVELS],
-    }),
+    harnessLaunchCatalog: () => {
+      if (!isEnabled()) return { models: {}, efforts: [...EFFORT_LEVELS] };
+      managers.models.reload();
+      return {
+        models: Object.fromEntries(HARNESS_NAMES.map((name) => [name, managers.models.modelsFor(name)])),
+        efforts: [...EFFORT_LEVELS],
+      };
+    },
     topicData: (topic) => {
       requireDeclaredTopic(declaration, topic);
       return isEnabled() ? readTopicData(managers, topic) : emptyTopicData(topic);
