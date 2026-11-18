@@ -52,8 +52,11 @@ A route from a tab on a remote workspace whose connection the search tab cannot 
 ### What is searched
 
 Every file under the search's scope — the launch directory or the workspace clone it was started from (see Which workspace it searches) — that gitignore does not exclude — the same set
-Quick Open searches, so the two never disagree about what the project contains. Two kinds of file
-are skipped: anything too large for the editor to open, and anything whose bytes are binary.
+Quick Open searches, so the two never disagree about what the project contains. Four kinds of file
+are skipped: anything too large for the editor to open, anything whose bytes are binary, files the
+workspace treats as secrets, and files reached through a symbolic link whose real target lies outside
+the workspace. The same four exclusions apply wherever text is searched — in this tab, through a file
+grep, or through a remote text search — so a protected file's contents never become a result.
 
 A remote workspace is searched on the remote machine with the same gitignore rules, file-size and binary skips, query modes, and include/exclude filters as a local search. Only matching rows are returned over the workspace connection. The capped result set appears when the remote scan completes.
 

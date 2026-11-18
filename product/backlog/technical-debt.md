@@ -2,17 +2,6 @@
 
 ## ready
 
-* Read candidate files through one policy-carrying reader so search, grep, and the search plugin skip the same secret and symlinked paths.
-
-Existing Debt: Three workspace text readers independently decide which files may be read, and only one applies the project's secret-path and real-target policy, so that policy is not a property of reading a candidate file. Severity: 6/10
-
-Existing Risk: 7/10 - The navigator search and the search plugin will read a secret or symlink-escaped file that grep refuses, putting token contents into a result list where the local-first policy expects them never to appear.
-
-Proposal Risk: 2/10 - All three readers share one policy, but a caller could still inject a raw reader; the injectable `CandidateReader` seam in `searchText` must keep defaulting to the shared one.
-
-Proposal: `src/file-grep/read-candidate.ts` `readCandidate` resolves the path strictly under the real root, calls `isSecretPath` and `createRealTargetCheck`, checks each ancestor with `lstat`, then `realpath`s the file and compares it to the resolved path before reading. `src/file-navigator/search-text.ts` `readCandidate` only `stat`s the size and scans the leading bytes for NUL; `src/plugins/search/scan.ts` `readableText` does the same through its `Runtime` size/read pair. Neither applies `isSecretPath`, `createRealTargetCheck`, nor a `realpath` equality check. Extract one policy-carrying reader (beside `createCandidateReader` in `src/file-grep/read-candidate.ts`, or in `src/file-read/policy.ts`) that takes the real root and a signal and owns the shared size, binary and policy decision, then call it from all three pipelines, keeping `searchText`'s injectable `CandidateReader` for tests but defaulting it to the shared reader. `src/file-grep/read-candidate.test.ts` already covers secret paths, links and home-secret roots; port those cases into a test of the shared reader and add the same assertions to `src/file-navigator/search-text.test.ts` and `src/plugins/search/scan.test.ts`, which today test only size and binary refusal.
-
-
 * Use one case-sensitivity rule for include and exclude globs so workspace search and file glob agree on which paths they select.
 
 Existing Debt: Two path-selection engines use different glob implementations with opposite case semantics, so the same include pattern selects different files depending on which command runs. Severity: 5/10
