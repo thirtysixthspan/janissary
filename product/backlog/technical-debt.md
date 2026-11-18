@@ -2,17 +2,6 @@
 
 ## ready
 
-* Give the picker-population hook an options object and a colocated test instead of eleven positional parameters.
-
-Existing Debt: A hook with eleven positional parameters of overlapping optional string and callback types fans its arguments into two further positional hooks, and its composition of two result objects has no direct test. Severity: 4/10
-
-Existing Risk: 4/10 - Adding or reordering a parameter silently shifts meaning at the single call site, and a key collision in the merged result would override one picker's handlers without any test noticing.
-
-Proposal Risk: 2/10 - Named fields make each argument explicit and a focused test pins the merge, but the two delegate hooks keep their own positional signatures for now, so the same class of mistake remains one layer down.
-
-Proposal: `web/src/pickers/usePopulatePickers.ts` takes eleven positional parameters, forwards them to `useTaskPicker` (seven parameters) and `useProfilePicker` (five) in `web/src/pickers/useTaskPicker.ts` and `web/src/pickers/useProfilePicker.ts`, then returns `{ ...task, ...profile }`; `web/src/pickers/usePickerOverlays.ts` is the only caller and passes them by position. Convert the hook to one named options object, update that call site, and add `web/src/pickers/usePopulatePickers.test.ts` asserting the merged result keeps both delegates' handlers and that the profile half wins on any shared key, or change the merge to an explicit object if no overlap is intended. `web/src/pickers/useTaskPicker.test.ts` and `web/src/pickers/useProfilePicker.test.ts` cover the delegates and must keep passing.
-
-
 * Share one algorithm for choosing the tab left visible in the source pane across the split and arrange paths.
 
 Existing Debt: Two tab-movement paths independently decide which tab remains visible in the vacated pane using different helper chains, and a third module forwards to one of them unchanged. Severity: 5/10

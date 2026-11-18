@@ -90,11 +90,11 @@ export function usePickerOverlays(input: Input): {
   const quick = useQuickOpen(client);
   const queue = useQueuePicker(client, pickerTab, tabs);
   const shellLabel = hostsCommandBar(pickerTab) ? pickerTab?.label : undefined;
-  const populate = usePopulatePickers(
+  const populate = usePopulatePickers({
     tasks, profiles, client, harnessPtyId, dropRef, focusHarness,
     pluginCommandLineInsertions, profileOwnerLabel, profileHarnessPtyId,
-    pluginCommandLineReplacements, shellLabel,
-  );
+    profileReplacements: pluginCommandLineReplacements, shellLabel,
+  });
 
   const overlays = buildOverlayOpenState({
     themePickerOpen: themes.themePickerOpen, appThemePickerOpen: appThemes.appThemePickerOpen,
