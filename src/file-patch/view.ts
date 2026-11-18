@@ -1,5 +1,5 @@
-import { realpathSync } from 'node:fs';
 import path from 'node:path';
+import { canonicalPath, foldCase } from '../file-read/canonical.js';
 import { failureResult, fileOperationReason, runFileOperation, type FileOperationResult } from '../file-navigator/file-operation-result.js';
 import { resolveMutationTarget } from '../file-write/target.js';
 import { volumeIgnoresCase } from './volume-case.js';
@@ -22,7 +22,7 @@ export interface PatchView extends PatchViewReads {
 
 function resolveCanonicalRoot(root: string): string {
   try {
-    return realpathSync.native(root);
+    return canonicalPath(root);
   } catch {
     return root;
   }
@@ -39,7 +39,7 @@ export function createPatchView(root: string, caseInsensitive = volumeIgnoresCas
   let namedCount = 0;
 
   function foldedPlace(location: string): PatchPlace | undefined {
-    return caseInsensitive ? folded.get(location.toLowerCase()) : undefined;
+    return caseInsensitive ? folded.get(foldCase(location)) : undefined;
   }
 
   function placeAt(location: string): PatchPlace | undefined {
@@ -47,7 +47,7 @@ export function createPatchView(root: string, caseInsensitive = volumeIgnoresCas
   }
 
   function planKey(folder: string): string {
-    return caseInsensitive ? folder.toLowerCase() : folder;
+    return caseInsensitive ? foldCase(folder) : folder;
   }
 
   function contribute(place: PatchPlace, delta: 1 | -1): void {
@@ -122,7 +122,7 @@ export function createPatchView(root: string, caseInsensitive = volumeIgnoresCas
         linkText: keys.linkText, missingFolders: keys.missingFolders, content, implicit };
       if (!implicit) namePlace(place);
       places.set(keys.location, place);
-      if (caseInsensitive) folded.set(keys.location.toLowerCase(), place);
+      if (caseInsensitive) folded.set(foldCase(keys.location), place);
       if (keys.linkIdentity !== undefined) links.set(keys.linkIdentity, place);
       return { ok: true, value: place };
     });

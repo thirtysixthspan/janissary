@@ -2,17 +2,6 @@
 
 ## ready
 
-* Share one path canonicalization and case-folding rule across the reader, writer, and patch view so the same file has one key everywhere.
-
-Existing Debt: The same canonical-path and case-insensitive-key facts are reimplemented with different functions in the read, write, and patch modules, so one file can carry different keys in different subsystems. Severity: 6/10
-
-Existing Risk: 6/10 - On a case-insensitive volume `realpathSync.native` preserves the on-disk spelling while `realpathSync` may not, and NFKC folding differs from plain lowercasing, so a file read under one key can be written or patched under another and produce a duplicate file or a stale edit.
-
-Proposal Risk: 2/10 - One helper defines both facts, but callers still choose whether a given path is case-sensitive, so a wrong choice remains possible at each site.
-
-Proposal: `src/file-write/target.ts` sets `const canonicalPath = realpathSync.native` and `src/file-patch/view.ts` `resolveCanonicalRoot` calls `realpathSync.native`, while `src/file-read/read.ts` `loadBytes` calls plain `realpathSync`. For the case key, `src/file-patch/view.ts` `foldedPlace` and `planKey` use plain `.toLowerCase()`, while `src/file-read/policy.ts` `foldSegment` uses `.normalize('NFKC').toLowerCase()` and the secret-anchor checks use lowercase again. Add one shared helper, for example `src/file-read/canonical.ts`, exporting a canonical-path function and a case-fold function, and use it in `loadBytes`, `target.ts`, `view.ts`, and `policy.ts`. `src/file-write/target.test.ts`, `src/file-patch/view.test.ts`, `src/file-read/read.test.ts` and `src/file-read/policy.test.ts` each test only their own module; add one cross-module case that reads, writes, and patches the same mixed-case path and asserts one canonical key, noting that the decisive case-insensitive assertion in `view.test.ts` is currently skipped on volumes that ignore case.
-
-
 * Map filesystem failures to their real reasons instead of reporting every read error as a missing file.
 
 Existing Debt: The workspace reader wraps every filesystem failure in one "File not found" string even though a shared reason mapper already distinguishes permission, symlink, directory and size failures. Severity: 5/10

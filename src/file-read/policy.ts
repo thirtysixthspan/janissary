@@ -2,6 +2,7 @@ import type { Stats } from 'node:fs';
 import { realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { foldCase } from './canonical.js';
 import { containedAbsolute } from '../path-containment.js';
 import { SECRET_DENY_PATHS } from '../sandbox/paths.js';
 
@@ -11,7 +12,7 @@ export type FilePolicyFailure = 'File not found' | 'Is a directory' | 'Not a tex
 
 const PROTECTED_SEGMENTS: ReadonlySet<string> = new Set(['.janissary', '.git']);
 
-const SECRET_SEGMENT_RUNS = SECRET_DENY_PATHS.map((entry) => entry.toLowerCase().split('/'));
+const SECRET_SEGMENT_RUNS = SECRET_DENY_PATHS.map((entry) => foldCase(entry).split('/'));
 
 function containsRun(segments: string[], run: string[]): boolean {
   for (let start = 0; start + run.length <= segments.length; start += 1) {
@@ -21,7 +22,7 @@ function containsRun(segments: string[], run: string[]): boolean {
 }
 
 export function isSecretPath(relative: string): boolean {
-  const segments = relative.toLowerCase().split(path.sep);
+  const segments = foldCase(relative).split(path.sep);
   const last = segments.at(-1) ?? '';
   if (last === '.env' || last.startsWith('.env.')) return true;
   return SECRET_SEGMENT_RUNS.some((run) => containsRun(segments, run));
@@ -43,12 +44,12 @@ function resolveHomeSecretAnchors(): string[] {
   const home = resolveExisting(homedir());
   return SECRET_DENY_PATHS.flatMap((entry) => {
     const literal = path.join(home, entry);
-    return [literal, resolveExisting(literal)].map((location) => location.toLowerCase());
+    return [literal, resolveExisting(literal)].map((location) => foldCase(location));
   });
 }
 
 function isUnderAnchors(anchors: readonly string[], realFile: string): boolean {
-  const file = realFile.toLowerCase();
+  const file = foldCase(realFile);
   return anchors.some((anchor) => containedAbsolute(anchor, file));
 }
 
@@ -84,14 +85,10 @@ export function createRealTargetCheck(realRoot: string): (realTarget: string) =>
   };
 }
 
-function foldSegment(segment: string): string {
-  return segment.normalize('NFKC').toLowerCase();
-}
-
 // Mutation-only: the tool writer refuses the directories holding its own authorization and git's
 // executable hooks and config. The reader never calls this, so those files stay readable.
 export function checkProtectedPath(relative: string): FilePolicyFailure | undefined {
-  return relative.split(path.sep).some((segment) => PROTECTED_SEGMENTS.has(foldSegment(segment))) ? 'Protected file' : undefined;
+  return relative.split(path.sep).some((segment) => PROTECTED_SEGMENTS.has(foldCase(segment))) ? 'Protected file' : undefined;
 }
 
 export function classifyStats(stats: Stats): FilePolicyFailure | undefined {

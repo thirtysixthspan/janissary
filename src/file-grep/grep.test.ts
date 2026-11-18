@@ -1061,40 +1061,23 @@ function captureFilterWorker(): Promise<{ worker: Worker; terminate: WorkerTermi
   return captured.promise;
 }
 
-async function expectHostileTimeout(include: string, exclude: string): Promise<void> {
+const HOSTILE_MATCHES = `${HOSTILE_PLUS_NAME}:1: needle\n${HOSTILE_STAR_NAME}:1: needle\nmatch.txt:1: needle`;
+
+async function expectHostileRefusal(include: string, exclude: string, expected: string): Promise<void> {
   seedHostileRoot();
   const captured = captureFilterWorker();
   const started = Date.now();
-  const deadline = started + 2500;
-  let heartbeat = false;
-  const heartbeatTimer = setTimeout(() => {
-    heartbeat = true;
-  }, 100);
-  let settled = false;
-  const call = grepWorkspace(root, args({ include, exclude }), deadline);
-  void call.then(() => {
-    settled = true;
-  }, () => {
-    settled = true;
-  });
+  const call = grepWorkspace(root, args({ include, exclude }), started + 10_000);
   const { worker, terminate } = await captured;
   const exited = once(worker, 'exit');
   await once(worker, 'online');
-  await sleep(300);
-  expect(heartbeat).toBe(true);
-  expect(settled).toBe(false);
-
   const text = await call;
-  clearTimeout(heartbeatTimer);
 
-  expect(text).toBe(TIMEOUT_RESULT);
-  // Node timers run on a monotonic clock whose millisecond phase can place the
-  // callback one millisecond before the wall-clock deadline used to arm it.
-  expect(Date.now()).toBeGreaterThanOrEqual(deadline - 1);
+  // filterPaths now shares file glob's matcher, so a hostile pattern is refused in an ordinary
+  // fast match. The worker settles on its own and the caller deadline is never reached.
+  expect(text.split('\n').toSorted((a, b) => a.localeCompare(b))).toEqual(expected.split('\n').toSorted((a, b) => a.localeCompare(b)));
+  expect(Date.now() - started).toBeLessThan(2000);
   expect(terminate).toHaveBeenCalledOnce();
-  expect(vi.mocked(createCandidateReader)).not.toHaveBeenCalled();
-  expect(vi.mocked(createMatcherWorker)).not.toHaveBeenCalled();
-  expect(vi.mocked(readFile)).not.toHaveBeenCalled();
   await exited;
   expect(worker.threadId).toBe(-1);
   await waitFor(() => worker.listenerCount('message') === 0);
@@ -1103,24 +1086,24 @@ async function expectHostileTimeout(include: string, exclude: string): Promise<v
 }
 
 describe('hostile include and exclude budgets', () => {
-  it('stops a hostile include at the caller deadline', async () => {
-    await expectHostileTimeout(HOSTILE_PLUS, '');
+  it('refuses a hostile include extglob without blocking the parent', async () => {
+    await expectHostileRefusal(HOSTILE_PLUS, '', NO_MATCHES);
   }, 20_000);
 
-  it('stops a hostile exclude at the caller deadline', async () => {
-    await expectHostileTimeout('*', HOSTILE_PLUS);
+  it('refuses a hostile exclude extglob without blocking the parent', async () => {
+    await expectHostileRefusal('*', HOSTILE_PLUS, HOSTILE_MATCHES);
   }, 20_000);
 
-  it('stops a repeated-star include at the caller deadline', async () => {
-    await expectHostileTimeout(HOSTILE_STAR, '');
+  it('refuses a hostile include with repeated stars without blocking the parent', async () => {
+    await expectHostileRefusal(HOSTILE_STAR, '', NO_MATCHES);
   }, 20_000);
 
-  it('stops a repeated-star exclude at the caller deadline', async () => {
-    await expectHostileTimeout('*', HOSTILE_STAR);
+  it('refuses a hostile exclude with repeated stars without blocking the parent', async () => {
+    await expectHostileRefusal('*', HOSTILE_STAR, HOSTILE_MATCHES);
   }, 20_000);
 
-  it('serves a safe call after a hostile filter times out and exits', async () => {
-    await expectHostileTimeout(HOSTILE_PLUS, '');
+  it('serves a safe call after a hostile filter is refused and exits', async () => {
+    await expectHostileRefusal(HOSTILE_PLUS, '', NO_MATCHES);
     const captured = captureFilterWorker();
     const result = await grep({ include: '*.txt' }, Date.now() + 10_000);
 

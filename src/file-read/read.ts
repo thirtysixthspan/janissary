@@ -1,5 +1,6 @@
-import { readFileSync, realpathSync, statSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { canonicalPath } from './canonical.js';
 import { parseFileRead, type FileReadArgs } from './command.js';
 import { formatFileLines } from './format.js';
 import { checkLexicalPath, checkRealTarget, classifyStats, FILE_POLICY_MAX_BYTES, type FilePolicyFailure } from './policy.js';
@@ -9,8 +10,8 @@ export const FILE_READ_MAX_BYTES = FILE_POLICY_MAX_BYTES;
 
 function loadBytes(root: string, requested: string): Buffer | FilePolicyFailure {
   try {
-    const realRoot = realpathSync(root);
-    const realFile = realpathSync(path.resolve(root, requested));
+    const realRoot = canonicalPath(root);
+    const realFile = canonicalPath(path.resolve(root, requested));
     const targetFailure = checkRealTarget(realRoot, realFile);
     if (targetFailure !== undefined) return targetFailure;
     const statsFailure = classifyStats(statSync(realFile));

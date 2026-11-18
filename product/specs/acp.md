@@ -110,6 +110,8 @@ A local tab reads its workspace directory, or its launch or project directory wh
 
 Containment and secrets are checked before the file is read. An absolute path, a path that leaves the root, or a symbolic link resolving outside it returns `Outside the workspace: <path>.`. A `.env` or `.env.*` file and any path containing a run from `SECRET_DENY_PATHS` are refused anywhere in the workspace, and a path under the real home directory matching the same table is also refused. Any of them returns `Secret file: <path>.`. The reader names the path as typed.
 
+Reads, writes, and patches identify a file by the same canonical path — the spelling recorded on disk — so one file has one key in all three. A path spelled in a different case in a write or patch still reaches the file a read saw, rather than creating a duplicate file or applying an edit to a stale entry. Where the volume ignores letter case, the case-insensitive key folds Unicode compatibility forms as well as letter case, the same way protected and secret path checks do, so a compatibility spelling such as a long `ſ` for `s` names the same file or folder.
+
 Output is numbered lines: each line is prefixed by its number, padded to the width of the last line number and followed by a tab. A trailing carriage return is dropped. A line longer than 2000 code points is cut and ends with `…`. An empty file prints `(empty file)`. A partial read ends with `(showing lines <first>-<last> of <total>; continue with --offset <last+1>)`. An offset past the end prints `Offset past end of file (<total> lines): <path>.`, so a one-line file reads `(1 lines)`.
 
 A failure prints one line naming the path as typed:
