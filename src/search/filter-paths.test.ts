@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createGlobMatcher } from '../file-glob/match.js';
 import { filterPaths } from './filter-paths.js';
 
 const files = [
@@ -105,5 +106,16 @@ describe('filterPaths', () => {
 
   it('does not select a file whose name merely starts with the pattern', () => {
     expect(filterPaths(['src/abc.ts'], 'src/ab', '')).toEqual([]);
+  });
+
+  it('selects case-sensitively in step with file glob', () => {
+    // File glob matches case-sensitively on every host; the include/exclude fields must agree.
+    const paths = ['src/a.ts', 'src/B.TS', 'src/nested/a.ts', 'docs/a.ts'];
+    for (const pattern of ['src/*.ts', 'src/*.TS', 'src/*', '**/*.TS']) {
+      const match = createGlobMatcher(pattern, false);
+      expect(filterPaths(paths, pattern, '')).toEqual(paths.filter((entry) => match(entry)));
+    }
+    expect(filterPaths(paths, 'src/*.ts', '')).toEqual(['src/a.ts']);
+    expect(filterPaths(paths, 'src/*.TS', '')).toEqual(['src/B.TS']);
   });
 });

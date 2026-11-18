@@ -69,7 +69,8 @@ reach every one of them and not only the ones at the project root. A pattern tha
 is anchored to the project root: `src/*.ts` covers `src/` and nothing below it, `*` in it does not
 cross a directory boundary, and a leading `./` or a trailing `/` states the same thing without
 changing the match. A pattern that is not a wildcard at all also names a directory, and selects
-everything beneath it, so `src` behaves as `src/**`.
+everything beneath it, so `src` behaves as `src/**`. Patterns are matched case-sensitively on every
+platform, the same as `file glob`, so `*.TS` does not select `a.ts` even on a case-insensitive disk.
 
 An empty include searches everything and an empty exclude excludes nothing. Where both name a file,
 the exclude wins. A pattern that matches nothing narrows the search to nothing rather than failing

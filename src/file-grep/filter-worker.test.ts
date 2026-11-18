@@ -1,4 +1,3 @@
-import { once } from 'node:events';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -311,40 +310,25 @@ describe('filter worker entry guards', () => {
 });
 
 async function runHostile(
-  filename: string, include: string, exclude: string,
+  filename: string, include: string, exclude: string, expected: string[],
 ): Promise<void> {
-  const controller = new AbortController();
-  const reason = new Error('hostile filter aborted');
+  const started = Date.now();
   let timerRan = false;
-  let settled = false;
   const timer = setTimeout(() => {
     timerRan = true;
   }, 10);
-  const pending = filterGrepPaths([filename], include, exclude, controller.signal);
-  const worker = control.created.at(-1) as workerThreads.Worker;
-  expect(worker).toBeDefined();
-  void pending.then(() => {
-    settled = true;
-  }, () => {
-    settled = true;
-  });
-
-  await once(worker, 'online');
-  const exited = once(worker, 'exit');
-  await new Promise<void>((resolve) => {
-    setTimeout(resolve, 500);
-  });
-  expect(timerRan).toBe(true);
-  expect(settled).toBe(false);
-
-  const abortedAt = Date.now();
-  controller.abort(reason);
-  await expect(pending).rejects.toBe(reason);
-  await exited;
-  clearTimeout(timer);
-  expect(Date.now() - abortedAt).toBeLessThan(2000);
-  expect(worker.threadId).toBe(-1);
-  await flush();
+  try {
+    // filterPaths now shares file glob's matcher, so its complexity guard and literal-extglob rules
+    // refuse a hostile pattern in an ordinary fast match. The worker settles on its own and the
+    // parent event loop stays responsive without needing an abort.
+    await expect(filterGrepPaths([filename], include, exclude, new AbortController().signal))
+      .resolves.toEqual(expected);
+    expect(timerRan).toBe(true);
+    expect(Date.now() - started).toBeLessThan(2000);
+    await flush();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 describe('hostile glob responsiveness', () => {
@@ -353,20 +337,20 @@ describe('hostile glob responsiveness', () => {
   const starPattern = `${'*a'.repeat(12)}b`;
   const starName = `${'a'.repeat(200)}c`;
 
-  it('aborts a hostile include without blocking the parent and recovers', async () => {
-    await runHostile(plusName, plusPattern, '');
+  it('refuses a hostile include extglob without blocking the parent and recovers', async () => {
+    await runHostile(plusName, plusPattern, '', []);
     await expect(filterGrepPaths(['a.ts', 'b.md'], '*.ts', '', new AbortController().signal)).resolves.toEqual(['a.ts']);
   }, 10_000);
 
-  it('aborts a hostile exclude without blocking the parent', async () => {
-    await runHostile(plusName, '', plusPattern);
+  it('refuses a hostile exclude extglob without blocking the parent', async () => {
+    await runHostile(plusName, '', plusPattern, [plusName]);
   }, 10_000);
 
-  it('aborts a repeated-star include without blocking the parent', async () => {
-    await runHostile(starName, starPattern, '');
+  it('refuses a hostile include with repeated stars without blocking the parent', async () => {
+    await runHostile(starName, starPattern, '', []);
   }, 10_000);
 
-  it('aborts a repeated-star exclude without blocking the parent', async () => {
-    await runHostile(starName, '', starPattern);
+  it('refuses a hostile exclude with repeated stars without blocking the parent', async () => {
+    await runHostile(starName, '', starPattern, [starName]);
   }, 10_000);
 });
