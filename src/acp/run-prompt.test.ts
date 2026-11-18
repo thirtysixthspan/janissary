@@ -17,6 +17,7 @@ import type { RemoteAcpSession } from '../remote/acp-session.js';
 import type { NativeCommandSettingsManager } from '../native-commands/manager.js';
 import type { CommandSettingsSnapshot } from '../native-commands/settings-types.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
+import { DISABLED_HARNESS_TOOLS_LINE } from './internal-tools.js';
 import type * as TabRead from '../file-read/tab-read.js';
 import type * as TabGlob from '../file-glob/tab-glob.js';
 import type * as TabGrep from '../file-grep/tab-grep.js';
@@ -249,6 +250,7 @@ describe('runCorePrompt role primer', () => {
       DB_PRIMER,
       'Only these commands are allowed: db sqlite query.',
       NO_BUILTIN_TOOLS_LINE,
+      DISABLED_HARNESS_TOOLS_LINE,
       commandProtocolPrimer(CORE_MAX_STEPS),
       TELL_INSTRUCTION,
       MARKDOWN_INSTRUCTION,
@@ -320,7 +322,8 @@ describe('runCorePrompt role primer', () => {
     const allowList = result.indexOf('Only these commands are allowed: db sqlite query.');
     expect(result.indexOf(BROWSER_PRIMER)).toBeLessThan(allowList);
     expect(allowList).toBeLessThan(result.indexOf(NO_BUILTIN_TOOLS_LINE));
-    expect(result.indexOf(NO_BUILTIN_TOOLS_LINE)).toBeLessThan(result.indexOf('How commands work:'));
+    expect(result.indexOf(NO_BUILTIN_TOOLS_LINE)).toBeLessThan(result.indexOf(DISABLED_HARNESS_TOOLS_LINE));
+    expect(result.indexOf(DISABLED_HARNESS_TOOLS_LINE)).toBeLessThan(result.indexOf('How commands work:'));
     expect(result.indexOf('How commands work:')).toBeLessThan(result.indexOf(TELL_INSTRUCTION));
     expect(result.indexOf(TELL_INSTRUCTION)).toBeLessThan(result.indexOf(MARKDOWN_INSTRUCTION));
   });

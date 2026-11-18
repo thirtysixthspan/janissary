@@ -2,6 +2,4 @@
 
 # pull-request
 
-* supplement the subagents tool preamble to identify which standard harness tools are not enabled and should not be called. For example, ask sessions do not include access to the bash or shell tool.
-
 * include the preamble that subagents receive in the connection tab transcript.

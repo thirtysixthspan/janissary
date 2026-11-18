@@ -1,11 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { internalToolDenial } from './internal-tools.js';
+import { DISABLED_HARNESS_TOOLS_LINE, internalToolDenial } from './internal-tools.js';
 import { CODEX_FEATURES_OFF, CODEX_TOOLS_OFF } from './internal-tools-test-fixture.js';
 
 const acpSpec = readFileSync(new URL('../../product/specs/acp.md', import.meta.url), 'utf8');
 
 const codexBase = { CODEX_CONFIG: JSON.stringify({ model: 'gpt-6-luna', model_reasoning_effort: 'high' }) };
+
+describe('DISABLED_HARNESS_TOOLS_LINE', () => {
+  it('names bash and shell as disabled and forbids calling them', () => {
+    expect(DISABLED_HARNESS_TOOLS_LINE).toContain('bash');
+    expect(DISABLED_HARNESS_TOOLS_LINE).toContain('shell');
+    expect(DISABLED_HARNESS_TOOLS_LINE).toContain('not enabled');
+    expect(DISABLED_HARNESS_TOOLS_LINE.toLowerCase()).toContain('do not call them');
+  });
+});
 
 describe('internalToolDenial', () => {
   it('merges a deny-all permission into opencode’s config beside its model', () => {

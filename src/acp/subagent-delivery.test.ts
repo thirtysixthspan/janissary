@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AcpLoopHandlers, AcpSession } from './types.js';
 import type { RoleEntry } from '../plugins/roles/shared.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
+import { DISABLED_HARNESS_TOOLS_LINE } from './internal-tools.js';
 import type { AcpRoleSettings } from './ask-role.js';
 import type { AcpRole } from './role.js';
 import type { AgentAcpCaller } from '../agent/run.js';
@@ -176,6 +177,7 @@ describe('subagent delivery', () => {
     expect(expected.startsWith('{')).toBe(true);
     expect(expected).not.toContain('runId');
     expect(depsAt(0).primer).toContain('You have no built-in tools; use only the commands listed here.');
+    expect(depsAt(0).primer).toContain(DISABLED_HARNESS_TOOLS_LINE);
     await answerDelivery(0, f);
   });
 
