@@ -225,15 +225,19 @@ describe('launchSubagent — synchronous receipt and record', () => {
     const callSettings: AcpRoleSettings = {
       name: 'Research', entries: [{ harness: 'opencode', model: 'model-a' }], commands: ['file read'],
     };
+    caller.offline = false;
+    const offlineAtReceipt = caller.offline;
     launch({ invocation: inv, settings: callSettings });
     inv.caller.context.push('later');
     callSettings.entries[0].model = 'mutated';
     callSettings.commands.push('file write');
+    caller.offline = true;
     await drain();
     const options = mocks.execute.mock.calls[0][0];
     expect(options.settings.entries[0].model).toBe('model-a');
     expect(options.settings.commands).toEqual(['file read']);
     expect(options.invocation.line).toBe('original line');
+    expect(options.offline).toBe(offlineAtReceipt);
   });
 
   it('gives concurrent same-role runs distinct ids, records and clones', () => {

@@ -112,6 +112,7 @@ export function launchSubagent(options: SubagentLaunchOptions, managers: Manager
   const first = { ...firstSource };
   const copiedEntries: [RoleEntry, ...RoleEntry[]] = [first, ...restSources.map((entry) => ({ ...entry }))];
   const line = invocation.line ?? commandText;
+  const offline = tab.offline;
 
   const channel = managers.remote.get(label);
   const host = managers.remote.addressOf(label)?.host;
@@ -156,7 +157,7 @@ export function launchSubagent(options: SubagentLaunchOptions, managers: Manager
   queueMicrotask(() => {
     void continueLaunch({
       run, managers, invocation, settings: copiedSettings, entries: copiedEntries, task, context,
-      workspace, remote, channel, host, offline: tab.offline, sink,
+      workspace, remote, channel, host, offline, sink,
       onStarted: (id) => { firstId ??= id; sink.started(id); },
       firstProviderId: () => firstId,
       executionReached: () => reached,
