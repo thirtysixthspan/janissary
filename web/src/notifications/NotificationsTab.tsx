@@ -36,7 +36,7 @@ export function NotificationsTab({ lines, client, index, dock }: Properties) {
   };
   return (
     <div className="notifications-tab" tabIndex={0} onKeyDown={onKeyDown}>
-      {dock && <DockCycleHeader dock={dock} client={client} index={index} classPrefix="notifications" />}
+      {dock && <DockCycleHeader dock={dock} onCycle={(next) => client.send({ method: 'setDock', params: { index, dock: next } })} classPrefix="notifications" />}
       <Transcript
         lines={lines.toReversed()}
         intents={intents}

@@ -2,17 +2,6 @@
 
 ## ready
 
-* Replace the client prop on the shared dock-cycle header with a callback so the header renders markup instead of sending a protocol call.
-
-Existing Debt: The shared dock-cycle header takes a `JanusClient` and sends the `setDock` intent from its button's click handler, violating §5 (components render; they do not decide) by putting a protocol call inside a presentational component's JSX. Severity: 5/10
-
-Existing Risk: 4/10 - A header that can reach the whole client is untestable without a transport fake, and every new docked surface that needs a header copies the service prop instead of supplying its own intent.
-
-Proposal Risk: 2/10 - The two callers still have to send `setDock` with the right tab index, but that call becomes visible in a container where a wrong index is reviewable rather than buried in shared markup.
-
-Proposal: `web/src/shared/DockCycleHeader.tsx` accepts `client` and `index` and calls `client.send({ method: 'setDock', params: { index, dock: nextDock(dock) } })` in the button's `onClick`. Replace those two props with `onCycle(next: 'left' | 'right'): void` and keep `dock`, `classPrefix`, `children` and the `nextDock`/`dockTooltip` helpers as they are. Update the two callers, `web/src/notifications/NotificationsTab.tsx` and `web/src/plugins/DockedPluginBody.tsx`, to pass `onCycle={(next) => client.send({ method: 'setDock', params: { index, dock: next } })}`; both already hold `client` and `index`, so their own props do not change. There is no dedicated header test; `web/src/notifications/NotificationsTab.test.tsx` and `web/src/plugins/DockedPluginBody.test.tsx` render the two callers and pin the surrounding behavior, so add a click assertion for the new `onCycle` seam to one of them and keep both passing. The same service-prop pattern also sits in `web/src/shared/questions/QuestionPanel.tsx` and `web/src/toasts/ToastStack.tsx`; leave those for a separate entry so this stays a three-file change.
-
-
 * Make the editor tab take its plugin host from the session hook instead of constructing a fallback host of its own.
 
 Existing Debt: The editor tab builds `createEditorPluginHost(() => {})` in a `useMemo` whenever no host is injected, violating §7 (services are injected, never constructed by a component) and duplicating `web/src/useEditorPluginHost.ts`, the hook that owns the session host and its disabled-plugin report queue. Severity: 4/10
