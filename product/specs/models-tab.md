@@ -18,7 +18,7 @@ The bundled catalog is `known-models.json` at the repository root. A project ove
 
 Each record is validated independently; duplicate ids are not rejected. Duplicate rows can appear, and Delete addresses the first matching record.
 
-The catalog is re-read when `models` runs and at the start of Delete and Refresh. Hand edits therefore take effect at the next of those actions; this version does not watch the file continuously. A read that finds a changed catalog replaces the in-memory value and updates open consumers.
+The catalog is re-read when `models` runs, at the start of Delete and Refresh, and whenever the roles tab reads the catalog (see [[roles]]). Hand edits therefore take effect at the next of those actions; this version does not watch the file continuously. A read that finds a changed catalog replaces the in-memory value and updates open consumers.
 
 ### Delete
 

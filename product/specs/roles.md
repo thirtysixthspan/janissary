@@ -73,7 +73,9 @@ Each card carries the role's name, description, ordered model entries, and comma
 `Commands of role <name>`. An entry whose model is no longer enabled is dimmed and titled `Not in the
 model catalog`; the entry remains on the card and in `roles.json`. The marker is recomputed when the
 model catalog changes and is not stored in the roles file. The model picker offers only the enabled
-models from the current catalog.
+models from the current catalog. The tab re-reads the effective catalog file each time it reads the
+catalog — when `roles` opens or focuses it, after each edit, and on each catalog or Commands change —
+so a catalog refreshed in another window or edited by hand appears without running `models`.
 
 The name and description edit in place: the change is written when the field loses focus, Enter
 commits, and Escape reverts. The `Models` section shows a muted `No models` row when empty. Every
