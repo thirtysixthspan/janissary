@@ -185,4 +185,13 @@ describe('RowKeyStore', () => {
       expect(keys.resolve(keyFor(database, keys, 1))).toBeDefined();
     });
   });
+
+  it('releases an early key once empty pages push it past the eight-page bound, before any later mint', () => {
+    withDb((database) => {
+      const keys = new RowKeyStore();
+      const first = keyFor(database, keys, 1);
+      for (let page = 0; page < 8; page++) keys.beginPage();
+      expect(keys.resolve(first)).toBeUndefined();
+    });
+  });
 });

@@ -192,9 +192,9 @@ shown in a different order. A missing cell starts as empty text; a null cell sta
 
 A write addresses one row by an identity the server issued when it returned the page. A client cannot
 name a row it was not handed, and cannot write its own `WHERE`. An identity stays good for the last
-eight pages read from that database and always names the same primary key, so it can never reach a
-different row; a write naming a row from an older page is refused with `That row is no longer
-loaded. Refresh and try again.`
+eight pages read from that database — counting every page, including one that returned no rows — and
+always names the same primary key, so it can never reach a different row; a write naming a row from an
+older page is refused with `That row is no longer loaded. Refresh and try again.`
 
 **Insert row** opens a form headed `New row in <object>`, with one input per column (a key column is
 marked `pk`), the statement the save will run shown above the controls with a `?` for each value —
