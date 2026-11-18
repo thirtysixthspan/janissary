@@ -37,7 +37,7 @@ function HunkControls({ onAccept, onDecline }: { onAccept: () => void; onDecline
 export function EditorLines({ state, tokens, suggest, active, gutterCh, caretRef }: EditorLinesProps) {
   const pending = suggest.pending;
   const queryLine = suggest.queryLine;
-  const rows = buildEditorRows(state.lines, pending?.hunks ?? [], pending?.resolved ?? []);
+  const rows = buildEditorRows(state.lines, pending?.hunks ?? []);
 
   const renderLine = (index: number, removed: boolean) => {
     const [selFrom, selTo] = lineSelection(state, index);

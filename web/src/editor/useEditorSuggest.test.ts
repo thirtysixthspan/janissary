@@ -71,7 +71,7 @@ describe('useEditorSuggest', () => {
       params: { url: '/open/1', persona: 'summarizer', content: 'old', prompt: 'rewrite this' },
     });
     await waitFor(() => expect(result.current.pending).not.toBeNull());
-    expect(result.current.pending?.hunks).toEqual([{ anchor: 'old', replacement: 'new' }]);
+    expect(result.current.pending?.hunks).toEqual([{ hunk: { anchor: 'old', replacement: 'new' }, resolved: false }]);
     expect(result.current.firingLine).toBeNull();
   });
 
@@ -274,7 +274,7 @@ describe('useEditorSuggest', () => {
 
     act(() => { result.current.declineHunk(bufferState, 1); });
 
-    expect(result.current.pending?.resolved).toEqual([false, true]);
+    expect(result.current.pending?.hunks.map((entry) => entry.resolved)).toEqual([false, true]);
   });
 
   it('resolves hunks out of order and only finalizes once every slot is resolved', async () => {
@@ -292,7 +292,7 @@ describe('useEditorSuggest', () => {
     await waitFor(() => expect(result.current.pending?.hunks.length).toBe(2));
 
     act(() => { result.current.acceptHunk(bufferState, 1); });
-    expect(result.current.pending?.resolved).toEqual([false, true]);
+    expect(result.current.pending?.hunks.map((entry) => entry.resolved)).toEqual([false, true]);
     expect(result.current.pending).not.toBeNull();
 
     act(() => { result.current.acceptHunk(latest ?? bufferState, 0); });
@@ -391,6 +391,33 @@ describe('useEditorSuggest', () => {
     act(() => { result.current.declineHunk(bufferState, 0); });
     act(() => { result.current.declineHunk(bufferState, 0); });
 
-    expect(result.current.pending?.resolved).toEqual([true, false]);
+    expect(result.current.pending?.hunks.map((entry) => entry.resolved)).toEqual([true, false]);
+  });
+
+  it('ignores accept and decline calls whose index is no longer in the pending set', async () => {
+    const { client } = makeClient(['summarizer'], [{ hunks: [{ anchor: 'old text', replacement: 'new text' }] }]);
+    const setState = vi.fn();
+    const replace = vi.fn();
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', setState, replace));
+    await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
+    typeQuery(result, ' summarizer rewrite');
+
+    const bufferState = makeState('old text');
+    await act(async () => { result.current.fireOnLine(bufferState); });
+    await waitFor(() => expect(result.current.pending?.hunks.length).toBe(1));
+    const pending = result.current.pending;
+
+    expect(() => {
+      act(() => {
+        result.current.acceptHunk(bufferState, 1);
+        result.current.acceptHunk(bufferState, -1);
+        result.current.declineHunk(bufferState, 1);
+        result.current.declineHunk(bufferState, -1);
+      });
+    }).not.toThrow();
+    expect(replace).not.toHaveBeenCalled();
+    expect(setState).not.toHaveBeenCalled();
+    expect(result.current.pending).toBe(pending);
+    expect(result.current.queryLine).not.toBeNull();
   });
 });

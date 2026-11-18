@@ -781,7 +781,9 @@ before that accept, and the edits made before the request stay in place for late
 Accepting a change leaves the caret, and any other selections, where they were, pulled back to the
 nearest position that still exists if the change shortened their line or removed it. A change whose
 text no longer matches the buffer is dropped without touching the buffer or recording an undo step,
-and declining a change never writes to the buffer at all. While any change is pending, every keystroke
+and declining a change never writes to the buffer at all. A control for a change that is no longer
+pending is ignored: clicking it does nothing and leaves the buffer and the remaining changes
+untouched. While any change is pending, every keystroke
 other than the accept/decline clicks is suppressed rather than reaching the buffer, so editing is
 blocked until the whole set is resolved. Switching to another tab and back leaves the pending set
 exactly as it was.

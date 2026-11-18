@@ -2,17 +2,6 @@
 
 ## ready
 
-* Store each suggestion hunk together with its resolved flag so an out-of-range hunk index cannot crash the editor.
-
-Existing Debt: Pending suggestions keep hunks and their resolved flags in two parallel arrays that are re-paired by position in the renderer and the accept path, with no bound tying an incoming index to the array length. Severity: 5/10
-
-Existing Risk: 5/10 - An index that no longer matches the current hunks passes the `resolved[index]` check as `undefined` and reaches `applyHunk` with an undefined hunk, which dereferences `hunk.anchor` and throws inside a click handler.
-
-Proposal Risk: 2/10 - A single tuple makes the pair indivisible, but hunk indices still travel through rendered row data, so a stale row must still be rejected by an explicit bound check.
-
-Proposal: `web/src/editor/useEditorSuggest.ts` defines `PendingSuggest` with `hunks: SuggestHunk[]` and a parallel `resolved: boolean[]`; `resolveHunk`, `acceptHunk` and `declineHunk` index both arrays, and `web/src/editor/editor-rows.ts` `buildEditorRows` takes them as two arguments and re-pairs by index. Change `PendingSuggest` to hold `hunks: { hunk: SuggestHunk; resolved: boolean }[]`, update the three handlers to operate on one entry with an explicit `index >= 0 && index < hunks.length` guard, and change `buildEditorRows` to take the single array so every `hunkIndex` it emits is in range. `web/src/editor/EditorLines.tsx` passes `row.hunkIndex` back into the handlers and needs no signature change. `web/src/editor/useEditorSuggest.test.ts` and `web/src/editor/editor-rows.test.ts` cover accept and decline with valid indices; add a stale-index case asserting the handler is a no-op rather than throwing.
-
-
 * Replace the client prop on the shared dock-cycle header with a callback so the header renders markup instead of sending a protocol call.
 
 Existing Debt: The shared dock-cycle header takes a `JanusClient` and sends the `setDock` intent from its button's click handler, violating §5 (components render; they do not decide) by putting a protocol call inside a presentational component's JSX. Severity: 5/10

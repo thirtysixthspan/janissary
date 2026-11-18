@@ -2,6 +2,10 @@ import type { SuggestHunk } from '@shared/protocol';
 import type { SuggestDiffPreview } from './suggestDiff';
 import { suggestDiffPreview } from './suggestDiff';
 
+// A pending hunk and its resolved flag travel as one entry, so the index a rendered row carries
+// always names a hunk that still exists in the pending set (see useEditorSuggest.ts).
+export type PendingHunk = { hunk: SuggestHunk; resolved: boolean };
+
 // One unresolved hunk's diff preview, paired with its index into `pending.hunks` so accept/decline
 // clicks can name the right hunk.
 type HunkPreview = { index: number; diff: SuggestDiffPreview };
@@ -17,12 +21,11 @@ export type EditorRow =
 
 // The ordered rows the buffer renders: every line, with each still-unresolved pending hunk's removed
 // range and added lines interleaved at the hunk's position. Hunks whose anchor no longer matches
-// (no preview) and hunks that overlap an earlier one are left out of the plan. `resolved` is
-// parallel to `hunks` — true once that hunk has been accepted or declined, at which point it no
-// longer previews.
-export function buildEditorRows(lines: string[], hunks: SuggestHunk[], resolved: boolean[]): EditorRow[] {
+// (no preview) and hunks that overlap an earlier one are left out of the plan. An entry whose
+// `resolved` flag is set — accepted or declined — no longer previews.
+export function buildEditorRows(lines: string[], hunks: PendingHunk[]): EditorRow[] {
   const previews: HunkPreview[] = hunks
-    .map((hunk, index) => ({ index, diff: resolved.at(index) ? null : suggestDiffPreview(lines, hunk) }))
+    .map(({ hunk, resolved }, index) => ({ index, diff: resolved ? null : suggestDiffPreview(lines, hunk) }))
     .filter((p): p is HunkPreview => p.diff !== null)
     .toSorted((a, b) => a.diff.startLine - b.diff.startLine);
 

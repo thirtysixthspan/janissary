@@ -14,12 +14,10 @@ import { applyHunk } from './suggestDiff';
 import { applyKeyAction, type EditSurface } from './applyKeyAction';
 import type { KeyAction } from './keys';
 import { UndoBuffer } from './undo';
+import type { PendingHunk } from './editor-rows';
 
 export type PendingSuggest = {
-  hunks: SuggestHunk[];
-  // Parallel to `hunks`: true once that hunk has been accepted or declined. Every unresolved hunk
-  // previews inline at once; the set finalizes once every slot is true.
-  resolved: boolean[];
+  hunks: PendingHunk[];
   acceptedAny: boolean;
 };
 
@@ -163,7 +161,7 @@ export function useEditorSuggest(
       // Empty hunks/failure is already surfaced via a notification server-side (Decision 10); the
       // query line stays open with its text intact and no pending panel opens.
       if (hunks.length > 0) {
-        setPendingBoth({ hunks, resolved: hunks.map(() => false), acceptedAny: false });
+        setPendingBoth({ hunks: hunks.map((hunk) => ({ hunk, resolved: false })), acceptedAny: false });
       } else setNoSuggestionLine(queryText);
     }).catch(() => {
       if (!firingCancelledRef.current) setNoSuggestionLine(queryText);
@@ -172,14 +170,14 @@ export function useEditorSuggest(
 
   // Marks one hunk resolved, or finalizes the whole set once no unresolved hunk remains — closing
   // the query line only if at least one hunk was accepted (Decision 8); otherwise it stays open
-  // with its text intact so it can be edited and retried. A call against an already-resolved index
-  // is a no-op.
+  // with its text intact so it can be edited and retried. A call against an already-resolved or
+  // out-of-range index is a no-op.
   const resolveHunk = (index: number, accepted: boolean) => {
     const p = pendingRef.current;
-    if (!p || p.resolved[index]) return;
+    if (!p || index < 0 || index >= p.hunks.length || p.hunks[index].resolved) return;
     const acceptedAny = p.acceptedAny || accepted;
-    const resolved = p.resolved.map((r, i) => (i === index ? true : r));
-    if (resolved.some((r) => !r)) { setPendingBoth({ ...p, resolved, acceptedAny }); return; }
+    const hunks = p.hunks.map((entry, i) => (i === index ? { ...entry, resolved: true } : entry));
+    if (hunks.some((entry) => !entry.resolved)) { setPendingBoth({ ...p, hunks, acceptedAny }); return; }
     setPendingBoth(null);
     if (acceptedAny) closeQueryLine();
   };
@@ -187,8 +185,8 @@ export function useEditorSuggest(
   // A hunk whose anchor no longer matches is dropped: no buffer write, so no undo step either.
   const acceptHunk = (state: EditorState, index: number) => {
     const p = pendingRef.current;
-    if (!p || p.resolved[index]) return;
-    const applied = applyHunk(state, p.hunks[index]);
+    if (!p || index < 0 || index >= p.hunks.length || p.hunks[index].resolved) return;
+    const applied = applyHunk(state, p.hunks[index].hunk);
     if (applied) replace(applied);
     resolveHunk(index, applied !== null);
   };

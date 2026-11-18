@@ -60,7 +60,7 @@ describe('handleSuggestKeyDown pending hunks', () => {
     const state = makeState('old text');
     const api = makeApi(state);
     const suggest = makeSuggest({
-      pending: { hunks: [{ anchor: 'old text', replacement: 'new text' }], resolved: [false], acceptedAny: false },
+      pending: { hunks: [{ hunk: { anchor: 'old text', replacement: 'new text' }, resolved: false }], acceptedAny: false },
     });
     const e = makeEvent('a');
 
