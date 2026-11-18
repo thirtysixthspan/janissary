@@ -1,0 +1,195 @@
+# Model search input for roles and the New harness dialog
+
+**Complexity: 7/10** — ~300 added lines across 11 files, 32 requirements, 43 test scenarios (p=7.80)
+
+Feature text, from the `## development` list in `product/backlog/features.md`: "move model selection in the roles tab from a selectbox to a model search input field with tab completion, candidate dropdown, clickable candidates."
+
+Two places choose a model today, and both use a native `<select>` that lists every enabled model id of the chosen harness: the roles tab's **Add model** picker and the **New harness** dialog's **Model** field. Catalogs can be long (OpenCode alone carries many provider-prefixed ids), and a select offers no way to type part of a name to narrow the list. This change replaces both selects with one shared search input. Typing filters the harness's models the way the editor's find filters lines. Tab completes the typed text the way the command bar completes a token. A dropdown lists the candidates, and on a blank input it lists the models the existing roles use most. Any candidate can be clicked to choose it.
+
+## Design decisions
+
+Each decision comes from the feature text ("feature text"), from existing behavior ("from precedent"), or from a user answer ("user decision").
+
+- **Replace the model select (feature text).** The model `<select>` in the Add model picker becomes a search input field.
+- **Tab completion (feature text).** Tab in the input completes the typed text against the candidate models.
+- **Candidate dropdown (feature text).** A dropdown shows the candidate models for the typed text.
+- **Clickable candidates (feature text).** Clicking a candidate in the dropdown chooses it.
+- **Candidates are the enabled catalog (from precedent).** The picker offers only the enabled models from the current catalog (`product/specs/roles.md`), already delivered to the client as `catalog.models`, a harness-keyed list of enabled ids in `RolesPayload`, along with every role's entries. The roles picker needs no server or protocol change. The New harness dialog's `HarnessLaunchView` likewise carries each harness's enabled ids (`modelsFor`).
+- **Search scoped to the chosen harness (user decision).** The harness select stays first in the picker. The search input offers only the chosen harness's enabled models, as the model select does today. Changing the harness clears the typed text, along with the effort, as the picker already resets both today.
+- **Matching reuses the editor's find (user decision).** Candidates are chosen exactly as the editor tab's Cmd+F find chooses lines (`product/specs/editor-tab.md`, "Finding a line"): the typed text, trimmed, matched as a contiguous, case-insensitive substring of the model id, up to ten results, best-scoring first, using the same `contiguousMatch` function in `web/src/shared/fuzzy-match.ts`. That matcher gives a bonus to characters after the last `/`, so for an OpenCode id such as `opencode-go/deepseek-v4.1-flash` a match in the model name outranks one in the provider prefix. Identical ranking ties fall back to the shorter id, then alphabetical order.
+- **Tab completes the longest common prefix (user decision).** Tab in the model input follows the command bar's rule. With exactly one candidate, Tab replaces the typed text with that candidate's full id. With several, Tab replaces the typed text with the longest common prefix of the candidates when that prefix is longer than the typed text, and otherwise leaves the text unchanged. The dropdown stays open after Tab.
+- **Tab never widens the list (user decision).** The common prefix is computed over every match, not only the ten shown, and is filled only when it is longer than the typed text and still contains the typed text case-insensitively. Typing `5` against `claude-opus-5-5` and `claude-sonnet-5-5` gives the prefix `claude-`, which does not contain `5`, so Tab leaves `5` unchanged. Filling a prefix that contains the typed text can never add a candidate, because every id that contains the prefix also contains the typed text.
+- **Add needs an exact catalog id (user decision).** Add is enabled only when the input text, trimmed, exactly equals (case-sensitive) one of the chosen harness's enabled model ids. Partial or unknown text keeps Add disabled, so the picker still can't add a model outside the enabled catalog, as with today's select. Add sends that trimmed id.
+- **Return accepts, then adds (user decision).** With the dropdown open and a candidate highlighted, Return replaces the input text with that candidate's full id and closes the dropdown. With no candidate highlighted, whether the dropdown is closed or open with nothing highlighted, and the text an exact enabled id, Return adds the entry, exactly as pressing Add does. In any other state Return does nothing.
+- **The blank list starts unhighlighted, and hover highlights (user decision).** The blank-input most-used list opens with no row highlighted, so Return on a blank field never picks a model by accident. In the New harness dialog it launches with the default model. `↓` or `↑` then highlights the first row. A typed-text match list highlights its first row automatically. In either list, moving the pointer over a row moves the highlight to it, exactly as the arrows would. When the pointer leaves the list, the highlight stays on the last row hovered. A click on a row selects it (see "A click fills and closes").
+- **Tab completion reopens like typing (from the decisions above).** A Tab completion changes the input text, so, like typing, it reopens a dropdown that Escape had closed.
+- **Dropdown opens on focus with the most-used models (user decision).** The dropdown opens when the model input gains focus. While the input is blank (empty or only whitespace), it lists the chosen harness's most-used models across the existing roles. Once the input holds non-blank text, it lists that text's matches instead and re-filters on every keystroke. Choosing a candidate, by click or Return, closes the dropdown, and typing in the input reopens it.
+- **"Most used" counts roles (user decision).** A model's usage is the number of roles in the file in effect, including the role being edited, that hold at least one entry with the chosen harness and that model id. Only the chosen harness's enabled model ids are eligible, and a model with a usage of zero isn't counted as used. Higher usage comes first. Ties keep the order in which each model first appears, reading roles top to bottom and entries in order. At most ten are shown. Usage is computed on the client from the roles already in the published payload.
+- **Blank input lists used models only (user decision).** The blank-input list holds only used models, so it may have fewer than ten rows, and it isn't padded from the catalog. When no role uses any of the chosen harness's enabled models, the dropdown shows no rows, just a muted hint line telling the user to type to search.
+- **Escape closes the dropdown first (user decision).** In the model input with the dropdown open, Escape closes only the dropdown, keeping the typed text and the focus in the input. Escape with the dropdown closed, or in any other picker control, cancels the picker as it does today. This matches the command bar, where Escape closes the completion picker without changing the line.
+- **A harness with no enabled models isn't special-cased (user decision).** The input stays enabled. The blank dropdown shows the type-to-search hint because nothing is used, typed text shows the no-match line, and Add stays disabled. This is the same path as any query that matches nothing.
+- **A republish keeps the text and recomputes (user decision).** A new catalog or roles publication while the picker is open never changes the typed text. The candidate list, the most-used list, and Add's enabled state are recomputed from the new catalog and roles, so an exact id that was just disabled turns Add off, and one just enabled turns it on. Whenever the list's contents change, whether from typing or a republish, the highlight resets: to the first row for a typed-text match list, and to no row for the blank-input most-used list.
+- **The New harness dialog uses the same input (user decision).** The model search input is one shared component used in both the roles tab's Add model picker and the New harness dialog's **Model** field (`web/src/harness/HarnessLaunchDialog.tsx`), in place of each one's model select. Matching, Tab completion, the dropdown, clicking, and Escape behave the same in both places. Behavior specific to each host is listed under its own decisions.
+- **Tab moves focus when it has nothing to complete (user decision).** Tab completes only when completing would change the input text. When it wouldn't, because there are no candidates, the text already equals the single candidate, or the common prefix wouldn't narrow, Tab isn't intercepted: focus moves to the next control as usual and the dropdown closes. Shift+Tab is never intercepted.
+- **Dialog: blank means default, otherwise an exact id (user decision).** In the New harness dialog, a blank model input means the harness's default model, so no `--model` flag is added. Non-blank text that, trimmed, is exactly (case-sensitive) an enabled id of the chosen harness adds `--model <id>`. Any other non-blank text disables **Create**, and Return doesn't submit, mirroring the roles picker's Add rule. The blank input shows the placeholder `(default)`, the label the select's default option carries today.
+- **Dialog: blank input lists the most-used models too (user decision).** The New harness dialog's blank-input dropdown follows the same "most used" rule as the roles picker: the chosen harness's enabled models ranked by how many roles use them, used models only, at most ten, with the type-to-search hint when none are used. The dialog has no roles data today, so the server has to deliver the roles the dialog counts from, an addition to the launch dialog's view.
+- **Dialog: Return and Escape follow the shared rules (from the decisions above).** With the dropdown open, Escape in the model input closes only the dropdown, and Return accepts the highlighted candidate when one is highlighted. Neither of those reaches the dialog. Return with no candidate highlighted reaches the dialog's existing handling, Create (when allowed), whether the dropdown is open or closed. So does Escape with the dropdown closed, which cancels.
+- **Dialog: disabled when the harness has no models (user decision, keeping precedent).** As today, the dialog's model input is disabled when the chosen harness has no enabled models. It stays blank, shows `(default)`, and the launch uses the default model.
+- **Dialog: only a valid model is carried over (user decision).** This keeps today's guarantee that the dialog never holds a model the chosen harness lacks. On a harness change, and in the copy remembered for the next open, the model text is kept only when it is blank or, trimmed, an exact enabled id of the (new) harness. Any other text is cleared. A remembered dialog therefore never reopens with **Create** disabled by the model field. Typing itself never clears the text: the existing "clear the model if it's not in the catalog" check moves from every field update to harness changes and remembering.
+- **Wording matches existing text (user decision).**
+  - Roles picker input: placeholder `model…` and accessible name `Model for the new entry`, both carried over from the select.
+  - Dialog input: keeps its visible `Model` label, with the placeholder `(default)`.
+  - The blank-list hint row reads `type to search`, the hint the editor find and quick open use.
+  - A query with no matches shows the row `No matching models`, following `No matching lines` and `No matching files`.
+  - The dropdown has no title row.
+- **A click fills and closes (user decision).** Clicking a candidate row does what Return does on a highlighted row: the input text becomes the candidate's full id, the dropdown closes, and focus stays in the input. A click never adds an entry or launches a harness on its own. That stays the job of Add or Return in the roles picker, and of **Create** or Return in the dialog.
+- **The dialog receives raw role entries and ranks on the client (user decision).** `HarnessLaunchView` gains a `roleEntries` field: one list of `{ harness, model }` pairs per role, in the file's role order and each role's entry order. The server reads it with `readRolesFile(homedir(), managers.tab.launchDir, { create: false })`, which is the reader `src/acp/ask-role.ts` uses and the root `src/subagent/command-policy.ts` passes. It never creates a file, and with no roles file it yields the built-in default roles. A broken file falls back along the reader's existing chain, and its problem line isn't shown in the dialog. A single client ranking function in `web/src/shared/model-search/` serves both the roles picker, from its payload's roles, and the dialog, from `roleEntries`.
+- **The dialog reads roles once, when it opens (user decision).** `openLaunchDialog()` reads the roles once and keeps their entries. Every `harnessLaunchView()` built while that dialog stays open reuses them, and `closeLaunchDialog()` drops them. So a roles edit made while the dialog is open first appears the next time it opens. The catalog half of the view is still built fresh for each snapshot, as today, so a model enabled or disabled while the dialog is open is reflected under the republish rule above.
+- **Command-bar Tab semantics (from precedent).** In the command bar, Tab replaces the token with the single match, or with the longest common prefix of several matches and opens a candidate picker; `↑`/`↓` move, Return or a click accepts, Escape closes without changing the line (`product/specs/tab-completion.md`).
+- **Picker contract kept (from precedent).** The picker focuses its first control when opened, cancels on Escape, and returns focus to **Add model** on Add, Cancel, or Escape; it starts on `default` effort and resets the model and effort when the harness changes or the picker is reopened (`product/specs/roles.md`).
+
+## What already exists (reuse, don't rebuild)
+
+| Need | Existing code | Notes |
+| --- | --- | --- |
+| The picker being changed | `web/src/plugins/roles/EntryPicker.tsx`, opened from `web/src/plugins/roles/RoleModels.tsx` | Harness, model, effort selects plus Add and Cancel; owns its selection and unmounts on close |
+| Picker focus handling | `web/src/plugins/roles/useRolePickerFocus.ts` | `firstControlRef` is typed `HTMLSelectElement` |
+| Enabled model catalog on the client | `LaunchCatalog` in `src/plugins/roles/shared.ts`, passed as `catalog.models` through `RolesTab.tsx` and `RoleCard.tsx` | Already filtered to enabled ids |
+| Longest common prefix | `longestCommonPrefix` in `src/completion/helpers.ts` | The model for the client copy (user decision). The server file imports `node:fs`, so the client can't import it |
+| Click without stealing focus | `web/src/plugins/shell/ShellCompletionPicker.tsx` | Row `onMouseDown` prevents default so the input keeps focus |
+| Up/Down clamp rule | `rankedOverlayKeys` in `web/src/shared/ranked-overlay-keys.ts` | Up/Down clamp at the ends; it swallows every key, so the new hook applies the same clamp rather than calling it |
+| Matching typed text | `contiguousMatch` in `web/src/shared/fuzzy-match.ts`, used by `web/src/shared/line-find/useLineFind.ts` with a cap of ten | The editor find's matcher, reused unchanged (user decision) |
+| Match emphasis | `highlightRanges` in `web/src/shared/line-find/LineFind.tsx` (module-private today); `.editor-find-row mark` rules in `web/src/theme.css` | Exported for reuse rather than copied |
+| The dialog being changed | `web/src/harness/HarnessLaunchDialog.tsx`; `HarnessLaunchView` in `src/protocol/tab.ts`; `harnessLaunchView()`, `openLaunchDialog()`, `closeLaunchDialog()` in `src/harness/manager.ts` | The view is rebuilt on every state snapshot (`src/state/event.ts`) |
+| Reading roles from core without creating a file | `readRolesFile(home, root, { create: false })` in `src/plugins/roles/roles-file.ts`, used by `src/acp/ask-role.ts`; root `managers.tab.launchDir` as in `src/subagent/command-policy.ts` | Core may import a plugin's file module, but not its `activate.js` (`eslint.plugin-boundaries.mjs`) |
+| Shared components re-exported to plugins | `InlineEditInput`, `ConfirmDialog` in `web/src/plugins/api.ts` | How the roles plugin reaches `web/src/shared/` |
+| Existing tests | `web/src/plugins/roles/RolesTab.test.tsx`, `web/src/harness/HarnessLaunchDialog.test.tsx`, `src/harness/manager.test.ts` (`harnessLaunchView` cases) | Roles tests use the `Model for the new entry` label; the dialog tests find the model select by position |
+
+## Proposed changes
+
+### Shared model search — `web/src/shared/model-search/`
+
+- **One pure module, `model-search.ts`, with two functions.**
+  - `completeModel(ids, text)` returns the text Tab should put in the input, or null when Tab should not be intercepted. It runs `contiguousMatch(ids, text, ids.length)`, so every match counts, not only the ten shown. With exactly one match it returns that id. With several, it returns the longest common prefix when the prefix is longer than the trimmed text and contains it case-insensitively. In every other case it returns null, including a result equal to the current text. The longest common prefix is a few-line client copy, a module-private helper modelled on `longestCommonPrefix` in `src/completion/helpers.ts` (user decision: a client copy, server untouched).
+  - `mostUsedModels(roleEntries, harness, ids)` takes one `{ harness, model }` list per role, in role order, and returns at most ten of `ids` ranked by how many roles hold at least one entry with that harness and id. Ties fall in first-appearance order, and only models with a usage above zero are returned. It knows nothing of roles beyond that list shape.
+
+  The visible rows for typed text need no wrapper: they are `contiguousMatch(ids, text, 10)` from `web/src/shared/fuzzy-match.ts`, the call `useLineFind` makes. "Exact id" everywhere below means `ids.includes(text.trim())`, inline at each host, with no helper.
+- **`useModelSearch` hook.** It holds whether the dropdown is open and the highlighted row, which may be none. It takes the controlled text and an `onChangeText` callback from its host, which owns the value. It derives the rows (`mostUsedModels` when the text is blank, otherwise the `contiguousMatch` call above). Whenever the rows' contents change, it resets the highlight to the first row for typed-text matches and to none for the blank list. It handles keys:
+  - Tab completes when `completeModel` returns text, which reopens the dropdown like typing, and otherwise lets the event through and closes the dropdown.
+  - `↑`/`↓` reopen a closed dropdown. With nothing highlighted, they highlight the first row. Otherwise they clamp-step the highlight.
+  - Return with the dropdown open and a row highlighted fills that id, closes the dropdown, and stops the event. Otherwise it lets the event through to the host.
+  - Escape with the dropdown open closes it and stops the event. Otherwise it lets the event through.
+
+  A row's pointer-enter sets the highlight to that row, and pointer-leave changes nothing. The input's focus opens the dropdown, its blur closes it, and typing reopens it.
+- **`ModelSearchInput` component.** A thin render of the input plus, while open, the `ModelSearchList` dropdown. It takes `ids`, `roleEntries`, `harness`, `value`, `onChange`, `placeholder`, `aria-label`, `disabled`, an `inputRef`, an optional `onListChange({ open, highlighted })`, reporting whether the dropdown is open and whether a row is highlighted, and an optional `onSubmit()`. Its keydown handler calls the hook. `onSubmit` is called for a Return the dropdown didn't consume. Only the roles picker passes it, so Return-to-add fires from the model input alone and never from the harness select, the effort select, or the Add and Cancel buttons, whose own Return already clicks them. An Escape the hook didn't consume bubbles on to the host's handler. The input and the dropdown sit in one wrapper with `position: relative`, so the absolutely positioned list anchors to the input.
+- **`ModelSearchList` component.** Presentational. It renders the rows, each marked with `highlightRanges`; the `type to search` hint when the text is blank and nothing is used; and `No matching models` when typed text matches nothing. A row's mouse-down prevents default, and its click fills. A layout effect sets the placement. It finds the nearest ancestor whose computed `overflow-y` isn't `visible`, which is `.roles-list` in the roles tab, or the viewport when there is none, as in the dialog, whose `.modal` doesn't clip. The list opens below when its height fits between the input's bottom and that box's bottom, and above otherwise. The same measurement sets the list's `max-width` to the distance from the input's left edge to that box's right edge. The list's `min-width` is the input's width, and its width otherwise fits its content.
+- **Styles** in `web/src/theme.css`, beside the other picker rules, because both a lazy plugin chunk and the entry-bundle dialog render the list. The rules are a container class, row, highlighted-row, and muted-row rules, and a `mark` rule matching `.editor-find-row mark`, all in the roles-native look described under UI design.
+
+### Reused pieces made reachable
+
+- `web/src/shared/line-find/LineFind.tsx`: export `highlightRanges` (no behavior change).
+- `web/src/plugins/api.ts`: re-export `ModelSearchInput` for client plugins.
+
+### Roles tab — `web/src/plugins/roles/`
+
+- `EntryPicker.tsx`: the model select becomes `ModelSearchInput`, with the placeholder `model…` and the accessible name `Model for the new entry`. The picker owns the text. A harness change clears it, and so does reopening, since the picker unmounts on close. Add is disabled unless the text is an exact id, and sends the trimmed id. The picker container's existing `onKeyDown` Escape handler stays as it is. It now sees an Escape from the input only when the dropdown was closed, because the hook stops the propagation of the Escape it consumes. `onSubmit` adds when the text is an exact id and does nothing otherwise. `firstControlRef` remains the harness select, so `useRolePickerFocus` and its `HTMLSelectElement` typing are unchanged.
+- `RolesTab.tsx` → `RoleCard.tsx` → `RoleModels.tsx` → `EntryPicker.tsx`: `RolesTab` passes `roles.map((role) => role.entries)` as a new `roleEntries` prop through each layer down to the picker. `RoleEntry` (`src/plugins/roles/shared.ts`) already has the `harness` and `model` fields the ranking reads, so no mapping is needed.
+- `product/specs/roles.md`: rewrite the **Add model** paragraph ("**Add model** opens a small picker — harness, model, effort, and Add …") to describe the search input, Tab, the dropdown, the most-used list, Add's exact-id rule, and Return and Escape. Keep the effort sentences unchanged.
+- `documentation/user-documentation/tab-types/roles.md`: update "## Add a model to a role" ("pick the harness, model, and effort, and press **Add**") and the following focus/Escape paragraph so they say you type to search, Tab completes, a blank field lists the most-used models, and the first Escape closes the list.
+
+### New harness dialog
+
+- `src/protocol/tab.ts`: `HarnessLaunchView` gains a required `roleEntries` field, one list of `{ harness, model }` pairs per role, documented as the roles in effect, read when the dialog opened. Because it is required, the test fixtures that build a full view must add `roleEntries: []`: `web/src/useServerState.test.ts` (the `harnessLaunch: { names: ['claude'], … }` literal) and the `autoResume: []` literal in `web/src/shared/ws/ws.test.ts`. The two `ws.test.ts` literals that already omit `autoApprove`/`autoResume` exercise partial wire data and stay as they are. `web/src/shared/ws/ws.ts` passes the view through without validating it, so nothing else changes there.
+- `src/harness/manager.ts`: `openLaunchDialog()` reads the roles with `readRolesFile(homedir(), this.managers.tab.launchDir, { create: false })` and keeps only the `{ harness, model }` pairs, dropping `effort`. The import is `../plugins/roles/roles-file.js`, as in `src/acp/ask-role.ts`. Core may import a plugin's file module, and the boundary rule only forbids `activate.js`. The file is 163 lines today, so the additions stay well under the 200-line limit. `harnessLaunchView()` returns them alongside the freshly built catalog. `closeLaunchDialog()` drops them. Reading once per open is a deliberate ceiling: a roles edit made while the dialog is open appears only when it reopens. If live updates are ever wanted, the upgrade path is to re-read in `harnessLaunchView()` behind an mtime check.
+- `web/src/harness/HarnessLaunchDialog.tsx`: the Model select becomes `ModelSearchInput` inside the existing `Model` label, with the placeholder `(default)`, disabled when the harness has no models. The check that clears the model if it isn't in the catalog runs only on a harness change and when writing the remembered copy, not on every update, so the text can't be cleared while it's being typed. **Create** is disabled while the text is non-blank and not an exact id. The dialog's Return-to-Create path honors the same rule, because the dialog passes that condition as `useLaunchDialog`'s existing `canSubmit` argument, which is `true` today.
+- `web/src/shared/use-launch-dialog.ts`: the dialog's keys are read by `useDialogKeyboard`'s window listener in the **capture** phase, before the focused input sees them. So a Return or Escape meant for the open dropdown would otherwise Create or Cancel. `useLaunchDialog` gains an optional fifth argument, a `yieldsKey(event)` predicate. When it returns true, the hook's handler returns without acting and without `preventDefault`, so the key reaches the input. `ModelSearchInput` reports its state through `onListChange`. The dialog passes `yieldsKey` as "the model dropdown is open, and the key is Escape, or the key is Enter with a row highlighted". So Return on a blank, unhighlighted Model field still reaches Create. `ScheduleDialog`, the only other caller, passes nothing and is unchanged.
+- `web/src/harness/harness-launch-command.ts`: unchanged. `buildHarnessLaunchCommand` adds `--model` only for a non-empty `fields.model`. The dialog hands `useHarnessLaunchActions` its fields with `model` trimmed, so whitespace-only text launches with the default model, and an exact id with stray spaces passes the trimmed id.
+- `product/specs/harness.md`: rewrite the **Model** dropdown sentences of "New harness launch dialog" ("The **Model** dropdown lists the selected harness's known models and is disabled when that harness has no model catalog.") to describe the search input, its most-used list, and Create's rule.
+- `documentation/user-documentation/advanced-agents/harness.md`: in the New harness dialog paragraph, "**Model** and **Effort** dropdowns" becomes a **Model** search field and an **Effort** dropdown, with one sentence on typing, Tab, and the most-used list. The `harness-launch-dialog.png` screenshot isn't regenerated, because its alt text still holds and the field keeps its place and label.
+
+### Order
+
+Land the shared `web/src/shared/model-search/` modules, the `highlightRanges` export, and their tests first, then the roles tab, then the protocol field, the manager, and the dialog together. Each step keeps typecheck and tests green: the protocol field and its fixture updates go in the same change as the manager code that fills it.
+
+## UI design
+
+- **Surfaces (from precedent).** The first is the Add model picker row inside each role card's `Models` section (`.roles-picker` in `web/src/plugins/roles/roles.css`), which today holds three selects plus Add and Cancel. The input takes the model select's place, between the harness and effort selects. The second is the New harness dialog's `Model` field (`.harness-launch-form` in `web/src/theme.css`), where the input takes the select's place under its `Model` label, between Auto-resume and Effort.
+- **Closest existing components (from precedent).** The shell tab's completion picker (`ShellCompletionPicker`, styled by the shared `.picker` classes), the quick-open overlay's input over a ranked list, and the editor's find overlay (`web/src/shared/line-find/LineFind.tsx`), whose matcher this input reuses.
+- **The dropdown floats below the input (user decision).** The candidate list is positioned absolutely, anchored to the bottom-left edge of the model input, and overlays whatever is beneath it without moving it: later role cards in the roles tab, or the dialog's Effort field and buttons. It is at least as wide as the input and grows to fit the ids. When there isn't room below the input inside the scrolling container (the roles list, or the dialog), it opens above the input instead.
+- **Roles picker focus on open is unchanged (user decision).** **Add model** still focuses the picker's first control, the harness select. Tab then reaches the model input, and focusing the input opens its dropdown.
+- **The dropdown closes on blur (user decision).** The dropdown closes whenever focus leaves the input: a click elsewhere, Shift+Tab, Tab moving on, or the picker or dialog closing. A row press doesn't blur the input, because the row prevents its own mouse-down default, as `ShellCompletionPicker` does. Focusing the input again reopens the dropdown.
+- **Rows show the id with the match marked (user decision).** Each row is the model id, with the matched characters wrapped in `<mark>` the way editor-find rows emphasize them. Rows in the blank-input most-used list show the plain id. No row shows a usage count.
+- **Long ids wrap (user decision).** The dropdown is never wider than its scrolling container (the roles list, or the dialog). An id too long for that width wraps onto further lines inside its row, breaking anywhere if it must, the way command text wraps on role cards (`overflow-wrap: anywhere`), so the whole id is always visible.
+- **Arrows clamp, and there are no ARIA roles (user decision).** With the dropdown open, `↑`/`↓` move the highlight one row and stop at the ends rather than wrapping, the rule `rankedOverlayKeys` gives editor find and quick open. With the dropdown closed and the input focused, `↑` or `↓` reopens it. With nothing highlighted, as on the blank most-used list, `↑` or `↓` highlights the first row. Pointer hover moves the same highlight (see the design decision "The blank list starts unhighlighted, and hover highlights"). The rows are plain elements, like `ShellCompletionPicker`'s, with no combobox, listbox, or option roles. The input keeps its accessible name: `Model for the new entry` in the roles picker, and the `Model` label in the dialog. Hint and no-match rows can't be highlighted or chosen.
+- **Roles-native look, in both hosts (user decision).** The dropdown is styled like the roles tab's own controls rather than the global `.picker` rows. The container has the tab's background (`--bg`, opaque because it overlays content), a 1px `--border` edge, a 3px radius, and 12px text. Rows are `--fg` text, and the highlighted row is `--fg` bold instead of an accent fill. Hover has no style of its own, because hovering moves the highlight. The hint and no-match rows are `--muted` and never highlight. Matched characters use the `<mark>` treatment editor find, quick open, and the tab navigator already share (accent background, `--bg` text, 2px radius). The same look is used in the New harness dialog. The roles picker's input matches `.roles-picker select` (transparent, 1px `--border`, 3px radius, 12px). The dialog's input keeps the dialog's existing `input[type="text"]` style.
+- **Where the client code goes (fact, per `ai/guidelines/react-code-organization.md`).** The input has two real consumers in different features, the roles plugin (`web/src/plugins/roles/`) and the harness launch dialog (`web/src/harness/`). Features can't import each other, so it is promoted to the shared layer as a feature directory, `web/src/shared/model-search/`, which holds no knowledge of roles or harness launches. Inside it, Tab completion and most-used ranking live in one pure module, matching is the existing `contiguousMatch`, open state and highlight live in one hook, and the input and dropdown are thin components. The roles plugin can import only `../api` and its own shared contract (`eslint.plugin-boundaries.mjs`), so it reaches the component through a re-export in `web/src/plugins/api.ts`, as it already does for `InlineEditInput` and `ConfirmDialog`. The harness dialog imports the shared file directly. The server stays the owner of the catalog and the roles file (`ai/guidelines/architecture-principles.md` §1): the client only derives views (candidates, rankings) from published data and never stores them.
+- **No new key bindings (fact).** Tab, `↑`, `↓`, Return, and Escape are handled only while the model input has focus. `help/keys.md` binds none of them globally for a focused text field: the global `Shift+Tab` section move is untouched, since Shift+Tab isn't intercepted.
+
+## Tests
+
+- **`web/src/shared/model-search/model-search.test.ts` (pure).** `contiguousMatch` already has its own tests in `web/src/shared/fuzzy-match.test.ts`, so they aren't repeated here.
+  - `completeModel`:
+    - A single match returns the full id.
+    - Several matches with a narrowing prefix return the prefix, with every match counted even beyond ten.
+    - A prefix that doesn't contain the text (`5` against `claude-opus-5-5`/`claude-sonnet-5-5`) returns null.
+    - No matches return null.
+    - Text already equal to the result returns null.
+  - `mostUsedModels`: counts roles, not entries; first-appearance tie order; enabled ids only; other harnesses ignored; zero-use models excluded; at most ten.
+- **`web/src/shared/model-search/ModelSearchInput.test.tsx` (component).**
+  - Focus opens the most-used list with no row highlighted, and a blank list with nothing used shows `type to search`.
+  - Typing filters, with `<mark>` on matches and the first row highlighted, and unmatched text shows `No matching models`.
+  - `↑`/`↓` highlight the first row from none, then clamp, and reopen a closed list.
+  - Hovering a row highlights it, and the highlight stays after the pointer leaves.
+  - Tab completes, a completion reopens a closed list, and Tab with nothing to complete is not prevented and closes the list.
+  - Return fills the highlighted row and closes the list, and Return with nothing highlighted is let through to `onSubmit`.
+  - Escape closes the list only.
+  - A click fills and keeps focus.
+  - Blur closes the list.
+  - A new `ids` prop keeps the text and resets the highlight.
+  - The list opens above the input when there's no room below.
+- **`web/src/plugins/roles/RolesTab.test.tsx`.** Update the existing picker tests that drive the `Model for the new entry` select to type instead. Add:
+  - Add is disabled for partial text and enabled for an exact id.
+  - Add and Return with an exact id send `add-entry` with the trimmed id.
+  - The first Escape closes the dropdown and the second cancels the picker, with focus back on **Add model**.
+  - A harness change clears the text.
+  - The most-used list reflects the payload's roles.
+  - A republished catalog that disables the typed id disables Add.
+- **`web/src/harness/HarnessLaunchDialog.test.tsx`.** Update the model-select cases (the empty catalog disabling the field, and `--model sonnet` in the built command) to use the input. Add:
+  - Blank text builds no `--model`.
+  - Partial text disables Create, and Return doesn't submit.
+  - Escape with the dropdown open doesn't cancel, and Return with a highlighted row doesn't create.
+  - Return on a focused blank Model field (most-used list open, nothing highlighted) creates with no `--model`.
+  - A harness change keeps an id the new harness has, and clears anything else.
+  - Reopening restores only a valid remembered id.
+  - The most-used list comes from `roleEntries`.
+- **`src/harness/manager.test.ts`.**
+  - `harnessLaunchView()` carries `roleEntries` read from a project `roles.json` in the launch dir.
+  - With no roles file it carries the default roles' entries, and no file is created.
+  - The entries are read once per open, and a file change while open doesn't appear until the next open.
+  - They are dropped on close.
+- **`web/src/shared/use-launch-dialog.test.tsx` (existing).** A `yieldsKey` returning true lets Enter and Escape through: neither create nor cancel is called, and `defaultPrevented` stays false. Returning false keeps the normal handling. Omitting `yieldsKey` keeps the current behavior, which the existing cases already cover.
+- **`web/src/plugins/roles/chunk-imports.test.ts` (existing).** It checks what the roles chunk imports. Run it unchanged to confirm that reaching `ModelSearchInput` through `../api` keeps the chunk inside its allowed imports.
+
+## Out of scope
+
+- Any change to the `roles.json` format, or to the roles plugin's server side.
+- The harness and effort selects in the roles picker and the dialog, and the per-entry effort dropdown on each role card row.
+- Command-line completion of `harness … --model` (`product/specs/tab-completion.md`), which is unchanged.
+
+## Verification
+
+- `$janissary/scripts/run.mjs check-diff`
+- Manual, roles tab: run `roles` and press **Add model** on a role.
+  1. Tab to the model input and confirm the dropdown lists the harness's most-used models.
+  2. Type `opus` and confirm the matching rows with `opus` marked.
+  3. Press Tab and confirm the text completes to the common prefix.
+  4. Click a candidate and confirm it fills the input and Add enables.
+  5. Press Return and confirm the entry appears on the card and in `roles.json`.
+  6. Reopen the picker, type `zzz`, and confirm `No matching models` with Add disabled.
+  7. Press Escape twice and confirm the dropdown closes first, then the picker.
+- Manual, New harness dialog: type bare `harness`.
+  1. Focus Model and confirm the most-used list with no row highlighted. Hover a row and confirm it highlights.
+  2. Type part of an id, then press Return to accept the highlighted first match.
+  3. Press Return again and confirm the harness launches with `--model <id>` recorded in the transcript.
+  4. Reopen, type partial text, and confirm **Create** is disabled.
+  5. Clear the text, press Return, and confirm a launch with no `--model`.
