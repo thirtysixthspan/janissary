@@ -69,6 +69,9 @@ export type BufferLine = {
 export type HarnessView = {
   name: string; program: string; ptyId: string; status: 'running' | 'exited' | 'provisioning'; exitCode?: number;
   destination?: string; model?: string; effort?: string;
+  // Set only on an ssh tab opened from a saved host: the name the host was stored under. The
+  // connections panel and sessions row show it in place of the raw destination.
+  hostName?: string;
   // This tab's asciicast recording, mirrored from `Tab.recording` so the harness-view payload is the
   // whole of what its row renders. Absent until the session has produced output.
   recording?: string;

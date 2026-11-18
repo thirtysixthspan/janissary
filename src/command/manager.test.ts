@@ -80,6 +80,12 @@ function seedPromptPluginTab(managers: Managers, label = 'janus'): void {
   } as unknown as Managers['plugins'];
 }
 
+function seedHostsTab(managers: Managers, label = 'hosts'): void {
+  managers.tab.tabs.push(makePluginTab(label, '#fff', 1, 1, '#fff', 'hosts', {
+    id: 'hosts', instanceKey: 'hosts', schemaVersion: 1, payload: {}, fileRefs: [], sourceLabel: label,
+  }));
+}
+
 describe('CommandManager async commands', () => {
   it('records new tab allocations from a run-owned granted command', async () => {
     const { managers } = makeManagers();
@@ -711,7 +717,7 @@ describe('CommandManager delegating harness and ssh', () => {
   it('hands the whole input to the ssh manager and appends the input line', () => {
     const { managers } = makeManagers();
     managers.command.dispatch('ssh build-box -p 2222');
-    expect(managers.ssh.run).toHaveBeenCalledWith('ssh build-box -p 2222');
+    expect(managers.ssh.run).toHaveBeenCalledWith('ssh build-box -p 2222', 'janus');
     expect(managers.tab.cur().log).toContainEqual({ input: 'ssh build-box -p 2222', output: '' });
   });
 
@@ -729,6 +735,84 @@ describe('CommandManager delegating harness and ssh', () => {
     const { managers } = makeManagers();
     managers.command.dispatch('ssh build-box');
     expect(managers.tab.cur().log).toEqual([{ input: 'ssh build-box', output: '' }]);
+  });
+
+  it('records the typed line but sends the normalized command to the manager', () => {
+    const { managers } = makeManagers();
+
+    managers.command.dispatch('/ssh build-box');
+
+    expect(managers.ssh.run).toHaveBeenCalledWith('ssh build-box', 'janus');
+    expect(managers.tab.cur().log).toContainEqual({ input: '/ssh build-box', output: '' });
+  });
+
+  it('keeps an inline !ssh line on the shell route', () => {
+    const { managers, recorder } = makeManagers();
+
+    managers.command.dispatch('!ssh host');
+
+    expect(recorder).toContain('shell:ssh host');
+    expect(managers.ssh.run).not.toHaveBeenCalled();
+  });
+
+  it('launches a Hosts-row ssh without recording a line in the hosts tab', async () => {
+    const { managers } = makeManagers();
+    seedHostsTab(managers);
+    vi.mocked(managers.ssh.run).mockReturnValue(undefined);
+
+    await expect(managers.command.dispatchLineWithOutput('hosts', 'ssh lab')).resolves.toEqual({
+      dispatched: true, output: '',
+    });
+
+    expect(managers.ssh.run).toHaveBeenCalledExactlyOnceWith('ssh lab', 'hosts');
+    expect(managers.tab.byLabel('hosts')?.log).toEqual([]);
+  });
+
+  it('returns a disabled-command refusal without recording it in the hosts tab', async () => {
+    const { managers } = makeManagers(settingsWith({ ssh: { enabled: false } }));
+    seedHostsTab(managers);
+
+    await expect(managers.command.dispatchLineWithOutput('hosts', 'ssh lab')).resolves.toEqual({
+      dispatched: true, output: 'Command is disabled: ssh.',
+    });
+
+    expect(managers.ssh.run).not.toHaveBeenCalled();
+    expect(managers.tab.byLabel('hosts')?.log).toEqual([]);
+  });
+
+  it('returns a launch error through the result without recording it in the hosts tab', async () => {
+    const { managers } = makeManagers();
+    seedHostsTab(managers);
+    vi.mocked(managers.ssh.run).mockReturnValue('Usage: ssh <destination> [ssh options].');
+
+    await expect(managers.command.dispatchLineWithOutput('hosts', 'ssh')).resolves.toEqual({
+      dispatched: true, output: '', result: 'Usage: ssh <destination> [ssh options].',
+    });
+
+    expect(managers.tab.byLabel('hosts')?.log).toEqual([]);
+  });
+
+  it('returns a launch exception through the result without recording it in the hosts tab', async () => {
+    const { managers } = makeManagers();
+    seedHostsTab(managers);
+    vi.mocked(managers.ssh.run).mockImplementation(() => { throw new Error('spawn failed'); });
+
+    await expect(managers.command.dispatchLineWithOutput('hosts', 'ssh lab')).resolves.toEqual({
+      dispatched: true, output: '', result: 'spawn failed',
+    });
+
+    expect(managers.tab.byLabel('hosts')?.log).toEqual([]);
+  });
+
+  it('keeps transcript capture for a shell plugin tab', async () => {
+    const { managers } = makeManagers();
+    seedPromptPluginTab(managers, 'shell');
+    vi.mocked(managers.ssh.run).mockReturnValue(undefined);
+
+    await managers.command.dispatchLineWithOutput('shell', 'ssh lab');
+
+    expect(managers.ssh.run).toHaveBeenCalledWith('ssh lab', 'shell');
+    expect(managers.tab.byLabel('shell')?.log.at(-1)).toEqual({ input: 'ssh lab', output: '' });
   });
 });
 

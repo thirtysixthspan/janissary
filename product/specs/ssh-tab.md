@@ -46,7 +46,12 @@ local workspace clone.
 A bare `ssh <name>` — the command word and a single name, with nothing else typed — can name a saved
 host instead of a literal destination. The name is matched against the saved catalog without regard
 to case, and a name that begins with a hyphen is still a name. Any other form — flags, a second
-word, a trailing remote command, or an address containing `@` or `:` — goes to ssh verbatim.
+word, a trailing remote command, or an address containing `@` or `:` — goes to ssh verbatim. A
+matching name wins over a literal hostname or an `~/.ssh/config` alias with the same spelling.
+
+When the file in effect cannot be used, the name is treated as a literal destination and the file's
+problem is posted once to the transcript the command was typed in. A valid personal catalog still
+supplies the match when a project file is malformed.
 
 When a saved host matches, the connection uses the saved user and host as its destination, with a
 saved port passed to ssh before the destination. A saved working directory makes the invocation ask
@@ -57,6 +62,17 @@ kept literal. If the directory cannot be entered, the remote side reports the fa
 starts the login shell in the original directory. The whole remote command is handed over as one
 argument, so the local shell neither expands its variables nor interprets its separators; expansion
 and command parsing happen only on the remote side.
+
+The new tab is labeled with the saved spelling, disambiguated with `-2`, `-3`, … if that label is
+already taken. The connections panel continues to show `ssh:<destination>` with the real
+`[user@]host`; the saved name travels with the tab so later views can tell a saved launch from a
+typed address. The tab inherits the group, color and working directory of the tab the command was
+typed in, even when a different tab is focused as it opens.
+
+The typed line is recorded in that tab's transcript exactly as entered, including a leading `/`,
+while the details used for the connection come from the catalog. Opening a host from a hosts tab
+records no line, because that tab has no transcript: an immediate launch error is returned to the
+caller instead of being written to a log.
 
 ## Tab shape
 

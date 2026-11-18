@@ -12,7 +12,7 @@ export function runDelegated(
   delegate: (input: string) => string | undefined,
   invocation?: CommandInvocationContext,
 ): void {
-  appendCommandOutput(managers, label, { input, output: '' }, invocation);
+  appendCommandOutput(managers, label, { input: invocation?.line ?? input, output: '' }, invocation);
   const error = delegate(input);
   if (error) appendCommandOutput(managers, label, { input: '', output: error }, invocation);
 }
