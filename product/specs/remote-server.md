@@ -504,6 +504,8 @@ On the remote side a dropped connection leaves running work intact for up to sev
 
 Detaching and attaching a remote shell preserves its shell and workspace across repeated reconnects. An earlier connection's delayed exit does not close the restored shell, and input or cleanup arriving after a terminal has ended is ignored.
 
+Any additional run clones the far side made beside the main workspace (see [Run clones](#run-clones)) stay owned by that far side through a detach and are drained only at its shutdown, never released when a channel ends.
+
 Closing the final remote harness tab stops its harness and removes the remote workspace before the session is left behind. Terminal cleanup keeps the connection available for remote teardown, including when the application quits, and gives shutdown frames a short bounded drain before closing SSH. That drain is what delivers those frames, so nothing else takes the connection down while it runs: closing the tabs of a session that is already ending leaves the connection to the teardown that is ending it. If a joined tab still uses the workspace, closing the launching harness leaves that tab connected until its own final release.
 
 A refused attachment for a missing session, a recorded peer process that no longer exists, or an explicit remote shell or harness exit establishes termination. A timeout or failed connection alone does not. Terminated tabs stay open with their transcripts and an explanation, and a `remote-session-terminated` notification names what went: `<what> on <host> terminated.` Nothing relaunches automatically. Explicitly terminating the shared remote connection is the one termination that reads differently: it ends recovery, shuts the peer down, and closes every tab and navigator holding the channel rather than leaving them open, and it records no notification, because the termination was the user's own instruction rather than news about the session.
@@ -861,6 +863,44 @@ will not open tabs, serve paths outside the provisioned workspace, run anything 
 workspace, or accept a message outside its protocol. The ACP agent is killed before the clone is
 removed, so the clone is never taken out from under a live agent, and every one of them is killed —
 a shared channel's server holds one agent per tab using it.
+
+#### Run clones
+
+Once the main workspace is ready, the far side also owns a service that can make additional shallow
+clones beside it for runs sharing the channel. Each clone is made with the same merged credentials
+the main workspace uses and the same depth its agents use, through the same workspace owner the main
+clone lives in. A run clone's directory becomes visible only after its clone and all follow-up setup
+have finished; a caller that asks earlier sees nothing and learns the directory when it is ready.
+Two different run labels stay independent.
+
+A run name is checked and reserved before any path is built from it. Names that are not a single
+folder name are refused without creating or removing anything, as is a name matching the main
+workspace, a name already held by this service, a name already tracked by the workspace owner, or one
+whose folder or scratch sibling already exists. Names differing only by case share one folder, so a
+case variant cannot race into the same target; an occupied path is never borrowed, overwritten or
+cleared, and a generated run name never removes a leftover. An unknown or invalid release is a
+harmless no-op, and releasing a name no longer held changes nothing.
+
+Release hides the run clone and cancels its startup before waiting on it. A cancellation takes effect
+before startup as well: if the release arrives before the clone begins, nothing is created, and if it
+arrives while the clone is starting, the clone is cancelled once and its underlying work is allowed
+to settle before its directory is removed. A ready clone is removed once and stops being visible at
+once; concurrent or repeated releases share that removal and never remove the same directory twice.
+A clone that fails or is cancelled gives its name back only after its cleanup has finished, so a
+later request may retry it, and a late completion from the old attempt cannot change the retry.
+
+The ACP and agent-resolution requests a client may send are routed together, beside the rest of the
+server's frame handling; a frame only the far side may send still receives the same
+`Unexpected remote frame "<type>".` refusal, whether or not a workspace has been provisioned.
+
+On shutdown the service stops admitting new clones, cancels and drains anything still starting, and
+the server waits for that drain alongside ACP disposal before the guarded removal of everything the
+workspace owner holds. Finished run clones stay owned until that point, so none is removed from under
+a live ACP child; if ACP teardown cannot confirm that its processes exited, the run clones and the main
+workspace are all kept, as today. A detached far side does not stop the service, cancel pending clones
+or release ready ones — detaching only parks its session. A far side that outlives a lost channel
+therefore keeps its run clones on disk until it shuts down. No wire request, workspace selector, or
+command exposes this service yet.
 
 ### Out of scope
 

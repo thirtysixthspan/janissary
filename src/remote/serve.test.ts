@@ -4,7 +4,7 @@ import { execSync } from 'node:child_process';
 import { spawn as spawnTerminal } from 'node-pty';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { initWorkspaceDir } from '../workspace/index.js';
+import { initWorkspaceDir, workspacePath } from '../workspace/index.js';
 import { loadProjectTokens } from '../project/tokens.js';
 import { loadGitIdentity, getGitIdentity } from '../git/identity.js';
 import { spawnPty } from '../pty.js';
@@ -16,7 +16,8 @@ import { encodeFrame, decodeFrame, encodeHandshake, parseHandshake, REMOTE_PROTO
 import type { ServerFrame } from './protocol-frames.js';
 import type { PromptHandlers } from '../acp/types.js';
 import { DetachedPeer, relayPeer, REMOTE_DETACH_TIMEOUT_MS } from './serve-detach.js';
-import { provisionRemoteWorkspace } from './serve-provision.js';
+import { provisionRemoteWorkspace, type ProvisionedWorkspace } from './serve-provision.js';
+import type * as ProvisionModule from './serve-provision.js';
 import { randomUUID } from 'node:crypto';
 import { createConnection, createServer } from 'node:net';
 import { readFileSync } from 'node:fs';
@@ -53,6 +54,27 @@ vi.mock('../acp/index.js', () => ({
     };
   }),
 }));
+
+// Observe the real `provision` callback without a production getter or a test-only wire frame. The
+// wrapper only records the owned workspace before handing it to the server unchanged.
+const provisionSpy = vi.hoisted(() => ({ workspaces: [] as unknown[] }));
+vi.mock('./serve-provision.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof ProvisionModule>();
+  type ProvisionArgs = Parameters<typeof actual.provisionRemoteWorkspace>;
+  return {
+    ...actual,
+    provisionRemoteWorkspace: (
+      context: ProvisionArgs[0], label: ProvisionArgs[1], forwarded: ProvisionArgs[2],
+      identity: ProvisionArgs[3], cloned?: ProvisionArgs[4], depth?: ProvisionArgs[5],
+    ) => {
+      const observed = context.provisioned;
+      return actual.provisionRemoteWorkspace({
+        ...context,
+        provisioned: (workspace) => { provisionSpy.workspaces.push(workspace); observed(workspace); },
+      }, label, forwarded, identity, cloned, depth);
+    },
+  };
+});
 
 const SPAWN_FRAME = {
   type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', cols: 80, rows: 24,
@@ -169,6 +191,7 @@ describe('RemoteServer', () => {
     acpMock.shutdown.mockReset().mockResolvedValue(undefined);
     acpMock.cancel.mockReset().mockResolvedValue(undefined);
     acpMock.killedBeforeCloneRemoved = false;
+    provisionSpy.workspaces.length = 0;
   });
 
   it('clones the root\'s origin on a provision request and answers workspace-ready', async () => {
@@ -459,6 +482,16 @@ describe('RemoteServer', () => {
     ]);
   });
 
+  it('refuses server-only and resolver-result frames through the default branch', () => {
+    const { server, frames } = makeServer();
+    server.receive(`${encodeFrame({ type: 'acp-ready', id: 'r1', sandboxed: false })}\n`);
+    server.receive(`${encodeFrame({ type: 'agent-resolve-result', id: 'r1', error: 'no' })}\n`);
+    expect(frames).toEqual([
+      { type: 'workspace-failed', message: 'Unexpected remote frame "acp-ready".' },
+      { type: 'workspace-failed', message: 'Unexpected remote frame "agent-resolve-result".' },
+    ]);
+  });
+
   it('refuses to spawn anything before a workspace has been provisioned', () => {
     const { server, frames } = makeServer();
     server.receive(`${encodeFrame({ type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', cols: 80, rows: 24 })}\n`);
@@ -528,6 +561,140 @@ describe('RemoteServer', () => {
     const { server, frames } = makeServer();
     server.receive(`${encodeFrame({ type: 'session-state' })}\n`);
     expect(frames).toEqual([{ type: 'session-state-result', processes: [] }]);
+  });
+});
+
+describe('RemoteServer — run clone ownership', () => {
+  const createdDirs: string[] = [];
+  type ManagedClone = { dir: string; ready: PromiseWithResolvers<void>; cancel: ReturnType<typeof vi.fn> };
+
+  // A manager stub over the suite's real workspace paths: clones get real directories so the
+  // shutdown assertions can watch them disappear, while readiness stays under the test's control.
+  function managedServer(pendingLabels: string[] = [], home = homeDir) {
+    const frames: ServerFrame[] = [];
+    const exit = vi.fn();
+    const clones = new Map<string, ManagedClone>();
+    const tracked = new Set<string>();
+    const manager = {
+      create: vi.fn((label: string) => {
+        const dir = workspacePath(label);
+        mkdirSync(dir, { recursive: true });
+        createdDirs.push(dir);
+        const ready = Promise.withResolvers<void>();
+        if (!pendingLabels.includes(label)) ready.resolve();
+        const clone: ManagedClone = { dir, ready, cancel: vi.fn() };
+        clones.set(label, clone);
+        tracked.add(dir);
+        return { dir, ready: ready.promise, cancel: clone.cancel };
+      }),
+      tracks: vi.fn((dir: string) => tracked.has(dir)),
+      remove: vi.fn((dir: string) => { rmSync(dir, { recursive: true, force: true }); tracked.delete(dir); }),
+      removeAll: vi.fn(() => {
+        for (const dir of tracked) { rmSync(dir, { recursive: true, force: true }); tracked.delete(dir); }
+      }),
+      cancel: vi.fn(),
+      preflight: vi.fn((): string | undefined => undefined),
+    } as unknown as WorkspaceManager;
+    const server = new RemoteServer(repoDir, (frame) => { frames.push(frame); }, exit, { settle: () => manager, home });
+    return { server, frames, exit, manager, clones, tracked };
+  }
+
+  async function provisionMain(f: ReturnType<typeof managedServer>, label: string): Promise<ProvisionedWorkspace> {
+    f.server.receive(`${encodeFrame({ type: 'provision', label })}\n`);
+    await waitForWorkspaceReady(f.frames);
+    const owner = provisionSpy.workspaces.at(-1) as ProvisionedWorkspace | undefined;
+    if (!owner) throw new Error('no provisioned workspace observed');
+    return owner;
+  }
+
+  afterEach(() => {
+    for (const dir of createdDirs) rmSync(dir, { recursive: true, force: true });
+    createdDirs.length = 0;
+  });
+
+  it('keeps main and run clones while ACP exit is pending, then removes both', async () => {
+    const f = managedServer();
+    const owner = await provisionMain(f, 'main-shared-exit');
+    const run = await owner.runClones.create('run-shared-exit');
+    const runDir = run.dir!;
+    expect(existsSync(owner.dir)).toBe(true);
+    expect(existsSync(runDir)).toBe(true);
+    f.server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
+    const acpExit = Promise.withResolvers<void>();
+    acpMock.shutdown.mockImplementation(() => acpExit.promise);
+    const stopping = f.server.shutdown(0);
+
+    expect(existsSync(owner.dir)).toBe(true);
+    expect(existsSync(runDir)).toBe(true);
+    expect(f.exit).not.toHaveBeenCalled();
+    acpExit.resolve();
+    await stopping;
+
+    expect(existsSync(owner.dir)).toBe(false);
+    expect(existsSync(runDir)).toBe(false);
+    expect(f.exit).toHaveBeenCalledWith(0);
+  });
+
+  it('waits for a pending clone readiness before removing both clones', async () => {
+    const f = managedServer(['run-pending-shutdown']);
+    const owner = await provisionMain(f, 'main-pending-drain');
+    const run = owner.runClones.create('run-pending-shutdown');
+    await vi.waitFor(() => expect(f.clones.has('run-pending-shutdown')).toBe(true));
+    const runDir = f.clones.get('run-pending-shutdown')!.dir;
+    f.server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
+    const acpExit = Promise.withResolvers<void>();
+    acpMock.shutdown.mockImplementation(() => acpExit.promise);
+    const stopping = f.server.shutdown(0);
+    acpExit.resolve();
+
+    await vi.waitFor(() => expect(f.clones.get('run-pending-shutdown')?.cancel).toHaveBeenCalledOnce());
+    expect(f.exit).not.toHaveBeenCalled();
+    expect(existsSync(runDir)).toBe(true);
+    f.clones.get('run-pending-shutdown')!.ready.resolve();
+    await run;
+    await stopping;
+
+    expect(f.exit).toHaveBeenCalledWith(0);
+    expect(existsSync(owner.dir)).toBe(false);
+    expect(existsSync(runDir)).toBe(false);
+  });
+
+  it('keeps both completed clones when bounded ACP teardown cannot confirm process exit', async () => {
+    const f = managedServer();
+    const owner = await provisionMain(f, 'main-unconfirmed-clones');
+    const run = await owner.runClones.create('run-unconfirmed');
+    const runDir = run.dir!;
+    f.server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
+    acpMock.shutdown.mockImplementation(() => new Promise<void>(() => {}));
+    vi.useFakeTimers();
+    try {
+      const stopping = f.server.shutdown(0);
+      await vi.advanceTimersByTimeAsync(5000);
+      await stopping;
+      expect(existsSync(owner.dir)).toBe(true);
+      expect(existsSync(runDir)).toBe(true);
+      expect(f.exit).toHaveBeenCalledWith(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('detach retains ready and pending clones without stopping their service', async () => {
+    const f = managedServer(['run-pending-detach']);
+    const owner = await provisionMain(f, 'main-detach-clones');
+    const ready = await owner.runClones.create('run-ready-detach');
+    const pending = owner.runClones.create('run-pending-detach');
+    await vi.waitFor(() => expect(f.clones.has('run-pending-detach')).toBe(true));
+
+    f.server.detach();
+
+    expect(f.exit).not.toHaveBeenCalled();
+    expect(existsSync(owner.dir)).toBe(true);
+    expect(existsSync(ready.dir!)).toBe(true);
+    expect(existsSync(f.clones.get('run-pending-detach')!.dir)).toBe(true);
+    expect(owner.runClones.lookup('run-ready-detach')).toBe(ready.dir);
+    f.clones.get('run-pending-detach')!.ready.resolve();
+    await pending;
   });
 });
 
