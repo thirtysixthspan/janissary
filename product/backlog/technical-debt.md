@@ -2,17 +2,6 @@
 
 ## ready
 
-* Trim resolved row-key buckets when a page begins, not only when a key is minted, so empty pages cannot grow the store without bound.
-
-Existing Debt: The store's page buckets are created by one method and evicted by another, so the documented bound applies only when a page actually mints a key. Severity: 5/10
-
-Existing Risk: 4/10 - Repeated queries that return no rows or keyless results push an empty bucket per page for the life of the browser, so a long session paging through empty results grows memory without eviction.
-
-Proposal Risk: 2/10 - Empty buckets are evicted, but a page that mints keys and is then superseded still relies on eviction during a later mint, so a long idle gap can retain extra keys.
-
-Proposal: `src/database/row-keys.ts` `RowKeyStore.beginPage` pushes a new bucket while only `mint` calls `trim`, and the comment above `RESOLVED_PAGES` claims the bound keeps the map from growing with use. Call `trim()` at the end of `beginPage` as well, so the bucket array stays bounded whether or not a page yields keys. `src/database/grid.ts` `runGrid` calls `beginPage` for every page including empty ones and should keep doing so. `src/database/write.test.ts` tests eviction only for pages that minted keys; add a case that begins more than `RESOLVED_PAGES` empty pages and asserts that buckets from the earlier pages were discarded before any later mint.
-
-
 * Reduce the cognitive complexity of `orderedKeys()` in `src/native-commands/decode.ts` (line 9), reported at 23 against the allowed 15 in a file scoring 44.97 FTA across 67 lines. The function scans settings JSON text by hand to collect top-level keys, and the complexity comes from a character switch whose quoted-string case nests a second escape-aware loop over the same shared depth and expecting-key state. Lift the string-skipping loop into a local helper so the switch keeps only the delimiter cases. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against `orderedKeys()` in `src/native-commands/decode.ts`. Severity: **medium**.
 
 

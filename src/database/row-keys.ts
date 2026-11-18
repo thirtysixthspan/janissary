@@ -24,6 +24,7 @@ export class RowKeyStore {
   /** Start a new page's bucket, so a superseded page is released as one rather than row by row. */
   beginPage(): void {
     this.pages.push([]);
+    this.trim();
   }
 
   /** A fresh opaque key for one row of `object`, addressed by its primary-key column values. */

@@ -74,7 +74,7 @@ While **Save** is pending, the form is disabled and another submission is ignore
 
 Each row has a **Delete row** button in its first column. It asks `Delete row from "<table>"?` before it deletes anything.
 
-A row you can edit stays valid for the last eight pages you've read from that database. An edit to a row from an older page is refused with `That row is no longer loaded. Refresh and try again.` Press **Refresh** and make the change again.
+A row you can edit stays valid for the last eight pages you've read from that database, counting pages that came back empty. An edit to a row from an older page is refused with `That row is no longer loaded. Refresh and try again.` Press **Refresh** and make the change again.
 
 ### Read-only tables
 
