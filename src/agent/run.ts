@@ -3,6 +3,7 @@ import { getConfig } from '../config.js';
 import { deferred } from '../deferred.js';
 import type { AgentRunView, AgentSnapshot } from './types.js';
 import type { AcpActivityKind } from '../acp/activity.js';
+import type { AcpRole } from '../acp/role.js';
 import type { AgentRecordFeed } from './record-feed.js';
 import { cleanupAgentRun } from './run-cleanup.js';
 
@@ -13,6 +14,11 @@ export type AgentCaller = Readonly<{
   incarnation: string;
   cwd: string;
   context: readonly string[];
+}>;
+export type AgentAcpCaller = Readonly<{
+  role: AcpRole;
+  sessionIdentity: string;
+  callerId: string;
 }>;
 export type AgentRunOptions = Readonly<{
   caller: AgentCaller;
@@ -26,6 +32,7 @@ export type AgentRunOptions = Readonly<{
   model?: string;
   effort?: string;
   subagentRole?: string;
+  acpCaller?: AgentAcpCaller;
 }>;
 
 function immutableSnapshot(snapshot: AgentSnapshot): AgentSnapshot {
@@ -53,6 +60,7 @@ export class AgentRun {
   private cleanups: (() => void | Promise<void>)[] = [];
   private allocations = new Set<Promise<void>>();
   private currentSnapshot: AgentSnapshot;
+  readonly acpCaller?: AgentAcpCaller;
 
   constructor(
     readonly caller: AgentCaller,
@@ -63,8 +71,10 @@ export class AgentRun {
       model: '', effort: 'medium', host: 'Local', workspace: caller.cwd,
     },
     readonly executionDir: string = caller.cwd,
+    acpCaller?: AgentAcpCaller,
   ) {
     this.currentSnapshot = immutableSnapshot(snapshot);
+    this.acpCaller = acpCaller === undefined ? undefined : Object.freeze({ ...acpCaller });
   }
 
   get snapshot(): AgentSnapshot {

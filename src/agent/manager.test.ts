@@ -4,7 +4,8 @@ import { createControllerTestProject } from '../controller/test-project.js';
 import { tabRuntime } from '../tab/runtime.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 import { makeTab } from '../tab/index.js';
-import type { AgentSnapshot } from './types.js';
+import type { AgentRunView, AgentSnapshot } from './types.js';
+import { AgentRun, type AgentAcpCaller } from './run.js';
 import { createRunCompletion, trackChildRun } from './nested-run.js';
 
 const snapshot: AgentSnapshot = Object.freeze({ taskPath: '/task.md', taskText: 'captured task', skills: [], grants: [] });
@@ -15,7 +16,8 @@ function setup() {
   const controller = project.create();
   const caller = seedRootTab(controller.managers.tab);
   const captured = controller.managers.agent.captureCaller(caller);
-  return { controller, caller, captured, manager: controller.managers.agent };
+  const acpCaller: AgentAcpCaller = { role: 'ask', sessionIdentity: 'acp-session-1', callerId: 'provider-caller-1' };
+  return { controller, caller, captured, acpCaller, manager: controller.managers.agent };
 }
 
 describe('AgentRunManager', () => {
@@ -461,5 +463,108 @@ describe('AgentRunManager', () => {
       title: 'Subagent: my-subagent.md',
       source: { taskPath: 'ai/tasks/my-subagent.md', subagentRole: 'research' },
     });
+  });
+
+  it('captures a distinct frozen ACP caller snapshot that ignores later mutation', async () => {
+    const { manager, captured } = setup();
+    const supplied = { role: 'tell' as const, sessionIdentity: 'acp-session-7', callerId: 'provider-caller-7' };
+    const run = manager.create({ caller: captured, snapshot, acpCaller: supplied });
+
+    supplied.sessionIdentity = 'changed-after-launch';
+    supplied.callerId = 'changed-after-launch';
+
+    expect(run.acpCaller).toEqual({ role: 'tell', sessionIdentity: 'acp-session-7', callerId: 'provider-caller-7' });
+    expect(run.acpCaller).not.toBe(supplied);
+    expect(Object.isFrozen(run.acpCaller)).toBe(true);
+    await manager.finish(run.id, 'completed');
+  });
+
+  it('keeps ACP caller data out of record provenance and run and monitor views', async () => {
+    const { manager, captured, acpCaller, controller } = setup();
+    const monitorViews: AgentRunView[] = [];
+    const subscription = messageBus.on('agent', 'run-updated', (event) => {
+      if (event.tab === 'monitor-acp') monitorViews.push(event.view);
+    });
+    try {
+      const run = manager.create({ caller: captured, snapshot, subagentRole: 'research', acpCaller });
+      manager.attachMonitor(run.id, 'monitor-acp');
+      run.reportActivity('message', 'A visible line.');
+      await Promise.resolve();
+
+      const source = controller.managers.acpRecords.window(run.recordId!)?.source;
+      expect(source).toMatchObject({ taskPath: '/task.md', subagentRole: 'research' });
+      expect(source).not.toHaveProperty('acpCaller');
+      expect(JSON.stringify(source)).not.toContain('acp-session-1');
+      expect(JSON.stringify(source)).not.toContain('provider-caller-1');
+
+      expect(monitorViews.length).toBeGreaterThan(0);
+      for (const view of [run.view(), ...monitorViews]) {
+        expect(JSON.stringify(view)).not.toContain('acpCaller');
+        expect(JSON.stringify(view)).not.toContain('acp-session-1');
+        expect(JSON.stringify(view)).not.toContain('provider-caller-1');
+      }
+      await manager.finish(run.id, 'completed');
+    } finally {
+      subscription.unsubscribe();
+    }
+  });
+
+  it('leaves ACP caller data absent for ordinary runs and legacy direct construction', async () => {
+    const { manager, captured } = setup();
+    const viaManager = manager.create({ caller: captured, snapshot });
+    const direct = new AgentRun(captured, snapshot);
+    const legacy = new AgentRun(captured, snapshot, undefined, {
+      command: 'agent execute task.md', model: 'test', effort: 'medium', host: 'Local', workspace: captured.cwd,
+    }, captured.cwd);
+
+    expect(viaManager.acpCaller).toBeUndefined();
+    expect(direct.acpCaller).toBeUndefined();
+    expect(legacy.acpCaller).toBeUndefined();
+    await manager.finish(viaManager.id, 'completed');
+    await direct.finish('completed');
+    await legacy.finish('completed');
+  });
+
+  it('marks disposing synchronously for an empty manager and on repeated disposal', async () => {
+    const { manager } = setup();
+    expect(manager.disposing).toBe(false);
+
+    const disposing = manager.dispose();
+    expect(manager.disposing).toBe(true);
+    await disposing;
+    expect(manager.disposing).toBe(true);
+    expect(manager.dispose()).toBeUndefined();
+    expect(manager.disposing).toBe(true);
+  });
+
+  it('marks disposing during pending cleanup and after a cleanup rejection', async () => {
+    const { manager, captured } = setup();
+    const run = manager.create({ caller: captured, snapshot });
+    const release = Promise.withResolvers<void>();
+    run.addResource('pending', () => release.promise);
+
+    const disposing = manager.dispose();
+    expect(manager.disposing).toBe(true);
+    let settled = false;
+    const observeSettlement = async () => {
+      try {
+        await disposing;
+      } finally {
+        settled = true;
+      }
+    };
+    const observed = observeSettlement();
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    release.resolve();
+    await observed;
+    expect(manager.disposing).toBe(true);
+
+    const rejecting = setup();
+    const failing = rejecting.manager.create({ caller: rejecting.captured, snapshot });
+    failing.addResource('bad', () => { throw new Error('bad cleanup'); });
+    await expect(rejecting.manager.dispose()).rejects.toThrow('Agent run shutdown failed.');
+    expect(rejecting.manager.disposing).toBe(true);
+    expect(rejecting.manager.dispose()).toBeUndefined();
   });
 });

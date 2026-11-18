@@ -53,7 +53,7 @@ export class AgentRunManager {
       effort: options.effort ?? 'medium',
       host: options.executionHost ?? 'Local',
       workspace: options.executionWorkspace ?? options.executionDir ?? options.caller.cwd,
-    }, options.executionDir ?? options.caller.cwd);
+    }, options.executionDir ?? options.caller.cwd, options.acpCaller);
     run.record = new AgentRecordFeed(this.managers.acpRecords, metadata, run.id);
     ownRecord(tabRuntime(callerTab), run.record.id);
     this.runs.set(run.id, run);
@@ -133,6 +133,10 @@ export class AgentRunManager {
 
   isAgentRun(runId: string): boolean {
     return this.knownRunIds.has(runId);
+  }
+
+  get disposing(): boolean {
+    return this.disposed;
   }
 
   dispose(): void | Promise<void> {

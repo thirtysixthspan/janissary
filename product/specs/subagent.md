@@ -20,6 +20,24 @@ The caller-facing primer teaches the one-line JSON grammar with escaped newlines
 
 On a remote run the far side reports the provider id as soon as its `newSession` succeeds, ahead of effort configuration and readiness, so a failed effort setup cannot discard an id whose handshake already completed. A normal readiness frame may carry the same id as an optional field, but readiness timing is unchanged. A caller keeps the first id it observes for `started` and the most recent id from a completed handshake for an outcome, with no id meaning `null`; none of these ids is the internal session identity.
 
+### Message contract
+
+A `started` message holds exactly the fields `status`, `role`, `sessionId`, and `callerId`, in that order, with the status set to `started` and the role set to the canonical role name. A completion holds exactly the fields `status`, `sessionId`, `callerId`, and `output`, in that order, with a status of `completed`, `partial`, `failed`, or `terminated`. A completion carries no role and a `started` message carries no output. Both ids are the provider ids the harness reported for the subagent and its caller. They pass through verbatim: no id is minted, replaced with an internal session identity, or inferred, and a completion whose subagent never completed a handshake carries a null session id.
+
+Each delivered message is one physical JSON line whose fields appear in the order above. Output is JSON-escaped so embedded newlines, quotes, and backslashes stay on that line, and decoding the line recovers the original text. Internal run, caller-incarnation, caller-role, and session-identity values are never part of the delivered message.
+
+### Caller ownership
+
+At launch a subagent captures its caller's role (`ask` or `tell`), the caller session's internal identity token, and the caller's provider id as a snapshot. Later changes to the launch options or to the caller session do not change that snapshot. The captured provider id stays distinct from the internal session identity, and none of the captured values is written into the run's durable record or its monitor view.
+
+### Pending delivery queue
+
+Messages waiting for a caller form a queue owned by that caller tab and role. The `ask` and `tell` roles on one tab, and the same role on two different tabs, hold independent queues. Within a role, messages are appended in arrival order. When a completion for a run is queued, any `started` message for that same run still waiting in the queue is dropped; other runs' waiting `started` messages and already-queued completions keep their positions and relative order, and the completion is appended at the tail. A `started` already taken out for delivery is unaffected. Queues never merge messages, replace an earlier position with a completion, or deduplicate completions. The queue holds pending messages only: it does not send a head message or start a prompt.
+
+### Human wording
+
+The Markdown reply for a started subagent is exactly `Subagent <role> started.` The completion reply is exactly `Subagent <role> <status>.`, followed by two newline characters and then the output verbatim. The role keeps its canonical spelling and spacing. Output text — Markdown, indentation, trailing whitespace, and an empty output — is preserved without an added suffix and without removing the blank line. Neither reply prints a session id, and no caller or session ids are needed to format either reply.
+
 ### Task prompt
 
 A subagent is told it is a subagent and asked to finish with a self-contained final result for the agent that launched it. The task text follows verbatim, then the optional context verbatim. The task prompt does not repeat the command protocol primer and adds no summarizing turn or output cap.
@@ -36,4 +54,4 @@ A subagent run always uses a fresh workspace. It never borrows the caller's dire
 
 ### Boundaries
 
-The grammar, messages, and task prompt are pure. They neither register the command nor check grants, roles, models, caller kind, workspaces, launch, delivery, or I/O. Caller-kind enforcement and response handling belong to command dispatch.
+The grammar, messages, human wording, pending queue, and task prompt are pure. They neither register the command nor check grants, roles, models, caller kind, workspaces, launch, delivery, or I/O. Caller-kind enforcement and response handling belong to command dispatch.
