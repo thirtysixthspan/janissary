@@ -17,6 +17,7 @@ The `hosts` command opens the hosts tab. The hosts tab is not dockable.
 The hosts tab is core, not a plugin.
 The `hosts list` lists the host configurations in json.
 Host name must be unique across all configurations.
+shell, agent and harness commends that support remote machines using `on <name>` syntax should accept a host connection name.
 
 ## development
 
