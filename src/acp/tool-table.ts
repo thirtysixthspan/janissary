@@ -44,7 +44,7 @@ export function createAcpToolTable(grants: readonly string[]): AcpTool[] {
       owner: 'browser',
       tool: {
         primer: BROWSER_PRIMER,
-        match: (command) => /^browser\b/i.test(command),
+        match: (command) => nativeCommandTool(command) === 'browser',
         isCommandLine: (line) => isBrowserCommandLine(line),
         runsOn: 'caller',
       },
@@ -53,7 +53,7 @@ export function createAcpToolTable(grants: readonly string[]): AcpTool[] {
       owner: 'question',
       tool: {
         primer: QUESTION_PRIMER,
-        match: (command) => /^question\b/i.test(command),
+        match: (command) => nativeCommandTool(command) === 'question',
         isCommandLine: (line) => isQuestionCommandLine(line),
         runsOn: 'caller',
       },
@@ -62,7 +62,7 @@ export function createAcpToolTable(grants: readonly string[]): AcpTool[] {
       owner: 'file',
       tool: {
         primer: filePrimer(allowed),
-        match: (command) => /^file\b/i.test(command),
+        match: (command) => nativeCommandTool(command) === 'file',
         isCommandLine: (line) => isFileReadCommandLine(line) || isFileGlobCommandLine(line)
           || isFileGrepCommandLine(line) || isFileMutationCommandLine(line),
         runsOn: 'workspace',
@@ -72,7 +72,7 @@ export function createAcpToolTable(grants: readonly string[]): AcpTool[] {
       owner: 'web',
       tool: {
         primer: webPrimer(allowed),
-        match: (command) => isWebCommandLine(command),
+        match: (command) => nativeCommandTool(command) === 'web',
         isCommandLine: (line) => isWebSearchReplyLine(line) || isWebFetchReplyLine(line),
         runsOn: 'workspace',
       },

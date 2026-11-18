@@ -2,17 +2,6 @@
 
 ## ready
 
-* Recognize native ACP commands from one vocabulary so gating and extraction cannot disagree about what a command is.
-
-Existing Debt: The same native-command vocabulary is recognized by two independent mechanisms whose rules are kept in sync by hand. Severity: 5/10
-
-Existing Risk: 5/10 - Adding or rewording a native command in one place narrows gating or extraction on the same path, so a command the model is told it may run is refused or never extracted from its reply.
-
-Proposal Risk: 2/10 - One recognizer feeds both paths, but the per-tool line matchers still have their own predicates, so a reply-line form one of them misses remains invisible.
-
-Proposal: `src/acp/native-commands.ts` `nativeCommandName` recognizes commands by splitting `NATIVE_ACP_COMMANDS` and matching token prefixes, while `src/acp/tool-table.ts` `createAcpToolTable` gives each tool its own `match` predicate: regexes for browser, question and file, `isWebCommandLine` for web, and a `match: () => true` database fall-through. `gateCoreCommand` and `toolExtractor` in `tool-table.ts` call both recognizers on the same command. Export one predicate over `NATIVE_ACP_COMMANDS` that both the tool-table entries and `nativeCommandName` consume, keeping the database fall-through explicit. `src/acp/native-commands.test.ts` and `src/acp/tool-table.test.ts` test each recognizer alone; add a parity test walking every `NATIVE_ACP_COMMANDS` entry through both and asserting identical recognition.
-
-
 * Share one recurrence validator between the schedule parser and the stored-entry decoder so persisted entries keep the parser's rules.
 
 Existing Debt: The grammar of a valid schedule entry is spelled out twice, once while parsing user input and again while decoding persisted entries, with the second copy relying on casts to narrow `unknown`. Severity: 5/10

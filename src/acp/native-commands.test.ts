@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isNativeCommand, nativeCommandName, nativeCommandTool } from './native-commands.js';
+import { createAcpToolTable } from './tool-table.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 
 describe('native ACP commands', () => {
@@ -66,6 +67,33 @@ describe('native ACP commands', () => {
   it('resolves a patch line with arguments in any case', () => {
     expect(nativeCommandName('file patch {"patchText":"x"}')).toBe('file patch');
     expect(nativeCommandName('  FILE  PATCH {…}')).toBe('file patch');
+  });
+
+  it('recognizes every native command through both the name recognizer and the tool table', () => {
+    const tools = createAcpToolTable(NATIVE_ACP_COMMANDS);
+    const fallThrough = tools.find((tool) => tool.match('anything at all'))!;
+    expect(tools.filter((tool) => tool.match('anything at all'))).toEqual([fallThrough]);
+    for (const name of NATIVE_ACP_COMMANDS) {
+      expect(nativeCommandName(name)).toBe(name);
+      const matched = tools.filter((tool) => tool.match(name));
+      const owned = matched.filter((tool) => tool !== fallThrough);
+      if (nativeCommandTool(name) === 'database') {
+        expect(matched).toEqual([fallThrough]);
+      } else {
+        expect(owned).toHaveLength(1);
+      }
+    }
+  });
+
+  it('rejects near-miss commands in both recognizers apart from the database fall-through', () => {
+    const tools = createAcpToolTable(NATIVE_ACP_COMMANDS);
+    const recognizers = tools.filter((tool) => !tool.match('anything at all'));
+    for (const nearMiss of [
+      'browser gotofoo x', 'file greps x', 'web searching x', 'question unknown x', 'db sqlitex list x',
+    ]) {
+      expect(nativeCommandName(nearMiss)).toBeUndefined();
+      expect(recognizers.some((tool) => tool.match(nearMiss))).toBe(false);
+    }
   });
 
   it('rejects unknown commands and words that only start with a native command', () => {
