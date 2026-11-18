@@ -55,11 +55,9 @@ and risk.`), `implementation` (`Implementation of an approved plan or a describe
 `gpt-6-luna` at `high`. The `tell` role follows `ask`, has the description `When you tell a model to
 carry out a task via ACP.`, and starts with the same three entries. The `ask` role grants `db sqlite
 list`, `db sqlite query`, `browser goto`, `browser content`, `question ask`, `question approve`,
-`file read`, `file glob`, `file grep`, `web search`, and `web fetch`. The `tell` role grants all seventeen native
+`file read`, `file glob`, `file grep`, `web search`, and `web fetch`. The `tell` role grants all eighteen native
 commands: those eleven plus `db sqlite create`, `db sqlite delete`, `browser eval`, `file write`,
-`file edit`, and `file patch`. The published native vocabulary has eighteen entries — the same commands plus `subagent`; tell's saved and default grant list is unchanged here. An existing roles file is not changed, so its saved `ask` and `tell`
-keep the grants they list.
-`planning`, `research`, `code review`, `implementation`, and
+`file edit`, `file patch`, and `subagent`. The published native vocabulary has eighteen entries, the same commands, so the default `tell` grants every native command. An existing roles file is not changed, so its saved `tell` keeps the grants it lists, including a list without `subagent`. `planning`, `research`, `code review`, `implementation`, and
 `documentation` start with no command grants. Only `planning`, `ask`, and `tell` start with entries.
 
 ### What the tab shows

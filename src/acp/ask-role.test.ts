@@ -37,6 +37,11 @@ const ASK_COMMANDS = [
   'db sqlite list', 'db sqlite query', 'browser goto', 'browser content', 'question ask', 'question approve',
   'file read', 'file glob', 'file grep', 'web search', 'web fetch',
 ];
+const TELL_COMMANDS = [
+  'db sqlite create', 'db sqlite delete', 'db sqlite query', 'db sqlite list',
+  'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve', 'file read',
+  'file glob', 'file grep', 'file write', 'file edit', 'subagent',
+];
 
 describe('askRoleEntries', () => {
   it('uses the default ask entries, in order, when neither roles file exists, and creates no file', () => {
@@ -93,13 +98,16 @@ describe('readRoleSettings', () => {
     expect(readRoleSettings(root, 'ask', home)).toEqual({
       name: 'ask', entries: [OPENCODE, CLAUDE, CODEX], commands: ASK_COMMANDS,
     });
-    const tell = readRoleSettings(root, 'tell', home).commands;
-    expect(tell).toHaveLength(17);
-    expect(tell).toEqual(expect.arrayContaining([
-      'file glob', 'file grep', 'file write', 'file edit', 'file patch', 'web search', 'web fetch',
+    const tell = readRoleSettings(root, 'tell', home);
+    expect(tell.commands).toEqual(TELL_COMMANDS);
+    expect(tell.commands).toHaveLength(18);
+    expect(tell.commands).toEqual(expect.arrayContaining([
+      'file glob', 'file grep', 'file write', 'file edit', 'file patch', 'web search', 'web fetch', 'subagent',
     ]));
-    expect(tell).toContain('file patch');
+    expect(tell.commands).toContain('file patch');
+    expect(tell.commands.filter((command) => command === 'subagent')).toHaveLength(1);
     expect(ASK_COMMANDS).not.toContain('file patch');
+    expect(knownRoleSettings(root, 'tell', home)).toEqual(tell);
     expect(readFileSync(file, 'utf8')).toBe(before);
   });
 
@@ -146,6 +154,26 @@ describe('readRoleSettings', () => {
     writeRoles(home, { tell: { description: 'Tasks.', entries: [], commands: ['file read'] } });
 
     expect(readRoleSettings(root, 'tell', home).commands).toEqual(['file read']);
+  });
+
+  it('borrows built-in tell models but grants no tools for an empty command list', () => {
+    const { home, root } = directories();
+    writeRoles(home, { tell: { description: 'Tasks.', entries: [], commands: [] } });
+
+    expect(readRoleSettings(root, 'tell', home)).toEqual({
+      name: 'tell', entries: [OPENCODE, CLAUDE, CODEX], commands: [],
+    });
+    expect(knownRoleSettings(root, 'tell', home)).toEqual(readRoleSettings(root, 'tell', home));
+  });
+
+  it('borrows built-in tell models but grants no tools when the command field is absent', () => {
+    const { home, root } = directories();
+    writeRoles(home, { tell: { description: 'Tasks.', entries: [] } });
+
+    expect(readRoleSettings(root, 'tell', home)).toEqual({
+      name: 'tell', entries: [OPENCODE, CLAUDE, CODEX], commands: [],
+    });
+    expect(knownRoleSettings(root, 'tell', home)).toEqual(readRoleSettings(root, 'tell', home));
   });
 });
 
@@ -206,9 +234,19 @@ describe('knownRoleSettings', () => {
     const { home, root } = directories();
     writeRoles(home, { 'home-only': { description: 'Home.', entries: [CLAUDE], commands: [] } });
     writeRoles(root, {});
+    const homeFile = path.join(home, '.janissary', 'roles.json');
+    const projectFile = path.join(root, '.janissary', 'roles.json');
+    const homeBefore = readFileSync(homeFile, 'utf8');
+    const projectBefore = readFileSync(projectFile, 'utf8');
 
+    expect(JSON.parse(projectBefore)).toEqual({});
     expect(knownRoleSettings(root, 'home-only', home)).toBeUndefined();
-    expect(knownRoleSettings(root, 'tell', home)?.commands).toHaveLength(14);
+    expect(knownRoleSettings(root, 'tell', home)).toEqual({
+      name: 'tell', entries: [OPENCODE, CLAUDE, CODEX], commands: TELL_COMMANDS,
+    });
+    expect(readRoleSettings(root, 'tell', home)).toEqual(knownRoleSettings(root, 'tell', home));
+    expect(readFileSync(homeFile, 'utf8')).toBe(homeBefore);
+    expect(readFileSync(projectFile, 'utf8')).toBe(projectBefore);
   });
 
   it('keeps a known custom role that lists zero entries', () => {

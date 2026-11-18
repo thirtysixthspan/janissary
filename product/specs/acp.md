@@ -150,7 +150,7 @@ file read <path> [--offset <line>] [--limit <lines>]
 Paths are relative to the workspace root. The output is numbered lines, at most 2000 per read; use --offset to continue a long file.
 ```
 
-`file read` is granted by default to the built-in `ask` and `tell` roles: ask grants eleven commands, including `file glob`, `file grep`, `web search`, and `web fetch`, and tell grants seventeen, every native command, including `file glob`, `file grep`, `file write`, `file edit`, `file patch`, `web search`, and `web fetch`.
+`file read` is granted by default to the built-in `ask` and `tell` roles: ask grants eleven commands, including `file glob`, `file grep`, `web search`, and `web fetch`, and tell grants eighteen, every native command, including `file glob`, `file grep`, `file write`, `file edit`, `file patch`, `web search`, `web fetch`, and `subagent`.
 
 ### File glob
 
