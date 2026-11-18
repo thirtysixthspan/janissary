@@ -3,7 +3,7 @@ import path from 'node:path';
 import { atomicWriteFile } from './atomic-write.js';
 import { DEFAULT_SYNTAX_THEME } from './syntax-themes.js';
 import { DEFAULT_APP_THEME } from './app-themes.js';
-import { backfillNotificationAlerts, configRecord, decodeConfig } from './config-decode.js';
+import { backfillMaxToolTurns, backfillNotificationAlerts, configRecord, decodeConfig } from './config-decode.js';
 import { NOTIFICATION_ALERT_DEFAULTS } from './notifications/alert-defaults.js';
 import { DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH, DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES, DEFAULT_TAB_NAME_MAX_LENGTH } from './shared/config-defaults.js';
 import type { NotificationEventType } from './notifications/index.js';
@@ -27,6 +27,7 @@ export type NotificationConfig = {
 
 export type Config = {
   transcriptMaxLines: number;
+  maxToolTurns: number;
   tabNameMaxLength: number;
   activeTabNameMaxLength: number;
   // How many entries the clipboard-history popup keeps (see `clipboard-history` in the specs). A cap
@@ -79,11 +80,13 @@ export type Config = {
 };
 
 export const DEFAULT_TRANSCRIPT_MAX_LINES = 25_000;
+export const DEFAULT_MAX_TOOL_TURNS = 20;
 export const DEFAULT_SYNC_PATHS = ['product/backlog/', 'product/plans/'];
 export const DEFAULT_EXTERNAL_VIEWERS: Record<string, string> = { video: 'QuickTime Player' };
 
 const DEFAULT_CONFIG: Config = {
   transcriptMaxLines: DEFAULT_TRANSCRIPT_MAX_LINES,
+  maxToolTurns: DEFAULT_MAX_TOOL_TURNS,
   tabNameMaxLength: DEFAULT_TAB_NAME_MAX_LENGTH,
   activeTabNameMaxLength: DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH,
   clipboardHistoryMaxEntries: DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES,
@@ -131,7 +134,8 @@ export function loadConfig(projectDirectory: string): Config {
   try {
     const parsed: unknown = JSON.parse(readFileSync(configPath, 'utf8'));
     config = decodeConfig(parsed, DEFAULT_CONFIG);
-    const backfilled = backfillNotificationAlerts(parsed, DEFAULT_CONFIG.notifications!);
+    const alerts = backfillNotificationAlerts(parsed, DEFAULT_CONFIG.notifications!);
+    const backfilled = backfillMaxToolTurns(alerts ?? parsed, DEFAULT_CONFIG);
     if (backfilled) {
       try {
         atomicWriteFile(configPath, JSON.stringify(backfilled, undefined, 2) + '\n');

@@ -63,6 +63,82 @@ describe('loadConfig', () => {
     expect(config.transcriptMaxLines).toBe(100);
   });
 
+  it('writes the default max tool turns into a fresh config', () => {
+    const config = loadConfig(tmpDir);
+    expect(config.maxToolTurns).toBe(20);
+
+    const parsed = JSON.parse(readFileSync(path.join(tmpDir, '.janissary', 'config.json'), 'utf8'));
+    expect(parsed.maxToolTurns).toBe(20);
+  });
+
+  it('backfills max tool turns into an existing config that predates it', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    const configPath = path.join(configDir, 'config.json');
+    writeFileSync(configPath, JSON.stringify({ transcriptMaxLines: 100, custom: 'kept' }));
+
+    const config = loadConfig(tmpDir);
+
+    expect(config.maxToolTurns).toBe(20);
+    expect(config.transcriptMaxLines).toBe(100);
+    const written = JSON.parse(readFileSync(configPath, 'utf8'));
+    expect(written.maxToolTurns).toBe(20);
+    expect(written.transcriptMaxLines).toBe(100);
+    expect(written.custom).toBe('kept');
+  });
+
+  it('honors an explicit max tool turns and does not rewrite the file', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    const configPath = path.join(configDir, 'config.json');
+    const raw = JSON.stringify({ maxToolTurns: 42 });
+    writeFileSync(configPath, raw);
+
+    expect(loadConfig(tmpDir).maxToolTurns).toBe(42);
+    expect(readFileSync(configPath, 'utf8')).toBe(raw);
+  });
+
+  it.each([0, -3, 2.5, '20', null])(
+    'falls back to 20 for the invalid max tool turns %p while keeping valid neighbors',
+    (value) => {
+      const configDir = path.join(tmpDir, '.janissary');
+      mkdirSync(configDir, { recursive: true });
+      const configPath = path.join(configDir, 'config.json');
+      writeFileSync(configPath, JSON.stringify({ maxToolTurns: value, transcriptMaxLines: 100 }));
+
+      const config = loadConfig(tmpDir);
+
+      expect(config.maxToolTurns).toBe(20);
+      expect(config.transcriptMaxLines).toBe(100);
+      expect(JSON.parse(readFileSync(configPath, 'utf8')).maxToolTurns).toBe(value);
+    },
+  );
+
+  it('leaves an invalid JSON config untouched when loading', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    const configPath = path.join(configDir, 'config.json');
+    writeFileSync(configPath, 'not-json');
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+    expect(loadConfig(tmpDir).maxToolTurns).toBe(20);
+    expect(readFileSync(configPath, 'utf8')).toBe('not-json');
+  });
+
+  it('keeps the decoded config when the max tool turns backfill cannot be written', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ transcriptMaxLines: 100 }));
+    const writeSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    chmodSync(configDir, 0o500);
+    try {
+      expect(loadConfig(tmpDir).maxToolTurns).toBe(20);
+      expect(writeSpy).not.toHaveBeenCalled();
+    } finally {
+      chmodSync(configDir, 0o700);
+    }
+  });
+
   it('defaults native alerts and validates per-category bell settings', () => {
     const configDir = path.join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });
@@ -381,7 +457,10 @@ describe('loadConfig', () => {
     const configDir = path.join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });
     const configPath = path.join(configDir, 'config.json');
-    const complete = JSON.stringify({ notifications: { events: {}, alerts: NOTIFICATION_ALERT_DEFAULTS } });
+    const complete = JSON.stringify({
+      maxToolTurns: 20,
+      notifications: { events: {}, alerts: NOTIFICATION_ALERT_DEFAULTS },
+    });
     writeFileSync(configPath, complete);
     loadConfig(tmpDir);
     expect(readFileSync(configPath, 'utf8')).toBe(complete);
@@ -550,6 +629,16 @@ describe('updateConfig', () => {
     updateConfig({ theme: 'dracula' });
     const reloaded = loadConfig(tmpDir);
     expect(reloaded.theme).toBe('dracula');
+  });
+
+  it('preserves max tool turns when rewriting an unrelated key and across a reload', () => {
+    loadConfig(tmpDir);
+
+    expect(updateConfig({ syntaxTheme: 'nord' })).toBe(true);
+    expect(getConfig().maxToolTurns).toBe(20);
+    const configPath = path.join(tmpDir, '.janissary', 'config.json');
+    expect(JSON.parse(readFileSync(configPath, 'utf8')).maxToolTurns).toBe(20);
+    expect(loadConfig(tmpDir).maxToolTurns).toBe(20);
   });
 
   it('preserves the clipboard-history cap when rewriting an unrelated key', () => {
