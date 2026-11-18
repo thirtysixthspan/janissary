@@ -3,10 +3,13 @@ import type { ApplicationCommandNativeTool } from '../shared/application-command
 
 export type NativeCommandTool = ApplicationCommandNativeTool;
 
-export function nativeCommandName(command: string): string | undefined {
+export function matchesNativeCommand(command: string, name: string): boolean {
   const words = command.trim().split(/\s+/u).map((word) => word.toLowerCase());
-  return NATIVE_ACP_COMMANDS.find((candidate) =>
-    candidate.split(' ').every((part, index) => words[index] === part));
+  return name.split(' ').every((part, index) => words[index] === part);
+}
+
+export function nativeCommandName(command: string): string | undefined {
+  return NATIVE_ACP_COMMANDS.find((candidate) => matchesNativeCommand(command, candidate));
 }
 
 export function nativeCommandTool(command: string): NativeCommandTool | undefined {
