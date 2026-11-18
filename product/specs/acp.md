@@ -273,7 +273,7 @@ Only a lowercase `web fetch` line counts as a command; `Web fetch …`, `WEB FET
 
 ### File patch tool
 
-`file patch` is a native command, listed after `file edit`, and a role can grant it like any other command; the built-in `tell` role grants it by default with seventeen commands, the built-in `ask` role does not grant it, and a saved role keeps the grants it lists. It belongs to the same file tool as `file read`, `file glob`, `file grep`, `file write`, and `file edit`, which is included when a role grants any of the six. When `file patch` is granted, the file tool's primer adds the patch primer as its own block after the mutation primer, or after the last of the read, glob, and grep primers when neither write nor edit is granted, separated by a blank line, so a patch-only grant gets no write or edit text. The patch primer is exactly:
+`file patch` is a native command, listed after `file edit`, and a role can grant it like any other command; the built-in `tell` role grants it by default with eighteen commands, the built-in `ask` role does not grant it, and a saved role keeps the grants it lists. It belongs to the same file tool as `file read`, `file glob`, `file grep`, `file write`, and `file edit`, which is included when a role grants any of the six. When `file patch` is granted, the file tool's primer adds the patch primer as its own block after the mutation primer, or after the last of the read, glob, and grep primers when neither write nor edit is granted, separated by a blank line, so a patch-only grant gets no write or edit text. The patch primer is exactly:
 
 ```
 To change several files in one step, end your reply with one line:
