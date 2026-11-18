@@ -1,5 +1,6 @@
-import { lstatSync, mkdirSync, readlinkSync, realpathSync, statSync } from 'node:fs';
+import { lstatSync, mkdirSync, readlinkSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { canonicalPath } from '../file-read/canonical.js';
 import { checkLexicalPath, checkProtectedPath, checkRealTarget, type FilePolicyFailure } from '../file-read/policy.js';
 import { failureResult, fileOperationReason, runFileOperation, type FileOperationResult } from '../file-navigator/file-operation-result.js';
 
@@ -13,8 +14,6 @@ export type WriteTarget = {
 type Ancestor = { realAncestor: string; missingSegments: string[] };
 
 type ExistingCheck = { exists: false } | { exists: true; realPath: string };
-
-const canonicalPath = realpathSync.native;
 
 const NOT_A_DIRECTORY_REASON = fileOperationReason({ code: 'ENOTDIR' });
 
