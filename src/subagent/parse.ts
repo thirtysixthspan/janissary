@@ -1,9 +1,9 @@
 import { readToken, skipSpaces } from '../command/quoted-token.js';
 
-export const SUBAGENT_FLAG_USAGE = 'Usage: subagent --role <role> --task <file.md> [--context <text>]';
-export const SUBAGENT_JSON_USAGE = 'Usage: subagent {"role":"<role>","task":"<file.md>","context":"<text>"}';
+export const SUBAGENT_FLAG_USAGE = 'Usage: subagent --role <role> [--task <file.md>] [--context <text>]';
+export const SUBAGENT_JSON_USAGE = 'Usage: subagent {"role":"<role>","context":"<text>"}';
 
-type SubagentFields = { role: string; task: string; context?: string };
+type SubagentFields = { role: string; task?: string; context?: string };
 export type SubagentInvocation = SubagentFields & { form: 'flags' | 'json' };
 export type SubagentParseResult = SubagentInvocation | { error: string };
 
@@ -12,6 +12,18 @@ const JSON_FIELDS = ['role', 'task', 'context'] as const;
 
 function present(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+function subagentFields(role: unknown, task: unknown, context: unknown): SubagentFields | undefined {
+  if (!present(role)) return undefined;
+  if (task !== undefined && !present(task)) return undefined;
+  if (context !== undefined && typeof context !== 'string') return undefined;
+  if (task === undefined && !present(context)) return undefined;
+  return {
+    role,
+    ...(task !== undefined && { task }),
+    ...(context !== undefined && { context }),
+  };
 }
 
 function flagError(): { error: string } {
@@ -45,11 +57,8 @@ function parseFlags(argument: string): SubagentParseResult {
     values[flag as (typeof FLAGS)[number]] = value;
   }
 
-  const role = values['--role'];
-  const task = values['--task'];
-  if (!present(role) || !present(task)) return flagError();
-  const context = values['--context'];
-  return { form: 'flags', role, task, ...(context !== undefined && { context }) };
+  const parsed = subagentFields(values['--role'], values['--task'], values['--context']);
+  return parsed === undefined ? flagError() : { form: 'flags', ...parsed };
 }
 
 function parseJson(argument: string): SubagentParseResult {
@@ -64,10 +73,8 @@ function parseJson(argument: string): SubagentParseResult {
   if (Object.keys(record).some((key) => !JSON_FIELDS.includes(key as (typeof JSON_FIELDS)[number]))) {
     return jsonError();
   }
-  const { role, task, context } = record;
-  if (!present(role) || !present(task)) return jsonError();
-  if (context !== undefined && typeof context !== 'string') return jsonError();
-  return { form: 'json', role, task, ...(context !== undefined && { context }) };
+  const parsed = subagentFields(record.role, record.task, record.context);
+  return parsed === undefined ? jsonError() : { form: 'json', ...parsed };
 }
 
 export function parseSubagentCommand(text: string): SubagentParseResult {

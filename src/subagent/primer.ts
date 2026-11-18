@@ -1,6 +1,6 @@
 export const SUBAGENT_PRIMER = [
   'You can hand a task to another agent with the subagent command.',
-  String.raw`Write it as one line of JSON with a "role" (the role name), a "task" (an existing AI task file), and an optional "context" (extra directions). Encode newlines inside strings as \n so the whole command stays on one line.`,
+  String.raw`Write it as one line of JSON with a "role" (the role name), an optional "task" (an existing AI task file), and a "context" (the assignment or extra directions). Omit "task" when "context" carries the whole assignment. Encode newlines inside strings as \n so the whole command stays on one line.`,
   'The command returns no output immediately and does not block you. Its results arrive later as new prompts, each holding one JSON object on a single line.',
   'A started message has "status":"started" and the fields "role" (the canonical role name), "sessionId", and "callerId". It means the subagent is running in the background.',
   'A completion message has "status", "sessionId", "callerId", and "output". The sessionId is the provider session id and may be null on a failed completion when no session started. The started message may be skipped when its completion overtakes it.',

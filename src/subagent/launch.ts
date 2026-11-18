@@ -18,9 +18,11 @@ import { prepareRemoteSubagentWorkspace, type RemoteSubagentWorkspace } from './
 import { createSubagentReplySink, type SubagentReplySink } from './replies.js';
 import { settleSubagentRun } from './settle.js';
 
+const SUBAGENT_INLINE_TASK_PATH = 'inline';
+
 export type SubagentLaunchOptions = Readonly<{
   label: string;
-  task: string;
+  task?: string;
   context?: string;
   commandText: string;
   invocation?: CommandInvocationContext;
@@ -34,7 +36,7 @@ type Continuation = Readonly<{
   invocation: CommandInvocationContext;
   settings: AcpRoleSettings;
   entries: readonly [RoleEntry, ...RoleEntry[]];
-  task: string;
+  task?: string;
   context?: string;
   workspace: AgentWorkspace | undefined;
   remote: RemoteSubagentWorkspace | undefined;
@@ -61,8 +63,11 @@ async function continueLaunch(ctx: Continuation): Promise<void> {
       if (remote) directory = await remote.ready;
       else { await workspace!.ready; directory = workspace!.dir; }
       if (run.outcome !== undefined || run.abortController.signal.aborted) return terminatedResult(ctx.firstProviderId);
+      const inline = task === undefined;
       let snapshot: AgentSnapshot;
-      if (remote && channel) {
+      if (inline) {
+        snapshot = { taskPath: SUBAGENT_INLINE_TASK_PATH, taskText: context ?? '', skills: [], grants: [] };
+      } else if (remote && channel) {
         snapshot = await channel.resolveAgentSnapshot(task, [], `subagent-${run.id}`);
         if (run.outcome !== undefined || run.abortController.signal.aborted) return terminatedResult(ctx.firstProviderId);
       } else {
@@ -70,7 +75,8 @@ async function continueLaunch(ctx: Continuation): Promise<void> {
       }
       run.setSnapshot(snapshot);
       const execute = (): Promise<SubagentExecutionResult> => executeSubagentRun({
-        run, invocation, managers, settings, entries, executionDir: directory, context, offline,
+        run, invocation, managers, settings, entries, executionDir: directory,
+        context: inline ? undefined : context, offline,
         ...(remote && channel && { remote: { channel, host: host ?? '', workspace: `subagent-${run.id}` } }),
         onStarted: ctx.onStarted,
       });
@@ -123,7 +129,7 @@ export function launchSubagent(options: SubagentLaunchOptions, managers: Manager
     if (remote) {
       run = managers.agent.create({
         caller,
-        snapshot: { taskPath: task, taskText: '', skills: [], grants: [] },
+        snapshot: { taskPath: task ?? SUBAGENT_INLINE_TASK_PATH, taskText: '', skills: [], grants: [] },
         executionHost: host,
         command: line,
         model: first.model,
@@ -133,7 +139,7 @@ export function launchSubagent(options: SubagentLaunchOptions, managers: Manager
         ...(acpCaller && { acpCaller }),
       });
     } else {
-      const local = startLocalAgentRun(managers, caller, line, task, first.model, first.effort ?? 'default', {
+      const local = startLocalAgentRun(managers, caller, line, task ?? SUBAGENT_INLINE_TASK_PATH, first.model, first.effort ?? 'default', {
         fresh: true, subagentRole: settings.name, ...(acpCaller && { acpCaller }),
       });
       run = local.run;

@@ -315,6 +315,27 @@ describe('launchSubagent — resolution and execution', () => {
     expect(options.remote).toBeUndefined();
   });
 
+  it('uses the context as the task text with no task file and no resolution', async () => {
+    const receipt = launch({ task: undefined, context: 'Investigate the parser' });
+    const run = onlyRun();
+    await drain();
+    expect(mocks.resolve).not.toHaveBeenCalled();
+    expect(run.snapshot.taskText).toBe('Investigate the parser');
+    expect(mocks.execute.mock.calls[0][0].context).toBeUndefined();
+    expect(record(receipt).title).toBe('Subagent: inline');
+  });
+
+  it('skips task resolution on a remote no-task run but still provisions and executes', async () => {
+    const remote = fakeRemote();
+    launch({ task: undefined, context: 'Investigate the parser' });
+    const run = onlyRun();
+    await drain();
+    expect(remote.resolveAgentSnapshot).not.toHaveBeenCalled();
+    expect(remote.runClone).toHaveBeenCalledWith('create', expect.stringContaining('subagent-'));
+    expect(mocks.execute).toHaveBeenCalledOnce();
+    expect(run.snapshot.taskText).toBe('Investigate the parser');
+  });
+
   it('turns a resolver failure into one failed completion with no started reply', async () => {
     mocks.resolve.mockImplementation(() => { throw new Error('Agent: unknown task "task.md".'); });
     launch();

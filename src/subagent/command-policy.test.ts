@@ -193,6 +193,36 @@ describe('runSubagentCommand — caller and form', () => {
       undefined, '', 'line one\nline two',
     ]);
   });
+
+  it('passes an omitted task through with its context for both caller forms', () => {
+    const root = directories();
+    writeRoles(root, researchRoles());
+    const { managers } = fixture({ root });
+    mocks.launch.mockReturnValue(RECEIPT);
+
+    expect(runSubagentCommand('subagent --role research --context "Investigate the parser"',
+      { label: 'caller', index: 0 }, managers)).toBe(RECEIPT);
+    expect(mocks.launch.mock.calls[0][0].task).toBeUndefined();
+    expect(mocks.launch.mock.calls[0][0].context).toBe('Investigate the parser');
+
+    mocks.launch.mockClear();
+    expect(runSubagentCommand('subagent {"role":"research","context":"Investigate the parser"}',
+      { label: 'caller', index: 0 }, managers, invocation({ acpTool: true }))).toBe('');
+    expect(mocks.launch.mock.calls[0][0].task).toBeUndefined();
+    expect(mocks.launch.mock.calls[0][0].context).toBe('Investigate the parser');
+  });
+
+  it('refuses an invocation with neither task nor context in the caller usage', () => {
+    const root = directories();
+    writeRoles(root, researchRoles());
+    const { managers, appended } = fixture({ root });
+
+    expect(runSubagentCommand('subagent --role research', { label: 'caller', index: 0 }, managers)).toBeUndefined();
+    expect(appended[0]?.output).toBe(SUBAGENT_FLAG_USAGE);
+    expect(runSubagentCommand('subagent {"role":"research"}',
+      { label: 'caller', index: 0 }, managers, invocation({ acpTool: true }))).toBe(SUBAGENT_JSON_USAGE);
+    expect(mocks.launch).not.toHaveBeenCalled();
+  });
 });
 
 describe('runSubagentCommand — caller usage override', () => {

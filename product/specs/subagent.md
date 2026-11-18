@@ -2,15 +2,15 @@
 
 ### Invocation forms
 
-`subagent` starts a background agent run for a named role, gives it an existing AI task file plus optional context, and hands a distilled result back to whoever started it. The command token is matched regardless of case. A person uses the flag form; an agent in an `ask` or `tell` session uses the JSON form.
+`subagent` starts a background agent run for a named role, gives it an existing AI task file or an assignment written inline in the context, plus optional extra directions, and hands a distilled result back to whoever started it. The command token is matched regardless of case. A person uses the flag form; an agent in an `ask` or `tell` session uses the JSON form.
 
-The flag form is `subagent --role <role> --task <file.md> [--context <text>]`. Flags may appear in any order, and a role or context containing spaces is written as one quoted value; escaped matching quotes are preserved as literal characters. The JSON form is one line holding an object, `subagent {"role":"<role>","task":"<file.md>","context":"<text>"}`; context may be omitted or empty, and embedded newlines in string values are escaped so the command stays on one line. Form selection happens before decoding: an argument whose first non-space character is `{` is JSON, and everything else — including arrays, scalars, and quoted JSON — is flags.
+The flag form is `subagent --role <role> [--task <file.md>] [--context <text>]`. The task is optional: when it is omitted, the context carries the whole assignment; when both are supplied, the context is extra directions appended after the task file. Flags may appear in any order, and a role or context containing spaces is written as one quoted value; escaped matching quotes are preserved as literal characters. The JSON form is one line holding an object, `subagent {"role":"<role>","context":"<text>"}` when the task is omitted or `subagent {"role":"<role>","task":"<file.md>","context":"<text>"}` when it is present; context may be empty when a task is supplied, and embedded newlines in string values are escaped so the command stays on one line. Form selection happens before decoding: an argument whose first non-space character is `{` is JSON, and everything else — including arrays, scalars, and quoted JSON — is flags.
 
-Only `role`, `task`, and `context` are accepted. Unknown or removed fields and flags (including model and effort), repeated or valueless flags, extra positional text, non-string values, invalid JSON, and a missing or whitespace-only role or task are refused. String contents pass through unchanged; trimming is used only to decide whether a required value is present.
+Only `role`, `task`, and `context` are accepted. Unknown or removed fields and flags (including model and effort), repeated or valueless flags, extra positional text, non-string values, invalid JSON, a missing or whitespace-only role, an explicitly blank task, and an invocation with neither a task nor a non-blank context are refused. String contents pass through unchanged; trimming is used only to decide whether a required value is present.
 
 ### Usage errors
 
-Bare `subagent` and every flag-form failure return exactly `Usage: subagent --role <role> --task <file.md> [--context <text>]`. Every JSON-form failure returns exactly `Usage: subagent {"role":"<role>","task":"<file.md>","context":"<text>"}`. Which form a caller must use, and how a refusal reaches it, is decided by the caller policy below.
+Bare `subagent` and every flag-form failure return exactly `Usage: subagent --role <role> [--task <file.md>] [--context <text>]`. Every JSON-form failure returns exactly `Usage: subagent {"role":"<role>","context":"<text>"}`. Which form a caller must use, and how a refusal reaches it, is decided by the caller policy below.
 
 ### Caller policy and immediate refusals
 
@@ -22,7 +22,7 @@ A person receives a refusal as one background reply under the original line — 
 
 ### Command primer
 
-The caller-facing primer teaches the one-line JSON grammar with escaped newlines, that the command returns nothing immediately and does not block, and that results arrive later as new prompts each holding one JSON object. A `started` message carries `status`, the canonical `role`, `sessionId`, and `callerId`, and means the subagent is running in the background. A completion carries `status`, `sessionId`, `callerId`, and `output`. Session ids are provider ids; a failed completion may carry a null session id, and a `started` message may be skipped when its completion overtakes it. Provider ids are taken from the agent's own handshake rather than minted by Janissary, so a run whose handshake never completes has none; that provider id stays separate from the internal session identity that prompts and `startAcp` report. Completion statuses are `completed` (finished successfully), `partial` (stopped at the tool-loop limit), `failed` (the output is the source error), and `terminated` (stopped). The primer lists no roles and consults no role descriptions.
+The caller-facing primer teaches the one-line JSON grammar with escaped newlines, that the task is optional when the context carries the whole assignment, that the command returns nothing immediately and does not block, and that results arrive later as new prompts each holding one JSON object. A `started` message carries `status`, the canonical `role`, `sessionId`, and `callerId`, and means the subagent is running in the background. A completion carries `status`, `sessionId`, `callerId`, and `output`. Session ids are provider ids; a failed completion may carry a null session id, and a `started` message may be skipped when its completion overtakes it. Provider ids are taken from the agent's own handshake rather than minted by Janissary, so a run whose handshake never completes has none; that provider id stays separate from the internal session identity that prompts and `startAcp` report. Completion statuses are `completed` (finished successfully), `partial` (stopped at the tool-loop limit), `failed` (the output is the source error), and `terminated` (stopped). The primer lists no roles and consults no role descriptions.
 
 ### Provider ids on remote runs
 
@@ -54,7 +54,7 @@ The Markdown reply for a started subagent is exactly `Subagent <role> started.` 
 
 ### Task prompt
 
-A subagent is told it is a subagent and asked to finish with a self-contained final result for the agent that launched it. The task text follows verbatim, then the optional context verbatim. The task prompt does not repeat the command protocol primer and adds no summarizing turn or output cap.
+A subagent is told it is a subagent and asked to finish with a self-contained final result for the agent that launched it. The task text follows verbatim, then the optional context verbatim. When no task file is named, the context is the assignment and appears once as the task text, with no second copy appended as extra directions; no task file is looked up, locally or remotely. The task prompt does not repeat the command protocol primer and adds no summarizing turn or output cap.
 
 ### Single-entry execution
 
@@ -76,7 +76,7 @@ Termination takes priority over everything else. An ended or aborted run, a clos
 
 ### Records and names
 
-A subagent run's durable record carries the canonical role name. Its title is `Subagent: <task filename>` from the task selector captured at launch, without the ACP title cap; later task resolution, a task snapshot replacement, and caller renames never change it. In the connections tab, and as its own connection tab's title, the record is named `subagent:<canonical role>`. In the caller's connections popup it appears as an ACP-kind row titled `Subagent: <task filename>` while the run is live, with no ACP reference, and leaves the popup when the run ends. Ordinary agent and ACP names are unchanged.
+A subagent run's durable record carries the canonical role name. Its title is `Subagent: <task filename>` from the task selector captured at launch, without the ACP title cap; a run with no task file is titled `Subagent: inline`. Later task resolution, a task snapshot replacement, and caller renames never change it. In the connections tab, and as its own connection tab's title, the record is named `subagent:<canonical role>`. In the caller's connections popup it appears as an ACP-kind row titled `Subagent: <task filename>` while the run is live, with no ACP reference, and leaves the popup when the run ends. Ordinary agent and ACP names are unchanged.
 
 A run stopped at the tool-loop limit closes its record with the `Partial` outcome, which reads `Partial` as a terminal status in the connections list, the connection tab, and the agent monitor. It owns the first outcome like `Completed` and does not abort the run's controller. A terminated subagent record saves `Subagent terminated.` as its answer, regardless of an earlier response; an ordinary agent run saves `Agent terminated.` instead.
 

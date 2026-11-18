@@ -29,6 +29,12 @@ describe('SUBAGENT_PRIMER', () => {
     expect(SUBAGENT_PRIMER).toContain(String.raw`\n`);
   });
 
+  it('teaches that the task is optional when the context carries the assignment', () => {
+    expect(primer).toContain('optional "task"');
+    expect(primer).toContain('omit "task"');
+    expect(primer).toContain('carries the whole assignment');
+  });
+
   it('teaches empty immediate output and later JSON prompts', () => {
     expect(primer).toContain('no output immediately');
     expect(primer).toContain('does not block you');
@@ -87,6 +93,12 @@ describe('subagentTaskPrompt', () => {
     expect(subagentTaskPrompt('TASK BODY')).toBe(
       'You are a subagent. Complete the task below and finish with a self-contained final result for the agent that launched you.\n\nTASK BODY',
     );
+  });
+
+  it('places an inline assignment verbatim and only once', () => {
+    const prompt = subagentTaskPrompt('Investigate the parser');
+    expect(prompt).toContain('Investigate the parser');
+    expect(prompt.match(/Investigate the parser/g)).toHaveLength(1);
   });
 
   it('does not repeat the command primer', () => {

@@ -3,8 +3,8 @@ import { parseSubagentCommand, SUBAGENT_FLAG_USAGE, SUBAGENT_JSON_USAGE } from '
 
 describe('usage exports', () => {
   it('exposes the exact usage lines', () => {
-    expect(SUBAGENT_FLAG_USAGE).toBe('Usage: subagent --role <role> --task <file.md> [--context <text>]');
-    expect(SUBAGENT_JSON_USAGE).toBe('Usage: subagent {"role":"<role>","task":"<file.md>","context":"<text>"}');
+    expect(SUBAGENT_FLAG_USAGE).toBe('Usage: subagent --role <role> [--task <file.md>] [--context <text>]');
+    expect(SUBAGENT_JSON_USAGE).toBe('Usage: subagent {"role":"<role>","context":"<text>"}');
   });
 });
 
@@ -27,6 +27,13 @@ describe('valid flag form', () => {
       .toEqual({ form: 'flags', role: 'r', task: 't.md', context: '' });
   });
 
+  it('accepts an omitted task when the context carries the assignment', () => {
+    expect(parseSubagentCommand('subagent --role r --context "Investigate the parser"'))
+      .toEqual({ form: 'flags', role: 'r', context: 'Investigate the parser' });
+    expect(parseSubagentCommand('subagent --context research.md --role r'))
+      .toEqual({ form: 'flags', role: 'r', context: 'research.md' });
+  });
+
   it('preserves quoted values, escaped quotes and surrounding whitespace', () => {
     expect(parseSubagentCommand('subagent --role "code review" --task t.md'))
       .toEqual({ form: 'flags', role: 'code review', task: 't.md' });
@@ -45,6 +52,11 @@ describe('valid JSON form', () => {
       .toEqual({ form: 'json', role: 'r', task: 't.md', context: 'ctx' });
     expect(parseSubagentCommand('subagent {"role":"r","task":"t.md","context":""}'))
       .toEqual({ form: 'json', role: 'r', task: 't.md', context: '' });
+  });
+
+  it('accepts an omitted task when the context carries the assignment', () => {
+    expect(parseSubagentCommand('subagent {"role":"r","context":"Investigate the parser"}'))
+      .toEqual({ form: 'json', role: 'r', context: 'Investigate the parser' });
   });
 
   it('preserves string contents and escapes newlines', () => {
@@ -95,6 +107,8 @@ describe('invalid input', () => {
       'subagent --role r --task "   "',
       'subagent --Role r --task t.md',
       'subagent --role r --task t.md --context',
+      'subagent --role r --context ""',
+      'subagent --role r --context "   "',
     ]) {
       expect(parseSubagentCommand(input)).toEqual({ error: SUBAGENT_FLAG_USAGE });
     }
@@ -115,6 +129,8 @@ describe('invalid input', () => {
       'subagent {"role":"r","task":"t.md","context":5}',
       'subagent {"role":"r","task":"t.md","context":null}',
       'subagent {"role":"r","task":"t.md"} trailing',
+      'subagent {"role":"r","context":""}',
+      'subagent {"role":"r","context":"   "}',
     ]) {
       expect(parseSubagentCommand(input)).toEqual({ error: SUBAGENT_JSON_USAGE });
     }

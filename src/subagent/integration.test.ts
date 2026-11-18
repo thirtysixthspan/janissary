@@ -338,7 +338,7 @@ describe('subagent integration — local command to human reply', () => {
   it('returns the exact flag usage for a malformed person form and starts nothing', async () => {
     await withRealLoop(async () => {
       runSubagentCommand('subagent --role research', caller, controller.managers);
-      expect(humanReplies()[0]!.output).toBe('Usage: subagent --role <role> --task <file.md> [--context <text>]');
+      expect(humanReplies()[0]!.output).toBe('Usage: subagent --role <role> [--task <file.md>] [--context <text>]');
       expect(runs()).toHaveLength(0);
     });
   });

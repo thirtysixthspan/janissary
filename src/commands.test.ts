@@ -107,11 +107,11 @@ describe('getOutput help pages', () => {
   it('prints the subagent page and its alphabetical commands row', () => {
     const text = outputText('help subagent');
     expect(text.startsWith('### subagent')).toBe(true);
-    expect(text).toContain('`subagent --role <role> --task <file.md> [--context <text>]`');
-    expect(text).toContain('`subagent {"role":"<role>","task":"<file.md>","context":"<text>"}`');
+    expect(text).toContain('`subagent --role <role> [--task <file.md>] [--context <text>]`');
+    expect(text).toContain('`subagent {"role":"<role>","context":"<text>"}`');
     const row = outputText('help commands').split('\n').find((line) => line.startsWith('| `subagent` |'));
     if (!row) throw new Error('subagent command row is missing');
-    expect(row).toContain('`subagent --role <role> --task <file.md> [--context <text>]`');
+    expect(row).toContain('`subagent --role <role> [--task <file.md>] [--context <text>]`');
     const table = outputText('help commands');
     expect(table.indexOf('| `ssh` |')).toBeLessThan(table.indexOf('| `subagent` |'));
     expect(table.indexOf('| `subagent` |')).toBeLessThan(table.indexOf('| `syntax` |'));

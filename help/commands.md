@@ -54,7 +54,7 @@
 | `shell` | `shell [name] [-w\|--workspace\|--no-workspace] [--offline] [on <address>]` opens a shell with a fresh workspace; `--no-workspace` uses a local shell, and `on <address>` opens a remote shell |
 | `sql` | Open a SQL browser. Bare `sql` opens the most recently connected database; use `sql <name>` to choose one or add `left` or `right` to dock it |
 | `ssh` | Open an SSH session to a remote host in a full-tab terminal |
-| `subagent` | `subagent --role <role> --task <file.md> [--context <text>]` runs a background agent; an ACP caller uses `subagent <json>` for no immediate output and later messages |
+| `subagent` | `subagent --role <role> [--task <file.md>] [--context <text>]` runs a background agent; omit task when context carries the assignment; an ACP caller uses `subagent <json>` with no immediate output |
 | `syntax` | `syntax theme <name>` sets the syntax-highlighting theme for every open editor and diff tab; `syntax theme` alone opens a theme-picker modal |
 | `tab` | `focus <name>`, `move <tab> <position>`, `pane <tab> left\|right`, `split <tab>`, `color <tab> <#rrggbb>`, `group <tab> <id\|name>`, `dock <tab> left\|right`, `undock <tab>` arrange tabs |
 | `tasks` | Open the task picker listing executable `ai/tasks/*.md` files from the project and Janissary (Ctrl+A) |
