@@ -1,4 +1,5 @@
 import type { TimeOfDay } from './types.js';
+import { isValidClock, isValidIntervalMs } from './validity.js';
 
 const MONTHS = [
   'january', 'february', 'march', 'april', 'may', 'june',
@@ -25,7 +26,8 @@ export function parseTimeOfDay(tok: string): TimeOfDay | undefined {
     return undefined;
   }
   if (minute > 59) return undefined;
-  return { hour, minute };
+  const timeOfDay = { hour, minute };
+  return isValidClock(timeOfDay) ? timeOfDay : undefined;
 }
 
 export function parseInterval(tok: string): number | undefined {
@@ -33,7 +35,8 @@ export function parseInterval(tok: string): number | undefined {
   if (!m) return undefined;
   const n = Number(m[1]);
   if (n <= 0) return undefined;
-  return n * UNIT_MS[m[2].toLowerCase()];
+  const ms = n * UNIT_MS[m[2].toLowerCase()];
+  return isValidIntervalMs(ms) ? ms : undefined;
 }
 
 export function parseMonthDay(tokens: string[]): { month: number; day: number; consumed: number } | undefined {

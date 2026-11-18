@@ -2,17 +2,6 @@
 
 ## ready
 
-* Share one recurrence validator between the schedule parser and the stored-entry decoder so persisted entries keep the parser's rules.
-
-Existing Debt: The grammar of a valid schedule entry is spelled out twice, once while parsing user input and again while decoding persisted entries, with the second copy relying on casts to narrow `unknown`. Severity: 5/10
-
-Existing Risk: 5/10 - A change to accepted time, interval or weekday rules on the parser side leaves stored entries validated by the old rules, so a schedule can be created one way and silently accepted or dropped differently after a reload.
-
-Proposal Risk: 2/10 - One validator is used at both boundaries, but the stored snapshot still has its own version gate and command-string check, so those can drift independently.
-
-Proposal: `src/schedule/parsing.ts` `parseTimeOfDay` and `parseInterval`, together with `src/schedule/every-schedule.ts` `parseEverySchedule`, define the accepted clock, interval and weekday shapes; `src/schedule/system/store-decode.ts` `validClock`, `validEntry` and `hasNoRecurrenceFields` re-derive the same rules with casts such as `(time.hour as number)` and re-check `value.command !== \`script ${value.script}\``. Extract a shared guard module, for example `src/schedule/validity.ts`, exporting the clock, interval and recurrence validators, and call it from both the parser and the store decoder, leaving the version gate in `store-decode.ts`. `src/schedule/system/store-decode.test.ts` checks hand-picked invalid cases and `src/schedule/index.test.ts` covers the parser; add a round-trip test feeding parsed entries through the decoder plus a case where a stored entry violates a parser rule.
-
-
 * Reject non-positive or non-integer terminal dimensions in asciicast headers before they reach the terminal emulator.
 
 Existing Debt: The header parser validates only the JavaScript type of the terminal dimensions while its sibling resize parser validates their numeric shape, so the same value is trusted at one boundary and checked at the other. Severity: 5/10
