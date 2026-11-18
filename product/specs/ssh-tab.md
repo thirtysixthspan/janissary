@@ -41,6 +41,23 @@ grammar (`ssh host as label` runs `as label` on the remote host). No `-w`/`--wor
 either — `-w` is a real ssh flag (tunnel device forwarding), and a remote session has no use for a
 local workspace clone.
 
+### Saved host destinations
+
+A bare `ssh <name>` — the command word and a single name, with nothing else typed — can name a saved
+host instead of a literal destination. The name is matched against the saved catalog without regard
+to case, and a name that begins with a hyphen is still a name. Any other form — flags, a second
+word, a trailing remote command, or an address containing `@` or `:` — goes to ssh verbatim.
+
+When a saved host matches, the connection uses the saved user and host as its destination, with a
+saved port passed to ssh before the destination. A saved working directory makes the invocation ask
+for a terminal: after login the remote side changes into that directory and then starts the
+account's login shell. An absolute path is used as it stands, a relative path starts at the SSH login
+directory, and `~` or a path beginning with `~/` refers to the remote home with the rest of the path
+kept literal. If the directory cannot be entered, the remote side reports the failure and still
+starts the login shell in the original directory. The whole remote command is handed over as one
+argument, so the local shell neither expands its variables nor interprets its separators; expansion
+and command parsing happen only on the remote side.
+
 ## Tab shape
 
 An ssh tab **is** a harness-view tab (`view: 'harness'`), recognized by `harness.name === 'ssh'`.

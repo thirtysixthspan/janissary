@@ -1,3 +1,5 @@
+import { shellQuote } from '../shell/quote.js';
+
 // The embeddable AI coding harnesses, mapped to the binary that launches each. In the web app a
 // harness runs in a PTY rendered as an inline terminal card (see src/controller.ts).
 export const HARNESS_COMMANDS: Record<string, string> = {
@@ -7,12 +9,6 @@ export const HARNESS_COMMANDS: Record<string, string> = {
 };
 
 export const HARNESS_NAMES = Object.keys(HARNESS_COMMANDS);
-
-// Single-quote a value for embedding in a `shell -lc '<command>'` string, escaping any embedded
-// single quotes (`'` → `'\''`).
-function shellQuote(value: string): string {
-  return `'${value.replaceAll("'", String.raw`'\''`)}'`;
-}
 
 // Each harness expresses a per-session effort/reasoning level through a different flag, so the same
 // requested level maps to different arguments: claude takes `--effort <level>`; codex sets it via a
