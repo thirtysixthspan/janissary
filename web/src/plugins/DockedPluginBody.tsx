@@ -35,7 +35,7 @@ export function DockedPluginBody({
   const isVisible = visible && !tab.hidden;
   return (
     <div className="sidebar-plugin" data-tab-label={tab.label} inert={!isVisible} style={{ display: isVisible ? 'flex' : 'none' }}>
-      <DockCycleHeader dock={tab.dock} client={client} index={index} classPrefix="sidebar-plugin">
+      <DockCycleHeader dock={tab.dock} onCycle={(next) => client.send({ method: 'setDock', params: { index, dock: next } })} classPrefix="sidebar-plugin">
         <span className="sidebar-plugin-actions" ref={setActionsTarget} />
       </DockCycleHeader>
       <DockedActionsContext.Provider value={actionsTarget}>

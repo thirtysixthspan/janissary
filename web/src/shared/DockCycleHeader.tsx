@@ -1,13 +1,11 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { JanusClient } from './ws/ws';
 import { nextDock, dockTooltip } from './dock-cycle';
 import { dockSwapIcon } from './icons';
 
 type Properties = {
   dock?: 'left' | 'right';
-  client: JanusClient;
-  index: number;
+  onCycle(next: 'left' | 'right'): void;
   // BEM-ish class prefix (e.g. 'notifications', 'schedules') the caller's stylesheet defines
   // `<prefix>-header`/`<prefix>-actions`/`<prefix>-dock-cycle` under.
   classPrefix: string;
@@ -16,7 +14,7 @@ type Properties = {
 
 // The dock-location-cycle button shown in a docked tab's header, shared by every tab body that
 // supports the left/center/right dock cycle (NotificationsTab, SchedulesTab).
-export function DockCycleHeader({ dock, client, index, classPrefix, children }: Properties) {
+export function DockCycleHeader({ dock, onCycle, classPrefix, children }: Properties) {
   return (
     <div className={`${classPrefix}-header`}>
       <div className={`${classPrefix}-actions`}>
@@ -25,7 +23,7 @@ export function DockCycleHeader({ dock, client, index, classPrefix, children }: 
           type="button"
           className={`${classPrefix}-dock-cycle`}
           title={dockTooltip(nextDock(dock))}
-          onClick={() => client.send({ method: 'setDock', params: { index, dock: nextDock(dock) } })}
+          onClick={() => onCycle(nextDock(dock))}
         >
           <FontAwesomeIcon icon={dockSwapIcon} />
         </button>}
