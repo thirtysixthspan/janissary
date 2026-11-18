@@ -286,6 +286,34 @@ describe('launchSubagent — resolution and execution', () => {
     expect(mocks.execute).not.toHaveBeenCalled();
   });
 
+  it('delivers one terminal completion when termination arrives during a pending remote clone', async () => {
+    const cloneCreate = deferred<string>();
+    const runClone = vi.fn((action: string) => action === 'create' ? cloneCreate.promise : Promise.resolve(undefined));
+    const resolveAgentSnapshot = vi.fn(async () => ({ taskPath: '/remote/task.md', taskText: 'text', skills: [], grants: [] }));
+    const channel = { runClone, resolveAgentSnapshot, attached: true } as unknown as RemoteChannel;
+    vi.spyOn(controller.managers.remote, 'get').mockReturnValue(channel);
+    vi.spyOn(controller.managers.remote, 'addressOf').mockReturnValue({ host: 'devbox' } as never);
+    vi.spyOn(controller.managers.remote, 'acquireAgentLease').mockReturnValue(vi.fn(async () => {}));
+
+    launch();
+    const run = onlyRun();
+    await drain();
+    expect(runClone).toHaveBeenCalledWith('create', `subagent-${run.id}`);
+    expect(resolveAgentSnapshot).not.toHaveBeenCalled();
+    expect(mocks.execute).not.toHaveBeenCalled();
+
+    const finishing = controller.managers.agent.finish(run.id, 'terminated');
+    await drain();
+    cloneCreate.resolve('/remote/clone/ws');
+    await finishing;
+    await drain();
+
+    expect(resolveAgentSnapshot).not.toHaveBeenCalled();
+    expect(mocks.execute).not.toHaveBeenCalled();
+    expect(humanReplies()).toHaveLength(1);
+    expect(humanReplies()[0].output).toContain('Subagent terminated.');
+  });
+
   it('resolves remote tasks through the captured channel with the clone label', async () => {
     const remote = fakeRemote();
     remote.cloneCreate.resolve('/remote/clone/ws');

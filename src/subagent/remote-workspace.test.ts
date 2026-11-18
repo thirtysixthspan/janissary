@@ -184,6 +184,26 @@ describe('prepareRemoteSubagentWorkspace — cancellation and release', () => {
     expect(leaseRelease).toHaveBeenCalledOnce();
   });
 
+  it('termination during a pending create rejects a late successful clone as cancelled with no lookup', async () => {
+    autoCreate = false;
+    const lookup = vi.spyOn(channel, 'resolveAgentSnapshot');
+    workspace.start(run);
+    await flush();
+    const [create] = requests();
+    expect(requests().filter((frame) => frame.action === 'create')).toHaveLength(1);
+
+    const finishing = controller.managers.agent.finish(run.id, 'terminated');
+    await flush();
+    answer(create.id, { dir: createDir });
+    await finishing;
+
+    await expect(workspace.ready).rejects.toThrow('git clone cancelled.');
+    expect(lookup).not.toHaveBeenCalled();
+    expect(requests().filter((frame) => frame.action === 'create')).toHaveLength(1);
+    expect(requests().filter((frame) => frame.action === 'release')).toHaveLength(1);
+    expect(leaseRelease).toHaveBeenCalledOnce();
+  });
+
   it('a task-resolution style failure with no execution releases the clone normally', async () => {
     await startAndCreate();
     await workspace.release();

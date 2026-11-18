@@ -71,6 +71,7 @@ export function prepareRemoteSubagentWorkspace(
 
   async function doRelease(): Promise<void> {
     cancelled = true;
+    rejectReady(new Error('git clone cancelled.'));
     try {
       if (cloneRequested && dir === undefined && !cloneRelease) cloneRelease = safeCloneRelease();
       const safe = executionAdmitted ? await executionBarrier.promise : true;

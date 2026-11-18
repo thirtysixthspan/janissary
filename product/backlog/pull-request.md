@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Handle termination during pending remote clone creation so a late successful clone cannot hang the completion.
-
-Existing Issue: When a remote run is terminated after its clone request is submitted but before the clone resolves, and that clone later succeeds, the handle neither resolves nor rejects readiness, so the launch continuation waits forever and never publishes a completion. Severity: 8/10
-
-Existing Risk: 7/10 - Terminating a remote subagent while its clone is provisioning can silently swallow the completion and leave the background continuation pending indefinitely, with no terminal message for the caller.
-
-Proposal Risk: 2/10 - Readiness is always settled once termination is recorded, so the continuation reaches settlement and the recorded terminated outcome overrides the result; the existing latches guard against a second settlement.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2064 "settle remote readiness when termination arrives during pending clone creation". In src/subagent/remote-workspace.ts, release()/doRelease() sets cancelled but never calls rejectReady; when the run ends while a create is pending and the create later returns a directory, startup()'s ended(run) guard returns without settling readiness, so src/subagent/launch.ts's await remote.ready never returns and settleSubagentRun never runs. Make the final release also reject an unsettled readiness with git clone cancelled., using the existing rejectReady latch so the late success cannot resolve readiness or reach lookup, while keeping the ended(run) guard after the awaited create. Add a src/subagent/remote-workspace.test.ts case that starts a pending create, finishes the run as terminated, answers create with a successful directory, and asserts readiness rejects with git clone cancelled. and no lookup begins; add a matching launch/settlement case proving exactly one terminal completion is delivered. Keep cancel()'s existing late-success and one-shot release behavior and the invariant that allocation ends before readiness; a stale stub whose allocation already ended cannot prove this regression.
-
 * Deliver the plan's real-driver executor-rejection tests for the owned-abort cleanup path.
 
 Existing Issue: The subplan's focused local and selected-remote cases that admit the real replacement driver and throw from its fallback activity subscriber are absent; every executor-rejection test uses a plain rejected-promise stub, including the case whose allocation was already ended. Severity: 5/10
