@@ -102,6 +102,20 @@ describe('SessionList rendering', () => {
     );
   });
 
+  it('shows the saved launch name in the Host cell but keeps the original destination in the tooltip', () => {
+    const { container } = list([row({ host: 'devbox', hostName: 'lab', destination: 'admin@devbox' })]);
+    expect(container.querySelector('.session-row-host')).toHaveTextContent('lab');
+    expect(container.querySelector('.session-row')).toHaveAttribute(
+      'title', expect.stringContaining('admin@devbox') as unknown as string,
+    );
+    expect(container.querySelector('.session-row')?.getAttribute('title')).not.toContain('lab');
+  });
+
+  it('shows the bare host in the Host cell when the row has no saved launch name', () => {
+    const { container } = list([row({ host: 'devbox', destination: 'admin@devbox' })]);
+    expect(container.querySelector('.session-row-host')).toHaveTextContent('devbox');
+  });
+
   it('focuses the active list and highlights its first row', () => {
     const { container } = list([row({ id: 'a' }), row({ id: 'b' })]);
     expect(container.querySelector('.session-list')).toHaveFocus();
@@ -375,6 +389,23 @@ describe('SessionList docked layout', () => {
     const renderedRow = container.querySelector('.session-row');
     expect(renderedRow).not.toHaveTextContent('harness');
     expect(renderedRow).toHaveAttribute('title', 'admin@devbox\nharness\n/srv/ws\nConnection timed out');
+  });
+
+  it('shows the saved launch name in the docked Host cell but keeps the original destination in the tooltip', () => {
+    const { container } = list(
+      [row({ host: 'devbox', hostName: 'lab', destination: 'admin@devbox' })],
+      capabilities('left').value,
+    );
+    expect(container.querySelector(':scope .session-row-secondary .session-row-host')).toHaveTextContent('lab');
+    expect(container.querySelector('.session-row')).toHaveAttribute(
+      'title', expect.stringContaining('admin@devbox') as unknown as string,
+    );
+    expect(container.querySelector('.session-row')?.getAttribute('title')).not.toContain('lab');
+  });
+
+  it('shows the bare host in the docked Host cell when the row has no saved launch name', () => {
+    const { container } = list([row({ host: 'devbox' })], capabilities('left').value);
+    expect(container.querySelector(':scope .session-row-secondary .session-row-host')).toHaveTextContent('devbox');
   });
 
   it('returns to the table when placement changes back to the centre', () => {

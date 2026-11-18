@@ -18,6 +18,7 @@ export type SessionMember = {
 export type SessionChannel = {
   launchLabel: string;
   host: string;
+  hostName?: string;
   destination: string;
   workspace: string;
   session?: string;
@@ -33,6 +34,7 @@ export type SessionChannel = {
 export type SessionSsh = {
   label: string;
   host: string;
+  hostName?: string;
   destination: string;
   activity: number;
 };
@@ -52,6 +54,7 @@ export type SessionDetached = {
 export type SessionTerminated = {
   session: string;
   host: string;
+  hostName?: string;
   destination: string;
   workspace: string;
   label: string;
@@ -106,6 +109,7 @@ function liveRows(channel: SessionChannel): RemoteSessionView[] {
   return channel.members.map((member) => ({
     id: member.label,
     host: channel.host,
+    ...(channel.hostName !== undefined && { hostName: channel.hostName }),
     name: member.name,
     kind: member.kind,
     state,
@@ -127,6 +131,7 @@ function sshRow(tab: SessionSsh): RemoteSessionView {
   return {
     id: tab.label,
     host: tab.host,
+    ...(tab.hostName !== undefined && { hostName: tab.hostName }),
     name: 'ssh',
     kind: 'ssh',
     state: 'active',
@@ -152,6 +157,7 @@ function detachedRows(entry: SessionDetached): RemoteSessionView[] {
   return record.processes.filter((process) => process.kind !== 'agent').map((process) => ({
     id: `${record.session}:${process.id}`,
     host: record.host,
+    ...(record.hostName !== undefined && { hostName: record.hostName }),
     name: process.label,
     kind: process.kind === 'harness' ? 'harness' : 'shell',
     state: 'detached' as const,
@@ -172,6 +178,7 @@ function terminatedRow(entry: SessionTerminated): RemoteSessionView[] {
   return [{
     id: `${entry.session}:terminated`,
     host: entry.host,
+    ...(entry.hostName !== undefined && { hostName: entry.hostName }),
     name: entry.name,
     kind: entry.kind,
     state: 'terminated',

@@ -40,6 +40,11 @@ describe('sessions shared contract', () => {
     })).toBe(true);
   });
 
+  it('accepts an optional saved launch name and rejects one of the wrong type', () => {
+    expect(isSessionsPayload({ entries: [{ ...ROW, hostName: 'lab' }] })).toBe(true);
+    expect(isSessionsPayload({ entries: [{ ...ROW, hostName: 7 }] })).toBe(false);
+  });
+
   it('rejects null, an array, a missing entries list, and a non-array entries value', () => {
     expect(isSessionsPayload(null)).toBe(false);
     expect(isSessionsPayload([ROW])).toBe(false);

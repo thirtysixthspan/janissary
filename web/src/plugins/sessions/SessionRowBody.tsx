@@ -12,7 +12,7 @@ type SessionRowProperties = {
 export function WideSessionRow({ row, now, onAction }: SessionRowProperties) {
   return (
     <>
-      <span className="session-row-host">{row.host}</span>
+      <span className="session-row-host">{row.hostName ?? row.host}</span>
       <span className="session-row-kind">{row.kind}</span>
       <span className="session-row-name">{row.name}</span>
       <span className="session-row-state">
@@ -39,7 +39,7 @@ export function NarrowSessionRow({ row, now, onAction }: SessionRowProperties) {
           <ConnectionPlug state={row.state} />
           {row.state}
         </span>
-        <span className="session-row-host">{row.host}</span>
+        <span className="session-row-host">{row.hostName ?? row.host}</span>
         <time className="session-row-activity" dateTime={new Date(row.activity).toISOString()}>
           {relativeActivity(row.activity, now)}
         </time>

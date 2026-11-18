@@ -21,8 +21,13 @@ function harnessTab(label: string, overrides: Partial<Tab> = {}): Tab {
   return tab(label, { view: 'harness', harness: { name: 'claude', program: 'claude', ptyId: 'p', status: 'running' }, ...overrides });
 }
 
-function sshTab(label: string, destination: string): Tab {
-  return harnessTab(label, { harness: { name: 'ssh', program: 'ssh', ptyId: 'p', status: 'running', destination } as never });
+function sshTab(label: string, destination: string, hostName?: string): Tab {
+  return harnessTab(label, {
+    harness: {
+      name: 'ssh', program: 'ssh', ptyId: 'p', status: 'running', destination,
+      ...(hostName !== undefined && { hostName }),
+    } as never,
+  });
 }
 
 function managers(tabs: Tab[]): Managers {
@@ -77,6 +82,18 @@ describe('channelOf member rows', () => {
       .toMatchObject({ label: 'scratch', kind: 'shell' });
   });
 
+  it('carries the saved launch name from a resolved address into the channel', () => {
+    const withName = entry({
+      address: { host: 'devbox', destination: 'devbox', address: 'devbox', hostName: 'lab' } as never,
+    });
+
+    expect(channelOf(managers([harnessTab('claude')]), withName, activity).hostName).toBe('lab');
+  });
+
+  it('leaves the saved launch name off a channel launched by a literal destination', () => {
+    expect(channelOf(managers([harnessTab('claude')]), entry(), activity).hostName).toBeUndefined();
+  });
+
   // A joined tab can close while the channel lives on; its label stays in the entry's set, and a row
   // for a tab that is no longer there would be a row the user cannot act on.
   it('drops a label whose tab has since closed', () => {
@@ -98,6 +115,15 @@ describe('sshTabs', () => {
   it('lists a destination with no user as its own host', () => {
     expect(sshTabs(managers([sshTab('box', 'web2')]), activity))
       .toEqual([{ label: 'box', host: 'web2', destination: 'web2', activity: 42 }]);
+  });
+
+  it('carries the saved launch name of an ssh tab opened from a saved host', () => {
+    expect(sshTabs(managers([sshTab('prod', 'deploy@web1', 'lab')]), activity))
+      .toEqual([{ label: 'prod', host: 'web1', hostName: 'lab', destination: 'deploy@web1', activity: 42 }]);
+  });
+
+  it('leaves the saved launch name off an ssh tab opened from a literal destination', () => {
+    expect(sshTabs(managers([sshTab('box', 'web2')]), activity)[0].hostName).toBeUndefined();
   });
 
   it('lists nothing when no tab is an ssh session', () => {

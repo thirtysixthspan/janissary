@@ -27,6 +27,7 @@ function toPayload(rows: readonly RemoteSessionView[]): SessionsPayload {
   const entries: SessionRow[] = rows.map((row) => ({
     id: row.id,
     host: row.host,
+    ...(row.hostName !== undefined && { hostName: row.hostName }),
     name: row.name,
     kind: row.kind,
     state: row.state,

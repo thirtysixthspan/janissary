@@ -469,12 +469,13 @@ describe('SessionsManager attach', () => {
   // A peer that answers is a peer that is there; refusing establishes the session is over.
   it('drops the record and leaves a terminated row when the peer refuses', async () => {
     const h = harness();
-    saveRemoteSessions([record()]);
+    saveRemoteSessions([record({ hostName: 'lab' })]);
     settle({ kind: 'terminated', reason: 'claude on devbox is no longer running.' });
     h.sessions.attach(SESSION);
 
     await vi.waitFor(() => expect(h.sessions.view()[0].state).toBe('terminated'));
     expect(loadRemoteSessions()).toEqual([]);
+    expect(h.sessions.view()[0].hostName).toBe('lab');
   });
 
   // Exactly one line for the event: whatever the remote layer would have had to say about the same
@@ -519,12 +520,13 @@ describe('SessionsManager end', () => {
 
   it('drops the record and leaves a terminated row when the peer is stopped', async () => {
     const h = harness();
-    saveRemoteSessions([record()]);
+    saveRemoteSessions([record({ hostName: 'lab' })]);
     vi.mocked(terminateParkedSession).mockResolvedValue({ terminated: true } satisfies TerminateOutcome);
     h.sessions.terminate(SESSION);
 
     await vi.waitFor(() => expect(h.sessions.view()[0].state).toBe('terminated'));
     expect(loadRemoteSessions()).toEqual([]);
+    expect(h.sessions.view()[0].hostName).toBe('lab');
   });
 
   // The end action is the narrator for an end it pressed, and one event is one line.

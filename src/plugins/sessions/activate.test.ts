@@ -91,6 +91,14 @@ describe('sessions plugin command', () => {
   it('opens an empty list when nothing is running or parked', () => {
     expect(payloadOf([]).entries).toEqual([]);
   });
+
+  it('preserves the saved launch name from the wire row into the payload', () => {
+    expect(payloadOf([{ ...LIVE, hostName: 'lab' }]).entries[0].hostName).toBe('lab');
+  });
+
+  it('leaves the saved launch name off a wire row that has none', () => {
+    expect(payloadOf().entries[0].hostName).toBeUndefined();
+  });
 });
 
 describe('sessions plugin notifications', () => {
