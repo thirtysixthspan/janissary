@@ -255,9 +255,12 @@
 // `run-clone` asks for a shallow run clone to be created or released under a supplied label, and a
 // server `run-clone-result` answers with its directory, nothing beyond the id, or an error. Both are
 // request/reply frames, not channel notifications, so neither is admitted as a tab-level frame.
-// Workspace-selector frames further down the same feature also belong to 47, and add to this comment
-// rather than moving the constant. Bumping again would break the exact-version handshake between
-// peers of the same unreleased feature set.
+// Workspace-selector fields further down the same feature also belong to 47, and add to this comment
+// rather than moving the constant. The `acp-open` and `agent-resolve` requests each carry an optional
+// `workspace` selector naming one ready run clone owned by the provisioned workspace; both fall back
+// to the main workspace directory when it is absent. They are fields on existing request frames, not
+// new frames, so neither the constant nor the pinned version literal moves. Bumping again would break
+// the exact-version handshake between peers of the same unreleased feature set.
 export const REMOTE_PROTOCOL_VERSION = 47;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it

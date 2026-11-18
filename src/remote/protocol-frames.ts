@@ -166,7 +166,7 @@ export type ClientFrame =
   | { type: 'capture-request'; session: string; id: string; request: string; origin?: string }
   | { type: 'filesystem-open'; session: string }
   | { type: 'filesystem-close'; session: string }
-  | { type: 'agent-resolve'; id: string; task: string; skills: string[] }
+  | { type: 'agent-resolve'; id: string; task: string; skills: string[]; workspace?: string }
   // Ask the far side to create or release a run clone under a supplied label. A create waits for the
   // clone's readiness and answers with its directory; a release answers without one. Neither the
   // action nor the label is repeated on the reply: the request id selects the one being answered.
@@ -180,6 +180,7 @@ export type ClientFrame =
     env?: Record<string, string>; offline?: boolean;
     autonomous?: true; effort?: { level: string; model: string };
     sessionMeta?: Record<string, unknown>;
+    workspace?: string;
   }
   | { type: 'acp-run'; id: string; text: string; snapshot: AcpRunSnapshot }
   | { type: 'acp-tool-result'; id: string; request: number; output?: string; error?: string }

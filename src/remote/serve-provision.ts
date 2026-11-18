@@ -96,14 +96,15 @@ export async function provisionRemoteWorkspace(
   // machine paired with an email from this one belongs to nobody, so a forwarded identity either
   // stands on its own or this machine's own stays as the fallback.
   if (Object.keys(identity).length > 0) setGitIdentity(identity);
+  // Built only after main readiness, from the already-merged tokens and the main label, so no
+  // service is published for a failed or stopped main provisioning.
+  const runClones = new RemoteRunClones(workspaces, tokens, label);
   context.provisioned({
     dir: result.dir,
     processes: new RemoteProcesses(emit, result.dir, label, tokens),
     files: new RemoteFileNavigators(emit, result.dir, new LocalFileSystemPort(), tokens),
-    acp: new RemoteAcp(emit, result.dir, tokens),
-    // Built only after main readiness, from the already-merged tokens and the main label, so no
-    // service is published for a failed or stopped main provisioning.
-    runClones: new RemoteRunClones(workspaces, tokens, label),
+    acp: new RemoteAcp(emit, result.dir, tokens, (selector) => runClones.lookup(selector)),
+    runClones,
   });
   emit({
     type: 'workspace-ready',

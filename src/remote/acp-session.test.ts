@@ -76,6 +76,31 @@ describe('createRemoteAcpSession — opening', () => {
     }]);
   });
 
+  it('carries a selected workspace only on the open frame', () => {
+    const fake = fakeChannel();
+    const session = createRemoteAcpSession(
+      fake.channel, { ...OPTIONS, workspace: 'agent-run1' }, { onError: vi.fn(), onConnect: vi.fn() },
+    );
+    session.run('hi', snapshot, vi.fn(), runEvents());
+
+    expect(fake.sent[0]).toEqual({
+      type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp'],
+      env: { OPENCODE_CONFIG_CONTENT: '{"model":"google/gemini-3.1-flash-lite"}' }, offline: false,
+      workspace: 'agent-run1',
+    });
+    expect(fake.sent.filter((frame) => 'workspace' in frame)).toEqual([
+      expect.objectContaining({ type: 'acp-open' }),
+    ]);
+  });
+
+  it('leaves the open frame unchanged when no workspace is selected', () => {
+    const fake = fakeChannel();
+    createRemoteAcpSession(fake.channel, OPTIONS, { onError: vi.fn(), onConnect: vi.fn() });
+
+    expect(fake.sent).toHaveLength(1);
+    expect(fake.sent[0]).not.toHaveProperty('workspace');
+  });
+
   it('invokes the connect hook when the remote reports its handshake done', () => {
     const s = makeSession();
 

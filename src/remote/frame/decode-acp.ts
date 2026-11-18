@@ -1,4 +1,4 @@
-import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js';
+import { malformed, nonEmptyString, optionalNonEmptyString, type DecodeResult } from './decode-shared.js';
 import { isAcpActivityKind } from '../../acp/activity.js';
 import { isRecord } from '../../value-guards.js';
 
@@ -31,7 +31,9 @@ export function decodeAcpOpen(record: Record<string, unknown>): DecodeResult {
   const { id, command, args, offline, autonomous, effort } = record;
   const env = decodeEnv(record.env);
   const sessionMeta = decodeSessionMeta(record.sessionMeta);
+  const { workspace } = record;
   if (!nonEmptyString(id) || !nonEmptyString(command) || env === 'invalid' || sessionMeta === 'invalid'
+    || !optionalNonEmptyString(workspace)
     || !Array.isArray(args) || args.some((argument) => typeof argument !== 'string')
     || !(offline === undefined || typeof offline === 'boolean')
     || !(autonomous === undefined || autonomous === true)
@@ -45,6 +47,7 @@ export function decodeAcpOpen(record: Record<string, unknown>): DecodeResult {
     ...(autonomous === true && { autonomous }),
     ...(effort !== undefined && { effort: effort as { level: string; model: string } }),
     ...(sessionMeta !== undefined && { sessionMeta }),
+    ...(workspace !== undefined && { workspace }),
   };
 }
 

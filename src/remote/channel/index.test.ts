@@ -549,6 +549,50 @@ describe('RemoteChannel — agent snapshot resolution', () => {
 
     await expect(pending).resolves.toEqual(snapshot);
   });
+
+  it('forwards a selected workspace through the facade', async () => {
+    const h = harness();
+    h.channel.receive(`${encodeHandshake()}\n`);
+    const pending = h.channel.resolveAgentSnapshot('ai/tasks/fix.md', ['review'], 'agent-run1');
+    const request = JSON.parse(h.written[0] ?? '{}') as { type: string; id: string; workspace?: string };
+    expect(request).toMatchObject({ type: 'agent-resolve', workspace: 'agent-run1' });
+
+    const snapshot = { taskPath: '/remote/clone/ai/tasks/fix.md', taskText: 'Fix it.', skills: [], grants: [] };
+    h.channel.receive(`${encodeFrame({ type: 'agent-resolve-result', id: request.id, snapshot })}\n`);
+
+    await expect(pending).resolves.toEqual(snapshot);
+  });
+
+  it('leaves the frame unchanged through the facade when no workspace is selected', () => {
+    const h = harness();
+    h.channel.receive(`${encodeHandshake()}\n`);
+    void h.channel.resolveAgentSnapshot('ai/tasks/fix.md', ['review']);
+    const request = JSON.parse(h.written[0] ?? '{}') as { workspace?: string };
+    expect(request).not.toHaveProperty('workspace');
+  });
+
+  it.each(['authentication', 'closed', 'reconnecting', 'attaching'] as const)(
+    'rejects a selected resolution with no write while %s', async (state) => {
+      const h = harness();
+      if (state !== 'authentication') {
+        if (state === 'reconnecting') {
+          h.channel.sessionId = '12345678-1234-1234-1234-123456789abc';
+          h.channel.receive(`${encodeHandshake(h.channel.sessionId)}\n`);
+          h.channel.closed();
+        } else if (state === 'attaching') {
+          h.channel.sessionId = '12345678-1234-1234-1234-123456789abc';
+          h.channel.receive(`${encodeHandshake(h.channel.sessionId)}\n`);
+        } else {
+          h.channel.closed();
+        }
+      }
+      expect(h.channel.attached).toBe(false);
+
+      await expect(h.channel.resolveAgentSnapshot('ai/tasks/fix.md', [], 'agent-run1'))
+        .rejects.toThrow('Remote connection unavailable.');
+      expect(h.written).toEqual([]);
+    },
+  );
 });
 
 describe('RemoteChannel — run clones', () => {

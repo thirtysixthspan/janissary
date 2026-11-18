@@ -714,6 +714,15 @@ results. And **which agent and model run** is decided locally and sent
 across on the frame that opens the session, so one definition holds and the two installations cannot
 silently disagree about the model. See [[acp]].
 
+An ACP open can carry an optional `workspace` selector naming one ready run clone owned by this
+provisioned workspace (see [Run clones](#run-clones)). A selector names only such a clone: never the
+main workspace, another peer's clone, or a caller-supplied directory. With no selector the open uses
+the provisioned main workspace. The chosen directory is fixed on the live session when it opens: the
+agent's spawn directory, its confinement report and every loop file command all use it, and a later
+lookup change or a run after the clone is released does not move it. An unknown selector is refused
+before confinement, connect or session creation with a fatal `acp-error` whose message is
+`Unknown remote run clone "<label>".`; the same id can open again later.
+
 An autonomous `agent` command can select a remote execution host with `on <[user@]host[:path]>`,
 whether its caller is local or already remote. With a pathless host matching an established remote
 workspace, the run borrows that workspace and channel. Otherwise, including a target with an explicit
@@ -735,6 +744,12 @@ the execution host, inside the run's workspace clone, so workspace commands reso
 back as tool results. Command authorization,
 output, questions, and other invocation context stay bound to the original caller even when execution
 moves to another host. Remote activity is routed only to its run.
+
+The `agent-resolve` request accepts the same optional `workspace` selector: with no selector it uses
+the provisioned main workspace, otherwise it names one ready run clone owned by this provisioned
+workspace and resolves the task and skills there, still falling back to installed tasks and skills.
+An unknown selector answers with the correlated `agent-resolve-result` carrying
+`error: "Unknown remote run clone \"<label>\"."` and no snapshot, before any task or skill lookup.
 
 The run owns an ephemeral reference to its remote channel and workspace. Releasing it leaves resources
 held by other tabs and runs alive; a run-only connection closes when its run releases the final
@@ -923,8 +938,9 @@ workspace owner holds. Finished run clones stay owned until that point, so none 
 a live ACP child; if ACP teardown cannot confirm that its processes exited, the run clones and the main
 workspace are all kept, as today. A detached far side does not stop the service, cancel pending clones
 or release ready ones — detaching only parks its session. A far side that outlives a lost channel
-therefore keeps its run clones on disk until it shuts down. No workspace selector, launcher or
-command exposes the service for a run yet.
+therefore keeps its run clones on disk until it shuts down. An `acp-open` or `agent-resolve` request
+may name a ready clone with a `workspace` selector, but no launcher or command exposes the service
+for a run yet.
 
 ### Out of scope
 

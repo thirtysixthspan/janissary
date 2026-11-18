@@ -1,5 +1,5 @@
 import type { AgentSnapshot } from '../../agent/types.js';
-import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js';
+import { malformed, nonEmptyString, optionalNonEmptyString, type DecodeResult } from './decode-shared.js';
 
 function stringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
@@ -29,8 +29,13 @@ function decodeSnapshot(value: unknown): AgentSnapshot | undefined {
 }
 
 export function decodeAgentResolve(record: Record<string, unknown>): DecodeResult {
-  if (!nonEmptyString(record.id) || !nonEmptyString(record.task) || !stringArray(record.skills)) return malformed('agent-resolve');
-  return { type: 'agent-resolve', id: record.id, task: record.task, skills: record.skills };
+  const { workspace } = record;
+  if (!nonEmptyString(record.id) || !nonEmptyString(record.task) || !stringArray(record.skills)
+    || !optionalNonEmptyString(workspace)) return malformed('agent-resolve');
+  return {
+    type: 'agent-resolve', id: record.id, task: record.task, skills: record.skills,
+    ...(workspace !== undefined && { workspace }),
+  };
 }
 
 export function decodeAgentResolveResult(record: Record<string, unknown>): DecodeResult {

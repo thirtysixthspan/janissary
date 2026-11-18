@@ -76,7 +76,7 @@ export function dispatchAcpFrame(
   emit: (frame: ServerFrame) => void,
 ): boolean {
   switch (frame.type) {
-  case 'agent-resolve': { return gated(workspace, emit, (owner) => { resolveRemoteAgentRequest(frame, owner.dir, emit); }); }
+  case 'agent-resolve': { return gated(workspace, emit, (owner) => { resolveRemoteAgentRequest(frame, owner.dir, emit, (label) => owner.runClones.lookup(label)); }); }
   case 'acp-open': { return gated(workspace, emit, (owner) => { owner.acp.open(frame); }); }
   case 'acp-run': { return gated(workspace, emit, (owner) => { owner.acp.run(frame); }); }
   case 'acp-tool-result': { return optional(workspace, (owner) => { owner.acp.toolResult(frame); }); }

@@ -631,6 +631,80 @@ describe('RemoteServer — run clone frames', () => {
   });
 });
 
+describe('RemoteServer — workspace selectors', () => {
+  it('selects a ready clone for resolution and ACP file work, defaults to main, then refuses a released clone', async () => {
+    const { server, frames } = makeServer();
+    server.receive(`${encodeFrame({ type: 'provision', label: 'selector-main' })}\n`);
+    await waitForWorkspaceReady(frames);
+    const mainDir = frames.find((frame) => frame.type === 'workspace-ready')!.dir;
+    const cloneDir = path.join(repoDir, '.janissary', 'workspace', 'selector-run');
+
+    server.receive(`${encodeFrame({ type: 'run-clone', id: 'c-select', action: 'create', label: 'selector-run' })}\n`);
+    await vi.waitFor(
+      () => expect(frames.some((frame) => frame.type === 'run-clone-result' && frame.id === 'c-select')).toBe(true),
+      { timeout: WORKSPACE_READY_TIMEOUT_MS },
+    );
+    expect(frames.find((frame) => frame.type === 'run-clone-result' && frame.id === 'c-select')).toMatchObject({ dir: cloneDir });
+
+    for (const [dir, label] of [[mainDir, 'main'], [cloneDir, 'clone']] as const) {
+      mkdirSync(path.join(dir, 'ai', 'tasks'), { recursive: true });
+      writeFileSync(path.join(dir, 'ai', 'tasks', 'selector-task.md'), `# task from ${label}`);
+      writeFileSync(path.join(dir, 'untouched.txt'), `${label} only`);
+    }
+
+    server.receive(`${encodeFrame({ type: 'agent-resolve', id: 'res-clone', task: 'selector-task.md', skills: [], workspace: 'selector-run' })}\n`);
+    await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'agent-resolve-result' && frame.id === 'res-clone')).toBe(true));
+    expect(frames.find((frame) => frame.type === 'agent-resolve-result' && frame.id === 'res-clone')).toMatchObject({
+      snapshot: { taskText: '# task from clone' },
+    });
+
+    server.receive(`${encodeFrame({ type: 'agent-resolve', id: 'res-main', task: 'selector-task.md', skills: [] })}\n`);
+    await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'agent-resolve-result' && frame.id === 'res-main')).toBe(true));
+    expect(frames.find((frame) => frame.type === 'agent-resolve-result' && frame.id === 'res-main')).toMatchObject({
+      snapshot: { taskText: '# task from main' },
+    });
+
+    server.receive(`${encodeFrame({ ...ACP_OPEN_FRAME, workspace: 'selector-run' })}\n`);
+    expect(acpMock.options.at(-1)).toMatchObject({ cwd: cloneDir, workspaceDir: cloneDir });
+    server.receive(`${encodeFrame({
+      ...ACP_RUN_FRAME,
+      snapshot: { kind: 'core', role: 'tell', roleName: 'tell', grants: ['file write'], rows: [], withoutTools: false },
+    })}\n`);
+    const handlers = acpMock.prompt.mock.calls[0]![1] as PromptHandlers;
+    handlers.onChunk('file write {"path":"mutated.txt","content":"written in clone"}');
+    handlers.onEnd('end_turn');
+    await vi.waitFor(() => expect(existsSync(path.join(cloneDir, 'mutated.txt'))).toBe(true));
+    expect(existsSync(path.join(mainDir, 'mutated.txt'))).toBe(false);
+    expect(readFileSync(path.join(cloneDir, 'untouched.txt'), 'utf8')).toBe('clone only');
+    expect(readFileSync(path.join(mainDir, 'untouched.txt'), 'utf8')).toBe('main only');
+
+    server.receive(`${encodeFrame({ ...ACP_OPEN_FRAME, id: 'racp-main' })}\n`);
+    expect(acpMock.options.at(-1)).toMatchObject({ cwd: mainDir, workspaceDir: mainDir });
+
+    server.receive(`${encodeFrame({ type: 'acp-close', id: 'racp1' })}\n`);
+    await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'acp-closed' && frame.id === 'racp1')).toBe(true));
+    server.receive(`${encodeFrame({ type: 'run-clone', id: 'r-select', action: 'release', label: 'selector-run' })}\n`);
+    await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'run-clone-result' && frame.id === 'r-select')).toBe(true));
+    await vi.waitFor(() => expect(existsSync(cloneDir)).toBe(false));
+
+    const beforeRefusedOpen = acpMock.options.length;
+    frames.length = 0;
+    server.receive(`${encodeFrame({ ...ACP_OPEN_FRAME, id: 'racp-refused', workspace: 'selector-run' })}\n`);
+    expect(frames).toEqual([{
+      type: 'acp-error', id: 'racp-refused', message: 'Unknown remote run clone "selector-run".', fatal: true,
+    }]);
+    expect(acpMock.options).toHaveLength(beforeRefusedOpen);
+
+    frames.length = 0;
+    server.receive(`${encodeFrame({ type: 'agent-resolve', id: 'res-refused', task: 'selector-task.md', skills: [], workspace: 'selector-run' })}\n`);
+    await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'agent-resolve-result' && frame.id === 'res-refused')).toBe(true));
+    expect(frames.find((frame) => frame.type === 'agent-resolve-result' && frame.id === 'res-refused')).toEqual({
+      type: 'agent-resolve-result', id: 'res-refused', error: 'Unknown remote run clone "selector-run".',
+    });
+    server.shutdown(0);
+  });
+});
+
 describe('RemoteServer — run clone ownership', () => {
   const createdDirs: string[] = [];
   type ManagedClone = { dir: string; ready: PromiseWithResolvers<void>; cancel: ReturnType<typeof vi.fn> };

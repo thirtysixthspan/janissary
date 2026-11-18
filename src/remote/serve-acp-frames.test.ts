@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { describe, it, expect, vi } from 'vitest';
 import { dispatchAcpFrame } from './serve-acp-frames.js';
 import { decodeFrame, encodeFrame } from './protocol.js';
@@ -12,7 +15,7 @@ import type { WorkspaceManager } from '../workspace/manager.js';
 
 function owner(dir = process.cwd()) {
   const acp = { open: vi.fn(), run: vi.fn(), toolResult: vi.fn(), close: vi.fn(), cancel: vi.fn() };
-  const runClones = { create: vi.fn(), release: vi.fn() };
+  const runClones = { create: vi.fn(), release: vi.fn(), lookup: vi.fn() };
   return { acp, runClones, workspace: { dir, acp, runClones } as unknown as ProvisionedWorkspace };
 }
 
@@ -81,6 +84,53 @@ describe('dispatchAcpFrame', () => {
     expect(emit).toHaveBeenCalledWith({
       type: 'agent-resolve-result', id: 'run-1', error: 'Agent: unknown task "missing-task.md".',
     });
+  });
+
+  it('resolves a selected task through the provisioned owner clone lookup', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'frames-selected-'));
+    try {
+      const taskPath = path.join(root, 'ai', 'tasks', 'feature');
+      mkdirSync(taskPath, { recursive: true });
+      writeFileSync(path.join(taskPath, 'work-pull-request-issue.md'), '# Selected clone task');
+      const { runClones, workspace } = owner();
+      runClones.lookup.mockReturnValue(root);
+      const emit = vi.fn<(frame: ServerFrame) => void>();
+
+      expect(dispatchAcpFrame({
+        ...RESOLVE, task: 'ai/tasks/feature/work-pull-request-issue.md', workspace: 'agent-run1',
+      }, workspace, emit)).toBe(true);
+
+      expect(runClones.lookup).toHaveBeenCalledExactlyOnceWith('agent-run1');
+      expect(emit).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'agent-resolve-result', id: 'run-1',
+        snapshot: expect.objectContaining({ taskText: '# Selected clone task' }),
+      }));
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('uses the main directory and skips lookup when the selector is absent', () => {
+    const { runClones, workspace } = owner();
+    const emit = vi.fn<(frame: ServerFrame) => void>();
+
+    expect(dispatchAcpFrame({
+      ...RESOLVE, task: 'ai/tasks/feature/work-pull-request-issue.md',
+    }, workspace, emit)).toBe(true);
+
+    expect(runClones.lookup).not.toHaveBeenCalled();
+    expect(emit).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'agent-resolve-result', id: 'run-1',
+      snapshot: expect.objectContaining({ taskText: expect.stringContaining('# Work a Pull Request Issue') }),
+    }));
+  });
+
+  it('refuses a selected resolution with no workspace just like an unselected one', () => {
+    const emit = vi.fn();
+
+    expect(dispatchAcpFrame({ ...RESOLVE, workspace: 'agent-run1' }, undefined, emit)).toBe(true);
+
+    expect(emit).toHaveBeenCalledExactlyOnceWith(NO_WORKSPACE);
   });
 
   it.each([OPEN, RUN, RESOLVE])('refuses %s with the missing-workspace message', (frame) => {

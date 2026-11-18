@@ -72,9 +72,9 @@ export class RemoteChannel {
     return this.captures.request(id, session, (frame) => this.send(frame), origin);
   }
 
-  resolveAgentSnapshot(task: string, skills: string[]): Promise<AgentSnapshot> {
+  resolveAgentSnapshot(task: string, skills: string[], workspace?: string): Promise<AgentSnapshot> {
     if (!this.attached) return Promise.reject(new Error('Remote connection unavailable.'));
-    return this.agentRequests.request(task, skills, (frame) => this.send(frame));
+    return this.agentRequests.request(task, skills, (frame) => this.send(frame), workspace);
   }
 
   runClone(action: RemoteRunCloneAction, label: string): Promise<string | undefined> {

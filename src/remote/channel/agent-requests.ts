@@ -17,14 +17,14 @@ export class RemoteAgentRequests {
   private pending = new PendingRequests<AgentSnapshot>();
   private clones = new PendingRequests<RunCloneResultFrame>();
 
-  request(task: string, skills: string[], send: (frame: ClientFrame) => void): Promise<AgentSnapshot> {
+  request(task: string, skills: string[], send: (frame: ClientFrame) => void, workspace?: string): Promise<AgentSnapshot> {
     const id = randomUUID();
     const result = this.pending.open(id, {
       deadlineMs: RESOLUTION_TIMEOUT_MS,
       onTimeout: (timedOut) => { this.pending.fail(timedOut, new Error('Remote agent resolution timed out.')); },
     });
     try {
-      send({ type: 'agent-resolve', id, task, skills });
+      send({ type: 'agent-resolve', id, task, skills, ...(workspace !== undefined && { workspace }) });
     } catch (error) {
       this.pending.fail(id, sendFailure(error));
     }

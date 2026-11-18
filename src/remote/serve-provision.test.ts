@@ -307,6 +307,16 @@ describe('provisionRemoteWorkspace — run clone service', () => {
     expect(owner.acp).toBe(main.acp);
   });
 
+  it('gives the ACP host the same clone service it publishes', async () => {
+    const { owner } = await provisionedOwner({ github: 'forwarded-github' });
+    const result = await owner.runClones.create('run-1');
+    const lookup = (owner.acp as unknown as { lookupWorkspace?: (label: string) => string | undefined }).lookupWorkspace;
+
+    expect(lookup).toBeDefined();
+    expect(lookup?.('run-1')).toBe(result.dir);
+    expect(lookup?.('missing')).toBeUndefined();
+  });
+
   it('publishes no service when the main clone fails', async () => {
     const h = ownerHarness();
     h.workspaces.create = vi.fn(() => ({ error: 'no origin' })) as unknown as WorkspaceManager['create'];

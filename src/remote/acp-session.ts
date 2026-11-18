@@ -20,6 +20,7 @@ export type RemoteAcpOptions = {
   autonomous?: true;
   effort?: { level: string; model: string };
   sessionMeta?: Record<string, unknown>;
+  workspace?: string;
 };
 
 // Hooks the owner supplies, matching `AcpManager`'s own `ConnectHooks`: `onError` is the
@@ -64,7 +65,7 @@ export function createRemoteAcpSession(
   options: RemoteAcpOptions,
   hooks: RemoteAcpHooks,
 ): RemoteAcpSession {
-  const { id, command, args, env, offline, autonomous, effort, sessionMeta } = options;
+  const { id, command, args, env, offline, autonomous, effort, sessionMeta, workspace } = options;
   // The one in-flight run, matching the discipline `connectAcp` keeps with its own `current`.
   const control = new AcpPromptControl();
   let live = true;
@@ -149,6 +150,7 @@ export function createRemoteAcpSession(
     ...(env !== undefined && { env }), ...(offline !== undefined && { offline }),
     ...(autonomous !== undefined && { autonomous }), ...(effort !== undefined && { effort }),
     ...(sessionMeta !== undefined && { sessionMeta }),
+    ...(workspace !== undefined && { workspace }),
   });
 
   const release = (): Promise<boolean> => {

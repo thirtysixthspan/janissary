@@ -45,6 +45,42 @@ describe('RemoteAgentRequests — agent resolution', () => {
     await expect(second).resolves.toMatchObject({ taskText: 'Second.' });
   });
 
+  it('forwards a selected workspace only on the agent-resolve frame', () => {
+    const tracker = new RemoteAgentRequests();
+    const send = vi.fn<(frame: ClientFrame) => void>();
+    tracker.request('fix.md', ['review'], send, 'agent-run1');
+
+    expect(send).toHaveBeenCalledExactlyOnceWith({
+      type: 'agent-resolve', id: expect.any(String), task: 'fix.md', skills: ['review'], workspace: 'agent-run1',
+    });
+  });
+
+  it('leaves the agent-resolve frame unchanged when no workspace is selected', () => {
+    const tracker = new RemoteAgentRequests();
+    const send = vi.fn<(frame: ClientFrame) => void>();
+    tracker.request('fix.md', ['review'], send);
+
+    expect(send).toHaveBeenCalledExactlyOnceWith({
+      type: 'agent-resolve', id: expect.any(String), task: 'fix.md', skills: ['review'],
+    });
+    expect(send.mock.calls[0]?.[0]).not.toHaveProperty('workspace');
+  });
+
+  it('correlates two selected task requests answered out of order', async () => {
+    const tracker = new RemoteAgentRequests();
+    const sent: ClientFrame[] = [];
+    const first = tracker.request('one.md', [], (frame) => { sent.push(frame); }, 'clone-a');
+    const second = tracker.request('two.md', [], (frame) => { sent.push(frame); }, 'clone-b');
+    const requests = sent.filter((frame): frame is Extract<ClientFrame, { type: 'agent-resolve' }> => frame.type === 'agent-resolve');
+    expect(requests.map((frame) => frame.workspace)).toEqual(['clone-a', 'clone-b']);
+
+    tracker.resolve({ type: 'agent-resolve-result', id: requests[1]!.id, snapshot: { ...snapshot, taskText: 'Second.' } });
+    tracker.resolve({ type: 'agent-resolve-result', id: requests[0]!.id, snapshot });
+
+    await expect(first).resolves.toEqual(snapshot);
+    await expect(second).resolves.toMatchObject({ taskText: 'Second.' });
+  });
+
   it('settles a disconnected request and bounds a silent remote', async () => {
     vi.useFakeTimers();
     const tracker = new RemoteAgentRequests();

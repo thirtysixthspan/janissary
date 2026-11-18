@@ -586,6 +586,60 @@ describe('frame codec', () => {
     expect(roundTrip(frame)).toEqual(frame);
   });
 
+  describe('workspace selectors on request frames', () => {
+    const requests = [
+      ['agent-resolve', { type: 'agent-resolve', id: 'run1', task: 'fix.md', skills: [] }],
+      ['acp-open', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [] }],
+    ] as const;
+    const malformedSelectors = [
+      ['an empty string', ''],
+      ['null', null],
+      ['a number', 7],
+      ['a boolean', true],
+      ['an array', []],
+      ['an object', {}],
+    ] as const;
+
+    it.each(requests)('decodes %s with the selector omitted', (_type, frame) => {
+      expect(decodeFrame(JSON.stringify(frame))).toEqual(frame);
+      expect(roundTrip(frame)).toEqual(frame);
+    });
+
+    it.each(requests)('decodes %s with an exact selected label', (_type, frame) => {
+      const selected = { ...frame, workspace: 'agent-run1' };
+      expect(decodeFrame(JSON.stringify(selected))).toEqual(selected);
+      expect(roundTrip(selected)).toEqual(selected);
+    });
+
+    it.each(requests)('preserves a path-shaped %s selector exactly', (_type, frame) => {
+      const selected = { ...frame, workspace: ' ../clone/./agent run 1 ' };
+      expect(encodeFrame(selected)).toContain(' ../clone/./agent run 1 ');
+      expect(decodeFrame(JSON.stringify(selected))).toEqual(selected);
+      expect(roundTrip(selected)).toEqual(selected);
+    });
+
+    it.each(malformedSelectors)('refuses %s as an agent-resolve selector', (_label, workspace) => {
+      expect(decodeFrame(JSON.stringify({
+        type: 'agent-resolve', id: 'run1', task: 'fix.md', skills: [], workspace,
+      }))).toEqual({ error: 'Malformed remote frame "agent-resolve".' });
+    });
+
+    it.each(malformedSelectors)('refuses %s as an acp-open selector', (_label, workspace) => {
+      expect(decodeFrame(JSON.stringify({
+        type: 'acp-open', id: 'racp1', command: 'opencode', args: [], workspace,
+      }))).toEqual({ error: 'Malformed remote frame "acp-open".' });
+    });
+
+    it('strips undeclared fields while keeping an admitted selector', () => {
+      expect(decodeFrame(JSON.stringify({
+        type: 'agent-resolve', id: 'run1', task: 'fix.md', skills: [], workspace: 'agent-run1', extra: 'drop',
+      }))).toEqual({ type: 'agent-resolve', id: 'run1', task: 'fix.md', skills: [], workspace: 'agent-run1' });
+      expect(decodeFrame(JSON.stringify({
+        type: 'acp-open', id: 'racp1', command: 'opencode', args: [], workspace: 'agent-run1', extra: 'drop',
+      }))).toEqual({ type: 'acp-open', id: 'racp1', command: 'opencode', args: [], workspace: 'agent-run1' });
+    });
+  });
+
   // Base64 is the whole reason the payload can't be mistaken for framing.
   it('carries terminal control bytes and embedded newlines through intact', () => {
     const data = '[2J[H first\nsecond\r\n{"type":"kill"}\n';
@@ -974,7 +1028,7 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   },
   'filesystem-open': { type: 'filesystem-open', session: 'files1' },
   'filesystem-close': { type: 'filesystem-close', session: 'files1' },
-  'agent-resolve': { type: 'agent-resolve', id: 'run1', task: 'fix.md', skills: ['review'] },
+  'agent-resolve': { type: 'agent-resolve', id: 'run1', task: 'fix.md', skills: ['review'], workspace: 'agent-run1' },
   'run-clone': { type: 'run-clone', id: 'run1', action: 'create', label: 'subagent-run1' },
   'filesystem-request': {
     type: 'filesystem-request', session: 'files1', request: 'q1', operation: 'write-file',
@@ -983,7 +1037,7 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   'acp-open': {
     type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp'], env: { A: '1' }, offline: true,
     autonomous: true, effort: { level: 'high', model: 'google/gemini-3.1-flash-lite' },
-    sessionMeta: { claudeCode: { options: { tools: [] } } },
+    sessionMeta: { claudeCode: { options: { tools: [] } } }, workspace: 'agent-run1',
   },
   'acp-run': { type: 'acp-run', id: 'racp1', text: 'summarize this project', snapshot: { kind: 'agent', grants: ['file'], askUser: true } },
   'acp-tool-result': { type: 'acp-tool-result', id: 'racp1', request: 0, output: 'first\nsecond' },
