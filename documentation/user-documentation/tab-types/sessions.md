@@ -26,13 +26,13 @@ An empty list reads `No remote sessions`, and the column headings go with the ro
 
 Each row shows:
 
-- **Host** — the bare hostname
+- **Host** — the saved launch name when the session was launched through a saved host, otherwise the bare hostname
 - **Type** — `harness`, `shell`, `ssh`, or `navigator`
 - **Tab** — the tab's own name: a harness or shell label, `ssh` for a plain `ssh` tab, and `files` followed by the root for a navigator
 - **State** — see below
 - **Last activity** — how long ago the row last changed
 
-Hover a row to see its full destination, its remote workspace path, and the reason a previous attempt on it failed, if there was one.
+Hover a row to see its full destination, its remote workspace path, and the reason a previous attempt on it failed, if there was one. The tooltip names the original destination exactly as it was launched, not the saved name.
 
 A docked row carries the same information on two lines: the tab's name with its actions above, then the plug and state word, the host, and how long ago the row last changed. When a field is too wide for the line it is cut short with an ellipsis and the tooltip still shows the whole value, and the tab's name is the field that gives way first so its actions stay reachable. A docked row hides the type, which stays in the tooltip; the columns come back on their own when the list returns to the center, however narrow that center pane is.
 
