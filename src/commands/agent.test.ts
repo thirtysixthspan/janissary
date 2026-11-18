@@ -319,6 +319,32 @@ describe('agent command', () => {
     expect(execute).not.toHaveBeenCalled();
   });
 
+  it('refuses an ordinary run when workspace creation is refused synchronously', async () => {
+    vi.mocked(managers.workspace.create).mockReturnValue({
+      error: 'No git repository found. Cannot create workspace.',
+    });
+
+    await expect(run()).resolves.toEqual({
+      status: 'failed',
+      response: 'Agent: No git repository found. Cannot create workspace.',
+      cleanupWarnings: [],
+    });
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('cancels and releases a prepared workspace when run creation fails', async () => {
+    const cancel = vi.fn();
+    vi.mocked(managers.workspace.create).mockReturnValue({ dir: cloneWorkspace, ready: Promise.resolve(), cancel });
+    vi.spyOn(managers.agent, 'create').mockImplementation(() => { throw new Error('record refused'); });
+
+    await expect(run()).resolves.toEqual({
+      status: 'failed', response: 'Agent: record refused', cleanupWarnings: [],
+    });
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(workspaceRelease).toHaveBeenCalledOnce();
+    expect(execute).not.toHaveBeenCalled();
+  });
+
   it('releases the explicitly borrowed local workspace after provider failure', async () => {
     const namedRelease = vi.fn(async () => {});
     vi.spyOn(managers.workspace, 'acquireAgentWorkspace').mockReturnValue({

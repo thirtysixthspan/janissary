@@ -30,6 +30,10 @@ A subagent run's durable record carries the canonical role name. Its title is `S
 
 A run stopped at the tool-loop limit closes its record with the `Partial` outcome, which reads `Partial` as a terminal status in the connections list, the connection tab, and the agent monitor. It owns the first outcome like `Completed` and does not abort the run's controller. A terminated subagent record saves `Subagent terminated.` as its answer, regardless of an earlier response; an ordinary agent run saves `Agent terminated.` instead.
 
+### Workspace ownership
+
+A subagent run always uses a fresh workspace. It never borrows the caller's directory and never selects a named workspace, even when the caller is running in a tracked workspace. The run and its durable record are published synchronously at launch with the canonical role name and the original task selector, while the clone is scheduled for a later turn. The clone's creator reference transfers to the run's lease, so releasing the run deletes only that clone and leaves the caller's tracked workspace intact. Cleanup cancels provisioning and waits for clone readiness before releasing the lease. A run that ends before cloning begins schedules no clone and reports `git clone cancelled.` through readiness. A workspace refusal, a clone failure, or a run-creation refusal settles the record failed with the original error and no fabricated prompt; a final lease-removal failure is only a cleanup warning. This is the internal run-launch contract; it does not by itself wire a public subagent launch.
+
 ### Boundaries
 
 The grammar, messages, and task prompt are pure. They neither register the command nor check grants, roles, models, caller kind, workspaces, launch, delivery, or I/O. Caller-kind enforcement and response handling belong to command dispatch.
