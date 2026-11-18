@@ -2,7 +2,21 @@
 
 ## ready
 
-* the ssh tab (`product/specs/ssh-tab.md`) is a raw PTY you start by typing a full `ssh <destination>` every time, with only live connections listed in the connections panel; Termius keeps hosts, groups, SSH keys, snippets and port-forwarding rules in a vault and connects to a saved host in one click, with built-in SFTP transfer. Closing this means adding a saved-host list (destination, key, group, label) that launches an ssh tab from a pick or command, and folding the existing remote navigator into that flow so file transfer becomes a first-class action on a saved host. Complexity: medium-high.
+* Add a hosts tab that lists saved host configurations that when clicked launches a ssh tab connecting to the destination.
+A host configuration includes:
+name - a label for the host 
+user - the user name on the remote host
+destination - the hostname and optional port `hostname[:port]` 
+path - the optional target working directory on the remote machine cded into after login 
+`ssh <name>` looks up the connection details from the named host configuration and connects
+The hosts tab should have a metadata bar like the sessions tab including refresh and split icon buttons. It should also have a plus icon button the triggers a create new host configuration modal.
+Host configurations should be stored in ~/.janissary/hosts.json and overridden by .janissary/hosts.json similar to how other configuration files are managed.
+The hosts table should be styled and have the same keyboard and mouse interactions as the table in the sessions tab. 
+The host column in the sessions tab should show the host configuration name when one matches instead of the ssh destination. 
+The `hosts` command opens the hosts tab. The hosts tab is not dockable.
+The hosts tab is core, not a plugin.
+The `hosts list` lists the host configurations in json.
+Host name must be unique across all configurations.
 
 ## development
 
