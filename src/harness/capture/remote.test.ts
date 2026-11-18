@@ -11,19 +11,18 @@ function harness(origin?: string) {
   let handlers: TransportHandlers | undefined;
   const write = vi.fn();
   const kill = vi.fn();
+  const spawnTransport = vi.fn((_label, _program, _command, _cwd, value: TransportHandlers) => {
+    handlers = value;
+    return { id: 'query', program: 'ssh', write, resize: vi.fn(), kill };
+  });
   const managers = {
-    pty: {
-      spawnTransport: vi.fn((_label, _program, _command, _cwd, value: TransportHandlers) => {
-        handlers = value;
-        return { id: 'query', program: 'ssh', write, resize: vi.fn(), kill };
-      }),
-    },
+    pty: { spawnTransport },
     workspace: { origin: () => origin },
   } as unknown as Managers;
   const record = {
     address: 'devbox', workspaceLabel: 'claude', session: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
   } as RemoteSessionRecord;
-  return { managers, record, write, kill, transport: () => handlers! };
+  return { managers, record, write, kill, spawnTransport, transport: () => handlers! };
 }
 
 afterEach(() => vi.useRealTimers());
@@ -63,6 +62,23 @@ describe('queryParkedCapture', () => {
     expect(h.write).toHaveBeenCalledExactlyOnceWith(`${encodeFrame({
       type: 'capture-request', session: h.record.session, id: 'h1', request: '1',
     })}\n`);
+  });
+
+  it('keeps the recorded port and capture options in the transport command', () => {
+    const h = harness();
+
+    void queryParkedCapture(h.managers, { ...h.record, port: 2222, hostName: 'lab' }, 'h1');
+
+    expect(h.spawnTransport.mock.calls[0]?.[2]).toBe(
+      `ssh -o BatchMode=yes -o NumberOfPasswordPrompts=0 -o ConnectTimeout=10 -p 2222 -t -- devbox '$SHELL -ic "janus remote-serve"'`,
+    );
+  });
+
+  it('opens no transport for an unparseable recorded address', async () => {
+    const h = harness();
+
+    await expect(queryParkedCapture(h.managers, { ...h.record, address: 'dev box' }, 'h1')).resolves.toBeUndefined();
+    expect(h.spawnTransport).not.toHaveBeenCalled();
   });
 
   it('returns a remote protocol failure to the caller', async () => {

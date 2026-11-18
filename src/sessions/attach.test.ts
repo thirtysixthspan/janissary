@@ -92,6 +92,34 @@ describe('startSessionAttach', () => {
     expect(restoreSessionTabs).not.toHaveBeenCalled();
   });
 
+  it('reaches the harness attach with the recorded port and saved name', async () => {
+    const h = harness();
+
+    await startSessionAttach(h.managers, { ...record(), port: 2222, hostName: 'lab' });
+
+    expect(h.managers.harness.attachRemote).toHaveBeenCalledWith(expect.objectContaining({
+      remote: expect.objectContaining({ destination: 'devbox', port: 2222, hostName: 'lab' }),
+    }));
+  });
+
+  it('reaches the SSH bridge with the recorded port and saved name', async () => {
+    const h = harness();
+    vi.mocked(askSessionState).mockResolvedValue([]);
+    vi.mocked(startSshBridge).mockImplementation(
+      (_managers, launch: { address: unknown; resume: RemoteResume }) => { launch.resume.onResult(true); },
+    );
+    const shellRecord: RemoteSessionRecord = {
+      ...record(), launchKind: 'shell', port: 2222, hostName: 'lab',
+      processes: [{ id: 'rpty1', label: 'claude', kind: 'shell', shell: { nonce: 'a'.repeat(32) }, offline: true, cwd: '/remote/src' }],
+    };
+
+    await startSessionAttach(h.managers, shellRecord);
+
+    expect(startSshBridge).toHaveBeenCalledWith(h.managers, expect.objectContaining({
+      address: expect.objectContaining({ destination: 'devbox', port: 2222, hostName: 'lab' }),
+    }));
+  });
+
   it('restores a recorded harness auto-approve setting', async () => {
     const h = harness();
     const saved = {

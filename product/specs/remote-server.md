@@ -541,6 +541,8 @@ application has been closed and reopened. That record outlives an ordinary start
 swept with the rest of the state directory, and a record older than the seven-day wait is dropped
 when it is read, since it describes a peer that cannot still exist.
 
+When a session was launched through a saved host that has a port, or by a saved name, janissary writes that port and name into the record beside the address. Attaching, terminating, or asking a parked session for a capture reconnects with the saved port and name, even after the host entry has been edited to a different port or deleted altogether. Reconnection follows what was recorded at launch, so changing the catalog never redirects a session that is already parked. Records written before janissary kept this detail, and sessions launched from a typed address, still reconnect the way they always did; a record whose saved port or name is malformed is dropped when the record file is read, like any other invalid record.
+
 Attaching a parked session opens one ssh connection and asks the peer to take it back. The
 recorded launching tab is created first, so ssh's own password, passphrase, and host-key prompts
 render there, and the remaining tabs are created once the peer has accepted and said what is still

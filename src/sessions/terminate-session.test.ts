@@ -17,13 +17,15 @@ type FakedRemote = {
   handlers: RemoteLaunchHandlers;
   resume: Resume;
   closeCalls: string[];
+  openedWith: { label: string; address: unknown; cwd: string }[];
 };
 
 function fakedRemote(): FakedRemote {
-  const state = { managers: undefined, handlers: undefined, resume: undefined, closeCalls: [] } as Partial<FakedRemote>;
+  const state = { managers: undefined, handlers: undefined, resume: undefined, closeCalls: [], openedWith: [] } as Partial<FakedRemote>;
   const faked = state as FakedRemote;
-  const open = (_label: string, _address: unknown, _cwd: string, handlers: RemoteLaunchHandlers,
+  const open = (label: string, address: unknown, cwd: string, handlers: RemoteLaunchHandlers,
     resume: Resume): RemoteChannel => {
+    faked.openedWith.push({ label, address, cwd });
     faked.handlers = handlers;
     faked.resume = resume;
     return { close: vi.fn() } as unknown as RemoteChannel;
@@ -66,6 +68,12 @@ describe('terminateParkedSession', () => {
   it('marks the attach it opens as a terminate', () => {
     const { fake } = start(record());
     expect(fake.resume).toMatchObject({ session: 'session-1', workspaceDir: '/remote/ws', terminate: true });
+  });
+
+  it('opens the transport with the recorded port and saved name', () => {
+    const { fake } = start({ ...record(), address: 'devbox', port: 2222, hostName: 'lab' });
+
+    expect(fake.openedWith[0]?.address).toMatchObject({ destination: 'devbox', port: 2222, hostName: 'lab' });
   });
 
   it('resolves terminated when the peer refuses the attach and never closes', async () => {

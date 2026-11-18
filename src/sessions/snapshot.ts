@@ -126,6 +126,8 @@ export function recordOf(managers: Managers, entry: RemoteEntry, now: number): R
   return {
     session,
     address: entry.address.address,
+    ...(entry.address.port !== undefined && { port: entry.address.port }),
+    ...(entry.address.hostName !== undefined && { hostName: entry.address.hostName }),
     destination: entry.address.destination,
     host: entry.address.host,
     workspaceLabel: entry.workspaceLabel,

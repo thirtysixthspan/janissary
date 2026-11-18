@@ -46,6 +46,8 @@ export type RemoteSessionRecord = {
   session: string;
   // The address exactly as launched, plus the two derivations the rows and the ssh command need.
   address: string;
+  port?: number;
+  hostName?: string;
   destination: string;
   host: string;
   workspaceLabel: string;
@@ -101,6 +103,8 @@ export function isRemoteSessionRecord(value: unknown): value is RemoteSessionRec
   return isRecord(value)
     && typeof value.session === 'string' && value.session.length > 0
     && typeof value.address === 'string'
+    && (value.port === undefined || (typeof value.port === 'number' && Number.isSafeInteger(value.port) && value.port >= 1 && value.port <= 65_535))
+    && (value.hostName === undefined || (typeof value.hostName === 'string' && value.hostName.length > 0))
     && typeof value.destination === 'string'
     && typeof value.host === 'string'
     && typeof value.workspaceLabel === 'string'

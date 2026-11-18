@@ -175,6 +175,22 @@ describe('recordOf process rows', () => {
     expect(record?.processes.map((process) => process.id)).toEqual(['p1']);
   });
 
+  it('carries a resolved port and saved name from the address into the record', () => {
+    const resolved = { host: 'devbox', destination: 'devbox', address: 'devbox', port: 2222, hostName: 'lab' } as never;
+    const withEndpoint = withProcesses([{ id: 'p1', mode: 'pty', harness: 'claude' }]);
+    withEndpoint.address = resolved;
+
+    const recorded = recordOf(managers([harnessTab('claude')]), withEndpoint, 7);
+
+    expect(recorded).toMatchObject({ address: 'devbox', port: 2222, hostName: 'lab' });
+  });
+
+  it('leaves the port and saved name off a record whose address has neither', () => {
+    const recorded = recordOf(managers([harnessTab('claude')]), withProcesses([{ id: 'p1', mode: 'pty', harness: 'claude' }]), 7);
+    expect(recorded?.port).toBeUndefined();
+    expect(recorded?.hostName).toBeUndefined();
+  });
+
   it('records nothing when the channel spawned nothing worth a row', () => {
     expect(recordOf(emptyManagers, withProcesses([{ id: 'p3', mode: 'pty' }]), 7)).toBeUndefined();
   });

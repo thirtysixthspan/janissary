@@ -61,6 +61,13 @@ describe('remote session store round trip', () => {
     expect(loadRemoteSessions()).toEqual([entry]);
   });
 
+  it('persists a resolved port and saved name beside the address', () => {
+    project();
+    const entry = record({ activity: Date.now(), port: 2222, hostName: 'lab' });
+    saveRemoteSessions([entry]);
+    expect(loadRemoteSessions()).toEqual([entry]);
+  });
+
   it('persists a remote shell process', () => {
     project();
     const shell = record({
@@ -138,6 +145,34 @@ describe('remote session store parsing', () => {
 
   it('refuses a record with a non-string remote home', () => {
     expect(parseRemoteSessions(JSON.stringify([record({ home: 7 as never })]))).toEqual([]);
+  });
+
+  it('keeps records with absent or valid optional endpoint fields', () => {
+    const plain = record();
+    const lowest = record({ port: 1 });
+    const highest = record({ port: 65_535, hostName: 'lab' });
+    expect(parseRemoteSessions(JSON.stringify([plain, lowest, highest]))).toEqual([plain, lowest, highest]);
+  });
+
+  it('drops a record with a malformed port or saved name but keeps the rest', () => {
+    const invalid = [
+      record({ port: 22.5 }),
+      record({ port: 0 }),
+      record({ port: 65_536 }),
+      record({ port: '2222' as never }),
+      record({ hostName: '' }),
+      record({ hostName: 7 as never }),
+    ];
+    const valid = record();
+    expect(parseRemoteSessions(JSON.stringify([...invalid, valid]))).toEqual([valid]);
+  });
+
+  it('reads a pre-keying record that carries a resolved endpoint', () => {
+    const dir = project();
+    const entry = record({ activity: Date.now(), port: 2222, hostName: 'lab' });
+    mkdirSync(path.join(dir, '.janissary'), { recursive: true });
+    writeFileSync(path.join(dir, '.janissary', 'remote-sessions.json'), JSON.stringify([entry]));
+    expect(loadRemoteSessions()).toEqual([entry]);
   });
 
   it('survives a file written by a janissary that crashed mid-write', () => {
