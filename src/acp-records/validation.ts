@@ -23,7 +23,8 @@ export function isRecordSource(value: unknown): value is AcpRecordSource {
     return value.role === undefined || (typeof value.role === 'string'
       && validAcpRoles.includes(value.role));
   }
-  return value.kind === 'agent' && nonempty(value.runId) && nonempty(value.taskPath);
+  return value.kind === 'agent' && nonempty(value.runId) && nonempty(value.taskPath)
+    && (value.subagentRole === undefined || nonempty(value.subagentRole));
 }
 
 export function isRecordOutcome(source: AcpRecordSource, value: unknown): value is AcpRecordOutcome {

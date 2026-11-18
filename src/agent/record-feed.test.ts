@@ -11,17 +11,18 @@ import { getConfig } from '../config.js';
 let root: string;
 let records: AcpSessionRecords;
 const metadata = { model: 'provider/model', taskPath: 'ai/tasks/original.md', ownerLabel: 'caller', ownerName: 'Original caller' };
+const subagentMetadata = { ...metadata, subagentRole: 'research' };
 beforeEach(() => {
   root = mkdtempSync(path.join(tmpdir(), 'agent-record-feed-'));
   records = new AcpSessionRecords({ projectDir: root });
 });
 afterEach(() => { records.dispose(); rmSync(root, { recursive: true, force: true }); });
 
-function runFixture() {
+function runFixture(feedMetadata: typeof metadata | typeof subagentMetadata = metadata) {
   const run = new AgentRun({ label: 'caller', incarnation: 'one', cwd: root, context: [] }, {
     taskPath: metadata.taskPath, taskText: 'Task', skills: [], grants: [],
   });
-  run.record = new AgentRecordFeed(records, metadata, run.id);
+  run.record = new AgentRecordFeed(records, feedMetadata, run.id);
   return run;
 }
 
@@ -90,5 +91,35 @@ describe('agent run durable feed', () => {
     });
     await expect(run.finish('completed')).rejects.toThrow('cleanup failed');
     expect(records.window(run.recordId!)).toMatchObject({ status: 'Completed', blocks: [{ answer: 'answer' }] });
+  });
+
+  it('projects the subagent role onto the row and window source with the original task title', () => {
+    const run = runFixture(subagentMetadata);
+    run.setSnapshot({ taskPath: '/resolved/other.md', taskText: 'resolved', skills: [], grants: [] });
+    expect(records.window(run.recordId!)).toMatchObject({
+      title: 'Subagent: original.md',
+      source: { ...subagentMetadata, kind: 'agent', runId: run.id },
+    });
+    expect(records.rows().find((row) => row.id === run.recordId)).toMatchObject({
+      title: 'Subagent: original.md', subagentRole: 'research',
+    });
+  });
+
+  it('reloads stored subagent provenance and keeps legacy records loadable without migration', () => {
+    const subagent = runFixture(subagentMetadata);
+    const legacy = runFixture();
+    const coreId = records.begin({ kind: 'acp', model: 'model', ownerLabel: 'owner', ownerName: 'Owner' });
+    const store = new AcpRecordStore({ projectDir: root });
+
+    expect(store.read(subagent.recordId!)).toMatchObject({
+      title: 'Subagent: original.md',
+      source: { ...subagentMetadata, kind: 'agent', runId: subagent.id },
+    });
+    expect(store.read(legacy.recordId!)).toMatchObject({
+      title: 'Agent: original.md',
+      source: { ...metadata, kind: 'agent', runId: legacy.id },
+    });
+    expect(store.read(legacy.recordId!)?.source).not.toHaveProperty('subagentRole');
+    expect(store.read(coreId)?.source).not.toHaveProperty('subagentRole');
   });
 });

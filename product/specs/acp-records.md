@@ -4,7 +4,7 @@ The backend automatically retains project-scoped records for every core tab ACP 
 
 ### Identity and provenance
 
-Each accepted begin creates a fresh UUID, independent of the transient ACP session identity or agent run id. Sources distinguish core ACP from agent runs. Both supply a nonempty model, original owner label, and copied owner display name. An agent additionally supplies a nonempty run id and task path. A core session on a remote tab, or an agent run executing on a remote host, also supplies that host, so the record keeps it after its tab closes; a local source supplies none, and a supplied host must be nonempty. Invalid metadata throws `Invalid ACP record source.` without creating a record.
+Each accepted begin creates a fresh UUID, independent of the transient ACP session identity or agent run id. Sources distinguish core ACP from agent runs. Both supply a nonempty model, original owner label, and copied owner display name. An agent additionally supplies a nonempty run id and task path. An agent run launched for a subagent also carries the subagent's canonical role name, which must be nonempty when present and is stored exactly as supplied; an ordinary agent run carries no such name. A core session on a remote tab, or an agent run executing on a remote host, also supplies that host, so the record keeps it after its tab closes; a local source supplies none, and a supplied host must be nonempty. Invalid metadata, including an empty or non-string subagent role, throws `Invalid ACP record source.` without creating a record.
 
 Owner metadata is a snapshot. Closing a tab or reusing its label cannot replace the retained owner name. Records contain only tracked ACP and agent history; conversations, monitors, editor persona sessions, and other connection kinds are not recorded here.
 
@@ -20,7 +20,7 @@ Settlement saves the exact answer or error text. Core cancellation saves `ACP: p
 
 ### Titles and statuses
 
-A core record starts as `ACP`. Its first accepted prompt fixes the title to `ACP: <first line>`, capped at 60 JavaScript string characters including the prefix. The first line is trimmed, including a CR line terminator. An empty first line keeps `ACP`, even when later lines contain text. Subsequent prompts do not retitle it. An agent title is `Agent: <task filename>` without that cap. Original prompt and activity text remain intact.
+A core record starts as `ACP`. Its first accepted prompt fixes the title to `ACP: <first line>`, capped at 60 JavaScript string characters including the prefix. The first line is trimmed, including a CR line terminator. An empty first line keeps `ACP`, even when later lines contain text. Subsequent prompts do not retitle it. An agent title is `Agent: <task filename>` without that cap. A subagent run's title is `Subagent: <task filename>` from the task selector captured at launch, also without that cap; later task resolution, a task snapshot replacement, and caller renames never retitle it. Original prompt and activity text remain intact.
 
 Status is derived. An open core record is `Idle` before its first prompt and between settled prompts, and `Running` while its newest block is unanswered. An open agent record is always `Running`, including after an answer, until closed. Terminal status is the recorded outcome: `Closed`, `Completed`, `Failed`, or `Terminated`.
 
@@ -44,9 +44,9 @@ Successful prompt, activity, answer, close, and delete operations return true. U
 
 Every accepted begin, prompt, activity, answer, and close uses the clock. Mutation times are clamped to at least the record's previous update time, so a backwards clock cannot reorder history. The same mutation time supplies its update, block, entry, or end timestamp. Times are finite nonnegative epoch milliseconds. Start time never changes.
 
-Rows are detached summaries sorted by descending update time, then ascending id for ties. They include identity, source kind, title, model, owner label/name, optional remote host, optional agent run id, start/update/end times, and derived status. They expose no prompt or activity text.
+Rows are detached summaries sorted by descending update time, then ascending id for ties. They include identity, source kind, title, model, owner label/name, optional remote host, optional agent run id, optional subagent role on an agent run, start/update/end times, and derived status. They expose no prompt or activity text.
 
-A window returns detached metadata, source provenance, and the newest chronological suffix of blocks, including a running block. Its default size is 20. A supplied count must be a positive safe integer or the read throws `Invalid ACP record window count.`. Counts beyond the total return all blocks. The result includes total block count, zero-based offset, and `hasOlder`, which is true exactly when offset is positive. Missing or invalid ids return no window for a valid count.
+A window returns detached metadata, source provenance — including an agent run's optional subagent role — and the newest chronological suffix of blocks, including a running block. Its default size is 20. A supplied count must be a positive safe integer or the read throws `Invalid ACP record window count.`. Counts beyond the total return all blocks. The result includes total block count, zero-based offset, and `hasOlder`, which is true exactly when offset is positive. Missing or invalid ids return no window for a valid count.
 
 Reads do not publish changes or remember requested window sizes. Mutating a returned row, source, block, or entry cannot alter stored state. Later loaded windows and their 20-block paging increments follow the same rules.
 

@@ -42,6 +42,7 @@ export class AgentRunManager {
       model, taskPath: options.snapshot.taskPath, ownerLabel: options.caller.label,
       ownerName: options.caller.ownerName ?? callerTab.title ?? callerTab.label,
       ...(options.executionHost !== undefined && { host: options.executionHost }),
+      ...(options.subagentRole !== undefined && { subagentRole: options.subagentRole }),
     });
     const releaseWorkspace = options.releaseWorkspace ?? (options.workspaceDir === undefined
       ? undefined

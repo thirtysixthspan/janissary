@@ -46,7 +46,7 @@ type ConnectionsTopicRecordFields = {
 };
 
 export type ConnectionsTopicRecordRow = ConnectionsTopicRecordFields & {
-  kind: AcpRecordRow['kind']; role?: AcpRole;
+  kind: AcpRecordRow['kind']; role?: AcpRole; subagentRole?: string;
 };
 
 export type ConnectionsTopicRow = ConnectionsTopicLiveRow | ConnectionsTopicRecordRow;

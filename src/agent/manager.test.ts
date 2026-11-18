@@ -127,6 +127,29 @@ describe('AgentRunManager', () => {
     }
   });
 
+  it('broadcasts a subagent caller-owned popup row titled from its captured task', async () => {
+    const { manager, captured, controller } = setup();
+    const rowsAtBroadcast: string[][] = [];
+    const subscription = messageBus.on('state', 'dirty', () => {
+      rowsAtBroadcast.push(
+        controller.managers.connection.connectionsFor(captured.label)
+          .filter((row) => row.text.startsWith('Subagent: '))
+          .map((row) => row.text),
+      );
+    });
+    try {
+      const run = manager.create({ caller: captured, snapshot, subagentRole: 'research' });
+      expect(rowsAtBroadcast).toEqual([['Subagent: task.md']]);
+      expect(controller.managers.connection.connectionsFor(captured.label)).toContainEqual({
+        text: 'Subagent: task.md', kind: 'acp', recordId: run.recordId,
+      });
+      await manager.finish(run.id, 'completed');
+      expect(rowsAtBroadcast.at(-1)).toEqual([]);
+    } finally {
+      subscription.unsubscribe();
+    }
+  });
+
   it('broadcasts the caller row gone when a monitored run finishes and stays retained for the monitor', async () => {
     const { manager, captured, controller } = setup();
     const rowsAtBroadcast: string[][] = [];
@@ -366,5 +389,61 @@ describe('AgentRunManager', () => {
     await expect(manager.dispose()).rejects.toThrow('Agent run shutdown failed.');
     expect(clean).toHaveBeenCalledOnce();
     expect(manager.runs.size).toBe(0);
+  });
+
+  it('forwards a subagent role to the record with its supplied spelling', async () => {
+    const { manager, captured, controller } = setup();
+    const run = manager.create({ caller: captured, snapshot, subagentRole: 'Research' });
+    expect(controller.managers.acpRecords.window(run.recordId!)).toMatchObject({
+      title: 'Subagent: task.md', source: { subagentRole: 'Research' },
+    });
+    expect(controller.managers.acpRecords.rows().find((row) => row.id === run.recordId))
+      .toMatchObject({ subagentRole: 'Research' });
+    await manager.finish(run.id, 'completed');
+  });
+
+  it.each(['', ' '.repeat(3)])('rejects a %j subagent role before record or lease creation', (subagentRole) => {
+    const { manager, captured, controller } = setup();
+    const acquire = vi.spyOn(controller.managers.workspace, 'acquireAgentLease');
+    expect(() => manager.create({ caller: captured, snapshot, subagentRole, workspaceDir: '/unused' }))
+      .toThrow('Invalid ACP record source.');
+    expect(acquire).not.toHaveBeenCalled();
+    expect(manager.runs.size).toBe(0);
+    expect(controller.managers.acpRecords.rows()).toEqual([]);
+  });
+
+  it('rejects a non-string subagent role before record creation', () => {
+    const { manager, captured, controller } = setup();
+    expect(() => manager.create({ caller: captured, snapshot, subagentRole: 7 as unknown as string }))
+      .toThrow('Invalid ACP record source.');
+    expect(manager.runs.size).toBe(0);
+    expect(controller.managers.acpRecords.rows()).toEqual([]);
+  });
+
+  it('leaves ordinary metadata without a subagent role field', () => {
+    const { manager, captured, controller } = setup();
+    const run = manager.create({ caller: captured, snapshot });
+    expect(controller.managers.acpRecords.window(run.recordId!)).toMatchObject({
+      title: 'Agent: task.md', source: { taskPath: '/task.md' },
+    });
+    expect(controller.managers.acpRecords.window(run.recordId!)?.source).not.toHaveProperty('subagentRole');
+    expect(controller.managers.acpRecords.rows().find((row) => row.id === run.recordId))
+      .not.toHaveProperty('subagentRole');
+  });
+
+  it('captures the subagent title from the original selector before renames and resolution', async () => {
+    const { manager, caller, controller } = setup();
+    caller.title = 'Original caller';
+    const captured = manager.captureCaller(caller);
+    caller.title = 'Renamed caller';
+    const run = manager.create({
+      caller: captured, snapshot: { ...snapshot, taskPath: 'ai/tasks/my-subagent.md' }, subagentRole: 'research',
+    });
+    run.setSnapshot({ ...snapshot, taskPath: '/resolved/other.md' });
+    await manager.finish(run.id, 'failed');
+    expect(controller.managers.acpRecords.window(run.recordId!)).toMatchObject({
+      title: 'Subagent: my-subagent.md',
+      source: { taskPath: 'ai/tasks/my-subagent.md', subagentRole: 'research' },
+    });
   });
 });

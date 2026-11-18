@@ -321,4 +321,16 @@ describe('connections topic rows', () => {
     for (const row of owned('first')) expect(row).not.toHaveProperty('permanent');
     expect(owned('first').map((row) => row.kind)).toEqual(expect.arrayContaining(['shell', 'terminal']));
   });
+
+  it('preserves subagent row fields through composition, including a loaded window', () => {
+    const { managers, recordRows, tabs } = fixture();
+    Object.assign(recordRows[1]!, { subagentRole: 'research', title: 'Subagent: task.md' });
+    tabs[2]!.plugin!.instanceKey = 'agent-record';
+    const data = composeConnectionsTopicData(managers, new Map([['agent-record', 10]]));
+    const row = data.rows.find((entry) => entry.id === 'agent-record');
+    expect(row).toMatchObject({
+      type: 'record', kind: 'agent', subagentRole: 'research', title: 'Subagent: task.md', runId: 'run-1',
+      window: { id: 'agent-record', count: 10 },
+    });
+  });
 });

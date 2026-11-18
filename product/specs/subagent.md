@@ -20,6 +20,10 @@ The caller-facing primer teaches the one-line JSON grammar with escaped newlines
 
 A subagent is told it is a subagent and asked to finish with a self-contained final result for the agent that launched it. The task text follows verbatim, then the optional context verbatim. The task prompt does not repeat the command protocol primer and adds no summarizing turn or output cap.
 
+### Records and names
+
+A subagent run's durable record carries the canonical role name. Its title is `Subagent: <task filename>` from the task selector captured at launch, without the ACP title cap; later task resolution, a task snapshot replacement, and caller renames never change it. In the connections tab, and as its own connection tab's title, the record is named `subagent:<canonical role>`. In the caller's connections popup it appears as an ACP-kind row titled `Subagent: <task filename>` while the run is live, with no ACP reference, and leaves the popup when the run ends. Ordinary agent and ACP names are unchanged.
+
 ### Boundaries
 
 The grammar, messages, and task prompt are pure. They neither register the command nor check grants, roles, models, caller kind, workspaces, launch, delivery, or I/O. Caller-kind enforcement and response handling belong to command dispatch.

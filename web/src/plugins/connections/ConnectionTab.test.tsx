@@ -17,12 +17,16 @@ function setup(record: RecordConnectionRow, impl?: (name: string, payload: unkno
   return { intent, openLink, capabilities, view: render(<ConnectionTab record={record} capabilities={capabilities} />) };
 }
 
-function record(kind: 'acp' | 'agent' = 'acp', status: RecordConnectionRow['status'] = 'Running'): RecordConnectionRow {
+function record(
+  kind: 'acp' | 'agent' = 'acp', status: RecordConnectionRow['status'] = 'Running', subagentRole?: string,
+): RecordConnectionRow {
   return { type: 'record', id: 'uuid', kind, title: 'Authoritative title', model: 'model-x', status,
     host: 'Local', ownerLabel: 'other-label', ownerName: 'Captured owner', startedAt: 0, updatedAt: 2, endedAt: 3,
     runId: 'run-id', orderingTimestamp: 4,
+    ...(subagentRole !== undefined && { subagentRole }),
     window: { id: 'uuid', source: kind === 'agent'
-      ? { kind: 'agent', model: 'model-x', ownerLabel: 'other-label', ownerName: 'Captured owner', runId: 'run-id', taskPath: '/task' }
+      ? { kind: 'agent', model: 'model-x', ownerLabel: 'other-label', ownerName: 'Captured owner', runId: 'run-id', taskPath: '/task',
+        ...(subagentRole !== undefined && { subagentRole }) }
       : { kind: 'acp', model: 'model-x', ownerLabel: 'other-label', ownerName: 'Captured owner' },
       offset: 0, totalBlocks: 1, hasOlder: false, blocks: [{ prompt: 'prompt', startedAt: 1,
         entries: (['message', 'thought', 'tool', 'plan', 'permission'] as const).map((kind, timestamp) => ({ kind, text: kind, timestamp })),
@@ -231,6 +235,24 @@ describe('ConnectionTab', () => {
       expect(actions()).toEqual([{ label: 'Terminate', icon: 'circle-stop', text: '' }]);
       fireEvent.click(screen.getByRole('button', { name: 'Terminate' }));
       expect(intent).toHaveBeenCalledWith('terminate', { id: 'uuid' });
+    });
+
+    it('names a subagent tab by its role and keeps the Subagent title in the name tooltip', () => {
+      const value = record('agent', 'Running', 'research');
+      value.title = 'Subagent: research-task.md';
+      setup(value);
+      expect(fields().map((element) => element.textContent)).toContain('subagent:research');
+      expect(fields().map((element) => element.getAttribute('title')))
+        .toContain('Connection Name: subagent:research\nSubagent: research-task.md');
+    });
+
+    it('offers the usual Terminate and Focus tab actions for a subagent run', () => {
+      const { intent } = setup({ ...record('agent', 'Running', 'research'), focusTarget: 'caller-label' });
+      expect(actions().map((action) => action.label)).toEqual(['Focus tab', 'Terminate']);
+      fireEvent.click(screen.getByRole('button', { name: 'Terminate' }));
+      expect(intent).toHaveBeenCalledWith('terminate', { id: 'uuid' });
+      fireEvent.click(screen.getByRole('button', { name: 'Focus tab' }));
+      expect(intent).toHaveBeenCalledWith('focus', { id: 'uuid' });
     });
   });
 

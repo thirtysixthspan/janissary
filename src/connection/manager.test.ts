@@ -15,6 +15,7 @@ function makeManagers(overrides: Partial<Managers> = {}): Managers {
     browser: { info: vi.fn(), run: vi.fn(() => Promise.resolve('closed')) },
     pty: { terminalsFor: vi.fn(() => []) },
     database: { openDbs: vi.fn(() => []), listOpen: vi.fn(() => []) },
+    acpRecords: { rows: vi.fn(() => []) },
     agent: { runs: new Map() },
     tab: {
       tabs: [],
@@ -175,5 +176,37 @@ describe('ConnectionManager connectionsFor', () => {
     const rows = new ConnectionManager(managers).connectionsFor('main');
     expect(rows.filter((row) => row.text === `${SHELL_NAME}:/repo`)).toHaveLength(1);
     expect(rows.filter((row) => row.text === 'Agent: task.md')).toHaveLength(1);
+  });
+
+  it('names a subagent run popup row from its captured title while leaving ordinary agent text alone', () => {
+    const managers = makeManagers({
+      acpRecords: { rows: vi.fn(() => [
+        { id: 'record-s', subagentRole: 'research', title: 'Subagent: original.md' },
+      ]) },
+      agent: { runs: new Map([
+        ['run-s', { caller: { label: 'main', incarnation: 'inc-main' }, recordId: 'record-s', view: () => ({ task: 'resolved.md' }) }],
+        ['run-a', { caller: { label: 'main', incarnation: 'inc-main' }, recordId: 'record-a', view: () => ({ task: 'task.md' }) }],
+      ]) },
+    } as unknown as Partial<Managers>);
+    const rows = new ConnectionManager(managers).connectionsFor('main').filter((row) => row.recordId !== undefined);
+    expect(rows).toEqual([
+      { text: 'Subagent: original.md', kind: 'acp', recordId: 'record-s' },
+      { text: 'Agent: task.md', kind: 'acp', recordId: 'record-a' },
+    ]);
+    expect(rows[0]).not.toHaveProperty('acpRef');
+  });
+
+  it('drops a subagent popup row after settlement or caller reincarnation', () => {
+    const base = { caller: { label: 'main', incarnation: 'inc-main' }, recordId: 'record-s', view: () => ({ task: 'original.md' }) };
+    const names = (run: object) => new ConnectionManager(makeManagers({
+      acpRecords: { rows: vi.fn(() => [
+        { id: 'record-s', subagentRole: 'research', title: 'Subagent: original.md' },
+      ]) },
+      agent: { runs: new Map([['run-s', run]]) },
+    } as unknown as Partial<Managers>)).connectionsFor('main').map((row) => row.text);
+
+    expect(names(base)).toContain('Subagent: original.md');
+    expect(names({ ...base, outcome: 'completed' })).not.toContain('Subagent: original.md');
+    expect(names({ ...base, caller: { label: 'main', incarnation: 'inc-previous' } })).not.toContain('Subagent: original.md');
   });
 });

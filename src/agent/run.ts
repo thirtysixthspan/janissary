@@ -25,6 +25,7 @@ export type AgentRunOptions = Readonly<{
   command?: string;
   model?: string;
   effort?: string;
+  subagentRole?: string;
 }>;
 
 function immutableSnapshot(snapshot: AgentSnapshot): AgentSnapshot {
