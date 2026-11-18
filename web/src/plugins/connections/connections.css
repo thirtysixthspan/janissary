@@ -65,6 +65,11 @@
 .connections-activity-label, .connections-activity summary { color: var(--muted); font-size: 12px; }
 /* JSON activity keeps its indentation and wraps long values instead of widening the tab. */
 .connections-activity-json { margin: 0; font-size: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
+.connections-tool-calls { display: flex; flex-direction: column; gap: 6px; margin: 4px 0; }
+.connections-tool-call { border-left: 2px solid var(--border); padding-left: 8px; }
+.connections-tool-call-name { color: var(--muted); font-size: 12px; font-weight: 600; }
+.connections-tool-call-parameter { white-space: pre-wrap; overflow-wrap: anywhere; }
+.connections-tool-call-parameter-name { color: var(--muted); margin-right: 6px; }
 .connections-list-error, .connections-record-error { color: var(--error); padding: 8px 12px; }
 
 /* Docked, each row stacks onto two lines the way a docked sessions row does: the connection's name

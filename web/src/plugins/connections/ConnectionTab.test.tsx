@@ -59,6 +59,36 @@ describe('ConnectionTab', () => {
     expect(screen.getByText('db query select 1').tagName).toBe('DIV');
   });
 
+  it('renders a tool call embedded mid-line in an activity entry and keeps the prose', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [
+      { kind: 'message', timestamp: 1,
+        text: 'I will explore. <function_calls> <invoke name="bash"> <parameter name="command">find . -type f</parameter> </invoke> </function_calls> Done.' },
+    ];
+    setup(value);
+    expect(screen.getByText(/I will explore\./)).toBeInTheDocument();
+    expect(screen.getByText('bash')).toHaveClass('connections-tool-call-name');
+    expect(screen.getByText('command')).toHaveClass('connections-tool-call-parameter-name');
+    expect(screen.getByText('find . -type f')).toBeInTheDocument();
+    expect(screen.getByText(/Done\./)).toBeInTheDocument();
+    expect(screen.queryByText(/<function_calls>/)).toBeNull();
+  });
+
+  it('renders every embedded invoke with its own parameters', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [
+      { kind: 'tool', timestamp: 1,
+        text: '<function_calls><invoke name="file read"><parameter name="path">a.ts</parameter></invoke>'
+          + '<invoke name="file glob"><parameter name="pattern">**/*.ts</parameter></invoke></function_calls>' },
+    ];
+    setup(value);
+    expect(document.querySelectorAll('.connections-tool-call')).toHaveLength(2);
+    expect([...document.querySelectorAll('.connections-tool-call-name')].map((element) => element.textContent))
+      .toEqual(['file read', 'file glob']);
+    expect(screen.getByText('a.ts')).toBeInTheDocument();
+    expect(screen.getByText('**/*.ts')).toBeInTheDocument();
+  });
+
   it('keeps a tool entry the reader collapsed closed through a streamed update', () => {
     const value = record();
     const { view, capabilities } = setup(value);

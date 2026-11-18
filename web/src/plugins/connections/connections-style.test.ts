@@ -81,6 +81,18 @@ describe('connections list styles', () => {
     expect(json).toContain('overflow-wrap: anywhere');
     expect(json).toContain('margin: 0');
   });
+
+  it('lays embedded tool calls out as labelled name and parameter lines that wrap', () => {
+    const styles = readFileSync('web/src/plugins/connections/connections.css', 'utf8');
+    expect(styles).toContain('.connections-tool-calls {');
+    const call = styles.match(/\.connections-tool-call \{[^}]+\}/)?.[0];
+    expect(call).toContain('border-left: 2px solid var(--border)');
+    const name = styles.match(/\.connections-tool-call-name \{[^}]+\}/)?.[0];
+    expect(name).toContain('color: var(--muted)');
+    const parameter = styles.match(/\.connections-tool-call-parameter \{[^}]+\}/)?.[0];
+    expect(parameter).toContain('white-space: pre-wrap');
+    expect(parameter).toContain('overflow-wrap: anywhere');
+  });
 });
 
 describe('connections rows follow the sessions rows', () => {

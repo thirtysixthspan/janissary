@@ -1,7 +1,8 @@
 import React from 'react';
 import type { ConnectionWindow } from '@shared/plugins/connections/shared';
 import { renderMarkdown } from '../api';
-import { prettyJson } from './activity-text';
+import { parseToolCalls, prettyJson } from './activity-text';
+import { ToolCallBlock } from './ToolCallBlock';
 
 export function ConnectionHistory({ window, openLink }: {
   window: ConnectionWindow | undefined;
@@ -38,6 +39,16 @@ export function ConnectionHistory({ window, openLink }: {
 }
 
 function ActivityText({ text }: { text: string }) {
+  const segments = parseToolCalls(text);
+  if (segments.some((segment) => segment.kind === 'tool-call')) {
+    return (
+      <div className="connections-activity-text">
+        {segments.map((segment, index) => segment.kind === 'text'
+          ? <span key={index}>{segment.text}</span>
+          : <ToolCallBlock key={index} calls={segment.calls} />)}
+      </div>
+    );
+  }
   const json = prettyJson(text);
   return json === undefined
     ? <div className="connections-activity-text">{text}</div>
