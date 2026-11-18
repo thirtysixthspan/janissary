@@ -5,7 +5,7 @@ import path from 'node:path';
 import { initWorkspaceDir, workspacePath } from '../workspace/index.js';
 import { createControllerTestProject } from '../controller/test-project.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
-import type { AgentCaller } from './run.js';
+import type { AgentAcpCaller, AgentCaller } from './run.js';
 import { startLocalAgentRun } from './workspace-execution.js';
 
 const project = createControllerTestProject();
@@ -33,7 +33,9 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
-function fresh(options: { workspaceName?: string; subagentRole?: string } = {}) {
+const acpCaller: AgentAcpCaller = { role: 'tell', sessionIdentity: 'identity-1', callerId: 'provider-1' };
+
+function fresh(options: { workspaceName?: string; subagentRole?: string; acpCaller?: AgentAcpCaller } = {}) {
   return startLocalAgentRun(
     controller.managers, captured, 'agent execute task.md', 'task.md', undefined, undefined,
     { fresh: true, ...options },
@@ -109,6 +111,13 @@ describe('startLocalAgentRun fresh mode', () => {
     await Promise.resolve();
     expect(create).not.toHaveBeenCalled();
   });
+
+  it('forwards acpCaller into manager.create on the fresh branch', () => {
+    const createRun = vi.spyOn(controller.managers.agent, 'create');
+    const result = fresh({ acpCaller });
+    expect(createRun).toHaveBeenCalledWith(expect.objectContaining({ acpCaller }));
+    expect(result.run.acpCaller).toEqual(acpCaller);
+  });
 });
 
 describe('startLocalAgentRun ordinary mode', () => {
@@ -122,5 +131,25 @@ describe('startLocalAgentRun ordinary mode', () => {
     const row = controller.managers.acpRecords.window(run.recordId!)!;
     expect(row).not.toHaveProperty('subagentRole');
     expect(row.source).not.toHaveProperty('subagentRole');
+  });
+
+  it('forwards acpCaller into manager.create on the ordinary branch', async () => {
+    vi.spyOn(controller.managers.workspace, 'acquireAgentLease').mockReturnValue(vi.fn(async () => {}));
+    const createRun = vi.spyOn(controller.managers.agent, 'create');
+    const { run } = await startLocalAgentRun(
+      controller.managers, captured, 'agent execute task.md', 'task.md', undefined, undefined, { acpCaller },
+    );
+    expect(createRun).toHaveBeenCalledWith(expect.objectContaining({ acpCaller }));
+    expect(run.acpCaller).toEqual(acpCaller);
+  });
+
+  it('omits acpCaller on an ordinary run when none was supplied', async () => {
+    vi.spyOn(controller.managers.workspace, 'acquireAgentLease').mockReturnValue(vi.fn(async () => {}));
+    const createRun = vi.spyOn(controller.managers.agent, 'create');
+    const { run } = await startLocalAgentRun(
+      controller.managers, captured, 'agent execute task.md', 'task.md', undefined, undefined, {},
+    );
+    expect(createRun.mock.calls[0]?.[0]).not.toHaveProperty('acpCaller');
+    expect(run.acpCaller).toBeUndefined();
   });
 });

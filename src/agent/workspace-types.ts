@@ -1,4 +1,4 @@
-import type { AgentRun } from './run.js';
+import type { AgentAcpCaller, AgentRun } from './run.js';
 
 export type AgentWorkspace = Readonly<{
   dir: string;
@@ -11,6 +11,7 @@ export type LocalAgentRunOptions = Readonly<{
   workspaceName?: string;
   fresh?: boolean;
   subagentRole?: string;
+  acpCaller?: AgentAcpCaller;
 }>;
 
 export type LocalAgentRunStart = Readonly<{

@@ -54,6 +54,7 @@ function createLocalAgentRun(
     model,
     effort,
     ...(options.subagentRole !== undefined && { subagentRole: options.subagentRole }),
+    ...(options.acpCaller !== undefined && { acpCaller: options.acpCaller }),
   });
 }
 
