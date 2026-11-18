@@ -1,0 +1,20 @@
+.host-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; outline: none; }
+.host-list.plugin-tab { padding: 0; gap: 0; }
+.host-empty { padding: 8px 12px; color: var(--muted); }
+.host-list-header { min-height: 28px; padding: 6px 12px; font-size: 12px; border-bottom: 1px solid var(--border); }
+.host-list-header .plugin-actions { gap: 8px; }
+.host-list-header .plugin-actions button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 0 4px; line-height: 1;
+}
+.host-list-header .plugin-actions button:hover { color: var(--fg); }
+.host-rows { display: flex; flex-direction: column; }
+.host-columns, .host-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1.5fr) 24px;
+  gap: 12px; align-items: baseline; padding: 0 12px; color: var(--muted); font-size: 12px; text-align: left;
+}
+.host-row { width: 100%; white-space: nowrap; cursor: pointer; color: var(--fg); padding: 4px 12px; }
+.host-row:hover { background: var(--border); }
+.host-row.selected { background: var(--bg-soft); }
+.host-row > span { overflow: hidden; text-overflow: ellipsis; }
