@@ -4,7 +4,6 @@
 
 
 
-* Reduce the cognitive complexity of `intent()` in `src/plugins/connections/activate.ts` (line 52), reported at 17 against the allowed 15 in a file scoring 48.50 FTA across 90 lines. The function dispatches a connections tab request by testing each intent name in turn and validating its payload branch by branch before delegating, so every new intent adds another guarded arm to the chain. Flatten the chain into a local per-intent lookup or lift the payload validation into a helper; the function is private to the activation module. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against `intent()` in `src/plugins/connections/activate.ts`. Severity: **low**.
 
 ## development
 

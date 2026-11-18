@@ -1,6 +1,7 @@
 import { noFileOpener, type TabPluginActivation, type TabPluginServerCapabilities } from '../api.js';
 import {
   isConnectionsPayload, isEmptyIntent, isIdIntent, isKindIdOwnerIntent, type ConnectionKind, type ConnectionRow,
+  type ConnectionsPayload,
 } from './shared.js';
 import { runConnectionsCommand } from './command.js';
 import { ConnectionTabs, connectionsData } from './tabs.js';
@@ -49,18 +50,25 @@ function recordAction(name: string, id: string, capabilities: TabPluginServerCap
   return null;
 }
 
+function refreshConnections(
+  payload: unknown,
+  tabPayload: ConnectionsPayload,
+  tabs: ConnectionTabs,
+  capabilities: TabPluginServerCapabilities,
+): null {
+  if (!isEmptyIntent(payload)) return capabilities.rejectRequest('invalid refresh payload');
+  if (tabPayload.kind !== 'list') return capabilities.rejectRequest('refresh applies only to the connections list');
+  tabs.refreshList(capabilities);
+  return null;
+}
+
 function intent(
   request: { intent: string; payload: unknown; tabPayload: unknown },
   tabs: ConnectionTabs,
   capabilities: TabPluginServerCapabilities,
 ): null {
   if (!isConnectionsPayload(request.tabPayload)) return capabilities.reportFailure('invalid connections tab payload');
-  if (request.intent === 'refresh') {
-    if (!isEmptyIntent(request.payload)) return capabilities.rejectRequest('invalid refresh payload');
-    if (request.tabPayload.kind !== 'list') return capabilities.rejectRequest('refresh applies only to the connections list');
-    tabs.refreshList(capabilities);
-    return null;
-  }
+  if (request.intent === 'refresh') return refreshConnections(request.payload, request.tabPayload, tabs, capabilities);
   if (request.intent === 'open-record') {
     if (!isIdIntent(request.payload)) return capabilities.rejectRequest('invalid open-record payload');
     const row = rowForId(connectionsData(capabilities).rows, request.payload.id);
