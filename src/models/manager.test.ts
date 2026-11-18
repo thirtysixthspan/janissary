@@ -273,4 +273,29 @@ describe('ModelCatalogManager refresh behavior', () => {
     expect(report).not.toHaveBeenCalled();
     expect(manager.view().refreshing).toBe(false);
   });
+
+  it('writes no non-conversational id returned by a provider to the override catalog', async () => {
+    seed({
+      claude: [{ id: 'claude-old' }],
+      codex: [{ id: 'gpt-old' }],
+      opencode: [{ id: 'google/gemini-3-flash' }],
+    });
+    const { manager } = fixture({ providers: providers(
+      outcome([{ id: 'claude-sonnet-5' }, { id: 'claude-embedding' }]),
+      outcome([{ id: 'gpt-4o-transcribe' }]),
+      outcome([{ id: 'google/gemini-3-flash' }, { id: 'google/veo-3.1' }]),
+    ) });
+
+    await manager.refresh();
+
+    expect(manager.modelsFor('claude')).toEqual(['claude-sonnet-5']);
+    expect(manager.modelsFor('codex')).toEqual([]);
+    expect(manager.modelsFor('opencode')).toEqual(['google/gemini-3-flash']);
+    expect(JSON.parse(readFileSync(path.join(projectDir, '.janissary', 'known-models.json'), 'utf8')))
+      .toEqual({
+        claude: [{ id: 'claude-sonnet-5' }],
+        codex: [],
+        opencode: [{ id: 'google/gemini-3-flash' }],
+      });
+  });
 });

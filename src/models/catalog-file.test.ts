@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import {
   BUNDLED_MODEL_CATALOG, decodeModelCatalog, encodeModelCatalog, readCatalog,
 } from './catalog-file.js';
+import { isConversationalModel } from './conversational.js';
 import { DEFAULT_ROLES } from '../plugins/roles/roles-file.js';
 
 describe('bundled model catalog', () => {
@@ -22,9 +23,8 @@ describe('bundled model catalog', () => {
   });
 
   it.each(['claude', 'opencode'])('contains no non-conversational model for %s', (harness) => {
-    const excluded = /embedding|-tts|transcribe|-live|-image$|^veo|\/veo|lyria/;
     const records = BUNDLED_MODEL_CATALOG[harness] ?? [];
-    for (const { id } of records) expect(id).not.toMatch(excluded);
+    for (const { id } of records) expect(isConversationalModel(id)).toBe(true);
   });
 
   it.each(DEFAULT_ROLES.flatMap((role) => role.entries.map((entry) => [role.name, entry.harness, entry.model])))
