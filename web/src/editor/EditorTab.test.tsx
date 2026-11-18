@@ -1,4 +1,4 @@
-import React, { createRef } from 'react';
+import React, { createRef, forwardRef, useMemo, useRef } from 'react';
 import { render, screen, waitFor, fireEvent, createEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EditorView, TabView } from '@shared/protocol';
@@ -6,7 +6,9 @@ import { contentHash } from '@shared/editor/save-conflict';
 import { EditorTab } from './EditorTab';
 import { editorDropHandle } from '../shared/drop-registry';
 import type { KeyLike } from './keys';
-import type { useEditorPlugins } from './plugins/useEditorPlugins';
+import type { useEditorPlugins, PluginReport } from './plugins/useEditorPlugins';
+import { createEditorPluginHost, type EditorPluginHost } from './plugins/host';
+import type { BoundBinding } from './plugins/api';
 
 type EditorPluginsModule = { useEditorPlugins: typeof useEditorPlugins };
 import type { DirtyTabHandle } from '../shared/tab/handles';
@@ -64,8 +66,20 @@ function makeClient(saveError?: string) {
   return { client: { saveFile, editorSync, onConnectionStatus, connectionStatus: 'connected', request, send, readFile, renameEditorFile, commitEditorFile } as unknown as JanusClient, saveFile, request, send, renameEditorFile, commitEditorFile };
 }
 
+// The tab now requires its session host and report queue to be injected. Reproduce the old
+// standalone fallback here so existing fixtures keep working without threading the host through
+// every render; one focused case below renders EditorTab directly to prove injection is honored.
+const TestEditorTab = forwardRef<
+  DirtyTabHandle,
+  Omit<React.ComponentPropsWithoutRef<typeof EditorTab>, 'pluginHost' | 'pluginReports'>
+>(function TestEditorTab(props, ref) {
+  const pluginHost = useMemo(() => createEditorPluginHost(() => {}), []);
+  const pluginReports = useRef<PluginReport[]>([]).current;
+  return <EditorTab {...props} ref={ref} pluginHost={pluginHost} pluginReports={pluginReports} />;
+});
+
 async function renderLoaded(client: JanusClient, view = makeView(), tab = makeTab({ editor: view })) {
-  const result = render(<EditorTab editor={view} tab={tab} client={client} active />);
+  const result = render(<TestEditorTab editor={view} tab={tab} client={client} active />);
   await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
   return result;
 }
@@ -167,7 +181,7 @@ describe('EditorTab', () => {
   it('a new-file tab opens its name already focused for renaming in the metadata row', async () => {
     const { client } = makeClient();
     const view = makeView({ name: 'untitled.md', path: '/home/user/untitled.md', newFile: true, size: 'unknown' });
-    const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    const { container } = render(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
     const input = await waitForContainerChild<HTMLInputElement>(container, '.editor-name-input');
     expect(input).toBe(document.activeElement);
     expect(input.value).toBe('untitled.md');
@@ -179,7 +193,7 @@ describe('EditorTab', () => {
   it('a new-file tab named when it was opened focuses the buffer, not the metadata row name', async () => {
     const { client } = makeClient();
     const view = makeView({ name: 'plan.md', path: '/home/user/plan.md', newFile: true, named: true, size: 'unknown' });
-    const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    const { container } = render(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
     await waitFor(() => expect(document.activeElement).toBe(textareaFor('plan.md')));
     expect(container.querySelector('.editor-name-input')).toBeNull();
     expect(nameText(container)).toBe('plan.md');
@@ -188,7 +202,7 @@ describe('EditorTab', () => {
   it('accepting the new name in the metadata row sends renameEditorFile and returns focus to the buffer', async () => {
     const { client, renameEditorFile } = makeClient();
     const view = makeView({ name: 'untitled.md', path: '/home/user/untitled.md', newFile: true, size: 'unknown' });
-    const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    const { container } = render(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
     const input = await waitForContainerChild<HTMLInputElement>(container, '.editor-name-input');
     fireEvent.change(input, { target: { value: 'plan.md' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -199,7 +213,7 @@ describe('EditorTab', () => {
   it('accepting a new name with Return leaves the cursor on line 1 without typing a line break', async () => {
     const { client } = makeClient();
     const view = makeView({ name: 'untitled.md', path: '/home/user/untitled.md', newFile: true, size: 'unknown' });
-    const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    const { container } = render(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
     const rows = () => [...container.querySelectorAll(':scope .editor-row .editor-content')].map((n) => n.textContent);
     await waitFor(() => expect(rows().length).toBeGreaterThan(0));
     const before = rows();
@@ -217,7 +231,7 @@ describe('EditorTab', () => {
   it('escape in the metadata row keeps the default name and returns focus to the buffer', async () => {
     const { client, renameEditorFile } = makeClient();
     const view = makeView({ name: 'untitled.md', path: '/home/user/untitled.md', newFile: true, size: 'unknown' });
-    const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    const { container } = render(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
     const input = await waitForContainerChild<HTMLInputElement>(container, '.editor-name-input');
     fireEvent.change(input, { target: { value: 'typed.md' } });
     fireEvent.keyDown(input, { key: 'Escape' });
@@ -268,7 +282,7 @@ describe('EditorTab', () => {
     await waitFor(() => expect(hasDirtyDot(container)).toBe(true));
 
     const renamed = makeView({ name: 'renamed.txt', path: '/home/user/renamed.txt', url: '/open/2' });
-    rerender(<EditorTab editor={renamed} tab={makeTab({ editor: renamed })} client={client} active />);
+    rerender(<TestEditorTab editor={renamed} tab={makeTab({ editor: renamed })} client={client} active />);
 
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(container.querySelector('.editor-content')?.textContent).toBe('draft line one');
@@ -293,7 +307,7 @@ describe('EditorTab', () => {
   it('shows a load error when the fetch fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('boom')));
     const { client } = makeClient();
-    render(<EditorTab editor={makeView()} tab={makeTab()} client={client} active />);
+    render(<TestEditorTab editor={makeView()} tab={makeTab()} client={client} active />);
     await waitFor(() => expect(screen.getByText('Failed to load notes.txt')).toBeInTheDocument());
   });
 
@@ -301,7 +315,7 @@ describe('EditorTab', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404, text: () => Promise.resolve('') } as unknown as Response));
     const { client } = makeClient();
     const view = makeView({ name: 'untitled.md', path: '/repo/untitled.md', size: 'unknown', newFile: true });
-    const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    const { container } = render(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
 
     await waitFor(() => expect(container.querySelectorAll('.editor-gutter')).toHaveLength(1));
     expect(screen.queryByText('Failed to load untitled.md')).not.toBeInTheDocument();
@@ -331,9 +345,9 @@ describe('EditorTab', () => {
     const { rerender } = await renderLoaded(client, view);
     const scrollMock = Element.prototype.scrollIntoView as ReturnType<typeof vi.fn>;
 
-    rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} />);
+    rerender(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} />);
     scrollMock.mockClear();
-    rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    rerender(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
 
     expect(scrollMock).not.toHaveBeenCalled();
   });
@@ -348,9 +362,9 @@ describe('EditorTab', () => {
     body.scrollTop = 240;
     fireEvent.scroll(body);
 
-    rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} visible={false} />);
+    rerender(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} visible={false} />);
     body.scrollTop = 0;
-    rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active visible />);
+    rerender(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active visible />);
 
     expect(body.scrollTop).toBe(240);
   });
@@ -362,8 +376,8 @@ describe('EditorTab', () => {
     fireEvent.keyDown(textarea(), { key: 'ArrowRight' });
     fireEvent.keyDown(textarea(), { key: 'ArrowRight' });
 
-    rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} visible={false} />);
-    rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active visible />);
+    rerender(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} visible={false} />);
+    rerender(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active visible />);
 
     expect(container.querySelector(':scope .editor-row-current .editor-content')?.textContent).toBe('line one');
     expect(textBeforeCaret(container)).toBe('li');
@@ -375,8 +389,8 @@ describe('EditorTab', () => {
     const { rerender } = await renderLoaded(client, view);
     const focusSpy = vi.spyOn(textarea(), 'focus');
 
-    rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} visible={false} />);
-    rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active visible />);
+    rerender(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} visible={false} />);
+    rerender(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active visible />);
 
     expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true });
     focusSpy.mockRestore();
@@ -393,7 +407,7 @@ describe('EditorTab', () => {
     const { client } = makeClient();
     stubTenLines();
     const view = makeView({ line: 5 });
-    const { container, rerender } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    const { container, rerender } = render(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
     await waitFor(() => expect(currentGutter(container)).toBe('5'));
     fireEvent.mouseDown(container.querySelector(':scope .editor-row .editor-content')!, { clientX: 0, clientY: 0, detail: 1 });
     expect(currentGutter(container)).toBe('1');
@@ -401,7 +415,7 @@ describe('EditorTab', () => {
     const scrollMock = Element.prototype.scrollIntoView as ReturnType<typeof vi.fn>;
     scrollMock.mockClear();
     const reopened = { ...view, line: 8, lineRequest: 1 };
-    rerender(<EditorTab editor={reopened} tab={makeTab({ editor: reopened })} client={client} active />);
+    rerender(<TestEditorTab editor={reopened} tab={makeTab({ editor: reopened })} client={client} active />);
 
     await waitFor(() => expect(currentGutter(container)).toBe('8'));
     expect(container.querySelector(':scope .editor-row-current .editor-content')?.textContent).toBe('row 8');
@@ -412,13 +426,13 @@ describe('EditorTab', () => {
     const { client } = makeClient();
     stubTenLines();
     const view = makeView({ line: 8, lineRequest: 1 });
-    const { container, rerender } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    const { container, rerender } = render(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
     await waitFor(() => expect(currentGutter(container)).toBe('8'));
     fireEvent.mouseDown(container.querySelector(':scope .editor-row .editor-content')!, { clientX: 0, clientY: 0, detail: 1 });
     expect(currentGutter(container)).toBe('1');
 
     const reopened = { ...view, lineRequest: 2 };
-    rerender(<EditorTab editor={reopened} tab={makeTab({ editor: reopened })} client={client} active />);
+    rerender(<TestEditorTab editor={reopened} tab={makeTab({ editor: reopened })} client={client} active />);
 
     await waitFor(() => expect(currentGutter(container)).toBe('8'));
   });
@@ -435,7 +449,7 @@ describe('EditorTab', () => {
       ok: true,
       text: () => Promise.resolve(''),
     } as unknown as Response));
-    const { container } = render(<EditorTab editor={makeView()} tab={makeTab()} client={client} active />);
+    const { container } = render(<TestEditorTab editor={makeView()} tab={makeTab()} client={client} active />);
     await waitFor(() => expect(container.querySelectorAll('.editor-gutter')).toHaveLength(1));
     expect(container.querySelector('.editor-caret')).toBeInTheDocument();
   });
@@ -447,7 +461,7 @@ describe('EditorTab', () => {
       ok: true,
       text: () => Promise.resolve('line one\nline two'),
     } as unknown as Response));
-    const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} />);
+    const { container } = render(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} />);
     await waitFor(() => expect(container.querySelector('.editor-caret')).toBeNull());
   });
 
@@ -465,7 +479,7 @@ describe('EditorTab', () => {
   it('exposes isDirty() returning false after load and true after edit', async () => {
     const { client } = makeClient();
     const ref = createRef<DirtyTabHandle>();
-    render(<EditorTab editor={makeView()} tab={makeTab()} client={client} active ref={ref} />);
+    render(<TestEditorTab editor={makeView()} tab={makeTab()} client={client} active ref={ref} />);
     await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
     expect(ref.current?.isDirty()).toBe(false);
     type('x');
@@ -475,7 +489,7 @@ describe('EditorTab', () => {
   it('exposes save() that calls saveFile and marks clean', async () => {
     const { client, saveFile } = makeClient();
     const ref = createRef<DirtyTabHandle>();
-    render(<EditorTab editor={makeView()} tab={makeTab()} client={client} active ref={ref} />);
+    render(<TestEditorTab editor={makeView()} tab={makeTab()} client={client} active ref={ref} />);
     await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
     type('x');
     await waitFor(() => expect(ref.current?.isDirty()).toBe(true));
@@ -737,7 +751,7 @@ describe('EditorTab', () => {
   it('groups every metadata button in the right-side actions', async () => {
     const { client } = makeClient();
     const { container } = render(
-      <EditorTab
+      <TestEditorTab
         editor={makeView({ sync: 'synced' })}
         tab={makeTab({ editor: makeView({ sync: 'synced' }) })}
         client={client}
@@ -868,7 +882,7 @@ describe('EditorTab', () => {
     vi.stubGlobal('fetch', fetchMock);
     const { client } = makeClient();
     const view = makeView({ sync: 'provisioning' });
-    const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    const { container } = render(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
     await waitFor(() => expect(container.querySelector('.editor-sync-icon--provisioning')).not.toBeNull());
     expect(container.querySelectorAll('.editor-gutter')).toHaveLength(0);
     expect(fetchMock).not.toHaveBeenCalled();
@@ -877,11 +891,11 @@ describe('EditorTab', () => {
   it('loads the real content once a provisioning synced tab transitions to synced', async () => {
     const { client } = makeClient();
     const view = makeView({ sync: 'provisioning' });
-    const { container, rerender } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    const { container, rerender } = render(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
     expect(container.querySelectorAll('.editor-gutter')).toHaveLength(0);
 
     const synced = { ...view, url: '/open/2', size: '12 B', sync: 'synced' as const };
-    rerender(<EditorTab editor={synced} tab={makeTab({ editor: synced })} client={client} active />);
+    rerender(<TestEditorTab editor={synced} tab={makeTab({ editor: synced })} client={client} active />);
 
     await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
   });
@@ -983,7 +997,7 @@ describe('EditorTab', () => {
       text: () => Promise.resolve('const x = 1;'),
     } as unknown as Response));
     const view = makeView({ name: 'notes.ts' });
-    const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    const { container } = render(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
     await waitFor(() => expect(container.querySelector('.hljs-keyword')).toBeInTheDocument());
   });
 
@@ -1002,7 +1016,7 @@ describe('EditorTab', () => {
     const view = makeView({ mtimeMs: 1 });
     const { rerender } = await renderLoaded(client, view);
 
-    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} tab={makeTab({ editor: view })} client={client} active />);
+    rerender(<TestEditorTab editor={{ ...view, mtimeMs: 2 }} tab={makeTab({ editor: view })} client={client} active />);
 
     await waitFor(() => expect(screen.getByText('changed elsewhere')).toBeInTheDocument());
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -1017,7 +1031,7 @@ describe('EditorTab', () => {
     const view = makeView({ sync: 'synced' });
     const { rerender } = await renderLoaded(client, view);
 
-    rerender(<EditorTab editor={{ ...view, mtimeMs: 1 }} tab={makeTab({ editor: view })} client={client} active />);
+    rerender(<TestEditorTab editor={{ ...view, mtimeMs: 1 }} tab={makeTab({ editor: view })} client={client} active />);
 
     await waitFor(() => expect(screen.queryByText('line two')).not.toBeInTheDocument());
     expect(screen.getByText('line one')).toBeInTheDocument();
@@ -1031,7 +1045,7 @@ describe('EditorTab', () => {
     type('x');
     await waitFor(() => expect(hasDirtyDot(container)).toBe(true));
 
-    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} tab={makeTab({ editor: view })} client={client} active />);
+    rerender(<TestEditorTab editor={{ ...view, mtimeMs: 2 }} tab={makeTab({ editor: view })} client={client} active />);
     expect(screen.getByText('line one')).toBeInTheDocument();
 
     fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
@@ -1045,7 +1059,7 @@ describe('EditorTab', () => {
     const { container, rerender } = await renderLoaded(client, view);
     type('x');
     await waitFor(() => expect(hasDirtyDot(container)).toBe(true));
-    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} tab={makeTab({ editor: view })} client={client} active />);
+    rerender(<TestEditorTab editor={{ ...view, mtimeMs: 2 }} tab={makeTab({ editor: view })} client={client} active />);
     fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
     await waitFor(() => expect(screen.getByRole('button', { name: 'Overwrite (y)' })).toBeInTheDocument());
 
@@ -1061,7 +1075,7 @@ describe('EditorTab', () => {
     const { container, rerender } = await renderLoaded(client, view);
     type('x');
     await waitFor(() => expect(hasDirtyDot(container)).toBe(true));
-    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} tab={makeTab({ editor: view })} client={client} active />);
+    rerender(<TestEditorTab editor={{ ...view, mtimeMs: 2 }} tab={makeTab({ editor: view })} client={client} active />);
     fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
     await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel (Esc)' })).toBeInTheDocument());
 
@@ -1078,7 +1092,7 @@ describe('EditorTab', () => {
     const { container, rerender } = await renderLoaded(client, view);
     type('x');
     await waitFor(() => expect(hasDirtyDot(container)).toBe(true));
-    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} tab={makeTab({ editor: view })} client={client} active />);
+    rerender(<TestEditorTab editor={{ ...view, mtimeMs: 2 }} tab={makeTab({ editor: view })} client={client} active />);
     fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
     await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel (Esc)' })).toBeInTheDocument());
     expect(document.activeElement).not.toBe(textarea());
@@ -1098,7 +1112,7 @@ describe('EditorTab', () => {
     const { container, rerender } = await renderLoaded(client, view);
     type('x');
     await waitFor(() => expect(hasDirtyDot(container)).toBe(true));
-    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} tab={makeTab({ editor: view })} client={client} active />);
+    rerender(<TestEditorTab editor={{ ...view, mtimeMs: 2 }} tab={makeTab({ editor: view })} client={client} active />);
     fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
     await waitFor(() => expect(screen.getByRole('button', { name: 'Overwrite (y)' })).toBeInTheDocument());
 
@@ -1733,10 +1747,10 @@ describe('EditorTab', () => {
       search('two');
       expect(findInput()).toBeInTheDocument();
 
-      rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} />);
+      rerender(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} />);
       expect(noFindInput()).toBeNull();
 
-      rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+      rerender(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
       expect(noFindInput()).toBeNull();
 
       openFind();
@@ -1841,7 +1855,7 @@ describe('EditorTab', () => {
     it('publishes insertAtCaret under its tab label while visible, inserting the dropped path at the cursor', async () => {
       const { client } = makeClient();
       const view = makeView();
-      const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+      const { container } = render(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
       await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
 
       expect(container.querySelector<HTMLElement>('[data-editor-drop]')?.dataset.editorDrop).toBe('notes');
@@ -1856,7 +1870,7 @@ describe('EditorTab', () => {
     it('moves keyboard focus to the editor', async () => {
       const { client } = makeClient();
       const view = makeView();
-      render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+      render(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
       await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
       const textarea = screen.getByLabelText('Edit notes.txt');
       act(() => { (textarea as HTMLTextAreaElement).blur(); });
@@ -1870,7 +1884,7 @@ describe('EditorTab', () => {
     it('leaves the caret at the end of the dropped path', async () => {
       const { client } = makeClient();
       const view = makeView();
-      const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+      const { container } = render(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
       await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
 
       act(() => { editorDropHandle('notes')?.insertAtCaret('src/notes.txt'); });
@@ -1881,7 +1895,7 @@ describe('EditorTab', () => {
     it('leaves the caret at the end of the last path when several are dropped at once', async () => {
       const { client } = makeClient();
       const view = makeView();
-      const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+      const { container } = render(<TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
       await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
 
       act(() => { editorDropHandle('notes')?.insertAtCaret('src/one.txt\nsrc/two.txt'); });
@@ -1893,17 +1907,17 @@ describe('EditorTab', () => {
       const { client } = makeClient();
       const view = makeView();
       const tab = makeTab({ editor: view });
-      const { rerender, unmount } = render(<EditorTab editor={view} tab={tab} client={client} active={false} visible={false} />);
+      const { rerender, unmount } = render(<TestEditorTab editor={view} tab={tab} client={client} active={false} visible={false} />);
       await waitFor(() => expect(screen.getByLabelText('Edit notes.txt')).toBeInTheDocument());
       expect(editorDropHandle('notes')).toBeUndefined();
 
-      rerender(<EditorTab editor={view} tab={tab} client={client} active={false} visible />);
+      rerender(<TestEditorTab editor={view} tab={tab} client={client} active={false} visible />);
       expect(editorDropHandle('notes')).toBeDefined();
 
-      rerender(<EditorTab editor={view} tab={tab} client={client} active={false} visible={false} />);
+      rerender(<TestEditorTab editor={view} tab={tab} client={client} active={false} visible={false} />);
       expect(editorDropHandle('notes')).toBeUndefined();
 
-      rerender(<EditorTab editor={view} tab={tab} client={client} active={false} visible />);
+      rerender(<TestEditorTab editor={view} tab={tab} client={client} active={false} visible />);
       unmount();
       expect(editorDropHandle('notes')).toBeUndefined();
     });
@@ -1916,8 +1930,8 @@ describe('EditorTab', () => {
       const other = { ...makeView(), url: '/open/2', name: 'other.txt' };
       const { container } = render(
         <>
-          <EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />
-          <EditorTab editor={other} tab={makeTab({ label: 'other', editor: other })} client={client} active={false} visible />
+          <TestEditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />
+          <TestEditorTab editor={other} tab={makeTab({ label: 'other', editor: other })} client={client} active={false} visible />
         </>,
       );
       await waitFor(() => expect(screen.getAllByText('line one')).toHaveLength(2));
@@ -1936,6 +1950,31 @@ describe('EditorTab', () => {
     const rowText = (container: HTMLElement) => [
       ...container.querySelectorAll(':scope .editor-row:not(.editor-row-query) .editor-content'),
     ].map((row) => (row.textContent ?? '').replaceAll('\u{200B}', ''));
+
+    it('uses the injected host and drains the injected report queue', async () => {
+      const { client, send } = makeClient();
+      const binding: BoundBinding = {
+        plugin: 'injected', command: 'do-it', chord: { key: 'j', meta: true }, needs: 'selection',
+      };
+      const host: EditorPluginHost = {
+        bindings: vi.fn(() => [binding]),
+        run: vi.fn().mockResolvedValue({ status: 'ok', result: null }),
+        disable: vi.fn(),
+        disabled: vi.fn(() => []),
+      };
+      const reports: PluginReport[] = [{ plugin: 'broken', reason: 'boom' }];
+      render(<EditorTab editor={makeView()} tab={makeTab()} client={client} active pluginHost={host} pluginReports={reports} />);
+      await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
+      expect(send).toHaveBeenCalledWith({
+        method: 'editorPluginFailed',
+        params: { url: '/open/1', plugin: 'broken', reason: 'boom' },
+      });
+      expect(reports).toHaveLength(0);
+
+      fireEvent.keyDown(textarea(), { key: 'j', metaKey: true });
+      await waitFor(() => expect(host.run).toHaveBeenCalledTimes(1));
+      expect(host.bindings).toHaveBeenCalled();
+    });
 
     it('comments the caret\'s line with Cmd+/', async () => {
       const { client } = makeClient();
@@ -2110,7 +2149,7 @@ describe('EditorTab', () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true, text: () => Promise.resolve('foo bar\nfoo baz'),
       } as unknown as Response));
-      const result = render(<EditorTab editor={makeView()} tab={makeTab()} client={client} active />);
+      const result = render(<TestEditorTab editor={makeView()} tab={makeTab()} client={client} active />);
       await waitFor(() => expect(screen.getByText('bar', { exact: false })).toBeInTheDocument());
       return result;
     }

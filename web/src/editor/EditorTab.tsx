@@ -1,4 +1,4 @@
-import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type { EditorView, TabView } from '@shared/protocol';
 import type { JanusClient } from '../shared/ws/ws';
 import { useEditor } from './useEditor';
@@ -11,7 +11,7 @@ import { useEditorSuggest } from './useEditorSuggest';
 import { useEditorConnections } from './useEditorConnections';
 import { useLineFind } from '../shared/line-find/useLineFind';
 import { useEditorPlugins, type PluginReport } from './plugins/useEditorPlugins';
-import { createEditorPluginHost, type EditorPluginHost } from './plugins/host';
+import type { EditorPluginHost } from './plugins/host';
 import { useEditorInteractions } from './useEditorInteractions';
 import { useEditorScrollRetention } from './useEditorScrollRetention';
 import { selectionsText } from './model';
@@ -44,11 +44,10 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   // buffer hands them all on, hides its caret, and takes focus back once the overlay closes.
   overlayOpen?: boolean;
   onSplit?: () => void;
-  // The session plugin host and its disabled-plugin report queue, owned by the composition that
-  // mounts every editor tab (`useEditorPluginHost`). Absent, this tab gets a host of its own — the
-  // arrangement for a standalone render, which has no session to share.
-  pluginHost?: EditorPluginHost;
-  pluginReports?: PluginReport[];
+  // The session plugin host and its disabled-plugin report queue, injected by the composition that
+  // mounts every editor tab (`useEditorPluginHost`). A standalone render supplies its own host.
+  pluginHost: EditorPluginHost;
+  pluginReports: PluginReport[];
 }>(function EditorTab({
   editor, tab, client, active, visible = true, overlayOpen = false, onSplit, pluginHost, pluginReports,
 }, ref) {
@@ -81,9 +80,8 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
     if (!find.findOpen || !result || state?.cursor.line !== result.index || !bodyRef.current || !caretRef.current) return;
     positionCaretAtQuarter(bodyRef.current, caretRef.current);
   }, [find.findOpen, find.results, find.selected, state?.cursor.line]);
-  const ownHost = useMemo(() => createEditorPluginHost(() => {}), []);
   const pluginKey = useEditorPlugins(
-    client, editor.url, api, editor.name, pluginHost ?? ownHost, pluginReports,
+    client, editor.url, api, editor.name, pluginHost, pluginReports,
   );
   const revealInFileNavigator = useCallback(
     () => { sendRevealInFileNavigator(client, tab.label, editor.revealBlocked); },

@@ -3,6 +3,8 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EditorView, TabView } from '@shared/protocol';
 import { EditorTab } from './editor/EditorTab';
+import { createEditorPluginHost } from './editor/plugins/host';
+import type { PluginReport } from './editor/plugins/useEditorPlugins';
 import { useSectionNav } from './useSectionNav';
 import type { JanusClient } from './shared/ws/ws';
 
@@ -33,13 +35,16 @@ function makeClient(): JanusClient {
   } as unknown as JanusClient;
 }
 
+const testPluginHost = createEditorPluginHost(() => {});
+const testPluginReports: PluginReport[] = [];
+
 function Harness({ tabs, focusCenter }: { tabs: TabView[]; focusCenter: () => void }) {
   const keyboardCapturedRef = React.useRef(false);
   useSectionNav(tabs, focusCenter, keyboardCapturedRef);
   const tab = tabs[0];
   return (
     <div className="app-center">
-      <EditorTab editor={tab.editor!} tab={tab} client={makeClient()} active />
+      <EditorTab editor={tab.editor!} tab={tab} client={makeClient()} active pluginHost={testPluginHost} pluginReports={testPluginReports} />
     </div>
   );
 }
