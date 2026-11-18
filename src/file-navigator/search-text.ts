@@ -1,32 +1,19 @@
-import { readFile, stat } from 'node:fs/promises';
-import path from 'node:path';
 import { createMatcherWorker } from '../search/matching-worker.js';
 import { filterPaths } from '../search/filter-paths.js';
+import { createCandidateReader } from '../search/search-files.js';
 import { listProjectFiles } from './search.js';
 import type { SearchMatch, SearchRequest } from '../search/types.js';
-import {
-  SEARCH_BINARY_PREFIX_BYTES, SEARCH_MAX_FILE_BYTES, SEARCH_MAX_RESULTS,
-} from '../search/types.js';
+import { SEARCH_MAX_RESULTS } from '../search/types.js';
 
 const READ_CONCURRENCY = 8;
 type CandidateReader = (root: string, relPath: string) => Promise<string | null>;
 
-async function readCandidate(root: string, relPath: string): Promise<string | null> {
-  const absPath = path.join(root, relPath);
-  try {
-    const info = await stat(absPath);
-    if (info.size > SEARCH_MAX_FILE_BYTES) return null;
-    const text = await readFile(absPath, 'utf8');
-    return text.slice(0, SEARCH_BINARY_PREFIX_BYTES).includes('\0') ? null : text;
-  } catch {
-    return null;
-  }
-}
-
 export async function searchText(
-  root: string, request: SearchRequest, candidateReader: CandidateReader = readCandidate,
+  root: string, request: SearchRequest, candidateReader?: CandidateReader,
 ): Promise<SearchMatch[]> {
   if (request.query === '') return [];
+  const policyReader = await createCandidateReader(root);
+  const read: CandidateReader = candidateReader ?? ((_root, relPath) => policyReader(relPath));
   const candidates = filterPaths(await listProjectFiles(root), request.include, request.exclude);
   const matcher = createMatcherWorker(request.query, request, new AbortController().signal);
   const rows: SearchMatch[] = [];
@@ -38,7 +25,7 @@ export async function searchText(
     while (nextToRead < candidates.length && reads.size < READ_CONCURRENCY) {
       const index = nextToRead++;
       const relPath = candidates[index];
-      if (relPath !== undefined) reads.set(index, candidateReader(root, relPath));
+      if (relPath !== undefined) reads.set(index, read(root, relPath));
     }
   };
 

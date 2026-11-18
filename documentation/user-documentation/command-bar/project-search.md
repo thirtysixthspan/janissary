@@ -66,7 +66,7 @@ With the search bar focused, `↑` steps back through the terms this tab has sea
 
 The search covers every file under the directory the app was launched from, or under the workspace it follows. In a Git project, that means every tracked file plus every untracked file your `.gitignore` doesn't exclude, so `node_modules` stays out. A tracked file is searched even if `.gitignore` also matches it. If the directory isn't in a Git repository, or Git can't list it, the search walks the folders itself. That walk doesn't read `.gitignore`, so `node_modules` and build output are searched. It skips only `.git`, `.svn`, `.hg`, `.DS_Store`, and `Thumbs.db`. [Quick open](/user-documentation/command-bar/quick-open) lists files the same way.
 
-Two kinds of file are skipped. Files larger than 2 MB are too large for the editor to open, so they never show up. A file counts as binary when a null byte appears in its first 8 KB. A file whose first null byte comes later is searched as text.
+Four kinds of file are skipped. Files larger than 2 MB are too large for the editor to open, so they never show up. A file counts as binary when a null byte appears in its first 8 KB; a file whose first null byte comes later is searched as text. Secret files are also skipped, as are files reached through a symbolic link whose real target lies outside the workspace. The same skips apply to a file grep and to a search of a remote workspace, so a protected file's contents never appear as a result.
 
 The **Files to include** and **Files to exclude** fields across the top narrow that set. Each takes glob patterns separated by commas, such as `*.md, docs`, and editing either one reruns the search.
 

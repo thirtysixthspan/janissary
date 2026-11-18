@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { startScan as runScan, type ScanBatch, type ScanOptions, type ScanQuery } from './scan.js';
 import { compileMatcher } from '../../search/compile-matcher.js';
@@ -116,6 +119,35 @@ describe('startScan', () => {
     const { batches } = scanWith({ 'bin.dat': 'todo\0binary', 'b.ts': 'todo' });
     await settle();
     expect(rowsOf(batches).map((row) => row.path)).toEqual(['b.ts']);
+  });
+
+  it('skips a secret path through the shared reader', async () => {
+    const { batches, readFile } = scanWith({ '.env': 'todo secret', 'b.ts': 'todo' });
+    await settle();
+    expect(rowsOf(batches).map((row) => row.path)).toEqual(['b.ts']);
+    expect(readFile.mock.calls.map(([absPath]) => absPath)).not.toContain('/repo/.env');
+  });
+
+  it('skips a symlink whose real target is outside the project root', async () => {
+    const base = realpathSync(mkdtempSync(path.join(tmpdir(), 'plugin-scan-link-')));
+    try {
+      const root = path.join(base, 'workspace');
+      const outside = path.join(base, 'outside');
+      mkdirSync(root);
+      mkdirSync(outside);
+      writeFileSync(path.join(outside, 'secret.txt'), 'todo secret');
+      symlinkSync(path.join(outside, 'secret.txt'), path.join(root, 'linked.txt'));
+      writeFileSync(path.join(root, 'visible.txt'), 'todo visible');
+      const batches: ScanBatch[] = [];
+      startScan({
+        listFiles: async () => ({ root, paths: ['linked.txt', 'visible.txt'] }),
+        onBatch: (batch) => { batches.push(batch); },
+      }, query);
+      await settle();
+      expect(rowsOf(batches).map((row) => row.path)).toEqual(['visible.txt']);
+    } finally {
+      rmSync(base, { recursive: true, force: true });
+    }
   });
 
   it('skips a file over the editor size limit', async () => {

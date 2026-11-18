@@ -2,24 +2,13 @@ import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { patternError } from '../../search/compile-matcher.js';
 import { filterPaths } from '../../search/filter-paths.js';
-import { splitLines } from '../../search/search-files.js';
-import { createMatcherWorker } from '../../search/matching-worker.js';
 import {
-  SEARCH_BINARY_PREFIX_BYTES, SEARCH_MAX_FILE_BYTES, SEARCH_MAX_RESULTS,
-} from '../../search/types.js';
+  createCandidateReader, splitLines, type CandidateIo, type CandidateReader,
+} from '../../search/search-files.js';
+import { createMatcherWorker } from '../../search/matching-worker.js';
+import { SEARCH_MAX_RESULTS } from '../../search/types.js';
 import type { MatcherWorker } from '../../search/matcher-worker-protocol.js';
 import type { SearchMatch } from './shared.js';
-
-// The editor tab's own limit, restated rather than imported because a plugin may not reach host
-// internals across the import boundary. A match in a file the editor would refuse to open is a row
-// that cannot be acted on, and the two numbers are expected to stay equal.
-export const MAX_BYTES = SEARCH_MAX_FILE_BYTES;
-
-// How many bytes are inspected for the binary test. A null byte in the first few kilobytes is the
-// same signal `grep` and `git grep` use, and checking a prefix rather than the whole file is what
-// keeps the refusal cheap enough to run on every candidate — at the cost of a file whose null byte
-// sits past the prefix being searched as text.
-const BINARY_PREFIX = SEARCH_BINARY_PREFIX_BYTES;
 
 // How many files one detection batch covers, and how many of them are read at once inside a batch.
 // Both bound how much of the repository a single `updateTab` represents and how many reads are open
@@ -67,23 +56,28 @@ type SizeLookup = (absPath: string) => Promise<number | null>;
 // One candidate file, carrying both forms so nothing downstream has to rejoin them.
 type Candidate = { relPath: string; absPath: string };
 
-// A file the scan cannot or will not read: over the editor's size limit, unreadable, binary, or
-// deleted since the list was taken. Each is a normal outcome, never a failure of the scan. A size
-// that cannot be read is treated as over the limit, so an unreadable file is skipped rather than
-// read and found to be enormous afterwards.
+// The shared reader's filesystem seam for a test that supplies file contents and sizes instead of a
+// filesystem. Candidate paths are the files; every other path it stats is an ancestor directory.
+// `realpath` is the identity because injected contents have no links; real symlink and real-target
+// checks are the job of the default IO, which production uses.
+function injectedIo(runtime: Runtime, candidates: readonly Candidate[]): CandidateIo {
+  const files = new Set(candidates.map((candidate) => candidate.absPath));
+  return {
+    lstat: async (target) => {
+      if (!files.has(target)) return { isFile: () => false, isDirectory: () => true, size: 0 };
+      const size = await runtime.sizeOf(target);
+      if (size === null) throw new Error('ENOENT');
+      return { isFile: () => true, isDirectory: () => false, size };
+    },
+    realpath: async (target) => target,
+    readFile: async (target) => Buffer.from(await runtime.read(target)),
+  };
+}
+
+// A file the scan cannot or will not read is returned as null by the shared policy reader, which
+// applies the size, binary, secret-path and real-target refusals for every search pipeline alike.
 async function readableText(candidate: Candidate, runtime: Runtime): Promise<string | null> {
-  const { absPath } = candidate;
-  let text: string | null;
-  try {
-    const bytes = await runtime.sizeOf(absPath);
-    if (bytes === null || bytes > MAX_BYTES) return null;
-    text = await runtime.read(absPath);
-  } catch {
-    return null;
-  }
-  if (text === null) return null;
-  if (text.slice(0, BINARY_PREFIX).includes('\0')) return null;
-  return text;
+  return runtime.reader(candidate.relPath);
 }
 
 function chunk<T>(items: readonly T[], size: number): T[][] {
@@ -99,6 +93,8 @@ type Runtime = {
   sizeOf: SizeLookup;
   createMatcher: NonNullable<ScanOptions['createMatcher']>;
   signal: AbortSignal;
+  // Built once the file list is known, so it is bound to the real root. Until then a read is a no-op.
+  reader: CandidateReader;
   // Rows still to deliver before the search reaches its cap.
   remaining: number;
 };
@@ -160,6 +156,9 @@ async function run(runtime: Runtime): Promise<void> {
     if (signal.aborted) return;
     const candidates: Candidate[] = filterPaths(listed.paths, request.include, request.exclude)
       .map((relPath) => ({ relPath, absPath: path.join(listed.root, relPath) }));
+    runtime.reader = await createCandidateReader(
+      listed.root, signal, options.readFile === undefined ? undefined : injectedIo(runtime, candidates),
+    );
     for (const batch of chunk(candidates, BATCH_SIZE)) {
       if (signal.aborted) return;
       if (runtime.remaining === 0) break;
@@ -199,6 +198,7 @@ export function startScan(options: ScanOptions, request: ScanQuery): ScanHandle 
     options, request, read, sizeOf, signal: controller.signal,
     createMatcher: options.createMatcher
       ?? ((search, signal) => createMatcherWorker(search.query, search, signal)),
+    reader: async () => null,
     remaining: MAX_RESULTS,
   };
   // A rejection here would otherwise escape as an unhandled rejection while the tab sat in its

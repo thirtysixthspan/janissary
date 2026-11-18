@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -93,5 +93,45 @@ describe('searchText', () => {
     write(root, 'a.txt', 'todo');
 
     await expect(searchText(root, { ...plain, query: '' })).resolves.toEqual([]);
+  });
+
+  it('skips a secret file even though its contents match', async () => {
+    const root = project();
+    write(root, '.env', 'TODO=secret');
+    write(root, 'visible.txt', 'todo visible');
+
+    const rows = await searchText(root, plain);
+
+    expect(rows.map((row) => row.path)).toEqual(['visible.txt']);
+  });
+
+  it('skips a symlink whose real target is outside the root', async () => {
+    const base = realpathSync(mkdtempSync(path.join(tmpdir(), 'navigator-search-link-')));
+    try {
+      const root = path.join(base, 'workspace');
+      const outside = path.join(base, 'outside');
+      mkdirSync(root);
+      mkdirSync(outside);
+      writeFileSync(path.join(outside, 'secret.txt'), 'todo secret');
+      symlinkSync(path.join(outside, 'secret.txt'), path.join(root, 'linked.txt'));
+      writeFileSync(path.join(root, 'visible.txt'), 'todo visible');
+
+      const rows = await searchText(root, plain);
+
+      expect(rows.map((row) => row.path)).toEqual(['visible.txt']);
+    } finally {
+      rmSync(base, { recursive: true, force: true });
+    }
+  });
+
+  it('lets an injected candidate reader override the shared policy', async () => {
+    const root = project();
+    write(root, '.env', 'todo secret');
+    const candidateReader = async (_root: string, relativePath: string) =>
+      relativePath === '.env' ? 'todo secret' : null;
+
+    const rows = await searchText(root, plain, candidateReader);
+
+    expect(rows.map((row) => row.path)).toEqual(['.env']);
   });
 });
