@@ -12,6 +12,7 @@ import { beginCoreRecord, closeCoreRecord, coreActivity } from './record-feed.js
 import { ACP_ROLES, DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
 
 type ConnectHooks = { onError: (message: string) => void; onConnect: () => void };
+type Handshake = 'connecting' | 'idle' | 'published' | 'failed';
 type Session = AcpSession | RemoteAcpSession;
 type CoreSession = { session?: Session; runtime: TabRuntime; identity: string; entry: RoleEntry; model?: string };
 type RoleSessions = Map<AcpRole, CoreSession>;
@@ -52,23 +53,34 @@ export class AcpSessionManager {
     };
     const current = () => this.sessions.get(label)?.get(role) === holder
       && this.managers.tab.byLabel(label)?.runtime === runtime && !runtime.closing;
-    let connecting = true;
-    let connected = false;
+    let handshake: Handshake = 'connecting';
     let failure: string | undefined;
     const publish = () => {
-      if (!current() || failure !== undefined) return;
+      if (!current() || handshake === 'failed' || handshake === 'published') return;
+      handshake = 'published';
       beginCoreRecord(this.managers.acpRecords, runtime, source);
       holder.model = model;
       hooks.onConnect();
     };
+    const fail = (message: string) => {
+      if (handshake === 'failed') return;
+      handshake = 'failed';
+      hooks.onError(message);
+    };
     const onError = (message: string) => {
-      if (!current()) return;
-      failure = message;
-      if (!connecting) hooks.onError(message);
+      if (!current() || handshake === 'failed') return;
+      if (handshake === 'connecting') {
+        failure = message;
+        return;
+      }
+      fail(message);
     };
     const onConnect = () => {
-      connected = true;
-      if (!connecting) publish();
+      if (!current() || handshake === 'failed' || handshake === 'published') return;
+      const pending = failure;
+      failure = undefined;
+      publish();
+      if (pending !== undefined) fail(pending);
     };
     const activity = (kind: AcpActivityKind, text: string) => {
       if (current()) coreActivity(this.managers.acpRecords, runtime, kind, text, role);
@@ -91,10 +103,15 @@ export class AcpSessionManager {
             if (classified) activity(classified.kind, classified.text);
           },
         });
-      connecting = false;
       if (!current()) holder.session.kill();
-      else if (failure !== undefined) hooks.onError(failure);
-      else if (connected) publish();
+      else if (handshake === 'connecting') {
+        handshake = 'idle';
+        if (failure !== undefined) {
+          const pending = failure;
+          failure = undefined;
+          fail(pending);
+        }
+      }
       return holder.session;
     } catch (error) {
       this.deleteSession(label, role, holder);

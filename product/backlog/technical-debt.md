@@ -2,17 +2,6 @@
 
 ## ready
 
-* Make the ACP session handshake an explicit state so an early error cannot permanently suppress the connection.
-
-Existing Debt: The connection handshake is tracked by three independent flags whose ordering is the protocol, and the error flag is never cleared, so an error recorded before connecting silently blocks the publish that follows a successful connect. Severity: 6/10
-
-Existing Risk: 6/10 - An early transient error followed by a successful connect leaves the session with no core record and no connect hook, so the tab shows no agent even though the process is running; post-connect errors can also fire repeatedly.
-
-Proposal Risk: 2/10 - An explicit state makes each transition total, but the hooks still have side effects, so a transition that fires twice would still be visible.
-
-Proposal: `src/acp/session-manager.ts` `AcpSessionManager.session()` declares `connecting`, `connected` and a write-once `failure`; `publish()` returns early when `failure !== undefined`, `onError` records it without clearing it, and the post-connect branch calls `hooks.onError(failure)` whenever one was recorded, even when `connected` is true. Replace the three flags with one state such as `'connecting' | 'connected' | 'failed'`, move the "record now versus call the hook now" decision into a single `onError` transition, and let `publish` refuse only in the failed state after the connection has settled. `AcpManager.acquire` in `src/acp/manager.ts` is the hook consumer that settles the prompt and closes the tab, so keep exactly one error delivery. There is no `session-manager.test.ts`; indirect coverage lives in `src/acp/record-feed.test.ts` and `src/acp/manager.test.ts`; add a colocated test for early-error-then-connect and for two post-connect errors asserting one publish and one settle.
-
-
 * Emit the ACP tool loop's terminal event when a native command throws so the prompt settles and state refreshes.
 
 Existing Debt: The tool loop's error path ends the run without its finished event, so the cleanup that only the terminal handler performs is skipped. Severity: 6/10
