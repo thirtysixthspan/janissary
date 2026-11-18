@@ -2,23 +2,6 @@
 
 ## ready
 
-* Add a hosts tab that lists saved host configurations that when clicked launches a ssh tab connecting to the destination.
-A host configuration includes:
-name - a label for the host 
-user - the user name on the remote host
-destination - the hostname and optional port `hostname[:port]` 
-path - the optional target working directory on the remote machine cded into after login 
-`ssh <name>` looks up the connection details from the named host configuration and connects
-The hosts tab should have a metadata bar like the sessions tab including refresh and split icon buttons. It should also have a plus icon button the triggers a create new host configuration modal.
-Host configurations should be stored in ~/.janissary/hosts.json and overridden by .janissary/hosts.json similar to how other configuration files are managed.
-The hosts table should be styled and have the same keyboard and mouse interactions as the table in the sessions tab. 
-The host column in the sessions tab should show the host configuration name when one matches instead of the ssh destination. 
-The `hosts` command opens the hosts tab. The hosts tab is not dockable.
-The hosts tab is core, not a plugin.
-The `hosts list` lists the host configurations in json.
-Host name must be unique across all configurations.
-shell, agent and harness commends that support remote machines using `on <name>` syntax should accept a host connection name.
-
 ## development
 
 
