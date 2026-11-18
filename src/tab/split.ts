@@ -1,5 +1,6 @@
 import type { CenterPane, Tab } from './types.js';
 import { centerPane, isCenterActionTab, isSplitEligibleTab } from './placement.js';
+import { selectSurvivor } from './survivor.js';
 
 export type SplitState = {
   tabs: Tab[];
@@ -9,36 +10,6 @@ export type SplitState = {
 
 export function hasSplit(tabs: Tab[]): boolean {
   return tabs.some((tab) => isSplitEligibleTab(tab) && tab.pane === 'right');
-}
-
-function isRestorable(tab: Tab | undefined, pane: CenterPane, excluded: string): tab is Tab {
-  return tab !== undefined && tab.label !== excluded && isSplitEligibleTab(tab) && centerPane(tab) === pane;
-}
-
-function nearestLabel(tabs: Tab[], index: number, pane: CenterPane, excluded: string): string | undefined {
-  const candidates = tabs
-    .map((tab, candidateIndex) => ({ tab, candidateIndex }))
-    .filter(({ tab }) => isRestorable(tab, pane, excluded))
-    .toSorted((a, b) => Math.abs(a.candidateIndex - index) - Math.abs(b.candidateIndex - index));
-  return candidates[0]?.tab.label;
-}
-
-function historyLabel(tabs: Tab[], history: string[], pane: CenterPane, excluded: string): string | undefined {
-  for (let index = history.length - 1; index >= 0; index--) {
-    const tab = tabs.find((candidate) => candidate.label === history[index]);
-    if (isRestorable(tab, pane, excluded)) return tab.label;
-  }
-  return undefined;
-}
-
-function restorableLabel(
-  tabs: Tab[],
-  label: string | undefined,
-  pane: CenterPane,
-  excluded: string,
-): string | undefined {
-  const tab = tabs.find((candidate) => candidate.label === label);
-  return isRestorable(tab, pane, excluded) ? tab.label : undefined;
 }
 
 export function moveToOtherPane(
@@ -61,8 +32,7 @@ export function moveToOtherPane(
   nextTarget.pane = targetPane === 'right' ? 'right' : undefined;
 
   if (!hasSplit(tabs)) {
-    const restored = historyLabel(nextTabs, focusHistory, 'left', targetLabel)
-      ?? nearestLabel(nextTabs, targetIndex, 'left', targetLabel);
+    const restored = selectSurvivor(nextTabs, 'left', [], focusHistory);
     if (!restored) return undefined;
     return { tabs: nextTabs, activeLabel: targetLabel, secondaryLabel: restored };
   }
@@ -75,9 +45,6 @@ export function moveToOtherPane(
     return { tabs: nextTabs, activeLabel: targetLabel };
   }
 
-  const restored = restorableLabel(nextTabs, activeLabel, sourcePane, targetLabel)
-    ?? restorableLabel(nextTabs, secondaryLabel, sourcePane, targetLabel)
-    ?? historyLabel(nextTabs, focusHistory, sourcePane, targetLabel)
-    ?? nearestLabel(nextTabs, targetIndex, sourcePane, targetLabel);
+  const restored = selectSurvivor(nextTabs, sourcePane, [activeLabel, secondaryLabel], focusHistory);
   return { tabs: nextTabs, activeLabel: targetLabel, secondaryLabel: restored };
 }

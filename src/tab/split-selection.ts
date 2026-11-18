@@ -1,6 +1,5 @@
 import type { CenterPane, Tab } from './types.js';
 import { centerPane, isCenterActionTab } from './placement.js';
-import { moveToOtherPane } from './split.js';
 import { beginDwell, disposeDwell } from './dwell.js';
 import { clearUnreadTab } from './transcript/events.js';
 
@@ -60,10 +59,4 @@ export function repairPaneSelections(
   const visible = tabs.find((tab) => tab.label === nextSecondary);
   if (visible) clearUnreadTab(tabs, visible.label);
   return { activeTab: nextActiveTab, secondaryTabLabel: nextSecondary };
-}
-
-export function moveTabToOtherPaneSelection(
-  tabs: Tab[], targetLabel: string, activeLabel: string, secondaryTabLabel: string | undefined, focusHistory: string[],
-): { tabs: Tab[]; activeLabel: string; secondaryLabel?: string } | undefined {
-  return moveToOtherPane(tabs, targetLabel, activeLabel, secondaryTabLabel, focusHistory);
 }

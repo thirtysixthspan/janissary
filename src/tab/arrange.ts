@@ -4,8 +4,9 @@ import { messageBus } from '../bus.js';
 import { resolveTabGroup } from './groups.js';
 import { isDockableTab } from './dock.js';
 import { isCenterActionTab, isReportingTab, isSplitEligibleTab, centerPane } from './placement.js';
-import { moveTabToOtherPaneSelection, focusedPane, recentLabel } from './split-selection.js';
-import { hasSplit } from './split.js';
+import { focusedPane } from './split-selection.js';
+import { moveToOtherPane, hasSplit } from './split.js';
+import { selectSurvivor } from './survivor.js';
 import { removeTabAt } from './reorder.js';
 import { insertTabInGroup, renumberTabs } from './utils.js';
 import { setDock } from './operations.js';
@@ -84,7 +85,7 @@ function movePane(port: TabOperationsPort, tab: Tab, side?: CenterPane): boolean
   if (sourcePane === targetPane) return true;
   const activeLabel = active.label;
   const activePane = centerPane(active);
-  const result = moveTabToOtherPaneSelection(
+  const result = moveToOtherPane(
     port.tabs, tab.label, activeLabel, port.secondaryTabLabel, port.focusHistory,
   );
   if (!result) return false;
@@ -98,10 +99,7 @@ function movePane(port: TabOperationsPort, tab: Tab, side?: CenterPane): boolean
   } else if (sourcePane === activePane) {
     secondaryLabel = splitRemains ? tab.label : undefined;
   } else if (splitRemains) {
-    secondaryLabel = visibleInPane(result.tabs, port.secondaryTabLabel, sourcePane, tab.label)
-      ?? recentLabel(result.tabs, port.focusHistory, (candidate) => (
-        isCenterActionTab(candidate) && centerPane(candidate) === sourcePane
-      ), tab.label);
+    secondaryLabel = selectSurvivor(result.tabs, sourcePane, [port.secondaryTabLabel], port.focusHistory);
   }
   port.tabs = result.tabs;
   port.activeTab = port.findIndex(nextActiveLabel);
@@ -109,11 +107,6 @@ function movePane(port: TabOperationsPort, tab: Tab, side?: CenterPane): boolean
   port.repairSelections();
   messageBus.emit('state', { type: 'dirty' });
   return true;
-}
-
-function visibleInPane(tabs: Tab[], label: string | undefined, pane: CenterPane, excluded: string): string | undefined {
-  const tab = tabs.find((candidate) => candidate.label === label);
-  return tab && tab.label !== excluded && isCenterActionTab(tab) && centerPane(tab) === pane ? tab.label : undefined;
 }
 
 function dockTab(port: TabOperationsPort, tab: Tab, index: number, side: 'left' | 'right'): boolean {

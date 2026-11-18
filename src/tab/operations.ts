@@ -10,8 +10,8 @@ import { applyDock } from './dock.js';
 import { insertTabInGroup } from './utils.js';
 import { setActiveTabOp, moveTabOp, reorderTabOp, reorderTabToOp } from './navigation-commands.js';
 import { centerPane, isCenterActionTab } from './placement.js';
-import { hasSplit } from './split.js';
-import { focusedPane, recentLabel, moveTabToOtherPaneSelection } from './split-selection.js';
+import { hasSplit, moveToOtherPane } from './split.js';
+import { focusedPane, recentLabel } from './split-selection.js';
 import { revealTab } from './visibility.js';
 
 export type TabOperationsPort = {
@@ -68,7 +68,7 @@ export function moveTabToOtherPane(port: TabOperationsPort, index: number): void
   const target = port.tabs[index];
   const active = port.tabs[port.activeTab];
   if (!target || !active) return;
-  const result = moveTabToOtherPaneSelection(port.tabs, target.label, active.label, port.secondaryTabLabel, port.focusHistory);
+  const result = moveToOtherPane(port.tabs, target.label, active.label, port.secondaryTabLabel, port.focusHistory);
   if (!result) return;
   if (target.label !== active.label) port.recordLeavingActiveTab(index);
   port.tabs = result.tabs;

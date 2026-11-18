@@ -75,6 +75,13 @@ there. Moving the last tab out of a pane collapses the split. A tab that becomes
 secondary selection has its unread badge cleared. Hidden, docked, notification, and reporting tabs
 cannot be moved into panes; an unsplit strip with fewer than two eligible tabs cannot open a split.
 
+Every route that moves a tab to the other pane — the Split button, a drag across the divider, and
+`tab pane` / `tab split` — chooses the tab left visible in the vacated pane by the same rule: that
+pane's visible selection when it is still eligible there, otherwise the most recently focused
+eligible tab in the pane, otherwise its first eligible tab. A notification tab is never chosen as
+the visible selection. The same starting layout therefore leaves the same tab selected whichever
+route performed the move.
+
 ### Busy indicator
 
 While a tab is busy — running a shell command, an ACP turn, or any other in-flight work (the `busy` flag on the tab) — its colored dot **blinks**, toggling fully on and off (600ms each), so an at-a-glance scan of the strip shows which tabs are working even when they are not focused. The blink applies to every tab regardless of focus; when operations overlap, the dot stays busy until they have all finished, then returns to a steady fill in the tab's dot color.
