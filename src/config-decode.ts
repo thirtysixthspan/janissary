@@ -102,11 +102,18 @@ export function backfillNotificationAlerts(
   };
 }
 
+export function backfillMaxToolTurns(parsed: unknown, defaults: Config): Record<string, unknown> | undefined {
+  const raw = configRecord(parsed);
+  if (!raw || Object.hasOwn(raw, 'maxToolTurns')) return;
+  return { ...raw, maxToolTurns: defaults.maxToolTurns };
+}
+
 export function decodeConfig(value: unknown, defaults: Config): Config {
   const record = isRecord(value) ? value : {};
   const defaultNotifications = defaults.notifications;
   return {
     transcriptMaxLines: numberValue(record.transcriptMaxLines, defaults.transcriptMaxLines),
+    maxToolTurns: positiveIntegerValue(record.maxToolTurns, defaults.maxToolTurns),
     tabNameMaxLength: numberValue(record.tabNameMaxLength, defaults.tabNameMaxLength),
     activeTabNameMaxLength: numberValue(record.activeTabNameMaxLength, defaults.activeTabNameMaxLength),
     clipboardHistoryMaxEntries: positiveIntegerValue(record.clipboardHistoryMaxEntries, defaults.clipboardHistoryMaxEntries),
