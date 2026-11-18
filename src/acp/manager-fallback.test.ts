@@ -228,6 +228,23 @@ describe('AcpManager — ask role fallback', () => {
     expect(launched(1).env).toMatchObject({ ANTHROPIC_MODEL: CLAUDE.model });
   });
 
+  it('drops a guarded prompt once when catalog removal closes the current session before admission', () => {
+    const { acp, append, enabledModels } = setup([OPENCODE, CLAUDE]);
+    acp.run('tab1', 'ask first');
+    answer(loop(0), 'from opencode');
+    enabledModels.delete(`${OPENCODE.harness} ${OPENCODE.model}`);
+    const onDrop = vi.fn();
+    const onDone = vi.fn();
+    acp.run('tab1', 'ask again', onDone, 'ask', {
+      admission: { isCurrent: () => acp.sessionIdentity('tab1') === 'acp-1', onDrop },
+    });
+
+    expect(onDrop).toHaveBeenCalledOnce();
+    expect(onDone).toHaveBeenCalledExactlyOnceWith({ answered: false, error: 'ACP session closed.' });
+    expect(mocks.connectAcp).toHaveBeenCalledTimes(1);
+    expect(append).not.toHaveBeenCalledWith('tab1', expect.objectContaining({ input: 'ask again' }));
+  });
+
   it('starts the role’s first entry and reports its model', () => {
     const { acp } = setup([CLAUDE, OPENCODE]);
 

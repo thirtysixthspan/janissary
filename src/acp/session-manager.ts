@@ -5,6 +5,7 @@ import { acpLaunchForEntry } from './launch.js';
 import type { RoleEntry } from '../plugins/roles/shared.js';
 import type { Managers } from '../managers.js';
 import { settleAcpPrompt } from './response.js';
+import { closeSubagentSession } from './subagent-delivery.js';
 import { tabRuntime } from '../tab/runtime.js';
 import type { TabRuntime } from '../tab/types.js';
 import { acpActivity, type AcpActivityKind } from './activity.js';
@@ -16,6 +17,7 @@ type Handshake = 'connecting' | 'idle' | 'published' | 'failed';
 type Session = AcpSession | RemoteAcpSession;
 type CoreSession = {
   session?: Session; runtime: TabRuntime; identity: string; entry: RoleEntry; model?: string; providerId?: string;
+  closing?: boolean;
 };
 type RoleSessions = Map<AcpRole, CoreSession>;
 
@@ -33,7 +35,8 @@ export class AcpSessionManager {
   }
 
   sessionIdentity(label: string, role: AcpRole = DEFAULT_ACP_ROLE): string | undefined {
-    return this.sessions.get(label)?.get(role)?.identity;
+    const holder = this.sessions.get(label)?.get(role);
+    return holder?.closing ? undefined : holder?.identity;
   }
 
   providerSessionId(label: string, role: AcpRole = DEFAULT_ACP_ROLE): string | undefined {
@@ -61,7 +64,7 @@ export class AcpSessionManager {
       ...(tab.remote && { host: tab.remote.host }),
     };
     const current = () => this.sessions.get(label)?.get(role) === holder
-      && this.managers.tab.byLabel(label)?.runtime === runtime && !runtime.closing;
+      && this.managers.tab.byLabel(label)?.runtime === runtime && !runtime.closing && !holder.closing;
     const onSessionStarted = (providerId: string) => {
       if (current()) holder.providerId = providerId;
     };
@@ -140,6 +143,8 @@ export class AcpSessionManager {
       : output ?? { answered: false as const, error: 'ACP session closed.' };
     const holder = this.sessions.get(label)?.get(role);
     const runtime = holder?.runtime ?? this.managers.tab.byLabel(label)?.runtime;
+    if (holder) holder.closing = true;
+    closeSubagentSession(this.managers, label, role, runtime, holder?.identity);
     settleAcpPrompt(this.managers, label, settled, () => {
       if (runtime) closeCoreRecord(this.managers.acpRecords, runtime, role);
       this.deleteSession(label, role, holder);
@@ -165,13 +170,15 @@ export class AcpSessionManager {
   // The role entry the tab's open session was launched from, while that session is still the tab's.
   protected entryOf(label: string, role: AcpRole = DEFAULT_ACP_ROLE): RoleEntry | undefined {
     const holder = this.sessions.get(label)?.get(role);
-    const current = holder?.session !== undefined && holder.runtime === this.managers.tab.byLabel(label)?.runtime;
+    const current = holder?.session !== undefined && !holder.closing
+      && holder.runtime === this.managers.tab.byLabel(label)?.runtime;
     return current ? holder.entry : undefined;
   }
 
   protected isCurrent(label: string, session: Session, role: AcpRole = DEFAULT_ACP_ROLE): boolean {
     const holder = this.sessions.get(label)?.get(role);
-    return holder?.session === session && holder.runtime === this.managers.tab.byLabel(label)?.runtime;
+    return holder?.session === session && !holder.closing
+      && holder.runtime === this.managers.tab.byLabel(label)?.runtime;
   }
 
   private sessionsFor(label: string, create = false): RoleSessions | undefined {

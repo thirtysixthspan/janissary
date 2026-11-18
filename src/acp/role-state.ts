@@ -8,6 +8,8 @@ export type AcpRoleRuntime = {
   recordId?: string;
   recordName?: string;
   pendingSubagentMessages?: SubagentDelivery[];
+  subagentDeliveryInFlight?: symbol;
+  subagentDrainScheduled?: symbol;
 };
 
 export function acpRoleRuntime(runtime: TabRuntime, role: AcpRole = DEFAULT_ACP_ROLE): AcpRoleRuntime {

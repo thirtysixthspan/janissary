@@ -12,6 +12,8 @@ import { isShellAcpReceipt, type ShellAcpReceipt } from '../plugins/shell/shared
 import { TabManager } from '../tab/manager.js';
 import { backgroundRepliesFor, pendingAcpReplyNamesFor } from '../tab/background-replies.js';
 import { makeTab } from '../tab/index.js';
+import { tabRuntime } from '../tab/runtime.js';
+import type { SubagentDelivery } from '../subagent/messages.js';
 import { messageBus } from '../bus.js';
 import { acpCapabilities } from '../plugins/acp-capabilities.js';
 import { guardPluginCall } from '../plugins/guard.js';
@@ -763,6 +765,33 @@ describe('core ACP for plugin tabs', () => {
     expect(managers.questions.pendingFor('consumer')).toBeUndefined();
     expect(session.prompt).toHaveBeenCalledTimes(1);
     expect(session.kill).toHaveBeenCalledTimes(1);
+  });
+
+  it('delivers a plugin-owned ask message and settles it once when its session is reset', async () => {
+    const { managers, session } = setup();
+    const tab = managers.tab.byLabel('consumer')!;
+    const incarnation = tabRuntime(tab).incarnation ??= 'plugin-inc';
+    const identity = managers.acp.start('consumer').session!;
+    const envelope: SubagentDelivery = {
+      runId: 'plugin-run',
+      callerIncarnation: incarnation,
+      callerRole: 'ask',
+      callerSessionIdentity: identity,
+      subagentRole: 'research',
+      message: { status: 'started', role: 'research', sessionId: 'provider-1', callerId: 'caller-1' },
+    };
+
+    managers.acp.deliver('consumer', 'ask', envelope);
+    await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalledOnce(); });
+
+    managers.acp.close('consumer');
+    await vi.waitFor(() => {
+      expect(backgroundRepliesFor(tab)).toContainEqual(expect.objectContaining({
+        line: 'ask ← subagent:research started', output: 'ACP session closed.',
+      }));
+    });
+    expect(backgroundRepliesFor(tab).filter((entry) => entry.line === 'ask ← subagent:research started')).toHaveLength(1);
+    managers.acp.closeAll();
   });
 
   it('does not register an already cancelled question', async () => {
