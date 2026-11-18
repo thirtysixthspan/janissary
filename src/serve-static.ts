@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { containedAbsolute } from './path-containment.js';
 import { servedContentType } from './open/content-type.js';
 import { serveOpenFile } from './open/route.js';
 import { originAllowed, tokenFromReq as tokenFromRequest, tokenMatches } from './security.js';
@@ -49,6 +50,7 @@ export type StaticFileServerOptions = {
 // by id from the controller's allow-list. Separated from the server that wires it up so the content
 // types and the security headers live beside what they govern rather than inside the boot sequence.
 export function staticFileServer(options: StaticFileServerOptions) {
+  const root = path.resolve(options.webDir);
   return async (request: IncomingMessage, res: ServerResponse): Promise<void> => {
     if (!originAllowed(request)) { res.writeHead(403).end('forbidden'); return; }
     const urlPath = new URL(request.url ?? '/', 'http://localhost').pathname;
@@ -68,13 +70,13 @@ export function staticFileServer(options: StaticFileServerOptions) {
     }
     // Resolve within webDir; fall back to index.html for SPA routes / unknown assets.
     const rel = path.normalize(urlPath).replace(/^(\.\.[/\\])+/, '').replace(/^\/+/, '');
-    let file = path.join(options.webDir, rel || 'index.html');
-    if (!file.startsWith(options.webDir)) file = path.join(options.webDir, 'index.html');
+    let file = path.resolve(root, rel || 'index.html');
+    if (!containedAbsolute(root, file)) file = path.join(root, 'index.html');
     let body: Buffer;
     try {
       body = await readFile(file);
     } catch {
-      try { body = await readFile(path.join(options.webDir, 'index.html')); file = 'index.html'; }
+      try { body = await readFile(path.join(root, 'index.html')); file = 'index.html'; }
       catch { res.writeHead(404).end('not found'); return; }
     }
     res.writeHead(200, { ...SECURITY_HEADERS, 'content-type': MIME[path.extname(file)] ?? 'application/octet-stream' });

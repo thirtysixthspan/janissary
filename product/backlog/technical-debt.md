@@ -2,28 +2,6 @@
 
 ## ready
 
-* Replace the inert import-cycle lint rule with a tested import-graph check that fails on real runtime cycles.
-
-Existing Debt: `eslint.config.mjs` sets `'import-x/no-cycle': 'error'` while its own note says the rule's graph traversal does not fire in this setup and recommends a manual `npx madge --circular --extensions ts,tsx src` instead, and no script, test, or CI step runs that command, so the configured guard is documentation rather than enforcement. Severity: 5/10
-
-Existing Risk: 5/10 - An import cycle can land with every check green and surface only as an undefined binding at module evaluation, a plugin activation that never runs, or a client entry chunk that pulls host code in, all of which look like unrelated bugs at the call site.
-
-Proposal Risk: 2/10 - The graph check fails on real runtime cycles; the residual risk is a cycle formed through syntax the scanner does not parse, which the check should report as unanalysed rather than silently skip.
-
-Proposal: Add `scripts/import-cycles.mjs`, run through `$janissary/scripts/run.mjs` and wired into the `check` script in `package.json` and the `check-diff` orchestrator in `scripts/check-diff.mjs` when `src/` or `web/src/` changed, that walks `src/**/*.ts` and `web/src/**/*.{ts,tsx}`, parses static `import`/`export ... from` specifiers, records whether each statement is type-only, resolves relative `.js`/extensionless specifiers to files, and reports every cycle containing at least one runtime edge. Add `scripts/import-cycles.test.mjs` with synthetic trees covering a two-file runtime cycle (fails), an all-`import type` cycle (passes, because TypeScript erases it), a cycle through `export ... from` (fails), and a self-import (fails), following the fixture style in `scripts/help-doc-changes.test.mjs`. Run the check against the current tree before enabling the gate; if it finds a pre-existing runtime cycle, fix it in the same change rather than adding a silent allowlist. The completed `product/plans/complete/split-types-by-domain.md` records that a manual madge run reported many type-only edges, which is why the runtime-only rule matters. Remove the `import-x/no-cycle` entry and its note from `eslint.config.mjs`; `src/eslint-plugin-boundaries.test.ts` and `src/eslint-feature-boundaries.test.ts` stay as they are because they test rules that do fire.
-
-
-* Use the shared path-containment rule for static assets instead of a string prefix so a sibling directory can never be served.
-
-Existing Debt: The static server clamps requested paths with a string `startsWith` check while the project's containment rule is shared across the other file-serving paths, so the asset boundary is defined twice. Severity: 7/10
-
-Existing Risk: 8/10 - A directory whose name shares the bundle directory's prefix lets a crafted URL select a path outside the bundle, because the check compares characters rather than path components.
-
-Proposal Risk: 2/10 - The clamp becomes component-aware and falls back to the SPA shell, but the separate allow-list behind `/open/` remains a second guard that must stay intact.
-
-Proposal: `src/serve-static.ts` `staticFileServer` normalizes the URL path and checks `if (!file.startsWith(options.webDir))`, falling back to `index.html`. `src/path-containment.ts` exports `containedAbsolute`/`containedPath`, and its header comment already names the serve process as a consumer, but this module imports none of it. Replace the prefix test with `containedAbsolute` on the resolved bundle directory, computing the absolute directory once when the server is built, and keep the SPA fallback for rejected paths. There is no `serve-static.test.ts`; `src/index.test.ts` covers origin rejection, SPA fallback, `/open/` token handling and malformed URLs but no traversal or prefix-sibling case. Add cases where the bundle directory has a sibling sharing its prefix and where the URL contains `../` segments, asserting the shell is served and no file outside the bundle directory is read.
-
-
 * Refuse to create or overwrite a conversation written by a newer schema version instead of treating it as absent.
 
 Existing Debt: The conversation store treats an exact schema-version match as the only valid document, so a record from a newer build is indistinguishable from a malformed one and can be replaced by a fresh conversation under the same id. Severity: 6/10
@@ -131,6 +109,16 @@ Proposal: `src/database/row-keys.ts` `RowKeyStore.beginPage` pushes a new bucket
 ## development
 
 ## deferred
+
+* Replace the inert import-cycle lint rule with a tested import-graph check that fails on real runtime cycles. — deferred: complexity 8/10, requires a new static-analysis tool with a parser, resolver and graph traversal plus breaking four real runtime cycles across the command, agent and remote registries.
+
+Existing Debt: `eslint.config.mjs` sets `'import-x/no-cycle': 'error'` while its own note says the rule's graph traversal does not fire in this setup and recommends a manual `npx madge --circular --extensions ts,tsx src` instead, and no script, test, or CI step runs that command, so the configured guard is documentation rather than enforcement. Severity: 5/10
+
+Existing Risk: 5/10 - An import cycle can land with every check green and surface only as an undefined binding at module evaluation, a plugin activation that never runs, or a client entry chunk that pulls host code in, all of which look like unrelated bugs at the call site.
+
+Proposal Risk: 2/10 - The graph check fails on real runtime cycles; the residual risk is a cycle formed through syntax the scanner does not parse, which the check should report as unanalysed rather than silently skip.
+
+Proposal: Add `scripts/import-cycles.mjs`, run through `$janissary/scripts/run.mjs` and wired into the `check` script in `package.json` and the `check-diff` orchestrator in `scripts/check-diff.mjs` when `src/` or `web/src/` changed, that walks `src/**/*.ts` and `web/src/**/*.{ts,tsx}`, parses static `import`/`export ... from` specifiers, records whether each statement is type-only, resolves relative `.js`/extensionless specifiers to files, and reports every cycle containing at least one runtime edge. Add `scripts/import-cycles.test.mjs` with synthetic trees covering a two-file runtime cycle (fails), an all-`import type` cycle (passes, because TypeScript erases it), a cycle through `export ... from` (fails), and a self-import (fails), following the fixture style in `scripts/help-doc-changes.test.mjs`. Run the check against the current tree before enabling the gate; if it finds a pre-existing runtime cycle, fix it in the same change rather than adding a silent allowlist. The completed `product/plans/complete/split-types-by-domain.md` records that a manual madge run reported many type-only edges, which is why the runtime-only rule matters. Remove the `import-x/no-cycle` entry and its note from `eslint.config.mjs`; `src/eslint-plugin-boundaries.test.ts` and `src/eslint-feature-boundaries.test.ts` stay as they are because they test rules that do fire.
 
 * Move the file-safety policy, refusal vocabulary, and remote-tab helpers out of the read and navigator features into one shared file-operations module. — deferred: complexity 8/10, a very large mechanical move spanning roughly 50 import sites across many features.
 

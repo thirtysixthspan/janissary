@@ -78,6 +78,16 @@ all — it has been told the file is not there, and starts on the empty buffer i
 write (see [[editor-tab]]) rather than asking for content and reporting the expected refusal as a
 failure. Only a file that was there when the tab opened can report one.
 
+### Serving the web UI's own assets
+
+The built web UI's assets are served only from inside the app's bundle directory, under the same
+containment rule the rest of the app uses to keep file-serving paths inside their roots. A request
+that would resolve outside that directory — whether by reaching a sibling whose name shares the
+directory's prefix or by climbing with `..` segments — is answered with the app's shell page rather
+than the requested file, so a crafted URL cannot read a file the app did not intend to serve. The
+`/open/<id>` route is a separate path with its own session-token check and registered-file
+allow-list, and that guard stays intact.
+
 ### Wildcards
 
 When the path contains wildcard characters, it is treated as a pattern rather than a single file. The pattern is expanded **by the application itself**, not by a shell, into the list of files it matches, resolved against the active tab's working directory. `open` then acts on each matched file in turn, applying the same presentation (inline or external) to every one.
