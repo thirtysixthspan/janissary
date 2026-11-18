@@ -63,7 +63,7 @@ async function continueLaunch(ctx: Continuation): Promise<void> {
       if (run.outcome !== undefined || run.abortController.signal.aborted) return terminatedResult(ctx.firstProviderId);
       let snapshot: AgentSnapshot;
       if (remote && channel) {
-        snapshot = await channel.resolveAgentSnapshot(task, [], directory);
+        snapshot = await channel.resolveAgentSnapshot(task, [], `subagent-${run.id}`);
         if (run.outcome !== undefined || run.abortController.signal.aborted) return terminatedResult(ctx.firstProviderId);
       } else {
         snapshot = resolveAgentSnapshot(task, [], { workspaceDir: directory, installationDir: janissaryRoot() }, []);

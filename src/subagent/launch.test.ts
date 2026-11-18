@@ -11,6 +11,10 @@ import type { CommandInvocationContext } from '../commands/types.js';
 import type { AcpRoleSettings } from '../acp/ask-role.js';
 import type { RoleEntry } from '../plugins/roles/shared.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
+import type { ServerFrame } from '../remote/protocol-frames.js';
+import { resolveRemoteAgentRequest } from '../remote/serve-agent-resolution.js';
+import { RemoteRunClones } from '../remote/serve-run-clones.js';
+import type { WorkspaceManager } from '../workspace/manager.js';
 import { deferred } from '../deferred.js';
 import type * as ExecuteModule from './execute.js';
 import type * as TaskResolutionModule from '../agent/task-resolution.js';
@@ -286,11 +290,69 @@ describe('launchSubagent — resolution and execution', () => {
     const remote = fakeRemote();
     remote.cloneCreate.resolve('/remote/clone/ws');
     launch();
+    const runId = onlyRun().id;
     await drain();
-    expect(remote.resolveAgentSnapshot).toHaveBeenCalledWith('task.md', [], '/remote/clone/ws');
-    expect(mocks.execute.mock.calls[0][0].remote).toMatchObject({
-      channel: expect.anything(), host: 'devbox', workspace: expect.stringMatching(/^subagent-/),
+    expect(remote.resolveAgentSnapshot).toHaveBeenCalledWith('task.md', [], `subagent-${runId}`);
+    expect(mocks.execute.mock.calls[0][0]).toMatchObject({
+      executionDir: '/remote/clone/ws',
+      remote: { channel: expect.anything(), host: 'devbox', workspace: `subagent-${runId}` },
     });
+  });
+
+  it('resolves through the real far-side handler, which refuses a path selector', async () => {
+    const cloneDir = '/remote/clone/ws';
+    const workspaces = {
+      create: vi.fn(() => ({ dir: cloneDir, ready: Promise.resolve(), cancel: vi.fn() })),
+      tracks: vi.fn(() => false),
+      remove: vi.fn(),
+      cancel: vi.fn(),
+    } as unknown as WorkspaceManager;
+    const clones = new RemoteRunClones(workspaces, {} as never, 'main');
+    const lookup = (label: string) => clones.lookup(label);
+    const selectors: (string | undefined)[] = [];
+    const resolveAgentSnapshot = vi.fn(async (task: string, skills: string[], workspace?: string) => {
+      selectors.push(workspace);
+      const frames: ServerFrame[] = [];
+      resolveRemoteAgentRequest(
+        { type: 'agent-resolve', id: 'req-1', task, skills, ...(workspace !== undefined && { workspace }) },
+        '/main', (frame) => { frames.push(frame); }, lookup,
+      );
+      const frame = frames[0];
+      if (frame?.type !== 'agent-resolve-result') throw new Error('no resolution result frame');
+      if (frame.error !== undefined) throw new Error(frame.error);
+      return frame.snapshot!;
+    });
+    const runClone = vi.fn(async (action: string, label: string) => {
+      if (action === 'create') {
+        const result = await clones.create(label);
+        if (result.error !== undefined) throw new Error(result.error);
+        return result.dir;
+      }
+      await clones.release(label);
+      return;
+    });
+    const channel = { runClone, resolveAgentSnapshot, attached: true } as unknown as RemoteChannel;
+    vi.spyOn(controller.managers.remote, 'get').mockReturnValue(channel);
+    vi.spyOn(controller.managers.remote, 'addressOf').mockReturnValue({ host: 'devbox' } as never);
+    vi.spyOn(controller.managers.remote, 'acquireAgentLease').mockReturnValue(vi.fn(async () => {}));
+
+    launch();
+    const label = `subagent-${onlyRun().id}`;
+    await vi.waitFor(() => expect(mocks.execute).toHaveBeenCalledOnce());
+    await drain();
+
+    expect(runClone).toHaveBeenCalledWith('create', label);
+    expect(selectors).toEqual([label]);
+    expect(mocks.execute.mock.calls[0][0].executionDir).toBe(cloneDir);
+
+    const pathFrames: ServerFrame[] = [];
+    resolveRemoteAgentRequest(
+      { type: 'agent-resolve', id: 'req-2', task: 'task.md', skills: [], workspace: cloneDir },
+      '/main', (frame) => { pathFrames.push(frame); }, lookup,
+    );
+    expect(pathFrames).toEqual([{
+      type: 'agent-resolve-result', id: 'req-2', error: `Unknown remote run clone "${cloneDir}".`,
+    }]);
   });
 
   it('turns a clone error object into one failed completion after the receipt', async () => {

@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Make remote task resolution use the clone label the plan requires so remote subagents can resolve their task.
-
-Existing Issue: Remote task resolution passes the returned clone directory as the channel workspace selector, but the far side resolves that selector as a run-clone label and refuses an absolute path, so every remote subagent fails task lookup before execution. Severity: 9/10
-
-Existing Risk: 9/10 - No remote caller can run a subagent at all, because resolution always fails with an unknown-clone error and the executor is never reached.
-
-Proposal Risk: 2/10 - Resolution then uses the same label the clone was created with, matching the far-side lookup; a future mismatch would still fail closed rather than run in the wrong directory.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2064 "pass the clone label to remote task resolution". In src/subagent/launch.ts the remote branch of the executor thunk calls channel.resolveAgentSnapshot(task, [], directory), where directory is the absolute path returned by remote.ready; pass the clone label subagent-${run.id} instead — the same label used for runClone('create', ...) and for remote.workspace in the executor options — while keeping executionDir: directory for the actual execution path. The far-side handler src/remote/serve-agent-resolution.ts resolves this selector through RemoteRunClones.lookup, which refuses paths and only accepts single-folder labels, and the subplan step 6 explicitly names the clone label. Update the selected-remote case in src/subagent/launch.test.ts to assert the label rather than the returned path, and add a case that drives the real resolveRemoteAgentRequest handler so a wrong selector is caught rather than a fake resolver that ignores it; keep the local-resolution and exact-executor-options cases passing untouched. Update product/specs/subagent.md's remote clone lifecycle paragraph, which currently says resolution uses the returned directory, to say resolution uses the clone label while execution metadata uses the returned directory.
-
 * Handle termination during pending remote clone creation so a late successful clone cannot hang the completion.
 
 Existing Issue: When a remote run is terminated after its clone request is submitted but before the clone resolves, and that clone later succeeds, the handle neither resolves nor rejects readiness, so the launch continuation waits forever and never publishes a completion. Severity: 8/10
