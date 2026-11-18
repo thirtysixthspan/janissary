@@ -135,22 +135,40 @@ afterEach(async () => {
 });
 
 describe('runSubagentEntry', () => {
-  it('records the logical lead-in once and prepends one automatic core primer to the raw prompt', async () => {
+  it('records the full provider preamble once and keeps the raw prompt unchanged', async () => {
     const { options, record, settings } = setup();
     const { prompts } = scriptedSession([['final']]);
     await withRealLoop(async () => {
       const result = await runSubagentEntry(options);
       expect(result.status).toBe('completed');
-      expect(record.prompt.mock.calls).toEqual([[subagentTaskPrompt(TASK, CONTEXT)]]);
       const expected = {
         kind: 'core', role: 'ask', roleName: 'Research',
         grants: ['file read', 'file write', 'db sqlite query'],
         rows: coreSnapshotRows(settings), withoutTools: false,
       } as Extract<AcpRunSnapshot, { kind: 'core' }>;
       const primer = corePrimer(expected, createAcpToolTable(expected.grants));
+      const taskPrompt = subagentTaskPrompt(TASK, CONTEXT);
+      const fullPrompt = `${primer}\n\n${taskPrompt}`;
+      expect(record.prompt.mock.calls).toEqual([[fullPrompt]]);
       expect(prompts).toHaveLength(1);
-      expect(prompts[0]).toBe(`${primer}\n\n${subagentTaskPrompt(TASK, CONTEXT)}`);
-      expect(prompts[0].split(subagentTaskPrompt(TASK, CONTEXT))).toHaveLength(2);
+      expect(prompts[0]).toBe(fullPrompt);
+      expect(prompts[0].split(primer)).toHaveLength(2);
+      expect(prompts[0].split(taskPrompt)).toHaveLength(2);
+    });
+  });
+
+  it('records the preamble before a task-only prompt when no context is given', async () => {
+    const { options, record, settings } = setup({ context: undefined });
+    scriptedSession([['final']]);
+    await withRealLoop(async () => {
+      await runSubagentEntry(options);
+      const expected = {
+        kind: 'core', role: 'ask', roleName: 'Research',
+        grants: ['file read', 'file write', 'db sqlite query'],
+        rows: coreSnapshotRows(settings), withoutTools: false,
+      } as Extract<AcpRunSnapshot, { kind: 'core' }>;
+      const primer = corePrimer(expected, createAcpToolTable(expected.grants));
+      expect(record.prompt.mock.calls).toEqual([[`${primer}\n\n${subagentTaskPrompt(TASK)}`]]);
     });
   });
 

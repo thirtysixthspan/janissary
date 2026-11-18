@@ -6,7 +6,8 @@ import type { RoleEntry } from '../plugins/roles/shared.js';
 import type { CommandSettingsSnapshot } from '../native-commands/settings-types.js';
 import type { AcpSession, AcpPromptHandlers, AcpLoopSession, AcpRunSnapshot } from '../acp/types.js';
 import { acpLaunchForEntry } from '../acp/launch.js';
-import { runToolLoop } from '../acp/drive-loop.js';
+import { corePrimer, runToolLoop } from '../acp/drive-loop.js';
+import { createAcpToolTable } from '../acp/tool-table.js';
 import { guardAcpHandlers } from '../acp/guard-handlers.js';
 import { coreSnapshotRows } from '../acp/run-prompt.js';
 import { subagentTaskPrompt } from './primer.js';
@@ -166,8 +167,9 @@ export async function runSubagentEntry(options: SubagentAttemptOptions): Promise
       adoptSession,
     });
     const prompt = subagentTaskPrompt(run.snapshot.taskText, context);
-    run.record?.prompt(prompt);
     const snapshot = attemptSnapshot(settings, nativeSettings);
+    const preamble = corePrimer(snapshot, createAcpToolTable(snapshot.grants));
+    run.record?.prompt(`${preamble}\n\n${prompt}`);
     const host = createSubagentAttemptHost({ run, invocation, managers, executionDir, active: () => state.active() });
     await new Promise<void>((resolve) => {
       state.onSettled(resolve);

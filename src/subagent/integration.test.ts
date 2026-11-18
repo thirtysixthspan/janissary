@@ -8,7 +8,9 @@ import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 import { tabRuntime } from '../tab/runtime.js';
 import { writeRolesFile, type Role } from '../plugins/roles/roles-file.js';
 import { deferred } from '../deferred.js';
-import type { AcpPromptHandlers, AcpSession, AcpPromptResult } from '../acp/types.js';
+import type { AcpPromptHandlers, AcpSession, AcpPromptResult, AcpRunSnapshot } from '../acp/types.js';
+import { corePrimer } from '../acp/drive-loop.js';
+import { createAcpToolTable } from '../acp/tool-table.js';
 import type { CommandInvocationContext } from '../commands/types.js';
 import type * as DriveLoop from '../acp/drive-loop.js';
 import type * as TaskResolution from '../agent/task-resolution.js';
@@ -190,6 +192,10 @@ describe('subagent integration — local command to human reply', () => {
       await drain();
       expect(loopPrompt(0)).toContain(TASK_TEXT);
       expect(loopPrompt(0)).toContain('What is X?');
+      const snapshot = mocks.runToolLoop.mock.calls[0]![2] as Extract<AcpRunSnapshot, { kind: 'core' }>;
+      const primer = corePrimer(snapshot, createAcpToolTable(snapshot.grants));
+      const record = controller.managers.acpRecords.window(receipt!.recordId)!;
+      expect(record.blocks[0]!.prompt).toBe(`${primer}\n\n${loopPrompt(0)}`);
       expect(mocks.resolve).toHaveBeenCalledWith('task.md', [], expect.objectContaining({ workspaceDir: expect.stringContaining('subagent-') }), []);
 
       handshake(0, 'provider-A');
