@@ -2,17 +2,6 @@
 
 ## ready
 
-* Delete the unused file-capabilities group and the test that asserts both it and the live implementation.
-
-Existing Debt: A whole capability module is dead production code whose helpers duplicate the live ones and have already drifted from them, while a test keeps both implementations alive. Severity: 4/10
-
-Existing Risk: 4/10 - A future fix to topic authorization or editor opening applied only to the live module leaves the dead copy wrong, and the test that runs both hides the drift by treating the dead behavior as an expected result.
-
-Proposal Risk: 1/10 - Removing the module and its duplicated assertions leaves one implementation and one test path; the only residual risk is a later caller reaching for the old import, which a missing module makes an immediate compile error.
-
-Proposal: `src/plugins/file-capabilities.ts` exports `fileCapabilities`, `requireDeclaredTopic` and `topicActionCapability`; no production module imports `fileCapabilities` — the only importer is `src/plugins/topics.test.ts`, which builds a `fileContext` and asserts the same topic-action behavior as the live `createPluginContext`. The live `requireDeclaredTopic` and `topicActionCapability` are in `src/plugins/context.ts`, and `projectFileList`/`openInEditor` in the dead module duplicate `src/plugins/project-capabilities.ts` while lacking its `root` result and `withRunAllocation` wrapping and calling `managers.openFile.edit` directly. Delete `src/plugins/file-capabilities.ts`, remove the `fileContext` setup and its parallel assertions from `src/plugins/topics.test.ts`, and rely on `src/plugins/context.test.ts` and `src/plugins/project-capabilities.test.ts` for the live behavior. A completed plan note in `product/plans/complete/04-runscripts-topic-and-actions.md` already records that nothing imports this module.
-
-
 * Give the picker-population hook an options object and a colocated test instead of eleven positional parameters.
 
 Existing Debt: A hook with eleven positional parameters of overlapping optional string and callback types fans its arguments into two further positional hooks, and its composition of two result objects has no direct test. Severity: 4/10

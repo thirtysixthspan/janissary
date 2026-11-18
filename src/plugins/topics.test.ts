@@ -17,7 +17,6 @@ import {
   type TabPluginNotificationTopic,
 } from './api.js';
 import { createPluginContext } from './context.js';
-import { fileCapabilities } from './file-capabilities.js';
 import { emptyTopicData, readTopicData, runTopicAction, subscribeTopic } from './topics.js';
 import { emitSessionsChanged } from '../remote/attach.js';
 import { messageBus } from '../bus.js';
@@ -795,16 +794,8 @@ describe('the topicData and topicAction capabilities', () => {
     const { managers } = makeManagers();
     const action = { topic: 'models', action: 'delete', harness: 'claude', id: 'gone' } as const;
     const context = contextFor(managers, ['topicData', 'topicAction'], ['models'], () => false);
-    const fileContext = fileCapabilities({
-      managers,
-      declaration: declaration(['topicData', 'topicAction'], ['models']),
-      origin,
-      isEnabled: () => false,
-      openRequests: [],
-    });
 
     await expect(context.topicAction(action)).resolves.toBeUndefined();
-    await expect(fileContext.topicAction(action)).resolves.toBeUndefined();
     expect(managers.models.delete).not.toHaveBeenCalled();
   });
 
