@@ -8,10 +8,17 @@ import { TAB_PLUGIN_API_VERSION, TabPluginRejection } from './api-capabilities.j
 import { launchRemotePluginTab } from './launch-tab-remote.js';
 import { launchCapabilities, type LaunchInput } from './launch-tab.js';
 import { notify } from '../notifications/index.js';
+import { readHostsFile } from '../plugins/hosts/hosts-file.js';
 
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
+vi.mock('../plugins/hosts/hosts-file.js', () => ({
+  readHostsFile: vi.fn(() => ({ hosts: [], path: '', usable: true, problems: [] })),
+}));
 
-beforeEach(() => { vi.clearAllMocks(); });
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(readHostsFile).mockReturnValue({ hosts: [], path: '', usable: true, problems: [] });
+});
 afterEach(() => { vi.useRealTimers(); });
 
 const declaration: TabPluginDeclaration = {
@@ -26,7 +33,7 @@ function harness(options: {
   sourceRemote?: { address: string; host: string };
 } = {}) {
   const channels: { label: string; handlers: RemoteLaunchHandlers }[] = [];
-  const opened: { label: string; start: unknown; payload: unknown }[] = [];
+  const opened: { label: string; start: unknown; payload: unknown; remote: unknown }[] = [];
   const tabs: { label: string; plugin?: { id: string; instanceKey: string; payload: unknown; busy?: boolean } }[] = [
     { label: 'janus', ...(options.sourceRemote && { remote: options.sourceRemote }) },
   ];
@@ -47,7 +54,7 @@ function harness(options: {
       ) => {
         const start = { label: naming.label, cwd: naming.cwd, connectPtyId: `connect-${channels.length - 1}`, host: 'devbox' };
         const payload = factory({});
-        opened.push({ label: naming.label, start, payload });
+        opened.push({ label: naming.label, start, payload, remote: naming.remote });
         tabs.push({ label: naming.label, plugin: { id, instanceKey, payload } });
       },
       setCwd: vi.fn(),
@@ -292,6 +299,40 @@ describe('launchRemotePluginTab', () => {
     expect(h.managers.tab.setCwd).toHaveBeenCalledWith('docs', '/remote/docs');
     expect(h.managers.tab.setPluginBusy).toHaveBeenCalledWith(docs, false);
     expect(docs?.plugin?.busy).toBe(false);
+  });
+
+  it('opens the channel and tab metadata with the resolved saved endpoint', () => {
+    const h = harness();
+    vi.mocked(readHostsFile).mockReturnValue({
+      hosts: [{ name: 'lab', host: 'devbox', user: 'admin', port: 2222, path: '/srv/proj' }],
+      path: '', usable: true, problems: [],
+    });
+
+    launchRemotePluginTab(h.input, 'shell-1', { remote: { address: 'lab' }, name: 'docs' }, factory, ready);
+
+    expect(vi.mocked(h.managers.remote.create).mock.calls[0]?.[1]).toMatchObject({
+      address: 'admin@devbox:/srv/proj', destination: 'admin@devbox', host: 'devbox', port: 2222, hostName: 'lab',
+    });
+    expect(h.opened[0]?.remote).toEqual({ address: 'admin@devbox:/srv/proj', host: 'devbox' });
+  });
+
+  it('keeps the resolved endpoint on a name-refusal retry even if the catalog changes', async () => {
+    const h = harness();
+    vi.mocked(readHostsFile).mockReturnValue({
+      hosts: [{ name: 'lab', host: 'devbox', port: 2222 }], path: '', usable: true, problems: [],
+    });
+    launchRemotePluginTab(h.input, 'shell-1', { remote: { address: 'lab' } }, factory, ready);
+    const first = vi.mocked(h.managers.remote.create).mock.calls[0]?.[1];
+
+    vi.mocked(readHostsFile).mockReturnValue({
+      hosts: [{ name: 'lab', host: 'otherbox', port: 9999 }], path: '', usable: true, problems: [],
+    });
+    h.channels[0]?.handlers.onNameRefused?.({ type: 'name-in-use', label: h.channels[0]?.label ?? '' });
+    await vi.waitFor(() => expect(h.channels).toHaveLength(2));
+
+    expect(readHostsFile).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(h.managers.remote.create).mock.calls[1]?.[1]).toEqual(first);
+    expect(first).toMatchObject({ address: 'devbox', host: 'devbox', port: 2222, hostName: 'lab' });
   });
 
   it('retries an unnamed pool label after the remote host reports it in use', async () => {

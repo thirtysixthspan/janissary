@@ -67,16 +67,39 @@ function findGroupClause(tokens: string[]): { tokens: string[]; group?: string }
   return { tokens: [...tokens.slice(0, index), ...tokens.slice(index + 3)], group };
 }
 
+// Character span of the first `on` operand in the argument string. A saved name such as `with` or
+// `build-with-ssh` is that operand, so a `with` match inside this span is not a prompt delimiter.
+function onOperandSpan(rest: string): { start: number; end: number } | undefined {
+  const match = /\bon\s+(\S+)/i.exec(rest);
+  if (match === null) return undefined;
+  const start = (match.index ?? 0) + match[0].indexOf(match[1]);
+  return { start, end: start + match[1].length };
+}
+
 // Split a trailing `with <prompt>` clause off the harness command's argument string, before any
 // option parsing so flag-like words inside the prompt are never scanned as options. Returns the
 // options portion (`left`) plus the verbatim prompt when a standalone `with` token is present, an
 // `error` when `with` has no following text, or just `left` when there is no clause.
 function splitWithClause(rest: string): { left: string; prompt?: string } | { error: string } {
-  const withMatch = /\bwith\b/i.exec(rest);
+  const span = onOperandSpan(rest);
+  const withMatch = [...rest.matchAll(/\bwith\b/gi)].find((match) => {
+    const index = match.index ?? 0;
+    return span === undefined || index >= span.end || index + match[0].length <= span.start;
+  });
   if (!withMatch) return { left: rest };
-  const prompt = rest.slice(withMatch.index + withMatch[0].length).trim();
+  const index = withMatch.index ?? 0;
+  const prompt = rest.slice(index + withMatch[0].length).trim();
   if (!prompt) return { error: usage(`harness <${HARNESS_NAMES.join('|')}> [options] with <prompt>.`) };
-  return { left: rest.slice(0, withMatch.index).trim(), prompt };
+  return { left: rest.slice(0, index).trim(), prompt };
+}
+
+// The token after `on` is a saved name, not an independent keyword. Blanking it in a copy keeps every
+// other token in place, so option values hold their positions while group, flag, and `as` scans skip
+// a saved operand such as `in`, `as`, or `--offline`.
+function withoutOnOperand(tokens: readonly string[]): string[] {
+  const index = tokens.findIndex((token) => token.toLowerCase() === 'on');
+  if (index === -1 || index + 1 >= tokens.length) return [...tokens];
+  return tokens.map((token, position) => (position === index + 1 ? '' : token));
 }
 
 // Parse the option flags following the harness name: workspace, auto-approve, and browser
@@ -87,12 +110,11 @@ function splitWithClause(rest: string): { left: string; prompt?: string } | { er
 function parseHarnessFlags(
   tokens: string[],
   name: string,
+  remote: RemoteAddress | undefined,
 ): {
   workspace: boolean; offline: boolean; autoApprove: boolean; browser: boolean; autoResume: boolean;
-  model?: string; effort?: string; label?: string; remote?: RemoteAddress; group?: string;
+  model?: string; effort?: string; label?: string; group?: string;
 } | { error: string } {
-  const remote = findRemoteClause(tokens);
-  if (remote !== undefined && 'error' in remote) return remote;
   const noWorkspace = tokens.some((t) => t.toLowerCase() === '--no-workspace');
   const workspace = remote !== undefined || !noWorkspace;
   const offline = tokens.some((t) => t.toLowerCase() === '--offline');
@@ -116,10 +138,10 @@ function parseHarnessFlags(
   const effort = findFlagValue(tokens, '--effort');
   if (effort !== undefined && typeof effort !== 'string') return effort;
   const asIndex = tokens.findIndex((t) => t.toLowerCase() === 'as');
-  if (asIndex === -1) return { workspace, offline, autoApprove, browser, autoResume, model, effort, remote };
+  if (asIndex === -1) return { workspace, offline, autoApprove, browser, autoResume, model, effort };
   const label = tokens[asIndex + 1];
   if (!label) return { error: usage(`harness <${HARNESS_NAMES.join('|')}> as <label>.`) };
-  return { workspace, offline, autoApprove, browser, autoResume, model, effort, label, remote };
+  return { workspace, offline, autoApprove, browser, autoResume, model, effort, label };
 }
 
 // The `harness <subcommand> <label>` forms, which target an existing harness tab instead of
@@ -172,15 +194,18 @@ export function parseHarnessCommand(input: string): HarnessParsed {
   if ('error' in clause) return clause;
   const { left, prompt } = clause;
   const tokens = left.split(/\s+/);
-  const subcommand = parseLabelSubcommand(tokens);
+  const remote = findRemoteClause(tokens);
+  if (remote !== undefined && 'error' in remote) return remote;
+  const scan = withoutOnOperand(tokens);
+  const subcommand = parseLabelSubcommand(scan);
   if (subcommand) return subcommand;
-  const groupClause = findGroupClause(tokens);
+  const groupClause = findGroupClause(scan);
   if ('error' in groupClause) return groupClause;
   const name = groupClause.tokens[0].toLowerCase();
   if (HARNESS_COMMANDS[name] === undefined) {
     return { error: `Unknown harness "${name}". Choose from: ${HARNESS_NAMES.join(', ')}.` };
   }
-  const flags = parseHarnessFlags(groupClause.tokens.slice(1), name);
+  const flags = parseHarnessFlags(groupClause.tokens.slice(1), name, remote);
   if ('error' in flags) return flags;
-  return { name, ...flags, ...(groupClause.group !== undefined && { group: groupClause.group }), prompt };
+  return { name, ...flags, remote, ...(groupClause.group !== undefined && { group: groupClause.group }), prompt };
 }

@@ -52,15 +52,33 @@ quote, a semicolon, a backtick, `$`, `&`, `|` — is rejected by name rather tha
 address can arrive from a profile file on disk as well as from something just typed. An `on` with no
 following token is a usage error.
 
-### Ports from saved hosts
+### Launching by saved name
 
-When a remote launch names a saved host that has a port, janissary passes that port to ssh, so the
-connection no longer needs a `Host` alias in `~/.ssh/config` just to carry a port. The saved host name
-is handed to ssh as an operand rather than an option, so one beginning with a hyphen is still read as
-the destination. A saved host's remote path is used exactly as a typed path is. The initial connection
-and every automatic retry after a dropped transport use the same resolved port, host, and path, as
-does a capture query for a parked session. A typed `on <address>` is unchanged: it accepts no port,
-and a trailing `:2222` is still the name of a directory.
+A bare `on <name>` that matches a saved host resolves to that host's concrete endpoint before the
+launch starts. The saved user, host, port, and path all take effect, so `on lab` can mean
+`admin@devbox` on port 2222 with its project at `/srv/proj`. When the saved entry has no path, the
+remote still finds its project root by walking up from the ssh login directory, exactly as a typed
+host without a path does. The saved name is handed to ssh as an operand rather than an option, so one
+beginning with a hyphen is still read as the destination. A saved host with a port no longer needs a
+`Host` alias in `~/.ssh/config` just to carry that port.
+
+Three rules decide which endpoint wins. First, a typed address always wins: an operand containing
+`@` or `:` is used literally and the saved catalog is never consulted, so `on devbox:/srv/proj` keeps
+meaning the path `/srv/proj` and a trailing `:2222` is still a directory name, not a port. Second, an
+unmatched name or an unusable catalog falls back to treating the token as a plain host name, which ssh
+resolves the way it always has. Third, if the project's catalog is malformed, janissary reports that
+once in the notifications feed and still uses a valid personal catalog, so a broken project override
+does not block a saved launch.
+
+The saved endpoint is pinned for the life of the launch. The initial connection, every automatic
+retry after a dropped transport, and a name-refusal retry under a different tab label all use the same
+resolved user, host, port, and path, even if the catalog is edited in between. A capture query for a
+parked session reconnects with what was recorded at launch for the same reason.
+
+A saved name that looks like a command keyword is still read as the address. Names such as `with`,
+`as`, `in`, and `--offline`, and names containing `with` such as `build-with-ssh`, reach the launch
+instead of becoming a prompt delimiter, a tab label, a group clause, or a flag. A real `with <prompt>`
+after the address still works, and `on` inside that prompt stays prompt text.
 
 ### Bootstrap requirement
 

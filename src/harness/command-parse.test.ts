@@ -251,6 +251,43 @@ describe('parseHarnessCommand — on <address> clause', () => {
       workspace: true, remote: { host: 'devbox' }, prompt: 'switch it on',
     });
   });
+
+  it.each(['with', 'build-with-ssh'])('reads a saved operand containing with as the address, not a prompt (%s)', (name) => {
+    expect(parseHarnessCommand(`harness claude on ${name}`)).toMatchObject({
+      workspace: true, remote: { address: name }, prompt: undefined,
+    });
+    expect(parseHarnessCommand(`harness claude on ${name} with fix the tests`)).toMatchObject({
+      remote: { address: name }, prompt: 'fix the tests',
+    });
+  });
+
+  it('reads a saved operand named as or --offline as the address, not a label or a flag', () => {
+    const namedAs = parseHarnessCommand('harness claude on as --model opus');
+    expect(namedAs).toMatchObject({ remote: { address: 'as' }, model: 'opus' });
+    expect(namedAs).not.toHaveProperty('label');
+
+    const offline = parseHarnessCommand('harness claude on --offline');
+    expect(offline).toMatchObject({ remote: { address: '--offline' }, offline: false });
+    expect(offline).not.toHaveProperty('label');
+  });
+
+  it('reads a saved operand named in as the address, not a group clause', () => {
+    const parsed = parseHarnessCommand('harness claude on in group review as bot');
+    expect(parsed).toMatchObject({ remote: { address: 'in' }, label: 'bot' });
+    expect(parsed).not.toHaveProperty('group');
+  });
+
+  it('parses a genuine trailing prompt after a saved operand', () => {
+    expect(parseHarnessCommand('harness claude on lab with fix the tests')).toMatchObject({
+      remote: { address: 'lab' }, prompt: 'fix the tests',
+    });
+  });
+
+  it('keeps an on inside a genuine prompt as prompt text', () => {
+    expect(parseHarnessCommand('harness claude on lab with turn it on')).toMatchObject({
+      remote: { address: 'lab' }, prompt: 'turn it on',
+    });
+  });
 });
 
 describe('parseHarnessCommand — with <prompt> clause', () => {
