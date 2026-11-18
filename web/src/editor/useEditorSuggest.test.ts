@@ -10,10 +10,13 @@ function makeState(text: string, cursorLine = 0): EditorState {
 
 // `Promise.withResolvers` (ES2024) predates this project's `lib` target; a small typed shim keeps
 // the tests off the disallowed "extract resolver from `new Promise()`" pattern regardless.
-function withResolvers<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
-  const state = { resolve: undefined as unknown as (value: T) => void };
-  const promise = new Promise<T>((resolve) => { state.resolve = resolve; });
-  return { promise, resolve: state.resolve };
+function withResolvers<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (reason?: unknown) => void } {
+  const state = {
+    resolve: undefined as unknown as (value: T) => void,
+    reject: undefined as unknown as (reason?: unknown) => void,
+  };
+  const promise = new Promise<T>((resolve, reject) => { state.resolve = resolve; state.reject = reject; });
+  return { promise, resolve: state.resolve, reject: state.reject };
 }
 
 function makeClient(personas: string[] = ['summarizer'], hunksQueue: { hunks: { anchor: string; replacement: string }[] }[] = []) {
@@ -92,6 +95,59 @@ describe('useEditorSuggest', () => {
     expect(result.current.noSuggestionLine).toBeNull();
     expect(result.current.firingLine).toBeNull();
     expect(result.current.queryLine).toBeNull();
+  });
+
+  it('clears the in-flight guard and shows a failure line when the editorSuggest request rejects', async () => {
+    const { client, request } = makeClient(['summarizer']);
+    const { promise, reject } = withResolvers<RequestResult<{ hunks: { anchor: string; replacement: string }[] }>>();
+    request.mockImplementationOnce(() => promise);
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn(), vi.fn()));
+    await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
+    typeQuery(result, ' summarizer rewrite this');
+
+    act(() => { result.current.fireOnLine(makeState('old')); });
+    expect(result.current.firingLine).toBe('> summarizer rewrite this');
+
+    await act(async () => { reject(new Error('connection lost')); });
+
+    expect(result.current.firingLine).toBeNull();
+    expect(result.current.noSuggestionLine).toBe('> summarizer rewrite this');
+    expect(result.current.pending).toBeNull();
+
+    request.mockResolvedValueOnce({ ok: true, value: { hunks: [] } });
+    act(() => { result.current.fireOnLine(makeState('old')); });
+    expect(request).toHaveBeenCalledTimes(3); // persona list + rejected query + the retry
+  });
+
+  it('shows no failure line when a cancelled in-flight request rejects', async () => {
+    const { client, request } = makeClient(['summarizer']);
+    const { promise, reject } = withResolvers<RequestResult<{ hunks: { anchor: string; replacement: string }[] }>>();
+    request.mockImplementationOnce(() => promise);
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn(), vi.fn()));
+    await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
+    typeQuery(result, ' summarizer rewrite this');
+
+    act(() => { result.current.fireOnLine(makeState('old')); });
+    act(() => { result.current.closeQueryLine(); });
+    await act(async () => { reject(new Error('connection lost')); });
+
+    expect(result.current.noSuggestionLine).toBeNull();
+    expect(result.current.firingLine).toBeNull();
+    expect(result.current.queryLine).toBeNull();
+    expect(result.current.pending).toBeNull();
+  });
+
+  it('leaves the persona list empty when persona discovery rejects', async () => {
+    const { promise, reject } = withResolvers<RequestResult<{ names: string[] }>>();
+    const request = vi.fn().mockImplementationOnce(() => promise);
+    const client = { request } as unknown as JanusClient;
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn(), vi.fn()));
+
+    expect(result.current.personas).toEqual([]);
+    await act(async () => { reject(new Error('discovery failed')); });
+
+    expect(result.current.personas).toEqual([]);
+    expect(request).toHaveBeenCalledTimes(1);
   });
 
   it('records the query as having no suggestion when the reply has no hunks', async () => {

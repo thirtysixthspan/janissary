@@ -2,17 +2,6 @@
 
 ## ready
 
-* Clear the in-flight suggestion state when a request fails so one rejected editor query cannot disable the suggestion surface for the rest of the session.
-
-Existing Debt: The suggestion hook sets a firing flag before a request and clears it only in the success callback, so a rejected request leaves the flag set and every later request is refused by the same guard. Severity: 6/10
-
-Existing Risk: 6/10 - A dropped request or a server error leaves `firingRef` true and `firingLine` visible, so the in-editor suggestion surface silently stops responding for the rest of the tab's life with no error shown.
-
-Proposal Risk: 2/10 - The flag is cleared on every settlement, but a failed request still produces no visible error text, so the user sees the surface go idle again without knowing the query failed.
-
-Proposal: `web/src/editor/useEditorSuggest.ts` `fireOnLine` sets `firingRef.current = true` and `setFiringLine(queryText)`, then attaches only a `.then()` to `client.request`; `closeQueryLine` sets `firingCancelledRef` while a request is in flight, and that flag is also cleared only inside `.then()`. Add a rejection handler, or a `.finally()` combined with the existing success logic, that clears `firingRef`, `firingLine` and `firingCancelledRef` on any settlement, and surface a short failure line through the existing `noSuggestionLine` state. The persona request in the same file has the same missing rejection path and should get the same guard. `web/src/editor/useEditorSuggest.test.ts` covers success, empty hunks, close-while-in-flight and the second-request guard but has no rejected request; add one asserting a subsequent `fireOnLine` proceeds after a rejection.
-
-
 * Detect a stuck permission gate from the gate itself rather than byte-for-byte screen equality so a redrawing terminal cannot keep auto-approval looping.
 
 Existing Debt: The stuck guard counts repeats by whole-screen text equality, so any unrelated redraw resets the counter even when the same gate is still on screen. Severity: 6/10

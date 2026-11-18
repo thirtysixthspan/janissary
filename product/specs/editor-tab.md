@@ -803,10 +803,12 @@ progress: `agent?` before a known persona has been named, `query?` once the pers
 no request text has been typed yet, and `run` once both are present — clicking `run` sends the
 request, the same as pressing Ctrl+Enter (Cmd+Enter on macOS), or pressing Enter while the pill
 holds keyboard focus (see above). While the request is in flight the pill reads `running...`; if
-the reply proposes no change at all, it reads `no suggestion` until the query is edited. While a
-proposed change is pending accept/decline, the pill is hidden — the pending-change prompt above the
-buffer is the request's state at that point, and the buffer's own caret is suppressed while the
-query line holds keyboard focus.
+the reply proposes no change at all, or the request fails before a reply arrives, it reads
+`no suggestion` until the query is edited. A failed request clears its in-flight state, so another
+request can be sent from the same query line afterward. While a proposed change is pending
+accept/decline, the pill is hidden — the pending-change prompt above the buffer is the request's
+state at that point, and the buffer's own caret is suppressed while the query line holds keyboard
+focus.
 
 Nothing about an in-editor suggestion is saved or restored — like the rest of an editor tab's state,
 it exists only in memory for as long as the tab is open. The query line follows the same rule: it is
