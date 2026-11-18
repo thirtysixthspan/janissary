@@ -135,6 +135,11 @@ There is no `idle_time_limit`: a recording plays at the timing it happened at, a
 otherwise would only tell a player to rewrite it. A recording made by another tool may state one, and
 it is played at its own timing regardless.
 
+The header's `cols` and `rows` must each be a positive whole number within the safe-integer range. A
+header that declares a missing, zero, negative, fractional, non-finite, or out-of-range dimension is
+refused, with the reason shown on the player's metadata line. Recorded resizes apply the same rule: a
+resize with a dimension outside that shape is ignored.
+
 Every subsequent line is a JSON event array `[<interval-seconds>, "<code>", "<data>"]`, where
 `interval-seconds` is the gap **since the previous event** rather than the time since the start — the
 one thing v3 changed about the event stream, and the reason a v2 file has to be read differently — and

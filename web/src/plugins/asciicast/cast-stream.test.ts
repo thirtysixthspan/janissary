@@ -65,6 +65,11 @@ describe('parseCastHeader', () => {
     ['a json array rather than an object', '[]'],
     ['a version it does not know', '{"version":1,"width":80,"height":24}'],
     ['a header with no terminal size', '{"version":2}'],
+    ['a header whose dimension is infinite', '{"version":2,"width":1e999,"height":24}'],
+    ['a header whose dimension is negative', '{"version":2,"width":-80,"height":24}'],
+    ['a header whose dimension is a fraction', '{"version":2,"width":80.5,"height":24}'],
+    ['a header whose dimension is zero', '{"version":2,"width":0,"height":24}'],
+    ['a header whose dimension is not a safe integer', '{"version":2,"width":9007199254740993,"height":24}'],
   ])('refuses %s with a reason the metadata line can show', (_case, line) => {
     const result = parseCastHeader(line);
     expect('error' in result && result.error.length > 0).toBe(true);
@@ -86,6 +91,15 @@ describe('CastStream', () => {
     expect(stream.events).toHaveLength(0);
     stream.push('tial"]\n');
     expect(stream.events).toEqual([{ code: 'o', time: 0, data: 'partial' }]);
+  });
+
+  it('ignores a resize whose dimension is not positive, while keeping a valid one', () => {
+    const stream = timeline(V3_HEADER, [
+      JSON.stringify([0, 'r', '0x30']),
+      JSON.stringify([1, 'r', '100x30']),
+    ]);
+    expect(stream.error).toBeUndefined();
+    expect(stream.events).toEqual([{ code: 'r', time: 1, data: { cols: 100, rows: 30 } }]);
   });
 
   it('skips the comment lines v3 permits, including before the header', () => {
