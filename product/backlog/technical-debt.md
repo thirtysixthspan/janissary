@@ -2,17 +2,6 @@
 
 ## ready
 
-* Use one case-sensitivity rule for include and exclude globs so workspace search and file glob agree on which paths they select.
-
-Existing Debt: Two path-selection engines use different glob implementations with opposite case semantics, so the same include pattern selects different files depending on which command runs. Severity: 5/10
-
-Existing Risk: 5/10 - On macOS and Windows `file grep --include '*.TS'` silently matches lowercase files while `file glob '*.TS'` does not, so a user can miss matches or act on the wrong set without any error.
-
-Proposal Risk: 2/10 - One matcher is shared by both paths, but the commands still normalize patterns differently, so an anchored or directory-like pattern may need its own normalization pass to keep the two pipelines identical.
-
-Proposal: `src/search/filter-paths.ts` `selects` calls `path.matchesGlob`, which the comment in `src/file-glob/match.ts` says folds case on macOS and Windows with no way to turn it off; `createGlobMatcher` in that file deliberately uses `minimatch` with `nocase: false`, and also applies `normalizeGlobPattern` and the complexity cap from `src/file-glob/pattern-limits.ts`. Route include/exclude matching in `filterPaths` through one shared case-sensitive matcher built on the same minimatch options and complexity guard, keeping only the behavior unique to `filterPaths`: the `**/` retry for patterns without a slash and the directory-prefix rule for non-globs. `src/file-glob/match.test.ts` asserts case sensitivity on every host while `src/search/filter-paths.test.ts` has no case test; add a cross-pipeline case asserting both engines select the same paths for a mixed-case pattern, and keep the existing pattern-limit tests passing.
-
-
 * Share one path canonicalization and case-folding rule across the reader, writer, and patch view so the same file has one key everywhere.
 
 Existing Debt: The same canonical-path and case-insensitive-key facts are reimplemented with different functions in the read, write, and patch modules, so one file can carry different keys in different subsystems. Severity: 6/10

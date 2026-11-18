@@ -1,6 +1,4 @@
-import path from 'node:path';
-
-const { matchesGlob } = path;
+import { createGlobMatcher, type GlobMatcher } from '../file-glob/match.js';
 
 // Comma-separated glob patterns, the syntax VS Code documents for its include and exclude fields:
 // patterns are trimmed, and an empty field means no constraint. A pattern that does not compile is
@@ -25,40 +23,39 @@ function normalize(pattern: string): string {
     .replace(/\/+$/u, '');
 }
 
-// Whether one project-relative path is selected by a field. A pattern that says nothing about depth —
-// no `/` anywhere in it — names something at any depth, so it is matched a second time under `**/`
-// and `*.test.ts` reaches the tests in `src/` as well as the one at the project root. A pattern that
-// does name depth is a statement about where to look and is matched as written, so `src/*.ts` stays
-// about `src/` and the `*` in it still does not cross a boundary.
-//
-// A pattern that is *not* a glob names a directory as well as a file, and selects everything beneath
-// it, so `src` behaves as `src/**`, which is what a user means by it and what makes the field useful
-// for narrowing rather than only exact selection. A pattern that *is* a glob is left to `matchesGlob`
-// alone, since a glob is a statement about names and not about subtrees.
-function selects(relPath: string, pattern: string): boolean {
+// The selector for one include/exclude pattern. Matching goes through the same case-sensitive
+// matcher file glob uses, so the two pipelines select the same paths on every host. Only the
+// behavior unique to these fields lives here: a pattern with no `/` names something at any depth,
+// so it is tried again under `**/`; and a pattern that is not a glob names a directory as well as a
+// file, so it selects everything beneath it. A pattern that *is* a glob is left to the matcher alone,
+// since a glob is a statement about names and not about subtrees.
+function selector(pattern: string): GlobMatcher {
   const normalized = normalize(pattern);
-  if (matchesGlob(relPath, normalized)) return true;
-  if (!normalized.includes('/') && matchesGlob(relPath, `**/${normalized}`)) return true;
-  if (GLOB_CHARS.test(normalized)) return false;
+  const match = createGlobMatcher(normalized, false);
+  const deepMatch = normalized.includes('/') ? undefined : createGlobMatcher(`**/${normalized}`, false);
+  const isGlob = GLOB_CHARS.test(normalized);
   const prefix = `${normalized}/`;
-  return relPath === normalized || relPath.startsWith(prefix);
-}
-
-function anySelects(relPath: string, field: string): boolean {
-  return patterns(field).some((pattern) => selects(relPath, pattern));
+  return (relPath) => {
+    if (match(relPath)) return true;
+    if (deepMatch?.(relPath)) return true;
+    if (isGlob) return false;
+    return relPath === normalized || relPath.startsWith(prefix);
+  };
 }
 
 // Narrow a project file list to the paths an include and exclude field select. An empty include
 // selects everything, an empty exclude removes nothing, and a path an include names but an exclude
 // also names is removed — exclude wins, as it does in every tool with these two fields.
 //
-// Paths arriving here are the project-relative forward-slash form `listProjectFiles` returns, which
-// is the form `matchesGlob` expects, so no path rewriting is needed beyond normalizing the pattern.
+// Matchers are compiled once per field rather than once per path. Paths arriving here are the
+// project-relative forward-slash form `listProjectFiles` returns, which is the form the matcher
+// expects, so no path rewriting is needed beyond normalizing the pattern.
 export function filterPaths(paths: readonly string[], include: string, exclude: string): string[] {
-  const hasInclude = patterns(include).length > 0;
-  if (!hasInclude && patterns(exclude).length === 0) return [...paths];
+  const includeSelectors = patterns(include).map((pattern) => selector(pattern));
+  const excludeSelectors = patterns(exclude).map((pattern) => selector(pattern));
+  if (includeSelectors.length === 0 && excludeSelectors.length === 0) return [...paths];
   return paths.filter((relPath) => {
-    if (hasInclude && !anySelects(relPath, include)) return false;
-    return !anySelects(relPath, exclude);
+    if (includeSelectors.length > 0 && includeSelectors.every((test) => !test(relPath))) return false;
+    return excludeSelectors.every((test) => !test(relPath));
   });
 }
