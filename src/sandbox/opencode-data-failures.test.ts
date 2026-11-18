@@ -9,7 +9,7 @@ import { sandboxSpawn } from './index.js';
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof fs>();
-  return { ...actual, mkdirSync: vi.fn(actual.mkdirSync), writeFileSync: vi.fn(actual.writeFileSync) };
+  return { ...actual, mkdirSync: vi.fn(actual.mkdirSync), writeFileSync: vi.fn(actual.writeFileSync), unlinkSync: vi.fn(actual.unlinkSync) };
 });
 
 let root: string;
@@ -46,6 +46,10 @@ function failPartialWrite(): void {
   });
 }
 
+function failStagingCleanup(): void {
+  vi.mocked(fs.unlinkSync).mockImplementationOnce(() => { throw new Error('test-secret'); });
+}
+
 describe('optional OAuth preparation', () => {
   it('reports a regular-file collision as unsafe without modifying it', () => {
     fs.writeFileSync(dataHome, 'keep-this-file');
@@ -63,6 +67,13 @@ describe('optional OAuth preparation', () => {
     failPartialWrite();
     expect(prepareOpencodeData(scratch)).toEqual({ type: 'failed', reason: 'storage' });
     expect(fs.existsSync(dataHome)).toBe(false);
+  });
+
+  it('reports a failed staging cleanup as a storage failure with no lingering credential', () => {
+    failStagingCleanup();
+    expect(prepareOpencodeData(scratch)).toEqual({ type: 'failed', reason: 'storage' });
+    expect(fs.existsSync(path.join(dataHome, 'opencode', 'auth.json'))).toBe(false);
+    expect(fs.existsSync(path.join(dataHome, 'opencode', '.auth-seed'))).toBe(false);
   });
 
   it('allows a later legitimate preparation after failed staging', () => {

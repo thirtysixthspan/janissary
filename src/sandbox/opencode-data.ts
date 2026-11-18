@@ -56,7 +56,12 @@ function writeOauth(dataHome: string, oauth: OpencodeOauth): void {
   const descriptor = openSync(staging, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
   try { writeFileSync(descriptor, JSON.stringify({ openai: oauth })); } finally { closeSync(descriptor); }
   linkSync(staging, authFile(dataHome));
-  try { unlinkSync(staging); } catch { return; }
+  try {
+    unlinkSync(staging);
+  } catch (error) {
+    rmSync(authFile(dataHome), { force: true });
+    throw error;
+  }
 }
 
 export function prepareOpencodeData(tmpDir: string): OpencodePreparation {
