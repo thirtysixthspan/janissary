@@ -50,8 +50,9 @@ word, a trailing remote command, or an address containing `@` or `:` — goes to
 matching name wins over a literal hostname or an `~/.ssh/config` alias with the same spelling.
 
 When the file in effect cannot be used, the name is treated as a literal destination and the file's
-problem is posted once to the transcript the command was typed in. A valid personal catalog still
-supplies the match when a project file is malformed.
+problem is reported once as a manual notification attributed to the tab the command was typed in and
+shown in the notifications feed rather than written into that tab's transcript. A valid personal
+catalog still supplies the match when a project file is malformed.
 
 When a saved host matches, the connection uses the saved user and host as its destination, with a
 saved port passed to ssh before the destination. A saved working directory makes the invocation ask

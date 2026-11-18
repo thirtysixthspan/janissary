@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the SSH tab specification's claim that a malformed hosts file's diagnostic is posted to the originating tab's transcript.
-
-Existing Issue: The spec added by this change says the file problem is posted once to the transcript the command was typed in, but the code sends it through a manual notification to the notifications feed attributed to that tab. Severity: 3/10
-
-Existing Risk: 3/10 - A user watching the creator tab never sees the warning and assumes the saved host was used, or a later change appends the line to that transcript to "fix" it and duplicates the notification.
-
-Proposal Risk: 1/10 - The spec then matches the delivered behavior and no code path changes, so the only remaining risk is the general one that a feed notification is overlooked.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2092 "correct the spec claim about where a malformed hosts diagnostic is posted". In product/specs/ssh-tab.md, rewrite the sentence in "Saved host destinations" that says the problem is posted once to the transcript the command was typed in, so it states the problem is reported once as a manual notification attributed to that tab and shown in the notifications feed rather than written into that tab's transcript. Keep the deduplication wording and the sentence that a valid personal catalog still supplies the match when the project file is malformed. Verify against src/ssh-manager.ts, where SshManager.run forwards readHostsFile's diagnostic to notify(managers, 'manual', creatorLabel, message), and src/notifications/deliver.ts, which appends the entry to the notifications feed. No behavior change belongs here; the existing single-notification test in src/ssh-manager.test.ts must keep passing untouched.
-
-
 * Correct the harness-view comment claiming the connections panel and sessions row show the saved host name in place of the real destination.
 
 Existing Issue: The new hostName field's comment says the connections panel and sessions row display the saved name instead of the raw destination, but the panel renders the real [user@]host from HarnessView.destination and no view reads hostName. Severity: 2/10
