@@ -743,6 +743,34 @@ describe('useShellReplyWriters delivered pending echoes', () => {
     expect(handles[0]?.show).not.toHaveBeenCalled();
   });
 
+  it('keeps a delivered caller-role echo marker distinct from the subagent record marker and links its reply to the caller record', () => {
+    const { openConnection, result } = setup();
+    const commandLine = 'subagent --role research --task task.md';
+
+    result.current.echoCommand(commandLine, recordReceipt('r1', 'rec-sub', 'subagent:research'));
+    result.current.displayReply(commandLine, 'Subagent research started.', { id: 'start-1' });
+    expect(handles[0]?.show).not.toHaveBeenCalled();
+    result.current.displayReply(commandLine, 'Subagent research completed.', {
+      id: 'r1', record: { id: 'rec-sub', name: 'subagent:research' },
+    });
+    expect(handles[0]?.show).toHaveBeenCalledWith(expect.objectContaining({ kind: 'link', name: 'subagent:research' }));
+
+    const beforeDelivered = handles.length;
+    result.current.displayReply('', '', delivered('d1', 'tell', 'tell ← subagent:research started', 'acp:tell:shell1'));
+    expect(handles.length).toBeGreaterThan(beforeDelivered);
+    viewOf(beforeDelivered).onOpen();
+    expect(openConnection).toHaveBeenCalledWith({
+      text: 'acp:tell:shell1', kind: 'acp', acpRef: { scope: 'tab', label: 'shell-1', role: 'tell' },
+    });
+
+    result.current.displayReply('', 'ack', { id: 'd1', record: { id: 'rec-caller', name: 'acp:tell:new model' } });
+    const deliveredHandle = handles[beforeDelivered]!;
+    expect(deliveredHandle.show).toHaveBeenCalledWith(expect.objectContaining({ kind: 'link', name: 'acp:tell:new model' }));
+    const shown = deliveredHandle.show.mock.calls[0]?.[0] as { onOpen: () => void };
+    shown.onOpen();
+    expect(openConnection).toHaveBeenCalledWith({ text: 'acp:tell:new model', kind: 'acp', recordId: 'rec-caller' });
+  });
+
   it('refreshes the name of an existing entry without retargeting or echoing again', () => {
     const { fake, markersRef, openConnection, result } = setup();
     result.current.displayReply('', '', delivered('r1', 'tell', ECHO, 'acp:tell:original shell'));
