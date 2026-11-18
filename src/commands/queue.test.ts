@@ -40,6 +40,10 @@ describe('parseQueueCommand', () => {
   it('parses a label and command', () => {
     expect(parseQueueCommand('queue claude echo hi')).toEqual({ label: 'claude', text: 'echo hi' });
   });
+
+  it('parses a quoted multi-word label', () => {
+    expect(parseQueueCommand('queue "build shell" make test')).toEqual({ label: 'build shell', text: 'make test' });
+  });
 });
 
 function makeManagers(tabs: Tab[]): { managers: Managers; appended: string[] } {

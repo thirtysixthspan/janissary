@@ -29,7 +29,7 @@ function isTabSubcommand(value: string | undefined): value is TabSubcommand {
   return TAB_SUBCOMMANDS.includes(value as TabSubcommand);
 }
 
-function readWords(input: string): ReadWords {
+export function readWords(input: string): ReadWords {
   const tokens: Token[] = [];
   let index = 0;
   while (index < input.length) {

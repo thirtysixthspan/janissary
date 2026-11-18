@@ -12,11 +12,11 @@ The command appends `make test` to `worker`'s queue. If the shell is idle, it ru
 
 ## Pick the target tab
 
-The first word after `queue` is the target. It matches a tab's label or its display alias, in any letter case, and the first tab in the strip that matches wins. Hidden tabs count, and so does a shell that is still provisioning its workspace. The line waits there and runs once zsh starts.
+The first name after `queue` is the target. It matches a tab's label or its display alias, in any letter case, and the first tab in the strip that matches wins. Hidden tabs count, and so does a shell that is still provisioning its workspace. The line waits there and runs once zsh starts.
 
 Everything after the target is the command. Runs of spaces in it collapse to single spaces.
 
-The target is always one word. A display alias with spaces in it can't be addressed with `queue`, and quotes don't help: `queue "build shell" make` reads `"build` as the tab name. Use the tab's label or rename the tab to a single word. Tab completion offers labels and aliases, but it doesn't quote an alias that contains spaces.
+Quote a target whose name contains spaces, for example `queue "build shell" make`; a quoted name reads as one target. Without quotes, `queue build shell make` reads `build` as the name, so use quotes for a spaced alias. Tab completion offers labels and aliases and quotes one that contains spaces.
 
 A queue has no size limit.
 

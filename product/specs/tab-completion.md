@@ -57,7 +57,7 @@ The shell uses the following rules, in order of precedence:
 
 - **Context:** The target argument of `send`, `queue`, `close`/`exit`, `schedule … in <tab>`, and every `tab` subcommand.
 - **Candidates:** Each open tab contributes its label and display title, including hidden tabs. Names duplicated without regard to case appear once, retaining the first spelling in tab order.
-- **Behavior:** `tab` offers all eight subcommands, quotes target names containing whitespace, and offers `left`/`right` after `pane` and `dock`. Generic target completions offer spaced display titles without quoting them. `close` reads the full target remainder; `send`, `queue`, and `schedule` parse a single whitespace-delimited target token, so a spaced title offered there is not accepted as a whole target.
+- **Behavior:** `tab` offers all eight subcommands, quotes target names containing whitespace, and offers `left`/`right` after `pane` and `dock`. Target completions for `send` and `queue` quote spaced display titles, and both commands read a quoted multi-word name as one target, so the suggestion is accepted whole. `close` keeps unquoted suggestions because it reads the full target remainder. `schedule` still offers spaced titles without quotes and reads one whitespace-delimited target token, so use a label there when the title has spaces.
 
 ### Monitor and unmonitor target arguments
 

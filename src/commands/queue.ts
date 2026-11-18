@@ -2,15 +2,15 @@ import type { Command } from './types.js';
 import { resolveTarget } from './resolve-target.js';
 import { supportsCommandQueue } from '../command-queue/support.js';
 import { appendCommandOutput } from '../command/append.js';
+import { readWords } from './parse-tab.js';
 
 /** Parse a `queue <shell-tab> <command...>` command (the leading `queue` is optional). */
 export function parseQueueCommand(input: string): { label: string; text: string } | { error: string } {
   const body = input.trim().replace(/^queue\b\s*/i, '');
-  const parts = body.split(/\s+/).filter(Boolean);
-  const label = parts[0];
-  const text = parts.slice(1).join(' ');
-  if (!label || !text) return { error: 'Usage: queue <shell-tab> <command>' };
-  return { label, text };
+  const first = readWords(body).tokens[0];
+  const text = first ? body.slice(first.end).trim().replaceAll(/\s+/g, ' ') : '';
+  if (!first || !text) return { error: 'Usage: queue <shell-tab> <command>' };
+  return { label: first.value, text };
 }
 
 export const command: Command = {

@@ -2,17 +2,6 @@
 
 ## ready
 
-* Parse send and queue labels with the same quote-aware tokenizer the tab commands use, so a spaced tab label can be addressed everywhere.
-
-Existing Debt: Two commands split their arguments on whitespace while the tab command uses the shared quote-aware reader, so the same tab label is addressable in one command family and not another. Severity: 5/10
-
-Existing Risk: 5/10 - A tab whose label contains a space can be renamed and moved but a `send` or `queue` to it silently targets a different tab or reports an unknown tab, losing the command the user typed.
-
-Proposal Risk: 2/10 - Both parsers then use the shared tokenizer, but completion for those commands still uses the unquoted word completer, so the UI can suggest a bare label with spaces that the parser now reads as two tokens.
-
-Proposal: `src/commands/send.ts` `parseSendCommand` and `src/commands/queue.ts` `parseQueueCommand` each strip the verb and call `body.split(/\s+/)` to take the first token as the label. `src/commands/parse-tab.ts` `readWords` already tokenizes through `readToken` in `src/command/quoted-token.ts`, and `src/completion/target-handlers.ts` `formatTarget` quotes labels containing whitespace. Replace both naive splits with the shared token reader, exporting `readWords` from `parse-tab.ts` if needed, while keeping the existing usage errors for a missing label or text. In the same change switch `completeSendTarget` in `src/completion/target-handlers.ts` from `completeWord` to the quoting completion path so suggestions match what the parsers accept. `src/commands/send.test.ts`, `src/commands/queue.test.ts` and `src/completion/handlers.test.ts` cover plain labels; add a quoted multi-word label case to each parser suite and to the completion suite.
-
-
 * Remove the re-dispatch fallback for unavailable commands so a system-initiated command reports why it cannot run instead of becoming an unknown command.
 
 Existing Debt: The command executor handles an unavailable command by sending the input back through the normal dispatcher, which applies the same availability filter and therefore cannot match it a second time. Severity: 6/10

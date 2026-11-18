@@ -5,16 +5,16 @@ import { resolveTarget } from './resolve-target.js';
 import { typeIntoHarness } from '../harness/input.js';
 import { awaitsTerminal, ownsTerminal } from '../tab/plugin-terminals.js';
 import { appendCommandOutput } from '../command/append.js';
+import { readWords } from './parse-tab.js';
 
 /** Parse a `send <label> <text...>` command (the leading `send` is optional). */
 export function parseSendCommand(input: string): { label: string; text: string } | { error: string } {
   const body = input.trim().replace(/^send\b\s*/i, '');
-  const parts = body.split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return { error: 'Usage: send <label> <text>' };
-  const label = parts[0];
-  const text = parts.slice(1).join(' ');
+  const first = readWords(body).tokens[0];
+  if (!first) return { error: 'Usage: send <label> <text>' };
+  const text = body.slice(first.end).trim().replaceAll(/\s+/g, ' ');
   if (!text) return { error: 'No text to send.' };
-  return { label, text };
+  return { label: first.value, text };
 }
 
 function deliverTo(target: Tab, text: string, managers: CommandManagers): string | null {
