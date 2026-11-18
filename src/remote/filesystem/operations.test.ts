@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  decodeFilesystemResult, FILESYSTEM_OPERATIONS, isFilesystemOperation, operationDescriptor,
-  type RemoteFilesystemOperationResult,
+  decodeFilesystemResult, FILESYSTEM_OPERATIONS, isFilesystemOperation, isRemoteFilesystemOperationResult,
+  operationDescriptor, type RemoteFilesystemOperationResult,
 } from './operations.js';
 import type { RemoteFilesystemArgumentsByOperation, RemoteFilesystemOperation } from '../protocol-frames.js';
 import { FILE_READ_MAX_LIMIT } from '../../file-read/command.js';
@@ -234,6 +234,18 @@ describe('FILESYSTEM_OPERATIONS', () => {
   it('decodes a valid result for every operation', () => {
     for (const operation of ALL_OPERATIONS) {
       expect(decodeFilesystemResult(operation, VALID_RESULTS[operation])).toEqual(VALID_RESULTS[operation]);
+    }
+  });
+
+  it('accepts a declared result shape for every operation through the frame guard', () => {
+    for (const operation of ALL_OPERATIONS) {
+      expect(isRemoteFilesystemOperationResult(VALID_RESULTS[operation])).toBe(true);
+    }
+  });
+
+  it('rejects a result that matches no declared shape through the frame guard', () => {
+    for (const bad of [null, 7, { entries: [] }, { unknown: true }]) {
+      expect(isRemoteFilesystemOperationResult(bad)).toBe(false);
     }
   });
 

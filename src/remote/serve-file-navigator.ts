@@ -10,7 +10,7 @@ import {
 import type { MaybePromise } from '../maybe-promise.js';
 import type { ProjectTokens } from '../project/tokens.js';
 import { refusalFor, refusedPaths } from './filesystem/refusal.js';
-import { operationDescriptor } from './filesystem/operations.js';
+import { operationDescriptor, type AnyRemoteFilesystemOperationResult } from './filesystem/operations.js';
 import type { OperationContext } from './filesystem/operation-types.js';
 import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
 import type { ClientFrame, RemoteFilesystemArgumentsByOperation, ServerFrame } from './protocol-frames.js';
@@ -137,7 +137,7 @@ export class RemoteFileNavigators {
 
   private reply(frame: RequestFrame, result?: unknown, error?: string): void {
     this.emit(error === undefined
-      ? { type: 'filesystem-reply', session: frame.session, request: frame.request, result }
+      ? { type: 'filesystem-reply', session: frame.session, request: frame.request, result: result as AnyRemoteFilesystemOperationResult }
       : { type: 'filesystem-reply', session: frame.session, request: frame.request, error });
   }
 }
