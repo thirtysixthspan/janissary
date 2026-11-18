@@ -2,17 +2,6 @@
 
 ## ready
 
-* Guard the undo/redo replay so a partial success cannot pop a stack that does not match the step being replayed.
-
-Existing Debt: The shared replay protocol pops the source history stack unconditionally whenever any item succeeds, without checking that the stack's top is the step actually being replayed. Severity: 5/10
-
-Existing Risk: 5/10 - A replay whose stack was already changed by another action drops the wrong entry and rebuilds a history that no longer matches the files, so a later undo or redo restores the wrong set of changes.
-
-Proposal Risk: 2/10 - The pop becomes tied to the replayed step, but the protocol still keys successful and failed items by object identity, so duplicate item objects can collapse into one outcome.
-
-Proposal: `src/file-navigator/replay-protocol.ts` `applyReplayProtocol` collects `successful` and `failed` keyed by item identity and, when `successful.size > 0`, calls `options.fromStack.pop()` with no check that the top entry corresponds to `options.groupItems`. Add a guard, or pass the expected step in as a parameter, so the pop happens only when the top stack entry is the replayed group, and keep the remaining-step push and the `toStack` push inside that same guarded branch. `src/file-navigator/moves.ts` `applyStackMove` and `applyStackPaste` supply the stacks and should pass the step identity if the guard needs it. There is no `replay-protocol.test.ts`; `src/file-navigator/moves.test.ts` covers the normal split path but not an empty or mismatched `fromStack`, so add a direct case there or colocate a focused test asserting the stack is untouched on mismatch.
-
-
 * Parse send and queue labels with the same quote-aware tokenizer the tab commands use, so a spaced tab label can be addressed everywhere.
 
 Existing Debt: Two commands split their arguments on whitespace while the tab command uses the shared quote-aware reader, so the same tab label is addressable in one command family and not another. Severity: 5/10
