@@ -17,12 +17,16 @@ const PATH_PATTERN = /^[\w./~-]+$/;
 // A parsed `on` address. `address` is the token exactly as typed (the metadata chip's tooltip);
 // `destination` is what ssh is given; `host` is the bare host
 // for the chip; `path` is the remote project root, absent when the remote should walk up from its
-// ssh login directory.
+// ssh login directory. `port` and `hostName` are set only on addresses resolved from a validated
+// saved endpoint: the transport passes the port to ssh, and a saved name goes after `--` so a
+// leading hyphen is read as the destination rather than an option.
 export type RemoteAddress = {
   address: string;
   destination: string;
   host: string;
   path?: string;
+  port?: number;
+  hostName?: string;
 };
 
 // The bare host of a destination: any `user@` prefix removed.

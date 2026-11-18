@@ -20,6 +20,10 @@ function address(token: string): RemoteAddress {
   return parsed;
 }
 
+function savedAddress(token: string, fields: Partial<RemoteAddress>): RemoteAddress {
+  return { ...address(token), ...fields };
+}
+
 describe('remoteServeCommand', () => {
   it('runs remote-serve through an interactive shell so rc-file PATH setup applies', () => {
     expect(remoteServeCommand(address('devbox'))).toBe(`ssh -t devbox '$SHELL -ic "janus remote-serve"'`);
@@ -47,6 +51,16 @@ describe('remoteServeCommand', () => {
     expect(remoteServeCommand(address('admin@devbox:~/dev/proj')))
       .toBe(`ssh -t admin@devbox '$SHELL -ic "janus remote-serve ~/dev/proj"'`);
   });
+
+  it('adds a saved port among the ssh options before the destination and keeps the path', () => {
+    expect(remoteServeCommand(savedAddress('devbox:/srv/proj', { port: 2222, hostName: 'devbox' })))
+      .toBe(`ssh -p 2222 -t -- devbox '$SHELL -ic "janus remote-serve /srv/proj"'`);
+  });
+
+  it('puts -- before a saved destination beginning with a hyphen when no port is present', () => {
+    expect(remoteServeCommand(savedAddress('-devbox', { hostName: '-devbox' })))
+      .toBe(`ssh -t -- -devbox '$SHELL -ic "janus remote-serve"'`);
+  });
 });
 
 describe('remoteCaptureCommand', () => {
@@ -59,9 +73,17 @@ describe('remoteCaptureCommand', () => {
     expect(remoteCaptureCommand(address('build-box')))
       .toBe(`ssh -o BatchMode=yes -o NumberOfPasswordPrompts=0 -o ConnectTimeout=10 -t build-box '$SHELL -ic "janus remote-serve"'`);
   });
+
+  it('keeps the capture flags and adds a saved port before the destination', () => {
+    expect(remoteCaptureCommand(savedAddress('devbox:/srv/proj', { port: 2222, hostName: 'devbox' })))
+      .toBe(`ssh -o BatchMode=yes -o NumberOfPasswordPrompts=0 -o ConnectTimeout=10 -p 2222 -t -- devbox '$SHELL -ic "janus remote-serve /srv/proj"'`);
+  });
 });
 
-function managerHarness(ready = true, session?: string, nonInteractive = false, handshake = encodeHandshake(session)) {
+function managerHarness(
+  ready = true, session?: string, nonInteractive = false,
+  handshake = encodeHandshake(session), addr = address('devbox'),
+) {
   let transport: { onData: (data: string) => void; onExit: () => void } | undefined;
   const kill = vi.fn();
   const write = vi.fn();
@@ -88,7 +110,7 @@ function managerHarness(ready = true, session?: string, nonInteractive = false, 
   } as unknown as Managers;
   const remote = new RemoteManager(managers);
   const handlers: RemoteLaunchHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn(), onNameRefused: vi.fn() };
-  remote.create('creator', address('devbox'), '/local', handlers, undefined, { nonInteractive });
+  remote.create('creator', addr, '/local', handlers, undefined, { nonInteractive });
   transport?.onData(`${handshake}\n`);
   if (ready) transport?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
   return { remote, handlers, kill, write, reassignTransports, closeTab, dropSession, spawnTransport, transport: () => transport };
@@ -315,6 +337,24 @@ describe('RemoteManager shared channels', () => {
     expect(h.remote.reconnectingOf('nothing-here')).toBe(false);
     h.transport()?.onExit();
     expect(h.remote.reconnectingOf('creator')).toBe(true);
+    h.remote.dispose();
+  });
+
+  // The `connect` callback closes over the resolved address, so the initial transport and an Attach
+  // retry after a drop build the very same ssh command — port, saved-name separator, and path alike.
+  it('uses the same resolved port and path on the initial connection and an Attach retry', () => {
+    vi.useFakeTimers();
+    const session = '12345678-1234-1234-1234-123456789abc';
+    const resolved = savedAddress('devbox:/srv/proj', { port: 2222, hostName: 'devbox' });
+    const h = managerHarness(true, session, false, encodeHandshake(session), resolved);
+    const initialCommand = h.spawnTransport.mock.calls[0]?.[2] as string;
+    const expected = `ssh -p 2222 -t -- devbox '$SHELL -ic "janus remote-serve /srv/proj"'`;
+    expect(h.spawnTransport.mock.calls[0]?.[1]).toBe('ssh');
+    expect(initialCommand).toBe(expected);
+    h.transport()?.onExit();
+    vi.advanceTimersByTime(250);
+    expect(h.spawnTransport).toHaveBeenCalledTimes(2);
+    expect(h.spawnTransport.mock.calls[1]?.[2] as string).toBe(initialCommand);
     h.remote.dispose();
   });
 

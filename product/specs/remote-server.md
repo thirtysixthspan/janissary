@@ -52,6 +52,16 @@ quote, a semicolon, a backtick, `$`, `&`, `|` — is rejected by name rather tha
 address can arrive from a profile file on disk as well as from something just typed. An `on` with no
 following token is a usage error.
 
+### Ports from saved hosts
+
+When a remote launch names a saved host that has a port, janissary passes that port to ssh, so the
+connection no longer needs a `Host` alias in `~/.ssh/config` just to carry a port. The saved host name
+is handed to ssh as an operand rather than an option, so one beginning with a hyphen is still read as
+the destination. A saved host's remote path is used exactly as a typed path is. The initial connection
+and every automatic retry after a dropped transport use the same resolved port, host, and path, as
+does a capture query for a parked session. A typed `on <address>` is unchanged: it accepts no port,
+and a trailing `:2222` is still the name of a directory.
+
 ### Bootstrap requirement
 
 The remote must already have `janus` on its PATH. Nothing is shipped over the wire: no bundle

@@ -37,11 +37,15 @@ export type RemoteEntryFactoryOptions = {
 // The `janus remote-serve` invocation both `remoteServeCommand` and `remoteCaptureCommand`
 // build over ssh, differing only in which non-interactive `-o` flags (if any) precede `-t`.
 // Kept as one builder so a fix to the path interpolation or the `$SHELL -ic` quoting cannot land
-// in one variant and not the other.
+// in one variant and not the other. A saved endpoint's port joins those options before the
+// destination; a saved name is preceded by `--` so a leading hyphen cannot be read as an option.
 function sshRemoteCommand(address: RemoteAddress, options: string[] = []): string {
   const serve = `janus remote-serve${address.path ? ` ${address.path}` : ''}`;
-  const flags = options.length > 0 ? `${options.join(' ')} ` : '';
-  return `ssh ${flags}-t ${address.destination} '$SHELL -ic "${serve}"'`;
+  const flags = [...options];
+  if (address.port !== undefined) flags.push(`-p ${address.port}`);
+  const leading = flags.length > 0 ? `${flags.join(' ')} ` : '';
+  const destination = address.hostName === undefined ? address.destination : `-- ${address.destination}`;
+  return `ssh ${leading}-t ${destination} '$SHELL -ic "${serve}"'`;
 }
 
 export function remoteServeCommand(address: RemoteAddress): string {
