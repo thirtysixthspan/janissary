@@ -146,6 +146,31 @@ describe('the static file server', () => {
     expect(await statusOf('/open/%E0%A4%A')).toBe(400);
     expect(await statusOf('/open/not-registered')).toBe(404);
   });
+
+  // A sibling whose name shares the bundle directory's prefix used to slip through a character
+  // prefix clamp. The component-aware boundary must keep every such path out of the asset route.
+  it('never serves a file from a sibling directory sharing the bundle directory\'s prefix', async () => {
+    const sibling = `${webDir}-sibling`;
+    mkdirSync(sibling);
+    const secret = 'SIBLING-SECRET-CONTENT';
+    writeFileSync(path.join(sibling, 'secret.txt'), secret);
+
+    const response = await serve(`/../${path.basename(sibling)}/secret.txt`);
+    expect(response.status).toBe(200);
+    expect(response.body).toContain('<!DOCTYPE html>');
+    expect(response.body).not.toContain(secret);
+  });
+
+  it('cannot read a file outside the bundle directory through ../ segments', async () => {
+    const outside = mkdtempSync(path.join(tmpdir(), 'janus-outside-'));
+    const secret = 'OUTSIDE-SECRET-CONTENT';
+    writeFileSync(path.join(outside, 'secret.txt'), secret);
+
+    const response = await serve(`/../../../..${outside}/secret.txt`);
+    expect(response.status).toBe(200);
+    expect(response.body).toContain('<!DOCTYPE html>');
+    expect(response.body).not.toContain(secret);
+  });
 });
 
 describe.skipIf(!canBindLoopback)('startServer (WS + RPC + security)', () => {
