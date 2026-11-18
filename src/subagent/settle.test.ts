@@ -4,8 +4,24 @@ import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 import type { AgentSnapshot } from '../agent/types.js';
 import type { AgentRun } from '../agent/run.js';
 import { settleSubagentRun, type SubagentSettlementResult } from './settle.js';
+import { executeSubagentRun, type SubagentExecutionOptions } from './execute.js';
 import type { SubagentReplySink } from './replies.js';
 import { deferred } from '../deferred.js';
+import { fallbackNotice } from '../acp/ask-role.js';
+import type { AcpLoopHandlers, AcpSession } from '../acp/types.js';
+import type { CommandInvocationContext } from '../commands/types.js';
+import type * as AcpModule from '../acp/index.js';
+import type * as DriveLoopModule from '../acp/drive-loop.js';
+
+const mocks = vi.hoisted(() => ({ connectAcp: vi.fn(), runToolLoop: vi.fn() }));
+vi.mock('../acp/index.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof AcpModule>();
+  return { ...actual, connectAcp: mocks.connectAcp };
+});
+vi.mock('../acp/drive-loop.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof DriveLoopModule>();
+  return { ...actual, runToolLoop: mocks.runToolLoop };
+});
 
 const snapshot: AgentSnapshot = Object.freeze({ taskPath: 'task.md', taskText: '', skills: [], grants: [] });
 const project = createControllerTestProject();
@@ -26,6 +42,9 @@ beforeEach(() => {
   sink = { started: vi.fn(), completion };
   reached = false;
   firstId = 'provider-1';
+  mocks.connectAcp.mockReset();
+  mocks.runToolLoop.mockReset();
+  mocks.runToolLoop.mockImplementation(() => {});
 });
 
 afterEach(async () => { await project.dispose(); vi.restoreAllMocks(); });
@@ -46,6 +65,39 @@ function success(overrides: Partial<Awaited<ReturnType<typeof success>>> = {}) {
     status: 'completed' as const, response: 'answer', sessionId: 'session-1', cleanupWarnings: [] as string[],
     ...overrides,
   });
+}
+
+const FIRST = { harness: 'opencode' as const, model: 'model-a' };
+const REPLACEMENT = { harness: 'claude' as const, model: 'model-b' };
+
+function localSession(shutdown: () => Promise<void>): AcpSession {
+  return { prompt: vi.fn(), cancel: vi.fn(async () => {}), kill: vi.fn(), shutdown: vi.fn(shutdown) };
+}
+
+function loopHandlers(call: number): AcpLoopHandlers {
+  return mocks.runToolLoop.mock.calls[call]![4] as AcpLoopHandlers;
+}
+
+function connectHooks(call: number): { onSessionStarted?: (id: string) => void; onError: (message: string) => void } {
+  return mocks.connectAcp.mock.calls[call]![0] as {
+    onSessionStarted?: (id: string) => void; onError: (message: string) => void;
+  };
+}
+
+function realOptions(target: AgentRun, onStarted?: (id: string) => void): SubagentExecutionOptions {
+  const invocation: CommandInvocationContext = {
+    runId: 'rejection-run', invocationId: 'rejection-inv',
+    caller: { label: 'caller', cwd: '/caller', context: [] },
+    signal: target.abortController.signal,
+  };
+  return {
+    run: target, invocation, managers: controller.managers,
+    settings: {
+      name: 'Research', commands: ['file read'],
+      entries: [FIRST, REPLACEMENT].map((entry) => ({ ...entry })),
+    },
+    entries: [FIRST, REPLACEMENT], executionDir: '/clone', onStarted,
+  };
 }
 
 describe('settleSubagentRun', () => {
@@ -169,5 +221,76 @@ describe('settleSubagentRun', () => {
     once.completion('completed', 'late', 'session-1');
     expect(result.status).toBe('terminated');
     expect(completion).toHaveBeenCalledOnce();
+  });
+
+  it('aborts and drains the real admitted replacement before failed settlement', async () => {
+    const rejection = 'fallback subscriber threw\n  while the replacement was active\nafter allocation';
+    const release = deferred<void>();
+    const shutdownOrder: string[] = [];
+    mocks.connectAcp.mockImplementationOnce(() => localSession(async () => { shutdownOrder.push('first'); }));
+    mocks.connectAcp.mockImplementationOnce(() => localSession(async () => {
+      shutdownOrder.push('replacement');
+      await release.promise;
+      shutdownOrder.push('replacement released');
+    }));
+
+    let abortedAtCleanup: boolean | undefined;
+    run.addResource('observed-abort', () => { abortedAtCleanup = run.abortController.signal.aborted; });
+    const notice = fallbackNotice(FIRST, REPLACEMENT);
+    const seen: string[] = [];
+    const unsubscribe = run.subscribe((view) => {
+      if (view.activity.at(-1)?.text !== notice) return;
+      unsubscribe();
+      seen.push('notice');
+      throw new Error(rejection);
+    });
+    reached = true;
+    const pending = settle(() => executeSubagentRun(realOptions(run, (id) => { firstId = id; })));
+
+    await vi.waitFor(() => expect(mocks.runToolLoop).toHaveBeenCalledTimes(1));
+    connectHooks(0).onSessionStarted?.('provider-A');
+    loopHandlers(0).error('first attempt failed');
+    await vi.waitFor(() => expect(mocks.runToolLoop).toHaveBeenCalledTimes(2));
+    await flush(20);
+
+    expect(seen).toEqual(['notice']);
+    expect(run.abortController.signal.aborted).toBe(true);
+    expect(completion).not.toHaveBeenCalled();
+    expect(mocks.connectAcp).toHaveBeenCalledTimes(2);
+    expect(mocks.connectAcp.mock.calls[1]![0]).toMatchObject({ cwd: '/clone' });
+    expect((mocks.connectAcp.mock.results[1]!.value as AcpSession).shutdown).toHaveBeenCalledOnce();
+
+    release.resolve();
+    const result = await pending;
+    unsubscribe();
+
+    expect(abortedAtCleanup).toBe(true);
+    expect(shutdownOrder).toEqual(['first', 'replacement', 'replacement released']);
+    expect((mocks.connectAcp.mock.results[1]!.value as AcpSession).shutdown).toHaveBeenCalledOnce();
+    expect(result).toMatchObject({ status: 'failed', response: rejection, sessionId: 'provider-A' });
+    expect(completion).toHaveBeenCalledOnce();
+    expect(completion).toHaveBeenCalledWith('failed', rejection, 'provider-A');
+
+    loopHandlers(1).endTurn('late answer');
+    loopHandlers(1).finished('answered');
+    connectHooks(1).onError('late error');
+    expect(completion).toHaveBeenCalledOnce();
+  });
+
+  it('introduces no cleanup abort for a normal returned failure from the real driver', async () => {
+    const extra = controller.managers.agent.create({ caller: run.caller, snapshot });
+    mocks.connectAcp.mockImplementation(() => localSession(async () => {}));
+    const options = realOptions(extra);
+    const pending = settleSubagentRun({
+      run: extra, managers: controller.managers, sink: { started: vi.fn(), completion: vi.fn() },
+      firstProviderId: () => null, executionReached: () => true,
+      execute: () => executeSubagentRun({ ...options, entries: [FIRST] }),
+    });
+    await vi.waitFor(() => expect(mocks.runToolLoop).toHaveBeenCalledOnce());
+    loopHandlers(0).error('normal failure');
+
+    const result = await pending;
+    expect(result).toMatchObject({ status: 'failed', response: 'normal failure' });
+    expect(extra.abortController.signal.aborted).toBe(false);
   });
 });

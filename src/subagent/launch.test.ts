@@ -10,20 +10,42 @@ import type { Tab } from '../tab/types.js';
 import type { CommandInvocationContext } from '../commands/types.js';
 import type { AcpRoleSettings } from '../acp/ask-role.js';
 import type { RoleEntry } from '../plugins/roles/shared.js';
-import type { RemoteChannel } from '../remote/channel/index.js';
+import { RemoteChannel } from '../remote/channel/index.js';
+import type { ChannelTransport } from '../remote/channel/types.js';
 import type { ServerFrame } from '../remote/protocol-frames.js';
+import { encodeFrame, encodeHandshake } from '../remote/protocol.js';
 import { resolveRemoteAgentRequest } from '../remote/serve-agent-resolution.js';
 import { RemoteRunClones } from '../remote/serve-run-clones.js';
 import type { WorkspaceManager } from '../workspace/manager.js';
 import { deferred } from '../deferred.js';
+import { fallbackNotice } from '../acp/ask-role.js';
+import type { AcpLoopHandlers } from '../acp/types.js';
+import type { RemoteAcpSession } from '../remote/acp-session.js';
 import type * as ExecuteModule from './execute.js';
 import type * as TaskResolutionModule from '../agent/task-resolution.js';
+import type * as DriveLoopModule from '../acp/drive-loop.js';
+import type * as RemoteAcpSessionModule from '../remote/acp-session.js';
 import { launchSubagent, type SubagentLaunchOptions } from './launch.js';
 
-const mocks = vi.hoisted(() => ({ execute: vi.fn(), resolve: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  execute: vi.fn(),
+  resolve: vi.fn(),
+  realExecute: undefined as unknown,
+  runToolLoop: vi.fn(),
+  createRemoteAcpSession: vi.fn(),
+}));
 vi.mock('./execute.js', async (importOriginal) => {
   const actual = await importOriginal<typeof ExecuteModule>();
-  return { ...actual, executeSubagentRun: mocks.execute };
+  mocks.realExecute = actual.executeSubagentRun;
+  return { ...actual, executeSubagentRun: (options: ExecuteModule.SubagentExecutionOptions) => mocks.execute(options) };
+});
+vi.mock('../acp/drive-loop.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof DriveLoopModule>();
+  return { ...actual, runToolLoop: mocks.runToolLoop };
+});
+vi.mock('../remote/acp-session.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof RemoteAcpSessionModule>();
+  return { ...actual, createRemoteAcpSession: mocks.createRemoteAcpSession };
 });
 vi.mock('../agent/task-resolution.js', async (importOriginal) => {
   const actual = await importOriginal<typeof TaskResolutionModule>();
@@ -44,6 +66,9 @@ let provisioning: ReturnType<typeof deferred<void>>;
 let create: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
+  mocks.runToolLoop.mockReset();
+  mocks.runToolLoop.mockImplementation(() => {});
+  mocks.createRemoteAcpSession.mockReset();
   scratch = mkdtempSync(path.join(os.tmpdir(), 'subagent-launch-'));
   initWorkspaceDir(scratch, path.join(scratch, '.claude.json'));
   controller = project.create();
@@ -105,6 +130,47 @@ function fakeRemote() {
   vi.spyOn(controller.managers.remote, 'addressOf').mockReturnValue({ host: 'devbox' } as never);
   vi.spyOn(controller.managers.remote, 'acquireAgentLease').mockReturnValue(vi.fn(async () => {}));
   return { runClone, resolveAgentSnapshot, cloneCreate };
+}
+
+function useRealExecute() {
+  mocks.execute.mockImplementation((options: ExecuteModule.SubagentExecutionOptions) =>
+    (mocks.realExecute as (input: ExecuteModule.SubagentExecutionOptions) => Promise<ExecuteModule.SubagentExecutionResult>)(options));
+}
+
+function fakeRemoteSession(release: () => Promise<boolean>): RemoteAcpSession {
+  return {
+    remote: true, run: vi.fn(), ready: Promise.resolve(true), release: vi.fn(release),
+    cancel: vi.fn(), kill: vi.fn(), shutdown: vi.fn(),
+  } as unknown as RemoteAcpSession;
+}
+
+function realRemote() {
+  const written: string[] = [];
+  const cloneDir = '/remote/clone/ws';
+  const transport: ChannelTransport = {
+    id: 'pty1',
+    write: (data) => {
+      written.push(data);
+      const frame = JSON.parse(data.trim()) as { type: string; id: string; action: string };
+      if (frame.type !== 'run-clone') return;
+      queueMicrotask(() => {
+        const result = frame.action === 'create' ? { dir: cloneDir } : {};
+        channel.receive(`${encodeFrame({ type: 'run-clone-result', id: frame.id, ...result })}\n`);
+      });
+    },
+    kill: vi.fn(),
+  };
+  const channel = new RemoteChannel(transport, {
+    onTerminalData: () => {}, onAttached: () => {}, onFrame: () => {},
+    onError: () => {}, onClose: () => {}, onTruncatedReplay: () => {},
+  });
+  channel.receive(`${encodeHandshake()}\n`);
+  vi.spyOn(channel, 'resolveAgentSnapshot').mockResolvedValue({ taskPath: 'task.md', taskText: '', skills: [], grants: [] });
+  vi.spyOn(controller.managers.remote, 'get').mockReturnValue(channel);
+  vi.spyOn(controller.managers.remote, 'addressOf').mockReturnValue({ host: 'devbox' } as never);
+  const leaseRelease = vi.fn(async () => {});
+  vi.spyOn(controller.managers.remote, 'acquireAgentLease').mockReturnValue(leaseRelease);
+  return { channel, written, leaseRelease };
 }
 
 function invocation(overrides: Partial<CommandInvocationContext> = {}): CommandInvocationContext {
@@ -406,5 +472,63 @@ describe('launchSubagent — resolution and execution', () => {
     await drain();
     expect(humanReplies()).toHaveLength(1);
     expect(humanReplies()[0].output).toContain('clone rejected');
+  });
+
+  it('aborts and drains the real admitted replacement through a selected remote, retaining the ready clone', async () => {
+    useRealExecute();
+    const remote = realRemote();
+    const rejection = 'remote subscriber threw\n  while replacement was active\nafter admission';
+    const release = deferred<boolean>();
+    const replacement = fakeRemoteSession(() => release.promise);
+    const hooks: Array<{ onSessionStarted?: (id: string) => void }> = [];
+    mocks.createRemoteAcpSession
+      .mockImplementationOnce((_channel, _options, sessionHooks) => {
+        hooks[0] = sessionHooks;
+        return fakeRemoteSession(async () => true);
+      })
+      .mockImplementationOnce((_channel, _options, sessionHooks) => {
+        hooks[1] = sessionHooks;
+        return replacement;
+      });
+
+    launch();
+    const run = onlyRun();
+    const notice = fallbackNotice(entries[0]!, entries[1]!);
+    const seen: string[] = [];
+    const unsubscribe = run.subscribe((view) => {
+      if (view.activity.at(-1)?.text !== notice) return;
+      unsubscribe();
+      seen.push('notice');
+      throw new Error(rejection);
+    });
+
+    await vi.waitFor(() => expect(mocks.runToolLoop).toHaveBeenCalledTimes(1));
+    hooks[0]!.onSessionStarted?.('provider-A');
+    (mocks.runToolLoop.mock.calls[0]![4] as AcpLoopHandlers).error('first remote attempt failed');
+    await vi.waitFor(() => expect(mocks.runToolLoop).toHaveBeenCalledTimes(2));
+    await drain();
+
+    expect(seen).toEqual(['notice']);
+    expect(run.abortController.signal.aborted).toBe(true);
+    expect(humanReplies()).toHaveLength(1);
+    expect(mocks.createRemoteAcpSession).toHaveBeenCalledTimes(2);
+    expect(replacement.release).toHaveBeenCalledOnce();
+
+    release.resolve(true);
+    await vi.waitFor(() => expect(humanReplies()).toHaveLength(2));
+    unsubscribe();
+
+    expect(humanReplies()[1]!.output).toContain(rejection);
+    expect(replacement.release).toHaveBeenCalledOnce();
+    (mocks.runToolLoop.mock.calls[1]![4] as AcpLoopHandlers).endTurn('late answer');
+    (mocks.runToolLoop.mock.calls[1]![4] as AcpLoopHandlers).finished('answered');
+    expect(humanReplies()).toHaveLength(2);
+
+    const cloneFrames = remote.written
+      .map((chunk) => JSON.parse(chunk.trim()) as { type: string; action?: string })
+      .filter((frame) => frame.type === 'run-clone');
+    expect(cloneFrames.filter((frame) => frame.action === 'create')).toHaveLength(1);
+    expect(cloneFrames.filter((frame) => frame.action === 'release')).toHaveLength(0);
+    expect(remote.leaseRelease).toHaveBeenCalledOnce();
   });
 });
