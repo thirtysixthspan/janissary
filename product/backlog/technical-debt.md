@@ -2,17 +2,6 @@
 
 ## ready
 
-* Report a failed cleanup of the OAuth staging file instead of leaving a second plaintext credential on disk.
-
-Existing Debt: The OAuth seeding step silently ignores a failure to remove its temporary file, so a successful result can leave a duplicate copy of the credential behind. Severity: 6/10
-
-Existing Risk: 7/10 - A stale `.auth-seed` holding the full OAuth token remains in the sandbox data home, outliving the linked auth file and invisible to the caller that reported the preparation available.
-
-Proposal Risk: 2/10 - The failure surfaces as a preparation failure, but the link has already been made by then, so cleanup must also remove that link to leave no copy at all.
-
-Proposal: `src/sandbox/opencode-data.ts` `writeOauth` creates `<dataHome>/opencode/.auth-seed` with mode 0o600, hard-links it to `auth.json`, then runs `try { unlinkSync(staging); } catch { return; }`, swallowing the error and returning success. Remove the silent catch so the failure propagates to `prepareOpencodeData`, which already maps storage errors to `{ type: 'failed', reason: 'storage' }`, and remove the linked file when the staging removal fails so no duplicate remains. `src/sandbox/opencode-data-failures.test.ts` forces a partial write failure and checks the staging file is gone, and `src/sandbox/opencode-data.test.ts` checks the seeded auth file and its mode but not staging after a successful link; add a case that makes `unlinkSync` throw and asserts a storage-failure result with no lingering credential file.
-
-
 * Re-check the lock file at deletion time so shutdown cannot remove a lock another instance just took over.
 
 Existing Debt: Lock release reads the pid and then deletes unconditionally, while acquisition treats a changed lock as a reason to refuse, so the two sides apply different rules to the same race. Severity: 6/10
