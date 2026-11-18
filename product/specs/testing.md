@@ -10,6 +10,8 @@ Dedicated recorder and controller persistence tests continue to exercise real st
 
 Client tests run with a DOM environment and isolated module state for each test file. The DOM environment is prepared once per worker and reused across its files. Cleanup removes rendered React trees after each test.
 
+Canvas contexts are unavailable throughout the client suite: requesting one returns `null`, so code that measures text or captures image frames takes its existing no-canvas fallback. This keeps jsdom's unimplemented-canvas warning out of test output without requiring a native canvas package, and tests that need drawing behavior supply their own fake context.
+
 ### Diff-scoped help tests
 
 When a Markdown file under `help/` changes, the diff-scoped check runs `src/commands.test.ts` in the server project. That test reads the command table and help pages directly, so it covers help changes that Vitest's changed-source dependency detection cannot associate with a test file.
