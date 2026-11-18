@@ -107,3 +107,9 @@ A ready clone is released only after the execution it admitted finishes independ
 ### Boundaries
 
 The grammar, messages, human wording, pending queue, and task prompt are pure. They neither register the command nor check grants, workspaces or command vocabulary. Caller kind, form, role and enabled-model policy, immediate refusals and the launch call are owned by the command-policy helper that the command's run delegates to. The registry, vocabulary, global disabled gate and public help remain outside it.
+
+### Public registration
+
+One command named `subagent` is registered in the command registry. Its first-token match is the exact, case-insensitive `subagent` word, so bare, flag, JSON, and malformed suffix forms all reach it while `subagents` and `subagent-x` do not. It declares the bare and valid-flag samples, carries the same core-response and ACP-tab availability metadata as `ask` and `tell`, and its run is the caller-policy helper itself: it preserves all four arguments and the helper's result unchanged and adds no parsing, caller decision, role lookup, launch call, or reply of its own. The command is offered wherever `ask` and `tell` are available, and `help subagent` describes the human flag form, the agent JSON form, the immediate empty agent output and later messages, the canonical-role Markdown replies and record link, the caller-specific usage and refusals, and the fresh-clone task boundary.
+
+`subagent` is the one-word entry in the published native command vocabulary and owns one native tool in the caller-side ACP tool table, included only when the caller role grants it. That makes the earlier caller-policy, primer, receipt, delivery, human-reply, and disabled-gate contracts reachable from both a typed command and an `ask` or `tell` tool loop. A subagent's own tool table omits `subagent` whatever its role grants, so it cannot launch a subagent of its own. This registration changes no wire or protocol version.

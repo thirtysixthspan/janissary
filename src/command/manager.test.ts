@@ -6,6 +6,7 @@ import type { Managers } from '../managers.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 import { makePluginTab, makeTab } from '../tab/index.js';
 import { commands } from '../commands/index.js';
+import { command as subagentCommand } from '../commands/subagent.js';
 import type { CommandInvocationContext } from '../commands/types.js';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -1037,5 +1038,29 @@ describe('CommandManager disabled command policy', () => {
       dispatched: true, output: 'query result',
     });
     expect(managers.database.runInTab).toHaveBeenCalledWith('janus', 'db sqlite list');
+  });
+
+  it('refuses a disabled subagent on every typed path with no run, receipt, or later reply', async () => {
+    const { managers } = makeManagers(settingsWith({ subagent: { enabled: false } }));
+    const run = vi.spyOn(subagentCommand, 'run');
+    const input = 'subagent --role research --task t.md';
+    const refusal = 'Command is disabled: subagent.';
+
+    managers.command.dispatchTo('janus', input);
+    expect(managers.tab.cur().log.at(-1)).toEqual({ input, output: refusal });
+
+    await expect(managers.command.dispatchLineWithOutput('janus', input)).resolves.toEqual({
+      dispatched: true, output: refusal,
+    });
+    await expect(managers.command.executeCommand('subagent', input, 'janus', 0)).resolves.toBe(refusal);
+
+    expect(run).not.toHaveBeenCalled();
+    const replies = managers.tab.cur().log.filter((entry) => entry.input === input);
+    expect(replies).toHaveLength(3);
+    for (const reply of replies) {
+      expect(reply.output).toBe(refusal);
+      expect(reply).not.toHaveProperty('background');
+      expect(reply).not.toHaveProperty('backgroundRecord');
+    }
   });
 });

@@ -124,6 +124,17 @@ describe('the roles payload guard', () => {
     })).toBe(true);
   });
 
+  it('validates a subagent restriction against the published vocabulary', () => {
+    const valid = payload(CATALOG) as Record<string, unknown>;
+    expect(isRolesPayload({ ...valid, commandRestrictions: { subagent: 'agents' } })).toBe(true);
+    expect(isRolesPayload({ ...valid, commandRestrictions: { subagent: 'application-wide' } })).toBe(true);
+    expect(isRolesPayload({
+      ...valid,
+      nativeCommands: NATIVE_ACP_COMMANDS.filter((command) => command !== 'subagent'),
+      commandRestrictions: { subagent: 'agents' },
+    })).toBe(false);
+  });
+
   it('refuses a missing or malformed command restriction map', () => {
     const valid = payload(CATALOG) as Record<string, unknown>;
     const withoutRestrictions = { ...valid };

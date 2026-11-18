@@ -23,7 +23,13 @@ describe('native ACP commands', () => {
       'file patch',
       'web search',
       'web fetch',
+      'subagent',
     ]);
+  });
+
+  it('appends subagent once as the last ordered entry', () => {
+    expect(NATIVE_ACP_COMMANDS.filter((command) => command === 'subagent')).toHaveLength(1);
+    expect(NATIVE_ACP_COMMANDS.at(-1)).toBe('subagent');
   });
 
   it.each([
@@ -45,6 +51,9 @@ describe('native ACP commands', () => {
     ['Web Search x', 'web'],
     ['web fetch https://example.com', 'web'],
     ['WEB FETCH x', 'web'],
+    ['subagent', 'subagent'],
+    ['subagent --role research --task t.md', 'subagent'],
+    ['subagent {"role":"research","task":"t.md"}', 'subagent'],
   ] as const)('assigns %s to %s, including trailing arguments', (command, tool) => {
     expect(nativeCommandTool(command)).toBe(tool);
     expect(isNativeCommand(command)).toBe(true);
@@ -96,6 +105,13 @@ describe('native ACP commands', () => {
     }
   });
 
+  it('assigns malformed mixed-case subagent lines to the subagent owner', () => {
+    expect(nativeCommandName('  SuBAgEnT\t--bogus  ')).toBe('subagent');
+    expect(nativeCommandTool('SUBAGENT {"role":')).toBe('subagent');
+    expect(nativeCommandTool('SuBAgEnT --role research')).toBe('subagent');
+    expect(isNativeCommand('subagent --role')).toBe(true);
+  });
+
   it('rejects unknown commands and words that only start with a native command', () => {
     expect(nativeCommandTool('browser gotofoo https://example.test')).toBeUndefined();
     expect(nativeCommandName('question unknown')).toBeUndefined();
@@ -111,5 +127,9 @@ describe('native ACP commands', () => {
     expect(nativeCommandName('web searching x')).toBeUndefined();
     expect(nativeCommandName('web fetcher x')).toBeUndefined();
     expect(nativeCommandName('websearch x')).toBeUndefined();
+    expect(nativeCommandName('subagents x')).toBeUndefined();
+    expect(nativeCommandName('subagent-x x')).toBeUndefined();
+    expect(nativeCommandTool('subagents --role r')).toBeUndefined();
+    expect(isNativeCommand('subagent-x')).toBe(false);
   });
 });

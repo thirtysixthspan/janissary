@@ -21,6 +21,7 @@ import { FILE_GREP_PRIMER } from '../file-grep/command.js';
 import { FILE_PATCH_PRIMER } from '../file-patch/command.js';
 import { WEB_SEARCH_PRIMER } from '../web/search/command.js';
 import { WEB_FETCH_PRIMER } from '../web/fetch/command.js';
+import { SUBAGENT_PRIMER } from '../subagent/primer.js';
 
 const setup = (grants: readonly string[] = NATIVE_ACP_COMMANDS) => ({ tools: createAcpToolTable(grants) });
 
@@ -37,6 +38,7 @@ describe('createAcpToolTable', () => {
       'question primer text',
       `${FILE_READ_PRIMER}\n\n${FILE_GLOB_PRIMER}\n\n${FILE_GREP_PRIMER}\n\n${FILE_MUTATION_PRIMER}\n\n${FILE_PATCH_PRIMER}`,
       `${WEB_SEARCH_PRIMER}\n\n${WEB_FETCH_PRIMER}`,
+      SUBAGENT_PRIMER,
       DB_PRIMER,
       `Only these commands are allowed: ${NATIVE_ACP_COMMANDS.join(', ')}.`,
     ].join('\n\n'));
@@ -116,7 +118,7 @@ describe('createAcpToolTable', () => {
 
   it('runs the file and web entries on the workspace and the others on the caller side', () => {
     const { tools } = setup();
-    expect(tools.map((tool) => tool.runsOn)).toEqual(['caller', 'caller', 'workspace', 'workspace', 'caller']);
+    expect(tools.map((tool) => tool.runsOn)).toEqual(['caller', 'caller', 'workspace', 'workspace', 'caller', 'caller']);
   });
 
   it('keeps the database entry last when it is included', () => {
@@ -797,5 +799,67 @@ describe('file grep gate', () => {
     expect(gateCommand(snapshot(grants, rows), toolsFor(grants), GREP)).toStrictEqual({
       refusal: 'Command is disabled: file grep.', refused: 'disabled',
     });
+  });
+});
+
+describe('subagent tool', () => {
+  const LINE = 'subagent --role research --task t.md';
+  const toolsFor = (grants: readonly string[]) => createAcpToolTable(grants);
+  const snapshot = (grants: readonly string[], rows: AcpRunSnapshotRow[] = []): AcpRunSnapshot => ({
+    kind: 'core', role: 'tell', roleName: 'writer', grants, rows, withoutTools: false,
+  });
+
+  it('declares one granted caller entry before the database entry with the exact primer', () => {
+    const tools = toolsFor(['subagent', 'db sqlite list']);
+    expect(tools).toHaveLength(2);
+    expect(tools[0]).toMatchObject({ primer: SUBAGENT_PRIMER, runsOn: 'caller' });
+    expect(tools[0].match(LINE)).toBe(true);
+    expect(tools[0].isCommandLine('  SUBAGENT {"role":')).toBe(true);
+    expect(tools.at(-1)!.match('anything at all')).toBe(true);
+    expect(toolPrimer(tools, ['subagent', 'db sqlite list'])).toBe(
+      `${SUBAGENT_PRIMER}\n\n${DB_PRIMER}\n\nOnly these commands are allowed: db sqlite list, subagent.`,
+    );
+    expect(toolPrimer(tools, ['subagent', 'db sqlite list']).split(SUBAGENT_PRIMER)).toHaveLength(2);
+  });
+
+  it('extracts a bare, wrong-flag, and malformed-JSON subagent line before policy validates it', () => {
+    const extract = toolExtractor(toolsFor(['subagent']));
+    expect(extract('Thinking.\nsubagent')).toBe('subagent');
+    expect(extract('Thinking.\nsubagent --bogus x')).toBe('subagent --bogus x');
+    expect(extract('Thinking.\nsubagent {"role":')).toBe('subagent {"role":');
+  });
+
+  it('omits the entry, primer, and extraction when subagent is not granted', () => {
+    const tools = toolsFor(['browser goto', 'db sqlite list']);
+    expect(tools.some((tool) => tool.primer === SUBAGENT_PRIMER)).toBe(false);
+    expect(toolPrimer(tools, ['subagent'])).not.toContain(SUBAGENT_PRIMER);
+    expect(toolExtractor(tools)(LINE)).toBeNull();
+  });
+
+  it('selects the last recognized command across mixed database and subagent reply lines', () => {
+    const extract = toolExtractor(toolsFor(['subagent', 'db sqlite list']));
+    expect(extract(`db sqlite list\n${LINE}`)).toBe(LINE);
+    expect(extract(`${LINE}\ndb sqlite list`)).toBe('db sqlite list');
+  });
+
+  it('refuses a subagent command whose Enabled setting is off', () => {
+    const grants = ['subagent'];
+    const rows = [{ name: 'subagent', effectiveEnabled: false, effectiveAgentAccess: true }];
+    expect(gateCommand(snapshot(grants, rows), toolsFor(grants), LINE)).toStrictEqual({
+      refusal: 'Command is disabled: subagent.', refused: 'disabled',
+    });
+  });
+
+  it('refuses a subagent command whose Agent access is off', () => {
+    const grants = ['subagent'];
+    const rows = [{ name: 'subagent', effectiveEnabled: true, effectiveAgentAccess: false }];
+    expect(gateCommand(snapshot(grants, rows), toolsFor(grants), LINE)).toStrictEqual({
+      refusal: 'Command is disabled: subagent.', refused: 'disabled',
+    });
+  });
+
+  it('runs a granted subagent command with no settings row on the caller side', () => {
+    const grants = ['subagent'];
+    expect(gateCommand(snapshot(grants), toolsFor(grants), LINE)).toStrictEqual({ runsOn: 'caller' });
   });
 });

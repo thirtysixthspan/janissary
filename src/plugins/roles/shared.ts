@@ -18,6 +18,7 @@ export const NATIVE_ACP_COMMANDS = [
   'file patch',
   'web search',
   'web fetch',
+  'subagent',
 ] as const;
 
 // One harness/model/effort choice inside a role. `effort` is absent for the default (no effort

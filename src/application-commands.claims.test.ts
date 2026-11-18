@@ -49,6 +49,10 @@ describe('application command inventory plugin claims', () => {
     const grepRows = rows.filter((row) => row.name === 'file grep');
     expect(grepRows).toHaveLength(1);
     expect(grepRows[0].kind).toBe('native');
+    const subagentRows = rows.filter((row) => row.name === 'subagent');
+    expect(subagentRows).toEqual([{
+      name: 'subagent', kind: 'native', aliases: [], forms: ['subagent'], nativeTool: 'subagent',
+    }]);
     expect(rows.map((row) => row.name))
       .toEqual(rows.map((row) => row.name).toSorted((left, right) => left.localeCompare(right)));
   });

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import type * as nodeOs from 'node:os';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -33,6 +33,15 @@ import { CORE_MAX_STEPS } from './drive-loop.js';
 import { deferred } from '../deferred.js';
 import { WEB_SEARCH_PRIMER } from '../web/search/command.js';
 import { WEB_FETCH_PRIMER } from '../web/fetch/command.js';
+import { CommandManager } from '../command/manager.js';
+import { SUBAGENT_JSON_USAGE } from '../subagent/parse.js';
+import type * as LaunchModule from '../subagent/launch.js';
+
+const subagentMock = vi.hoisted(() => ({ launch: vi.fn() }));
+vi.mock('../subagent/launch.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof LaunchModule>();
+  return { ...actual, launchSubagent: subagentMock.launch };
+});
 
 const mocks = vi.hoisted(() => ({
   runAcpToolLoop: vi.fn(), notify: vi.fn(), readFileInTab: vi.fn(), mutateFileInTab: vi.fn(),
@@ -76,6 +85,7 @@ vi.mock('./drive-loop.js', async (importOriginal) => {
 import { coreSnapshotRows, runCorePrompt } from './run-prompt.js';
 
 const homeRoots: string[] = [];
+const launchRoots: string[] = [];
 beforeEach(() => {
   const dir = mkdtempSync(path.join(tmpdir(), 'acp-run-prompt-home-'));
   home.dir = dir;
@@ -84,7 +94,24 @@ beforeEach(() => {
 afterEach(() => {
   for (const dir of homeRoots) rmSync(dir, { recursive: true, force: true });
   homeRoots.length = 0;
+  for (const dir of launchRoots) rmSync(dir, { recursive: true, force: true });
+  launchRoots.length = 0;
+  subagentMock.launch.mockReset();
 });
+
+function subagentLaunchDir(): string {
+  const dir = mkdtempSync(path.join(tmpdir(), 'acp-run-prompt-subagent-'));
+  launchRoots.push(dir);
+  mkdirSync(path.join(dir, '.janissary'));
+  writeFileSync(path.join(dir, '.janissary', 'roles.json'), JSON.stringify({
+    research: {
+      description: 'Research.',
+      entries: [{ harness: 'opencode', model: 'model-a' }],
+      commands: ['subagent'],
+    },
+  }));
+  return dir;
+}
 
 const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
 const NO_BUILTIN_TOOLS_LINE = 'You have no built-in tools; use only the commands listed here.';
@@ -123,13 +150,17 @@ type StartOptions = {
   tab?: { workspaceDir?: string; remote?: unknown };
   launchDir?: string;
   remoteSession?: boolean;
+  realCommand?: boolean;
 };
 
 function harness(options: Omit<StartOptions, 'commands' | 'roleName'> = {}) {
   const dispatchNativeLine = vi.fn(async () => ({ dispatched: true, output: 'dispatched output' }));
   const runtime = { acpWithoutTools: options.withoutTools ?? false, acpRoles: {} } as unknown as TabRuntime;
   const tab = {
-    runtime, ...options.tab, cmdHistory: ['git status'], cmdHistoryIdx: -1,
+    runtime,
+    ...(options.realCommand && { view: 'plugin', plugin: { id: 'shell' } }),
+    ...options.tab,
+    cmdHistory: ['git status'], cmdHistoryIdx: -1,
   };
   const managers = {
     tab: {
@@ -137,13 +168,20 @@ function harness(options: Omit<StartOptions, 'commands' | 'roleName'> = {}) {
       deleteBusy: vi.fn(),
       append: vi.fn(),
       byLabel: vi.fn(() => tab),
+      ...(options.realCommand && { findIndex: vi.fn(() => 0), tabs: [tab] }),
       workingDirOf: vi.fn(() => '/project'),
       launchDir: options.launchDir ?? '/launch',
     },
     acpRecords: { activity: vi.fn(), answer: vi.fn() },
     command: { dispatchNativeLine },
+    ...(options.realCommand && {
+      plugins: { declarations: [{ id: 'shell', capabilities: ['promptAcp'] }] },
+      models: { isKnownModel: vi.fn(() => true) },
+      agent: { runs: new Map(), trackCreatedTab: vi.fn() },
+    }),
     ...(options.settings && { nativeCommandSettings: options.settings }),
   } as unknown as Managers;
+  if (options.realCommand) managers.command = new CommandManager(managers);
   const providerPrompt = vi.fn();
   const run = vi.fn();
   const localSession = { prompt: providerPrompt } as unknown as AcpSession;
@@ -1554,5 +1592,78 @@ describe('coreSnapshotRows', () => {
     expect(captured()).not.toBe(sourceRows[0]);
     sourceRows[0] = { ...sourceRows[0], effectiveEnabled: true, effectiveAgentAccess: true };
     expect(captured()).toEqual({ name: 'file read', effectiveEnabled: false, effectiveAgentAccess: false });
+  });
+});
+
+describe('runCorePrompt subagent through the real command', () => {
+  const RECEIPT = {
+    replyId: 'reply-1', kind: 'record' as const, recordId: 'record-1', name: 'subagent:research',
+  };
+  const GRANTS = ['subagent'];
+  beforeEach(() => {
+    vi.clearAllMocks();
+    subagentMock.launch.mockReturnValue(RECEIPT);
+  });
+
+  it('emits the JSON usage for wrong flags with no launch or later message', async () => {
+    await withRealLoop(async () => {
+      const seam = harness({ realCommand: true, launchDir: subagentLaunchDir() });
+      seam.start('tell', GRANTS, 'tell', 'record-1');
+      const line = 'subagent --role research --task t.md';
+      reply(seam.providerPrompt, line);
+      await vi.waitFor(() => expect(seam.providerPrompt).toHaveBeenCalledTimes(2));
+
+      const prompt = seam.providerPrompt.mock.calls[1]?.[0] as string;
+      expect(prompt).toContain(`Output of \`${line}\`:`);
+      expect(prompt).toContain(SUBAGENT_JSON_USAGE);
+      expect(subagentMock.launch).not.toHaveBeenCalled();
+      expect(seam.managers.tab.append).toHaveBeenCalledWith('shell', {
+        input: line, output: SUBAGENT_JSON_USAGE, acp: true,
+      });
+    });
+  });
+
+  it('emits the JSON usage for malformed JSON with no launch', async () => {
+    await withRealLoop(async () => {
+      const seam = harness({ realCommand: true, launchDir: subagentLaunchDir() });
+      const { request } = seam.start('tell', GRANTS, 'tell', 'record-1');
+      reply(seam.providerPrompt, 'subagent {"role":');
+      await vi.waitFor(() => expect(seam.providerPrompt).toHaveBeenCalledTimes(2));
+
+      const prompt = seam.providerPrompt.mock.calls[1]?.[0] as string;
+      expect(prompt).toContain(SUBAGENT_JSON_USAGE);
+      expect(subagentMock.launch).not.toHaveBeenCalled();
+      expect(request.finish).not.toHaveBeenCalled();
+    });
+  });
+
+  it('returns empty tool output for valid JSON before background work', async () => {
+    await withRealLoop(async () => {
+      const seam = harness({ realCommand: true, launchDir: subagentLaunchDir() });
+      seam.start('tell', GRANTS, 'tell', 'record-1');
+      const line = 'subagent {"role":"research","task":"t.md"}';
+      reply(seam.providerPrompt, line);
+      await vi.waitFor(() => expect(seam.providerPrompt).toHaveBeenCalledTimes(2));
+
+      expect(subagentMock.launch).toHaveBeenCalledTimes(1);
+      expect(seam.managers.tab.append).toHaveBeenCalledWith('shell', {
+        input: line, output: '', acp: true,
+      });
+      expect(seam.providerPrompt.mock.calls[1]?.[0] as string).toContain(`Output of \`${line}\`:`);
+    });
+  });
+
+  it('leaves a subagent line as prose with no dispatch on a without-tools tab', async () => {
+    await withRealLoop(async () => {
+      const seam = harness({ realCommand: true, withoutTools: true, launchDir: subagentLaunchDir() });
+      const { request } = seam.start('tell', GRANTS, 'tell', 'record-1');
+      const line = 'subagent {"role":"research","task":"t.md"}';
+      reply(seam.providerPrompt, line);
+      await vi.waitFor(() => expect(request.finish).toHaveBeenCalled());
+
+      expect(seam.providerPrompt).toHaveBeenCalledTimes(1);
+      expect(subagentMock.launch).not.toHaveBeenCalled();
+      expect(request.finish).toHaveBeenCalledWith(expect.objectContaining({ answered: true, reply: line }));
+    });
   });
 });
