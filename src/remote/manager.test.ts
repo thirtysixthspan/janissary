@@ -918,3 +918,33 @@ describe('RemoteManager — settling the remote root', () => {
     h.dispose();
   });
 });
+
+describe('joined plugin tab remote target', () => {
+  function makeRemote(): RemoteManager {
+    return new RemoteManager({ tab: { findIndex: vi.fn(() => -1) } } as unknown as Managers);
+  }
+
+  it('setRemoteTarget writes the tab target and broadcasts dirty', () => {
+    const remote = makeRemote();
+    const tab = { label: 'search-1' } as Tab;
+    const emit = vi.spyOn(messageBus, 'emit');
+
+    remote.setRemoteTarget(tab, { address: 'dev@box', host: 'box' });
+
+    expect(tab.remote).toEqual({ address: 'dev@box', host: 'box' });
+    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
+    emit.mockRestore();
+  });
+
+  it('clearRemoteTarget removes the tab target and broadcasts dirty', () => {
+    const remote = makeRemote();
+    const tab = { label: 'search-1', remote: { address: 'dev@box', host: 'box' } } as Tab;
+    const emit = vi.spyOn(messageBus, 'emit');
+
+    remote.clearRemoteTarget(tab);
+
+    expect(tab.remote).toBeUndefined();
+    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
+    emit.mockRestore();
+  });
+});

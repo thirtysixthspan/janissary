@@ -90,6 +90,8 @@ export class TabManager extends TabTranscriptState {
     runtimeOperations.clearBusy(this.tabs, label);
   }
 
+  setPluginBusy(tab: Tab, busy: boolean): void { tabOperations.setPluginBusy(tab, busy); }
+  setPageSnapshot(tab: Tab, text: string): void { tabOperations.setPageSnapshot(tab, text); }
   protected queueChanged(): void {
     messageBus.emit('state', { type: 'dirty' });
   }

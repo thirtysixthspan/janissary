@@ -119,3 +119,17 @@ export function insertTab(port: TabOperationsPort, tab: Tab): void {
   if (isCenterActionTab(tab)) tab.pane = focusedPane(port.tabs, port.activeTab) === 'right' ? 'right' : undefined;
   port.tabs = insertTabInGroup(port.tabs, tab);
 }
+
+// A plugin tab's busy dot and page snapshot are host-owned. The capability asking for a change has
+// already resolved the exact tab; these own the write and the broadcast that goes with it, so a
+// caller cannot change one of these fields and forget to tell connected clients. `pageSnapshot` is
+// server-only and never reaches a TabView, so it needs no broadcast.
+export function setPluginBusy(tab: Tab, busy: boolean): void {
+  if (!tab.plugin) return;
+  tab.plugin.busy = busy;
+  messageBus.emit('state', { type: 'dirty' });
+}
+
+export function setPageSnapshot(tab: Tab, text: string): void {
+  tab.pageSnapshot = { text, capturedAt: Date.now() };
+}

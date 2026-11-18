@@ -2,17 +2,6 @@
 
 ## ready
 
-* Give plugin capabilities manager methods for the tab fields they write instead of assigning into the host tab record directly.
-
-Existing Debt: Several plugin capabilities write host-owned `Tab` fields in place and remember to emit a dirty state broadcast themselves, mixing host record ownership with capability logic. Severity: 5/10
-
-Existing Risk: 5/10 - Writing `tab.plugin.busy`, `tab.pageSnapshot` or `tab.remote` outside their owners can leave the view stale when a writer forgets the matching broadcast, or skip the teardown and release bookkeeping the owning manager performs.
-
-Proposal Risk: 2/10 - The writes move behind manager methods that own both mutation and broadcast, but capabilities still have to call the right method, which a typed method name keeps visible in review.
-
-Proposal: `src/plugins/own-tab-capabilities.ts` `setBusy` assigns `tab.plugin.busy = busy` and emits `messageBus.emit('state', { type: 'dirty' })` by hand, and `snapshotTab` assigns `tab.pageSnapshot`; `src/plugins/remote-join-capabilities.ts` assigns and deletes `tab.remote` around `managers.remote.attach`/`release` with two more manual broadcasts; `src/plugins/launch-tab.ts` and `src/plugins/launch-tab-remote.ts` also write `tab.plugin.busy`. Those fields are declared in `src/tab/types.ts` and owned by the tab and remote managers. Add methods on `TabManager` and `RemoteManager` that perform each write with its broadcast, leaving the enable and deadline gating in the capability, then call them from the capability modules and drop the direct assignments and local `messageBus` imports. Keep `src/plugins/context.test.ts`, `src/plugins/snapshot-tab.test.ts` and `src/plugins/remote-join-capabilities.test.ts` as the behavior contract.
-
-
 * Delete the unused file-capabilities group and the test that asserts both it and the live implementation.
 
 Existing Debt: A whole capability module is dead production code whose helpers duplicate the live ones and have already drifted from them, while a test keeps both implementations alive. Severity: 4/10

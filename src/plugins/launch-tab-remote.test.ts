@@ -51,6 +51,9 @@ function harness(options: {
         tabs.push({ label: naming.label, plugin: { id, instanceKey, payload } });
       },
       setCwd: vi.fn(),
+      setPluginBusy: vi.fn((tab: { plugin?: { busy?: boolean } }, busy: boolean) => {
+        if (tab.plugin) tab.plugin.busy = busy;
+      }),
       findIndex: (label: string) => tabs.findIndex((tab) => tab.label === label),
       closeTab: (index: number) => {
         const [tab] = tabs.splice(index, 1);
@@ -277,7 +280,9 @@ describe('launchRemotePluginTab', () => {
       label: 'docs', start: { connectPtyId: 'connect-0', host: 'devbox' },
       payload: { payload: { connectPtyId: 'connect-0', host: 'devbox' } },
     });
-    expect(h.tabs.find((tab) => tab.label === 'docs')?.plugin?.busy).toBe(true);
+    const docs = h.tabs.find((tab) => tab.label === 'docs');
+    expect(h.managers.tab.setPluginBusy).toHaveBeenCalledWith(docs, true);
+    expect(docs?.plugin?.busy).toBe(true);
 
     h.channels[0]?.handlers.onReady('/remote/docs', 'sandbox notice');
     await vi.waitFor(() => expect(ready).toHaveBeenCalled());
@@ -285,7 +290,8 @@ describe('launchRemotePluginTab', () => {
       workspaceDir: '/remote/docs', displayDir: '$workspace/docs', host: 'devbox', sandboxNotice: 'sandbox notice',
     }), expect.anything());
     expect(h.managers.tab.setCwd).toHaveBeenCalledWith('docs', '/remote/docs');
-    expect(h.tabs.find((tab) => tab.label === 'docs')?.plugin?.busy).toBe(false);
+    expect(h.managers.tab.setPluginBusy).toHaveBeenCalledWith(docs, false);
+    expect(docs?.plugin?.busy).toBe(false);
   });
 
   it('retries an unnamed pool label after the remote host reports it in use', async () => {
