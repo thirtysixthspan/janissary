@@ -67,7 +67,9 @@ it('passes a settled connection record through to the reply writer', () => {
 it('does not dedupe a pending name update against its later settled reply', () => {
   const display = vi.fn();
   const replyIds = new Set<string>();
-  const pending = { id: 'acp-3', name: 'acp:ask:Renamed shell' };
+  const pending: PendingAcpReplyNameView = {
+    id: 'acp-3', name: 'acp:ask:Renamed shell', role: 'ask', echo: 'tell ← subagent:research completed',
+  };
   const settled: BackgroundReplyView = { id: 'acp-3', output: 'Answer', line: 'ask hello' };
   let receiveSettled: (reply: BackgroundReplyView) => void = () => {};
   let receivePending: (update: PendingAcpReplyNameView) => void = () => {};
@@ -84,6 +86,7 @@ it('does not dedupe a pending name update against its later settled reply', () =
   act(() => { receivePending(pending); });
 
   expect(display).toHaveBeenCalledExactlyOnceWith('', '', { ...pending, pending: true });
+  expect(display.mock.calls[0]?.[2]).toMatchObject({ role: 'ask', echo: 'tell ← subagent:research completed' });
   expect(replyIds).toEqual(new Set());
 
   act(() => { receiveSettled(settled); });

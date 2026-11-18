@@ -112,6 +112,7 @@ export type Attempt = {
   queue: RoleEntry[];
   failures: AttemptFailure[];
   replyId?: string;
+  echo?: string;
   onDone: (result: AcpPromptResult) => void;
 };
 

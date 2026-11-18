@@ -94,7 +94,8 @@ export class AcpManager extends AcpSessionManager {
     const nativeSettings = this.managers.nativeCommandSettings?.current();
     this.attempt(label, {
       nativeSettings, command, prompt, role, settings, queue, failures: [],
-      ...options.replyId && { replyId: options.replyId }, onDone,
+      ...options.replyId && { replyId: options.replyId },
+      ...(options.echo !== undefined && { echo: options.echo }), onDone,
     });
   }
 
@@ -116,6 +117,7 @@ export class AcpManager extends AcpSessionManager {
       commands: [...attempt.settings.commands],
       runningEntries: new Set(),
       ...(attempt.replyId && { replyId: attempt.replyId }),
+      ...(attempt.echo !== undefined && { echo: attempt.echo }),
     };
     acpRoleRuntime(runtime, attempt.role).prompt = request;
     this.managers.tab.addBusy(label, request);

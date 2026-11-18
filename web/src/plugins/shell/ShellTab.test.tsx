@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { act, cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
-import type { BackgroundReplyView, TabView } from '@shared/protocol';
+import type { BackgroundReplyView, PendingAcpReplyNameView, TabView } from '@shared/protocol';
 import type { PluginTerminal, TabPluginClientCapabilities } from '../api';
 import { disabledApplicationCommand } from '../../shared/command-availability';
 import { PluginChordProvider, createPluginChordRegistry, type PluginChordRegistry } from '../PluginChords';
@@ -173,6 +173,7 @@ function makeCapabilities(overrides: {
   dotColor?: string;
   recording?: string;
   onBackgroundReply?: TabPluginClientCapabilities['onBackgroundReply'];
+  onPendingAcpReplyName?: TabPluginClientCapabilities['onPendingAcpReplyName'];
 } = {}) {
   const written: Written = [];
   const resized: { cols: number; rows: number }[] = [];
@@ -233,6 +234,7 @@ function makeCapabilities(overrides: {
       openRecording: vi.fn(),
     }),
     ...(overrides.onBackgroundReply !== undefined && { onBackgroundReply: overrides.onBackgroundReply }),
+    ...(overrides.onPendingAcpReplyName !== undefined && { onPendingAcpReplyName: overrides.onPendingAcpReplyName }),
   } as unknown as TabPluginClientCapabilities;
   return {
     capabilities, closed, handle, openConnection, resized, written,
@@ -255,6 +257,15 @@ function backgroundReplies() {
     return () => {};
   });
   return { subscribe, send: (reply: BackgroundReplyView) => { receive(reply); } };
+}
+
+function pendingNames() {
+  let receive: (update: PendingAcpReplyNameView) => void = () => {};
+  const subscribe = vi.fn((callback: (update: PendingAcpReplyNameView) => void) => {
+    receive = callback;
+    return () => {};
+  });
+  return { subscribe, send: (update: PendingAcpReplyNameView) => { receive(update); } };
 }
 
 // The application state a plugin tab's bar reaches in the running application: the interception every
@@ -1210,6 +1221,41 @@ describe('ShellTab', () => {
     expect(marker.textContent).not.toContain('[');
     fireEvent.click(marker);
     expect(openConnection).toHaveBeenLastCalledWith({ text: 'acp:ask:shell1', kind: 'acp', recordId: 'record-ask-1' });
+  });
+
+  it('renders a delivered echo from a pending update with no dispatch, then links its answering caller record', () => {
+    const replies = backgroundReplies();
+    const pending = pendingNames();
+    const echo = 'tell ← subagent:research completed';
+    const callerName = 'acp:tell:shell1';
+    const { capabilities, openConnection, terminal } = renderTab({
+      onBackgroundReply: replies.subscribe, onPendingAcpReplyName: pending.subscribe,
+    });
+
+    act(() => { pending.send({ id: 'delivered-1', name: callerName, role: 'tell', echo }); });
+
+    expect(terminal.written.some((text) => text.includes(echo))).toBe(true);
+    const marker = screen.getByRole('link', { name: `Open ${callerName}` });
+    expect(marker).toHaveTextContent('Thinking');
+    fireEvent.change(bar(), { target: { value: 'keep this draft' } });
+    fireEvent.click(marker);
+    expect(openConnection).toHaveBeenLastCalledWith({
+      text: callerName, kind: 'acp', acpRef: { scope: 'tab', label: 'shell1', role: 'tell' },
+    });
+    expect(bar()).toHaveValue('keep this draft');
+    expect(vi.mocked(capabilities.intent).mock.calls.filter(
+      ([name]) => name === 'dispatch' || name === 'dispatch-command',
+    )).toEqual([]);
+
+    act(() => replies.send({
+      id: 'delivered-1', line: echo, output: '## Answer',
+      record: { id: 'record-tell-caller', name: callerName },
+    }));
+    expect(marker).toHaveTextContent('see thought process');
+    fireEvent.click(marker);
+    expect(openConnection).toHaveBeenLastCalledWith({
+      text: callerName, kind: 'acp', recordId: 'record-tell-caller',
+    });
   });
 
   it('marks a subagent dispatch by its durable record, ignores a fresh-id start, then links on completion', async () => {

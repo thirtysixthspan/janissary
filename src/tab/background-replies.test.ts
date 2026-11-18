@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { backgroundRepliesFor } from './background-replies.js';
+import type { AcpPendingPrompt } from '../acp/prompt-state.js';
+import { backgroundRepliesFor, pendingAcpReplyNamesFor } from './background-replies.js';
 import { makeTab } from './index.js';
 
 describe('backgroundRepliesFor', () => {
@@ -145,5 +146,75 @@ describe('backgroundRepliesFor', () => {
         record: backgroundRecord,
       },
     ]);
+  });
+});
+
+describe('pendingAcpReplyNamesFor delivered projections', () => {
+  function pendingPrompt(overrides: Partial<AcpPendingPrompt> = {}): AcpPendingPrompt {
+    return {
+      finish: () => {}, abort: new AbortController(), prompt: 'hello', role: 'ask',
+      roleName: 'ask', commands: [], runningEntries: new Set(), ...overrides,
+    };
+  }
+
+  function withPrompts(states: Partial<Record<'ask' | 'tell', { prompt?: AcpPendingPrompt }>>) {
+    const tab = makeTab('shell', '#fff');
+    tab.runtime = { busy: false, context: [], queue: [], acpRoles: states };
+    return tab;
+  }
+
+  it('projects id, name, role and echo for each role, preserving the supplied text and using prompt.role', () => {
+    for (const { role, echo } of [
+      { role: 'ask' as const, echo: 'ask ← subagent:research started' },
+      { role: 'tell' as const, echo: 'tell ← subagent:research completed' },
+    ]) {
+      const tab = withPrompts({ [role]: { prompt: pendingPrompt({
+        replyId: `reply-${role}`, role, roleName: 'configured-name',
+        recordName: `acp:${role}:shell`, echo,
+      }) } });
+      expect(pendingAcpReplyNamesFor(tab)).toEqual([{
+        id: `reply-${role}`, name: `acp:${role}:shell`, role, echo,
+      }]);
+    }
+  });
+
+  it('keeps an explicitly empty echo in the request and the projected view', () => {
+    const tab = withPrompts({ ask: { prompt: pendingPrompt({
+      replyId: 'reply-empty', role: 'ask', recordName: 'acp:ask:shell', echo: '',
+    }) } });
+
+    const view = pendingAcpReplyNamesFor(tab);
+    expect(view).toEqual([{ id: 'reply-empty', name: 'acp:ask:shell', role: 'ask', echo: '' }]);
+    expect(view[0]).toHaveProperty('echo', '');
+    expect(tab.runtime?.acpRoles?.ask?.prompt?.echo).toBe('');
+  });
+
+  it('projects only id and name for a typed prompt, with no role or echo key', () => {
+    const tab = withPrompts({ ask: { prompt: pendingPrompt({
+      replyId: 'reply-typed', role: 'ask', recordName: 'acp:ask:shell',
+    }) } });
+
+    const view = pendingAcpReplyNamesFor(tab);
+    expect(view).toEqual([{ id: 'reply-typed', name: 'acp:ask:shell' }]);
+    expect(view[0]).not.toHaveProperty('role');
+    expect(view[0]).not.toHaveProperty('echo');
+  });
+
+  it('projects nothing without a replyId even when an echo is supplied', () => {
+    const tab = withPrompts({ ask: { prompt: pendingPrompt({
+      recordName: 'acp:ask:shell', echo: 'ask ← subagent:research completed',
+    }) } });
+
+    expect(pendingAcpReplyNamesFor(tab)).toEqual([]);
+  });
+
+  it('projects nothing without a recordName, and stays empty with no runtime or no prompt', () => {
+    const noRecord = withPrompts({ ask: { prompt: pendingPrompt({
+      replyId: 'reply-no-record', echo: 'ask ← subagent:research completed',
+    }) } });
+
+    expect(pendingAcpReplyNamesFor(noRecord)).toEqual([]);
+    expect(pendingAcpReplyNamesFor(makeTab('shell', '#fff'))).toEqual([]);
+    expect(pendingAcpReplyNamesFor(withPrompts({ ask: {} }))).toEqual([]);
   });
 });

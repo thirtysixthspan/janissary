@@ -2,7 +2,7 @@ import type { AcpPromptResult } from './types.js';
 import type { AcpRole } from './role.js';
 import type { LogEntry } from '../tab/types.js';
 
-export type PromptResultOptions = { appendRefusalToTranscript?: boolean; replyId?: string };
+export type PromptResultOptions = { appendRefusalToTranscript?: boolean; replyId?: string; echo?: string };
 
 export type AcpPendingPrompt = {
   finish: (result: AcpPromptResult) => void;
@@ -13,6 +13,7 @@ export type AcpPendingPrompt = {
   commands: string[];
   runningEntries: Set<LogEntry>;
   replyId?: string;
+  echo?: string;
   recordId?: string;
   recordName?: string;
   cancellation?: Promise<boolean>;

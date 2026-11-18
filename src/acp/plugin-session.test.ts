@@ -452,6 +452,52 @@ describe('core ACP for plugin tabs', () => {
     managers.acp.closeAll();
   });
 
+  it('carries a supplied echo and role through fallback while keeping the id and answering record', async () => {
+    const echo = 'tell ← subagent:research completed';
+    const { managers, handlers, session } = setup(() => ({
+      name: 'ask',
+      entries: [
+        { harness: 'opencode', model: 'first/model' },
+        { harness: 'opencode', model: 'fallback/model' },
+      ],
+      commands: [...NATIVE_ACP_COMMANDS],
+    }));
+    const pending = managers.acp.promptResult('consumer', 'ask first', 'ask', {
+      replyId: 'delivered-1', echo,
+    });
+    const tab = managers.tab.byLabel('consumer')!;
+    await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalled(); });
+
+    expect(tab.runtime?.acpRoles?.ask?.prompt?.echo).toBe(echo);
+    await vi.waitFor(() => {
+      expect(pendingAcpReplyNamesFor(tab)).toContainEqual({
+        id: 'delivered-1', name: 'acp:ask:consumer', role: 'ask', echo,
+      });
+    });
+    const firstRecordId = tab.runtime?.acpRoles?.ask?.recordId;
+
+    tab.title = 'Renamed shell';
+    handlers().onError('first model failed');
+
+    await vi.waitFor(() => {
+      expect(tab.runtime?.acpRoles?.ask?.recordId).not.toBe(firstRecordId);
+      expect(pendingAcpReplyNamesFor(tab)).toContainEqual({
+        id: 'delivered-1', name: 'acp:ask:Renamed shell', role: 'ask', echo,
+      });
+      expect(session.prompt).toHaveBeenCalledTimes(2);
+    });
+    const fallbackHandlers = handlers();
+    fallbackHandlers.onChunk('Fallback answer');
+    fallbackHandlers.onEnd('end_turn');
+
+    const result = await pending;
+    const answeringRecordId = tab.runtime?.acpRoles?.ask?.recordId;
+    expect(result).toMatchObject({ answered: true, recordId: answeringRecordId });
+    const answeringRecord = managers.acpRecords.rows().find((row) => row.id === answeringRecordId)!;
+    expect(recordConnectionName(answeringRecord)).toBe('acp:ask:Renamed shell');
+    managers.acp.closeAll();
+  });
+
   it('names the tell record on the settled tell reply and places it under the tell line', async () => {
     const { managers, handlers } = setup();
     const reply = await managers.command.dispatchLineWithOutput('consumer', 'tell hello', 1);
