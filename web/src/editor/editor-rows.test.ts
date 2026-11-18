@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import type { SuggestHunk } from '@shared/protocol';
+import type { PendingHunk } from './editor-rows';
 import { buildEditorRows } from './editor-rows';
 
 const lines = ['one', 'two', 'three', 'four'];
 
 function plan(hunks: SuggestHunk[], resolved: boolean[] = hunks.map(() => false)) {
-  return buildEditorRows(lines, hunks, resolved);
+  const entries: PendingHunk[] = hunks.map((hunk, index) => ({ hunk, resolved: resolved[index] ?? false }));
+  return buildEditorRows(lines, entries);
 }
 
 describe('buildEditorRows', () => {
@@ -61,6 +63,15 @@ describe('buildEditorRows', () => {
     expect(rows.filter((row) => row.kind === 'added')).toEqual([
       { kind: 'added', hunkIndex: 1, text: 'THREE', position: 0, last: true },
     ]);
+  });
+
+  it('only emits hunk indices that exist in the pending set', () => {
+    const hunks = [{ anchor: 'one', replacement: 'ONE' }, { anchor: 'three', replacement: 'THREE' }];
+    for (const row of plan(hunks)) {
+      if (row.kind !== 'added') continue;
+      expect(row.hunkIndex).toBeGreaterThanOrEqual(0);
+      expect(row.hunkIndex).toBeLessThan(hunks.length);
+    }
   });
 
   it('previews hunks in start-line order regardless of the order they arrived', () => {

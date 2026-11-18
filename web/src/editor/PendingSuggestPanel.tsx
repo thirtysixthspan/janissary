@@ -9,7 +9,7 @@ import type { PendingSuggest } from './useEditorSuggest';
 // Split out of EditorTab.tsx to keep that file under the 200-line cap.
 export function PendingSuggestPanel({ pending }: { pending: PendingSuggest | null }) {
   if (!pending || pending.hunks.length <= 1) return null;
-  const remaining = pending.resolved.filter((r) => !r).length;
+  const remaining = pending.hunks.filter((entry) => !entry.resolved).length;
   return (
     <div className="editor-suggest-panel">
       <div className="editor-suggest-title">Accept or decline each change below</div>
