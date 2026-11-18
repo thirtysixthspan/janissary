@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { clearIfStale, createPidFile, parseLockPid, readPidFile } from './pid-lock-file.js';
 
@@ -85,7 +85,9 @@ export function acquireLock(projectDir: string): void {
 }
 
 export function releaseLock(projectDir: string): void {
-  if (readLockPid(projectDir) === process.pid) {
-    rmSync(lockPath(projectDir), { force: true });
+  const file = lockPath(projectDir);
+  const content = readPidFile(file);
+  if (content !== undefined && parseLockPid(content) === process.pid) {
+    clearIfStale(file, content);
   }
 }
