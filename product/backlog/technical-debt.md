@@ -2,17 +2,6 @@
 
 ## ready
 
-* Drive the remote frame encoder's base64 fields from one declared table so a new frame with a binary payload cannot silently bypass encoding.
-
-Existing Debt: The remote frame union and its admitted-type maps are compile-checked, but the encoder that base64-encodes payload bytes is a hand-written chain of frame-type checks that nothing ties back to the union. Severity: 6/10
-
-Existing Risk: 6/10 - A new or edited frame type carrying a binary field can be sent with raw control bytes or embedded newlines, which breaks line framing on the SSH channel and makes the far side reject the frame as malformed or stray.
-
-Proposal Risk: 2/10 - Encoding still depends on field names, but a new binary field is added to the same declaration the compiler checks, so an omitted encoder entry becomes a build error rather than a runtime framing fault.
-
-Proposal: `src/remote/protocol.ts` defines `toWire` as a chain of `if (frame.type === ...)` branches calling `encodeText` on fields such as `data`, `blocks`, `text`, `command`, `result`, `display`, `capture` and `output`, while `src/remote/protocol-frames.ts` separately declares `ClientFrame`/`ServerFrame` and the compile-complete `CLIENT_FRAME_TYPES`/`SERVER_FRAME_TYPES` maps. Move the "which fields of which frame are base64" fact into `src/remote/protocol-frames.ts` as a keyed declaration covering every `RemoteFrame['type']`, then reduce `toWire` to one pass over that declaration. Preserve the conditional cases that encode only when a field is present (`acp-turn` with `phase === 'end'`, `acp-tool-result` with `output !== undefined`, `gate-event` and `resume-event` with `capture !== undefined`, `capture-reply` with `text !== undefined`) as explicit entries rather than dropping them. `src/remote/protocol.test.ts` round-trips frames through `encodeFrame`/`decodeFrame` and checks the admitted-type maps; add a case for every frame whose fields appear in the new table so a missing or wrong encoding fails there.
-
-
 * Type the remote filesystem reply's result by operation instead of `unknown`, so the wire frame and its validation table are one contract.
 
 Existing Debt: The `filesystem-reply` frame declares `result?: unknown` and its decoder copies that value through untouched, while the real per-operation shape lives only in a separate hand-written decoder table. Severity: 6/10

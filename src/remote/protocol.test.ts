@@ -3,6 +3,7 @@ import {
   REMOTE_PROTOCOL_VERSION, HANDSHAKE_SENTINEL, encodeFrame, decodeFrame, encodeHandshake,
   parseHandshake, heldBackLength,
 } from './protocol.js';
+import { BINARY_FIELDS } from './base64-fields.js';
 import { CLIENT_FRAME_TYPES, SERVER_FRAME_TYPES, type ClientFrame, type RemoteFrame } from './protocol-frames.js';
 
 function roundTrip(frame: RemoteFrame): RemoteFrame | { error: string } {
@@ -1072,6 +1073,78 @@ describe('admitted frame types', () => {
         error: expect.stringContaining(`Malformed remote frame "${type}"`),
       });
     }
+  });
+});
+
+// The expected wire values below are written out by hand, not read from BINARY_FIELDS. A field left
+// out of the declaration stays plain on the wire and fails here, instead of agreeing with the
+// declaration's own account of itself.
+describe('base64 field declaration', () => {
+  const b64 = (text: string) => Buffer.from(text, 'utf8').toString('base64');
+
+  it.each([
+    ['input', { type: 'input', id: 'r1', data: 'one\ntwo' }, { data: b64('one\ntwo') }],
+    ['output', { type: 'output', id: 'r1', data: 'one\ntwo' }, { data: b64('one\ntwo') }],
+    ['transcript', { type: 'transcript', blocks: ['one\ntwo', 'three'] }, { blocks: [b64('one\ntwo'), b64('three')] }],
+    ['shell-history', {
+      type: 'shell-history', id: 'r1',
+      runs: [{ source: 'input', text: 'one\ntwo' }, { source: 'output', text: 'three' }],
+    }, { runs: [{ source: 'input', text: b64('one\ntwo') }, { source: 'output', text: b64('three') }] }],
+    ['acp-run', {
+      type: 'acp-run', id: 'r1', text: 'one\ntwo', snapshot: { kind: 'agent', grants: [], askUser: false },
+    }, { text: b64('one\ntwo') }],
+    ['acp-turn', { type: 'acp-turn', id: 'r1', phase: 'end', display: 'one\ntwo' }, { display: b64('one\ntwo') }],
+    ['acp-tool-result', { type: 'acp-tool-result', id: 'r1', request: 0, output: 'one\ntwo' }, { output: b64('one\ntwo') }],
+    ['acp-tool-request', { type: 'acp-tool-request', id: 'r1', request: 0, command: 'one\ntwo' }, { command: b64('one\ntwo') }],
+    ['acp-tool-step', {
+      type: 'acp-tool-step', id: 'r1', command: 'one\ntwo', result: 'three\nfour', workspace: true,
+    }, { command: b64('one\ntwo'), result: b64('three\nfour') }],
+    ['acp-chunk', { type: 'acp-chunk', id: 'r1', text: 'one\ntwo' }, { text: b64('one\ntwo') }],
+    ['acp-activity', { type: 'acp-activity', id: 'r1', kind: 'thought', text: 'one\ntwo' }, { text: b64('one\ntwo') }],
+    ['gate-event', {
+      type: 'gate-event', id: 'r1', message: 'gate', capturedAt: 1, capture: 'one\ntwo',
+    }, { capture: b64('one\ntwo') }],
+    ['resume-event', {
+      type: 'resume-event', id: 'r1', reset: { kind: 'in', ms: 1 }, capturedAt: 1, capture: 'one\ntwo',
+    }, { capture: b64('one\ntwo') }],
+    ['capture-reply', {
+      type: 'capture-reply', id: 'r1', request: 'q1', text: 'one\ntwo', capturedAt: 1,
+    }, { text: b64('one\ntwo') }],
+  ] as Array<[string, RemoteFrame, Record<string, unknown>]>)(
+    'base64-encodes the declared fields of %s', (_type, frame, expected) => {
+      expect(JSON.parse(encodeFrame(frame))).toMatchObject(expected);
+      expect(decodeFrame(encodeFrame(frame))).toEqual(frame);
+    },
+  );
+
+  it.each([
+    ['an acp-turn start', { type: 'acp-turn', id: 'r1', phase: 'start', first: true }],
+    ['an acp-tool-result without output', { type: 'acp-tool-result', id: 'r1', request: 0, error: 'failed' }],
+    ['a gate-event without capture', { type: 'gate-event', id: 'r1', message: 'gate', capturedAt: 1 }],
+    ['a resume-event without capture', { type: 'resume-event', id: 'r1', reset: { kind: 'in', ms: 1 }, capturedAt: 1 }],
+    ['a capture-reply without text', { type: 'capture-reply', id: 'r1', request: 'q1', capturedAt: 1 }],
+    ['an empty transcript', { type: 'transcript', blocks: [] }],
+    ['an empty shell history', { type: 'shell-history', id: 'r1', runs: [] }],
+  ] as Array<[string, RemoteFrame]>)('leaves the absent fields of %s alone', (_label, frame) => {
+    expect(JSON.parse(encodeFrame(frame))).toEqual(frame);
+  });
+
+  it('declares a field list for every frame type', () => {
+    const order = (a: string, b: string) => a.localeCompare(b);
+    const admitted = [...Object.keys(CLIENT_FRAME_TYPES), ...Object.keys(SERVER_FRAME_TYPES)].toSorted(order);
+    expect(Object.keys(BINARY_FIELDS).toSorted(order)).toEqual(admitted);
+  });
+
+  it('declares binary fields for exactly the frames that carry them', () => {
+    const order = (a: string, b: string) => a.localeCompare(b);
+    const withFields = Object.entries(BINARY_FIELDS)
+      .filter(([, fields]) => fields.length > 0)
+      .map(([type]) => type)
+      .toSorted(order);
+    expect(withFields).toEqual([
+      'acp-activity', 'acp-chunk', 'acp-run', 'acp-tool-request', 'acp-tool-result', 'acp-tool-step', 'acp-turn',
+      'capture-reply', 'gate-event', 'input', 'output', 'resume-event', 'shell-history', 'transcript',
+    ]);
   });
 });
 

@@ -252,10 +252,9 @@ export const HANDSHAKE_SENTINEL = '__JANUS_REMOTE__';
 export type RemoteHandshake = { version: number; session?: string };
 
 // The frame shapes live in `protocol-frames.ts`; this module is the codec over them.
+import { BINARY_FIELDS } from './base64-fields.js';
 import { decodeKnownFrame } from './frame/decode.js';
-import {
-  CLIENT_FRAME_TYPES, SERVER_FRAME_TYPES, type RemoteFrame,
-} from './protocol-frames.js';
+import { CLIENT_FRAME_TYPES, SERVER_FRAME_TYPES, type RemoteFrame } from './protocol-frames.js';
 
 // A predicate rather than a bare membership test, so the narrowed type reaches `decodeKnownFrame`
 // and its switch can be exhaustive over the union instead of over `string`.
@@ -268,26 +267,25 @@ function encodeText(text: string): string {
 }
 
 // Terminal bytes and rendered transcript blocks travel base64-encoded so no control byte, escape
-// sequence, or embedded newline in a payload can ever be mistaken for framing.
+// sequence, or embedded newline in a payload can ever be mistaken for framing. Which fields those
+// are lives with the frame union; this is one pass over that declaration.
 function toWire(frame: RemoteFrame): Record<string, unknown> {
-  if (frame.type === 'input' || frame.type === 'output') return { ...frame, data: encodeText(frame.data) };
-  if (frame.type === 'transcript') return { ...frame, blocks: frame.blocks.map((block) => encodeText(block)) };
-  if (frame.type === 'shell-history') {
-    return { ...frame, runs: frame.runs.map((run) => ({ ...run, text: encodeText(run.text) })) };
+  const wire: Record<string, unknown> = { ...frame };
+  const fields = BINARY_FIELDS[frame.type];
+  for (const field of fields) {
+    const value = wire[field.field];
+    if (value === undefined) continue;
+    if (field.shape === 'text') wire[field.field] = encodeText(value as string);
+    else if (field.shape === 'list') wire[field.field] = (value as string[]).map((item) => encodeText(item));
+    else {
+      const { inner } = field;
+      wire[field.field] = (value as Record<string, unknown>[]).map((item) => ({
+        ...item,
+        [inner]: encodeText(item[inner] as string),
+      }));
+    }
   }
-  if (frame.type === 'acp-run') return { ...frame, text: encodeText(frame.text) };
-  if (frame.type === 'acp-turn' && frame.phase === 'end') return { ...frame, display: encodeText(frame.display) };
-  if (frame.type === 'acp-tool-result' && frame.output !== undefined) return { ...frame, output: encodeText(frame.output) };
-  if (frame.type === 'acp-tool-request') return { ...frame, command: encodeText(frame.command) };
-  if (frame.type === 'acp-tool-step') {
-    return { ...frame, command: encodeText(frame.command), result: encodeText(frame.result) };
-  }
-  if (frame.type === 'acp-chunk') return { ...frame, text: encodeText(frame.text) };
-  if (frame.type === 'acp-activity') return { ...frame, text: encodeText(frame.text) };
-  if (frame.type === 'gate-event' && frame.capture !== undefined) return { ...frame, capture: encodeText(frame.capture) };
-  if (frame.type === 'resume-event' && frame.capture !== undefined) return { ...frame, capture: encodeText(frame.capture) };
-  if (frame.type === 'capture-reply' && frame.text !== undefined) return { ...frame, text: encodeText(frame.text) };
-  return { ...frame };
+  return wire;
 }
 
 export function encodeFrame(frame: RemoteFrame): string {
