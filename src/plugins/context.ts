@@ -84,25 +84,34 @@ function topicActionCapability(
   return topicAction;
 }
 
+// The named inputs to one guarded plugin call. Keeping them in one object means the failure-disabling
+// callback and the adopted PTY id cannot be swapped between `invokePlugin` and this context builder.
+export type PluginInvocationOptions = {
+  // Collects `openClaimedFiles` targets for the host to run once the guarded call has returned.
+  openRequests?: string[];
+  // The tab whose client asked, when the call came from one — an intent, or a selection action on a
+  // plugin tab. Distinct from `origin`, which is the tab a *command* was invoked from and which stays
+  // that way for every capability.
+  answeringLabel?: string;
+  // The guarded call's clock, so a capability that runs host work the plugin waits on can stop it.
+  deadline?: HandlerDeadline;
+  // A later guarded call into this plugin, for a handler that outlives this one — `launchTab`'s ready.
+  deferred?: DeferredPluginCall;
+  adoptPtyId?: string;
+  disable?: (error: unknown, origin: PluginFailureOrigin) => void;
+};
+
 export function createPluginContext(
   managers: Managers,
   declaration: TabPluginDeclaration,
   activation: TabPluginActivation,
   origin: PluginFailureOrigin,
   isEnabled: () => boolean,
-  // Collects `openClaimedFiles` targets for the host to run once the guarded call has returned.
-  openRequests: string[] = [],
-  // The tab whose client asked, when the call came from one — an intent, or a selection action on a
-  // plugin tab. Distinct from `origin`, which is the tab a *command* was invoked from and which stays
-  // that way for every capability.
-  answeringLabel?: string,
-  // The guarded call's clock, so a capability that runs host work the plugin waits on can stop it.
-  deadline?: HandlerDeadline,
-  // A later guarded call into this plugin, for a handler that outlives this one — `launchTab`'s ready.
-  deferred?: DeferredPluginCall,
-  adoptPtyId?: string,
-  disable?: (error: unknown, origin: PluginFailureOrigin) => void,
+  options: PluginInvocationOptions = {},
 ): TabPluginServerCapabilities {
+  const {
+    openRequests = [], answeringLabel, deadline, deferred, adoptPtyId, disable,
+  } = options;
   return restrictToDeclared({
     note: (text) => {
       if (!isEnabled()) return;

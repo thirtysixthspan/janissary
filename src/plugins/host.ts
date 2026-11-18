@@ -55,7 +55,7 @@ export class TabPluginHost {
       managers,
       records: () => [...this.records.values()],
       invoke: (record, activation, origin, call, timeoutMs) =>
-        this.invoke(record, activation, origin, call, undefined, undefined, timeoutMs),
+        this.invoke(record, activation, origin, call, { timeoutMs }),
       disable: (record, error, origin) => { this.disable(record, error, origin); },
     }, declarations, {
       notifyMs: options.notifyTimeoutMs ?? TAB_PLUGIN_NOTIFY_TIMEOUT_MS,
@@ -109,7 +109,7 @@ export class TabPluginHost {
     if (!record) throw new Error(`Unknown tab plugin "${id}"`);
     return reattachPlugin(data, { managers: this.managers, record, origin,
       ensureActive: this.ensureActive.bind(this),
-      invoke: (item, activation, at, call, adoptPtyId) => this.invoke(item, activation, at, call, undefined, adoptPtyId),
+      invoke: (item, activation, at, call, adoptPtyId) => this.invoke(item, activation, at, call, { adoptPtyId }),
       disable: (item, error, at) => { this.disable(item, error, at); } });
   }
 
@@ -120,7 +120,7 @@ export class TabPluginHost {
       closedTabReason: (tabLabel) => closedTabReason(this.records, this.disabledTabPlugins, tabLabel),
       ensureActive: (record, origin) => this.ensureActive(record, origin),
       invoke: (record, activation, origin, call, answeringLabel) =>
-        this.invoke(record, activation, origin, call, answeringLabel),
+        this.invoke(record, activation, origin, call, { answeringLabel }),
       disable: (record, error, origin) => this.disable(record, error, origin),
     };
   }
@@ -156,15 +156,16 @@ export class TabPluginHost {
     activation: TabPluginActivation,
     origin: PluginFailureOrigin,
     call: (capabilities: TabPluginServerCapabilities) => Result | Promise<Result>,
-    answeringLabel?: string,
-    adoptPtyId?: string,
-    timeoutMs = this.handlerTimeoutMs,
+    options: { answeringLabel?: string; adoptPtyId?: string; timeoutMs?: number } = {},
   ): Promise<PluginCallOutcome<Result>> {
     return invokePlugin(
       this.managers, record.declaration, activation, origin,
-      () => record.state === 'active' && !this.disposed, timeoutMs, call, answeringLabel,
-      (error, failureOrigin) => { this.disable(record, error, failureOrigin); },
-      adoptPtyId,
+      () => record.state === 'active' && !this.disposed, options.timeoutMs ?? this.handlerTimeoutMs, call,
+      {
+        answeringLabel: options.answeringLabel,
+        disable: (error, failureOrigin) => { this.disable(record, error, failureOrigin); },
+        adoptPtyId: options.adoptPtyId,
+      },
     );
   }
 
