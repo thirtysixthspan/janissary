@@ -15,6 +15,8 @@ import type {
 } from './types.js';
 import type { RemoteAcpSession } from '../remote/acp-session.js';
 import type { NativeCommandSettingsManager } from '../native-commands/manager.js';
+import type { CommandSettingsSnapshot } from '../native-commands/settings-types.js';
+import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import type * as TabRead from '../file-read/tab-read.js';
 import type * as TabGlob from '../file-glob/tab-glob.js';
 import type * as TabGrep from '../file-grep/tab-grep.js';
@@ -71,7 +73,7 @@ vi.mock('./drive-loop.js', async (importOriginal) => {
   return { ...actual, runToolLoop: mocks.runToolLoop };
 });
 
-import { runCorePrompt } from './run-prompt.js';
+import { coreSnapshotRows, runCorePrompt } from './run-prompt.js';
 
 const homeRoots: string[] = [];
 beforeEach(() => {
@@ -1383,5 +1385,99 @@ describe('runCorePrompt web routing', () => {
       input: '[far] web search x', output: 'result', acp: true,
     });
     expect(mocks.runWebInTab).not.toHaveBeenCalled();
+  });
+});
+
+type SnapshotRowInput = {
+  name: string;
+  savedEnabled?: boolean;
+  savedAgentAccess?: boolean;
+  effectiveEnabled?: boolean;
+  effectiveAgentAccess?: boolean;
+};
+
+function snapshotOf(rows: SnapshotRowInput[]): CommandSettingsSnapshot {
+  return {
+    commands: rows.map((row) => ({
+      name: row.name,
+      kind: 'native' as const,
+      aliases: [],
+      forms: [row.name],
+      enabled: row.savedEnabled ?? true,
+      agentAccess: row.savedAgentAccess ?? true,
+      effectiveEnabled: row.effectiveEnabled ?? true,
+      effectiveAgentAccess: row.effectiveAgentAccess ?? true,
+    })),
+    source: 'default',
+    path: '',
+  };
+}
+
+const permissiveRow = (name: string) => ({ name, effectiveEnabled: true, effectiveAgentAccess: true });
+
+describe('coreSnapshotRows', () => {
+  it('returns a fresh empty array for undefined settings', () => {
+    const first = coreSnapshotRows(undefined);
+    const second = coreSnapshotRows(undefined);
+    expect(first).toEqual([]);
+    expect(second).toEqual([]);
+    expect(second).not.toBe(first);
+  });
+
+  it('returns permissive rows for the whole vocabulary from a defined empty snapshot', () => {
+    expect(coreSnapshotRows(snapshotOf([]))).toEqual(NATIVE_ACP_COMMANDS.map((name) => permissiveRow(name)));
+  });
+
+  it('copies an effective-enabled-off value rather than the saved enabled value', () => {
+    const rows = coreSnapshotRows(snapshotOf([{
+      name: 'file read', savedEnabled: true, effectiveEnabled: false,
+    }]));
+    expect(rows.find((row) => row.name === 'file read')).toEqual({
+      name: 'file read', effectiveEnabled: false, effectiveAgentAccess: true,
+    });
+  });
+
+  it('copies an effective-agent-access-off value rather than the saved agent access value', () => {
+    const rows = coreSnapshotRows(snapshotOf([{
+      name: 'file grep', savedAgentAccess: true, effectiveAgentAccess: false,
+    }]));
+    expect(rows.find((row) => row.name === 'file grep')).toEqual({
+      name: 'file grep', effectiveEnabled: true, effectiveAgentAccess: false,
+    });
+  });
+
+  it('defaults missing vocabulary rows to permissive in a partial snapshot', () => {
+    const rows = coreSnapshotRows(snapshotOf([{
+      name: 'file write', effectiveEnabled: false, effectiveAgentAccess: false,
+    }]));
+    expect(rows.find((row) => row.name === 'file write')).toEqual({
+      name: 'file write', effectiveEnabled: false, effectiveAgentAccess: false,
+    });
+    expect(rows.find((row) => row.name === 'browser goto')).toEqual(permissiveRow('browser goto'));
+  });
+
+  it('omits a non-vocabulary settings row', () => {
+    const rows = coreSnapshotRows(snapshotOf([{
+      name: 'unrelated command', effectiveEnabled: false, effectiveAgentAccess: false,
+    }]));
+    expect(rows.map((row) => row.name)).toEqual([...NATIVE_ACP_COMMANDS]);
+    expect(rows.every((row) => row.effectiveEnabled && row.effectiveAgentAccess)).toBe(true);
+  });
+
+  it('keeps vocabulary order, fresh rows, and values captured at call time', () => {
+    const sourceRows = [{
+      name: 'file read', kind: 'native' as const, aliases: [], forms: ['file read'],
+      enabled: true, agentAccess: true, effectiveEnabled: false, effectiveAgentAccess: false,
+    }];
+    const settings = { commands: sourceRows, source: 'default' as const, path: '' } as CommandSettingsSnapshot;
+    const first = coreSnapshotRows(settings);
+    const second = coreSnapshotRows(settings);
+
+    const captured = () => first.find((row) => row.name === 'file read');
+    expect(first.map((row) => row.name)).toEqual([...NATIVE_ACP_COMMANDS]);
+    expect(captured()).not.toBe(second.find((row) => row.name === 'file read'));
+    expect(captured()).not.toBe(sourceRows[0]);
+    sourceRows[0] = { ...sourceRows[0], effectiveEnabled: true, effectiveAgentAccess: true };
+    expect(captured()).toEqual({ name: 'file read', effectiveEnabled: false, effectiveAgentAccess: false });
   });
 });

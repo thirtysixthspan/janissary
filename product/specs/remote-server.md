@@ -698,7 +698,10 @@ A remote shell or other supported plugin tab's core ACP agent is a further excep
 process** runs on the remote, in the workspace clone, so it sees the files the tab is working on; the
 remote hosts the ACP client too, so what crosses the channel is prompt text, turns, and tool steps rather
 than JSON-RPC. The **autonomous tool loop** runs beside the agent in the clone, so workspace commands —
-reads, writes, and edits — all resolve in the clone on the remote machine; its caller-side tools — `db`, `browser`, and `question` — still execute on the machine
+reads, writes, and edits — all resolve in the clone on the remote machine; the far side routes them
+through `runWorkspaceCommandIn` in `src/acp/workspace-runner.ts`, which hands each one to the same
+root-taking file service the typed command uses and adds no root, grant, or wire behavior of its own.
+Its caller-side tools — `db`, `browser`, and `question` — still execute on the machine
 janissary is running on, against local data and a local browser, and their results travel back as tool
 results. And **which agent and model run** is decided locally and sent
 across on the frame that opens the session, so one definition holds and the two installations cannot

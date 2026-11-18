@@ -1,5 +1,5 @@
 import type { Managers } from '../managers.js';
-import type { AcpLoopSession, AcpRunSnapshot, AcpSession, AcpToolHost } from './types.js';
+import type { AcpLoopSession, AcpRunSnapshot, AcpRunSnapshotRow, AcpSession, AcpToolHost } from './types.js';
 import type { RemoteAcpSession } from '../remote/acp-session.js';
 import type { AcpPendingPrompt } from './prompt-state.js';
 import type { LogEntry, TabRuntime } from '../tab/types.js';
@@ -25,19 +25,23 @@ import { effectiveCommandSetting } from '../native-commands/policy.js';
 import type { CommandSettingsSnapshot } from '../native-commands/settings-types.js';
 import { runToolLoop } from './drive-loop.js';
 
-function coreSnapshot(
-  runtime: TabRuntime, request: AcpPendingPrompt, settings: CommandSettingsSnapshot | undefined,
-): Extract<AcpRunSnapshot, { kind: 'core' }> {
-  const rows = settings === undefined ? [] : NATIVE_ACP_COMMANDS.map((name) => {
+export function coreSnapshotRows(settings: CommandSettingsSnapshot | undefined): AcpRunSnapshotRow[] {
+  if (settings === undefined) return [];
+  return NATIVE_ACP_COMMANDS.map((name) => {
     const setting = effectiveCommandSetting(settings, name);
     return { name, effectiveEnabled: setting.effectiveEnabled, effectiveAgentAccess: setting.effectiveAgentAccess };
   });
+}
+
+function coreSnapshot(
+  runtime: TabRuntime, request: AcpPendingPrompt, settings: CommandSettingsSnapshot | undefined,
+): Extract<AcpRunSnapshot, { kind: 'core' }> {
   return {
     kind: 'core',
     role: request.role,
     roleName: request.roleName,
     grants: request.commands,
-    rows,
+    rows: coreSnapshotRows(settings),
     withoutTools: runtime.acpWithoutTools === true,
   };
 }
