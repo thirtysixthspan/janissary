@@ -15,7 +15,7 @@ type Properties = TabItemActions & {
 };
 
 export function TabStrip({
-  tabs, activeTab, onSelect, onClose, onRename, tabNameMaxLength, activeTabNameMaxLength = 50,
+  tabs, activeTab, onSelect, onClose, onRename, tabNameMaxLength, activeTabNameMaxLength,
   onFocusCommandBar, onFocusEditor, windowFocused, dirtyTabs, startControl, endControl,
   onReorder, crossStripDrop, className,
 }: Properties) {

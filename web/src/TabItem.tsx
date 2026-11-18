@@ -14,7 +14,7 @@ export type TabItemActions = {
   onClose: (index: number) => void;
   onRename: (index: number, title: string) => void;
   tabNameMaxLength: number;
-  activeTabNameMaxLength?: number;
+  activeTabNameMaxLength: number;
   onFocusCommandBar?: () => void;
   onFocusEditor?: (label: string) => void;
   // Labels of tabs holding unsaved work. A knowing exception to the "no markers in a tab label"
@@ -34,7 +34,7 @@ type Properties = TabItemActions & {
 
 export function TabItem({
   tab, index, active, onSelect, onClose, onRename, tabNameMaxLength,
-  activeTabNameMaxLength = 50, onFocusCommandBar, onFocusEditor, windowFocused = true,
+  activeTabNameMaxLength, onFocusCommandBar, onFocusEditor, windowFocused = true,
   dirtyTabs, dragTransform, onReorderMouseDown,
 }: Properties) {
   const [editing, setEditing] = useState(false);

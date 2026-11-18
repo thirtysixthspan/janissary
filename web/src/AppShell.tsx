@@ -16,7 +16,6 @@ import type { TabPluginState } from './plugins/api';
 export function AppShell({
   tabs, client, children, dropRef,
   notificationsVisible,
-  tabNameMaxLength = 16, activeTabNameMaxLength = 50,
   sidebarLeftWidth, onSidebarLeftWidthChange, sidebarRightWidth, onSidebarRightWidthChange,
   focusLeft, focusRight,
   onPluginDirtyHandle,
@@ -29,8 +28,6 @@ export function AppShell({
   client: JanusClient;
   children: React.ReactNode;
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
-  tabNameMaxLength?: number;
-  activeTabNameMaxLength?: number;
   sidebarLeftWidth?: number;
   onSidebarLeftWidthChange?: (width: number) => void;
   sidebarRightWidth?: number;
@@ -52,8 +49,6 @@ export function AppShell({
     <div className="app">
       <Sidebar
         side="left" tabs={tabs} client={client} dropRef={dropRef}
-        tabNameMaxLength={tabNameMaxLength}
-        activeTabNameMaxLength={activeTabNameMaxLength}
         width={sidebarLeftWidth} onWidthChange={onSidebarLeftWidthChange} focusView={focusLeft}
         onNotificationsVisibilityChange={setLeftNotificationsVisible}
         onPluginDirtyHandle={onPluginDirtyHandle}
@@ -64,8 +59,6 @@ export function AppShell({
       <div className="app-center"><ConnectionStatusLabel status={connectionStatus} />{children}</div>
       <Sidebar
         side="right" tabs={tabs} client={client} dropRef={dropRef}
-        tabNameMaxLength={tabNameMaxLength}
-        activeTabNameMaxLength={activeTabNameMaxLength}
         width={sidebarRightWidth} onWidthChange={onSidebarRightWidthChange} focusView={focusRight}
         onNotificationsVisibilityChange={setRightNotificationsVisible}
         onPluginDirtyHandle={onPluginDirtyHandle}

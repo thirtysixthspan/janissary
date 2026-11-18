@@ -1,7 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { JanusClient } from './shared/ws/ws';
 import type { TabView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow, DisabledApplicationCommand } from '@shared/protocol';
+import { DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH, DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES, DEFAULT_TAB_NAME_MAX_LENGTH } from '@shared/shared/config-defaults';
 import { useProjectTitle } from './useProjectTitle';
+
+export type AppSettings = {
+  tabNameMaxLength: number;
+  activeTabNameMaxLength: number;
+  clipboardHistoryMaxEntries: number;
+};
 
 type Setters = {
   setTabs: (tabs: TabView[]) => void;
@@ -9,9 +16,7 @@ type Setters = {
   setSecondaryTab: (index: number | undefined) => void;
   setHarnessLaunch: (view: HarnessLaunchView | null) => void;
   setScheduleLaunch: (view: ScheduleLaunchView | null) => void;
-  setTabNameMaxLength: (length: number) => void;
-  setActiveTabNameMaxLength: (length: number) => void;
-  setClipboardHistoryMaxEntries: (entries: number) => void;
+  setSettings: (partial: Partial<AppSettings>) => void;
   setGlobalHistory: (history: string[]) => void;
   setSyntaxTheme: (theme: string) => void;
   setTheme: (theme: string) => void;
@@ -20,17 +25,18 @@ type Setters = {
   setDisabledApplicationCommands: (commands: DisabledApplicationCommand[]) => void;
 };
 
-export function useTabNameLimits() {
-  const [tabNameMaxLength, setTabNameMaxLength] = useState(16);
-  const [activeTabNameMaxLength, setActiveTabNameMaxLength] = useState(50);
-  return { tabNameMaxLength, setTabNameMaxLength, activeTabNameMaxLength, setActiveTabNameMaxLength };
-}
-
-// The browser has no storage of its own, so the clipboard-history cap is the one tunable the client
-// reads rather than owns: it comes down in the state snapshot from `.janissary/config.json`.
-export function useClipboardHistoryCap() {
-  const [clipboardHistoryMaxEntries, setClipboardHistoryMaxEntries] = useState(15);
-  return { clipboardHistoryMaxEntries, setClipboardHistoryMaxEntries };
+// The three display limits are server-owned tunables. The browser seeds them from the same
+// constants the server defaults to, then the state snapshot overwrites them.
+export function useAppSettings(): { settings: AppSettings; setSettings: (partial: Partial<AppSettings>) => void } {
+  const [settings, updateSettings] = useState<AppSettings>({
+    tabNameMaxLength: DEFAULT_TAB_NAME_MAX_LENGTH,
+    activeTabNameMaxLength: DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH,
+    clipboardHistoryMaxEntries: DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES,
+  });
+  const setSettings = useCallback((partial: Partial<AppSettings>) => {
+    updateSettings((previous) => ({ ...previous, ...partial }));
+  }, []);
+  return { settings, setSettings };
 }
 
 // Subscribes App to server state snapshots, fanning each field out to its setter. Split out of
@@ -39,7 +45,7 @@ export function useClipboardHistoryCap() {
 export function useServerState(client: JanusClient, setters: Setters): void {
   const {
     setTabs, setActiveTab, setSecondaryTab, setHarnessLaunch, setScheduleLaunch,
-    setTabNameMaxLength, setActiveTabNameMaxLength, setClipboardHistoryMaxEntries,
+    setSettings,
     setGlobalHistory, setSyntaxTheme, setTheme,
     setTasks, setProfiles, setDisabledApplicationCommands,
   } = setters;
@@ -61,9 +67,11 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     setSecondaryTab(secondary);
     setHarnessLaunch(nextHarnessLaunch);
     setScheduleLaunch(nextScheduleLaunch);
-    setTabNameMaxLength(nextTabNameMaxLength);
-    setActiveTabNameMaxLength(nextActiveTabNameMaxLength);
-    setClipboardHistoryMaxEntries(nextClipboardHistoryMaxEntries);
+    setSettings({
+      tabNameMaxLength: nextTabNameMaxLength,
+      activeTabNameMaxLength: nextActiveTabNameMaxLength,
+      clipboardHistoryMaxEntries: nextClipboardHistoryMaxEntries,
+    });
     setGlobalHistory(nextGlobalHistory);
     setSyntaxTheme(nextSyntaxTheme);
     setTheme(nextTheme);
@@ -74,7 +82,7 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     setVersion(nextVersion);
   }), [
     client, setTabs, setActiveTab, setSecondaryTab, setHarnessLaunch, setScheduleLaunch,
-    setTabNameMaxLength, setActiveTabNameMaxLength, setClipboardHistoryMaxEntries,
+    setSettings,
     setGlobalHistory, setSyntaxTheme, setTheme,
     setTasks, setProfiles, setDisabledApplicationCommands,
   ]);

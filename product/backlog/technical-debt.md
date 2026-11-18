@@ -2,17 +2,6 @@
 
 ## ready
 
-* Source the app's server-owned display limits from one settings object and remove the component fallback literals that shadow them.
-
-Existing Debt: The tab-name limits and clipboard-history cap arrive in the state snapshot, but the client seeds them with its own `16`, `50`, and `15` in `web/src/useServerState.ts`, repeats `= 16` and `= 50` as optional prop defaults in `web/src/AppShell.tsx`, `web/src/Sidebar.tsx`, `web/src/TabStrip.tsx`, and `web/src/TabItem.tsx`, and hardcodes `tabNameMaxLength={50}` in `web/src/ReportingSection.tsx`, so the same server setting is declared in five places with no single source. Severity: 5/10
-
-Existing Risk: 5/10 - A server config change or a missed prop falls back to a stale literal instead of failing, and reporting rows already truncate tab names at 50 while the configured inactive limit is 16, so the same tab can read differently in two surfaces with no test noticing.
-
-Proposal Risk: 2/10 - Settings come from one provider seeded by the snapshot, so a forgotten consumer is a type error instead of a stale default; the residual risk is a leaf that still receives a literal from its caller, which a ReportingSection assertion now covers.
-
-Proposal: Add `src/shared/config-defaults.ts` with `DEFAULT_TAB_NAME_MAX_LENGTH`, `DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH`, and `DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES`, import them from `src/config.ts`, and seed `web/src/useServerState.ts` from the same module through `@shared/shared/config-defaults` (a runtime-value import, so confirm the path resolves in `web/tsconfig.json`, `web/vite.config.ts`, and the client project in `vitest.config.ts`, as `ai/guidelines/architecture-principles.md` requires). Replace `useTabNameLimits` and `useClipboardHistoryCap` with one `useAppSettings()` returning `{ settings, setSettings }` for the three values, and change `useServerState`'s `Setters` to take one `setSettings` that merges a partial settings object instead of the three individual setters it takes today (`setTabNameMaxLength`, `setActiveTabNameMaxLength`, `setClipboardHistoryMaxEntries`). Provide the object through an `AppSettingsProvider` beside `PluginChordProvider` in `web/src/App.tsx`, and have `web/src/Sidebar.tsx`, `web/src/ReportingSection.tsx`, and `web/src/AppCenterActionArea.tsx` read it and pass required values to `web/src/TabStrip.tsx` and `web/src/TabItem.tsx`; delete `AppMain.tsx`'s two length props, the two fields in `web/src/CenterActionAreaProps.ts`, and every `= 16`, `= 50`, and `tabNameMaxLength={50}` literal. Keep leaf components taking the narrow numbers they render rather than the whole settings object, per `ai/guidelines/react-code-organization.md`. Update `web/src/useServerState.test.ts`, `web/src/App.test.tsx`, `web/src/Sidebar.test.tsx`, `web/src/TabStrip.test.tsx`, and `web/src/ReportingSection.test.tsx`, and add a ReportingSection case that fails when reporting rows truncate at anything other than the configured inactive length. The server stays authoritative; this pass only deletes the client's copies.
-
-
 * Replace the inert import-cycle lint rule with a tested import-graph check that fails on real runtime cycles.
 
 Existing Debt: `eslint.config.mjs` sets `'import-x/no-cycle': 'error'` while its own note says the rule's graph traversal does not fire in this setup and recommends a manual `npx madge --circular --extensions ts,tsx src` instead, and no script, test, or CI step runs that command, so the configured guard is documentation rather than enforcement. Severity: 5/10

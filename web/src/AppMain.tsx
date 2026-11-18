@@ -34,8 +34,6 @@ type AppMainProps = LayoutState & {
   actionEntries: TabEntry[];
   reportingEntries: TabEntry[];
   closeTab: (index: number, reason?: { terminalExited: string }) => void;
-  tabNameMaxLength: number;
-  activeTabNameMaxLength: number;
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;
   questionPanelRef: React.RefObject<QuestionPanelHandle | null>;
   tabHandles: React.RefObject<Map<string, DirtyTabHandle>>;
@@ -61,7 +59,6 @@ export function AppMain({
   pickers, pickerSourceTab, tabs,
   quitConfirmOpen, dropRef,
   activeTab, secondaryTab, windowFocused, actionEntries, reportingEntries, closeTab,
-  tabNameMaxLength, activeTabNameMaxLength,
   sidebarLeftWidth, setSidebarLeftWidth, sidebarRightWidth, setSidebarRightWidth,
   reportingHeightPct, setReportingHeightPct, focusLeft, focusRight,
   splitPct, setSplitPct,
@@ -74,9 +71,8 @@ export function AppMain({
 
   return (
     <AppShell
-      tabs={tabs} client={client} dropRef={dropRef} tabNameMaxLength={tabNameMaxLength}
+      tabs={tabs} client={client} dropRef={dropRef}
       notificationsVisible={current?.view === 'notifications'}
-      activeTabNameMaxLength={activeTabNameMaxLength}
       sidebarLeftWidth={sidebarLeftWidth} onSidebarLeftWidthChange={setSidebarLeftWidth}
       sidebarRightWidth={sidebarRightWidth} onSidebarRightWidthChange={setSidebarRightWidth}
       focusLeft={focusLeft} focusRight={focusRight}
@@ -88,8 +84,7 @@ export function AppMain({
       <AppCenterActionArea
         entries={actionEntries} tabs={tabs} activeTab={activeTab} secondaryTab={secondaryTab}
         splitPct={splitPct} setSplitPct={setSplitPct}
-        client={client} closeTab={closeTab} tabNameMaxLength={tabNameMaxLength}
-        activeTabNameMaxLength={activeTabNameMaxLength}
+        client={client} closeTab={closeTab}
         onFocusCommandBar={() => inputReference.current?.focus()}
         onFocusEditor={(label) => tabHandles.current.get(label)?.focus()}
         windowFocused={windowFocused}

@@ -12,8 +12,8 @@ type Properties = BaseCenterActionAreaProps & {
 };
 
 export function AppCenterActionArea({
-  entries, tabs, activeTab, secondaryTab, splitPct, setSplitPct, client, closeTab, tabNameMaxLength,
-  activeTabNameMaxLength, onFocusCommandBar, onFocusEditor, windowFocused, dirtyTabs,
+  entries, tabs, activeTab, secondaryTab, splitPct, setSplitPct, client, closeTab,
+  onFocusCommandBar, onFocusEditor, windowFocused, dirtyTabs,
   mountedProps,
 }: Properties) {
   const splitTab = (index: number) => {
@@ -40,8 +40,7 @@ export function AppCenterActionArea({
     <CenterActionArea
       entries={entries} tabs={tabs} activeTab={activeTab} secondaryTab={secondaryIndex}
       splitPct={splitPct} setSplitPct={setSplitPct}
-      client={client} closeTab={closeTab} tabNameMaxLength={tabNameMaxLength}
-      activeTabNameMaxLength={activeTabNameMaxLength}
+      client={client} closeTab={closeTab}
       onFocusCommandBar={onFocusCommandBar} onFocusEditor={onFocusEditor}
       windowFocused={windowFocused} dirtyTabs={dirtyTabs} renderBody={renderBody}
       persistentLayers={<>

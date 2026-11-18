@@ -62,6 +62,7 @@ type EmitState = (
   scheduleLaunch?: StateEvent['scheduleLaunch'],
   secondaryTab?: number,
   disabledApplicationCommands?: StateEvent['disabledApplicationCommands'],
+  activeTabNameMaxLength?: number,
 ) => void;
 let stateListener: EmitState | null = null;
 let layoutListener: LayoutListener | null = null;
@@ -76,11 +77,11 @@ const client = {
   registerStateCollector: registerStateCollectorMock,
   saveFile: () => Promise.resolve(undefined),
   onState(listener: StateListener) {
-    stateListener = (tabs, active, maxLength, history, syntax, theme, tasks, scheduleLaunch = null, secondaryTab, disabledApplicationCommands = []) => {
+    stateListener = (tabs, active, maxLength, history, syntax, theme, tasks, scheduleLaunch = null, secondaryTab, disabledApplicationCommands = [], activeTabNameMaxLength = 50) => {
       listener({
         t: 'state', tabs, activeTab: active, tabNameMaxLength: maxLength,
         ...(secondaryTab !== undefined && { secondaryTab }),
-        activeTabNameMaxLength: 50, clipboardHistoryMaxEntries: 15, globalHistory: history,
+        activeTabNameMaxLength, clipboardHistoryMaxEntries: 15, globalHistory: history,
         syntaxTheme: syntax, theme, tasks,
         profiles: [], projectDir: '/tmp', version: '1.2.3',
         harnessLaunch: null, scheduleLaunch, disabledApplicationCommands,
@@ -766,6 +767,30 @@ describe('App layout WS event', () => {
 
     expect(area?.style.getPropertyValue('--center-left-pct')).toBe('62%');
     expect(sidebar?.style.flex).toBe('0 0 300px');
+  }, 15_000);
+});
+
+describe('App display limits from the state snapshot', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('shortens centre strip labels with the active and inactive limits the server sent', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App client={client} />);
+    act(() => {
+      stateListener!(
+        [
+          makeTab({ label: 'active', title: 'abcdefghij' }),
+          makeTab({ label: 'inactive', title: 'abcdefghij', number: 2 }),
+        ],
+        0, 5, [], 'github-dark', 'dark', [], undefined, undefined, undefined, 4,
+      );
+    });
+    const strip = container.querySelector<HTMLElement>('.center-strip-left')!;
+    expect(within(strip).getByText('abc…')).toBeTruthy();
+    expect(within(strip).getByText('abcd…')).toBeTruthy();
   }, 15_000);
 });
 

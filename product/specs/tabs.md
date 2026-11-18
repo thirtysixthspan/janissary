@@ -261,6 +261,8 @@ A command typed into a tab's command bar but not yet executed belongs to that ta
 
 A tab name longer than its display limit is shortened with a trailing `…`. Inactive tabs use `tabNameMaxLength`, which defaults to 16 characters. The active tab uses `activeTabNameMaxLength`, which defaults to 50 characters, so focusing a tab reveals more of a long name. Each limit counts the ellipsis as one of its displayed characters.
 
+Every tab strip takes these limits from the configuration the server publishes in the state snapshot — the centre strip, the docked sidebar strips, and the reporting strip. The reporting strip applies `tabNameMaxLength` to all of its rows, selected or not, so a tab name reads the same way there as it does while inactive in another strip. No strip substitutes a fixed length of its own.
+
 File-backed tabs keep the complete filename in their tab state and apply these limits only while rendering the strip. Focusing a file-backed tab can therefore expand a name that was shortened while inactive without losing any part of the underlying filename.
 
 ### Tab display alias

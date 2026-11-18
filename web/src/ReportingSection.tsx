@@ -5,6 +5,7 @@ import { beginResizeDrag } from './drag-resize';
 import { TabStrip } from './TabStrip';
 import type { TabEntry } from './tab-entries';
 import { DEFAULT_REPORTING_PCT } from './layout-defaults';
+import { useAppSettingsContext } from './AppSettings';
 
 // One reporting tab plus its index in the server's full tab list (close RPCs need it).
 export type ReportingEntry = TabEntry;
@@ -38,6 +39,7 @@ export function ReportingSection({
   heightPct?: number;
   onHeightPctChange?: (heightPct: number) => void;
 }) {
+  const { tabNameMaxLength } = useAppSettingsContext();
   const [selectedLabel, setSelectedLabel] = useState<string>();
 
   const onResize = useCallback((_down: React.MouseEvent, move: MouseEvent) => {
@@ -63,7 +65,8 @@ export function ReportingSection({
         onClose={(index) => onClose(entries[index].index)}
         onRename={(index, title) => onRename?.(entries[index].index, title)}
         onReorder={onReorder}
-        tabNameMaxLength={50}
+        tabNameMaxLength={tabNameMaxLength}
+        activeTabNameMaxLength={tabNameMaxLength}
         endControl={resizeButton}
       />
       {current.tab.view === 'monitor' && current.tab.monitor && (

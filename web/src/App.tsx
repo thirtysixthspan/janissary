@@ -15,11 +15,12 @@ import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
 import { useAppCommands } from './useAppCommands';
 import { useAppWindowKeys } from './useAppWindowKeys';
 import { createPluginChordRegistry, PluginChordProvider } from './plugins/PluginChords';
+import { AppSettingsProvider } from './AppSettings';
 import { AppCommandBarProvider, useAppCommandLine } from './shared/command-bar/AppCommandBar';
 import { usePickerOverlays } from './pickers/usePickerOverlays';
 import { firstOpenOverlay } from './pickers/overlay-registry';
 import { useAppCommandBarState } from './useAppCommandBarState';
-import { useServerState, useTabNameLimits, useClipboardHistoryCap } from './useServerState';
+import { useAppSettings, useServerState } from './useServerState';
 import { useLayoutState } from './useLayoutState';
 import { applySyntaxTheme } from './shared/syntax-highlight/themes';
 import { useWindowFocus } from './useWindowFocus';
@@ -56,8 +57,7 @@ export function App({ client }: { client: JanusClient }) {
   }, [pluginTabStateStore]);
   const [activeTab, setActiveTab] = useState(0);
   const [secondaryTab, setSecondaryTab] = useState<number>();
-  const { tabNameMaxLength, setTabNameMaxLength, activeTabNameMaxLength, setActiveTabNameMaxLength } = useTabNameLimits();
-  const { clipboardHistoryMaxEntries, setClipboardHistoryMaxEntries } = useClipboardHistoryCap();
+  const { settings, setSettings } = useAppSettings();
   const [globalHistory, setGlobalHistory] = useState<string[]>([]);
   const [syntaxTheme, setSyntaxTheme] = useState('github-dark');
   const [tasks, setTasks] = useState<TaskRow[]>([]);
@@ -103,7 +103,7 @@ export function App({ client }: { client: JanusClient }) {
   const currentTabForOverlay = useCallback(() => currentRef.current, []);
   const focusHarness = useCallback((ptyId: string) => { harnessHandles.current.get(ptyId)?.focus(); }, [harnessHandles]);
   useOverlayPlugins({
-    client, dropRef: dropReference, maxEntries: clipboardHistoryMaxEntries,
+    client, dropRef: dropReference, maxEntries: settings.clipboardHistoryMaxEntries,
     currentTab: currentTabForOverlay, focusHarness, tabLabel: current?.label,
   });
 
@@ -173,8 +173,7 @@ export function App({ client }: { client: JanusClient }) {
 
   useServerState(client, {
     setTabs: receiveTabs, setActiveTab, setSecondaryTab, setHarnessLaunch, setScheduleLaunch,
-    setTabNameMaxLength, setActiveTabNameMaxLength, setClipboardHistoryMaxEntries, setGlobalHistory,
-    setSyntaxTheme,
+    setSettings, setGlobalHistory, setSyntaxTheme,
     setTasks, setProfiles, setDisabledApplicationCommands,
     ...pickers.serverState,
   });
@@ -227,33 +226,34 @@ export function App({ client }: { client: JanusClient }) {
   if (!hasState) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
   return (
-    <PluginChordProvider registry={pluginChords}>
-      <AppCommandBarProvider bar={appCommandBar}>
-      <AppMain
-      current={current} client={client}
-      inputReference={inputReference}
-      pickers={pickers.view} pickerSourceTab={pickerSourceTab} tabs={tabs}
-      quitConfirmOpen={quitConfirmOpen}
-      dropRef={dropReference}
-      activeTab={activeTab} secondaryTab={secondaryTab} windowFocused={windowFocused}
-      actionEntries={actionEntries} reportingEntries={reportingEntries} closeTab={closeTab}
-      tabNameMaxLength={tabNameMaxLength} activeTabNameMaxLength={activeTabNameMaxLength}
-      sidebarLeftWidth={sidebarLeftWidth} setSidebarLeftWidth={setSidebarLeftWidth}
-      sidebarRightWidth={sidebarRightWidth} setSidebarRightWidth={setSidebarRightWidth}
-       reportingHeightPct={reportingHeightPct} setReportingHeightPct={setReportingHeightPct}
-       splitPct={splitPct} setSplitPct={setSplitPct}
-      focusLeft={focusLeft} focusRight={focusRight}
-      harnessHandles={harnessHandles} questionPanelRef={questionPanelRef}
-      tabHandles={tabHandles}
-      dirtyPluginTabs={dirtyPluginTabs} registerPluginDirtyHandle={registerPluginDirtyHandle}
-      getPluginTabState={getPluginTabState}
-      harnessLaunch={harnessLaunch} scheduleLaunch={scheduleLaunch}
-      confirmQuit={confirmQuit} cancelQuit={cancelQuit}
-      quitWalkRef={quitWalkRef} saveWalkOpenRef={saveWalkOpenRef}
-      onQuit={onQuit} revealDocked={revealDocked}
-      guardRef={guardRef}
-      />
-      </AppCommandBarProvider>
-    </PluginChordProvider>
+    <AppSettingsProvider settings={settings}>
+      <PluginChordProvider registry={pluginChords}>
+        <AppCommandBarProvider bar={appCommandBar}>
+          <AppMain
+            current={current} client={client}
+            inputReference={inputReference}
+            pickers={pickers.view} pickerSourceTab={pickerSourceTab} tabs={tabs}
+            quitConfirmOpen={quitConfirmOpen}
+            dropRef={dropReference}
+            activeTab={activeTab} secondaryTab={secondaryTab} windowFocused={windowFocused}
+            actionEntries={actionEntries} reportingEntries={reportingEntries} closeTab={closeTab}
+            sidebarLeftWidth={sidebarLeftWidth} setSidebarLeftWidth={setSidebarLeftWidth}
+            sidebarRightWidth={sidebarRightWidth} setSidebarRightWidth={setSidebarRightWidth}
+            reportingHeightPct={reportingHeightPct} setReportingHeightPct={setReportingHeightPct}
+            splitPct={splitPct} setSplitPct={setSplitPct}
+            focusLeft={focusLeft} focusRight={focusRight}
+            harnessHandles={harnessHandles} questionPanelRef={questionPanelRef}
+            tabHandles={tabHandles}
+            dirtyPluginTabs={dirtyPluginTabs} registerPluginDirtyHandle={registerPluginDirtyHandle}
+            getPluginTabState={getPluginTabState}
+            harnessLaunch={harnessLaunch} scheduleLaunch={scheduleLaunch}
+            confirmQuit={confirmQuit} cancelQuit={cancelQuit}
+            quitWalkRef={quitWalkRef} saveWalkOpenRef={saveWalkOpenRef}
+            onQuit={onQuit} revealDocked={revealDocked}
+            guardRef={guardRef}
+          />
+        </AppCommandBarProvider>
+      </PluginChordProvider>
+    </AppSettingsProvider>
   );
 }

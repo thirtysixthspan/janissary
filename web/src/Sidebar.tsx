@@ -14,6 +14,7 @@ import { multiOpenablePaths } from './multi-open';
 import { isFilesTabView } from './shared/tab/view-guards';
 import { DEFAULT_SIDEBAR_WIDTH_PX } from './layout-defaults';
 import type { TabPluginState } from './plugins/api';
+import { useAppSettingsContext } from './AppSettings';
 
 const MIN_WIDTH_PX = 180;
 const MAX_WIDTH_PCT = 50;
@@ -27,7 +28,6 @@ const MAX_WIDTH_PCT = 50;
 export function Sidebar({
   side, tabs, client, dropRef,
   pickerOverlays, pickerSourceTab,
-  tabNameMaxLength = 16, activeTabNameMaxLength = 50,
   width = DEFAULT_SIDEBAR_WIDTH_PX, onWidthChange, focusView, onNotificationsVisibilityChange,
   onPluginDirtyHandle,
   getPluginTabState,
@@ -39,8 +39,6 @@ export function Sidebar({
   // The active tab's command-bar drop handle, threaded down to a docked `FileNavigatorTab` so a drag
   // can find and insert into that tab's command bar. See `App.tsx`'s `dropRef`.
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
-  tabNameMaxLength?: number;
-  activeTabNameMaxLength?: number;
   width?: number;
   onWidthChange?: (width: number) => void;
   // The docked view this sidebar should show, when the server names one over the `layout` WS
@@ -53,6 +51,8 @@ export function Sidebar({
   pickerOverlays?: React.ReactNode;
   pickerSourceTab?: string;
 }) {
+  const { tabNameMaxLength, activeTabNameMaxLength } = useAppSettingsContext();
+
   const onResize = useCallback((down: React.MouseEvent, move: MouseEvent) => {
     const delta = side === 'left' ? move.clientX - down.clientX : down.clientX - move.clientX;
     const maxWidth = globalThis.innerWidth * (MAX_WIDTH_PCT / 100);

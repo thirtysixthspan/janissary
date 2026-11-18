@@ -1,7 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import type { StateEvent } from '@shared/protocol';
-import { useServerState } from './useServerState';
+import { DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH, DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES, DEFAULT_TAB_NAME_MAX_LENGTH } from '@shared/shared/config-defaults';
+import { useAppSettings, useServerState } from './useServerState';
 
 type StateListener = Parameters<Parameters<typeof useServerState>[0]['onState']>[0];
 
@@ -28,15 +29,34 @@ const makeSetters = () => ({
   setSecondaryTab: vi.fn(),
   setHarnessLaunch: vi.fn(),
   setScheduleLaunch: vi.fn(),
-  setTabNameMaxLength: vi.fn(),
-  setActiveTabNameMaxLength: vi.fn(),
-  setClipboardHistoryMaxEntries: vi.fn(),
+  setSettings: vi.fn(),
   setGlobalHistory: vi.fn(),
   setSyntaxTheme: vi.fn(),
   setTheme: vi.fn(),
   setTasks: vi.fn(),
   setProfiles: vi.fn(),
   setDisabledApplicationCommands: vi.fn(),
+});
+
+describe('useAppSettings', () => {
+  it('seeds all three limits from the shared server defaults', () => {
+    const { result } = renderHook(() => useAppSettings());
+    expect(result.current.settings).toEqual({
+      tabNameMaxLength: DEFAULT_TAB_NAME_MAX_LENGTH,
+      activeTabNameMaxLength: DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH,
+      clipboardHistoryMaxEntries: DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES,
+    });
+  });
+
+  it('merges a partial update without dropping the other limits', () => {
+    const { result } = renderHook(() => useAppSettings());
+    act(() => { result.current.setSettings({ tabNameMaxLength: 24 }); });
+    expect(result.current.settings).toEqual({
+      tabNameMaxLength: 24,
+      activeTabNameMaxLength: DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH,
+      clipboardHistoryMaxEntries: DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES,
+    });
+  });
 });
 
 describe('useServerState', () => {
@@ -59,9 +79,11 @@ describe('useServerState', () => {
     expect(setters.setTabs).toHaveBeenCalledWith(snapshot.tabs);
     expect(setters.setActiveTab).toHaveBeenCalledWith(2);
     expect(setters.setSecondaryTab).toHaveBeenCalledWith(5);
-    expect(setters.setTabNameMaxLength).toHaveBeenCalledWith(19);
-    expect(setters.setActiveTabNameMaxLength).toHaveBeenCalledWith(63);
-    expect(setters.setClipboardHistoryMaxEntries).toHaveBeenCalledWith(15);
+    expect(setters.setSettings).toHaveBeenCalledWith({
+      tabNameMaxLength: 19,
+      activeTabNameMaxLength: 63,
+      clipboardHistoryMaxEntries: 15,
+    });
     expect(setters.setGlobalHistory).toHaveBeenCalledWith(['previous-command']);
     expect(setters.setSyntaxTheme).toHaveBeenCalledWith('monokai');
     expect(setters.setTheme).toHaveBeenCalledWith('light');
