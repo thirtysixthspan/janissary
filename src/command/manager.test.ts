@@ -365,6 +365,125 @@ describe('CommandManager dispatchNativeLine', () => {
   });
 });
 
+describe('CommandManager ACP invocation metadata', () => {
+  it.each(['ask', 'tell'] as const)('carries the %s role through root and child invocation contexts', (role) => {
+    const { managers } = makeManagers();
+    const root = createInvocationContext(managers, 'janus', 'parent line', {
+      acpRole: role, acpTool: true, awaitResult: true,
+    });
+
+    expect(root.acpRole).toBe(role);
+    expect(root.acpTool).toBe(true);
+    expect(root.awaitResult).toBe(true);
+    expect(Object.isFrozen(root)).toBe(true);
+
+    const child = childInvocationContext(root, 'child line');
+    expect(child.acpRole).toBe(role);
+    expect(child.acpTool).toBe(true);
+    expect(child.awaitResult).toBe(true);
+    expect(child.line).toBe('child line');
+    expect(child.runId).toBe(root.runId);
+    expect(child.caller).toBe(root.caller);
+    expect(child.signal).toBe(root.signal);
+    expect(child.invocationId).not.toBe(root.invocationId);
+    expect(Object.isFrozen(child)).toBe(true);
+  });
+
+  it('leaves ACP fields absent without a role or marker', () => {
+    const { managers } = makeManagers();
+    const plain = createInvocationContext(managers, 'janus', 'plain');
+
+    expect(plain).not.toHaveProperty('acpRole');
+    expect(plain).not.toHaveProperty('acpTool');
+    expect(childInvocationContext(plain, 'child')).not.toHaveProperty('acpRole');
+  });
+
+  it('keeps a legacy ACP tool caller without a role', () => {
+    const { managers } = makeManagers();
+    const legacy = createInvocationContext(managers, 'janus', 'legacy', { acpTool: true, awaitResult: true });
+    const child = childInvocationContext(legacy, 'child');
+
+    expect(legacy.acpTool).toBe(true);
+    expect(child.acpTool).toBe(true);
+    expect(legacy).not.toHaveProperty('acpRole');
+    expect(child).not.toHaveProperty('acpRole');
+  });
+
+  it('leaves the ACP tool marker absent for role-only options', () => {
+    const { managers } = makeManagers();
+    const roleOnly = createInvocationContext(managers, 'janus', 'role-only', { acpRole: 'tell' });
+
+    expect(roleOnly.acpRole).toBe('tell');
+    expect(roleOnly).not.toHaveProperty('acpTool');
+    expect(childInvocationContext(roleOnly, 'child').acpRole).toBe('tell');
+    expect(childInvocationContext(roleOnly, 'child')).not.toHaveProperty('acpTool');
+  });
+
+  it.each(['ask', 'tell'] as const)('gives a nested command the inherited %s role and marker', async (role) => {
+    const { managers } = makeManagers();
+    let childInvocation: CommandInvocationContext | undefined;
+    const child = {
+      name: 'fixture-acp-child', match: (input: string) => input === 'fixture-acp-child',
+      samples: ['fixture-acp-child'],
+      run: (_input: string, _tab: unknown, _services: Managers, invocation: CommandInvocationContext) => {
+        childInvocation = invocation;
+        return 'child result';
+      },
+    };
+    commands.push(child);
+    try {
+      const parent: CommandInvocationContext = {
+        runId: 'run', invocationId: 'invocation',
+        caller: { label: 'janus', cwd: '/repo', context: [] },
+        signal: new AbortController().signal,
+        acpRole: role, acpTool: true,
+      };
+      await managers.command.dispatchLineInInvocation('janus', 'fixture-acp-child', parent);
+
+      expect(childInvocation?.acpRole).toBe(role);
+      expect(childInvocation?.acpTool).toBe(true);
+      expect(childInvocation?.runId).toBe('run');
+      expect(childInvocation?.caller).toBe(parent.caller);
+      expect(childInvocation?.signal).toBe(parent.signal);
+      expect(childInvocation?.line).toBe('fixture-acp-child');
+    } finally {
+      commands.splice(commands.indexOf(child), 1);
+    }
+  });
+
+  it('keeps ordinary dispatch entry points free of ACP metadata', async () => {
+    const { managers } = makeManagers();
+    const captured: CommandInvocationContext[] = [];
+    const fixture = {
+      name: 'fixture-ordinary', match: (input: string) => input === 'fixture-ordinary',
+      samples: ['fixture-ordinary'],
+      run: (_input: string, _tab: unknown, _services: Managers, invocation: CommandInvocationContext) => {
+        captured.push(invocation);
+        return 'ok';
+      },
+    };
+    commands.push(fixture);
+    try {
+      managers.command.dispatch('fixture-ordinary');
+      managers.command.dispatchTo('janus', 'fixture-ordinary');
+      await managers.command.executeCommand('fixture-ordinary', 'fixture-ordinary', 'janus', 0);
+      await managers.command.dispatchLineWithOutput('janus', 'fixture-ordinary');
+      await managers.command.dispatchQueuedLine('janus', 'fixture-ordinary');
+      const provenance = Object.freeze({ kind: 'system-schedule' as const, scheduleKey: 'daily' });
+      await managers.command.dispatchQueuedLine('janus', 'fixture-ordinary', provenance);
+
+      expect(captured).toHaveLength(6);
+      for (const invocation of captured) {
+        expect(invocation).not.toHaveProperty('acpRole');
+        expect(invocation).not.toHaveProperty('acpTool');
+      }
+      expect(captured.at(-1)?.systemSchedule).toEqual(provenance);
+    } finally {
+      commands.splice(commands.indexOf(fixture), 1);
+    }
+  });
+});
+
 describe('CommandManager shell command', () => {
   it.each([
     ['!ls -la', 'ls -la'],
@@ -403,6 +522,8 @@ describe('CommandManager structured results', () => {
       await managers.command.dispatchQueuedLine('janus', 'fixture-schedule-parent', provenance);
       expect(childInvocation?.systemSchedule).toEqual(provenance);
       expect(Object.isFrozen(childInvocation?.systemSchedule)).toBe(true);
+      expect(childInvocation).not.toHaveProperty('acpRole');
+      expect(childInvocation).not.toHaveProperty('acpTool');
     } finally {
       commands.splice(commands.indexOf(child), 1);
       commands.splice(commands.indexOf(parent), 1);

@@ -291,16 +291,21 @@ describe('runCorePrompt role primer', () => {
 describe('runCorePrompt tool runner', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it('dispatches a granted caller-side command with the prompt signal and resolves to its output', async () => {
-    const { start, dispatchNativeLine } = harness({ settings: settingsWith({}) });
-    const { deps, request } = start('ask', ['db sqlite query']);
-    await expect(deps.runCommand('db sqlite query shop SELECT 1')).resolves.toBe('dispatched output');
-    expect(dispatchNativeLine).toHaveBeenCalledWith(
-      'shell',
-      'db sqlite query shop SELECT 1',
-      expect.objectContaining({ acpTool: true, awaitResult: true, signal: request.abort.signal }),
-    );
-  });
+  it.each(['ask', 'tell'] as const)(
+    'dispatches a granted caller-side command with the %s role and prompt signal',
+    async (role) => {
+      const { start, dispatchNativeLine } = harness({ settings: settingsWith({}) });
+      const { deps, request } = start(role, ['db sqlite query'], 'display name');
+      await expect(deps.runCommand('db sqlite query shop SELECT 1')).resolves.toBe('dispatched output');
+      expect(dispatchNativeLine).toHaveBeenCalledWith(
+        'shell',
+        'db sqlite query shop SELECT 1',
+        expect.objectContaining({
+          acpRole: role, acpTool: true, awaitResult: true, signal: request.abort.signal,
+        }),
+      );
+    },
+  );
 
   it.each([
     ['disabled', { effectiveEnabled: false }],
@@ -574,6 +579,71 @@ describe('runCorePrompt tool runner', () => {
   });
 });
 
+describe('runCorePrompt native result mapping', () => {
+  const COMMAND = 'db sqlite query shop SELECT 1';
+  const OUTPUT = 'captured output';
+  const fallback = Symbol('fallback');
+  type NativeReply = { dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown };
+  const cases: Array<[string, NativeReply, string]> = [
+    [
+      'returns a core-response refusal string verbatim',
+      { dispatched: true, output: OUTPUT, coreResponse: true, result: 'Command refused.' },
+      'Command refused.',
+    ],
+    [
+      'keeps an empty core-response string empty despite captured output',
+      { dispatched: true, output: OUTPUT, coreResponse: true, result: '' },
+      '',
+    ],
+    [
+      'returns captured output for a core response with an object receipt',
+      { dispatched: true, output: OUTPUT, coreResponse: true, result: { receipt: 'ignored' } },
+      OUTPUT,
+    ],
+    [
+      'returns captured output for a core response with no result',
+      { dispatched: true, output: OUTPUT, coreResponse: true },
+      OUTPUT,
+    ],
+    [
+      'returns an ordinary string result before captured output',
+      { dispatched: true, output: OUTPUT, result: 'ordinary string result' },
+      'ordinary string result',
+    ],
+    [
+      'returns captured output for an ordinary response with no result',
+      { dispatched: true, output: OUTPUT },
+      OUTPUT,
+    ],
+    [
+      'serializes an ordinary structured result',
+      { dispatched: true, output: OUTPUT, result: { status: 'completed' } },
+      JSON.stringify({ status: 'completed' }),
+    ],
+    [
+      'falls back to String when JSON serialization is undefined',
+      { dispatched: true, output: OUTPUT, result: fallback },
+      String(fallback),
+    ],
+  ];
+
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it.each(cases)('%s', async (_label, reply, expected) => {
+    const { start, dispatchNativeLine } = harness({ settings: settingsWith({}) });
+    dispatchNativeLine.mockResolvedValueOnce(reply);
+    const { deps } = start('ask', ['db sqlite query']);
+    await expect(deps.runCommand(COMMAND)).resolves.toBe(expected);
+  });
+
+  it('rejects an undispatched reply carrying a string result before mapping it', async () => {
+    const { start, dispatchNativeLine } = harness({ settings: settingsWith({}) });
+    dispatchNativeLine.mockResolvedValueOnce({ dispatched: false, output: OUTPUT, result: 'mapped refusal' });
+    const { deps } = start('ask', ['db sqlite query']);
+    await expect(deps.runCommand(COMMAND)).rejects.toThrow(`No ACP tool matched command: ${COMMAND}`);
+  });
+});
+
 describe('runCorePrompt remote session', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
@@ -592,18 +662,23 @@ describe('runCorePrompt remote session', () => {
     expect(request.abort.signal.aborted).toBe(false);
   });
 
-  it('dispatches a granted caller command through the guarded runner with the prompt signal', async () => {
-    const { start, dispatchNativeLine, run } = harness({ remoteSession: true });
-    const { request } = start('ask', ['db sqlite query']);
-    const runCaller = remoteCall(run)[2];
+  it.each(['ask', 'tell'] as const)(
+    'dispatches a granted caller command through the guarded runner with the %s role',
+    async (role) => {
+      const { start, dispatchNativeLine, run } = harness({ remoteSession: true });
+      const { request } = start(role, ['db sqlite query'], 'display name');
+      const runCaller = remoteCall(run)[2];
 
-    await expect(runCaller('db sqlite query shop SELECT 1')).resolves.toBe('dispatched output');
-    expect(dispatchNativeLine).toHaveBeenCalledWith(
-      'shell',
-      'db sqlite query shop SELECT 1',
-      expect.objectContaining({ acpTool: true, awaitResult: true, signal: request.abort.signal }),
-    );
-  });
+      await expect(runCaller('db sqlite query shop SELECT 1')).resolves.toBe('dispatched output');
+      expect(dispatchNativeLine).toHaveBeenCalledWith(
+        'shell',
+        'db sqlite query shop SELECT 1',
+        expect.objectContaining({
+          acpRole: role, acpTool: true, awaitResult: true, signal: request.abort.signal,
+        }),
+      );
+    },
+  );
 
   it('raises the command-disabled notification for a far-side refused step', () => {
     const { start, managers, run } = harness({ remoteSession: true });
