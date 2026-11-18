@@ -9,7 +9,9 @@ import { TAB_SUBCOMMANDS } from '../commands/parse-tab.js';
 
 export function completeSendTarget(cursor: CompletionCursor, labels: string[]): CompletionResult | null {
   if (cursor.argumentIndex !== 1 || !['send', 'queue', 'close', 'exit'].includes(cursor.command)) return null;
-  return completeWord(cursor, labels);
+  return cursor.command === 'send' || cursor.command === 'queue'
+    ? completeLabelTarget(cursor, labels)
+    : completeWord(cursor, labels);
 }
 
 function precedingWords(cursor: CompletionCursor): string[] | undefined {
@@ -35,7 +37,7 @@ function formatTarget(label: string): string {
   return /[\s"']/u.test(label) ? `"${label.replaceAll('"', String.raw`\"`)}"` : label;
 }
 
-function completeTabTarget(cursor: CompletionCursor, labels: string[]): CompletionResult {
+function completeLabelTarget(cursor: CompletionCursor, labels: string[]): CompletionResult {
   let partial = cursor.token;
   if (partial.startsWith('"') || partial.startsWith("'")) {
     const parsed = readToken(partial, 0);
@@ -58,7 +60,7 @@ export function completeTabCommand(cursor: CompletionCursor, labels: string[]): 
   }
   const subcommand = preceding[1]?.toLowerCase();
   if (!TAB_SUBCOMMANDS.includes(subcommand as (typeof TAB_SUBCOMMANDS)[number])) return null;
-  if (preceding.length === 2) return completeTabTarget(cursor, labels);
+  if (preceding.length === 2) return completeLabelTarget(cursor, labels);
   if (preceding.length === 3 && ['pane', 'dock'].includes(subcommand)) {
     return completeWord(cursor, ['left', 'right']);
   }

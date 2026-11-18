@@ -43,6 +43,17 @@ describe('completeSendTarget', () => {
     const r = completeSendTarget(at('exit jan'), ['janus', 'claude']);
     expect(r?.newInput).toBe('exit janus ');
   });
+
+  it('quotes a spaced target label for send and queue', () => {
+    const labels = ['janus', 'review notes'];
+    expect(completeSendTarget(at('send rev'), labels)?.newInput).toBe('send "review notes" ');
+    expect(completeSendTarget(at('send "rev'), labels)?.newInput).toBe('send "review notes" ');
+    expect(completeSendTarget(at('queue rev'), labels)?.newInput).toBe('queue "review notes" ');
+  });
+
+  it('leaves close target suggestions unquoted', () => {
+    expect(completeSendTarget(at('close rev'), ['review notes'])?.newInput).toBe('close review notes ');
+  });
 });
 
 describe('completeTabCommand', () => {

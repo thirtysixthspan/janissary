@@ -137,7 +137,7 @@ An alias changes what you see, not what you can type: commands that target a tab
 
 An alias does not have to be unique, and two tabs can show the same one. They stay separate tabs with separate labels, and anything that takes a name closes or reaches whichever of them comes first in the strip. Setting an alias to nothing, or to the tab's own label, takes the alias back off rather than storing a name that says nothing new.
 
-Pressing `Tab` to complete a target offers the label and display alias of every open tab, including hidden tabs. Names that match without regard to case appear once, keeping the first spelling in tab order. The `tab` command quotes a name that contains spaces. For `send`, `queue`, `close`, and `schedule … in <tab>`, a spaced alias is offered without quotes. `close` reads the full target remainder, so it accepts that alias. `send`, `queue`, and `schedule` read one whitespace-delimited target token, so use the tab's label when its alias contains spaces. If multiple tabs share a name, entering it still targets the first match.
+Pressing `Tab` to complete a target offers the label and display alias of every open tab, including hidden tabs. Names that match without regard to case appear once, keeping the first spelling in tab order. The `tab`, `send`, and `queue` commands quote a name that contains spaces, and `send` and `queue` accept that quoted name as one target. `close` suggestions stay unquoted because it reads the full target remainder. `schedule … in <tab>` still offers a spaced alias without quotes and reads one whitespace-delimited target token, so use the tab's label there. If multiple tabs share a name, entering it still targets the first match.
 
 ## Closing tabs
 

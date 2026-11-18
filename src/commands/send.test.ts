@@ -35,6 +35,10 @@ describe('parseSendCommand', () => {
   it('joins multi-word text', () => {
     expect(parseSendCommand('send worker db vacuum')).toEqual({ label: 'worker', text: 'db vacuum' });
   });
+
+  it('parses a quoted multi-word label', () => {
+    expect(parseSendCommand('send "review notes" hello world')).toEqual({ label: 'review notes', text: 'hello world' });
+  });
 });
 
 describe('send delivery', () => {

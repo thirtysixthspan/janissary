@@ -9,9 +9,9 @@ send claude /standup
 send worker db sqlite list
 ```
 
-Name the tab by its label, the way it appears in the strip. A tab you renamed answers to its one-word display name too, ignoring case. `Tab` completes the name against every open tab, so you rarely have to type it in full. Tab numbers don't work here — `send 2 …` looks for a tab actually named `2`.
+Name the tab by its label, the way it appears in the strip. A tab you renamed answers to its display name too, ignoring case; quote the name if it contains spaces. `Tab` completes the name against every open tab, so you rarely have to type it in full. Tab numbers don't work here — `send 2 …` looks for a tab actually named `2`.
 
-`send` reads the first word after it as the tab name, so a display name with spaces can't be used. Say you renamed a tab to `review notes`. Both `send "review notes" hello` and `send review notes hello` fail with `No tab named "<label>".`, because the name is read as `"review` or `review`. Send to the tab's original label instead, or rename it to a single word. Only top-level tabs can be addressed, so a terminal card embedded in a transcript can't receive a `send`.
+`send` reads the first name after it as the tab name, and a name with spaces works when it is quoted. Say you renamed a tab to `review notes`: `send "review notes" hello` delivers `hello` to it, and `Tab` completes a spaced name inside quotes for you. Without quotes, `send review notes hello` reads `review` as the name and fails with `No tab named "review".`. Only top-level tabs can be addressed, so a terminal card embedded in a transcript can't receive a `send`.
 
 Everything after the tab name is delivered as one line. Runs of spaces between words collapse to a single space, so `send worker echo   a    b` types `echo a b`.
 
@@ -41,7 +41,7 @@ Errors land in *your* transcript rather than the target's, so a send that went n
 |---|---|
 | `Usage: send <label> <text>` | You typed bare `send` |
 | `No text to send.` | You named a tab but gave it nothing to type |
-| `No tab named "<label>".` | No open tab has that label or one-word display name |
+| `No tab named "<label>".` | No open tab has that label or display name |
 | `Tab "<label>" is not a running harness.` | The harness in that tab has exited |
 | `Tab "<label>" does not accept input.` | The target is a view tab |
 

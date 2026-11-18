@@ -17,6 +17,7 @@ the same file.
 - `send` (no args) — error: `Usage: send <label> <text>`
 - `send claude` (no text) — error: `No text to send.`
 - `send claude /standup` — delivers `/standup` to the tab labeled `claude`.
+- `send "review notes" hello` — delivers `hello` to the tab labeled or titled `review notes`; a name containing spaces is written as one quoted value.
 
 ## Routing by tab kind
 
@@ -62,11 +63,10 @@ than the sender's (see [[scheduling]]).
 ## Tab-completion
 
 Typing `send <partial>` completes the first argument against every open tab's label and display
-title (all tabs, not just agents), via `completeSendTarget` in
-`src/completion/target-handlers.ts`. The same handler backs `queue` and `close`/`exit`'s name
-argument (see [[tabs]]). Completion does not quote a spaced display title. Because `send` and
-`queue` parse the target as one whitespace-delimited word, such a suggestion is not accepted as a
-whole target; `close` reads the full remaining text.
+title (all tabs, not just agents). A spaced title is suggested inside quotes, and both `send` and
+`queue` read a quoted multi-word name as a single target, so such a suggestion is accepted as a
+whole. `close` and `exit` keep receiving unquoted suggestions because they read the entire
+remaining text as the name (see [[tabs]]).
 
 ## Non-goals
 
