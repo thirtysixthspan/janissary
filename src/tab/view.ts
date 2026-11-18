@@ -1,6 +1,6 @@
 import { queueProjection } from '../command-queue/support.js';
 import type { Tab } from './types.js';
-import type { ConnectionView, PendingQuestionView, ScheduleView, TabView } from '../protocol.js';
+import type { ConnectionView, PendingQuestionView, ScheduleView, TabView, TabViewBase } from '../protocol.js';
 import type { Managers } from '../managers.js';
 import type { TabPluginDeclaration } from '../plugins/api.js';
 import { abbreviateWorkspacePath } from '../paths.js';
@@ -11,6 +11,7 @@ import { tabGroupName } from './groups.js';
 import { queueEntryLine } from '../command-queue/entry.js';
 import { backgroundRepliesFor, pendingAcpReplyNamesFor } from './background-replies.js';
 import { editorRevealBlocked } from '../file-navigator/reveal-editor.js';
+import { narrowView } from './view-union.js';
 
 export function buildTabViews(
   tabs: Tab[],
@@ -110,7 +111,39 @@ export function buildTabView(
   const transcript = tab.transcript;
   const queue = queueProjection(tab, declarationOf?.(tab.plugin?.id ?? ''), commandQueue);
   const revealBlocked = tab.editor ? editorRevealBlocked(tab.editor) : undefined;
-  return {
+  const plugin = tab.plugin ? {
+    id: tab.plugin.id,
+    schemaVersion: tab.plugin.schemaVersion,
+    payload: tab.plugin.payload,
+    ...(recording !== undefined && { recording }),
+    ...(transcript !== undefined && { transcript }),
+    ...declaredFields(declarationOf?.(tab.plugin.id)),
+  } : undefined;
+  // The harness-view payload is the tab's own, spread rather than rebuilt, so this one field is
+  // mirrored onto it wherever a harness or ssh tab's row looks for the rest of its facts.
+  const harness = tab.harness && (recording === undefined
+    ? tab.harness
+    : { ...tab.harness, recording });
+  const editor = tab.editor ? {
+    ...tab.editor, path: shorten(tab.editor.path),
+    ...(revealBlocked !== undefined && { revealBlocked }),
+  } : undefined;
+  const monitor = tab.monitor;
+  const files = tab.files ? {
+    ...tab.files,
+    root: tab.files.remote
+      ? remoteFileNavigatorRoot(tab.files.root, workspaceOf?.(tab.label) ?? '') ?? shorten(tab.files.root)
+      : shorten(tab.files.root),
+    absoluteRoot: tab.files.root,
+    remote: remoteFileNavigatorTarget(tab.files.remote, tab.label, workspaceOf, reconnectingOf),
+  } : undefined;
+  // Deliberately NOT spreading `tab.editorDraft` here: the transient unsaved buffer is
+  // server-only and must never be broadcast back to clients (see editor-live-buffer-sync plan).
+  // Same for `tab.pageSnapshot`: the visible-text cache a plugin writes through `snapshotTab` is
+  // server-only, read by monitor page feeds, and must never be broadcast back to clients.
+  // And for `tab.sessionTerminated`: that copy is the server's own gate on a dead remote session, with
+  // no client reader. The copy the client does get is `harness.sessionTerminated`, passed through above.
+  const base: TabViewBase = {
     label: tab.label,
     ...(tab.hidden && { hidden: true }),
     ...(tab.systemShell && { systemShell: true }),
@@ -154,44 +187,16 @@ export function buildTabView(
     cmdHistory: tab.cmdHistory,
     ...queue,
     pendingQuestion,
-    view: tab.view,
     title: tab.title,
-    plugin: tab.plugin ? {
-      id: tab.plugin.id,
-      schemaVersion: tab.plugin.schemaVersion,
-      payload: tab.plugin.payload,
-      ...(recording !== undefined && { recording }),
-      ...(transcript !== undefined && { transcript }),
-      ...declaredFields(declarationOf?.(tab.plugin.id)),
-    } : undefined,
-    // The harness-view payload is the tab's own, spread rather than rebuilt, so this one field is
-    // mirrored onto it wherever a harness or ssh tab's row looks for the rest of its facts.
-    harness: tab.harness && (recording === undefined
-      ? tab.harness
-      : { ...tab.harness, recording }),
-    editor: tab.editor ? {
-      ...tab.editor, path: shorten(tab.editor.path),
-      ...(revealBlocked !== undefined && { revealBlocked }),
-    } : undefined,
-    // Deliberately NOT spreading `tab.editorDraft` here: the transient unsaved buffer is
-    // server-only and must never be broadcast back to clients (see editor-live-buffer-sync plan).
-    // Same for `tab.pageSnapshot`: the visible-text cache a plugin writes through `snapshotTab` is
-    // server-only, read by monitor page feeds, and must never be broadcast back to clients.
-    // And for `tab.sessionTerminated`: that copy is the server's own gate on a dead remote session, with
-    // no client reader. The copy the client does get is `harness.sessionTerminated`, passed through above.
-
-    monitor: tab.monitor,
-    files: tab.files ? {
-      ...tab.files,
-      root: tab.files.remote
-        ? remoteFileNavigatorRoot(tab.files.root, workspaceOf?.(tab.label) ?? '') ?? shorten(tab.files.root)
-        : shorten(tab.files.root),
-      absoluteRoot: tab.files.root,
-      remote: remoteFileNavigatorTarget(tab.files.remote, tab.label, workspaceOf, reconnectingOf),
-    } : undefined,
+    plugin,
+    harness,
+    editor,
+    monitor,
+    files,
     dock: tab.dock,
     pane: tab.pane,
   };
+  return narrowView(base, tab.view, { plugin, harness, editor, monitor, files });
 }
 
 // The metadata row's animated provisioning flag, in the workspace flag's place so the box replaces it

@@ -20,7 +20,7 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
     bufferLines: [],
     cmdHistory: [], commandQueue: [],
     ...overrides,
-  };
+  } as TabView;
 }
 
 function StatefulTabStrip({ tabs, initialActiveTab = 0 }: { tabs: TabView[]; initialActiveTab?: number }) {

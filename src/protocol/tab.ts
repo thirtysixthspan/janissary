@@ -70,8 +70,10 @@ export type PendingQuestionView = {
 };
 
 // A tab as the client renders it: presentation metadata plus the already-flattened transcript
-// lines (the server owns `flattenBuffer`, so the client never needs it).
-export type TabView = {
+// lines (the server owns `flattenBuffer`, so the client never needs it). The payload fields live on
+// the base as optional so a reader holding an unnarrowed tab can still ask `tab.harness?.ptyId`; the
+// `TabView` union below tightens the matching one to required for a tab narrowed on `view`.
+export type TabViewBase = {
   hidden?: true;
   systemShell?: true;
   label: string;
@@ -109,8 +111,6 @@ export type TabView = {
   commandQueue: string[];
   hasCommandQueue?: true;
   pendingQuestion?: PendingQuestionView;
-  // Body kind: undefined/`'agent'` for a normal tab, or the named live view kind.
-  view?: 'plugin' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications';
   // Display name when it differs from `label` (a plugin tab is titled by its plugin).
   title?: string;
   // Bundled-plugin envelope, present only when `view === 'plugin'`.
@@ -122,12 +122,7 @@ export type TabView = {
   harness?: HarnessView;
   // Editor-view payload, present only when `view === 'editor'`.
   editor?: EditorView;
-  // Monitor-window payload, present only when `view === 'monitor'`: the suggestion feed, the
-  // monitor's runtime name (also this tab's label, and what `unmonitor` and `monitor ask` address),
-  // the persona it runs — the same word as the name unless it was started under one of its own — the
-  // monitored tabs/groups (pre-formatted), and the running total of bytes sent/received on the
-  // monitor's dedicated ACP session.
-  monitor?: { suggestions: SuggestionView[]; name: string; persona: string; targets: string; contextBytes: number };
+  monitor?: MonitorView;
   // File-navigator payload, present only when `view === 'files'`.
   files?: FileNavigatorView;
   // Set when this tab is docked into a sidebar instead of living in the central tab strip.
@@ -135,3 +130,28 @@ export type TabView = {
   dock?: 'left' | 'right';
   pane?: 'right';
 };
+
+// Monitor-window payload, present only when `view === 'monitor'`: the suggestion feed, the
+// monitor's runtime name (also this tab's label, and what `unmonitor` and `monitor ask` address),
+// the persona it runs — the same word as the name unless it was started under one of its own — the
+// monitored tabs/groups (pre-formatted), and the running total of bytes sent/received on the
+// monitor's dedicated ACP session.
+export type MonitorView = {
+  suggestions: SuggestionView[];
+  name: string;
+  persona: string;
+  targets: string;
+  contextBytes: number;
+};
+
+// One member per body kind. `view` is the discriminant and the matching payload is required, so a
+// tab narrowed to a kind reads its payload without a non-null assertion. The plain member covers a
+// normal transcript tab, whose `view` is absent. `notifications` is view-only and carries no payload.
+export type TabView =
+  | (TabViewBase & { view: 'plugin'; plugin: PluginTabView })
+  | (TabViewBase & { view: 'harness'; harness: HarnessView })
+  | (TabViewBase & { view: 'editor'; editor: EditorView })
+  | (TabViewBase & { view: 'monitor'; monitor: MonitorView })
+  | (TabViewBase & { view: 'files'; files: FileNavigatorView })
+  | (TabViewBase & { view: 'notifications' })
+  | (TabViewBase & { view?: undefined });

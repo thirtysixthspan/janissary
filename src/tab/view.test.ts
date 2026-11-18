@@ -649,6 +649,45 @@ describe('buildTabView', () => {
     const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p, pending);
     expect(view.pendingQuestion).toEqual(pending);
   });
+
+  // TabView is a discriminated union: narrowing on `view` must make the matching payload available
+  // without a non-null assertion, and a tab that cannot supply that payload must drop the view.
+  describe('discriminated view payloads', () => {
+    it('returns the harness member, whose payload narrows with the discriminant', () => {
+      const tab = makeTab('claude', '#fff');
+      tab.view = 'harness';
+      tab.harness = { name: 'claude', program: 'claude', ptyId: 'pty1', status: 'running' };
+
+      const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p);
+      expect(view.view).toBe('harness');
+      if (view.view !== 'harness') throw new Error('expected a harness view');
+      expect(view.harness).toEqual(tab.harness);
+    });
+
+    it('drops the view when the tab names one but its payload is absent', () => {
+      const tab = makeTab('claude', '#fff');
+      tab.view = 'harness';
+
+      const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p);
+      expect(view.view).toBeUndefined();
+      expect(view.harness).toBeUndefined();
+    });
+
+    it('returns a plain view with no payload for a normal tab', () => {
+      const view = buildTabView(makeTab('agent-1', '#fff'), false, '/tmp', undefined, [], [], [], (p) => p);
+      expect(view.view).toBeUndefined();
+      expect(view.plugin).toBeUndefined();
+      expect(view.editor).toBeUndefined();
+    });
+
+    it('emits a view-only member for the notifications tab', () => {
+      const tab = makeTab('notifications', '#fff');
+      tab.view = 'notifications';
+
+      const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p);
+      expect(view.view).toBe('notifications');
+    });
+  });
 });
 
 // The wrapper every state event goes through. Its two closures are the only readers of the remote

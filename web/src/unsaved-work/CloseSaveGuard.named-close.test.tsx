@@ -16,7 +16,7 @@ function makeTab(label: string, overrides: Partial<TabView> = {}): TabView {
     busy: false, hasUnread: false, cwd: '/tmp', connections: [], schedule: [],
     bufferLines: [], cmdHistory: [], commandQueue: [],
     ...overrides,
-  };
+  } as TabView;
 }
 
 const tabs = [makeTab('janus'), makeTab('image', { view: 'plugin', title: 'alpha.png' })];

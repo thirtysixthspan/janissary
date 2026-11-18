@@ -7,7 +7,7 @@ function tab(overrides: Partial<TabView> = {}): TabView {
     label: 'a', number: 1, dotColor: '#fff', group: 0, groupColor: '#000', busy: false, hasUnread: false,
     cwd: '/repo', connections: [], schedule: [], bufferLines: [], cmdHistory: [], commandQueue: [],
     ...overrides,
-  };
+  } as TabView;
 }
 
 const EDITOR: EditorView = { name: 'a.txt', path: '/repo/a.txt', size: '1 B', url: '/open/1' };
