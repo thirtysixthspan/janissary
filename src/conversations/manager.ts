@@ -77,7 +77,7 @@ export class ConversationsManager {
   }
 
   create(id: string): boolean {
-    if (this.conversations.has(id) || this.store.read(id)) return false;
+    if (this.conversations.has(id) || this.store.read(id) || this.store.hasNewerRecord(id)) return false;
     const remembered = this.store.readLastUsedPair();
     const modelsFor = (harness: string) => this.managers.models.modelsFor(harness);
     const pair = remembered && hasConversationModel(remembered, modelsFor)

@@ -23,6 +23,11 @@ export type Conversation = {
   turns: ConversationTurnView[];
 };
 
+type DecodedConversation =
+  | { kind: 'conversation'; conversation: Conversation }
+  | { kind: 'newer-version'; version: number }
+  | { kind: 'invalid' };
+
 type StoreOptions = {
   projectDir?: string;
   home?: string;
@@ -48,6 +53,15 @@ function isConversation(value: unknown): value is Conversation {
     && isModelPair(value.pair)
     && Array.isArray(value.turns)
     && value.turns.every((turn) => isTurn(turn));
+}
+
+function decodeConversation(value: unknown): DecodedConversation {
+  if (!isRecord(value)) return { kind: 'invalid' };
+  const version = value.schemaVersion;
+  if (typeof version === 'number' && Number.isSafeInteger(version) && version > CONVERSATION_SCHEMA_VERSION) {
+    return { kind: 'newer-version', version };
+  }
+  return isConversation(value) ? { kind: 'conversation', conversation: value } : { kind: 'invalid' };
 }
 
 function assertId(id: string): void {
@@ -94,13 +108,14 @@ export class ConversationStore {
   }
 
   read(id: string): Conversation | undefined {
-    assertId(id);
-    try {
-      const parsed: unknown = JSON.parse(readFileSync(this.file(id), 'utf8'));
-      return isConversation(parsed) && parsed.id === id ? parsed : undefined;
-    } catch {
-      return undefined;
-    }
+    const decoded = this.decode(id);
+    return decoded.kind === 'conversation' && decoded.conversation.id === id
+      ? decoded.conversation
+      : undefined;
+  }
+
+  hasNewerRecord(id: string): boolean {
+    return this.decode(id).kind === 'newer-version';
   }
 
   hasRecord(id: string): boolean {
@@ -110,6 +125,9 @@ export class ConversationStore {
 
   write(conversation: Conversation): void {
     assertId(conversation.id);
+    if (this.hasNewerRecord(conversation.id)) {
+      throw new Error(`Refusing to overwrite conversation "${conversation.id}" written by a newer schema version.`);
+    }
     const durable = {
       ...conversation,
       turns: conversation.turns.filter((turn) => turn.streaming !== true),
@@ -145,6 +163,15 @@ export class ConversationStore {
     return path.join(this.root, id);
   }
 
+  private decode(id: string): DecodedConversation {
+    assertId(id);
+    try {
+      return decodeConversation(JSON.parse(readFileSync(this.file(id), 'utf8')) as unknown);
+    } catch {
+      return { kind: 'invalid' };
+    }
+  }
+
   private file(id: string): string {
     return path.join(this.directory(id), 'conversation.json');
   }
@@ -159,13 +186,16 @@ export class ConversationStore {
     const entries = readdirSync(this.root, { withFileTypes: true });
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
-      const conversation = this.read(entry.name);
-      if (conversation) {
+      const decoded = this.decode(entry.name);
+      if (decoded.kind === 'conversation' && decoded.conversation.id === entry.name) {
+        const conversation = decoded.conversation;
         summaries.set(conversation.id, {
           id: conversation.id, title: conversation.title, updatedAt: conversation.updatedAt,
         });
       } else {
-        this.warn(entry.name, 'missing or malformed conversation.json');
+        this.warn(entry.name, decoded.kind === 'newer-version'
+          ? `written by a newer schema version (v${decoded.version})`
+          : 'missing or malformed conversation.json');
       }
     }
     return summaries;

@@ -72,6 +72,8 @@ If workspace or session setup fails after a query is submitted, the pending turn
 
 Each conversation is stored in its own directory under the project's `.janissary/conversations/` directory. That directory contains the conversation record, an empty private workspace, and the workspace's private temporary directory. The directory is created when the first query is sent or either workspace control is used. Using a workspace control before the first query also saves the otherwise-empty conversation, so its workspace remains available after a restart. The directory survives application restarts and project workspace sweeps and is removed only when the conversation is deleted.
 
+A record written by a newer schema version is never read, listed, or opened, and no conversation can be created under its id. It is left exactly as it was and reported with a message naming the newer version, rather than being treated as a malformed record, and no save path overwrites it. Downgrading to an older build therefore cannot silently erase a newer conversation; it stays unavailable until a build that understands its version runs.
+
 Conversations and remembered model selection in the former user-wide store remain untouched and are not imported into projects automatically. Each project starts with its own conversation list and remembered model selection.
 
 Conversation records contain completed and failed turns, never a streaming turn. Renaming or changing the model while a reply is in progress updates an existing record without storing the partial response. A pending first query does not create a record through a metadata change; workspace controls can still save an empty conversation explicitly.
