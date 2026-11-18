@@ -35,6 +35,10 @@ export type CastHeader = {
 
 export type CastHeaderResult = { header: CastHeader } | { error: string };
 
+function isPositiveDimension(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+}
+
 function readString(source: Record<string, unknown>, key: string): string {
   const value = source[key];
   return typeof value === 'string' ? value : '';
@@ -66,7 +70,7 @@ export function parseCastHeader(line: string): CastHeaderResult {
   const term = version === 3 && isRecord(raw.term) ? raw.term : undefined;
   const cols = term?.cols ?? raw.width;
   const rows = term?.rows ?? raw.height;
-  if (typeof cols !== 'number' || typeof rows !== 'number') {
+  if (!isPositiveDimension(cols) || !isPositiveDimension(rows)) {
     return { error: 'the recording does not declare a terminal size' };
   }
   const colors = readColors(term);
@@ -87,7 +91,11 @@ function parseResize(data: unknown): CastResize | undefined {
   if (typeof data !== 'string') return undefined;
   const [cols, rows] = data.split('x');
   if (!/^\d+$/u.test(cols ?? '') || !/^\d+$/u.test(rows ?? '')) return undefined;
-  return { cols: Number(cols), rows: Number(rows) };
+  const width = Number(cols);
+  const height = Number(rows);
+  return isPositiveDimension(width) && isPositiveDimension(height)
+    ? { cols: width, rows: height }
+    : undefined;
 }
 
 // The incremental reader. Text arrives in whatever chunks the ranged reads return, and a chunk can
