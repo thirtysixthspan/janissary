@@ -33,6 +33,7 @@ import { tabActivityRows } from './activity.js';
 import { withRunAllocation } from './run-allocation.js';
 import { queueCapabilities } from './queue-capabilities.js';
 import { updateTabCapability } from './update-tab-capability.js';
+import { ownedPluginTabs } from '../tab/lookup.js';
 
 // Holds a plugin to the capability set its own manifest asked for. Without this the `capabilities`
 // field is decorative: every plugin receives the whole context regardless of what it declared, so
@@ -141,9 +142,7 @@ export function createPluginContext(
       if (!isEnabled()) return;
       const answering = answeringLabel !== undefined && managers.tab.byLabel(answeringLabel) ? answeringLabel : undefined;
       if (!answering && !origin.launch && managers.tab.tabs.every((tab) => tab.label !== origin.label)) return;
-      const existed = managers.tab.tabs.some(
-        (tab) => tab.plugin?.id === declaration.id && tab.plugin.instanceKey === instanceKey,
-      );
+      const existed = ownedPluginTabs(managers.tab.tabs, declaration.id, instanceKey).length > 0;
       managers.tab.openPluginTab(
         declaration.id,
         declaration.tabLabelPrefix,
@@ -158,9 +157,7 @@ export function createPluginContext(
         origin.launch ? { label: origin.label } : declaration.agentNamedTabs === true,
       );
       if (!existed) {
-        const created = managers.tab.tabs.find(
-          (tab) => tab.plugin?.id === declaration.id && tab.plugin.instanceKey === instanceKey,
-        );
+        const created = ownedPluginTabs(managers.tab.tabs, declaration.id, instanceKey)[0]?.tab;
         if (created) registerTab(created.label);
       }
     }),

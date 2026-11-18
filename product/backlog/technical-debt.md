@@ -2,17 +2,6 @@
 
 ## ready
 
-* Resolve a plugin's own tabs through one helper instead of four hand-rolled scans using two different lookup idioms.
-
-Existing Debt: The "tabs owned by this plugin" scan is repeated across four capability modules, and one file resolves the same instance key two different ways, so the definition of ownership has no single owner. Severity: 5/10
-
-Existing Risk: 4/10 - A change to how a plugin tab is identified must be applied in four places; missing one lets a plugin act on another plugin's tab or fail to find its own.
-
-Proposal Risk: 2/10 - One helper centralizes the filter, but callers still choose between key-based and index-based results, so an incorrect choice remains possible at each site.
-
-Proposal: `src/plugins/notifications.ts` `ownedTabs`, `src/plugins/own-tab-capabilities.ts` `ownTabKeys` and `src/plugins/line-capabilities.ts` `ownTabLabels` each filter `managers.tab.tabs` on `tab.plugin?.id === declaration.id`, while `own-tab-capabilities.ts` `dockTab` and `closeOwnTab` hand-roll a `findIndex` over the same predicate even as `setUnread`, `setBusy` and `snapshotTab` call `managers.tab.pluginTabByInstanceKey`. Add one exported helper beside `pluginTabByInstanceKey` in `src/tab/lookup.ts` that returns the owned tab and its index for a declaration id plus optional instance key, and route all four scans and both `findIndex` sites through it. Extend `src/plugins/context.test.ts` and `src/plugins/notifications.test.ts` with a case registering tabs from two plugins and asserting every capability sees only its own; those suites currently test each copy independently, so drift is invisible.
-
-
 * Give plugin capabilities manager methods for the tab fields they write instead of assigning into the host tab record directly.
 
 Existing Debt: Several plugin capabilities write host-owned `Tab` fields in place and remember to emit a dirty state broadcast themselves, mixing host record ownership with capability logic. Severity: 5/10

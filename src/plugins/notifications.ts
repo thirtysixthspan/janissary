@@ -6,6 +6,7 @@ import type {
 } from './api.js';
 import { readTopicData, subscribeTopic } from './topics.js';
 import { deliverBackground, type BackgroundDeliveryPort } from './background-delivery.js';
+import { ownedPluginTabs } from '../tab/lookup.js';
 
 // A notification handler does no I/O beyond reading the slice it was handed, so it gets a tighter
 // budget than the 5000 ms a user-initiated opener, command, or intent runs under.
@@ -22,7 +23,7 @@ export type TabPluginNotificationPort = BackgroundDeliveryPort & {
 // The instance keys of the tabs this plugin currently owns. Empty means there is nothing to tell it
 // about, which is also the test for whether to deliver at all.
 function ownedTabs(managers: Managers, id: string): string[] {
-  return managers.tab.tabs.flatMap((tab) => (tab.plugin?.id === id ? [tab.plugin.instanceKey] : []));
+  return ownedPluginTabs(managers.tab.tabs, id).map(({ tab }) => tab.plugin.instanceKey);
 }
 
 // A notification never activates a plugin: only one that is already active, still enabled, and

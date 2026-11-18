@@ -19,6 +19,8 @@ import { HARNESS_NAMES } from '../harness/index.js';
 import { BUNDLED_MODEL_CATALOG, type ModelCatalog } from '../models/catalog-file.js';
 import { EFFORT_LEVELS } from '../harness/effort-levels.js';
 import { messageBus } from '../bus.js';
+import { pluginTabByInstanceKey } from '../tab/lookup.js';
+import type { Tab } from '../tab/types.js';
 import { TabPluginHost } from './host.js';
 import { MANAGER_TAB_RELEASE } from '../managers.js';
 
@@ -57,7 +59,9 @@ function makeManagers(modelCatalog: ModelCatalog = BUNDLED_MODEL_CATALOG) {
       tabs, append, closeTab: vi.fn(), openPluginTab: vi.fn(), cur: () => tabs[0],
       launchDir: '/repo',
       ...fakeNotificationsHost(tabs),
-      pluginTabByInstanceKey: vi.fn(), markUnread: vi.fn(() => false), clearUnread: vi.fn(),
+      pluginTabByInstanceKey: vi.fn((id: string, key: string) =>
+        pluginTabByInstanceKey(tabs as unknown as Tab[], id, key)),
+      markUnread: vi.fn(() => false), clearUnread: vi.fn(),
     },
     openFile: { runAs: vi.fn(async () => {}) },
     notifications: new NotificationQueue(),
@@ -247,6 +251,59 @@ describe('ownTabKeys', () => {
 
   it('is refused to a plugin that did not declare it', () => {
     expect(() => contextFor(['note']).ownTabKeys()).toThrow('used capability "ownTabKeys" without declaring it');
+  });
+});
+
+describe('plugin-owned tab lookups are scoped to the calling plugin', () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  const pluginTab = (label: string, id: string, instanceKey: string): Tab => ({
+    label, dotColor: '#ddd', log: [], view: 'plugin',
+    plugin: { id, instanceKey, schemaVersion: 1, payload: {}, fileRefs: [], sourceLabel: label },
+  }) as Tab;
+
+  function owners() {
+    const { managers } = makeManagers();
+    const own = pluginTab('fixture-1', 'fixture', 'one');
+    const other = pluginTab('other-1', 'other', 'theirs');
+    managers.tab.tabs.push(own, other);
+    return { managers, own, other };
+  }
+
+  it('lists only this plugin\'s own instance keys', () => {
+    const { managers } = owners();
+    expect(contextFor(['ownTabKeys'], () => true, [], managers).ownTabKeys()).toEqual(['one']);
+  });
+
+  it('does not busy or snapshot another plugin\'s tab', () => {
+    const { managers, own, other } = owners();
+    const emit = vi.spyOn(messageBus, 'emit');
+    const capabilities = contextFor(['setBusy', 'snapshotTab'], () => true, [], managers);
+
+    capabilities.setBusy('theirs', true);
+    capabilities.snapshotTab('theirs', 'leaked');
+
+    expect(other.plugin?.busy).toBeUndefined();
+    expect(other.pageSnapshot).toBeUndefined();
+    expect(emit).not.toHaveBeenCalled();
+
+    capabilities.setBusy('one', true);
+    capabilities.snapshotTab('one', 'mine');
+    expect(own.plugin?.busy).toBe(true);
+    expect(own.pageSnapshot).toMatchObject({ text: 'mine' });
+  });
+
+  it('does not unread, dock or close another plugin\'s tab', () => {
+    const { managers, other } = owners();
+    const capabilities = contextFor(['setUnread', 'dockTab', 'closeOwnTab'], () => true, [], managers);
+
+    capabilities.setUnread('theirs', true);
+    capabilities.dockTab('theirs', 'right');
+    capabilities.closeOwnTab('theirs');
+
+    expect(managers.tab.markUnread).not.toHaveBeenCalled();
+    expect(other.dock).toBeUndefined();
+    expect(managers.tab.closeTab).not.toHaveBeenCalled();
   });
 });
 
