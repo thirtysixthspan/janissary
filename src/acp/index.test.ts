@@ -88,6 +88,7 @@ function handle(message) {
   }
   if (message.method === 'session/set_config_option') {
     configuredEffort = message.params.value === 'high';
+    update({ sessionUpdate: 'agent_thought_chunk', content: { type: 'text', text: 'effort-configured' } });
     write({
       jsonrpc: '2.0',
       id: message.id,
@@ -109,6 +110,10 @@ function handle(message) {
     return;
   }
   if (message.method === 'session/new') {
+    if (mode === 'fail-new') {
+      write({ jsonrpc: '2.0', id: message.id, error: { code: -32603, message: 'session creation failed' } });
+      return;
+    }
     sessions += 1;
     receivedMeta = { present: '_meta' in message.params, value: message.params._meta };
     write({
@@ -199,7 +204,12 @@ function agentScript(): string {
   return file;
 }
 
-type Connected = { session: AcpSession; info: Promise<AcpInfo>; errors: string[] };
+type ConnectExtras = {
+  onSessionStarted?: (sessionId: string) => void;
+  onConnect?: (info: AcpInfo) => void;
+};
+
+type Connected = { session: AcpSession; info: Promise<AcpInfo>; errors: string[]; started: ReturnType<typeof vi.fn> };
 
 function connect(
   mode: string,
@@ -209,24 +219,27 @@ function connect(
   onActivity?: (update: unknown) => void,
   installedSkillDirs?: string[],
   sessionMeta?: Record<string, unknown>,
+  extras: ConnectExtras = {},
 ): Connected {
   const errors: string[] = [];
   const connected = Promise.withResolvers<AcpInfo>();
+  const started = vi.fn<(sessionId: string) => void>();
   const session = connectAcp({
     command: process.execPath,
     args: [agentScript(), mode],
     cwd: os.tmpdir(),
     onError: (message) => { errors.push(message); },
-    onConnect: connected.resolve,
+    onConnect: (info) => { connected.resolve(info); extras.onConnect?.(info); },
     allowedTools,
     autonomous,
     effort,
     installedSkillDirs,
     onActivity,
     sessionMeta,
+    onSessionStarted: (sessionId) => { started(sessionId); extras.onSessionStarted?.(sessionId); },
   });
   sessions.push(session);
-  return { session, info: connected.promise, errors };
+  return { session, info: connected.promise, errors, started };
 }
 
 function prompt(session: AcpSession, text: string): Promise<{ text: string; stopReason: string }> {
@@ -515,6 +528,111 @@ describe('connectAcp', () => {
     const reply = await prompt(session, 'run task tools');
 
     expect(reply.text).toBe('protocol=1 sessions=1 configured=true hello');
+  });
+});
+
+describe('connectAcp — provider session id', () => {
+  it('reports the exact provider session id once across repeated prompts', async () => {
+    const { session, started } = connect('basic');
+
+    await prompt(session, 'first');
+    await prompt(session, 'second');
+
+    expect(started).toHaveBeenCalledExactlyOnceWith('stub-session');
+  });
+
+  it('reports the id before effort configuration and onConnect', async () => {
+    const events: string[] = [];
+    const { session } = connect(
+      'effort', undefined, undefined, { level: 'high', model: 'provider/model' },
+      (update) => {
+        const content = (update as { content?: { text?: string } }).content;
+        if (content?.text === 'effort-configured') events.push('configured');
+      },
+      undefined, undefined,
+      { onSessionStarted: () => { events.push('started'); }, onConnect: () => { events.push('connect'); } },
+    );
+
+    await prompt(session, 'run');
+
+    expect(events).toEqual(['started', 'configured', 'connect']);
+  });
+
+  it('keeps the reported id when effort selection fails after the handshake', async () => {
+    const { session, started } = connect('effort', undefined, undefined, { level: 'absent', model: 'provider/model' });
+
+    await expect(prompt(session, 'run')).rejects.toThrow('unsupported effort "absent"');
+    expect(started).toHaveBeenCalledExactlyOnceWith('stub-session');
+  });
+
+  it('reports no id when initialization fails', async () => {
+    const { session, started } = connect('fail-init');
+
+    await expect(prompt(session, 'hi')).rejects.toThrow('initialization failed');
+    expect(started).not.toHaveBeenCalled();
+  });
+
+  it('reports no id when the provider refuses a new session', async () => {
+    const { session, started } = connect('fail-new');
+
+    await expect(prompt(session, 'hi')).rejects.toThrow('session creation failed');
+    expect(started).not.toHaveBeenCalled();
+  });
+
+  it('reports no late id when killed before the handshake completes', async () => {
+    const { session, started } = connect('basic');
+    const handlers = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
+    session.prompt('hi', handlers);
+    session.kill();
+
+    await vi.waitFor(() => expect(handlers.onError).toHaveBeenCalledExactlyOnceWith('ACP session closed.'));
+    expect(started).not.toHaveBeenCalled();
+  });
+
+  it('reports one id when a pre-handshake turn is cancelled and initialization completes', async () => {
+    const { session, started } = connect('cancel');
+    const pending = prompt(session, 'hold');
+    await session.cancel();
+
+    expect(await pending).toEqual({ text: '', stopReason: 'cancelled' });
+    await prompt(session, 'next');
+    expect(started).toHaveBeenCalledExactlyOnceWith('stub-session');
+  });
+
+  it('does not initialize merely because a caller supplied the hook', async () => {
+    const { session, started } = connect('basic');
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(started).not.toHaveBeenCalled();
+    expect(await prompt(session, 'hi')).toMatchObject({ text: 'protocol=1 sessions=1 hello' });
+    expect(started).toHaveBeenCalledExactlyOnceWith('stub-session');
+  });
+
+  it('initializes an autonomous connection before prompting and still reports one id', async () => {
+    const { session, info, started } = connect('basic', undefined, true);
+
+    expect(await info).toMatchObject({ provider: 'stub-agent' });
+    expect(started).toHaveBeenCalledExactlyOnceWith('stub-session');
+    const reply = await prompt(session, 'task');
+    expect(reply.text).toBe('protocol=1 sessions=1 hello');
+    expect(started).toHaveBeenCalledExactlyOnceWith('stub-session');
+  });
+
+  it('works for a caller that omits the hook', async () => {
+    const errors: string[] = [];
+    const session = connectAcp({
+      command: process.execPath,
+      args: [agentScript(), 'basic'],
+      cwd: os.tmpdir(),
+      onError: (message) => { errors.push(message); },
+    });
+    sessions.push(session);
+
+    const reply = await prompt(session, 'hi');
+
+    expect(reply.text).toBe('protocol=1 sessions=1 hello');
+    expect(errors).toEqual([]);
   });
 });
 

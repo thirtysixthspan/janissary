@@ -50,6 +50,8 @@ Core keeps a separate connection and record for each role on a tab. It starts ea
 
 A session carries an identity minted when it is created and forgotten when it is closed, and `startAcp` reports it beside the model. A caller that primed one session — a persona, a trust delimiter — compares it to learn that the session it is now talking to is a different one, because a replacement arrives with nothing the previous one was told.
 
+A local connection also learns the provider's own session id from the agent's handshake. It is reported once, as soon as the provider assigns it, and stays available for that session's lifetime; it is absent before the handshake, when initialization fails, or when the session is closed before the provider answers. An effort failure after the id arrives does not remove it. Closing or resetting the connection, replacing the session, or removing or closing the tab clears the exposed id, and a replacement reports no provider id until its own handshake. This provider id is distinct from the internal session identity used by `startAcp` and prompt results, and appears in neither connection info nor plugin results.
+
 ### Cancellation
 
 Core cancellation returns false when no logical request is active and starts no connection. Otherwise it aborts that request's host loop and active or queued question immediately, preserving unrelated questions. Concurrent calls share one cancellation. Running browser or database work may still complete; its late result cannot dispatch another command or provider turn.

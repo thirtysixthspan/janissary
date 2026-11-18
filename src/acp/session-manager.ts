@@ -14,7 +14,9 @@ import { ACP_ROLES, DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
 type ConnectHooks = { onError: (message: string) => void; onConnect: () => void };
 type Handshake = 'connecting' | 'idle' | 'published' | 'failed';
 type Session = AcpSession | RemoteAcpSession;
-type CoreSession = { session?: Session; runtime: TabRuntime; identity: string; entry: RoleEntry; model?: string };
+type CoreSession = {
+  session?: Session; runtime: TabRuntime; identity: string; entry: RoleEntry; model?: string; providerId?: string;
+};
 type RoleSessions = Map<AcpRole, CoreSession>;
 
 export class AcpSessionManager {
@@ -32,6 +34,13 @@ export class AcpSessionManager {
 
   sessionIdentity(label: string, role: AcpRole = DEFAULT_ACP_ROLE): string | undefined {
     return this.sessions.get(label)?.get(role)?.identity;
+  }
+
+  providerSessionId(label: string, role: AcpRole = DEFAULT_ACP_ROLE): string | undefined {
+    const holder = this.sessions.get(label)?.get(role);
+    if (holder?.providerId === undefined) return undefined;
+    const runtime = this.managers.tab.byLabel(label)?.runtime;
+    return holder.runtime === runtime && !holder.runtime.closing ? holder.providerId : undefined;
   }
 
   session(
@@ -53,6 +62,9 @@ export class AcpSessionManager {
     };
     const current = () => this.sessions.get(label)?.get(role) === holder
       && this.managers.tab.byLabel(label)?.runtime === runtime && !runtime.closing;
+    const onSessionStarted = (providerId: string) => {
+      if (current()) holder.providerId = providerId;
+    };
     let handshake: Handshake = 'connecting';
     let failure: string | undefined;
     const publish = () => {
@@ -97,7 +109,7 @@ export class AcpSessionManager {
           },
         })
         : connectAcp({
-          ...launch, cwd, onError, onConnect, workspaceDir: tab.workspaceDir, offline: tab.offline,
+          ...launch, cwd, onError, onConnect, onSessionStarted, workspaceDir: tab.workspaceDir, offline: tab.offline,
           onActivity: (update) => {
             const classified = acpActivity(update);
             if (classified) activity(classified.kind, classified.text);
