@@ -20,6 +20,7 @@ import { BUNDLED_MODEL_CATALOG, type ModelCatalog } from '../models/catalog-file
 import { EFFORT_LEVELS } from '../harness/effort-levels.js';
 import { messageBus } from '../bus.js';
 import { pluginTabByInstanceKey } from '../tab/lookup.js';
+import { setPageSnapshot, setPluginBusy } from '../tab/operations.js';
 import type { Tab } from '../tab/types.js';
 import { TabPluginHost } from './host.js';
 import { MANAGER_TAB_RELEASE } from '../managers.js';
@@ -61,6 +62,7 @@ function makeManagers(modelCatalog: ModelCatalog = BUNDLED_MODEL_CATALOG) {
       ...fakeNotificationsHost(tabs),
       pluginTabByInstanceKey: vi.fn((id: string, key: string) =>
         pluginTabByInstanceKey(tabs as unknown as Tab[], id, key)),
+      setPluginBusy: vi.fn(setPluginBusy), setPageSnapshot: vi.fn(setPageSnapshot),
       markUnread: vi.fn(() => false), clearUnread: vi.fn(),
     },
     openFile: { runAs: vi.fn(async () => {}) },
@@ -198,6 +200,7 @@ describe('setBusy', () => {
     contextFor(['setBusy'], () => true, [], managers).setBusy('shell-1', true);
 
     expect(managers.tab.pluginTabByInstanceKey).toHaveBeenCalledWith('fixture', 'shell-1');
+    expect(managers.tab.setPluginBusy).toHaveBeenCalledWith(tab, true);
     expect(tab.plugin.busy).toBe(true);
     expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
   });
@@ -289,6 +292,9 @@ describe('plugin-owned tab lookups are scoped to the calling plugin', () => {
 
     capabilities.setBusy('one', true);
     capabilities.snapshotTab('one', 'mine');
+    expect(managers.tab.setPluginBusy).toHaveBeenCalledOnce();
+    expect(managers.tab.setPluginBusy).toHaveBeenCalledWith(own, true);
+    expect(managers.tab.setPageSnapshot).toHaveBeenCalledWith(own, 'mine');
     expect(own.plugin?.busy).toBe(true);
     expect(own.pageSnapshot).toMatchObject({ text: 'mine' });
   });

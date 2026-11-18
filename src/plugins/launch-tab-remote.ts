@@ -1,4 +1,3 @@
-import { messageBus } from '../bus.js';
 import { startRemoteLaunch } from '../harness/remote-launch.js';
 import { poolCandidates, suffixCandidates } from '../launch-name/check.js';
 import { resolveLocalLaunchName } from '../launch-name/local.js';
@@ -89,8 +88,7 @@ export function launchRemotePluginTab(
   }
 
   const tab = input.managers.tab.byLabel(label);
-  if (tab?.plugin) tab.plugin.busy = true;
-  messageBus.emit('state', { type: 'dirty' });
+  if (tab?.plugin) input.managers.tab.setPluginBusy(tab, true);
   const { managers, declaration, deferred } = input;
   const closeRetry = retry;
   const onReady = async () => {
@@ -100,10 +98,9 @@ export function launchRemotePluginTab(
     if (!live || !deferred || !input.isEnabled()
       || (input.origin.runId !== undefined && managers.agent.isAgentRun(input.origin.runId)
         && !managers.agent.isLive(input.origin.runId))) return;
-    live.plugin.busy = false;
+    managers.tab.setPluginBusy(live, false);
     const workspace = remote.cwd();
     managers.tab.setCwd(label, workspace);
-    messageBus.emit('state', { type: 'dirty' });
     reportRemoteCleanup(managers, closeRetry, label, parsed.host, remote.cleaned());
     reportRemoteClone(managers, closeRetry, parsed.host, remote.cloned());
     const outcome = await deferred.invoke((capabilities) => ready({

@@ -1,5 +1,4 @@
 import type { Managers } from '../managers.js';
-import { messageBus } from '../bus.js';
 import { closeQuitsApp } from '../tab/placement.js';
 import { armHarnessIdleEscalation, cancelHarnessIdleEscalation } from '../harness/idle-notification.js';
 import type { TabPluginDeclaration, TabPluginServerCapabilities } from './api.js';
@@ -35,8 +34,7 @@ export function ownTabCapabilities(input: {
       if (!isEnabled()) return;
       const tab = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey);
       if (!tab || (tab.plugin.busy ?? false) === busy) return;
-      tab.plugin.busy = busy;
-      messageBus.emit('state', { type: 'dirty' });
+      managers.tab.setPluginBusy(tab, busy);
     },
     // Placement, addressed like `setBusy` so a plugin reaches only its own tab, and delegating to the
     // same `setDock` the client's dock-cycle control uses — there is still one docking path.
@@ -50,7 +48,7 @@ export function ownTabCapabilities(input: {
     snapshotTab: (instanceKey, text) => {
       if (!isEnabled()) return;
       const tab = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey);
-      if (tab) tab.pageSnapshot = { text, capturedAt: Date.now() };
+      if (tab) managers.tab.setPageSnapshot(tab, text);
     },
     // The ordinary close path, never awaited so a `notify` handler's budget is not spent on release,
     // and never the close that quits the app.

@@ -1,5 +1,4 @@
 import type { Managers } from '../managers.js';
-import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';
 import { abbreviateWorkspaceDir } from '../paths.js';
 import { unconfinedAgentCwd } from '../profile/inherited-cwd.js';
@@ -92,8 +91,7 @@ async function runReady(
   if (input.origin.runId && managers.agent.isAgentRun(input.origin.runId)
     && !managers.agent.isLive(input.origin.runId)) return;
   const tab = launchedTab(managers, declaration.id, instanceKey);
-  if (tab) tab.plugin.busy = false;
-  messageBus.emit('state', { type: 'dirty' });
+  if (tab) managers.tab.setPluginBusy(tab, false);
   if (!deferred || !input.isEnabled()
     || (input.origin.runId !== undefined && managers.agent.isAgentRun(input.origin.runId)
       && !managers.agent.isLive(input.origin.runId))) return;
@@ -149,8 +147,7 @@ function awaitClone(
 ): void {
   const { managers, declaration } = input;
   const tab = launchedTab(managers, declaration.id, instanceKey);
-  if (tab) tab.plugin.busy = true;
-  messageBus.emit('state', { type: 'dirty' });
+  if (tab) managers.tab.setPluginBusy(tab, true);
   wireProvisioning(
     label, clone.ready, () => launchedTab(managers, declaration.id, instanceKey) !== undefined,
     () => { void runReady(input, label, instanceKey, clone, ready); },

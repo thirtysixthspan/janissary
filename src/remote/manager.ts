@@ -1,5 +1,6 @@
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
+import type { RemoteTarget, Tab } from '../tab/types.js';
 import type { RemoteAddress } from './address.js';
 import type { RemoteChannel } from './channel/index.js';
 import type { ServerFrame } from './protocol-frames.js';
@@ -78,6 +79,19 @@ export class RemoteManager {
   }
 
   get(label: string): RemoteChannel | undefined { return this.entries.get(label)?.channel; }
+
+  // The remote target a joined plugin tab copies from its source, and its counterpart when the join
+  // is released. The channel bookkeeping stays with the caller; these own the tab-field write and
+  // the broadcast that keeps the metadata row in step with it.
+  setRemoteTarget(tab: Tab, remote: RemoteTarget): void {
+    tab.remote = remote;
+    messageBus.emit('state', { type: 'dirty' });
+  }
+
+  clearRemoteTarget(tab: Tab): void {
+    delete tab.remote;
+    messageBus.emit('state', { type: 'dirty' });
+  }
 
   // The tab's remote address, for the connections panel's `ssh:<destination>` row.
   addressOf(label: string): RemoteAddress | undefined { return this.entries.get(label)?.address; }

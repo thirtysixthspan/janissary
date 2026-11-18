@@ -1030,3 +1030,48 @@ describe('TabManager retargetEditorTab', () => {
     expect(managers.editorWatch.watch).toHaveBeenCalledWith(nestedEditor.label, '/tree/lib/notes.txt');
   });
 });
+
+describe('plugin-owned field writes', () => {
+  const plugin = {
+    id: 'fixture', instanceKey: 'k', schemaVersion: 1, payload: {}, fileRefs: [], sourceLabel: 'janus',
+  };
+
+  it('setPluginBusy writes the plugin busy dot and broadcasts the change', () => {
+    const tm = makeTabManager();
+    const tab = { ...makeTab('plugin-tab', '#abc'), plugin: { ...plugin } };
+    tm.tabs.push(tab);
+    const emit = vi.spyOn(messageBus, 'emit');
+
+    tm.setPluginBusy(tab, true);
+
+    expect(tab.plugin.busy).toBe(true);
+    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
+    emit.mockRestore();
+  });
+
+  it('setPluginBusy ignores a tab without a plugin record', () => {
+    const tm = makeTabManager();
+    const tab = makeTab('plain', '#abc');
+    const emit = vi.spyOn(messageBus, 'emit');
+
+    tm.setPluginBusy(tab, true);
+
+    expect(emit).not.toHaveBeenCalled();
+    emit.mockRestore();
+  });
+
+  it('setPageSnapshot writes text and a fresh timestamp without broadcasting', () => {
+    const tm = makeTabManager();
+    const tab = makeTab('plugin-tab', '#abc');
+    tm.tabs.push(tab);
+    const emit = vi.spyOn(messageBus, 'emit');
+    const before = Date.now();
+
+    tm.setPageSnapshot(tab, 'visible');
+
+    expect(tab.pageSnapshot).toMatchObject({ text: 'visible' });
+    expect(tab.pageSnapshot?.capturedAt).toBeGreaterThanOrEqual(before);
+    expect(emit).not.toHaveBeenCalled();
+    emit.mockRestore();
+  });
+});

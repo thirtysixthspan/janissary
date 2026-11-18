@@ -29,6 +29,14 @@ function setup(): Setup {
     reconnectingOf: vi.fn(() => false),
     attach: vi.fn(() => true),
     release: vi.fn(() => true),
+    setRemoteTarget: vi.fn((tab: Tab, target: { address: string; host: string }) => {
+      tab.remote = target;
+      messageBus.emit('state', { type: 'dirty' });
+    }),
+    clearRemoteTarget: vi.fn((tab: Tab) => {
+      delete tab.remote;
+      messageBus.emit('state', { type: 'dirty' });
+    }),
     entryOf: vi.fn(),
     closeTab: vi.fn(),
   };
@@ -61,6 +69,7 @@ describe('remoteJoinCapabilities', () => {
     const { own, source, managers, remote } = setup();
     expect(caps(managers).joinRemoteWorkspace('k1', SOURCE)).toBe(true);
     expect(remote.attach).toHaveBeenCalledWith(OWN, SOURCE);
+    expect(remote.setRemoteTarget).toHaveBeenCalledWith(own, { address: 'dev@box', host: 'box' });
     expect(own.remote).toEqual({ address: 'dev@box', host: 'box' });
     expect(own.remote).not.toBe(source.remote);
     expect(own.label).toBe(OWN);
@@ -99,6 +108,7 @@ describe('remoteJoinCapabilities', () => {
     emit.mockClear();
     capabilities.releaseRemoteWorkspace('k1');
     expect(remote.release).toHaveBeenCalledWith(OWN);
+    expect(remote.clearRemoteTarget).toHaveBeenCalledWith(own);
     expect(own.remote).toBeUndefined();
     expect(releasePluginRemoteResource).toHaveBeenCalledWith(OWN);
     expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
