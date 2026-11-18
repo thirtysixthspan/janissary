@@ -16,6 +16,10 @@ Bare `subagent` and every flag-form failure return exactly `Usage: subagent --ro
 
 The caller-facing primer teaches the one-line JSON grammar with escaped newlines, that the command returns nothing immediately and does not block, and that results arrive later as new prompts each holding one JSON object. A `started` message carries `status`, the canonical `role`, `sessionId`, and `callerId`, and means the subagent is running in the background. A completion carries `status`, `sessionId`, `callerId`, and `output`. Session ids are provider ids; a failed completion may carry a null session id, and a `started` message may be skipped when its completion overtakes it. Provider ids are taken from the agent's own handshake rather than minted by Janissary, so a run whose handshake never completes has none; that provider id stays separate from the internal session identity that prompts and `startAcp` report. Completion statuses are `completed` (finished successfully), `partial` (stopped at the tool-loop limit), `failed` (the output is the source error), and `terminated` (stopped). The primer lists no roles and consults no role descriptions.
 
+### Provider ids on remote runs
+
+On a remote run the far side reports the provider id as soon as its `newSession` succeeds, ahead of effort configuration and readiness, so a failed effort setup cannot discard an id whose handshake already completed. A normal readiness frame may carry the same id as an optional field, but readiness timing is unchanged. A caller keeps the first id it observes for `started` and the most recent id from a completed handshake for an outcome, with no id meaning `null`; none of these ids is the internal session identity.
+
 ### Task prompt
 
 A subagent is told it is a subagent and asked to finish with a self-contained final result for the agent that launched it. The task text follows verbatim, then the optional context verbatim. The task prompt does not repeat the command protocol primer and adds no summarizing turn or output cap.

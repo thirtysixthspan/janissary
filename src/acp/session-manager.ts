@@ -101,7 +101,7 @@ export class AcpSessionManager {
     try {
       holder.session = channel
         ? createRemoteAcpSession(channel, { ...launch, id: `racp${++this.remoteCounter}`, offline: tab.offline }, {
-          onError, onConnect, onActivity: activity,
+          onError, onConnect, onSessionStarted, onActivity: activity,
           onTransportLost: () => {
             const result = { answered: false as const, error: 'Remote connection lost.' };
             onError(result.error);

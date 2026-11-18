@@ -6,7 +6,7 @@ import { connectAcp } from './index.js';
 import { getProjectTokens } from '../project/tokens.js';
 import type * as SandboxModule from '../sandbox/index.js';
 import type { SandboxOptions } from '../sandbox/index.js';
-import type { AcpInfo, AcpSession } from './types.js';
+import type { AcpInfo, AcpLoopHandlers, AcpRunSnapshot, AcpSession } from './types.js';
 import { shutdownProcessTree } from './process-tree.js';
 import { AcpManager } from './manager.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
@@ -16,6 +16,7 @@ import { makeTab } from '../tab/index.js';
 import type { Managers } from '../managers.js';
 import { RemoteChannel } from '../remote/channel/index.js';
 import { RemoteAcp } from '../remote/serve-acp.js';
+import { createRemoteAcpSession } from '../remote/acp-session.js';
 import { decodeFrame, encodeFrame, encodeHandshake } from '../remote/protocol.js';
 
 // The sandbox is left real — these tests drive actual subprocesses — but every call's options are
@@ -39,8 +40,9 @@ vi.mock('../sandbox/index.js', async (importOriginal) => {
 // These tests drive the SDK's stdio transport end to end (rather than mocking `connectAcp`), so a
 // change in how the SDK frames, parses, or validates messages surfaces here.
 const STUB_AGENT = String.raw`
+import { readFileSync } from 'node:fs';
 const mode = process.argv[2];
-const sessionId = 'stub-session';
+const sessionId = process.argv[3] || 'stub-session';
 let buffer = '';
 let sessions = 0;
 let negotiated = null;
@@ -89,6 +91,23 @@ function handle(message) {
   if (message.method === 'session/set_config_option') {
     configuredEffort = message.params.value === 'high';
     update({ sessionUpdate: 'agent_thought_chunk', content: { type: 'text', text: 'effort-configured' } });
+    if (mode === 'effort-hold') {
+      // Hold the response until the test writes a decision beside this script, so the harness's
+      // newSession id can be observed while effort setup is still pending.
+      const control = new URL('./effort.control', import.meta.url);
+      const timer = setInterval(() => {
+        let decision;
+        try { decision = readFileSync(control, 'utf8').trim(); } catch {}
+        if (decision !== 'release' && decision !== 'reject') return;
+        clearInterval(timer);
+        if (decision === 'reject') {
+          write({ jsonrpc: '2.0', id: message.id, error: { code: -32603, message: 'effort rejected' } });
+        } else {
+          write({ jsonrpc: '2.0', id: message.id, result: { configOptions: [] } });
+        }
+      }, 10);
+      return;
+    }
     write({
       jsonrpc: '2.0',
       id: message.id,
@@ -122,7 +141,7 @@ function handle(message) {
       result: {
         sessionId,
         modes: { currentModeId: 'fast', availableModes: [{ id: 'fast', name: 'Fast mode' }] },
-        ...(mode === 'effort' && {
+        ...((mode === 'effort' || mode === 'effort-hold') && {
           configOptions: [{
             id: 'reasoning', name: 'Effort', category: 'thought_level', type: 'select', currentValue: 'medium',
             options: [{ value: 'medium', name: 'Medium' }, { value: 'high', name: 'High' }],
@@ -195,6 +214,7 @@ process.stdin.on('data', (data) => {
 
 let roots: string[] = [];
 let sessions: AcpSession[] = [];
+let holders: RemoteAcp[] = [];
 
 function agentScript(): string {
   const directory = mkdtempSync(path.join(os.tmpdir(), 'janissary-acp-agent-'));
@@ -257,10 +277,12 @@ function permissionDecisions(activity: unknown[]): unknown[] {
   return activity.filter((update) => (update as { sessionUpdate?: string }).sessionUpdate === 'permission_decision');
 }
 
-afterEach(() => {
+afterEach(async () => {
   sandboxCalls.bypassWorkspace = false;
   for (const session of sessions) session.kill();
   sessions = [];
+  for (const holder of holders) await holder.dispose();
+  holders = [];
   for (const directory of roots) rmSync(directory, { recursive: true, force: true });
   roots = [];
 });
@@ -633,6 +655,218 @@ describe('connectAcp — provider session id', () => {
 
     expect(reply.text).toBe('protocol=1 sessions=1 hello');
     expect(errors).toEqual([]);
+  });
+});
+
+// The near side of the loopback uses `createRemoteAcpSession` directly so the provider-id hooks are
+// observable without a manager. The far side runs a real `connectAcp` subprocess through `RemoteAcp`,
+// so the ID that reaches the hook is the one the harness really reported at `newSession`.
+const REMOTE_SNAPSHOT: AcpRunSnapshot = { kind: 'agent', grants: [], askUser: false };
+const HELD_EFFORT = { level: 'high', model: 'provider/model' };
+
+function remoteRunHandlers(): AcpLoopHandlers {
+  return {
+    startTurn: vi.fn(), chunk: vi.fn(), endTurn: vi.fn(),
+    startCommand: vi.fn(), ranCommand: vi.fn(), finished: vi.fn(), error: vi.fn(),
+  };
+}
+
+type NearHooks = {
+  onError?: (message: string) => void;
+  onConnect?: (sandboxed: boolean) => void;
+  onSessionStarted?: (sessionId: string) => void;
+};
+
+function providerLoopback(config: { mode: string; providerId?: string }) {
+  sandboxCalls.bypassWorkspace = true;
+  const script = agentScript();
+  const workspaceDir = path.dirname(script);
+  const control = path.join(workspaceDir, 'effort.control');
+  const far: { holder?: RemoteAcp } = {};
+  const channel = new RemoteChannel({
+    id: 'stdio', kill: () => {},
+    write: (line) => {
+      const frame = decodeFrame(line.trim());
+      if (!('type' in frame)) throw new Error(frame.error);
+      switch (frame.type) {
+      case 'acp-open': {
+        far.holder!.open({
+          ...frame, command: process.execPath,
+          args: [script, config.mode, ...(config.providerId ? [config.providerId] : [])], env: {},
+        });
+        break;
+      }
+      case 'acp-run': { far.holder!.run(frame); break; }
+      case 'acp-tool-result': { far.holder!.toolResult(frame); break; }
+      case 'acp-cancel': { far.holder!.cancel(frame.id); break; }
+      case 'acp-close': { void far.holder!.close(frame.id); break; }
+      default: { throw new Error(`Unexpected test frame ${frame.type}`); }
+      }
+    },
+  }, { onAttached: () => {}, onTerminalData: () => {}, onFrame: () => {}, onError: () => {}, onClose: () => {} });
+  far.holder = new RemoteAcp((frame) => channel.receive(`${encodeFrame(frame)}\n`), workspaceDir);
+  holders.push(far.holder);
+  channel.receive(`${encodeHandshake()}\n`);
+  return { channel, control };
+}
+
+function openNear(
+  channel: RemoteChannel,
+  id: string,
+  hooks: NearHooks,
+  autonomous?: true,
+  effort?: { level: string; model: string },
+) {
+  return createRemoteAcpSession(channel, {
+    id, command: process.execPath, args: [], ...(autonomous && { autonomous }), ...(effort && { effort }),
+  }, {
+    onError: hooks.onError ?? vi.fn(),
+    onConnect: hooks.onConnect ?? vi.fn(),
+    onSessionStarted: hooks.onSessionStarted,
+  });
+}
+
+function capturedIds() {
+  let started: string | null = null;
+  let latest: string | null = null;
+  return {
+    capture: (id: string) => {
+      if (started === null) started = id;
+      latest = id;
+    },
+    values: () => ({ started, latest }),
+  };
+}
+
+describe('remote provider session id — transport', () => {
+  it('reports a real newSession id to the near hook before effort completes', async () => {
+    const loop = providerLoopback({ mode: 'effort-hold' });
+    const started = vi.fn<(id: string) => void>();
+    const onConnect = vi.fn();
+    const near = openNear(loop.channel, 'racp1', { onSessionStarted: started, onConnect }, undefined, HELD_EFFORT);
+    const events = remoteRunHandlers();
+
+    near.run('hi', REMOTE_SNAPSHOT, vi.fn(), events);
+    await vi.waitFor(() => expect(started).toHaveBeenCalledWith('stub-session'));
+    expect(onConnect).not.toHaveBeenCalled();
+    let settled = false;
+    void near.ready.then(() => { settled = true; }, () => { settled = true; });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    writeFileSync(loop.control, 'release');
+    await vi.waitFor(() => expect(onConnect).toHaveBeenCalledOnce());
+  });
+
+  it('keeps the observed id when effort is rejected, without ready or onConnect', async () => {
+    const loop = providerLoopback({ mode: 'effort-hold' });
+    const started = vi.fn<(id: string) => void>();
+    const onConnect = vi.fn();
+    const near = openNear(loop.channel, 'racp1', { onSessionStarted: started, onConnect }, undefined, HELD_EFFORT);
+    const events = remoteRunHandlers();
+
+    near.run('hi', REMOTE_SNAPSHOT, vi.fn(), events);
+    await vi.waitFor(() => expect(started).toHaveBeenCalledWith('stub-session'));
+    writeFileSync(loop.control, 'reject');
+
+    await vi.waitFor(() => expect(events.error).toHaveBeenCalledWith(expect.stringContaining('effort rejected')));
+    expect(started).toHaveBeenCalledExactlyOnceWith('stub-session');
+    expect(onConnect).not.toHaveBeenCalled();
+  });
+
+  it.each(['fail-init', 'fail-new'])('reports no id when %s fails on the far side', async (mode) => {
+    const loop = providerLoopback({ mode });
+    const started = vi.fn();
+    const events = remoteRunHandlers();
+    const near = openNear(loop.channel, 'racp1', { onSessionStarted: started });
+
+    near.run('hi', REMOTE_SNAPSHOT, vi.fn(), events);
+
+    await vi.waitFor(() => expect(events.error).toHaveBeenCalled());
+    expect(started).not.toHaveBeenCalled();
+  });
+
+  it('reports the id eagerly for an autonomous session before any prompt', async () => {
+    const loop = providerLoopback({ mode: 'basic' });
+    const started = vi.fn();
+
+    openNear(loop.channel, 'racp1', { onSessionStarted: started }, true);
+
+    await vi.waitFor(() => expect(started).toHaveBeenCalledExactlyOnceWith('stub-session'));
+  });
+
+  it('reports the id on the first prompt of an ordinary session', async () => {
+    const loop = providerLoopback({ mode: 'basic' });
+    const started = vi.fn();
+    const near = openNear(loop.channel, 'racp1', { onSessionStarted: started });
+
+    expect(started).not.toHaveBeenCalled();
+    near.run('hi', REMOTE_SNAPSHOT, vi.fn(), remoteRunHandlers());
+
+    await vi.waitFor(() => expect(started).toHaveBeenCalledExactlyOnceWith('stub-session'));
+  });
+
+  it('leaves both outcome ids null when no handshake succeeds', async () => {
+    const loop = providerLoopback({ mode: 'fail-new' });
+    const ids = capturedIds();
+    const events = remoteRunHandlers();
+    const near = openNear(loop.channel, 'racp1', { onSessionStarted: ids.capture });
+
+    near.run('hi', REMOTE_SNAPSHOT, vi.fn(), events);
+    await vi.waitFor(() => expect(events.error).toHaveBeenCalled());
+
+    expect(ids.values()).toEqual({ started: null, latest: null });
+  });
+
+  it('retains the first id when a replacement adapter fails before its handshake', async () => {
+    const config = { mode: 'basic', providerId: 'provider-one' };
+    const loop = providerLoopback(config);
+    const ids = capturedIds();
+    const first = openNear(loop.channel, 'racp1', { onSessionStarted: ids.capture }, true);
+    await vi.waitFor(() => expect(ids.values().latest).toBe('provider-one'));
+
+    void first.release();
+    config.mode = 'fail-new';
+    config.providerId = undefined;
+    const second = openNear(loop.channel, 'racp2', { onSessionStarted: ids.capture });
+    const events = remoteRunHandlers();
+    second.run('hi', REMOTE_SNAPSHOT, vi.fn(), events);
+    await vi.waitFor(() => expect(events.error).toHaveBeenCalled());
+
+    expect(ids.values()).toEqual({ started: 'provider-one', latest: 'provider-one' });
+  });
+
+  it('selects a second handshake id for the outcome while started stays the first', async () => {
+    const config = { mode: 'basic', providerId: 'provider-one' };
+    const loop = providerLoopback(config);
+    const ids = capturedIds();
+    openNear(loop.channel, 'racp1', { onSessionStarted: ids.capture }, true);
+    await vi.waitFor(() => expect(ids.values().latest).toBe('provider-one'));
+
+    config.mode = 'effort-hold';
+    config.providerId = 'provider-two';
+    const second = openNear(loop.channel, 'racp2', { onSessionStarted: ids.capture }, undefined, HELD_EFFORT);
+    const events = remoteRunHandlers();
+    second.run('hi', REMOTE_SNAPSHOT, vi.fn(), events);
+    await vi.waitFor(() => expect(ids.values().latest).toBe('provider-two'));
+    expect(ids.values().started).toBe('provider-one');
+
+    writeFileSync(loop.control, 'reject');
+    await vi.waitFor(() => expect(events.error).toHaveBeenCalled());
+    expect(ids.values()).toEqual({ started: 'provider-one', latest: 'provider-two' });
+  });
+
+  it('retains an id reported before termination even though readiness fails', async () => {
+    const loop = providerLoopback({ mode: 'effort-hold', providerId: 'provider-one' });
+    const ids = capturedIds();
+    const near = openNear(loop.channel, 'racp1', { onSessionStarted: ids.capture }, undefined, HELD_EFFORT);
+
+    near.run('hi', REMOTE_SNAPSHOT, vi.fn(), remoteRunHandlers());
+    await vi.waitFor(() => expect(ids.values().latest).toBe('provider-one'));
+
+    near.kill();
+    await expect(near.ready).rejects.toThrow();
+    expect(ids.values()).toEqual({ started: 'provider-one', latest: 'provider-one' });
   });
 });
 

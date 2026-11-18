@@ -28,6 +28,7 @@ export type RemoteAcpOptions = {
 export type RemoteAcpHooks = {
   onError: (message: string) => void;
   onConnect: (sandboxed: boolean) => void;
+  onSessionStarted?: (sessionId: string) => void;
   onActivity?: (kind: RemoteAcpActivityKind, text: string) => void;
   onTransportLost?: () => void;
 };
@@ -67,6 +68,13 @@ export function createRemoteAcpSession(
   // The one in-flight run, matching the discipline `connectAcp` keeps with its own `current`.
   const control = new AcpPromptControl();
   let live = true;
+  let providerReported = false;
+  const reportProvider = (providerId: string | undefined) => {
+    if (!live || providerReported || providerId === undefined) return;
+    providerReported = true;
+    hooks.onSessionStarted?.(providerId);
+  };
+  let readinessReceived = false;
   const { promise: ready, resolve: resolveReady, reject: rejectReady } = deferred<boolean>();
   void ready.catch(() => {});
   let resolveRelease: (released: boolean) => void = () => {};
@@ -95,7 +103,11 @@ export function createRemoteAcpSession(
   const run = createRemoteAcpRun(control, send);
 
   channel.attachAcp(id, {
-    onReady: (sandboxed) => {
+    onSessionStarted: (providerId) => { reportProvider(providerId); },
+    onReady: (sandboxed, providerId) => {
+      if (!live || readinessReceived) return;
+      readinessReceived = true;
+      reportProvider(providerId);
       if (!live) return;
       resolveReady(sandboxed);
       hooks.onConnect(sandboxed);

@@ -60,6 +60,7 @@ export class RemoteAcp {
     const existing = this.records.get(id);
     if (existing && (existing.state !== 'settled' || existing.session)) return;
     const sandboxed = sandboxWillConfine(this.workspaceDir);
+    let sessionId: string | undefined;
     const session = connectAcp({
       command: frame.command,
       args: frame.args,
@@ -87,7 +88,15 @@ export class RemoteAcp {
         record.run = undefined;
         run.abort();
       },
-      onConnect: () => { this.send({ type: 'acp-ready', id, sandboxed }); },
+      // The provider id lands before effort configuration, so report it now rather than waiting for
+      // readiness — a failed effort setup must not discard an id that was already reported.
+      onSessionStarted: (providerId) => {
+        sessionId = providerId;
+        this.send({ type: 'acp-session-started', id, sessionId: providerId });
+      },
+      onConnect: () => {
+        this.send({ type: 'acp-ready', id, sandboxed, ...(sessionId !== undefined && { sessionId }) });
+      },
     });
     this.records.set(id, { state: 'live', session, runOnly: frame.autonomous === true });
   }

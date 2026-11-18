@@ -5,8 +5,9 @@ import type { RoleEntry } from '../plugins/roles/shared.js';
 import { makeTab } from '../tab/index.js';
 import { tabRuntime } from '../tab/runtime.js';
 
-const mocks = vi.hoisted(() => ({ connect: vi.fn() }));
+const mocks = vi.hoisted(() => ({ connect: vi.fn(), remote: vi.fn() }));
 vi.mock('./index.js', () => ({ connectAcp: mocks.connect }));
+vi.mock('../remote/acp-session.js', () => ({ createRemoteAcpSession: mocks.remote }));
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 vi.mock('../bus.js', () => ({ messageBus: { emit: vi.fn() } }));
 
@@ -61,6 +62,8 @@ function makeSession(): AcpSession {
   };
 }
 
+type RemoteHooks = { onSessionStarted?: (sessionId: string) => void };
+
 function setup() {
   const tabs = [makeTab('owner', '#fff')];
   const records = {
@@ -74,15 +77,21 @@ function setup() {
   const managers = {
     acpRecords: records,
     tab: { byLabel: (label: string) => tabs.find((tab) => tab.label === label) },
+    remote: { get: () => ({}) },
   } as unknown as Managers;
   const options: AcpOptions[] = [];
   mocks.connect.mockImplementation((opts: AcpOptions) => {
     options.push(opts);
     return makeSession();
   });
+  const remoteHooks: RemoteHooks[] = [];
+  mocks.remote.mockImplementation((_channel: unknown, _opts: unknown, hooks: RemoteHooks) => {
+    remoteHooks.push(hooks);
+    return makeSession();
+  });
   const manager = new AcpSessionManager(managers);
   const hooks = { onError: vi.fn(), onConnect: vi.fn() };
-  const fixture = { tabs, records, managers, options, manager, hooks };
+  const fixture = { tabs, records, managers, options, remoteHooks, manager, hooks };
   fixtures.push(fixture);
   return fixture;
 }
@@ -256,5 +265,129 @@ describe('AcpSessionManager provider session id', () => {
     expect(fixture.manager.sessionIdentity('owner')).toBe(identity);
     expect(identity).not.toBe('provider-abc');
     expect(fixture.manager.providerSessionId('owner')).toBe('provider-abc');
+  });
+});
+
+describe('AcpSessionManager remote provider session id', () => {
+  function startRemote(fixture: ReturnType<typeof setup>, role: 'ask' | 'tell' = 'ask') {
+    fixture.tabs[0]!.remote = { address: 'stub-host', host: 'stub-host' };
+    return fixture.manager.session('owner', '/cwd', ENTRY, fixture.hooks, role);
+  }
+
+  it('reports undefined before the remote handshake hook fires', () => {
+    const fixture = setup();
+    startRemote(fixture);
+
+    expect(fixture.manager.providerSessionId('owner')).toBeUndefined();
+  });
+
+  it('reports the remote id while readiness is still pending', () => {
+    const fixture = setup();
+    startRemote(fixture);
+
+    fixture.remoteHooks[0]!.onSessionStarted?.('remote-provider');
+
+    expect(fixture.manager.providerSessionId('owner')).toBe('remote-provider');
+  });
+
+  it('keeps remote ask and tell ids independent', () => {
+    const fixture = setup();
+    startRemote(fixture);
+    startRemote(fixture, 'tell');
+
+    fixture.remoteHooks[0]!.onSessionStarted?.('ask-remote');
+    fixture.remoteHooks[1]!.onSessionStarted?.('tell-remote');
+
+    expect(fixture.manager.providerSessionId('owner')).toBe('ask-remote');
+    expect(fixture.manager.providerSessionId('owner', 'tell')).toBe('tell-remote');
+  });
+
+  it('captures a synchronous remote callback fired before the session handle is assigned', () => {
+    const fixture = setup();
+    mocks.remote.mockImplementation((_channel: unknown, _opts: unknown, hooks: RemoteHooks) => {
+      hooks.onSessionStarted?.('sync-remote');
+      return makeSession();
+    });
+
+    startRemote(fixture);
+
+    expect(fixture.manager.providerSessionId('owner')).toBe('sync-remote');
+  });
+
+  it('clears the remote id on close and starts a replacement fresh', () => {
+    const fixture = setup();
+    startRemote(fixture);
+    fixture.remoteHooks[0]!.onSessionStarted?.('remote-provider');
+    expect(fixture.manager.providerSessionId('owner')).toBe('remote-provider');
+
+    fixture.manager.close('owner');
+    expect(fixture.manager.providerSessionId('owner')).toBeUndefined();
+
+    startRemote(fixture);
+    expect(fixture.manager.providerSessionId('owner')).toBeUndefined();
+    fixture.remoteHooks[1]!.onSessionStarted?.('second-remote');
+    expect(fixture.manager.providerSessionId('owner')).toBe('second-remote');
+  });
+
+  it('ignores a late callback from a replaced remote holder', () => {
+    const fixture = setup();
+    startRemote(fixture);
+    const stale = fixture.remoteHooks[0]!;
+    stale.onSessionStarted?.('first-remote');
+
+    fixture.manager.close('owner');
+    startRemote(fixture);
+    stale.onSessionStarted?.('late-remote');
+    expect(fixture.manager.providerSessionId('owner')).toBeUndefined();
+
+    fixture.remoteHooks[1]!.onSessionStarted?.('fresh-remote');
+    expect(fixture.manager.providerSessionId('owner')).toBe('fresh-remote');
+  });
+
+  it('rejects a replaced remote tab runtime', () => {
+    const fixture = setup();
+    startRemote(fixture);
+    fixture.remoteHooks[0]!.onSessionStarted?.('remote-provider');
+
+    fixture.tabs[0] = makeTab('owner', '#abc');
+
+    expect(fixture.manager.providerSessionId('owner')).toBeUndefined();
+  });
+
+  it('rejects a removed remote tab', () => {
+    const fixture = setup();
+    startRemote(fixture);
+    fixture.remoteHooks[0]!.onSessionStarted?.('remote-provider');
+
+    fixture.tabs.length = 0;
+
+    expect(fixture.manager.providerSessionId('owner')).toBeUndefined();
+  });
+
+  it('rejects a closing remote runtime and ignores its late callback', () => {
+    const fixture = setup();
+    startRemote(fixture);
+    fixture.remoteHooks[0]!.onSessionStarted?.('remote-provider');
+    expect(fixture.manager.providerSessionId('owner')).toBe('remote-provider');
+
+    tabRuntime(fixture.tabs[0]!).closing = true;
+    fixture.remoteHooks[0]!.onSessionStarted?.('late-remote');
+    expect(fixture.manager.providerSessionId('owner')).toBeUndefined();
+
+    tabRuntime(fixture.tabs[0]!).closing = false;
+    expect(fixture.manager.providerSessionId('owner')).toBe('remote-provider');
+  });
+
+  it('keeps the internal session identity distinct from the remote provider id', () => {
+    const fixture = setup();
+    startRemote(fixture);
+    const identity = fixture.manager.sessionIdentity('owner');
+
+    fixture.remoteHooks[0]!.onSessionStarted?.('remote-provider');
+
+    expect(identity).toMatch(/^acp-\d+$/);
+    expect(identity).not.toBe('remote-provider');
+    expect(fixture.manager.sessionIdentity('owner')).toBe(identity);
+    expect(fixture.manager.providerSessionId('owner')).toBe('remote-provider');
   });
 });

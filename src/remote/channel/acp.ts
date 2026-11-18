@@ -6,7 +6,8 @@ type AcpToolStepFrame = Extract<RemoteFrame, { type: 'acp-tool-step' }>;
 type AcpRunEndReason = Extract<RemoteFrame, { type: 'acp-run-end' }>['reason'];
 
 export type AcpSessionListener = {
-  onReady: (sandboxed: boolean) => void;
+  onReady: (sandboxed: boolean, sessionId?: string) => void;
+  onSessionStarted?: (sessionId: string) => void;
   onChunk: (text: string) => void;
   onTurn: (frame: AcpTurnFrame) => void;
   onToolRequest: (frame: AcpToolRequestFrame) => void;
@@ -20,7 +21,8 @@ export type AcpSessionListener = {
 
 export function dispatchAcp(sessions: Map<string, AcpSessionListener>, frame: RemoteFrame): boolean {
   switch (frame.type) {
-  case 'acp-ready': { sessions.get(frame.id)?.onReady(frame.sandboxed); return true; }
+  case 'acp-ready': { sessions.get(frame.id)?.onReady(frame.sandboxed, frame.sessionId); return true; }
+  case 'acp-session-started': { sessions.get(frame.id)?.onSessionStarted?.(frame.sessionId); return true; }
   case 'acp-chunk': { sessions.get(frame.id)?.onChunk(frame.text); return true; }
   case 'acp-turn': { sessions.get(frame.id)?.onTurn(frame); return true; }
   case 'acp-tool-request': { sessions.get(frame.id)?.onToolRequest(frame); return true; }

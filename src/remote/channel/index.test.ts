@@ -356,7 +356,7 @@ describe('RemoteChannel — ACP session routing', () => {
     const h = harness();
     h.channel.receive(`${encodeHandshake()}\n`);
     const listener = {
-      onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(),
+      onReady: vi.fn(), onSessionStarted: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(),
       onRunEnd: vi.fn(), onActivity: vi.fn(), onClosed: vi.fn(), onError: vi.fn(),
     };
     return { ...h, listener };
@@ -374,6 +374,51 @@ describe('RemoteChannel — ACP session routing', () => {
     expect(h.listener.onChunk).toHaveBeenCalledWith('partial');
     expect(h.listener.onRunEnd).toHaveBeenCalledWith('answered');
     expect(h.frames).toEqual([]);
+  });
+
+  it('routes the provider id and both ready arguments only to the owning ACP listener', () => {
+    const h = acpHarness();
+    const other = { ...h.listener, onReady: vi.fn(), onSessionStarted: vi.fn() };
+    h.channel.attachAcp('racp1', h.listener);
+    h.channel.attachAcp('racp2', other);
+
+    h.channel.receive(`${encodeFrame({ type: 'acp-session-started', id: 'racp1', sessionId: 'provider-abc' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-ready', id: 'racp1', sandboxed: true, sessionId: 'provider-abc' })}\n`);
+
+    expect(h.listener.onSessionStarted).toHaveBeenCalledExactlyOnceWith('provider-abc');
+    expect(h.listener.onReady).toHaveBeenCalledExactlyOnceWith(true, 'provider-abc');
+    expect(other.onSessionStarted).not.toHaveBeenCalled();
+    expect(other.onReady).not.toHaveBeenCalled();
+    expect(h.frames).toEqual([]);
+    expect(h.errors).toEqual([]);
+  });
+
+  it('delivers an id-bearing frame to no listener for an unknown or detached address', () => {
+    const h = acpHarness();
+    h.channel.attachAcp('racp1', h.listener);
+    h.channel.detachAcp('racp1');
+
+    h.channel.receive(`${encodeFrame({ type: 'acp-session-started', id: 'racp1', sessionId: 'stale' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-session-started', id: 'racp9', sessionId: 'unknown' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-ready', id: 'racp9', sandboxed: false, sessionId: 'unknown' })}\n`);
+
+    expect(h.listener.onSessionStarted).not.toHaveBeenCalled();
+    expect(h.listener.onReady).not.toHaveBeenCalled();
+    expect(h.errors).toEqual([]);
+    expect(h.kill).not.toHaveBeenCalled();
+  });
+
+  it('accepts an ACP listener that omits the optional session-started hook', () => {
+    const h = acpHarness();
+    const listener = {
+      onReady: vi.fn(), onChunk: vi.fn(), onTurn: vi.fn(), onToolRequest: vi.fn(), onToolStep: vi.fn(),
+      onRunEnd: vi.fn(), onActivity: vi.fn(), onClosed: vi.fn(), onError: vi.fn(),
+    };
+    h.channel.attachAcp('racp1', listener);
+
+    h.channel.receive(`${encodeFrame({ type: 'acp-session-started', id: 'racp1', sessionId: 'provider-abc' })}\n`);
+
+    expect(h.errors).toEqual([]);
   });
 
   it('routes activity and release acknowledgments to the owning ACP session', () => {

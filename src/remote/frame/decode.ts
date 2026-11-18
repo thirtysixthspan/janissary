@@ -87,7 +87,8 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'acp-chunk': { return decodeAcpText(type, record); }
   case 'acp-close':
   case 'acp-cancel':
-  case 'acp-ready': { return decodeAcpAddressed(type, record); }
+  case 'acp-ready':
+  case 'acp-session-started': { return decodeAcpAddressed(type, record); }
   case 'acp-error': { return decodeAcpError(record); }
   case 'acp-activity': { return decodeAcpActivity(record); }
   case 'acp-closed': { return decodeAcpClosed(record); }

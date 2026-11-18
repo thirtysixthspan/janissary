@@ -263,8 +263,13 @@ export type ServerFrame =
   | { type: 'filesystem-event'; session: string; path: string }
   | { type: 'agent-resolve-result'; id: string; snapshot?: AgentSnapshot; error?: string }
   // Readiness includes the confinement result because only the host that spawned the ACP process
-  // knows whether its workspace was actually confined.
-  | { type: 'acp-ready'; id: string; sandboxed: boolean }
+  // knows whether its workspace was actually confined. `sessionId` is the provider's id when the
+  // handshake supplied one; a peer that never reported one omits it.
+  | { type: 'acp-ready'; id: string; sandboxed: boolean; sessionId?: string }
+  // Sent the moment the far side's `newSession` succeeds, before effort configuration. `id` is the
+  // transport address and `sessionId` the provider's id. It travels ahead of readiness so a failed
+  // effort setup cannot lose an id that was already reported successfully.
+  | { type: 'acp-session-started'; id: string; sessionId: string }
   | { type: 'acp-chunk'; id: string; text: string }
   // A turn's boundaries, so the local side can open and close a transcript entry. `first` is true
   // only for a run's opening turn. `display` is the turn's final text with the extracted command
@@ -336,7 +341,7 @@ export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'resume-cancel': true,
   'filesystem-reply': true, 'filesystem-event': true,
   'agent-resolve-result': true,
-  'acp-ready': true, 'acp-chunk': true, 'acp-turn': true, 'acp-tool-request': true, 'acp-tool-step': true,
+  'acp-ready': true, 'acp-session-started': true, 'acp-chunk': true, 'acp-turn': true, 'acp-tool-request': true, 'acp-tool-step': true,
   'acp-run-end': true,
   'acp-activity': true, 'acp-closed': true, 'acp-error': true,
 };

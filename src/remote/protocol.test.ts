@@ -462,11 +462,38 @@ describe('frame codec', () => {
       { type: 'filesystem-reply', session: 'files1', request: 'q2', result: { content: 'aMOpbGxvCndvcmxk' } },
       { type: 'filesystem-event', session: 'files1', path: 'src' },
       { type: 'acp-ready', id: 'racp1', sandboxed: true },
+      { type: 'acp-ready', id: 'racp1', sandboxed: false, sessionId: 'provider-abc' },
+      { type: 'acp-session-started', id: 'racp1', sessionId: 'provider-abc' },
       { type: 'acp-chunk', id: 'racp1', text: 'partial reply' },
       { type: 'acp-error', id: 'racp1', message: 'rate limited', fatal: false },
       { type: 'acp-error', id: 'racp1', message: 'ACP agent exited.', fatal: true },
     ];
     for (const frame of frames) expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  // The provider id is opaque: no trimming, prefixing, or base64 the way payload text gets.
+  it('preserves an id-bearing frame exactly, with its session id plain on the wire', () => {
+    const sessionId = ' Ses/+sion =🌍 ';
+    const frame: RemoteFrame = { type: 'acp-session-started', id: 'racp1', sessionId };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toMatchObject({ sessionId });
+    expect(decodeFrame(encoded)).toEqual(frame);
+    expect(roundTrip({ type: 'acp-ready', id: 'racp1', sandboxed: true, sessionId }))
+      .toEqual({ type: 'acp-ready', id: 'racp1', sandboxed: true, sessionId });
+  });
+
+  it('drops undeclared fields from both id-bearing frames', () => {
+    expect(decodeFrame(JSON.stringify({
+      type: 'acp-session-started', id: 'racp1', sessionId: 'provider-abc', sandboxed: true, extra: 'drop',
+    }))).toEqual({ type: 'acp-session-started', id: 'racp1', sessionId: 'provider-abc' });
+    expect(decodeFrame(JSON.stringify({
+      type: 'acp-ready', id: 'racp1', sandboxed: true, sessionId: 'provider-abc', extra: 'drop',
+    }))).toEqual({ type: 'acp-ready', id: 'racp1', sandboxed: true, sessionId: 'provider-abc' });
+  });
+
+  it('accepts a ready frame that omits its optional session id', () => {
+    expect(decodeFrame(JSON.stringify({ type: 'acp-ready', id: 'racp1', sandboxed: true })))
+      .toEqual({ type: 'acp-ready', id: 'racp1', sandboxed: true });
   });
 
   it('carries a reply chunk through the base64 path intact', () => {
@@ -643,6 +670,14 @@ describe('frame codec', () => {
     ['acp-cancel numeric id', { type: 'acp-cancel', id: 7 }],
     ['acp-ready without an id', { type: 'acp-ready' }],
     ['acp-ready without sandbox state', { type: 'acp-ready', id: 'racp1' }],
+    ['acp-ready with an empty session id', { type: 'acp-ready', id: 'racp1', sandboxed: true, sessionId: '' }],
+    ['acp-ready with a non-string session id', { type: 'acp-ready', id: 'racp1', sandboxed: true, sessionId: 7 }],
+    ['acp-session-started without an id', { type: 'acp-session-started', sessionId: 'provider-abc' }],
+    ['acp-session-started with an empty id', { type: 'acp-session-started', id: '', sessionId: 'provider-abc' }],
+    ['acp-session-started with a non-string id', { type: 'acp-session-started', id: 7, sessionId: 'provider-abc' }],
+    ['acp-session-started without a provider id', { type: 'acp-session-started', id: 'racp1' }],
+    ['acp-session-started with an empty provider id', { type: 'acp-session-started', id: 'racp1', sessionId: '' }],
+    ['acp-session-started with a non-string provider id', { type: 'acp-session-started', id: 'racp1', sessionId: 7 }],
     ['acp-chunk without string text', { type: 'acp-chunk', id: 'racp1', text: null }],
     ['acp-error without a message', { type: 'acp-error', id: 'racp1', fatal: true }],
     ['acp-error without a fatal flag', { type: 'acp-error', id: 'racp1', message: 'gone' }],
@@ -909,7 +944,8 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
     type: 'agent-resolve-result', id: 'run1',
     snapshot: { taskPath: '/remote/ai/tasks/fix.md', taskText: 'Fix the issue.', skills: [], grants: [] },
   },
-  'acp-ready': { type: 'acp-ready', id: 'racp1', sandboxed: true },
+  'acp-ready': { type: 'acp-ready', id: 'racp1', sandboxed: true, sessionId: 'provider-abc' },
+  'acp-session-started': { type: 'acp-session-started', id: 'racp1', sessionId: 'provider-abc' },
   'acp-chunk': { type: 'acp-chunk', id: 'racp1', text: 'partial reply' },
   'acp-turn': { type: 'acp-turn', id: 'racp1', phase: 'end', display: 'first\nsecond' },
   'acp-tool-request': { type: 'acp-tool-request', id: 'racp1', request: 1, command: 'file read\nnotes.txt' },
@@ -1036,8 +1072,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 46', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(46);
+  it('is 47', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(47);
   });
 });
 
@@ -1055,7 +1091,7 @@ describe('admitted frame types', () => {
 
   it('admits exactly the declared server frame types', () => {
     expect(Object.keys(SERVER_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-activity', 'acp-chunk', 'acp-closed', 'acp-error', 'acp-ready', 'acp-run-end',
+      'acp-activity', 'acp-chunk', 'acp-closed', 'acp-error', 'acp-ready', 'acp-run-end', 'acp-session-started',
       'acp-tool-request', 'acp-tool-step', 'acp-turn',
       'agent-resolve-result', 'attach-result', 'browser-exited', 'browser-started',
       'busy-transition', 'capture-reply', 'clone-offer', 'exit', 'filesystem-event', 'filesystem-reply', 'gate-event', 'name-in-use',

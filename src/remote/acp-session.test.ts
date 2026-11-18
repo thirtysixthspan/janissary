@@ -37,12 +37,17 @@ function fakeChannel() {
   return { channel, sent, listeners, detached };
 }
 
-function makeSession(hooks?: { onError?: ReturnType<typeof vi.fn>; onConnect?: ReturnType<typeof vi.fn> }) {
+function makeSession(hooks?: {
+  onError?: ReturnType<typeof vi.fn>;
+  onConnect?: ReturnType<typeof vi.fn>;
+  onSessionStarted?: ReturnType<typeof vi.fn>;
+}) {
   const fake = fakeChannel();
   const onError = hooks?.onError ?? vi.fn();
   const onConnect = hooks?.onConnect ?? vi.fn();
-  const session = createRemoteAcpSession(fake.channel, OPTIONS, { onError, onConnect });
-  return { ...fake, session, onError, onConnect, listener: () => fake.listeners.get('racp1')! };
+  const onSessionStarted = hooks?.onSessionStarted ?? vi.fn();
+  const session = createRemoteAcpSession(fake.channel, OPTIONS, { onError, onConnect, onSessionStarted });
+  return { ...fake, session, onError, onConnect, onSessionStarted, listener: () => fake.listeners.get('racp1')! };
 }
 
 describe('createRemoteAcpSession — opening', () => {
@@ -141,6 +146,185 @@ describe('createRemoteAcpSession — opening', () => {
     await vi.advanceTimersByTimeAsync(5000);
     await expectation;
     expect(s.detached).toEqual(['racp1']);
+  });
+});
+
+describe('createRemoteAcpSession — provider session reporting', () => {
+  it('reports an early id without resolving readiness or calling onConnect', async () => {
+    const onConnect = vi.fn();
+    const s = makeSession({ onConnect });
+    let settled = false;
+    void s.session.ready.then(() => { settled = true; }, () => { settled = true; });
+
+    s.listener().onSessionStarted?.('provider-abc');
+
+    expect(s.onSessionStarted).toHaveBeenCalledExactlyOnceWith('provider-abc');
+    expect(onConnect).not.toHaveBeenCalled();
+    await Promise.resolve();
+    expect(settled).toBe(false);
+  });
+
+  it('reports an early id once and still resolves readiness with the sandbox state', async () => {
+    const onConnect = vi.fn();
+    const s = makeSession({ onConnect });
+
+    s.listener().onSessionStarted?.('provider-abc');
+    s.listener().onReady(true, 'provider-abc');
+
+    expect(s.onSessionStarted).toHaveBeenCalledExactlyOnceWith('provider-abc');
+    expect(onConnect).toHaveBeenCalledExactlyOnceWith(true);
+    await expect(s.session.ready).resolves.toBe(true);
+  });
+
+  it('reports a ready-only id before onConnect', async () => {
+    const order: string[] = [];
+    const onConnect = vi.fn(() => { order.push('connect'); });
+    const onSessionStarted = vi.fn(() => { order.push('provider'); });
+    const s = makeSession({ onConnect, onSessionStarted });
+
+    s.listener().onReady(false, 'provider-abc');
+
+    expect(order).toEqual(['provider', 'connect']);
+    expect(s.onSessionStarted).toHaveBeenCalledExactlyOnceWith('provider-abc');
+    await expect(s.session.ready).resolves.toBe(false);
+  });
+
+  it('keeps the first live id across duplicate frames and a conflicting later id', async () => {
+    const onConnect = vi.fn();
+    const s = makeSession({ onConnect });
+    const listener = s.listener();
+
+    listener.onSessionStarted?.('first-provider');
+    listener.onSessionStarted?.('later-provider');
+    listener.onReady(true, 'conflicting-provider');
+    listener.onReady(true, 'another-provider');
+    listener.onSessionStarted?.('after-ready-provider');
+
+    expect(s.onSessionStarted).toHaveBeenCalledExactlyOnceWith('first-provider');
+    expect(onConnect).toHaveBeenCalledExactlyOnceWith(true);
+    await expect(s.session.ready).resolves.toBe(true);
+  });
+
+  it('resolves a no-id ready without reporting a provider id', async () => {
+    const onConnect = vi.fn();
+    const s = makeSession({ onConnect });
+
+    s.listener().onReady(false);
+
+    expect(s.onSessionStarted).not.toHaveBeenCalled();
+    expect(onConnect).toHaveBeenCalledExactlyOnceWith(false);
+    await expect(s.session.ready).resolves.toBe(false);
+  });
+
+  it('reports a first notification after a no-id ready without repeating readiness', async () => {
+    const onConnect = vi.fn();
+    const s = makeSession({ onConnect });
+    const listener = s.listener();
+
+    listener.onReady(false);
+    listener.onSessionStarted?.('late-provider');
+    listener.onReady(true, 'ignored-provider');
+
+    expect(s.onSessionStarted).toHaveBeenCalledExactlyOnceWith('late-provider');
+    expect(onConnect).toHaveBeenCalledExactlyOnceWith(false);
+    await expect(s.session.ready).resolves.toBe(false);
+  });
+
+  it('works for a consumer that omits the optional provider hook', async () => {
+    const fake = fakeChannel();
+    const onConnect = vi.fn();
+    const session = createRemoteAcpSession(fake.channel, OPTIONS, { onError: vi.fn(), onConnect });
+    const listener = fake.listeners.get('racp1')!;
+
+    listener.onSessionStarted?.('provider-abc');
+    listener.onReady(false, 'provider-abc');
+
+    expect(onConnect).toHaveBeenCalledExactlyOnceWith(false);
+    await expect(session.ready).resolves.toBe(false);
+  });
+
+  it('keeps an early id through a nonfatal failure before ready', async () => {
+    const s = makeSession();
+    let rejected = false;
+    void s.session.ready.catch(() => { rejected = true; });
+    const listener = s.listener();
+
+    listener.onSessionStarted?.('provider-abc');
+    listener.onError('rate limited', false);
+
+    expect(s.onSessionStarted).toHaveBeenCalledExactlyOnceWith('provider-abc');
+    await Promise.resolve();
+    expect(rejected).toBe(false);
+    expect(s.onError).not.toHaveBeenCalled();
+  });
+
+  const TERMINALS = ['release', 'kill', 'remote-close', 'fatal', 'transport-lost'] as const;
+  type Terminal = (typeof TERMINALS)[number];
+
+  function endBeforeReady(s: ReturnType<typeof makeSession>, reason: Terminal, listener: AcpSessionListener): void {
+    switch (reason) {
+    case 'release': { void s.session.release(); listener.onClosed(true); break; }
+    case 'kill': { s.session.kill(); listener.onClosed(true); break; }
+    case 'remote-close': { listener.onClosed(true); break; }
+    case 'fatal': { listener.onError('gone', true); break; }
+    case 'transport-lost': { listener.onTransportLost?.(); break; }
+    }
+  }
+
+  it.each(TERMINALS)('keeps an early id after %s before ready and suppresses late frames', async (reason) => {
+    const s = makeSession();
+    const listener = s.listener();
+    listener.onSessionStarted?.('provider-abc');
+
+    endBeforeReady(s, reason, listener);
+
+    expect(s.onSessionStarted).toHaveBeenCalledExactlyOnceWith('provider-abc');
+    await expect(s.session.ready).rejects.toThrow();
+    listener.onSessionStarted?.('late-provider');
+    listener.onReady(true, 'late-provider');
+    expect(s.onSessionStarted).toHaveBeenCalledExactlyOnceWith('provider-abc');
+    expect(s.onConnect).not.toHaveBeenCalled();
+  });
+
+  it.each(TERMINALS)('reports no id after %s before any handshake, even from a retained listener', (reason) => {
+    const s = makeSession();
+    const listener = s.listener();
+
+    endBeforeReady(s, reason, listener);
+
+    listener.onSessionStarted?.('late-provider');
+    listener.onReady(true, 'late-provider');
+    expect(s.onSessionStarted).not.toHaveBeenCalled();
+    expect(s.onConnect).not.toHaveBeenCalled();
+  });
+
+  it('does not change an id the consumer captured before readiness failed', async () => {
+    let captured: string | null = null;
+    const onSessionStarted = vi.fn((id: string) => { captured = id; });
+    const s = makeSession({ onSessionStarted });
+    const listener = s.listener();
+
+    listener.onSessionStarted?.('provider-abc');
+    listener.onError('gone', true);
+    await expect(s.session.ready).rejects.toThrow();
+
+    expect(s.onSessionStarted).toHaveBeenCalledExactlyOnceWith('provider-abc');
+    expect(captured).toBe('provider-abc');
+  });
+
+  it('does not call onConnect when the provider callback releases during ready fallback', async () => {
+    const fake = fakeChannel();
+    const onConnect = vi.fn();
+    const near: { session?: ReturnType<typeof createRemoteAcpSession> } = {};
+    const onSessionStarted = vi.fn(() => { void near.session!.release(); });
+    near.session = createRemoteAcpSession(fake.channel, OPTIONS, { onError: vi.fn(), onConnect, onSessionStarted });
+    const listener = fake.listeners.get('racp1')!;
+
+    listener.onReady(false, 'provider-abc');
+    listener.onClosed(true);
+
+    expect(onSessionStarted).toHaveBeenCalledExactlyOnceWith('provider-abc');
+    expect(onConnect).not.toHaveBeenCalled();
   });
 });
 

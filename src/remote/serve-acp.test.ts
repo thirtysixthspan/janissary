@@ -106,6 +106,52 @@ describe('RemoteAcp — opening a session', () => {
     expect(confinement.sandboxWillConfine).toHaveBeenCalledWith(WORKSPACE);
   });
 
+  // The provider id arrives before effort setup, so it is its own frame rather than waiting for
+  // readiness. A no-ID open keeps the original ready shape.
+  it.each([false, true])('reports the provider id immediately, then carries it on ready: %s', (sandboxed) => {
+    vi.spyOn(confinement, 'sandboxWillConfine').mockReturnValue(sandboxed);
+    const { acp, frames } = makeAcp();
+
+    acp.open(OPEN);
+    acpMock.options[0].onSessionStarted?.('session-exact-id');
+
+    expect(frames).toEqual([{ type: 'acp-session-started', id: 'racp1', sessionId: 'session-exact-id' }]);
+
+    acpMock.options[0].onConnect?.({ provider: 'opencode', model: 'Build' });
+
+    expect(frames).toEqual([
+      { type: 'acp-session-started', id: 'racp1', sessionId: 'session-exact-id' },
+      { type: 'acp-ready', id: 'racp1', sandboxed, sessionId: 'session-exact-id' },
+    ]);
+  });
+
+  it('keeps an already-emitted id when effort setup fails without inventing readiness', () => {
+    const { acp, frames } = makeAcp();
+
+    acp.open(OPEN);
+    acpMock.options[0].onSessionStarted?.('session-exact-id');
+    acpMock.options[0].onError('unsupported effort "absent"');
+
+    expect(frames).toContainEqual({ type: 'acp-session-started', id: 'racp1', sessionId: 'session-exact-id' });
+    expect(frames.filter((frame) => frame.type === 'acp-ready')).toEqual([]);
+  });
+
+  it('keeps the captured id separate across two simultaneous opens', () => {
+    const { acp, frames } = makeAcp();
+
+    acp.open(OPEN);
+    acp.open({ ...OPEN, id: 'racp2' });
+    acpMock.options[0].onSessionStarted?.('first-provider');
+    acpMock.options[1].onSessionStarted?.('second-provider');
+    acpMock.options[1].onConnect?.({ provider: 'opencode', model: 'Build' });
+
+    expect(frames).toEqual([
+      { type: 'acp-session-started', id: 'racp1', sessionId: 'first-provider' },
+      { type: 'acp-session-started', id: 'racp2', sessionId: 'second-provider' },
+      { type: 'acp-ready', id: 'racp2', sandboxed: true, sessionId: 'second-provider' },
+    ]);
+  });
+
   it('applies autonomous policy and forwards typed activity to the run id', () => {
     const { acp, frames } = makeAcp();
     const options = {
