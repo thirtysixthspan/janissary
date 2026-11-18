@@ -295,6 +295,23 @@ describe('driveToolLoop', () => {
     expect(host.runCaller).toHaveBeenCalledExactlyOnceWith(QUERY);
     reject(new Error('host failed'));
     await vi.waitFor(() => { expect(ofKind(events, 'error')).toEqual([['error', 'host failed']]); });
+    await vi.waitFor(() => { expect(events.at(-1)).toEqual(['finished', 'failed', CORE_MAX_STEPS]); });
+    expect(ofKind(events, 'ranCommand')).toEqual([]);
+    expect(sent).toHaveLength(1);
+  });
+
+  it('reports a synchronously throwing host and ends the run', () => {
+    const { session, sent } = makeSession([QUERY, 'Done.']);
+    const { h, events } = makeHandlers();
+    const host = {
+      runCaller: vi.fn(() => { throw new Error('sync boom'); }),
+      runWorkspace: vi.fn(() => 'workspace output'),
+    };
+
+    driveToolLoop(session, 'do it', coreSnapshot('tell', ['db sqlite query']), host, h, new AbortController().signal);
+
+    expect(ofKind(events, 'error')).toEqual([['error', 'sync boom']]);
+    expect(events.at(-1)).toEqual(['finished', 'failed', CORE_MAX_STEPS]);
     expect(ofKind(events, 'ranCommand')).toEqual([]);
     expect(sent).toHaveLength(1);
   });

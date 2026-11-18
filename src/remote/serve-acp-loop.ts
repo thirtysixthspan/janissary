@@ -101,7 +101,7 @@ export function startRemoteLoop(
         ...(refused !== undefined && { refused }),
       });
     },
-    finished: (reason) => { if (!aborted()) send({ type: 'acp-run-end', id, reason }); },
+    finished: (reason) => { if (reason !== 'failed' && !aborted()) send({ type: 'acp-run-end', id, reason }); },
     error: (message) => { if (!aborted()) send({ type: 'acp-error', id, message, fatal: false }); },
   };
 

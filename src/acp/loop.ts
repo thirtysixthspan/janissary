@@ -57,6 +57,7 @@ export function runAcpToolLoop(
             result = returnValue instanceof Promise ? await returnValue : returnValue;
           } catch (error) {
             h.error(errorText(error));
+            h.finished('failed', maxSteps);
             return;
           }
           if (dependencies.signal?.aborted) return;

@@ -272,4 +272,31 @@ describe('runAcpToolLoop', () => {
     expect(events).toContainEqual(['error', 'boom']);
     expect(runCommand).not.toHaveBeenCalled();
   });
+
+  it('emits a terminal event after a throwing command and starts no further turn', () => {
+    const { session, sent } = makeSession(['db sqlite query movies SELECT 1', 'Done.']);
+    const { h, events } = makeHandlers();
+    const runCommand = vi.fn(() => { throw new Error('boom'); });
+
+    runAcpToolLoop(session, 'list actors', { runCommand, extractCommand: extractDatabaseCommand }, h);
+
+    expect(events).toContainEqual(['error', 'boom']);
+    expect(events.at(-1)).toEqual(['finished', 'failed', 8]);
+    expect(events.findIndex((event) => event[0] === 'error'))
+      .toBeLessThan(events.findIndex((event) => event[0] === 'finished'));
+    expect(events.filter((event) => event[0] === 'startTurn')).toEqual([['startTurn', true]]);
+    expect(sent).toHaveLength(1);
+  });
+
+  it('emits a terminal event after an async command rejection', async () => {
+    const { session, sent } = makeSession(['db sqlite query movies SELECT 1', 'Done.']);
+    const { h, events } = makeHandlers();
+    const runCommand = vi.fn(() => Promise.reject(new Error('late boom')));
+
+    runAcpToolLoop(session, 'list actors', { runCommand, extractCommand: extractDatabaseCommand }, h);
+
+    await vi.waitFor(() => { expect(events.at(-1)).toEqual(['finished', 'failed', 8]); });
+    expect(events).toContainEqual(['error', 'late boom']);
+    expect(sent).toHaveLength(1);
+  });
 });
