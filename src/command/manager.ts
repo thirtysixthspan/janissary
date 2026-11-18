@@ -167,8 +167,9 @@ export class CommandManager {
     const cmd = findCommand(name, command);
     if (!cmd) return undefined;
     if (cmd.available?.(label, this.managers) === false) {
-      this.run(command, label, index);
-      return;
+      const output = `Command is unavailable in this tab: ${name}.`;
+      this.managers.tab.appendForInvocation(label, { input: command, output }, invocation.invocationId);
+      return output;
     }
     const existingTabs = new Set(this.managers.tab.tabs.map((tab) => tab.label));
     try {
