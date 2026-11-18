@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   askRoleEntries, attemptOrder, defaultAskEntries, exhaustedError, fallbackNotice, finalAttemptResult,
-  readRoleSettings, type AttemptFailure,
+  knownRoleSettings, readRoleSettings, type AttemptFailure,
 } from './ask-role.js';
 import type { AcpPromptResult } from './types.js';
 
@@ -149,6 +149,154 @@ describe('readRoleSettings', () => {
   });
 });
 
+describe('knownRoleSettings', () => {
+  it('returns a known custom role with its canonical name, entries and commands', () => {
+    const { home, root } = directories();
+    writeRoles(home, {
+      'review-bot': { description: 'Reviews.', entries: [CLAUDE], commands: ['file read'] },
+    });
+
+    expect(knownRoleSettings(root, 'review-bot', home)).toEqual({
+      name: 'review-bot', entries: [CLAUDE], commands: ['file read'],
+    });
+  });
+
+  it('matches a custom role trimmed and in any case while keeping its configured spelling', () => {
+    const { home, root } = directories();
+    writeRoles(home, {
+      ' Review-Bot ': { description: 'Reviews.', entries: [CODEX], commands: [] },
+    });
+
+    expect(knownRoleSettings(root, '  REVIEW-bot  ', home)).toEqual({
+      name: 'Review-Bot', entries: [CODEX], commands: [],
+    });
+  });
+
+  it('returns undefined for an unknown name', () => {
+    const { home, root } = directories();
+    writeRoles(home, { planning: { description: 'Plans.', entries: [], commands: [] } });
+
+    expect(knownRoleSettings(root, 'not-a-role', home)).toBeUndefined();
+  });
+
+  it('returns undefined for a whitespace-only name', () => {
+    const { home, root } = directories();
+
+    expect(knownRoleSettings(root, ' '.repeat(3), home)).toBeUndefined();
+  });
+
+  it('recognizes a built-in role when no file exists and creates no file', () => {
+    const { home, root } = directories();
+
+    expect(knownRoleSettings(root, 'ask', home)).toEqual({
+      name: 'ask', entries: [OPENCODE, CLAUDE, CODEX], commands: ASK_COMMANDS,
+    });
+    expect(existsSync(path.join(home, '.janissary', 'roles.json'))).toBe(false);
+  });
+
+  it('hides a home-only custom role when a project file replaces the home file', () => {
+    const { home, root } = directories();
+    writeRoles(home, { 'home-only': { description: 'Home.', entries: [CLAUDE], commands: [] } });
+    writeRoles(root, { ask: { description: 'Questions.', entries: [CLAUDE], commands: [] } });
+
+    expect(knownRoleSettings(root, 'home-only', home)).toBeUndefined();
+  });
+
+  it('hides home roles while keeping built-ins known for an empty project object', () => {
+    const { home, root } = directories();
+    writeRoles(home, { 'home-only': { description: 'Home.', entries: [CLAUDE], commands: [] } });
+    writeRoles(root, {});
+
+    expect(knownRoleSettings(root, 'home-only', home)).toBeUndefined();
+    expect(knownRoleSettings(root, 'tell', home)?.commands).toHaveLength(14);
+  });
+
+  it('keeps a known custom role that lists zero entries', () => {
+    const { home, root } = directories();
+    writeRoles(home, {
+      'no-models': { description: 'None.', entries: [], commands: ['file read'] },
+    });
+
+    expect(knownRoleSettings(root, 'no-models', home)).toEqual({
+      name: 'no-models', entries: [], commands: ['file read'],
+    });
+  });
+
+  it('borrows built-in entries for a configured built-in role with empty entries', () => {
+    const { home, root } = directories();
+    writeRoles(home, { ask: { description: 'Questions.', entries: [], commands: [] } });
+
+    expect(knownRoleSettings(root, 'ask', home)).toEqual({
+      name: 'ask', entries: [OPENCODE, CLAUDE, CODEX], commands: [],
+    });
+  });
+
+  it('preserves configured grants when both stored and built-in entries are empty', () => {
+    const { home, root } = directories();
+    writeRoles(home, {
+      research: { description: 'Research.', entries: [], commands: ['file read', 'file glob'] },
+    });
+
+    expect(knownRoleSettings(root, 'research', home)).toEqual({
+      name: 'research', entries: [], commands: ['file read', 'file glob'],
+    });
+  });
+
+  it('preserves nonempty stored entries even when they are unavailable to the caller', () => {
+    const { home, root } = directories();
+    const retired = { harness: 'retired-harness', model: 'retired-model' };
+    writeRoles(home, {
+      ask: { description: 'Questions.', entries: [retired], commands: ['future command'] },
+    });
+
+    expect(knownRoleSettings(root, 'ask', home)).toEqual({
+      name: 'ask', entries: [retired], commands: ['future command'],
+    });
+  });
+
+  it('falls back from a damaged project file to a known role in the home file', () => {
+    const { home, root } = directories();
+    writeRoles(home, { 'home-only': { description: 'Home.', entries: [CLAUDE], commands: [] } });
+    mkdirSync(path.join(root, '.janissary'), { recursive: true });
+    writeFileSync(path.join(root, '.janissary', 'roles.json'), '{ not json');
+
+    expect(knownRoleSettings(root, 'home-only', home)).toEqual({
+      name: 'home-only', entries: [CLAUDE], commands: [],
+    });
+  });
+
+  it('reads the current settings again on a later call', () => {
+    const { home, root } = directories();
+    writeRoles(home, {
+      'review-bot': { description: 'Reviews.', entries: [CLAUDE], commands: ['file read'] },
+    });
+    expect(knownRoleSettings(root, 'review-bot', home)?.commands).toEqual(['file read']);
+
+    writeRoles(home, {
+      'review-bot': { description: 'Reviews.', entries: [CODEX], commands: ['file write'] },
+    });
+
+    expect(knownRoleSettings(root, 'review-bot', home)).toEqual({
+      name: 'review-bot', entries: [CODEX], commands: ['file write'],
+    });
+  });
+
+  it('returns detached copies of entries and commands', () => {
+    const { home, root } = directories();
+
+    const first = knownRoleSettings(root, 'ask', home);
+    expect(first).toBeDefined();
+    if (!first) return;
+    first.entries.push(CODEX);
+    first.commands.push('extra command');
+    first.entries[0].model = 'mutated';
+
+    expect(knownRoleSettings(root, 'ask', home)).toEqual({
+      name: 'ask', entries: [OPENCODE, CLAUDE, CODEX], commands: ASK_COMMANDS,
+    });
+  });
+});
+
 describe('attemptOrder', () => {
   it('keeps the role order when no session is open', () => {
     expect(attemptOrder([OPENCODE, CLAUDE, CODEX])).toEqual([OPENCODE, CLAUDE, CODEX]);
@@ -172,6 +320,24 @@ describe('fallback messages', () => {
     ])).toBe([
       'ACP: every model in the ask role failed.',
       '- opencode opencode-go/deepseek-v4.1-flash: ACP error: out of credits',
+      '- claude claude-haiku-4-5: ACP: ACP agent exited.',
+    ].join('\n'));
+  });
+
+  it('names a custom role in the header while preserving failure order and text', () => {
+    expect(exhaustedError([
+      { entry: OPENCODE, error: 'ACP error: out of credits' },
+      { entry: CLAUDE, error: 'ACP: ACP agent exited.' },
+    ], 'review-bot')).toBe([
+      'ACP: every model in the review-bot role failed.',
+      '- opencode opencode-go/deepseek-v4.1-flash: ACP error: out of credits',
+      '- claude claude-haiku-4-5: ACP: ACP agent exited.',
+    ].join('\n'));
+  });
+
+  it('keeps the tell role in the header when it is passed explicitly', () => {
+    expect(exhaustedError([{ entry: CLAUDE, error: 'ACP: ACP agent exited.' }], 'tell')).toBe([
+      'ACP: every model in the tell role failed.',
       '- claude claude-haiku-4-5: ACP: ACP agent exited.',
     ].join('\n'));
   });

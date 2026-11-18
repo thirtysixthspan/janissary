@@ -211,3 +211,13 @@ Role connections deny all of their harness's internal tools, so a role grants on
 the agent can run the granted commands that are enabled for agents and nothing else.
 Keyboard reordering is not provided — adding and removing entries and roles are pointer-free, but
 order rides the drag.
+
+### Resolving a role by name
+
+A role name is matched ignoring surrounding whitespace and case, and the name reported back is the
+spelling the file in effect stores, not the text the caller supplied. A name resolves when it is one
+of the built-in roles or is present in the file in effect. Because a project file replaces the home
+file wholesale, a custom role that exists only in the home file does not resolve while a project file
+is present unless that name is also built in. An unrecognized name is reported as unknown with its
+trimmed text; a recognized name returns the same entries and grants, read fresh with no file creation,
+that the ask and tell readers use.

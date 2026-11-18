@@ -32,23 +32,42 @@ export function defaultAskEntries(): RoleEntry[] {
   return copyEntries(findRole(DEFAULT_ROLES, ASK_ROLE)?.entries ?? []);
 }
 
-export function readRoleSettings(
-  root: string, name: string, home: string = homedir(),
-): AcpRoleSettings {
-  const configured = findRole(readRolesFile(home, root, { create: false }).roles, name);
+function roleSettingsIn(
+  roles: readonly Role[], name: string,
+): { known: boolean; settings: AcpRoleSettings } {
+  const configured = findRole(roles, name);
   const defaults = findRole(DEFAULT_ROLES, name);
   if (!configured) {
     return {
-      name: defaults?.name ?? name,
-      entries: copyEntries(defaults?.entries ?? []),
-      commands: [...(defaults?.commands ?? [])],
+      known: defaults !== undefined,
+      settings: {
+        name: defaults?.name ?? name,
+        entries: copyEntries(defaults?.entries ?? []),
+        commands: [...(defaults?.commands ?? [])],
+      },
     };
   }
   return {
-    name: configured.name,
-    entries: copyEntries(configured.entries.length === 0 ? defaults?.entries ?? [] : configured.entries),
-    commands: [...configured.commands],
+    known: true,
+    settings: {
+      name: configured.name,
+      entries: copyEntries(configured.entries.length === 0 ? defaults?.entries ?? [] : configured.entries),
+      commands: [...configured.commands],
+    },
   };
+}
+
+export function readRoleSettings(
+  root: string, name: string, home: string = homedir(),
+): AcpRoleSettings {
+  return roleSettingsIn(readRolesFile(home, root, { create: false }).roles, name).settings;
+}
+
+export function knownRoleSettings(
+  root: string, name: string, home: string = homedir(),
+): AcpRoleSettings | undefined {
+  const { known, settings } = roleSettingsIn(readRolesFile(home, root, { create: false }).roles, name);
+  return known ? settings : undefined;
 }
 
 export function askRoleSettings(root: string, home: string = homedir()): AcpRoleSettings {
@@ -96,7 +115,7 @@ export type Attempt = {
   onDone: (result: AcpPromptResult) => void;
 };
 
-export function exhaustedError(failures: readonly AttemptFailure[], role: AcpRole = 'ask'): string {
+export function exhaustedError(failures: readonly AttemptFailure[], role: string = 'ask'): string {
   return [
     `ACP: every model in the ${role} role failed.`,
     ...failures.map(({ entry, error }) => `- ${describeEntry(entry)}: ${error}`),
