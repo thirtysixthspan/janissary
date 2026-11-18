@@ -2,17 +2,6 @@
 
 ## ready
 
-* Map filesystem failures to their real reasons instead of reporting every read error as a missing file.
-
-Existing Debt: The workspace reader wraps every filesystem failure in one "File not found" string even though a shared reason mapper already distinguishes permission, symlink, directory and size failures. Severity: 5/10
-
-Existing Risk: 5/10 - A permission error or a symlink loop is reported as a missing file, so a user retries a path that exists and cannot tell the real cause, and no test can distinguish the cases.
-
-Proposal Risk: 2/10 - Errors map to specific reasons, but the mapper still covers a fixed set of codes and an unknown code falls back to a generic reason, so a new failure mode needs a mapping entry.
-
-Proposal: `src/file-read/read.ts` `loadBytes` catches every exception from `realpathSync`, `statSync` and `readFileSync` and returns `'File not found'`. `src/file-navigator/file-operation-result.ts` `fileOperationReason` already maps error codes to specific strings, and `src/file-read/policy.ts` `classifyStats` covers directory and size cases. Replace the catch-all with code-aware mapping through `fileOperationReason`, keeping the lexical-policy and real-target failures returned as they are today. `src/file-read/read.test.ts` covers missing files and binary content but not permission or I/O codes; add cases with a code-bearing error such as `EACCES` and `ELOOP` asserting the mapped reason, and keep the existing missing-file case for `ENOENT`.
-
-
 * Guard the undo/redo replay so a partial success cannot pop a stack that does not match the step being replayed.
 
 Existing Debt: The shared replay protocol pops the source history stack unconditionally whenever any item succeeds, without checking that the stack's top is the step actually being replayed. Severity: 5/10

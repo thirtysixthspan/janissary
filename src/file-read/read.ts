@@ -3,12 +3,13 @@ import path from 'node:path';
 import { canonicalPath } from './canonical.js';
 import { parseFileRead, type FileReadArgs } from './command.js';
 import { formatFileLines } from './format.js';
-import { checkLexicalPath, checkRealTarget, classifyStats, FILE_POLICY_MAX_BYTES, type FilePolicyFailure } from './policy.js';
+import { checkLexicalPath, checkRealTarget, classifyStats, FILE_POLICY_MAX_BYTES } from './policy.js';
+import { fileOperationReason } from '../file-navigator/file-operation-result.js';
 
 // eslint-disable-next-line unicorn/prefer-export-from -- no-restricted-syntax forbids re-exports here; keep the existing import path by assignment
 export const FILE_READ_MAX_BYTES = FILE_POLICY_MAX_BYTES;
 
-function loadBytes(root: string, requested: string): Buffer | FilePolicyFailure {
+function loadBytes(root: string, requested: string): Buffer | string {
   try {
     const realRoot = canonicalPath(root);
     const realFile = canonicalPath(path.resolve(root, requested));
@@ -17,8 +18,12 @@ function loadBytes(root: string, requested: string): Buffer | FilePolicyFailure 
     const statsFailure = classifyStats(statSync(realFile));
     if (statsFailure !== undefined) return statsFailure;
     return readFileSync(realFile);
-  } catch {
-    return 'File not found';
+  } catch (error) {
+    const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
+      ? error.code
+      : undefined;
+    if (code === 'ENOENT' || code === 'ENOTDIR') return 'File not found';
+    return fileOperationReason(error);
   }
 }
 

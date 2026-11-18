@@ -116,7 +116,9 @@ Output is numbered lines: each line is prefixed by its number, padded to the wid
 
 A failure prints one line naming the path as typed:
 
-- `File not found: <path>.` for a missing path, and for a file that exists but cannot be read, such as one without read permission.
+- `File not found: <path>.` for a missing path, a dangling link, or a path whose parent is a regular file.
+- `Permission denied; check file and folder permissions, then try again: <path>.` when a file exists but cannot be read, such as one without read permission.
+- `Filesystem error <code>; check the item and destination, then try again: <path>.` for any other read failure, such as a symlink loop (`ELOOP`). A code with its own mapping prints that reason instead, such as `The disk is full; free some space, then try again: <path>.` for `ENOSPC`.
 - `Is a directory: <path>.`
 - `Not a text file: <path>.` for binary content, text that is not valid UTF-8, or anything that is not a regular file or directory.
 - `File too large (>5 MB): <path>.`

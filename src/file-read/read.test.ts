@@ -81,10 +81,15 @@ describe('readWorkspaceLines missing files and types', () => {
     expect(read('dangling-out')).toBe('File not found: dangling-out.');
   });
 
-  it.skipIf(typeof process.getuid === 'function' && process.getuid() === 0)('reports an existing file without read permission as not found', () => {
+  it.skipIf(typeof process.getuid === 'function' && process.getuid() === 0)('reports an existing file without read permission with the permission reason', () => {
     write('locked.txt', 'secret');
     chmodSync(path.join(root, 'locked.txt'), 0o000);
-    expect(read('locked.txt')).toBe('File not found: locked.txt.');
+    expect(read('locked.txt')).toBe('Permission denied; check file and folder permissions, then try again: locked.txt.');
+  });
+
+  it('reports a symlink loop with the filesystem error reason', () => {
+    symlinkSync('loop', path.join(root, 'loop'));
+    expect(read('loop')).toBe('Filesystem error ELOOP; check the item and destination, then try again: loop.');
   });
 
   it('reports a path under a regular file as missing', () => {
