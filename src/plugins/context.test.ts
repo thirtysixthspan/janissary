@@ -78,7 +78,7 @@ function contextFor(
   managers: Managers = makeManagers().managers,
 ): TabPluginServerCapabilities {
   return createPluginContext(
-    managers, declaration(capabilities), activationFor(), origin, isEnabled, openRequests,
+    managers, declaration(capabilities), activationFor(), origin, isEnabled, { openRequests },
   );
 }
 
@@ -284,7 +284,7 @@ describe('capability revocation', () => {
       { isPayload: () => true, intent: () => null, opener: { inline: () => {}, external: () => {} } },
       origin,
       () => false,
-      openRequests,
+      { openRequests },
     );
 
     revoked.note('too late');
@@ -367,7 +367,8 @@ describe('capability revocation', () => {
     Object.assign(managers.tab, { byLabel: (label: string) => managers.tab.tabs.find((tab) => tab.label === label) });
     const openPluginTab = managers.tab.openPluginTab as unknown as ReturnType<typeof vi.fn>;
     const capabilities = createPluginContext(
-      managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => true, [], 'shell1',
+      managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => true,
+      { answeringLabel: 'shell1' },
     );
 
     capabilities.openOrFocusTab('key', () => ({ title: 'shell', payload: {} }));

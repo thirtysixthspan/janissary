@@ -5,7 +5,7 @@ import {
   type TabPluginDeclaration,
   type TabPluginServerCapabilities,
 } from './api.js';
-import { createPluginContext } from './context.js';
+import { createPluginContext, type PluginInvocationOptions } from './context.js';
 import type { PluginFailureOrigin } from './failure.js';
 import { guardPluginCall } from './guard.js';
 import type { DeferredPluginCall } from './launch-tab.js';
@@ -52,16 +52,16 @@ export async function invokePlugin<Result>(
   isEnabled: () => boolean,
   timeoutMs: number,
   call: (capabilities: TabPluginServerCapabilities) => Result | Promise<Result>,
-  answeringLabel?: string,
-  // How a failure in a later call is turned into this plugin being disabled. Absent, no capability
-  // that runs a handler after this call returns is available.
-  disable?: (error: unknown, origin: PluginFailureOrigin) => void,
-  adoptPtyId?: string,
+  options: PluginInvocationOptions = {},
 ): Promise<PluginCallOutcome<Result>> {
+  // How a failure in a later call is turned into this plugin being disabled is carried by
+  // `options.disable`; absent, no capability that runs a handler after this call returns is available.
+  const { disable } = options;
   const openRequests: string[] = [];
   const deferred: DeferredPluginCall | undefined = disable && {
     invoke: (later, laterAnswering) => invokePlugin(
-      managers, declaration, activation, origin, isEnabled, timeoutMs, later, laterAnswering, disable, adoptPtyId,
+      managers, declaration, activation, origin, isEnabled, timeoutMs, later,
+      { ...options, answeringLabel: laterAnswering },
     ),
     disable: (error) => { disable(error, origin); },
   };
@@ -72,8 +72,7 @@ export async function invokePlugin<Result>(
     // plugin's behalf exempt that work from this deadline, and so need the deadline itself.
     value = await guardPluginCall((deadline) => call(createPluginContext(
       managers, declaration, activation, origin, isEnabled,
-      openRequests, answeringLabel, deadline, deferred, adoptPtyId,
-      (error, failureOrigin) => { disable?.(error, failureOrigin); },
+      { ...options, openRequests, deadline, deferred },
     )), timeoutMs);
   } catch (error) {
     if (error instanceof TabPluginRejection) return { status: 'rejected', reason: error.message };

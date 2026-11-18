@@ -2,17 +2,6 @@
 
 ## ready
 
-* Replace the positional argument chains through the plugin guarded-call path with one options object so optional handlers cannot be swapped between call layers.
-
-Existing Debt: `invokePlugin` and `createPluginContext` take long positional tails whose optional string and callback parameters appear in different orders and are threaded through `undefined` placeholders, so the forwarding seam has no types expressing which argument is which. Severity: 6/10
-
-Existing Risk: 6/10 - Swapping two same-typed optional arguments between those functions typechecks and silently misroutes the failure-disabling callback or the adopted PTY id, turning a plugin failure into a silent one or attaching a terminal to the wrong tab; no `invoke.test.ts` covers the forwarding.
-
-Proposal Risk: 2/10 - Named fields make every argument's meaning explicit at each call site while the guarded call itself stays in `guardPluginCall`; the residual risk is passing the right value under the wrong name, which a named type makes reviewable.
-
-Proposal: `src/plugins/invoke.ts` `invokePlugin` ends with `answeringLabel?, disable?, adoptPtyId?` and forwards eleven positional arguments into `src/plugins/context.ts` `createPluginContext`, whose tail is `answeringLabel?, deadline?, deferred?, adoptPtyId?, disable?` — `adoptPtyId` and `disable` are in opposite positions. Callers in `src/plugins/host.ts` pad the gap: the constructor's `invoke` port and `reattach` pass `undefined` placeholders. Change both functions to take a single trailing options object typed as a named interface carrying `openRequests`, `answeringLabel`, `deadline`, `deferred`, `adoptPtyId` and `disable` by name, and update the recursion in `invokePlugin`'s `deferred.invoke` and the two `host.ts` call sites together. Add `src/plugins/invoke.test.ts` asserting that `disable` and `adoptPtyId` survive the deferred call, which no current test checks; `src/plugins/host.test.ts` and `src/plugins/context.test.ts` cover the surrounding behavior and must keep passing.
-
-
 * Make the client tab view a discriminated union so view payloads are narrowed by the discriminant instead of two hand-mirrored guard files.
 
 Existing Debt: The wire tab view and the server tab record both declare `view` and their five payloads as independent optional fields with a prose-only "present only when" invariant, so each side hand-writes the same five predicates and nothing ties the two sets together. Severity: 6/10

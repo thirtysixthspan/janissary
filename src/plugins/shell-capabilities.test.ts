@@ -63,7 +63,7 @@ function makeManagers(extra: Partial<Managers> = {}) {
 function contextFor(capabilities: readonly TabPluginCapabilityName[], managers: Managers) {
   return createPluginContext(
     managers, declaration(capabilities), activationFor(), { label: 'janus', command: 'shell' },
-    () => true, [],
+    () => true,
   );
 }
 
@@ -122,7 +122,7 @@ describe('originTab', () => {
     byLabel.mockReturnValue(undefined);
     const capabilities = createPluginContext(
       managers, declaration(['originTab']), activationFor(), { label: 'ghost', command: 'shell' },
-      () => true, [],
+      () => true,
     );
 
     expect(capabilities.originTab()).toBeNull();
@@ -132,7 +132,7 @@ describe('originTab', () => {
     const { managers } = makeManagers();
     const capabilities = createPluginContext(
       managers, declaration(['originTab']), activationFor(), { label: 'janus', command: 'shell' },
-      () => false, [],
+      () => false,
     );
 
     expect(capabilities.originTab()).toBeNull();
@@ -163,7 +163,7 @@ describe('dispatchLineWithOutput', () => {
     byLabel.mockReturnValue(undefined);
     const capabilities = createPluginContext(
       managers, declaration(['dispatchLineWithOutput']), activationFor(), { label: 'janus', command: 'shell' },
-      () => true, [], 'shell1',
+      () => true, { answeringLabel: 'shell1' },
     );
 
     await capabilities.dispatchLineWithOutput('theme');
@@ -184,7 +184,7 @@ describe('dispatchLineWithOutput', () => {
     byLabel.mockReturnValue({ label: 'shell1' } as never);
     const capabilities = createPluginContext(
       managers, declaration(['dispatchLineWithOutput']), activationFor(), { label: 'janus', command: 'shell' },
-      () => true, [], 'shell1',
+      () => true, { answeringLabel: 'shell1' },
     );
 
     await expect(capabilities.dispatchLineWithOutput('help')).resolves.toEqual({
@@ -219,7 +219,7 @@ describe('dispatchLineWithOutput', () => {
     const { managers, dispatchLineWithOutput } = withDispatcher();
     const capabilities = createPluginContext(
       managers, declaration(['dispatchLineWithOutput']), activationFor(), { label: 'janus', command: 'shell' },
-      () => false, [],
+      () => false,
     );
 
     await expect(capabilities.dispatchLineWithOutput('help')).resolves.toEqual({
@@ -244,7 +244,7 @@ describe('spawnTerminal as a declared resource', () => {
       ...(spawnTerminal !== undefined && { spawnTerminal }),
     };
     createPluginContext(
-      managers, declared, activationFor(), { label: 'janus', command: 'shell' }, () => true, [],
+      managers, declared, activationFor(), { label: 'janus', command: 'shell' }, () => true,
     ).openOrFocusTab('shell-1', (resources: TabPluginResources) => {
       seen.push(resources);
       return { title: 'shell', payload: {} };
@@ -283,7 +283,7 @@ describe('completeLine', () => {
     managers.monitor = { namesFor: vi.fn(() => []) } as unknown as Managers['monitor'];
     const capabilities = createPluginContext(
       managers, declaration(['completeLine', 'originTab']), activationFor(),
-      { label: 'janus', command: 'shell' }, () => true, [], 'shell',
+      { label: 'janus', command: 'shell' }, () => true, { answeringLabel: 'shell' },
     );
     capabilities.completeLine('l', 1);
     expect(completeCommandLine).toHaveBeenLastCalledWith(
@@ -300,7 +300,7 @@ describe('completeLine', () => {
     const { managers } = makeManagers();
     const capabilities = createPluginContext(
       managers, declaration(['completeLine']), activationFor(), { label: 'janus', command: 'shell' },
-      () => false, [],
+      () => false,
     );
 
     // The line and cursor come back untouched, so a disabled plugin's bar still has something coherent
@@ -361,7 +361,7 @@ describe('terminalRunning', () => {
     const { managers } = makeManagers({ pty: { isRunningFor: vi.fn(() => true) } as never });
     const capabilities = createPluginContext(
       managers, declaration(['terminalRunning']), activationFor(), { label: 'janus', command: 'shell' },
-      () => false, [],
+      () => false,
     );
 
     expect(capabilities.terminalRunning('pty7')).toBe(false);
@@ -392,7 +392,7 @@ describe('queueLine and nextQueuedLine', () => {
   function answeringContext(managers: Managers, isEnabled = () => true, answeringLabel: string | null = 'shell1') {
     return createPluginContext(
       managers, declaration(['queueLine', 'nextQueuedLine']), activationFor(), { label: 'janus', command: 'shell' },
-      isEnabled, [], answeringLabel ?? undefined,
+      isEnabled, { answeringLabel: answeringLabel ?? undefined },
     );
   }
 
@@ -458,7 +458,7 @@ describe('recordCwd', () => {
     Object.assign(managers.tab, { setCwd });
     const capabilities = createPluginContext(
       managers, declaration(['recordCwd']), activationFor(), { label: 'janus', command: 'shell' },
-      isEnabled, [], answeringLabel ?? undefined,
+      isEnabled, { answeringLabel: answeringLabel ?? undefined },
     );
     return { capabilities, setCwd };
   }
