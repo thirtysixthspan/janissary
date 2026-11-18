@@ -3,6 +3,7 @@ import { messageBus } from '../bus.js';
 import { closeQuitsApp } from '../tab/placement.js';
 import { armHarnessIdleEscalation, cancelHarnessIdleEscalation } from '../harness/idle-notification.js';
 import type { TabPluginDeclaration, TabPluginServerCapabilities } from './api.js';
+import { ownedPluginTabs } from '../tab/lookup.js';
 
 // The capabilities that act on one of this plugin's own tabs, each addressed by instance key the way
 // `updateTab` is: the badge, the busy dot, where the tab sits, the server-only snapshot a monitor
@@ -41,10 +42,8 @@ export function ownTabCapabilities(input: {
     // same `setDock` the client's dock-cycle control uses — there is still one docking path.
     dockTab: (instanceKey, dock) => {
       if (!isEnabled()) return;
-      const index = managers.tab.tabs.findIndex(
-        (tab) => tab.plugin?.id === declaration.id && tab.plugin.instanceKey === instanceKey,
-      );
-      if (index !== -1) managers.tab.setDock(index, dock);
+      const [owned] = ownedPluginTabs(managers.tab.tabs, declaration.id, instanceKey);
+      if (owned) managers.tab.setDock(owned.index, dock);
     },
     // Server-only transient state, addressed like `setBusy`. It never reaches `buildTabView`, so
     // writing it neither marks the view dirty nor sends anything to a client.
@@ -57,17 +56,14 @@ export function ownTabCapabilities(input: {
     // and never the close that quits the app.
     closeOwnTab: (instanceKey) => {
       if (!isEnabled()) return;
-      const index = managers.tab.tabs.findIndex(
-        (tab) => tab.plugin?.id === declaration.id && tab.plugin.instanceKey === instanceKey,
-      );
-      if (index === -1 || closeQuitsApp(managers.tab.tabs, index)) return;
-      void managers.tab.closeTab(index);
+      const [owned] = ownedPluginTabs(managers.tab.tabs, declaration.id, instanceKey);
+      if (!owned || closeQuitsApp(managers.tab.tabs, owned.index)) return;
+      void managers.tab.closeTab(owned.index);
     },
-    // The same plugin-id scan `pluginTabByInstanceKey` makes, answering every key it would find, so
-    // a plugin learns only what is open of its own.
+    // Every instance key the shared ownership helper finds, so a plugin learns only what is open of its own.
     ownTabKeys: () => {
       if (!isEnabled()) return [];
-      return managers.tab.tabs.flatMap((tab) => (tab.plugin?.id === declaration.id ? [tab.plugin.instanceKey] : []));
+      return ownedPluginTabs(managers.tab.tabs, declaration.id).map(({ tab }) => tab.plugin.instanceKey);
     },
   };
 }

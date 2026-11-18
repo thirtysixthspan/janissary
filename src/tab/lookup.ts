@@ -90,6 +90,19 @@ export function pluginTabByInstanceKey(tabs: Tab[], id: string, instanceKey: str
   return tab && isPluginTab(tab) ? tab : undefined;
 }
 
+// The single definition of "tabs this plugin owns": every tab carrying the declaration id, narrowed
+// to one instance key when given, paired with its index for callers that act on an index. The plain
+// `plugin?.id` predicate — not the `isPluginTab` guard `pluginTabByInstanceKey` applies — is deliberate:
+// the four scans this replaces matched on the record alone, including a mid-activation tab with no view.
+export type OwnedPluginTab = { tab: Tab & { plugin: NonNullable<Tab['plugin']> }; index: number };
+
+export function ownedPluginTabs(tabs: Tab[], id: string, instanceKey?: string): OwnedPluginTab[] {
+  return tabs.flatMap((tab, index) =>
+    tab.plugin?.id === id && (instanceKey === undefined || tab.plugin.instanceKey === instanceKey)
+      ? [{ tab: tab as Tab & { plugin: NonNullable<Tab['plugin']> }, index }]
+      : []);
+}
+
 export function filesTabByRoot(tabs: Tab[], root: string): FilesTab | undefined {
   const tab = tabs.find((t) => t.files?.root === root);
   return tab && isFilesTab(tab) ? tab : undefined;

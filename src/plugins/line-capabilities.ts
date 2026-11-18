@@ -7,6 +7,7 @@ import { messageBus } from '../bus.js';
 import type { TabPluginDeclaration, TabPluginServerCapabilities } from './api.js';
 import { ownTabLabel } from './own-tab.js';
 import { originWorkspace } from './origin-workspace.js';
+import { ownedPluginTabs } from '../tab/lookup.js';
 
 // The capabilities that make a plugin tab a place a line can be typed and a process can be checked
 // on: where it is, which tab a line runs in, what output that line produces, what the application
@@ -30,9 +31,7 @@ export function lineCapabilities(input: {
   const { managers, declaration, origin, answeringLabel, isEnabled, deadline } = input;
   // The labels of this plugin's own open tabs — the only terminals whose ids a plugin can legitimately
   // hold, because a payload factory is the only scope in which it may start one.
-  const ownTabLabels = () => managers.tab.tabs
-    .filter((tab) => tab.plugin?.id === declaration.id)
-    .map((tab) => tab.label);
+  const ownTabLabels = () => ownedPluginTabs(managers.tab.tabs, declaration.id).map(({ tab }) => tab.label);
   return {
     originTab: (label?: string) => {
       if (!isEnabled()) return null;

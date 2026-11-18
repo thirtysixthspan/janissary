@@ -276,6 +276,24 @@ describe('tab plugin notifications', () => {
     expect(seen).toEqual([{ topic: 'schedules', data: ROWS, tabs: ['/tmp/a.fixture'] }]);
   });
 
+  it('delivers each subscriber only its own plugin\'s instance keys', async () => {
+    const managers = makeManagers();
+    const seenAlpha: TabPluginNotification[] = [];
+    const seenBeta: TabPluginNotification[] = [];
+    const host = new TabPluginHost(managers, [manifest('alpha', ['schedules']), manifest('beta', ['schedules'])], {
+      alpha: async () => ({ activate: () => activationFor((event) => { seenAlpha.push(event); }) }),
+      beta: async () => ({ activate: () => activationFor((event) => { seenBeta.push(event); }) }),
+    });
+    await openTab(host, managers, 'alpha');
+    await openTab(host, managers, 'beta');
+
+    await fireSchedules();
+
+    expect(seenAlpha).toEqual([{ topic: 'schedules', data: ROWS, tabs: ['/tmp/a.alpha'] }]);
+    expect(seenBeta).toEqual([{ topic: 'schedules', data: ROWS, tabs: ['/tmp/a.beta'] }]);
+    host.dispose();
+  });
+
   it('delivers commands only to an active plugin with an open tab, and never activates one', async () => {
     const managers = makeManagers();
     const notify = vi.fn();

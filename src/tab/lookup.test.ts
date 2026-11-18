@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { makeTab } from './index.js';
 import {
   allLabelOrAliasNames, byLabel, byLabelOrAlias, editorTab, editorTabByUrl, filesTab, filesTabByRoot,
-  harnessTab, harnessTabByPtyId, monitorTab, pluginTab, pluginTabByInstanceKey,
+  harnessTab, harnessTabByPtyId, monitorTab, ownedPluginTabs, pluginTab, pluginTabByInstanceKey,
 } from './lookup.js';
 import type { Tab } from './types.js';
 
@@ -155,5 +155,30 @@ describe('the keyed lookup helpers', () => {
     const clone = { ...tab, label: `${tab.label}-2` };
     const [id, key] = keyOf(tab);
     expect(helper([clone, tab], id, key)).toBe(clone);
+  });
+});
+
+describe('ownedPluginTabs', () => {
+  const pluginTab = (label: string, id: string, instanceKey: string): Tab => ({
+    ...makeTab(label, '#ddd'), view: 'plugin',
+    plugin: { id, instanceKey, schemaVersion: 1, payload: {}, fileRefs: [], sourceLabel: label },
+  }) as Tab;
+
+  const a1 = pluginTab('a1', 'alpha', 'one');
+  const b1 = pluginTab('b1', 'beta', 'theirs');
+  const a2 = pluginTab('a2', 'alpha', 'two');
+  const tabs = [makeTab('plain', '#bbb'), a1, b1, a2];
+
+  it('returns every tab of the named id with its strip index, in order', () => {
+    expect(ownedPluginTabs(tabs, 'alpha')).toEqual([{ tab: a1, index: 1 }, { tab: a2, index: 3 }]);
+  });
+
+  it('narrows to one instance key when given', () => {
+    expect(ownedPluginTabs(tabs, 'alpha', 'two')).toEqual([{ tab: a2, index: 3 }]);
+  });
+
+  it('is empty for an unknown id or key', () => {
+    expect(ownedPluginTabs(tabs, 'gamma')).toEqual([]);
+    expect(ownedPluginTabs(tabs, 'alpha', 'missing')).toEqual([]);
   });
 });
