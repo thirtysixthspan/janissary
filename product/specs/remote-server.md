@@ -938,9 +938,10 @@ workspace owner holds. Finished run clones stay owned until that point, so none 
 a live ACP child; if ACP teardown cannot confirm that its processes exited, the run clones and the main
 workspace are all kept, as today. A detached far side does not stop the service, cancel pending clones
 or release ready ones — detaching only parks its session. A far side that outlives a lost channel
-therefore keeps its run clones on disk until it shuts down. An `acp-open` or `agent-resolve` request
-may name a ready clone with a `workspace` selector, but no launcher or command exposes the service
-for a run yet.
+therefore keeps its run clones on disk until it shuts down. The `subagent` command is the command that
+provisions and releases a run clone for each remote subagent run. An `acp-open` or `agent-resolve` request
+may name that ready clone with a `workspace` selector, selecting it by its label for spawn, confinement
+and task resolution.
 
 ### Out of scope
 

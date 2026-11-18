@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Reconcile the remote spec's stale claim that no command exposes run clones with the subagent command that uses them.
-
-Existing Issue: The Run clones section closes by saying an open or resolution request may name a ready clone with a workspace selector but no launcher or command exposes the service for a run yet, while this same change ships the subagent command that provisions and releases a run clone over the channel for every remote run. Severity: 5/10
-
-Existing Risk: 5/10 - A reviewer or future maintainer reading the remote spec concludes the run-clone frames are unused scaffolding, under-scrutinizes the remote subagent clone lifecycle, or later removes the service as dead code while the command still depends on it.
-
-Proposal Risk: 2/10 - The spec then agrees with the code and the sibling subagent spec, the change is prose only, and no runtime hazard remains; the only residual risk is a future edit reintroducing a similar stale claim.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2064 "reconcile the remote spec's stale claim that no command exposes run clones". In product/specs/remote-server.md, find the Run clones section's closing sentence stating that an acp-open or agent-resolve request may name a ready clone with a workspace selector but no launcher or command exposes the service for a run yet. Replace that last clause with a statement that the subagent command is the command that provisions and releases a run clone for each remote subagent run, and that acp-open and agent-resolve select that clone by its label for spawn, confinement, and task resolution. Cross-check product/specs/subagent.md's Remote clone lifecycle section and src/subagent/launch.ts and src/remote/serve-run-clones.ts so the wording matches the shipped behavior. Change no code, frames, protocol version, or command behavior. The spec has no automated test; verify by re-reading the section and confirming it no longer denies that a command uses the service.
-
-
 * Correct the plan's stale claim that the tell grant count started at fourteen rather than the actual seventeen.
 
 Existing Issue: The plan's Specs and docs section says the tell grant count moves from fourteen to eighteen in three help and spec files, but those files carried seventeen native commands before this change, as both the diff and the count-correction fix plan show. Severity: 2/10
