@@ -192,6 +192,26 @@ describe('runSubagentEntry', () => {
     });
   });
 
+  it('extracts the delimited final result from a completed turn', async () => {
+    const { options } = setup();
+    fakeSession();
+    const { execution, events } = start(options);
+    answer(events, 'thinking\n<final_result>\nThe answer.\n</final_result>\ntrailing');
+    expect(await execution).toMatchObject({
+      status: 'completed', response: 'The answer.', replied: true, reason: 'answered',
+    });
+  });
+
+  it('keeps a verbatim completion when the turn has no delimiters', async () => {
+    const { options } = setup();
+    fakeSession();
+    const { execution, events } = start(options);
+    answer(events, 'plain answer');
+    expect(await execution).toMatchObject({
+      status: 'completed', response: 'plain answer', replied: true, reason: 'answered',
+    });
+  });
+
   it('treats an empty final answer through the real cold-start retry as completed', async () => {
     const { options } = setup();
     const { prompts } = scriptedSession([[], []]);

@@ -10,6 +10,7 @@ import { runToolLoop } from '../acp/drive-loop.js';
 import { guardAcpHandlers } from '../acp/guard-handlers.js';
 import { coreSnapshotRows } from '../acp/run-prompt.js';
 import { subagentTaskPrompt } from './primer.js';
+import { extractFinalResult } from './final-result.js';
 import { errorText } from '../error-text.js';
 import { openSubagentAttemptSession, type SubagentAttemptLease, type SubagentAttemptRemote } from './attempt-session.js';
 import { createSubagentAttemptHost } from './attempt-host.js';
@@ -174,7 +175,7 @@ export async function runSubagentEntry(options: SubagentAttemptOptions): Promise
       runToolLoop(loopSession as AcpLoopSession, prompt, snapshot, host, guardAcpHandlers({
         startTurn: () => {},
         chunk: () => {},
-        endTurn: (text) => state.reply(text),
+        endTurn: (text) => state.reply(extractFinalResult(text)),
         startCommand: (command, workspace) => {
           state.toolActivity(command, workspace);
         },

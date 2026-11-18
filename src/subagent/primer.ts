@@ -18,6 +18,7 @@ export function isSubagentCommandLine(line: string): boolean {
 export function subagentTaskPrompt(taskText: string, context?: string): string {
   return [
     'You are a subagent. Complete the task below and finish with a self-contained final result for the agent that launched you.',
+    'Write only that final result between <final_result> and </final_result> tags. Keep reasoning, thoughts, and tool calls outside the tags, and write nothing after the closing tag. The tags and everything outside them are discarded; only the contents reach the caller.',
     taskText,
     ...(context === undefined ? [] : [context]),
   ].join('\n\n');

@@ -89,9 +89,20 @@ describe('subagentTaskPrompt', () => {
     expect(prompt).toContain('EXTRA CONTEXT');
   });
 
+  it('teaches the final result delimiter contract', () => {
+    const prompt = subagentTaskPrompt('TASK BODY');
+    expect(prompt).toContain('<final_result>');
+    expect(prompt).toContain('</final_result>');
+    expect(prompt).toContain('Keep reasoning, thoughts, and tool calls outside the tags');
+    expect(prompt).toContain('The tags and everything outside them are discarded');
+    expect(prompt.indexOf('Write only that final result')).toBeLessThan(prompt.indexOf('TASK BODY'));
+  });
+
   it('omits context when none is supplied', () => {
     expect(subagentTaskPrompt('TASK BODY')).toBe(
-      'You are a subagent. Complete the task below and finish with a self-contained final result for the agent that launched you.\n\nTASK BODY',
+      'You are a subagent. Complete the task below and finish with a self-contained final result for the agent that launched you.\n\n'
+      + 'Write only that final result between <final_result> and </final_result> tags. Keep reasoning, thoughts, and tool calls outside the tags, and write nothing after the closing tag. The tags and everything outside them are discarded; only the contents reach the caller.\n\n'
+      + 'TASK BODY',
     );
   });
 
