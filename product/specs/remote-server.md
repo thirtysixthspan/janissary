@@ -314,6 +314,8 @@ Protocol version 46 adds `web-fetch`, the read-only, path-free filesystem operat
 
 Protocol version 47 adds `acp-session-started`, a server-only frame carrying a transport address and the provider's session id. The far side sends it the moment the agent's `newSession` succeeds, before effort selection or configuration, so a successful handshake is reported even when effort setup later fails. `acp-ready` gains the same id as an optional field; a peer that never reported one leaves it out, and the frame still carries its sandbox state as before. A session id is kept verbatim as a nonempty string — no trimming, prefixing, or encoding — and an empty or non-string value makes the frame malformed. Readiness does not move: only the first `acp-ready` settles the readiness wait and calls the connect hook with its sandbox state, and a later ready frame is ignored even when the earlier one carried no id. The early notification neither signals readiness nor settles that wait. A near-side adapter reports a provider id at most once, taking the first live id it sees whether it arrives on the notification or on ready; a notification after an id-less ready may still supply the one id without repeating readiness. Both frames are routed only to the listener that owns the transport address. A version-46 peer cannot report an id before readiness, so a failed effort setup after an otherwise successful handshake would lose it while both ends looked healthy; the exact-version handshake refuses that pairing. The new frame is not admitted on the client-to-server side or as a channel-level frame.
 
+Version 44 is one unreleased version for the whole feature set, not one bump per frame. The run-clone request and its answer belong to the same version and do not move the constant: a peer that speaks 44 already refuses any older one at the handshake, and bumping again would split peers that support the same frames.
+
 Unavailable sends, explicit disconnect, transport loss, protocol failure, and channel finish settle and detach ACP listeners, including before readiness. Late frames for detached ids are ignored. A provider id already reported before such a terminal event stays observed; a later readiness failure neither erases nor replaces it. A lost core ACP session is closed locally and replaced by a later request once its channel is ready; autonomous runs retain their transport-loss termination. Durable activity capture belongs only to the initiating project's recorder. The sessions tab's existing shell/harness restoration policy is unchanged.
 
 The handshake check is narrower for an attach than for a launch. An attach is answered by the
@@ -381,9 +383,12 @@ nonempty. A clone offer must carry a nonempty path and URL, and its home directo
 nonempty when present; a clone answer's `accept` must be a boolean. A root refusal must carry one of
 its declared kinds, a nonempty path, and every nonempty field that kind carries; an unknown kind is
 malformed.
-An invalid known frame is refused as `Malformed remote frame "<type>".` and an unknown frame type is
-refused by name. Undeclared properties are discarded rather than forwarded to process, workspace, or
-ACP handlers.
+A run-clone request must carry a nonempty id and label and an action from the two declared values;
+its answer must carry a nonempty id and, when a directory or an error is supplied, a nonempty string
+for it, never both. An id-only answer is a valid release completion, and no action or label is added
+to the answer. An invalid known frame is refused as `Malformed remote frame "<type>".` and an unknown
+frame type is refused by name. Undeclared properties are discarded rather than forwarded to process,
+workspace, ACP or run-clone handlers.
 
 An ACP-level failure is not a channel-level fault. An agent that fails to spawn or errors mid-prompt
 is reported on its own error frame and routed to the session that owns it; only a malformed or
@@ -889,9 +894,28 @@ once; concurrent or repeated releases share that removal and never remove the sa
 A clone that fails or is cancelled gives its name back only after its cleanup has finished, so a
 later request may retry it, and a late completion from the old attempt cannot change the retry.
 
-The ACP and agent-resolution requests a client may send are routed together, beside the rest of the
-server's frame handling; a frame only the far side may send still receives the same
+The ACP, agent-resolution and run-clone requests a client may send are routed together, beside the
+rest of the server's frame handling; a frame only the far side may send still receives the same
 `Unexpected remote frame "<type>".` refusal, whether or not a workspace has been provisioned.
+
+A client asks for a clone with a request carrying its own id, an action and a supplied label. The
+answer carries that same id and one of three payloads: a directory for a create, nothing beyond the
+id for a release, or an error; a directory and an error never travel together. A create's directory
+is how the caller learns the clone is ready, and a create has no deadline — a clone can take as long
+as the far side's own setup needs. A release does have a bounded wait and fails with a timeout when
+the far side never answers. The near side keeps creates and releases apart even when their ids are
+the same as another request family's ids, and an answer with the wrong payload for its action is
+refused locally rather than taken as success. A request made before the connection is fully attached,
+or after it is gone, is refused on the near side without reaching the host; a failure to write the
+request settles only that request immediately, and neither that nor a near-side timeout tells the
+far side to release anything, since the far side may have received the request. An error answer, a
+missing workspace and a failed clone each settle only the request they answer, without faulting the
+session; a malformed answer is a protocol failure. Disconnect, shutdown, transport loss and protocol
+failure settle every outstanding request at once with a reason naming what happened, and settlement
+clears a release's timer so a late answer cannot change it. A request is never replayed once the
+transport is replaced — a caller that still wants a clone makes a fresh request with a new id. A far
+side with no provisioned workspace answers each action with a correlated error instead of a general
+provisioning refusal.
 
 On shutdown the service stops admitting new clones, cancels and drains anything still starting, and
 the server waits for that drain alongside ACP disposal before the guarded removal of everything the
@@ -899,8 +923,8 @@ workspace owner holds. Finished run clones stay owned until that point, so none 
 a live ACP child; if ACP teardown cannot confirm that its processes exited, the run clones and the main
 workspace are all kept, as today. A detached far side does not stop the service, cancel pending clones
 or release ready ones — detaching only parks its session. A far side that outlives a lost channel
-therefore keeps its run clones on disk until it shuts down. No wire request, workspace selector, or
-command exposes this service yet.
+therefore keeps its run clones on disk until it shuts down. No workspace selector, launcher or
+command exposes the service for a run yet.
 
 ### Out of scope
 

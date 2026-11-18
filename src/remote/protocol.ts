@@ -250,12 +250,14 @@
 // failure after a successful handshake would lose it while both ends looked healthy; the
 // exact-version handshake refuses that pairing. The new frame is server-only.
 //
-// Version 47 opens this feature's single unreleased protocol version, not one bump per frame: the
-// later run-clone frames and workspace-selector frames extend this same version and comment without
-// another increment. Those frames are not implemented yet — no run-clone or selector support is
-// present here — but when they land they belong to version 47 and add to this comment rather than
-// moving the constant. Bumping again would break the exact-version handshake between peers of the
-// same unreleased feature set.
+// Version 47 opens this feature's single unreleased protocol version, not one bump per frame. The
+// run-clone frames extend this same version and comment without another increment: a client
+// `run-clone` asks for a shallow run clone to be created or released under a supplied label, and a
+// server `run-clone-result` answers with its directory, nothing beyond the id, or an error. Both are
+// request/reply frames, not channel notifications, so neither is admitted as a tab-level frame.
+// Workspace-selector frames further down the same feature also belong to 47, and add to this comment
+// rather than moving the constant. Bumping again would break the exact-version handshake between
+// peers of the same unreleased feature set.
 export const REMOTE_PROTOCOL_VERSION = 47;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it

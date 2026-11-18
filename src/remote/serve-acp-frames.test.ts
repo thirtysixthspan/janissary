@@ -3,6 +3,8 @@ import { dispatchAcpFrame } from './serve-acp-frames.js';
 import { decodeFrame, encodeFrame } from './protocol.js';
 import type { RemoteFrame, ServerFrame } from './protocol-frames.js';
 import type { ProvisionedWorkspace } from './serve-provision.js';
+import { RemoteRunClones } from './serve-run-clones.js';
+import type { WorkspaceManager } from '../workspace/manager.js';
 
 // Only the frame routing is under test here: `RemoteAcp` itself is exercised in its own tests, and
 // the resolver against a real workspace is exercised in `serve-agent-resolution.test.ts`. These
@@ -10,7 +12,8 @@ import type { ProvisionedWorkspace } from './serve-provision.js';
 
 function owner(dir = process.cwd()) {
   const acp = { open: vi.fn(), run: vi.fn(), toolResult: vi.fn(), close: vi.fn(), cancel: vi.fn() };
-  return { acp, workspace: { dir, acp } as unknown as ProvisionedWorkspace };
+  const runClones = { create: vi.fn(), release: vi.fn() };
+  return { acp, runClones, workspace: { dir, acp, runClones } as unknown as ProvisionedWorkspace };
 }
 
 const OPEN = { type: 'acp-open', id: 's1', command: 'opencode', args: ['acp'] } as const;
@@ -19,6 +22,8 @@ const TOOL_RESULT = { type: 'acp-tool-result', id: 's1', request: 3, output: '42
 const CLOSE = { type: 'acp-close', id: 's1' } as const;
 const CANCEL = { type: 'acp-cancel', id: 's1' } as const;
 const RESOLVE = { type: 'agent-resolve', id: 'run-1', task: 'missing-task.md', skills: [] } as const;
+const CREATE = { type: 'run-clone', id: 'clone-1', action: 'create', label: 'subagent-run1' } as const;
+const RELEASE = { type: 'run-clone', id: 'clone-2', action: 'release', label: 'subagent-run1' } as const;
 
 const NO_WORKSPACE = { type: 'workspace-failed', message: 'No remote workspace has been provisioned.' } as const;
 
@@ -136,6 +141,170 @@ describe('dispatchAcpFrame', () => {
     expect(dispatchAcpFrame(frame, workspace, emit)).toBe(false);
 
     expect(emit).not.toHaveBeenCalled();
+    for (const call of Object.values(acp)) expect(call).not.toHaveBeenCalled();
+  });
+
+  it.each([CREATE, RELEASE])('answers a %s without a workspace with a correlated error', (frame) => {
+    const emit = vi.fn();
+
+    expect(dispatchAcpFrame(frame, undefined, emit)).toBe(true);
+
+    expect(emit).toHaveBeenCalledExactlyOnceWith({
+      type: 'run-clone-result', id: frame.id, error: 'No remote workspace has been provisioned.',
+    });
+  });
+
+  it.each([CREATE, RELEASE])('immediately claims a %s and passes only its label to the service', (frame) => {
+    const { runClones, workspace } = owner();
+    runClones.create.mockResolvedValue({ dir: '/srv/ws/subagent-run1' });
+    runClones.release.mockResolvedValue({});
+    const emit = vi.fn();
+
+    expect(dispatchAcpFrame(frame, workspace, emit)).toBe(true);
+
+    const method = frame.action === 'create' ? runClones.create : runClones.release;
+    expect(method).toHaveBeenCalledExactlyOnceWith(frame.label);
+  });
+
+  it('defers a create answer until readiness and then sends the exact directory', async () => {
+    const { runClones, workspace } = owner();
+    const ready = Promise.withResolvers<{ dir?: string; error?: string }>();
+    runClones.create.mockReturnValue(ready.promise);
+    const emit = vi.fn();
+
+    expect(dispatchAcpFrame(asFrame(CREATE), workspace, emit)).toBe(true);
+    await Promise.resolve();
+    expect(emit).not.toHaveBeenCalled();
+
+    ready.resolve({ dir: '/srv/ws/subagent-run1' });
+    await vi.waitFor(() => expect(emit).toHaveBeenCalledWith({
+      type: 'run-clone-result', id: 'clone-1', dir: '/srv/ws/subagent-run1',
+    }));
+  });
+
+  it.each([
+    ['directory', 'create', { dir: '/srv/ws/subagent-run1' }],
+    ['error', 'create', { error: 'clone refused' }],
+    ['empty', 'release', {}],
+  ] as const)('maps the service\'s exact %s result for %s to the request id', async (_kind, action, result) => {
+    const { runClones, workspace } = owner();
+    runClones.create.mockResolvedValue(result);
+    runClones.release.mockResolvedValue(result);
+    const emit = vi.fn();
+    const frame = action === 'create' ? CREATE : { ...RELEASE, id: 'clone-1' };
+
+    expect(dispatchAcpFrame(frame, workspace, emit)).toBe(true);
+    await vi.waitFor(() => expect(emit).toHaveBeenCalledExactlyOnceWith({
+      type: 'run-clone-result', id: 'clone-1', ...result,
+    }));
+  });
+
+  it('correlates a release answered while a create is still pending', async () => {
+    const { runClones, workspace } = owner();
+    const ready = Promise.withResolvers<{ dir?: string; error?: string }>();
+    runClones.create.mockReturnValue(ready.promise);
+    runClones.release.mockResolvedValue({});
+    const emit = vi.fn();
+
+    expect(dispatchAcpFrame(CREATE, workspace, emit)).toBe(true);
+    expect(dispatchAcpFrame(RELEASE, workspace, emit)).toBe(true);
+    await vi.waitFor(() => expect(emit).toHaveBeenCalledExactlyOnceWith({ type: 'run-clone-result', id: 'clone-2' }));
+
+    ready.resolve({ dir: '/srv/ws/subagent-run1' });
+    await vi.waitFor(() => expect(emit).toHaveBeenCalledTimes(2));
+    expect(emit).toHaveBeenCalledWith({ type: 'run-clone-result', id: 'clone-1', dir: '/srv/ws/subagent-run1' });
+  });
+
+  it('correlates two independent creates', async () => {
+    const { runClones, workspace } = owner();
+    runClones.create.mockResolvedValueOnce({ dir: '/srv/ws/one' }).mockResolvedValueOnce({ dir: '/srv/ws/two' });
+    const emit = vi.fn();
+
+    dispatchAcpFrame(CREATE, workspace, emit);
+    dispatchAcpFrame({ ...CREATE, id: 'clone-3', label: 'subagent-run2' }, workspace, emit);
+
+    await vi.waitFor(() => expect(emit).toHaveBeenCalledTimes(2));
+    expect(emit).toHaveBeenCalledWith({ type: 'run-clone-result', id: 'clone-1', dir: '/srv/ws/one' });
+    expect(emit).toHaveBeenCalledWith({ type: 'run-clone-result', id: 'clone-3', dir: '/srv/ws/two' });
+  });
+
+  it('falls back to an action-specific message when a service failure has no text', async () => {
+    const { runClones, workspace } = owner();
+    runClones.create.mockResolvedValue({ error: '' });
+    const emit = vi.fn();
+
+    dispatchAcpFrame(CREATE, workspace, emit);
+
+    await vi.waitFor(() => expect(emit).toHaveBeenCalledWith({
+      type: 'run-clone-result', id: 'clone-1', error: 'Remote run clone create failed.',
+    }));
+  });
+
+  it('converts a synchronous service throw into a correlated error', async () => {
+    const { runClones, workspace } = owner();
+    runClones.create.mockImplementation(() => { throw new Error('manager exploded'); });
+    const emit = vi.fn();
+
+    expect(dispatchAcpFrame(CREATE, workspace, emit)).toBe(true);
+
+    await vi.waitFor(() => expect(emit).toHaveBeenCalledWith({
+      type: 'run-clone-result', id: 'clone-1', error: 'manager exploded',
+    }));
+  });
+
+  it.each([
+    ['error object', () => new Error('clone failed asynchronously'), 'clone failed asynchronously'],
+    ['empty error object', () => {
+      const error = new Error('placeholder');
+      error.message = '';
+      return error;
+    }, 'Remote run clone create failed.'],
+    ['non-error', () => 'plain failure', 'plain failure'],
+  ])('converts a rejected service promise (%s) into a correlated error', async (_kind, thrown, message) => {
+    const { runClones, workspace } = owner();
+    runClones.create.mockReturnValue(Promise.reject(thrown()) as ReturnType<typeof runClones.create>);
+    const emit = vi.fn();
+
+    dispatchAcpFrame(CREATE, workspace, emit);
+
+    await vi.waitFor(() => expect(emit).toHaveBeenCalledWith({ type: 'run-clone-result', id: 'clone-1', error: message }));
+  });
+
+  it('reaches the real service refusal for an invalid label without manager work', async () => {
+    const create = vi.fn();
+    const manager = { create, tracks: vi.fn(), remove: vi.fn() } as unknown as WorkspaceManager;
+    const service = new RemoteRunClones(manager, {}, 'main');
+    const workspace = { dir: process.cwd(), runClones: service } as unknown as ProvisionedWorkspace;
+    const emit = vi.fn();
+
+    expect(dispatchAcpFrame({ ...CREATE, label: '../escape' }, workspace, emit)).toBe(true);
+
+    await vi.waitFor(() => expect(emit).toHaveBeenCalledTimes(1));
+    expect(emit).toHaveBeenCalledWith({
+      type: 'run-clone-result', id: 'clone-1', error: expect.stringContaining('Cannot launch'),
+    });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('rejects malformed action and label syntax by decoding before dispatch', () => {
+    expect(decodeFrame(JSON.stringify({ ...CREATE, action: 'delete' }))).toEqual({
+      error: 'Malformed remote frame "run-clone".',
+    });
+    expect(decodeFrame(JSON.stringify({ ...CREATE, label: '' }))).toEqual({
+      error: 'Malformed remote frame "run-clone".',
+    });
+  });
+
+  it('returns false for a decoded server-only run-clone-result without service calls', () => {
+    const { acp, runClones, workspace } = owner();
+    const emit = vi.fn();
+    const frame = asFrame({ type: 'run-clone-result', id: 'clone-1' });
+
+    expect(dispatchAcpFrame(frame, workspace, emit)).toBe(false);
+
+    expect(emit).not.toHaveBeenCalled();
+    expect(runClones.create).not.toHaveBeenCalled();
+    expect(runClones.release).not.toHaveBeenCalled();
     for (const call of Object.values(acp)) expect(call).not.toHaveBeenCalled();
   });
 });

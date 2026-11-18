@@ -486,9 +486,11 @@ describe('RemoteServer', () => {
     const { server, frames } = makeServer();
     server.receive(`${encodeFrame({ type: 'acp-ready', id: 'r1', sandboxed: false })}\n`);
     server.receive(`${encodeFrame({ type: 'agent-resolve-result', id: 'r1', error: 'no' })}\n`);
+    server.receive(`${encodeFrame({ type: 'run-clone-result', id: 'r1' })}\n`);
     expect(frames).toEqual([
       { type: 'workspace-failed', message: 'Unexpected remote frame "acp-ready".' },
       { type: 'workspace-failed', message: 'Unexpected remote frame "agent-resolve-result".' },
+      { type: 'workspace-failed', message: 'Unexpected remote frame "run-clone-result".' },
     ]);
   });
 
@@ -561,6 +563,71 @@ describe('RemoteServer', () => {
     const { server, frames } = makeServer();
     server.receive(`${encodeFrame({ type: 'session-state' })}\n`);
     expect(frames).toEqual([{ type: 'session-state-result', processes: [] }]);
+  });
+});
+
+describe('RemoteServer — run clone frames', () => {
+  function resultFor(frames: ServerFrame[], id: string) {
+    return frames.find((frame) => frame.type === 'run-clone-result' && frame.id === id);
+  }
+
+  it('answers a correlated missing-workspace error before anything is provisioned', () => {
+    const { server, frames } = makeServer();
+
+    server.receive(`${encodeFrame({ type: 'run-clone', id: 'c-missing', action: 'create', label: 'run-wire-missing' })}\n`);
+    server.receive(`${encodeFrame({ type: 'run-clone', id: 'r-missing', action: 'release', label: 'run-wire-missing' })}\n`);
+
+    expect(frames).toEqual([
+      {
+        type: 'run-clone-result', id: 'c-missing', error: 'No remote workspace has been provisioned.',
+      },
+      {
+        type: 'run-clone-result', id: 'r-missing', error: 'No remote workspace has been provisioned.',
+      },
+    ]);
+  });
+
+  it('answers a create only after its clone is ready and a release leaves the main workspace usable', async () => {
+    const { server, frames } = makeServer();
+    server.receive(`${encodeFrame({ type: 'provision', label: 'clone-wire-main' })}\n`);
+    await waitForWorkspaceReady(frames);
+    const mainDir = frames.find((frame) => frame.type === 'workspace-ready')!.dir;
+    const cloneDir = path.join(repoDir, '.janissary', 'workspace', 'run-wire-frames');
+
+    server.receive(`${encodeFrame({ type: 'run-clone', id: 'c-wire', action: 'create', label: 'run-wire-frames' })}\n`);
+    expect(resultFor(frames, 'c-wire')).toBeUndefined();
+
+    await vi.waitFor(() => expect(resultFor(frames, 'c-wire')).toMatchObject({ id: 'c-wire' }), {
+      timeout: WORKSPACE_READY_TIMEOUT_MS,
+    });
+    expect(resultFor(frames, 'c-wire')).toMatchObject({ dir: cloneDir });
+    expect(existsSync(cloneDir)).toBe(true);
+    expect(existsSync(path.join(cloneDir, 'README.md'))).toBe(true);
+    expect(cloneDir).not.toBe(mainDir);
+
+    server.receive(`${encodeFrame({ type: 'run-clone', id: 'r-wire', action: 'release', label: 'run-wire-frames' })}\n`);
+    await vi.waitFor(() => expect(resultFor(frames, 'r-wire')).toEqual({ type: 'run-clone-result', id: 'r-wire' }));
+    await vi.waitFor(() => expect(existsSync(cloneDir)).toBe(false));
+
+    expect(existsSync(mainDir)).toBe(true);
+    server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
+    expect(acpMock.options.at(-1)).toMatchObject({ cwd: mainDir, workspaceDir: mainDir });
+    server.shutdown(0);
+  });
+
+  it('correlates a failed create with its request id without faulting the server', async () => {
+    const { server, frames } = makeServer();
+    server.receive(`${encodeFrame({ type: 'provision', label: 'clone-wire-error' })}\n`);
+    await waitForWorkspaceReady(frames);
+
+    server.receive(`${encodeFrame({ type: 'run-clone', id: 'c-bad', action: 'create', label: '../escape' })}\n`);
+
+    await vi.waitFor(() => expect(resultFor(frames, 'c-bad')).toMatchObject({ id: 'c-bad' }));
+    expect(resultFor(frames, 'c-bad')).toMatchObject({
+      error: expect.stringContaining('Cannot launch'),
+    });
+    expect(frames.some((frame) => frame.type === 'workspace-failed')).toBe(false);
+    server.shutdown(0);
   });
 });
 

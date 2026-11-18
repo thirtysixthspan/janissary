@@ -276,6 +276,68 @@ describe('acp-tool-step codec', () => {
   });
 });
 
+describe('run-clone codec', () => {
+  it.each(['create', 'release'] as const)('round-trips a %s request with its label plain on the wire', (action) => {
+    const frame: RemoteFrame = { type: 'run-clone', id: 'r1', action, label: ' sub/+agent =🌍 ' };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toMatchObject({ label: frame.label });
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it('round-trips a directory, an id-only and an error result', () => {
+    for (const frame of [
+      { type: 'run-clone-result', id: 'r1', dir: '/srv/ws/ sub/+run ' },
+      { type: 'run-clone-result', id: 'r2' },
+      { type: 'run-clone-result', id: 'r3', error: 'clone refused — 🌍' },
+    ] as const) expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it.each([
+    ['missing id', { action: 'create', label: 'run1' }],
+    ['empty id', { id: '', action: 'create', label: 'run1' }],
+    ['null id', { id: null, action: 'create', label: 'run1' }],
+    ['non-string id', { id: 7, action: 'create', label: 'run1' }],
+    ['missing action', { id: 'r1', label: 'run1' }],
+    ['empty action', { id: 'r1', action: '', label: 'run1' }],
+    ['invalid action', { id: 'r1', action: 'delete', label: 'run1' }],
+    ['null action', { id: 'r1', action: null, label: 'run1' }],
+    ['non-string action', { id: 'r1', action: 1, label: 'run1' }],
+    ['missing label', { id: 'r1', action: 'create' }],
+    ['empty label', { id: 'r1', action: 'create', label: '' }],
+    ['null label', { id: 'r1', action: 'create', label: null }],
+    ['non-string label', { id: 'r1', action: 'create', label: 7 }],
+  ])('refuses a request with %s', (_name, fields) => {
+    expect(decodeFrame(JSON.stringify({ type: 'run-clone', ...fields })))
+      .toEqual({ error: 'Malformed remote frame "run-clone".' });
+  });
+
+  it.each([
+    ['missing id', {}],
+    ['empty id', { id: '' }],
+    ['null id', { id: null }],
+    ['non-string id', { id: 7 }],
+    ['empty dir', { id: 'r1', dir: '' }],
+    ['null dir', { id: 'r1', dir: null }],
+    ['non-string dir', { id: 'r1', dir: 7 }],
+    ['empty error', { id: 'r1', error: '' }],
+    ['null error', { id: 'r1', error: null }],
+    ['non-string error', { id: 'r1', error: 7 }],
+    ['directory and error', { id: 'r1', dir: '/srv/ws/run1', error: 'denied' }],
+  ])('refuses a result with %s', (_name, fields) => {
+    expect(decodeFrame(JSON.stringify({ type: 'run-clone-result', ...fields })))
+      .toEqual({ error: 'Malformed remote frame "run-clone-result".' });
+  });
+
+  it('drops undeclared fields from a request and a result', () => {
+    expect(decodeFrame(JSON.stringify({
+      type: 'run-clone', id: 'r1', action: 'create', label: 'run1', dir: 'drop', extra: 'drop',
+    }))).toEqual({ type: 'run-clone', id: 'r1', action: 'create', label: 'run1' });
+    expect(decodeFrame(JSON.stringify({
+      type: 'run-clone-result', id: 'r1', dir: '/srv/ws/run1', action: 'drop', extra: 'drop',
+    }))).toEqual({ type: 'run-clone-result', id: 'r1', dir: '/srv/ws/run1' });
+  });
+});
+
 describe('frame codec', () => {
   it('ties filesystem request arguments to their operation', () => {
     const request: ClientFrame = {
@@ -420,6 +482,8 @@ describe('frame codec', () => {
       },
       { type: 'acp-close', id: 'racp1' },
       { type: 'acp-cancel', id: 'racp1' },
+      { type: 'run-clone', id: 'r1', action: 'create', label: 'subagent-run1' },
+      { type: 'run-clone', id: 'r2', action: 'release', label: 'subagent-run1' },
     ];
     for (const frame of frames) expect(roundTrip(frame)).toEqual(frame);
   });
@@ -467,6 +531,9 @@ describe('frame codec', () => {
       { type: 'acp-chunk', id: 'racp1', text: 'partial reply' },
       { type: 'acp-error', id: 'racp1', message: 'rate limited', fatal: false },
       { type: 'acp-error', id: 'racp1', message: 'ACP agent exited.', fatal: true },
+      { type: 'run-clone-result', id: 'r1', dir: '/srv/proj/.janissary/workspace/subagent-run1' },
+      { type: 'run-clone-result', id: 'r2' },
+      { type: 'run-clone-result', id: 'r3', error: 'No remote workspace has been provisioned.' },
     ];
     for (const frame of frames) expect(roundTrip(frame)).toEqual(frame);
   });
@@ -682,6 +749,14 @@ describe('frame codec', () => {
     ['acp-error without a message', { type: 'acp-error', id: 'racp1', fatal: true }],
     ['acp-error without a fatal flag', { type: 'acp-error', id: 'racp1', message: 'gone' }],
     ['acp-error with a non-boolean fatal flag', { type: 'acp-error', id: 'racp1', message: 'gone', fatal: 'yes' }],
+    ['run-clone without an id', { type: 'run-clone', action: 'create', label: 'run1' }],
+    ['run-clone with an empty id', { type: 'run-clone', id: '', action: 'create', label: 'run1' }],
+    ['run-clone with a null id', { type: 'run-clone', id: null, action: 'create', label: 'run1' }],
+    ['run-clone with a non-string action', { type: 'run-clone', id: 'r1', action: 1, label: 'run1' }],
+    ['run-clone with an empty label', { type: 'run-clone', id: 'r1', action: 'create', label: '' }],
+    ['run-clone-result with a null dir', { type: 'run-clone-result', id: 'r1', dir: null }],
+    ['run-clone-result with an empty error', { type: 'run-clone-result', id: 'r1', error: '' }],
+    ['run-clone-result with both dir and error', { type: 'run-clone-result', id: 'r1', dir: '/srv/ws/run1', error: 'denied' }],
     ['acp-open with an unsupported autonomous policy', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], autonomous: false }],
     ['acp-open with malformed effort', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], effort: { level: '', model: 'x' } }],
     ['acp-activity with an unknown kind', { type: 'acp-activity', id: 'racp1', kind: 'unknown', text: 'aGk=' }],
@@ -900,6 +975,7 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   'filesystem-open': { type: 'filesystem-open', session: 'files1' },
   'filesystem-close': { type: 'filesystem-close', session: 'files1' },
   'agent-resolve': { type: 'agent-resolve', id: 'run1', task: 'fix.md', skills: ['review'] },
+  'run-clone': { type: 'run-clone', id: 'run1', action: 'create', label: 'subagent-run1' },
   'filesystem-request': {
     type: 'filesystem-request', session: 'files1', request: 'q1', operation: 'write-file',
     args: { path: 'notes.txt', content: 'aMOpbGxvCndvcmxk' },
@@ -944,6 +1020,7 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
     type: 'agent-resolve-result', id: 'run1',
     snapshot: { taskPath: '/remote/ai/tasks/fix.md', taskText: 'Fix the issue.', skills: [], grants: [] },
   },
+  'run-clone-result': { type: 'run-clone-result', id: 'run1', dir: '/srv/ws/subagent-run1' },
   'acp-ready': { type: 'acp-ready', id: 'racp1', sandboxed: true, sessionId: 'provider-abc' },
   'acp-session-started': { type: 'acp-session-started', id: 'racp1', sessionId: 'provider-abc' },
   'acp-chunk': { type: 'acp-chunk', id: 'racp1', text: 'partial reply' },
@@ -1085,7 +1162,7 @@ describe('admitted frame types', () => {
     expect(Object.keys(CLIENT_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
       'acp-cancel', 'acp-close', 'acp-open', 'acp-run', 'acp-tool-result', 'agent-resolve', 'attach', 'capture-request', 'clone-answer',
       'filesystem-close', 'filesystem-open', 'filesystem-request',
-      'input', 'kill', 'provision', 'resize', 'resume-ack', 'session-state', 'shutdown', 'spawn',
+      'input', 'kill', 'provision', 'resize', 'resume-ack', 'run-clone', 'session-state', 'shutdown', 'spawn',
     ]);
   });
 
@@ -1095,8 +1172,8 @@ describe('admitted frame types', () => {
       'acp-tool-request', 'acp-tool-step', 'acp-turn',
       'agent-resolve-result', 'attach-result', 'browser-exited', 'browser-started',
       'busy-transition', 'capture-reply', 'clone-offer', 'exit', 'filesystem-event', 'filesystem-reply', 'gate-event', 'name-in-use',
-      'output', 'resume-cancel', 'resume-event', 'root-refused', 'session-state-result', 'shell-history', 'transcript', 'workspace-failed',
-      'workspace-ready',
+      'output', 'resume-cancel', 'resume-event', 'root-refused', 'run-clone-result', 'session-state-result', 'shell-history', 'transcript',
+      'workspace-failed', 'workspace-ready',
     ]);
   });
 
