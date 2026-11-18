@@ -2,17 +2,6 @@
 
 ## ready
 
-* Emit the ACP tool loop's terminal event when a native command throws so the prompt settles and state refreshes.
-
-Existing Debt: The tool loop's error path ends the run without its finished event, so the cleanup that only the terminal handler performs is skipped. Severity: 6/10
-
-Existing Risk: 6/10 - A command that rejects leaves the prompt unsettled with no state-change notification and no dirty broadcast, so the transcript keeps looking busy and the connection row never updates.
-
-Proposal Risk: 2/10 - Both paths end with a terminal event, but the handler still distinguishes outcomes by the event reason, so a wrong reason changes row state.
-
-Proposal: `src/acp/loop.ts` `runAcpToolLoop` catches a throwing or rejecting `dependencies.runCommand`, calls `h.error(errorText(error))` and returns, while the normal end emits `h.finished(command ? 'capped' : 'answered', maxSteps)`. The `finished` handler in `src/acp/run-prompt.ts` performs the state-change notification, rate-limit check, dirty broadcast and `answered: true` settle that the error handler does not. Emit a terminal event on the catch path too, with a reason that conveys failure, and have the `run-prompt.ts` handler map that reason to the same cleanup while preserving the error line. `src/acp/loop.test.ts` covers `session.onError` but not a throwing command, and `src/acp/drive-loop.test.ts` asserts only the error line for a rejecting host; add an assertion there that a terminal event follows and the prompt settles.
-
-
 * Report a failed cleanup of the OAuth staging file instead of leaving a second plaintext credential on disk.
 
 Existing Debt: The OAuth seeding step silently ignores a failure to remove its temporary file, so a successful result can leave a duplicate copy of the credential behind. Severity: 6/10
