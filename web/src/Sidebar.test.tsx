@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { act, render, fireEvent } from '@testing-library/react';
+import { act, render, fireEvent, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './shared/ws/ws';
 import { Sidebar } from './Sidebar';
 import { DEFAULT_SIDEBAR_WIDTH_PX } from './layout-defaults';
+import { AppSettingsProvider } from './AppSettings';
 import { createPluginHost, PluginHostProvider } from './plugins/host';
 
 // A drag needs the width prop to actually move the rendered flex value, so the drag-clamp tests
@@ -295,6 +296,20 @@ describe('Sidebar', () => {
     fireEvent.mouseDown(divider, { clientX: 280 });
     fireEvent.mouseMove(document, { clientX: -1000 });
     expect(sidebar.style.flex).toBe('0 0 180px');
+  });
+
+  it('uses the limit published by the app settings provider for its docked strip label', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const tabs = [makeTab({
+      label: 'files', view: 'files', dock: 'left', title: 'abcdefghijk',
+      files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] },
+    })];
+    render(
+      <AppSettingsProvider settings={{ tabNameMaxLength: 16, activeTabNameMaxLength: 5, clipboardHistoryMaxEntries: 15 }}>
+        <Sidebar side="left" tabs={tabs} client={client} />
+      </AppSettingsProvider>,
+    );
+    expect(screen.getByText('abcd…')).toBeTruthy();
   });
 
   it("the right sidebar's resize button floats to the start of the strip, ahead of the tabs", () => {

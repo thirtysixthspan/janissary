@@ -5,6 +5,7 @@ import { DEFAULT_SYNTAX_THEME } from './syntax-themes.js';
 import { DEFAULT_APP_THEME } from './app-themes.js';
 import { backfillNotificationAlerts, configRecord, decodeConfig } from './config-decode.js';
 import { NOTIFICATION_ALERT_DEFAULTS } from './notifications/alert-defaults.js';
+import { DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH, DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES, DEFAULT_TAB_NAME_MAX_LENGTH } from './shared/config-defaults.js';
 import type { NotificationEventType } from './notifications/index.js';
 import type { NotificationAlert } from './notifications/alert-defaults.js';
 
@@ -78,9 +79,6 @@ export type Config = {
 };
 
 export const DEFAULT_TRANSCRIPT_MAX_LINES = 25_000;
-export const DEFAULT_TAB_NAME_MAX_LENGTH = 16;
-export const DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH = 50;
-export const DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES = 15;
 export const DEFAULT_SYNC_PATHS = ['product/backlog/', 'product/plans/'];
 export const DEFAULT_EXTERNAL_VIEWERS: Record<string, string> = { video: 'QuickTime Player' };
 

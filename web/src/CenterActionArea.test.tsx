@@ -22,7 +22,6 @@ function setup(secondaryTab: number | undefined = 2) {
     entries: tabs.map((item, index) => ({ tab: item, index })),
     tabs, activeTab: 1, secondaryTab, client, closeTab: vi.fn(),
     splitPct: DEFAULT_SPLIT_PCT, setSplitPct: vi.fn(),
-    tabNameMaxLength: 16, activeTabNameMaxLength: 50,
     onFocusCommandBar: vi.fn(), onFocusEditor: vi.fn(), windowFocused: true,
     renderBody: (entry: { tab: TabView }, focused: boolean) => (
       <button type="button">{`${entry.tab.label}-${focused ? 'focused' : 'visible'}`}</button>
@@ -74,7 +73,7 @@ describe('CenterActionArea', () => {
     const { container } = render(<CenterActionArea
       entries={entries} tabs={tabs} activeTab={1} secondaryTab={2} client={client}
       splitPct={DEFAULT_SPLIT_PCT} setSplitPct={vi.fn()}
-      closeTab={vi.fn()} tabNameMaxLength={16} activeTabNameMaxLength={50}
+      closeTab={vi.fn()}
       onFocusCommandBar={vi.fn()} onFocusEditor={vi.fn()} windowFocused
       renderBody={() => null} persistentLayers={null}
     />);

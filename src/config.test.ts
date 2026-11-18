@@ -5,9 +5,11 @@ import { tmpdir } from 'node:os';
 import { mkdtempSync } from 'node:fs';
 import {
   loadConfig, getConfig, updateConfig, DEFAULT_TRANSCRIPT_MAX_LINES,
+} from './config.js';
+import {
   DEFAULT_TAB_NAME_MAX_LENGTH, DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH,
   DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES,
-} from './config.js';
+} from './shared/config-defaults.js';
 import { DEFAULT_SYNTAX_THEME } from './syntax-themes.js';
 import { DEFAULT_APP_THEME } from './app-themes.js';
 import { NOTIFICATION_ALERT_DEFAULTS } from './notifications/alert-defaults.js';

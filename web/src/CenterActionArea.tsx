@@ -6,6 +6,7 @@ import type { TabEntry } from './tab-entries';
 import { currentEntryForPane, entriesInPane, selectedIndexForPane } from './center-panes';
 import type { BaseCenterActionAreaProps } from './CenterActionAreaProps';
 import { DEFAULT_SPLIT_PCT } from './layout-defaults';
+import { useAppSettingsContext } from './AppSettings';
 
 const MIN_PCT = 15;
 const MAX_PCT = 85;
@@ -16,10 +17,11 @@ type Properties = BaseCenterActionAreaProps & {
 };
 
 export function CenterActionArea({
-  entries, tabs, activeTab, secondaryTab, client, closeTab, tabNameMaxLength,
-  activeTabNameMaxLength, onFocusCommandBar, onFocusEditor, windowFocused, dirtyTabs,
+  entries, tabs, activeTab, secondaryTab, client, closeTab,
+  onFocusCommandBar, onFocusEditor, windowFocused, dirtyTabs,
   splitPct = DEFAULT_SPLIT_PCT, setSplitPct, renderBody, persistentLayers,
 }: Properties) {
+  const { tabNameMaxLength, activeTabNameMaxLength } = useAppSettingsContext();
   const areaRef = useRef<HTMLDivElement>(null);
   const split = secondaryTab !== undefined;
   const onResize = useCallback((_down: React.MouseEvent, move: MouseEvent) => {

@@ -32,7 +32,7 @@ function StatefulTabStrip({ tabs, initialActiveTab = 0 }: { tabs: TabView[]; ini
       onSelect={setActiveTab}
       onClose={vi.fn()}
       onRename={vi.fn()}
-      tabNameMaxLength={100}
+      tabNameMaxLength={100} activeTabNameMaxLength={100}
     />
   );
 }
@@ -56,20 +56,20 @@ function mockTabRects(container: HTMLElement): void {
 describe('TabStrip', () => {
   it('renders a tab label', () => {
     const tab = makeTab({ label: 'mytab' });
-    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />);
+    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />);
     expect(screen.getByText('mytab')).toBeInTheDocument();
   });
 
   it('renders title instead of label when title is set', () => {
     const tab = makeTab({ label: 'internal', title: 'Display Name' });
-    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />);
+    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />);
     expect(screen.getByText('Display Name')).toBeInTheDocument();
   });
 
   it('marks the active tab with the active class', () => {
     const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' })];
     const { container } = render(
-      <TabStrip tabs={tabs} activeTab={1} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />,
+      <TabStrip tabs={tabs} activeTab={1} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />,
     );
     const tabEls = container.querySelectorAll('.tab');
     expect(tabEls[0]).not.toHaveClass('active');
@@ -79,21 +79,21 @@ describe('TabStrip', () => {
   it('calls onSelect with the tab index when clicked', async () => {
     const onSelect = vi.fn();
     const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' })];
-    render(<TabStrip tabs={tabs} activeTab={0} onSelect={onSelect} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />);
+    render(<TabStrip tabs={tabs} activeTab={0} onSelect={onSelect} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />);
     await userEvent.click(screen.getByText('b'));
     expect(onSelect).toHaveBeenCalledWith(1);
   });
 
   it('shows a close button for harness tabs and renders the harness name', () => {
     const tab = makeTab({ label: 'claude', view: 'harness', title: 'claude' });
-    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />);
+    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />);
     expect(screen.getByText('claude')).toBeInTheDocument();
     expect(screen.queryAllByRole('button', { name: /close/i })).toHaveLength(1);
   });
 
   it('shows a close button for page tabs and renders the title', () => {
     const tab = makeTab({ label: 'page', view: 'plugin', title: 'slashdot.org' });
-    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />);
+    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />);
     expect(screen.getByText('slashdot.org')).toBeInTheDocument();
     expect(screen.queryAllByRole('button', { name: /close/i })).toHaveLength(1);
   });
@@ -102,7 +102,7 @@ describe('TabStrip', () => {
     const onClose = vi.fn();
     const onSelect = vi.fn();
     const tab = makeTab({ label: 'img', view: 'plugin' });
-    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={onSelect} onClose={onClose} onRename={vi.fn()} tabNameMaxLength={100} />);
+    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={onSelect} onClose={onClose} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />);
     await userEvent.click(screen.getByRole('button', { name: /close/i }));
     expect(onClose).toHaveBeenCalledWith(0);
     expect(onSelect).not.toHaveBeenCalled();
@@ -111,7 +111,7 @@ describe('TabStrip', () => {
   it('applies busy class to the dot when tab is busy', () => {
     const tab = makeTab({ busy: true });
     const { container } = render(
-      <TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />,
+      <TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />,
     );
     expect(container.querySelector('.dot.busy')).toBeInTheDocument();
   });
@@ -129,13 +129,13 @@ describe('TabStrip', () => {
       },
     } as unknown as Partial<TabView>);
     const { container, rerender } = render(
-      <TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />,
+      <TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />,
     );
 
     expect(container.querySelector('.dot.busy')).toBeNull();
 
     rerender(
-      <TabStrip tabs={[{ ...tab, busy: true }]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />,
+      <TabStrip tabs={[{ ...tab, busy: true }]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />,
     );
     expect(container.querySelector('.dot.busy')).toBeInTheDocument();
   });
@@ -145,7 +145,7 @@ describe('TabStrip', () => {
   // drawing it there would flicker for the three seconds before the badge comes off.
   it('shows the unread badge on an inactive tab when hasUnread is set', () => {
     const { container, getByRole } = render(
-      <TabStrip tabs={[makeTab({}), makeTab({ hasUnread: true })]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />,
+      <TabStrip tabs={[makeTab({}), makeTab({ hasUnread: true })]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />,
     );
     const badge = getByRole('img', { name: 'unread' });
     expect(badge).toHaveClass('tab-badge');
@@ -155,14 +155,14 @@ describe('TabStrip', () => {
 
   it('shows no badge on the active tab even while it is badged', () => {
     const { container } = render(
-      <TabStrip tabs={[makeTab({ hasUnread: true })]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />,
+      <TabStrip tabs={[makeTab({ hasUnread: true })]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />,
     );
     expect(container.querySelector('.tab-badge')).not.toBeInTheDocument();
   });
 
   it('shows no badge when hasUnread is false', () => {
     const { container } = render(
-      <TabStrip tabs={[makeTab({ hasUnread: false })]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />,
+      <TabStrip tabs={[makeTab({ hasUnread: false })]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />,
     );
     expect(container.querySelector('.tab-badge')).not.toBeInTheDocument();
   });
@@ -170,7 +170,7 @@ describe('TabStrip', () => {
   it('single-clicking an active tab label does not start renaming', async () => {
     const onSelect = vi.fn();
     const tab = makeTab({ label: 'internal', title: 'Display Name' });
-    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={onSelect} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />);
+    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={onSelect} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />);
     await userEvent.click(screen.getByText('Display Name'));
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(onSelect).toHaveBeenCalledTimes(1);
@@ -178,7 +178,7 @@ describe('TabStrip', () => {
 
   it('double-clicking the active tab label shows an input pre-filled with the current display name', async () => {
     const tab = makeTab({ label: 'internal', title: 'Display Name' });
-    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />);
+    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />);
     await userEvent.dblClick(screen.getByText('Display Name'));
     expect(screen.getByDisplayValue('Display Name')).toBeInTheDocument();
   });
@@ -190,7 +190,7 @@ describe('TabStrip', () => {
       title: 'a-very-long-fi',
       editor: { name: 'a-very-long-file-name.md', path: '/tmp/a-very-long-file-name.md', size: '1 KB', url: '/open/1' },
     });
-    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={14} />);
+    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={14} activeTabNameMaxLength={100} />);
     await userEvent.dblClick(screen.getByText('a-very-long-file-name.md'));
     expect(screen.getByDisplayValue('a-very-long-file-name.md')).toBeInTheDocument();
   });
@@ -198,7 +198,7 @@ describe('TabStrip', () => {
   it('clicking an inactive tab label still selects it instead of editing', async () => {
     const onSelect = vi.fn();
     const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' })];
-    render(<TabStrip tabs={tabs} activeTab={0} onSelect={onSelect} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />);
+    render(<TabStrip tabs={tabs} activeTab={0} onSelect={onSelect} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />);
     await userEvent.click(screen.getByText('b'));
     expect(onSelect).toHaveBeenCalledWith(1);
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
@@ -207,7 +207,7 @@ describe('TabStrip', () => {
   it('double-clicking an inactive tab label selects it but does not start renaming', async () => {
     const onSelect = vi.fn();
     const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' })];
-    render(<TabStrip tabs={tabs} activeTab={0} onSelect={onSelect} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />);
+    render(<TabStrip tabs={tabs} activeTab={0} onSelect={onSelect} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />);
     await userEvent.dblClick(screen.getByText('b'));
     expect(onSelect).toHaveBeenCalled();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
@@ -232,7 +232,7 @@ describe('TabStrip', () => {
   it('commits the trimmed value once on Enter', async () => {
     const onRename = vi.fn();
     const tab = makeTab({ label: 'internal', title: 'Display Name' });
-    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={onRename} tabNameMaxLength={100} />);
+    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={onRename} tabNameMaxLength={100} activeTabNameMaxLength={100} />);
     await userEvent.dblClick(screen.getByText('Display Name'));
     const input = screen.getByRole('textbox');
     await userEvent.clear(input);
@@ -244,7 +244,7 @@ describe('TabStrip', () => {
   it('truncates typed input to the 50-character rename cap regardless of tabNameMaxLength', async () => {
     const onRename = vi.fn();
     const tab = makeTab({ label: 'internal', title: 'Display Name' });
-    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={onRename} tabNameMaxLength={4} />);
+    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={onRename} tabNameMaxLength={4} activeTabNameMaxLength={100} />);
     await userEvent.dblClick(screen.getByText('Display Name'));
     const input = screen.getByRole('textbox');
     await userEvent.clear(input);
@@ -254,7 +254,7 @@ describe('TabStrip', () => {
 
   it('grows the rename input as the draft grows instead of reserving fixed space', async () => {
     const tab = makeTab({ label: 'internal', title: 'ab' });
-    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />);
+    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />);
     await userEvent.dblClick(screen.getByText('ab'));
     const input = screen.getByRole('textbox') as HTMLInputElement;
     expect(input.size).toBe(2);
@@ -265,7 +265,7 @@ describe('TabStrip', () => {
   it('cancels without committing on Escape', async () => {
     const onRename = vi.fn();
     const tab = makeTab({ label: 'internal', title: 'Display Name' });
-    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={onRename} tabNameMaxLength={100} />);
+    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={onRename} tabNameMaxLength={100} activeTabNameMaxLength={100} />);
     await userEvent.dblClick(screen.getByText('Display Name'));
     const input = screen.getByRole('textbox');
     await userEvent.type(input, 'x{Escape}');
@@ -280,7 +280,7 @@ describe('TabStrip', () => {
     render(
       <TabStrip
         tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()}
-        tabNameMaxLength={100} onFocusEditor={onFocusEditor}
+        tabNameMaxLength={100} activeTabNameMaxLength={100} onFocusEditor={onFocusEditor}
       />,
     );
     await userEvent.dblClick(screen.getByText('Display Name'));
@@ -296,7 +296,7 @@ describe('TabStrip', () => {
     render(
       <TabStrip
         tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()}
-        tabNameMaxLength={100} onFocusEditor={onFocusEditor}
+        tabNameMaxLength={100} activeTabNameMaxLength={100} onFocusEditor={onFocusEditor}
       />,
     );
     await userEvent.dblClick(screen.getByText('Display Name'));
@@ -308,7 +308,7 @@ describe('TabStrip', () => {
   it('commits without an onFocusEditor prop without throwing', async () => {
     const onRename = vi.fn();
     const tab = makeTab({ label: 'internal', title: 'Display Name' });
-    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={onRename} tabNameMaxLength={100} />);
+    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={onRename} tabNameMaxLength={100} activeTabNameMaxLength={100} />);
     await userEvent.dblClick(screen.getByText('Display Name'));
     const input = screen.getByRole('textbox');
     await expect(userEvent.type(input, '{Enter}')).resolves.not.toThrow();
@@ -325,7 +325,7 @@ describe('TabStrip', () => {
         onSelect={vi.fn()}
         onClose={vi.fn()}
         onRename={vi.fn()}
-        tabNameMaxLength={100}
+        tabNameMaxLength={100} activeTabNameMaxLength={100}
         onFocusCommandBar={onFocusCommandBar}
       />,
     );
@@ -335,7 +335,7 @@ describe('TabStrip', () => {
 
   it('dims the tab border when the window is unfocused', () => {
     const { container } = render(
-      <TabStrip tabs={[makeTab()]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} windowFocused={false} />,
+      <TabStrip tabs={[makeTab()]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} windowFocused={false} />,
     );
     const tabEl = container.querySelector('.tab') as HTMLElement;
     expect(tabEl.style.borderTopColor).toContain('color-mix');
@@ -343,7 +343,7 @@ describe('TabStrip', () => {
 
   it('shows the full-strength tab border when the window is focused', () => {
     const { container } = render(
-      <TabStrip tabs={[makeTab({ groupColor: '#123456' })]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} windowFocused />,
+      <TabStrip tabs={[makeTab({ groupColor: '#123456' })]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} windowFocused />,
     );
     const tabEl = container.querySelector('.tab') as HTMLElement;
     expect(tabEl.style.borderTopColor).not.toContain('color-mix');
@@ -351,7 +351,7 @@ describe('TabStrip', () => {
 
   it('shows the full-strength tab border when windowFocused is omitted', () => {
     const { container } = render(
-      <TabStrip tabs={[makeTab()]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />,
+      <TabStrip tabs={[makeTab()]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />,
     );
     const tabEl = container.querySelector('.tab') as HTMLElement;
     expect(tabEl.style.borderTopColor).not.toContain('color-mix');
@@ -360,7 +360,7 @@ describe('TabStrip', () => {
   it('does not crash on mousedown of a tab label when onFocusCommandBar is omitted', () => {
     const onSelect = vi.fn();
     const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' })];
-    render(<TabStrip tabs={tabs} activeTab={0} onSelect={onSelect} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />);
+    render(<TabStrip tabs={tabs} activeTab={0} onSelect={onSelect} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} activeTabNameMaxLength={100} />);
     fireEvent.mouseDown(screen.getByText('b'));
     expect(onSelect).toHaveBeenCalledWith(1);
   });
@@ -372,7 +372,7 @@ describe('TabStrip', () => {
       <TabStrip
         tabs={[makeTab({ label: 'a' }), makeTab({ label: 'b' })]}
         activeTab={0} onSelect={onSelect} onClose={vi.fn()} onRename={vi.fn()}
-        onReorder={onReorder} tabNameMaxLength={100}
+        onReorder={onReorder} tabNameMaxLength={100} activeTabNameMaxLength={100}
       />,
     );
     fireEvent.mouseDown(screen.getByText('b'), { clientX: 140 });
@@ -386,7 +386,7 @@ describe('TabStrip', () => {
     const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' }), makeTab({ label: 'c' })];
     const { container } = render(
       <TabStrip tabs={tabs} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()}
-        onRename={vi.fn()} onReorder={onReorder} tabNameMaxLength={100} />,
+        onRename={vi.fn()} onReorder={onReorder} tabNameMaxLength={100} activeTabNameMaxLength={100} />,
     );
     mockTabRects(container);
     fireEvent.mouseDown(screen.getByText('a'), { clientX: 40 });
@@ -401,7 +401,7 @@ describe('TabStrip', () => {
     const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' }), makeTab({ label: 'c' })];
     const { container } = render(
       <TabStrip tabs={tabs} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()}
-        onRename={vi.fn()} onReorder={onReorder} tabNameMaxLength={100} />,
+        onRename={vi.fn()} onReorder={onReorder} tabNameMaxLength={100} activeTabNameMaxLength={100} />,
     );
     mockTabRects(container);
     fireEvent.mouseDown(screen.getByText('a'), { clientX: 40 });
@@ -418,7 +418,7 @@ describe('TabStrip', () => {
     const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' }), makeTab({ label: 'c' })];
     const { container } = render(
       <TabStrip tabs={tabs} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()}
-        onRename={vi.fn()} onReorder={onReorder} tabNameMaxLength={100} />,
+        onRename={vi.fn()} onReorder={onReorder} tabNameMaxLength={100} activeTabNameMaxLength={100} />,
     );
     mockTabRects(container);
     fireEvent.mouseDown(screen.getByText('a'), { clientX: 40 });
@@ -435,12 +435,12 @@ describe('TabStrip', () => {
       <TabStrip
         tabs={[makeTab({ label: 'source' })]} activeTab={0} onSelect={vi.fn()}
         onClose={vi.fn()} onRename={vi.fn()} onReorder={onReorder}
-        crossStripDrop={crossStripDrop} tabNameMaxLength={100}
+        crossStripDrop={crossStripDrop} tabNameMaxLength={100} activeTabNameMaxLength={100}
       />
       <TabStrip
         tabs={[makeTab({ label: 'target' })]} activeTab={0} onSelect={vi.fn()}
         onClose={vi.fn()} onRename={vi.fn()}
-        crossStripDrop={{ zone: 'center', onDrop: vi.fn() }} tabNameMaxLength={100}
+        crossStripDrop={{ zone: 'center', onDrop: vi.fn() }} tabNameMaxLength={100} activeTabNameMaxLength={100}
       />
     </>);
     mockTabRects(container);
@@ -460,12 +460,12 @@ describe('TabStrip', () => {
         tabs={[makeTab({ label: 'source' }), makeTab({ label: 'source-two' })]}
         activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()}
         onReorder={onReorder}
-        crossStripDrop={{ zone: 'center', onDrop: onCrossStripDrop }} tabNameMaxLength={100}
+        crossStripDrop={{ zone: 'center', onDrop: onCrossStripDrop }} tabNameMaxLength={100} activeTabNameMaxLength={100}
       />
       <TabStrip
         tabs={[makeTab({ label: 'target' })]} activeTab={0} onSelect={vi.fn()}
         onClose={vi.fn()} onRename={vi.fn()}
-        crossStripDrop={{ zone: 'sidebar', onDrop: vi.fn() }} tabNameMaxLength={100}
+        crossStripDrop={{ zone: 'sidebar', onDrop: vi.fn() }} tabNameMaxLength={100} activeTabNameMaxLength={100}
       />
     </>);
     mockTabRects(container);
@@ -485,7 +485,7 @@ describe('TabStrip', () => {
     ];
     const { container } = render(
       <TabStrip tabs={tabs} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()}
-        onRename={vi.fn()} onReorder={onReorder} tabNameMaxLength={100} />,
+        onRename={vi.fn()} onReorder={onReorder} tabNameMaxLength={100} activeTabNameMaxLength={100} />,
     );
     mockTabRects(container);
     fireEvent.mouseDown(screen.getByText('a'), { clientX: 40 });
@@ -502,7 +502,7 @@ describe('TabStrip', () => {
     const dragStrip = (tabs: TabView[], onReorder: () => void) => {
       const properties = (current: TabView[]) => (
         <TabStrip tabs={current} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()}
-          onRename={vi.fn()} onReorder={onReorder} tabNameMaxLength={100} />
+          onRename={vi.fn()} onReorder={onReorder} tabNameMaxLength={100} activeTabNameMaxLength={100} />
       );
       const view = render(properties(tabs));
       mockTabRects(view.container);
@@ -541,12 +541,12 @@ describe('TabStrip', () => {
           <TabStrip
             tabs={tabs} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()}
             onReorder={onReorder}
-            crossStripDrop={{ zone: 'center', onDrop: onCrossStripDrop }} tabNameMaxLength={100}
+            crossStripDrop={{ zone: 'center', onDrop: onCrossStripDrop }} tabNameMaxLength={100} activeTabNameMaxLength={100}
           />
           <TabStrip
             tabs={[makeTab({ label: 'target' })]} activeTab={0} onSelect={vi.fn()}
             onClose={vi.fn()} onRename={vi.fn()}
-            crossStripDrop={{ zone: 'center', onDrop: vi.fn() }} tabNameMaxLength={100}
+            crossStripDrop={{ zone: 'center', onDrop: vi.fn() }} tabNameMaxLength={100} activeTabNameMaxLength={100}
           />
         </>
       );
@@ -567,7 +567,7 @@ describe('TabStrip', () => {
     const onReorder = vi.fn();
     render(
       <TabStrip tabs={[makeTab({ label: 'a' })]} activeTab={0} onSelect={vi.fn()}
-        onClose={vi.fn()} onRename={vi.fn()} onReorder={onReorder} tabNameMaxLength={100} />,
+        onClose={vi.fn()} onRename={vi.fn()} onReorder={onReorder} tabNameMaxLength={100} activeTabNameMaxLength={100} />,
     );
     await userEvent.dblClick(screen.getByText('a'));
     expect(screen.getByDisplayValue('a')).toBeInTheDocument();
@@ -579,7 +579,7 @@ describe('TabStrip', () => {
     const tab = makeTab({ label: 'internal', title: 'Display Name' });
     render(
       <>
-        <TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={onRename} tabNameMaxLength={100} />
+        <TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={onRename} tabNameMaxLength={100} activeTabNameMaxLength={100} />
         <button type="button">elsewhere</button>
       </>,
     );

@@ -11,8 +11,6 @@ export type BaseCenterActionAreaProps = {
   setSplitPct: (splitPct: number) => void;
   client: JanusClient;
   closeTab: (index: number, reason?: { terminalExited: string }) => void;
-  tabNameMaxLength: number;
-  activeTabNameMaxLength: number;
   onFocusCommandBar: () => void;
   onFocusEditor: (label: string) => void;
   windowFocused: boolean;

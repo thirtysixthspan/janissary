@@ -3,6 +3,7 @@ import { render, fireEvent, within } from '@testing-library/react';
 import React, { useState } from 'react';
 import { ReportingSection, type ReportingEntry } from './ReportingSection';
 import { DEFAULT_REPORTING_PCT } from './layout-defaults';
+import { AppSettingsProvider } from './AppSettings';
 
 // A drag needs the heightPct prop to actually move the rendered flex value, so the drag-clamp
 // tests wrap ReportingSection in a small controlled harness — mirroring how `App` owns it in
@@ -157,6 +158,22 @@ describe('ReportingSection', () => {
     fireEvent.click(tabs[1]);
     fireEvent.click(tabs[1].querySelector(':scope .tab-close')!);
     expect(onClose).toHaveBeenCalledWith(1);
+  });
+
+  it('shortens reporting rows to the configured inactive limit, not a fixed 50', () => {
+    const { container } = render(
+      React.createElement(AppSettingsProvider, {
+        settings: {
+          tabNameMaxLength: 8, activeTabNameMaxLength: 50, clipboardHistoryMaxEntries: 15,
+        },
+        children: React.createElement(ReportingSection, {
+          entries: [makeEntry('a-monitor-with-a-long-name', 0)],
+          onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
+        }),
+      }),
+    );
+    const strip = container.querySelector<HTMLElement>('.reporting-strip')!;
+    expect(within(strip).getByText('a-monit…')).toBeTruthy();
   });
 
   it('resize button mouseup removes listeners', () => {
