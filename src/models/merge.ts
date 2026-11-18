@@ -1,4 +1,5 @@
 import type { ModelCatalog, ModelRecord } from './catalog-file.js';
+import { conversationalRecords } from './conversational.js';
 import type { ProviderOutcome, ProviderRecord } from './providers/result.js';
 
 export type ModelHarness = 'claude' | 'codex' | 'opencode';
@@ -16,6 +17,7 @@ export function mergeModelCatalog(
   catalog: ModelCatalog,
   outcomes: ModelRefreshOutcomes,
 ): ModelCatalogMerge {
+  const fetched = conversationalOnly(outcomes);
   const merged: ModelCatalog = { ...catalog };
   const counts: ModelRefreshCounts = {
     claude: { visible: 0, added: 0, removed: 0 },
@@ -25,7 +27,7 @@ export function mergeModelCatalog(
   const reachedHarnesses: ModelHarness[] = [];
 
   for (const harness of ['claude', 'codex'] as const) {
-    const outcome = outcomes[harness];
+    const outcome = fetched[harness];
     if (outcome.status !== 'ok') continue;
     const result = mergeRecords(catalog[harness] ?? [], outcome.records);
     merged[harness] = result.records;
@@ -40,7 +42,7 @@ export function mergeModelCatalog(
     counts[harness].visible = visibleCount(merged[harness] ?? []);
   }
 
-  const openCode = mergeOpenCode(catalog.opencode ?? [], outcomes.opencode);
+  const openCode = mergeOpenCode(catalog.opencode ?? [], fetched.opencode);
   if (catalog.opencode !== undefined || openCode.reached) merged.opencode = openCode.records;
   counts.opencode = {
     visible: visibleCount(openCode.records),
@@ -55,6 +57,20 @@ export function mergeModelCatalog(
     reachedHarnesses,
     unreportedOpenCodePrefixes: openCode.unreportedPrefixes,
   };
+}
+
+function conversationalOnly(outcomes: ModelRefreshOutcomes): ModelRefreshOutcomes {
+  return {
+    claude: conversationalOutcome(outcomes.claude),
+    codex: conversationalOutcome(outcomes.codex),
+    opencode: conversationalOutcome(outcomes.opencode),
+  };
+}
+
+function conversationalOutcome(outcome: ProviderOutcome): ProviderOutcome {
+  return outcome.status === 'ok'
+    ? { status: 'ok', records: conversationalRecords(outcome.records) }
+    : outcome;
 }
 
 function mergeRecords(existing: ModelRecord[], fetched: ProviderRecord[]): {

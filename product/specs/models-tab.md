@@ -36,6 +36,8 @@ Refresh queries the providers concurrently, with a 30-second timeout for each so
 
 The merge syncs each reached provider. It appends new ids in provider order, updates fetched names, retains flags on listed ids, and drops ids that a reached provider no longer reports. A provider that could not be reached keeps its existing list. OpenCode prefixes already in the catalog but not reported by this machine are treated as unconfigured and kept unchanged. If no harness was reached, Refresh writes nothing.
 
+Non-conversational ids are never added during the merge: embeddings, text-to-speech, transcription, live-audio, image, video, and music models reported by a provider are skipped. A non-conversational id already in the catalog is dropped by the refresh that reaches its harness, so a catalog polluted by an earlier refresh heals itself. The same rule keeps these ids out of the bundled catalog.
+
 Refresh reports one line in the notifications feed through the `models-refresh` event. The event has its own default-on toggle, bypasses focus suppression, and uses the success alert default; see [Notifications](notifications.md). When at least one harness was reached, the line starts `Models refreshed:`. Otherwise it starts `Models not refreshed:`. Reached harnesses come first in the order Claude, Codex, OpenCode. Each shows its visible count after merge, followed by nonzero added and removed counts in parentheses. Skipped or failed harnesses follow in that same order, then each unreported OpenCode prefix in catalog order as `<prefix> skipped: not configured in opencode.`.
 
 Examples:

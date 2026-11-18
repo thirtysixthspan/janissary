@@ -97,4 +97,72 @@ describe('mergeModelCatalog', () => {
     expect(result.unreportedOpenCodePrefixes).toEqual([]);
     expect(result.reachedHarnesses).toEqual([]);
   });
+
+  it('skips non-conversational Claude and Codex ids without counting them', () => {
+    const result = mergeModelCatalog(
+      { claude: [{ id: 'claude-old' }], codex: [{ id: 'gpt-old' }] },
+      outcomes(
+        { status: 'ok', records: [
+          { id: 'claude-old', name: 'Old' },
+          { id: 'claude-sonnet-5', name: 'Sonnet' },
+          { id: 'claude-embedding', name: 'Embedding' },
+        ] },
+        { status: 'ok', records: [
+          { id: 'gpt-old' },
+          { id: 'gpt-5.6-sol' },
+          { id: 'gpt-4o-transcribe' },
+        ] },
+        { status: 'skipped', reason: 'not installed' },
+      ),
+    );
+
+    expect(result.catalog.claude).toEqual([
+      { id: 'claude-old', name: 'Old' },
+      { id: 'claude-sonnet-5', name: 'Sonnet' },
+    ]);
+    expect(result.catalog.codex).toEqual([{ id: 'gpt-old' }, { id: 'gpt-5.6-sol' }]);
+    expect(result.counts.claude).toEqual({ visible: 2, added: 1, removed: 0 });
+    expect(result.counts.codex).toEqual({ visible: 2, added: 1, removed: 0 });
+  });
+
+  it('skips non-conversational OpenCode ids while keeping prefix grouping and counts', () => {
+    const result = mergeModelCatalog(
+      { opencode: [{ id: 'google/gemini-3-flash' }] },
+      outcomes(
+        { status: 'failed', reason: 'offline' },
+        { status: 'failed', reason: 'offline' },
+        { status: 'ok', records: [
+          { id: 'google/gemini-3-flash', name: 'Flash' },
+          { id: 'google/gemini-3.1-pro' },
+          { id: 'google/veo-3.1' },
+          { id: 'google/gemini-embedding-001' },
+          { id: 'openai/gpt-5.6-sol' },
+          { id: 'openai/gpt-4o-transcribe' },
+        ] },
+      ),
+    );
+
+    expect(result.catalog.opencode).toEqual([
+      { id: 'google/gemini-3-flash', name: 'Flash' },
+      { id: 'google/gemini-3.1-pro' },
+      { id: 'openai/gpt-5.6-sol' },
+    ]);
+    expect(result.counts.opencode).toEqual({ visible: 3, added: 2, removed: 0 });
+    expect(result.unreportedOpenCodePrefixes).toEqual([]);
+    expect(result.reachedHarnesses).toEqual(['opencode']);
+  });
+
+  it('drops a previously added non-conversational id for a reached OpenCode prefix', () => {
+    const result = mergeModelCatalog(
+      { opencode: [{ id: 'google/veo-3.1' }, { id: 'google/gemini-3-flash' }] },
+      outcomes(
+        { status: 'failed', reason: 'offline' },
+        { status: 'failed', reason: 'offline' },
+        { status: 'ok', records: [{ id: 'google/gemini-3-flash' }] },
+      ),
+    );
+
+    expect(result.catalog.opencode).toEqual([{ id: 'google/gemini-3-flash' }]);
+    expect(result.counts.opencode).toEqual({ visible: 1, added: 0, removed: 1 });
+  });
 });
