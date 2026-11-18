@@ -26,7 +26,9 @@ For `file read`, `--offset` is the first line to print and defaults to 1, and `-
 
 Each `file read` failure prints one line that names the path as you typed it:
 
-- `File not found: <path>.` for a missing path, and also for a file that exists but cannot be read, such as one without read permission
+- `File not found: <path>.` for a missing path, a dangling link, or a path whose parent is a regular file
+- `Permission denied; check file and folder permissions, then try again: <path>.` for a file that exists but cannot be read, such as one without read permission
+- `Filesystem error <code>; check the item and destination, then try again: <path>.` for any other read failure, such as a symlink loop (`ELOOP`); a code with its own mapping prints that reason instead
 - `Is a directory: <path>.`
 - `Not a text file: <path>.` for binary content, text that is not valid UTF-8, or anything that is not a regular file or directory, such as a named pipe, socket, or device
 - `File too large (>5 MB): <path>.`
