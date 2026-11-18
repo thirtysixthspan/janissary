@@ -70,6 +70,14 @@ resolves the way it always has. Third, if the project's catalog is malformed, ja
 once in the notifications feed and still uses a valid personal catalog, so a broken project override
 does not block a saved launch.
 
+An agent run's `on <name>` uses the same resolution before it resolves its target. When the saved
+entry has no path, the run can still borrow an established workspace whose SSH destination matches
+case-insensitively and whose port matches exactly; an omitted port does not match an explicit one,
+since SSH configuration can supply the default. A saved path is always explicit, so the run opens a
+run-only channel at that path even when another workspace shares the destination. The borrowed
+workspace keeps its own channel and receives only the run's lease, while a fresh channel's lease
+outlives the temporary run label. See [[agent-command]].
+
 The saved endpoint is pinned for the life of the launch. The initial connection, every automatic
 retry after a dropped transport, and a name-refusal retry under a different tab label all use the same
 resolved user, host, port, and path, even if the catalog is edited in between. A capture query for a
