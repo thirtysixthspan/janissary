@@ -2,17 +2,6 @@
 
 ## ready
 
-* Detect a stuck permission gate from the gate itself rather than byte-for-byte screen equality so a redrawing terminal cannot keep auto-approval looping.
-
-Existing Debt: The stuck guard counts repeats by whole-screen text equality, so any unrelated redraw resets the counter even when the same gate is still on screen. Severity: 6/10
-
-Existing Risk: 7/10 - A spinner frame, clock, or task panel changing around a gate the agent cannot clear resets `identicalApprovals`, so the stand-down notification never fires and the approver keeps sending keystrokes indefinitely.
-
-Proposal Risk: 3/10 - The counter tracks the gate rather than the whole frame, but detection still depends on the per-harness gate detector, so a gate that detector misses remains unguarded.
-
-Proposal: `src/harness/auto-approve.ts` `HarnessAutoApprover.onCapture` computes `repeat = capture.text === this.lastApprovedText` and uses it both for the `MAX_IDENTICAL_APPROVALS` stand-down and for the counter, storing the entire frame in `lastApprovedText`. Derive the repeat key from the detected gate instead: `detectPermissionGate` is already called just above, so use it to select the matching gate lines or a normalized region of the capture, store that as `lastApprovedText`, and keep the existing notification and counter behavior. `src/harness/auto-approve.test.ts` covers byte-identical repeats and a switch to a different gate; add a case repeating the same gate with a cosmetic change elsewhere on screen and assert the stand-down fires after the same number of approvals, keeping the existing non-gate reset test.
-
-
 * Store each suggestion hunk together with its resolved flag so an out-of-range hunk index cannot crash the editor.
 
 Existing Debt: Pending suggestions keep hunks and their resolved flags in two parallel arrays that are re-paired by position in the renderer and the accept path, with no bound tying an incoming index to the array length. Severity: 5/10

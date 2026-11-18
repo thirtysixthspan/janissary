@@ -406,6 +406,34 @@ describe('HarnessAutoApprover', () => {
     expect(notify).toHaveBeenLastCalledWith('Auto-approve could not clear the permission prompt; standing down', stuck);
   });
 
+  // The same gate with a task panel pinned below it, whose in-progress line redraws between
+  // captures. The panel is cosmetic chrome around the gate, not part of the gate itself.
+  function withTaskPanel(gate: string, stage: string): string {
+    return [gate, '', '  9 tasks (8 done, 1 in progress, 0 open)', `  ◼ ${stage}`].join('\n');
+  }
+
+  it('stands down on the same gate even when cosmetic chrome redraws around it', () => {
+    const { approver, approve, notify } = make();
+    for (const stage of ['Running checks', 'Updating spec', 'Opening PR', 'Merging']) {
+      approver.onCapture(capture(withTaskPanel(BASH_IN_PROJECT, stage)));
+    }
+    expect(approve).toHaveBeenCalledTimes(3);
+    expect(notify).toHaveBeenCalledTimes(4);
+    expect(notify).toHaveBeenLastCalledWith('Auto-approve could not clear the permission prompt; standing down', expect.anything());
+  });
+
+  it('stands down on the same codex overlay when a spinner redraws around it', () => {
+    const approve = vi.fn();
+    const notify = vi.fn();
+    const approver = new HarnessAutoApprover({ harnessName: 'codex', approve, notify });
+    for (const frame of ['⠋', '⠙', '⠹', '⠸']) {
+      approver.onCapture(capture(`${frame} working…\n${CODEX_GATE}`));
+    }
+    expect(approve).toHaveBeenCalledTimes(3);
+    expect(notify).toHaveBeenCalledTimes(4);
+    expect(notify).toHaveBeenLastCalledWith('Auto-approve could not clear the permission prompt; standing down', expect.anything());
+  });
+
   it('approves again when the screen changes to a new gate', () => {
     const { approver, approve } = make();
     approver.onCapture(capture(BASH_IN_PROJECT));

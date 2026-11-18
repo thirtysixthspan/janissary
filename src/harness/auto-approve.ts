@@ -88,6 +88,54 @@ export function detectPermissionGate(text: string, harnessName: string): boolean
   return entry ? entry.detect(text) : false;
 }
 
+// A numbered option row (`1. Yes`, `2. No`, `2.Yes`, or the highlighted `❯ 1. Yes` / `› 1.`), as
+// used by the claude and codex menus. The marker is kept out of the comparison, so a highlighted
+// option and an unhighlighted one still compare as the same row.
+function isNumberedOptionLine(trimmed: string): boolean {
+  const withoutMarker = trimmed.startsWith('❯') || trimmed.startsWith('›')
+    ? trimmed.slice(1).trimStart()
+    : trimmed;
+  return /^\d+\./u.test(withoutMarker);
+}
+
+// A predicate for the lines that make up a harness's permission gate, as opposed to cosmetic chrome
+// on the same screen (spinner frames, clocks, task panels, status lines). A redraw can change that
+// chrome while the same gate is still on screen, so only gate lines belong in the repeat key the
+// stuck guard compares.
+type GateLinePredicate = (line: string) => boolean;
+
+function gateLinePredicate(harnessName: string): GateLinePredicate {
+  switch (harnessName) {
+    case 'claude': {
+      return (line) => {
+        const trimmed = line.trim();
+        return isNumberedOptionLine(trimmed) || trimmed.endsWith('?') || trimmed.includes('Esc to cancel');
+      };
+    }
+    case 'codex': {
+      return (line) => {
+        const trimmed = line.trim();
+        return trimmed.endsWith('?') || trimmed.endsWith(' needs your approval.')
+          || isNumberedOptionLine(trimmed)
+          || (trimmed.includes('to confirm') && trimmed.includes('to cancel'));
+      };
+    }
+    case 'opencode': {
+      return (line) => line.includes('┃');
+    }
+    default: {
+      return () => true;
+    }
+  }
+}
+
+// The stable repeat key for a detected gate: only its own lines, in order. Unrelated redraws around
+// the gate leave it unchanged, while a different gate still produces a different key.
+function gateRepeatKey(text: string, harnessName: string): string {
+  const isGateLine = gateLinePredicate(harnessName);
+  return text.split('\n').filter((line) => isGateLine(line)).join('\n');
+}
+
 // A one-line security warning reported when a harness tab launches auto-approving (`-y`) but
 // without a workspace: with no disposable clone (and, on macOS, no sandbox) confining it, an
 // auto-approved prompt acts on the user's real working directory unattended. Undefined when
@@ -117,7 +165,7 @@ const MAX_IDENTICAL_APPROVALS = 3;
 // Both reports pass the triggering capture, so a stand-down links the screen that defeated
 // auto-approve the same way an approval links the screen it answered.
 export class HarnessAutoApprover {
-  private lastApprovedText: string | undefined;
+  private lastApprovedGateKey: string | undefined;
   private identicalApprovals = 0;
   private stuckNotified = false;
   private keystroke: string;
@@ -136,12 +184,13 @@ export class HarnessAutoApprover {
 
   onCapture(capture: ScreenCapture): void {
     if (!detectPermissionGate(capture.text, this.opts.harnessName)) {
-      this.lastApprovedText = undefined;
+      this.lastApprovedGateKey = undefined;
       this.identicalApprovals = 0;
       this.stuckNotified = false;
       return;
     }
-    const repeat = capture.text === this.lastApprovedText;
+    const gateKey = gateRepeatKey(capture.text, this.opts.harnessName);
+    const repeat = gateKey === this.lastApprovedGateKey;
     if (repeat && this.identicalApprovals >= MAX_IDENTICAL_APPROVALS) {
       if (!this.stuckNotified) {
         this.stuckNotified = true;
@@ -150,7 +199,7 @@ export class HarnessAutoApprover {
       return;
     }
     this.opts.approve(this.keystroke);
-    this.lastApprovedText = capture.text;
+    this.lastApprovedGateKey = gateKey;
     this.identicalApprovals = repeat ? this.identicalApprovals + 1 : 1;
     this.stuckNotified = false;
     this.opts.notify(AUTO_APPROVED_MESSAGE, capture);
