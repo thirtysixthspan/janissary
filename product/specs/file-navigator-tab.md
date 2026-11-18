@@ -543,6 +543,11 @@ Grouped undo and redo preflight every destination before moving anything. Confli
 stack; failed and skipped pairs remain available for a later retry, and any failures are reported
 as a notifications-feed line the same way a move or delete's failures are.
 
+A replay advances the history stacks only while the step it is replaying is still the most recent
+entry on the source stack. If another action changes that stack while the replay is running, the
+files still move, but neither history stack is changed, so a later undo or redo cannot apply to a
+mismatched step.
+
 A user-initiated deletion is not covered by undo/redo — a file or directory removed with Backspace
 or Delete cannot be restored this way. A paste is undoable, however, and undoing one may delete the
 items it created — see Copying, cutting, and pasting below.

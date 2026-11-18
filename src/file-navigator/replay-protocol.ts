@@ -46,6 +46,7 @@ function buildReplayResult<Item, Step>(options: ReplayOptions<Item, Step>, faile
 }
 
 export function applyReplayProtocol<Item, Step>(options: ReplayOptions<Item, Step>): UndoRedoResult {
+  const replayedStep = options.fromStack.at(-1);
   const replay = options.replayItems.map((item) => options.leg(item));
   const conflicts = [
     ...(options.preflight === false ? [] : replay
@@ -69,7 +70,7 @@ export function applyReplayProtocol<Item, Step>(options: ReplayOptions<Item, Ste
     else failed.set(current.item, result.reason);
   }
 
-  if (successful.size > 0) {
+  if (successful.size > 0 && replayedStep !== undefined && options.fromStack.at(-1) === replayedStep) {
     options.fromStack.pop();
     const remaining = options.groupItems.filter((item) => !successful.has(item));
     if (remaining.length > 0) options.fromStack.push(options.makeStep(remaining));
