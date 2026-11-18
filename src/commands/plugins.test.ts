@@ -32,6 +32,17 @@ describe('plugins command', () => {
     expect(fixture.runOpener).not.toHaveBeenCalled();
   });
 
+  it('discovers the hosts plugin from the catalog', () => {
+    const declaration = tabPluginCatalog.find((entry) => entry.id === 'hosts');
+    expect(declaration?.command).toBe('hosts');
+    expect(declaration?.capabilities).not.toContain('dockTab');
+
+    const fixture = run({ state: 'declared' });
+    expect(fixture.append).toHaveBeenCalledWith('janus', {
+      input: 'plugins', output: `hosts 1.0.0 api=${TAB_PLUGIN_API_VERSION} state=declared`,
+    });
+  });
+
   it('rejects arguments without reading plugin status', () => {
     const fixture = run({ state: 'declared' });
     fixture.append.mockClear();

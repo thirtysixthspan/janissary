@@ -35,6 +35,9 @@ export class SshManager {
         if ('error' in parsed) return parsed.error;
         return this.open(parsed.command, parsed.destination, parsed.label, parsed.options, host.name, label);
       }
+      if (this.managers.tab.byLabel(creatorLabel)?.plugin?.id === 'hosts') {
+        return `No host named "${name}".`;
+      }
     }
     const parsed = parseSshCommand(input);
     if ('error' in parsed) return parsed.error;

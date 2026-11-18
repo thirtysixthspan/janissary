@@ -74,6 +74,13 @@ describe('findCommand fallback', () => {
   });
 });
 
+describe('hosts command routing', () => {
+  it.each(['hosts', 'hosts list', 'hosts add Lab lab.local', 'hosts remove lab', 'hosts left'])(
+    'routes %s to the hosts plugin command',
+    (command) => { expect(resolveCommand(command)).toEqual({ kind: 'app', name: 'hosts', cmd: command }); },
+  );
+});
+
 describe('execute command routing', () => {
   it('routes execute case-insensitively through the registry', () => {
     expect(resolveCommand('ExEcUtE deploy')).toEqual({ kind: 'app', name: 'execute', cmd: 'ExEcUtE deploy' });

@@ -39,11 +39,13 @@ saved hosts.
 
 ### The Hosts tab
 
-The `hosts` command opens a single table of the hosts in effect. Each row shows the name, the user, the destination and the remote path in that order, under matching column headings, with a narrow unlabeled column at the right for row controls. Rows keep the order the server supplies, which is name order ignoring case. A blank user or path leaves its cell empty, and the destination shows `host` or `host:port`. Long cells are cut short with an ellipsis. Hovering a row shows the full `[user@]host[:port]` on one line and, when one is saved, the remote path on the next line.
+The `hosts` command opens a single table of the hosts in effect. Each row shows the name, the user, the destination and the remote path in that order, under matching column headings, with a narrow unlabeled column at the right for row controls. Rows keep the order the server supplies, which is name order ignoring case. A blank user or path leaves its cell empty, and the destination shows `host` or `host:port`. Long cells are cut short with an ellipsis. Hovering a row shows the full `[user@]host[:port]` on one line and, when one is saved, the remote path on the next line. The tab is an ordinary bundled plugin, so it is listed by `plugins`.
 
-With no saved hosts the table shows only `No saved hosts` and no column headings. The metadata bar above the table stays available: its Refresh button re-reads the catalog, and the tab's Split control sits beside it. The tab re-reads the catalog once each time it is returned to after being hidden, but not when it first opens.
+With no saved hosts the table shows only `No saved hosts` and no column headings. The metadata bar above the table stays available: its Refresh button re-reads the catalog, and the tab's Split control sits beside it. The tab re-reads the catalog once each time it is returned to after being hidden, but not when it first opens. Running `hosts` again refreshes the rows of an already open tab in place and focuses it rather than opening a second table. The Hosts tab never moves into a sidebar: a generic tab-docking action leaves it in the centre, `hosts left` and `hosts right` are refused with the ordinary usage line, and its Split control still works.
 
 One click on a row makes it current; a second click on that same row opens it and launches an ssh connection to the saved host. Enter does the same for the current row while the list has focus. Up and Down move the highlight one row without wrapping, and Home and End jump to the first and last row. A row highlighted by the keyboard still takes two clicks to open, and a row replaced underneath the list never inherits a pending open from the row it replaced. Escape leaves the list unchanged, and a key pressed on a focused button belongs to that button rather than the list.
+
+Opening a row checks the name against the rows the tab is showing and then against the catalog in effect. A name the tab never offered is refused as a bad request. If the offered row has disappeared from the catalog, the tab publishes the fresh rows and reports `No host named "<name>".` attributed to itself. Otherwise the stored spelling is passed to the ssh command, which is the only place a saved name becomes an ssh launch. A saved name that vanishes between the two reads, a disabled ssh command, or an unclaimed line is reported on the Hosts tab; a successful launch is recorded only by the new ssh tab and its recording.
 
 ### Commands
 
@@ -52,7 +54,9 @@ Every verb matches regardless of case, and all field rules above apply to what y
 
 `hosts list` prints the effective catalog as JSON, two spaces per indent, in name order ignoring case.
 An empty catalog and a catalog that cannot be used both print `{}`. A problem with the file is
-reported separately, the listing itself stays plain text.
+reported separately, the listing itself stays plain text. Command results and refusals appear in the
+transcript the command was typed in; a problem reported while the tab itself is acting is attributed
+to the Hosts tab.
 
 `hosts add <name> <[user@]host[:port]> [path]` saves a host. The destination may carry a user before
 an `@`, which is split out into the user field. If a name already exists regardless of case, only that

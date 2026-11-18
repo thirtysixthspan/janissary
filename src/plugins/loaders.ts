@@ -9,6 +9,7 @@ export const tabPluginLoaders = {
   connections: () => import('./connections/activate.js'),
   conversations: () => import('./conversations/activate.js'),
   diff: () => import('./diff/activate.js'),
+  hosts: () => import('./hosts/activate.js'),
   image: () => import('./image/activate.js'),
   launcher: () => import('./launcher/activate.js'),
   markdown: () => import('./markdown/activate.js'),

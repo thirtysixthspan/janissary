@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { SshManager } from './ssh-manager.js';
-import { makeTab } from './tab/index.js';
+import { makePluginTab, makeTab } from './tab/index.js';
 import type { Managers } from './managers.js';
 import type { Tab } from './tab/types.js';
 import { wireControllerEvents } from './controller/events.js';
@@ -177,6 +177,20 @@ describe('SshManager.run', () => {
 
     expect(tabs.at(-1)?.label).toBe('ghost');
     expect(tabs.at(-1)?.harness?.hostName).toBeUndefined();
+  });
+
+  it('returns the missing-row error for a Hosts origin whose saved name has gone', () => {
+    const { managers, tabs } = makeManagers(JSON.stringify({ other: { destination: 'other.example' } }));
+    const hosts = makePluginTab('hosts', '#fff', 2, 1, '#fff', 'hosts', {
+      id: 'hosts', instanceKey: 'hosts', schemaVersion: 1,
+      payload: { filePath: '', rows: [] }, fileRefs: [], sourceLabel: 'janus',
+    });
+    tabs.push(hosts);
+
+    expect(new SshManager(managers).run('ssh ghost', 'hosts')).toBe('No host named "ghost".');
+
+    expect(tabs.at(-1)).toBe(hosts);
+    expect(managers.pty.spawn).not.toHaveBeenCalled();
   });
 
   it('uses a usable home catalog after a malformed project file and reports the problem once', () => {
