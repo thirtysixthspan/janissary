@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JanusClient } from '../shared/ws/ws';
-import { createPluginClientCapabilities, nextListSelection, spliceIntoTextarea } from './api';
+import { createPluginClientCapabilities, ModelSearchInput, nextListSelection, spliceIntoTextarea } from './api';
 import * as clientApi from './api';
 import { nextListSelection as sharedNextListSelection } from '../shared/list-selection';
 import { spliceIntoTextarea as sharedSpliceIntoTextarea } from '../shared/command-bar/textarea-splice';
+import { ModelSearchInput as sharedModelSearchInput } from '../shared/model-search/ModelSearchInput';
 import { createPluginHost, type PluginHost } from './host';
 
 function makeClient(request?: () => Promise<unknown>) {
@@ -245,6 +246,12 @@ describe('nextListSelection', () => {
   it('publishes the shared list-selection rule itself', () => {
     expect(nextListSelection).toBe(sharedNextListSelection);
     expect(nextListSelection(3, 2, 'ArrowDown')).toBe(2);
+  });
+});
+
+describe('ModelSearchInput', () => {
+  it('publishes the shared model-search input itself', () => {
+    expect(ModelSearchInput).toBe(sharedModelSearchInput);
   });
 });
 

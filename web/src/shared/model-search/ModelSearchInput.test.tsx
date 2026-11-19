@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { HarnessModelPair } from './model-search';
 import { ModelSearchInput } from './ModelSearchInput';
+import type { ModelSearchListState } from './useModelSearch';
 
 type WrapperProps = {
   ids: string[];
   roleEntries: readonly (readonly HarnessModelPair[])[];
   harness?: string;
   disabled?: boolean;
+  onSubmit?: () => void;
+  onListChange?: (state: ModelSearchListState) => void;
 };
 
-function Controlled({ ids, roleEntries, harness = 'claude', disabled = false }: WrapperProps) {
+function Controlled({ ids, roleEntries, harness = 'claude', disabled = false, onSubmit, onListChange }: WrapperProps) {
   const [value, setValue] = useState('');
   return (
     <ModelSearchInput
@@ -23,8 +26,22 @@ function Controlled({ ids, roleEntries, harness = 'claude', disabled = false }: 
       placeholder="model search"
       aria-label="Model for the new entry"
       disabled={disabled}
+      onSubmit={onSubmit}
+      onListChange={onListChange}
     />
   );
+}
+
+function renderWithHost(props: WrapperProps) {
+  const onKeyDown = vi.fn();
+  const onSubmit = vi.fn();
+  const onListChange = vi.fn();
+  const view = render(
+    <div onKeyDown={onKeyDown}>
+      <Controlled {...props} onSubmit={onSubmit} onListChange={onListChange} />
+    </div>,
+  );
+  return { ...view, onKeyDown, onSubmit, onListChange };
 }
 
 const field = () => screen.getByPlaceholderText('model search');
@@ -321,5 +338,173 @@ describe('ModelSearchInput', () => {
     expect(highlighted(container)?.textContent).toBe(before);
     expect(fireEvent.keyDown(field(), { key: 'ArrowDown', isComposing: true })).toBe(true);
     expect(highlighted(container)?.textContent).toBe(before);
+  });
+
+  it('Return accepts the highlighted row without reaching the host', () => {
+    const ids = ['claude-opus-4', 'claude-sonnet-4'];
+    const { container, onKeyDown, onSubmit } = renderWithHost({ ids, roleEntries: [] });
+    focusField();
+    fireEvent.change(field(), { target: { value: 'claude' } });
+    expect(highlighted(container)?.textContent).toBe('claude-opus-4');
+
+    expect(fireEvent.keyDown(field(), { key: 'Enter' })).toBe(false);
+    expect(field()).toHaveValue('claude-opus-4');
+    expect(list(container)).toBeNull();
+    expect(onKeyDown).not.toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('Return after a down arrow accepts the top most-used model', () => {
+    const ids = ['opus', 'sonnet'];
+    const roleEntries = [[
+      { harness: 'claude', model: 'opus' },
+      { harness: 'claude', model: 'sonnet' },
+    ]];
+    const { container, onKeyDown, onSubmit } = renderWithHost({ ids, roleEntries });
+    focusField();
+    expect(rows(container).map((row) => row.textContent)).toEqual(['opus', 'sonnet']);
+    expect(highlighted(container)).toBeNull();
+
+    expect(fireEvent.keyDown(field(), { key: 'ArrowDown' })).toBe(false);
+    expect(fireEvent.keyDown(field(), { key: 'Enter' })).toBe(false);
+    expect(field()).toHaveValue('opus');
+    expect(list(container)).toBeNull();
+    expect(onKeyDown).toHaveBeenCalledOnce();
+    expect(onKeyDown.mock.calls[0][0].key).toBe('ArrowDown');
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('Return fills an exact id and a second Return submits', () => {
+    const ids = ['opus', 'opus-max'];
+    const { container, onKeyDown, onSubmit } = renderWithHost({ ids, roleEntries: [] });
+    focusField();
+    fireEvent.change(field(), { target: { value: 'opus-max' } });
+    expect(rows(container).map((row) => row.textContent)).toEqual(['opus-max']);
+    expect(highlighted(container)?.textContent).toBe('opus-max');
+
+    expect(fireEvent.keyDown(field(), { key: 'Enter' })).toBe(false);
+    expect(field()).toHaveValue('opus-max');
+    expect(list(container)).toBeNull();
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(onKeyDown).not.toHaveBeenCalled();
+
+    expect(fireEvent.keyDown(field(), { key: 'Enter' })).toBe(true);
+    expect(onSubmit).toHaveBeenCalledOnce();
+    expect(onKeyDown).toHaveBeenCalledOnce();
+  });
+
+  it('Return with nothing highlighted on a blank list bubbles and submits', () => {
+    const { container, onKeyDown, onSubmit } = renderWithHost({ ids: ['opus'], roleEntries: [] });
+    focusField();
+    expect(list(container)).not.toBeNull();
+    expect(highlighted(container)).toBeNull();
+
+    expect(fireEvent.keyDown(field(), { key: 'Enter' })).toBe(true);
+    expect(onSubmit).toHaveBeenCalledOnce();
+    expect(onKeyDown).toHaveBeenCalledOnce();
+    expect(list(container)).not.toBeNull();
+  });
+
+  it('Return with nothing highlighted after Escape bubbles and submits', () => {
+    const { onKeyDown, onSubmit } = renderWithHost({ ids: ['opus'], roleEntries: [] });
+    focusField();
+    fireEvent.change(field(), { target: { value: 'opus' } });
+    expect(fireEvent.keyDown(field(), { key: 'Escape' })).toBe(false);
+    expect(onKeyDown).not.toHaveBeenCalled();
+
+    expect(fireEvent.keyDown(field(), { key: 'Enter' })).toBe(true);
+    expect(onSubmit).toHaveBeenCalledOnce();
+    expect(onKeyDown).toHaveBeenCalledOnce();
+    expect(field()).toHaveValue('opus');
+  });
+
+  it('Return with nothing highlighted is harmless without an onSubmit prop', () => {
+    const { container } = render(<Controlled ids={['opus']} roleEntries={[]} />);
+    focusField();
+    expect(fireEvent.keyDown(field(), { key: 'Enter' })).toBe(true);
+    expect(field()).toHaveValue('');
+    expect(list(container)).not.toBeNull();
+  });
+
+  it('Escape closes the open list and a second Escape bubbles to the host', () => {
+    const { container, onKeyDown, onSubmit } = renderWithHost({ ids: ['opus'], roleEntries: [] });
+    focusField();
+    fireEvent.change(field(), { target: { value: 'opus' } });
+
+    expect(fireEvent.keyDown(field(), { key: 'Escape' })).toBe(false);
+    expect(list(container)).toBeNull();
+    expect(field()).toHaveValue('opus');
+    expect(document.activeElement).toBe(field());
+    expect(onKeyDown).not.toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    expect(fireEvent.keyDown(field(), { key: 'Escape' })).toBe(true);
+    expect(onKeyDown).toHaveBeenCalledOnce();
+  });
+
+  it('Tab completes and reopens a list that Escape closed', () => {
+    const { container } = render(<Controlled ids={['opus', 'opus-max']} roleEntries={[]} />);
+    focusField();
+    fireEvent.change(field(), { target: { value: 'op' } });
+    expect(fireEvent.keyDown(field(), { key: 'Escape' })).toBe(false);
+    expect(list(container)).toBeNull();
+
+    expect(fireEvent.keyDown(field(), { key: 'Tab' })).toBe(false);
+    expect(field()).toHaveValue('opus');
+    expect(list(container)).not.toBeNull();
+  });
+
+  it('leaves composing Return and Escape alone but lets Shift+Escape close', () => {
+    const ids = ['opus', 'sonnet'];
+    const { container, onSubmit } = renderWithHost({ ids, roleEntries: [] });
+    focusField();
+    fireEvent.change(field(), { target: { value: 'op' } });
+    expect(highlighted(container)?.textContent).toBe('opus');
+
+    expect(fireEvent.keyDown(field(), { key: 'Enter', isComposing: true })).toBe(true);
+    expect(field()).toHaveValue('op');
+    expect(list(container)).not.toBeNull();
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    expect(fireEvent.keyDown(field(), { key: 'Escape', isComposing: true })).toBe(true);
+    expect(list(container)).not.toBeNull();
+
+    expect(fireEvent.keyDown(field(), { key: 'Escape', shiftKey: true })).toBe(false);
+    expect(list(container)).toBeNull();
+  });
+
+  it('reports list state changes through onListChange', () => {
+    const ids = ['opus', 'sonnet'];
+    const roleEntries = [[
+      { harness: 'claude', model: 'opus' },
+      { harness: 'claude', model: 'sonnet' },
+    ]];
+    const onListChange = vi.fn();
+    const { container, rerender } = render(<Controlled ids={ids} roleEntries={roleEntries} onListChange={onListChange} />);
+    expect(onListChange).toHaveBeenLastCalledWith({ open: false, highlighted: false });
+
+    focusField();
+    expect(onListChange).toHaveBeenLastCalledWith({ open: true, highlighted: false });
+
+    fireEvent.keyDown(field(), { key: 'ArrowDown' });
+    expect(onListChange).toHaveBeenLastCalledWith({ open: true, highlighted: true });
+
+    fireEvent.keyDown(field(), { key: 'Escape' });
+    expect(onListChange).toHaveBeenLastCalledWith({ open: false, highlighted: false });
+
+    fireEvent.keyDown(field(), { key: 'ArrowDown' });
+    expect(onListChange).toHaveBeenLastCalledWith({ open: true, highlighted: false });
+    rerender(<Controlled ids={ids} roleEntries={roleEntries} onListChange={onListChange} disabled />);
+    expect(onListChange).toHaveBeenLastCalledWith({ open: false, highlighted: false });
+    expect(list(container)).toBeNull();
+  });
+
+  it('does not report again when onListChange is replaced without a state change', () => {
+    const ids = ['opus'];
+    const { rerender } = render(<Controlled ids={ids} roleEntries={[]} onListChange={vi.fn()} />);
+    focusField();
+    const next = vi.fn();
+    rerender(<Controlled ids={ids} roleEntries={[]} onListChange={next} />);
+    expect(next).not.toHaveBeenCalled();
   });
 });
