@@ -28,9 +28,9 @@ It adds those steps to the pull request description under **Additional test case
 
 ## Which branch runs
 
-The agent builds and starts the app from the pull request's branch, using fresh scratch state that never touches your own app. It installs only the packages where the branch differs from `master`, and only after a supply-chain audit of the branch's lockfile passes. No install script runs. A branch whose package list and lockfile disagree isn't installed at all. The agent reports it as untestable and records nothing.
+The agent builds and starts the app from the pull request's branch, using fresh scratch state that never touches your own app. It installs only the packages where the branch differs from `master`, and only after a supply-chain audit of the branch's lockfile passes. The audit uses Janissary's own checker, not the branch's copy, so a pull request can't change how it gets checked. No install script runs, and what gets installed is exactly the audited lockfile. A branch whose package list and lockfile disagree isn't installed at all. The agent reports it as untestable and records nothing.
 
-The instructions for preparing, starting, and stopping the app come from the pull request's base branch, never from the branch under test. So a pull request that changes how its own app starts is still started the old way. If that start fails, it's reported like any other failure.
+The agent takes the instructions for preparing the workspace from `master`, and the instructions for building, starting, and stopping the app from the pull request's base branch. Each falls back to Janissary's own copy when that branch has none. It never takes them from the pull request under test. That way a tested pull request can't rewrite its own tester: one that changes how its app starts is still started the old way, and a start failure is reported like any other.
 
 The branch's code still runs, though, inside your tab's sandbox. The audit keeps install-time code out. It doesn't make the branch trustworthy.
 
