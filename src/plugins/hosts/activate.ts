@@ -6,11 +6,13 @@ import {
   type TabPluginServerCapabilities,
 } from '../api.js';
 import { runCatalogCommand } from './catalog-commands.js';
+import { deleteHostEdit, saveHostEdit } from './host-edits.js';
 import { readHostsFile, type HostsRead } from './hosts-file.js';
 import { formatDestination, sameHostName, type SavedHost } from './hosts-values.js';
 import {
-  isHostsPayload, isOpenIntent, isRefreshIntent,
-  type HostRow, type HostsPayload, type OpenIntent,
+  isDeleteHostIntent, isHostsPayload, isOpenIntent, isRefreshIntent, isSaveHostIntent,
+  type DeleteHostIntent, type HostRow, type HostsPayload, type OpenIntent,
+  type SaveHostIntent, type SaveHostResult,
 } from './shared.js';
 
 const INSTANCE_KEY = 'hosts';
@@ -79,6 +81,31 @@ function refresh(
   return null;
 }
 
+function save(
+  _tab: HostsPayload, intent: SaveHostIntent, capabilities: TabPluginServerCapabilities,
+): SaveHostResult {
+  const outcome = saveHostEdit(
+    intent, originRoot(capabilities), homedir(), readNotify(capabilities, true),
+  );
+  if (!outcome.ok) return { ok: false, error: outcome.error };
+  publish(capabilities, payloadFrom(outcome.hosts, outcome.path));
+  return { ok: true, name: outcome.name };
+}
+
+function deleteRow(
+  _tab: HostsPayload, intent: DeleteHostIntent, capabilities: TabPluginServerCapabilities,
+): null {
+  const outcome = deleteHostEdit(
+    intent, originRoot(capabilities), homedir(), readNotify(capabilities, true),
+  );
+  if (!outcome.ok) {
+    capabilities.notifyUser(outcome.error, { tab: INSTANCE_KEY });
+    return null;
+  }
+  publish(capabilities, payloadFrom(outcome.hosts, outcome.path));
+  return null;
+}
+
 function dispatchMessage(name: string, result: DispatchResult): string | undefined {
   if (typeof result.result === 'string' && result.result.length > 0) return result.result;
   if (result.output.length > 0) return result.output;
@@ -112,6 +139,8 @@ export function activate(): TabPluginActivation {
     intent: defineIntents('hosts', isHostsPayload, {
       refresh: { payload: isRefreshIntent, run: refresh },
       open: { payload: isOpenIntent, run: openRow },
+      save: { payload: isSaveHostIntent, run: save },
+      delete: { payload: isDeleteHostIntent, run: deleteRow },
     }),
   };
 }

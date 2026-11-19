@@ -47,6 +47,12 @@ One click on a row makes it current; a second click on that same row opens it an
 
 Opening a row checks the name against the rows the tab is showing and then against the catalog in effect. A name the tab never offered is refused as a bad request. If the offered row has disappeared from the catalog, the tab publishes the fresh rows and reports `No host named "<name>".` attributed to itself. Otherwise the stored spelling is passed to the ssh command, which is the only place a saved name becomes an ssh launch. A saved name that vanishes between the two reads, a disabled ssh command, or an unclaimed line is reported on the Hosts tab; a successful launch is recorded only by the new ssh tab and its recording.
 
+### Editing hosts
+
+The tab can save and delete hosts against the catalog in effect. Saving a name that is not present creates it; saving under a name already present edits that entry, and a new spelling of the same name renames it without changing its neighbours. Names match without regard to case, so changing only the case is a rename of the same entry. A name that collides with a different entry is refused with `Host "<name>" already exists.` A save or delete whose original entry has disappeared since the tab last read is refused with `No host named "<name>".`
+
+Every field is checked by the same rules as the `hosts add` command, and the field-specific error is returned for the form to show inline. Each accepted edit is written in one pass, at the file in effect: the project file when it is usable, otherwise the home file. The catalog that was just written replaces the tab's rows in name order ignoring case, with the file path of the file that was written, and the previous rows stay on screen when a save is refused or a write fails. A save answers with the spelling it stored on success, or the validation, duplicate, missing-host, unusable-file or write error on failure. A delete answers with nothing on success; on failure it reports the diagnostic as a notification on the Hosts tab and leaves the displayed rows unchanged until the server publishes them.
+
 ### Commands
 
 The `hosts` command manages the catalog from a transcript. With no operands it opens the Hosts tab.

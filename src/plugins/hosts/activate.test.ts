@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type * as FileSystem from 'node:fs';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -12,12 +13,16 @@ import {
   type TabPluginTabUpdate,
 } from '../api.js';
 import { activate } from './activate.js';
-import type { HostRow, HostsPayload } from './shared.js';
+import type { HostRow, HostsPayload, SaveHostResult } from './shared.js';
 
 const dirs = vi.hoisted(() => ({ home: '' }));
 vi.mock('node:os', async (importOriginal) => {
   const actual = await importOriginal();
   return { ...actual, homedir: () => dirs.home };
+});
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof FileSystem>();
+  return { ...actual, writeFileSync: vi.fn(actual.writeFileSync) };
 });
 
 type Notification = { text: string; options?: { tab?: string } };
@@ -26,6 +31,7 @@ type DispatchResult = Awaited<ReturnType<TabPluginServerCapabilities['dispatchLi
 const roots: string[] = [];
 
 afterEach(() => {
+  vi.mocked(writeFileSync).mockClear();
   for (const root of roots) rmSync(root, { recursive: true, force: true });
   roots.length = 0;
 });
@@ -109,6 +115,17 @@ function send(
     tab: 'hosts', intent, payload, tabPayload: tabPayload ?? f.tabPayload(),
   };
   return f.activation.intent(request, f.capabilities);
+}
+
+function savePayload(name: string, destination: string, originalName?: string): unknown {
+  const base = { name, user: '', destination, path: '' };
+  return originalName === undefined ? base : { ...base, originalName };
+}
+
+function sendSave(
+  f: ReturnType<typeof fixture>, payload: unknown, tabPayload?: HostsPayload,
+): SaveHostResult {
+  return send(f, 'save', payload, tabPayload) as SaveHostResult;
 }
 
 function refusal(work: () => unknown): string {
@@ -341,4 +358,207 @@ describe('hosts activation intents', () => {
     expect(f.notifications[0]?.options).toEqual({ tab: 'hosts' });
   });
 
+  it('rejects malformed edit payloads before touching the file or the tab', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const before = readFileSync(file, 'utf8');
+
+    expect(refusal(() => send(f, 'save', { name: 7 }))).toBe('invalid save payload');
+    expect(refusal(() => send(f, 'delete', { name: '' }))).toBe('invalid delete payload');
+
+    expect(readFileSync(file, 'utf8')).toBe(before);
+    expect(f.updated).toEqual([]);
+  });
+
+  it('creates a host and publishes the sorted written catalog exactly once', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+
+    expect(sendSave(f, savePayload('Other', 'other.local'))).toEqual({ ok: true, name: 'Other' });
+
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({
+      Lab: { destination: 'lab.local' }, Other: { destination: 'other.local' },
+    });
+    expect(f.updated).toHaveLength(1);
+    expect(f.updated[0]?.value.payload).toEqual({
+      filePath: file,
+      rows: [row('Lab', 'lab.local'), row('Other', 'other.local')],
+    });
+    expect(f.notifications).toEqual([]);
+  });
+
+  it('refuses a create whose name is already taken regardless of case', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const before = readFileSync(file, 'utf8');
+
+    expect(sendSave(f, savePayload('lab', 'new.local')))
+      .toEqual({ ok: false, error: 'Host "lab" already exists.' });
+
+    expect(readFileSync(file, 'utf8')).toBe(before);
+    expect(f.updated).toEqual([]);
+  });
+
+  it('edits a host under its own name without duplicating it', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+
+    expect(sendSave(f, savePayload('Lab', 'new.local:2222', 'Lab')))
+      .toEqual({ ok: true, name: 'Lab' });
+
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ Lab: { destination: 'new.local:2222' } });
+    expect(f.updated).toHaveLength(1);
+    expect(f.updated[0]?.value.payload).toEqual({
+      filePath: file, rows: [row('Lab', 'new.local:2222')],
+    });
+  });
+
+  it('renames a host by case alone in one write', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, { lab: { destination: 'lab.local' } });
+
+    expect(sendSave(f, savePayload('Lab', 'lab.local', 'lab')))
+      .toEqual({ ok: true, name: 'Lab' });
+
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ Lab: { destination: 'lab.local' } });
+    expect(f.updated).toHaveLength(1);
+    expect(f.updated[0]?.value.payload).toEqual({
+      filePath: file, rows: [row('Lab', 'lab.local')],
+    });
+  });
+
+  it('refuses a rename that collides with another row', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, {
+      Lab: { destination: 'lab.local' }, Other: { destination: 'other.local' },
+    });
+    const before = readFileSync(file, 'utf8');
+
+    expect(sendSave(f, savePayload('Other', 'new.local', 'Lab')))
+      .toEqual({ ok: false, error: 'Host "Other" already exists.' });
+
+    expect(readFileSync(file, 'utf8')).toBe(before);
+    expect(f.updated).toEqual([]);
+  });
+
+  it('refuses an edit whose original row has gone', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, { Other: { destination: 'other.local' } });
+
+    expect(sendSave(f, savePayload('Lab', 'lab.local', 'Lab')))
+      .toEqual({ ok: false, error: 'No host named "Lab".' });
+
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ Other: { destination: 'other.local' } });
+    expect(f.updated).toEqual([]);
+  });
+
+  it('reports a stale deletion on the Hosts tab and keeps the current payload', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, { Other: { destination: 'other.local' } });
+    const tab = f.tabPayload([row('Lab', 'lab.local')]);
+
+    expect(send(f, 'delete', { name: 'Lab' }, tab)).toBeNull();
+
+    expect(f.notifications).toEqual([
+      { text: 'No host named "Lab".', options: { tab: 'hosts' } },
+    ]);
+    expect(f.updated).toEqual([]);
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ Other: { destination: 'other.local' } });
+  });
+
+  it('deletes a host and publishes the remaining catalog exactly once', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, {
+      Lab: { destination: 'lab.local' }, Other: { destination: 'other.local' },
+    });
+
+    expect(send(f, 'delete', { name: 'lab' })).toBeNull();
+
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ Other: { destination: 'other.local' } });
+    expect(f.updated).toHaveLength(1);
+    expect(f.updated[0]?.value.payload).toEqual({
+      filePath: file, rows: [row('Other', 'other.local')],
+    });
+    expect(f.notifications).toEqual([]);
+  });
+
+  it('keeps an entry added by hand after the tab opened', () => {
+    const f = fixture();
+    writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    runCommand(f, '');
+    writeCatalog(f.root, {
+      Lab: { destination: 'lab.local' }, Hand: { destination: 'hand.local' },
+    });
+    const file = path.join(f.root, '.janissary', 'hosts.json');
+
+    expect(sendSave(f, savePayload('New', 'new.local'))).toEqual({ ok: true, name: 'New' });
+
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({
+      Hand: { destination: 'hand.local' },
+      Lab: { destination: 'lab.local' },
+      New: { destination: 'new.local' },
+    });
+    expect(f.updated.at(-1)?.value.payload).toEqual({
+      filePath: file,
+      rows: [row('Hand', 'hand.local'), row('Lab', 'lab.local'), row('New', 'new.local')],
+    });
+  });
+
+  it('returns the shared field error inline without writing', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const before = readFileSync(file, 'utf8');
+
+    expect(sendSave(f, savePayload('bad name', 'lab.local')))
+      .toEqual({ ok: false, error: 'Invalid name "bad name". Use letters, digits, and . - _ only.' });
+
+    expect(readFileSync(file, 'utf8')).toBe(before);
+    expect(f.updated).toEqual([]);
+  });
+
+  it('returns the unusable-file diagnostic inline and attributes its warning', () => {
+    const f = fixture();
+    writeCatalog(f.home, []);
+
+    const result = sendSave(f, savePayload('New', 'new.local'));
+
+    expect(result).toEqual({
+      ok: false,
+      error: `Cannot save hosts: ${path.join(f.home, '.janissary', 'hosts.json')} is unusable — fix it by hand.`,
+    });
+    expect(f.notifications[0]?.text).toContain('is unusable');
+    expect(f.notifications[0]?.options).toEqual({ tab: 'hosts' });
+    expect(f.updated).toEqual([]);
+  });
+
+  it('returns the write-failure diagnostic inline and leaves the file untouched', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const before = readFileSync(file, 'utf8');
+    vi.mocked(writeFileSync).mockImplementationOnce(() => { throw new Error('Disk full'); });
+
+    expect(sendSave(f, savePayload('New', 'new.local')))
+      .toEqual({ ok: false, error: `Could not write hosts.json at ${file}.` });
+
+    expect(readFileSync(file, 'utf8')).toBe(before);
+    expect(f.updated).toEqual([]);
+  });
+
+  it('writes through the usable home file when the project override is bad', () => {
+    const f = fixture();
+    const homeFile = writeCatalog(f.home, { Home: { destination: 'home.local' } });
+    writeCatalog(f.root, []);
+
+    expect(sendSave(f, savePayload('New', 'new.local'))).toEqual({ ok: true, name: 'New' });
+
+    expect(JSON.parse(readFileSync(homeFile, 'utf8'))).toEqual({
+      Home: { destination: 'home.local' }, New: { destination: 'new.local' },
+    });
+    expect(f.updated).toHaveLength(1);
+    expect(f.updated[0]?.value.payload).toEqual({
+      filePath: homeFile,
+      rows: [row('Home', 'home.local'), row('New', 'new.local')],
+    });
+    expect(f.notifications[0]?.options).toEqual({ tab: 'hosts' });
+  });
 });

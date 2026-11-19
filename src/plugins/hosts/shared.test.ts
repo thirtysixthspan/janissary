@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   HOSTS_PAYLOAD_SCHEMA_VERSION,
+  isDeleteHostIntent,
   isHostsPayload,
   isOpenIntent,
   isRefreshIntent,
+  isSaveHostIntent,
+  isSaveHostResult,
   type HostRow,
   type HostsPayload,
 } from './shared.js';
@@ -89,5 +92,52 @@ describe('hosts intent guards', () => {
     expect(isOpenIntent({ name: 7 })).toBe(false);
     expect(isOpenIntent(null)).toBe(false);
     expect(isOpenIntent(['lab'])).toBe(false);
+  });
+});
+
+describe('hosts edit intent guards', () => {
+  const SAVE = { name: 'lab', user: 'admin', destination: 'devbox:2222', path: '/srv/ws' };
+
+  it('accepts a complete save with the four string fields', () => {
+    expect(isSaveHostIntent(SAVE)).toBe(true);
+    expect(isSaveHostIntent({ ...SAVE, extra: 1 })).toBe(true);
+  });
+
+  it('lets blank field strings through so the shared validator can report them', () => {
+    expect(isSaveHostIntent({ name: '', user: '', destination: '', path: '' })).toBe(true);
+  });
+
+  it('carries an optional original name only when it is nonempty', () => {
+    expect(isSaveHostIntent({ ...SAVE, originalName: 'Lab' })).toBe(true);
+    expect(isSaveHostIntent(SAVE)).toBe(true);
+    expect(isSaveHostIntent({ ...SAVE, originalName: '' })).toBe(false);
+    expect(isSaveHostIntent({ ...SAVE, originalName: 7 })).toBe(false);
+  });
+
+  it('rejects a save missing a field or holding a nonstring field', () => {
+    expect(isSaveHostIntent({ name: 'lab', user: '', destination: 'devbox' })).toBe(false);
+    expect(isSaveHostIntent({ ...SAVE, path: 7 })).toBe(false);
+    expect(isSaveHostIntent(null)).toBe(false);
+    expect(isSaveHostIntent(['lab'])).toBe(false);
+  });
+
+  it('accepts a delete target with a nonempty name only', () => {
+    expect(isDeleteHostIntent({ name: 'lab' })).toBe(true);
+    expect(isDeleteHostIntent({ name: 'lab', extra: 1 })).toBe(true);
+    expect(isDeleteHostIntent({ name: '' })).toBe(false);
+    expect(isDeleteHostIntent({})).toBe(false);
+    expect(isDeleteHostIntent({ name: 7 })).toBe(false);
+    expect(isDeleteHostIntent(null)).toBe(false);
+  });
+
+  it('narrows both branches of a save result', () => {
+    expect(isSaveHostResult({ ok: true, name: 'Lab' })).toBe(true);
+    expect(isSaveHostResult({ ok: false, error: 'Host "Lab" already exists.' })).toBe(true);
+    expect(isSaveHostResult({ ok: true, name: 7 })).toBe(false);
+    expect(isSaveHostResult({ ok: false, error: 7 })).toBe(false);
+    expect(isSaveHostResult({ ok: true, error: 'x' })).toBe(false);
+    expect(isSaveHostResult({ ok: false, name: 'Lab' })).toBe(false);
+    expect(isSaveHostResult({ name: 'Lab' })).toBe(false);
+    expect(isSaveHostResult(null)).toBe(false);
   });
 });
