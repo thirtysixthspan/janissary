@@ -20,6 +20,8 @@ When `tasks` is disabled in the Commands tab, `Ctrl+A` and `tasks` do nothing; t
 | `Return` | Directory: expand or collapse it. File: insert the task's command into the command line at the cursor |
 | `Escape` | Close, leaving the command line untouched |
 
+Keys other than these do nothing while the picker is open and are not entered into the command line. Hovering the mouse over the row the keyboard highlight is already on keeps that row highlighted, so the mouse and keyboard never point at two different rows.
+
 Unlike the [history picker](/user-documentation/command-bar/history), `Return` here does **not** run the command immediately. It inserts the command at the cursor — leaving any text you'd already typed intact, with the cursor just after the inserted command — so you can supplement it (say, appending extra instructions) or edit it before pressing `Return` yourself to actually run it.
 
 On a shell tab, `Ctrl+A` opens the picker while the command line has focus. If the shell terminal has keyboard focus, `Ctrl+A` goes to the terminal instead, since interactive programs may use that keystroke. On a harness tab there is no command line to insert into, so picking a task sends the same command straight into that harness's terminal input, exactly as if it had been typed there. Wherever the window appears, it appears over the tab you opened it from, never over some other tab.
@@ -62,6 +64,8 @@ For an open pull request, choose `review-pull-request` to record review findings
 
 Expand **workspace** and choose `fix-build` to diagnose and repair a failing build. On its own it works on `master`, and the repair merges through a new pull request once its checks pass. Append a PR number, `#number`, or GitHub PR URL to repair that pull request's build instead; the repair is pushed to its branch and the pull request stays open. Expand **research** and choose `find-bugs` to check an app against its functional specs and record bugs it reproduces. This task does not fix the bugs and needs a harness tab with an attached browser.
 
+Expand **planning** to work on a single plan before you build it. Choose `rate-plan-complexity` for a judgment rating from 1 to 10, `rate-plan-complexity-quantitative` for a rating from 1 to 9 worked out by counting five things and applying a fixed formula, or `decompose-plan` to split one plan into ordered subplans. The [product development workflow](/user-documentation/workflows/product-development) shows where plans live as they move from draft to ready to complete.
+
 ## What a shipped task does when you pick it
 
 Picking a task only inserts the command; the agent then reads that file and follows it, so what happens next depends on the task. `plan-a-new-feature`, the task that drafts a new plan, works in phases and asks you a lot along the way:
@@ -74,3 +78,5 @@ Picking a task only inserts the command; the agent then reads that file and foll
 - It moves the finished plan from `product/plans/draft/` to `product/plans/ready/`, where `build-a-feature` picks it up.
 
 It asks one question at a time. Each question lists at least three numbered answers and a last **Other** answer where you type your own. One answer is marked as recommended, and one as the lowest-cost option, the one least likely to grow the scope. A single answer can carry both marks. The draft is rewritten as you answer. A phase is finished when no question is left hanging, so the questioning is the longest part of the task rather than something you can skip past.
+
+The planning tasks do one job each and change only plans. `rate-plan-complexity` reads the plan and the code it touches and writes a single complexity line under the plan's title. `rate-plan-complexity-quantitative` counts five things about the plan and its code, runs them through a fixed formula, and writes the same line; its formula tops out at 9, so it never writes a 10. `decompose-plan` turns one plan into ordered subplans, rates and improves each one, moves the finished subplans to ready, and keeps the original plan, unchanged, as the record of the whole feature. It writes no code and opens no pull request.
