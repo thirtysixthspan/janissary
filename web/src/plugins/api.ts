@@ -50,6 +50,11 @@ export { InlineEditInput } from '../shared/InlineEditInput';
 // does, with the same wording shape and the same keyboard contract. It shipped as two identical
 // per-plugin copies before this, which is exactly the drift the published surface exists to prevent.
 export { ConfirmDialog } from '../shared/ConfirmDialog';
+// The raw modal primitives a plugin form composes itself: the backdrop and markup, and the app-wide
+// shortcut suppression plus outside-click trapping behind it. Published additively, so
+// `TAB_PLUGIN_API_VERSION` does not move.
+export { ModalDialog } from '../shared/ModalDialog';
+export { useDialogKeyboard } from '../shared/useDialogKeyboard';
 
 // The two colors a terminal renders with, and the platform check that decides which modifier is the
 // copy one. Published on the same terms as the components above: a plugin with its own terminal — the

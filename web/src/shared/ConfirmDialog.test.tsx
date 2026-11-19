@@ -110,3 +110,42 @@ describe('ConfirmDialog', () => {
     expect(isModalOpen()).toBe(false);
   });
 });
+
+describe('ConfirmDialog with a disabled confirm', () => {
+  function pendingDialog() {
+    const onConfirm = vi.fn();
+    const onCancel = vi.fn();
+    render(
+      <ConfirmDialog
+        title="Delete host lab?"
+        confirmLabel="Delete"
+        confirmDisabled
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+      />,
+    );
+    return { onConfirm, onCancel, confirm: screen.getByText('Delete', { selector: '.modal-button' }) };
+  }
+
+  it('disables the confirm button and refuses the click', () => {
+    const { onConfirm, confirm } = pendingDialog();
+    expect(confirm).toBeDisabled();
+    fireEvent.click(confirm);
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('refuses both keyboard routes, y and Enter on the selected confirm', () => {
+    const { onConfirm } = pendingDialog();
+    press('y');
+    press('ArrowRight');
+    expect(screen.getByText('Delete', { selector: '.modal-button' })).toHaveClass('selected');
+    press('Enter');
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('still lets a disabled dialog be cancelled', () => {
+    const { onCancel } = pendingDialog();
+    press('Escape');
+    expect(onCancel).toHaveBeenCalledOnce();
+  });
+});

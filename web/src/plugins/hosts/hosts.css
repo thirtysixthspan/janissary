@@ -18,3 +18,17 @@
 .host-row:hover { background: var(--border); }
 .host-row.selected { background: var(--bg-soft); }
 .host-row > span { overflow: hidden; text-overflow: ellipsis; }
+.host-row-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.host-row-actions button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
+  padding: 0 4px; line-height: 1;
+}
+.host-row-actions button:hover { color: var(--fg); }
+.host-form form { display: flex; flex-direction: column; gap: 8px; }
+.host-form label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+.host-form input {
+  background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  padding: 3px 6px; font-family: var(--mono); font-size: 13px;
+}
+.host-form-error { color: var(--warn, var(--accent)); font-size: 12px; }
+.host-form .modal-actions { margin-top: 6px; }
