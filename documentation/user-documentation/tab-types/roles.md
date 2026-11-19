@@ -18,11 +18,11 @@ If neither your project nor your home folder has a `roles.json` file, opening th
 
 ## Add a model to a role
 
-Each card has **Models** and **Commands** sections. Click **Add model** in the Models section, pick the harness, model, and effort, and press **Add**. The picker offers enabled models only. The effort picker starts on `default` and returns to it when you change the harness or reopen the picker, so a choice never carries over to an entry you did not make it for.
+Each card has **Models** and **Commands** sections. Click **Add model** in the Models section, pick the harness, then type to search for the model. The field offers only the harness's enabled models: typing narrows the list, `Tab` completes a single match or a common prefix, and you can click a row to fill the field. With the field blank, the list shows the models your roles use most, or `type to search` when none are used; text that matches nothing shows `No matching models`. Press **Add** when the field holds an exact model id — it stays unavailable for partial or unknown text. The effort picker starts on `default` and returns to it when you change the harness or reopen the picker, so a choice never carries over to an entry you did not make it for.
 
 The **Models** list has the accessible name `Models of role <name>` for screen readers. When a role has no model choices, the section shows a muted `No models` row.
 
-Both the model and command pickers focus their first control when they open and close on `Escape`. Adding, canceling, or pressing `Escape` returns focus to the button you opened them from.
+Both the model and command pickers focus their first control when they open. In the model field, the first `Escape` closes the candidate list and the next `Escape` closes the picker; in the command picker, `Escape` closes it directly. Adding, canceling, or pressing `Escape` returns focus to the button you opened them from.
 
 Each choice row carries an effort dropdown: `default`, `low`, `medium`, `high`, `xhigh`, or `max`. `default` stores no effort at all for that choice; the other levels are the same ones the **New harness** dialog offers. If a hand-written role has another effort value, that value stays visible as an option in its dropdown. Change it whenever you like: the tab saves as you go. If saving fails, it shows `Could not write roles.json at <path>.` and preserves your previous file and the choices on screen.
 

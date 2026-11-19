@@ -48,5 +48,9 @@
   background: transparent; color: var(--fg); border: 1px solid var(--border);
   border-radius: 3px; font-size: 12px;
 }
+.roles-picker input {
+  background: transparent; color: var(--fg); border: 1px solid var(--border);
+  border-radius: 3px; font-size: 12px;
+}
 .roles-add-model, .roles-add-command { font-size: 12px; padding: 2px 0; }
 .roles-add-role { display: block; margin: 4px auto; }

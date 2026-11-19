@@ -32,6 +32,7 @@ export function RolesTab({ payload, capabilities }: Properties) {
             index={index}
             efforts={catalog.efforts}
             models={catalog.models}
+            roleEntries={roles.map((role) => role.entries)}
             nativeCommands={nativeCommands}
             commandRestrictions={commandRestrictions}
             capabilities={capabilities}
