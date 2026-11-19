@@ -2,8 +2,6 @@
 
 ## ready
 
-* launcher (3/10) — Of 22 user-visible launcher facts, 19 are correct and three are missing, with none wrong. The omitted facts are that the command rail scrolls within a bounded area (`max-height: 45%; overflow-y: auto` in `web/src/plugins/launcher/launcher.css`) so the tab list stays available, that clicking a tab row which closed before its answer does nothing, and that hovering a tab row highlights it without opening an information popup. All three come from `product/specs/launcher.md` and none appears in `documentation/user-documentation/tab-types/launcher.md`, `help/launcher.md` or `help/commands.md`. Add the bounded-scroll note to the "Run a command" section and the closed-tab and hover notes to the "Find an open tab" section of `documentation/user-documentation/tab-types/launcher.md`, which is the correct destination.
-
 * markdown-rendering (3/10) — Of 15 user-visible facts, 14 are correct and one is missing. The shipped detector in `web/src/shared/transcript/file-link.ts` (`slurpLineNumber`) parses an optional column, so a reference such as `tests/test.py:10:5` renders as a clickable file link, but the "Follow source locations" section of `documentation/user-documentation/advanced-agents/markdown-rendering.md` shows only `src/app.ts:42` and describes matching before the line number, never the column form. Add one sentence there stating that a `filepath:line:col` reference is also a file link, so compiler and linter output carrying a column stays navigable. Ground truth is `product/specs/markdown-rendering.md` and `web/src/shared/transcript/file-link.ts`.
 
 * pull-request-review (3/10) — Of 20 user-visible facts, 17 are correct and three are missing, with none wrong. The missing facts are that a subplan skips all three closing stages (opening the pull request, the review cycle and the update), that the single-plan route publishes its canonical source plan first and then improves it in place preserving its identity, and that any recovery which changes the branch needs another test/repair cycle, a final update and fresh validation of the new published head while an unsupported primary branch blocks completion. These are specified in `product/specs/pull-request-review.md` and implemented in `ai/tasks/feature/build-a-complex-feature.md`. Add them to the "How a complex feature is staged" and "Testing and final checks" sections of `documentation/user-documentation/workflows/pull-request-review.md`; no help page carries this workflow.
@@ -22,6 +20,7 @@
 
 ## resolved
 
+* launcher — documented in documentation/user-documentation/tab-types/launcher.md (removed 2026-11-19)
 * harness-recording — documented in documentation/user-documentation/advanced-agents/harness.md, documentation/user-documentation/tab-types/recording-player.md (removed 2026-11-19)
 * harness — documented in documentation/user-documentation/advanced-agents/harness.md, help/harness.md (removed 2026-11-19)
 * connections-tab — documented in documentation/user-documentation/command-bar/connections.md, help/connections.md (removed 2026-11-19)
