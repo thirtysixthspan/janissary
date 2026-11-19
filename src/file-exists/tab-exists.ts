@@ -1,4 +1,4 @@
-import { constants } from 'node:fs';
+import { constants, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { fileFailureLine } from '../file-failure.js';
 import { readRowStat } from '../file-navigator/stats.js';
@@ -20,18 +20,35 @@ function typeWord(mode: number): string {
   return TYPE_WORDS.get(mode & S_IFMT) ?? 'file';
 }
 
-function canonicalFailure(error: unknown): string {
+function isAbsentPathError(error: unknown): boolean {
   const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
     ? error.code
     : undefined;
-  return code === 'ENOENT' || code === 'ENOTDIR' ? 'missing' : 'forbidden';
+  return code === 'ENOENT' || code === 'ENOTDIR';
+}
+
+// Resolve the nearest existing ancestor so an escaping symlink still reaches checkRealTarget and a
+// dangling link keeps its own spelling for readRowStat's lstat.
+function resolveExisting(location: string): string {
+  try {
+    return realpathSync(location);
+  } catch {
+    const parent = path.dirname(location);
+    return parent === location ? location : path.join(resolveExisting(parent), path.basename(location));
+  }
 }
 
 function resolveRealTarget(root: string, requested: string): { realRoot: string; realTarget: string } | { result: string } {
+  const target = path.resolve(root, requested);
   try {
-    return { realRoot: canonicalPath(root), realTarget: canonicalPath(path.resolve(root, requested)) };
+    return { realRoot: canonicalPath(root), realTarget: canonicalPath(target) };
   } catch (error) {
-    return { result: canonicalFailure(error) };
+    if (!isAbsentPathError(error)) return { result: 'forbidden' };
+    try {
+      return { realRoot: canonicalPath(root), realTarget: resolveExisting(target) };
+    } catch {
+      return { result: 'forbidden' };
+    }
   }
 }
 

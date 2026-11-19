@@ -56,8 +56,17 @@ describe('fileExistsInTab', () => {
     expect(fileExistsInTab(managersWith(), 'janus', 'file exists alias')).toBe('link');
   });
 
+  it('answers link for a symlink whose target does not exist', () => {
+    symlinkSync(path.join(root, 'gone.md'), path.join(root, 'dangling'));
+    expect(fileExistsInTab(managersWith(), 'janus', 'file exists dangling')).toBe('link');
+  });
+
   it('answers missing for an absent path', () => {
     expect(fileExistsInTab(managersWith(), 'janus', 'file exists absent')).toBe('missing');
+  });
+
+  it('answers missing for a plain absent path with multiple missing segments', () => {
+    expect(fileExistsInTab(managersWith(), 'janus', 'file exists deep/nested/gone.md')).toBe('missing');
   });
 
   it('answers forbidden for out-of-workspace and secret paths', () => {
@@ -72,6 +81,11 @@ describe('fileExistsInTab', () => {
     writeFileSync(target, 'x');
     symlinkSync(target, path.join(root, 'escape'));
     expect(fileExistsInTab(managersWith(), 'janus', 'file exists escape')).toBe('forbidden');
+  });
+
+  it('answers forbidden for an absent path through a symlink pointing outside the workspace', () => {
+    symlinkSync(outside, path.join(root, 'out'));
+    expect(fileExistsInTab(managersWith(), 'janus', 'file exists out/absent.md')).toBe('forbidden');
   });
 
   it('answers normally for .git and .janissary paths', () => {
