@@ -11,7 +11,8 @@ import {
   type TabPluginTabUpdate,
 } from '../api.js';
 import { activate } from './activate.js';
-import { DEFAULT_ROLES, readRolesFile, writeRolesFile } from './roles-file.js';
+import { DEFAULT_ROLES } from './default-roles.js';
+import { readRolesFile, writeRolesFile } from './roles-file.js';
 import {
   isRolesPayload, NATIVE_ACP_COMMANDS, type LaunchCatalog, type RoleEntry, type RolesPayload,
 } from './shared.js';

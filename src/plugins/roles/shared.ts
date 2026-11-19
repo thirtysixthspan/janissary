@@ -19,6 +19,7 @@ export const NATIVE_ACP_COMMANDS = [
   'web search',
   'web fetch',
   'subagent',
+  'tab',
   'notify',
 ] as const;
 

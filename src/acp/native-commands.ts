@@ -20,6 +20,7 @@ export function nativeCommandTool(command: string): NativeCommandTool | undefine
   if (native.startsWith('file ')) return 'file';
   if (native.startsWith('web ')) return 'web';
   if (native === 'subagent') return 'subagent';
+  if (native === 'tab') return 'tab';
   if (native === 'notify') return 'notify';
   return 'question';
 }

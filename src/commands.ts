@@ -2,7 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { commands } from './commands/index.js';
 import { RESERVED_NON_COMMAND_NAMES } from './commands/reserved.js';
-import { readHelpPage } from './help-pages.js';
+import { readCommandTable, readHelpPage } from './help-pages.js';
 
 // What the classifier decided, rather than three meanings folded into `string | null` and told
 // apart by the leading words of a user-facing message. Two callers used to recover the third case
@@ -30,9 +30,11 @@ function fallbackHelp(): string {
   return 'Built-in: ' + availableCommands.join(', ') + '. Prefix a command with "!" to run it in the shell, or / to run a built-in command. Press Ctrl+R or type hist to browse command history.';
 }
 
-// Bare `help` lists commands; named pages are read fresh so edits take effect without a restart.
+// Bare `help` prints the command table; named pages are read fresh so edits take effect without a restart.
 function helpText(query: string | undefined): string {
-  const result = readHelpPage(helpDirectory(), query ?? 'commands');
+  const result = query === undefined || query === 'commands'
+    ? readCommandTable(helpDirectory())
+    : readHelpPage(helpDirectory(), query);
   if (result.kind === 'page') return result.text;
   if (result.kind === 'missing') return `No help for "${result.name}". Type "help" for available commands.`;
   return fallbackHelp();

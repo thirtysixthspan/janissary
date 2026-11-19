@@ -45,7 +45,7 @@ A project's `.janissary/roles.json`, when it exists, **replaces** the home file 
 merging of roles between the two — including when it holds an empty object, which is an explicit
 choice of zero roles rather than a request for the defaults.
 
-When neither file exists, the tab creates `~/.janissary/roles.json` holding seven default roles:
+When neither file exists, the tab creates `~/.janissary/roles.json` holding eight default roles:
 `planning` (with the two entries above), `research` (`Research, comparison, and information
 gathering for a task or question.`), `code review` (`Review of code changes for correctness, style,
 and risk.`), `implementation` (`Implementation of an approved plan or a described change.`),
@@ -53,12 +53,14 @@ and risk.`), `implementation` (`Implementation of an approved plan or a describe
 `ask` (`When you ask a question via ACP.`) with three entries in order: `opencode`
 `opencode-go/deepseek-v4.1-flash` at `medium`, `claude` `claude-haiku-4-5` at `high`, and `codex`
 `gpt-6-luna` at `high`. The `tell` role follows `ask`, has the description `When you tell a model to
-carry out a task via ACP.`, and starts with the same three entries. The `ask` role grants `db sqlite
+carry out a task via ACP.`, and starts with the same three entries. The `user-interface` role follows
+`tell`, has the description `When you ask a model to arrange the user interface via ACP.`, starts with
+the same three entries, and grants only `tab`. The `ask` role grants `db sqlite
 list`, `db sqlite query`, `browser goto`, `browser content`, `question ask`, `question approve`,
-`file read`, `file glob`, `file grep`, `web search`, `web fetch`, and `notify`. The `tell` role grants all nineteen
-native commands: those twelve plus `db sqlite create`, `db sqlite delete`, `browser eval`, `file write`,
-`file edit`, `file patch`, and `subagent`. The published native vocabulary has nineteen entries, the same commands, so the default `tell` grants every native command. An existing roles file is not changed, so its saved `tell` keeps the grants it lists, including a list without `subagent`. `planning`, `research`, `code review`, `implementation`, and
-`documentation` start with no command grants. Only `planning`, `ask`, and `tell` start with entries.
+`file read`, `file glob`, `file grep`, `web search`, `web fetch`, and `notify`. The `tell` role grants all native commands except `tab` (nineteen of the twenty):
+those twelve plus `db sqlite create`, `db sqlite delete`, `browser eval`, `file write`,
+`file edit`, `file patch`, and `subagent`. The published native vocabulary has twenty entries, so the default `tell` grants every one except `tab`, and `user-interface` is the only default role that grants `tab`. An existing roles file is not changed, so its saved `tell` keeps the grants it lists, including a list without `subagent`. `planning`, `research`, `code review`, `implementation`, and
+`documentation` start with no command grants. Only `planning`, `ask`, `tell`, and `user-interface` start with entries.
 
 ### What the tab shows
 
@@ -107,7 +109,7 @@ from the live Commands topic and is not stored in the roles file, and a restrict
 be added or removed like any other. Opening the tab with an unreadable Commands snapshot reports `invalid commands topic data` and opens nothing; a later unreadable snapshot is ignored and the tab keeps the restrictions it last showed. A muted `No commands` row appears when a role has none. **Add
 command** opens a dropdown of native commands the role does not already have, followed by Add and
 Cancel; Add stays disabled until a choice is made. The button is
-hidden when all nineteen native commands, including `subagent` and `notify`, are present. Add sends `add-command`; removing any duplicate
+hidden when all twenty native commands, including `subagent`, `tab`, and `notify`, are present. Add sends `add-command`; removing any duplicate
 row sends `remove-command`, which removes every copy. If another client changes a command while the
 picker is open, it clears a selection that is no longer available or closes when no commands remain
 to add, and the card follows the next publication. Both pickers focus their first control when

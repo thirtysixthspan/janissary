@@ -113,6 +113,15 @@ describe('readRoleSettings', () => {
     expect(readFileSync(file, 'utf8')).toBe(before);
   });
 
+  it('reads the built-in user-interface role with its tab grant when it is absent from the file', () => {
+    const { home, root } = directories();
+    writeRoles(home, { planning: { description: 'Plans.', entries: [], commands: [] } });
+
+    expect(readRoleSettings(root, 'user-interface', home)).toEqual({
+      name: 'user-interface', entries: [OPENCODE, CLAUDE, CODEX], commands: ['tab'],
+    });
+  });
+
   it('keeps an existing role grant list empty while falling back from empty model entries', () => {
     const { home, root } = directories();
     writeRoles(home, { ask: { description: 'Questions.', entries: [], commands: [] } });

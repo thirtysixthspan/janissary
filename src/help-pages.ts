@@ -24,6 +24,19 @@ export function listHelpPages(directory: string): string[] {
     .toSorted((left, right) => left.localeCompare(right));
 }
 
+export function readCommandTable(directory: string): HelpPageResult {
+  const result = readHelpPage(directory, 'commands');
+  if (result.kind !== 'page') return result;
+  const lines = result.text.split('\n');
+  const firstRow = lines.findIndex((line) => line.startsWith('|'));
+  if (firstRow === -1) return result;
+  const afterTable = lines.findIndex(
+    (line, index) => index > firstRow && line.trim() !== '' && !line.startsWith('|'),
+  );
+  const table = afterTable === -1 ? lines : lines.slice(0, afterTable);
+  return { kind: 'page', text: table.join('\n').trimEnd() };
+}
+
 export function readHelpPage(directory: string, query: string): HelpPageResult {
   const pages = markdownPageNames(directory);
   if (pages === null) return { kind: 'unreadable' };

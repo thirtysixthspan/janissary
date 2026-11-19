@@ -12,7 +12,7 @@ import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { BROWSER_PRIMER } from '../browser/command.js';
 import { DB_PRIMER } from '../database/primer.js';
 import { globWorkspaceCommand } from '../file-glob/glob.js';
-import { DEFAULT_ROLES } from '../plugins/roles/roles-file.js';
+import { DEFAULT_ROLES } from '../plugins/roles/default-roles.js';
 
 const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
 

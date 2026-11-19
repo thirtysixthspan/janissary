@@ -29,11 +29,12 @@ function buildApplicationCommands(): ApplicationCommandRow[] {
   const rows: ApplicationCommandRow[] = [];
   const nativeNames = new Set<string>(NATIVE_ACP_COMMANDS);
   for (const command of coreCommands) {
-    // A command registered as a native ACP tool owns its name through the native row below.
-    // Emitting a builtin row from its forms declaration would duplicate that name.
-    if (nativeNames.has(command.name)) continue;
     const declaration = COMMAND_FORMS[command.name];
-    if (declaration) rows.push(...builtinRows(declaration));
+    if (!declaration) continue;
+    const builtin = builtinRows(declaration);
+    rows.push(...(nativeNames.has(command.name)
+      ? builtin.filter((row) => row.name !== command.name)
+      : builtin));
   }
   rows.push({ name: 'help', kind: 'help', aliases: [], forms: ['help', 'help commands', 'help keys', 'help <command>'], parent: 'help' });
   const declarations: readonly TabPluginDeclaration[] = tabPluginCatalog;

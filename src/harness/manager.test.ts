@@ -17,7 +17,8 @@ import { BUNDLED_MODEL_CATALOG, type ModelCatalog } from '../models/catalog-file
 import type { Tab } from '../tab/types.js';
 import type { RemoteSessionView } from '../protocol.js';
 import { byLabel, harnessTab } from '../tab/lookup.js';
-import { DEFAULT_ROLES, writeRolesFile } from '../plugins/roles/roles-file.js';
+import { DEFAULT_ROLES } from '../plugins/roles/default-roles.js';
+import { writeRolesFile } from '../plugins/roles/roles-file.js';
 import type { Role, RoleEntry } from '../plugins/roles/shared.js';
 
 vi.mock('./capture/file.js', () => ({

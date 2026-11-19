@@ -6,7 +6,7 @@ import {
   BUNDLED_MODEL_CATALOG, decodeModelCatalog, encodeModelCatalog, readCatalog,
 } from './catalog-file.js';
 import { isConversationalModel } from './conversational.js';
-import { DEFAULT_ROLES } from '../plugins/roles/roles-file.js';
+import { DEFAULT_ROLES } from '../plugins/roles/default-roles.js';
 
 describe('bundled model catalog', () => {
   const harnesses = ['claude', 'codex', 'opencode'];

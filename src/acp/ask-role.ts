@@ -1,5 +1,6 @@
 import { homedir } from 'node:os';
-import { DEFAULT_ROLES, readRolesFile } from '../plugins/roles/roles-file.js';
+import { DEFAULT_ROLES } from '../plugins/roles/default-roles.js';
+import { readRolesFile } from '../plugins/roles/roles-file.js';
 import type { Role, RoleEntry } from '../plugins/roles/shared.js';
 import type { CommandSettingsSnapshot } from '../native-commands/settings-types.js';
 import type { AcpRole } from './role.js';
