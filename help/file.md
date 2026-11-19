@@ -1,6 +1,6 @@
 ### file
 
-Read a text file from the workspace and print it as numbered lines in the current tab, find files there by path, search those files for text, write or edit a text file there, or apply a patch that changes several files. A local tab reads from its workspace, or from the project directory when the tab has no workspace. Paths are relative to that root. A remote tab reads from its remote workspace clone on the remote machine, never from the local disk, with paths relative to that workspace. The output carries no host tag.
+Read a text file from the workspace and print it as numbered lines in the current tab, find files there by path, search those files for text, write or edit a text file there, or apply a patch that changes several files. It also lists a directory with `file list` (alias `file ls`), prints one entry's details with `file stat`, checks a path with `file exists`, and prints the first or last lines with `file head` and `file tail`. A local tab reads from its workspace, or from the project directory when the tab has no workspace. Paths are relative to that root. A remote tab reads from its remote workspace clone on the remote machine, never from the local disk, with paths relative to that workspace. The output carries no host tag.
 
 **Usage**
 
@@ -16,7 +16,19 @@ Read a text file from the workspace and print it as numbered lines in the curren
 
 `file patch <JSON>`
 
-For `file read`, `--offset` is the first line to print and defaults to 1, and `--limit` is the number of lines to print and defaults to 2000. One read prints at most 2000 lines, and files over 5 MB are refused. The **Output** and **Errors** notes below cover `file read` too. `file glob` has its own flags and defaults under **Finding files**. `file grep` has its own flags and defaults under **Searching contents**. `file write` and `file edit` are under **Writing and editing**. `file patch` is under **Patching several files**.
+`file list <path>`
+
+`file ls <path>`
+
+`file stat <path>`
+
+`file exists <path>`
+
+`file head <path> [-n <lines>]`
+
+`file tail <path> [-n <lines>]`
+
+For `file read`, `--offset` is the first line to print and defaults to 1, and `--limit` is the number of lines to print and defaults to 2000. One read prints at most 2000 lines, and files over 5 MB are refused. The **Output** and **Errors** notes below cover `file read` too. `file glob` has its own flags and defaults under **Finding files**. `file grep` has its own flags and defaults under **Searching contents**. `file write` and `file edit` are under **Writing and editing**. `file patch` is under **Patching several files**. `file list`, `file ls`, `file stat`, `file exists`, `file head`, and `file tail` are under **Listing and inspecting paths**.
 
 **Output**
 
@@ -189,3 +201,20 @@ The `<reason>` in a section failure names either the patch rule that refused the
 - `file patch {"patchText":"*** Begin Patch\n*** Add File: notes/new/todo.md\n+# Todo\n*** Update File: src/a.ts\n@@\n const a = 1;\n-const b = 2;\n+const b = 3;\n*** Update File: src/x.ts\n*** Move to: src/y.ts\n*** Delete File: old.txt\n*** End Patch"}` prints `Patched 4 files:` with `A notes/new/todo.md`, `M src/a.ts`, `R src/x.ts -> src/y.ts`, and `D old.txt` in that order.
 - `file patch {"patchText":"*** Delete File: old.txt"}` prints `Patched 1 file:` and then `D old.txt`.
 - `file patch {"patchText":"*** Add File: z.md\n+z\n*** Update File: src/a.ts\n@@\n const a = 1;\n-const b = 99;\n+const b = 4;"}` prints `Patch failed at section 2 (Update File: src/a.ts): No matching text for hunk starting "const a = 1;". No files were changed.` and leaves `z.md` out.
+
+**Listing and inspecting paths**
+
+`file list <path>` prints one row per entry of a directory. `file ls <path>` is the same command under a shorter name, but its usage errors print the `list` usage line. `file stat <path>` prints one row for a single path and works on both files and directories, so a directory target prints a `dir` row instead of being refused. All three use the same root as `file read`: the tab's workspace, or the project directory when the tab has none; a remote tab uses its remote workspace on the remote machine and never the local disk. Their output carries no host tag.
+
+A row is fixed tokens separated by single spaces: a type word (`file` or `dir`), an `rwx` permission string starting with `-` for a file or `d` for a directory, the byte size, the modification time as an ISO UTC timestamp such as `2026-11-19T13:50:00Z`, and the entry name — for example `file -rw-r--r-- 1234 2026-11-19T13:50:00Z notes.md`. Sizes are not humanized and columns are not padded. An empty directory prints `(empty directory)`. Secret entries such as `.env` are left out, while dotfiles and `node_modules` are listed.
+
+These commands answer in one word instead of a verbose error line: `missing` for an absent path, `forbidden` for a path outside the workspace or a secret path, and `notdir` when `file list` is pointed at a file. `file exists <path>` answers with the type word `file`, `dir`, or `link` for a regular file, a directory, or a symbolic link — the link itself, even when its target is missing — and with `missing` or `forbidden` otherwise. It prints only that word and never echoes the path.
+
+`file head <path> [-n <lines>]` and `file tail <path> [-n <lines>]` print the first or last N numbered lines of a file with the same numbering and line truncation as `file read`. `-n` defaults to 10 and accepts no value above 2000; a count larger than the file prints every line, and an empty file prints `(empty file)`. A directory target prints `notdir`. Other failures keep `file read`'s verbose lines naming the path as typed, such as `File not found: <path>.`, `Outside the workspace: <path>.`, `Secret file: <path>.`, `Not a text file: <path>.`, and `File too large (>5 MB): <path>.`
+
+Malformed arguments print `Usage: file list <path>` (also for `file ls`), `Usage: file stat <path>`, `Usage: file exists <path>`, `Usage: file head <path> [-n <lines>]`, or `Usage: file tail <path> [-n <lines>]`.
+
+- `file list .` lists the workspace root; `file ls src` does the same for `src/`.
+- `file stat notes.md` prints one row for that file; `file stat notes` prints a `dir` row.
+- `file exists notes.md` prints `file`, and `file exists notes` prints `dir`.
+- `file head server.log -n 5` prints the first five numbered lines; `file tail server.log -n 20` prints the last twenty.

@@ -57,11 +57,10 @@ carry out a task via ACP.`, and starts with the same three entries. The `user-in
 `tell`, has the description `When you ask a model to arrange the user interface via ACP.`, starts with
 the same three entries, and grants only `tab`. The `ask` role grants `db sqlite
 list`, `db sqlite query`, `browser goto`, `browser content`, `question ask`, `question approve`,
-`file read`, `file glob`, `file grep`, `web search`, `web fetch`, and `notify`. The `tell` role grants all native commands except `tab` (nineteen of the twenty):
-those twelve plus `db sqlite create`, `db sqlite delete`, `browser eval`, `file write`,
-`file edit`, `file patch`, and `subagent`. The published native vocabulary has twenty entries, so the default `tell` grants every one except `tab`, and `user-interface` is the only default role that grants `tab`. An existing roles file is not changed, so its saved `tell` keeps the grants it lists, including a list without `subagent`. `planning`, `research`, `code review`, `implementation`, and
+`file read`, `file glob`, `file grep`, `file list`, `file stat`, `file exists`, `file head`, `file tail`, `web search`, `web fetch`, and `notify`. The `tell` role grants all native commands except `tab` (twenty-four of the twenty-five):
+those seventeen plus `db sqlite create`, `db sqlite delete`, `browser eval`, `file write`,
+`file edit`, `file patch`, and `subagent`. The published native vocabulary has twenty-five entries, so the default `tell` grants every one except `tab`, and `user-interface` is the only default role that grants `tab`. An existing roles file is not changed, so its saved `tell` keeps the grants it lists, including a list without `subagent`. `planning`, `research`, `code review`, `implementation`, and
 `documentation` start with no command grants. Only `planning`, `ask`, `tell`, and `user-interface` start with entries.
-
 ### What the tab shows
 
 The tab shows role cards and no model catalog column. Above the cards, a line names the file in
@@ -109,8 +108,7 @@ from the live Commands topic and is not stored in the roles file, and a restrict
 be added or removed like any other. Opening the tab with an unreadable Commands snapshot reports `invalid commands topic data` and opens nothing; a later unreadable snapshot is ignored and the tab keeps the restrictions it last showed. A muted `No commands` row appears when a role has none. **Add
 command** opens a dropdown of native commands the role does not already have, followed by Add and
 Cancel; Add stays disabled until a choice is made. The button is
-hidden when all twenty native commands, including `subagent`, `tab`, and `notify`, are present. Add sends `add-command`; removing any duplicate
-row sends `remove-command`, which removes every copy. If another client changes a command while the
+hidden when all twenty-five native commands, including `subagent`, `tab`, and `notify`, are present. Add sends `add-command`; removing any duplicaterow sends `remove-command`, which removes every copy. If another client changes a command while the
 picker is open, it clears a selection that is no longer available or closes when no commands remain
 to add, and the card follows the next publication. Both pickers focus their first control when
 opened, cancel on Escape, and return focus to their own add button on Add, Cancel, or Escape; the

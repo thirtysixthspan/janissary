@@ -2,7 +2,7 @@
 
 **Complexity: 2/10** — 5 documentation requirements and 8 verification scenarios, no production code (p=3.65)
 
-Decomposed from `./product/plans/complete/supplement-file-command-with-additional-sub-commands.md`, the authoritative feature scope. This is subplan 9 of 8. It depends on subplans 1-8 (`./product/plans/ready/supplement-file-command-with-additional-sub-commands-1-list-stat-local.md` through `...-8-native-commands-and-agent-integration.md`) and is the final integration and verification slice. No new production code belongs here.
+Decomposed from `./product/plans/complete/supplement-file-command-with-additional-sub-commands.md`, the authoritative feature scope. This is the final subplan (numbered 9 in the original decomposition; 8 work units after subplan 4 absorbed the former subplan 5). It depends on subplans 1-8 (`./product/plans/ready/supplement-file-command-with-additional-sub-commands-1-list-stat-local.md` through `...-8-native-commands-and-agent-integration.md`) and is the final integration and verification slice. No new production code belongs here.
 
 ## Goal
 

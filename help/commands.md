@@ -38,7 +38,7 @@
 | `diff` | `diff` opens the diff tab on the project's changes versus HEAD; `diff <path>` scopes it to that directory's changes; `diff on <tab name>` opens that tab's workspace diff |
 | `edit` | Open a file for editing (`edit <file>[:line]`); a bare existing runscript name opens it when no exact file exists |
 | `execute` | Run an existing project runscript immediately in the managed system shell (`execute <name>`) |
-| `file` | Use a `file` subcommand to read, search, write, and patch project files; bare `file` prints its usage |
+| `file` | Use a `file` subcommand to read, search, write, and patch project files, or to inspect a path with `list`/`ls`, `stat`, `exists`, `head`/`tail [-n]`; bare `file` prints its usage |
 | `file edit` | `file edit <JSON>` applies a single-file edit |
 | `file glob` | `file glob <pattern>` lists paths matching a glob |
 | `file grep` | `file grep <pattern>` searches file contents |
