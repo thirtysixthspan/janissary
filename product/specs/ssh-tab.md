@@ -23,8 +23,9 @@ host or a failed auth).
 ### Destination and label
 
 The **destination** is the first non-option token after `ssh` (an `ssh://` scheme, if present, is
-stripped) — this is the connection identity shown in the connections panel as `ssh:<destination>`.
-The **label** is the destination's bare host — a leading `user@` and a trailing `:port` are
+stripped) — this is the connection identity, shown in the connections panel as `ssh:<destination>`
+unless the tab was launched from a saved host, in which case the panel shows that host's name (see
+"Saved host destinations"). The **label** is the destination's bare host — a leading `user@` and a trailing `:port` are
 stripped — and becomes the tab's label, disambiguated with `-2`, `-3`, … if already in use, the
 same way harness tab labels are (per [[tab-label-no-markers]], no `ssh:` marker on the tab itself;
 connection identity lives in the connections panel instead).
@@ -65,8 +66,11 @@ argument, so the local shell neither expands its variables nor interprets its se
 and command parsing happen only on the remote side.
 
 The new tab is labeled with the saved spelling, disambiguated with `-2`, `-3`, … if that label is
-already taken. The connections panel continues to show `ssh:<destination>` with the real
-`[user@]host`; the saved name travels with the tab so later views can tell a saved launch from a
+already taken. The connections panel shows `ssh:<saved name>` for such a launch, so a saved host
+reads as `ssh:thecandykingdom` instead of its real destination `ssh:anonymouscoward@10.27.1.94`;
+the displayed name belongs to the launch and does not change if the saved host is later edited. The
+real `[user@]host` stays as the connection identity for `connections list`, `connections close`, and
+the tab label, and the saved name travels with the tab so later views can tell a saved launch from a
 typed address. The tab inherits the group, color and working directory of the tab the command was
 typed in, even when a different tab is focused as it opens.
 
@@ -88,8 +92,8 @@ does in a harness tab — see Selecting and copying terminal text in `harness.md
 ## Connections panel
 
 Unlike an ordinary harness tab (which shows `terminal:<name>` for its PTY), an ssh tab shows
-`ssh:<destination>` instead, and no `terminal:` row — its only PTY is the ssh session itself. The
-panel is shown even while the ssh tab is active (harness tabs otherwise suppress the connections
+`ssh:<destination>` instead, or `ssh:<saved name>` when it was launched from a saved host, and no
+`terminal:` row — its only PTY is the ssh session itself. The panel is shown even while the ssh tab is active (harness tabs otherwise suppress the connections
 list over themselves, since the terminal *is* the connection) because listing the destination is
 the point.
 
@@ -105,7 +109,7 @@ open ssh tab.
 
 - **Created** by `ssh <destination> […]` — the command is first recorded in the creator's
   transcript, then a new tab is opened, focused, and the ssh PTY starts.
-- **Running** — the ssh process receives all input; the connections panel lists `ssh:<destination>`.
+- **Running** — the ssh process receives all input; the connections panel lists `ssh:<destination>`, or `ssh:<saved name>` for a saved-host launch.
 - **Closed** — the tab closes as soon as the ssh process exits (logout, `exit`, connection drop,
   or the binary/host being unreachable), or via the tab strip's × / `close` command (which kills
   the PTY first), or `connections close ssh:<id>` from any tab. If the ssh tab is the last
