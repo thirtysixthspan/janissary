@@ -6,6 +6,8 @@
 
 * add notify command to the list of allowed ACP commands and grant it to ask and tell roles by default.
 
+* add tab command to the list of allowed ACP commands, create a new role user-interface, and grant the tab command to this roles by default.
+
 * in the help command documentation, when a command has multiple sub commands list each as a separate row.
 
 ## deferred
