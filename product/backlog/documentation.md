@@ -2,8 +2,6 @@
 
 ## ready
 
-* transcript (3/10) — Of 21 verified user-visible facts, 19 are correct and two are missing, with none wrong; an unverified spec detail about a prompt-bar scrollbar indicator was excluded from the count. The missing facts are that the mouse scroll wheel moves the transcript one line per tick, which no user doc or help states, and that a running shell command's transcript entry carries an **open in terminal** action and, if the command ends up in a terminal, reads `(ran in terminal)` once finished. The first belongs in the transcript scrolling portion of `documentation/user-documentation/getting-started/keyboard.md`, the second in the captured-shell portion of `documentation/user-documentation/command-bar/shell.md` or the shell-output section of `documentation/user-documentation/getting-started/tabs.md`. Ground truth is `product/specs/transcript.md`, `web/src/shared/transcript/useTranscriptScroll.ts` and `web/src/shared/transcript/transcript-line.test.tsx`.
-
 ## development
 
 ## deferred
