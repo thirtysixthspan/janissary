@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, statSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { openerForExtension } from '../openers/index.js';
 import type { OpenContext } from '../openers/types.js';
@@ -100,13 +100,6 @@ export class OpenFileManager {
     const resolved = path.join(dir, nextFreeName(dir, path.basename(file)));
     const context = this.buildContext(command, label, runId);
     openInEditor(resolved, { ...context, openEditorTab: (view) => context.openEditorTab({ ...view, named: true }) });
-  }
-
-  newDirectory(target: string, label: string): void {
-    const directory = resolveTabPath(this.managers, label, target);
-    const parent = path.dirname(directory);
-    const resolved = path.join(parent, nextFreeName(parent, path.basename(directory)));
-    mkdirSync(resolved);
   }
 
   private note(text: string, command: string, label: string, invocation?: OpenInvocation): void {

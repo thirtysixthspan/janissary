@@ -31,7 +31,6 @@
 | `monitor` | Start a persona-driven AI monitor — inline on the current tab, or watching other tabs/groups into a reporting tab |
 | `monitors` | List active monitors with their targets and suggestion counts |
 | `nav` | Open the fuzzy tab navigator (Ctrl+G); `nav <query>` pre-fills the search |
-| `newdir <directory>` | Create a directory immediately, choosing a free name if needed; its parent must exist |
 | `newfile <file>` | Open a new unsaved plain-text file, choosing a free name if needed; Save writes it to disk |
 | `next` | Switch to the next tab |
 | `notifications` | `notifications [left\|right]` opens or docks notifications; per-type settings control desktop banners and sounds for explicit and opted-in ambient events in `.janissary/config.json` |

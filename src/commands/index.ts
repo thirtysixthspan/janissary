@@ -24,7 +24,6 @@ import { command as edit } from './edit.js';
 import { command as execute } from './execute.js';
 import { command as create } from './create.js';
 import { command as newFile } from './new-file.js';
-import { command as newDirectory } from './new-directory.js';
 import { command as send } from './send.js';
 import { command as queue } from './queue.js';
 import { command as rename } from './rename.js';
@@ -73,7 +72,6 @@ export const coreCommands: Command[] = [
   execute,
   create,
   newFile,
-  newDirectory,
   send,
   queue,
   rename,
