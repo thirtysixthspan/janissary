@@ -1,3 +1,13 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
+
+* Deliver the plan's lstat-based symlink answer and real-target containment for absent paths in local file exists
+
+Existing Issue: When the requested path is a dangling symlink, canonicalPath throws ENOENT and the executor returns "missing" before readRowStat's lstat can answer "link", and the same short-circuit returns "missing" (skipping checkRealTarget containment) for an absent path reached through a symlink pointing outside the workspace, where the plan promises "forbidden". Severity: 5/10
+
+Existing Risk: 5/10 - The single-word answer is wrong in both cases, so a caller that trusts it gets a dangling symlink reported as absent and a workspace escape reported as a harmless miss, and the dispatcher and agent wiring of later subplans would propagate the inaccurate existence answer.
+
+Proposal Risk: 2/10 - After resolving the nearest existing parent for absent targets, both the lstat type lookup and the real-target containment check run on the intended paths; the remaining risk is that this resolution must match the codebase's existing canonicalisation rules, which colocated tests can pin.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2115 "handle dangling symlinks and absent paths behind escaping symlinks in local file exists". In src/file-exists/tab-exists.ts, change resolveRealTarget so that when canonicalPath(path.resolve(root, requested)) throws ENOENT or ENOTDIR it resolves the nearest existing parent of that path with realpathSync (the same algorithm as the private resolveExisting in src/file-read/policy.ts, which must be replicated locally or exported for reuse) and rejoins the remaining missing segments, instead of returning { result: 'missing' }. Doing so lets checkRealTarget run on the canonical real target so a symlink chain escaping the workspace still yields "forbidden", and lets readRowStat's lstat run on the requested path so a dangling symlink yields "link". Keep the existing checkLexicalPath-first ordering and keep returning "missing" for genuinely absent plain paths. Add colocated executor tests in src/file-exists/tab-exists.test.ts: a symlink whose target does not exist answers "link"; an absent path reached through a symlink pointing outside the workspace answers "forbidden"; and a plain absent path still answers "missing". The existing file, dir, link, absent, escape, and no-echo tests must keep passing untouched.
