@@ -38,4 +38,4 @@ Deleting asks `Delete host <name>?` first. Cancel, `n` or Escape backs out; the 
 
 **Notes**
 
-Malformed requests reply with a usage line and never touch the catalog. A problem with a hosts file is reported once per distinct problem; it does not change the tab's rows until a Refresh or a return to the tab.
+Malformed requests never touch the catalog: an unknown verb or the wrong number of operands replies with a usage line, while an invalid name, user, host, port, or path in a structurally valid `hosts add` or `hosts remove` replies with that field's specific diagnostic — `Invalid <field> "<value>". Use letters, digits, and . - _ only.` for name, user, or host, `Invalid port "<value>". Use digits only, from 1 to 65535.` for a port, and `Invalid path "<value>". Use letters, digits, and . - _ / ~ only.` for a path. A problem with a hosts file is reported once per distinct problem; it does not change the tab's rows until a Refresh or a return to the tab.
