@@ -8,8 +8,11 @@ export function matchesNativeCommand(command: string, name: string): boolean {
   return name.split(' ').every((part, index) => words[index] === part);
 }
 
+const FILE_LS_ALIAS = /^\s*file\s+ls(?=\s|$)/i;
+
 export function nativeCommandName(command: string): string | undefined {
-  return NATIVE_ACP_COMMANDS.find((candidate) => matchesNativeCommand(command, candidate));
+  const canonical = command.replace(FILE_LS_ALIAS, 'file list');
+  return NATIVE_ACP_COMMANDS.find((candidate) => matchesNativeCommand(canonical, candidate));
 }
 
 export function nativeCommandTool(command: string): NativeCommandTool | undefined {

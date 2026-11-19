@@ -307,6 +307,12 @@ The follow-up prompt that feeds a patch's result back to the agent names it as `
 
 An autonomous agent run's `janissary file patch …` is refused in this version, with or without a `file` grant: its tool result is exactly `Agent: command not permitted: <command>.`, and no patch runs. See [[agent-command]].
 
+### File list tool
+
+`file list <path>` is a native command a role grants like any other file command; the built-in `ask` and `tell` roles grant it by default, and a saved role keeps the grants it lists. It belongs to the file tool, whose primer tells the agent to end its reply with one `file list <path>` line, notes that paths are relative to the workspace root, and names `file ls` as an accepted alias. A role session that ends its reply with `file list <path>` or `file ls <path>` runs the listing against its workspace and returns the same one-row-per-entry answer the typed command prints; the reply line keeps whichever spelling the agent used.
+
+The two spellings are recognized, gated, and run on exactly the same terms: both are extracted from the reply as commands, both are authorized by the `file list` grant and its settings row, and both run through the same workspace path. `file ls` has no command of its own — no settings row, no place in the allow-list line, and no separate role grant — so a disabled `file list` row or a role that does not grant `file list` refuses the alias with the same `Command is disabled: file list.` or `Command not allowed for role "<role>": file list.` message. Near-miss spellings such as `file lsignore` are not commands and stay part of the answer.
+
 ## Remote connections
 
 A remote shell or other remote plugin tab uses its existing channel and workspace for the ACP agent. The local side reads the selected role (`ask` or `tell`), chooses the model, and sends the launch request; the remote hosts the ACP client and runs the tool loop in the workspace clone, so prompt text, turns, and tool steps cross SSH instead of JSON-RPC. Workspace commands resolve against the clone, while database, browser, and question commands still execute on the machine running Janissary and their results return over the channel. Tabs sharing one channel still have independent ACP session ids.

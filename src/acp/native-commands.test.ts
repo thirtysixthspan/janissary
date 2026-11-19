@@ -80,6 +80,15 @@ describe('native ACP commands', () => {
     expect(nativeCommandTool('FILE GREP')).toBe('file');
   });
 
+  it('resolves the file ls alias to the file list native name', () => {
+    expect(nativeCommandName('file ls docs')).toBe('file list');
+    expect(nativeCommandName('  FILE\tLS  docs  ')).toBe('file list');
+    expect(nativeCommandTool('file ls docs')).toBe('file');
+    expect(isNativeCommand('file ls docs')).toBe(true);
+    expect(nativeCommandName('file lsignore docs')).toBeUndefined();
+    expect(nativeCommandName('file ls-foo docs')).toBeUndefined();
+  });
+
   it('classifies malformed grep arguments by the command name', () => {
     expect(nativeCommandName('file grep [unclosed')).toBe('file grep');
     expect(nativeCommandTool('file grep --path')).toBe('file');

@@ -876,6 +876,16 @@ describe('additional file command tools', () => {
     expect(tools[0].isCommandLine('file ls docs')).toBe(true);
   });
 
+  it('extracts the file ls alias and gates it as file list', () => {
+    const grants = ['file list'];
+    const tools = createAcpToolTable(grants);
+    expect(toolExtractor(tools)('Let me check.\nfile ls docs')).toBe('file ls docs');
+    const snapshot: AcpRunSnapshot = {
+      kind: 'core', role: 'tell', roleName: 'reader', grants, rows: [], withoutTools: false,
+    };
+    expect(gateCommand(snapshot, tools, 'file ls docs')).toStrictEqual({ runsOn: 'workspace' });
+  });
+
   it.each([
     ['granted', ['file']],
     ['ungranted', []],
