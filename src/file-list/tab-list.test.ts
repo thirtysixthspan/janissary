@@ -113,6 +113,13 @@ describe('listFilesInTab', () => {
     expect(await listFilesInTab(managersWith(), 'janus', 'file list .env')).toBe('forbidden');
   });
 
+  it('resolves to a one-word refusal when the directory read fails', async () => {
+    const port = {
+      readDirectory: () => { throw new Error('EACCES: permission denied'); },
+    } as unknown as FileSystemPort;
+    expect(await listFilesInTab(managersWith(), 'janus', 'file list .', port)).toBe('forbidden');
+  });
+
   it('returns the usage line for malformed arguments', async () => {
     expect(await listFilesInTab(managersWith(), 'janus', 'file ls')).toBe(FILE_LIST_USAGE);
     expect(await listFilesInTab(managersWith(), 'janus', 'file list a b')).toBe(FILE_LIST_USAGE);
