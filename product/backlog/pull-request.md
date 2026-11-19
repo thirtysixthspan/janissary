@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request title's docs-only claim, which does not describe the full hosts feature the diff ships.
-
-Existing Issue: The pull request is titled "docs(plans): rework the hosts tab implementation sequence" although the diff delivers the entire saved-hosts feature across implementation, specs, help, and UI. Severity: 3/10
-
-Existing Risk: 3/10 - A reader triaging by conventional-commit type treats this as a documentation-only change and may approve a large feature without the scrutiny a `feat` would attract.
-
-Proposal Risk: 1/10 - The title then matches the body and the diff, with the body already describing the shipped behavior correctly; the only remaining risk is a future title that drifts from the change again.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2092 "correct the pull request title to describe the hosts feature". Retitle pull request 2092 to name the delivered change, for example "feat(hosts): add saved hosts and the Hosts tab", so the conventional-commit type and scope match the implementation, specs, help, and UI in the diff. Leave the body intact: its What, Behavior examples, Screenshots, and How to verify sections already describe the behavior the code delivers. No source edit is involved; verify by re-reading `gh pr view 2092 --json title,body` and confirming the title names the feature.
-
-
 * Correct the hosts help note's claim that malformed requests reply with a usage line.
 
 Existing Issue: `help/hosts.md` says in its Notes that malformed requests reply with a usage line, but a structurally valid `hosts add` or `hosts remove` with an invalid field returns that field's specific diagnostic instead. Severity: 2/10
