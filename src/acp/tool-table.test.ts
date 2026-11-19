@@ -22,6 +22,7 @@ import { FILE_PATCH_PRIMER } from '../file-patch/command.js';
 import { WEB_SEARCH_PRIMER } from '../web/search/command.js';
 import { WEB_FETCH_PRIMER } from '../web/fetch/command.js';
 import { SUBAGENT_PRIMER } from '../subagent/primer.js';
+import { NOTIFY_PRIMER } from '../notifications/primer.js';
 
 const setup = (grants: readonly string[] = NATIVE_ACP_COMMANDS) => ({ tools: createAcpToolTable(grants) });
 
@@ -39,6 +40,7 @@ describe('createAcpToolTable', () => {
       `${FILE_READ_PRIMER}\n\n${FILE_GLOB_PRIMER}\n\n${FILE_GREP_PRIMER}\n\n${FILE_MUTATION_PRIMER}\n\n${FILE_PATCH_PRIMER}`,
       `${WEB_SEARCH_PRIMER}\n\n${WEB_FETCH_PRIMER}`,
       SUBAGENT_PRIMER,
+      NOTIFY_PRIMER,
       DB_PRIMER,
       `Only these commands are allowed: ${NATIVE_ACP_COMMANDS.join(', ')}.`,
     ].join('\n\n'));
@@ -118,7 +120,7 @@ describe('createAcpToolTable', () => {
 
   it('runs the file and web entries on the workspace and the others on the caller side', () => {
     const { tools } = setup();
-    expect(tools.map((tool) => tool.runsOn)).toEqual(['caller', 'caller', 'workspace', 'workspace', 'caller', 'caller']);
+    expect(tools.map((tool) => tool.runsOn)).toEqual(['caller', 'caller', 'workspace', 'workspace', 'caller', 'caller', 'caller']);
   });
 
   it('keeps the database entry last when it is included', () => {
@@ -860,6 +862,61 @@ describe('subagent tool', () => {
 
   it('runs a granted subagent command with no settings row on the caller side', () => {
     const grants = ['subagent'];
+    expect(gateCommand(snapshot(grants), toolsFor(grants), LINE)).toStrictEqual({ runsOn: 'caller' });
+  });
+});
+
+describe('notify tool', () => {
+  const LINE = 'notify Build finished';
+  const toolsFor = (grants: readonly string[]) => createAcpToolTable(grants);
+  const snapshot = (grants: readonly string[], rows: AcpRunSnapshotRow[] = []): AcpRunSnapshot => ({
+    kind: 'core', role: 'tell', roleName: 'writer', grants, rows, withoutTools: false,
+  });
+
+  it('declares one granted caller entry before the database entry with the exact primer', () => {
+    const tools = toolsFor(['notify', 'db sqlite list']);
+    expect(tools).toHaveLength(2);
+    expect(tools[0]).toMatchObject({ primer: NOTIFY_PRIMER, runsOn: 'caller' });
+    expect(tools[0].match(LINE)).toBe(true);
+    expect(tools[0].isCommandLine('  NOTIFY Hello')).toBe(true);
+    expect(tools.at(-1)!.match('anything at all')).toBe(true);
+    expect(toolPrimer(tools, ['notify', 'db sqlite list'])).toBe(
+      `${NOTIFY_PRIMER}\n\n${DB_PRIMER}\n\nOnly these commands are allowed: db sqlite list, notify.`,
+    );
+    expect(toolPrimer(tools, ['notify', 'db sqlite list']).split(NOTIFY_PRIMER)).toHaveLength(2);
+  });
+
+  it('omits the entry, primer, and extraction when notify is not granted', () => {
+    const tools = toolsFor(['browser goto', 'db sqlite list']);
+    expect(tools.some((tool) => tool.primer === NOTIFY_PRIMER)).toBe(false);
+    expect(toolPrimer(tools, ['notify'])).not.toContain(NOTIFY_PRIMER);
+    expect(toolExtractor(tools)(LINE)).toBeNull();
+  });
+
+  it('extracts a trailing notify line but not a near-miss', () => {
+    const extract = toolExtractor(toolsFor(['notify']));
+    expect(extract('Working.\nnotify Build finished')).toBe(LINE);
+    expect(extract('Working.\nnotifies Build finished')).toBeNull();
+    expect(extract('Working.\nnotify-x Build')).toBeNull();
+  });
+
+  it('refuses an ungranted notify command with the role name', () => {
+    const grants = ['browser goto'];
+    expect(gateCommand(snapshot(grants), toolsFor(['notify', 'browser goto']), LINE)).toStrictEqual({
+      refusal: 'Command not allowed for role "writer": notify.',
+    });
+  });
+
+  it('refuses a granted notify command whose Enabled setting is off', () => {
+    const grants = ['notify'];
+    const rows = [{ name: 'notify', effectiveEnabled: false, effectiveAgentAccess: true }];
+    expect(gateCommand(snapshot(grants, rows), toolsFor(grants), LINE)).toStrictEqual({
+      refusal: 'Command is disabled: notify.', refused: 'disabled',
+    });
+  });
+
+  it('runs a granted notify command with no settings row on the caller side', () => {
+    const grants = ['notify'];
     expect(gateCommand(snapshot(grants), toolsFor(grants), LINE)).toStrictEqual({ runsOn: 'caller' });
   });
 });

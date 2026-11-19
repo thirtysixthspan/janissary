@@ -14,6 +14,7 @@ import { isWebCommandLine } from '../web/command-line.js';
 import { isWebSearchReplyLine, WEB_SEARCH_PRIMER } from '../web/search/command.js';
 import { isWebFetchReplyLine, WEB_FETCH_PRIMER } from '../web/fetch/command.js';
 import { SUBAGENT_PRIMER, isSubagentCommandLine } from '../subagent/primer.js';
+import { NOTIFY_PRIMER, isNotifyCommandLine } from '../notifications/primer.js';
 
 // One tool on the ACP run path. The three loop options the agent sees — what it is told the tools
 // are, which side runs a command it emitted, and what pulls a command out of its reply — are all
@@ -84,6 +85,15 @@ export function createAcpToolTable(grants: readonly string[]): AcpTool[] {
         primer: SUBAGENT_PRIMER,
         match: (command) => isSubagentCommandLine(command),
         isCommandLine: (line) => isSubagentCommandLine(line),
+        runsOn: 'caller',
+      },
+    },
+    {
+      owner: 'notify',
+      tool: {
+        primer: NOTIFY_PRIMER,
+        match: (command) => nativeCommandTool(command) === 'notify',
+        isCommandLine: (line) => isNotifyCommandLine(line),
         runsOn: 'caller',
       },
     },

@@ -1,5 +1,6 @@
 import type { Command } from './types.js';
 import { notify } from '../notifications/index.js';
+import { isNotifyCommandLine } from '../notifications/primer.js';
 import { appendCommandOutput } from '../command/append.js';
 
 // `notify <message>` pushes a custom line into the notifications feed, attributed to the issuing
@@ -10,7 +11,7 @@ import { appendCommandOutput } from '../command/append.js';
 // message is a usage error and records nothing in the feed.
 export const command: Command = {
   name: 'notify',
-  match: (command_) => /^notify\b/i.test(command_),
+  match: (command_) => isNotifyCommandLine(command_),
   samples: ['notify', 'notify hello'],
   run: (command_, tab, managers, invocation) => {
     const message = command_.replace(/^notify\b\s*/i, '').trim();
