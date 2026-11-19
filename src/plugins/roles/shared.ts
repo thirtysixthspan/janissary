@@ -19,6 +19,7 @@ export const NATIVE_ACP_COMMANDS = [
   'web search',
   'web fetch',
   'subagent',
+  'notify',
 ] as const;
 
 // One harness/model/effort choice inside a role. `effort` is absent for the default (no effort

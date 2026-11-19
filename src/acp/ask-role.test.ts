@@ -35,13 +35,13 @@ const OPENCODE = { harness: 'opencode', model: 'opencode-go/deepseek-v4.1-flash'
 const CODEX = { harness: 'codex', model: 'gpt-6-luna', effort: 'high' };
 const ASK_COMMANDS = [
   'db sqlite list', 'db sqlite query', 'browser goto', 'browser content', 'question ask', 'question approve',
-  'file read', 'file glob', 'file grep', 'web search', 'web fetch',
+  'file read', 'file glob', 'file grep', 'web search', 'web fetch', 'notify',
 ];
 const TELL_COMMANDS = [
   'db sqlite create', 'db sqlite delete', 'db sqlite query', 'db sqlite list',
   'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve', 'file read',
   'file glob', 'file grep', 'file write', 'file edit', 'file patch', 'web search', 'web fetch',
-  'subagent',
+  'subagent', 'notify',
 ];
 
 describe('askRoleEntries', () => {
@@ -101,9 +101,10 @@ describe('readRoleSettings', () => {
     });
     const tell = readRoleSettings(root, 'tell', home);
     expect(tell.commands).toEqual(TELL_COMMANDS);
-    expect(tell.commands).toHaveLength(18);
+    expect(tell.commands).toHaveLength(19);
     expect(tell.commands).toEqual(expect.arrayContaining([
       'file glob', 'file grep', 'file write', 'file edit', 'file patch', 'web search', 'web fetch', 'subagent',
+      'notify',
     ]));
     expect(tell.commands).toContain('file patch');
     expect(tell.commands.filter((command) => command === 'subagent')).toHaveLength(1);

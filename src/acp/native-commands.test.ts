@@ -24,12 +24,14 @@ describe('native ACP commands', () => {
       'web search',
       'web fetch',
       'subagent',
+      'notify',
     ]);
   });
 
-  it('appends subagent once as the last ordered entry', () => {
+  it('appends notify once as the last ordered entry', () => {
+    expect(NATIVE_ACP_COMMANDS.filter((command) => command === 'notify')).toHaveLength(1);
+    expect(NATIVE_ACP_COMMANDS.at(-1)).toBe('notify');
     expect(NATIVE_ACP_COMMANDS.filter((command) => command === 'subagent')).toHaveLength(1);
-    expect(NATIVE_ACP_COMMANDS.at(-1)).toBe('subagent');
   });
 
   it.each([
@@ -54,6 +56,8 @@ describe('native ACP commands', () => {
     ['subagent', 'subagent'],
     ['subagent --role research --task t.md', 'subagent'],
     ['subagent {"role":"research","task":"t.md"}', 'subagent'],
+    ['notify Build finished', 'notify'],
+    ['NOTIFY Hello', 'notify'],
   ] as const)('assigns %s to %s, including trailing arguments', (command, tool) => {
     expect(nativeCommandTool(command)).toBe(tool);
     expect(isNativeCommand(command)).toBe(true);
@@ -98,7 +102,7 @@ describe('native ACP commands', () => {
     const tools = createAcpToolTable(NATIVE_ACP_COMMANDS);
     const recognizers = tools.filter((tool) => !tool.match('anything at all'));
     for (const nearMiss of [
-      'browser gotofoo x', 'file greps x', 'web searching x', 'question unknown x', 'db sqlitex list x',
+      'browser gotofoo x', 'file greps x', 'web searching x', 'question unknown x', 'db sqlitex list x', 'notify-x Build',
     ]) {
       expect(nativeCommandName(nearMiss)).toBeUndefined();
       expect(recognizers.some((tool) => tool.match(nearMiss))).toBe(false);
