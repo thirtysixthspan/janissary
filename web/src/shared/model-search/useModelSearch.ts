@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
+import type React from 'react';
 import { contiguousMatch } from '../fuzzy-match';
 import type { ModelSearchRow } from './ModelSearchList';
 import { mostUsedModels, type HarnessModelPair } from './model-search';
+import { handleModelSearchKey } from './model-search-keys';
 
 const RESULT_CAP = 10;
 
@@ -34,15 +36,30 @@ export function useModelSearch({ ids, roleEntries, harness, text, onChangeText, 
   const effectiveOverride = override && override.signature === signature ? override.index : null;
   const highlighted = isOpen ? effectiveOverride ?? defaultHighlighted : null;
 
+  const close = () => { setOverride(null); setOpen(false); };
+  const highlight = (index: number) => setOverride({ index, signature });
+
   return {
     rows,
     blank,
     open: isOpen,
     highlighted,
     onFocus: () => { setOverride(null); setOpen(true); },
-    onBlur: () => { setOverride(null); setOpen(false); },
+    onBlur: close,
     onChange: (next: string) => { onChangeText(next); setOpen(true); },
-    onHover: (index: number) => setOverride({ index, signature }),
-    onPick: (id: string) => { onChangeText(id); setOverride(null); setOpen(false); },
+    onHover: highlight,
+    onPick: (id: string) => { onChangeText(id); close(); },
+    onKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => handleModelSearchKey(event, {
+      open: isOpen,
+      highlighted,
+      count: rows.length,
+      text,
+      ids,
+    }, {
+      open: () => setOpen(true),
+      close,
+      highlight,
+      changeText: onChangeText,
+    }),
   };
 }

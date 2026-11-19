@@ -195,4 +195,131 @@ describe('ModelSearchInput', () => {
     expect(field()).toBeDisabled();
     expect(list(container)).toBeNull();
   });
+
+  it('moves the highlight with the arrows and clamps at the ends', () => {
+    const ids = ['claude-opus', 'claude-sonnet', 'claude-haiku'];
+    const roleEntries = [[
+      { harness: 'claude', model: 'claude-opus' },
+      { harness: 'claude', model: 'claude-sonnet' },
+      { harness: 'claude', model: 'claude-haiku' },
+    ]];
+    const { container } = render(<Controlled ids={ids} roleEntries={roleEntries} />);
+    focusField();
+    expect(rows(container).map((row) => row.textContent)).toEqual(['claude-opus', 'claude-sonnet', 'claude-haiku']);
+    expect(fireEvent.keyDown(field(), { key: 'ArrowDown' })).toBe(false);
+    expect(highlighted(container)?.textContent).toBe('claude-opus');
+    fireEvent.blur(field());
+    field().blur();
+    focusField();
+    expect(fireEvent.keyDown(field(), { key: 'ArrowUp' })).toBe(false);
+    expect(highlighted(container)?.textContent).toBe('claude-opus');
+
+    fireEvent.change(field(), { target: { value: 'claude' } });
+    const texts = rows(container).map((row) => row.textContent);
+    expect(texts).toHaveLength(3);
+    expect(highlighted(container)?.textContent).toBe(texts[0]);
+    for (let press = 0; press < 4; press += 1) {
+      expect(fireEvent.keyDown(field(), { key: 'ArrowDown' })).toBe(false);
+    }
+    expect(highlighted(container)?.textContent).toBe(texts.at(-1));
+    for (let press = 0; press < 4; press += 1) {
+      expect(fireEvent.keyDown(field(), { key: 'ArrowUp' })).toBe(false);
+    }
+    expect(highlighted(container)?.textContent).toBe(texts[0]);
+  });
+
+  it('highlights nothing when an arrow is pressed on a list with no rows', () => {
+    const { container } = render(<Controlled ids={['opus', 'sonnet']} roleEntries={[]} />);
+    focusField();
+    fireEvent.change(field(), { target: { value: 'zzz' } });
+    expect(screen.getByText('No matching models')).toBeInTheDocument();
+    expect(fireEvent.keyDown(field(), { key: 'ArrowDown' })).toBe(false);
+    expect(highlighted(container)).toBeNull();
+  });
+
+  it('reopens a closed typed list at the first row without stepping past it', () => {
+    const ids = ['opus', 'opus-max'];
+    const { container } = render(<Controlled ids={ids} roleEntries={[]} />);
+    focusField();
+    fireEvent.change(field(), { target: { value: 'opus' } });
+    expect(rows(container).map((row) => row.textContent)).toEqual(['opus', 'opus-max']);
+    fireEvent.click(rows(container)[0]);
+    expect(list(container)).toBeNull();
+
+    expect(fireEvent.keyDown(field(), { key: 'ArrowDown' })).toBe(false);
+    expect(list(container)).not.toBeNull();
+    expect(rows(container).map((row) => row.textContent)).toEqual(['opus', 'opus-max']);
+    expect(highlighted(container)?.textContent).toBe('opus');
+    expect(fireEvent.keyDown(field(), { key: 'ArrowDown' })).toBe(false);
+    expect(highlighted(container)?.textContent).toBe('opus-max');
+
+    fireEvent.click(rows(container)[0]);
+    expect(list(container)).toBeNull();
+    expect(fireEvent.keyDown(field(), { key: 'ArrowUp' })).toBe(false);
+    expect(list(container)).not.toBeNull();
+    expect(highlighted(container)?.textContent).toBe('opus');
+  });
+
+  it('reopens a closed blank list with no highlight until a second arrow', () => {
+    const ids = ['opus', 'sonnet'];
+    const roleEntries = [[
+      { harness: 'claude', model: 'opus' },
+      { harness: 'claude', model: 'sonnet' },
+    ]];
+    const { container } = render(<Controlled ids={ids} roleEntries={roleEntries} />);
+    focusField();
+    expect(fireEvent.keyDown(field(), { key: 'Tab' })).toBe(true);
+    expect(list(container)).toBeNull();
+
+    expect(fireEvent.keyDown(field(), { key: 'ArrowDown' })).toBe(false);
+    expect(list(container)).not.toBeNull();
+    expect(rows(container).map((row) => row.textContent)).toEqual(['opus', 'sonnet']);
+    expect(highlighted(container)).toBeNull();
+    expect(fireEvent.keyDown(field(), { key: 'ArrowDown' })).toBe(false);
+    expect(highlighted(container)?.textContent).toBe('opus');
+  });
+
+  it('completes Tab to a single id or a narrowing common prefix and keeps the list open', () => {
+    const { container, rerender } = render(<Controlled ids={['opus', 'sonnet']} roleEntries={[]} />);
+    focusField();
+    fireEvent.change(field(), { target: { value: 'op' } });
+    expect(fireEvent.keyDown(field(), { key: 'Tab' })).toBe(false);
+    expect(field()).toHaveValue('opus');
+    expect(list(container)).not.toBeNull();
+
+    rerender(<Controlled ids={['claude-opus-4', 'claude-sonnet-4']} roleEntries={[]} />);
+    fireEvent.change(field(), { target: { value: 'claude' } });
+    fireEvent.mouseEnter(rows(container)[1]);
+    expect(highlighted(container)).toBe(rows(container)[1]);
+    expect(fireEvent.keyDown(field(), { key: 'Tab' })).toBe(false);
+    expect(field()).toHaveValue('claude-');
+    expect(list(container)).not.toBeNull();
+  });
+
+  it('lets Tab move focus and closes the list when there is nothing to complete', () => {
+    const { container } = render(<Controlled ids={['opus']} roleEntries={[]} />);
+    focusField();
+    expect(fireEvent.keyDown(field(), { key: 'Tab' })).toBe(true);
+    expect(list(container)).toBeNull();
+
+    fireEvent.change(field(), { target: { value: 'opus' } });
+    expect(list(container)).not.toBeNull();
+    expect(fireEvent.keyDown(field(), { key: 'Tab' })).toBe(true);
+    expect(field()).toHaveValue('opus');
+    expect(list(container)).toBeNull();
+  });
+
+  it('leaves modified and composing keys to the browser', () => {
+    const { container } = render(<Controlled ids={['opus', 'sonnet']} roleEntries={[]} />);
+    focusField();
+    fireEvent.change(field(), { target: { value: 'op' } });
+    expect(fireEvent.keyDown(field(), { key: 'Tab', shiftKey: true })).toBe(true);
+    expect(field()).toHaveValue('op');
+
+    const before = highlighted(container)?.textContent;
+    expect(fireEvent.keyDown(field(), { key: 'ArrowDown', shiftKey: true })).toBe(true);
+    expect(highlighted(container)?.textContent).toBe(before);
+    expect(fireEvent.keyDown(field(), { key: 'ArrowDown', isComposing: true })).toBe(true);
+    expect(highlighted(container)?.textContent).toBe(before);
+  });
 });

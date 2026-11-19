@@ -33,6 +33,7 @@ export function ModelSearchInput({ ids, roleEntries, harness, value, onChange, p
         disabled={disabled}
         onFocus={search.onFocus}
         onBlur={search.onBlur}
+        onKeyDown={search.onKeyDown}
         onChange={(event) => search.onChange(event.currentTarget.value)}
       />
       {search.open && (
