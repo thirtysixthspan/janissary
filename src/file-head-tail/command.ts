@@ -1,7 +1,8 @@
+import { FILE_READ_MAX_LIMIT } from '../file-read/command.js';
 import { positiveInteger } from '../positive-integer.js';
 
 export const FILE_HEAD_TAIL_DEFAULT_LINES = 10;
-export const FILE_HEAD_TAIL_MAX_LINES = 2000;
+export const FILE_HEAD_TAIL_MAX_LINES = FILE_READ_MAX_LIMIT;
 export const FILE_HEAD_USAGE = 'Usage: file head <path> [-n <lines>]';
 export const FILE_TAIL_USAGE = 'Usage: file tail <path> [-n <lines>]';
 

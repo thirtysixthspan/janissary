@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FILE_HEAD_USAGE, FILE_TAIL_USAGE, parseFileHeadTail } from './command.js';
+import { FILE_HEAD_TAIL_MAX_LINES, FILE_HEAD_USAGE, FILE_TAIL_USAGE, parseFileHeadTail } from './command.js';
 
 describe('parseFileHeadTail', () => {
   it('parses head and tail with the default count of 10', () => {
@@ -9,7 +9,11 @@ describe('parseFileHeadTail', () => {
 
   it('parses an explicit single-dash count after the path', () => {
     expect(parseFileHeadTail('file head a.md -n 3')).toEqual({ direction: 'head', path: 'a.md', count: 3 });
-    expect(parseFileHeadTail('file tail a.md -n 2000')).toEqual({ direction: 'tail', path: 'a.md', count: 2000 });
+    expect(parseFileHeadTail(`file tail a.md -n ${FILE_HEAD_TAIL_MAX_LINES}`)).toEqual({
+      direction: 'tail',
+      path: 'a.md',
+      count: FILE_HEAD_TAIL_MAX_LINES,
+    });
   });
 
   it('matches the keywords case-insensitively and keeps the path verbatim', () => {
@@ -39,7 +43,7 @@ describe('parseFileHeadTail', () => {
   });
 
   it('returns the matching usage for zero, negative, non-numeric and oversized counts', () => {
-    for (const count of ['0', '-3', 'abc', '2001', '1.5', '1e3']) {
+    for (const count of ['0', '-3', 'abc', String(FILE_HEAD_TAIL_MAX_LINES + 1), '1.5', '1e3']) {
       expect(parseFileHeadTail(`file head a.md -n ${count}`)).toEqual({ error: FILE_HEAD_USAGE });
       expect(parseFileHeadTail(`file tail a.md -n ${count}`)).toEqual({ error: FILE_TAIL_USAGE });
     }
