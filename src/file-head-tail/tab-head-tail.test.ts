@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -64,6 +64,24 @@ describe('headTailInTab', () => {
     mkdirSync(path.join(root, 'sub'));
     expect(headTailInTab(managersWith(), 'janus', 'file head sub')).toBe('notdir');
     expect(headTailInTab(managersWith(), 'janus', 'file tail sub')).toBe('notdir');
+  });
+
+  it('prints notdir when the target is a symlink to a directory', () => {
+    mkdirSync(path.join(root, 'sub'));
+    symlinkSync(path.join(root, 'sub'), path.join(root, 'dirlink'));
+    expect(headTailInTab(managersWith(), 'janus', 'file head dirlink')).toBe('notdir');
+    expect(headTailInTab(managersWith(), 'janus', 'file tail dirlink')).toBe('notdir');
+  });
+
+  it('reads a symlink to a regular file', () => {
+    makeFile('a.md', 'a\nb\nc');
+    symlinkSync(path.join(root, 'a.md'), path.join(root, 'filelink'));
+    expect(headTailInTab(managersWith(), 'janus', 'file head filelink -n 2')).toBe([
+      '1\ta',
+      '2\tb',
+      '(showing lines 1-2 of 3; continue with --offset 3)',
+    ].join('\n'));
+    expect(headTailInTab(managersWith(), 'janus', 'file tail filelink -n 2')).toBe('2\tb\n3\tc');
   });
 
   it('keeps file read verbose lines for absent and out-of-workspace paths', () => {
