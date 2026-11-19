@@ -102,7 +102,7 @@ Two cases change the rule for a label you typed. The reserved name `system` is a
 
 ## New harness dialog
 
-Typing `harness` with no arguments opens a **New harness** dialog instead of erroring: a form with a harness selector, a **Label** field, **Workspace**, **Offline**, and **E2E browser** toggles, an **Auto-approve** toggle, an **Auto-resume** toggle, and **Model** and **Effort** dropdowns. **Workspace** starts checked. **Auto-approve** starts checked for every harness. **Auto-resume** starts checked for opencode and codex and is unavailable for claude. **E2E browser** starts checked and stays available for every harness.
+Typing `harness` with no arguments opens a **New harness** dialog instead of erroring: a form with a harness selector, a **Label** field, **Workspace**, **Offline**, and **E2E browser** toggles, an **Auto-approve** toggle, an **Auto-resume** toggle, a **Model** search field, and an **Effort** dropdown. **Workspace** starts checked. **Auto-approve** starts checked for every harness. **Auto-resume** starts checked for opencode and codex and is unavailable for claude. **E2E browser** starts checked and stays available for every harness. In the **Model** field you type to filter the harness's models and `Tab` completes a match; an empty field uses the harness's default model and its dropdown lists the models your roles use most.
 
 ![The New harness dialog, with fields for harness, label, workspace, offline, E2E browser, auto-approve, auto-resume, model, and effort.](/screenshots/harness-launch-dialog.png)
 

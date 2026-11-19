@@ -64,7 +64,7 @@ dialog over the command bar instead of returning a usage error. The dialog is a 
 choosing the harness and its launch flags with controls rather than typing the command by hand. It
 offers: a harness selector (claude, opencode, codex), a **Label** field (the `as <label>` name), a
 **Workspace** toggle (`-w`), an **Offline** toggle (`--offline`), an **E2E browser** toggle (`-b`),
-an **Auto-approve** toggle (`-y`), an **Auto-resume** toggle (`--auto-resume`), a **Model** dropdown,
+an **Auto-approve** toggle (`-y`), an **Auto-resume** toggle (`--auto-resume`), a **Model** search field,
 and an **Effort** dropdown.
 
 The form enforces the flag constraints so it can only ever build a valid command: **Auto-approve** is
@@ -75,8 +75,16 @@ disable it. The dialog offers Auto-approve for exactly the harnesses the `harnes
 same rule against the harnesses the command accepts `--auto-resume` for — today opencode and codex,
 so switching to claude clears and disables it. **E2E browser** stays
 enabled for every harness, since none rejects it. It starts checked, matching the command's default,
-and unchecking it adds `--no-browser` to the built command. The **Model** dropdown lists
-the selected harness's known models and is disabled when that harness has no model catalog. The
+and unchecking it adds `--no-browser` to the built command. The **Model** field is a search input:
+you type to filter the selected harness's enabled models, `Tab` completes the highlighted match,
+and the matching models appear in a dropdown whose rows you can click to pick one and whose
+highlighted row `Return` accepts. A blank field means the harness's default model, adding no
+`--model` flag; its dropdown lists the models the roles in effect use most, read when the dialog
+opens. Non-blank text is accepted only when it is exactly an enabled model id of the chosen
+harness — any other text disables **Create**, and Return does not submit. With the dropdown open,
+`Escape` closes only the dropdown and `Return` accepts the highlighted row without launching;
+with no row highlighted, `Return` follows the dialog's normal Create path. The field is disabled
+when the chosen harness has no enabled models, leaving the default model in place. The
 **Effort** dropdown offers a default (no `--effort` flag) plus the fixed levels `low`, `medium`,
 `high`, `xhigh`, and `max`. Opening the dialog records no line in the transcript.
 
