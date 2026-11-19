@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { ModelSearchList } from './ModelSearchList';
 import type { ModelSearchRow } from './ModelSearchList';
 
@@ -17,6 +17,7 @@ function renderList(overrides: Partial<React.ComponentProps<typeof ModelSearchLi
       rows={rows}
       highlighted={0}
       blank={false}
+      anchorRef={{ current: null }}
       onHover={onHover}
       onPick={onPick}
       {...overrides}
@@ -95,5 +96,82 @@ describe('ModelSearchList', () => {
     const { container } = renderList({ highlighted: null });
     const elements = [...container.querySelectorAll('.model-search-row')];
     expect(elements.every((element) => !element.className.includes('highlighted'))).toBe(true);
+  });
+});
+
+type Measure = { input: { left: number; top: number; width: number; height: number }; listHeight: number };
+
+function renderPositioned(measure: Measure, positionedRows: ModelSearchRow[] = rows) {
+  const input = document.createElement('input');
+  const anchorRef: React.RefObject<HTMLInputElement | null> = { current: input };
+  const rectFor = (element: Element): DOMRect => {
+    if (element === input) {
+      const { left, top, width, height } = measure.input;
+      return new DOMRect(left, top, width, height);
+    }
+    if (element.classList.contains('model-search-list')) {
+      return new DOMRect(0, 0, 0, measure.listHeight);
+    }
+    return new DOMRect(0, 0, 0, 0);
+  };
+  vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function measure(this: Element) {
+    // eslint-disable-next-line unicorn/no-this-outside-of-class -- a DOM method measures its own receiver
+    return rectFor(this);
+  });
+  const element = (someRows: ModelSearchRow[]) => (
+    <ModelSearchList
+      rows={someRows}
+      highlighted={0}
+      blank={false}
+      anchorRef={anchorRef}
+      onHover={() => {}}
+      onPick={() => {}}
+    />
+  );
+  const utils = render(element(positionedRows));
+  return {
+    ...utils,
+    rerenderRows: (someRows: ModelSearchRow[]) => utils.rerender(element(someRows)),
+  };
+}
+
+describe('ModelSearchList placement', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('opens above the input when the list does not fit below', () => {
+    const measure: Measure = {
+      input: { left: 50, top: window.innerHeight - 18, width: 200, height: 20 },
+      listHeight: 100,
+    };
+    const { container } = renderPositioned(measure);
+    const list = container.querySelector('.model-search-list')!;
+    expect(list.classList.contains('model-search-above')).toBe(true);
+  });
+
+  it('drops the above placement when a new rows array fits below', () => {
+    const measure: Measure = {
+      input: { left: 50, top: window.innerHeight - 18, width: 200, height: 20 },
+      listHeight: 100,
+    };
+    const { container, rerenderRows } = renderPositioned(measure);
+    const list = container.querySelector('.model-search-list')!;
+    expect(list.classList.contains('model-search-above')).toBe(true);
+
+    measure.input = { left: 50, top: 100, width: 200, height: 20 };
+    rerenderRows([{ id: 'new-id', ranges: [] }]);
+    expect(list.classList.contains('model-search-above')).toBe(false);
+  });
+
+  it('sets the inline min and max width from the input and the viewport', () => {
+    const measure: Measure = {
+      input: { left: 50, top: 100, width: 200, height: 20 },
+      listHeight: 40,
+    };
+    const { container } = renderPositioned(measure);
+    const list = container.querySelector('.model-search-list') as HTMLElement;
+    expect(list.style.minWidth).toBe('200px');
+    expect(list.style.maxWidth).toBe(`${window.innerWidth - 50}px`);
   });
 });
