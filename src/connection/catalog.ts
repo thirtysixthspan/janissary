@@ -42,12 +42,14 @@ function acpEntries(managers: Managers, label: string): ConnectionEntry[] {
   return entries;
 }
 
-// An ssh harness tab or a remote tab is closable as `ssh:<its label>`; the destination it was
-// launched with is what the panel shows and the list adds in parentheses.
+// An ssh harness tab or a remote tab is closable as `ssh:<its label>`. An ssh tab opened from a saved
+// host shows that host's name in the panel; every other ssh connection shows its destination. The
+// list always keeps the real destination in parentheses.
 function sshEntry(tab: Tab, label: string): ConnectionEntry | undefined {
   const destination = tab.harness?.name === 'ssh' ? tab.harness.destination : tab.remote?.address;
   if (!destination) return undefined;
-  return { kind: 'ssh', id: tab.label, display: `ssh:${destination}`, scope: tab.label === label ? 'tab' : 'global', detail: destination };
+  const hostName = tab.harness?.name === 'ssh' ? tab.harness.hostName : undefined;
+  return { kind: 'ssh', id: tab.label, display: `ssh:${hostName ?? destination}`, scope: tab.label === label ? 'tab' : 'global', detail: destination };
 }
 
 // The tab's own ssh connection, then its terminals. An ssh tab's only PTY is the ssh session itself,

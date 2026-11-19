@@ -134,7 +134,7 @@ An [editor tab](/user-documentation/tab-types/editor-persona-query) lists each p
 
 <img class="agent-float" src="/agents/selim-south-west.png" alt="" />
 
-Over an ssh tab, the panel shows only that tab's own `ssh:<destination>` row, and its metadata bar keeps both the connections and schedule buttons. Any other harness tab has no connections button at all, since its terminal already is the connection. It keeps its schedule button.
+Over an ssh tab, the panel shows only that tab's own `ssh:<destination>` row, or `ssh:<saved name>` when the tab was opened from a saved host (for example `ssh:thecandykingdom` instead of `ssh:anonymouscoward@10.27.1.94`), and its metadata bar keeps both the connections and schedule buttons. The real destination still identifies the connection for `connections list` and `connections close`. Any other harness tab has no connections button at all, since its terminal already is the connection. It keeps its schedule button.
 
 In the web app, a link icon in the tab's metadata bar opens this panel. It lights up whenever the tab has a live connection, and stays dark and unclickable, with a tooltip saying there are none, when it doesn't. Hovering the lit icon shows the panel; moving away hides it again. Clicking pins the panel open until you click a second time.
 

@@ -21,4 +21,4 @@ Open an SSH session to a remote host in a full-tab terminal. A bare `ssh <name>`
 
 **Notes**
 
-A saved name wins over a literal hostname or `~/.ssh/config` alias with the same spelling; flags, extra words and a trailing remote command keep the verbatim path. The new tab is labelled with the saved name, while the connections panel still shows the real `ssh:<destination>`.
+A saved name wins over a literal hostname or `~/.ssh/config` alias with the same spelling; flags, extra words and a trailing remote command keep the verbatim path. The new tab is labelled with the saved name, and the connections panel shows `ssh:<saved name>` (for example `ssh:thecandykingdom` rather than `ssh:anonymouscoward@10.27.1.94`). The real destination stays as the connection identity used by `connections list` and `connections close`.

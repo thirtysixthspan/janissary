@@ -15,9 +15,9 @@ function remoteTab(label: string): Tab {
   return tab;
 }
 
-function sshTab(label: string, destination: string, ptyId: string): Tab {
+function sshTab(label: string, destination: string, ptyId: string, hostName?: string): Tab {
   const tab = makeTab(label, 'blue');
-  tab.harness = { name: 'ssh', program: 'ssh', ptyId, status: 'running', destination };
+  tab.harness = { name: 'ssh', program: 'ssh', ptyId, status: 'running', destination, ...(hostName !== undefined && { hostName }) };
   return tab;
 }
 
@@ -100,6 +100,24 @@ describe('connectionCatalog', () => {
 
     expect(entries.map((e) => `${e.kind}:${e.id}`)).toContain('ssh:bastion');
     expect(entries.some((e) => e.kind === 'terminal')).toBe(false);
+  });
+
+  it('shows the saved host name in an ssh tab\'s own panel while keeping the real destination for close and list', () => {
+    const tabs = [sshTab('thecandykingdom', 'anonymouscoward@10.27.1.94', 'pty-s', 'thecandykingdom')];
+    const managers = { ...populated(), tab: { ...populated().tab, tabs, byLabel: (l: string) => tabs.find((t) => t.label === l) } } as unknown as Managers;
+
+    const own = connectionCatalog(managers, 'thecandykingdom').find((e) => e.kind === 'ssh');
+
+    expect(own).toMatchObject({ id: 'thecandykingdom', display: 'ssh:thecandykingdom', detail: 'anonymouscoward@10.27.1.94', scope: 'tab' });
+  });
+
+  it('shows another tab\'s saved-host connection by its saved name with global scope', () => {
+    const tabs = [makeTab('main', 'red'), sshTab('thecandykingdom', 'anonymouscoward@10.27.1.94', 'pty-s', 'thecandykingdom')];
+    const managers = { ...populated(), tab: { ...populated().tab, tabs, byLabel: (l: string) => tabs.find((t) => t.label === l) } } as unknown as Managers;
+
+    const global = connectionCatalog(managers, 'main').filter((e) => e.kind === 'ssh');
+
+    expect(global).toContainEqual(expect.objectContaining({ id: 'thecandykingdom', display: 'ssh:thecandykingdom', detail: 'anonymouscoward@10.27.1.94', scope: 'global' }));
   });
 
   it('leaves out an agent session whose handshake has not named it yet', () => {
