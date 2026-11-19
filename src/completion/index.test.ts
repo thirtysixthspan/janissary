@@ -384,9 +384,10 @@ describe('completeCommandLine — disabled command guard', () => {
 
   it('drops a disabled file glob subcommand after file', () => {
     const policy = policyWith(['file glob']);
-    expect(completeCommandLine('file ', 5, dir).matches).toEqual(['glob', 'grep', 'read']);
+    expect(completeCommandLine('file ', 5, dir).matches)
+      .toEqual(['exists', 'glob', 'grep', 'head', 'list', 'ls', 'read', 'stat', 'tail']);
     expect(completeCommandLine('file ', 5, dir, [], [], undefined, undefined, undefined, undefined, policy).matches)
-      .toEqual(['grep', 'read']);
+      .toEqual(['exists', 'grep', 'head', 'list', 'ls', 'read', 'stat', 'tail']);
 
     const line = 'file glob * --path ';
     expect(completeCommandLine(line, line.length, dir, [], [], undefined, undefined, undefined, undefined, policy))

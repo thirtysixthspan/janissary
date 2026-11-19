@@ -2,7 +2,7 @@
 
 **Complexity: 5/10** — ~60 added lines across 2 files, 10 requirements, 12 scenarios (p=5.58)
 
-Decomposed from `./product/plans/complete/supplement-file-command-with-additional-sub-commands.md`, the authoritative feature scope. This is subplan 7 of 9. It depends on subplans 1-3 (`./product/plans/ready/supplement-file-command-with-additional-sub-commands-1-list-stat-local.md`, `...-2-exists-local.md`, `...-3-head-tail-local.md`) for the parsers and executors and on subplan 6 (`./product/plans/ready/supplement-file-command-with-additional-sub-commands-6-remote-port-and-executors.md`) so a typed command is fully working on both tab kinds when it becomes reachable. Subplan 8 adds native command grants and agent integration.
+Decomposed from `./product/plans/complete/supplement-file-command-with-additional-sub-commands.md`, the authoritative feature scope. This is subplan 7 of 8. It depends on subplans 1-3 (`./product/plans/ready/supplement-file-command-with-additional-sub-commands-1-list-stat-local.md`, `...-2-exists-local.md`, `...-3-head-tail-local.md`) for the parsers and executors and on subplan 6 (`./product/plans/ready/supplement-file-command-with-additional-sub-commands-6-remote-port-and-executors.md`) so a typed command is fully working on both tab kinds when it becomes reachable. Subplan 8 adds native command grants and agent integration.
 
 ## Goal
 

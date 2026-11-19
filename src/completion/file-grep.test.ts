@@ -227,7 +227,8 @@ describe('file grep completion integration', () => {
     expect(completeFileReadCommand(at('file gr'), root)).toEqual({
       newInput: 'file grep ', newCursor: 'file grep '.length, matches: ['grep'],
     });
-    expect(completeFileReadCommand(at('file '), root)?.matches).toEqual(['glob', 'grep', 'read']);
+    expect(completeFileReadCommand(at('file '), root)?.matches)
+      .toEqual(['exists', 'glob', 'grep', 'head', 'list', 'ls', 'read', 'stat', 'tail']);
     expect(completeFileReadCommand(at('file g'), root))
       .toEqual({ newInput: 'file g', newCursor: 'file g'.length, matches: ['glob', 'grep'] });
     expect(completeCommandLine('file g', 6, cwd).matches).toEqual(['glob', 'grep']);
@@ -235,10 +236,11 @@ describe('file grep completion integration', () => {
 
   it('drops a disabled grep child without removing read or glob', () => {
     const policy = policyWith({ 'file grep': { enabled: false } });
-    expect(completeFileReadCommand(at('file '), root, policy)?.matches).toEqual(['glob', 'read']);
+    expect(completeFileReadCommand(at('file '), root, policy)?.matches)
+      .toEqual(['exists', 'glob', 'head', 'list', 'ls', 'read', 'stat', 'tail']);
     expect(completeFileReadCommand(at('file gr'), root, policy)?.matches).toEqual([]);
     expect(completeCommandLine('file ', 5, cwd, [], [], undefined, undefined, undefined, undefined, policy).matches)
-      .toEqual(['glob', 'read']);
+      .toEqual(['exists', 'glob', 'head', 'list', 'ls', 'read', 'stat', 'tail']);
     const line = 'file grep --p';
     expect(completeCommandLine(line, line.length, cwd, [], [], undefined, undefined, undefined, undefined, policy))
       .toEqual({ newInput: line, newCursor: line.length, matches: [] });

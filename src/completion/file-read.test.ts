@@ -45,7 +45,8 @@ afterAll(() => {
 describe('completeFileReadCommand', () => {
   it('completes the read subcommand', () => {
     expect(completeFileReadCommand(at('file r'), root)?.newInput).toBe('file read ');
-    expect(completeFileReadCommand(at('file '), root)?.matches).toEqual(['glob', 'grep', 'read']);
+    expect(completeFileReadCommand(at('file '), root)?.matches)
+      .toEqual(['exists', 'glob', 'grep', 'head', 'list', 'ls', 'read', 'stat', 'tail']);
   });
 
   it('completes the glob subcommand', () => {
@@ -54,7 +55,47 @@ describe('completeFileReadCommand', () => {
 
   it('does not offer a disabled file glob subcommand', () => {
     const policy = policyWith({ 'file glob': { enabled: false } });
-    expect(completeFileReadCommand(at('file '), root, policy)?.matches).toEqual(['grep', 'read']);
+    expect(completeFileReadCommand(at('file '), root, policy)?.matches)
+      .toEqual(['exists', 'grep', 'head', 'list', 'ls', 'read', 'stat', 'tail']);
+  });
+
+  it('offers each new subcommand only when enabled by policy', () => {
+    for (const word of ['list', 'ls', 'stat', 'exists', 'head', 'tail']) {
+      const policy: CompletionPolicy = { allows: (input) => input !== `file ${word}`, names: [] };
+      const matches = completeFileReadCommand(at('file '), root, policy)?.matches;
+      expect(matches).not.toContain(word);
+      expect(matches).toContain('read');
+    }
+  });
+
+  it('completes the ls alias alongside list', () => {
+    const matches = completeFileReadCommand(at('file l'), root)?.matches;
+    expect(matches).toContain('list');
+    expect(matches).toContain('ls');
+  });
+
+  it('completes a path for each new subcommand', () => {
+    for (const word of ['list', 'ls', 'stat', 'exists', 'head', 'tail']) {
+      expect(completeFileReadCommand(at(`file ${word} no`), root)?.newInput).toBe(`file ${word} notes.md `);
+    }
+  });
+
+  it('offers no paths for a new subcommand without a root', () => {
+    for (const word of ['list', 'ls', 'stat', 'exists', 'head', 'tail']) {
+      const result = completeFileReadCommand(at(`file ${word} no`), undefined);
+      expect(result?.matches).toEqual([]);
+      expect(result?.newInput).toBe(`file ${word} no`);
+    }
+  });
+
+  it('offers nothing for a head or tail count', () => {
+    for (const word of ['head', 'tail']) {
+      for (const line of [`file ${word} notes.md -n `, `file ${word} notes.md -n 5`]) {
+        const result = completeFileReadCommand(at(line), root);
+        expect(result?.matches).toEqual([]);
+        expect(result?.newInput).toBe(line);
+      }
+    }
   });
 
   it('returns null for another command', () => {

@@ -307,6 +307,58 @@ describe('file command run', () => {
     });
   });
 
+  describe('new subcommand dispatch', () => {
+    beforeEach(() => {
+      tabs = [{ label: 'janus' }];
+      writeFileSync(path.join(root, 'a.md'), 'one\ntwo\n');
+      mkdirSync(path.join(root, 'docs'));
+      writeFileSync(path.join(root, 'docs', 'b.md'), '');
+    });
+
+    it('dispatches list and its ls alias to the list executor', async () => {
+      expect(await run('file list .')).toContain('a.md');
+      appended = [];
+      expect(await run('file ls .')).toContain('a.md');
+    });
+
+    it('dispatches stat, exists, head, and tail to their executors', async () => {
+      expect(await run('file stat a.md')).toContain('a.md');
+      appended = [];
+      expect(await run('file exists a.md')).toBe('file');
+      appended = [];
+      expect(await run('file head a.md -n 1')).toContain('1\tone');
+      appended = [];
+      expect(await run('file tail a.md -n 1')).toBe('2\ttwo');
+    });
+
+    it('keeps the read usage line for lookalikes of the new subcommands', async () => {
+      for (const line of [
+        'file listing .', 'file status a.md', 'file existing a.md',
+        'file heading a.md', 'file tailing a.md', 'file lss .',
+      ]) {
+        expect(await run(line)).toBe(FILE_READ_USAGE);
+        appended = [];
+      }
+    });
+
+    it('appends one transcript entry with the exact typed input for every new command', async () => {
+      for (const line of [
+        'file list .', 'file ls .', 'file stat a.md', 'file exists a.md',
+        'file head a.md -n 1', 'file tail a.md -n 1',
+      ]) {
+        appended = [];
+        await run(line);
+        expect(appended).toEqual([{ input: line, output: expect.any(String) }]);
+      }
+    });
+
+    it('declares a sample for each new subcommand', () => {
+      for (const subcommand of ['list', 'stat', 'exists', 'head', 'tail']) {
+        expect(command.samples.some((sample) => sample.startsWith(`file ${subcommand} `))).toBe(true);
+      }
+    });
+  });
+
   describe('on a remote tab', () => {
     beforeEach(() => {
       tabs = [{ label: 'janus', remote: { host: 'box' } }];

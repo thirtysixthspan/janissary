@@ -2,7 +2,7 @@
 
 **Complexity: 5/10** — ~95 added lines across 4 files, 8 requirements, 10 scenarios (p=5.71)
 
-Decomposed from `./product/plans/complete/supplement-file-command-with-additional-sub-commands.md`, the authoritative feature scope. This is subplan 8 of 9. It depends on subplans 1-3 (`./product/plans/ready/supplement-file-command-with-additional-sub-commands-1-list-stat-local.md`, `...-2-exists-local.md`, `...-3-head-tail-local.md`) for the predicates and primers and on subplan 7 (`./product/plans/ready/supplement-file-command-with-additional-sub-commands-7-dispatcher-and-completion.md`) so the commands are typed-reachable before they are granted. Subplan 9 updates the docs and runs the full manual matrix.
+Decomposed from `./product/plans/complete/supplement-file-command-with-additional-sub-commands.md`, the authoritative feature scope. This is subplan 8 of 8. It depends on subplans 1-3 (`./product/plans/ready/supplement-file-command-with-additional-sub-commands-1-list-stat-local.md`, `...-2-exists-local.md`, `...-3-head-tail-local.md`) for the predicates and primers and on subplan 7 (`./product/plans/ready/supplement-file-command-with-additional-sub-commands-7-dispatcher-and-completion.md`) so the commands are typed-reachable before they are granted. Subplan 9 updates the docs and runs the full manual matrix.
 
 ## Goal
 
