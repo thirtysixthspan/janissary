@@ -2,6 +2,10 @@ import React, { useState, type KeyboardEvent, type RefObject } from 'react';
 import type { RoleEntry } from '@shared/plugins/roles/shared';
 import { ModelSearchInput } from '../api';
 
+function isExactEnabledId(model: string, ids: readonly string[]): boolean {
+  return ids.includes(model.trim());
+}
+
 // The add-entry picker: a harness, a model, and an effort for one new entry, so an entry can be added
 // without a pointer. The levels are the catalog the host published, so one the host knows appears here
 // and in the card's per-entry dropdown at once. The picker owns its selection and unmounts when it
@@ -36,6 +40,10 @@ export function EntryPicker({
   };
 
   const ids = models[harness] ?? [];
+  const add = () => {
+    if (!isExactEnabledId(model, ids)) return;
+    onAdd(harness, model.trim(), effort);
+  };
 
   return (
     <div className="roles-picker" onKeyDown={handleKeyDown}>
@@ -53,6 +61,7 @@ export function EntryPicker({
         harness={harness}
         value={model}
         onChange={setModel}
+        onSubmit={add}
         placeholder="model…"
         aria-label="Model for the new entry"
       />
@@ -66,8 +75,8 @@ export function EntryPicker({
       </select>
       <button
         type="button"
-        onClick={() => onAdd(harness, model.trim(), effort)}
-        disabled={!ids.includes(model.trim())}
+        onClick={add}
+        disabled={!isExactEnabledId(model, ids)}
       >
         Add
       </button>

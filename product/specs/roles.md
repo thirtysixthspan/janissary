@@ -89,7 +89,9 @@ fills the field. With the field blank, the dropdown lists at most ten models the
 that harness, counting each role once per model, including the role being edited, and counting only
 enabled models; it shows `type to search` when none are used. Text that matches nothing shows
 `No matching models`. Changing the harness clears the text. Add becomes available only when the
-field holds exactly one of the harness's enabled model ids, and sends that id. The first Escape in
+field holds exactly one of the harness's enabled model ids, and sends that id. Return fills the field
+with a highlighted candidate; with no row highlighted, or a further Return after the fill, Return adds
+the entry when the field holds an exact enabled id, exactly as Add does. The first Escape in
 the model field closes the dropdown, while Escape in the other picker controls cancels the picker. The
 picker starts on `default` and returns there when the harness changes or the picker is reopened, so no
 entry carries an effort nobody chose for it.

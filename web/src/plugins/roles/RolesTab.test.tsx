@@ -288,6 +288,51 @@ describe('RolesTab', () => {
     expect(addCommand()).toHaveFocus();
   });
 
+  it('adds the trimmed id on Return and returns focus to Add model', () => {
+    const { intent } = renderTab();
+    const addModel = () => screen.getAllByRole('button', { name: 'Add model' })[1];
+
+    fireEvent.click(addModel());
+    const input = screen.getByLabelText('Model for the new entry');
+    fireEvent.change(input, { target: { value: '  gpt-6-luna  ' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(intent).toHaveBeenCalledWith('add-entry', {
+      role: 'research', entry: { harness: 'codex', model: 'gpt-6-luna' },
+    });
+    expect(addModel()).toHaveFocus();
+  });
+
+  it('sends nothing and stays open on Return with text that is not an exact id', () => {
+    const { intent } = renderTab();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add model' })[1]);
+    const input = screen.getByLabelText('Model for the new entry');
+    fireEvent.change(input, { target: { value: 'gpt-6-lunx' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(intent).not.toHaveBeenCalled();
+    expect(input).toBeInTheDocument();
+  });
+
+  it('fills the highlighted row on the first Return and adds on the second', () => {
+    const { intent } = renderTab();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add model' })[1]);
+    const input = screen.getByLabelText('Model for the new entry');
+    fireEvent.change(input, { target: { value: 'gpt-6-lu' } });
+
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(input).toHaveValue('gpt-6-luna');
+    expect(intent).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(intent).toHaveBeenCalledWith('add-entry', {
+      role: 'research', entry: { harness: 'codex', model: 'gpt-6-luna' },
+    });
+  });
+
   it('clears a selected command after publication and closes to the heading when none remain', () => {
     const payload = makePayload({
       nativeCommands: ['browser goto', 'browser content'],
