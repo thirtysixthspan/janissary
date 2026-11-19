@@ -27,3 +27,5 @@ Launch `claude`, `opencode`, or `codex` with optional settings. Workspace, brows
 - `harness transcript reviewer` opens the session transcript from the harness tab labeled `reviewer`.
 
 The `--model` value must be enabled in the current catalog. Use `models` to review or refresh that catalog; a disabled or unknown model is refused with `Unknown model "<model>" for harness "<name>" — add it to known-models.json.`
+
+`--auto-resume` is supported only by `opencode` and `codex`. Passing it to another harness is refused with `--auto-resume is only supported for the opencode and codex harnesses.`
