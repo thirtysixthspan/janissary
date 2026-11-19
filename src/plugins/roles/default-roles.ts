@@ -44,7 +44,9 @@ export const DEFAULT_ROLES: readonly Role[] = [
     ],
     commands: [
       'db sqlite list', 'db sqlite query', 'browser goto', 'browser content',
-      'question ask', 'question approve', 'file read', 'file glob', 'file grep', 'web search', 'web fetch',
+      'question ask', 'question approve', 'file read', 'file glob', 'file grep',
+      'file list', 'file stat', 'file exists', 'file head', 'file tail',
+      'web search', 'web fetch',
       'notify',
     ],
   },
@@ -59,7 +61,9 @@ export const DEFAULT_ROLES: readonly Role[] = [
     commands: [
       'db sqlite create', 'db sqlite delete', 'db sqlite query', 'db sqlite list',
       'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve', 'file read',
-      'file glob', 'file grep', 'file write', 'file edit', 'file patch', 'web search', 'web fetch',
+      'file glob', 'file grep', 'file write', 'file edit', 'file patch',
+      'file list', 'file stat', 'file exists', 'file head', 'file tail',
+      'web search', 'web fetch',
       'subagent', 'notify',
     ],
   },

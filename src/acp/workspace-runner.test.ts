@@ -7,6 +7,9 @@ import { FILE_GREP_USAGE } from '../file-grep/command.js';
 import { FILE_GLOB_USAGE } from '../file-glob/command.js';
 import { FILE_READ_USAGE } from '../file-read/command.js';
 import { FILE_WRITE_USAGE } from '../file-write/command.js';
+import { FILE_LIST_USAGE } from '../file-list/command.js';
+import { FILE_EXISTS_USAGE } from '../file-exists/command.js';
+import { FILE_HEAD_USAGE } from '../file-head-tail/command.js';
 import type * as Glob from '../file-glob/glob.js';
 import type * as Grep from '../file-grep/grep.js';
 
@@ -86,6 +89,44 @@ describe('runWorkspaceCommandIn routes to the target root', () => {
     await expect(runWorkspaceCommandIn(target, edit)).resolves.toBe('Edited a.md (1 replacements).');
     expect(readFileSync(path.join(target, 'a.md'), 'utf8')).toBe('uno\ntwo\n');
     expect(readFileSync(path.join(caller, 'a.md'), 'utf8')).toBe('caller one\n');
+  });
+});
+
+describe('runWorkspaceCommandIn routes additional file commands to the target root', () => {
+  beforeEach(() => {
+    mkdirSync(path.join(target, 'docs'));
+    writeFileSync(path.join(target, 'a.md'), 'one\ntwo\nthree\n');
+    writeFileSync(path.join(target, 'docs', 'b.md'), 'nested\n');
+    writeFileSync(path.join(caller, 'a.md'), 'caller one\n');
+  });
+
+  it('lists a directory in the target root', async () => {
+    expect(await runWorkspaceCommandIn(target, 'file list docs')).toContain('b.md');
+    expect(await runWorkspaceCommandIn(target, 'file ls docs')).toContain('b.md');
+  });
+
+  it('stats a file in the target root', async () => {
+    expect(await runWorkspaceCommandIn(target, 'file stat a.md')).toContain('a.md');
+  });
+
+  it('checks existence in the target root', async () => {
+    expect(await runWorkspaceCommandIn(target, 'file exists a.md')).toBe('file');
+    expect(await runWorkspaceCommandIn(target, 'file exists missing.md')).toBe('missing');
+  });
+
+  it('reads the head and tail of a file in the target root', async () => {
+    expect(await runWorkspaceCommandIn(target, 'file head a.md -n 1')).toContain('1\tone');
+    expect(await runWorkspaceCommandIn(target, 'file tail a.md -n 1')).toContain('3\tthree');
+  });
+
+  it('answers malformed new commands with their own usage text', async () => {
+    expect(await runWorkspaceCommandIn(target, 'file list')).toBe(FILE_LIST_USAGE);
+    expect(await runWorkspaceCommandIn(target, 'file exists')).toBe(FILE_EXISTS_USAGE);
+    expect(await runWorkspaceCommandIn(target, 'file head')).toBe(FILE_HEAD_USAGE);
+  });
+
+  it('still falls through to file read for an unrecognized line', async () => {
+    expect(await runWorkspaceCommandIn(target, 'totally unknown command')).toBe(FILE_READ_USAGE);
   });
 });
 

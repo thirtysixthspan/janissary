@@ -5,17 +5,21 @@ import { findLastCommandLine } from './command-line.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { nativeCommandName, nativeCommandTool, type NativeCommandTool } from './native-commands.js';
 import type { AcpRunSnapshot } from './types.js';
-import { FILE_READ_PRIMER, isFileReadCommandLine } from '../file-read/command.js';
-import { FILE_MUTATION_PRIMER, isFileMutationCommandLine } from '../file-write/command.js';
-import { FILE_PATCH_PRIMER } from '../file-patch/command.js';
-import { FILE_GLOB_PRIMER, isFileGlobCommandLine } from '../file-glob/command.js';
-import { FILE_GREP_PRIMER, isFileGrepCommandLine } from '../file-grep/command.js';
+import { isFileReadCommandLine } from '../file-read/command.js';
+import { isFileMutationCommandLine } from '../file-write/command.js';
+import { isFileGlobCommandLine } from '../file-glob/command.js';
+import { isFileGrepCommandLine } from '../file-grep/command.js';
+import { isFileListCommandLine } from '../file-list/command.js';
+import { isFileStatCommandLine } from '../file-stat/command.js';
+import { filePrimer } from './file-primer.js';
 import { isWebCommandLine } from '../web/command-line.js';
 import { isWebSearchReplyLine, WEB_SEARCH_PRIMER } from '../web/search/command.js';
 import { isWebFetchReplyLine, WEB_FETCH_PRIMER } from '../web/fetch/command.js';
 import { SUBAGENT_PRIMER, isSubagentCommandLine } from '../subagent/primer.js';
 import { TAB_PRIMER, isTabCommandLine } from '../commands/tab-primer.js';
 import { NOTIFY_PRIMER, isNotifyCommandLine } from '../notifications/primer.js';
+
+const FILE_EXISTS_HEAD_TAIL_LINE = /^file\s+(?:exists|head|tail)(\s|$)/i;
 
 // One tool on the ACP run path. The three loop options the agent sees — what it is told the tools
 // are, which side runs a command it emitted, and what pulls a command out of its reply — are all
@@ -67,7 +71,9 @@ export function createAcpToolTable(grants: readonly string[]): AcpTool[] {
         primer: filePrimer(allowed),
         match: (command) => nativeCommandTool(command) === 'file',
         isCommandLine: (line) => isFileReadCommandLine(line) || isFileGlobCommandLine(line)
-          || isFileGrepCommandLine(line) || isFileMutationCommandLine(line),
+          || isFileGrepCommandLine(line) || isFileMutationCommandLine(line)
+          || isFileListCommandLine(line) || isFileStatCommandLine(line)
+          || FILE_EXISTS_HEAD_TAIL_LINE.test(line),
         runsOn: 'workspace',
       },
     },
@@ -122,16 +128,6 @@ export function createAcpToolTable(grants: readonly string[]): AcpTool[] {
     .map(({ tool }) => tool);
 }
 
-function filePrimer(allowed: readonly string[]): string {
-  return [
-    ...(allowed.includes('file read') ? [FILE_READ_PRIMER] : []),
-    ...(allowed.includes('file glob') ? [FILE_GLOB_PRIMER] : []),
-    ...(allowed.includes('file grep') ? [FILE_GREP_PRIMER] : []),
-    ...(allowed.includes('file write') || allowed.includes('file edit') ? [FILE_MUTATION_PRIMER] : []),
-    ...(allowed.includes('file patch') ? [FILE_PATCH_PRIMER] : []),
-  ].join('\n\n');
-}
-
 function webPrimer(allowed: readonly string[]): string {
   return [
     ...(allowed.includes('web search') ? [WEB_SEARCH_PRIMER] : []),
@@ -184,7 +180,9 @@ function gateAgentCommand(
 ): AcpGateDecision {
   const input = command.trim().replace(/^\//, '');
   if (isFileMutationCommandLine(input) || isFileGlobCommandLine(input)
-    || isFileGrepCommandLine(input) || isWebCommandLine(input)) {
+    || isFileGrepCommandLine(input) || isFileListCommandLine(input)
+    || isFileStatCommandLine(input) || FILE_EXISTS_HEAD_TAIL_LINE.test(input)
+    || isWebCommandLine(input)) {
     return { refusal: `Agent: command not permitted: ${command}.` };
   }
   if (!isFileReadCommandLine(input)) return { runsOn: 'caller' };
