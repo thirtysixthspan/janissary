@@ -41,7 +41,7 @@ export function writeShellReply(
   const ownLine = placement.reply(line);
   if (ownLine && onHeadMarker) terminal.write(commandHead(line), () => { markFirstRow(terminal, onHeadMarker); });
   const head = ownLine && !onHeadMarker ? line : undefined;
-  if (!insertMarkdownBlock(terminal, head, markdown, openLink)) {
+  if (!insertMarkdownBlock(terminal, head, markdown, openLink, onHeadMarker !== undefined)) {
     terminal.write(formatDispatchedCommand(head, markdownToAnsi(markdown)));
   }
   return ownLine;

@@ -52,7 +52,7 @@ function position(element: HTMLElement, terminal: Terminal, markerLine: number, 
 }
 
 export function insertMarkdownBlock(
-  terminal: Terminal, line: string | undefined, markdown: string, openLink: (href: string) => void,
+  terminal: Terminal, line: string | undefined, markdown: string, openLink: (href: string) => void, reserveRow = false,
 ): boolean {
   const html = renderMarkdown(markdown);
   const screen = terminal.element?.querySelector<HTMLElement>('.xterm-screen');
@@ -62,7 +62,10 @@ export function insertMarkdownBlock(
   const height = measure(screen, html, rowHeight);
   if (height <= 0) return false;
   const rows = Math.ceil(height / rowHeight);
-  terminal.write(`${commandHead(line)}${'\r\n'.repeat(rows)}`, () => {
+  // An echo's thinking marker sits on the row below the command. Leave that row clear so the block
+  // painted over these rows does not cover the marker and clip its label or link.
+  const clearance = reserveRow ? '\r\n' : '';
+  terminal.write(`${clearance}${commandHead(line)}${'\r\n'.repeat(rows)}`, () => {
     const marker = terminal.registerMarker(-1);
     const decoration = terminal.registerDecoration({ marker, width: terminal.cols, height: rows, layer: 'top' });
     decoration?.onRender((element) => {
