@@ -8,3 +8,7 @@ export function parseFileExists(input: string): FileExistsArgs | { error: string
   if (rest.length !== 1) return { error: FILE_EXISTS_USAGE };
   return { path: rest[0] };
 }
+
+export function isFileExistsCommandLine(line: string): boolean {
+  return /^file\s+exists(\s|$)/i.test(line);
+}

@@ -48,3 +48,7 @@ export function parseFileHeadTail(input: string): HeadTailArgs | { error: string
   }
   return { error: FILE_HEAD_USAGE };
 }
+
+export function isFileHeadTailCommandLine(line: string): boolean {
+  return /^file\s+(?:head|tail)(\s|$)/i.test(line);
+}

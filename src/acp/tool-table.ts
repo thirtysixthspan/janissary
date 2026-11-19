@@ -11,6 +11,8 @@ import { isFileGlobCommandLine } from '../file-glob/command.js';
 import { isFileGrepCommandLine } from '../file-grep/command.js';
 import { isFileListCommandLine } from '../file-list/command.js';
 import { isFileStatCommandLine } from '../file-stat/command.js';
+import { isFileExistsCommandLine } from '../file-exists/command.js';
+import { isFileHeadTailCommandLine } from '../file-head-tail/command.js';
 import { filePrimer } from './file-primer.js';
 import { isWebCommandLine } from '../web/command-line.js';
 import { isWebSearchReplyLine, WEB_SEARCH_PRIMER } from '../web/search/command.js';
@@ -18,8 +20,6 @@ import { isWebFetchReplyLine, WEB_FETCH_PRIMER } from '../web/fetch/command.js';
 import { SUBAGENT_PRIMER, isSubagentCommandLine } from '../subagent/primer.js';
 import { TAB_PRIMER, isTabCommandLine } from '../commands/tab-primer.js';
 import { NOTIFY_PRIMER, isNotifyCommandLine } from '../notifications/primer.js';
-
-const FILE_EXISTS_HEAD_TAIL_LINE = /^file\s+(?:exists|head|tail)(\s|$)/i;
 
 // One tool on the ACP run path. The three loop options the agent sees — what it is told the tools
 // are, which side runs a command it emitted, and what pulls a command out of its reply — are all
@@ -73,7 +73,7 @@ export function createAcpToolTable(grants: readonly string[]): AcpTool[] {
         isCommandLine: (line) => isFileReadCommandLine(line) || isFileGlobCommandLine(line)
           || isFileGrepCommandLine(line) || isFileMutationCommandLine(line)
           || isFileListCommandLine(line) || isFileStatCommandLine(line)
-          || FILE_EXISTS_HEAD_TAIL_LINE.test(line),
+          || isFileExistsCommandLine(line) || isFileHeadTailCommandLine(line),
         runsOn: 'workspace',
       },
     },
@@ -181,7 +181,8 @@ function gateAgentCommand(
   const input = command.trim().replace(/^\//, '');
   if (isFileMutationCommandLine(input) || isFileGlobCommandLine(input)
     || isFileGrepCommandLine(input) || isFileListCommandLine(input)
-    || isFileStatCommandLine(input) || FILE_EXISTS_HEAD_TAIL_LINE.test(input)
+    || isFileStatCommandLine(input) || isFileExistsCommandLine(input)
+    || isFileHeadTailCommandLine(input)
     || isWebCommandLine(input)) {
     return { refusal: `Agent: command not permitted: ${command}.` };
   }

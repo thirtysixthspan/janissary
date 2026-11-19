@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FILE_HEAD_TAIL_MAX_LINES, FILE_HEAD_USAGE, FILE_TAIL_USAGE, parseFileHeadTail } from './command.js';
+import { FILE_HEAD_TAIL_MAX_LINES, FILE_HEAD_USAGE, FILE_TAIL_USAGE, isFileHeadTailCommandLine, parseFileHeadTail } from './command.js';
 
 describe('parseFileHeadTail', () => {
   it('parses head and tail with the default count of 10', () => {
@@ -57,5 +57,26 @@ describe('parseFileHeadTail', () => {
   it('uses the canonical usage text for each subcommand', () => {
     expect(FILE_HEAD_USAGE).toBe('Usage: file head <path> [-n <lines>]');
     expect(FILE_TAIL_USAGE).toBe('Usage: file tail <path> [-n <lines>]');
+  });
+});
+
+describe('isFileHeadTailCommandLine', () => {
+  it('recognizes head and tail lines with a path, a count, and no arguments', () => {
+    expect(isFileHeadTailCommandLine('file head a.md')).toBe(true);
+    expect(isFileHeadTailCommandLine('file tail notes/a.md -n 3')).toBe(true);
+    expect(isFileHeadTailCommandLine('file head')).toBe(true);
+    expect(isFileHeadTailCommandLine('file tail')).toBe(true);
+  });
+
+  it('matches case-insensitively and tolerates tabs', () => {
+    expect(isFileHeadTailCommandLine('FILE HEAD notes/A.md')).toBe(true);
+    expect(isFileHeadTailCommandLine('FiLe\tTaIl a.md')).toBe(true);
+  });
+
+  it('rejects lookalike subcommands and a missing word boundary', () => {
+    expect(isFileHeadTailCommandLine('file heading a.md')).toBe(false);
+    expect(isFileHeadTailCommandLine('file tails a.md')).toBe(false);
+    expect(isFileHeadTailCommandLine('files tail a.md')).toBe(false);
+    expect(isFileHeadTailCommandLine('file headfirst a.md')).toBe(false);
   });
 });

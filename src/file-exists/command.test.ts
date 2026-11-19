@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FILE_EXISTS_USAGE, parseFileExists } from './command.js';
+import { FILE_EXISTS_USAGE, isFileExistsCommandLine, parseFileExists } from './command.js';
 
 const usage = { error: FILE_EXISTS_USAGE };
 
@@ -33,5 +33,24 @@ describe('parseFileExists', () => {
 
   it('uses the exact canonical usage line', () => {
     expect(FILE_EXISTS_USAGE).toBe('Usage: file exists <path>');
+  });
+});
+
+describe('isFileExistsCommandLine', () => {
+  it('recognizes a command line with a path and a bare one', () => {
+    expect(isFileExistsCommandLine('file exists a.md')).toBe(true);
+    expect(isFileExistsCommandLine('file exists')).toBe(true);
+  });
+
+  it('matches case-insensitively and tolerates tabs', () => {
+    expect(isFileExistsCommandLine('FILE EXISTS Docs/A.md')).toBe(true);
+    expect(isFileExistsCommandLine('file\texists a.md')).toBe(true);
+  });
+
+  it('rejects lookalike subcommands and a missing word boundary', () => {
+    expect(isFileExistsCommandLine('file exist a.md')).toBe(false);
+    expect(isFileExistsCommandLine('file existing a.md')).toBe(false);
+    expect(isFileExistsCommandLine('files exists a.md')).toBe(false);
+    expect(isFileExistsCommandLine('file existsfoo a.md')).toBe(false);
   });
 });
