@@ -2,8 +2,6 @@
 
 ## ready
 
-* harness (3/10) — Of 20 user-visible harness facts, 19 are correct and one is missing. A user who types `harness claude --auto-resume` is refused with the exact line `--auto-resume is only supported for the opencode and codex harnesses.`, which is produced by `src/harness/command-parse.ts` and asserted in `src/harness/command-parse.test.ts`. Neither `documentation/user-documentation/advanced-agents/harness.md` nor `help/harness.md` gives that verbatim refusal; both only paraphrase that claude does not support the flag. Add the exact line to the "Resuming after a usage limit" section of `documentation/user-documentation/advanced-agents/harness.md` and mirror it in `help/harness.md` alongside the existing `--model` refusal.
-
 * harness-recording (3/10) — Of 20 user-visible facts, 19 are correct and one is missing. The docs say external playback with `asciinema play .janissary/recordings/<file>.cast` still works and that the files are standard asciicast v3, but `product/specs/harness-recording.md` states that v3 recordings need asciinema 3.x, a minimum the user docs omit and that could mislead someone on asciinema 2.x. Add a short "(requires asciinema 3.x for v3 recordings)" clause to the external-playback statements in `documentation/user-documentation/advanced-agents/harness.md`, including the SSH example, and optionally mirror it in `documentation/user-documentation/tab-types/recording-player.md`. Ground truth is `product/specs/harness-recording.md`, `src/harness/cast-header.ts` and `web/src/plugins/asciicast/usePlayback.ts`.
 
 * launcher (3/10) — Of 22 user-visible launcher facts, 19 are correct and three are missing, with none wrong. The omitted facts are that the command rail scrolls within a bounded area (`max-height: 45%; overflow-y: auto` in `web/src/plugins/launcher/launcher.css`) so the tab list stays available, that clicking a tab row which closed before its answer does nothing, and that hovering a tab row highlights it without opening an information popup. All three come from `product/specs/launcher.md` and none appears in `documentation/user-documentation/tab-types/launcher.md`, `help/launcher.md` or `help/commands.md`. Add the bounded-scroll note to the "Run a command" section and the closed-tab and hover notes to the "Find an open tab" section of `documentation/user-documentation/tab-types/launcher.md`, which is the correct destination.
@@ -26,6 +24,7 @@
 
 ## resolved
 
+* harness — documented in documentation/user-documentation/advanced-agents/harness.md, help/harness.md (removed 2026-11-19)
 * connections-tab — documented in documentation/user-documentation/command-bar/connections.md, help/connections.md (removed 2026-11-19)
 * commands-tab — documented in documentation/user-documentation/tab-types/commands.md, help/commands.md (removed 2026-11-19)
 * acp — documented in documentation/user-documentation/advanced-agents/acp-agent.md, help/ask.md, help/tell.md (removed 2026-11-19)
