@@ -2,8 +2,6 @@
 
 ## ready
 
-* commands-tab (3/10) — Of 20 user-visible Commands-tab facts, 19 are correct and one is missing. The missing fact is that rows are ordered by canonical command name; the dedicated page `documentation/user-documentation/tab-types/commands.md` describes label rules, icons, settings and scrolling but never states the sort order, and `help/commands.md` is equally silent. The behavior is implemented in `web/src/plugins/commands/CommandsTab.tsx` and `web/src/plugins/commands/CommandRow.tsx` and recorded in `product/specs/commands-tab.md`. Add one sentence on row ordering to the "The table" section of `documentation/user-documentation/tab-types/commands.md`, optionally mirrored in `help/commands.md`.
-
 * connections-tab (3/10) — Of 20 user-visible facts, 18 are correct and two are missing, with none wrong. First, `product/specs/connections-tab.md` states that connections-popup rows are operable by pointer and by Enter or Space, but `documentation/user-documentation/command-bar/connections.md` mentions Enter/Space only for the Refresh and Split header controls, not for the popup rows. Second, the same page names **Close session** but omits that it appears only while the session is `Running` or `Idle`, documenting only Cancel's `Running` gating. Add the popup-row activation note to the "The connections window" section and the Close-session gating to the "Connection tabs" section of `documentation/user-documentation/command-bar/connections.md`, optionally mirroring the gating in `help/connections.md`. The relevant source is `src/plugins/connections/activate.ts` and `src/plugins/connections-topic-actions.ts`.
 
 * harness (3/10) — Of 20 user-visible harness facts, 19 are correct and one is missing. A user who types `harness claude --auto-resume` is refused with the exact line `--auto-resume is only supported for the opencode and codex harnesses.`, which is produced by `src/harness/command-parse.ts` and asserted in `src/harness/command-parse.test.ts`. Neither `documentation/user-documentation/advanced-agents/harness.md` nor `help/harness.md` gives that verbatim refusal; both only paraphrase that claude does not support the flag. Add the exact line to the "Resuming after a usage limit" section of `documentation/user-documentation/advanced-agents/harness.md` and mirror it in `help/harness.md` alongside the existing `--model` refusal.
@@ -30,6 +28,7 @@
 
 ## resolved
 
+* commands-tab — documented in documentation/user-documentation/tab-types/commands.md, help/commands.md (removed 2026-11-19)
 * acp — documented in documentation/user-documentation/advanced-agents/acp-agent.md, help/ask.md, help/tell.md (removed 2026-11-19)
 * editor-tab — documented in documentation/user-documentation/tab-types/editor.md, help/keys.md, help/newfile.md (removed 2026-11-19)
 * sql-database — documented in documentation/user-documentation/tab-types/sql-browser.md (removed 2026-11-19)
