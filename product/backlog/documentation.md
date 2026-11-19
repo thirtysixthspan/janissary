@@ -2,8 +2,6 @@
 
 ## ready
 
-* connections-tab (3/10) — Of 20 user-visible facts, 18 are correct and two are missing, with none wrong. First, `product/specs/connections-tab.md` states that connections-popup rows are operable by pointer and by Enter or Space, but `documentation/user-documentation/command-bar/connections.md` mentions Enter/Space only for the Refresh and Split header controls, not for the popup rows. Second, the same page names **Close session** but omits that it appears only while the session is `Running` or `Idle`, documenting only Cancel's `Running` gating. Add the popup-row activation note to the "The connections window" section and the Close-session gating to the "Connection tabs" section of `documentation/user-documentation/command-bar/connections.md`, optionally mirroring the gating in `help/connections.md`. The relevant source is `src/plugins/connections/activate.ts` and `src/plugins/connections-topic-actions.ts`.
-
 * harness (3/10) — Of 20 user-visible harness facts, 19 are correct and one is missing. A user who types `harness claude --auto-resume` is refused with the exact line `--auto-resume is only supported for the opencode and codex harnesses.`, which is produced by `src/harness/command-parse.ts` and asserted in `src/harness/command-parse.test.ts`. Neither `documentation/user-documentation/advanced-agents/harness.md` nor `help/harness.md` gives that verbatim refusal; both only paraphrase that claude does not support the flag. Add the exact line to the "Resuming after a usage limit" section of `documentation/user-documentation/advanced-agents/harness.md` and mirror it in `help/harness.md` alongside the existing `--model` refusal.
 
 * harness-recording (3/10) — Of 20 user-visible facts, 19 are correct and one is missing. The docs say external playback with `asciinema play .janissary/recordings/<file>.cast` still works and that the files are standard asciicast v3, but `product/specs/harness-recording.md` states that v3 recordings need asciinema 3.x, a minimum the user docs omit and that could mislead someone on asciinema 2.x. Add a short "(requires asciinema 3.x for v3 recordings)" clause to the external-playback statements in `documentation/user-documentation/advanced-agents/harness.md`, including the SSH example, and optionally mirror it in `documentation/user-documentation/tab-types/recording-player.md`. Ground truth is `product/specs/harness-recording.md`, `src/harness/cast-header.ts` and `web/src/plugins/asciicast/usePlayback.ts`.
@@ -28,6 +26,7 @@
 
 ## resolved
 
+* connections-tab — documented in documentation/user-documentation/command-bar/connections.md, help/connections.md (removed 2026-11-19)
 * commands-tab — documented in documentation/user-documentation/tab-types/commands.md, help/commands.md (removed 2026-11-19)
 * acp — documented in documentation/user-documentation/advanced-agents/acp-agent.md, help/ask.md, help/tell.md (removed 2026-11-19)
 * editor-tab — documented in documentation/user-documentation/tab-types/editor.md, help/keys.md, help/newfile.md (removed 2026-11-19)
