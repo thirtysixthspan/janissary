@@ -1,9 +1,36 @@
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { RemoteChannel } from '../remote/channel/index.js';
+import type { NavigatorListener } from '../remote/channel/types.js';
+import type { ClientFrame } from '../remote/protocol-frames.js';
+import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
 import { FILE_EXISTS_USAGE } from './command.js';
 import { fileExistsInTab } from './tab-exists.js';
+
+type RequestFrame = Extract<ClientFrame, { type: 'filesystem-request' }>;
+
+function fakeChannel() {
+  const sent: ClientFrame[] = [];
+  let listener: NavigatorListener | undefined;
+  const attachNavigator = vi.fn((_id: string, value: NavigatorListener) => { listener = value; });
+  const channel = {
+    attachNavigator,
+    detachNavigator: vi.fn(),
+    send: (frame: ClientFrame) => { sent.push(frame); },
+  } as unknown as RemoteChannel;
+  const requests = () => sent.filter((frame): frame is RequestFrame => frame.type === 'filesystem-request');
+  const reply = (result: unknown, error?: string) => {
+    const request = requests().at(-1);
+    if (!request) throw new Error('No request was sent.');
+    listener?.onReply({
+      type: 'filesystem-reply', session: request.session, request: request.request,
+      ...(error ? { error } : { result }),
+    });
+  };
+  return { channel, attachNavigator, requests, reply };
+}
 
 let root: string;
 let outside: string;
@@ -120,5 +147,67 @@ describe('fileExistsInTab', () => {
       .map((line) => fileExistsInTab(managersWith(), 'janus', line));
     expect(results).toEqual(['file', 'missing', 'forbidden', 'forbidden']);
     for (const result of results) expect(result).not.toContain('a.md');
+  });
+});
+
+describe('fileExistsInTab on a remote tab', () => {
+  const remoteRoot = '/remote/ws';
+  let remote: ReturnType<typeof fakeChannel>;
+
+  beforeEach(() => { remote = fakeChannel(); });
+
+  const managers = (hasChannel = true) => ({
+    tab: { launchDir: root, byLabel: () => ({ label: 'far', remote: { host: 'box' } }) },
+    remote: {
+      get: () => hasChannel ? remote.channel : undefined,
+      readyOf: () => Promise.resolve(remoteRoot),
+      workspaceOf: () => remoteRoot,
+    },
+  }) as never;
+
+  const start = (line: string, hasChannel = true) => fileExistsInTab(managers(hasChannel), 'far', line);
+  const replyText = async (line: string, text: string) => {
+    const pending = start(line);
+    await vi.waitFor(() => expect(remote.requests()).toHaveLength(1));
+    remote.reply({ text });
+    return pending;
+  };
+
+  it.each([['file', 'a.md'], ['dir', 'sub'], ['link', 'alias'], ['missing', 'absent']] as const)(
+    'returns the far-side %s word verbatim', async (word, name) => {
+      expect(await replyText(`file exists ${name}`, word)).toBe(word);
+      const [request] = remote.requests();
+      expect(request).toMatchObject({ operation: 'path-exists', args: { path: name } });
+      expect(request?.session.startsWith('file-exists-')).toBe(true);
+      expect(request?.session).not.toBe('far');
+    },
+  );
+
+  it('maps a relative path and never reads the local temporary directory', async () => {
+    makeFile('local-only.md');
+    expect(await replyText('file exists ./local-only.md', 'missing')).toBe('missing');
+    expect(remote.requests()[0]).toMatchObject({ operation: 'path-exists', args: { path: 'local-only.md' } });
+  });
+
+  it('returns the far-side refusal wording for a secret path', async () => {
+    expect(await replyText('file exists .env', 'forbidden')).toBe('forbidden');
+  });
+
+  it('answers an absolute path locally without a request', async () => {
+    expect(await start('file exists /etc/passwd')).toBe('Outside the workspace: /etc/passwd.');
+    expect(remote.requests()).toEqual([]);
+  });
+
+  it('maps a far-side containment refusal to the path as typed', async () => {
+    const pending = start('file exists ../x');
+    await vi.waitFor(() => expect(remote.requests()).toHaveLength(1));
+    expect(remote.requests()[0]).toMatchObject({ args: { path: '../x' } });
+    remote.reply(undefined, OUTSIDE_ROOT_REASON);
+    expect(await pending).toBe('Outside the workspace: ../x.');
+  });
+
+  it('prints the unavailable line without a channel', async () => {
+    expect(await start('file exists a.md', false)).toBe('Remote connection unavailable.');
+    expect(remote.attachNavigator).not.toHaveBeenCalled();
   });
 });

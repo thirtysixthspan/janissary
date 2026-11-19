@@ -1,10 +1,37 @@
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { RemoteChannel } from '../remote/channel/index.js';
+import type { NavigatorListener } from '../remote/channel/types.js';
+import type { ClientFrame } from '../remote/protocol-frames.js';
 import type { FileSystemPort } from '../file-navigator/filesystem-port.js';
+import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
 import { FILE_LIST_USAGE } from './command.js';
 import { listFilesInTab } from './tab-list.js';
+
+type RequestFrame = Extract<ClientFrame, { type: 'filesystem-request' }>;
+
+function fakeChannel() {
+  const sent: ClientFrame[] = [];
+  let listener: NavigatorListener | undefined;
+  const attachNavigator = vi.fn((_id: string, value: NavigatorListener) => { listener = value; });
+  const channel = {
+    attachNavigator,
+    detachNavigator: vi.fn(),
+    send: (frame: ClientFrame) => { sent.push(frame); },
+  } as unknown as RemoteChannel;
+  const requests = () => sent.filter((frame): frame is RequestFrame => frame.type === 'filesystem-request');
+  const reply = (result: unknown, error?: string) => {
+    const request = requests().at(-1);
+    if (!request) throw new Error('No request was sent.');
+    listener?.onReply({
+      type: 'filesystem-reply', session: request.session, request: request.request,
+      ...(error ? { error } : { result }),
+    });
+  };
+  return { channel, attachNavigator, requests, reply };
+}
 
 const STAMP = Date.parse('2026-11-19T13:50:00Z') / 1000;
 
@@ -137,5 +164,75 @@ describe('listFilesInTab', () => {
     } finally {
       rmSync(workspace, { recursive: true, force: true });
     }
+  });
+});
+
+describe('listFilesInTab on a remote tab', () => {
+  const remoteRoot = '/remote/ws';
+  let remote: ReturnType<typeof fakeChannel>;
+
+  beforeEach(() => { remote = fakeChannel(); });
+
+  const managers = (hasChannel = true) => ({
+    tab: { launchDir: root, byLabel: () => ({ label: 'far', remote: { host: 'box' } }) },
+    remote: {
+      get: () => hasChannel ? remote.channel : undefined,
+      readyOf: () => Promise.resolve(remoteRoot),
+      workspaceOf: () => remoteRoot,
+    },
+  }) as never;
+
+  const start = (line: string, hasChannel = true) => listFilesInTab(managers(hasChannel), 'far', line);
+  const replyText = async (line: string, text: string) => {
+    const pending = start(line);
+    await vi.waitFor(() => expect(remote.requests()).toHaveLength(1));
+    remote.reply({ text });
+    return pending;
+  };
+
+  it('returns the far-side directory row verbatim on its own session', async () => {
+    makeFile('alpha.md');
+    makeDir('subdir');
+    fixDir('subdir');
+    const local = await listFilesInTab(managersWith(), 'janus', 'file list .');
+    expect(await replyText('file list .', local)).toBe(local);
+    const [request] = remote.requests();
+    expect(request).toMatchObject({ operation: 'list-directory', args: { path: '' } });
+    expect(request?.session.startsWith('file-list-')).toBe(true);
+    expect(request?.session).not.toBe('far');
+  });
+
+  it('returns the far-side (empty directory) and notdir wording', async () => {
+    expect(await replyText('file list sub', '(empty directory)')).toBe('(empty directory)');
+    remote = fakeChannel();
+    expect(await replyText('file list a.md', 'notdir')).toBe('notdir');
+  });
+
+  it('maps a relative path and never reads the local temporary directory', async () => {
+    writeFileSync(path.join(root, 'local-only.md'), 'x');
+    expect(await replyText('file list local-only.md', 'notdir')).toBe('notdir');
+    expect(remote.requests()[0]).toMatchObject({ operation: 'list-directory', args: { path: 'local-only.md' } });
+  });
+
+  it('returns the far-side refusal wording for a secret path', async () => {
+    expect(await replyText('file list .env', 'forbidden')).toBe('forbidden');
+  });
+
+  it('answers an absolute path locally without a request', async () => {
+    expect(await start('file list /etc')).toBe('Outside the workspace: /etc.');
+    expect(remote.requests()).toEqual([]);
+  });
+
+  it('maps a far-side containment refusal to the path as typed', async () => {
+    const pending = start('file list ../x');
+    await vi.waitFor(() => expect(remote.requests()).toHaveLength(1));
+    expect(remote.requests()[0]).toMatchObject({ args: { path: '../x' } });
+    remote.reply(undefined, OUTSIDE_ROOT_REASON);
+    expect(await pending).toBe('Outside the workspace: ../x.');
+  });
+
+  it('prints the unavailable line without a channel', async () => {
+    expect(await start('file list .', false)).toBe('Remote connection unavailable.');
+    expect(remote.attachNavigator).not.toHaveBeenCalled();
   });
 });

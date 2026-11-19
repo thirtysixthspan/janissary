@@ -1119,3 +1119,56 @@ describe('RemoteFileSystemPort.applyPatch', () => {
     expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(false);
   });
 });
+
+describe('RemoteFileSystemPort typed read methods', () => {
+  const hasRequest = (sent: ClientFrame[]) => sent.some((frame) => frame.type === 'filesystem-request');
+  const lastRequest = (sent: ClientFrame[]) => sent.findLast((frame) => frame.type === 'filesystem-request');
+  const text = 'finished remote wording';
+
+  it.each([
+    ['listDirectory', 'list-directory'],
+    ['statPath', 'stat-path'],
+    ['pathExists', 'path-exists'],
+  ] as const)('%s maps the path, forwards it and returns the decoded text', async (method, operation) => {
+    const h = harness();
+    const pending = h.port[method]('/remote/ws', './notes/a.md');
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    expect(lastRequest(h.sent)).toMatchObject({ operation, args: { path: 'notes/a.md' } });
+    h.reply({ text });
+    await expect(pending).resolves.toEqual({ text, path: 'notes/a.md' });
+  });
+
+  it.each([
+    ['headLines', 'head-lines'],
+    ['tailLines', 'tail-lines'],
+  ] as const)('%s forwards the line count and returns the decoded text', async (method, operation) => {
+    const h = harness();
+    const pending = h.port[method]('/remote/ws', './notes/a.md', 7);
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    expect(lastRequest(h.sent)).toMatchObject({ operation, args: { path: 'notes/a.md', count: 7 } });
+    h.reply({ text });
+    await expect(pending).resolves.toEqual({ text, path: 'notes/a.md' });
+  });
+
+  it.each(['listDirectory', 'statPath', 'pathExists'] as const)('%s refuses an absolute path without a request', async (method) => {
+    const h = harness();
+    await expect(h.port[method]('/remote/ws', '/remote/ws/a.md'))
+      .resolves.toEqual({ text: 'Outside the workspace: /remote/ws/a.md.', path: '/remote/ws/a.md' });
+    expect(hasRequest(h.sent)).toBe(false);
+  });
+
+  it.each(['headLines', 'tailLines'] as const)('%s refuses an absolute path without a request', async (method) => {
+    const h = harness();
+    await expect(h.port[method]('/remote/ws', '/remote/ws/a.md', 7))
+      .resolves.toEqual({ text: 'Outside the workspace: /remote/ws/a.md.', path: '/remote/ws/a.md' });
+    expect(hasRequest(h.sent)).toBe(false);
+  });
+
+  it('surfaces a channel refusal as a rejection, like the line read', async () => {
+    const h = harness();
+    const pending = h.port.listDirectory('/remote/ws', '../x');
+    await vi.waitFor(() => expect(hasRequest(h.sent)).toBe(true));
+    h.reply(undefined, 'Remote connection unavailable.');
+    await expect(pending).rejects.toThrow(new Error('Remote connection unavailable.'));
+  });
+});

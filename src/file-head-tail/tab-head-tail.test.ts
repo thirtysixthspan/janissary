@@ -1,9 +1,36 @@
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { RemoteChannel } from '../remote/channel/index.js';
+import type { NavigatorListener } from '../remote/channel/types.js';
+import type { ClientFrame } from '../remote/protocol-frames.js';
+import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
 import { readWorkspaceLines } from '../file-read/read.js';
 import { headTailInTab } from './tab-head-tail.js';
+
+type RequestFrame = Extract<ClientFrame, { type: 'filesystem-request' }>;
+
+function fakeChannel() {
+  const sent: ClientFrame[] = [];
+  let listener: NavigatorListener | undefined;
+  const attachNavigator = vi.fn((_id: string, value: NavigatorListener) => { listener = value; });
+  const channel = {
+    attachNavigator,
+    detachNavigator: vi.fn(),
+    send: (frame: ClientFrame) => { sent.push(frame); },
+  } as unknown as RemoteChannel;
+  const requests = () => sent.filter((frame): frame is RequestFrame => frame.type === 'filesystem-request');
+  const reply = (result: unknown, error?: string) => {
+    const request = requests().at(-1);
+    if (!request) throw new Error('No request was sent.');
+    listener?.onReply({
+      type: 'filesystem-reply', session: request.session, request: request.request,
+      ...(error ? { error } : { result }),
+    });
+  };
+  return { channel, attachNavigator, requests, reply };
+}
 
 let root: string;
 
@@ -124,5 +151,80 @@ describe('headTailInTab', () => {
   it('returns the usage line for malformed arguments', () => {
     expect(headTailInTab(managersWith(), 'janus', 'file head')).toBe('Usage: file head <path> [-n <lines>]');
     expect(headTailInTab(managersWith(), 'janus', 'file tail a.md -n 0')).toBe('Usage: file tail <path> [-n <lines>]');
+  });
+});
+
+describe('headTailInTab on a remote tab', () => {
+  const remoteRoot = '/remote/ws';
+  let remote: ReturnType<typeof fakeChannel>;
+
+  beforeEach(() => { remote = fakeChannel(); });
+
+  const managers = (hasChannel = true) => ({
+    tab: { launchDir: root, byLabel: () => ({ label: 'far', remote: { host: 'box' } }) },
+    remote: {
+      get: () => hasChannel ? remote.channel : undefined,
+      readyOf: () => Promise.resolve(remoteRoot),
+      workspaceOf: () => remoteRoot,
+    },
+  }) as never;
+
+  const start = (line: string, hasChannel = true) => headTailInTab(managers(hasChannel), 'far', line);
+  const replyText = async (line: string, text: string) => {
+    const pending = start(line);
+    await vi.waitFor(() => expect(remote.requests()).toHaveLength(1));
+    remote.reply({ text });
+    return pending;
+  };
+
+  it('returns far-side head numbering verbatim with the typed count forwarded', async () => {
+    makeFile('a.md', 'a\nb\nc\nd\ne');
+    const local = headTailInTab(managersWith(), 'janus', 'file head a.md -n 2');
+    expect(await replyText('file head a.md -n 2', local)).toBe(local);
+    const [request] = remote.requests();
+    expect(request).toMatchObject({ operation: 'head-lines', args: { path: 'a.md', count: 2 } });
+    expect(request?.session.startsWith('file-head-tail-')).toBe(true);
+    expect(request?.session).not.toBe('far');
+  });
+
+  it('returns far-side tail absolute numbering verbatim', async () => {
+    makeFile('a.md', 'a\nb\nc\nd\ne');
+    const local = headTailInTab(managersWith(), 'janus', 'file tail a.md -n 2');
+    expect(await replyText('file tail a.md -n 2', local)).toBe(local);
+    expect(remote.requests()[0]).toMatchObject({ operation: 'tail-lines', args: { path: 'a.md', count: 2 } });
+  });
+
+  it('returns the far-side notdir wording in both directions', async () => {
+    expect(await replyText('file head sub -n 2', 'notdir')).toBe('notdir');
+    remote = fakeChannel();
+    expect(await replyText('file tail sub -n 2', 'notdir')).toBe('notdir');
+  });
+
+  it('maps a relative path and never reads the local temporary directory', async () => {
+    makeFile('local-only.md', 'one\ntwo');
+    expect(await replyText('file head ./local-only.md -n 1', '1\tremote')).toBe('1\tremote');
+    expect(remote.requests()[0]).toMatchObject({ operation: 'head-lines', args: { path: 'local-only.md', count: 1 } });
+  });
+
+  it('returns the far-side secret refusal wording', async () => {
+    expect(await replyText('file head .env -n 1', 'Secret file: .env.')).toBe('Secret file: .env.');
+  });
+
+  it('answers an absolute path locally without a request', async () => {
+    expect(await start('file head /etc/passwd -n 1')).toBe('Outside the workspace: /etc/passwd.');
+    expect(remote.requests()).toEqual([]);
+  });
+
+  it('maps a far-side containment refusal to the path as typed', async () => {
+    const pending = start('file tail ../x -n 1');
+    await vi.waitFor(() => expect(remote.requests()).toHaveLength(1));
+    expect(remote.requests()[0]).toMatchObject({ args: { path: '../x', count: 1 } });
+    remote.reply(undefined, OUTSIDE_ROOT_REASON);
+    expect(await pending).toBe('Outside the workspace: ../x.');
+  });
+
+  it('prints the unavailable line without a channel', async () => {
+    expect(await start('file head a.md -n 1', false)).toBe('Remote connection unavailable.');
+    expect(remote.attachNavigator).not.toHaveBeenCalled();
   });
 });

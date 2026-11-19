@@ -18,7 +18,7 @@ import type { DiffSource } from '../../plugins/diff/shared.js';
 import { remoteGitCommit, remoteGitMetadata, remoteGitPull, type RemoteRequest } from './port-git.js';
 import { remoteMove, remoteMoveMany } from './port-moves.js';
 import {
-  remoteApplyPatch, remoteEditFile, remoteGlobPaths, remoteGrepFiles, remoteReadLines, remoteWebFetch, remoteWebSearch, remoteWriteFile,
+  remoteApplyPatch, remoteEditFile, remoteGlobPaths, remoteGrepFiles, remoteHeadLines, remoteListDirectory, remotePathExists, remoteReadLines, remoteStatPath, remoteTailLines, remoteWebFetch, remoteWebSearch, remoteWriteFile,
 } from './port-reads.js';
 import type { FileGlobArgs } from '../../file-glob/command.js';
 import type { FileGrepArgs } from '../../file-grep/command.js';
@@ -123,17 +123,19 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
     return remoteReadFile(this.requester(), this.paths, root, relPath);
   }
 
-  readLines(root: string, relPath: string, offset?: number, limit?: number): Promise<{ text: string; path: string }> {
-    return remoteReadLines(this.requester(), this.paths, root, relPath, offset, limit);
-  }
+  readLines(root: string, relPath: string, offset?: number, limit?: number): Promise<{ text: string; path: string }> { return remoteReadLines(this.requester(), this.paths, root, relPath, offset, limit); }
 
-  globPaths(root: string, args: FileGlobArgs): Promise<{ text: string; dir: string | undefined }> {
-    return remoteGlobPaths(this.requester(), this.paths, root, args);
-  }
+  globPaths(root: string, args: FileGlobArgs): Promise<{ text: string; dir: string | undefined }> { return remoteGlobPaths(this.requester(), this.paths, root, args); }
 
   grepFiles(root: string, args: FileGrepArgs): Promise<{ text: string; path: string | undefined }> {
     return remoteGrepFiles(this.requester(), this.paths, root, args);
   }
+
+  listDirectory(root: string, relPath: string): Promise<{ text: string; path: string }> { return remoteListDirectory(this.requester(), this.paths, root, relPath); }
+  statPath(root: string, relPath: string): Promise<{ text: string; path: string }> { return remoteStatPath(this.requester(), this.paths, root, relPath); }
+  pathExists(root: string, relPath: string): Promise<{ text: string; path: string }> { return remotePathExists(this.requester(), this.paths, root, relPath); }
+  headLines(root: string, relPath: string, count: number): Promise<{ text: string; path: string }> { return remoteHeadLines(this.requester(), this.paths, root, relPath, count); }
+  tailLines(root: string, relPath: string, count: number): Promise<{ text: string; path: string }> { return remoteTailLines(this.requester(), this.paths, root, relPath, count); }
 
   webSearch(args: WebSearchCommand): Promise<string> {
     return remoteWebSearch(this.requester(), args);

@@ -75,6 +75,51 @@ export async function remoteGrepFiles(
   return { text: result.text, path: sent };
 }
 
+export async function remoteListDirectory(
+  request: RemoteRequest, paths: RemotePortPaths, root: string, relPath: string,
+): Promise<{ text: string; path: string }> {
+  if (path.posix.isAbsolute(relPath)) return { text: `Outside the workspace: ${relPath}.`, path: relPath };
+  const sent = await paths.to(root, relPath);
+  const result = await request('list-directory', { path: sent });
+  return { text: result.text, path: sent };
+}
+
+export async function remoteStatPath(
+  request: RemoteRequest, paths: RemotePortPaths, root: string, relPath: string,
+): Promise<{ text: string; path: string }> {
+  if (path.posix.isAbsolute(relPath)) return { text: `Outside the workspace: ${relPath}.`, path: relPath };
+  const sent = await paths.to(root, relPath);
+  const result = await request('stat-path', { path: sent });
+  return { text: result.text, path: sent };
+}
+
+export async function remotePathExists(
+  request: RemoteRequest, paths: RemotePortPaths, root: string, relPath: string,
+): Promise<{ text: string; path: string }> {
+  if (path.posix.isAbsolute(relPath)) return { text: `Outside the workspace: ${relPath}.`, path: relPath };
+  const sent = await paths.to(root, relPath);
+  const result = await request('path-exists', { path: sent });
+  return { text: result.text, path: sent };
+}
+
+export async function remoteHeadLines(
+  request: RemoteRequest, paths: RemotePortPaths, root: string, relPath: string, count: number,
+): Promise<{ text: string; path: string }> {
+  if (path.posix.isAbsolute(relPath)) return { text: `Outside the workspace: ${relPath}.`, path: relPath };
+  const sent = await paths.to(root, relPath);
+  const result = await request('head-lines', { path: sent, count });
+  return { text: result.text, path: sent };
+}
+
+export async function remoteTailLines(
+  request: RemoteRequest, paths: RemotePortPaths, root: string, relPath: string, count: number,
+): Promise<{ text: string; path: string }> {
+  if (path.posix.isAbsolute(relPath)) return { text: `Outside the workspace: ${relPath}.`, path: relPath };
+  const sent = await paths.to(root, relPath);
+  const result = await request('tail-lines', { path: sent, count });
+  return { text: result.text, path: sent };
+}
+
 export async function remoteWebSearch(request: RemoteRequest, args: WebSearchCommand): Promise<string> {
   const result = await request('web-search', {
     query: args.query,
