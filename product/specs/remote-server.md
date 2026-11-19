@@ -700,6 +700,8 @@ openers, and editor saves travel back over the same channel.
 Each remote filesystem request must include the arguments required by its selected operation. A
 request with missing or malformed arguments is rejected before the operation accesses the workspace.
 
+Typed `file list`, `file stat`, `file exists`, `file head`, and `file tail` on a remote tab are answered on the far side and read the remote workspace, but they produce their text from the same implementation the local commands use, so the two surfaces cannot disagree. Row wording, the type words `file`, `dir`, and `link`, the one-word refusals `missing`, `forbidden`, and `notdir`, and the file reader's verbose error lines are identical whichever side answers. An unreadable directory is reported as `forbidden` on both, and a path that is neither a regular file, a directory, nor a link gets the same fallback word.
+
 Bare `files` from a remote shell or harness uses its remote cwd when that directory is inside the
 workspace, and the workspace root otherwise. During provisioning it reports
 `The remote workspace is not ready yet.` and opens nothing. Relative paths resolve against that

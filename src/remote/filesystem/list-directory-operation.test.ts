@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { FileSystemPort } from '../../file-navigator/filesystem-port.js';
 import { listFilesInTab } from '../../file-list/tab-list.js';
 import type { TestWorkspace } from './descriptor-test-workspace.js';
 import { createWorkspace } from './descriptor-test-workspace.js';
@@ -58,5 +59,18 @@ describe('listDirectoryOperation', () => {
 
   it('answers missing for an absent path', async () => {
     expect(await run('absent')).toBe('missing');
+  });
+
+  it('answers forbidden for an unreadable directory, matching the local list', async () => {
+    workspace.makeDir('locked');
+    const error: NodeJS.ErrnoException = new Error('permission denied');
+    error.code = 'EACCES';
+    const unreadable = { readDirectory: () => { throw error; } } as unknown as FileSystemPort;
+    const result = await listDirectoryOperation.run(
+      { ...workspace.context, filesystem: unreadable },
+      listDirectoryOperation.decode({ path: 'locked' }),
+    );
+    expect(result.text).toBe('forbidden');
+    expect(result.text).toBe(await listFilesInTab(workspace.managers(), 'janus', 'file list locked', unreadable));
   });
 });

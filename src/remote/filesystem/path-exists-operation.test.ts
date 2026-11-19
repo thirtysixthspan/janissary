@@ -1,3 +1,6 @@
+import { once } from 'node:events';
+import { createServer } from 'node:net';
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { fileExistsInTab } from '../../file-exists/tab-exists.js';
 import type { TestWorkspace } from './descriptor-test-workspace.js';
@@ -42,6 +45,23 @@ describe('pathExistsOperation', () => {
     expect(await run(path)).toBe(local);
     expect(await run(path)).not.toContain(path);
     expect(local).not.toContain(path);
+  });
+
+  it('answers file for a non-regular file type, matching the local command', async () => {
+    const socketPath = path.join(workspace.root, 'socket');
+    const server = createServer();
+    server.listen(socketPath);
+    await once(server, 'listening');
+    try {
+      const local = fileExistsInTab(workspace.managers(), 'janus', 'file exists socket');
+      const remote = pathExistsOperation.run(workspace.context, pathExistsOperation.decode({ path: 'socket' }));
+      expect(remote.text).toBe('file');
+      expect(remote.text).toBe(local);
+      expect(remote.text).not.toContain('socket');
+    } finally {
+      server.close();
+      await once(server, 'close');
+    }
   });
 
   it('answers forbidden for a path outside the workspace or a secret path', async () => {
