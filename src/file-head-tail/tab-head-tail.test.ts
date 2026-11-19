@@ -2,35 +2,10 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { RemoteChannel } from '../remote/channel/index.js';
-import type { NavigatorListener } from '../remote/channel/types.js';
-import type { ClientFrame } from '../remote/protocol-frames.js';
 import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
 import { readWorkspaceLines } from '../file-read/read.js';
+import { fakeChannel } from '../testing/fake-remote-channel.js';
 import { headTailInTab } from './tab-head-tail.js';
-
-type RequestFrame = Extract<ClientFrame, { type: 'filesystem-request' }>;
-
-function fakeChannel() {
-  const sent: ClientFrame[] = [];
-  let listener: NavigatorListener | undefined;
-  const attachNavigator = vi.fn((_id: string, value: NavigatorListener) => { listener = value; });
-  const channel = {
-    attachNavigator,
-    detachNavigator: vi.fn(),
-    send: (frame: ClientFrame) => { sent.push(frame); },
-  } as unknown as RemoteChannel;
-  const requests = () => sent.filter((frame): frame is RequestFrame => frame.type === 'filesystem-request');
-  const reply = (result: unknown, error?: string) => {
-    const request = requests().at(-1);
-    if (!request) throw new Error('No request was sent.');
-    listener?.onReply({
-      type: 'filesystem-reply', session: request.session, request: request.request,
-      ...(error ? { error } : { result }),
-    });
-  };
-  return { channel, attachNavigator, requests, reply };
-}
 
 let root: string;
 

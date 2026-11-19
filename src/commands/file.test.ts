@@ -11,32 +11,10 @@ import type { NavigatorListener } from '../remote/channel/types.js';
 import type { ClientFrame, RemoteFrame, ServerFrame } from '../remote/protocol-frames.js';
 import { decodeFrame, encodeFrame } from '../remote/protocol.js';
 import { RemoteFileNavigators } from '../remote/serve-file-navigator.js';
+import { fakeChannel, type RequestFrame } from '../testing/fake-remote-channel.js';
 import { command } from './file.js';
 
 type FakeTab = { label: string; workspaceDir?: string; remote?: unknown };
-
-function fakeChannel() {
-  const sent: ClientFrame[] = [];
-  let listener: NavigatorListener | undefined;
-  const attachNavigator = vi.fn((_id: string, value: NavigatorListener) => { listener = value; });
-  const channel = {
-    attachNavigator,
-    detachNavigator: vi.fn(),
-    send: (frame: ClientFrame) => { sent.push(frame); },
-  };
-  const requests = () => sent.filter((frame) => frame.type === 'filesystem-request');
-  const reply = (result: unknown, error?: string) => {
-    const request = requests().at(-1);
-    if (request?.type !== 'filesystem-request') throw new Error('No request was sent.');
-    listener?.onReply({
-      type: 'filesystem-reply', session: request.session, request: request.request,
-      ...(error ? { error } : { result }),
-    });
-  };
-  return { channel, attachNavigator, requests, reply, listener: () => listener };
-}
-
-type RequestFrame = Extract<ClientFrame, { type: 'filesystem-request' }>;
 
 function wireChannel(root: string) {
   const entries: { line: string; frame: RemoteFrame }[] = [];

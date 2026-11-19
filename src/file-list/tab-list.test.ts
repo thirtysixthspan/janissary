@@ -2,36 +2,11 @@ import { chmodSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } 
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { RemoteChannel } from '../remote/channel/index.js';
-import type { NavigatorListener } from '../remote/channel/types.js';
-import type { ClientFrame } from '../remote/protocol-frames.js';
 import type { FileSystemPort } from '../file-navigator/filesystem-port.js';
 import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
+import { fakeChannel } from '../testing/fake-remote-channel.js';
 import { FILE_LIST_USAGE } from './command.js';
 import { listFilesInTab } from './tab-list.js';
-
-type RequestFrame = Extract<ClientFrame, { type: 'filesystem-request' }>;
-
-function fakeChannel() {
-  const sent: ClientFrame[] = [];
-  let listener: NavigatorListener | undefined;
-  const attachNavigator = vi.fn((_id: string, value: NavigatorListener) => { listener = value; });
-  const channel = {
-    attachNavigator,
-    detachNavigator: vi.fn(),
-    send: (frame: ClientFrame) => { sent.push(frame); },
-  } as unknown as RemoteChannel;
-  const requests = () => sent.filter((frame): frame is RequestFrame => frame.type === 'filesystem-request');
-  const reply = (result: unknown, error?: string) => {
-    const request = requests().at(-1);
-    if (!request) throw new Error('No request was sent.');
-    listener?.onReply({
-      type: 'filesystem-reply', session: request.session, request: request.request,
-      ...(error ? { error } : { result }),
-    });
-  };
-  return { channel, attachNavigator, requests, reply };
-}
 
 const STAMP = Date.parse('2026-11-19T13:50:00Z') / 1000;
 
