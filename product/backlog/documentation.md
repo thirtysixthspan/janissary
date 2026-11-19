@@ -2,8 +2,6 @@
 
 ## ready
 
-* acp (3/10) — Of 16 user-visible ACP facts, 15 are correct and one is missing, with none wrong. The missing fact is the cancellation-failure outcome: when the native cancellation notification cannot be written, for example because a remote connection is unavailable, the prompt ends with `ACP: cancellation failed: <reason>` and the session is closed instead of settling as `ACP: prompt cancelled.` and being reused for the next prompt, per `product/specs/acp.md` and `src/acp/manager.ts`. No user doc or help page mentions this line. Add it to the Cancel bullet in the "Cancel, close, and reset" section of `documentation/user-documentation/advanced-agents/acp-agent.md`, which currently states cancellation always settles as `ACP: prompt cancelled.` without the failure case, and mirror a short note in the Cancel bullets of `help/ask.md` and `help/tell.md`.
-
 * commands-tab (3/10) — Of 20 user-visible Commands-tab facts, 19 are correct and one is missing. The missing fact is that rows are ordered by canonical command name; the dedicated page `documentation/user-documentation/tab-types/commands.md` describes label rules, icons, settings and scrolling but never states the sort order, and `help/commands.md` is equally silent. The behavior is implemented in `web/src/plugins/commands/CommandsTab.tsx` and `web/src/plugins/commands/CommandRow.tsx` and recorded in `product/specs/commands-tab.md`. Add one sentence on row ordering to the "The table" section of `documentation/user-documentation/tab-types/commands.md`, optionally mirrored in `help/commands.md`.
 
 * connections-tab (3/10) — Of 20 user-visible facts, 18 are correct and two are missing, with none wrong. First, `product/specs/connections-tab.md` states that connections-popup rows are operable by pointer and by Enter or Space, but `documentation/user-documentation/command-bar/connections.md` mentions Enter/Space only for the Refresh and Split header controls, not for the popup rows. Second, the same page names **Close session** but omits that it appears only while the session is `Running` or `Idle`, documenting only Cancel's `Running` gating. Add the popup-row activation note to the "The connections window" section and the Close-session gating to the "Connection tabs" section of `documentation/user-documentation/command-bar/connections.md`, optionally mirroring the gating in `help/connections.md`. The relevant source is `src/plugins/connections/activate.ts` and `src/plugins/connections-topic-actions.ts`.
@@ -32,6 +30,7 @@
 
 ## resolved
 
+* acp — documented in documentation/user-documentation/advanced-agents/acp-agent.md, help/ask.md, help/tell.md (removed 2026-11-19)
 * editor-tab — documented in documentation/user-documentation/tab-types/editor.md, help/keys.md, help/newfile.md (removed 2026-11-19)
 * sql-database — documented in documentation/user-documentation/tab-types/sql-browser.md (removed 2026-11-19)
 * workspaced-agent — documented in documentation/user-documentation/advanced-agents/workspaced-agent.md, documentation/user-documentation/tab-types/notifications.md (removed 2026-11-17)
