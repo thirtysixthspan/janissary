@@ -2,68 +2,150 @@
 
 | Command | Description |
 | ------- | ----------- |
-| `agent` | Run task: [on <host>] [in a tab] [in group <name|id>] [in workspace <label>] [with skill <name>] [using model <id>] [with effort <level>] execute <task> [parameters...] (effort: medium) |
-| `ask` | Query a core ACP connection using enabled models and native command grants from the `ask` role; the settled Markdown answer appears in shell output (`ask reset` starts fresh) |
+| `agent` | Run task: [on <host>] [in a tab] [in group <name\|id>] [in workspace <label>] [with skill <name>] [using model <id>] [with effort <level>] execute <task> [parameters...] (effort: medium) |
+| `ask` | Query a core ACP connection using enabled models and native command grants from the `ask` role; the settled Markdown answer appears in shell output |
+| `ask reset` | Start a fresh `ask` session, dropping the earlier exchange |
 | `audio` | `audio <path>` queues audio into the single audio tab through the bundled audio plugin; accepts the same paths and wildcards as `open` |
-| `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |
+| `browser` | Drive a headless/headed web browser in a tab; bare `browser` prints its usage |
+| `browser content` | Print the current browser page's text content |
+| `browser eval` | Run JavaScript in the current browser page and print the result |
+| `browser goto` | Navigate the current browser window to a URL |
+| `browser open` | Open a URL in a browser window |
+| `browser shot` | Save a screenshot of the current browser page |
 | `clear` | Clear the tab's output log; in a shell tab, bare `clear` is sent to zsh so it clears the terminal instead (use `/clear` to clear the output log) |
 | `clipboard` | Show session clipboard history with `clip`, Ctrl+Shift+V, or Cmd+Shift+V. Selecting an entry pastes it at the cursor; typing `clipboard` opens this help page |
 | `close` | Close the current tab (exits if last); `close <tabname>` closes a tab by label or display alias, and Cancel on its dirty prompt activates that tab. `/close` and `/exit` are equivalent |
-| `commands` | Open the Commands tab to enable or disable application commands and control native agent access; `commands enable\|disable [agent\|global] <command>` changes one setting |
-| `connection` | Open the connections tab; `connection <text>` opens a live connection or retained session by UUID or full title, and `connection list`/`connection close <connection>` manage live connections |
-| `connections` | Open the connections tab; `connections left`/`right` docks it, `connections <text>` looks up a session, and `connections list`/`connections close <connection>` manage live connections |
+| `commands` | Open the Commands tab to enable or disable application commands and control native agent access |
+| `commands disable` | `commands disable [agent\|global] <command>` turns off a command or its agent access |
+| `commands enable` | `commands enable [agent\|global] <command>` turns on a command or its agent access |
+| `connection` | Open the connections tab; `connection <text>` opens a live connection or retained session by UUID or full title |
+| `connection close <connection>` | Close a live connection by name or id |
+| `connection list` | List live connections and retained sessions |
+| `connections` | Open the connections tab; `connections <text>` looks up a live connection or retained session by UUID or title |
+| `connections close <connection>` | Close a live connection by name or id |
+| `connections left` | Dock the connections tab in the left sidebar |
+| `connections list` | List live connections and retained sessions |
+| `connections right` | Dock the connections tab in the right sidebar |
 | `conversation` | Bare `conversation` opens the conversation list; `conversation <title>` opens a saved conversation by title, ignoring case, or creates one and sends `<title>` as its first query |
-| `conversations` | Open the conversation list; `conversations left`/`right` docks it, and `conversations <title>` opens a saved conversation by title, ignoring case |
-| `db` | Create, delete, query, or list SQLite databases |
+| `conversations` | Open the conversation list; `conversations <title>` opens a saved conversation by title, ignoring case |
+| `conversations left` | Dock the conversation list in the left sidebar |
+| `conversations right` | Dock the conversation list in the right sidebar |
+| `db` | Open the database tab to create, delete, query, and list SQLite databases |
+| `db sqlite create` | `db sqlite create <name>` creates a new SQLite database |
+| `db sqlite delete` | `db sqlite delete <name>` deletes a SQLite database |
+| `db sqlite list` | `db sqlite list` lists the available SQLite databases |
+| `db sqlite query` | `db sqlite query <name> <sql>` runs SQL against a SQLite database |
 | `diff` | `diff` opens the diff tab on the project's changes versus HEAD; `diff <path>` scopes it to that directory's changes; `diff on <tab name>` opens that tab's workspace diff |
 | `edit` | Open a file for editing (`edit <file>[:line]`); a bare existing runscript name opens it when no exact file exists |
 | `execute` | Run an existing project runscript immediately in the managed system shell (`execute <name>`) |
-| `file` | `file read <path>` prints lines; `file glob <pattern>` lists paths; `file grep <pattern>` searches; `file write <JSON>` writes; `file edit <JSON>` edits; `file patch <JSON>` applies a multi-file patch |
-| `files` | `files [path]` opens a tree; `files <path> in <label>` targets another tab (quote labels with spaces or quotes). Remote paths use the host's workspace. `with <name\|size\|modified\|permissions>` sets details; `expand <path>`, `collapse <path>`, `cursor <path>`, `anchor <path>`, and `select <path>` restore view. `files print <tab>` prints a command |
-| `harness` | Open an AI coding harness with a disposable workspace and browser. Use `--no-workspace`, `--no-browser`, `--no-auto-approve`, or `--no-auto-resume` to opt out; `capture <name>` saves a screen |
-| `help` | `help` lists the commands; `help <command>` shows one command's usage, use cases, and examples; `help keys` lists the key bindings |
+| `file` | Use a `file` subcommand to read, search, write, and patch project files; bare `file` prints its usage |
+| `file edit` | `file edit <JSON>` applies a single-file edit |
+| `file glob` | `file glob <pattern>` lists paths matching a glob |
+| `file grep` | `file grep <pattern>` searches file contents |
+| `file patch` | `file patch <JSON>` applies a multi-file patch |
+| `file read` | `file read <path>` prints a file's lines with line numbers |
+| `file write` | `file write <JSON>` writes a file |
+| `files` | `files [path]` opens a tree; `files <path> in <label>` targets another tab (quote labels with spaces or quotes). `with <name\|size\|modified\|permissions>` sets details; remote paths use the host. |
+| `files anchor` | `files anchor <path>` restores the tree's anchor |
+| `files collapse` | `files collapse <path>` collapses a directory |
+| `files cursor` | `files cursor <path>` restores the cursor |
+| `files expand` | `files expand <path>` expands a directory |
+| `files select` | `files select <path>` restores the selection |
+| `harness` | Open an AI coding harness with a disposable workspace and browser. Use `--no-workspace`, `--no-browser`, `--no-auto-approve`, or `--no-auto-resume` to opt out |
+| `harness capture` | `harness capture <name>` saves a screen capture |
+| `help` | `help` lists the commands; use a help subcommand for a page or the key bindings |
+| `help <command>` | Show one command's usage, use cases, and examples |
+| `help commands` | Print the alphabetical commands table |
+| `help keys` | List the key bindings |
 | `hist` | Open command history picker |
-| `hosts` | Open the Hosts tab of saved hosts; `hosts list` prints them as JSON, `hosts add <name> <[user@]host[:port]> [path]` saves one, and `hosts remove <name>` removes one |
+| `hosts` | Open the Hosts tab of saved hosts; `hosts <name> <[user@]host[:port]> [path]` saves one |
+| `hosts add` | `hosts add <name> <[user@]host[:port]> [path]` saves a host |
+| `hosts list` | `hosts list` prints the saved hosts as JSON |
+| `hosts remove` | `hosts remove <name>` removes a saved host |
 | `image` | `image <path>` opens an image through the bundled image tab plugin; accepts the same paths and wildcards as `open` |
-| `launcher` | Open or focus the launcher (`launcher left` or `launcher right` to choose a sidebar). Select a command row and click again to run it, or select a tab row to focus it |
-| `layout` | `layout window <width> <height>`, `layout sidebar left\|right <width>`, `layout split <percent>`, or `layout reporting <percent>` sets a size; `layout show` prints the current ones |
-| `models` | Open the model catalog; use `models left` or `models right` to dock it |
+| `launcher` | Open or focus the launcher, where a selected command row runs on a second click |
+| `launcher left` | Dock the launcher in the left sidebar |
+| `launcher right` | Dock the launcher in the right sidebar |
+| `layout` | Set the application window, sidebar, split, or reporting size; see the layout rows below |
+| `layout reporting` | `layout reporting <percent>` sets the reporting area's share of the window |
+| `layout show` | Print the current sizes as re-runnable commands |
+| `layout sidebar` | `layout sidebar left\|right <width>` sets a sidebar's width |
+| `layout split` | `layout split <percent>` sets the left pane's share of the center area |
+| `layout window` | `layout window <width> <height>` sets the application window size |
+| `models` | Open the model catalog |
+| `models left` | Dock the model catalog in the left sidebar |
+| `models right` | Dock the model catalog in the right sidebar |
 | `monitor` | Start a persona-driven AI monitor — inline on the current tab, or watching other tabs/groups into a reporting tab |
 | `monitors` | List active monitors with their targets and suggestion counts |
+| `monitors left` | Dock the monitors list in the left sidebar |
+| `monitors right` | Dock the monitors list in the right sidebar |
 | `nav` | Open the fuzzy tab navigator (Ctrl+G); `nav <query>` pre-fills the search |
 | `newdir <directory>` | Create a directory immediately, choosing a free name if needed; its parent must exist |
 | `newfile <file>` | Open a new unsaved plain-text file, choosing a free name if needed; Save writes it to disk |
 | `next` | Switch to the next tab |
-| `notifications` | `notifications [left\|right]` opens or docks notifications; per-type settings control desktop banners and sounds for explicit and opted-in ambient events in `.janissary/config.json` |
+| `notifications` | Open the notifications feed; per-type settings control desktop banners and sounds in `.janissary/config.json` |
+| `notifications clear` | Empty the notification queue, record file, and on-screen toasts |
+| `notifications left` | Dock the notifications tab in the left sidebar |
+| `notifications right` | Dock the notifications tab in the right sidebar |
 | `notify` | `notify <message>` pushes a custom line into the notifications feed |
-| `open` | Open images/files in a tab, or web pages embedded (`open https://…` / `open page …`) — sites that refuse framing render too; `open external` uses the OS viewer/browser |
+| `open` | Open images and files in a tab or web pages embedded; sites that refuse framing still render |
+| `open external` | Open a file or URL in the OS viewer or browser |
+| `open page` | Open a web page in an embedded tab |
 | `pdf` | `pdf <path>` opens a PDF through the bundled PDF tab plugin; accepts the same paths and wildcards as `open` |
-| `play` | Play a file in the tab for its type: `play devbox` opens its newest `.cast` recording, `play clip.mp4` opens a video, and `play song.mp3` queues audio |
+| `play` | Play a file in the tab for its type: `play devbox`, a video, or an audio file |
 | `plugins` | Print bundled tab plugin statuses in the transcript, including API version, state, activation time, or disabled reason |
-| `profile` | Use `profile launch <name>` to launch a profile, or bare `profile launch` to pick one. `profile list` lists the available profiles |
-| `question` | `question ask "<question>"` opens a free-text answer panel; `question approve "<question>" <option> …` opens an option-button panel |
+| `profile` | Manage launch profiles |
+| `profile launch` | `profile launch <name>` launches a profile, or bare `profile launch` picks one |
+| `profile list` | `profile list` lists the available profiles |
+| `question` | Ask the user a question through an answer panel |
+| `question approve` | `question approve "<question>" <option> …` opens an option-button panel |
+| `question ask` | `question ask "<question>"` opens a free-text answer panel |
 | `queue` | Queue a command for a shell or another tab supporting queues (`queue <tab> <command>`); bare `queue` opens the interactive queue picker (Ctrl+E) |
 | `quit` | Exit the application (asks for confirmation); Cancel returns focus to the command bar that submitted it. `/quit` is equivalent |
 | `rename` | Rename the current tab's display name (`rename <name>`); bare `rename` clears the alias; in an editor tab, renames the file |
 | `roles` | Open the roles tab, where named roles map to harness/model/effort choices and native ACP command grants in `roles.json`; bare `roles` only |
-| `schedule` | Run a tab command later with `schedule <name> <form> <command>`, or manage project schedules that run persistent runscripts with `schedule system <name> <form> script <name>` |
-| `schedules` | Open the aggregated tab listing every scheduled command across all tabs, through the bundled schedules tab plugin (`schedules left`/`right` to dock it). Its **+** button opens the New schedule dialog |
+| `schedule` | Schedule a tab command to run later |
+| `schedule cancel` | Cancel a scheduled tab command |
+| `schedule clear` | Clear the scheduled commands for a tab |
+| `schedule list` | List the scheduled commands for a tab |
+| `schedule system` | Manage project schedules that run persistent runscripts with `schedule system <name> <form> script <name>` |
+| `schedules` | Open the aggregated tab listing every scheduled command across all tabs, through the bundled schedules tab plugin. Its **+** button opens the New schedule dialog |
+| `schedules left` | Dock the schedules tab in the left sidebar |
+| `schedules right` | Dock the schedules tab in the right sidebar |
 | `scripts` | Open the project's runscripts in `.janissary/scripts/`, which survive launch cleanup. Run, duplicate, or delete one from its row, or create one with **+**. |
-| `search` | `search` opens project search; `search <phrase>` searches for a phrase. From a workspaced tab, it searches that workspace. Use `search transcript <pattern>` to search the transcript |
+| `search` | `search` opens project search; `search <phrase>` searches for a phrase from the project or workspaced tab |
+| `search transcript` | `search transcript <pattern>` searches the current transcript |
 | `send` | Deliver a line to a harness, or submit it through a shell tab's command bar — application commands run in the app and unclaimed lines go to zsh |
-| `sessions` | Open the remote sessions list — every host you're connected to or parked on (`sessions left`/`right` to dock it) |
-| `shell` | `shell [name] [-w\|--workspace\|--no-workspace] [--offline] [on <address>]` opens a shell with a fresh workspace; `--no-workspace` uses a local shell, and `on <address>` opens a remote shell |
+| `sessions` | Open the remote sessions list — every host you're connected to or parked on |
+| `sessions left` | Dock the sessions list in the left sidebar |
+| `sessions right` | Dock the sessions list in the right sidebar |
+| `shell` | `shell [name] [-w\|--workspace\|--no-workspace] [--offline] [on <address>]` opens a shell with a fresh workspace; `on <address>` opens a remote shell |
 | `sql` | Open a SQL browser. Bare `sql` opens the most recently connected database; use `sql <name>` to choose one or add `left` or `right` to dock it |
 | `ssh` | Open an SSH session to a remote host in a full-tab terminal; a bare saved host name uses its stored destination, port and path |
 | `subagent` | `subagent --role <role> [--task <file.md>] [--context <text>]` runs a background agent; omit task when context carries the assignment; an ACP caller uses `subagent <json>` with no immediate output |
-| `syntax` | `syntax theme <name>` sets the syntax-highlighting theme for every open editor and diff tab; `syntax theme` alone opens a theme-picker modal |
-| `tab` | `focus <name>`, `move <tab> <position>`, `pane <tab> left\|right`, `split <tab>`, `color <tab> <#rrggbb>`, `group <tab> <id\|name>`, `dock <tab> left\|right`, `undock <tab>` arrange tabs |
+| `syntax` | Manage the syntax-highlighting theme used by editors and diff tabs |
+| `syntax theme` | `syntax theme <name>` sets the syntax theme; bare `syntax theme` opens a theme-picker modal |
+| `tab` | Arrange tabs; bare `tab` and unknown forms print the available subcommands |
+| `tab color` | `tab color <tab> <#rrggbb>` sets the tab's dot color |
+| `tab dock` | `tab dock <tab> left\|right` docks a tab into a sidebar |
+| `tab focus` | `tab focus <name>` focuses a tab by label or display alias |
+| `tab group` | `tab group <tab> <id\|name>` moves a tab into a group |
+| `tab move` | `tab move <tab> <position>` moves a tab among its strip mates |
+| `tab pane` | `tab pane <tab> left\|right` moves a tab into a pane |
+| `tab split` | `tab split <tab>` moves a tab to the other pane |
+| `tab undock` | `tab undock <tab>` returns a docked tab to the focused pane |
 | `tasks` | Open the task picker listing executable `ai/tasks/*.md` files from the project and Janissary (Ctrl+A) |
-| `tell` | Instruct a core ACP connection using enabled models and native command grants from the `tell` role; the settled Markdown reply appears in shell output (`tell reset` starts fresh) |
-| `theme` | Set the application UI theme (`theme <name>`); `theme` alone opens a theme-picker modal; `theme sync` sets the syntax theme to match the app theme name |
-| `unmonitor` | Stop a monitor by name, remove one target (`unmonitor <name> <target>`), or stop all monitors started from this tab (`--all`) |
-| `video` | `video <path>` opens a video tab, with the same paths and wildcards as `open`; `video snapshot <video> at <time> <file>` saves one frame as an image |
-| `web` | `web search <query>` searches the web through a configured provider (Tavily or TinyFish) and prints a Markdown list of results; `web fetch <url>` reads one page by its URL; see `help web` |
+| `tell` | Instruct a core ACP connection using enabled models and native command grants from the `tell` role; the settled Markdown reply appears in shell output |
+| `tell reset` | Start a fresh `tell` session, dropping the earlier exchange |
+| `theme` | Set the application UI theme; bare `theme` opens a theme-picker modal |
+| `theme sync` | `theme sync` sets the syntax theme to match the app theme name |
+| `unmonitor` | Stop a monitor by name or remove one target (`unmonitor <name> <target>`) |
+| `unmonitor --all` | Stop all monitors started from this tab |
+| `video` | `video <path>` opens a video tab, with the same paths and wildcards as `open` |
+| `video snapshot` | `video snapshot <video> at <time> <file>` saves one frame as an image |
+| `web` | Search the web or read a page through a configured provider; see `help web` |
+| `web fetch` | `web fetch <url>` reads one page by its URL |
+| `web search` | `web search <query>` prints a Markdown list of results from a configured provider (Tavily or TinyFish) |
 
 Both `shell` and `harness` launches accept `in group <name\|id>` to join an existing group by its case-insensitive name or numeric ID. An unknown name creates a group; an unknown positive ID creates that numbered group. Without the clause, the new tab joins the issuing tab's group.
 

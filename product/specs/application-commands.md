@@ -68,9 +68,9 @@ When a command is dispatched from a plugin tab, the reply preserves `dispatched`
 
 ### `help`
 
-Bare `help` and `help commands` print the alphabetical command table, whose descriptions are limited to 200 characters except for the `files` row, which is limited to 350 characters to fit its expanded syntax. A command description may include a shortcut reference, such as `Ctrl+E` in the `queue` row. The separate `Key Bindings` section appears only in `help keys` and is not included in bare `help`.
+Bare `help` and `help commands` print the alphabetical command table. A command with multiple fixed subcommand forms gets one row per form: `file read`, `file glob`, `file grep`, `file write`, `file edit`, and `file patch` each have their own row, as do the eight `tab` forms, the five `browser` forms, `web search` and `web fetch`, the five `layout` forms, `question ask` and `question approve`, `commands enable` and `commands disable`, and the view clauses of `files`. The parent row gives a short summary of the bare command and does not enumerate its forms. Every row's description is limited to 200 characters, with no exception. A command description may include a shortcut reference, such as `Ctrl+E` in the `queue` row. The separate `Key Bindings` section appears only in `help keys` and is not included in bare `help`.
 
-The `files` row keeps the `name`, `size`, `modified`, and `permissions` detail modes together in its single description cell. It also names the `expand <path>`, `collapse <path>`, `cursor <path>`, `anchor <path>`, and `select <path>` view clauses and notes that labels with spaces or quotes should be quoted.
+The `files` parent row keeps the `name`, `size`, `modified`, and `permissions` detail modes together and notes that labels with spaces or quotes should be quoted. The `expand <path>`, `collapse <path>`, `cursor <path>`, `anchor <path>`, and `select <path>` view clauses each have their own row named after the full form.
 
 Each command page uses one opening description after its `### <command>` heading, followed by **Usage**, **Use cases**, and **Examples** blocks in that order.
 

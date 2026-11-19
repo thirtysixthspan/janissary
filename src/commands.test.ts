@@ -124,20 +124,18 @@ describe('getOutput help pages', () => {
     expect(table.indexOf('| `subagent` |')).toBeLessThan(table.indexOf('| `syntax` |'));
   });
 
-  it('summarizes all files detail modes and view clauses in the command table', () => {
-    const filesRow = outputText('help commands').split('\n').find((line) => line.startsWith('| `files` |'));
+  it('keeps files detail modes in the parent row and view clauses in their own rows', () => {
+    const rows = new Map(outputText('help commands').split('\n')
+      .filter((line) => line.startsWith('| `'))
+      .map((line) => [line.slice(3, line.indexOf('`', 3)), line]));
+    const filesRow = rows.get('files');
     if (!filesRow) throw new Error('files command row is missing');
 
-    for (const syntax of [
-      '`with <name\\|size\\|modified\\|permissions>`',
-      '`expand <path>`',
-      '`collapse <path>`',
-      '`cursor <path>`',
-      '`anchor <path>`',
-      '`select <path>`',
-      '(quote labels with spaces or quotes)',
-    ]) {
+    for (const syntax of ['`with <name\\|size\\|modified\\|permissions>`', '(quote labels with spaces or quotes)']) {
       expect(filesRow).toContain(syntax);
+    }
+    for (const clause of ['expand', 'collapse', 'cursor', 'anchor', 'select']) {
+      expect(rows.get(`files ${clause}`)).toContain(`\`files ${clause} <path>\``);
     }
   });
 
@@ -261,34 +259,54 @@ describe('getOutput help pages', () => {
     expect(names).toEqual(names.toSorted((left, right) => left.localeCompare(right)));
   });
 
-  it('limits ordinary command descriptions to 200 characters and bounds the files row', () => {
-    const commandRows = outputText('help commands')
+  it('limits every command description in the table to 200 characters', () => {
+    const descriptions = outputText('help commands')
       .split('\n')
       .filter((line) => line.startsWith('| `'))
       .map((line) => {
         const separator = line.indexOf(' | ', line.indexOf('`') + 1);
-        return {
-          name: line.slice(3, line.indexOf('`', 3)).split(' ', 1)[0].toLowerCase(),
-          description: line.slice(separator + 3, line.lastIndexOf(' |')),
-        };
+        return line.slice(separator + 3, line.lastIndexOf(' |'));
       });
 
-    expect(commandRows.length).toBeGreaterThan(1);
-    const filesRows = commandRows.filter(({ name }) => name === 'files');
-    expect(filesRows).toHaveLength(1);
-    expect(filesRows[0]?.description.length).toBeGreaterThan(200);
-    expect(filesRows[0]?.description.length).toBeLessThanOrEqual(350);
-    expect(commandRows.filter(({ name, description }) => name !== 'files' && description.length > 200)).toEqual([]);
+    expect(descriptions.length).toBeGreaterThan(1);
+    expect(descriptions.filter((description) => description.length > 200)).toEqual([]);
+  });
+
+  it('gives each fixed subcommand form its own row in the commands table', () => {
+    const rows = new Map(outputText('help commands').split('\n')
+      .filter((line) => line.startsWith('| `'))
+      .map((line) => [line.slice(3, line.indexOf('`', 3)), line]));
+    const forms: Record<string, string[]> = {
+      file: ['file read', 'file glob', 'file grep', 'file write', 'file edit', 'file patch'],
+      tab: ['tab focus', 'tab move', 'tab pane', 'tab split', 'tab color', 'tab group', 'tab dock', 'tab undock'],
+      browser: ['browser open', 'browser goto', 'browser content', 'browser eval', 'browser shot'],
+      web: ['web search', 'web fetch'],
+      layout: ['layout window', 'layout sidebar', 'layout split', 'layout reporting', 'layout show'],
+      question: ['question ask', 'question approve'],
+      commands: ['commands enable', 'commands disable'],
+      files: ['files expand', 'files collapse', 'files cursor', 'files anchor', 'files select'],
+    };
+
+    for (const [parent, subcommands] of Object.entries(forms)) {
+      const parentRow = rows.get(parent);
+      if (!parentRow) throw new Error(`${parent} command row is missing`);
+      for (const form of subcommands) {
+        const formRow = rows.get(form);
+        if (!formRow) throw new Error(`${form} command row is missing`);
+        expect(formRow).toContain(`\`${form}`);
+        expect(parentRow).not.toContain(`\`${form}`);
+      }
+    }
   });
 
   it('has a help page for each command row and no orphan command pages', () => {
-    const commandNames = outputText('help commands')
+    const commandNames = [...new Set(outputText('help commands')
       .split('\n')
       .flatMap((line) => {
         const cell = line.startsWith('| `') ? line.slice(3, line.indexOf('`', 3)) : undefined;
         return cell ? [cell.split(' ', 1)[0].toLowerCase()] : [];
       })
-      .filter((name) => name !== 'commands');
+      .filter((name) => name !== 'commands'))];
     const helpDirectory = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'help');
     const pages = listHelpPages(helpDirectory).filter((page) => !['commands', 'keys'].includes(page));
 
