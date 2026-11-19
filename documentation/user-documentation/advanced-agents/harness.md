@@ -270,7 +270,7 @@ Other tabs can drive a harness: `send <tab> <text>` types a line into it, and [s
 
 ## Recordings
 
-Every harness session is recorded automatically. The full session, with its timing and colors, is written to a `.cast` file under `.janissary/recordings/` in your project, named `<label>-<timestamp>.cast`. The label is cleaned up on the way in: every character that isn't a letter, a digit, an underscore, or a dash becomes a dash, so `harness opencode as my-tab` records as `my-tab-<timestamp>.cast`. Captures, transcripts, and browser logs use the same rule. You can review a recording after its tab has closed and its scrollback is gone — `play` plays it back inside the app (see [Playing a recording back](#playing-a-recording-back)), and `asciinema play` still works on the files. Recordings contain terminal output, terminal resizes, and the session's exit status when the tab's process reports one, so playback can follow changes in window size. Keystrokes are not recorded as input events; text echoed by a program is part of its output.
+Every harness session is recorded automatically. The full session, with its timing and colors, is written to a `.cast` file under `.janissary/recordings/` in your project, named `<label>-<timestamp>.cast`. The label is cleaned up on the way in: every character that isn't a letter, a digit, an underscore, or a dash becomes a dash, so `harness opencode as my-tab` records as `my-tab-<timestamp>.cast`. Captures, transcripts, and browser logs use the same rule. You can review a recording after its tab has closed and its scrollback is gone — `play` plays it back inside the app (see [Playing a recording back](#playing-a-recording-back)), and `asciinema play` still works on the files (requires asciinema 3.x for v3 recordings). Recordings contain terminal output, terminal resizes, and the session's exit status when the tab's process reports one, so playback can follow changes in window size. Keystrokes are not recorded as input events; text echoed by a program is part of its output.
 
 Recording covers named harness tabs, dedicated SSH tabs, and [shell tabs](/user-documentation/command-bar/shell#open-a-shell-tab). Interactive programs launched through `!`, such as `!vim`, are not recorded — a tab whose body is a terminal records, a program the `!` command took a tab over to does not. The three kinds share one directory and are told apart by the file's header: a harness recording names the bare program in `command` and the tab label in `title`, an SSH recording carries the full invocation you typed, and a shell recording names the shell's own path (`/bin/zsh`). That is worth knowing before you type one: an invocation with a secret passed in an ssh flag value puts that secret in a plaintext file under `.janissary/recordings/`.
 
@@ -467,7 +467,7 @@ play .janissary/recordings/devbox-2026-07-10T18-30-05-123Z.cast
 ```
 
 A connected session is followed live, exactly like a harness recording. `asciinema play` still works
-on the files too:
+on the files too (requires asciinema 3.x for v3 recordings):
 
 ```
 asciinema play .janissary/recordings/devbox-2026-07-10T18-30-05-123Z.cast

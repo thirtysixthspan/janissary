@@ -2,8 +2,6 @@
 
 ## ready
 
-* harness-recording (3/10) — Of 20 user-visible facts, 19 are correct and one is missing. The docs say external playback with `asciinema play .janissary/recordings/<file>.cast` still works and that the files are standard asciicast v3, but `product/specs/harness-recording.md` states that v3 recordings need asciinema 3.x, a minimum the user docs omit and that could mislead someone on asciinema 2.x. Add a short "(requires asciinema 3.x for v3 recordings)" clause to the external-playback statements in `documentation/user-documentation/advanced-agents/harness.md`, including the SSH example, and optionally mirror it in `documentation/user-documentation/tab-types/recording-player.md`. Ground truth is `product/specs/harness-recording.md`, `src/harness/cast-header.ts` and `web/src/plugins/asciicast/usePlayback.ts`.
-
 * launcher (3/10) — Of 22 user-visible launcher facts, 19 are correct and three are missing, with none wrong. The omitted facts are that the command rail scrolls within a bounded area (`max-height: 45%; overflow-y: auto` in `web/src/plugins/launcher/launcher.css`) so the tab list stays available, that clicking a tab row which closed before its answer does nothing, and that hovering a tab row highlights it without opening an information popup. All three come from `product/specs/launcher.md` and none appears in `documentation/user-documentation/tab-types/launcher.md`, `help/launcher.md` or `help/commands.md`. Add the bounded-scroll note to the "Run a command" section and the closed-tab and hover notes to the "Find an open tab" section of `documentation/user-documentation/tab-types/launcher.md`, which is the correct destination.
 
 * markdown-rendering (3/10) — Of 15 user-visible facts, 14 are correct and one is missing. The shipped detector in `web/src/shared/transcript/file-link.ts` (`slurpLineNumber`) parses an optional column, so a reference such as `tests/test.py:10:5` renders as a clickable file link, but the "Follow source locations" section of `documentation/user-documentation/advanced-agents/markdown-rendering.md` shows only `src/app.ts:42` and describes matching before the line number, never the column form. Add one sentence there stating that a `filepath:line:col` reference is also a file link, so compiler and linter output carrying a column stays navigable. Ground truth is `product/specs/markdown-rendering.md` and `web/src/shared/transcript/file-link.ts`.
@@ -24,6 +22,7 @@
 
 ## resolved
 
+* harness-recording — documented in documentation/user-documentation/advanced-agents/harness.md, documentation/user-documentation/tab-types/recording-player.md (removed 2026-11-19)
 * harness — documented in documentation/user-documentation/advanced-agents/harness.md, help/harness.md (removed 2026-11-19)
 * connections-tab — documented in documentation/user-documentation/command-bar/connections.md, help/connections.md (removed 2026-11-19)
 * commands-tab — documented in documentation/user-documentation/tab-types/commands.md, help/commands.md (removed 2026-11-19)

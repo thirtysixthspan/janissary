@@ -52,9 +52,10 @@ terminal.
 
 Each recording is an asciicast file. Janissary writes version 3, with a header for the command, tab
 label, start time, and terminal dimensions, followed by timed output, resize, and process-exit events.
-The player also reads version 2 recordings. It replays the recorded dimensions rather than fitting the
-terminal to the tab, and a resize before the first output sets the starting dimensions without
-creating a recording file.
+The player also reads version 2 recordings. Playing a version 3 recording outside the app with
+`asciinema play` needs asciinema 3.x; an asciicast web player works too. It replays the recorded
+dimensions rather than fitting the terminal to the tab, and a resize before the first output sets the
+starting dimensions without creating a recording file.
 
 ## What it can do
 
