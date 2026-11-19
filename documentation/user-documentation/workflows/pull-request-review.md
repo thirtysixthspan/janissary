@@ -61,6 +61,10 @@ A feature can start from a ready plan rated anywhere from 1–10. A plan rated 1
 
 All the improved subplans are published to one open pull request before any implementation begins. The feature's original plan moves to the completed plans in that same first commit, so it becomes the pull request's own plan.
 
+On the single-plan route, the source plan is published first, then improved and built in place. It keeps its identity throughout, so a later update still finds it as the pull request's own plan. No second copy is made.
+
+A subplan skips the three closing stages a standalone feature build runs: it doesn't open a pull request, run the review-and-repair cycle, or finish with its own update. The complex-feature workflow runs focused reviews as each subplan lands and does one update for the whole feature at the end.
+
 ### Focused reviews and resolution reviews
 
 Once a subplan's implementation is pushed, that commit gets a review against its subplan alone. The whole pull request isn't reviewed during these cycles. Every finding goes into the backlog and is repaired one at a time, in file order, before any other review runs.
@@ -76,3 +80,5 @@ After the update and full review, the feature is tested in a real browser, the s
 The pull request is updated again so its description and the feature's own plan reflect the repairs. Any code repair that update finds goes through testing before another final update. See [Update a pull request](/user-documentation/workflows/updating-a-pull-request) for what an update changes.
 
 Before the feature is done, the published branch is checked for conflicts with the main branch, local validation failures, and failing GitHub checks. Conflicts go through conflict resolution on the same pull request, and a failing local or CI check goes through build repair in pull request mode. Recovery is limited to three verification sequences. Each sequence needs successful local validation and the configured GitHub checks for that branch or its current merge commit; a missing, stale, skipped, cancelled, inaccessible, or unfinished check doesn't count as success. If failures or conflicts remain after three sequences, the pull request stays open with a blocked report. The workflow never merges, closes, or replaces it.
+
+A recovery that changes the branch doesn't end the work there. The feature runs through another test-and-repair cycle and one more update, then the new published head is validated again from scratch. Proof from the earlier head doesn't carry over. Recovery also stops when the pull request's base isn't a primary branch the workflow supports: it reports the mismatch instead of switching targets.
