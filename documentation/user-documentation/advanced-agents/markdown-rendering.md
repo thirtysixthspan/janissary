@@ -24,7 +24,7 @@ Regular transcript output and Markdown replies turn text like `src/app.ts:42` in
 src/app.ts:42
 ```
 
-A single click opens the file in an editor at the named line. A value like `error:42` has no path separator, so it isn't a file link. Links beginning with `http://` or `https://` open through the app's page-opening behavior. A web address with a port, such as `http://localhost:3000`, stays a web link. A URL ending in `:42` also opens as a web page instead of a file-and-line reference. Other Markdown links keep their normal link behavior. In a shell's ACP answer, a link acts for the shell that owns the answer, as described in [Query ACP from a shell](/user-documentation/advanced-agents/acp-agent).
+A single click opens the file in an editor at the named line. A reference with a column, such as `src/app.ts:42:7`, is a file link too, so compiler and linter output that carries a column stays clickable. A value like `error:42` has no path separator, so it isn't a file link. Links beginning with `http://` or `https://` open through the app's page-opening behavior. A web address with a port, such as `http://localhost:3000`, stays a web link. A URL ending in `:42` also opens as a web page instead of a file-and-line reference. Other Markdown links keep their normal link behavior. In a shell's ACP answer, a link acts for the shell that owns the answer, as described in [Query ACP from a shell](/user-documentation/advanced-agents/acp-agent).
 
 Color, bold, and underline styling in shell output appears while a command runs and after it finishes. A file-and-line reference in a colored shell-output line stays clickable. Terminal control sequences such as cursor movement and clearing a line are omitted from the transcript.
 

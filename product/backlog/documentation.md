@@ -2,8 +2,6 @@
 
 ## ready
 
-* markdown-rendering (3/10) — Of 15 user-visible facts, 14 are correct and one is missing. The shipped detector in `web/src/shared/transcript/file-link.ts` (`slurpLineNumber`) parses an optional column, so a reference such as `tests/test.py:10:5` renders as a clickable file link, but the "Follow source locations" section of `documentation/user-documentation/advanced-agents/markdown-rendering.md` shows only `src/app.ts:42` and describes matching before the line number, never the column form. Add one sentence there stating that a `filepath:line:col` reference is also a file link, so compiler and linter output carrying a column stays navigable. Ground truth is `product/specs/markdown-rendering.md` and `web/src/shared/transcript/file-link.ts`.
-
 * pull-request-review (3/10) — Of 20 user-visible facts, 17 are correct and three are missing, with none wrong. The missing facts are that a subplan skips all three closing stages (opening the pull request, the review cycle and the update), that the single-plan route publishes its canonical source plan first and then improves it in place preserving its identity, and that any recovery which changes the branch needs another test/repair cycle, a final update and fresh validation of the new published head while an unsupported primary branch blocks completion. These are specified in `product/specs/pull-request-review.md` and implemented in `ai/tasks/feature/build-a-complex-feature.md`. Add them to the "How a complex feature is staged" and "Testing and final checks" sections of `documentation/user-documentation/workflows/pull-request-review.md`; no help page carries this workflow.
 
 * pull-request-testing (3/10) — Of 21 user-visible facts, 19 are correct and two are missing. The "Which branch runs" section of `documentation/user-documentation/workflows/testing-a-pull-request.md` says preparation, start and stop instructions all come from the pull request's base branch, but `product/specs/pull-request-testing.md` and `ai/tasks/feature/test-pull-request.md` require preparation to be read from `master` (falling back to `$janissary/ai/tasks/workspace/prepare-workspace.md`) while only start and stop come from the base branch, so a tested PR cannot rewrite its own tester. The same section omits that the supply-chain audit uses the installation's own runner rather than the branch's copy, runs no install scripts and installs exactly the audited lockfile. Add both details to that section of `documentation/user-documentation/workflows/testing-a-pull-request.md`; no help page needs editing because `help/tasks.md` has no row for this task.
@@ -20,6 +18,7 @@
 
 ## resolved
 
+* markdown-rendering — documented in documentation/user-documentation/advanced-agents/markdown-rendering.md (removed 2026-11-19)
 * launcher — documented in documentation/user-documentation/tab-types/launcher.md (removed 2026-11-19)
 * harness-recording — documented in documentation/user-documentation/advanced-agents/harness.md, documentation/user-documentation/tab-types/recording-player.md (removed 2026-11-19)
 * harness — documented in documentation/user-documentation/advanced-agents/harness.md, help/harness.md (removed 2026-11-19)
