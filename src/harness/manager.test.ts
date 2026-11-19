@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { HarnessManager } from './manager.js';
 import { TerminalRuntimeManager } from '../terminal-runtime/manager.js';
 import { HarnessScreenReader } from './screen.js';
@@ -13,6 +16,8 @@ import { BUNDLED_MODEL_CATALOG, type ModelCatalog } from '../models/catalog-file
 import type { Tab } from '../tab/types.js';
 import type { RemoteSessionView } from '../protocol.js';
 import { byLabel, harnessTab } from '../tab/lookup.js';
+import { DEFAULT_ROLES, writeRolesFile } from '../plugins/roles/roles-file.js';
+import type { Role, RoleEntry } from '../plugins/roles/shared.js';
 
 vi.mock('./capture/file.js', () => ({
   writeCaptureFile: vi.fn(() => '/project/.janissary/captures/claude-now.txt'),
@@ -70,6 +75,7 @@ afterEach(() => {
 
 function makeManagers(
   modelCatalog: ModelCatalog = BUNDLED_MODEL_CATALOG,
+  launchDir = '/project',
 ): { managers: Managers; tabs: Tab[]; edit: ReturnType<typeof vi.fn>; scheduleSet: ReturnType<typeof vi.fn> } {
   const tabs: Tab[] = [];
   const creator = { label: 'janus', log: [] } as unknown as Tab;
@@ -87,6 +93,7 @@ function makeManagers(
     },
     tab: {
       tabs,
+      launchDir,
       cur: () => creator,
       allLabels: () => tabs.map((tab) => tab.label),
       cwdOf: () => '/project',
@@ -748,6 +755,25 @@ describe('HarnessManager no-workspace auto-approve warning', () => {
 });
 
 describe('HarnessManager launch dialog view', () => {
+  let root: string;
+  let home: string;
+  let project: string;
+
+  beforeEach(() => {
+    root = mkdtempSync(path.join(tmpdir(), 'harness-launch-roles-'));
+    home = path.join(root, 'home');
+    project = path.join(root, 'project');
+    vi.stubEnv('HOME', home);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  const role = (name: string, entries: RoleEntry[]): Role => ({ name, description: '', commands: [], entries });
+  const defaultEntries = () => DEFAULT_ROLES.map((r) => r.entries.map(({ harness, model }) => ({ harness, model })));
+
   it('returns null while the dialog is closed', () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
@@ -794,6 +820,64 @@ describe('HarnessManager launch dialog view', () => {
     manager.openLaunchDialog();
     manager.closeLaunchDialog();
     expect(manager.harnessLaunchView()).toBeNull();
+  });
+
+  it('carries role entries in role and entry order, without effort', () => {
+    const { managers } = makeManagers(BUNDLED_MODEL_CATALOG, project);
+    writeRolesFile(path.join(managers.tab.launchDir, '.janissary', 'roles.json'), [
+      role('first', [
+        { harness: 'claude', model: 'opus', effort: 'high' },
+        { harness: 'codex', model: 'gpt-6' },
+      ]),
+      role('second', [{ harness: 'opencode', model: 'glm' }]),
+    ]);
+    const manager = new HarnessManager(managers);
+    manager.openLaunchDialog();
+
+    expect(manager.harnessLaunchView()!.roleEntries).toEqual([
+      [{ harness: 'claude', model: 'opus' }, { harness: 'codex', model: 'gpt-6' }],
+      [{ harness: 'opencode', model: 'glm' }],
+    ]);
+  });
+
+  it('uses the default roles when no roles file exists and creates no file', () => {
+    const { managers } = makeManagers(BUNDLED_MODEL_CATALOG, project);
+    const manager = new HarnessManager(managers);
+    manager.openLaunchDialog();
+
+    expect(manager.harnessLaunchView()!.roleEntries).toEqual(defaultEntries());
+    expect(existsSync(path.join(home, '.janissary', 'roles.json'))).toBe(false);
+    expect(existsSync(path.join(project, '.janissary', 'roles.json'))).toBe(false);
+  });
+
+  it('reads the entries once per open, so a mid-dialog edit waits for the next open', () => {
+    const file = path.join(project, '.janissary', 'roles.json');
+    writeRolesFile(file, [role('only', [{ harness: 'claude', model: 'before' }])]);
+    const { managers } = makeManagers(BUNDLED_MODEL_CATALOG, project);
+    const manager = new HarnessManager(managers);
+    manager.openLaunchDialog();
+    expect(manager.harnessLaunchView()!.roleEntries).toEqual([[{ harness: 'claude', model: 'before' }]]);
+
+    writeRolesFile(file, [role('only', [{ harness: 'claude', model: 'after' }])]);
+    expect(manager.harnessLaunchView()!.roleEntries).toEqual([[{ harness: 'claude', model: 'before' }]]);
+
+    manager.closeLaunchDialog();
+    manager.openLaunchDialog();
+    expect(manager.harnessLaunchView()!.roleEntries).toEqual([[{ harness: 'claude', model: 'after' }]]);
+  });
+
+  it('drops the stored entries on close so a fresh open reads the file again', () => {
+    const file = path.join(project, '.janissary', 'roles.json');
+    writeRolesFile(file, [role('only', [{ harness: 'claude', model: 'stored' }])]);
+    const { managers } = makeManagers(BUNDLED_MODEL_CATALOG, project);
+    const manager = new HarnessManager(managers);
+    manager.openLaunchDialog();
+    expect(manager.harnessLaunchView()!.roleEntries).toEqual([[{ harness: 'claude', model: 'stored' }]]);
+
+    rmSync(file);
+    manager.closeLaunchDialog();
+    manager.openLaunchDialog();
+    expect(manager.harnessLaunchView()!.roleEntries).toEqual(defaultEntries());
   });
 });
 

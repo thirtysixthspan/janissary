@@ -10,6 +10,7 @@ const view: HarnessLaunchView = {
   models: { claude: ['opus', 'sonnet'], opencode: ['opencode-go/glm-5.2'], codex: [] },
   autoApprove: ['claude', 'codex'],
   autoResume: ['opencode', 'codex'],
+  roleEntries: [],
 };
 
 function makeClient() {
