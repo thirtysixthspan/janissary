@@ -23,6 +23,7 @@
 | `harness` | Open an AI coding harness with a disposable workspace and browser. Use `--no-workspace`, `--no-browser`, `--no-auto-approve`, or `--no-auto-resume` to opt out; `capture <name>` saves a screen |
 | `help` | `help` lists the commands; `help <command>` shows one command's usage, use cases, and examples; `help keys` lists the key bindings |
 | `hist` | Open command history picker |
+| `hosts` | Open the Hosts tab of saved hosts; `hosts list` prints them as JSON, `hosts add <name> <[user@]host[:port]> [path]` saves one, and `hosts remove <name>` removes one |
 | `image` | `image <path>` opens an image through the bundled image tab plugin; accepts the same paths and wildcards as `open` |
 | `launcher` | Open or focus the launcher (`launcher left` or `launcher right` to choose a sidebar). Select a command row and click again to run it, or select a tab row to focus it |
 | `layout` | `layout window <width> <height>`, `layout sidebar left\|right <width>`, `layout split <percent>`, or `layout reporting <percent>` sets a size; `layout show` prints the current ones |
@@ -53,7 +54,7 @@
 | `sessions` | Open the remote sessions list — every host you're connected to or parked on (`sessions left`/`right` to dock it) |
 | `shell` | `shell [name] [-w\|--workspace\|--no-workspace] [--offline] [on <address>]` opens a shell with a fresh workspace; `--no-workspace` uses a local shell, and `on <address>` opens a remote shell |
 | `sql` | Open a SQL browser. Bare `sql` opens the most recently connected database; use `sql <name>` to choose one or add `left` or `right` to dock it |
-| `ssh` | Open an SSH session to a remote host in a full-tab terminal |
+| `ssh` | Open an SSH session to a remote host in a full-tab terminal; a bare saved host name uses its stored destination, port and path |
 | `subagent` | `subagent --role <role> [--task <file.md>] [--context <text>]` runs a background agent; omit task when context carries the assignment; an ACP caller uses `subagent <json>` with no immediate output |
 | `syntax` | `syntax theme <name>` sets the syntax-highlighting theme for every open editor and diff tab; `syntax theme` alone opens a theme-picker modal |
 | `tab` | `focus <name>`, `move <tab> <position>`, `pane <tab> left\|right`, `split <tab>`, `color <tab> <#rrggbb>`, `group <tab> <id\|name>`, `dock <tab> left\|right`, `undock <tab>` arrange tabs |

@@ -52,6 +52,42 @@ quote, a semicolon, a backtick, `$`, `&`, `|` — is rejected by name rather tha
 address can arrive from a profile file on disk as well as from something just typed. An `on` with no
 following token is a usage error.
 
+### Launching by saved name
+
+A bare `on <name>` that matches a saved host resolves to that host's concrete endpoint before the
+launch starts. The saved user, host, port, and path all take effect, so `on lab` can mean
+`admin@devbox` on port 2222 with its project at `/srv/proj`. When the saved entry has no path, the
+remote still finds its project root by walking up from the ssh login directory, exactly as a typed
+host without a path does. The saved name is handed to ssh as an operand rather than an option, so one
+beginning with a hyphen is still read as the destination. A saved host with a port no longer needs a
+`Host` alias in `~/.ssh/config` just to carry that port.
+
+Three rules decide which endpoint wins. First, a typed address always wins: an operand containing
+`@` or `:` is used literally and the saved catalog is never consulted, so `on devbox:/srv/proj` keeps
+meaning the path `/srv/proj` and a trailing `:2222` is still a directory name, not a port. Second, an
+unmatched name or an unusable catalog falls back to treating the token as a plain host name, which ssh
+resolves the way it always has. Third, if the project's catalog is malformed, janissary reports that
+once in the notifications feed and still uses a valid personal catalog, so a broken project override
+does not block a saved launch.
+
+An agent run's `on <name>` uses the same resolution before it resolves its target. When the saved
+entry has no path, the run can still borrow an established workspace whose SSH destination matches
+case-insensitively and whose port matches exactly; an omitted port does not match an explicit one,
+since SSH configuration can supply the default. A saved path is always explicit, so the run opens a
+run-only channel at that path even when another workspace shares the destination. The borrowed
+workspace keeps its own channel and receives only the run's lease, while a fresh channel's lease
+outlives the temporary run label. See [[agent-command]].
+
+The saved endpoint is pinned for the life of the launch. The initial connection, every automatic
+retry after a dropped transport, and a name-refusal retry under a different tab label all use the same
+resolved user, host, port, and path, even if the catalog is edited in between. A capture query for a
+parked session reconnects with what was recorded at launch for the same reason.
+
+A saved name that looks like a command keyword is still read as the address. Names such as `with`,
+`as`, `in`, and `--offline`, and names containing `with` such as `build-with-ssh`, reach the launch
+instead of becoming a prompt delimiter, a tab label, a group clause, or a flag. A real `with <prompt>`
+after the address still works, and `on` inside that prompt stays prompt text.
+
 ### Bootstrap requirement
 
 The remote must already have `janus` on its PATH. Nothing is shipped over the wire: no bundle
@@ -530,6 +566,8 @@ process with its own label — in the project's own state directory, so a peer s
 application has been closed and reopened. That record outlives an ordinary start rather than being
 swept with the rest of the state directory, and a record older than the seven-day wait is dropped
 when it is read, since it describes a peer that cannot still exist.
+
+When a session was launched through a saved host that has a port, or by a saved name, janissary writes that port and name into the record beside the address. Attaching, terminating, or asking a parked session for a capture reconnects with the saved port and name, even after the host entry has been edited to a different port or deleted altogether. Reconnection follows what was recorded at launch, so changing the catalog never redirects a session that is already parked. Records written before janissary kept this detail, and sessions launched from a typed address, still reconnect the way they always did; a record whose saved port or name is malformed is dropped when the record file is read, like any other invalid record.
 
 Attaching a parked session opens one ssh connection and asks the peer to take it back. The
 recorded launching tab is created first, so ssh's own password, passphrase, and host-key prompts

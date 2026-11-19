@@ -5,6 +5,7 @@ type Properties = {
   title: string;
   notes?: string[];
   confirmLabel: string;
+  confirmDisabled?: boolean;
   cancelLabel: string;
   onConfirm: () => void;
   onCancel: () => void;
@@ -12,8 +13,14 @@ type Properties = {
 
 // Shared two-button (confirm/cancel) modal shell — see useConfirmDialogKeys for the trapped
 // keyboard/click-outside behavior. Callers only vary the title, the optional note lines, and button text.
-export function ConfirmDialogShell({ title, notes = [], confirmLabel, cancelLabel, onConfirm, onCancel }: Properties) {
-  const { dialogRef, selected } = useConfirmDialogKeys(onConfirm, onCancel);
+export function ConfirmDialogShell({
+  title, notes = [], confirmLabel, confirmDisabled = false, cancelLabel, onConfirm, onCancel,
+}: Properties) {
+  // A disabled confirm must not answer through any of its three routes — mouse, `y`, or Enter on a
+  // selected confirm button. Guarding the callback covers the keyboard routes; the button's own
+  // `disabled` covers the mouse one.
+  const confirm = () => { if (!confirmDisabled) onConfirm(); };
+  const { dialogRef, selected } = useConfirmDialogKeys(confirm, onCancel);
 
   return (
     <div className="modal-backdrop">
@@ -23,7 +30,11 @@ export function ConfirmDialogShell({ title, notes = [], confirmLabel, cancelLabe
           <div key={note} className="modal-note">{note}</div>
         ))}
         <div className="modal-actions">
-          <button className={`modal-button${selected === 'confirm' ? ' selected' : ''}`} onClick={onConfirm}>
+          <button
+            className={`modal-button${selected === 'confirm' ? ' selected' : ''}`}
+            disabled={confirmDisabled}
+            onClick={confirm}
+          >
             {confirmLabel}
           </button>
           <button className={`modal-button${selected === 'cancel' ? ' selected' : ''}`} onClick={onCancel}>

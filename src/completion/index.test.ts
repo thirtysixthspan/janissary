@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -429,5 +429,36 @@ describe('completeCommandLine — web command', () => {
 
     expect(result.matches).toEqual([]);
     expect(result.newInput).toBe('web ');
+  });
+});
+
+describe('completeCommandLine — saved host names', () => {
+  const withNames = (line: string, names: () => string[], policy?: CompletionPolicy) =>
+    completeCommandLine(line, line.length, dir, [], [], undefined, undefined, undefined, undefined, policy, undefined, names);
+
+  it('tries saved names before the filesystem fallback', () => {
+    const names = vi.fn(() => ['lab']);
+    expect(withNames('ssh la', names).newInput).toBe('ssh lab ');
+    expect(names).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to filesystem paths when no saved name matches', () => {
+    expect(withNames('ssh rep', vi.fn(() => ['lab'])).newInput).toBe('ssh report.txt ');
+  });
+
+  it('preserves earlier handlers and never consults names there', () => {
+    const names = vi.fn(() => ['lab']);
+    expect(withNames('shell rep', names).newInput).toBe('shell report.txt ');
+    expect(names).not.toHaveBeenCalled();
+  });
+
+  it('consults neither a disabled command nor an unrelated slot', () => {
+    const disabled = vi.fn(() => ['lab']);
+    expect(withNames('ssh la', disabled, policyWith(['ssh'])).matches).toEqual([]);
+    expect(disabled).not.toHaveBeenCalled();
+
+    const unrelated = vi.fn(() => ['lab']);
+    expect(withNames('cat la', unrelated).newInput).toBe('cat la');
+    expect(unrelated).not.toHaveBeenCalled();
   });
 });

@@ -27,6 +27,7 @@
 | `Ctrl+E` | Open the queue picker for a shell or another tab with a queue and command bar (no-op on tabs without queues); blocked when `queue` is disabled in the Commands tab |
 | `Cmd+F` | Search for a line in an editor buffer, a shell tab's transcript, or a PDF tab's document |
 | `Cmd+N` / `Ctrl+N` (conversation list) | Create and open a new conversation |
+| `Cmd+N` / `Ctrl+N` (Hosts list) | Open the New host form while the list has focus; ignored with Shift or Alt, or when a button has focus |
 | `Backspace` / `Delete` | Delete the character before / after the cursor |
 | Printable characters | Insert at the command cursor |
 

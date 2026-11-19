@@ -3,8 +3,12 @@ import { beginDwell } from './dwell.js';
 import type { Tab } from './types.js';
 import { isCenterActionTab } from './placement.js';
 
+export function canDockTab(tab: Tab): boolean {
+  return !(isPluginTab(tab) && tab.plugin.id === 'hosts');
+}
+
 export function isDockableTab(tab: Tab): boolean {
-  return ['files', 'notifications', 'plugin'].includes(tab.view ?? '');
+  return canDockTab(tab) && ['files', 'notifications', 'plugin'].includes(tab.view ?? '');
 }
 
 // Resolves docking a tab into a sidebar (`'left'` | `'right'`), or undocking it back to the

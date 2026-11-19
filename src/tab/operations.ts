@@ -6,7 +6,7 @@ import { notify } from '../notifications/index.js';
 import { closeTabOp } from './close.js';
 import { renameTabOp } from './rename.js';
 import { retargetRemoteFile } from '../editor/remote-rename.js';
-import { applyDock } from './dock.js';
+import { applyDock, canDockTab } from './dock.js';
 import { insertTabInGroup } from './utils.js';
 import { setActiveTabOp, moveTabOp, reorderTabOp, reorderTabToOp } from './navigation-commands.js';
 import { centerPane, isCenterActionTab } from './placement.js';
@@ -48,7 +48,7 @@ export function moveTab(port: TabOperationsPort, dir: -1 | 1): void {
 
 export function setDock(port: TabOperationsPort, index: number, dock: 'left' | 'right' | null): void {
   const tab = port.tabs[index];
-  if (!tab) return;
+  if (!tab || !canDockTab(tab)) return;
   const sourcePane = centerPane(tab);
   const wasActive = index === port.activeTab;
   const wasSecondary = tab.label === port.secondaryTabLabel;

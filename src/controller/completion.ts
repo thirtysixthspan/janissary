@@ -1,3 +1,4 @@
+import { homedir } from 'node:os';
 import { completeCommandLine } from '../completion/index.js';
 import { completionPolicy } from '../completion/command-policy.js';
 import type { Managers } from '../managers.js';
@@ -7,6 +8,7 @@ import { catalogRunscripts } from '../schedule/system/runscript-files.js';
 import { byLabelOrAlias } from '../tab/lookup.js';
 import type { FilesCompletions } from '../completion/files.js';
 import { localReadRoot } from '../file-read/tab-read.js';
+import { readHostsFile } from '../plugins/hosts/hosts-file.js';
 
 export function complete(managers: Managers, text: string, cursor: number, label?: string): CompletionResult {
   const tab = (label ? managers.tab.byLabel(label) : undefined) ?? managers.tab.cur();
@@ -39,5 +41,6 @@ export function complete(managers: Managers, text: string, cursor: number, label
     (harness) => managers.models.modelsFor(harness),
     completionPolicy(managers.nativeCommandSettings?.current()),
     localReadRoot(managers, tab.label),
+    () => readHostsFile(managers.tab.launchDir, homedir()).hosts.map((host) => host.name),
   );
 }

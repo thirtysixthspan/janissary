@@ -3,6 +3,7 @@ import { resolveLocalLaunchName } from '../launch-name/local.js';
 import { suffixCandidates } from '../launch-name/check.js';
 import { HARNESS_NAMES } from './index.js';
 import { parseHarnessCommand, type HarnessLaunch } from './command-parse.js';
+import { resolveRemoteLaunchAddress } from '../remote/saved-host.js';
 import { resolveLaunchDir } from './launch-dir.js';
 import type { HarnessLaunchView } from '../protocol.js';
 import type { ScreenCapture } from './screen.js';
@@ -73,7 +74,11 @@ export class HarnessManager extends HarnessTabSpawn {
     if (parsed.model && !this.managers.models.isKnownModel(parsed.name, parsed.model)) {
       return `Unknown model "${parsed.model}" for harness "${parsed.name}" — add it to known-models.json.`;
     }
-    return this.open(parsed, invocation);
+    const originLabel = invocation?.caller.label ?? this.managers.tab.cur().label;
+    const remote = parsed.remote === undefined
+      ? undefined
+      : resolveRemoteLaunchAddress(this.managers, originLabel, parsed.remote);
+    return this.open({ ...parsed, remote }, invocation);
   }
 
   // Open the "New harness" launch dialog (bare `harness`). Held as a flag, mirroring

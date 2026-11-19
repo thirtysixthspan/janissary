@@ -24,6 +24,7 @@ export type RemoteSessionView = {
   id: string;
   // The bare host, first column.
   host: string;
+  hostName?: string;
   // What the row is running, second column: a harness or agent label, `ssh`, or a navigator's
   // abbreviated root.
   name: string;

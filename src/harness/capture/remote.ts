@@ -1,9 +1,9 @@
 import { RemoteChannel } from '../../remote/channel/index.js';
 import { deferredChannelTransport } from '../../remote/channel/types.js';
 import { provisionOrigin, remoteCaptureCommand } from '../../remote/entry-factory.js';
-import { parseRemoteAddress } from '../../remote/address.js';
 import type { PtySession } from '../../pty.js';
 import type { Managers } from '../../managers.js';
+import { addressFromSessionRecord } from '../../sessions/record-address.js';
 import type { RemoteSessionRecord } from '../../sessions/store.js';
 
 export type RemoteCaptureResult = { text: string; capturedAt: number } | { error: string } | undefined;
@@ -23,7 +23,7 @@ export function queryParkedCapture(
   managers: Managers, record: RemoteSessionRecord, processId: string,
 ): Promise<RemoteCaptureResult> {
   return new Promise((resolve) => {
-    const remote = parseRemoteAddress(record.address);
+    const remote = addressFromSessionRecord(record);
     if ('error' in remote) { resolve(undefined); return; }
     const deferred: { session?: PtySession } = {};
     let terminal = '';

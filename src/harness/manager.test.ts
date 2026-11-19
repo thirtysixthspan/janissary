@@ -5,6 +5,7 @@ import { HarnessScreenReader } from './screen.js';
 import { HarnessRecorder } from './recorder.js';
 import { writeCaptureFile } from './capture/file.js';
 import { notify } from '../notifications/index.js';
+import { readHostsFile } from '../plugins/hosts/hosts-file.js';
 import { autoApproveWithoutWorkspaceWarning } from './auto-approve.js';
 import { hasLeftoverWorkspace, isWorkspaceRunning, removeLeftoverWorkspace } from '../launch-name/leftover.js';
 import { messageBus } from '../bus.js';
@@ -31,6 +32,10 @@ vi.mock('./scratch-dir.js', () => ({
 }));
 
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
+
+vi.mock('../plugins/hosts/hosts-file.js', () => ({
+  readHostsFile: vi.fn(() => ({ hosts: [], path: '', usable: true, problems: [] })),
+}));
 
 // No workspace folder exists or is held for any label unless a test says so, so a `-w` launch goes
 // ahead without touching the filesystem.
@@ -1165,6 +1170,7 @@ describe('HarnessManager remote launch', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     recorderMock.instances.length = 0;
+    vi.mocked(readHostsFile).mockReturnValue({ hosts: [], path: '', usable: true, problems: [] });
   });
 
   afterEach(() => {
@@ -1202,6 +1208,45 @@ describe('HarnessManager remote launch', () => {
       remote: { address: 'admin@devbox:/srv/proj', host: 'devbox' },
       workspaceDir: undefined,
     });
+  });
+
+  it('opens the channel and the placeholder with the resolved saved endpoint', () => {
+    const { managers, tabs } = remoteLaunch();
+    vi.mocked(readHostsFile).mockReturnValue({
+      hosts: [{ name: 'lab', host: 'devbox', user: 'admin', port: 2222, path: '/srv/proj' }],
+      path: '', usable: true, problems: [],
+    });
+    const manager = new HarnessManager(managers);
+
+    expect(manager.run('harness claude on lab')).toBeUndefined();
+    expect(vi.mocked(managers.remote.create).mock.calls[0]?.[1]).toMatchObject({
+      address: 'admin@devbox:/srv/proj', destination: 'admin@devbox', host: 'devbox', port: 2222, hostName: 'lab',
+    });
+    expect(tabs.at(-1)).toMatchObject({
+      remote: { address: 'admin@devbox:/srv/proj', host: 'devbox' },
+    });
+  });
+
+  it('keeps the resolved endpoint on a name-refusal retry even if the catalog changes', async () => {
+    const { managers, tabs, refuse, launchedLabels } = remoteLaunch();
+    vi.mocked(readHostsFile).mockReturnValue({
+      hosts: [{ name: 'lab', host: 'devbox', port: 2222 }], path: '', usable: true, problems: [],
+    });
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude on lab')).toBeUndefined();
+    const first = vi.mocked(managers.remote.create).mock.calls[0]?.[1];
+
+    vi.mocked(readHostsFile).mockReturnValue({
+      hosts: [{ name: 'lab', host: 'otherbox', port: 9999 }], path: '', usable: true, problems: [],
+    });
+    refuse();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(launchedLabels()).toEqual(['claude', 'claude-2']);
+    expect(readHostsFile).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(managers.remote.create).mock.calls[1]?.[1]).toEqual(first);
+    expect(first).toMatchObject({ address: 'devbox', host: 'devbox', port: 2222, hostName: 'lab' });
+    expect(tabs.at(-1)).toMatchObject({ remote: { address: 'devbox', host: 'devbox' } });
   });
 
   it('promotes the tab to running with a remote PtySession once the workspace is ready', async () => {

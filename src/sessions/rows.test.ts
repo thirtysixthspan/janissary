@@ -90,6 +90,29 @@ describe('composeSessionRows live channels', () => {
     expect(row.workspace).toBe('/srv/ws');
   });
 
+  it('puts the channel\'s saved launch name on the launching row and every joined row', () => {
+    const rows = composeSessionRows(snapshot({
+      channels: [channel({
+        hostName: 'lab',
+        members: [
+          { label: 'claude', name: 'claude', kind: 'harness', activity: 100 },
+          { label: 'bekir', name: 'bekir', kind: 'shell', activity: 90 },
+        ],
+      })],
+    }));
+    expect(rows.map((row) => row.hostName)).toEqual(['lab', 'lab']);
+  });
+
+  it('keeps the saved launch name on a reconnecting channel row', () => {
+    const [row] = composeSessionRows(snapshot({ channels: [channel({ hostName: 'lab', reconnecting: true })] }));
+    expect(row.hostName).toBe('lab');
+  });
+
+  it('leaves the saved launch name off a channel launched by a literal destination', () => {
+    const [row] = composeSessionRows(snapshot({ channels: [channel()] }));
+    expect(row.hostName).toBeUndefined();
+  });
+
   it('offers focus, detach, and terminate on the launching row', () => {
     const [row] = composeSessionRows(snapshot({ channels: [channel()] }));
     expect(row.actions).toEqual(['focus', 'detach', 'diff', 'terminate']);
@@ -197,6 +220,20 @@ describe('composeSessionRows ssh tabs', () => {
     }));
     expect(row.actions).toEqual(['focus', 'close']);
   });
+
+  it('carries the saved launch name of an ssh tab opened from a saved host', () => {
+    const [row] = composeSessionRows(snapshot({
+      ssh: [{ label: 'build-01', host: 'build-01', hostName: 'lab', destination: 'build-01', activity: 70 }],
+    }));
+    expect(row.hostName).toBe('lab');
+  });
+
+  it('leaves the saved launch name off an ssh tab opened from a literal destination', () => {
+    const [row] = composeSessionRows(snapshot({
+      ssh: [{ label: 'build-01', host: 'build-01', destination: 'build-01', activity: 70 }],
+    }));
+    expect(row.hostName).toBeUndefined();
+  });
 });
 
 describe('composeSessionRows detached records', () => {
@@ -236,6 +273,16 @@ describe('composeSessionRows detached records', () => {
     const rows = composeSessionRows(snapshot({ detached: [{ record: record() }] }));
     expect(rows[0].id).toBe('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee:spawn-1');
     expect(rows[0].session).toBe('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
+  });
+
+  it('carries the saved launch name from the record onto a detached row', () => {
+    const [row] = composeSessionRows(snapshot({ detached: [{ record: record({ hostName: 'lab' }) }] }));
+    expect(row.hostName).toBe('lab');
+  });
+
+  it('leaves the saved launch name off a detached row without one', () => {
+    const [row] = composeSessionRows(snapshot({ detached: [{ record: record() }] }));
+    expect(row.hostName).toBeUndefined();
   });
 
   it('offers attach and end on the launching row', () => {
@@ -306,6 +353,17 @@ describe('composeSessionRows terminated sessions', () => {
     }));
     expect(row.state).toBe('terminated');
     expect(row.actions).toEqual(['forget']);
+  });
+
+  it('carries the saved launch name onto a terminated row', () => {
+    const [row] = composeSessionRows(snapshot({
+      terminated: [{
+        session: 'cccccccc-dddd-eeee-ffff-000000000000',
+        host: 'devbox', hostName: 'lab', destination: 'devbox', workspace: '/srv/ws',
+        label: 'claude-3', name: 'claude-3', kind: 'harness', activity: 10,
+      }],
+    }));
+    expect(row.hostName).toBe('lab');
   });
 });
 

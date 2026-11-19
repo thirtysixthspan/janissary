@@ -19,6 +19,7 @@ import { completeRunscriptCommand } from './runscript-commands.js';
 import { completeFilesCommand, type FilesCompletions } from './files.js';
 import { completeFileReadCommand } from './file-read.js';
 import { completeWebCommand } from './web.js';
+import { completeSavedHost, isSavedHostSlot } from './hosts.js';
 import { listHelpPages } from '../help-pages.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -48,6 +49,9 @@ const HELP_DIRECTORY = path.join(path.dirname(fileURLToPath(import.meta.url)), '
  *   completes the flags not yet used after the query and the values of `--depth` and `--provider`;
  *   for `web fetch`, the flags not yet used after the URL and the values of `--format` and
  *   `--provider`. The query, the URL, and numeric values get no candidates and no path fallback.
+ * - At a saved-host argument (`ssh`, `hosts remove`, or the token after `on` in `shell`, `harness`
+ *   and `agent`), offers names from `hostNames` before falling back to filesystem paths. The provider
+ *   is consulted only in one of those slots, so unrelated completions do no catalog I/O.
  * - Otherwise completes a filesystem path relative to `cwd`.
  *
  * A single match is filled in fully; multiple matches fill in their longest common prefix
@@ -65,6 +69,7 @@ export function completeCommandLine(
   modelsFor?: (harness: string) => string[],
   policy: CompletionPolicy = ALL_ENABLED_POLICY,
   fileReadRoot?: string,
+  hostNames?: () => string[],
 ): CompletionResult {
   const cursor = readCompletionCursor(input, cursorOffset);
   const prefix = cursor.preceding.join(' ');
@@ -89,5 +94,7 @@ export function completeCommandLine(
     completeFileReadCommand(cursor, fileReadRoot, policy) ??
     completeWebCommand(cursor, policy) ??
     (modelsFor ? completeHarnessModel(cursor, modelsFor) : null);
-  return result ?? completeFilePath(cursor, cwd);
+  return result
+    ?? (hostNames !== undefined && isSavedHostSlot(cursor) ? completeSavedHost(cursor, hostNames()) : null)
+    ?? completeFilePath(cursor, cwd);
 }

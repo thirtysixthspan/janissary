@@ -25,12 +25,14 @@ export function ConfirmDialog({
   title,
   notes,
   confirmLabel,
+  confirmDisabled,
   onConfirm,
   onCancel,
 }: {
   title: string;
   notes?: string[];
   confirmLabel: string;
+  confirmDisabled?: boolean;
   onConfirm(): void;
   onCancel(): void;
 }) {
@@ -39,6 +41,7 @@ export function ConfirmDialog({
       title={title}
       notes={notes}
       confirmLabel={confirmLabel}
+      confirmDisabled={confirmDisabled}
       cancelLabel="Cancel"
       onConfirm={onConfirm}
       onCancel={onCancel}

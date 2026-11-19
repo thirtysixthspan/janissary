@@ -32,6 +32,14 @@ describe('parseRemoteAddress', () => {
     expect(parseRemoteAddress('devbox:2222')).toMatchObject({ destination: 'devbox', path: '2222' });
   });
 
+  // Only a validated saved endpoint may set a port or a host name; the parser invents neither,
+  // even when the literal path is all digits and looks like one.
+  it('leaves port and hostName absent on a parsed address with a numeric-looking path', () => {
+    expect(parseRemoteAddress('devbox:2222')).toEqual({
+      address: 'devbox:2222', destination: 'devbox', host: 'devbox', path: '2222',
+    });
+  });
+
   it('reports a usage error for an absent token', () => {
     expect(parseRemoteAddress(undefined)).toEqual({ error: expect.stringContaining('Usage: on') });
   });

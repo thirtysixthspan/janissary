@@ -55,7 +55,11 @@ function parseNamedClause(words: string[], index: number, fields: Fields, seen: 
   const valueIndex = index + (word === 'on' ? 1 : 2);
   const value = words[valueIndex];
   const label = word === 'on' ? 'on' : `${word} ${clause ?? ''}`.trim();
-  if (!value || value.toLowerCase() === 'execute') return { error: `Agent: missing value for ${label}.` };
+  const savedNameExecute = word === 'on' && value?.toLowerCase() === 'execute'
+    && words.slice(valueIndex + 1).some((next) => next.toLowerCase() === 'execute');
+  if (!value || (value.toLowerCase() === 'execute' && !savedNameExecute)) {
+    return { error: `Agent: missing value for ${label}.` };
+  }
   if (word === 'with' && clause === 'skill') {
     fields.skills.push(value);
     return { next: valueIndex + 1 };

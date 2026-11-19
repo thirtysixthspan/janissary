@@ -10,6 +10,14 @@ function tab(label: string, pane?: CenterPane, dock?: 'left' | 'right'): Tab {
   return { label, pane, dock, view: 'agent', hasUnread: true } as unknown as Tab;
 }
 
+function pluginTab(label: string, id: string): Tab {
+  return {
+    ...tab(label),
+    view: 'plugin',
+    plugin: { id, instanceKey: id, schemaVersion: 1, payload: {}, fileRefs: [], sourceLabel: 'janus' },
+  };
+}
+
 // Every manager a closing tab is released from, each answering `closeTab`. Built from the exported
 // list rather than restated, so a manager added to the release order is covered without editing this.
 function managerServices() {
@@ -60,6 +68,16 @@ describe('setDock', () => {
     const port = makePort([tab('a'), tab('b')]);
     setDock(port, 1, 'right');
     expect(port.tabs[1].dock).toBe('right');
+  });
+
+  it('leaves the Hosts plugin in the center but still docks another plugin', () => {
+    const port = makePort([tab('keeper'), pluginTab('hosts', 'hosts'), pluginTab('shell', 'shell')]);
+    setDock(port, 1, 'left');
+    expect(port.tabs[1].dock).toBeUndefined();
+    expect(port.repairSelections).not.toHaveBeenCalled();
+
+    setDock(port, 2, 'left');
+    expect(port.tabs[2].dock).toBe('left');
   });
 
   // Undocking a tab while the right pane is showing it is not a move back to the left: the pane it

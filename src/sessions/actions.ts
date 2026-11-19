@@ -110,6 +110,7 @@ function terminatedRowFrom(record: RemoteSessionRecord): SessionTerminated {
   return {
     session: record.session,
     host: record.host,
+    ...(record.hostName !== undefined && { hostName: record.hostName }),
     destination: record.destination,
     workspace: record.workspaceDir,
     label: record.launchLabel,

@@ -2,9 +2,9 @@ import { distinctColor } from '../tab/colors.js';
 import { uniqueLabel } from '../tab/utils.js';
 import type { Managers } from '../managers.js';
 import { startSshBridge } from './ssh-bridge.js';
-import { parseRemoteAddress } from '../remote/address.js';
 import { askSessionState } from '../remote/resume.js';
 import { restoreSessionTabs } from './restore-tabs.js';
+import { addressFromSessionRecord } from './record-address.js';
 import type { RemoteSessionRecord } from './store.js';
 
 // Bringing a parked session back. The launching tab is created first, exactly as a remote launch
@@ -81,7 +81,7 @@ function spawnIdOf(record: RemoteSessionRecord): string | undefined {
 export function startSessionAttach(
   managers: Managers, record: RemoteSessionRecord,
 ): Promise<AttachOutcome> {
-  const address = parseRemoteAddress(record.address);
+  const address = addressFromSessionRecord(record);
   if ('error' in address) return Promise.resolve({ kind: 'failed', reason: address.error });
   const shellSession = isShellSession(record);
   const harness = harnessNameOf(record);

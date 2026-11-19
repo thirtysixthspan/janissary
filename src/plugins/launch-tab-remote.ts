@@ -1,21 +1,17 @@
 import { startRemoteLaunch } from '../harness/remote-launch.js';
-import { poolCandidates, suffixCandidates } from '../launch-name/check.js';
 import { resolveLocalLaunchName } from '../launch-name/local.js';
 import { failRemoteLaunch, reportRemoteCleanup, reportRemoteClone, type RemoteNameRetry } from '../launch-name/fail-remote.js';
 import { notify } from '../notifications/index.js';
 import { abbreviateWorkspaceDir } from '../paths.js';
 import { parseRemoteAddress } from '../remote/address.js';
-import { isInsideRoot } from './files.js';
+import { resolveRemoteLaunchAddress } from '../remote/saved-host.js';
+import type { RemoteAddress } from '../remote/address.js';
+import { adoptRemotePluginTab, launchJoinedRemotePluginTab, poolThenPrefix } from './launch-tab-remote-reuse.js';
 import { SHELL_CLONE_DEPTH } from '../workspace/clone-depth.js';
 import { wireProvisioning } from '../workspace/provision-wire.js';
 import { TabPluginRejection } from './api-capabilities.js';
 import type { TabPluginLaunchFactory, TabPluginLaunchReadyHandler, TabPluginLaunchRequest, TabPluginLaunchResult } from './api-launch.js';
 import type { LaunchInput } from './launch-tab.js';
-
-function* poolThenPrefix(prefix: string): Generator<string> {
-  yield* poolCandidates();
-  yield* suffixCandidates(prefix);
-}
 
 function launchCwd(input: LaunchInput): string {
   const { managers, origin } = input;
@@ -41,10 +37,23 @@ export function launchRemotePluginTab(
   }
   if (request.remote && 'join' in request.remote) {
     return launchJoinedRemotePluginTab(input, instanceKey, request, factory);
-  }  const address = request.remote && 'address' in request.remote ? request.remote.address : undefined;
+  }
+  const address = request.remote && 'address' in request.remote ? request.remote.address : undefined;
   if (address === undefined) return undefined;
   const parsed = parseRemoteAddress(address);
   if ('error' in parsed) throw new TabPluginRejection(parsed.error);
+  const resolved = resolveRemoteLaunchAddress(input.managers, input.origin.label, parsed);
+  return launchAddressedRemotePluginTab(input, instanceKey, request, factory, ready, tried, resolved);
+}
+
+// The `on <address>` branch, split out so the already sizeable router stays under the line limit.
+// `resolved` is captured here and reused by a name-refusal retry: re-resolving on retry could pick a
+// different catalog entry and silently move the channel mid-launch.
+function launchAddressedRemotePluginTab(
+  input: LaunchInput, instanceKey: string, request: TabPluginLaunchRequest,
+  factory: TabPluginLaunchFactory, ready: TabPluginLaunchReadyHandler, tried: readonly string[],
+  resolved: RemoteAddress,
+): TabPluginLaunchResult | undefined {
   const name = request.name?.trim() ?? '';
   const explicit = name !== '';
   const label = resolveLocalLaunchName(input.managers, {
@@ -58,21 +67,21 @@ export function launchRemotePluginTab(
     ...(input.origin.runId !== undefined && { runId: input.origin.runId }),
     explicit, tried: [...tried, label],
     relaunch: (next, registerTab) => {
-      const relaunched = launchRemotePluginTab(input, instanceKey, request, factory, ready, next);
+      const relaunched = launchAddressedRemotePluginTab(input, instanceKey, request, factory, ready, next, resolved);
       if (relaunched) registerTab(relaunched.label);
     },
   };
-  const remote = startRemoteLaunch(input.managers, label, parsed, launchCwd(input), undefined, SHELL_CLONE_DEPTH);
+  const remote = startRemoteLaunch(input.managers, label, resolved, launchCwd(input), undefined, SHELL_CLONE_DEPTH);
   try {
     input.managers.tab.openPluginTab(
       input.declaration.id, input.declaration.tabLabelPrefix, instanceKey, input.declaration.payloadSchemaVersion,
       input.origin.label,
       (resources) => {
-        const payload = factory(resources, { label, cwd: launchCwd(input), connectPtyId: remote.ptyId, host: parsed.host });
+        const payload = factory(resources, { label, cwd: launchCwd(input), connectPtyId: remote.ptyId, host: resolved.host });
         input.validate(payload);
         return payload;
       },
-      { label, cwd: launchCwd(input), remote: { address: parsed.address, host: parsed.host },
+      { label, cwd: launchCwd(input), remote: { address: resolved.address, host: resolved.host },
         ...(request.group !== undefined && { group: request.group }) },
     );
   } catch (error) {
@@ -101,14 +110,14 @@ export function launchRemotePluginTab(
     managers.tab.setPluginBusy(live, false);
     const workspace = remote.cwd();
     managers.tab.setCwd(label, workspace);
-    reportRemoteCleanup(managers, closeRetry, label, parsed.host, remote.cleaned());
-    reportRemoteClone(managers, closeRetry, parsed.host, remote.cloned());
+    reportRemoteCleanup(managers, closeRetry, label, resolved.host, remote.cleaned());
+    reportRemoteClone(managers, closeRetry, resolved.host, remote.cloned());
     const outcome = await deferred.invoke((capabilities) => ready({
-      instanceKey, workspaceDir: workspace, displayDir: abbreviateWorkspaceDir(workspace), host: parsed.host,
+      instanceKey, workspaceDir: workspace, displayDir: abbreviateWorkspaceDir(workspace), host: resolved.host,
       ...(remote.notice() && { sandboxNotice: remote.notice() }),
     }, capabilities), label);
     if (outcome.status === 'rejected') {
-      fail(input, label, parsed.host, new TabPluginRejection(outcome.reason), outcome.reason, closeRetry);
+      fail(input, label, resolved.host, new TabPluginRejection(outcome.reason), outcome.reason, closeRetry);
       return;
     }
     if (outcome.status === 'failed') {
@@ -116,91 +125,9 @@ export function launchRemotePluginTab(
       return;
     }
   };
-  const onFailed = (message: string, error: unknown) => fail(input, label, parsed.host, error, message, closeRetry);
+  const onFailed = (message: string, error: unknown) => fail(input, label, resolved.host, error, message, closeRetry);
   wireProvisioning(label, remote.ready, (current) => managers.tab.tabs.some((item) => item.label === current), () => {
     void onReady();
   }, onFailed);
-  return { label };
-}
-
-function adoptRemotePluginTab(
-  input: LaunchInput, instanceKey: string, request: TabPluginLaunchRequest, factory: TabPluginLaunchFactory,
-): TabPluginLaunchResult | undefined {
-  const { managers, origin, declaration } = input;
-  if (!input.adoptPtyId) throw new TabPluginRejection('Remote process adoption is only available during reattach.');
-  const adopt = request.remote && 'adopt' in request.remote ? request.remote.adopt : undefined;
-  const source = managers.tab.byLabel(origin.label);
-  if (!adopt || !source?.remote) throw new TabPluginRejection('A remote process can only be adopted from its resumed channel.');
-  if (adopt.ptyId !== input.adoptPtyId) throw new TabPluginRejection('Remote process adoption must match the reattach record.');
-  const label = request.name?.trim() ?? '';
-  if (!label) throw new TabPluginRejection('An adopted remote process needs its recorded tab label.');
-  if (!managers.remote.attach(label, origin.label)) return undefined;
-  try {
-    managers.tab.openPluginTab(
-      declaration.id, declaration.tabLabelPrefix, instanceKey, declaration.payloadSchemaVersion, origin.label,
-      (resources) => {
-        const payload = factory(resources, {
-          label, cwd: adopt.cwd, workspaceDir: adopt.workspaceDir, host: adopt.host,
-        });
-        input.validate(payload);
-        return payload;
-      },
-      { label, cwd: adopt.cwd, remote: source.remote,
-        workspace: { dir: adopt.workspaceDir, offline: adopt.offline }, recordedPtyId: adopt.ptyId,
-        ...(request.group !== undefined && { group: request.group }) },
-    );
-  } catch (error) {
-    managers.remote.release(label);
-    throw error;
-  }
-  return managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey)?.label === label ? { label } : undefined;
-}
-
-function launchJoinedRemotePluginTab(
-  input: LaunchInput, instanceKey: string, request: TabPluginLaunchRequest, factory: TabPluginLaunchFactory,
-): TabPluginLaunchResult | undefined {
-  const { managers, origin, declaration } = input;
-  // The tab whose channel is joined: the one the request named, or the tab the call came from. A
-  // join naming a third tab is how a command reaches a workspace belonging to a tab it was not typed
-  // in; the tab it names must be the one riding a channel, since that is where the workspace lives.
-  const join = request.remote && 'join' in request.remote ? request.remote : undefined;
-  const sourceLabel = join?.label ?? origin.label;
-  const source = managers.tab.byLabel(sourceLabel);
-  if (!source?.remote) throw new TabPluginRejection('A remote workspace can only be joined from a remote tab.');
-  const workspaceDir = managers.remote.workspaceOf(sourceLabel);
-  if (workspaceDir === undefined) throw new TabPluginRejection('The remote workspace is not ready yet.');
-  const unavailable = () => notify(managers, 'manual', sourceLabel, 'The remote workspace is no longer available.');
-  if (managers.remote.reconnectingOf(sourceLabel)) { unavailable(); return undefined; }
-
-  const name = request.name?.trim() ?? '';
-  const explicit = name !== '';
-  const label = resolveLocalLaunchName(managers, {
-    creator: sourceLabel, name, explicit, workspace: false,
-    ...(!explicit && { candidates: poolThenPrefix(declaration.tabLabelPrefix) }),
-  });
-  if (label === undefined) return undefined;
-  if (!managers.remote.attach(label, sourceLabel)) { unavailable(); return undefined; }
-
-  const sourceCwd = managers.tab.cwdOf(sourceLabel) ?? workspaceDir;
-  const cwd = isInsideRoot(workspaceDir, sourceCwd) ? sourceCwd : workspaceDir;
-  try {
-    managers.tab.openPluginTab(
-      declaration.id, declaration.tabLabelPrefix, instanceKey, declaration.payloadSchemaVersion, sourceLabel,
-      (resources) => {
-        const payload = factory(resources, { label, cwd, workspaceDir, host: source.remote?.host });
-        input.validate(payload);
-        return payload;
-      },
-      { label, cwd, remote: source.remote, ...(request.group !== undefined && { group: request.group }) },
-    );
-  } catch (error) {
-    managers.remote.release(label);
-    throw error;
-  }
-  const opened = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey)?.label === label;
-  if (!opened) {
-    managers.remote.release(label);
-    return undefined;
-  }
   return { label };
 }

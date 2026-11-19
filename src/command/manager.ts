@@ -10,6 +10,13 @@ import { refuseDisabledCommand } from '../native-commands/dispatch-policy.js';
 
 const DISPATCH_CAPTURE_LIMIT_MS = 30_000;
 
+// A Hosts row dispatches `ssh <name>` through the captured path but owns no transcript, so its
+// policy responses have to come back through the dispatch result rather than a log entry. Narrow
+// the exemption to this one command from this one plugin; every other caller keeps transcript capture.
+function fromHostsTab(managers: Managers, name: string, label: string): boolean {
+  return name === 'ssh' && managers.tab.byLabel(label)?.plugin?.id === 'hosts';
+}
+
 export class CommandManager {
   constructor(private managers: Managers) {}
 
@@ -107,7 +114,9 @@ export class CommandManager {
       ? undefined
       : refuseDisabledCommand(this.managers, input, resolution.cmd, label);
     if (refusal !== undefined) {
-      this.managers.tab.append(label, { input, output: refusal });
+      if (!fromHostsTab(this.managers, resolution.kind === 'app' ? resolution.name : '', label)) {
+        this.managers.tab.append(label, { input, output: refusal });
+      }
       return { dispatched: true, output: refusal };
     }
     if (resolution.kind === 'output') {
@@ -159,16 +168,21 @@ export class CommandManager {
     index: number,
     invocation: CommandInvocationContext,
   ): Promise<unknown> {
+    const hostsSsh = fromHostsTab(this.managers, name, label);
     const refusal = refuseDisabledCommand(this.managers, name, command, label);
     if (refusal !== undefined) {
-      this.managers.tab.appendForInvocation(label, { input: command, output: refusal }, invocation.invocationId);
+      if (!hostsSsh) {
+        this.managers.tab.appendForInvocation(label, { input: command, output: refusal }, invocation.invocationId);
+      }
       return refusal;
     }
     const cmd = findCommand(name, command);
     if (!cmd) return undefined;
     if (cmd.available?.(label, this.managers) === false) {
       const output = `Command is unavailable in this tab: ${name}.`;
-      this.managers.tab.appendForInvocation(label, { input: command, output }, invocation.invocationId);
+      if (!hostsSsh) {
+        this.managers.tab.appendForInvocation(label, { input: command, output }, invocation.invocationId);
+      }
       return output;
     }
     const existingTabs = new Set(this.managers.tab.tabs.map((tab) => tab.label));
@@ -179,6 +193,7 @@ export class CommandManager {
     } catch (error) {
       this.trackRunTabs(invocation.runId, existingTabs);
       const output = errorText(error);
+      if (hostsSsh) return output;
       this.managers.tab.appendForInvocation(label, { input: command, output }, invocation.invocationId);
       return undefined;
     }

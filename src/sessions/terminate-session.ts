@@ -1,5 +1,5 @@
 import type { Managers } from '../managers.js';
-import { parseRemoteAddress } from '../remote/address.js';
+import { addressFromSessionRecord } from './record-address.js';
 import type { RemoteSessionRecord } from './store.js';
 
 // Terminating a parked session for good: reconnect far enough to send `shutdown`, which stops its
@@ -37,7 +37,7 @@ export function isTerminateSessionLabel(label: string): boolean {
 export function terminateParkedSession(
   managers: Managers, record: RemoteSessionRecord,
 ): Promise<TerminateOutcome> {
-  const address = parseRemoteAddress(record.address);
+  const address = addressFromSessionRecord(record);
   if ('error' in address) return Promise.resolve({ terminated: false, reason: address.error });
   const label = terminateLabel(record.session);
 

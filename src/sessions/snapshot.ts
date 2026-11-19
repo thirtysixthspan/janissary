@@ -50,6 +50,7 @@ export function channelOf(
   return {
     launchLabel,
     host: entry.address.host,
+    ...(entry.address.hostName !== undefined && { hostName: entry.address.hostName }),
     destination: entry.address.destination,
     workspace: entry.workspaceDir ?? '',
     provisioning: entry.workspaceDir === undefined,
@@ -63,6 +64,7 @@ export function sshTabs(managers: Managers, activity: (label: string) => number)
   return managers.tab.tabs.filter((tab) => isSshTab(tab)).map((tab) => ({
     label: tab.label,
     host: tab.harness?.destination?.replace(/^[^@]*@/, '') ?? '',
+    ...(tab.harness?.hostName !== undefined && { hostName: tab.harness.hostName }),
     destination: tab.harness?.destination ?? '',
     activity: activity(tab.label),
   }));
@@ -126,6 +128,8 @@ export function recordOf(managers: Managers, entry: RemoteEntry, now: number): R
   return {
     session,
     address: entry.address.address,
+    ...(entry.address.port !== undefined && { port: entry.address.port }),
+    ...(entry.address.hostName !== undefined && { hostName: entry.address.hostName }),
     destination: entry.address.destination,
     host: entry.address.host,
     workspaceLabel: entry.workspaceLabel,

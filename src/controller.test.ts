@@ -21,6 +21,7 @@ import { initHarnessCaptureDirectory } from './harness/capture/file.js';
 import { UNREAD_DWELL_MS } from './tab/dwell.js';
 import { createControllerAdapters } from './controller/create-adapters.js';
 import { seedRecordHistory } from './acp-records/history-test-fixture.js';
+import { readHostsFile } from './plugins/hosts/hosts-file.js';
 
 // The external-open path shells out to the OS image viewer; stub it so tests never launch an app.
 vi.mock('./openers/os-open.js', () => ({ didOsOpen: () => true }));
@@ -405,6 +406,66 @@ describe('Controller', () => {
       await c.shutdown();
       liveControllers.splice(liveControllers.indexOf(c), 1);
       rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('completes saved names from the project catalog ahead of the home catalog', async () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'janus-hosts-complete-'));
+    const home = mkdtempSync(path.join(tmpdir(), 'janus-hosts-home-'));
+    mkdirSync(path.join(root, '.janissary'), { recursive: true });
+    mkdirSync(path.join(home, '.janissary'), { recursive: true });
+    const projectFile = path.join(root, '.janissary', 'hosts.json');
+    writeFileSync(projectFile, JSON.stringify({ Project: { destination: 'box.local' } }));
+    writeFileSync(path.join(home, '.janissary', 'hosts.json'), JSON.stringify({ Home: { destination: 'box.local' } }));
+    const priorHome = process.env.HOME;
+    process.env.HOME = home;
+    const c = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} }, root);
+    seedRootTab(c.managers.tab);
+    liveControllers.push(c);
+
+    try {
+      expect(c.complete('ssh pro', 7).newInput).toBe('ssh Project ');
+      expect(c.complete('ssh hom', 7).matches).toEqual([]);
+      writeFileSync(projectFile, '{not json');
+      expect(c.complete('ssh hom', 7).newInput).toBe('ssh Home ');
+    } finally {
+      process.env.HOME = priorHome;
+      await c.shutdown();
+      liveControllers.splice(liveControllers.indexOf(c), 1);
+      rmSync(root, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('offers no names and leaves notifications alone with an unusable effective file', async () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'janus-hosts-unusable-'));
+    const home = mkdtempSync(path.join(tmpdir(), 'janus-hosts-home-'));
+    mkdirSync(path.join(root, '.janissary'), { recursive: true });
+    mkdirSync(path.join(home, '.janissary'), { recursive: true });
+    writeFileSync(path.join(root, '.janissary', 'hosts.json'), '{not json');
+    writeFileSync(path.join(home, '.janissary', 'hosts.json'), '{not json');
+    const priorHome = process.env.HOME;
+    process.env.HOME = home;
+    const c = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} }, root);
+    seedRootTab(c.managers.tab);
+    liveControllers.push(c);
+
+    try {
+      const notify = vi.fn();
+      readHostsFile(root, home, notify);
+      expect(notify).toHaveBeenCalledTimes(2);
+      notify.mockClear();
+
+      expect(c.complete('ssh la', 6).matches).toEqual([]);
+      expect(notify).not.toHaveBeenCalled();
+      readHostsFile(root, home, notify);
+      expect(notify).not.toHaveBeenCalled();
+    } finally {
+      process.env.HOME = priorHome;
+      await c.shutdown();
+      liveControllers.splice(liveControllers.indexOf(c), 1);
+      rmSync(root, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
     }
   });
 

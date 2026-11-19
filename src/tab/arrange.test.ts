@@ -252,6 +252,23 @@ describe('TabManager.arrangeTab dock and undock', () => {
     expect(last.arrangeTab('only', { kind: 'dock', side: 'left' })).toBe(false);
   });
 
+  it('refuses the Hosts plugin from the generic dock operation but still docks another plugin', () => {
+    const hosts = tab('hosts', 1, {
+      view: 'plugin',
+      plugin: { id: 'hosts', instanceKey: 'hosts', schemaVersion: 1, payload: {}, fileRefs: [], sourceLabel: 'janus' },
+    });
+    const other = tab('shell', 1, {
+      view: 'plugin',
+      plugin: { id: 'shell', instanceKey: 'shell', schemaVersion: 1, payload: {}, fileRefs: [], sourceLabel: 'janus' },
+    });
+    const manager = setup([tab('keeper'), hosts, other]);
+
+    expect(manager.arrangeTab('hosts', { kind: 'dock', side: 'left' })).toBe(false);
+    expect(manager.byLabel('hosts')?.dock).toBeUndefined();
+    expect(manager.arrangeTab('shell', { kind: 'dock', side: 'right' })).toBe(true);
+    expect(manager.byLabel('shell')?.dock).toBe('right');
+  });
+
   it('undocks into the focused pane without activation and activates the tab when no center tab is active', () => {
     const manager = setup([
       tab('left'), tab('active-right', 1, { pane: 'right' }), tab('docked', 2, { view: 'files', dock: 'left' }),

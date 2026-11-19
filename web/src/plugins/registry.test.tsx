@@ -10,6 +10,7 @@ import { VIDEO_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/video/shared';
 import { CONVERSATIONS_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/conversations/shared';
 import { CONNECTIONS_PAYLOAD_SCHEMA_VERSION, isConnectionsPayload } from '@shared/plugins/connections/shared';
 import { DIFF_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/diff/shared';
+import { HOSTS_PAYLOAD_SCHEMA_VERSION, isHostsPayload } from '@shared/plugins/hosts/shared';
 import { SQL_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/sql/shared';
 import { SHELL_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/shell/shared';
 import { SEARCH_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/search/shared';
@@ -33,6 +34,7 @@ describe('client plugin registry', () => {
     expect(clientPluginRegistry.get('connections')?.schemaVersion).toBe(CONNECTIONS_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('connections')?.schemaVersion).toBe(2);
     expect(clientPluginRegistry.get('diff')?.schemaVersion).toBe(DIFF_PAYLOAD_SCHEMA_VERSION);
+    expect(clientPluginRegistry.get('hosts')?.schemaVersion).toBe(HOSTS_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('markdown')?.schemaVersion).toBe(MARKDOWN_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('models')?.schemaVersion).toBe(MODELS_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('commands')?.schemaVersion).toBe(COMMANDS_PAYLOAD_SCHEMA_VERSION);
@@ -123,5 +125,19 @@ describe('client plugin registry', () => {
     expect(clientPluginRegistry.get('commands')?.schemaVersion).toBe(COMMANDS_PAYLOAD_SCHEMA_VERSION);
     const { isPayload } = await clientPluginLoaders.commands();
     expect(isPayload).toBe(isCommandsPayload);
+  });
+
+  it('reaches the hosts entry only through its literal dynamic import', () => {
+    const source = readFileSync('web/src/plugins/registry.tsx', 'utf8');
+    const statics = [...source.matchAll(/^import\s[^;]*?from\s+'(?<path>[^']+)'/gmu)]
+      .map((match) => match.groups?.path ?? '');
+    expect(statics.filter((path) => path.includes('hosts'))).toEqual([]);
+    expect(source).toContain("hosts: () => import('./hosts/index')");
+  });
+
+  it('pins and resolves the hosts entry to its shared payload guard', async () => {
+    expect(clientPluginRegistry.get('hosts')?.schemaVersion).toBe(HOSTS_PAYLOAD_SCHEMA_VERSION);
+    const { isPayload } = await clientPluginLoaders.hosts();
+    expect(isPayload).toBe(isHostsPayload);
   });
 });

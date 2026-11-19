@@ -292,6 +292,7 @@ describe('completeLine', () => {
       expect.any(Function),
       expect.objectContaining({ allows: expect.any(Function), names: expect.any(Array) }),
       '/repo',
+      expect.any(Function),
     );
     expect(managers.connection.completionConnections).toHaveBeenCalledWith('shell');
     expect(capabilities.originTab()).toEqual({ label: 'shell', cwd: '/repo/clone/subdir', root: '/repo' });

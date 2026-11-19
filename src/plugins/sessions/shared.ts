@@ -15,6 +15,7 @@ export type SessionRowAction = RemoteSessionAction;
 export type SessionRow = {
   id: string;
   host: string;
+  hostName?: string;
   name: string;
   kind: SessionRowKind;
   state: SessionRowState;
@@ -67,6 +68,7 @@ function isSessionRow(value: unknown): value is SessionRow {
   return isRecord(value)
     && typeof value.id === 'string'
     && typeof value.host === 'string'
+    && isOptionalString(value.hostName)
     && typeof value.name === 'string'
     && typeof value.kind === 'string' && Object.hasOwn(KINDS, value.kind)
     && typeof value.state === 'string' && Object.hasOwn(STATES, value.state)
