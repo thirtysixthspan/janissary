@@ -41,19 +41,28 @@ export const replaceToken = (
   return { newInput: newBefore + cursor.after, newCursor: newBefore.length, matches };
 };
 
-type CompleteWordOptions = { keepPrefix?: string; suffix?: string; partial?: string };
+type CompleteWordOptions = { keepPrefix?: string; suffix?: string; partial?: string; caseInsensitive?: boolean };
 
 // Completes the cursor's token (or `partial`) against `candidates`. A unique match gets `suffix`
 // appended — a space unless overridden — and `keepPrefix` stays ahead of whatever is completed.
+// With `caseInsensitive`, matching and ordering fold both sides but the inserted spelling does not:
+// a unique match keeps its stored spelling, and several extend the typed prefix by the folded
+// common prefix's length using the first match's characters beyond it.
 export const completeWord = (
   cursor: CompletionCursor,
-  candidates: string[],
-  { keepPrefix = '', suffix = ' ', partial = cursor.token }: CompleteWordOptions = {},
+  candidates: readonly string[],
+  { keepPrefix = '', suffix = ' ', partial = cursor.token, caseInsensitive = false }: CompleteWordOptions = {},
 ): CompletionResult => {
-  const matches = candidates.filter((c) => c.startsWith(partial)).toSorted((a, b) => a.localeCompare(b));
+  const fold = (value: string): string => caseInsensitive ? value.toLowerCase() : value;
+  const folded = fold(partial);
+  const matches = candidates.filter((candidate) => fold(candidate).startsWith(folded))
+    .toSorted((left, right) => fold(left).localeCompare(fold(right)));
   if (matches.length === 0) {
     return { newInput: cursor.before + cursor.after, newCursor: cursor.before.length, matches: [] };
   }
-  const completed = matches.length === 1 ? matches[0] + suffix : longestCommonPrefix(matches);
+  if (matches.length === 1) return replaceToken(cursor, keepPrefix + matches[0] + suffix, matches);
+  const completed = caseInsensitive
+    ? partial + matches[0].slice(partial.length, longestCommonPrefix(matches.map((value) => fold(value))).length)
+    : longestCommonPrefix(matches);
   return replaceToken(cursor, keepPrefix + completed, matches);
 };

@@ -28,6 +28,17 @@ describe('parseAgentCommand', () => {
     expect(parseAgentCommand('execute task.md in a tab')).toMatchObject({ task: 'task.md', parameters: ' in a tab' });
   });
 
+  it('accepts execute as a saved host name when a separate final execute clause follows', () => {
+    expect(parseAgentCommand('on execute execute task.md')).toEqual({
+      host: 'execute', inTab: false, skills: [], task: 'task.md', parameters: '',
+    });
+    expect(parseAgentCommand('agent on execute in a tab execute task.md')).toEqual({
+      host: 'execute', inTab: true, skills: [], task: 'task.md', parameters: '',
+    });
+    expect(parseAgentCommand('on execute using model gpt-5 execute task.md'))
+      .toMatchObject({ host: 'execute', model: 'gpt-5', task: 'task.md' });
+  });
+
   it('preserves unmatched quotes and significant whitespace in the task parameter tail', () => {
     expect(parseAgentCommand('execute task.md   --value  "unfinished'))
       .toMatchObject({ task: 'task.md', parameters: '   --value  "unfinished' });
