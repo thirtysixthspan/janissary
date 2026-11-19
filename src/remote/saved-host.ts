@@ -26,8 +26,9 @@ export function resolveSavedHost(token: string, hosts: readonly SavedHost[]): Re
 // Resolve the `on` operand once, before a channel opens, so the shell and harness executors share one
 // concrete endpoint for channel setup, tab metadata, and any name-refusal retry. A qualified token
 // (`@` or `:`) is a literal address the catalog has no say in. The catalog's own shared, deduplicated
-// "unusable file" report is forwarded to the origin's transcript; an unusable catalog or an unmatched
-// name keeps the parsed address. A usable home catalog can still supply a match after a malformed
+// "unusable file" report is posted once as a manual notification attributed to the caller label in the
+// notifications feed and never into a transcript; an unusable catalog or an unmatched name keeps the
+// parsed address. A usable home catalog can still supply a match after a malformed
 // project override has been reported, because readHostsFile falls back to it.
 export function resolveRemoteLaunchAddress(
   managers: Managers, originLabel: string, parsed: RemoteAddress,

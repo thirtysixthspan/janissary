@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the stale saved-host comment that claims the unusable-file report is forwarded to the origin's transcript.
-
-Existing Issue: The comment above `resolveRemoteLaunchAddress` in `src/remote/saved-host.ts` says the catalog's deduplicated unusable-file report is forwarded to the origin's transcript, while the code posts it as a manual notification to the notifications feed as `product/specs/ssh-tab.md` requires. Severity: 2/10
-
-Existing Risk: 3/10 - A maintainer who trusts the comment can "fix" the forwarding into a transcript append, breaking the documented rule that the notice never enters a tab's transcript.
-
-Proposal Risk: 1/10 - The comment then agrees with the code and the spec, leaving only the ordinary chance that a later edit to the notify path drifts the comment again.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2092 "correct the stale saved-host unusable-file notification comment". In `src/remote/saved-host.ts`, rewrite the comment above `resolveRemoteLaunchAddress` that currently says the report "is forwarded to the origin's transcript" so it states the report is posted as a manual notification attributed to the caller label into the notifications feed and is never written into a transcript, matching `product/specs/ssh-tab.md`. Do not change behavior: the function already calls `notify(managers, 'manual', originLabel, message)`. `src/remote/saved-host.test.ts` pins that notify call and the once-per-problem message and must keep passing unchanged.
-
-
 * Correct the pull request title's docs-only claim, which does not describe the full hosts feature the diff ships.
 
 Existing Issue: The pull request is titled "docs(plans): rework the hosts tab implementation sequence" although the diff delivers the entire saved-hosts feature across implementation, specs, help, and UI. Severity: 3/10
