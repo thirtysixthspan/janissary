@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the PR's testing steps and the roles fixture so the model input is verified against ids the bundled catalog actually enables.
-
-Existing Issue: Several How to verify steps assume `claude-sonnet-5-5` is an enabled `claude` id, but the bundled catalog has no such id, so those steps can never pass as written. Severity: 7/10
-
-Existing Risk: 7/10 - A reviewer following the description sees failures that look like a broken feature and cannot tell whether the code or the test is wrong.
-
-Proposal Risk: 5/10 - The description's examples and fixture still drift from the catalog over time, because nothing ties them to the shipped ids.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2099 "Correct the PR's testing steps and roles fixture to use catalog-enabled model ids". Step ids and sources: D1 and D6, description "How to verify" (plus the Setup fixture and the Behavior examples that repeat `claude-sonnet-5-5`). Exact setup: the scratch project has no `.janissary/known-models.json` override, so `readCatalog` in src/models/catalog-file.ts serves the bundled `known-models.json`, whose enabled `claude` ids are `claude-fable-5-1`, `claude-fable-5`, `claude-opus-5-5`, `claude-sonnet-5`, `claude-sonnet-4-6`, and `claude-haiku-4-5` (`disabled`/`hidden` records are filtered by `modelsFor` in src/models/manager.ts). The Setup fixture writes a `review` role entry with model `claude-sonnet-5-5`. Expected result: the steps promise a most-used dropdown listing `claude-opus-5-5` then `claude-sonnet-5-5` (D1, D6) and a launch command `harness claude --model claude-sonnet-5-5` (D8); the description's Behavior examples show the same id. Observed (2 of 2 runs): D1 and D6 each show a single most-used row, `claude-opus-5-5`; the Setup snapshot marks the fixture's `claude-sonnet-5-5` entry as `Not in the model catalog`; typing `sonnet` (D7) narrows to `claude-sonnet-5` and `claude-sonnet-4-6`, and the launch command (D8) records `--model claude-sonnet-5`. Root cause: the description's author used an id absent from known-models.json; the code correctly ranks only enabled ids via `mostUsedModels` in web/src/shared/model-search/model-search.ts over the ids the server publishes in `catalog.models` / `roleEntries`, and the disabled `claude-sonnet-5-5` fixture entry is excluded. Likely fix: replace every `claude-sonnet-5-5` in the description's Setup, steps D1/D6/D7/D8 and Behavior examples with an enabled id such as `claude-sonnet-5` (which contains the `sonnet` substring the steps type), and update the scratch fixture's `review` entry to match, so the most-used list, the typed match, and the recorded command all agree with the shipped catalog. A regression check should assert that every model id named in the description's How to verify steps is present in the enabled `claude` ids of known-models.json.
-
-
 * Return focus to the Add model button after a model entry is added, matching the picker's stated contract.
 
 Existing Issue: Pressing Return to add a model writes roles.json and shows the new entry but leaves the picker open with its input cleared and focus on the harness select, instead of closing the picker and returning focus to Add model. Severity: 5/10
