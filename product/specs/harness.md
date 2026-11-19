@@ -76,9 +76,9 @@ same rule against the harnesses the command accepts `--auto-resume` for — toda
 so switching to claude clears and disables it. **E2E browser** stays
 enabled for every harness, since none rejects it. It starts checked, matching the command's default,
 and unchecking it adds `--no-browser` to the built command. The **Model** field is a search input:
-you type to filter the selected harness's enabled models, `Tab` completes the highlighted match,
-and the matching models appear in a dropdown whose rows you can click to pick one and whose
-highlighted row `Return` accepts. A blank field means the harness's default model, adding no
+you type to filter the selected harness's enabled models, `Tab` completes a single match, or fills
+the longest common prefix when several match, and the matching models appear in a dropdown whose
+rows you can click to pick one and whose highlighted row `Return` accepts. A blank field means the harness's default model, adding no
 `--model` flag; its dropdown lists the models the roles in effect use most, read when the dialog
 opens. Non-blank text is accepted only when it is exactly an enabled model id of the chosen
 harness — any other text disables **Create**, and Return does not submit. With the dropdown open,
