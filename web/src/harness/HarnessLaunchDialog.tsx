@@ -1,6 +1,8 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import type { HarnessLaunchView } from '@shared/protocol';
 import { EFFORT_LEVELS } from '@shared/harness/effort-levels';
+import { ModelSearchInput } from '../shared/model-search/ModelSearchInput';
+import type { ModelSearchListState } from '../shared/model-search/useModelSearch';
 import type { JanusClient } from '../shared/ws/ws';
 import { useLaunchDialog } from '../shared/use-launch-dialog';
 import type { HarnessLaunchFields } from './harness-launch-command';
@@ -40,7 +42,13 @@ export function resetHarnessLaunchDialogMemory(): void {
 // catalog: it enforces the flag constraints by disabling controls that would build an invalid
 // command, so Create can only ever submit a valid `harness …` string via the normal command path.
 export function HarnessLaunchDialog({ view, client }: Properties) {
-  const [fields, setFields] = useState<HarnessLaunchFields>(() => remembered ?? initialFields(view));
+  const [fields, setFields] = useState<HarnessLaunchFields>(() => {
+    const initial = remembered ?? initialFields(view);
+    const model = initial.model.trim();
+    return model === '' || (view.models[initial.name] ?? []).includes(model)
+      ? initial
+      : { ...initial, model: '' };
+  });
   const [hadRemembered] = useState(() => remembered !== null);
 
   const models = view.models[fields.name] ?? [];
@@ -49,21 +57,37 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
   const autoResumeEnabled = autoResumeSupported(view, fields.name);
   const autoResumeNames = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' }).format(view.autoResume);
 
+  const listState = useRef<ModelSearchListState>({ open: false, highlighted: false });
+  const onListChange = useCallback((state: ModelSearchListState) => { listState.current = state; }, []);
+  const yieldsKey = useCallback((event: KeyboardEvent) => {
+    const state = listState.current;
+    return state.open && (event.key === 'Escape' || (event.key === 'Enter' && state.highlighted));
+  }, []);
+
   const update = useCallback((patch: Partial<HarnessLaunchFields>) => {
     setFields((prev) => {
       const next = { ...prev, ...patch };
-      if (!(view.models[next.name] ?? []).includes(next.model)) next.model = '';
+      if (patch.name !== undefined) {
+        const model = next.model.trim();
+        if (model !== '' && !(view.models[next.name] ?? []).includes(model)) next.model = '';
+      }
       if (!autoApproveSupported(view, next.name)) next.autoApprove = false;
       else if (patch.name !== undefined && !autoApproveSupported(view, prev.name)) next.autoApprove = true;
       if (!autoResumeSupported(view, next.name)) next.autoResume = false;
       else if (patch.name !== undefined && !autoResumeSupported(view, prev.name)) next.autoResume = true;
-      remembered = next;
+      const rememberedModel = next.model.trim();
+      remembered = rememberedModel === '' || (view.models[next.name] ?? []).includes(rememberedModel)
+        ? next
+        : { ...next, model: '' };
       return next;
     });
   }, [view]);
 
-  const { cancel, create } = useHarnessLaunchActions(client, fields);
-  const { dialogRef, submitButtonRef } = useLaunchDialog(cancel, create, true, hadRemembered);
+  const modelText = fields.model.trim();
+  const modelValid = modelText === '' || models.includes(modelText);
+
+  const { cancel, create } = useHarnessLaunchActions(client, { ...fields, model: modelText });
+  const { dialogRef, submitButtonRef } = useLaunchDialog(cancel, create, modelValid, hadRemembered, yieldsKey);
 
   return (
     <div className="modal-backdrop">
@@ -109,10 +133,17 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
             Auto-resume (--auto-resume) — {autoResumeNames} only
           </label>
           <label>Model
-            <select value={fields.model} disabled={models.length === 0} onChange={(e) => update({ model: e.target.value })}>
-              <option value="">(default)</option>
-              {models.map((model) => <option key={model} value={model}>{model}</option>)}
-            </select>
+            <ModelSearchInput
+              ids={models}
+              roleEntries={view.roleEntries}
+              harness={fields.name}
+              value={fields.model}
+              onChange={(model) => update({ model })}
+              placeholder="(default)"
+              aria-label="Model"
+              disabled={models.length === 0}
+              onListChange={onListChange}
+            />
           </label>
           <label>Effort
             <select value={fields.effort} onChange={(e) => update({ effort: e.target.value })}>
@@ -122,7 +153,7 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
           </label>
         </div>
         <div className="modal-actions">
-          <button ref={submitButtonRef} className="modal-button" onClick={create}>Create</button>
+          <button ref={submitButtonRef} className="modal-button" disabled={!modelValid} onClick={create}>Create</button>
           <button className="modal-button" onClick={cancel}>Cancel</button>
         </div>
       </div>

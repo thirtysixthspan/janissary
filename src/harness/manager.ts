@@ -1,3 +1,4 @@
+import { homedir } from 'node:os';
 import { distinctColor } from '../tab/colors.js';
 import { resolveLocalLaunchName } from '../launch-name/local.js';
 import { suffixCandidates } from '../launch-name/check.js';
@@ -20,6 +21,7 @@ import { oneShotRunEntry } from './one-shot-run.js';
 import { cancelHarnessIdleEscalation, disposeHarnessIdleEscalations } from './idle-notification.js';
 import { resolveTabGroup } from '../tab/groups.js';
 import type { CommandInvocationContext } from '../commands/types.js';
+import { readRolesFile } from '../plugins/roles/roles-file.js';
 
 // Owns harness command handling: launching a harness `<name>` as a PTY-backed tab (optionally in a
 // fresh `--workspace` git clone, and optionally under a custom `as <label>`) and naming it uniquely.
@@ -27,6 +29,7 @@ import type { CommandInvocationContext } from '../commands/types.js';
 // and wiring, and `HarnessTabSpawn` owns the tab creation itself.
 export class HarnessManager extends HarnessTabSpawn {
   private launchDialogOpen = false;
+  private launchRoleEntries: HarnessLaunchView['roleEntries'] = [];
 
   dispose(): void {
     disposeHarnessIdleEscalations(this.managers);
@@ -85,12 +88,17 @@ export class HarnessManager extends HarnessTabSpawn {
   // `CommandManager`'s `pendingRoute`; surfaced to the client via `harnessLaunchView()`.
   openLaunchDialog(): void {
     this.launchDialogOpen = true;
+    // Read once per open. To make roles live while the dialog stays open, re-read here behind an
+    // mtime check rather than changing the shape of every snapshot.
+    const { roles } = readRolesFile(homedir(), this.managers.tab.launchDir, { create: false });
+    this.launchRoleEntries = roles.map((role) => role.entries.map(({ harness, model }) => ({ harness, model })));
     messageBus.emit('state', { type: 'dirty' });
   }
 
   // Close the launch dialog (Cancel/Escape, or once a launch has been submitted).
   closeLaunchDialog(): void {
     this.launchDialogOpen = false;
+    this.launchRoleEntries = [];
     messageBus.emit('state', { type: 'dirty' });
   }
 
@@ -100,7 +108,10 @@ export class HarnessManager extends HarnessTabSpawn {
   harnessLaunchView(): HarnessLaunchView | null {
     if (!this.launchDialogOpen) return null;
     const models = Object.fromEntries(HARNESS_NAMES.map((name) => [name, this.managers.models.modelsFor(name)]));
-    return { names: HARNESS_NAMES, models, autoApprove: autoApproveHarnessNames(), autoResume: autoResumeHarnessNames() };
+    return {
+      names: HARNESS_NAMES, models, autoApprove: autoApproveHarnessNames(), autoResume: autoResumeHarnessNames(),
+      roleEntries: this.launchRoleEntries,
+    };
   }
 
   // Open (and focus) a harness tab running `name`, labeled `label` if given (otherwise `name`).

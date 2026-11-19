@@ -58,6 +58,9 @@ export type HarnessLaunchView = {
   autoApprove: string[];
   // The harnesses that accept auto-resume (`--auto-resume`), in `names` order.
   autoResume: string[];
+  // The { harness, model } pairs of every role in effect when the dialog opened, in role order
+  // and each role's entry order. Effort is not carried.
+  roleEntries: Array<Array<{ harness: string; model: string }>>;
 };
 
 export type QuestionKind = 'ask' | 'approve';

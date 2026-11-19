@@ -10,13 +10,14 @@ import {
 export type EntryDrop = { intent: string; payload: Record<string, unknown> } | null;
 
 export function RoleModels({
-  roleName, entries, efforts, models, headingId, headingRef, picker,
+  roleName, entries, efforts, models, roleEntries, headingId, headingRef, picker,
   onAdd, onRemove, onSetEffort, onDropEntry,
 }: {
   roleName: string;
   entries: RoleEntry[];
   efforts: readonly string[];
   models: Record<string, string[]>;
+  roleEntries: readonly (readonly RoleEntry[])[];
   headingId: string;
   headingRef: RefObject<HTMLHeadingElement | null>;
   picker: {
@@ -92,6 +93,7 @@ export function RoleModels({
           harnesses={Object.keys(models)}
           models={models}
           efforts={efforts}
+          roleEntries={roleEntries}
           firstControlRef={picker.firstControlRef}
           onAdd={onAdd}
           onCancel={picker.closePicker}

@@ -9,11 +9,14 @@ export function useRolePickerFocus(canOpen: boolean, fallbackRef: FocusableRef) 
   const openerHadFocus = useRef(false);
   const wasOpen = useRef(false);
   const wasAvailable = useRef(canOpen);
+  const returnFocus = useRef(false);
 
   useEffect(() => {
     if (open) {
+      returnFocus.current = false;
       firstControlRef.current?.focus();
-    } else if (wasOpen.current) {
+    } else if (wasOpen.current || returnFocus.current) {
+      returnFocus.current = false;
       if (canOpen && openerRef.current?.isConnected) openerRef.current.focus();
       else {
         openerHadFocus.current = false;
@@ -42,7 +45,10 @@ export function useRolePickerFocus(canOpen: boolean, fallbackRef: FocusableRef) 
     openPicker: () => {
       if (canOpen) setOpen(true);
     },
-    closePicker: () => setOpen(false),
+    closePicker: () => {
+      returnFocus.current = true;
+      setOpen(false);
+    },
     onOpenerFocus: () => { openerHadFocus.current = true; },
     onOpenerBlur,
   };

@@ -56,6 +56,11 @@ export { ConfirmDialog } from '../shared/ConfirmDialog';
 export { ModalDialog } from '../shared/ModalDialog';
 export { useDialogKeyboard } from '../shared/useDialogKeyboard';
 
+// The host's model-search input, published so a plugin whose entry picker offers models renders the
+// same filtered list and keys as the rest of the application rather than a second copy that drifts
+// from it. Additive, so `TAB_PLUGIN_API_VERSION` does not move.
+export { ModelSearchInput } from '../shared/model-search/ModelSearchInput';
+
 // The two colors a terminal renders with, and the platform check that decides which modifier is the
 // copy one. Published on the same terms as the components above: a plugin with its own terminal — the
 // asciicast player — should read the app's colors rather than keep a second copy of the fallbacks that

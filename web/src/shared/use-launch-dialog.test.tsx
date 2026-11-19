@@ -8,17 +8,20 @@ function Dialog({
   canSubmit = true,
   onCancel,
   onCreate,
+  yieldsKey,
 }: {
   hadRemembered?: boolean;
   canSubmit?: boolean;
   onCancel: () => void;
   onCreate: () => void;
+  yieldsKey?: (event: KeyboardEvent) => boolean;
 }) {
   const { dialogRef, submitButtonRef } = useLaunchDialog(
     onCancel,
     onCreate,
     canSubmit,
     hadRemembered,
+    yieldsKey,
   );
   return (
     <div ref={dialogRef} tabIndex={-1}>
@@ -58,6 +61,36 @@ describe('useLaunchDialog', () => {
     fireEvent.keyDown(document, { key: 'Enter' });
 
     expect(callbacks.onCreate).not.toHaveBeenCalled();
+  });
+
+  it('lets Enter and Escape through when yieldsKey returns true', () => {
+    const callbacks = makeCallbacks();
+    render(<Dialog {...callbacks} yieldsKey={() => true} />);
+
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    globalThis.dispatchEvent(escape);
+    globalThis.dispatchEvent(enter);
+
+    expect(escape.defaultPrevented).toBe(false);
+    expect(enter.defaultPrevented).toBe(false);
+    expect(callbacks.onCancel).not.toHaveBeenCalled();
+    expect(callbacks.onCreate).not.toHaveBeenCalled();
+  });
+
+  it('keeps the normal handling when yieldsKey returns false', () => {
+    const callbacks = makeCallbacks();
+    render(<Dialog {...callbacks} yieldsKey={() => false} />);
+
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    globalThis.dispatchEvent(escape);
+    globalThis.dispatchEvent(enter);
+
+    expect(escape.defaultPrevented).toBe(true);
+    expect(enter.defaultPrevented).toBe(true);
+    expect(callbacks.onCancel).toHaveBeenCalledOnce();
+    expect(callbacks.onCreate).toHaveBeenCalledOnce();
   });
 
   it('focuses the submit button on mount when a remembered selection was restored', () => {

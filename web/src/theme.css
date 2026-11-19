@@ -638,6 +638,20 @@ button.tab-recording { cursor: pointer; }
 .editor-find-row.selected mark { background: var(--bg); color: var(--accent); }
 .editor-find-row.selected .editor-find-line { color: var(--bg); }
 
+/* Model search dropdown (roles picker and New harness dialog) */
+.model-search { position: relative; display: flex; flex-direction: column; }
+.model-search-list {
+  position: absolute; top: 100%; left: 0; z-index: 5;
+  width: max-content;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 3px;
+  color: var(--fg); font-size: 12px;
+}
+.model-search-list.model-search-above { top: auto; bottom: 100%; }
+.model-search-row { padding: 2px 6px; cursor: pointer; overflow-wrap: anywhere; white-space: normal; }
+.model-search-row.highlighted { font-weight: bold; }
+.model-search-row.model-search-muted { color: var(--muted); cursor: default; }
+.model-search-row mark { background: var(--accent); color: var(--bg); border-radius: 2px; }
+
 /* Clipboard history overlay (Ctrl+Shift+V / clip). It holds the keyboard while open; the selected row
    already shows where it is, so the root draws no focus ring. */
 .clipboard-history:focus { outline: none; }

@@ -10,6 +10,7 @@ const view: HarnessLaunchView = {
   models: { claude: ['opus', 'sonnet'], opencode: ['opencode-go/glm-5.2'], codex: [] },
   autoApprove: ['claude', 'codex'],
   autoResume: ['opencode', 'codex'],
+  roleEntries: [[{ harness: 'claude', model: 'sonnet' }]],
 };
 
 function makeClient() {
@@ -20,8 +21,13 @@ function makeClient() {
 function renderDialog(launchView: HarnessLaunchView = view) {
   const { client, send } = makeClient();
   const utils = render(<HarnessLaunchDialog view={launchView} client={client} />);
-  return { ...utils, send };
+  return { ...utils, client, send };
 }
+
+const modelList = (container: HTMLElement) => container.querySelector('.model-search-list');
+const modelRows = (container: HTMLElement) =>
+  [...container.querySelectorAll('.model-search-row:not(.model-search-muted)')];
+const highlightedRow = (container: HTMLElement) => container.querySelector('.model-search-row.highlighted');
 
 beforeEach(() => resetHarnessLaunchDialogMemory());
 
@@ -158,20 +164,19 @@ describe('HarnessLaunchDialog', () => {
     expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'harness codex' } });
   });
 
-  it('disables the Model dropdown for a harness with an empty catalog (codex)', () => {
+  it('disables the Model input for a harness with an empty catalog (codex)', () => {
     const { getByLabelText, container } = renderDialog();
-    const modelSelect = () => [...container.querySelectorAll('select')][1] as HTMLSelectElement;
-    expect(modelSelect().disabled).toBe(false); // claude has models
+    const model = () => getByLabelText('Model') as HTMLInputElement;
+    expect(model().disabled).toBe(false); // claude has models
     fireEvent.change(container.querySelector('select')!, { target: { value: 'codex' } });
-    expect(modelSelect().disabled).toBe(true);
-    void getByLabelText;
+    expect(model().disabled).toBe(true);
   });
 
   it('Create submits the composed command and closes the dialog', () => {
-    const { getByText, getByLabelText, container, send } = renderDialog();
+    const { getByText, getByLabelText, send } = renderDialog();
     fireEvent.click(getByLabelText(/Workspace/));
     fireEvent.click(getByLabelText(/Auto-approve/));
-    fireEvent.change([...container.querySelectorAll('select')][1], { target: { value: 'sonnet' } });
+    fireEvent.change(getByLabelText('Model'), { target: { value: 'sonnet' } });
     fireEvent.click(getByText('Create'));
     expect(send).toHaveBeenNthCalledWith(1, {
       method: 'command',
@@ -260,5 +265,144 @@ describe('HarnessLaunchDialog', () => {
 
     const second = renderDialog();
     expect((second.getByLabelText(/E2E browser/) as HTMLInputElement).checked).toBe(false);
+  });
+
+  it('builds no --model for blank or whitespace-only text', () => {
+    const { getByText, getByLabelText, send } = renderDialog();
+    fireEvent.click(getByText('Create'));
+    expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'harness claude --no-auto-resume' } });
+    send.mockClear();
+
+    fireEvent.change(getByLabelText('Model'), { target: { value: ' '.repeat(3) } });
+    fireEvent.click(getByText('Create'));
+    expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'harness claude --no-auto-resume' } });
+  });
+
+  it('builds --model with the trimmed id when an exact id has surrounding spaces', () => {
+    const { getByText, getByLabelText, send } = renderDialog();
+    fireEvent.change(getByLabelText('Model'), { target: { value: '  sonnet  ' } });
+    fireEvent.click(getByText('Create'));
+    expect(send).toHaveBeenNthCalledWith(1, {
+      method: 'command', params: { text: 'harness claude --no-auto-resume --model sonnet' },
+    });
+  });
+
+  it('disables Create for partial text and never submits it on Return', () => {
+    const { getByText, getByLabelText, send } = renderDialog();
+    const model = getByLabelText('Model');
+    fireEvent.change(model, { target: { value: 'son' } });
+    expect((getByText('Create') as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.keyDown(document, { key: 'Enter' });
+    fireEvent.keyDown(model, { key: 'Escape' });
+    fireEvent.keyDown(document, { key: 'Enter' });
+    expect(send).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'command' }));
+  });
+
+  it('Escape with the dropdown open closes only the list, and Escape with it closed cancels', () => {
+    const { container, getByLabelText, send } = renderDialog();
+    const model = getByLabelText('Model');
+    fireEvent.focus(model);
+    expect(modelList(container)).not.toBeNull();
+
+    fireEvent.keyDown(model, { key: 'Escape' });
+    expect(modelList(container)).toBeNull();
+    expect(send).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'closeHarnessLaunch' }));
+
+    fireEvent.keyDown(model, { key: 'Escape' });
+    expect(send).toHaveBeenCalledWith({ method: 'closeHarnessLaunch', params: {} });
+  });
+
+  it('Return with a highlighted row fills the id instead of creating, and a second Return creates', () => {
+    const { container, getByLabelText, send } = renderDialog();
+    const model = getByLabelText('Model');
+    fireEvent.focus(model);
+    fireEvent.change(model, { target: { value: 'son' } });
+    expect(highlightedRow(container)?.textContent).toBe('sonnet');
+
+    fireEvent.keyDown(model, { key: 'Enter' });
+    expect(model).toHaveValue('sonnet');
+    expect(modelList(container)).toBeNull();
+    expect(send).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'command' }));
+
+    fireEvent.keyDown(document, { key: 'Enter' });
+    expect(send).toHaveBeenNthCalledWith(1, {
+      method: 'command', params: { text: 'harness claude --no-auto-resume --model sonnet' },
+    });
+  });
+
+  it('Return on a focused blank Model field creates with the default model', () => {
+    const { container, getByLabelText, send } = renderDialog();
+    const model = getByLabelText('Model');
+    fireEvent.focus(model);
+    expect(modelList(container)).not.toBeNull();
+    expect(highlightedRow(container)).toBeNull();
+
+    fireEvent.keyDown(model, { key: 'Enter' });
+    expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'harness claude --no-auto-resume' } });
+  });
+
+  it('keeps a model the new harness has and clears one it does not on a harness change', () => {
+    const shared: HarnessLaunchView = {
+      ...view,
+      models: { claude: ['opus', 'shared'], opencode: ['shared', 'glm'], codex: [] },
+    };
+    const { container, getByLabelText } = renderDialog(shared);
+    const model = getByLabelText('Model');
+    const harness = container.querySelector('select')!;
+
+    fireEvent.change(model, { target: { value: 'shared' } });
+    fireEvent.change(harness, { target: { value: 'opencode' } });
+    expect(model).toHaveValue('shared');
+
+    fireEvent.change(model, { target: { value: 'opus' } });
+    fireEvent.change(harness, { target: { value: 'codex' } });
+    expect(model).toHaveValue('');
+  });
+
+  it('restores a remembered model that is still in the catalog and clears one that is not', () => {
+    const first = renderDialog();
+    fireEvent.change(first.getByLabelText('Model'), { target: { value: 'sonnet' } });
+    first.unmount();
+
+    const second = renderDialog();
+    expect(second.getByLabelText('Model')).toHaveValue('sonnet');
+    second.unmount();
+
+    const withoutSonnet: HarnessLaunchView = { ...view, models: { ...view.models, claude: ['opus'] } };
+    const third = renderDialog(withoutSonnet);
+    expect(third.getByLabelText('Model')).toHaveValue('');
+    expect((third.getByText('Create') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('keeps typed text but disables Create when a new view drops the id from the catalog', () => {
+    const withoutSonnet: HarnessLaunchView = { ...view, models: { ...view.models, claude: ['opus'] } };
+    const { getByLabelText, getByText, rerender, client } = renderDialog();
+    fireEvent.change(getByLabelText('Model'), { target: { value: 'sonnet' } });
+    expect((getByText('Create') as HTMLButtonElement).disabled).toBe(false);
+
+    rerender(<HarnessLaunchDialog view={withoutSonnet} client={client} />);
+    expect(getByLabelText('Model')).toHaveValue('sonnet');
+    expect((getByText('Create') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('lists the models the roles use most in the blank dropdown', () => {
+    const withRoles: HarnessLaunchView = {
+      ...view,
+      roleEntries: [[
+        { harness: 'claude', model: 'sonnet' },
+        { harness: 'claude', model: 'opus' },
+        { harness: 'opencode', model: 'sonnet' },
+      ]],
+    };
+    const { container, getByLabelText } = renderDialog(withRoles);
+    fireEvent.focus(getByLabelText('Model'));
+    expect(modelRows(container).map((row) => row.textContent)).toEqual(['sonnet', 'opus']);
+  });
+
+  it('keeps the Model accessible name while the dropdown is open', () => {
+    const { container, getByLabelText } = renderDialog();
+    fireEvent.focus(getByLabelText('Model'));
+    expect(modelList(container)).not.toBeNull();
+    expect(getByLabelText('Model')).toBeInstanceOf(HTMLInputElement);
   });
 });

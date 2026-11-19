@@ -19,7 +19,7 @@ type Properties = {
 
 // Split `text` into alternating plain and `<mark>`ed segments from the matcher's ranges — the
 // generalization of `TabNavPicker`'s `highlightLabel` from one substring to many.
-function highlightRanges(text: string, ranges: [number, number][]): React.ReactNode {
+export function highlightRanges(text: string, ranges: [number, number][]): React.ReactNode {
   if (ranges.length === 0) return text;
   const segments: React.ReactNode[] = [];
   let at = 0;

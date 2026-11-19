@@ -80,9 +80,21 @@ commits, and Escape reverts. The `Models` section shows a muted `No models` row 
 entry row shows the model, the harness, an effort dropdown (`default` plus the levels above, and the
 entry's own stored effort as its own option when that value is outside them, so a hand-written
 effort never reads as unset), and a remove control. **Add model** opens a small picker — harness,
-model, effort, and Add — so an entry can be added without a pointer. The picker starts on `default`
-and returns there when the harness changes or the picker is reopened, so no entry carries an effort
-nobody chose for it.
+model, effort, and Add — so an entry can be added without a pointer. The model field searches the
+chosen harness's enabled models: typing narrows them to a contiguous, case-insensitive match of the
+text, best first and at most ten, and a dropdown lists the matches with the matching characters
+marked. Tab replaces the text with the single match, or with the common prefix of several matches
+when that prefix narrows the text. Moving the pointer over a row highlights it, and clicking a row
+fills the field. With the field blank, the dropdown lists at most ten models the roles use most for
+that harness, counting each role once per model, including the role being edited, and counting only
+enabled models; it shows `type to search` when none are used. Text that matches nothing shows
+`No matching models`. Changing the harness clears the text. Add becomes available only when the
+field holds exactly one of the harness's enabled model ids, and sends that id. Return fills the field
+with a highlighted candidate; with no row highlighted, or a further Return after the fill, Return adds
+the entry when the field holds an exact enabled id, exactly as Add does. The first Escape in
+the model field closes the dropdown, while Escape in the other picker controls cancels the picker. The
+picker starts on `default` and returns there when the harness changes or the picker is reopened, so no
+entry carries an effort nobody chose for it.
 
 The `Commands` section shows native grants in the published vocabulary order, followed by unknown
 hand-written values in their stored order. Duplicate grants remain adjacent and visible. Unknown
@@ -99,8 +111,9 @@ hidden when all eighteen native commands, including `subagent`, are present. Add
 row sends `remove-command`, which removes every copy. If another client changes a command while the
 picker is open, it clears a selection that is no longer available or closes when no commands remain
 to add, and the card follows the next publication. Both pickers focus their first control when
-opened, cancel on Escape, and return focus to their own add button on Add, Cancel, or Escape. If a
-publication leaves no commands to add while the picker is open, or removes the focused **Add
+opened, cancel on Escape, and return focus to their own add button on Add, Cancel, or Escape; the
+first Escape in the model field closes the dropdown instead. If a publication leaves no commands to
+add while the picker is open, or removes the focused **Add
 command** button, focus moves to the `Commands` heading. At narrow pane widths, command text wraps
 without pushing its remove control out of view.
 

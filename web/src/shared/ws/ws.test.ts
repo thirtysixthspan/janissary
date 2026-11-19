@@ -166,7 +166,7 @@ describe('JanusClient', () => {
       syntaxTheme: 'monokai', theme: 'light', tasks: [],
       profiles: [], projectDir: '/project', version: '7.8.9',
       disabledApplicationCommands: [{ name: 'theme', aliases: [], forms: ['theme'] }],
-      harnessLaunch: { names: ['claude'], models: { claude: ['opus'] }, autoApprove: ['claude'], autoResume: [] },
+      harnessLaunch: { names: ['claude'], models: { claude: ['opus'] }, autoApprove: ['claude'], autoResume: [], roleEntries: [] },
       scheduleLaunch: { targets: ['agent'], active: 'agent', runscripts: [] },
     };
     messageHandler!({ data: JSON.stringify(snapshot) });

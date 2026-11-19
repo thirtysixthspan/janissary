@@ -288,6 +288,74 @@ describe('RolesTab', () => {
     expect(addCommand()).toHaveFocus();
   });
 
+  it('adds the trimmed id on Return and returns focus to Add model', () => {
+    const { intent } = renderTab();
+    const addModel = () => screen.getAllByRole('button', { name: 'Add model' })[1];
+
+    fireEvent.click(addModel());
+    const input = screen.getByLabelText('Model for the new entry');
+    fireEvent.change(input, { target: { value: '  gpt-6-luna  ' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(intent).toHaveBeenCalledWith('add-entry', {
+      role: 'research', entry: { harness: 'codex', model: 'gpt-6-luna' },
+    });
+    expect(addModel()).toHaveFocus();
+  });
+
+  it('returns focus to the edited card\'s Add model button after a republished add', () => {
+    const payload = makePayload();
+    const { publish } = renderTab(payload);
+    const addModel = () => screen.getByDisplayValue('planning').closest('.roles-card')
+      ?.querySelector('.roles-add-model') as HTMLButtonElement;
+
+    fireEvent.click(addModel());
+    const input = screen.getByLabelText('Model for the new entry');
+    fireEvent.change(input, { target: { value: 'gpt-6-luna' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    publish({
+      ...payload,
+      roles: payload.roles.map((role) => (role.name === 'planning'
+        ? { ...role, entries: [...role.entries, { harness: 'codex', model: 'gpt-6-luna' }] }
+        : role)),
+    });
+
+    expect(screen.queryByLabelText('Model for the new entry')).toBeNull();
+    expect(addModel()).toHaveFocus();
+  });
+
+  it('sends nothing and stays open on Return with text that is not an exact id', () => {
+    const { intent } = renderTab();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add model' })[1]);
+    const input = screen.getByLabelText('Model for the new entry');
+    fireEvent.change(input, { target: { value: 'gpt-6-lunx' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(intent).not.toHaveBeenCalled();
+    expect(input).toBeInTheDocument();
+  });
+
+  it('fills the highlighted row on the first Return and adds on the second', () => {
+    const { intent } = renderTab();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add model' })[1]);
+    const input = screen.getByLabelText('Model for the new entry');
+    fireEvent.change(input, { target: { value: 'gpt-6-lu' } });
+
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(input).toHaveValue('gpt-6-luna');
+    expect(intent).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(intent).toHaveBeenCalledWith('add-entry', {
+      role: 'research', entry: { harness: 'codex', model: 'gpt-6-luna' },
+    });
+  });
+
   it('clears a selected command after publication and closes to the heading when none remain', () => {
     const payload = makePayload({
       nativeCommands: ['browser goto', 'browser content'],
@@ -346,7 +414,7 @@ describe('RolesTab', () => {
     expect(entry).not.toHaveTextContent('missing');
   });
 
-  it('keeps a missing saved entry but offers only enabled catalog models in the picker', () => {
+  it('keeps a missing saved entry and accepts only an enabled catalog model', () => {
     const payload = makePayload({
       roles: [{
         name: 'research', description: 'Research.',
@@ -360,10 +428,11 @@ describe('RolesTab', () => {
 
     expect(screen.getByText('disabled-model')).toBeInTheDocument();
     fireEvent.click(card.querySelector('.roles-add-model') as HTMLElement);
-    const modelPicker = screen.getByLabelText('Model for the new entry') as HTMLSelectElement;
-    const modelOptions = [...modelPicker.options].map(({ value }) => value);
-    expect(modelOptions).toContain('enabled-model');
-    expect(modelOptions).not.toContain('disabled-model');
+    const modelPicker = screen.getByLabelText('Model for the new entry');
+    fireEvent.change(modelPicker, { target: { value: 'enabled-model' } });
+    expect(screen.getByRole('button', { name: 'Add' })).toBeEnabled();
+    fireEvent.change(modelPicker, { target: { value: 'disabled-model' } });
+    expect(screen.getByRole('button', { name: 'Add' })).toBeDisabled();
     expect(container.querySelector('.roles-catalog')).toBeNull();
   });
 
@@ -595,6 +664,121 @@ describe('RolesTab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     open();
     expect(screen.getByLabelText('Effort for the new entry')).toHaveValue('');
+  });
+
+  it('enables Add only for an exact enabled model id', () => {
+    renderTab();
+    const card = screen.getByDisplayValue('research').closest('.roles-card') as HTMLElement;
+
+    fireEvent.click(card.querySelector('.roles-add-model') as HTMLElement);
+    const input = screen.getByLabelText('Model for the new entry');
+    fireEvent.change(input, { target: { value: 'gpt-6-lu' } });
+    expect(screen.getByRole('button', { name: 'Add' })).toBeDisabled();
+    fireEvent.change(input, { target: { value: 'gpt-6-luna' } });
+    expect(screen.getByRole('button', { name: 'Add' })).toBeEnabled();
+  });
+
+  it('adds the trimmed model id typed with surrounding spaces', () => {
+    const { intent } = renderTab();
+    const card = screen.getByDisplayValue('research').closest('.roles-card') as HTMLElement;
+
+    fireEvent.click(card.querySelector('.roles-add-model') as HTMLElement);
+    fireEvent.change(screen.getByLabelText('Model for the new entry'), { target: { value: '  gpt-6-luna  ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(intent).toHaveBeenCalledWith('add-entry', {
+      role: 'research', entry: { harness: 'codex', model: 'gpt-6-luna' },
+    });
+  });
+
+  it('closes the dropdown with the first Escape and the picker with the second', () => {
+    renderTab();
+    const addModel = () => screen.getAllByRole('button', { name: 'Add model' })[1];
+
+    fireEvent.click(addModel());
+    const input = screen.getByLabelText('Model for the new entry');
+    act(() => { input.focus(); });
+    expect(document.querySelector('.model-search-list')).not.toBeNull();
+
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(document.querySelector('.model-search-list')).toBeNull();
+    expect(input).toHaveFocus();
+
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(screen.queryByLabelText('Model for the new entry')).toBeNull();
+    expect(addModel()).toHaveFocus();
+  });
+
+  it('clears the model text when the harness changes', () => {
+    renderTab();
+    const card = screen.getByDisplayValue('research').closest('.roles-card') as HTMLElement;
+
+    fireEvent.click(card.querySelector('.roles-add-model') as HTMLElement);
+    fireEvent.change(screen.getByLabelText('Model for the new entry'), { target: { value: 'gpt-6-luna' } });
+    fireEvent.change(screen.getByLabelText('Harness for the new entry'), { target: { value: 'claude' } });
+
+    expect(screen.getByLabelText('Model for the new entry')).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Add' })).toBeDisabled();
+  });
+
+  it('lists the models the roles use most on a blank input', () => {
+    const payload = makePayload({
+      roles: [
+        { name: 'planning', description: 'Plans.', entries: [
+          { harness: 'codex', model: 'gpt-6-sol' },
+          { harness: 'codex', model: 'gpt-6-luna' },
+        ], commands: [] },
+        { name: 'research', description: 'Research.', entries: [
+          { harness: 'codex', model: 'gpt-6-sol' },
+        ], commands: [] },
+      ],
+    });
+    const { container } = renderTab(payload);
+    const card = screen.getByDisplayValue('research').closest('.roles-card') as HTMLElement;
+
+    fireEvent.click(card.querySelector('.roles-add-model') as HTMLElement);
+    act(() => { screen.getByLabelText('Model for the new entry').focus(); });
+
+    expect([...container.querySelectorAll('.model-search-row:not(.model-search-muted)')]
+      .map((row) => row.textContent)).toEqual(['gpt-6-sol', 'gpt-6-luna']);
+  });
+
+  it('shows only the type-to-search hint when the models the roles use are disabled', () => {
+    const payload = makePayload({
+      roles: [{
+        name: 'research', description: 'Research.',
+        entries: [{ harness: 'codex', model: 'gpt-6-sol', missing: true }],
+        commands: [],
+      }],
+      catalog: { models: { codex: ['gpt-6-luna'] }, efforts: ['low'] },
+    });
+    const { container } = renderTab(payload);
+    const card = screen.getByDisplayValue('research').closest('.roles-card') as HTMLElement;
+
+    fireEvent.click(card.querySelector('.roles-add-model') as HTMLElement);
+    act(() => { screen.getByLabelText('Model for the new entry').focus(); });
+
+    expect(screen.getByText('type to search')).toBeInTheDocument();
+    expect(container.querySelectorAll('.model-search-row:not(.model-search-muted)')).toHaveLength(0);
+  });
+
+  it('disables Add when a republished catalog disables the typed model', () => {
+    const payload = makePayload();
+    const { publish } = renderTab(payload);
+    const card = screen.getByDisplayValue('research').closest('.roles-card') as HTMLElement;
+
+    fireEvent.click(card.querySelector('.roles-add-model') as HTMLElement);
+    const input = screen.getByLabelText('Model for the new entry');
+    fireEvent.change(input, { target: { value: 'gpt-6-luna' } });
+    expect(screen.getByRole('button', { name: 'Add' })).toBeEnabled();
+
+    publish({
+      ...payload,
+      catalog: { ...payload.catalog, models: { codex: ['gpt-6-sol'], claude: ['claude-opus-5-5'] } },
+    });
+
+    expect(input).toHaveValue('gpt-6-luna');
+    expect(screen.getByRole('button', { name: 'Add' })).toBeDisabled();
   });
 
   it('adds a role from the inline name field, and Escape cancels it', async () => {
