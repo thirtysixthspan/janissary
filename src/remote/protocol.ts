@@ -261,7 +261,13 @@
 // to the main workspace directory when it is absent. They are fields on existing request frames, not
 // new frames, so neither the constant nor the pinned version literal moves. Bumping again would break
 // the exact-version handshake between peers of the same unreleased feature set.
-export const REMOTE_PROTOCOL_VERSION = 47;
+//
+// Version 48 adds the read-only `list-directory`, `stat-path`, `path-exists`, `head-lines`, and
+// `tail-lines` operations, so typed file commands on a remote tab run against the remote clone and
+// answer with finished output text rather than raw navigator data. A version-47 peer would refuse
+// them as unknown after the handshake had already passed, so the exact-version handshake refuses
+// that pairing first.
+export const REMOTE_PROTOCOL_VERSION = 48;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.

@@ -30,7 +30,8 @@ export type RemoteRunCloneResult =
 export type RemoteFilesystemOperation =
   | 'read-directory' | 'stat' | 'watch' | 'unwatch' | 'git' | 'git-pull' | 'git-commit' | 'search'
   | 'search-text' | 'read-file' | 'read-lines' | 'glob-paths' | 'grep-files' | 'web-search' | 'web-fetch' | 'write-file' | 'edit-file' | 'apply-patch' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
-  | 'create-file' | 'create-directory' | 'replay' | 'change-set';
+  | 'create-file' | 'create-directory' | 'replay' | 'change-set'
+  | 'list-directory' | 'stat-path' | 'path-exists' | 'head-lines' | 'tail-lines';
 
 // The five activity kinds the ACP mapping produces (`../acp/activity.ts`), which is what travels.
 export type RemoteAcpActivityKind = AcpActivityKind;
@@ -47,6 +48,11 @@ export type RemoteFilesystemArgumentsByOperation = {
   'read-file': { path: string };
   'read-lines': { path: string; offset?: number; limit?: number };
   'glob-paths': { pattern: string; dir?: string; hidden?: boolean; dirs?: boolean; limit?: number };
+  'list-directory': { path: string };
+  'stat-path': { path: string };
+  'path-exists': { path: string };
+  'head-lines': { path: string; count: number };
+  'tail-lines': { path: string; count: number };
   'grep-files': {
     pattern: string; include: string; exclude: string;
     literal: boolean; word: boolean; caseSensitive: boolean; limit: number; path?: string;

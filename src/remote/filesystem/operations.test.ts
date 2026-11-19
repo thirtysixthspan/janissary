@@ -21,6 +21,7 @@ const ALL_OPERATIONS: RemoteFilesystemOperation[] = [
   'read-directory', 'stat', 'watch', 'unwatch', 'git', 'git-pull', 'git-commit', 'search',
   'search-text', 'read-file', 'read-lines', 'glob-paths', 'grep-files', 'web-search', 'web-fetch', 'write-file', 'edit-file', 'apply-patch', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
   'create-file', 'create-directory', 'replay', 'change-set',
+  'list-directory', 'stat-path', 'path-exists', 'head-lines', 'tail-lines',
 ];
 
 // One representative argument record per operation, and the paths that record names. This is the
@@ -48,6 +49,11 @@ const PATH_CASES: PathCase[] = [
   ['read-lines', { path: 'a.txt', offset: 3, limit: 10 }, ['a.txt']],
   ['glob-paths', { pattern: '**/*.ts' }, []],
   ['glob-paths', { pattern: '*.ts', dir: 'src', hidden: true, dirs: true, limit: 20 }, ['src']],
+  ['list-directory', { path: 'src' }, ['src']],
+  ['stat-path', { path: 'src/index.ts' }, ['src/index.ts']],
+  ['path-exists', { path: 'src/index.ts' }, ['src/index.ts']],
+  ['head-lines', { path: 'a.txt', count: 10 }, ['a.txt']],
+  ['tail-lines', { path: 'a.txt', count: 20 }, ['a.txt']],
   ['grep-files', {
     pattern: 'TODO', include: '', exclude: '', literal: false, word: false, caseSensitive: false, limit: 100, path: undefined,
   }, []],
@@ -99,6 +105,21 @@ const INVALID_CASES: [RemoteFilesystemOperation, Record<string, unknown>][] = [
   ['search-text', { root: '', query: 'todo', include: '', exclude: '', regex: false, matchCase: false, wholeWord: 'yes' }],
   ['search-text', { root: 1, query: 'todo', include: '', exclude: '', regex: false, matchCase: false, wholeWord: false }],
   ['read-file', {}],
+  ['list-directory', {}],
+  ['list-directory', { path: 3 }],
+  ['stat-path', {}],
+  ['stat-path', { path: 3 }],
+  ['path-exists', {}],
+  ['path-exists', { path: 3 }],
+  ['head-lines', { path: 'a.txt' }],
+  ['head-lines', { path: 'a.txt', count: 0 }],
+  ['head-lines', { path: 'a.txt', count: -1 }],
+  ['head-lines', { path: 'a.txt', count: 1.5 }],
+  ['head-lines', { path: 'a.txt', count: '5' }],
+  ['head-lines', { path: 'a.txt', count: FILE_READ_MAX_LIMIT + 1 }],
+  ['tail-lines', { path: 'a.txt' }],
+  ['tail-lines', { path: 'a.txt', count: 0 }],
+  ['tail-lines', { path: 'a.txt', count: FILE_READ_MAX_LIMIT + 1 }],
   ['read-lines', { offset: 1 }],
   ['read-lines', { path: 'a.txt', offset: 0 }],
   ['read-lines', { path: 'a.txt', limit: -1 }],
@@ -202,6 +223,11 @@ const VALID_RESULTS: { [K in RemoteFilesystemOperation]: RemoteFilesystemOperati
   'read-file': { content: 'YQ==' },
   'read-lines': { text: '1\ta' },
   'glob-paths': { text: 'src/a.ts' },
+  'list-directory': { text: 'file -rw-r--r-- 1 2026-11-19T00:00:00.000Z a.txt' },
+  'stat-path': { text: 'file -rw-r--r-- 1 2026-11-19T00:00:00.000Z a.txt' },
+  'path-exists': { text: 'file' },
+  'head-lines': { text: '1\ta' },
+  'tail-lines': { text: '2\tb' },
   'grep-files': { text: 'src/a.ts:1: TODO' },
   'web-search': { text: '1. [Vitest](https://vitest.dev)' },
   'web-fetch': { text: 'Source: https://example.com/page' },
@@ -521,8 +547,9 @@ describe('FILESYSTEM_OPERATIONS', () => {
     const rootDestination = ALL_OPERATIONS.filter((operation) => operationDescriptor(operation).rootDestination);
 
     expect(alphabetical(rootDestination)).toEqual([
-      'create-directory', 'create-file', 'git-commit', 'glob-paths', 'grep-files', 'move', 'move-many', 'paste',
-      'read-directory', 'read-lines', 'search-text', 'unwatch', 'watch',
+      'create-directory', 'create-file', 'git-commit', 'glob-paths', 'grep-files', 'head-lines', 'list-directory',
+      'move', 'move-many', 'paste', 'path-exists', 'read-directory', 'read-lines', 'search-text', 'stat-path',
+      'tail-lines', 'unwatch', 'watch',
     ]);
   });
 });
