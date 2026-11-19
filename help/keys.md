@@ -96,7 +96,7 @@ View clauses restore only the named parts of a local tree; remote view clauses a
 
 | Key | Action |
 | --- | ------ |
-| `Cmd+A` / `Ctrl+A` | Select the whole buffer (in a file navigator, select the current row's siblings) |
+| `Cmd+A` | Select the whole buffer (in a file navigator, select the current row's siblings) |
 | `Cmd+C` / `Cmd+X` | Copy / cut the selection |
 | `Cmd+S` / `Ctrl+S` | Save the file |
 | `Cmd+Shift+E` on macOS | Reveal the file in the file navigator |
