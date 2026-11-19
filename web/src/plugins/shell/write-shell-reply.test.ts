@@ -286,4 +286,22 @@ describe('writeShellReply', () => {
     expect(fake.writes[0]?.data).toBe(commandHead('help'));
     expect(fake.writes.some((written) => written.data.includes('\u{1B}[6n'))).toBe(false);
   });
+
+  it('asks the block writer to reserve the marker line once a reply settles a marker', () => {
+    const fake = fakeTerminal({ cursorY: 2, wrapped: [false, false] });
+    blockSees(fake, true);
+
+    writeShellReply(fake.terminal, new ReplyPlacement(), 'help', 'Done', vi.fn(), vi.fn());
+
+    expect(insertBlock).toHaveBeenCalledWith(fake.terminal, undefined, 'Done', expect.any(Function), true);
+  });
+
+  it('leaves the block placement alone when no marker is settled', () => {
+    const fake = fakeTerminal();
+    blockSees(fake, true);
+
+    writeShellReply(fake.terminal, new ReplyPlacement(), 'help', 'Done', vi.fn());
+
+    expect(insertBlock).toHaveBeenCalledWith(fake.terminal, 'help', 'Done', expect.any(Function), false);
+  });
 });

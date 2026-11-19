@@ -208,7 +208,7 @@ describe('useShellReplyWriters settling', () => {
     result.current.displayReply(LINE, 'Done', { id: 'r1', record: RECORD });
 
     expect(written(fake)).toEqual([formatEchoedCommand(LINE), commandHead(LINE)]);
-    expect(insertBlock).toHaveBeenCalledWith(fake.terminal, undefined, 'Done', expect.any(Function));
+    expect(insertBlock).toHaveBeenCalledWith(fake.terminal, undefined, 'Done', expect.any(Function), true);
     expect(addMarker).toHaveBeenCalledTimes(2);
   });
 
