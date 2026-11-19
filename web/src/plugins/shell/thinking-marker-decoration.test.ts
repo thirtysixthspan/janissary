@@ -147,33 +147,33 @@ describe('addThinkingMarker', () => {
   });
 
   describe('placement', () => {
-    it('sits one cell after the row text, in pixels from the left, on the row it was rendered for', () => {
+    it('sits at the left edge of the line below the row it was rendered for', () => {
       const { fake } = mount({ rows: [{ text: '> ls' }] });
 
       const element = render(fake);
 
-      expect(element.style.marginLeft).toBe('50px');
+      expect(element.style.marginLeft).toBe('0px');
       expect(element.style.width).toBe('auto');
-      expect(element.style.top).toBe('0px');
+      expect(element.style.top).toBe('12px');
       expect(element.style.display).toBe('block');
     });
 
-    it('counts a wide character as two cells and the empty cells after the text as none', () => {
+    it('ignores the width of the text on the row', () => {
       const { fake } = mount({ rows: [{ text: '> 日本' }] });
 
-      expect(render(fake).style.marginLeft).toBe('70px');
+      expect(render(fake).style.marginLeft).toBe('0px');
     });
 
     it('reads no further than the columns when the row is longer after a resize', () => {
       const { fake } = mount({ rows: [{ text: STALE_ROW, length: 200 }] });
 
-      expect(render(fake).style.marginLeft).toBe('50px');
+      expect(render(fake).style.marginLeft).toBe('0px');
     });
 
-    it('places an empty row one cell from the left edge', () => {
+    it('places an empty row at the left edge of the next line', () => {
       const { fake } = mount({ rows: [{ text: '' }] });
 
-      expect(render(fake).style.marginLeft).toBe('10px');
+      expect(render(fake).style.marginLeft).toBe('0px');
     });
 
     it('never writes the left position, which xterm clears on a resize', () => {
@@ -185,7 +185,8 @@ describe('addThinkingMarker', () => {
       fake.decoration.handler?.(element);
 
       expect(element.style.left).toBe('');
-      expect(element.style.marginLeft).toBe('50px');
+      expect(element.style.marginLeft).toBe('0px');
+      expect(element.style.top).toBe('12px');
     });
 
     it('re-applies its geometry after xterm resets the size and top on a render', () => {
@@ -195,42 +196,39 @@ describe('addThinkingMarker', () => {
       render(fake);
 
       expect(element.style.width).toBe('auto');
-      expect(element.style.top).toBe('12px');
-      expect(element.style.marginLeft).toBe('40px');
+      expect(element.style.top).toBe('24px');
+      expect(element.style.marginLeft).toBe('0px');
     });
 
-    it('sits at the right edge over the last cells when the row is full', () => {
+    it('stays at the left edge when the row is full', () => {
       const { fake } = mount({ rows: [{ text: LONG_ROW }] });
 
-      expect(render(fake).style.marginLeft).toBe('900px');
+      expect(render(fake).style.marginLeft).toBe('0px');
     });
 
-    it.each([
-      [88, '890px'],
-      [89, '900px'],
-      [90, '900px'],
-    ])('places the element after %i text cells at %s, never past the right edge', (cells, expected) => {
+    it.each([0, 88, 90])('stays at the left edge with %i text cells', (cells) => {
       const { fake } = mount({ rows: [{ text: 'x'.repeat(cells) }] });
 
-      expect(render(fake).style.marginLeft).toBe(expected);
+      expect(render(fake).style.marginLeft).toBe('0px');
     });
 
-    it('sits at zero when it is wider than the screen', () => {
+    it('stays at the left edge when it is wider than the screen', () => {
       const { fake } = mount({ rows: [{ text: LONG_ROW }], runningWidth: 1200 });
 
       expect(render(fake).style.marginLeft).toBe('0px');
     });
 
-    it('moves after the row text changes and it renders again', () => {
+    it('stays put after the row text changes and it renders again', () => {
       const { fake } = mount({ rows: [{ text: '> ls' }] });
-      expect(render(fake).style.marginLeft).toBe('50px');
+      expect(render(fake).style.marginLeft).toBe('0px');
 
       fake.rows[0] = { text: '> ls -la' };
 
-      expect(render(fake).style.marginLeft).toBe('90px');
+      expect(render(fake).style.marginLeft).toBe('0px');
+      expect(render(fake).style.top).toBe('12px');
     });
 
-    it.each([0, 2])('is placed against the last row of a wrapped line when the marker is on row %i', (markerLine) => {
+    it.each([0, 2])('is placed below the last row of a wrapped line when the marker is on row %i', (markerLine) => {
       const { fake } = mount({
         rows: [{ text: LONG_ROW }, { text: LONG_ROW, wrapped: true }, { text: 'abc', wrapped: true }],
         markerLine,
@@ -238,8 +236,8 @@ describe('addThinkingMarker', () => {
 
       const element = render(fake);
 
-      expect(element.style.top).toBe('24px');
-      expect(element.style.marginLeft).toBe('40px');
+      expect(element.style.top).toBe('36px');
+      expect(element.style.marginLeft).toBe('0px');
       expect(element.style.display).toBe('block');
     });
 
@@ -250,8 +248,8 @@ describe('addThinkingMarker', () => {
 
       const element = render(fake);
 
-      expect(element.style.top).toBe('12px');
-      expect(element.style.marginLeft).toBe('40px');
+      expect(element.style.top).toBe('24px');
+      expect(element.style.marginLeft).toBe('0px');
     });
 
     it('hides when the marker row is gone from the buffer', () => {
@@ -294,6 +292,13 @@ describe('addThinkingMarker', () => {
       expect(render(fake).style.display).toBe('none');
     });
 
+    it('hides when the line below the marker is past the bottom of the viewport', () => {
+      const rows = Array.from({ length: 20 }, () => ({ text: '' }));
+      const { fake } = mount({ rows, markerLine: 19 });
+
+      expect(render(fake).style.display).toBe('none');
+    });
+
     it('shows when the marker row is above the viewport but the last row of its line is inside', () => {
       const { fake } = mount({
         rows: [{ text: LONG_ROW }, { text: LONG_ROW, wrapped: true }, { text: 'abc', wrapped: true }],
@@ -304,7 +309,7 @@ describe('addThinkingMarker', () => {
       const element = render(fake);
 
       expect(element.style.display).toBe('block');
-      expect(element.style.top).toBe('12px');
+      expect(element.style.top).toBe('24px');
     });
 
     it('hides when the marker was disposed', () => {
@@ -445,14 +450,16 @@ describe('addThinkingMarker', () => {
       expect(element.textContent).toBe('Thinking');
     });
 
-    it('places the element again at once when the view changes width', () => {
+    it('keeps the next-line placement when the view changes width', () => {
       const { fake, handle } = mount({ rows: [{ text: LONG_ROW }] });
       const element = render(fake);
-      expect(element.style.marginLeft).toBe('900px');
+      expect(element.style.marginLeft).toBe('0px');
+      expect(element.style.top).toBe('12px');
 
       handle.show(view('link'));
 
-      expect(element.style.marginLeft).toBe('810px');
+      expect(element.style.marginLeft).toBe('0px');
+      expect(element.style.top).toBe('12px');
     });
   });
 

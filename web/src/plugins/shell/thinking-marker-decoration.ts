@@ -1,6 +1,6 @@
 import { icon } from '@fortawesome/fontawesome-svg-core';
 import { faSpinner } from '@fortawesome/free-solid-svg-icons';
-import type { IBuffer, IBufferLine, IMarker, Terminal } from '@xterm/xterm';
+import type { IBuffer, IMarker, Terminal } from '@xterm/xterm';
 
 export type ThinkingMarkerView = { kind: 'running' | 'link'; name: string; onOpen: () => void };
 
@@ -10,7 +10,6 @@ export type ThinkingMarkerHandle = {
 };
 
 type MarkerTerminal = Pick<Terminal, 'element' | 'rows' | 'cols' | 'buffer' | 'registerDecoration'>;
-type Anchor = { line: IBufferLine; row: number };
 
 const LABELS = { running: 'Thinking', link: 'see thought process' } as const;
 
@@ -18,39 +17,24 @@ function isUsable(size: number): boolean {
   return Number.isFinite(size) && size > 0;
 }
 
-function lastRowOf(buffer: IBuffer, row: number): Anchor | undefined {
-  let line = buffer.getLine(row);
-  if (!line) return undefined;
+function lastRowOf(buffer: IBuffer, row: number): number | undefined {
+  if (!buffer.getLine(row)) return undefined;
   let last = row;
   let next = buffer.getLine(last + 1);
   while (next?.isWrapped) {
-    line = next;
     last += 1;
     next = buffer.getLine(last + 1);
   }
-  return { line, row: last };
+  return last;
 }
 
-function cellsUsed(line: IBufferLine, cols: number): number {
-  for (let x = Math.min(line.length, cols) - 1; x >= 0; x--) {
-    const cell = line.getCell(x);
-    if (cell && cell.getChars() !== '') return x + cell.getWidth();
-  }
-  return 0;
-}
-
-function offsetFor(cells: number, cellWidth: number, width: number, screenWidth: number): number {
-  const wanted = (cells + 1) * cellWidth;
-  return wanted + width > screenWidth ? Math.max(0, screenWidth - width) : wanted;
-}
-
-function anchorOf(terminal: MarkerTerminal, marker: IMarker): Anchor | undefined {
+function anchorOf(terminal: MarkerTerminal, marker: IMarker): number | undefined {
   const buffer = terminal.buffer.active;
   if (buffer.type !== 'normal' || marker.line < 0) return undefined;
   const end = lastRowOf(buffer, marker.line);
-  if (!end) return undefined;
-  const row = end.row - buffer.viewportY;
-  return row >= 0 && row < terminal.rows ? { line: end.line, row } : undefined;
+  if (end === undefined) return undefined;
+  const row = end - buffer.viewportY;
+  return row >= 0 && row + 1 < terminal.rows ? row : undefined;
 }
 
 function place(element: HTMLElement, terminal: MarkerTerminal, marker: IMarker): void {
@@ -59,16 +43,14 @@ function place(element: HTMLElement, terminal: MarkerTerminal, marker: IMarker):
   const rowHeight = screen.clientHeight / terminal.rows;
   const cellWidth = screen.clientWidth / terminal.cols;
   const anchor = isUsable(rowHeight) && isUsable(cellWidth) ? anchorOf(terminal, marker) : undefined;
-  if (!anchor) {
+  if (anchor === undefined) {
     element.style.display = 'none';
     return;
   }
   element.style.width = 'auto';
   element.style.display = 'block';
-  const cells = cellsUsed(anchor.line, terminal.cols);
-  const offset = offsetFor(cells, cellWidth, element.offsetWidth, screen.clientWidth);
-  element.style.marginLeft = `${offset}px`;
-  element.style.top = `${anchor.row * rowHeight}px`;
+  element.style.marginLeft = '0px';
+  element.style.top = `${(anchor + 1) * rowHeight}px`;
 }
 
 function fill(element: HTMLElement, view: ThinkingMarkerView): void {
