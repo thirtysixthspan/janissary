@@ -67,8 +67,8 @@ export function RoleCard({ role, index, efforts, models, roleEntries, nativeComm
   };
 
   const addPicked = (harness: string, model: string, effort: string) => {
-    raise('add-entry', { role: role.name, entry: { harness, model, ...(effort && { effort }) } });
     modelsPicker.closePicker();
+    raise('add-entry', { role: role.name, entry: { harness, model, ...(effort && { effort }) } });
   };
 
   const land = (result: EntryDrop) => {

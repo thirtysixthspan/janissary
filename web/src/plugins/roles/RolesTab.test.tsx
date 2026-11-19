@@ -304,6 +304,29 @@ describe('RolesTab', () => {
     expect(addModel()).toHaveFocus();
   });
 
+  it('returns focus to the edited card\'s Add model button after a republished add', () => {
+    const payload = makePayload();
+    const { publish } = renderTab(payload);
+    const addModel = () => screen.getByDisplayValue('planning').closest('.roles-card')
+      ?.querySelector('.roles-add-model') as HTMLButtonElement;
+
+    fireEvent.click(addModel());
+    const input = screen.getByLabelText('Model for the new entry');
+    fireEvent.change(input, { target: { value: 'gpt-6-luna' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    publish({
+      ...payload,
+      roles: payload.roles.map((role) => (role.name === 'planning'
+        ? { ...role, entries: [...role.entries, { harness: 'codex', model: 'gpt-6-luna' }] }
+        : role)),
+    });
+
+    expect(screen.queryByLabelText('Model for the new entry')).toBeNull();
+    expect(addModel()).toHaveFocus();
+  });
+
   it('sends nothing and stays open on Return with text that is not an exact id', () => {
     const { intent } = renderTab();
 
