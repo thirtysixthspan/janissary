@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useDialogKeyboard } from './useDialogKeyboard';
 
-// Shared dialog keyboard wiring and remembered-submit focus behavior.
+// Shared dialog keyboard wiring, an optional key-yield predicate, and remembered-submit focus behavior.
 export function useLaunchDialog(
   onCancel: () => void,
   onCreate: () => void,
   canSubmit: boolean,
   hadRemembered: boolean,
+  yieldsKey?: (event: KeyboardEvent) => boolean,
 ) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const submitButtonRef = useRef<HTMLButtonElement>(null);
@@ -15,6 +16,7 @@ export function useLaunchDialog(
   const create = useCallback(() => onCreate(), [onCreate]);
 
   useDialogKeyboard(dialogRef, (e) => {
+    if (yieldsKey?.(e)) return;
     if (e.key === 'Escape') { e.preventDefault(); cancel(); }
     else if (e.key === 'Enter') { e.preventDefault(); if (canSubmit) create(); }
   });
